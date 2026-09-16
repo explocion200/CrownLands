@@ -1,0 +1,175 @@
+/* Overview revision: a fortress portrait beside a compact holding summary. */
+.overview-panel { grid-template-columns: 35% minmax(0, 1fr); }
+.overview-panel .identity-column { padding: 18px; gap: 0; background: linear-gradient(145deg, #e9dbb6, #e1d0a7); }
+.overview-panel .details-column { padding: 18px 22px; }
+.keep-illustration { position: relative; flex: 1 0 225px; min-height: 225px; display: grid; place-items: center; margin-bottom: 16px; border: 1px solid #bda371; background: radial-gradient(ellipse at 50% 69%, #b6a27566, transparent 64%), linear-gradient(135deg, #f0e2c299, #d7c39766); box-shadow: inset 0 0 0 4px #f0e2c266; }
+.keep-illustration::before { content: ''; position: absolute; inset: 12px; border: 1px solid #b99d6955; pointer-events: none; }
+.keep-illustration > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 24px 4px 20px; filter: drop-shadow(0 8px 4px #5c462936); }
+.keep-level { position: absolute; left: 10px; top: 10px; z-index: 1; text-align: center; padding: 7px 9px; background: #eddfbfe8; border: 1px solid #aa8957; box-shadow: 0 2px 5px #69513022; }
+.keep-level small { font-size: 9px; color: #776047; }
+.keep-level strong { font: 25px Georgia, serif; }
+.keep-caption { position: absolute; bottom: 10px; font: italic 11px Georgia, serif; color: #725937; }
+.ownership-record { flex: none; }
+.ruler-entry { display: flex; align-items: center; gap: 10px; min-height: 63px; padding: 10px 0; border-bottom: 1px solid #bca781; }
+.ruler-entry > div { min-width: 0; }
+.ruler-entry small { font-size: 10px; color: #715d42; margin-bottom: 4px; }
+.ruler-entry .name-link { font-size: 17px; line-height: 1.25; }
+.holding-tag { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px 10px; padding: 12px 0 0; color: #776043; font-size: 11px; }
+.holding-tag strong { font: 14px Georgia, serif; color: #4e5739; }
+.holding-benefit { display: grid; grid-template-columns: 43px minmax(0,1fr) auto auto; gap: 12px; align-items: center; padding: 12px 15px; border: 1px solid #b59557; background: linear-gradient(100deg, #e4cc97, #efdfb5); box-shadow: inset 0 0 0 3px #faedcb77; }
+.holding-benefit > img { width: 43px; height: 43px; }
+.benefit-heading h2 { font: 20px/1.1 Georgia, serif; }
+.benefit-heading .eyebrow { font-size: 8px; margin-bottom: 5px; }
+.benefit-rate { text-align: center; min-width: 63px; }
+.benefit-rate strong { font: 31px Georgia, serif; color: #785327; }
+.benefit-rate small { margin-top: 1px; font-size: 9px; color: #786345; }
+.benefit-rate.shared { border-left: 1px solid #b99e69; padding-left: 12px; }
+.benefit-rate.shared strong { font-size: 24px; }
+.strength-overview { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; margin-top: 12px; }
+.strength-card { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px; border: 1px solid #c6b28b; background: #f4e9cf; box-shadow: inset 0 3px #d9c59c; }
+.strength-card > img { width: 30px; height: 32px; object-fit: contain; flex: none; }
+.strength-card > div { min-width: 0; }
+.strength-card h2 { font: 11px 'Segoe UI', Arial, sans-serif; color: #745f42; margin-bottom: 4px; }
+.strength-card strong { display: block; font: 29px/1.15 Georgia, serif; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.strength-card small { color: #7b684b; font-size: 9px; margin-top: 4px; }
+.strength-card .scouted-pair { font-size: 22px; }
+.scouted-pair b { display: block; font: 12px 'Segoe UI', Arial, sans-serif; color: #566541; margin-top: 2px; }
+.wall-overview { display: grid; grid-template-columns: 29px minmax(0,1fr); align-items: center; gap: 12px; padding: 11px 13px; margin-top: 10px; border: 1px solid #afb188; background: #e8e7cd; }
+.wall-overview > img { width: 29px; height: 31px; object-fit: contain; }
+.wall-heading { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.wall-heading strong { color: #566441; }
+.wall-overview .integrity-track { margin: 6px 0 4px; height: 5px; }
+.wall-overview small { color: #6f6c50; font-size: 9px; }
+.wall-overview.damaged { background: #eedcbc; border-color: #c0985f; }
+.wall-overview.damaged .wall-heading strong { color: #8b592c; }
+.overview-disclosures { margin-top: 13px; border-top: 1px solid #bca680; }
+.detail-fold { border-bottom: 1px solid #c6b38f; }
+.detail-fold summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 1px; cursor: pointer; list-style: none; }
+.detail-fold summary::-webkit-details-marker { display: none; }
+.detail-fold summary > span { font: 16px Georgia, serif; }
+.detail-fold summary > small { margin-left: auto; font-size: 10px; color: #806a49; }
+.detail-fold summary::after { content: '+'; font: 22px Georgia, serif; color: #886943; width: 18px; text-align: center; }
+.detail-fold[open] summary::after { content: '−'; }
+.detail-fold[open] summary > span { color: #7a402e; }
+.detail-fold summary:hover { background: #dfd0ac55; }
+.detail-fold summary:focus-visible { outline: 2px solid #35616c; outline-offset: -2px; }
+.fold-content { padding: 2px 10px 12px; font-size: 11px; line-height: 1.5; color: #715d40; }
+.fold-content > p { margin: 7px 0; }
+.fold-content .metric-row { font-size: 11px; }
+.fold-content .metric-row strong { font-size: 17px; }
+.fold-content .metric-row .stat-pair { font-size: 13px; }
+.fold-content .bonus-copy { margin-top: 0; }
+.fold-content .benefit-note:last-child { border: 0; padding-bottom: 0; }
+.overview-panel .support-heading { margin-top: 16px; }
+.overview-panel .support-heading h2 { font-size: 19px; }
+.overview-panel .support-row { padding: 8px 0; }
+.overview-panel .small-button { min-height: 40px; }
+.overview-active .holding-footer { min-height: 63px; padding-block: 8px; }
+.overview-active .management-copy strong { font: 14px Georgia, serif; color: #6d5637; margin-bottom: 4px; }
+.overview-active .management-copy small { font-size: 10px; }
+
+/* The approved royal frame stays consistent; specialization colors are confined to the benefit strip. */
+[data-holding="training"] .holding-benefit { background: linear-gradient(100deg, #d9d4a4, #e7e5c7); border-color: #9d9e71; }
+[data-holding="training"] .benefit-rate strong { color: #52613b; }
+[data-holding="movement"] .holding-benefit { background: linear-gradient(100deg, #cbd8d4, #e0e5d6); border-color: #91a199; }
+[data-holding="movement"] .benefit-rate strong { color: #415f61; }
+[data-holding="defense"] .holding-benefit { background: linear-gradient(100deg, #d2d4c5, #e7e6d5); border-color: #9b9f8d; }
+[data-holding="defense"] .benefit-rate strong { color: #515b46; }
+
+@media (max-height:600px), (max-width:1000px) {
+  .overview-active .window-header { min-height: 48px; }
+  .overview-active .tabs-bar, .overview-active .tabs-bar button { min-height: 36px; }
+  .overview-panel { grid-template-columns: 31% minmax(0,1fr); }
+  .overview-panel .identity-column { padding: 8px 11px; }
+  .overview-panel .details-column { padding: 8px 12px; }
+  .keep-illustration { flex: 1 0 91px; min-height: 91px; margin-bottom: 3px; }
+  .keep-illustration > img { max-height: 148px; padding: 3px 5px; }
+  .keep-illustration::before { inset: 5px; }
+  .keep-level { top: 4px; left: 4px; padding: 3px 5px; }
+  .keep-level small { font-size: 7px; }
+  .keep-level strong { font-size: 18px; }
+  .keep-caption { display: none; }
+  .ruler-entry { min-height: 42px; padding: 5px 0; gap: 7px; }
+  .ruler-entry small { font-size: 8px; margin-bottom: 2px; }
+  .ruler-entry .name-link, .ruler-entry .plain-owner { font-size: 13px; }
+  .ruler-entry .ruler-mark { width: 22px; height: 28px; }
+  .ruler-entry .heraldry-slot { width: 25px; }
+  .holding-tag { padding-top: 6px; font-size: 9px; }
+  .holding-tag strong { font-size: 11px; }
+  .holding-benefit { padding: 7px 9px; grid-template-columns: 31px minmax(0,1fr) auto auto; gap: 9px; }
+  .holding-benefit > img { width: 31px; height: 31px; }
+  .benefit-heading h2 { font-size: 16px; max-width: none; }
+  .benefit-heading .eyebrow { font-size: 7px; margin-bottom: 3px; }
+  .benefit-rate { min-width: 48px; }
+  .benefit-rate strong { font-size: 24px; }
+  .benefit-rate small { font-size: 8px; }
+  .benefit-rate.shared { padding-left: 9px; }
+  .benefit-rate.shared strong { font-size: 20px; }
+  .strength-overview { gap: 8px; margin-top: 7px; }
+  .strength-card { padding: 8px 9px; gap: 8px; }
+  .strength-card > img { width: 23px; height: 25px; }
+  .strength-card h2 { font-size: 10px; margin-bottom: 2px; }
+  .strength-card strong { font-size: 24px; }
+  .strength-card small { font-size: 8px; margin-top: 2px; }
+  .strength-card .scouted-pair { font-size: 18px; }
+  .scouted-pair b { font-size: 10px; }
+  .wall-overview { margin-top: 7px; padding: 7px 10px; gap: 9px; grid-template-columns: 23px minmax(0,1fr); }
+  .wall-overview > img { width: 23px; height: 25px; }
+  .wall-heading { font-size: 10px; }
+  .wall-overview .integrity-track { margin: 4px 0 3px; height: 4px; }
+  .wall-overview small { font-size: 8px; }
+  .overview-disclosures { margin-top: 7px; }
+  .detail-fold summary { min-height: 42px; }
+  .detail-fold summary > span { font-size: 14px; }
+  .detail-fold summary > small { font-size: 9px; }
+  .overview-panel .support-heading { margin-top: 10px; }
+  .overview-panel .support-heading h2 { font-size: 17px; }
+  .overview-active .holding-footer { min-height: 50px; padding: 4px 12px; }
+  .overview-active .management-copy strong { font-size: 12px; margin-bottom: 2px; }
+  .overview-active .management-copy small { font-size: 9px; }
+  .overview-active .relinquish-button { min-height: 40px; }
+}
+
+@media (max-width:650px) {
+  .overview-active .window-header { min-height: 43px; }
+  .overview-active .heading h1 { font-size: 20px; }
+  .overview-active .title-seal { width: 29px; height: 33px; }
+  .overview-active .close-button { height: 38px; width: 38px; }
+  .overview-active .tabs-bar, .overview-active .tabs-bar button { min-height: 33px; }
+  .overview-panel { grid-template-columns: 32% minmax(0,1fr); }
+  .overview-panel .identity-column { padding: 6px 7px; }
+  .overview-panel .details-column { padding: 6px 8px; }
+  .keep-illustration { flex-basis: 60px; min-height: 60px; }
+  .keep-illustration > img { max-height: 105px; }
+  .keep-level { padding: 2px 3px; }
+  .keep-level small { font-size: 6px; }
+  .keep-level strong { font-size: 16px; }
+  .ruler-entry { min-height: 36px; padding: 3px 0; gap: 5px; }
+  .ruler-entry .name-link, .ruler-entry .plain-owner { font-size: 11px; }
+  .ruler-entry small { font-size: 7px; margin-bottom: 1px; }
+  .ruler-entry .ruler-mark { width: 18px; height: 24px; padding: 3px; }
+  .ruler-entry .heraldry-slot { width: 20px; }
+  .holding-tag { font-size: 8px; padding-top: 4px; }
+  .holding-tag strong { font-size: 10px; }
+  .holding-benefit { gap: 6px; grid-template-columns: minmax(0,1fr) auto auto; padding: 4px 8px; }
+  .holding-benefit > img { display: none; }
+  .benefit-heading h2 { font-size: 14px; }
+  .benefit-rate { min-width: 42px; }
+  .benefit-rate strong { font-size: 22px; }
+  .benefit-rate.shared strong { font-size: 18px; }
+  .benefit-rate.shared { padding-left: 6px; }
+  .strength-overview { gap: 6px; margin-top: 6px; }
+  .strength-card { padding: 5px 7px; gap: 5px; }
+  .strength-card > img { width: 18px; height: 22px; }
+  .strength-card h2 { font-size: 9px; }
+  .strength-card strong { font-size: 19px; }
+  .strength-card .scouted-pair { font-size: 16px; }
+  .strength-card small { display: none; }
+  .wall-overview { margin-top: 6px; padding: 6px 8px; }
+  .wall-heading { font-size: 9px; }
+  .detail-fold summary > small { display: none; }
+  .detail-fold summary::after { margin-left: auto; }
+  .overview-active .holding-footer { min-height: 48px; padding: 3px 9px; }
+  .overview-active .management-copy strong { font-size: 11px; }
+  .overview-active .management-copy small { font-size: 8px; }
+}

@@ -1,0 +1,205 @@
+/* Approved royal objective details; ordinary City Details is unaffected. */
+#modal.stronghold-details-modal:has([data-holding]) .modal-card { font:12px 'Segoe UI',Arial,sans-serif!important; }
+#modal.stronghold-details-modal:has([data-holding]) .modal-card #modalTitle { margin:0!important; padding:10px 70px 10px 21px!important; background:linear-gradient(100deg,#e4d0a5,#f2e7ca 62%,#e8d7b4)!important; border-radius:0!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stronghold-legacy-info-panel,.crown-citadel-info-panel) { gap:0!important; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid span { margin:0!important; padding:0!important; min-height:0!important; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-sharing { width:100%; border-collapse:collapse; font:11px 'Segoe UI',sans-serif; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-sharing :is(td,th) { padding:7px 4px; border-bottom:1px solid #cbbb97; text-align:right; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-sharing th:first-child { text-align:left; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-sharing caption { text-align:left; font:16px Georgia,serif; padding-bottom:8px; }
+#modal.stronghold-details-modal:has([data-holding]) { --paper:#f0e5c9; --ink:#3a3024; --muted:#75644c; --line:#beab85; color-scheme:light; width:min(1040px,calc(100vw - 24px)); height:min(790px,calc(100dvh - 24px)); max-width:none; max-height:none; inset:0; margin:auto; padding:7px; border:2px solid #60402b!important; border-radius:0!important; background:#843e32!important; color:var(--ink)!important; box-shadow:inset 0 0 0 2px #d8b57a,0 12px 48px #171a1680!important; overflow:hidden; }
+#modal.stronghold-details-modal:has([data-holding]) .modal-card { width:100%!important; height:100%!important; max-width:none!important; max-height:none!important; margin:0; padding:0!important; display:flex; flex-direction:column; border:2px solid #d1b47f!important; border-radius:0!important; background:var(--paper)!important; box-shadow:inset 0 0 0 1px #79613f!important; color:var(--ink)!important; overflow:hidden!important; }
+#modal.stronghold-details-modal:has([data-holding]) #modalTitle { display:flex; align-items:center; gap:14px; flex:none; min-height:84px; margin:0; padding:10px 70px 10px 21px; border-bottom:1px solid #c6ad7d; background:linear-gradient(100deg,#e4d0a5,#f2e7ca 62%,#e8d7b4); font:32px Georgia,serif!important; color:var(--ink)!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) #modalTitle>span:nth-child(2) { min-width:0; overflow-wrap:anywhere; }
+#modal.stronghold-details-modal:has([data-holding]) #modalTitle small { display:block; font:10px 'Segoe UI',sans-serif; letter-spacing:2px; color:#805333; margin-bottom:3px; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-title-seal { display:grid; place-items:center; width:55px; height:58px; flex:none; background:#793c31; border:3px double #dcb778; clip-path:polygon(5% 0,95% 0,100% 68%,50% 100%,0 68%); }
+#modal.stronghold-details-modal:has([data-holding]) .holding-title-seal img { width:38px; height:38px; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-ownership { margin-left:auto; padding:6px 10px; border:1px solid #9ca277; background:#e1e3c1; color:#455032; font:12px Georgia,serif; text-align:center; flex:none; }
+#modal.stronghold-details-modal:has([data-holding]) #closeModalBtn { position:absolute; top:22px; right:14px; width:44px; height:44px; padding:0; border:0!important; background:none!important; color:var(--ink)!important; box-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) #modalBody { flex:1; min-height:0; width:100%; margin:0!important; padding:0!important; overflow:hidden!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stronghold-legacy-info-panel,.crown-citadel-info-panel) { height:100%; display:flex; flex-direction:column; color:var(--ink); }
+#modal.stronghold-details-modal:has([data-holding]) [hidden] { display:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-info-tabs { display:flex; gap:20px; flex:none; padding:0 21px; min-height:49px; border:0; border-bottom:1px solid var(--line); border-radius:0; background:#e9ddbd!important; }
+#modal.stronghold-details-modal:has([data-holding]) .camp-info-tab { min-height:46px; padding:0 4px; border:0!important; border-bottom:3px solid transparent!important; border-radius:0; background:none!important; box-shadow:none!important; color:#7a684b!important; font:16px Georgia,serif!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .camp-info-tab[aria-selected="true"] { border-bottom-color:#884436!important; color:#633a2c!important; background:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .camp-info-tab-panel { flex:1; min-height:0; overflow:hidden; margin:0; padding:0; }
+#modal.stronghold-details-modal:has([data-holding]) .overview-panel { display:grid; grid-template-columns:35% minmax(0,1fr); }
+#modal.stronghold-details-modal:has([data-holding]) :is(.identity-column,.details-column) { min-height:0; min-width:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#a89163 #e7d9b9; }
+#modal.stronghold-details-modal:has([data-holding]) .identity-column { display:flex; flex-direction:column; padding:18px; border-right:1px solid var(--line); background:linear-gradient(145deg,#e9dbb6,#e1d0a7); }
+#modal.stronghold-details-modal:has([data-holding]) .identity-column>* { flex-shrink:0; }
+#modal.stronghold-details-modal:has([data-holding]) .details-column { padding:18px 22px; }
+#modal.stronghold-details-modal:has([data-holding]) .keep-illustration { position:relative; flex:1 0 225px; min-height:225px; margin-bottom:16px; border:1px solid #bda371; background:radial-gradient(ellipse at 50% 69%,#b6a27566,transparent 64%),linear-gradient(135deg,#f0e2c299,#d7c39766); box-shadow:inset 0 0 0 4px #f0e2c266; }
+#modal.stronghold-details-modal:has([data-holding]) .keep-illustration::before { content:''; position:absolute; inset:12px; border:1px solid #b99d6955; pointer-events:none; }
+#modal.stronghold-details-modal:has([data-holding]) .keep-illustration>img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:24px 4px 20px; filter:drop-shadow(0 8px 4px #5c462936); }
+#modal.stronghold-details-modal:has([data-holding]) .keep-level { position:absolute; left:10px; top:10px; padding:7px 9px; text-align:center; background:#eddfbfe8; border:1px solid #aa8957; }
+#modal.stronghold-details-modal:has([data-holding]) .keep-level small { display:block; font:9px 'Segoe UI',sans-serif; color:#776047; }
+#modal.stronghold-details-modal:has([data-holding]) .keep-level strong { display:block; font:25px Georgia,serif; color:var(--ink); }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip) { display:flex; flex-direction:column; align-items:stretch; gap:4px; min-width:0; margin:0; padding:9px 0; border:0!important; border-bottom:1px solid #c4b28e!important; border-radius:0!important; background:none!important; color:var(--ink)!important; box-shadow:none!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip)>span { font:10px 'Segoe UI',sans-serif!important; color:#715d42!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip)>strong { font:17px Georgia,serif!important; color:var(--ink)!important; text-shadow:none!important; overflow-wrap:anywhere; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip) small { font:10px/1.5 'Segoe UI',sans-serif!important; color:#715d42!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.player-name-link,.clan-identity-link,.objective-clan-link,.reinforcement-holder-link) { padding:0!important; min-height:0; border:0!important; background:none!important; box-shadow:none!important; color:#493c2b!important; text-shadow:none!important; font:17px Georgia,serif!important; overflow-wrap:anywhere; text-align:left; }
+#modal.stronghold-details-modal:has([data-holding]) .objective-clan-link { display:flex; gap:7px; align-items:center; }
+#modal.stronghold-details-modal:has([data-holding]) .objective-clan-link :is(span,strong) { color:#493c2b!important; text-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-limit { padding-top:12px; font:12px Georgia,serif; color:#4e5739; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-benefit { display:grid; grid-template-columns:43px minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:12px 15px; border:1px solid #b59557; background:linear-gradient(100deg,#e4cc97,#efdfb5); box-shadow:inset 0 0 0 3px #faedcb77; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-benefit>img { width:43px; height:43px; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-heading h3 { margin:0; font:20px/1.1 Georgia,serif; color:var(--ink); text-transform:capitalize; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-heading small { display:block; font:8px 'Segoe UI',sans-serif; letter-spacing:1px; color:#7b603d; margin-bottom:5px; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-rate { text-align:center; min-width:63px; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-rate strong { display:block; font:31px Georgia,serif; color:#785327; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-rate small { display:block; font:9px 'Segoe UI',sans-serif; color:#786345; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-rate.shared { border-left:1px solid #b99e69; padding-left:12px; }
+#modal.stronghold-details-modal:has([data-holding]) .benefit-rate.shared strong { font-size:24px; }
+#modal.stronghold-details-modal:has([data-holding]) [data-holding="training"] .holding-benefit { background:linear-gradient(100deg,#d9d4a4,#e7e5c7); border-color:#9d9e71; }
+#modal.stronghold-details-modal:has([data-holding]) [data-holding="movement"] .holding-benefit { background:linear-gradient(100deg,#cbd8d4,#e0e5d6); border-color:#91a199; }
+#modal.stronghold-details-modal:has([data-holding]) [data-holding="defense"] .holding-benefit { background:linear-gradient(100deg,#d2d4c5,#e7e6d5); border-color:#9b9f8d; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-overview { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; margin-top:12px; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-card { display:flex; align-items:center; gap:10px; min-width:0; padding:12px; border:1px solid #c6b28b; background:#f4e9cf; box-shadow:inset 0 3px #d9c59c; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-card>img { width:30px; height:32px; object-fit:contain; flex:none; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-card :is(.stat-chip,.stat-wide) { flex:1; padding:0; border:0!important; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-card strong { font:29px/1.15 Georgia,serif!important; font-variant-numeric:tabular-nums; }
+#modal.stronghold-details-modal:has([data-holding]) .strength-card small { font-size:9px!important; }
+#modal.stronghold-details-modal:has([data-holding]) .fortification-status { margin-top:10px; padding:11px 13px; border:1px solid #afb188!important; background:#e8e7cd!important; }
+#modal.stronghold-details-modal:has([data-holding]) .fortification-status strong { color:#566441!important; font-size:16px!important; }
+#modal.stronghold-details-modal:has([data-holding]) .fortification-status.damaged { background:#eedcbc!important; border-color:#c0985f!important; }
+#modal.stronghold-details-modal:has([data-holding]) .overview-disclosures { margin-top:13px; border-top:1px solid #bca680; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold { border-bottom:1px solid #c6b38f; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold summary { display:flex; align-items:center; gap:10px; min-height:44px; padding:7px 1px; cursor:pointer; list-style:none; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold summary::-webkit-details-marker { display:none; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold summary>span { font:16px Georgia,serif; color:var(--ink); }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold summary>small { margin-left:auto; font:10px 'Segoe UI',sans-serif; color:#806a49; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold summary::after { content:'+'; font:22px Georgia,serif; color:#886943; width:18px; text-align:center; }
+#modal.stronghold-details-modal:has([data-holding]) .detail-fold[open] summary::after { content:'\2212'; }
+#modal.stronghold-details-modal:has([data-holding]) .fold-content { padding:2px 10px 12px; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-panel { margin:16px 0 0; padding:0; border:0!important; background:none!important; box-shadow:none!important; color:var(--ink)!important; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-heading { padding-bottom:7px; border-bottom:1px solid var(--line); color:var(--ink)!important; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-heading>span { font:19px Georgia,serif; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-heading strong { color:#726044!important; font-size:11px; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-row { padding:8px 0; border-bottom:1px solid #cdbc98; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-row button { min-height:40px; padding:0 13px; background:#eadcbb!important; border:1px solid #a58d65!important; color:#493c2b!important; box-shadow:none!important; text-shadow:none!important; font:12px Georgia,serif; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-panel small { display:block; font:10px/1.5 'Segoe UI',sans-serif; color:#715d42!important; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-reinforcement-empty { color:#715d42!important; font-size:11px; }
+#modal.stronghold-details-modal:has([data-holding]) .holding-footer { display:flex; flex:none; min-height:63px; padding:8px 21px; border-top:1px solid var(--line); background:#e7d9b8; color:#75644c; font:11px/1.4 'Segoe UI',sans-serif; align-items:center; }
+#modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-panel { display:flex; align-items:center; width:100%; gap:15px; padding:0; margin:0; border:0!important; background:none!important; box-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy { flex:1; min-width:0; }
+#modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy>strong { display:block; color:#6d5637!important; font:14px Georgia,serif; }
+#modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy small { color:#75644c!important; display:block; font:10px/1.4 'Segoe UI',sans-serif; }
+#modal.stronghold-details-modal:has([data-holding]) .relinquish-city-btn { min-height:44px; min-width:160px; padding:6px 16px; border:1px solid #8d5a42!important; background:#eee0c3!important; color:#7c3c2f!important; box-shadow:none!important; text-shadow:none!important; font:14px Georgia,serif!important; }
+#modal.stronghold-details-modal:has([data-holding]) :is(button,summary):focus-visible { outline:2px solid #35616c!important; outline-offset:2px; }
+#modal.stronghold-details-modal:has([data-holding]) button:disabled { opacity:.55; cursor:default; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-ledger { display:flex; flex-direction:column; min-height:0; height:100%; padding:20px 24px; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.citadel-reign-heading,.citadel-reign-row) { display:grid; grid-template-columns:58px minmax(0,1fr) 145px; align-items:center; gap:14px; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-heading { flex:none; padding:9px 12px; font:10px 'Segoe UI',sans-serif; color:#75644c!important; border-block:1px solid var(--line)!important; background:#e4d6b2!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-list { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-row { min-height:68px; padding:10px 12px; border:0!important; border-bottom:1px solid #c9b791!important; border-radius:0; background:transparent!important; box-shadow:none!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-row.current { background:#e1e4c7!important; box-shadow:inset 3px 0 #7b865b!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-rank { font:22px Georgia,serif; color:#8b6c3e!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-ruler small { display:block; font:10px 'Segoe UI',sans-serif; color:#607048!important; }
+#modal.stronghold-details-modal:has([data-holding]) .citadel-reign-time { text-align:right; font:17px Georgia,serif; color:#493c2b!important; font-variant-numeric:tabular-nums; }
+#modal.stronghold-details-modal:has([data-holding]) :is(.citadel-reign-note,.citadel-reign-empty) { flex:none; color:#75644c!important; font:11px/1.5 'Segoe UI',sans-serif; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefits { border:1px solid #b08d53; padding:10px 12px; background:linear-gradient(110deg,#e3c895,#f0dfb5); box-shadow:inset 0 0 0 3px #faecc755; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading { display:flex; align-items:center; gap:7px; padding-bottom:8px; border-bottom:1px solid #b6996680; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading img { width:29px; height:29px; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading h3 { margin:0; font:19px Georgia,serif; color:#77422e; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading small { margin-left:auto; font:10px 'Segoe UI',sans-serif; color:#725b3a; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); margin-top:8px; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid>div { min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 6px; border-left:1px solid #c0a476; text-align:center; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid>div:first-child { border-left:0; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid strong { font:27px/1.05 Georgia,serif; color:#774f29; white-space:nowrap; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid span { font:10px/1.2 'Segoe UI',sans-serif; color:#685234; }
+#modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid>div:last-child strong { color:#53633c; }
+
+@media(max-height:600px),(max-width:1000px) {
+  #modal.stronghold-details-modal:has([data-holding]) .modal-card #modalTitle { padding:2px 56px 2px 13px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) { width:calc(100vw - 16px); height:calc(100dvh - 16px); padding:5px; }
+  #modal.stronghold-details-modal:has([data-holding]) #modalTitle { min-height:48px; padding:2px 56px 2px 13px; gap:9px; font-size:23px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) #modalTitle small { font-size:8px; letter-spacing:1.3px; margin-bottom:1px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-title-seal { width:35px; height:39px; border-width:2px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-title-seal img { width:27px; height:27px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-ownership { font-size:10px; padding:4px 7px; }
+  #modal.stronghold-details-modal:has([data-holding]) #closeModalBtn { top:3px; right:7px; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-info-tabs { min-height:36px; padding:0 13px; gap:14px; }
+  #modal.stronghold-details-modal:has([data-holding]) .camp-info-tab { min-height:36px; font-size:14px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .overview-panel { grid-template-columns:31% minmax(0,1fr); }
+  #modal.stronghold-details-modal:has([data-holding]) .identity-column { padding:8px 11px; }
+  #modal.stronghold-details-modal:has([data-holding]) .details-column { padding:8px 12px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-illustration { flex:1 0 91px; min-height:91px; margin-bottom:3px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-illustration>img { padding:3px 5px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level { top:4px; left:4px; padding:3px 5px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level small { font-size:7px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level strong { font-size:18px; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip) { padding:5px 0; gap:2px; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip)>span { font-size:8px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip)>strong { font-size:13px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.stat-wide,.stat-chip) small { font-size:9px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.player-name-link,.clan-identity-link,.objective-clan-link,.reinforcement-holder-link) { font-size:13px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-benefit { padding:7px 9px; grid-template-columns:31px minmax(0,1fr) auto auto; gap:9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-benefit>img { width:31px; height:31px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-heading h3 { font-size:16px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-heading small { font-size:7px; margin-bottom:3px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate { min-width:48px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate strong { font-size:24px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate small { font-size:8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate.shared strong { font-size:20px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-overview { gap:8px; margin-top:7px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card { padding:8px 9px; gap:8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card>img { width:23px; height:25px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card strong { font-size:24px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .fortification-status { margin-top:7px; padding:7px 10px; }
+  #modal.stronghold-details-modal:has([data-holding]) .overview-disclosures { margin-top:7px; }
+  #modal.stronghold-details-modal:has([data-holding]) .detail-fold summary { min-height:42px; }
+  #modal.stronghold-details-modal:has([data-holding]) .detail-fold summary>span { font-size:14px; }
+  #modal.stronghold-details-modal:has([data-holding]) .detail-fold summary>small { font-size:9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-footer { min-height:50px; padding:4px 12px; }
+  #modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy>strong { font-size:12px; }
+  #modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy small { font-size:9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .relinquish-city-btn { min-height:40px; min-width:145px; font-size:12px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-reign-ledger { padding:10px 14px; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-reign-row { min-height:52px; padding:6px 9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-reign-time { font-size:14px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefits { padding:6px 8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading { padding-bottom:4px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading img { width:20px; height:20px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading h3 { font-size:15px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading small { font-size:8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid { margin-top:5px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid strong { font-size:22px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid span { font-size:8px; }
+}
+@media(max-width:650px) {
+  #modal.stronghold-details-modal:has([data-holding]) .modal-card #modalTitle { padding:2px 50px 2px 9px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) #modalTitle { min-height:43px; gap:7px; padding-left:9px; font-size:20px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-title-seal { width:29px; height:33px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-ownership { font-size:9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-info-tabs { min-height:33px; }
+  #modal.stronghold-details-modal:has([data-holding]) .camp-info-tab { min-height:33px; }
+  #modal.stronghold-details-modal:has([data-holding]) .overview-panel { grid-template-columns:32% minmax(0,1fr); }
+  #modal.stronghold-details-modal:has([data-holding]) .identity-column { padding:6px 7px; }
+  #modal.stronghold-details-modal:has([data-holding]) .details-column { padding:6px 8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-illustration { flex-basis:60px; min-height:60px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level { padding:2px 3px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level small { font-size:6px; }
+  #modal.stronghold-details-modal:has([data-holding]) .keep-level strong { font-size:16px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-benefit { gap:6px; grid-template-columns:minmax(0,1fr) auto auto; padding:4px 8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-benefit>img { display:none; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-heading h3 { font-size:14px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate { min-width:42px; }
+  #modal.stronghold-details-modal:has([data-holding]) .benefit-rate strong { font-size:22px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card { padding:5px 7px; gap:5px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card>img { width:18px; height:22px; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card strong { font-size:19px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) .strength-card small { display:none; }
+  #modal.stronghold-details-modal:has([data-holding]) .detail-fold summary>small { display:none; }
+  #modal.stronghold-details-modal:has([data-holding]) .detail-fold summary::after { margin-left:auto; }
+  #modal.stronghold-details-modal:has([data-holding]) .holding-footer { min-height:48px; padding:3px 9px; }
+  #modal.stronghold-details-modal:has([data-holding]) .relinquish-city-action-copy small { font-size:8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .relinquish-city-btn { min-width:122px; padding-inline:8px; font-size:11px!important; }
+  #modal.stronghold-details-modal:has([data-holding]) :is(.citadel-reign-heading,.citadel-reign-row) { grid-template-columns:38px minmax(0,1fr) 104px; gap:8px; }
+  #modal.stronghold-details-modal:has([data-holding]) .citadel-reign-row { min-height:44px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefits { padding:4px 5px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading { padding-bottom:3px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-heading h3 { font-size:13px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid strong { font-size:18px; }
+  #modal.stronghold-details-modal:has([data-holding]) .crown-benefit-grid span { font-size:7px; }
+}
