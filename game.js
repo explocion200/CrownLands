@@ -10243,9 +10243,10 @@ function updateVisibleFortificationRepairStatus(nowMs = Date.now()) {
     const power = status.querySelector("[data-fortification-power]");
     if (power && fullWallPower > 0) {
       const currentWallPower = Math.max(0, Math.floor(fullWallPower * integrityBps / 10_000));
+      const formatWallNumber = status.closest(".stronghold-legacy-info-panel,.crown-citadel-info-panel") ? formatLedgerNumber : formatNumber;
       setTextIfChanged(
         power,
-        `${formatNumber(currentWallPower)} / ${formatNumber(fullWallPower)} wall power. Walls absorb attack power before the garrison fights.`
+        `${formatWallNumber(currentWallPower)} / ${formatWallNumber(fullWallPower)} wall power. Walls absorb attack power before the garrison fights.`
       );
     }
   }
@@ -13766,7 +13767,7 @@ const ISLAND_PICKER_TILE_HEIGHT = 179;
 const ISLAND_PICKER_TILE_GAP = 34;
 const ISLAND_PICKER_STAGE_PADDING = 260;
 const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
-const ISLAND_PICKER_MIN_ZOOM = 0.18;
+const ISLAND_PICKER_MIN_ZOOM = 0.025;
 const ISLAND_PICKER_MAX_ZOOM = 1;
 const ISLAND_PICKER_CAMERA_EASE_MS = 120;
 const ISLAND_PICKER_ZOOM_EPSILON = 0.00035;
@@ -13906,6 +13907,81 @@ function islandMapFeatures(regionId) {
   return HOLDING_TOWER_UI.createMapFeaturePresentation(normalizeRegionId(regionId), HOLDING_TOWER_DEFINITIONS, REGION_CATALOG_SUMMARIES_BY_ID, WORLD_CAMPS);
 }
 
+// Same specialization icons used by the approved Strongholds ledger.
+const ATLAS_STRONGHOLD_BONUS_ICONS = Object.freeze({
+ "core-v2-greybanner-hold-p0-m1": "assets/icons/daily-login-troops-r1.svg",
+ "core-v2-aurum-keep-m1-p0": "assets/icons/royal-shop-gold-r1.svg",
+ "core-v2-swiftgate-p1-p0": "assets/icons/skills/marchOrders.svg",
+ "core-v2-ironwatch-p0-p1": "assets/icons/skills/shieldwallDiscipline.svg"
+});
+// Decorative SVG overlays stay outside layout and never intercept map gestures.
+function atlasFeatureFrame(kind, citadel = false, bonusIcon = "") {
+ const corners = (art, inset = 0, bottomArt = art) => [
+  `translate(${inset} ${inset})`,
+  `translate(${262-inset} ${inset}) scale(-1 1)`,
+  `translate(${inset} ${203-inset}) scale(1 -1)`,
+  `translate(${262-inset} ${203-inset}) scale(-1 -1)`
+ ].map((transform, index) => `<g transform="${transform}">${index < 2 ? art : bottomArt}</g>`).join("");
+ let art = "";
+ if (kind === "tower") {
+  const turret = `<path d="M2 29V3h6v5h5V2h6v6h5V3h6v26l-5 5H7Z" fill="#607557" stroke="#293e2d" stroke-width="1.6"/>
+   <path d="M5 12h22M4 21h24M11 13v7m10-7v7M15 22v9" fill="none" stroke="#344b35" stroke-width="1.2"/>
+   <path d="M4 29V11m2 0h21M3 4h3m9-1h3m8 1h3" fill="none" stroke="#c4cc9b" stroke-width="1.2"/>
+   <path d="M13 29v-5a3 3 0 0 1 6 0v5" fill="#263c2a"/>`;
+  art = `<rect x="8" y="8" width="246" height="187" rx="1" fill="none" stroke="#293e2d" stroke-width="11"/>
+   <rect x="8" y="8" width="246" height="187" fill="none" stroke="#526c44" stroke-width="8"/>
+   <rect x="13" y="13" width="236" height="177" fill="none" stroke="#c4cc9b" stroke-width="1.3"/>
+   <path d="M38 7h72m42 0h72M38 196h186M7 42v119m248-119v119" fill="none" stroke="#94a477" stroke-width="1"/>
+   ${corners(turret, 0, '<path d="M2 26V3h29v8H11v15Z" fill="#607557" stroke="#293e2d" stroke-width="1.5"/><path d="M5 24V6h23M13 7v3m8-3v3" fill="none" stroke="#c4cc9b" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="#344b35"/>')}
+   <path d="M116 1h30v17l-15 12-15-12Z" fill="#354e36" stroke="#c4cc9b" stroke-width="1.5"/>
+   <path d="M123 19V8h4V4h3v4h3V4h3v4h3v11Zm6 0v-5h4v5" fill="#d8d9ad" stroke="#233825" stroke-width=".7"/>`;
+ } else if (kind === "camp") {
+  const fitting = `<path d="M1 1h27v6H11l-4 4v17H1Z" fill="#dcb465" stroke="#755323" stroke-width="1.4"/>
+   <path d="M3 26V3h23M10 9l4-4" fill="none" stroke="#fff0ba" stroke-width="1.2"/>
+   <path d="m3 3 7 7" fill="none" stroke="#8d662d" stroke-width="1"/>
+   <circle cx="5" cy="5" r="2" fill="#82602f" stroke="#ffedb3" stroke-width=".7"/>
+   <circle cx="23" cy="4" r="1.4" fill="#80602c"/><circle cx="4" cy="23" r="1.4" fill="#80602c"/>`;
+  art = `<rect x="16" y="16" width="230" height="171" fill="none" stroke="#775724" stroke-width="7"/>
+   <rect x="16" y="16" width="230" height="171" fill="none" stroke="#e6c16f" stroke-width="5"/>
+   <rect x="19" y="19" width="224" height="165" fill="none" stroke="#fff1ba" stroke-width="1"/>
+   <path d="M46 16h69m32 0h69M46 187h170M16 46v111m230-111v111" fill="none" stroke="#a47d38" stroke-width="1" stroke-dasharray="2 4"/>
+   ${corners(fitting, 12, '<path d="M0 23V0h28v4H4v19Z" fill="#dcb465" stroke="#755323" stroke-width="1"/><path d="M2 21V2h24" fill="none" stroke="#fff0ba" stroke-width="1"/><circle cx="2" cy="2" r="1.5" fill="#80602c"/>')}
+   <circle cx="131" cy="13" r="12" fill="#dab366" stroke="#755323" stroke-width="1.5"/>
+   <circle cx="131" cy="13" r="9.5" fill="none" stroke="#ffedb2"/>
+   <path d="m122 19 9-15 9 15Zm9-15v15m-5 0 5-8 5 8" fill="#f6e4a7" stroke="#694d23" stroke-width="1.2" stroke-linejoin="round"/>`;
+ } else if (kind === "royal") {
+  const flourish = `<path d="M0 22V4L4 0h18l-3 5H9L5 9v10Z" fill="#d9b56d" stroke="#633923" stroke-width="1.2"/>
+   <path d="M3 17V6l3-3h11" fill="none" stroke="#fff0bd" stroke-width="1.2"/>
+   <path d="M9 10c14-10 19 1 9 5 5-7-4-8-9-5Zm1-1c-10 14 1 19 5 9-7 5-8-4-5-9Z" fill="#c69a53" stroke="#683e26" stroke-width=".9"/>
+   <path d="m5 5 4 3-1 4-4-3Z" fill="#923c32" stroke="#ffdf97" stroke-width=".7"/>`;
+  // Show each Stronghold's specialization; only Crown Citadel uses the crown.
+  const crest = citadel ? `<g class="citadel-crest">
+   <path d="M110 5q21-12 42 0l-3 19-18 12-18-12Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
+   <path d="m113 8 4 15 14 9 14-9 4-15" fill="none" stroke="#b36d51" stroke-width="1"/>
+   <path d="m117 10 7 5 7-12 7 12 7-5-4 14h-20Z" fill="#e6c17e" stroke="#593924" stroke-width="1.2" stroke-linejoin="round"/>
+   <path d="M121 21h20m-16-4 6-10 5 10" fill="none" stroke="#fff1b9" stroke-width="1.2"/>
+   <circle cx="117" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
+   <circle cx="145" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
+   <path d="m131 1 3 3-3 3-3-3Z" fill="#fff3c5" stroke="#593924" stroke-width=".7"/>
+   <path d="m105 6-7-3 3 7m56-4 7-3-3 7M124 28l7 4 7-4" fill="none" stroke="#f1d897" stroke-width="1.5"/>
+   </g>` : `<g class="stronghold-crest">
+   <path d="M106 0q25-12 50 0l-3 23-22 15-22-15Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
+   <path d="M110 2q21-9 42 0l-3 19-18 12-18-12Z" fill="#dfcba0" stroke="#a57e47" stroke-width="1"/>
+   ${bonusIcon ? `<image class="stronghold-bonus-icon" href="${bonusIcon}" x="114" y="-3" width="34" height="34" preserveAspectRatio="xMidYMid meet"/>` : ''}
+   </g>`;
+  art = `<rect x="8" y="8" width="246" height="187" rx="2" fill="none" stroke="#542b24" stroke-width="13"/>
+   <rect x="8" y="8" width="246" height="187" rx="1" fill="none" stroke="#8e352e" stroke-width="10"/>
+   <rect x="2.8" y="2.8" width="256.4" height="197.4" rx="2" fill="none" stroke="#d0a25d" stroke-width="1.5"/>
+   <rect x="13.2" y="13.2" width="235.6" height="176.6" fill="none" stroke="#f0d492" stroke-width="1.5"/>
+   <path d="M39 7h67m50 0h67M39 196h68m48 0h68M7 39v125m248-125v125" fill="none" stroke="#bb7860" stroke-width="1"/>
+   ${corners(flourish)}
+   <path d="m119 190 12-5 12 5v9l-12 4-12-4Z" fill="#89362d" stroke="#d7b373" stroke-width="1.2"/>
+   <path d="m131 189 4 5-4 5-4-5Z" fill="#e1bd78"/>
+   ${crest}`;
+ }
+ return `<svg class="feature-frame frame-${kind}" viewBox="0 0 262 203" aria-hidden="true" focusable="false">${art}</svg>`;
+}
+
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const regionId = normalizeRegionId(region.id);
   const label = region.label || regionId;
@@ -13936,6 +14012,9 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
       ${feature.markup}
+      ${hasRedTrim ? atlasFeatureFrame("royal", (getIllustratedMapPresentation(regionId)?.landmarks || []).some(landmark => landmark.kind === "citadel"), ATLAS_STRONGHOLD_BONUS_ICONS[regionId] || "") : ""}
+      ${feature.hasClanTower ? atlasFeatureFrame("tower") : ""}
+      ${feature.hasCamp ? atlasFeatureFrame("camp") : ""}
       ${isActive ? `<span class="island-map-active-label">Current map</span>` : ""}
       ${isHome ? `<span class="island-map-home-label">Home map</span>` : ""}
     </button>
@@ -13948,7 +14027,13 @@ function renderIslandSwitcherModalContent() {
   const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
   modalBody.innerHTML = `
     <div class="island-map-shell">
-      ${HOLDING_TOWER_UI.mapFeatureLegend}
+      <div class="atlas-toolbar">
+        <button type="button" class="location-shortcut" data-atlas-focus="${escapeHtml(activeRegionId)}"><small>Current map</small><strong>${escapeHtml(getRegionLabel(activeRegionId))}</strong></button>
+        <button type="button" class="location-shortcut home" data-atlas-focus="${escapeHtml(homeRegionId)}"><small>Home map</small><strong>${escapeHtml(getRegionLabel(homeRegionId))}</strong></button>
+        <button type="button" class="fit-button" data-atlas-fit>Whole realm</button>
+        <div class="zoom-controls"><button type="button" data-atlas-zoom="-1" aria-label="Zoom out">−</button><output data-atlas-zoom-value aria-label="Map zoom"></output><button type="button" data-atlas-zoom="1" aria-label="Zoom in">+</button></div>
+      </div>
+      ${HOLDING_TOWER_UI.mapFeatureLegend.replace("</div>", '<span><strong class="atlas-royal-legend" aria-hidden="true">♛</strong> Stronghold / Citadel</span></div>')}
       <div class="island-map-picker" style="${getIslandMapPickerStyle()}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
         <div class="island-map-stage">
           <div class="island-map-canvas-frame">
@@ -13966,6 +14051,7 @@ function renderIslandSwitcherModalContent() {
   attachIslandMapPickerPan(picker);
   attachIslandMapPickerZoom(picker);
   setIslandMapPickerOpeningView(picker, activeRegionId || homeRegionId);
+  bindIslandAtlasControls(picker);
   picker.addEventListener("click", event => {
     if (picker.dataset.justDragged === "true") return;
     const directTile = event.target?.closest?.("[data-island-region]");
@@ -13976,6 +14062,43 @@ function renderIslandSwitcherModalContent() {
     if (!button || !picker.contains(button)) return;
     rememberIslandMapPickerView(picker);
     switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
+  });
+}
+
+function bindIslandAtlasControls(picker) {
+  const controller = getIslandMapPickerCameraController(picker);
+  const focusRegion = (regionId, zoom = getIslandMapPickerZoom(picker)) => {
+    const region = WORLD_REGIONS.find(entry => normalizeRegionId(entry.id) === normalizeRegionId(regionId));
+    if (!region || !isWorldRegionRuntimeActive(region.id)) return;
+    const position = getIslandMapPosition(region);
+    controller.moveTo({ x: picker.clientWidth / 2 - position.x * zoom, y: picker.clientHeight / 2 - position.y * zoom, zoom });
+  };
+  modalBody.querySelectorAll('[data-atlas-focus]').forEach(button => button.addEventListener('click', () => {
+    focusRegion(button.dataset.atlasFocus, getIslandMapPickerOpeningZoom(picker));
+  }));
+  modalBody.querySelector('[data-atlas-fit]')?.addEventListener('click', () => {
+    const bounds = getIslandMapContentBounds();
+    const zoom = getIslandMapPickerFitZoom(picker);
+    controller.moveTo({ x: picker.clientWidth / 2 - (bounds.left + bounds.right) / 2 * zoom, y: picker.clientHeight / 2 - (bounds.top + bounds.bottom) / 2 * zoom, zoom });
+  });
+  modalBody.querySelectorAll('[data-atlas-zoom]').forEach(button => button.addEventListener('click', () => {
+    controller.zoomTo(controller.getTargetCamera().zoom * (Number(button.dataset.atlasZoom) > 0 ? 1.25 : 0.8), picker.clientWidth / 2, picker.clientHeight / 2);
+  }));
+  // Only keyboard navigation recenters focus. Pointer focus must not move a tile
+  // beneath the pressed pointer before its click can resolve.
+  picker.addEventListener('keydown', event => {
+    const tile = event.target.closest('[data-island-region]');
+    if (!tile || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const region = WORLD_REGIONS.find(entry => normalizeRegionId(entry.id) === tile.dataset.islandRegion);
+    if (!region) return;
+    const from = getIslandMapGridCoordinate(region);
+    const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    const target = getIslandMapGridLayout().entries.find(entry => entry.gridX === from.gridX + delta[0] && entry.gridY === from.gridY + delta[1]);
+    if (!target) return;
+    const next = [...picker.querySelectorAll('[data-island-region]')].find(button => button.dataset.islandRegion === normalizeRegionId(target.region.id));
+    next?.focus({ preventScroll: true });
+    focusRegion(target.region.id);
   });
 }
 
@@ -14031,7 +14154,7 @@ function getIslandMapPickerOpeningZoom(picker) {
   const layout = getIslandMapGridLayout();
   const margin = getIslandMapPickerViewportMargin(picker);
   const neighborhoodWidth = ISLAND_PICKER_TILE_WIDTH + layout.stepX * 2;
-  const neighborhoodHeight = ISLAND_PICKER_TILE_HEIGHT + layout.stepY * 2;
+  const neighborhoodHeight = ISLAND_PICKER_TILE_HEIGHT + layout.stepY * (picker.clientHeight < 400 ? 0.55 : 1.5);
   return clampIslandMapPickerZoom(Math.min(
     ISLAND_PICKER_MAX_ZOOM,
     Math.max(1, picker.clientWidth - margin * 2) / neighborhoodWidth,
@@ -14127,6 +14250,9 @@ function createIslandMapPickerCameraController(picker) {
     islandMapPickerViewState.zoom = current.zoom;
     islandMapPickerViewState.hasView = true;
     picker.dataset.islandMapZoom = String(current.zoom);
+    picker.classList.toggle("atlas-overview", current.zoom < 0.26);
+    const zoomOutput = modalBody.querySelector("[data-atlas-zoom-value]");
+    if (zoomOutput) zoomOutput.textContent = `${Math.round(current.zoom * 100)}%`;
     picker.style.setProperty("--island-map-indicator-scale", formatIslandCameraNumber(1 / current.zoom));
     if (frame) frame.style.transform = `translate3d(${formatIslandCameraNumber(current.x)}px, ${formatIslandCameraNumber(current.y)}px, 0) scale(${formatIslandCameraNumber(current.zoom)})`;
   };
@@ -26990,7 +27116,7 @@ function updateVisibleCityDynamicText() {
     if (!city) return;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const visibleTroops = getVisibleCityGarrisonTroops(city, scoutReport);
-    value.textContent = visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops);
+    value.textContent = visibleTroops === undefined ? "Unknown" : (isStronghold(city) ? formatLedgerNumber : formatNumber)(visibleTroops);
   });
   if (typeof patchCityDetailsPanel === "function") patchCityDetailsPanel();
 }
@@ -31017,6 +31143,31 @@ async function refreshStrongholdLegacyPanel(stronghold, { force = false } = {}) 
   return request;
 }
 
+function mountStrongholdDetails(city) {
+  const crown = isCrownCitadel(city);
+  const kind = crown ? "crown" : isTrainingStronghold(city) ? "training" : isSpeedStronghold(city) ? "movement" : isDefenseStronghold(city) ? "defense" : "gold";
+  const icon = crown ? "assets/icons/reward-achievements-r1.svg" : {
+    training: "assets/icons/daily-login-troops-r1.svg", movement: "assets/icons/skills/marchOrders.svg",
+    defense: "assets/icons/skills/shieldwallDiscipline.svg", gold: "assets/icons/royal-shop-gold-r1.svg",
+  }[kind];
+  const crownBenefits = [
+    ["Base gold", CROWN_CITADEL_GOLD_BONUS_PERCENT], ["Base troops", CROWN_CITADEL_TROOP_BONUS_PERCENT],
+    ["March speed", CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT], ["Soldier defense", CROWN_CITADEL_DEFENSE_BONUS_PERCENT],
+    ["Upgrade cost", -CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT],
+  ];
+  const benefitMarkup = crown
+    ? `<div class="crown-benefit-heading"><img src="${icon}" alt=""><h3>Crown dominion</h3><small>Controller benefits</small></div><div class="crown-benefit-grid">${crownBenefits.map(([label, value]) => `<div><strong>${value > 0 ? "+" : "−"}${formatNumber(Math.abs(value))}%</strong><span>${label}</span></div>`).join("")}</div>`
+    : `<img src="${icon}" alt=""><div class="benefit-heading"><small>HOLDING BENEFIT</small><h3>${escapeHtml(getStrongholdProductionLabel(city))}</h3></div><div class="benefit-rate"><strong>+${formatNumber(getStrongholdBonusPercent(city))}%</strong><small>Controller</small></div><div class="benefit-rate shared"><strong>+${formatNumber(getStrongholdBonusPercent(city) / 2)}%</strong><small>Clanmates</small></div>`;
+  modal.className = "modal stronghold-details-modal";
+  modalTitle.innerHTML = `<span class="holding-title-seal"><img src="${icon}" alt=""></span><span><small>${crown ? "CROWN CITADEL" : `${kind.toUpperCase()} STRONGHOLD`}</small>${escapeHtml(city.name)}</span><span class="holding-ownership">${city.owner === "player" ? "Your holding" : city.owner === "neutral" ? "Neutral" : isClanAllyCity(city) ? "Clan ally" : "Foreign holding"}</span>`;
+  window.CrownlandsStrongholdDetailsUi.mount(modalBody, {
+    name: city.name, art: getStrongholdArtSrc(city), level: formatNumber(getStrongholdDefenseLevel(city)), crown, kind, benefitMarkup,
+    benefitDetailsMarkup: crown ? `<table class="crown-sharing"><caption>Crown benefits while held</caption><thead><tr><th>Benefit</th><th>Controller</th><th>Clanmate</th></tr></thead><tbody>${crownBenefits.map(([label, value]) => `<tr><th scope="row">${label}</th><td>${value > 0 ? "+" : "−"}${Math.abs(value)}%</td><td>${value > 0 ? "+" : "−"}${Math.abs(value) / 2}%</td></tr>`).join("")}</tbody></table><p>Personal and shared clan benefits are resolved by the server. The Citadel controller also receives half the benefit of personally held regional Strongholds. March speed affects travel time; upgrade cost is reduced.</p>` : "",
+    accessNote: isClanAllyCity(city) ? "Clan ally holding · Recall your stationed troops from Clan reinforcements."
+      : "Scout reports govern private troop and defense information.",
+  });
+}
+
 function strongholdInfoPanelMarkup(stronghold, overviewMarkup) {
   const strongholdId = String(stronghold?.id || "");
   const cachedMarkup = strongholdLegacyCache.has(strongholdId)
@@ -31244,18 +31395,18 @@ function showCrownCitadelInfoModal(city) {
       </div>
       <section id="citadelOverviewPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="citadelOverviewTab" data-citadel-info-panel="overview">
         <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-          <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>The defense portion adds +10% for the controller or +5% for clanmates against each defending soldier's 1.30 base. It never increases walls, Stoneworks, city level, or repair time.</small></div>
+          <div class="stat-wide stronghold-status" data-holding-field="benefits"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>The defense portion adds +10% for the controller or +5% for clanmates against each defending soldier's 1.30 base. It never increases walls, Stoneworks, city level, or repair time.</small></div>
           ${renderObjectiveClanAffiliation(city)}
-          ${owned ? `<div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>` : ""}
-          <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
-          <div class="stat-chip"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
-          <div class="stat-chip"><span>Troops stationed</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
-          <div class="stat-chip"><span>${owned ? "Estimated live defense" : report ? "Scouted defense" : "Defense"}</span><strong>${visibleDefense === undefined
+          ${owned ? `<div class="stat-wide" data-holding-field="benefits"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>` : ""}
+          <div class="stat-chip" data-holding-field="owner"><span>Controller</span>${city.owner === "neutral" ? `<strong>${escapeHtml(controller)}</strong>` : renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), controller)}</div>
+          <div class="stat-chip" data-holding-field="reign"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
+          <div class="stat-chip" data-holding-field="troops"><span>Troops stationed</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatLedgerNumber(visibleTroops)}</strong></div>
+          <div class="stat-chip" data-holding-field="estimate"><span>${owned ? "Estimated live defense" : report ? "Scouted defense" : "Defense"}</span><strong>${visibleDefense === undefined
             ? "Unknown"
-            : formatNumber(visibleDefense)}</strong><small>${owned ? "Current wall plus locally estimated garrison defense" : report ? "Wall plus garrison at scout time" : "Scout to reveal"}</small></div>
+            : formatLedgerNumber(visibleDefense)}</strong><small>${owned ? "Current wall plus locally estimated garrison defense" : report ? "Wall plus garrison at scout time" : "Scout to reveal"}</small></div>
           ${renderCityFortificationStatus(city, stats, report)}
-          <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
-          <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
+          <div class="stat-chip"><span>Defense level</span><strong>${formatLedgerNumber(stats.level)}</strong><small>matches a level ${formatLedgerNumber(stats.level)} city</small></div>
+          <div class="stat-chip" data-holding-field="limit"><span>Garrison limit</span><strong>Unlimited</strong></div>
           ${!owned && clanAlly
             ? `<div class="stat-wide clan-garrison-access"><span>Garrison visibility</span><strong>Shared by clan</strong><small>Exact owner troops are live. Defense bonuses and reinforcement details remain private.</small></div>`
             : !owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
@@ -31283,6 +31434,7 @@ function showCrownCitadelInfoModal(city) {
     animateUiTabPanel(panels.find(panel => panel.dataset.citadelInfoPanel === selectedTab));
     if (selectedTab === "reigns") refreshCrownCitadelReignPanel();
   }));
+  mountStrongholdDetails(city);
   bindHoldingReinforcementButtons();
   if (owned) bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
@@ -31333,13 +31485,14 @@ function getCityFortificationDisplay(city, stats = null, report = null, nowMs = 
 
 function renderCityFortificationStatus(city, stats = null, report = null) {
   if (!supportsSiegeCombat()) return "";
+  const formatWallNumber = isStronghold(city) ? formatLedgerNumber : formatNumber;
   const displayedAtMs = Date.now();
   const fortification = getCityFortificationDisplay(city, stats, report, displayedAtMs);
   const breached = fortification.integrityBps <= 0;
   const damaged = fortification.integrityBps < 10_000;
   const status = breached ? "Breached" : damaged ? "Damaged" : "Intact";
   const powerText = fortification.powerVisible
-    ? `${formatNumber(fortification.currentWallPower)} / ${formatNumber(fortification.fullWallPower)} wall power`
+    ? `${formatWallNumber(fortification.currentWallPower)} / ${formatWallNumber(fortification.fullWallPower)} wall power`
     : "Wall power requires a scout report";
   const liveRepair = !report && damaged && fortification.repairAtMs > displayedAtMs;
   const repairText = damaged && fortification.repairAtMs > displayedAtMs
@@ -31360,6 +31513,8 @@ function showCityInfoModal(cityId) {
   if (!city) return;
   clearInnerCastleModalState();
   const stronghold = isStronghold(city);
+  const formatInfoNumber = stronghold ? formatLedgerNumber : formatNumber;
+  const formatInfoBaseAndBonus = stronghold ? formatLedgerBaseAndBonus : formatBaseAndBonusStat;
   if (isCrownCitadel(city)) {
     showCrownCitadelInfoModal(city);
     return;
@@ -31374,7 +31529,7 @@ function showCityInfoModal(cityId) {
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
     const strongholdBonusLabel = stronghold ? getStrongholdBonusLabel(city) : "";
     const neutralStrongholdBase = stronghold && city.owner === "neutral"
-      ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(getStrongholdStartTroops(city))}</strong><small>one-time starting defenders</small></div>`
+      ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatInfoNumber(getStrongholdStartTroops(city))}</strong><small>one-time starting defenders</small></div>`
       : "";
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     const overviewMarkup = `
@@ -31385,12 +31540,12 @@ function showCityInfoModal(cityId) {
             ? `<div class="stat-wide"><span>Clan</span>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}</div>`
             : ""}
         ${stronghold ? renderObjectiveClanAffiliation(city) : ""}
-        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>${isDefenseStronghold(city) ? "The controller receives +8% and current clanmates receive +4% against each defending soldier's 1.30 base. Walls, Stoneworks, city level, and repair time are unchanged." : "The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence."}</small></div>` : ""}
-        <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
-        <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
-        <div class="stat-chip"><span>Troops</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
-        <div class="stat-chip"><span>Total defense</span><strong>${report
-          ? formatBaseAndBonusStat(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
+        ${stronghold ? `<div class="stat-wide" data-holding-field="benefits"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>${isDefenseStronghold(city) ? "The controller receives +8% and current clanmates receive +4% against each defending soldier's 1.30 base. Walls, Stoneworks, city level, and repair time are unchanged." : "The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence."}</small></div>` : ""}
+        <div class="stat-wide" data-holding-field="owner"><span>Owner</span>${stronghold && city.owner === "neutral" ? `<strong>Neutral defenders</strong>` : renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
+        <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatInfoNumber(stats.level)}</strong></div>
+        <div class="stat-chip" data-holding-field="troops"><span>Troops</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatInfoNumber(visibleTroops)}</strong></div>
+        <div class="stat-chip" data-holding-field="estimate"><span>Total defense</span><strong>${report
+          ? formatInfoBaseAndBonus(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
           : "Unknown"}</strong></div>
         ${renderCityFortificationStatus(city, stats, report)}
         ${neutralStrongholdBase}
@@ -31409,7 +31564,10 @@ function showCityInfoModal(cityId) {
       modalTitle.textContent = city.name;
       bindCityDetailsPanel(city);
     }
-    if (stronghold) bindStrongholdInfoTabs(city);
+    if (stronghold) {
+      bindStrongholdInfoTabs(city);
+      mountStrongholdDetails(city);
+    }
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
     if (stronghold) void hydrateObjectiveClanAffiliation(city);
@@ -31437,23 +31595,24 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = `${city.name} - Stronghold`;
     const overviewMarkup = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Your clanmates receive half of this benefit while your clan controls it.</small></div>
+        <div class="stat-wide stronghold-status" data-holding-field="benefits"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Your clanmates receive half of this benefit while your clan controls it.</small></div>
         ${renderObjectiveClanAffiliation(city)}
-        <div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Citadel precedence is applied by the server.</small></div>
-        <div class="stat-wide"><span>Estimated live defense</span><strong>${formatNumber(supportsSiegeCombat() ? getCityFortificationDisplay(city, stats).totalDefensePower : stats.totalDefense)}</strong><small>${supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense")}</small></div>
+        <div class="stat-wide" data-holding-field="benefits"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Citadel precedence is applied by the server.</small></div>
+        <div class="stat-wide" data-holding-field="estimate"><span>Estimated live defense</span><strong>${formatInfoNumber(supportsSiegeCombat() ? getCityFortificationDisplay(city, stats).totalDefensePower : stats.totalDefense)}</strong><small>${supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense")}</small></div>
         ${renderCityFortificationStatus(city, stats)}
-        <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
-        <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
-        <div class="stat-chip"><span>Wall level</span><strong>${formatNumber(stats.level)}</strong><small>sets this objective's base wall and repair time</small></div>
-        <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
-        <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
-        <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
+        <div class="stat-chip" data-holding-field="owner"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
+        <div class="stat-chip" data-holding-field="troops"><span>Troops stationed</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${formatInfoNumber(city.troops)}</strong></div>
+        <div class="stat-chip"><span>Wall level</span><strong>${formatInfoNumber(stats.level)}</strong><small>sets this objective's base wall and repair time</small></div>
+        <div class="stat-chip"><span>City walls</span><strong>${formatInfoBaseAndBonus(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
+        <div class="stat-chip" data-holding-field="limit"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
+        <div class="stat-chip" data-holding-field="benefits"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
         ${renderRelinquishCityAction(city)}
         ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
     modalBody.innerHTML = strongholdInfoPanelMarkup(city, overviewMarkup);
     bindStrongholdInfoTabs(city);
+    mountStrongholdDetails(city);
     bindRelinquishCityButton(city);
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
@@ -36290,19 +36449,34 @@ function formatLeaderboardAge(updatedAtMs) {
 function renderLeaderboardRow(entry, index, currentUid) {
   const isCurrent = entry.uid === currentUid;
   return `
-    <article class="leaderboard-row ${isCurrent ? "current" : ""}">
-      <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
+    <article class="leaderboard-row ${isCurrent ? "current" : ""}" tabindex="-1">
+      <span class="leaderboard-rank">${formatLedgerNumber(index + 1)}</span>
       <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
       <div class="leaderboard-ruler">
-        <div>${entry.clanId && entry.clanTag ? `${renderClanIdentityLink({ clanId: entry.clanId, clanName: entry.clanName, clanTag: entry.clanTag, className: "city-clan-tag leaderboard-clan-link", display: "tag" })} ` : ""}${renderPlayerNameLink(entry.uid, entry.displayName)}</div>
-        <small>${escapeHtml(getRegionLabel(entry.mainRegionId))} - ${formatNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}${isCurrent ? " - You" : ""}</small>
+        <div>${renderPlayerNameLink(entry.uid, entry.displayName)}${isCurrent ? '<span class="leaderboard-you">YOU</span>' : ""}</div>
+        <small>${entry.clanId && entry.clanTag ? renderClanIdentityLink({ clanId: entry.clanId, clanName: entry.clanName, clanTag: entry.clanTag, className: "city-clan-tag leaderboard-clan-link", display: "tag" }) : "No clan"}<span class="leaderboard-mobile-meta"> · ${escapeHtml(getRegionLabel(entry.mainRegionId))} · ${formatLedgerNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}</span></small>
       </div>
-      <div class="leaderboard-power">
-        <strong>${formatNumber(entry.kingPower)}</strong>
-        <small>${escapeHtml(formatLeaderboardAge(entry.updatedAtMs))}</small>
-      </div>
-    </article>
-  `;
+      <span class="leaderboard-map">${escapeHtml(getRegionLabel(entry.mainRegionId))}</span>
+      <span class="leaderboard-cities">${formatLedgerNumber(entry.cityCount)}</span>
+      <div class="leaderboard-power"><strong>${formatLedgerNumber(entry.kingPower)}</strong><small>${escapeHtml(formatLeaderboardAge(entry.updatedAtMs))}</small></div>
+    </article>`;
+}
+
+function updateLeaderboardStanding(category, entries = []) {
+  const clans = category === "clans";
+  const panel = modalBody.querySelector(`[data-leaderboard-panel="${category}"]`);
+  const standing = panel?.querySelector('.leaderboard-standing');
+  if (!standing) return;
+  const index = entries.findIndex(entry => clans ? entry.id === state?.clanId : entry.uid === getCurrentOnlineUid());
+  const entry = entries[index];
+  standing.innerHTML = entry
+    ? `<span>${clans ? "Your clan" : "Your standing"}</span><strong>#${index + 1}</strong><b>${formatLedgerNumber(clans ? entry.totalKingPower || 0 : entry.kingPower)} <small>${clans ? "Clan" : "King"} Power</small></b><button type="button" data-find-rank>Find my ${clans ? "clan" : "rank"} ↓</button>`
+    : `<span>Your ${clans ? "clan" : "kingdom"} is not in this Top ${formatLedgerNumber(KING_POWER_LEADERBOARD_LIMIT)}.</span>`;
+  standing.querySelector('[data-find-rank]')?.addEventListener('click', () => {
+    const row = panel.querySelector('.leaderboard-row.current');
+    row?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    row?.focus({ preventScroll: true });
+  });
 }
 
 function renderLeaderboardRows(rows) {
@@ -36313,6 +36487,7 @@ function renderLeaderboardRows(rows) {
   list.innerHTML = entries.length
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
+  updateLeaderboardStanding("players", entries);
   entries.forEach((entry, index) => {
     FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag, {
       stableKey: entry.uid,
@@ -36414,13 +36589,13 @@ async function refreshClanLeaderboardRows() {
     const rows = await api.loadClanLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
     if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
     list.innerHTML = rows.length ? rows.map((entry, index) => `
-      <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}">
-        <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
+      <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}" tabindex="-1">
+        <span class="leaderboard-rank">${formatLedgerNumber(index + 1)}</span>
         <button class="clan-shield-link clan-leaderboard-shield-link" type="button" data-public-clan-id="${escapeHtml(entry.id)}" aria-label="View ${escapeHtml(entry.name || "Clan")} public clan profile">${renderClanHeraldry(entry.shield || entry.banner, { size: "mini", label: `${entry.name || "Clan"} shield` })}</button>
-        ${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-tag", display: "tag" })}
-        <div class="leaderboard-ruler">${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-name", display: "name" })}<small>${formatNumber(entry.memberCount || 0)} members</small></div>
-        <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
+        <div class="leaderboard-ruler">${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-tag", display: "tag" })} ${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-name", display: "name" })}<small class="leaderboard-mobile-meta">${formatLedgerNumber(entry.memberCount || 0)} members</small></div><span class="leaderboard-members">${formatLedgerNumber(entry.memberCount || 0)}</span>
+        <div class="leaderboard-power"><strong>${formatLedgerNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
       </article>`).join("") : `<div class="leaderboard-empty">No clan scores have been published yet.</div>`;
+    updateLeaderboardStanding("clans", rows);
     const panel = modalBody?.querySelector("#leaderboardClansPanel");
     if (panel) panel.dataset.loaded = "true";
     setClanLeaderboardStatus("Combined member King Power.");
@@ -36441,18 +36616,22 @@ function showLeaderboardModal() {
     <div class="leaderboard-panel">
       <div class="leaderboard-tabs-header">
         <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard category">
-          <button id="leaderboardPlayersTab" class="leaderboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="leaderboardPlayersPanel" data-leaderboard-tab="players">Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</button>
+          <button id="leaderboardPlayersTab" class="leaderboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="leaderboardPlayersPanel" data-leaderboard-tab="players">Top ${formatLedgerNumber(KING_POWER_LEADERBOARD_LIMIT)} Kingdoms</button>
           <button id="leaderboardClansTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardClansPanel" data-leaderboard-tab="clans" tabindex="-1">Top Clans</button>
         </div>
         <button id="leaderboardRefreshBtn" class="leaderboard-refresh-btn" type="button">Refresh</button>
       </div>
       <section id="leaderboardPlayersPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardPlayersTab" data-leaderboard-panel="players">
-        <div class="leaderboard-toolbar"><div><strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)} Kingdoms</strong><small id="leaderboardStatus">Loading global ranks...</small></div></div>
-        <div id="leaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Loading King Power ranks...</div></div>
+        <div class="leaderboard-standing"><span>Published King Power</span></div>
+        <div class="leaderboard-columns "><span>Rank</span><span>Ruler &amp; clan</span><span class="leaderboard-map">Home map</span><span class="leaderboard-cities">Cities</span><span>King Power</span></div>
+        <div id="leaderboardRows" class="leaderboard-list" tabindex="0" aria-label="Kingdom rankings"><div class="leaderboard-empty">Loading King Power ranks...</div></div>
+        <div class="leaderboard-toolbar"><small id="leaderboardStatus" role="status">Loading global ranks...</small><small>Scroll to view all</small></div>
       </section>
       <section id="leaderboardClansPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardClansTab" data-leaderboard-panel="clans" hidden>
-        <div class="leaderboard-toolbar clan-leaderboard-heading"><div><strong>Top Clans</strong><small id="clanLeaderboardStatus">Combined member King Power</small></div></div>
-        <div id="clanLeaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Select Top Clans to load clan ranks.</div></div>
+        <div class="leaderboard-standing"><span>Combined member King Power</span></div>
+        <div class="leaderboard-columns clan-columns"><span>Rank</span><span>Noble house</span><span class="leaderboard-members">Members</span><span>Clan Power</span></div>
+        <div id="clanLeaderboardRows" class="leaderboard-list" tabindex="0" aria-label="Clan rankings"><div class="leaderboard-empty">Select Top Clans to load clan ranks.</div></div>
+        <div class="leaderboard-toolbar"><small id="clanLeaderboardStatus" role="status">Combined member King Power</small><small>Scroll to view all</small></div>
       </section>
     </div>
   `;
@@ -36468,10 +36647,10 @@ function showLeaderboardModal() {
       }
     });
     button.addEventListener("keydown", event => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
       const direction = event.key === "ArrowRight" ? 1 : -1;
-      const nextButton = tabButtons[(index + direction + tabButtons.length) % tabButtons.length];
+      const nextButton = tabButtons[event.key === "Home" ? 0 : event.key === "End" ? tabButtons.length - 1 : (index + direction + tabButtons.length) % tabButtons.length];
       nextButton?.click();
       nextButton?.focus();
     });
@@ -38167,6 +38346,16 @@ function showMapLocationAnnouncement(regionId) {
   toast.classList.add("visible");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 2800);
+}
+
+function formatLedgerNumber(value) {
+  return Math.floor(Number(value) || 0).toLocaleString("en-US");
+}
+
+function formatLedgerBaseAndBonus(baseValue, totalValue) {
+  const base = Math.max(0, Math.floor(Number(baseValue) || 0));
+  const total = Math.max(base, Math.floor(Number(totalValue) || 0));
+  return `${formatLedgerNumber(base)} (+${formatLedgerNumber(total - base)})`;
 }
 
 function formatNumber(value) {

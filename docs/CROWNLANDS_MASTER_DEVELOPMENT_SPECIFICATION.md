@@ -1141,6 +1141,14 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 - Each holding preserves its current illustration, name/map, specialization, full garrison, defense level and Map action. The Crown Citadel shows its five existing bonuses together. Bonuses come from current runtime configuration; ownership filtering and Citadel authority remain unchanged.
 - No new gameplay action, reward, objective bonus or defense rule is introduced. Map continues to close the window and locate the holding. Production integration is approved as one release with Camps and Troop Orders; deployment requires separate verification.
 
+### Approved Leaderboards, Map Atlas, and objective details — September 16, 2026
+
+- Leaderboards use the parchment ledger with fixed category tabs, standing summary, column headings and footer, and a scrolling Top 100 list. Ruler/clan profiles, flags/heraldry, home map, city/member counts, score age and full power values remain available. Find my rank locates an existing published entry; it never inserts an unpublished local score.
+- Map Atlas uses larger, uncropped thumbnails within the existing tile footprint, compact captions, Current/Home shortcuts, Whole realm and zoom controls. Tower maps have green masonry frames; Camp maps have brass fittings; regional Strongholds have crimson/gold frames with their bonus icons. Crown Citadel retains the crown. Decorations do not intercept selection or gestures. The existing camera supports a whole-realm fit and keyboard neighbor navigation while preserving live activation, registered landmarks, open connections and drag-click suppression.
+- Gold, Training, Movement and Defense Strongholds and Crown Citadel share the approved royal frame. A fortress portrait and ownership sit beside the bonus strip, full garrison/defense values, wall status, collapsible Defense & repair and Holding benefits, and existing reinforcements. Management actions stay in a fixed footer. Stronghold Legacy and the Crown Reign Ledger retain authoritative cumulative scores and current-holder timers.
+- Exact enemy troops/defense remain scout-gated; clan garrison sharing and existing return/relinquishment permissions are unchanged. No objective balance, combat formula, season retention, map topology, or multiplayer authority is changed.
+- Desktop and mobile landscape are the supported game views. This batch is approved for integration, merge and web deployment; LIVE status requires verification of the resulting production build.
+
 ### Current presentation status
 
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.

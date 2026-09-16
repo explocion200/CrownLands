@@ -50,3 +50,7 @@ Crown fixture: level-100 base walls are 3,000,000. The same 12% Stoneworks + 4% 
 Ruler/clan names, skills, Gear, garrisons, reign times and reports are fictional. Objective identities and art are repository-backed. Timers are frozen for visual review. Runtime integration must retain server-authoritative benefits, fog of war, actual scout/repair/Legacy/Reign clocks, live support changes and the existing confirmation/permission handlers.
 
 The preview loads only draft scripts and the existing pure clan-heraldry renderer. It does not import `game.js`, Firebase, authentication, storage, or mutation APIs. Existing game art is reused unchanged. `prepare-pr`, integration tests, required release checks, PR creation, merge and deployment remain deferred until the approved batch is integrated.
+
+## Approved production integration
+
+September 16: integrated into the runtime on `codex/leaderboard-ledger-draft` with shared scoped styles and the existing authoritative loaders, camera, visibility rules and action handlers. These preview fixtures remain isolated review artifacts. Release status is recorded by the merged PR and verified production build, not by this draft page.

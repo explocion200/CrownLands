@@ -1,0 +1,149 @@
+/* Approved Kingdom Leaderboards and Map Atlas. Scoped to these two dialogs. */
+#modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card { font:12px 'Segoe UI',Arial,sans-serif!important; }
+#modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card #modalTitle { margin:0!important; padding:16px 70px 16px 22px!important; border-radius:0!important; }
+#modal:is(.leaderboard-modal,.island-switcher-modal) {
+  --ledger-paper:#f2e8cd; --ledger-ink:#352f23; --ledger-muted:#6d6049; --ledger-line:#bcab87;
+  width:min(1200px,calc(100vw - 24px)); height:min(700px,calc(100dvh - 24px));
+  max-width:none; max-height:none; inset:0; margin:auto; padding:5px;
+  border:1px solid #766346!important; border-radius:2px!important; overflow:hidden;
+  background:var(--ledger-paper)!important; color:var(--ledger-ink)!important;
+  box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important;
+  color-scheme:light;
+}
+#modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card {
+  width:100%!important; height:100%!important; max-width:none!important; max-height:none!important;
+  margin:0; padding:0!important; display:flex; flex-direction:column; overflow:hidden!important;
+  border:1px solid var(--ledger-line)!important; border-radius:0!important;
+  background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%),var(--ledger-paper)!important;
+  color:var(--ledger-ink)!important; box-shadow:none!important;
+}
+#modal:is(.leaderboard-modal,.island-switcher-modal) #modalTitle {
+  flex:none; margin:0; padding:16px 70px 16px 22px; min-height:74px; display:flex; align-items:center;
+  background:#e9dcb483!important; border-bottom:1px solid var(--ledger-line);
+  color:var(--ledger-ink)!important; font:30px Georgia,serif!important; text-shadow:none!important;
+}
+#modal:is(.leaderboard-modal,.island-switcher-modal) #closeModalBtn {
+  position:absolute; top:14px; right:14px; width:44px; height:44px; padding:0;
+  background:transparent!important; color:var(--ledger-ink)!important; border:0!important; box-shadow:none!important;
+}
+#modal:is(.leaderboard-modal,.island-switcher-modal) #modalBody {
+  flex:1; min-height:0; width:100%; margin:0!important; padding:0!important; overflow:hidden!important;
+  color:var(--ledger-ink)!important;
+}
+#modal:is(.leaderboard-modal,.island-switcher-modal) button:focus-visible { outline:2px solid #356778!important; outline-offset:2px; }
+#modal.leaderboard-modal :is(.leaderboard-panel,.leaderboard-tab-panel) { display:flex; flex-direction:column; height:100%; min-height:0; gap:0; }
+#modal.leaderboard-modal .leaderboard-tab-panel { flex:1; }
+#modal.leaderboard-modal [hidden] { display:none!important; }
+#modal.leaderboard-modal .leaderboard-tabs-header { display:flex; flex:none; gap:18px; align-items:center; padding:6px 20px; border-bottom:1px solid var(--ledger-line); background:#e8dcb9!important; }
+#modal.leaderboard-modal .leaderboard-tabs { display:flex; gap:6px; padding:0; border:0; background:none; }
+#modal.leaderboard-modal .leaderboard-tab { min-height:44px; min-width:185px; padding:0 20px; border:1px solid transparent!important; border-radius:0; background:transparent!important; color:#65583f!important; font:16px Georgia,serif!important; box-shadow:none!important; text-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-tab[aria-selected="true"] { background:#525e41!important; color:#fff6dc!important; border-color:#444e35!important; box-shadow:inset 0 0 0 2px #a4ad8655!important; }
+#modal.leaderboard-modal :is(.leaderboard-refresh-btn,[data-find-rank]) { margin-left:auto; min-height:44px; padding:0 13px; border:1px solid #ac986e!important; border-radius:0; background:#f0e5c8!important; color:#4b583c!important; font:14px Georgia,serif!important; box-shadow:none!important; text-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-standing { display:flex; align-items:center; gap:18px; flex:none; padding:9px 25px; min-height:64px; border-bottom:1px solid var(--ledger-line); background:linear-gradient(100deg,#dfe3c666,#ece1bc33); }
+#modal.leaderboard-modal .leaderboard-standing>span { font:11px 'Segoe UI',sans-serif; color:var(--ledger-muted); }
+#modal.leaderboard-modal .leaderboard-standing>strong { font:31px Georgia,serif; color:#4b583c; }
+#modal.leaderboard-modal .leaderboard-standing>b { font:22px Georgia,serif; }
+#modal.leaderboard-modal .leaderboard-standing small { font:11px 'Segoe UI',sans-serif; color:var(--ledger-muted); }
+#modal.leaderboard-modal :is(.leaderboard-row,.leaderboard-columns) { display:grid; grid-template-columns:48px 42px minmax(170px,1fr) 175px 65px 180px; align-items:center; gap:14px; }
+#modal.leaderboard-modal .leaderboard-columns { padding:8px 25px; flex:none; border-bottom:1px solid var(--ledger-line); background:#e4d7b5; font:10px 'Segoe UI',sans-serif; color:var(--ledger-muted); }
+#modal.leaderboard-modal .leaderboard-columns>span:nth-child(2) { grid-column:2/4; }
+#modal.leaderboard-modal .leaderboard-columns>span:last-child { text-align:right; }
+#modal.leaderboard-modal .leaderboard-list { display:block; flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:0; margin:0; gap:0; scrollbar-width:thin; scrollbar-color:#a8956d #e8ddbc; }
+#modal.leaderboard-modal .leaderboard-row { min-height:67px; padding:9px 25px; border:0!important; border-bottom:1px solid #cbb992!important; border-radius:0!important; background:#f3e8cc!important; box-shadow:none!important; color:var(--ledger-ink)!important; }
+#modal.leaderboard-modal .leaderboard-row:nth-child(even) { background:#eee1c1!important; }
+#modal.leaderboard-modal .leaderboard-row.current { background:#e1e4c7!important; box-shadow:inset 3px 0 #798658!important; }
+#modal.leaderboard-modal .leaderboard-rank { font:23px Georgia,serif!important; color:#80633d!important; text-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-ruler { min-width:0; }
+#modal.leaderboard-modal .leaderboard-row :is(.player-name-link,.clan-identity-link,.clan-shield-link) { display:inline; padding:0!important; min-height:0; min-width:0; border:0!important; border-radius:0; color:#3c3528!important; background:transparent!important; box-shadow:none!important; text-shadow:none!important; font:17px Georgia,serif!important; text-align:left; overflow-wrap:anywhere; }
+#modal.leaderboard-modal .leaderboard-row :is(.leaderboard-ruler small,.leaderboard-power small,.leaderboard-map,.leaderboard-cities,.leaderboard-members) { font:11px 'Segoe UI',sans-serif!important; color:#6d6049!important; text-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-row .leaderboard-clan-link { font:11px 'Segoe UI',sans-serif!important; color:#55603d!important; }
+#modal.leaderboard-modal .leaderboard-ruler small { display:block; margin-top:4px; }
+#modal.leaderboard-modal .leaderboard-power { min-width:0; text-align:right; }
+#modal.leaderboard-modal .leaderboard-power strong { display:block; font:23px Georgia,serif!important; color:#453921!important; text-shadow:none!important; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+#modal.leaderboard-modal .leaderboard-power small { display:block; margin-top:4px; }
+#modal.leaderboard-modal .leaderboard-you { display:inline-block; padding:2px 4px; margin-left:7px; font:8px 'Segoe UI',sans-serif; color:#4f603c; border:1px solid #a3ad81; }
+#modal.leaderboard-modal .leaderboard-mobile-meta { display:none!important; }
+#modal.leaderboard-modal :is(.clan-leaderboard-row,.clan-columns) { grid-template-columns:48px 42px minmax(170px,1fr) 95px 200px; }
+#modal.leaderboard-modal .clan-leaderboard-shield-link { width:38px; }
+#modal.leaderboard-modal .leaderboard-toolbar { display:flex; justify-content:space-between; flex:none; min-height:30px; padding:7px 25px; border:0!important; border-top:1px solid var(--ledger-line)!important; border-radius:0!important; background:#e6dab8!important; color:var(--ledger-muted)!important; box-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-toolbar small { font:10px 'Segoe UI',sans-serif!important; color:var(--ledger-muted)!important; text-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-empty { padding:35px 20px; color:var(--ledger-muted)!important; background:none!important; text-align:center; font:18px Georgia,serif; border:0; }
+
+/* The live map camera, landmarks, grid coordinates and activation remain intact. */
+#modal.island-switcher-modal .island-map-shell { height:100%; display:flex; flex-direction:column; gap:0; min-height:0; }
+#modal.island-switcher-modal .atlas-toolbar { display:flex; flex:none; align-items:center; gap:12px; padding:6px 18px; min-height:64px; background:#e7dcbc; border-bottom:1px solid var(--ledger-line); }
+#modal.island-switcher-modal .atlas-toolbar button { border:1px solid #b19c73!important; border-radius:0; background:#f0e6cb!important; color:#4b4835!important; box-shadow:none!important; text-shadow:none!important; font:14px Georgia,serif; }
+#modal.island-switcher-modal .location-shortcut { min-width:215px; min-height:48px; padding:4px 13px; text-align:left; }
+#modal.island-switcher-modal .location-shortcut small { display:block; font:9px 'Segoe UI',sans-serif; color:#6d6049; }
+#modal.island-switcher-modal .location-shortcut strong { display:block; font:16px Georgia,serif; color:#4c583a; }
+#modal.island-switcher-modal .fit-button { margin-left:auto; min-height:44px; padding:0 15px; white-space:nowrap; }
+#modal.island-switcher-modal .zoom-controls { display:flex; align-items:center; border:1px solid #b19c73; }
+#modal.island-switcher-modal .zoom-controls button { width:44px; height:44px; padding:0; border:0!important; font:24px Georgia,serif; }
+#modal.island-switcher-modal .zoom-controls output { width:45px; text-align:center; font-size:11px; color:#6d6049; }
+#modal.island-switcher-modal .island-map-feature-legend { margin:0; padding:6px 18px; flex:none; background:#e8ddbf!important; border:0; color:#65583e!important; font-size:10px; }
+#modal.island-switcher-modal .island-map-picker { flex:1; height:auto!important; min-height:0!important; max-height:none!important; width:100%; padding:0; border:0!important; border-radius:0; background:radial-gradient(ellipse at center,#fff7ddbb,#dfcfa650),repeating-linear-gradient(0deg,#826f4320 0 1px,transparent 1px 38px),repeating-linear-gradient(90deg,#826f4320 0 1px,transparent 1px 38px),#ebdfbd!important; }
+#modal.island-switcher-modal .island-map-icon { display:flex; flex-direction:column; padding:5px!important; gap:0; overflow:visible!important; border:2px solid #94805c!important; border-radius:1px!important; background:#f0e1bd!important; box-shadow:0 4px 7px #69573433!important; }
+#modal.island-switcher-modal .island-map-icon:focus-visible { outline:3px dashed #246779!important; outline-offset:12px; }
+#modal.island-switcher-modal .island-map-icon.active { background:#e2e3bd!important; }
+#modal.island-switcher-modal .island-map-icon.red-trim { border-color:#953f35!important; box-shadow:0 0 0 5px #953f35,0 0 0 6px #612b25!important; }
+#modal.island-switcher-modal .island-map-icon.has-clan-tower::after { content:""; position:absolute; inset:-7px; border:4px solid #496437; box-shadow:0 0 0 1px #304528,inset 0 0 0 1px #d2dcb3; pointer-events:none; }
+#modal.island-switcher-modal .island-map-thumb { height:126px!important; flex:none; margin:0; width:100%; overflow:hidden; border:1px solid #98865f; border-radius:0; background:#b3ab70!important; }
+#modal.island-switcher-modal .island-map-thumb svg { display:block; width:100%; height:100%; }
+#modal.island-switcher-modal .island-map-name { position:static; display:block; width:100%; padding:3px 4px 0; font:17px/1.06 Georgia,serif!important; color:#3c3528!important; text-shadow:none!important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#modal.island-switcher-modal .island-map-owned { position:static; padding:2px 4px 0; font:11px/1.15 'Segoe UI',sans-serif!important; color:#67573d!important; text-shadow:none!important; }
+#modal.island-switcher-modal .feature-frame { position:absolute; top:-12px; left:-12px; width:calc(100% + 24px); height:calc(100% + 24px); overflow:visible; pointer-events:none; z-index:3; filter:drop-shadow(0 2px 1px #3c2c2640); }
+#modal.island-switcher-modal .frame-camp { z-index:4; }
+#modal.island-switcher-modal .atlas-overview .feature-frame { display:none; }
+#modal.island-switcher-modal :is(.island-map-active-label,.island-map-home-label) { z-index:5; font:12px Georgia,serif!important; text-shadow:none!important; box-shadow:none!important; border-radius:0; }
+#modal.island-switcher-modal .island-map-connection { stroke:#917a50; stroke-width:2px; stroke-dasharray:5 4; opacity:.65; }
+
+@media(max-height:600px),(max-width:1000px) {
+  #modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card #modalTitle { padding:4px 55px 4px 13px!important; }
+  #modal:is(.leaderboard-modal,.island-switcher-modal) { width:calc(100vw - 16px); height:calc(100dvh - 16px); padding:4px; }
+  #modal:is(.leaderboard-modal,.island-switcher-modal) #modalTitle { min-height:48px; padding:4px 55px 4px 13px; font-size:23px!important; }
+  #modal:is(.leaderboard-modal,.island-switcher-modal) #closeModalBtn { top:2px; right:5px; }
+  #modal.leaderboard-modal .leaderboard-tabs-header { padding:3px 12px; }
+  #modal.leaderboard-modal .leaderboard-tab { min-width:160px; min-height:38px; padding:0 12px; font-size:14px!important; }
+  #modal.leaderboard-modal .leaderboard-refresh-btn { min-height:38px; }
+  #modal.leaderboard-modal .leaderboard-standing { min-height:47px; padding:3px 15px; gap:12px; }
+  #modal.leaderboard-modal .leaderboard-standing>strong { font-size:25px; }
+  #modal.leaderboard-modal .leaderboard-standing>b { font-size:18px; }
+  #modal.leaderboard-modal [data-find-rank] { min-height:38px; }
+  #modal.leaderboard-modal :is(.leaderboard-row,.leaderboard-columns) { grid-template-columns:32px 29px minmax(140px,1fr) 150px; gap:10px; padding-inline:15px; }
+  #modal.leaderboard-modal :is(.leaderboard-map,.leaderboard-cities,.leaderboard-members) { display:none; }
+  #modal.leaderboard-modal .leaderboard-mobile-meta { display:inline!important; }
+  #modal.leaderboard-modal .leaderboard-row { min-height:55px; padding-block:5px; }
+  #modal.leaderboard-modal .leaderboard-row :is(.player-name-link,.clan-identity-link) { font-size:14px!important; }
+  #modal.leaderboard-modal .leaderboard-power strong { font-size:20px!important; }
+  #modal.leaderboard-modal .leaderboard-flag { transform:scale(.8); transform-origin:left center; }
+  #modal.leaderboard-modal .leaderboard-toolbar { min-height:23px; padding:4px 15px; }
+  #modal.island-switcher-modal .atlas-toolbar { min-height:50px; padding:2px 9px; gap:8px; }
+  #modal.island-switcher-modal .location-shortcut { min-width:160px; min-height:44px; padding:2px 8px; }
+  #modal.island-switcher-modal .location-shortcut strong { font-size:13px; }
+  #modal.island-switcher-modal .fit-button { padding-inline:9px; font-size:12px; }
+  #modal.island-switcher-modal .island-map-feature-legend { padding:3px 10px; font-size:9px; }
+}
+@media(max-width:650px) {
+  #modal.leaderboard-modal .leaderboard-tab { min-width:130px; font-size:12px!important; }
+  #modal.leaderboard-modal :is(.leaderboard-row,.leaderboard-columns) { grid-template-columns:28px 25px minmax(100px,1fr) 122px; gap:7px; padding-inline:9px; }
+  #modal.leaderboard-modal .leaderboard-power strong { font-size:17px!important; }
+  #modal.leaderboard-modal .leaderboard-standing { padding-inline:9px; gap:8px; }
+  #modal.leaderboard-modal .leaderboard-standing>b { font-size:16px; }
+  #modal.leaderboard-modal .leaderboard-standing small { font-size:9px; }
+  #modal.leaderboard-modal .leaderboard-row :is(.leaderboard-ruler small,.leaderboard-power small) { font-size:9px!important; }
+  #modal.island-switcher-modal .location-shortcut { flex:1; min-width:0; max-width:145px; padding:2px 5px; }
+  #modal.island-switcher-modal .location-shortcut strong { font-size:11px; }
+  #modal.island-switcher-modal .location-shortcut small { font-size:7px; }
+  #modal.island-switcher-modal .atlas-toolbar { gap:5px; padding-inline:5px; }
+  #modal.island-switcher-modal .fit-button { font-size:10px; padding-inline:6px; }
+  #modal.island-switcher-modal .zoom-controls button { width:38px; }
+  #modal.island-switcher-modal .zoom-controls output { width:28px; font-size:9px; }
+}
+
+#modal.leaderboard-modal .leaderboard-rank { width:auto; height:auto; padding:0; border:0!important; background:none!important; box-shadow:none!important; }
+#modal.leaderboard-modal .leaderboard-tabs { box-shadow:none!important; border:0!important; border-radius:0!important; background:none!important; }
+#modal.leaderboard-modal .leaderboard-row :is(.player-name-link,.clan-identity-link) { max-width:none!important; white-space:normal; }
+
+#modal.island-switcher-modal .island-map-shell { width:100%!important; max-width:none!important; margin:0!important; }
+#modal.island-switcher-modal .island-map-canvas { background:transparent!important; }
+#modal.island-switcher-modal .atlas-royal-legend { background:#953f35; border:1px solid #612b25; color:#fff3d6; }

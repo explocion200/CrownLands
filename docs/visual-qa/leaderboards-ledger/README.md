@@ -22,3 +22,7 @@ All 100 entries are fictional in-memory fixtures. Tabs, keyboard tab navigation,
 Production integration will retain the existing authoritative loaders, sorting, identity handling, error states and score-age formatting. The existing validator encodes the old slate surface and will need an intentional presentation update alongside integration. Design approval has not changed gameplay rules.
 
 Required release validation and `prepare-pr` are deferred until runtime integration of the approved batch. This draft is not a release candidate and is not merged or deployed.
+
+## Approved production integration
+
+September 16: integrated into the runtime on `codex/leaderboard-ledger-draft` with shared scoped styles and the existing authoritative loaders, camera, visibility rules and action handlers. These preview fixtures remain isolated review artifacts. Release status is recorded by the merged PR and verified production build, not by this draft page.

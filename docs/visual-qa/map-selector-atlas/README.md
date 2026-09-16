@@ -31,3 +31,7 @@ Examples: Heartlands, current Home map, outer New Lands frontier, unknown city c
 - `holding-tower-ui.js` map feature badges and `tools/validate-map-picker-input.js` drag, tap, post-drag click, keyboard and zoom contracts.
 
 Production implementation, Master Specification presentation updates, `prepare-pr` and required release gates remain deferred until approval. This draft is not ready to merge and no deployment is authorized by it.
+
+## Approved production integration
+
+September 16: integrated into the runtime on `codex/leaderboard-ledger-draft` with shared scoped styles and the existing authoritative loaders, camera, visibility rules and action handlers. These preview fixtures remain isolated review artifacts. Release status is recorded by the merged PR and verified production build, not by this draft page.
