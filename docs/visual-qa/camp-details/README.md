@@ -1,6 +1,6 @@
 # Camp details drafts
 
-Status: **Gold Camp layout APPROVED; Warband, Relic and Deed variants await review.** The user approved Gold and requested the remaining camps in the same design. This continues the same update on `codex/camp-details-draft`, started from synchronized `main` at `cd021f7be253b83eea57ade726330ca5c0a9f63e`. This is an isolated design review, with no runtime integration, PR, push or deployment.
+Status: **All four Camp Details designs APPROVED**, including the corrected Relic Camp chest. The user requested the next related UI draft before releasing this batch. Camp and Holding Tower Details continue together on `codex/camp-details-draft`, started from synchronized `main` at `cd021f7be253b83eea57ade726330ca5c0a9f63e`. This is an isolated design review, with no runtime integration, PR, push or deployment.
 
 Open `/docs/visual-qa/camp-details/index.html?viewport=desktop&sample=owned&camp=troops`. The Camp selector switches between `gold`, `troops` (Warband), `items` (Relic) and `deed`. Existing links without `camp` still show Gold. The toolbar switches between desktop (1440 × 900), mobile landscape (844 × 390) and small landscape (568 × 320). There is no portrait game layout. The modal follows the approved 1040 × 790 maximum envelope, shrinking to fit landscape screens. Its header, tabs and footer remain available while the content panes scroll.
 
