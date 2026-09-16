@@ -10,15 +10,13 @@ function rulerMark() { return '<span class="ruler-mark" aria-hidden="true"><img 
 function duration(seconds) { const h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60); return `${h}h ${String(m).padStart(2,"0")}m`; }
 function metric(label,value,help="",className="") { return `<div class="metric-row"><div><span>${label}</span>${help?`<small>${help}</small>`:""}</div><strong class="${className}">${value}</strong></div>`; }
 function identityMarkup(f) {
- return `<div class="fortress-plate"><img class="fortress-art" src="${GOLD_HOLD.art}" alt="Aurum Keep's stone fortress with three towers and a walled courtyard"><span class="art-caption">Aurum Keep · Gold Stronghold</span></div>
-  <div class="identity-line">${rulerMark()}<div><small>Owner${f.owned?" · You":""}</small>${f.neutral?`<span class="plain-owner">${f.owner}</span>`:link(f.owner)}</div></div>
-  <div class="identity-line"><span class="heraldry-slot" id="clanHeraldry" aria-hidden="true"></span><div><small>Holding clan</small>${f.clan?link(`[${f.tag}] ${f.clan}`,"clan"):'<span class="plain-owner">No clan</span>'}</div></div>
-  <div class="garrison-card"><img src="${icons.troops}" alt=""><div><small>${f.owned?"Troops stationed":"Troops"}</small><strong>${f.visibleTroops?number(f.troops):"Unknown"}</strong></div></div>
-  <div class="identity-facts"><div><small>Defense level</small><strong>${GOLD_HOLD.level}</strong></div>${f.owned?'<div><small>Garrison limit</small><strong>Unlimited</strong></div>':`<div><small>Intelligence</small><strong>${f.ally?"Clan shared":f.scouted?"Scouted":"Unscouted"}</strong></div>`}</div>
-  <p class="identity-help">${f.owned?"Station as many troops as you can send.":f.ally?"Exact owner troops are shared by your clan.":f.scouted?"Garrison reflects your latest scout report.":"A scout report is needed to reveal the current garrison."}</p>`;
+ return `<div class="keep-illustration"><span class="keep-level"><small>Defense level</small><strong>${GOLD_HOLD.level}</strong></span><img src="${GOLD_HOLD.art}" alt="Aurum Keep's stone fortress with three towers and a walled courtyard"><span class="keep-caption">Aurum Keep · The Core</span></div>
+  <div class="ownership-record"><div class="ruler-entry">${rulerMark()}<div><small>Owner${f.owned?" · You":""}</small>${f.neutral?`<span class="plain-owner">${f.owner}</span>`:link(f.owner)}</div></div>
+  <div class="ruler-entry"><span class="heraldry-slot" id="clanHeraldry" aria-hidden="true"></span><div><small>Holding clan</small>${f.clan?link(`[${f.tag}] ${f.clan}`,"clan"):'<span class="plain-owner">No clan</span>'}</div></div></div>
+  <div class="holding-tag">${f.owned?'Garrison limit <strong>Unlimited</strong>':`Intelligence <strong>${f.ally?"Clan shared":f.scouted?"Scouted":"Unscouted"}</strong>`}</div>`;
 }
 function benefitMarkup(f) {
- return `<div class="bonus-banner"><img src="${icons.gold}" alt=""><div><p class="eyebrow">${f.owned?"Controlled bonus":"Stronghold bonus"}</p><div class="bonus-main"><strong>+8%</strong><h2>Base gold production</h2></div></div></div>`;
+ return `<section class="gold-benefit" aria-label="Gold Stronghold bonus"><img src="${icons.gold}" alt=""><div class="benefit-heading"><p class="eyebrow">${f.owned?"Controlled bonus":"Stronghold bonus"}</p><h2>Base gold production</h2></div><div class="benefit-rate"><strong>+8%</strong><small>Controller</small></div><div class="benefit-rate shared"><strong>+4%</strong><small>Clanmates</small></div></section>`;
 }
 function benefitDetailsMarkup(f) {
  return `<p class="bonus-copy">The controller receives <strong>8%</strong>; current clanmates receive <strong>4%</strong>, subject to Citadel precedence.</p>
@@ -26,10 +24,7 @@ function benefitDetailsMarkup(f) {
   ${f.owned?'<div class="benefit-note"><strong>Effect target · Base gold production</strong><small>Boosts owned towns while held.</small></div>':""}`;
 }
 function wallMarkup(f) {
- return `<div class="fortification ${f.damaged?"damaged":""}"><div class="integrity-heading"><span>Wall integrity</span><strong>${f.integrity}% · ${f.damaged?"Damaged":"Intact"}</strong></div><div class="integrity-track" style="--integrity:${f.integrity}%" aria-hidden="true"><span></span></div>
-  <p>${f.powerVisible?`<strong>${number(f.wallPower)} / ${number(f.fullWalls)}</strong> wall power.`:"Wall power requires a scout report."} Walls absorb attack power before the garrison fights.</p>
-  <small>${f.damaged?"Full repair in 12m 00s":"Fully repaired · Full-breach repair window 30m 00s"}</small>
-  ${f.damaged?'<small>30m 00s full-breach window · Hits add proportional time · Ownership handoffs preserve the deadline.</small>':""}</div>`;
+ return `<div class="wall-overview ${f.damaged?"damaged":""}"><img src="${icons.walls}" alt=""><div><div class="wall-heading"><span>Wall integrity</span><strong>${f.integrity}% · ${f.damaged?"Damaged":"Intact"}</strong></div><div class="integrity-track" style="--integrity:${f.integrity}%" aria-hidden="true"><span></span></div><small>${f.damaged?"Full repair in 12m 00s":"Fully repaired"}</small></div></div>`;
 }
 function supportMarkup(f) {
  if(!f.owned&&!f.ally)return "";
@@ -39,11 +34,14 @@ function supportMarkup(f) {
 }
 function detailsMarkup(f) {
  const total = f.owned ? number(f.totalDefense) : f.scouted ? `${number(f.baseDefense)} <b>+ ${number(f.totalDefense-f.baseDefense)}</b>` : "Unknown";
- return `${benefitMarkup(f)}<div class="section-heading"><img src="${icons.defense}" alt=""><h2>Fortress defenses</h2></div>
-  ${metric(f.owned?"Estimated live defense":"Total defense",total,f.owned?"Current wall power plus locally estimated garrison defense":f.scouted?"Base + bonus from the scout report":"Requires a scout report",f.scouted?"stat-pair":"")}
+ return `${benefitMarkup(f)}<div class="strength-overview"><article class="strength-card"><img src="${icons.troops}" alt=""><div><h2>${f.owned?"Troops stationed":"Troops"}</h2><strong>${f.visibleTroops?number(f.troops):"Unknown"}</strong><small>${f.owned?"Owner garrison":f.ally?"Shared by your clan":f.scouted?"Scout report":"Scout required"}</small></div></article><article class="strength-card"><img src="${icons.defense}" alt=""><div><h2>${f.owned?"Estimated defense":"Total defense"}</h2><strong class="${f.scouted?"scouted-pair":""}">${total}</strong><small>${f.owned?"Walls + owner garrison":f.scouted?"Report · base + bonus":"Scout required"}</small></div></article></div>
   ${wallMarkup(f)}
+  <div class="overview-disclosures"><details class="detail-fold"><summary><span>Defense &amp; repair</span><small>Wall power · bonuses</small></summary><div class="fold-content">
+  ${f.owned?'<p>Estimated live defense combines current wall power with locally estimated owner garrison defense. Allied reinforcements are listed separately.</p><p>Station as many troops as you can send.</p>':f.ally?'<p>Exact owner troops are shared by your clan.</p>':f.scouted?'<p>Garrison and defense reflect your latest scout report.</p>':'<p>A scout report is needed to reveal the current garrison and total defense.</p>'}
+  ${metric("Wall power",f.powerVisible?`${number(f.wallPower)} / ${number(f.fullWalls)}`:"Unknown","Walls absorb attack power before the garrison fights.","stat-pair")}
   ${f.owned?metric("Wall level",String(GOLD_HOLD.level),"Sets this objective's base wall and repair time")+metric("City walls",`${number(GOLD_HOLD.baseWalls)} <b>+ ${number(f.fullWalls-GOLD_HOLD.baseWalls)}</b>`,"Stoneworks +12% · Gear wall strength +4%","stat-pair"):""}
-  ${benefitDetailsMarkup(f)}
+  <p>Full-breach repair window <strong>30m 00s</strong>.${f.damaged?" Hits add proportional time. Ownership handoffs preserve the deadline.":""}</p></div></details>
+  <details class="detail-fold"><summary><span>Holding benefits</span><small>Gold · clan sharing</small></summary><div class="fold-content">${benefitDetailsMarkup(f)}</div></details></div>
   ${f.neutral?`<div class="access-note neutral-note"><strong>Neutral base · ${number(GOLD_HOLD.neutralStartingTroops)}</strong>One-time starting defenders. This is not the current garrison.</div>`:""}
   ${f.ally?'<div class="access-note"><strong>Clan Ally · Garrison shared by clan</strong>Scout and Attack are disabled. You may send clan reinforcements. Exact owner troops are live; defense bonuses and reinforcement details remain private.</div>':!f.owned?`<div class="access-note scout-note"><strong>${f.scouted?"Scout report expires in 7m 43s":"Scout report · Not available"}</strong>${f.scouted?"Defense values reflect the report snapshot.":"Current troop and total defense values remain unknown."}</div>`:""}
   ${supportMarkup(f)}`;
@@ -60,7 +58,7 @@ function legacyMarkup(f) {
 function footerMarkup(f) {
  if(section==="legacy")return '<p class="footer-note"><strong>Aurum Keep · Stronghold Legacy</strong><br>Scores are cumulative for this Stronghold. Its current holder continues adding time.</p>';
  if(!f.owned)return `<p class="footer-note"><strong>${f.ally?"Clan ally holding":f.neutral?"Neutral Stronghold":"Foreign Stronghold"}</strong><br>${f.ally?"Your stationed reinforcements can be recalled from the support section.":"Scout reports govern private troop and defense information."}</p>`;
- return `<div class="management-copy"><strong>Relinquish Castle</strong><small>March stationed troops to your nearest friendly city and make this city neutral.</small><small>${f.cooldown?"Daily allowance used. Resets in 06h 24m at 00:00 UTC.":"Available now. One holding may be relinquished per UTC day."}</small></div><button class="relinquish-button" data-preview-action="relinquish" ${f.cooldown?"disabled":""}>${f.cooldown?"Available in 06h 24m":"Relinquish Castle"}</button>`;
+ return `<div class="management-copy"><strong>${f.cooldown?"Daily allowance used":"Holding management"}</strong><small>${f.cooldown?"Resets in 06h 24m at 00:00 UTC.":"One relinquishment available · Resets 00:00 UTC"}</small></div><button class="relinquish-button" data-preview-action="relinquish" ${f.cooldown?"disabled":""}>${f.cooldown?"Available in 06h 24m":"Relinquish Castle"}</button>`;
 }
 function render() {
  fixture = goldDetailFixture(sample);
@@ -73,8 +71,9 @@ function render() {
 }
 function setSection(next,focus=false) {
  section=next; document.querySelectorAll("[data-tab]").forEach(tab=>{const active=tab.dataset.tab===section;tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;if(active&&focus)tab.focus();});
+ document.querySelector('.holding-shell').classList.toggle('overview-active',section==="overview");
  $("overviewPanel").hidden=section!=="overview";$("legacyPanel").hidden=section!=="legacy";$("actions").innerHTML=footerMarkup(fixture);$("actions").classList.toggle("legacy-footer",section==="legacy");
- status(section==="legacy"?"Stronghold Legacy preview. Holding times are fictional and frozen for review.":"Gold Stronghold overview. Scroll each column to inspect all information.");
+ status(section==="legacy"?"Stronghold Legacy preview. Holding times are fictional and frozen for review.":"Overview redesign. Expand Defense & repair or Holding benefits for the full breakdown.");
 }
 function previewAction(button) {
  const action=button.dataset.previewAction;actionOrigin=button;
