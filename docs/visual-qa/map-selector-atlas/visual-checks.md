@@ -14,3 +14,10 @@ Checked September 15, 2026 in the local browser preview.
 The draft includes pointer-based touch pan/pinch handling. Native touch/pinch validation remains for device review: the in-app browser does not support `Input.dispatchTouchEvent`, so no successful pinch test is claimed here. Runtime camera integration still requires the established map-picker interaction gate.
 
 No production browser session, game account, orders, player holdings or realm data were changed. Full release validation, PR creation, merge and deployment are deferred until approval and runtime integration.
+
+## Larger artwork and clearer feature trims
+
+- Rechecked desktop 1440 × 900 and landscape 844 × 390 / 568 × 320 after the thumbnail/caption adjustment. Thumbnail area is 126 pixels high at normal detail zoom (previously 100); all 61 captions fit within the unchanged tile bounds, and the landscape toolbar does not overflow.
+- Green Tower outer frames, gold Camp inner frames and red Stronghold/Citadel frames remain distinct in close and Whole realm views. The corresponding text badges and legend swatches use the same colors. Thumbnail SVG registration and asset references are unchanged.
+- Clicking the Tower badge on Lionwatch opened exactly one local map preview; Return and Reset example restored the standard desktop draft. The atlas still has 61 tiles and 106 connection lines. Browser error/warning logs were empty.
+- `node --check docs/visual-qa/map-selector-atlas/preview.js` and `git diff --check` passed. This revision changes presentation only; the previous device pinch-testing limitation remains.
