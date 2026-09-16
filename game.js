@@ -39894,6 +39894,7 @@ function handleGameModalClose() {
     window.clearInterval(rewardedAdShopCountdownTimer);
     rewardedAdShopCountdownTimer = 0;
   }
+  modal.classList.remove("stronghold-details-modal");
   delete modal.dataset.cityInfoId;
   delete modal.dataset.campInfoId;
   delete modal.dataset.scoutReportCityId;
