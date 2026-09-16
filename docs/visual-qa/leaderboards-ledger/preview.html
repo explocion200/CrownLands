@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Leaderboards preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="clan-heraldry-v2.css"><link rel="stylesheet" href="docs/visual-qa/leaderboards-ledger/draft.css">
+<script src="functions/clanHeraldryConfig.js" defer></script><script src="functions/clanHeraldryAssets.js" defer></script><script src="functions/clanHeraldryLegacyV1.js" defer></script><script src="functions/clanHeraldryRenderer.js" defer></script><script src="docs/visual-qa/leaderboards-ledger/fixtures.js" defer></script><script src="docs/visual-qa/leaderboards-ledger/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Leaderboards</button>
+<dialog id="leaderboardDialog" aria-labelledby="leaderboardTitle"><div class="ledger-shell">
+ <header class="window-header"><img class="heading-art" src="assets/flag-symbols/selected/svg/crown.svg" alt=""><div class="heading"><p>THE ROYAL ROLL</p><h1 id="leaderboardTitle">Leaderboards</h1></div><span class="header-note">Kingdoms &amp; noble houses</span><button id="close" class="close-button" aria-label="Close Leaderboards">×</button></header>
+ <div class="tabs-bar"><div class="tabs" role="tablist" aria-label="Leaderboard category"><button id="playersTab" role="tab" aria-controls="rankPanel" aria-selected="true" data-tab="players">Top 100 Kingdoms</button><button id="clansTab" role="tab" aria-controls="rankPanel" aria-selected="false" tabindex="-1" data-tab="clans">Top Clans</button></div><button id="refresh" class="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 8M19 3v6h-6"/></svg><span>Refresh</span></button></div>
+ <section id="rankPanel" class="rank-panel" role="tabpanel" aria-labelledby="playersTab">
+  <div id="standing" class="standing"></div>
+  <div id="columns" class="columns" aria-hidden="true"></div>
+  <div id="rankList" class="rank-list" tabindex="0" aria-label="Kingdom rankings"></div>
+ </section>
+ <footer class="ledger-footer"><span id="rankingStatus" role="status"></span><span id="rowCount"></span></footer>
+</div><div id="notice" class="notice" role="status" hidden></div></dialog>
+</body></html>
