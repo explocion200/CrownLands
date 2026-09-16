@@ -1,6 +1,6 @@
 # Leaderboards ledger draft
 
-Status: **DRAFT — awaiting visual approval**. Branch: `codex/leaderboard-ledger-draft`.
+Status: **DESIGN APPROVED — awaiting runtime integration**. Branch: `codex/leaderboard-ledger-draft`. The user approved the design and requested a Map Selector draft for the same UI review batch. Neither draft is authorized for release by design approval alone.
 
 Review `/docs/visual-qa/leaderboards-ledger/index.html?viewport=desktop&section=players`. Viewports are 1440 × 900, 844 × 390 and 568 × 320; no portrait game layout. This isolated draft never imports the game or Firebase client and never changes accounts, scores, ranking order, storage, or production styles.
 
@@ -19,6 +19,6 @@ All 100 entries are fictional in-memory fixtures. Tabs, keyboard tab navigation,
 - `tools/validate-leaderboard-tabs.js`: current-shard authoritative queries, no local unpublished injection, tab loading, active-tab refresh and accessible selection.
 - Current client/server release contracts both use `core-expansion-v1`. This is a presentation-only draft, with no production realm reads or edits required.
 
-Production integration will retain the existing authoritative loaders, sorting, identity handling, error states and score-age formatting. The existing validator encodes the old slate surface and will need an intentional presentation update alongside integration. No Master Specification rule was changed for this unapproved draft.
+Production integration will retain the existing authoritative loaders, sorting, identity handling, error states and score-age formatting. The existing validator encodes the old slate surface and will need an intentional presentation update alongside integration. Design approval has not changed gameplay rules.
 
-Required release validation and `prepare-pr` are deferred until design approval and runtime integration. This draft is not a release candidate and is not merged or deployed.
+Required release validation and `prepare-pr` are deferred until runtime integration of the approved batch. This draft is not a release candidate and is not merged or deployed.
