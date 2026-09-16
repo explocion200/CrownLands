@@ -1,6 +1,6 @@
 # Map Selector atlas draft
 
-Status: **DESIGN APPROVED — awaiting runtime integration**. The user approved the final specialization-icon version and requested the next Gold Stronghold detail draft. Continues the Leaderboards + Map Selector + objective-details UI review batch on `codex/leaderboard-ledger-draft`. Gold Stronghold details remain pending approval. No panel in this batch is integrated or released.
+Status: **DESIGN APPROVED — awaiting runtime integration**. The user approved the final specialization-icon version and the subsequent revised Gold Stronghold overview. Continues the Leaderboards + Map Selector + objective-details UI review batch on `codex/leaderboard-ledger-draft`. Training, Movement and Defense Stronghold detail variants now await approval. No panel in this batch is integrated or released.
 
 Review `/docs/visual-qa/map-selector-atlas/index.html?viewport=desktop&sample=standard`. Desktop is 1440 × 900; mobile landscape 844 × 390 and small landscape 568 × 320. No portrait game layout.
 

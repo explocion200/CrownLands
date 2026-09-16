@@ -22,3 +22,15 @@ The user requested a better overview after reviewing the initial draft. Rechecke
 - Defense & repair opened with a click; Holding benefits opened with Enter. Both retained their full fixture values, wall sources, repair information, effect target and Citadel precedence explanation. Send Home remained reachable after expanding both and opened the unchanged local return preview.
 - Enemy and neutral examples showed Unknown troops / total defense. Allies retained exact owner troops, private defense and Recall only. Scouted defense retained base-plus-bonus values. Damaged walls showed 60% and 5,238,841 estimated defense. Cooldown disabled relinquishment. Foreign examples had no relinquishment action.
 - No fixture math, production files, world data or server behavior changed. The overview styles are isolated in `overview.css`; this remains a design approval checkpoint.
+
+## Training, Movement and Defense variants
+
+Following Gold overview approval, checked the three additional regional drafts on 2026-09-15:
+
+- All three rendered at 1440 × 900, 844 × 390 and 568 × 320 with the correct name, specialization label, artwork and 8% / 4% split. No horizontal overflow in either column; the default owner/clan record and wall-status strip fit the initial overview. Desktop screenshots of all three and landscape screenshots were visually inspected.
+- A focused Node check compared all four definition IDs, names, levels and art paths against the current Core layout, verified art/icon files exist, and checked fixed example arithmetic. Gold/Training/Movement remain 5,914,736 intact; Defense is 6,252,736 with identical 1,689,736 wall power. Defense's 60% damaged example is 5,576,841. All assertions passed.
+- Ironwatch's expanded defense section identified the 8% soldier bonus and unchanged walls. Its local relinquish preview and return button both named Ironwatch. Enemy troops/defense stayed unknown, allied support exposed Recall only, and the daily cooldown disabled relinquishment.
+- Swiftgate's expanded benefits named March time and explained travel-time effects. Its Legacy introduction named Swiftgate and rendered 100 entries. A reload preserved the selected holding and example through the URL.
+- Shared styling, data definitions and rendering avoid three separate copies of the approved layout. The Gold default and its existing links are retained; Gold has an approved-design badge and the other variants remain drafts.
+
+Only local draft actions were exercised. Real multiplayer/order handling and deployment remain outside this approval pass.
