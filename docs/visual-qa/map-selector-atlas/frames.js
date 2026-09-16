@@ -1,6 +1,13 @@
 "use strict";
+// Same specialization icons used by the approved Strongholds ledger.
+const ATLAS_STRONGHOLD_BONUS_ICONS = Object.freeze({
+ "core-v2-greybanner-hold-p0-m1": "assets/icons/daily-login-troops-r1.svg",
+ "core-v2-aurum-keep-m1-p0": "assets/icons/royal-shop-gold-r1.svg",
+ "core-v2-swiftgate-p1-p0": "assets/icons/skills/marchOrders.svg",
+ "core-v2-ironwatch-p0-p1": "assets/icons/skills/shieldwallDiscipline.svg"
+});
 // Decorative SVG overlays stay outside layout and never intercept map gestures.
-function atlasFeatureFrame(kind, citadel = false, strongholdAsset = "") {
+function atlasFeatureFrame(kind, citadel = false, bonusIcon = "") {
  const corners = (art, inset = 0, bottomArt = art) => [
   `translate(${inset} ${inset})`,
   `translate(${262-inset} ${inset}) scale(-1 1)`,
@@ -39,7 +46,7 @@ function atlasFeatureFrame(kind, citadel = false, strongholdAsset = "") {
    <path d="M3 17V6l3-3h11" fill="none" stroke="#fff0bd" stroke-width="1.2"/>
    <path d="M9 10c14-10 19 1 9 5 5-7-4-8-9-5Zm1-1c-10 14 1 19 5 9-7 5-8-4-5-9Z" fill="#c69a53" stroke="#683e26" stroke-width=".9"/>
    <path d="m5 5 4 3-1 4-4-3Z" fill="#923c32" stroke="#ffdf97" stroke-width=".7"/>`;
-  // Reuse the map's own fortress art; the crown belongs only to Crown Citadel.
+  // Show each Stronghold's specialization; only Crown Citadel uses the crown.
   const crest = citadel ? `<g class="citadel-crest">
    <path d="M110 5q21-12 42 0l-3 19-18 12-18-12Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
    <path d="m113 8 4 15 14 9 14-9 4-15" fill="none" stroke="#b36d51" stroke-width="1"/>
@@ -52,7 +59,7 @@ function atlasFeatureFrame(kind, citadel = false, strongholdAsset = "") {
    </g>` : `<g class="stronghold-crest">
    <path d="M106 0q25-12 50 0l-3 23-22 15-22-15Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
    <path d="M110 2q21-9 42 0l-3 19-18 12-18-12Z" fill="#dfcba0" stroke="#a57e47" stroke-width="1"/>
-   ${strongholdAsset ? `<image class="stronghold-crest-art" href="${strongholdAsset}" x="109" y="-7" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>` : '<path d="M119 22V6h5v5h14V6h5v16Zm10 0v-7h5v7" fill="#625944" stroke="#302d23"/>'}
+   ${bonusIcon ? `<image class="stronghold-bonus-icon" href="${bonusIcon}" x="114" y="-3" width="34" height="34" preserveAspectRatio="xMidYMid meet"/>` : ''}
    </g>`;
   art = `<rect x="8" y="8" width="246" height="187" rx="2" fill="none" stroke="#542b24" stroke-width="13"/>
    <rect x="8" y="8" width="246" height="187" rx="1" fill="none" stroke="#8e352e" stroke-width="10"/>

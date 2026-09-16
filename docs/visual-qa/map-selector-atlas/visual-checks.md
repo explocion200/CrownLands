@@ -29,8 +29,8 @@ No production browser session, game account, orders, player holdings or realm da
 - A small-landscape click check initially opened Kingsbridge when clicking partially visible Lionwatch: pointer-induced focus centered the tile before the click completed. The draft now skips focus centering while a pointer is active. Repeating that exact click opened Lionwatch once; keyboard ArrowRight still centered/focused Lionwatch and Enter opened it correctly.
 - `node --check` passed for `frames.js` and `preview.js`; `git diff --check` passed. Browser warning/error logs were empty. The standard desktop draft was restored for review. Native device pinch review and production integration remain pending.
 
-## Fortress-specific Stronghold crests
+## Stronghold specialization crests
 
-- Replaced the four Stronghold crowns with their exact catalog landmark art; verified the training, gold, movement and defense assets against Greybanner Hold, Aurum Keep, Swiftgate and Ironwatch respectively. Existing image files were reused without modification.
-- The rendered atlas has four fortress crests and exactly one crown, on Crown Citadel. Desktop and both landscape sizes were reviewed; Ironwatch was centered via keyboard to inspect its defensive-fortress crest. Captions fit, focus remained visible and browser warning/error logs were empty.
+- Per the user's clarification, Stronghold icons represent their bonuses. Verified the existing Strongholds-ledger icons: troop helmet for Greybanner Hold, gold coin for Aurum Keep, marching standard for Swiftgate and shield for Ironwatch. Existing SVG files were reused without modification.
+- The rendered atlas has four specialization icons and one royal crown crest, on Crown Citadel. Desktop and 844 × 390 landscape were reviewed after the icon substitution. Borders, captions and layout are unchanged from the prior desktop and both-landscape checks.
 - Syntax and whitespace checks passed. The standard desktop draft was restored. No runtime integration or release was performed.
