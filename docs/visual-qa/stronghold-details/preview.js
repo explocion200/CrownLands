@@ -9,23 +9,31 @@ function status(message) { parent.postMessage({type:"stronghold-status",message,
 function link(name,kind="profile") { return `<button class="name-link" data-preview-action="${kind}" data-name="${esc(name)}">${esc(name)}</button>`; }
 function rulerMark() { return '<span class="ruler-mark" aria-hidden="true"><img src="assets/flag-symbols/selected/svg/lion.svg" alt=""></span>'; }
 function duration(seconds) { const h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60); return `${h}h ${String(m).padStart(2,"0")}m`; }
+function repairDuration(seconds) { return `${Math.floor(seconds/60)}m ${String(seconds%60).padStart(2,"0")}s`; }
+function ledgerTitle() { return hold.crown ? "Reign Ledger" : "Stronghold Legacy"; }
 function metric(label,value,help="",className="") { return `<div class="metric-row"><div><span>${label}</span>${help?`<small>${help}</small>`:""}</div><strong class="${className}">${value}</strong></div>`; }
 function identityMarkup(f) {
  return `<div class="keep-illustration"><span class="keep-level"><small>Defense level</small><strong>${hold.level}</strong></span><img src="${hold.art}" alt="${esc(hold.artDescription)}"><span class="keep-caption">${esc(hold.name)} · The Core</span></div>
-  <div class="ownership-record"><div class="ruler-entry">${rulerMark()}<div><small>Owner${f.owned?" · You":""}</small>${f.neutral?`<span class="plain-owner">${f.owner}</span>`:link(f.owner)}</div></div>
+  <div class="ownership-record"><div class="ruler-entry">${rulerMark()}<div><small>${hold.crown?"Controller":"Owner"}${f.owned?" · You":""}</small>${f.neutral?`<span class="plain-owner">${f.owner}</span>`:link(f.owner)}</div></div>
   <div class="ruler-entry"><span class="heraldry-slot" id="clanHeraldry" aria-hidden="true"></span><div><small>Holding clan</small>${f.clan?link(`[${f.tag}] ${f.clan}`,"clan"):'<span class="plain-owner">No clan</span>'}</div></div></div>
-  <div class="holding-tag">${f.owned?'Garrison limit <strong>Unlimited</strong>':`Intelligence <strong>${f.ally?"Clan shared":f.scouted?"Scouted":"Unscouted"}</strong>`}</div>`;
+  <div class="holding-tag">${hold.crown?`Current reign <strong>${f.currentReignSeconds?duration(f.currentReignSeconds):"Unclaimed"}</strong>`:f.owned?'Garrison limit <strong>Unlimited</strong>':`Intelligence <strong>${f.ally?"Clan shared":f.scouted?"Scouted":"Unscouted"}</strong>`}</div>`;
 }
 function benefitMarkup(f) {
+ if(hold.crown)return `<section class="crown-benefits" aria-label="Crown Citadel benefits"><div class="crown-benefit-heading"><img src="${hold.icon}" alt=""><h2>Crown dominion</h2><small>Clanmates receive half</small></div><div class="crown-benefit-grid">${CROWN_BENEFITS.map(item=>`<div><strong>${item.sign}${hold.directPercent}%</strong><span>${item.label}</span></div>`).join("")}</div></section>`;
  return `<section class="holding-benefit" aria-label="${esc(hold.kind)} bonus"><img src="${hold.icon}" alt=""><div class="benefit-heading"><p class="eyebrow">${f.owned?"Controlled bonus":"Stronghold bonus"}</p><h2>${hold.label}</h2></div><div class="benefit-rate"><strong>+${hold.directPercent}%</strong><small>Controller</small></div><div class="benefit-rate shared"><strong>+${hold.clanPercent}%</strong><small>Clanmates</small></div></section>`;
 }
 function benefitDetailsMarkup(f) {
+ if(hold.crown)return `<table class="crown-sharing"><caption>Crown benefits while held</caption><thead><tr><th scope="col">Benefit</th><th scope="col">Controller</th><th scope="col">Clanmate</th></tr></thead><tbody>${CROWN_BENEFITS.map(item=>`<tr><th scope="row">${item.fullLabel}</th><td>${item.sign}${hold.directPercent}%</td><td>${item.sign}${hold.clanPercent}%</td></tr>`).join("")}</tbody></table>
+  ${f.owned?'<div class="benefit-note"><strong>Your active objective benefit</strong><p>Citadel +10% · Upgrade cost −10%</p><small>Personal and shared clan benefits are calculated separately by the server.</small></div>':""}
+  <div class="benefit-note"><strong>Defending soldiers</strong><small>The defense portion adds 10% for the controller or 5% for clanmates against each soldier’s 1.30 base. Walls, Stoneworks, city level and repair time are unchanged.</small></div>
+  <div class="benefit-note"><strong>Other Strongholds &amp; clan sharing</strong><small>The Citadel controller also receives half the benefit of personally held regional Strongholds. For example, Citadel + Gold Stronghold gives 14% base gold production. A clanmate holding the Gold Stronghold receives its 8% plus 5% shared Citadel benefit, for 13%. Personal and clan contributions are resolved by the server.</small></div>
+  <div class="benefit-note"><strong>Effect target · ${hold.target}</strong><small>March speed affects travel time. Upgrade cost is reduced; it is not a production bonus.</small></div>`;
  return `<p class="bonus-copy">The controller receives <strong>${hold.directPercent}%</strong>; current clanmates receive <strong>${hold.clanPercent}%</strong>, subject to Citadel precedence.</p>
   ${f.owned?`<div class="benefit-note"><strong>Your active objective benefit</strong><p>${hold.kind} +${hold.directPercent}%</p><small>Citadel precedence is applied by the server.</small></div>`:""}
   <div class="benefit-note"><strong>Effect target · ${hold.target}</strong><small>${hold.help}</small></div>`;
 }
 function wallMarkup(f) {
- return `<div class="wall-overview ${f.damaged?"damaged":""}"><img src="${icons.walls}" alt=""><div><div class="wall-heading"><span>Wall integrity</span><strong>${f.integrity}% · ${f.damaged?"Damaged":"Intact"}</strong></div><div class="integrity-track" style="--integrity:${f.integrity}%" aria-hidden="true"><span></span></div><small>${f.damaged?"Full repair in 12m 00s":"Fully repaired"}</small></div></div>`;
+ return `<div class="wall-overview ${f.damaged?"damaged":""}"><img src="${icons.walls}" alt=""><div><div class="wall-heading"><span>Wall integrity</span><strong>${f.integrity}% · ${f.damaged?"Damaged":"Intact"}</strong></div><div class="integrity-track" style="--integrity:${f.integrity}%" aria-hidden="true"><span></span></div><small>${f.damaged?`Full repair in ${repairDuration(f.repairSeconds)}`:"Fully repaired"}</small></div></div>`;
 }
 function supportMarkup(f) {
  if(!f.owned&&!f.ally)return "";
@@ -34,14 +42,15 @@ function supportMarkup(f) {
   <p class="support-help">${f.owned?"These troops stay at this holding until their sender recalls them, you send them home, or they are lost in battle.":"Your troops stay at this holding until you recall them, the holding owner sends them home, or they are lost in battle."}</p></section>`;
 }
 function detailsMarkup(f) {
- const total = f.owned ? number(f.totalDefense) : f.scouted ? `${number(f.baseDefense)} <b>+ ${number(f.totalDefense-f.baseDefense)}</b>` : "Unknown";
- return `${benefitMarkup(f)}<div class="strength-overview"><article class="strength-card"><img src="${icons.troops}" alt=""><div><h2>${f.owned?"Troops stationed":"Troops"}</h2><strong>${f.visibleTroops?number(f.troops):"Unknown"}</strong><small>${f.owned?"Owner garrison":f.ally?"Shared by your clan":f.scouted?"Scout report":"Scout required"}</small></div></article><article class="strength-card"><img src="${icons.defense}" alt=""><div><h2>${f.owned?"Estimated defense":"Total defense"}</h2><strong class="${f.scouted?"scouted-pair":""}">${total}</strong><small>${f.owned?"Walls + owner garrison":f.scouted?"Report · base + bonus":"Scout required"}</small></div></article></div>
+ const total = f.owned || (f.scouted&&hold.crown) ? number(f.totalDefense) : f.scouted ? `${number(f.baseDefense)} <b>+ ${number(f.totalDefense-f.baseDefense)}</b>` : "Unknown";
+ return `${benefitMarkup(f)}<div class="strength-overview"><article class="strength-card"><img src="${icons.troops}" alt=""><div><h2>${f.owned||hold.crown?"Troops stationed":"Troops"}</h2><strong>${f.visibleTroops?number(f.troops):"Unknown"}</strong><small>${f.owned?"Owner garrison":f.ally?"Shared by your clan":f.scouted?"Scout report":"Scout required"}</small></div></article><article class="strength-card"><img src="${icons.defense}" alt=""><div><h2>${f.owned?"Estimated defense":f.scouted&&hold.crown?"Scouted defense":"Total defense"}</h2><strong class="${f.scouted&&!hold.crown?"scouted-pair":""}">${total}</strong><small>${f.owned?"Walls + owner garrison":f.scouted?(hold.crown?"Wall + garrison at scout time":"Report · base + bonus"):"Scout required"}</small></div></article></div>
   ${wallMarkup(f)}
   <div class="overview-disclosures"><details class="detail-fold"><summary><span>Defense &amp; repair</span><small>Wall power · bonuses</small></summary><div class="fold-content">
   ${f.owned?`<p>Estimated live defense combines current wall power with locally estimated owner garrison defense. Allied reinforcements are listed separately.</p>${f.objectiveDefensePercent?`<p>Includes ${hold.kind} +${f.objectiveDefensePercent}% on the owner's defending soldiers. Wall power is unchanged.</p>`:""}<p>Station as many troops as you can send.</p>`:f.ally?'<p>Exact owner troops are shared by your clan.</p>':f.scouted?'<p>Garrison and defense reflect your latest scout report.</p>':'<p>A scout report is needed to reveal the current garrison and total defense.</p>'}
   ${metric("Wall power",f.powerVisible?`${number(f.wallPower)} / ${number(f.fullWalls)}`:"Unknown","Walls absorb attack power before the garrison fights.","stat-pair")}
   ${f.owned?metric("Wall level",String(hold.level),"Sets this objective's base wall and repair time")+metric("City walls",`${number(hold.baseWalls)} <b>+ ${number(f.fullWalls-hold.baseWalls)}</b>`,"Stoneworks +12% · Gear wall strength +4%","stat-pair"):""}
-  <p>Full-breach repair window <strong>30m 00s</strong>.${f.damaged?" Hits add proportional time. Ownership handoffs preserve the deadline.":""}</p></div></details>
+  ${hold.crown?metric("Garrison limit","Unlimited",`Defense level ${hold.level} · matches a level ${hold.level} city.`):""}
+  <p>${f.damaged?`Full repair in <strong>${repairDuration(f.repairSeconds)}</strong>. `:"Fully repaired. "}Full-breach repair window <strong>${repairDuration(hold.repairMinutes*60)}</strong>.${f.damaged?" Hits add proportional time. Ownership handoffs preserve the deadline.":""}</p></div></details>
   <details class="detail-fold"><summary><span>Holding benefits</span><small>${hold.subject} · clan sharing</small></summary><div class="fold-content">${benefitDetailsMarkup(f)}</div></details></div>
   ${f.neutral?`<div class="access-note neutral-note"><strong>Neutral base · ${number(hold.neutralStartingTroops)}</strong>One-time starting defenders. This is not the current garrison.</div>`:""}
   ${f.ally?'<div class="access-note"><strong>Clan Ally · Garrison shared by clan</strong>Scout and Attack are disabled. You may send clan reinforcements. Exact owner troops are live; defense bonuses and reinforcement details remain private.</div>':!f.owned?`<div class="access-note scout-note"><strong>${f.scouted?"Scout report expires in 7m 43s":"Scout report · Not available"}</strong>${f.scouted?"Defense values reflect the report snapshot.":"Current troop and total defense values remain unknown."}</div>`:""}
@@ -50,15 +59,15 @@ function detailsMarkup(f) {
 function legacyMarkup(f) {
  const state = f.legacyStatus;
  if(state!=="ready") {
-  const copy = {loading:["Reading the Stronghold Legacy","Loading this Stronghold's holding-time rankings…"],error:["Stronghold Legacy unavailable","The Stronghold Legacy could not be loaded right now."],empty:["The legacy is yet to be written","No ruler has held this Stronghold yet."]}[state];
+  const copy = {loading:[`Reading the ${ledgerTitle()}`,`Loading ${hold.name}'s holding-time rankings…`],error:[`${ledgerTitle()} unavailable`,`The ${ledgerTitle()} could not be loaded right now.`],empty:[hold.crown?"The throne awaits its first ruler":"The legacy is yet to be written",hold.crown?"No ruler has held the Crown Citadel yet.":"No ruler has held this Stronghold yet."]}[state];
   return `<div class="legacy-state" role="status"><img src="${hold.icon}" alt=""><h2>${copy[0]}</h2><p>${copy[1]}</p></div>`;
  }
- return `<div class="legacy-intro"><img src="${hold.icon}" alt=""><div><h2>The Stronghold Legacy</h2><p>Cumulative time held at ${esc(hold.name)}. The current holder's time continues rising until control changes.</p></div></div>
-  <div class="legacy-columns"><span>Rank</span><span>Ruler</span><span>Time held</span></div><div class="legacy-list" tabindex="0" aria-label="Stronghold holding-time rankings">${strongholdLegacyFixture(f).map(row=>`<article class="legacy-row ${row.current?"current":""}"><span class="legacy-rank">#${row.rank}</span><div class="legacy-ruler">${rulerMark()}<div>${link(row.name)}${row.current?"<small>Current holder</small>":""}</div></div><strong class="legacy-time">${duration(row.seconds)}</strong></article>`).join("")}</div>`;
+ return `<div class="legacy-intro"><img src="${hold.icon}" alt=""><div><h2>${hold.crown?"The Reign Ledger":"The Stronghold Legacy"}</h2><p>Cumulative time held at ${esc(hold.name)}. The current ${hold.crown?"ruler":"holder"}'s time continues rising until control changes.</p></div></div>
+  <div class="legacy-columns"><span>Rank</span><span>Ruler</span><span>Time held</span></div><div class="legacy-list" tabindex="0" aria-label="${hold.crown?"Citadel reign":"Stronghold holding-time"} rankings">${strongholdLegacyFixture(f).map(row=>`<article class="legacy-row ${row.current?"current":""}"><span class="legacy-rank">#${row.rank}</span><div class="legacy-ruler">${rulerMark()}<div>${link(row.name)}${row.current?`<small>${hold.crown?"Current Citadel ruler":"Current holder"}</small>`:""}</div></div><strong class="legacy-time">${duration(row.seconds)}</strong></article>`).join("")}</div>`;
 }
 function footerMarkup(f) {
- if(section==="legacy")return `<p class="footer-note"><strong>${esc(hold.name)} · Stronghold Legacy</strong><br>Scores are cumulative for this Stronghold. Its current holder continues adding time.</p>`;
- if(!f.owned)return `<p class="footer-note"><strong>${f.ally?"Clan ally holding":f.neutral?"Neutral Stronghold":"Foreign Stronghold"}</strong><br>${f.ally?"Your stationed reinforcements can be recalled from the support section.":"Scout reports govern private troop and defense information."}</p>`;
+ if(section==="legacy")return `<p class="footer-note"><strong>${esc(hold.name)} · ${ledgerTitle()}</strong><br>Scores are cumulative. The current ${hold.crown?"ruler":"holder"} continues adding time until control changes.</p>`;
+ if(!f.owned)return `<p class="footer-note"><strong>${f.ally?"Clan ally holding":`${f.neutral?"Neutral":"Foreign"} ${hold.crown?"Citadel":"Stronghold"}`}</strong><br>${f.ally?"Your stationed reinforcements can be recalled from the support section.":"Scout reports govern private troop and defense information."}</p>`;
  return `<div class="management-copy"><strong>${f.cooldown?"Daily allowance used":"Holding management"}</strong><small>${f.cooldown?"Resets in 06h 24m at 00:00 UTC.":"One relinquishment available · Resets 00:00 UTC"}</small></div><button class="relinquish-button" data-preview-action="relinquish" ${f.cooldown?"disabled":""}>${f.cooldown?"Available in 06h 24m":"Relinquish Castle"}</button>`;
 }
 function render() {
@@ -66,7 +75,8 @@ function render() {
  document.title = `${hold.name} preview`;
  document.querySelector('.holding-shell').dataset.holding = holdingKey;
  $("strongholdTitle").textContent=hold.name;
- $("strongholdKind").textContent=hold.kind.toUpperCase();
+ $("strongholdKind").textContent=(hold.kicker||hold.kind).toUpperCase();
+ $("legacyTab").textContent=ledgerTitle();
  $("strongholdSeal").src=hold.icon;
  $("close").setAttribute("aria-label",`Close ${hold.kind}`);
  $("informationTabs").setAttribute("aria-label",`${hold.name} information`);
@@ -84,7 +94,7 @@ function setSection(next,focus=false) {
  section=next; document.querySelectorAll("[data-tab]").forEach(tab=>{const active=tab.dataset.tab===section;tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;if(active&&focus)tab.focus();});
  document.querySelector('.holding-shell').classList.toggle('overview-active',section==="overview");
  $("overviewPanel").hidden=section!=="overview";$("legacyPanel").hidden=section!=="legacy";$("actions").innerHTML=footerMarkup(fixture);$("actions").classList.toggle("legacy-footer",section==="legacy");
- status(section==="legacy"?"Stronghold Legacy preview. Holding times are fictional and frozen for review.":"Overview redesign. Expand Defense & repair or Holding benefits for the full breakdown.");
+ status(section==="legacy"?`${ledgerTitle()} preview. Holding times are fictional and frozen for review.`:"Overview preview. Expand Defense & repair or Holding benefits for the full breakdown.");
 }
 function previewAction(button) {
  const action=button.dataset.previewAction;actionOrigin=button;

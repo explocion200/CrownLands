@@ -34,3 +34,15 @@ Following Gold overview approval, checked the three additional regional drafts o
 - Shared styling, data definitions and rendering avoid three separate copies of the approved layout. The Gold default and its existing links are retained; Gold has an approved-design badge and the other variants remain drafts.
 
 Only local draft actions were exercised. Real multiplayer/order handling and deployment remain outside this approval pass.
+
+## Crown Citadel
+
+Checked the Crown variant on 2026-09-15:
+
+- Desktop and both landscape layouts rendered the Citadel art, crown, controller, current reign and five benefits. The smallest normal example fits the five-benefit group, main statistics, wall strip and reign line without horizontal overflow. The small Reign Ledger has space for two initial rows and retains the cumulative-score explanation in its footer.
+- Expanded benefits show all five controller/clanmate values, including −10% / −5% upgrade cost. Soldier-only defense and the confirmed regional Stronghold interaction examples are retained. Relinquishment opens the correctly named Crown Citadel local preview.
+- Owned estimate is 44,006,200; damaged is 42,614,200 with 18m remaining. Enemy and neutral private values remain Unknown; allies see exact owner troops and Recall only; Crown scout defense is a single reported total. Neutral starts at the labeled one-time 100,000,000, with current reign Unclaimed. Long values do not overflow horizontally, and cooldown disables relinquishment.
+- Reign Ledger contains 100 ranked sample rulers, a Current Citadel ruler marker, and cumulative times. The final ruler was reached, its local profile preview opened, and rank 100 was visible after returning. Loading, error and empty states use the correct Reign Ledger text.
+- A focused Node check verified Crown identity/art against the current Core layout, level-100 wall constants and 45-minute repair timing against economy configuration, five benefit signs, 10% soldier-layer math, 100-million neutral starting troops, and unchanged Gold/Defense regional fixture values. All passed.
+
+This remains a local design review. Fictional clocks are frozen; production ranking, multiplayer, orders, release checks and deployment await approved runtime integration.

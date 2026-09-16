@@ -19,7 +19,7 @@ const STRONGHOLD_DEFINITIONS = Object.freeze({
   art: "assets/worlds/core-expansion-v1/art/stronghold-training-c4a177cc4335.webp",
   artDescription: "Greybanner Hold's walled training courtyard with barracks, practice dummies and archery targets",
   icon: "assets/icons/daily-login-troops-r1.svg", label: "Base troop production", target: "Base troop production",
-  help: "Boosts owned towns while held."
+  help: "Boosts owned towns while held.", approved: true
  }),
  movement: Object.freeze({...REGIONAL_HOLD_DEFAULTS,
   id: "core-v2-swiftgate-p1-p0_speed_stronghold", region: "core-v2-swiftgate-p1-p0",
@@ -27,7 +27,7 @@ const STRONGHOLD_DEFINITIONS = Object.freeze({
   art: "assets/worlds/core-expansion-v1/art/stronghold-movement-b202e3da8557.webp",
   artDescription: "Swiftgate's stone watchtower and stable courtyard with horses and a water trough",
   icon: "assets/icons/skills/marchOrders.svg", label: "March speed", target: "March time",
-  help: "Reduces travel time, not attack power."
+  help: "Reduces travel time, not attack power.", approved: true
  }),
  defense: Object.freeze({...REGIONAL_HOLD_DEFAULTS,
   id: "core-v2-ironwatch-p0-p1_defense_stronghold", region: "core-v2-ironwatch-p0-p1",
@@ -35,20 +35,37 @@ const STRONGHOLD_DEFINITIONS = Object.freeze({
   art: "assets/worlds/core-expansion-v1/art/stronghold-defense-bc42b1436d02.webp",
   artDescription: "Ironwatch's fortified stone gatehouse, high towers and enclosed defensive courtyard",
   icon: "assets/icons/skills/shieldwallDiscipline.svg", label: "Defending-soldier power", target: "Defending soldiers",
-  help: "Adds against each soldier's 1.30 defense base. Walls and city stats are unchanged."
+  help: "Adds against each soldier's 1.30 defense base. Walls and city stats are unchanged.", approved: true
+ }),
+ crown: Object.freeze({
+  id: "core-v2-crown-citadel-p0-p0_crown_stronghold", region: "core-v2-crown-citadel-p0-p0",
+  name: "Crown Citadel", kind: "Crown Citadel", subject: "Crown", kicker: "Royal seat of the Core", crown: true,
+  level: 100, baseWalls: 3000000, repairMinutes: 45, directPercent: 10, clanPercent: 5,
+  neutralStartingTroops: 100000000, previewTroops: 28340000,
+  art: "assets/worlds/core-expansion-v1/art/citadel-crown-a81fc4688947.webp",
+  artDescription: "Crown Citadel's great twin-towered keep behind concentric stone walls and a royal gatehouse",
+  icon: "assets/icons/reward-achievements-r1.svg", label: "Crown dominion", target: "All cities and marches",
+  help: "Personal and shared clan benefits are calculated separately by the server."
  })
 });
+const CROWN_BENEFITS = Object.freeze([
+ Object.freeze({label:"Base gold",fullLabel:"Base gold production",sign:"+"}),
+ Object.freeze({label:"Base troops",fullLabel:"Base troop production",sign:"+"}),
+ Object.freeze({label:"March speed",fullLabel:"March speed",sign:"+"}),
+ Object.freeze({label:"Soldier defense",fullLabel:"Defending-soldier power",sign:"+"}),
+ Object.freeze({label:"Upgrade cost",fullLabel:"Upgrade cost",sign:"−"})
+]);
 function strongholdDetailFixture(sample, hold = STRONGHOLD_DEFINITIONS.gold) {
  const neutral = sample === "neutral" || sample === "legacy-empty";
  const ally = sample === "ally", scouted = sample === "scouted";
  const owned = !neutral && !ally && sample !== "enemy" && !scouted;
  const long = sample === "long", damaged = sample === "damaged";
- const troops = long ? 987654321012 : neutral ? 50000000 : 3250000;
- const fullWalls = owned || scouted ? Math.floor(hold.baseWalls * 1.16) : hold.baseWalls;
+ const troops = long ? 987654321012 : neutral ? hold.neutralStartingTroops : hold.previewTroops || 3250000;
+ const fullWalls = owned || scouted ? Math.floor(hold.baseWalls + hold.baseWalls * 16 / 100) : hold.baseWalls;
  const integrity = damaged ? 60 : 100;
  const wallPower = Math.floor(fullWalls * integrity / 100);
  // Illustrative owner-only estimate: the held Defense objective affects soldiers, never walls.
- const objectiveDefensePercent = hold === STRONGHOLD_DEFINITIONS.defense && !neutral ? hold.directPercent : 0;
+ const objectiveDefensePercent = (hold === STRONGHOLD_DEFINITIONS.defense || hold.crown) && !neutral ? hold.directPercent : 0;
  const garrisonDefense = Math.floor(troops * 1.30 * (1 + objectiveDefensePercent / 100));
  return {
   sample, owned, ally, neutral, scouted, long, damaged, cooldown: sample === "cooldown",
@@ -56,6 +73,8 @@ function strongholdDetailFixture(sample, hold = STRONGHOLD_DEFINITIONS.gold) {
   clan: neutral ? "" : long ? "Wardens of the Far North" : owned || ally ? "Ironford Wardens" : "House Redwyvern",
   tag: owned || ally ? "IRON" : "RED", troops, visibleTroops: owned || ally || scouted,
   fullWalls, wallPower, integrity, objectiveDefensePercent, totalDefense: wallPower + garrisonDefense,
+  repairSeconds: Math.round(hold.repairMinutes * 60 * (100 - integrity) / 100),
+  currentReignSeconds: hold.crown && !neutral ? 66420 : 0,
   baseDefense: hold.baseWalls + Math.floor(troops * 1.30),
   powerVisible: owned || scouted || neutral,
   support: owned ? [{name:"Mira Ashford",troops:225000,action:"Send Home",source:"Highwinter Vale"},{name:"Oswin Vale",troops:125000,action:"Send Home",source:"Dawncrest"}]
@@ -64,7 +83,7 @@ function strongholdDetailFixture(sample, hold = STRONGHOLD_DEFINITIONS.gold) {
  };
 }
 function strongholdLegacyFixture(fixture) {
- const firstNames = ["Elowen Reed","Edric Stone",fixture.owner,"Oswin Vale","Mira Ashford","Rowan Hawke"];
+ const firstNames = ["Elowen Reed","Edric Stone",fixture.neutral?"Alden Greywatch":fixture.owner,"Oswin Vale","Mira Ashford","Rowan Hawke"];
  return Array.from({length:100},(_,i)=>({
   rank:i+1,name:firstNames[i] || `${["Cedric","Isolde","Gareth","Alys","Maeve"][i%5]} ${["Northwell","Westmere","Oakfield","Hillwatch","Reedhall"][Math.floor(i/5)%5]}`,
   seconds: Math.max(60,330240-i*2950), current: !fixture.neutral && i===2

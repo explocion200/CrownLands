@@ -1,0 +1,67 @@
+/* Crown Citadel adds its benefit group and royal ledger to the approved frame. */
+[data-holding="crown"] .title-seal { background: #73372e; }
+[data-holding="crown"] .keep-illustration { background: radial-gradient(ellipse at 50% 65%, #c3a46e66, transparent 68%), linear-gradient(135deg, #f0e1bd, #d8c192); border-color: #ac8750; }
+[data-holding="crown"] .holding-tag strong { color: #824735; }
+.crown-benefits { border: 1px solid #b08d53; padding: 10px 12px; background: linear-gradient(110deg, #e3c895, #f0dfb5); box-shadow: inset 0 0 0 3px #faecc755; }
+.crown-benefit-heading { display: flex; align-items: center; gap: 7px; padding-bottom: 8px; border-bottom: 1px solid #b6996680; }
+.crown-benefit-heading img { width: 29px; height: 29px; object-fit: contain; }
+.crown-benefit-heading h2 { font: 19px Georgia, serif; color: #77422e; }
+.crown-benefit-heading small { margin-left: auto; font-size: 10px; color: #725b3a; }
+.crown-benefit-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 8px; }
+.crown-benefit-grid > div { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 6px; border-left: 1px solid #c0a476; text-align: center; }
+.crown-benefit-grid > div:first-child { border-left: 0; }
+.crown-benefit-grid strong { font: 27px/1.05 Georgia, serif; color: #774f29; white-space: nowrap; }
+.crown-benefit-grid span { font-size: 10px; line-height: 1.2; color: #685234; }
+.crown-benefit-grid > div:last-child strong { color: #53633c; }
+.crown-sharing { width: 100%; border-collapse: collapse; margin: 5px 0 8px; font-size: 11px; }
+.crown-sharing caption { text-align: left; font: 16px Georgia, serif; padding: 3px 0 8px; color: var(--ink); }
+.crown-sharing th, .crown-sharing td { border-bottom: 1px solid #cbbb97; padding: 7px 4px; text-align: right; }
+.crown-sharing th:first-child { text-align: left; }
+.crown-sharing tbody th { font-weight: 400; }
+.crown-sharing thead th { font-size: 10px; color: #836338; font-weight: 600; }
+.crown-sharing td { font: 15px Georgia, serif; color: #664b2d; font-variant-numeric: tabular-nums; }
+.crown-sharing tr:last-child td { color: #53633c; }
+[data-holding="crown"] .legacy-intro h2 { color: #743e2c; }
+[data-holding="crown"] .legacy-columns { background: #dfc89d; }
+[data-holding="crown"] .legacy-row.current { background: #eddcc0; border-left-color: #914b37; }
+[data-holding="crown"] .legacy-row.current small { color: #914b37; }
+[data-holding="crown"] .legacy-row:nth-child(-n+3) .legacy-rank { color: #8b5733; }
+
+@media (max-height:600px), (max-width:1000px) {
+  .crown-benefits { padding: 6px 8px; }
+  .crown-benefit-heading { gap: 5px; padding-bottom: 4px; }
+  .crown-benefit-heading img { width: 20px; height: 20px; }
+  .crown-benefit-heading h2 { font-size: 15px; }
+  .crown-benefit-heading small { font-size: 8px; }
+  .crown-benefit-grid { margin-top: 5px; }
+  .crown-benefit-grid > div { gap: 2px; padding-inline: 4px; }
+  .crown-benefit-grid strong { font-size: 22px; }
+  .crown-benefit-grid span { font-size: 8px; }
+  .crown-sharing th, .crown-sharing td { padding: 6px 3px; }
+}
+@media (max-width:650px) {
+  [data-holding="crown"] .window-header { min-height: 43px; }
+  [data-holding="crown"] .heading h1 { font-size: 20px; }
+  [data-holding="crown"] .title-seal { width: 29px; height: 33px; }
+  [data-holding="crown"] .close-button { height: 38px; width: 38px; }
+  [data-holding="crown"] .tabs-bar, [data-holding="crown"] .tabs-bar button { min-height: 33px; }
+  [data-holding="crown"] .keep-illustration { flex-basis: 54px; min-height: 54px; }
+  [data-holding="crown"] .holding-tag { padding-top: 2px; }
+  .crown-benefits { padding: 4px 5px; }
+  .crown-benefit-heading { padding-bottom: 3px; }
+  .crown-benefit-heading img { width: 16px; height: 16px; }
+  .crown-benefit-heading h2 { font-size: 13px; }
+  .crown-benefit-heading small { font-size: 7px; }
+  .crown-benefit-grid { margin-top: 3px; }
+  .crown-benefit-grid > div { padding-inline: 2px; gap: 2px; }
+  .crown-benefit-grid strong { font-size: 18px; }
+  .crown-benefit-grid span { font-size: 7px; }
+  [data-holding="crown"] .wall-overview { padding-block: 4px; margin-top: 4px; }
+  [data-holding="crown"] .wall-overview > img { height: 21px; }
+  [data-holding="crown"] .wall-overview:not(.damaged) small { display: none; }
+  [data-holding="crown"] .legacy-intro p { display: none; }
+  [data-holding="crown"] .legacy-row { min-height: 44px; padding-block: 3px; }
+  .crown-sharing { font-size: 9px; }
+  .crown-sharing thead th { font-size: 8px; }
+  .crown-sharing td { font-size: 13px; }
+}
