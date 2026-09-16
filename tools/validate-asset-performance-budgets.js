@@ -132,7 +132,14 @@ const entrypointBudgets = {
   // The City List ledger adds under one 4 KiB runtime step.
   // Skills card markup adds under 2 KiB; its stylesheet and emblems are bounded separately.
   // Clan presentation adds bounded navigation, confirmation, and order-entry markup.
-  "game.js": 1766 * 1024,
+  // Approved Leaderboards, Atlas navigation, and five holding views add a
+  // bounded 16 KiB of runtime wiring. Decorative presentation lives in separate
+  // runtime-cached modules; the aggregate installation cache limit is unchanged.
+  "game.js": (1766 + 16) * 1024,
+  "kingdom-ledgers-ui.js": 10 * 1024,
+  "kingdom-ledgers-ui.css": 18 * 1024,
+  "stronghold-details-ui.js": 6 * 1024,
+  "stronghold-details-ui.css": 30 * 1024,
   "modal-ui.js": 4 * 1024,
   "skills-ledger-ui.css": 30 * 1024,
   "clan-ledger-ui.css": 84 * 1024,

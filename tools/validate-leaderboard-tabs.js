@@ -50,7 +50,7 @@ assert.match(styles, /\.leaderboard-tabs[\s\S]*?\.leaderboard-tab\.active[\s\S]*
 assert.match(ledgerStyle, /\.leaderboard-row[\s\S]*?background:#f3e8cc!important/, "Ranking rows must use the approved parchment surface.");
 assert.match(ledgerStyle, /\.leaderboard-list[^}]*overflow:auto/, "The ranking list must scroll inside the fixed dialog.");
 assert.match(ledgerStyle, /\.leaderboard-row\.current[^}]*background:#e1e4c7!important/, "The current player's entry must remain highlighted.");
-assert.match(client, /function updateLeaderboardStanding[\s\S]*?entries\.findIndex[\s\S]*?data-find-rank[\s\S]*?scrollIntoView/, "Find my rank must use a published entry and scroll to it.");
+assert.match(read("kingdom-ledgers-ui.js"), /function updateLeaderboardStanding[\s\S]*?entries\.findIndex[\s\S]*?data-find-rank[\s\S]*?scrollIntoView/, "Find my rank must use a published entry and scroll to it.");
 assert.match(client, /formatLedgerNumber\(entry\.kingPower\)/, "Rankings must retain full power numbers.");
 
 for (const [label, theme] of [["Profile theme", profileTheme], ["final palette", finalPalette]]) {
