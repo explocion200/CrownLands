@@ -1,6 +1,6 @@
 # Leaderboards ledger draft
 
-Status: **DESIGN APPROVED — awaiting runtime integration**. Branch: `codex/leaderboard-ledger-draft`. The user approved the design and requested a Map Selector draft for the same UI review batch. Neither draft is authorized for release by design approval alone.
+Status: **DESIGN APPROVED — awaiting runtime integration**. Branch: `codex/leaderboard-ledger-draft`. The user approved this design and the subsequent Map Selector, then requested a Gold Stronghold detail draft for the same UI review batch. Gold Stronghold details remain pending approval. No draft is authorized for release by design approval alone.
 
 Review `/docs/visual-qa/leaderboards-ledger/index.html?viewport=desktop&section=players`. Viewports are 1440 × 900, 844 × 390 and 568 × 320; no portrait game layout. This isolated draft never imports the game or Firebase client and never changes accounts, scores, ranking order, storage, or production styles.
 
