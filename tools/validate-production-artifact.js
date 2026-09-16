@@ -29,6 +29,7 @@ const required = [
   "troop-orders-ui.css", "troop-orders-ui.js",
   "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg",
   "modal-ui.js",
+  "kingdom-ledgers-ui.js", "kingdom-ledgers-ui.css", "stronghold-details-ui.js", "stronghold-details-ui.css",
   "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
   "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
@@ -158,7 +159,12 @@ if (reinforcementUiBytes > 60 * 1024) throw new Error("Reinforcements presentati
 const militaryUiBytes = ["objectives-activity-ui.js", "objectives-activity-ui.css", "troop-orders-ui.js", "troop-orders-ui.css", "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (militaryUiBytes > 128 * 1024) throw new Error("Combined military presentation exceeds its 128 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132) * 1024;
+// Approved Leaderboards, Map Atlas, and royal holding views reuse packaged art.
+// Bound the four presentation files to 64 KiB and runtime/entry wiring to 20 KiB.
+const kingdomLedgersBytes = ["kingdom-ledgers-ui.js", "kingdom-ledgers-ui.css", "stronghold-details-ui.js", "stronghold-details-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (kingdomLedgersBytes > 64 * 1024) throw new Error("Kingdom ledgers presentation exceeds its 64 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
