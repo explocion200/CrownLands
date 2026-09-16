@@ -1,5 +1,9 @@
 # Camp draft checks
 
+## Relic chest image correction — 2026-09-16
+
+The initial variant used an older dark WebP chest despite describing it as updated. Corrected the reference to `assets/icons/common-gear-chest-r1.svg`, the approved oak-and-iron chest used by the current game's `COMMON_GEAR_BOX_ITEM.icon` and Daily Login draft. Confirmed successful image loading and visually checked the replacement on desktop and mobile landscape, with no overflow in the bonus strip. No layout or reward rule changed.
+
 ## Warband, Relic and Deed extension — 2026-09-16
 
 - Node.js syntax checks passed for all three scripts. Fixture checks matched every hold duration, daily allowance and production minimum against `functions/economy-config.json`. All four Core camp IDs/map names were found in the active layout; all camp artwork, map backdrops, icons, item illustrations and the updated chest file exist. Relic base item odds sum to 100%; the independent 1% chest roll was verified in the existing Functions code.

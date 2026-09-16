@@ -19,7 +19,7 @@ The review controls are outside the proposed game UI. Rulers, amounts, progress,
 | Relic | Ravenscar | 30 minutes | Five usable item rewards, each with a separate 1% bonus chest chance |
 | Deed | Dawncrest | 60 minutes | One random eligible neutral city award |
 
-Warband uses a restrained olive reward accent. Relic retains the existing six item images and drop chances, with the updated packaged Common Gear Box art in a separate bonus strip. Its history lists only the viewer's item rewards for today. The bonus chest supplements the random item and does not replace it; its 1% chance is separate from the six base item odds, which total 100%.
+Warband uses a restrained olive reward accent. Relic retains the existing six item images and drop chances, with the approved oak-and-iron Common Gear Box in a separate bonus strip. Its image is `assets/icons/common-gear-chest-r1.svg`, matching `COMMON_GEAR_BOX_ITEM.icon` in the current game; the older dark WebP chest is not used. Its history lists only the viewer's item rewards for today. The bonus chest supplements the random item and does not replace it; its 1% chance is separate from the six base item odds, which total 100%.
 
 Deed shows the existing-level/zero-troop city award, a private latest-ten history and local map-link previews. The reserved example separates a player's earned pending city from the now-neutral camp and its public timer. There is no invented Deed Token, city picker, map choice or guaranteed future city preview. Relic and Deed artwork uses adjusted mobile framing to retain the tops of the taller tents.
 

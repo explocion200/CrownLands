@@ -14,7 +14,7 @@ const RELIC_DROPS=Object.freeze([
  {name:'Recall Horn',rarity:'Rare',chance:8,art:'assets/optimized/item-recall-horn-384x384-66b7bde99a6d.webp'},
  {name:'Royal Peace Shield',rarity:'Legendary',chance:2,art:'assets/optimized/item-peace-shield-384x384-c74d2eb2f8ac.webp'}
 ]);
-const CAMP_GEAR_BOX_ART='assets/optimized/item-common-gear-box-192x192-d31500be5747.webp';
+const CAMP_GEAR_BOX_ART='assets/icons/common-gear-chest-r1.svg';
 // Fictional city awards; location buttons only open a local explanation.
 const DEED_HISTORY=Object.freeze(['Briarford','Stonebridge','Elmswatch','Ravenford','Ashenfield','Fairhaven','Oakrest','Westmere','Dunholt','Kingscross'].map((name,i)=>({name,map:['Dawncrest','Kingsbridge','Thornmere','Brambleford'][i%4],at:`${String(15-i).padStart(2,'0')} Sep 2026 · 14:20 UTC`})));
 const CAMP_SAMPLES=Object.freeze({
