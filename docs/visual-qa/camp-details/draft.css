@@ -2,7 +2,7 @@
 :root { color-scheme: light; --paper: #f0e5c9; --ink: #3a3024; --muted: #715e44; --line: #beab85; --olive: #53633f; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); background: #31382a; }
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; }
-body::before { content: ""; position: fixed; inset: -12px; background: linear-gradient(#26302085, #263020a8), url("../../../assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-north-east-p2-m2.webp") center / cover; filter: blur(4px); }
+body::before { content: ""; position: fixed; inset: -12px; background: linear-gradient(#26302085, #263020a8), var(--camp-map, url("../../../assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-north-east-p2-m2.webp")) center / cover; filter: blur(4px); }
 h1, h2, h3, p { margin: 0; }
 button { color: inherit; font: inherit; cursor: pointer; min-height: 44px; }
 button:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid #35616c; outline-offset: -2px; }
@@ -91,6 +91,38 @@ figure { margin: 0; }
 .panel-intro h2 { font: 27px Georgia, serif; margin: 5px 0 7px; }
 .panel-intro p:last-child { font-size: 13px; line-height: 1.5; color: var(--muted); }
 .rewards-summary { display: flex; justify-content: space-between; gap: 15px; padding: 12px 15px; background: #e5e2c2; border: 1px solid #b1b18b; font-size: 13px; color: #515b3b; }
+.ledger-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 21px Georgia, serif; margin: 19px 0 12px; }
+.ledger-heading small { font: 11px "Segoe UI", sans-serif; color: var(--muted); }
+.drop-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.drop-card { display: grid; grid-template-columns: 57px minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 11px 9px; border: 1px solid #c3b28f; background: #f4e9cf; }
+.drop-art { height: 57px; width: 57px; background: linear-gradient(#e0ddd5, #cbc9c0); border: 1px solid #b5b0a1; display: grid; place-items: center; }
+.drop-art img { width: 100%; height: 100%; object-fit: contain; }
+.drop-card h4 { font: 14px/1.3 Georgia, serif; margin: 0; }
+.drop-card small { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.drop-card > strong { font: 19px Georgia, serif; color: #655333; }
+.bonus-chest, .deed-award-record { display: flex; align-items: center; gap: 15px; border: 1px solid #baa577; padding: 13px 17px; margin-top: 14px; background: linear-gradient(110deg, #e4d2a6, #f1e5c6); }
+.bonus-chest > img { width: 80px; height: 70px; object-fit: contain; flex: none; }
+.bonus-chest h4, .deed-award-record h3 { font: 20px Georgia, serif; margin: 0 0 6px; }
+.bonus-chest h4 span { font: 11px "Segoe UI", sans-serif; padding-left: 9px; color: #6c542f; white-space: nowrap; }
+.bonus-chest p, .deed-award-record p { font-size: 12px; line-height: 1.6; color: var(--muted); }
+.deed-award-record > img { width: 65px; height: 65px; flex: none; }
+.deed-award-record small { font-size: 11px; margin-top: 7px; color: #6b593b; }
+.award-history { padding: 0; margin: 0; list-style: none; }
+.award-history li { display: flex; align-items: center; gap: 13px; padding: 11px 2px; border-bottom: 1px solid #cab891; }
+.award-history li > img { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.award-history li > div { flex: 1; min-width: 0; }
+.award-history strong { display: block; font: 17px Georgia, serif; overflow-wrap: anywhere; }
+.award-history small, .award-history time { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.award-history li > time { margin-left: auto; }
+.deed-history time { display: block; }
+.award-history .empty-history { display: block; font-size: 13px; color: var(--muted); padding: 19px 12px; background: #e7ddc1; }
+.history-state { padding: 20px; border: 1px solid var(--line); background: #e8dcc0; font-size: 13px; line-height: 1.6; }
+.history-state p { margin-top: 5px; color: var(--muted); }
+.reserved { border-color: #9b8151; }
+[data-camp="troops"] .reward-banner, [data-camp="troops"] .reward-step.next { background: linear-gradient(110deg, #dcddb9, #eeebd0); border-color: #a1a47e; }
+[data-camp="troops"] .reward-amount strong { color: #506039; }
+[data-camp="items"] .reward-banner { background: linear-gradient(110deg, #e0d4bd, #f1e5cf); }
+[data-camp="deed"] .reward-banner { background: linear-gradient(110deg, #dddab6, #eee7c9); border-color: #a8a27b; }
 .reward-ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 17px 0; }
 .reward-step { padding: 16px 13px; border: 1px solid var(--line); background: #f4e9cf; min-width: 0; position: relative; }
 .reward-step.next { border: 2px solid #8b7140; padding: 15px 12px; background: linear-gradient(135deg, #ead4a2, #f5e9cc); }
@@ -139,6 +171,8 @@ body:has(#campDialog[open]) .reopen { visibility: hidden; }
   .identity-column { padding: 8px 11px; }
   .camp-plate { flex-basis: 132px; min-height: 132px; overflow: hidden; }
   .camp-plate img { width: 90%; height: auto; top: 50%; transform: translateY(-58%); padding: 0; }
+  [data-camp="items"] .camp-plate img { width: 80%; transform: translateY(-52%); }
+  [data-camp="deed"] .camp-plate img { width: 86%; transform: translateY(-55%); }
   .camp-plate::before { inset: 5px; }
   .camp-plate figcaption { display: none; }
   .controller { padding: 2px 0; gap: 8px; }
@@ -187,6 +221,25 @@ body:has(#campDialog[open]) .reopen { visibility: hidden; }
   .panel-intro .eyebrow { font-size: 8px; }
   .panel-intro p:last-child { font-size: 11px; }
   .rewards-summary { padding: 9px 12px; font-size: 11px; }
+  .ledger-heading { font-size: 17px; margin: 13px 0 9px; }
+  .ledger-heading small { font-size: 10px; }
+  .drop-grid { gap: 7px; }
+  .drop-card { grid-template-columns: 43px minmax(0,1fr) auto; gap: 6px; padding: 8px 7px; }
+  .drop-art { width: 43px; height: 43px; }
+  .drop-card h4 { font-size: 12px; }
+  .drop-card small { font-size: 9px; }
+  .drop-card > strong { font-size: 16px; }
+  .bonus-chest, .deed-award-record { padding: 9px 11px; gap: 10px; margin-top: 10px; }
+  .bonus-chest > img { width: 64px; height: 53px; }
+  .bonus-chest h4, .deed-award-record h3 { font-size: 17px; }
+  .bonus-chest h4 span { font-size: 10px; }
+  .bonus-chest p, .deed-award-record p { font-size: 11px; }
+  .deed-award-record > img { width: 45px; height: 45px; }
+  .deed-award-record small { font-size: 10px; }
+  .award-history strong { font-size: 14px; }
+  .award-history small, .award-history time { font-size: 10px; }
+  .award-history li { padding: 8px 1px; gap: 9px; }
+  .award-history li > img { width: 30px; height: 30px; }
   .reward-ladder { gap: 8px; margin: 10px 0; }
   .reward-step { padding: 11px 9px; }
   .reward-step.next { padding: 10px 8px; }
@@ -220,6 +273,8 @@ body:has(#campDialog[open]) .reopen { visibility: hidden; }
   .strength-card > img { width: 20px; height: 24px; }
   .camp-footer > div { max-width: 165px; }
   .reward-ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .drop-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .bonus-chest h4 span { display: block; padding-left: 0; margin-top: 4px; }
   .rules-grid { grid-template-columns: 1fr; }
   .rewards-summary { flex-wrap: wrap; gap: 5px; }
 }

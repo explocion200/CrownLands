@@ -1,4 +1,15 @@
-# Gold Camp draft checks
+# Camp draft checks
+
+## Warband, Relic and Deed extension — 2026-09-16
+
+- Node.js syntax checks passed for all three scripts. Fixture checks matched every hold duration, daily allowance and production minimum against `functions/economy-config.json`. All four Core camp IDs/map names were found in the active layout; all camp artwork, map backdrops, icons, item illustrations and the updated chest file exist. Relic base item odds sum to 100%; the independent 1% chest roll was verified in the existing Functions code.
+- Browser geometry checks passed for all four camps × three tabs × three sizes: 36 combinations, including long names and large numbers. Windows/footer actions remained within the viewport; cards and content panes had no horizontal overflow; visible controls retained 44px minimum height. All referenced images loaded.
+- All 40 shared camp/example combinations passed checks for correct private defense visibility, completed allowance (zero further rewards), pending resolution and horizontal overflow. Owned fixtures correctly displayed Gold 92,480 gold / 6m 42s, Warband 46,240 troops / 10m 03s, Relic one usable item / 20m 06s, and Deed one neutral city / 40m 12s. Timers are intentionally frozen, proportional review examples.
+- Deed's additional reserved, empty-history, loading-history and failed-history examples rendered correctly at small landscape size. History retained ten private city awards. The last city's map action opened the local explanation and Escape dismissed it. Changing from a Deed-only example to Warband restored the Owned example.
+- Visually inspected all three new landscape Overviews, Relic's desktop/landscape drop ledger with the updated bonus chest, and the bottom of Deed's scrollable city history. Adjusted Relic/Deed mobile art framing to prevent tent roofs being cropped.
+- No browser console warnings or errors were observed. These are local prototype checks only; no multiplayer, backend mutation, PR gate or deployment ran.
+
+## Original Gold layout
 
 Checked locally on 2026-09-16 with Node.js 22.23.2 and the Codex in-app browser, using the static preview at `127.0.0.1:61703`.
 
