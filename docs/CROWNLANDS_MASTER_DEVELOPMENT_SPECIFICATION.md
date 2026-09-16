@@ -576,6 +576,10 @@ The objective logic and explicit validator coverage are verified in `origin/main
 
 ## 8. Holding Towers
 
+### Player-facing terminology
+
+The confirmed player-facing name is **Clan Tower** (plural **Clan Towers**). The approved objective-details draft uses this name, and runtime UI integration must carry that terminology forward. Existing technical identifiers and historical references may retain `Holding Tower`. This is a naming clarification, not a change to ownership, eligibility, combat rules or deployment status.
+
 ### Deployment status
 
 Holding Towers and Clan Treasury are `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`. The current synchronized implementation is reconciled with the current world, economy, clan, Rally, scouting, reset, security, and release contracts, but it is not live on either published channel. Historical [PR #159](https://github.com/explocion200/CrownLands/pull/159) at commit `e1abf11b46ab66d0586faeab06da083363fd565c` remains archived, unmerged, and not live; it must not be merged into current `main`.

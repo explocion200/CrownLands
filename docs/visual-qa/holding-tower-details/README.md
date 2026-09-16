@@ -1,12 +1,12 @@
-# Holding Tower Details draft
+# Clan Tower Details draft
 
-Status: **DRAFT — awaiting design approval.** The user approved all four Camp Details variants and the corrected Relic chest, then requested the next UI update. This continues the authorized related objective-details review batch on `codex/camp-details-draft`; the existing Camp commits are preserved. No runtime integration, PR, push, merge or deployment has occurred for this batch.
+Status: **Layout APPROVED; naming clarified to Clan Towers.** The user approved the layout and requested the Clan Tower name. The stationed-troop controls now use the clearer heading **Troop Actions**. This continues the authorized related objective-details review batch on `codex/camp-details-draft`; the existing approved Camp commits are preserved. No runtime integration, PR, push, merge or deployment has occurred for this batch.
 
 Open `/docs/visual-qa/holding-tower-details/index.html?viewport=desktop&sample=owned&tower=ravenwatch`. Use the review toolbar to switch among Ravenwatch, Highguard, Blackthorn and Stoneward. The window matches the approved camp maximum of 1040 × 790 and shrinks for 844 × 390 and 568 × 320 landscape screens. There is no portrait layout.
 
 ## Design
 
-- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops, Veil status and military orders.
+- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops, Veil status and troop actions.
 - Garrison displays each ruler's contribution in a compact ledger. Your row has a personal withdrawal action. Other members' troops cannot be withdrawn by officers.
 - Walls & Veil separates the current wall and construction queue from officer services. Clan Treasury remains visible above them. Disabled actions explain damage, attack, active repair, a full queue, insufficient funds, an active Veil or the spent daily allowance.
 - Tower Rules retains the confirmed conquest, garrison, wall, repair, scouting and clan-departure rules.

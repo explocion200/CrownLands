@@ -1,4 +1,6 @@
-# Holding Tower draft verification
+# Clan Tower draft verification
+
+Terminology follow-up: the user confirmed **Clan Towers**. Updated the review title, category header, accessibility labels and design notes, and clarified **Military orders** as **Troop Actions**. The preview script passed its syntax check, the diff passed whitespace checks, and a browser reload confirmed the new category and action heading. No layout or gameplay logic changed.
 
 Checked locally on 2026-09-16 using Node.js 22.23.2 and the Codex in-app browser at `127.0.0.1:61703`.
 
