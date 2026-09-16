@@ -21,3 +21,10 @@ No production browser session, game account, orders, player holdings or realm da
 - Green Tower outer frames, gold Camp inner frames and red Stronghold/Citadel frames remain distinct in close and Whole realm views. The corresponding text badges and legend swatches use the same colors. Thumbnail SVG registration and asset references are unchanged.
 - Clicking the Tower badge on Lionwatch opened exactly one local map preview; Return and Reset example restored the standard desktop draft. The atlas still has 61 tiles and 106 connection lines. Browser error/warning logs were empty.
 - `node --check docs/visual-qa/map-selector-atlas/preview.js` and `git diff --check` passed. This revision changes presentation only; the previous device pinch-testing limitation remains.
+
+## Medieval ornamental frames
+
+- Reviewed the green battlement, brass Camp and crimson/gold royal frames at desktop 1440 × 900 and landscape 844 × 390 / 568 × 320. Lower-corner ornaments were tightened to leave counts and feature badges visible. All 61 captions fit and the small-landscape toolbar does not overflow.
+- The 21 feature overlays have `pointer-events: none`; plain maps retain their existing frame. Whole realm hides fine SVG ornament while retaining the feature-color trims.
+- A small-landscape click check initially opened Kingsbridge when clicking partially visible Lionwatch: pointer-induced focus centered the tile before the click completed. The draft now skips focus centering while a pointer is active. Repeating that exact click opened Lionwatch once; keyboard ArrowRight still centered/focused Lionwatch and Enter opened it correctly.
+- `node --check` passed for `frames.js` and `preview.js`; `git diff --check` passed. Browser warning/error logs were empty. The standard desktop draft was restored for review. Native device pinch review and production integration remain pending.
