@@ -1,6 +1,6 @@
 "use strict";
 // Decorative SVG overlays stay outside layout and never intercept map gestures.
-function atlasFeatureFrame(kind, citadel = false) {
+function atlasFeatureFrame(kind, citadel = false, strongholdAsset = "") {
  const corners = (art, inset = 0, bottomArt = art) => [
   `translate(${inset} ${inset})`,
   `translate(${262-inset} ${inset}) scale(-1 1)`,
@@ -39,6 +39,21 @@ function atlasFeatureFrame(kind, citadel = false) {
    <path d="M3 17V6l3-3h11" fill="none" stroke="#fff0bd" stroke-width="1.2"/>
    <path d="M9 10c14-10 19 1 9 5 5-7-4-8-9-5Zm1-1c-10 14 1 19 5 9-7 5-8-4-5-9Z" fill="#c69a53" stroke="#683e26" stroke-width=".9"/>
    <path d="m5 5 4 3-1 4-4-3Z" fill="#923c32" stroke="#ffdf97" stroke-width=".7"/>`;
+  // Reuse the map's own fortress art; the crown belongs only to Crown Citadel.
+  const crest = citadel ? `<g class="citadel-crest">
+   <path d="M110 5q21-12 42 0l-3 19-18 12-18-12Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
+   <path d="m113 8 4 15 14 9 14-9 4-15" fill="none" stroke="#b36d51" stroke-width="1"/>
+   <path d="m117 10 7 5 7-12 7 12 7-5-4 14h-20Z" fill="#e6c17e" stroke="#593924" stroke-width="1.2" stroke-linejoin="round"/>
+   <path d="M121 21h20m-16-4 6-10 5 10" fill="none" stroke="#fff1b9" stroke-width="1.2"/>
+   <circle cx="117" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
+   <circle cx="145" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
+   <path d="m131 1 3 3-3 3-3-3Z" fill="#fff3c5" stroke="#593924" stroke-width=".7"/>
+   <path d="m105 6-7-3 3 7m56-4 7-3-3 7M124 28l7 4 7-4" fill="none" stroke="#f1d897" stroke-width="1.5"/>
+   </g>` : `<g class="stronghold-crest">
+   <path d="M106 0q25-12 50 0l-3 23-22 15-22-15Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
+   <path d="M110 2q21-9 42 0l-3 19-18 12-18-12Z" fill="#dfcba0" stroke="#a57e47" stroke-width="1"/>
+   ${strongholdAsset ? `<image class="stronghold-crest-art" href="${strongholdAsset}" x="109" y="-7" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>` : '<path d="M119 22V6h5v5h14V6h5v16Zm10 0v-7h5v7" fill="#625944" stroke="#302d23"/>'}
+   </g>`;
   art = `<rect x="8" y="8" width="246" height="187" rx="2" fill="none" stroke="#542b24" stroke-width="13"/>
    <rect x="8" y="8" width="246" height="187" rx="1" fill="none" stroke="#8e352e" stroke-width="10"/>
    <rect x="2.8" y="2.8" width="256.4" height="197.4" rx="2" fill="none" stroke="#d0a25d" stroke-width="1.5"/>
@@ -47,14 +62,7 @@ function atlasFeatureFrame(kind, citadel = false) {
    ${corners(flourish)}
    <path d="m119 190 12-5 12 5v9l-12 4-12-4Z" fill="#89362d" stroke="#d7b373" stroke-width="1.2"/>
    <path d="m131 189 4 5-4 5-4-5Z" fill="#e1bd78"/>
-   <path d="M110 5q21-12 42 0l-3 19-18 12-18-12Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
-   <path d="m113 8 4 15 14 9 14-9 4-15" fill="none" stroke="#b36d51" stroke-width="1"/>
-   <path d="m117 10 7 5 7-12 7 12 7-5-4 14h-20Z" fill="#e6c17e" stroke="#593924" stroke-width="1.2" stroke-linejoin="round"/>
-   <path d="M121 21h20m-16-4 6-10 5 10" fill="none" stroke="#fff1b9" stroke-width="1.2"/>
-   <circle cx="117" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
-   <circle cx="145" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
-   <path d="m131 1 3 3-3 3-3-3Z" fill="${citadel ? '#fff3c5' : '#dcb36e'}" stroke="#593924" stroke-width=".7"/>
-   ${citadel ? '<path d="m105 6-7-3 3 7m56-4 7-3-3 7M124 28l7 4 7-4" fill="none" stroke="#f1d897" stroke-width="1.5"/>' : ''}`;
+   ${crest}`;
  }
  return `<svg class="feature-frame frame-${kind}" viewBox="0 0 262 203" aria-hidden="true" focusable="false">${art}</svg>`;
 }
