@@ -69,7 +69,7 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The Skills ledger adds one stylesheet bounded at 30 KiB to the offline shell.
 // The complete Clan ledger adds at most 84 KiB CSS and 16 KiB client markup.
 // Settings adds at most 32 KiB of scoped CSS and 8 KiB of emblems and markup.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40) * 1024;
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16) * 1024;
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills"));
 assert.equal(skillEmblemFiles.length, 8, "Skills must ship exactly eight approved emblems.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
@@ -170,6 +170,10 @@ const entrypointBudgets = {
   "styles.css": 422 * 1024,
   "holding-tower-ui.css": 24 * 1024,
   "holding-tower-ui.js": 24 * 1024,
+  "camp-details-ui.js": 8 * 1024,
+  "camp-details-ui.css": 16 * 1024,
+  "clan-tower-details-ui.js": 20 * 1024,
+  "clan-tower-details-ui.css": 52 * 1024,
   "common-gear-ui.css": 40 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,

@@ -1,0 +1,156 @@
+/* Two labelled service panels; mobile shares one vertical scroll area. */
+#wallsPanel:has(.defense-workbench) { display:flex; flex-direction:column; overflow:hidden; padding:16px 20px; gap:12px; }
+.defense-funds { display:flex; align-items:center; gap:11px; padding:10px 14px; flex:none; border:1px solid #b9a16c; background:linear-gradient(100deg,#e2ce9e,#f0e4c5); }
+.defense-funds>img { width:33px; height:33px; object-fit:contain; }
+.defense-funds>div { min-width:0; }
+.defense-funds small { font-size:10px; color:var(--muted); }
+.defense-funds strong { font:25px Georgia,serif; font-variant-numeric:tabular-nums; }
+.defense-funds strong span { font-size:13px; }
+.defense-funds>p { font-size:11px; line-height:1.5; margin-left:auto; color:#625039; }
+.defense-funds>p span { display:block; }
+.service-role { padding:5px 8px; border:1px solid #9f9970; background:#e3dfbc; font:12px Georgia,serif; white-space:nowrap; }
+.defense-workbench { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:14px; flex:1; min-height:0; }
+.defense-pane { min-width:0; min-height:0; display:flex; flex-direction:column; border:1px solid #ad9b75; background:#f6ecd4; }
+.defense-pane-heading { display:flex; flex:none; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid #bbaa81; border-top:4px solid #69734f; background:linear-gradient(100deg,#dddab8,#eee5c7); }
+.defense-pane-heading>img { width:37px; height:39px; object-fit:contain; }
+.defense-pane-heading>div { min-width:0; }
+.defense-pane-heading h2 { font:24px Georgia,serif; }
+.defense-pane-heading p { font-size:10px; color:var(--muted); margin-top:3px; }
+.state-chip { flex:none; margin-left:auto; font:11px Georgia,serif; padding:5px 7px; border:1px solid #b5a984; background:#e9dfc4; color:#6b593c; }
+.state-chip.good { color:#45552e; border-color:#a0aa7d; background:#dfe4c5; }
+.state-chip.warning { color:#854834; border-color:#bb9670; background:#eddbc0; }
+.veil-work .defense-pane-heading { border-top-color:#61756d; background:linear-gradient(100deg,#d4ded0,#e5e7d4); }
+.defense-scroll { min-height:0; min-width:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#a89163 #e7d9b9; overscroll-behavior:contain; padding:14px 16px; }
+.wall-readout { display:flex; align-items:center; gap:22px; }
+.wall-readout>div:first-child { flex:none; }
+.wall-readout small { font-size:10px; color:var(--muted); }
+.wall-readout>div>strong { display:block; font:44px/1.15 Georgia,serif; }
+.wall-health { flex:1; min-width:0; }
+.wall-health>div:first-child { display:flex; justify-content:space-between; gap:8px; align-items:baseline; font-size:12px; }
+.wall-health strong { font:24px Georgia,serif; }
+.wall-ready { color:#51613c; font-size:11px; margin-top:7px; }
+.wall-ready span { margin-right:4px; }
+.service-section-title { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.service-section-title h3,.repair-status h3 { font:18px Georgia,serif; }
+.service-section-title>span { font-size:10px; color:var(--muted); }
+.service-section-title>strong { font:15px Georgia,serif; }
+.wall-queue,.wall-upgrade,.veil-activation,.veil-purchase { border-top:1px solid #c7b690; padding-top:12px; margin-top:12px; }
+.queue-slots { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:4px; margin:8px 0; }
+.queue-slots>span { height:9px; background:#e4d9bc; border:1px solid #bbab85; }
+.queue-slots .queued { background:#a3a780; border-color:#858c63; }
+.queue-slots .current { background:#626f42; border-color:#526337; }
+.queue-now { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.queue-now strong { font:17px Georgia,serif; }
+.queue-now span { font-size:10px; color:var(--muted); text-align:right; }
+.service-caption { font-size:11px; line-height:1.5; color:var(--muted); margin-top:6px; }
+.upgrade-picker { display:flex; align-items:end; gap:9px; margin-top:8px; }
+.upgrade-picker label { display:flex; align-items:center; gap:9px; font-size:11px; }
+.upgrade-picker select { min-height:44px; width:62px; border:1px solid #b59e72; background:#eee0bb; padding:0 7px; }
+.upgrade-picker button { flex:1; }
+.service-cost { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:5px 8px; margin-top:11px; }
+.service-cost>span { color:var(--muted); font-size:11px; }
+.service-cost>strong { display:flex; align-items:center; gap:5px; font:18px Georgia,serif; font-variant-numeric:tabular-nums; }
+.service-cost img { width:22px; height:22px; object-fit:contain; }
+.service-cost small { display:inline; font:10px "Segoe UI",sans-serif; color:var(--muted); }
+.service-blocker { font-size:11px; line-height:1.45; color:#874a32; padding:6px 8px; background:#edddc0; border-left:2px solid #b38455; margin-top:8px; }
+.service-blocker.calm { color:#536249; border-left-color:#819271; background:#e4e7d2; }
+.service-details { border-top:1px solid #c7b690; margin-top:12px; color:var(--muted); }
+.service-details summary { display:flex; align-items:center; gap:7px; min-height:44px; padding:6px 0; cursor:pointer; font-size:11px; color:#655232; list-style:none; }
+.service-details summary::before { content:"+"; width:16px; flex:none; font:18px Georgia,serif; }
+.service-details[open]>summary::before { content:"−"; }
+.service-details summary::-webkit-details-marker { display:none; }
+.service-details summary:focus-visible { outline:2px solid #35616c; outline-offset:-2px; }
+.service-details p { font-size:11px; line-height:1.55; margin:0 0 9px; }
+.service-details ol { list-style:none; padding:0; margin:0 0 5px; }
+.service-details li { display:grid; grid-template-columns:1fr auto; gap:4px 7px; padding:8px 0; border-top:1px solid #d2c29f; }
+.service-details li strong { font:14px Georgia,serif; color:var(--ink); }
+.service-details li span,.service-details li small { font-size:10px; }
+.service-details li small { grid-column:1 / -1; }
+.repair-status { margin-top:12px; padding:10px 12px; border:1px solid #b1b994; background:#e7ead6; }
+.repair-status.damaged { border-color:#c2a17b; background:#eee0c5; }
+.repair-status button { margin-top:8px; width:100%; }
+.repair-status>small { font-size:10px; color:var(--muted); line-height:1.5; margin-top:6px; }
+.veil-purpose { padding:14px; border:1px solid #b8bfa5; background:linear-gradient(110deg,#e0e5ce,#f0edd6); }
+.veil-purpose h3 { font:22px Georgia,serif; color:#48543b; }
+.veil-purpose p { margin-top:7px; font-size:12px; line-height:1.6; color:#65704f; }
+.veil-facts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+.veil-facts>div+div { padding-left:15px; border-left:1px solid #c6b792; }
+.veil-facts small,.veil-countdown small { font-size:11px; color:var(--muted); }
+.veil-facts strong { display:block; font:36px Georgia,serif; margin-top:4px; color:#506044; }
+.veil-facts strong span { font-size:17px; color:var(--muted); }
+.veil-activation button,.veil-purchase button { width:100%; margin-top:9px; }
+.veil-purchase .service-section-title { flex-wrap:wrap; }
+.veil-purchase-controls { display:flex; align-items:center; gap:10px; margin-top:9px; }
+.veil-purchase-controls .service-cost { display:block; flex:1; min-width:0; margin:0; }
+.veil-purchase-controls .service-cost>strong { margin-top:4px; }
+.veil-purchase-controls button { width:auto; margin:0; }
+.veil-work .veil-activation { border-top:0; padding-top:0; margin-top:3px; }
+.veil-work .veil-purpose { padding:10px; }
+.veil-work .veil-facts { margin-top:12px; }
+.veil-work .veil-facts strong { font-size:30px; }
+.veil-countdown { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin-top:12px; background:#dfe7d0; border:1px solid #a6b38e; }
+.veil-countdown strong { font:27px Georgia,serif; color:#506044; }
+.service-privacy { font-size:12px; line-height:1.6; padding:12px 0; color:var(--muted); }
+.public-services>strong { font:18px Georgia,serif; }
+@media(max-height:600px),(max-width:1000px) {
+  #wallsPanel:has(.defense-workbench) { display:block; overflow:auto; padding:6px 9px; }
+  .defense-funds { padding:4px 8px; gap:7px; margin-bottom:6px; }
+  .defense-funds>img { width:27px; height:27px; }
+  .defense-funds small { font-size:9px; }
+  .defense-funds strong { font-size:20px; }
+  .defense-funds>p { font-size:9px; }
+  .service-role { font-size:10px; padding:4px 6px; }
+  .defense-workbench { gap:8px; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:start; }
+  .defense-pane { min-height:auto; }
+  .defense-pane-heading { position:sticky; top:-6px; z-index:1; padding:5px 9px; gap:6px; border-top-width:3px; }
+  .defense-pane-heading>img { width:27px; height:29px; }
+  .defense-pane-heading h2 { font-size:19px; }
+  .defense-pane-heading p { font-size:9px; margin-top:1px; }
+  .state-chip { padding:3px 5px; font-size:10px; }
+  .defense-scroll { overflow:visible; min-height:auto; padding:9px 11px; }
+  .wall-readout { gap:15px; }
+  .wall-readout>div>strong { font-size:31px; }
+  .wall-health strong { font-size:21px; }
+  .wall-ready,.service-caption,.service-cost>span,.service-blocker,.service-details summary,.service-details p { font-size:10px; }
+  .service-section-title h3,.repair-status h3 { font-size:16px; }
+  .wall-queue,.wall-upgrade,.veil-activation,.veil-purchase { padding-top:9px; margin-top:9px; }
+  .service-cost { margin-top:8px; }
+  .service-cost>strong { font-size:16px; }
+  .veil-purpose { padding:10px; }
+  .veil-purpose h3 { font-size:18px; }
+  .veil-purpose p { font-size:11px; line-height:1.45; margin-top:5px; }
+  .veil-facts { margin-top:12px; }
+  .veil-work .veil-facts strong { font-size:27px; }
+  .veil-facts small { font-size:10px; }
+  .veil-countdown strong { font-size:22px; }
+  .service-details { margin-top:9px; }
+}
+@media(max-width:650px) {
+  .veil-purchase-controls { flex-direction:column; align-items:stretch; }
+  .veil-purchase-controls .service-cost { display:flex; }
+  .veil-purchase-controls button { width:100%; }
+  #wallsPanel:has(.defense-workbench) { padding:5px 6px; gap:5px; }
+  .defense-funds>p { font-size:8px; max-width:165px; }
+  .defense-funds strong { font-size:17px; }
+  .defense-funds strong span { font-size:10px; }
+  .defense-workbench { gap:6px; }
+  .defense-pane-heading { padding:5px 6px; gap:4px; }
+  .defense-pane-heading>img { width:22px; height:25px; }
+  .defense-pane-heading h2 { font-size:16px; }
+  .defense-pane-heading p { display:none; }
+  .state-chip { font-size:9px; padding:3px; }
+  .defense-scroll { padding:8px; }
+  .upgrade-picker { flex-wrap:wrap; gap:6px; }
+  .upgrade-picker label { font-size:10px; }
+  .upgrade-picker button { font-size:11px; padding-inline:5px; }
+  .upgrade-picker select { width:49px; }
+  .veil-purpose { padding:8px; }
+  .veil-purpose h3 { font-size:16px; }
+  .veil-purpose p { font-size:10px; }
+  .service-cost>strong { font-size:15px; }
+  .service-cost img { width:18px; height:18px; }
+  .service-cost small { font-size:9px; }
+  .veil-facts { gap:7px; }
+  .veil-facts>div+div { padding-left:8px; }
+  .public-services>strong { font-size:15px; }
+}

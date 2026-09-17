@@ -576,6 +576,10 @@ The objective logic and explicit validator coverage are verified in `origin/main
 
 ## 8. Holding Towers
 
+### Player-facing terminology
+
+The confirmed player-facing name is **Clan Tower** (plural **Clan Towers**). The approved objective-details draft uses this name, and runtime UI integration must carry that terminology forward. Existing technical identifiers and historical references may retain `Holding Tower`. This is a naming clarification, not a change to ownership, eligibility, combat rules or deployment status.
+
 ### Deployment status
 
 Holding Towers and Clan Treasury are `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`. The current synchronized implementation is reconciled with the current world, economy, clan, Rally, scouting, reset, security, and release contracts, but it is not live on either published channel. Historical [PR #159](https://github.com/explocion200/CrownLands/pull/159) at commit `e1abf11b46ab66d0586faeab06da083363fd565c` remains archived, unmerged, and not live; it must not be merged into current `main`.
@@ -630,12 +634,18 @@ The current Core mappings are fixed:
 ### Tower Veil
 
 - Tower Veil is a Tower-specific Clan Treasury service, not a normal Bag item.
+- **Confirmed revision (2026-09-17): purchase and activation are separate actions.** A Clan Leader or Officer may purchase Veil from the Clan Treasury through a daily purchase allowance and keep it available for later activation. A Leader or Officer may activate a purchased Veil when needed; purchase does not start its protection timer.
+- Each activation protects only the selected Clan Tower. It does not protect the clan's other Towers or cities.
 - Duration is ten minutes.
-- Limit is three uses per Tower per UTC day.
 - Cost is one times the equivalent regular-city wall cost at the Tower’s current wall level.
+- **Pending clarification:** the number of purchases allowed per day, the scope of that purchase allowance, and unused-charge carryover across daily/season boundaries. Do not infer a new numeric purchase limit from the superseded activation limit.
+
+**Implementation status:** the user explicitly deferred Veil mechanics on 2026-09-17 so the Clan Tower UI can be completed first. The local draft presents separate Purchase and Activate controls, synthetic stored counts and single-tower protection, without assigning a numeric daily purchase limit. The existing server still spends gold immediately on activation and enforces three activations per Tower per UTC day. That describes the existing implementation, not the final rule for the revised purchase flow. Stored purchases require separate authoritative inventory, purchase and activation handling, allowance clarification and validation in a later mechanics update before this revision can be considered implemented or released. The deferred mechanics do not block the approved UI release. Runtime integration retains the existing immediate-payment activation service and its existing server limit until the separately deferred purchase/inventory mechanics are implemented. This client presentation release does not activate or seed Tower gameplay.
 
 ### Tower scouting and presentation
 
+- All Clan Tower attacks and troop movement are initiated from the tower's controls on the map, like cities, outside the Clan Tower details window. Do not place Attack, Move, Reinforce or Rally controls or an embedded troop-order composer inside the details UI. Map orders use the normal city troop-order design adapted to the Tower origin; outgoing orders select only the player's personally stationed troops, never the combined clan garrison. The details garrison displays each player's name, saved personal flag and stationed troop count.
+- Display the controlling clan's saved flag/heraldry beside the Clan Tower name in the persistent window header, visible on every tab, and beside the controlling clan's name in Overview. Neutral towers have no clan flag.
 - There is no separate `Scout From Tower` action and no manual Tower-origin selector.
 - The normal target-driven Scout action automatically selects the closest eligible origin from either the player's personally owned Cities or a clan Holding Tower where that player has personally stationed troops and remains Tower-eligible.
 - Tower screens use the established Crownlands burgundy manuscript headers, parchment and ivory surfaces, tan information boxes, dark readable ink, and existing action-button treatments. Desktop and 844×390 landscape layouts must remain readable.

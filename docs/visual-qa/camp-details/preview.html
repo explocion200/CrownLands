@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Gold Camp preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/camp-details/draft.css"><script src="docs/visual-qa/camp-details/fixtures.js" defer></script><script src="docs/visual-qa/camp-details/preview.js" defer></script></head><body>
+<button id="reopen" class="reopen">Open Gold Camp</button>
+<dialog id="campDialog" aria-labelledby="campTitle"><div class="camp-shell">
+<header class="window-header"><img id="campIcon" src="assets/icons/royal-shop-gold-r1.svg" alt=""><div class="heading"><p>FIELD OUTPOST</p><h1 id="campTitle">Gold Camp</h1></div><span id="ownership" class="ownership"></span><button id="close" class="close-button" aria-label="Close Gold Camp">×</button></header>
+<nav class="tabs-bar" aria-label="Camp information"><div id="campTabs" role="tablist" aria-label="Gold Camp information"><button id="overviewTab" role="tab" aria-selected="true" aria-controls="overviewPanel" data-tab="overview">Overview</button><button id="rewardsTab" role="tab" aria-selected="false" aria-controls="rewardsPanel" tabindex="-1" data-tab="rewards">Your Rewards</button><button id="rulesTab" role="tab" aria-selected="false" aria-controls="rulesPanel" tabindex="-1" data-tab="rules">Camp Rules</button></div><span id="mapName" class="map-name">Gilded Moor · The Core</span></nav>
+<section id="overviewPanel" role="tabpanel" aria-labelledby="overviewTab" class="overview-panel"><aside id="identity" class="identity-column" tabindex="0" aria-label="Camp artwork and controller"></aside><div id="overview" class="detail-column" tabindex="0" aria-label="Reward, hold timer and defenses"></div></section>
+<section id="rewardsPanel" role="tabpanel" aria-labelledby="rewardsTab" class="scroll-panel" tabindex="0" hidden></section>
+<section id="rulesPanel" role="tabpanel" aria-labelledby="rulesTab" class="scroll-panel" tabindex="0" hidden></section>
+<footer class="camp-footer"><div><strong id="footerTitle">Gold Camp</strong><span id="footerHint">10-minute hold · Daily reset 00:00 UTC</span></div><button id="rewardShortcut" class="primary-button">Your Rewards <span aria-hidden="true">→</span></button><button id="back" class="paper-button">Back to Map</button></footer>
+</div></dialog>
+<dialog id="actionDialog" class="action-dialog" aria-labelledby="actionTitle"><p class="eyebrow">DESIGN PREVIEW</p><h2 id="actionTitle"></h2><p id="actionCopy"></p><p class="muted">This preview does not send troops or change the game.</p><button id="dismiss" class="primary-button">Back to Gold Camp</button></dialog>
+</body></html>
