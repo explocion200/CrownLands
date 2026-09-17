@@ -640,7 +640,7 @@ The current Core mappings are fixed:
 - Cost is one times the equivalent regular-city wall cost at the Tower’s current wall level.
 - **Pending clarification:** the number of purchases allowed per day, the scope of that purchase allowance, and unused-charge carryover across daily/season boundaries. Do not infer a new numeric purchase limit from the superseded activation limit.
 
-**Implementation status:** the purchase-and-hold revision is a confirmed design direction, pending the allowance clarification and implementation. The existing server and local draft still spend gold immediately on activation and enforce three activations per Tower per UTC day. That describes the existing implementation, not the final rule for the revised purchase flow. Stored purchases require separate authoritative inventory, purchase and activation handling before this revision can be considered implemented or released.
+**Implementation status:** the user explicitly deferred Veil mechanics on 2026-09-17 so the Clan Tower UI can be completed first. The local draft presents separate Purchase and Activate controls, synthetic stored counts and single-tower protection, without assigning a numeric daily purchase limit. The existing server still spends gold immediately on activation and enforces three activations per Tower per UTC day. That describes the existing implementation, not the final rule for the revised purchase flow. Stored purchases require separate authoritative inventory, purchase and activation handling, allowance clarification and validation in a later mechanics update before this revision can be considered implemented or released. The deferred mechanics do not block completion of the visual draft.
 
 ### Tower scouting and presentation
 

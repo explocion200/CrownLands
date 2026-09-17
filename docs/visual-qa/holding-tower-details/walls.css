@@ -34,7 +34,7 @@
 .service-section-title h3,.repair-status h3 { font:18px Georgia,serif; }
 .service-section-title>span { font-size:10px; color:var(--muted); }
 .service-section-title>strong { font:15px Georgia,serif; }
-.wall-queue,.wall-upgrade,.veil-activation { border-top:1px solid #c7b690; padding-top:12px; margin-top:12px; }
+.wall-queue,.wall-upgrade,.veil-activation,.veil-purchase { border-top:1px solid #c7b690; padding-top:12px; margin-top:12px; }
 .queue-slots { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:4px; margin:8px 0; }
 .queue-slots>span { height:9px; background:#e4d9bc; border:1px solid #bbab85; }
 .queue-slots .queued { background:#a3a780; border-color:#858c63; }
@@ -78,12 +78,16 @@
 .veil-facts small,.veil-countdown small { font-size:11px; color:var(--muted); }
 .veil-facts strong { display:block; font:36px Georgia,serif; margin-top:4px; color:#506044; }
 .veil-facts strong span { font-size:17px; color:var(--muted); }
-.veil-uses { display:flex; gap:5px; margin-top:6px; }
-.veil-uses>span { width:20px; height:5px; background:#dfd5b7; border:1px solid #b5a886; }
-.veil-uses .available { background:#768665; border-color:#657851; }
-.reset-note { margin-top:13px; }
-.veil-activation button { width:100%; margin-top:11px; }
-.veil-payment { margin-top:12px; font-size:11px; line-height:1.6; color:var(--muted); }
+.veil-activation button,.veil-purchase button { width:100%; margin-top:9px; }
+.veil-purchase .service-section-title { flex-wrap:wrap; }
+.veil-purchase-controls { display:flex; align-items:center; gap:10px; margin-top:9px; }
+.veil-purchase-controls .service-cost { display:block; flex:1; min-width:0; margin:0; }
+.veil-purchase-controls .service-cost>strong { margin-top:4px; }
+.veil-purchase-controls button { width:auto; margin:0; }
+.veil-work .veil-activation { border-top:0; padding-top:0; margin-top:3px; }
+.veil-work .veil-purpose { padding:10px; }
+.veil-work .veil-facts { margin-top:12px; }
+.veil-work .veil-facts strong { font-size:30px; }
 .veil-countdown { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; margin-top:12px; background:#dfe7d0; border:1px solid #a6b38e; }
 .veil-countdown strong { font:27px Georgia,serif; color:#506044; }
 .service-privacy { font-size:12px; line-height:1.6; padding:12px 0; color:var(--muted); }
@@ -107,21 +111,24 @@
   .wall-readout { gap:15px; }
   .wall-readout>div>strong { font-size:31px; }
   .wall-health strong { font-size:21px; }
-  .wall-ready,.service-caption,.service-cost>span,.service-blocker,.veil-payment,.service-details summary,.service-details p { font-size:10px; }
+  .wall-ready,.service-caption,.service-cost>span,.service-blocker,.service-details summary,.service-details p { font-size:10px; }
   .service-section-title h3,.repair-status h3 { font-size:16px; }
-  .wall-queue,.wall-upgrade,.veil-activation { padding-top:9px; margin-top:9px; }
+  .wall-queue,.wall-upgrade,.veil-activation,.veil-purchase { padding-top:9px; margin-top:9px; }
   .service-cost { margin-top:8px; }
   .service-cost>strong { font-size:16px; }
   .veil-purpose { padding:10px; }
   .veil-purpose h3 { font-size:18px; }
   .veil-purpose p { font-size:11px; line-height:1.45; margin-top:5px; }
   .veil-facts { margin-top:12px; }
-  .veil-facts strong { font-size:27px; }
+  .veil-work .veil-facts strong { font-size:27px; }
   .veil-facts small { font-size:10px; }
   .veil-countdown strong { font-size:22px; }
   .service-details { margin-top:9px; }
 }
 @media(max-width:650px) {
+  .veil-purchase-controls { flex-direction:column; align-items:stretch; }
+  .veil-purchase-controls .service-cost { display:flex; }
+  .veil-purchase-controls button { width:100%; }
   #wallsPanel:has(.defense-workbench) { padding:5px 6px; gap:5px; }
   .defense-funds>p { font-size:8px; max-width:165px; }
   .defense-funds strong { font-size:17px; }

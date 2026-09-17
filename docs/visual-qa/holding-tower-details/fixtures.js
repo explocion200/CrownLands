@@ -6,7 +6,7 @@ const TOWER_DEFINITIONS = Object.freeze({
   blackthorn: {id: "core-v2-holding-tower-3", name: "Blackthorn Tower", quadrant: "Southwest", map: "Oakwatch", region: "core-v2-south-west-holding-tower-m1-p1", art: "assets/worlds/core-expansion-v1/art/tower-blackthorn-a85bdbe2d2b4.webp"},
   stoneward: {id: "core-v2-holding-tower-4", name: "Stoneward Tower", quadrant: "Southeast", map: "Roseguard", region: "core-v2-south-east-holding-tower-p1-p1", art: "assets/worlds/core-expansion-v1/art/tower-stoneward-57c29f4d6846.webp"}
 });
-const TOWER_SAMPLES = Object.freeze(["owned", "member", "empty", "probation", "neutral", "enemy", "scouted", "veiled", "damaged", "repair", "queue", "full", "incoming", "veil", "spent", "poor", "long", "loading", "error"]);
+const TOWER_SAMPLES = Object.freeze(["owned", "member", "empty", "probation", "neutral", "enemy", "scouted", "veiled", "damaged", "repair", "queue", "full", "incoming", "veil", "spent", "veil-empty", "poor", "long", "loading", "error"]);
 const TOWER_ICONS = Object.freeze({troops: "assets/icons/daily-login-troops-r1.svg", wall: "assets/icons/skills/stoneworks.svg", gold: "assets/icons/royal-shop-gold-r1.svg", march: "assets/icons/troop-orders/marching-banner.svg", swords: "assets/icons/troop-orders/crossed-swords.svg", veil: "assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp"});
 const TOWER_PLAYER_FLAGS = Object.freeze([
   {version: 2, primary: "#722F37", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "split", symbol: "lion"},
@@ -15,7 +15,7 @@ const TOWER_PLAYER_FLAGS = Object.freeze([
 ]);
 function towerFixture(sample) {
   const member = !["neutral", "enemy", "scouted", "veiled", "loading", "error"].includes(sample);
-  const f = {member, manager: member && !["member", "probation"].includes(sample), eligible: sample !== "probation", neutral: sample === "neutral", clan: "The Crimson Watch", tag: "TCW", wall: sample === "neutral" ? 1 : 12, integrity: 100, veil: ["veil", "veiled"].includes(sample), veilUses: sample === "spent" ? 0 : sample === "veil" ? 1 : 2, treasury: 24000000, nextCost: 6250000, veilCost: 1250000, repairCost: 0, queue: [], rows: member ? [{name: "Aldric of Greenrook", troops: 685200, self: true}, {name: "Lady Elowen", troops: 1842150}, {name: "Lord Rowan", troops: 2255000}] : []};
+  const f = {member, manager: member && !["member", "probation"].includes(sample), eligible: sample !== "probation", neutral: sample === "neutral", clan: "The Crimson Watch", tag: "TCW", wall: sample === "neutral" ? 1 : 12, integrity: 100, veil: ["veil", "veiled"].includes(sample), veilStored: sample === "veil-empty" ? 0 : sample === "veil" ? 1 : 2, veilPurchaseAvailable: sample !== "spent", treasury: 24000000, nextCost: 6250000, veilCost: 1250000, repairCost: 0, queue: [], rows: member ? [{name: "Aldric of Greenrook", troops: 685200, self: true}, {name: "Lady Elowen", troops: 1842150}, {name: "Lord Rowan", troops: 2255000}] : []};
   if (!member && !f.neutral) {f.clan = "The Iron Covenant"; f.tag = "IRON";}
   f.clanShield = f.neutral ? null : {...CrownlandsClanHeraldryConfig.DEFAULT_V2, division: "solid", primary: member ? "#7a2638" : "#303436", charge: member ? "lion" : "fortress-keep", secondaryCharge: "none", chargeColor: "#eee1bd", borderColor: "#d8bd78"};
   if (sample === "long") {f.clan = "The Crimson Watch of the Northern Marches"; f.treasury = 1234567890; f.rows = Array.from({length: 12}, (_, i) => ({name: i ? `Warden ${i} of the Far Northern Marches` : "Aldric of the Greenrook Northern Marches", troops: 12345678 + i * 123456, self: i === 0}));}

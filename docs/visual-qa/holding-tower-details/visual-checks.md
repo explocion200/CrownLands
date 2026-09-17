@@ -1,5 +1,18 @@
 # Clan Tower draft verification
 
+## Final UI pass; mechanics deferred
+
+On 2026-09-17 the user asked to wrap up the UI and revisit mechanics later. The presentation now separates Purchase Veil and Activate Veil, shows stored stock, and states that protection affects only the selected tower. No numeric daily purchase limit or carryover rule is asserted. This supersedes the immediate-payment Veil layout in earlier checks below; production mechanics were not changed.
+
+- All four tabs passed focused geometry checks with long names and large numbers at 1440 × 900, 844 × 390 and 568 × 320: no horizontal overflow in the visible content panels, minimum 44px controls, persistent header clan flag and Back to Map within the viewport.
+- Standard desktop was visually checked with both Veil controls visible. Small landscape was visually checked after reaching Purchase Veil through the shared scroll area; price and button stack without crowding. A purchase-preview round trip works on small landscape.
+- Purchase and activation open distinct explanatory previews and return to the tower. Purchase explicitly does not start protection; activation names Ravenwatch and describes the single-tower effect. All counts, prices and availability are fixtures, and no inventory or Treasury balance is changed.
+- The unavailable-purchase and insufficient-funds examples disable Purchase while leaving the stored-stock activation preview available. Empty stock disables Activate while allowing the purchase preview. Active Veil shows its timer and an inactive activation button. Member views have no purchase/activation buttons; rival views omit the stock count and price and show only duration/public protection information. These are presentation examples, not authoritative inventory or daily-limit validation.
+- All four tower selections displayed the correct title and loaded their packaged illustration. No Attack, Move, Reinforce or Rally buttons appear inside the details window. Overview now summarizes stored Veils instead of the superseded daily activation allowance; Tower Rules uses the confirmed separate purchase/activation description.
+- Preview, fixtures and review scripts passed Node.js 22 syntax checks; whitespace checks passed. One oversized browser-check batch exceeded the tool deadline; the layout checks were then completed in smaller batches and returned passing results.
+
+The complete branch difference remains the local Camp/Clan Tower UI batch and its specification notes. No runtime/backend change, PR, full emulator gate, merge or deployment was performed. Mechanics and runtime integration are explicitly deferred, as described in README.
+
 ## Walls & Veil clarity revision
 
 Checked locally on 2026-09-17. This revision replaces the previous wall-services layout; the earlier behavior and permission checks below remain historical coverage.
