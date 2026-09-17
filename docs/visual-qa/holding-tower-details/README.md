@@ -1,23 +1,21 @@
 # Clan Tower Details draft
 
-Status: **Layout APPROVED; personal orders and player flags updated for review.** The user confirmed Clan Tower terminology, individual Attack/Move controls using the normal city design, and a garrison showing each player's name, flag and troops. This continues the authorized related objective-details review batch on `codex/camp-details-draft`; the existing approved Camp commits are preserved. No runtime integration, PR, push, merge or deployment has occurred for this batch.
+Status: **Layout APPROVED; troop orders clarified as map actions.** The user confirmed that all attacking and troop movement happen at the tower on the map, like cities, outside this details UI. The garrison shows each player's name, flag and troops, and the clan flag stays beside the tower title. This continues the authorized related objective-details review batch on `codex/camp-details-draft`; the existing approved Camp commits are preserved. No runtime integration, PR, push, merge or deployment has occurred for this batch.
 
 Open `/docs/visual-qa/holding-tower-details/index.html?viewport=desktop&sample=owned&tower=ravenwatch`. Use the review toolbar to switch among Ravenwatch, Highguard, Blackthorn and Stoneward. The window matches the approved camp maximum of 1040 × 790 and shrinks for 844 × 390 and 568 × 320 landscape screens. There is no portrait layout.
 
 ## Design
 
 - The controlling clan's flag appears beside the Clan Tower name in the persistent header on every tab. Overview also shows it beside the controlling clan's name. Both use the existing clan heraldry renderer with distinct synthetic flags for friendly and rival examples. Neutral and unavailable towers retain the generic header icon without a clan flag.
-- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops, Veil status and troop actions.
+- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops and Veil status.
 - Garrison displays three columns: each player's saved flag, name and stationed troops. Your row is marked You. The roster has no per-player command buttons; officers cannot move other members' troops.
-- Attack and Move stay in the footer and open the approved city troop-order presentation adapted to the Clan Tower origin and wall level. Both sliders select only your personally stationed troops, with crossed swords for Attack and a marching banner for Move. Reinforce and Form Rally remain secondary Overview actions.
+- The footer contains the current troop/status summary and Back to Map. Attack, Move, Reinforce and Rally are map actions, with no buttons or troop-order composer inside this details draft. Individual troop ownership and eligibility rules remain unchanged.
 - Walls & Veil separates the current wall and construction queue from officer services. Clan Treasury remains visible above them. Disabled actions explain damage, attack, active repair, a full queue, insufficient funds, an active Veil or the spent daily allowance.
 - Tower Rules retains the confirmed conquest, garrison, wall, repair, scouting and clan-departure rules.
 
 The parchment, olive, muted brass and burgundy frame follows Camp Details and Stronghold Details. Tower portraits use a restrained green fortification trim. Header, tabs and footer stay available while the two Overview columns or each ledger panel scroll. Minimum control height is 44px. No image generation or live artwork modification was needed.
 
-The toolbar, troop-order controls and explanatory action dialogs belong to the design review. Prices, player/clan names, troop counts, destinations and routes are fictional; timers remain frozen. All actions are local previews with no authentication, game commands or storage. Pure flag and Common Gear modules support the presentation; `game.js` is not loaded. Changing a fixture or tower returns to Overview. The URL preserves tower, fixture and viewport, and unknown query values fall back to Ravenwatch/Owned/Desktop.
-
-`orders.html` reuses the approved city draft's controls, slider artwork, dynamic attack-power calculation and transfer summary through a small tower adapter. Attack targets remain unscouted rather than showing an invented battle outcome. Move updates the example destination's arrival total, while confirmation changes only the review status. The Tower order endpoint currently has no Swift March consumable selection, so its third transfer summary panel identifies the player issuing the command instead.
+The toolbar and explanatory action dialogs belong to the design review. Prices, player/clan names and troop counts are fictional; timers remain frozen. All actions are local previews with no authentication, game commands or storage. Pure player-flag and clan-heraldry modules support the presentation; `game.js` is not loaded. Changing a fixture or tower returns to Overview. The URL preserves tower, fixture and viewport, and unknown query values fall back to Ravenwatch/Owned/Desktop. The removed embedded order preview remains available only in Git history; map integration is separate work.
 
 ## Source checks
 

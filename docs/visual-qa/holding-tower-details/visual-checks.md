@@ -1,5 +1,16 @@
 # Clan Tower draft verification
 
+## Troop orders belong on the map
+
+The user clarified that all attacking and troop movement happen at the tower on the map, like cities. Removed Attack, Move, Reinforce and Rally buttons, their handlers, and the embedded order iframe/adapter files from this details draft. The footer now contains the status summary and Back to Map. This supersedes the earlier embedded-order design and its historical verification below; individual troop ownership rules remain unchanged.
+
+- Preview and fixture scripts passed `node --check`; whitespace checks passed. No active HTML/JS/CSS references remain to the removed order composer.
+- Desktop, 844 × 390 and 568 × 320 garrison checks found no troop-command buttons or embedded iframe. All three player flags, names and counts remain, with 4,782,350 combined defenders and 685,200 personally stationed. The roster has no horizontal overflow, the header clan flag remains visible, and Back to Map stays within the viewport at a minimum 44px height.
+- Member, probation, neutral, rival, scouted and loading examples render without troop commands. Probation retains its notice; outsiders retain private roster boundaries.
+- The wall-upgrade review still opens and returns, and Back to Map closes the details window, which reopens successfully. Desktop Overview and small-landscape Garrison were visually inspected.
+
+Only the local details prototype changed. Implementing or verifying the real map action flow remains part of runtime integration, with no merge or deployment performed here.
+
 ## Persistent header flag clarification
 
 The user clarified that the flag must be beside the Clan Tower name. It now replaces the generic header icon for clan-controlled towers and remains visible across Overview, Garrison, Walls & Veil and Tower Rules. Twelve focused browser checks covered those tabs at desktop, 844 × 390 and 568 × 320: the flag stayed beside the title, within the header, without horizontal overflow. Friendly/rival switching updated its label and heraldry; neutral/loading states hid it and restored the generic icon. Desktop and small-landscape views were visually confirmed. The preview script and whitespace checks passed. This remains a local draft change.

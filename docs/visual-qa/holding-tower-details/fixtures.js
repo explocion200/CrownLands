@@ -22,7 +22,6 @@ function towerFixture(sample) {
   if (sample === "empty") f.rows = [];
   if (sample === "probation") f.rows = f.rows.filter(r => !r.self);
   f.rows = f.rows.map((row, i) => ({...row, uid: row.self ? "review-self" : `review-ruler-${i}`, flag: TOWER_PLAYER_FLAGS[row.self ? 0 : (i % 2) + 1]}));
-  f.viewer = {name: sample === "long" ? "Aldric of the Greenrook Northern Marches" : "Aldric of Greenrook", flag: TOWER_PLAYER_FLAGS[0]};
   if (["damaged", "repair"].includes(sample)) {f.integrity = sample === "repair" ? 61 : 38; f.repairCost = 3875000; f.repair = sample === "repair";}
   if (["queue", "incoming", "full"].includes(sample)) {
     f.queue = Array.from({length: sample === "full" ? 10 : sample === "queue" ? 5 : 2}, (_, i) => ({from: 12 + i, to: 13 + i, cost: 6250000 * (i + 1)}));

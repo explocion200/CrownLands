@@ -80,11 +80,6 @@ dialog::backdrop { background:#232b2138; }
 .queue-shortcut { display:flex; align-items:center; justify-content:space-between; width:100%; text-align:left; border:1px solid var(--line); margin-top:10px; padding:9px 12px; background:#e8ddbe; font:15px Georgia,serif; }
 .queue-shortcut small { font:10px "Segoe UI",sans-serif; color:var(--muted); padding-top:5px; }
 .queue-shortcut strong { font-size:14px; margin-left:8px; }
-.orders { padding:15px 0 0; }
-.orders h3 { font:19px Georgia,serif; }
-.orders p { font-size:12px; color:var(--muted); line-height:1.5; margin:7px 0; }
-.action-row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-.action-row button { flex:1; }
 .primary-button,.paper-button,.danger-button { border:1px solid #727d51; background:linear-gradient(#6c7850,#4e5e37); color:#fff2d0; padding:8px 14px; font:15px Georgia,serif; box-shadow:inset 0 0 0 1px #9aab7350; }
 .paper-button { border-color:#b19a6c; background:linear-gradient(#f0e2bf,#dac698); color:#614c2d; box-shadow:inset 0 0 0 1px #f9edcb; }
 .danger-button { border-color:#784737; background:linear-gradient(#985945,#773e32); color:#fff0cd; box-shadow:inset 0 0 0 1px #b5805550; }
@@ -211,11 +206,7 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
   .veil-strip strong { font-size:15px; }
   .veil-strip small { font-size:9px; }
   .veil-strip>span { font-size:14px; }
-  .orders { padding-top:9px; }
-  .orders h3 { font-size:17px; }
-  .orders p { font-size:11px; }
   .section-top>small { font-size:9px; }
-  .action-row { gap:6px; margin-top:6px; }
   .primary-button,.paper-button,.danger-button { font-size:13px; padding:6px 10px; }
   .scroll-panel { padding:13px 16px; }
   .panel-intro { margin-bottom:9px; }
@@ -266,7 +257,6 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
   .strength-card strong { font-size:19px; }
   .strength-card small { line-height:1.4; }
   .wall-caption { gap:5px; }
-  .action-row button { font-size:12px; padding:5px; }
   .garrison-list { overflow-wrap:anywhere; }
   .garrison-list li { display:grid; grid-template-columns:minmax(0,1fr) auto; }
   .garrison-list .ruler-seal { display:none; }
@@ -286,13 +276,7 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
   .tower-footer>button { padding-inline:8px; }
 }
 
-/* Personal city-style actions; the roster is flag / player / troops only. */
-.personal-command { display:flex; align-items:center; gap:12px; }
-.personal-command>div { min-width:0; }
-.personal-command h3 { overflow-wrap:anywhere; }
-.personal-command em { font:10px "Segoe UI",sans-serif; color:var(--olive); }
-.tower-footer>button { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
-.tower-footer>button>img { width:26px; height:27px; object-fit:contain; }
+/* The garrison roster is flag / player / troops only. */
 .garrison-columns,.garrison-list li { display:grid; grid-template-columns:58px minmax(0,1fr) auto; align-items:center; gap:18px; }
 .garrison-columns { margin-top:17px; padding:7px 12px; border-bottom:1px solid var(--line); font-size:10px; letter-spacing:.8px; color:var(--muted); text-transform:uppercase; }
 .garrison-columns>span:last-child { text-align:right; }
@@ -309,24 +293,16 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
 .player-flag::after { inset:0; z-index:1; pointer-events:none; background:linear-gradient(90deg,#fff2,transparent 30%,#0002 50%,transparent 80%),repeating-linear-gradient(0deg,#fff1 0 1px,transparent 1px 5px); }
 .player-flag .flag-symbol { z-index:2; width:35px; height:35px; display:grid; place-items:center; color:var(--flag-symbol-color); }
 .player-flag svg { width:100%; height:100%; fill:currentColor; stroke:var(--flag-symbol-outline); stroke-width:.72; stroke-linejoin:round; paint-order:stroke fill; }
-#towerOrderDialog { width:min(1040px,calc(100vw - 24px)); height:min(790px,calc(100dvh - 24px)); max-width:none; max-height:none; margin:auto; border:0; padding:0; background:var(--paper); overflow:hidden; box-shadow:0 15px 60px #151b1990; }
-#towerOrderDialog::backdrop { background:#232b2199; }
-#personalOrderFrame { display:block; width:100%; height:100%; border:0; }
 @media(max-height:600px),(max-width:1000px) {
-  #towerOrderDialog { width:calc(100vw - 12px); height:calc(100dvh - 12px); }
   .garrison-columns,.garrison-list li { grid-template-columns:48px minmax(0,1fr) auto; gap:12px; }
   .garrison-list li { min-height:62px; padding:8px; }
   .garrison-columns { padding-inline:8px; }
   .player-flag { width:44px; height:35px; }
   .player-flag .flag-symbol { width:29px; height:29px; }
-  .tower-footer>button>img { width:22px; height:23px; }
 }
 @media(max-width:650px) {
   .garrison-columns,.garrison-list li { grid-template-columns:42px minmax(0,1fr) auto; gap:9px; }
   .garrison-list li>div { grid-column:2; }
   .garrison-list li>b { grid-column:3; grid-row:1; }
   .player-flag { width:40px; height:33px; }
-  .tower-footer>button { gap:3px; padding-inline:7px; }
-  .tower-footer>button>img { width:20px; height:21px; }
-  .tower-footer>div { flex:1; }
 }

@@ -640,7 +640,7 @@ The current Core mappings are fixed:
 
 ### Tower scouting and presentation
 
-- Clan Tower Attack and Move use the normal city troop-order design adapted to the Tower origin. Each player selects only their own personally stationed troops; a clan's combined garrison is not available for an individual's order. The garrison roster displays each player's name, saved personal flag and stationed troop count.
+- All Clan Tower attacks and troop movement are initiated from the tower's controls on the map, like cities, outside the Clan Tower details window. Do not place Attack, Move, Reinforce or Rally controls or an embedded troop-order composer inside the details UI. Map orders use the normal city troop-order design adapted to the Tower origin; outgoing orders select only the player's personally stationed troops, never the combined clan garrison. The details garrison displays each player's name, saved personal flag and stationed troop count.
 - Display the controlling clan's saved flag/heraldry beside the Clan Tower name in the persistent window header, visible on every tab, and beside the controlling clan's name in Overview. Neutral towers have no clan flag.
 - There is no separate `Scout From Tower` action and no manual Tower-origin selector.
 - The normal target-driven Scout action automatically selects the closest eligible origin from either the player's personally owned Cities or a clan Holding Tower where that player has personally stationed troops and remains Tower-eligible.
