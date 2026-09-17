@@ -76,3 +76,8 @@ Checked locally on 2026-09-16 using Node.js 22.23.2 and the Codex in-app browser
 - One browser automation log reported a MutationObserver argument error after an exact-label selector failed. None of this draft's three scripts uses MutationObserver. Selecting the observed input by its ID succeeded, and subsequent checks completed; no draft script file was identified by that log.
 
 These checks cover the local prototype only. Full multiplayer/emulator/PR release checks were not run for this presentation draft. Authenticated permissions, real quotes, spending, combat, backend integration and deployment remain outside this review.
+
+
+## Runtime integration — 2026-09-17
+
+The shared production modules are now included in the game entry and production build. Browser review used the existing local benchmark/QA state, not a production account. Desktop and landscape checks verified the actual game modal, persistent header/footer, tab switching, artwork, clan/player flags, private-garrison boundaries and the unavailable-progress state. Camp daily-limit handling was corrected for the production configuration's zero sentinel (four Gold/Warband, five Relic, one Deed). Focused validation covers privacy, permissions, map-only commands and preserving upgrade quantity through busy rendering. The existing Camp and Tower validators passed; release gates and deployment receipts are separate evidence.

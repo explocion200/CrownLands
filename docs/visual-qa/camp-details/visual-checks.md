@@ -26,3 +26,8 @@ Checked locally on 2026-09-16 with Node.js 22.23.2 and the Codex in-app browser,
 - No browser console warnings or errors were observed in the reviewed draft. No gameplay, backend, release or world files were changed.
 
 This validates the local prototype only. No emulator suite, production transaction, multiplayer session or deployment was run for this draft. Integration validation and required GitHub checks remain for an approved implementation.
+
+
+## Runtime integration — 2026-09-17
+
+The shared production modules are now included in the game entry and production build. Browser review used the existing local benchmark/QA state, not a production account. Desktop and landscape checks verified the actual game modal, persistent header/footer, tab switching, artwork, clan/player flags, private-garrison boundaries and the unavailable-progress state. Camp daily-limit handling was corrected for the production configuration's zero sentinel (four Gold/Warband, five Relic, one Deed). Focused validation covers privacy, permissions, map-only commands and preserving upgrade quantity through busy rendering. The existing Camp and Tower validators passed; release gates and deployment receipts are separate evidence.

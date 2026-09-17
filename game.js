@@ -2311,6 +2311,8 @@ const holdingTowerSnapshots = new Map();
 let selectedHoldingTowerId = "";
 let holdingTowerLoading = false;
 let holdingTowerActionInFlight = "";
+let holdingTowerDetailsTab = "overview";
+let selectedTowerMapId = "";
 let holdingTowerRealtimeUnsubscribe = null;
 let holdingTowerRequestToken = 0;
 let clanGiftCountdownTimer = 0;
@@ -4020,8 +4022,9 @@ function renderHoldingTowerModal(tower) {
   if (!tower || !HOLDING_TOWER_UI) return;
   const neutral = tower.ownerKind !== "clan";
   const treasuryBalance = clanTreasuryStatus?.treasury?.balance;
-  modal.classList.add("holding-tower-modal");
-  modalTitle.textContent = tower.name || "Holding Tower";
+  modal.classList.add("holding-tower-modal", "clan-tower-details-modal");
+  modalTitle.textContent = tower.name || "Clan Tower";
+  const upgradeCount = modalBody.querySelector("[data-tower-upgrade-count]")?.value;
   modalBody.innerHTML = HOLDING_TOWER_UI.renderPanel(tower, {
     actionBusy: Boolean(holdingTowerActionInFlight),
     clanShieldHtml: neutral ? "" : renderClanShield(tower.clanEmblem, {
@@ -4031,6 +4034,17 @@ function renderHoldingTowerModal(tower) {
     }),
     treasuryBalance,
   });
+  window.CrownlandsClanTowerDetailsUi?.mount(modalBody, {
+    selected: holdingTowerDetailsTab,
+    onSelect: key => { holdingTowerDetailsTab = key; },
+    onClose: () => modal.close(),
+    garrison: tower.ownerMember ? tower.garrison || [] : [],
+    renderFlag: (element, row) => {
+      if (row) FlagRenderer.render(element, row.ownerFlag, {stableKey: row.uid, context: "clan-tower-garrison", size: "small"});
+    },
+  });
+  const upgradeInput = modalBody.querySelector("[data-tower-upgrade-count]");
+  if (upgradeInput?.options && [...upgradeInput.options].some(option => option.value === upgradeCount)) upgradeInput.value = upgradeCount;
   bindHoldingTowerControls(tower);
 }
 
@@ -4045,11 +4059,11 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
     return snapshot;
   }
   const api = getOnlineApi();
-  if (!api?.getHoldingTowerState || !api?.isSignedIn?.()) throw new Error("Sign in to inspect this Holding Tower.");
+  if (!api?.getHoldingTowerState || !api?.isSignedIn?.()) throw new Error("Sign in to inspect this Clan Tower.");
   const token = ++holdingTowerRequestToken;
   const result = await api.getHoldingTowerState({ towerId });
   if (token !== holdingTowerRequestToken) return null;
-  const snapshot = { ...(result?.towers?.[0] || towerVisual), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
+  const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
   holdingTowerSnapshots.set(towerId, snapshot);
   if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(snapshot);
   if (subscribe && result?.worldActive && api.subscribeHoldingTowerState) {
@@ -4066,6 +4080,7 @@ async function openHoldingTower(towerId = "") {
   const tower = getHoldingTowerVisual(towerId);
   if (!tower) return;
   selectedHoldingTowerId = tower.id;
+  holdingTowerDetailsTab = "overview";
   holdingTowerLoading = true;
   modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal", "troop-slider-modal");
   modal.classList.add("holding-tower-modal");
@@ -4086,7 +4101,7 @@ async function openHoldingTower(towerId = "") {
     if (current) renderHoldingTowerModal(current);
   } catch (error) {
     console.warn("Could not open Holding Tower", error);
-    modalBody.innerHTML = `<div class="holding-tower-loading error"><strong>Holding Tower unavailable</strong><span>${escapeHtml(error?.message || "Try again after reconnecting.")}</span></div>`;
+    modalBody.innerHTML = `<div class="holding-tower-loading error"><strong>Clan Tower unavailable</strong><span>${escapeHtml(error?.message || "Try again after reconnecting.")}</span></div>`;
   } finally {
     holdingTowerLoading = false;
   }
@@ -4094,7 +4109,7 @@ async function openHoldingTower(towerId = "") {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     selectedHoldingTowerId = "";
-    modal.classList.remove("holding-tower-modal", "holding-tower-treasury-qa-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal");
   }, { once: true });
 }
 
@@ -4141,12 +4156,12 @@ async function runHoldingTowerSpendAction(tower, action) {
     veil: "activateHoldingTowerVeil",
   }[action];
   if (!method || !api?.[method]) return;
+  const count = action === "upgrade"
+    ? Math.max(1, Math.min(10, Math.floor(Number(modalBody.querySelector("[data-tower-upgrade-count]")?.value) || 1)))
+    : undefined;
   holdingTowerActionInFlight = action;
   renderHoldingTowerModal(tower);
   try {
-    const count = action === "upgrade"
-      ? Math.max(1, Math.min(10, Math.floor(Number(modalBody.querySelector("[data-tower-upgrade-count]")?.value) || 1)))
-      : undefined;
     const result = await api[method]({
       towerId: tower.id,
       count,
@@ -4156,7 +4171,7 @@ async function runHoldingTowerSpendAction(tower, action) {
     if (result?.treasury) clanTreasuryStatus = { ...(clanTreasuryStatus || {}), treasury: result.treasury };
     showToast(action === "upgrade" ? "Wall upgrade added to the Tower queue." : action === "repair" ? "Paid Wall repair started." : "Veil of Silence activated for 10 minutes.");
   } catch (error) {
-    rejectGameAction(error?.message || "The Holding Tower order failed.");
+    rejectGameAction(error?.message || "The Clan Tower order failed.");
   } finally {
     holdingTowerActionInFlight = "";
     const current = holdingTowerSnapshots.get(tower.id) || tower;
@@ -4208,6 +4223,8 @@ function showHoldingTowerOrderComposer(tower, mode) {
     "rally-attack": "Form Rally Attack",
     "rally-from": "Form Rally from Tower",
   }[mode] || "Tower Order";
+  modal.classList.remove("clan-tower-details-modal");
+  modal.classList.add("holding-tower-modal");
   modalTitle.textContent = label;
   modalBody.innerHTML = `
     <form class="holding-tower-order-composer" data-tower-order-form data-tower-order-mode="${mode}">
@@ -4227,7 +4244,7 @@ function showHoldingTowerOrderComposer(tower, mode) {
     troopInput.max = String(maximum);
     troopInput.value = String(Math.max(1, Math.floor(maximum / 2)));
   });
-  modalBody.querySelector("[data-tower-order-back]")?.addEventListener("click", () => renderHoldingTowerModal(tower));
+  modalBody.querySelector("[data-tower-order-back]")?.addEventListener("click", () => modal.close());
   modalBody.querySelector("[data-tower-order-form]")?.addEventListener("submit", event => {
     event.preventDefault();
     void submitHoldingTowerOrder(tower, mode, candidates);
@@ -4285,9 +4302,11 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
     if (result?.rally) upsertClanRallySnapshot(result.rally);
     showToast(rally ? `Rally formed against ${to.name}.` : `${kind === "reinforce" ? "Reinforcements" : kind === "transfer" ? "Withdrawal" : kind === "scout" ? "Scouts" : "Army"} dispatched.`);
     await refreshHoldingTower(tower.id);
+    modal.close();
+    renderSelectionChangeNow();
   } catch (error) {
-    rejectGameAction(error?.message || "The Holding Tower order could not be sent.");
-    renderHoldingTowerModal(tower);
+    rejectGameAction(error?.message || "The Clan Tower order could not be sent.");
+    showHoldingTowerOrderComposer(tower, mode);
   } finally {
     holdingTowerActionInFlight = "";
   }
@@ -26960,6 +26979,8 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
   return [
     selectedSourceId || "",
     selectedTargetId || "",
+    selectedTowerMapId,
+    selectedTowerMapId ? JSON.stringify(holdingTowerSnapshots.get(selectedTowerMapId)?.permissions || {}) : "",
     sendMode ? 1 : 0,
     scoutNearbySourceId || "",
     regroupSourceId || "",
@@ -27311,7 +27332,8 @@ function renderCitiesUncached(force = false) {
   flushPendingDeedCityHighlights();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
-  if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
+  if (selectedTowerMapId && !sendMode) renderSelectedClanTowerWheel(selectedTowerMapId);
+  else if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
   else if (selectedForeign && isStronghold(selectedForeign) && !sendMode) renderSelectedStrongholdWheel(selectedForeign);
   else if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
   else if (source?.owner === "player" && isStronghold(source) && !sendMode) renderSelectedStrongholdWheel(source);
@@ -27579,6 +27601,45 @@ function beginStrongholdReinforcement(strongholdId) {
   showTroopSliderModal(sourceOption.city, stronghold);
 }
 
+async function selectClanTowerOnMap(towerId) {
+  clearSelection(false);
+  selectedTowerMapId = towerId;
+  renderSelectionChangeNow();
+  try {
+    await refreshHoldingTower(towerId);
+    if (selectedTowerMapId === towerId) renderSelectionChangeNow();
+  } catch (error) {
+    if (selectedTowerMapId === towerId) showToast(error?.message || "Tower orders unavailable. Open Info to reconnect.");
+  }
+}
+
+function renderSelectedClanTowerWheel(towerId) {
+  const visual = getHoldingTowerVisual(towerId);
+  if (!visual || !cityLayer.querySelector(`[data-holding-tower-id="${towerId}"]`)) return;
+  const snapshot = holdingTowerSnapshots.get(towerId);
+  const actions = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot) || [{action:"info",label:"Info",icon:"information"}];
+  const point = worldToMapPoint({x:visual.visualX,y:visual.visualY});
+  const wheel = document.createElement("div");
+  wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";
+  wheel.style.left = `${point.x}px`;
+  wheel.style.top = `${point.y}px`;
+  const positions = [[0,92],[-96,30],[96,30],[-80,-72],[80,-72]];
+  wheel.innerHTML = actions.map((entry,index) => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : entry.icon === "information" ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" style="--tower-action-x:${positions[index][0]}px;--tower-action-y:${positions[index][1]}px" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
+  wheel.querySelectorAll("[data-clan-tower-map-action]").forEach(button => button.addEventListener("click",event => {
+    event.stopPropagation();
+    const action = button.dataset.clanTowerMapAction;
+    if (action === "info") { void openHoldingTower(towerId); return; }
+    if (!snapshot) return;
+    if (action === "scout") { void scoutTarget(snapshot); return; }
+    showHoldingTowerOrderComposer(snapshot,action);
+    if (modalBody.querySelector("[data-tower-order-form]")) {
+      if (!modal.open) modal.showModal();
+      modal.addEventListener("close", () => modal.classList.remove("holding-tower-modal", "clan-tower-details-modal"), {once:true});
+    }
+  }));
+  cityLayer.appendChild(wheel);
+}
+
 function renderSelectedRewardCampWheel(camp) {
   const mapPoint = worldToMapPoint(camp);
   const wheel = document.createElement("div");
@@ -27734,6 +27795,7 @@ function beginRewardCampOrder(campId) {
 }
 
 function selectRewardCamp(campId) {
+  selectedTowerMapId = "";
   if (!state || isGamePausedByOutcome()) return;
   const camp = getCampTargetById(campId);
   if (!camp) return;
@@ -27846,6 +27908,7 @@ function relicCampProgressMarkup(config, progress, status = "ready") {
   const progressPercent = maxRewards > 0 ? Math.round(claimed / maxRewards * 100) : 100;
   const drops = (Array.isArray(config?.itemDrops) ? config.itemDrops : RELIC_CAMP_DROP_TABLE).map(item => `
     <li class="relic-drop-row rarity-${escapeHtml(String(item.rarity || "common").toLowerCase())}">
+      ${renderItemIcon(getShopItemById(item.itemId), "relic-drop-art")}
       <span class="relic-drop-name"><strong>${escapeHtml(item.itemName)}</strong><small>${escapeHtml(item.rarity)}</small></span>
       <em>${formatNumber(item.chance)}%</em>
     </li>`).join("");
@@ -27873,6 +27936,7 @@ function relicCampProgressMarkup(config, progress, status = "ready") {
     ${completed ? `<p class="relic-limit-message">Daily reward limit reached. You can still fight for this camp, but you will not receive another reward today.</p>` : ""}
     <h3 class="relic-reward-heading">Possible item drops</h3>
     <ul class="relic-drop-table">${drops}</ul>
+    ${COMMON_GEAR ? `<div class="relic-bonus-box">${renderItemIcon(COMMON_GEAR_BOX_ITEM)}<div><strong>Common Gear Box · ${COMMON_GEAR.RELIC_BONUS_CHANCE_PERCENT}% bonus chance</strong><p>A separate bonus on a rewarded hold, in addition to the item. Contains three Common gear pieces.</p></div></div>` : ""}
     <h3 class="relic-reward-heading">Today's rewards</h3>
     <ol class="camp-reward-list relic-reward-history">${history}</ol>
     <p class="camp-reward-reset">Relic Camp rewards reset at 00:00 UTC.</p>`;
@@ -27956,6 +28020,7 @@ function renderRewardCampProgressPanel(campId, config, progress, status = "ready
   const panel = findRewardCampProgressPanel(campId);
   if (!panel) return;
   panel.innerHTML = rewardCampProgressMarkup(config, progress, status);
+  globalThis.CrownlandsCampDetailsUi?.updateRewards(modalBody, campId, config, progress, status);
 }
 
 function refreshRewardCampProgressPanel(campId, config) {
@@ -28282,7 +28347,11 @@ function showRewardCampInfoModal(campId) {
   }));
   bindHoldingReinforcementButtons();
   if (!modal.open) modal.showModal();
-  if (!isDeedCamp) refreshRewardCampProgressPanel(camp.id, config);
+  window.CrownlandsCampDetailsUi?.mount(modalBody, {
+    camp, config, mapName: WORLD_REGIONS_BY_ID.get(camp.regionId)?.name || "The Core",
+    onClose: () => modal.close(), estimatedRewards: () => getRewardCampEstimatedRewards(config),
+  });
+  refreshRewardCampProgressPanel(camp.id, config);
 }
 
 function showScoutReportModal(cityId) {
@@ -29432,6 +29501,7 @@ function renderSelectionChangeNow() {
 }
 
 function selectCity(id) {
+  selectedTowerMapId = "";
   if (!state || isGamePausedByOutcome()) return;
   const clicked = cityById(id);
   if (!clicked) return;
@@ -34988,6 +35058,7 @@ function showAttackPreview(source, target) {
 }
 
 function clearSelection(shouldRender = true) {
+  selectedTowerMapId = "";
   selectedSourceId = null;
   selectedTargetId = null;
   scoutNearbySourceId = null;
@@ -39620,7 +39691,7 @@ cityLayer.addEventListener("click", event => {
     event.stopPropagation();
     cityTapState = null;
     campTapState = null;
-    void openHoldingTower(holdingTowerButton.dataset.holdingTowerId);
+    void selectClanTowerOnMap(holdingTowerButton.dataset.holdingTowerId);
     return;
   }
   const campButton = event.target.closest(".camp-node[data-camp-id]");
@@ -39812,6 +39883,7 @@ function handleGameModalClose() {
   modal.classList.remove("stronghold-details-modal");
   delete modal.dataset.cityInfoId;
   delete modal.dataset.campInfoId;
+  modal.classList.remove("camp-details-modal");
   delete modal.dataset.scoutReportCityId;
   delete modal.dataset.battleReportDetailId;
   clearInnerCastleModalState();
