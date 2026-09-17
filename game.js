@@ -27629,6 +27629,7 @@ function renderSelectedClanTowerWheel(towerId) {
     event.stopPropagation();
     const action = button.dataset.clanTowerMapAction;
     if (action === "info") { void openHoldingTower(towerId); return; }
+    const snapshot = holdingTowerSnapshots.get(towerId);
     if (!snapshot) return;
     if (action === "scout") { void scoutTarget(snapshot); return; }
     showHoldingTowerOrderComposer(snapshot,action);
