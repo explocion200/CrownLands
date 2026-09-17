@@ -2,6 +2,8 @@
 
 Status: **Main layout APPROVED; clearer Walls & Veil redesign ready for review.** The user confirmed that all attacking and troop movement happen at the tower on the map, like cities, outside this details UI. The garrison shows each player's name, flag and troops, and the clan flag stays beside the tower title. This continues the authorized related objective-details review batch on `codex/camp-details-draft`; the existing approved Camp commits are preserved. No runtime integration, PR, push, merge or deployment has occurred for this batch.
 
+Veil follow-up (2026-09-17): the user confirmed daily purchases by Leaders/Officers, with purchased Veils held for later activation by a Leader/Officer. An activation affects only one Clan Tower. The Master Specification records this revision; the daily purchase allowance and carryover details await clarification. This draft still shows the previous immediate-payment activation flow and must be revised to separate purchase from activation before approval of the new Veil behavior. Its displayed three-use limit does not establish the revised purchase limit.
+
 Open `/docs/visual-qa/holding-tower-details/index.html?viewport=desktop&sample=owned&tower=ravenwatch`. Use the review toolbar to switch among Ravenwatch, Highguard, Blackthorn and Stoneward. The window matches the approved camp maximum of 1040 × 790 and shrinks for 844 × 390 and 568 × 320 landscape screens. There is no portrait layout.
 
 ## Design

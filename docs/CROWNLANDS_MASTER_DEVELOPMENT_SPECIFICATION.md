@@ -634,9 +634,13 @@ The current Core mappings are fixed:
 ### Tower Veil
 
 - Tower Veil is a Tower-specific Clan Treasury service, not a normal Bag item.
+- **Confirmed revision (2026-09-17): purchase and activation are separate actions.** A Clan Leader or Officer may purchase Veil from the Clan Treasury through a daily purchase allowance and keep it available for later activation. A Leader or Officer may activate a purchased Veil when needed; purchase does not start its protection timer.
+- Each activation protects only the selected Clan Tower. It does not protect the clan's other Towers or cities.
 - Duration is ten minutes.
-- Limit is three uses per Tower per UTC day.
 - Cost is one times the equivalent regular-city wall cost at the Tower’s current wall level.
+- **Pending clarification:** the number of purchases allowed per day, the scope of that purchase allowance, and unused-charge carryover across daily/season boundaries. Do not infer a new numeric purchase limit from the superseded activation limit.
+
+**Implementation status:** the purchase-and-hold revision is a confirmed design direction, pending the allowance clarification and implementation. The existing server and local draft still spend gold immediately on activation and enforce three activations per Tower per UTC day. That describes the existing implementation, not the final rule for the revised purchase flow. Stored purchases require separate authoritative inventory, purchase and activation handling before this revision can be considered implemented or released.
 
 ### Tower scouting and presentation
 
