@@ -41,6 +41,8 @@ dialog::backdrop { background:#232b2138; }
 .controller small,.identity-facts small { color:var(--muted); font-size:11px; }
 .clan-mark { flex:none; display:grid; place-items:center; width:34px; height:43px; background:#783e31; clip-path:polygon(0 0,100% 0,100% 77%,50% 100%,0 77%); }
 .clan-mark img { width:28px; height:32px; }
+.clan-flag { display:block; flex:none; width:44px; aspect-ratio:100/106; }
+.clan-flag>.clan-heraldry-v2 { display:block; width:100%; height:100%; }
 .name-link { border:0; background:none; padding:4px 0; text-align:left; text-decoration:underline; text-decoration-color:#b2a080; text-underline-offset:3px; font:18px/1.25 Georgia,serif; overflow-wrap:anywhere; }
 .name-link span { font-size:12px; text-decoration:none; }
 .plain-owner { font:19px Georgia,serif; display:block; padding-top:5px; }
@@ -180,6 +182,7 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
   .controller small { font-size:9px; }
   .clan-mark { width:24px; height:30px; }
   .clan-mark img { width:21px; height:24px; }
+  .clan-flag { width:36px; }
   .name-link { font-size:15px; }
   .name-link span { font-size:10px; }
   .identity-facts { padding:8px 0; gap:6px; }

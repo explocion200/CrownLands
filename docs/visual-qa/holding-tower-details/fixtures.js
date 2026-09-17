@@ -17,6 +17,7 @@ function towerFixture(sample) {
   const member = !["neutral", "enemy", "scouted", "veiled", "loading", "error"].includes(sample);
   const f = {member, manager: member && !["member", "probation"].includes(sample), eligible: sample !== "probation", neutral: sample === "neutral", clan: "The Crimson Watch", tag: "TCW", wall: sample === "neutral" ? 1 : 12, integrity: 100, veil: ["veil", "veiled"].includes(sample), veilUses: sample === "spent" ? 0 : sample === "veil" ? 1 : 2, treasury: 24000000, nextCost: 6250000, veilCost: 1250000, repairCost: 0, queue: [], rows: member ? [{name: "Aldric of Greenrook", troops: 685200, self: true}, {name: "Lady Elowen", troops: 1842150}, {name: "Lord Rowan", troops: 2255000}] : []};
   if (!member && !f.neutral) {f.clan = "The Iron Covenant"; f.tag = "IRON";}
+  f.clanShield = f.neutral ? null : {...CrownlandsClanHeraldryConfig.DEFAULT_V2, division: "solid", primary: member ? "#7a2638" : "#303436", charge: member ? "lion" : "fortress-keep", secondaryCharge: "none", chargeColor: "#eee1bd", borderColor: "#d8bd78"};
   if (sample === "long") {f.clan = "The Crimson Watch of the Northern Marches"; f.treasury = 1234567890; f.rows = Array.from({length: 12}, (_, i) => ({name: i ? `Warden ${i} of the Far Northern Marches` : "Aldric of the Greenrook Northern Marches", troops: 12345678 + i * 123456, self: i === 0}));}
   if (sample === "empty") f.rows = [];
   if (sample === "probation") f.rows = f.rows.filter(r => !r.self);

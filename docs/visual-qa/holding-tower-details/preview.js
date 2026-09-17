@@ -5,6 +5,7 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;"
 const status = message => parent.postMessage({type: "tower-status", message}, location.origin);
 let tower = TOWER_DEFINITIONS.ravenwatch, sample = "owned", fixture = towerFixture(sample), section = "overview", actionOrigin = null;
 const flagRenderer = CrownlandsFlagRenderer.create({config: CrownlandsPlayerFlags, renderIcon: (key, className) => `<svg class="${className}" viewBox="0 0 100 100" aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-${key}"></use></svg>`});
+const clanHeraldry = CrownlandsClanHeraldryRenderer.create({config: CrownlandsClanHeraldryConfig, assets: CrownlandsClanHeraldryAssets, legacyRenderer: CrownlandsClanHeraldryLegacyV1});
 let pendingOrder = null, orderReady = false;
 const icon = key => `<img src="${TOWER_ICONS[key]}" alt="">`;
 const action = (key, label, style = "paper-button", disabled = false) => `<button class="${style}" data-action="${key}" ${disabled ? "disabled" : ""}>${label}</button>`;
@@ -12,7 +13,7 @@ const progress = (value, label) => `<div class="track" role="progressbar" aria-l
 function titleBlock(kicker, title, copy) { return `<div class="panel-intro"><p class="eyebrow">${kicker}</p><h2>${title}</h2><p>${copy}</p></div>`; }
 function unavailableMarkup() { return `<div class="empty-state">${icon("wall")}<h2>${fixture.unavailable === "loading" ? "Reading the watch ledger…" : "Tower details unavailable"}</h2><p>${fixture.unavailable === "loading" ? "Retrieving the current clan, garrison and wall condition." : "The tower could not be loaded. Return to the map and try again when the connection is ready."}</p></div>`; }
 function identityMarkup(f) {
-  return `<figure class="tower-plate"><img src="${tower.art}" alt="${esc(tower.name)} illustration"><figcaption>${esc(tower.map)} · The Core</figcaption></figure><div class="controller"><span class="clan-mark" aria-hidden="true">${icon("wall")}</span><div><small>${f.neutral ? "Unclaimed holding" : "Controlling clan"}</small>${f.neutral ? '<strong class="plain-owner">Neutral</strong>' : `<button class="name-link" data-action="clan">${esc(f.clan)} <span>[${esc(f.tag)}]</span></button>`}</div></div><div class="identity-facts"><div><small>Conquest</small><strong>Rally only</strong></div><div><small>Minimum force</small><strong>5 members</strong></div></div><p class="identity-note">A shared military foothold.<br>No passive realm bonus.</p>`;
+  return `<figure class="tower-plate"><img src="${tower.art}" alt="${esc(tower.name)} illustration"><figcaption>${esc(tower.map)} · The Core</figcaption></figure><div class="controller">${f.neutral ? `<span class="clan-mark" aria-hidden="true">${icon("wall")}</span>` : '<span id="controllingClanFlag" class="clan-flag"></span>'}<div><small>${f.neutral ? "Unclaimed holding" : "Controlling clan"}</small>${f.neutral ? '<strong class="plain-owner">Neutral</strong>' : `<button class="name-link" data-action="clan">${esc(f.clan)} <span>[${esc(f.tag)}]</span></button>`}</div></div><div class="identity-facts"><div><small>Conquest</small><strong>Rally only</strong></div><div><small>Minimum force</small><strong>5 members</strong></div></div><p class="identity-note">A shared military foothold.<br>No passive realm bonus.</p>`;
 }
 function wallMarkup(f) {
   const copy = f.repair ? "Paid repair in progress · 19m remaining" : f.integrity < 100 ? "Repair required before construction" : "Fortifications fully repaired";
@@ -78,6 +79,7 @@ function render(towerKey, sampleKey) {
   $("ownership").textContent = fixture.unavailable ? "Awaiting details" : fixture.neutral ? "Neutral" : fixture.member ? "Your clan" : "Rival clan";
   $("ownership").className = `ownership ${fixture.neutral || fixture.unavailable ? "neutral" : fixture.member ? "" : "enemy"}`;
   $("identity").innerHTML = fixture.unavailable ? `<figure class="tower-plate"><img src="${tower.art}" alt="${tower.name}"></figure>` : identityMarkup(fixture);
+  if (fixture.clanShield) clanHeraldry.render($("controllingClanFlag"), fixture.clanShield, {variant: "micro", label: `${fixture.clan} clan flag`});
   $("overview").innerHTML = fixture.unavailable ? unavailableMarkup() : overviewMarkup(fixture);
   $("garrisonPanel").innerHTML = fixture.unavailable ? unavailableMarkup() : garrisonMarkup(fixture);
   fixture.rows.forEach(row => flagRenderer.render(document.querySelector(`[data-player-flag="${row.uid}"]`), row.flag, {stableKey: row.uid, context: "clan-tower-garrison", size: "small"}));

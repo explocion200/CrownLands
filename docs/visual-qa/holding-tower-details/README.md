@@ -6,7 +6,7 @@ Open `/docs/visual-qa/holding-tower-details/index.html?viewport=desktop&sample=o
 
 ## Design
 
-- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops, Veil status and troop actions.
+- Overview pairs the current Core tower illustration and controlling clan with public wall condition, authorized defenders, personal troops, Veil status and troop actions. The clan's flag appears beside its name using the existing clan heraldry renderer, with distinct synthetic flags for the friendly and rival examples; neutral towers show no clan flag.
 - Garrison displays three columns: each player's saved flag, name and stationed troops. Your row is marked You. The roster has no per-player command buttons; officers cannot move other members' troops.
 - Attack and Move stay in the footer and open the approved city troop-order presentation adapted to the Clan Tower origin and wall level. Both sliders select only your personally stationed troops, with crossed swords for Attack and a marching banner for Move. Reinforce and Form Rally remain secondary Overview actions.
 - Walls & Veil separates the current wall and construction queue from officer services. Clan Treasury remains visible above them. Disabled actions explain damage, attack, active repair, a full queue, insufficient funds, an active Veil or the spent daily allowance.

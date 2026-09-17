@@ -1,5 +1,9 @@
 # Clan Tower draft verification
 
+## Controlling clan flag follow-up
+
+On 2026-09-16, added the clan's flag beside its name using the existing Clan/Stronghold heraldry renderer. Desktop shows a 44px flag; both landscape sizes show a 36px flag. Visually checked desktop and the scrolled 568 × 320 panel, and checked long-name geometry at 844 × 390 and 568 × 320 with no clan-row or name overflow. The clan-name link still opens and returns from its local preview. Friendly and rival examples render distinct lion/fortress heraldry; neutral and loading examples show no clan flag. Browser error logs were empty. The two changed scripts and whitespace checks passed. No runtime or release checks were needed for this draft-only addition.
+
 ## Personal orders and player flags follow-up
 
 Checked locally on 2026-09-16 after the user confirmed individual Attack/Move actions and a flag/name/troops roster.

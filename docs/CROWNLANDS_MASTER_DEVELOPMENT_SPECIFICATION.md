@@ -641,6 +641,7 @@ The current Core mappings are fixed:
 ### Tower scouting and presentation
 
 - Clan Tower Attack and Move use the normal city troop-order design adapted to the Tower origin. Each player selects only their own personally stationed troops; a clan's combined garrison is not available for an individual's order. The garrison roster displays each player's name, saved personal flag and stationed troop count.
+- Display the controlling clan's saved flag/heraldry beside its name in Clan Tower details. Neutral towers have no clan flag.
 - There is no separate `Scout From Tower` action and no manual Tower-origin selector.
 - The normal target-driven Scout action automatically selects the closest eligible origin from either the player's personally owned Cities or a clan Holding Tower where that player has personally stationed troops and remains Tower-eligible.
 - Tower screens use the established Crownlands burgundy manuscript headers, parchment and ivory surfaces, tan information boxes, dark readable ink, and existing action-button treatments. Desktop and 844×390 landscape layouts must remain readable.
