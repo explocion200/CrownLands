@@ -1,5 +1,9 @@
 # Clan Tower draft verification
 
+## Persistent header flag clarification
+
+The user clarified that the flag must be beside the Clan Tower name. It now replaces the generic header icon for clan-controlled towers and remains visible across Overview, Garrison, Walls & Veil and Tower Rules. Twelve focused browser checks covered those tabs at desktop, 844 × 390 and 568 × 320: the flag stayed beside the title, within the header, without horizontal overflow. Friendly/rival switching updated its label and heraldry; neutral/loading states hid it and restored the generic icon. Desktop and small-landscape views were visually confirmed. The preview script and whitespace checks passed. This remains a local draft change.
+
 ## Controlling clan flag follow-up
 
 On 2026-09-16, added the clan's flag beside its name using the existing Clan/Stronghold heraldry renderer. Desktop shows a 44px flag; both landscape sizes show a 36px flag. Visually checked desktop and the scrolled 568 × 320 panel, and checked long-name geometry at 844 × 390 and 568 × 320 with no clan-row or name overflow. The clan-name link still opens and returns from its local preview. Friendly and rival examples render distinct lion/fortress heraldry; neutral and loading examples show no clan flag. Browser error logs were empty. The two changed scripts and whitespace checks passed. No runtime or release checks were needed for this draft-only addition.

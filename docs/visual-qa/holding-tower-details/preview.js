@@ -74,12 +74,16 @@ function render(towerKey, sampleKey) {
   if ($("actionDialog").open) $("actionDialog").close();
   if ($("towerOrderDialog").open) $("towerOrderDialog").close();
   $("towerTitle").textContent = tower.name; $("reopen").textContent = `Open ${tower.name}`;
+  const showClanFlag = Boolean(fixture.clanShield && !fixture.unavailable);
+  $("towerClanFlag").hidden = !showClanFlag;
+  $("towerHeaderIcon").hidden = showClanFlag;
+  if (showClanFlag) clanHeraldry.render($("towerClanFlag"), fixture.clanShield, {variant: "micro", label: `${fixture.clan} clan flag`});
   $("quadrant").textContent = `${tower.quadrant} · The Core`;
   document.body.style.setProperty("--tower-map", `url("../../../assets/worlds/core-expansion-v1/maps/${tower.region}.webp")`);
   $("ownership").textContent = fixture.unavailable ? "Awaiting details" : fixture.neutral ? "Neutral" : fixture.member ? "Your clan" : "Rival clan";
   $("ownership").className = `ownership ${fixture.neutral || fixture.unavailable ? "neutral" : fixture.member ? "" : "enemy"}`;
   $("identity").innerHTML = fixture.unavailable ? `<figure class="tower-plate"><img src="${tower.art}" alt="${tower.name}"></figure>` : identityMarkup(fixture);
-  if (fixture.clanShield) clanHeraldry.render($("controllingClanFlag"), fixture.clanShield, {variant: "micro", label: `${fixture.clan} clan flag`});
+  if (showClanFlag) clanHeraldry.render($("controllingClanFlag"), fixture.clanShield, {variant: "micro", label: `${fixture.clan} clan flag`});
   $("overview").innerHTML = fixture.unavailable ? unavailableMarkup() : overviewMarkup(fixture);
   $("garrisonPanel").innerHTML = fixture.unavailable ? unavailableMarkup() : garrisonMarkup(fixture);
   fixture.rows.forEach(row => flagRenderer.render(document.querySelector(`[data-player-flag="${row.uid}"]`), row.flag, {stableKey: row.uid, context: "clan-tower-garrison", size: "small"}));
