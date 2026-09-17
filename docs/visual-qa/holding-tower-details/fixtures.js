@@ -8,6 +8,11 @@ const TOWER_DEFINITIONS = Object.freeze({
 });
 const TOWER_SAMPLES = Object.freeze(["owned", "member", "empty", "probation", "neutral", "enemy", "scouted", "veiled", "damaged", "repair", "queue", "full", "incoming", "veil", "spent", "poor", "long", "loading", "error"]);
 const TOWER_ICONS = Object.freeze({troops: "assets/icons/daily-login-troops-r1.svg", wall: "assets/icons/skills/stoneworks.svg", gold: "assets/icons/royal-shop-gold-r1.svg", march: "assets/icons/troop-orders/marching-banner.svg", swords: "assets/icons/troop-orders/crossed-swords.svg", veil: "assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp"});
+const TOWER_PLAYER_FLAGS = Object.freeze([
+  {version: 2, primary: "#722F37", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "split", symbol: "lion"},
+  {version: 2, primary: "#355E3B", secondary: "#DDD0AE", symbolColor: "#C69A45", pattern: "diagonal", symbol: "stag"},
+  {version: 2, primary: "#315A8A", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "band", symbol: "eagle"}
+]);
 function towerFixture(sample) {
   const member = !["neutral", "enemy", "scouted", "veiled", "loading", "error"].includes(sample);
   const f = {member, manager: member && !["member", "probation"].includes(sample), eligible: sample !== "probation", neutral: sample === "neutral", clan: "The Crimson Watch", tag: "TCW", wall: sample === "neutral" ? 1 : 12, integrity: 100, veil: ["veil", "veiled"].includes(sample), veilUses: sample === "spent" ? 0 : sample === "veil" ? 1 : 2, treasury: 24000000, nextCost: 6250000, veilCost: 1250000, repairCost: 0, queue: [], rows: member ? [{name: "Aldric of Greenrook", troops: 685200, self: true}, {name: "Lady Elowen", troops: 1842150}, {name: "Lord Rowan", troops: 2255000}] : []};
@@ -15,6 +20,8 @@ function towerFixture(sample) {
   if (sample === "long") {f.clan = "The Crimson Watch of the Northern Marches"; f.treasury = 1234567890; f.rows = Array.from({length: 12}, (_, i) => ({name: i ? `Warden ${i} of the Far Northern Marches` : "Aldric of the Greenrook Northern Marches", troops: 12345678 + i * 123456, self: i === 0}));}
   if (sample === "empty") f.rows = [];
   if (sample === "probation") f.rows = f.rows.filter(r => !r.self);
+  f.rows = f.rows.map((row, i) => ({...row, uid: row.self ? "review-self" : `review-ruler-${i}`, flag: TOWER_PLAYER_FLAGS[row.self ? 0 : (i % 2) + 1]}));
+  f.viewer = {name: sample === "long" ? "Aldric of the Greenrook Northern Marches" : "Aldric of Greenrook", flag: TOWER_PLAYER_FLAGS[0]};
   if (["damaged", "repair"].includes(sample)) {f.integrity = sample === "repair" ? 61 : 38; f.repairCost = 3875000; f.repair = sample === "repair";}
   if (["queue", "incoming", "full"].includes(sample)) {
     f.queue = Array.from({length: sample === "full" ? 10 : sample === "queue" ? 5 : 2}, (_, i) => ({from: 12 + i, to: 13 + i, cost: 6250000 * (i + 1)}));

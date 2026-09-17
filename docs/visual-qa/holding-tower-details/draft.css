@@ -282,3 +282,48 @@ body:has(#towerDialog[open]) .reopen { visibility:hidden; }
   .tower-footer div>span { font-size:8px; }
   .tower-footer>button { padding-inline:8px; }
 }
+
+/* Personal city-style actions; the roster is flag / player / troops only. */
+.personal-command { display:flex; align-items:center; gap:12px; }
+.personal-command>div { min-width:0; }
+.personal-command h3 { overflow-wrap:anywhere; }
+.personal-command em { font:10px "Segoe UI",sans-serif; color:var(--olive); }
+.tower-footer>button { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+.tower-footer>button>img { width:26px; height:27px; object-fit:contain; }
+.garrison-columns,.garrison-list li { display:grid; grid-template-columns:58px minmax(0,1fr) auto; align-items:center; gap:18px; }
+.garrison-columns { margin-top:17px; padding:7px 12px; border-bottom:1px solid var(--line); font-size:10px; letter-spacing:.8px; color:var(--muted); text-transform:uppercase; }
+.garrison-columns>span:last-child { text-align:right; }
+.garrison-list { margin-top:0; }
+.garrison-list li { min-height:77px; padding:12px; }
+.garrison-list li>div { grid-column:2; }
+.garrison-list li>b { grid-column:3; grid-row:1; text-align:right; }
+.player-flag { position:relative; display:grid; place-items:center; width:54px; height:43px; flex:none; overflow:hidden; isolation:isolate; background:var(--flag-primary); border:1px solid #493c2e; clip-path:polygon(0 0,100% 4%,94% 50%,100% 96%,0 100%); box-shadow:inset 3px 0 4px #fff2d025,inset -5px 0 8px #0004; }
+.player-flag::before,.player-flag::after { content:""; position:absolute; }
+.player-flag::before { background:var(--flag-secondary); z-index:0; }
+.player-flag.pattern-split::before { inset:0 0 0 50%; }
+.player-flag.pattern-diagonal::before { inset:0; clip-path:polygon(58% 0,100% 0,100% 100%,15% 100%); }
+.player-flag.pattern-band::before { left:0; right:0; top:38%; height:24%; }
+.player-flag::after { inset:0; z-index:1; pointer-events:none; background:linear-gradient(90deg,#fff2,transparent 30%,#0002 50%,transparent 80%),repeating-linear-gradient(0deg,#fff1 0 1px,transparent 1px 5px); }
+.player-flag .flag-symbol { z-index:2; width:35px; height:35px; display:grid; place-items:center; color:var(--flag-symbol-color); }
+.player-flag svg { width:100%; height:100%; fill:currentColor; stroke:var(--flag-symbol-outline); stroke-width:.72; stroke-linejoin:round; paint-order:stroke fill; }
+#towerOrderDialog { width:min(1040px,calc(100vw - 24px)); height:min(790px,calc(100dvh - 24px)); max-width:none; max-height:none; margin:auto; border:0; padding:0; background:var(--paper); overflow:hidden; box-shadow:0 15px 60px #151b1990; }
+#towerOrderDialog::backdrop { background:#232b2199; }
+#personalOrderFrame { display:block; width:100%; height:100%; border:0; }
+@media(max-height:600px),(max-width:1000px) {
+  #towerOrderDialog { width:calc(100vw - 12px); height:calc(100dvh - 12px); }
+  .garrison-columns,.garrison-list li { grid-template-columns:48px minmax(0,1fr) auto; gap:12px; }
+  .garrison-list li { min-height:62px; padding:8px; }
+  .garrison-columns { padding-inline:8px; }
+  .player-flag { width:44px; height:35px; }
+  .player-flag .flag-symbol { width:29px; height:29px; }
+  .tower-footer>button>img { width:22px; height:23px; }
+}
+@media(max-width:650px) {
+  .garrison-columns,.garrison-list li { grid-template-columns:42px minmax(0,1fr) auto; gap:9px; }
+  .garrison-list li>div { grid-column:2; }
+  .garrison-list li>b { grid-column:3; grid-row:1; }
+  .player-flag { width:40px; height:33px; }
+  .tower-footer>button { gap:3px; padding-inline:7px; }
+  .tower-footer>button>img { width:20px; height:21px; }
+  .tower-footer>div { flex:1; }
+}

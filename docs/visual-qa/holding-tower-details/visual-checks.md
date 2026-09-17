@@ -1,5 +1,22 @@
 # Clan Tower draft verification
 
+## Personal orders and player flags follow-up
+
+Checked locally on 2026-09-16 after the user confirmed individual Attack/Move actions and a flag/name/troops roster.
+
+- Preview, fixture and new order-adapter scripts passed `node --check`; `git diff --check` passed.
+- The three fixture flags render with the game flag modules and existing symbol sprite. Desktop and scrolled small-landscape rosters visually show the flags beside player names and counts, without per-player command buttons.
+- Nine focused geometry checks covered Garrison, Attack and Move at 1440 × 900, 844 × 390 and 568 × 320 with twelve long player names and large troop counts. The roster and order body had no horizontal overflow; footer buttons remained within the viewport, at least 44px high. The long roster remains scrollable.
+- Attack and Move reuse the approved city sliders. Keyboard Home selects one troop; End selects only the player's contribution (685,200 in the standard example; 12,345,678 in the long example), never the combined clan garrison. Both slider icons were visually confirmed after loading.
+- Changing attack/move destinations preserves the troop selection. The source remains the Clan Tower with Wall 12; destination cities show their levels. Attack exposes the own-army power breakdown and an unknown enemy forecast. Move with 685,200 selected updates the two destination examples to 870,200 and 779,200 troops respectively.
+- Preview confirmations and Back/Escape navigation leave all garrison contributions unchanged. Reopening switches cleanly between Attack and Move. No Swift March consumable control is presented for the Tower order.
+- Empty and probation examples disable personal Attack/Move. The eligible ordinary-member example enables both. Rival examples hide Move and keep their contribution rosters private; scouting reveals only total defenders.
+- Final browser error log was empty. Image probes found all order images loaded; one immediate screenshot caught the prior header icon while a replacement loaded, and a subsequent inspection confirmed the correct crossed swords.
+
+These are local draft checks, not authenticated multiplayer or release validation. The original layout verification below is retained as historical coverage; its explanatory-only withdrawal dialog has been replaced by the interactive personal order preview.
+
+## Original layout and terminology checks
+
 Terminology follow-up: the user confirmed **Clan Towers**. Updated the review title, category header, accessibility labels and design notes, and clarified **Military orders** as **Troop Actions**. The preview script passed its syntax check, the diff passed whitespace checks, and a browser reload confirmed the new category and action heading. No layout or gameplay logic changed.
 
 Checked locally on 2026-09-16 using Node.js 22.23.2 and the Codex in-app browser at `127.0.0.1:61703`.

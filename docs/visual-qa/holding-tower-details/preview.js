@@ -4,6 +4,8 @@ const number = n => Number(n).toLocaleString("en-US");
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[c]);
 const status = message => parent.postMessage({type: "tower-status", message}, location.origin);
 let tower = TOWER_DEFINITIONS.ravenwatch, sample = "owned", fixture = towerFixture(sample), section = "overview", actionOrigin = null;
+const flagRenderer = CrownlandsFlagRenderer.create({config: CrownlandsPlayerFlags, renderIcon: (key, className) => `<svg class="${className}" viewBox="0 0 100 100" aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-${key}"></use></svg>`});
+let pendingOrder = null, orderReady = false;
 const icon = key => `<img src="${TOWER_ICONS[key]}" alt="">`;
 const action = (key, label, style = "paper-button", disabled = false) => `<button class="${style}" data-action="${key}" ${disabled ? "disabled" : ""}>${label}</button>`;
 const progress = (value, label) => `<div class="track" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><span style="width:${value}%"></span></div>`;
@@ -25,7 +27,7 @@ function veilMarkup(f) {
 function orderMarkup(f) {
   if (!f.member) return `<section class="orders"><h3>Prepare your approach</h3><p>Scout the defenders, then gather at least five eligible clan members for a conquest rally.</p><div class="action-row">${action("scout", "Scout Tower")}${action("rally-attack", "Form Rally Attack", "danger-button")}</div></section>`;
   if (!f.eligible) return `<div class="notice"><strong>Tower participation probation</strong><p>Military actions unlock in 18h 24m. New clan members wait 24 hours before participating.</p></div>`;
-  return `<section class="orders"><div class="section-top"><h3>Troop Actions</h3><small>Your personally stationed troops</small></div><div class="action-row">${action("withdraw", "Withdraw Mine", "paper-button", !f.own)}${action("attack-from", "Attack from Tower", "danger-button", !f.own)}${action("rally-from", "Rally from Tower", "paper-button", !f.own)}</div>${!f.own ? '<p>Reinforce this tower to station troops for outgoing orders.</p>' : ""}</section>`;
+  return `<section class="orders"><div class="personal-command"><span class="kingdom-flag player-flag" data-viewer-flag role="img" aria-label="${esc(f.viewer.name)}'s flag"><span class="flag-symbol"></span></span><div><h3>${esc(f.viewer.name)} <em>You</em></h3><p>Attack and Move use only your ${number(f.own)} stationed troops.</p></div></div><div class="action-row">${action("reinforce", "Reinforce")}${action("rally-from", "Form Rally", "paper-button", !f.own)}</div>${!f.own ? '<p>Reinforce this tower to make Attack and Move available.</p>' : ""}</section>`;
 }
 function overviewMarkup(f) {
   return `${f.incoming ? '<div class="notice danger"><strong>Enemy rally incoming</strong><p>Construction is paused. Reinforcements may still arrive before battle.</p></div>' : ""}${wallMarkup(f)}${troopMarkup(f)}<p class="intel-note">${f.scouted ? "Scout snapshot · Expires in 12m 18s. Later troop movements are not reflected; a change of ownership invalidates the report." : f.scoutBlocked ? "Veil blocked the scout attempt. Defender counts and the clan roster remain hidden." : f.member ? "Clan garrison information. Each ruler keeps ownership of their contribution." : "Current defenders remain private until a successful scout report. Clan and wall details are public."}</p>${veilMarkup(f)}${f.queue.length ? `<button class="queue-shortcut" data-section="walls"><span>${f.incoming ? "Construction paused" : "Wall upgrade in progress"}<small>Level 12 → 13 · ${f.queue.length} of 10 queue slots used</small></span><strong>${f.incoming ? "Paused" : "6m left"} →</strong></button>` : ""}${orderMarkup(f)}`;
@@ -33,7 +35,7 @@ function overviewMarkup(f) {
 function garrisonMarkup(f) {
   const intro = titleBlock("SHARED DEFENSE", "The clan garrison", "Each ruler's contribution stays personally attributed. All valid defenders fight together.");
   if (!f.member) return intro + `<div class="notice"><strong>Clan roster is private</strong><p>${f.scouted ? `Your scout report reveals ${number(f.troops)} total defenders, but not each ruler's contribution.` : "A successful scout report can reveal the total defending force. Individual contributions are visible to the controlling clan."}</p></div>${action("scout", "Scout Tower")}`;
-  return intro + `<div class="garrison-summary"><div><small>Combined defenders</small><strong>${number(f.troops)}</strong></div><div><small>Your contribution</small><strong>${number(f.own)}</strong></div><div><small>Rulers stationed</small><strong>${f.rows.length}</strong></div></div><ol class="garrison-list">${f.rows.length ? f.rows.map(row => `<li class="${row.self ? "your-row" : ""}"><span class="ruler-seal" aria-hidden="true">${icon(row.self ? "march" : "troops")}</span><div><strong>${esc(row.name)} ${row.self ? '<em>You</em>' : ""}</strong><small>${row.self ? "Your troops · Personal command" : "Clan contribution"}</small></div><b>${number(row.troops)}</b>${row.self ? action("withdraw", "Withdraw Mine", "paper-button", !f.eligible) : '<span class="row-status">Stationed</span>'}</li>`).join("") : '<li class="empty-row">No troops are stationed here. Reinforce to establish your clan garrison.</li>'}</ol><p class="footnote">Leaving or being removed from the clan returns your surviving tower troops to your Main City. Officers cannot withdraw another ruler's troops.</p>${orderMarkup(f)}`;
+  return intro + `<div class="garrison-summary"><div><small>Combined defenders</small><strong>${number(f.troops)}</strong></div><div><small>Your contribution</small><strong>${number(f.own)}</strong></div><div><small>Players stationed</small><strong>${f.rows.length}</strong></div></div><div class="garrison-columns" aria-hidden="true"><span>Flag</span><span>Player</span><span>Troops</span></div><ol class="garrison-list">${f.rows.length ? f.rows.map(row => `<li class="${row.self ? "your-row" : ""}"><span class="kingdom-flag player-flag" data-player-flag="${row.uid}" role="img" aria-label="${esc(row.name)}'s flag"><span class="flag-symbol"></span></span><div><strong>${esc(row.name)} ${row.self ? '<em>You</em>' : ""}</strong><small>${row.self ? "Your stationed troops" : "Clan garrison"}</small></div><b aria-label="${number(row.troops)} troops">${number(row.troops)}</b></li>`).join("") : '<li class="empty-row">No troops are stationed here. Reinforce to establish your clan garrison.</li>'}</ol><p class="footnote">Each player attacks or moves with their own contribution. Leaving or being removed from the clan returns their surviving troops to their Main City.</p>`;
 }
 function queueMarkup(f) {
   return `<section class="service-card queue-card"><div class="section-top"><div><p class="eyebrow">CONSTRUCTION</p><h3>Wall upgrades</h3></div><span class="badge">${10 - f.queue.length} slots open</span></div>${f.queue.length ? `<div class="active-upgrade"><strong>Wall Level ${f.queue[0].from} → ${f.queue[0].to}</strong><span>${f.incoming ? "Paused by incoming rally" : "6m remaining · 10-minute build"}</span>${progress(40, "Current wall upgrade progress")}<small>${number(f.queue[0].cost)} gold paid · ${f.incoming ? "Resumes after battle" : "40% complete"}</small></div><ol class="queued-levels">${f.queue.slice(1).map(row => `<li><strong>Level ${row.from} → ${row.to}</strong><span>10 minutes · ${number(row.cost)} gold paid</span></li>`).join("") || '<li>No additional levels queued</li>'}</ol>` : '<p class="service-copy">No upgrades queued. Every level takes 10 minutes. Tower walls have no maximum level.</p>'}<p class="footnote">Repair fully before building. Construction pauses during attacks; capture removes the queue without a refund.</p></section>`;
@@ -69,6 +71,7 @@ function render(towerKey, sampleKey) {
   tower = TOWER_DEFINITIONS[towerKey] || TOWER_DEFINITIONS.ravenwatch;
   sample = TOWER_SAMPLES.includes(sampleKey) ? sampleKey : "owned"; fixture = towerFixture(sample);
   if ($("actionDialog").open) $("actionDialog").close();
+  if ($("towerOrderDialog").open) $("towerOrderDialog").close();
   $("towerTitle").textContent = tower.name; $("reopen").textContent = `Open ${tower.name}`;
   $("quadrant").textContent = `${tower.quadrant} · The Core`;
   document.body.style.setProperty("--tower-map", `url("../../../assets/worlds/core-expansion-v1/maps/${tower.region}.webp")`);
@@ -77,19 +80,32 @@ function render(towerKey, sampleKey) {
   $("identity").innerHTML = fixture.unavailable ? `<figure class="tower-plate"><img src="${tower.art}" alt="${tower.name}"></figure>` : identityMarkup(fixture);
   $("overview").innerHTML = fixture.unavailable ? unavailableMarkup() : overviewMarkup(fixture);
   $("garrisonPanel").innerHTML = fixture.unavailable ? unavailableMarkup() : garrisonMarkup(fixture);
+  fixture.rows.forEach(row => flagRenderer.render(document.querySelector(`[data-player-flag="${row.uid}"]`), row.flag, {stableKey: row.uid, context: "clan-tower-garrison", size: "small"}));
+  flagRenderer.render(document.querySelector('[data-viewer-flag]'), fixture.viewer.flag, {stableKey: "review-self", context: "clan-tower-personal", size: "small"});
   $("wallsPanel").innerHTML = fixture.unavailable ? unavailableMarkup() : wallsMarkup(fixture);
   $("rulesPanel").innerHTML = rulesMarkup();
   $("footerTitle").textContent = fixture.unavailable ? "Tower state unavailable" : fixture.member ? `${number(fixture.own)} troops under your command` : "Tower conquest · Rally only";
   $("footerHint").textContent = fixture.member ? fixture.eligible ? "Personal troops within a shared clan garrison" : "Military access unlocks in 18h 24m" : "5 eligible clan members · At least 1 troop each";
-  $("primaryAction").textContent = fixture.member ? "Reinforce" : "Form Rally Attack";
-  $("primaryAction").dataset.action = fixture.member ? "reinforce" : "rally-attack";
-  $("primaryAction").disabled = Boolean(fixture.unavailable || !fixture.eligible);
-  $("primaryAction").className = fixture.member ? "primary-button" : "danger-button";
+  $("primaryAction").innerHTML = fixture.member ? `${icon("swords")}Attack` : "Form Rally Attack";
+  $("primaryAction").dataset.action = fixture.member ? "attack-from" : "rally-attack";
+  $("primaryAction").disabled = Boolean(fixture.unavailable || !fixture.eligible || (fixture.member && !fixture.own));
+  $("primaryAction").className = "danger-button";
+  $("moveAction").hidden = !fixture.member;
+  $("moveAction").disabled = Boolean(fixture.unavailable || !fixture.eligible || !fixture.own);
   selectTab("overview");
   if (!$("towerDialog").open) $("towerDialog").showModal();
   document.querySelectorAll('.scroll-panel, .identity-column, .detail-column').forEach(el => {el.scrollTop = 0;});
 }
 function openAction(key, origin) {
+  if (["attack-from", "withdraw"].includes(key)) {
+    if (!fixture.member || !fixture.eligible || fixture.own < 1) return;
+    actionOrigin = origin;
+    pendingOrder = {type: "tower-personal-order", kind: key === "attack-from" ? "attack" : "transfer", tower: {...tower, wall: fixture.wall}, own: fixture.own, viewer: fixture.viewer.name};
+    if (!$("towerOrderDialog").open) $("towerOrderDialog").showModal();
+    if (orderReady) $("personalOrderFrame").contentWindow.postMessage(pendingOrder, location.origin);
+    else if (!$("personalOrderFrame").getAttribute("src")) $("personalOrderFrame").src = "docs/visual-qa/holding-tower-details/orders.html";
+    return;
+  }
   const descriptions = {
     clan: [fixture.clan, "This opens the controlling clan's public profile in the game."],
     reinforce: ["Reinforce the tower", "Choose an eligible owned city and send troops into your clan's garrison. Your contribution remains personally attributed."],
@@ -114,5 +130,12 @@ $("close").addEventListener("click", () => $("towerDialog").close()); $("back").
 $("towerDialog").addEventListener("close", () => {$("reopen").focus(); status("Tower closed · Reopen to continue reviewing");});
 $("reopen").addEventListener("click", () => $("towerDialog").showModal());
 window.addEventListener("message", e => {if (e.origin === location.origin && e.source === parent && e.data?.type === "tower-review") render(e.data.tower, e.data.sample);});
+window.addEventListener("message", e => {
+  if (e.origin !== location.origin || e.source !== $("personalOrderFrame").contentWindow) return;
+  if (e.data?.type === "tower-order-ready") {orderReady = true; if (pendingOrder && $("towerOrderDialog").open) e.source.postMessage(pendingOrder, location.origin);}
+  if (e.data?.type === "tower-order-close") $("towerOrderDialog").close();
+  if (e.data?.type === "orders-status") status(e.data.message);
+});
+$("towerOrderDialog").addEventListener("close", () => {pendingOrder = null; actionOrigin?.isConnected && actionOrigin.focus();});
 const query = new URLSearchParams(location.search); render(query.get("tower"), query.get("sample"));
 parent.postMessage({type: "tower-ready"}, location.origin);
