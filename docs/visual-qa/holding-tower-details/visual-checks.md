@@ -1,5 +1,18 @@
 # Clan Tower draft verification
 
+## Walls & Veil clarity revision
+
+Checked locally on 2026-09-17. This revision replaces the previous wall-services layout; the earlier behavior and permission checks below remain historical coverage.
+
+- Separated wall condition, repairs, paid queue and upgrade selection from Veil's effect, duration, remaining uses and activation price. Clan Treasury sits above both panels. Extra rules and the full paid queue use expandable details. Full-health walls show that no repair is needed instead of a disabled zero-cost repair action.
+- Visually inspected desktop and landscape layouts, including an expanded five-level queue at 568 × 320. Desktop uses two scrolling panels; mobile landscape uses one shared vertical scroll with sticky service headings. Long names and large numbers at 1440 × 900, 844 × 390 and 568 × 320 had no horizontal overflow in the service panels. Buttons, selectors and disclosure summaries retained at least 44px height; Back to Map and the header clan flag remained visible.
+- Checked intact/damaged walls, paid repair, a full queue, incoming attack, active/spent Veil and insufficient gold. Corresponding actions were disabled with nearby reasons; low funds show the exact shortfall. Member views retain read-only clan information, while outsider views withhold Treasury balance, paid queue and daily Veil allowance. Loading remains a placeholder.
+- Expanded the queue to inspect every paid level and duration. Selected three additional levels and opened the local upgrade review; it retained the selection and distinguished a single-level price from the required full quote. Repair and Veil explanatory dialogs opened and returned successfully. These actions spend no gold and do not alter fixtures or gameplay.
+- Reloading and switching examples preserves the selected section through `section=walls`. Switching from a scrolled small landscape view to desktop restored the correct Treasury and panel positions. A final Garrison check retained all player flags, names and troop counts without troop-command buttons; the revised desktop Walls & Veil draft was visually confirmed after removing obsolete service styles.
+- Preview/review scripts passed `node --check`, and `git diff --check` passed. The complete branch difference remains limited to the Camp/Clan Tower draft batch and its previously confirmed specification changes. No gameplay specification changed for this unapproved layout revision.
+
+This is a local presentation draft ready for design review. No runtime integration, PR release gates, merge or deployment was performed.
+
 ## Troop orders belong on the map
 
 The user clarified that all attacking and troop movement happen at the tower on the map, like cities. Removed Attack, Move, Reinforce and Rally buttons, their handlers, and the embedded order iframe/adapter files from this details draft. The footer now contains the status summary and Back to Map. This supersedes the earlier embedded-order design and its historical verification below; individual troop ownership rules remain unchanged.
