@@ -149,22 +149,22 @@
       "id": "pickup-gold",
       "category": "pickup",
       "source": "assets/gold-pickup.png",
-      "output": "assets/optimized/pickup-gold-192x192-a1de679b797d.webp",
+      "output": "assets/optimized/pickup-gold-192x192-0f5238966f7a.webp",
       "width": 192,
       "height": 192,
-      "bytes": 8248,
-      "sha256": "a1de679b797d5551582b0ec4e79976ba703386c1d87c51fb8a2b85ffa0c4dfd0",
+      "bytes": 11572,
+      "sha256": "0f5238966f7aa8a1104ea9d5dd2a2364607f6bc70ae246df9eec3950ca107856",
       "hasAlpha": true
     },
     {
       "id": "pickup-troops",
       "category": "pickup",
       "source": "assets/troop-pickup.png",
-      "output": "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp",
+      "output": "assets/optimized/pickup-troops-192x192-7613afbbad92.webp",
       "width": 192,
       "height": 192,
-      "bytes": 8920,
-      "sha256": "ed370610c5b661a7a9005e04cf1bb3dd69e4bb4677e57bedc820907dd110b3fc",
+      "bytes": 12780,
+      "sha256": "7613afbbad92f6b60b4da3909f608ebbb72d090b5466a4811ff886f08a29f11b",
       "hasAlpha": true
     },
     {

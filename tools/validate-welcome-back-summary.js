@@ -219,4 +219,173 @@ assert.ok(
   "The ownership-history index for lost-city summaries is missing."
 );
 
-console.log("Validated one-use Welcome back sessions, authoritative production totals, and captured-city summaries.");
+// Exercise the real summary builders, rather than only checking their call sites.
+sandbox.getServerWorldCityNode = (regionId, id) => ({ id, regionId, name: id, kind: "city" });
+sandbox.getServerCanonicalCityName = city => city.name || city.id;
+sandbox.timestampToMs = value => Number(value) || 0;
+sandbox.isStronghold = () => false;
+for (const name of [
+  "getReinforcementTargetKey",
+  "consumePendingAwayCityTroops",
+  "createWelcomeBackLostCityList",
+  "createWelcomeBackSummary",
+]) vm.runInContext(extractFunction(serverSource, name), sandbox, { filename: serverPath });
+
+const cityEntry = (id, regionId, troops) => ({ city: { id, regionId, troops } });
+const lossEvent = (id, regionId = "center", reason = "city_captured", targetType = "city") => ({
+  data: () => ({ targetId: id, regionId, reason, targetType, createdAtMs: nowMs - 1 }),
+});
+const returnSession = {
+  sessionId: "returning",
+  sessionStartedAtMs: nowMs,
+  awayStartedAtMs: nowMs - 180_000,
+  eligible: true,
+};
+const returnEconomy = {
+  pendingAwayProduction: {
+    goldGained: 123456789,
+    troopsByCity: { "city:center:kept": 80, "city:north:kept": 30, "city:center:lost": 900 },
+  },
+  cityEntries: [cityEntry("kept", "center", 50), cityEntry("kept", "north", 90)],
+};
+const losses = { docs: [
+  lossEvent("lost"), lossEvent("lost"), // repeated capture history is one lost city
+  lossEvent("kept"), // recaptured: currently owned, so no longer lost
+  lossEvent("lost", "north"), // same local ID, different map
+  lossEvent("released", "center", "inactivity_surrender"),
+  lossEvent("camp", "center", "city_captured", "camp"),
+] };
+const returnSummary = sandbox.createWelcomeBackSummary(returnEconomy, returnSession, losses);
+assert.equal(returnSummary.elapsedSeconds, 180, "Away time must use the session boundaries.");
+assert.equal(returnSummary.goldGained, 123456789, "Summary Gold must preserve the recorded integer total.");
+assert.equal(returnSummary.troopsGained, 80, "Only surviving troops in currently owned cities may appear.");
+assert.equal(returnSummary.lostCityCount, 2, "Lost-city reporting must deduplicate by city and map and exclude retaken cities.");
+assert.equal(returnSummary.lostCities.length, 2);
+assert.deepEqual(Array.from(returnSummary.lostCities, city => city.regionId).sort(), ["center", "north"]);
+assert.equal(sandbox.createWelcomeBackSummary(returnEconomy, null, losses), null);
+assert.equal(sandbox.createWelcomeBackSummary({
+  ...returnEconomy, cityEntries: [],
+}, returnSession, losses).troopsGained, 0, "Lost-city troops must never be included.");
+
+const manyLosses = { docs: Array.from({ length: 55 }, (_, index) => lossEvent(`lost-${index}`)) };
+const manySummary = sandbox.createWelcomeBackSummary({ cityEntries: [], pendingAwayProduction: {} }, returnSession, manyLosses);
+assert.equal(manySummary.lostCityCount, 55, "The total must survive the 50-name response limit.");
+assert.equal(manySummary.lostCities.length, 50);
+
+const defended = {
+  profilePatch: { pendingAwayProduction: { troopsByCity: { "city:center:kept": 80 } } },
+  profileAfter: {},
+};
+sandbox.consumePendingAwayCityTroops(defended, { id: "kept", regionId: "center" }, 25);
+assert.equal(defended.profilePatch.pendingAwayProduction.troopsByCity["city:center:kept"], 55);
+assert.equal(defended.profileAfter.pendingAwayProduction.troopsByCity["city:center:kept"], 55);
+sandbox.consumePendingAwayCityTroops(defended, { id: "kept", regionId: "center" }, 100);
+assert.equal(defended.profilePatch.pendingAwayProduction.troopsByCity["city:center:kept"], undefined,
+  "Defensive losses cannot leave negative away-produced troops.");
+defended.profilePatch.pendingAwayProduction.troopsByCity["city:center:kept"] = 80;
+sandbox.consumePendingAwayCityTroops(defended, { id: "kept", regionId: "center" }, 0, { captured: true });
+assert.equal(defended.profilePatch.pendingAwayProduction.troopsByCity["city:center:kept"], undefined,
+  "Capture must remove the city's entire away-produced troop balance.");
+
+const displayedSummaries = [];
+const clientSandbox = {
+  addLog() {},
+  formatNumber: value => String(value),
+  queueOfflineRewardsSummary: summary => displayedSummaries.push(summary),
+};
+vm.createContext(clientSandbox);
+vm.runInContext(extractFunction(clientSource, "applyServerEconomyResult"), clientSandbox, { filename: "game.js" });
+const displayOptions = { requestWelcomeBack: true, showOfflineRewards: true, render: false };
+const noEarningsLoss = { elapsedSeconds: 60, goldGained: 0, troopsGained: 0, lostCityCount: 2, lostCities: [] };
+clientSandbox.applyServerEconomyResult({ awaySummary: noEarningsLoss }, displayOptions);
+assert.equal(displayedSummaries.length, 1, "Zero earnings must not hide lost cities.");
+assert.equal(displayedSummaries[0].lostCityCount, 2);
+clientSandbox.applyServerEconomyResult({ awaySummary: { ...noEarningsLoss, lostCityCount: 0 } }, displayOptions);
+clientSandbox.applyServerEconomyResult({ awaySummary: { ...noEarningsLoss, elapsedSeconds: 59 } }, displayOptions);
+clientSandbox.applyServerEconomyResult({ awaySummary: returnSummary }, { ...displayOptions, requestWelcomeBack: false });
+clientSandbox.applyServerEconomyResult({ awaySummary: returnSummary }, { ...displayOptions, showOfflineRewards: false });
+assert.equal(displayedSummaries.length, 1, "Empty, short, hidden, or ordinary map refresh summaries must not open the modal.");
+clientSandbox.applyServerEconomyResult({
+  awaySummary: returnSummary,
+  production: { elapsedSeconds: 999, goldGained: 999, troopsGained: 999 },
+}, { ...displayOptions, resumeCatchUp: true });
+assert.equal(displayedSummaries[1].goldGained, returnSummary.goldGained, "Welcome Back must prefer the authoritative away receipt.");
+assert.equal(displayedSummaries[1].elapsed, 180);
+assert.equal(displayedSummaries[1].troopsGained, 80);
+
+vm.runInContext(extractFunction(clientSource, "mergeOfflineRewardsSummaries"), clientSandbox, { filename: "game.js" });
+const lossReceipt = (cities, count = cities.length) => ({
+  goldGained: 10, troopsGained: 5, elapsed: 60, lostCities: cities, lostCityCount: count,
+});
+const knownLoss = { id: "lost", regionId: "center", name: "Ashford" };
+const mergedSameCity = clientSandbox.mergeOfflineRewardsSummaries(lossReceipt([knownLoss]), lossReceipt([knownLoss]));
+assert.equal(mergedSameCity.lostCities.length, 1);
+assert.equal(mergedSameCity.lostCityCount, 1, "Queued receipts must not count the same named lost city twice.");
+assert.equal(mergedSameCity.goldGained, 20, "Separate production intervals must still add together.");
+assert.equal(mergedSameCity.troopsGained, 10);
+assert.equal(mergedSameCity.elapsed, 120);
+const differentMaps = clientSandbox.mergeOfflineRewardsSummaries(
+  lossReceipt([knownLoss]), lossReceipt([{ ...knownLoss, regionId: "north" }]),
+);
+assert.equal(differentMaps.lostCities.length, 2, "Local city IDs from different maps must remain distinct.");
+assert.equal(differentMaps.lostCityCount, 2);
+const partialLists = clientSandbox.mergeOfflineRewardsSummaries(lossReceipt([knownLoss], 3), lossReceipt([knownLoss], 2));
+assert.equal(partialLists.lostCityCount, 4, "Known overlaps must be removed without discarding unlisted losses.");
+
+// Execute the real callable with an in-memory transaction boundary. This checks
+// session binding and saved-receipt retries; it is not a Firestore concurrency test.
+async function validateWelcomeBackRetry() {
+  let membership = { welcomeBack: { ...returnSession } };
+  let currentEconomy = returnEconomy;
+  let lossReads = 0;
+  const writes = [];
+  const membershipRef = { kind: "membership" };
+  const query = {
+    kind: "losses", where() { return this; }, orderBy() { return this; },
+  };
+  const transaction = {
+    async get(ref) {
+      if (ref.kind === "membership") return { exists: true, data: () => membership };
+      lossReads += 1;
+      return losses;
+    },
+    set(ref, patch) { assert.equal(ref, membershipRef); membership = { ...membership, ...patch }; },
+  };
+  Object.assign(sandbox, {
+    exports: {},
+    timedCallable: (_name, _options, handler) => handler,
+    requireAuth: () => "fixture-player",
+    requireGameServerSessionId: id => id,
+    getRealmStorageId: () => "fixture-realm",
+    db: { doc: () => membershipRef, collection: () => query },
+    runTransactionWithInfrastructureRetry: callback => callback(transaction),
+    prepareEconomyCollection: async () => currentEconomy,
+    writePreparedEconomy: (_transaction, _economy, patch) => writes.push(patch),
+    createEconomyResponse: (_economy, meta) => ({ ok: true, ...meta }),
+  });
+  const start = serverSource.indexOf('exports.collectEconomy = timedCallable(');
+  const end = serverSource.indexOf('\nexports.getDailyLoginRewardStatus', start);
+  assert(start >= 0 && end > start);
+  vm.runInContext(serverSource.slice(start, end), sandbox, { filename: serverPath });
+  const request = { data: { includeWelcomeBack: true, sessionId: "returning" } };
+  const first = await sandbox.exports.collectEconomy(request);
+  assert.equal(first.awaySummary.goldGained, 123456789);
+  assert.equal(membership.welcomeBack.eligible, false, "Successful collection must consume eligibility.");
+  assert(membership.welcomeBack.claimedAtMs > 0);
+  assert.equal(writes[0].pendingAwayProduction.goldGained, 0);
+  assert.equal(Object.keys(writes[0].pendingAwayProduction.troopsByCity).length, 0);
+  currentEconomy = { cityEntries: [], pendingAwayProduction: { goldGained: 999 } };
+  const retry = await sandbox.exports.collectEconomy(request);
+  assert.deepEqual(retry.awaySummary, first.awaySummary, "Retry must return the saved receipt, not recompute the reward.");
+  assert.equal(lossReads, 1, "A receipt retry must not collect city losses again.");
+  const wrongSession = await sandbox.exports.collectEconomy({
+    data: { includeWelcomeBack: true, sessionId: "other-session" },
+  });
+  assert.equal(wrongSession.awaySummary, undefined, "A different session cannot receive this receipt.");
+  const ordinary = await sandbox.exports.collectEconomy({ data: {} });
+  assert.equal(ordinary.awaySummary, undefined, "An ordinary economy refresh cannot request Welcome Back.");
+}
+
+validateWelcomeBackRetry()
+  .then(() => console.log("Validated Welcome Back session retries, surviving troop totals, captured/retaken cities, exact counts, and production summary guards."))
+  .catch(error => { console.error(error); process.exitCode = 1; });

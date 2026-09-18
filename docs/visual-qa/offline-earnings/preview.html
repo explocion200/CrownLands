@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Welcome Back preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/offline-earnings/draft.css"><script src="docs/visual-qa/offline-earnings/preview.js" defer></script></head><body>
+<div class="map-caption" aria-hidden="true"><span>CROWN LANDS</span><strong>Your kingdom awaits</strong></div>
+<button id="reopen" class="reopen" type="button">Show Welcome Back</button>
+<dialog id="offlineModal" aria-labelledby="offlineTitle">
+<article class="parchment">
+<header class="welcome-header"><div><p class="eyebrow">THE KINGDOM'S CHRONICLE</p><h1 id="offlineTitle" tabindex="-1" autofocus>Welcome back</h1></div><div class="away-time"><svg viewBox="0 0 32 40" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h22M5 37h22M8 4c0 10 0 10 8 16-8 6-8 6-8 16m16-32c0 10 0 10-8 16 8 6 8 6 8 16"/><path d="M11 10h10l-5 6Zm5 15 5 8H11Z" fill="currentColor"/></g></svg><div><span>TIME AWAY</span><strong id="elapsed">8h 24m</strong></div></div></header>
+<div class="welcome-body">
+<section class="earnings" aria-labelledby="earningsTitle"><div class="section-heading"><span class="folio" aria-hidden="true">I</span><h2 id="earningsTitle">While you were away</h2></div>
+<div class="reward-list">
+<article class="reward-row gold"><img src="assets/optimized/pickup-gold-192x192-0f5238966f7a.webp" alt=""><div><h3>Gold collected</h3><strong id="gold" class="amount">+125,480</strong><p>Added to your treasury</p></div></article>
+<article class="reward-row troops"><img src="assets/optimized/pickup-troops-192x192-7613afbbad92.webp" alt=""><div><h3>Troops produced</h3><strong id="troops" class="amount">+32,620</strong><p>Remaining in cities you still own</p></div></article>
+</div>
+<p class="receipt-note"><span aria-hidden="true">✦</span> A record of your kingdom's production.</p>
+</section>
+<section class="holdings" aria-labelledby="holdingsTitle"><div class="section-heading"><span class="folio" aria-hidden="true">II</span><h2 id="holdingsTitle">Your cities</h2></div>
+<div id="cityLedger" class="city-ledger" tabindex="0" role="region" aria-label="City status and losses">
+<div id="safeStatus" class="safe-status"><svg class="city-seal" viewBox="0 0 140 150" aria-hidden="true"><g stroke="#68724e" stroke-width="1.8" stroke-linejoin="round"><path d="M24 13Q70 0 116 13v59c0 28-22 50-46 64-24-14-46-36-46-64Z" fill="#d7d7b3"/><path d="M30 19Q70 9 110 19v52c0 25-19 44-40 58-21-14-40-33-40-58Z" fill="none" stroke="#98a07b"/><g fill="#ede4c7"><path d="M41 90V53h7v8h9v-8h7v37M77 90V53h7v8h9v-8h7v37M61 90V37h18v53"/><path d="m58 38 12-16 12 16Z" fill="#888567"/><path d="M66 90V75a4 4 0 0 1 8 0v15" fill="#8b8d6b"/><path d="M38 91h65M46 71h7m33 0h7M68 49h4"/></g><path d="m57 106 9 8 20-20" fill="none" stroke-width="3"/></g></svg><strong>No cities lost</strong><p>Your kingdom welcomes<br>you home.</p><span class="safe-count">0 cities lost</span></div>
+<div id="lostStatus" hidden><div class="loss-summary"><div><span>Cities lost while away</span><strong id="lossCount">2</strong></div><span class="loss-mark" aria-hidden="true">◆</span></div><ul id="lostCities"></ul><button id="expandCities" class="expand-cities" type="button" aria-expanded="false" aria-controls="lostCities" hidden>Show all cities</button><p id="missingCities" class="missing-cities" hidden></p></div>
+<aside id="inactivityNotice" class="inactivity-notice" hidden><span>15-day inactivity limit reached</span><h3>6 holdings surrendered</h3><p>82,450 owned troops were secured at your protected main city. Surrendered territory is not restored.</p></aside>
+</div></section>
+</div>
+<footer class="welcome-footer"><p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 11v9H3V3h12" fill="none" stroke="currentColor"/></svg><span id="receiptStatus">Production already added to your kingdom.</span></p><button id="collect" type="button">Collect <span aria-hidden="true">›</span></button></footer>
+</article></dialog>
+<p id="localNotice" class="local-notice" role="status" hidden>Example dismissed. Your game has not been changed.</p>
+</body></html>

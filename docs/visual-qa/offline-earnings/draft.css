@@ -1,0 +1,59 @@
+/* Isolated approval draft; no production styles or game code loaded. */
+:root{color-scheme:light;font-family:"Segoe UI",Arial,sans-serif;color:#3e3327;background:#343d2e;--ink:#3e3327;--paper:#f0e5c9}
+*{box-sizing:border-box}body{margin:0;overflow:hidden}body::before{content:"";position:fixed;inset:-5px;background:linear-gradient(#28322566,#26302066),url("../../../assets/worlds/core-expansion-v1/maps/core-v2-north-west-holding-tower-m1-m1.webp") center/cover;filter:blur(2px)}
+[hidden]{display:none!important}h1,h2,h3,p{margin:0}button{font:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,[tabindex="0"]:focus-visible{outline:2px solid #506744;outline-offset:2px}
+#offlineTitle:focus{outline:none}
+.map-caption{position:fixed;left:26px;top:25px;color:#f3e5c3;text-shadow:0 2px 3px #263021}.map-caption span{display:block;font-size:10px;letter-spacing:2px;margin-bottom:6px}.map-caption strong{font:25px Georgia,serif}
+.reopen{position:fixed;inset:0;margin:auto;width:230px;height:48px;border:1px solid #a88d5d;background:#ebddba;color:#5e492f;font:16px Georgia,serif}
+#offlineModal{width:min(900px,calc(100vw - 24px));height:min(576px,calc(100dvh - 24px));max-width:none;max-height:none;margin:auto;padding:6px;border:2px solid #60432d;border-radius:1px;color:var(--ink);background:#764435;box-shadow:inset 0 0 0 2px #cdb17a,0 18px 60px #1b211a80;overflow:hidden}
+#offlineModal::backdrop{background:#26302066;backdrop-filter:blur(3px)}
+.parchment{height:100%;display:flex;flex-direction:column;border:1px solid #d1b581;background:var(--paper);box-shadow:inset 0 0 0 2px #f9efd5}
+.welcome-header{display:flex;align-items:center;justify-content:space-between;flex:none;gap:20px;min-height:95px;padding:17px 28px;border-bottom:1px solid #bba074;background:linear-gradient(100deg,#e8d7b0,#f5eacf 68%,#e8d6b0)}
+.eyebrow{color:#785735;font-size:9px;letter-spacing:1.8px;margin-bottom:5px}.welcome-header h1{font:34px/1.1 Georgia,serif;letter-spacing:-.3px}
+.away-time{display:flex;align-items:center;gap:12px;border-left:1px solid #bc9f6c;padding-left:25px;min-width:177px}.away-time svg{width:27px;height:35px;color:#8b744e;flex:none}.away-time span{display:block;font-size:8px;letter-spacing:1.5px;color:#796645;margin-bottom:5px}.away-time strong{font:23px Georgia,serif}
+.welcome-body{display:grid;grid-template-columns:1.14fr 1fr;flex:1;min-height:0}
+.section-heading{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex:none}.section-heading h2{font:21px Georgia,serif}.folio{color:#9a8053;font:italic 16px Georgia,serif}
+.earnings{padding:25px 25px 17px;min-width:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#b39a71 #eee2c4;background:linear-gradient(110deg,#f6ecd3,#eee0bf)}
+.reward-list{display:flex;flex-direction:column;gap:13px}
+.reward-row{display:flex;align-items:center;gap:12px;min-height:111px;border:1px solid #c4ae85;border-left:3px solid #b49856;background:linear-gradient(105deg,#faf2deaa,#e7d8b555);box-shadow:inset 0 0 0 1px #fbf2d6;padding:9px 12px 9px 3px}.reward-row.troops{border-left-color:#956953}
+.reward-row>img{display:block;width:94px;height:94px;object-fit:contain;flex:none}.reward-row>div{min-width:0}.reward-row h3{font:15px Georgia,serif;color:#705732;margin-bottom:6px}
+.amount{display:block;font:32px/1.05 Georgia,serif;font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;letter-spacing:-.6px}.amount.long-amount{font-size:27px}
+.reward-row p{font-size:10px;line-height:1.4;color:#716245;margin-top:9px}
+.receipt-note{font:italic 12px/1.5 Georgia,serif;color:#7f6c49;margin-top:23px;padding-top:14px;border-top:1px solid #cab58c;display:flex;gap:10px}.receipt-note>span{color:#a48953}
+.holdings{display:flex;flex-direction:column;min-height:0;min-width:0;padding:25px 25px 17px;border-left:1px solid #c0ab80;background:repeating-linear-gradient(90deg,#96773c04 0 1px,transparent 1px 4px),linear-gradient(110deg,#e6d6b1,#eedfbd)}
+.city-ledger{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#af976d #e5d5b0;padding-right:4px}
+.safe-status{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:100%;padding:0 0 12px;text-align:center}.city-seal{width:136px;height:143px;flex:none;margin-bottom:8px}.safe-status>strong{font:24px Georgia,serif;color:#53613d}.safe-status>p{font:italic 13px/1.5 Georgia,serif;color:#776749;margin-top:8px}.safe-count{border-top:1px solid #b6ad82;margin-top:17px;padding:9px 27px 0;font-size:10px;letter-spacing:1px;color:#616a49}
+.loss-summary{display:flex;justify-content:space-between;align-items:center;border-top:2px solid #965d48;border-bottom:1px solid #bfa579;background:#e3cbaa80;padding:10px 13px;color:#844938}.loss-summary>div{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%}.loss-summary span{font:13px Georgia,serif}.loss-summary strong{font:30px Georgia,serif}.loss-mark{font-size:9px!important;margin-left:10px}
+#lostCities{list-style:none;padding:0;margin:0}#lostCities li{display:flex;flex-direction:column;gap:5px;padding:12px 5px;border-bottom:1px solid #b8a27a77}#lostCities strong{font:16px/1.2 Georgia,serif;overflow-wrap:anywhere}#lostCities span{font-size:10px;color:#746344}
+.expand-cities{min-height:44px;width:100%;margin-top:6px;border:1px solid #a99570;background:#ebdcb8;color:#604b30;font-size:12px}
+.missing-cities{font-size:11px;line-height:1.5;color:#725e41;padding:8px 5px}
+.inactivity-notice{border-top:2px solid #996247;background:#e3cbaa80;padding:15px;line-height:1.5}.inactivity-notice>span{font-size:10px;color:#805939}.inactivity-notice h3{font:22px/1.3 Georgia,serif;color:#844938;margin:7px 0 12px}.inactivity-notice p{font-size:12px;line-height:1.7}
+.welcome-footer{flex:none;min-height:77px;display:flex;align-items:center;gap:20px;justify-content:space-between;padding:12px 26px;border-top:1px solid #bba074;background:linear-gradient(#e7d7b4,#ddc9a2)}
+.welcome-footer>p{display:flex;align-items:center;gap:8px;font:italic 12px Georgia,serif;color:#6b5c3f}.welcome-footer>p svg{width:22px;height:22px;flex:none;color:#626e41}
+#collect{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:190px;min-height:48px;padding:8px 18px;color:#fff0ca;border:1px solid #693a2d;border-radius:2px;background:linear-gradient(#965941,#783f31);box-shadow:inset 0 0 0 2px #b9885c66,0 2px 2px #6f512133;font:18px Georgia,serif}#collect>span{font-size:27px;line-height:.8;color:#d1b486}#collect:hover{filter:brightness(1.07)}
+.local-notice{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);width:max-content;max-width:90vw;padding:12px 18px;border:1px solid #bca77b;background:#424e35;color:#f4e7c6;font-size:13px;text-align:center}
+@media(max-width:900px) and (orientation:landscape){
+ #offlineModal{width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:4px}
+ .welcome-header{min-height:58px;padding:7px 19px}.eyebrow{font-size:7px;letter-spacing:1.4px;margin-bottom:3px}.welcome-header h1{font-size:25px}
+ .away-time{gap:9px;padding-left:18px;min-width:155px}.away-time svg{width:23px;height:29px}.away-time span{font-size:7px;letter-spacing:1px;margin-bottom:3px}.away-time strong{font-size:20px}
+ .earnings,.holdings{padding:12px 18px 10px}.section-heading{gap:8px;margin-bottom:10px}.section-heading h2{font-size:17px}.folio{font-size:13px}
+ .reward-list{gap:8px}.reward-row{min-height:79px;gap:9px;padding:4px 9px 4px 3px}.reward-row>img{width:68px;height:68px}.reward-row h3{font-size:13px;margin-bottom:3px}.amount{font-size:26px}.amount.long-amount{font-size:23px}.reward-row p{font-size:10px;margin-top:4px}
+ .receipt-note{font-size:10px;margin-top:5px;padding-top:5px;gap:7px}
+ .city-seal{width:89px;height:94px;margin-bottom:4px}.safe-status{padding-bottom:2px}.safe-status>strong{font-size:21px}.safe-status>p{font-size:11px;margin-top:5px}.safe-count{font-size:9px;padding-top:6px;margin-top:9px}
+ .loss-summary{padding:5px 10px}.loss-summary span{font-size:12px}.loss-summary strong{font-size:23px}
+ #lostCities li{padding:8px 4px;gap:3px}#lostCities strong{font-size:14px}#lostCities span{font-size:10px}.missing-cities{font-size:10px}
+ .inactivity-notice{padding:10px 12px}.inactivity-notice h3{font-size:20px;margin:5px 0 9px}.inactivity-notice p{font-size:11px;line-height:1.6}
+ .welcome-footer{min-height:54px;padding:4px 18px;gap:10px}.welcome-footer>p{font-size:11px;gap:7px}.welcome-footer>p svg{width:18px;height:18px}#collect{min-width:177px;min-height:44px;font-size:17px;padding:7px 15px}
+}
+@media(max-width:650px) and (orientation:landscape){
+ .welcome-header{min-height:49px;padding:5px 12px;gap:10px}.welcome-header h1{font-size:22px}.eyebrow{font-size:6px;letter-spacing:1px}
+ .away-time{padding-left:10px;gap:6px;min-width:136px}.away-time svg{width:20px;height:25px}.away-time strong{font-size:18px}
+ .welcome-body{grid-template-columns:1.2fr 1fr}.earnings,.holdings{padding:8px 11px}.section-heading{margin-bottom:6px;gap:6px}.section-heading h2{font-size:14px}.folio{font-size:11px}
+ .reward-list{gap:5px}.reward-row{min-height:69px;gap:5px;padding:4px 5px 4px 0}.reward-row>img{width:49px;height:54px}.reward-row h3{font-size:11px}.amount{font-size:22px}.amount.long-amount{font-size:19px;letter-spacing:-.5px}.reward-row p{font-size:9px;margin-top:3px}.receipt-note{display:none}
+ .city-seal{width:74px;height:78px;margin-bottom:3px}.safe-status>strong{font-size:18px}.safe-status>p{font-size:10px;line-height:1.4;margin-top:4px}.safe-count{margin-top:6px;font-size:8px;padding-top:5px}
+ .loss-summary{padding:5px 7px}.loss-summary>div{gap:8px}.loss-summary span{font-size:11px}.loss-summary strong{font-size:22px}.loss-mark{display:none}
+ #lostCities li{padding:7px 3px}#lostCities strong{font-size:13px}#lostCities span{font-size:9px}.expand-cities{font-size:11px}
+ .inactivity-notice{padding:8px}.inactivity-notice>span{font-size:9px}.inactivity-notice h3{font-size:18px}.inactivity-notice p{font-size:11px;line-height:1.5}
+ .welcome-footer{min-height:51px;padding:3px 10px}.welcome-footer>p{font-size:10px;max-width:270px}.welcome-footer>p svg{width:16px;height:16px}#collect{min-width:133px;font-size:16px;padding:6px 12px}
+}
