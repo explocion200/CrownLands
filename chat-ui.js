@@ -368,6 +368,9 @@
       send: documentRef.getElementById("chatSendBtn"),
       counter: documentRef.getElementById("chatCharacterCount"),
       status: documentRef.getElementById("chatStatus"),
+      translate: documentRef.getElementById("chatTranslateBtn"),
+      translationStatus: documentRef.getElementById("chatTranslationStatus"),
+      translationRetry: documentRef.getElementById("chatTranslationRetry"),
       tabs: [...documentRef.querySelectorAll("[data-chat-channel]")],
     };
     if (!elements.toggle || !elements.dialog || !elements.list) return null;
@@ -395,6 +398,54 @@
     const chatNow = () => options.now?.() ?? api?.getServerNowMs?.() ?? Date.now();
     const scheduleTimer = options.setTimeout || windowRef?.setTimeout?.bind(windowRef);
     const cancelTimer = options.clearTimeout || windowRef?.clearTimeout?.bind(windowRef);
+    const translationApi = options.translation || windowRef?.CrownlandsChatTranslation;
+    let preferenceStorage;
+    try { preferenceStorage = windowRef?.localStorage; } catch (_error) { /* Storage may be blocked. */ }
+    const deviceLanguage = () => translationApi?.preferredLanguage(windowRef?.navigator?.languages || [], windowRef?.navigator?.language);
+    const translation = translationApi?.create({
+      language: deviceLanguage(),
+      storage: preferenceStorage,
+      storagePrefix: options.translationStoragePrefix,
+      translate: payload => {
+        if (!api?.translateChatMessages) return Promise.reject(new Error("Translation is unavailable."));
+        return api.translateChatMessages(payload);
+      },
+      onChange: () => { renderMessages(); renderQuick(); renderTranslationControls(); },
+    });
+
+    function translationContext(current) {
+      return { messages: current, channel, clanId, active: Boolean(uid && mode !== "closed" && !errors[channel] && (channel !== "clan" || clanId)) };
+    }
+    function displayMessage(message) {
+      return translation?.display(message, { channel, clanId }) || { text: message.text, state: "original" };
+    }
+    function renderTranslationControls() {
+      if (!elements.translate || !translation) return;
+      const state = translation.status();
+      let language = state.target;
+      try { language = new Intl.DisplayNames([windowRef?.navigator?.language || "en"], { type: "language" }).of(language); } catch (_error) { /* The language code is still readable. */ }
+      elements.translate.setAttribute("aria-pressed", String(state.enabled));
+      elements.translate.setAttribute("aria-label", state.enabled ? `Show original messages. Translation language: ${language}` : `Translate messages to ${language}`);
+      elements.translate.querySelector(".translate-label").textContent = state.enabled ? "Show originals" : "Translate";
+      elements.translate.querySelector(".translate-language").textContent = language;
+      elements.translate.disabled = !uid || (channel === "clan" && !clanId);
+      const showStatus = state.enabled && !elements.translate.disabled && messages[channel].length > 0;
+      if (elements.translationStatus) {
+        elements.translationStatus.hidden = !showStatus;
+        elements.translationStatus.dataset.state = state.failed ? "error" : state.pending ? "pending" : "ready";
+        elements.translationStatus.textContent = state.pending ? "Translating… Originals stay visible."
+          : state.failed ? "Translation unavailable. Showing originals." : `${language} · Translation on`;
+      }
+      if (elements.translationRetry) elements.translationRetry.hidden = !showStatus || !state.failed;
+      const historyNote = documentRef.getElementById("historyNote");
+      if (historyNote) historyNote.hidden = showStatus;
+    }
+
+    function renderNewMessageButton() {
+      const count = messages[channel].filter(message => message.createdAtMs > (Number(lastReadAtMs[channel]) || 0)).length;
+      elements.newMessages.hidden = mode !== "full" || !unread[channel] || !count || isMessageListNearBottom(elements.list);
+      elements.newMessages.textContent = count > 1 ? `${count} new messages ↓` : "New message ↓";
+    }
 
     function pruneGlobalMessages() {
       messages.global = filterExpiredGlobalMessages(messages.global, chatNow());
@@ -465,11 +516,12 @@
     }
 
     function markRead(targetChannel, throughMs = latestMessageAtMs(targetChannel)) {
-      const nextReadAtMs = Math.max(Number(lastReadAtMs[targetChannel]) || 0, Number(throughMs) || 0, Date.now());
+      const nextReadAtMs = Math.max(Number(lastReadAtMs[targetChannel]) || 0, Number(throughMs) || 0);
       lastReadAtMs[targetChannel] = nextReadAtMs;
       unread[targetChannel] = false;
       saveLastRead(targetChannel, nextReadAtMs);
       renderUnread();
+      renderNewMessageButton();
     }
 
     function handleMessages(targetChannel, incoming, metadata = {}) {
@@ -501,7 +553,7 @@
       renderQuick();
       if (mode === "full" && targetChannel === channel) {
         renderMessages({ scrollToBottom: wasAtBottom });
-        if (!wasAtBottom && hasUnread) elements.newMessages.hidden = false;
+        renderNewMessageButton();
       }
     }
 
@@ -532,6 +584,8 @@
         positionQuickPanel();
         renderQuick();
       }
+      if (mode === "closed") translation?.update({ messages: [], active: false });
+      renderTranslationControls();
     }
 
     function updateMode(action) {
@@ -539,6 +593,7 @@
     }
 
     function selectChannel(nextChannel, { focus = true, forceBottom = false } = {}) {
+      const changed = nextChannel !== channel;
       channel = CHAT_CHANNELS.includes(nextChannel) ? nextChannel : "global";
       elements.tabs.forEach(tab => {
         const selected = tab.dataset.chatChannel === channel;
@@ -547,10 +602,11 @@
         tab.tabIndex = selected ? 0 : -1;
         if (focus && selected) tab.focus();
       });
-      renderMessages({ scrollToBottom: forceBottom });
+      renderMessages({ scrollToBottom: forceBottom || changed });
       renderComposer();
       renderQuick();
-      if (mode === "full") markRead(channel);
+      if (mode === "full" && (forceBottom || changed || isMessageListNearBottom(elements.list))) markRead(channel);
+      renderTranslationControls();
     }
 
     function renderUnread() {
@@ -566,7 +622,8 @@
       pruneGlobalMessages();
       if (!elements.quickMessages || mode !== "quick") return;
       const current = messages[channel].slice(-quickMessageLimit);
-      const signature = JSON.stringify([channel, clanId, current]);
+      translation?.update(translationContext(current));
+      const signature = JSON.stringify([channel, clanId, current, current.map(displayMessage)]);
       if (elements.quickMessages.dataset.messageSignature === signature) return;
       elements.quickMessages.dataset.messageSignature = signature;
       elements.quickMessages.replaceChildren();
@@ -585,7 +642,8 @@
         const name = documentRef.createElement("strong");
         name.textContent = `${message.senderDisplayName}:`;
         const text = documentRef.createElement("span");
-        text.textContent = message.text;
+        text.textContent = displayMessage(message).text;
+        text.dir = "auto";
         row.append(name, documentRef.createTextNode(" "), text);
         elements.quickMessages.append(row);
       });
@@ -594,27 +652,46 @@
     function renderMessages({ scrollToBottom = false, preserveFromTop = false } = {}) {
       pruneGlobalMessages();
       if (mode !== "full") return;
+      scrollToBottom ||= !preserveFromTop && isMessageListNearBottom(elements.list);
       const priorHeight = elements.list.scrollHeight;
       const priorTop = elements.list.scrollTop;
       const anchor = !scrollToBottom && Array.from(elements.list.children)
         .find(row => row.offsetTop + row.offsetHeight > priorTop);
       const anchorOffset = anchor ? anchor.offsetTop - priorTop : 0;
+      const anchorId = anchor?.dataset?.messageId;
       const current = messages[channel];
+      translation?.update(translationContext(current));
       const noClan = channel === "clan" && !clanId;
       const error = errors[channel];
       elements.empty.hidden = Boolean(current.length);
       elements.empty.textContent = error || (noClan
         ? "You are not currently in a clan."
         : `No ${channel === "clan" ? "clan" : "global"} messages yet. Begin the chronicle.`);
-      reconcileMessageElements(elements.list, current, documentRef, senderUid => {
+      reconcileMessageElements(elements.list, current.map(message => ({ ...message, text: displayMessage(message).text })), documentRef, senderUid => {
         windowRef?.dispatchEvent?.(new windowRef.CustomEvent("crownlands:chat-player-profile", {
           detail: { uid: senderUid },
         }));
       });
+      const byId = new Map(current.map(message => [message.id, message]));
+      for (const row of elements.list.children) {
+        const message = byId.get(row.dataset.messageId);
+        if (!message) continue;
+        const result = displayMessage(message), body = row.querySelector(".chat-message-text");
+        row.classList.toggle("is-own", message.senderUid === uid);
+        row.classList.toggle("is-translated", result.state === "translated");
+        body.dir = "auto";
+        body.dataset.translationState = result.state;
+        body.title = result.state === "translated" ? `Original: ${message.text}` : "";
+        body.setAttribute("aria-description", result.state === "translated" ? "Translated message. Use Show originals to read the original." : "");
+      }
       if (scrollToBottom) elements.list.scrollTop = elements.list.scrollHeight;
-      else if (anchor?.isConnected) elements.list.scrollTop = anchor.offsetTop - anchorOffset;
+      else if (anchorId && Array.from(elements.list.children).some(row => row.dataset.messageId === anchorId)) {
+        const restoredAnchor = Array.from(elements.list.children).find(row => row.dataset.messageId === anchorId);
+        elements.list.scrollTop = restoredAnchor.offsetTop - anchorOffset;
+      }
       else if (preserveFromTop) elements.list.scrollTop = priorTop + elements.list.scrollHeight - priorHeight;
-      elements.newMessages.hidden = true;
+      renderNewMessageButton();
+      renderTranslationControls();
       elements.loadOlder.hidden = noClan
         || !current.length
         || !hasOlder[channel]
@@ -783,6 +860,7 @@
       uid = nextUid;
       clanId = nextClanId;
       if (accountChanged) {
+        translation?.setAccount(uid);
         sessionGeneration += 1;
         cooldown.stop();
         messages = { global: [], clan: [] };
@@ -808,6 +886,7 @@
       const normalizedClanId = String(nextClanId || "").trim();
       if (normalizedClanId === clanId) return diagnostics();
       clanId = normalizedClanId;
+      translation?.clear();
       messages.clan = [];
       hasOlder.clan = true;
       errors.clan = "";
@@ -825,6 +904,7 @@
 
     function dispose(options = {}) {
       sessionGeneration += 1;
+      translation?.dispose();
       if (expiryTimer !== null) cancelTimer?.(expiryTimer);
       expiryTimer = null;
       const resetSession = options.resetSession === true;
@@ -868,6 +948,7 @@
         quickBlockerCount: lastQuickGeometry?.blockerCount || 0,
         quickCollisionEventListeners: windowRef ? 3 : 0,
         quickCollisionObservers: 0,
+        translation: translation?.status() || null,
         ...cooldown.diagnostics(),
         ...subscriptions.diagnostics(),
       };
@@ -901,6 +982,8 @@
       if (mode === "quick") positionQuickPanel();
     });
     elements.tabs.forEach(tab => tab.addEventListener("click", () => selectChannel(tab.dataset.chatChannel)));
+    elements.translate?.addEventListener("click", () => translation?.setEnabled(!translation.status().enabled));
+    elements.translationRetry?.addEventListener("click", () => translation?.retry());
     elements.form.addEventListener("submit", event => {
       event.preventDefault();
       sendCurrentMessage();
@@ -925,6 +1008,7 @@
     });
     elements.loadOlder.addEventListener("click", loadOlder);
     windowRef?.addEventListener?.("resize", positionQuickPanel);
+    windowRef?.addEventListener?.("languagechange", () => translation?.setLanguage(deviceLanguage()));
     function refreshExpiry() {
       scheduleExpiry();
       renderQuick();
@@ -939,7 +1023,9 @@
     selectChannel("global", { focus: false });
     renderUnread();
     renderComposer();
-    return Object.freeze({ start, updateClan, dispose, diagnostics, setMode, selectChannel });
+    return Object.freeze({ start, updateClan, dispose, diagnostics, setMode, selectChannel,
+      setTranslationLanguage: value => translation?.setLanguage(value === "device" ? deviceLanguage() : translationApi.preferredLanguage([value])),
+    });
   }
 
   let singleton = null;

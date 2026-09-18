@@ -27,8 +27,7 @@
     [3,"We stand together. For the clan!"]
   ]};
   let sample="standard",data={global:[],clan:[]},sequence=0,cooldownUntil=0,noticeTimer;
-  const controller=window.CrownlandsChat.createController();
-  const translation=window.ChatTranslationPreview.create({button:$("chatTranslateBtn"),list:$("chatMessageList"),quick:$("quickChat"),onChange:()=>publish("Translation preview updated · prepared examples only")});
+  const controller=window.CrownlandsChat.createController({translationStoragePrefix:"crownlands-chat-translation-preview"});
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   function message(channel,index,text,stamp,id){return {id:id||`${channel}-${++sequence}`,channel,channelId:channel==="clan"?"preview-clan":"global",senderUid:index===4?uid:`preview-${index}`,senderDisplayName:people[index],text,createdAtMs:stamp,status:"visible"};}
   function publish(label="Review ready"){
@@ -45,24 +44,22 @@
     $("chatMessageList").setAttribute("aria-label",clan?"Clan messages":"Global messages");
     const ownIds=new Set([...data.global,...data.clan].filter(m=>m.senderUid===uid).map(m=>m.id));
     for(const row of $("chatMessageList").children)row.classList.toggle("is-own",ownIds.has(row.dataset.messageId));
-    const translated=translation.apply(data[d.channel],d.mode,clan&&sample==="no-clan");
-    if(translated.enabled)$("historyNote").textContent+=` · ${translated.name}`;
     window.parent.postMessage({type:"chat-status",message:label,mode:d.mode,channel:d.channel},location.origin);
   }
   const api={
+    async translateChatMessages({channel,messageIds,targetLanguage}){await wait(sample==="translation-slow"?5000:650);if(sample==="translation-error")throw new Error("Example translation outage");return {translations:messageIds.map(id=>{const m=data[channel].find(item=>item.id===id);if(!m)return {id};const result=window.ChatTranslationPreview.lookup(m.text,targetLanguage);return {id,text:result.text};})};},
     subscribeChatMessages(options,handlers){const channel=options.channel;listeners.set(channel,handlers);queueMicrotask(()=>{if(listeners.get(channel)!==handlers)return;handlers.onMessages(data[channel],{initial:true,hasMore:data[channel].length>0});if(sample==="reconnecting")handlers.onError(new Error("Preview reconnect"));publish();if(controller.diagnostics().mode==="full"&&controller.diagnostics().channel===channel)controller.selectChannel(channel,{focus:false,forceBottom:true});});return()=>{if(listeners.get(channel)===handlers)listeners.delete(channel);};},
     async loadOlderChatMessages({channel,beforeCreatedAtMs}){await wait(350);const older=Array.from({length:8},(_,i)=>message(channel,i%4,lines[channel][i%lines[channel].length][1],beforeCreatedAtMs-(8-i)*60000));data[channel]=[...older,...data[channel]];setTimeout(()=>publish("Earlier messages loaded locally"),0);return older;},
     async sendChatMessage(payload){await wait(350);if(sample==="failed"||sample==="reconnecting")throw new Error("Message could not be sent. Your draft is still here. Try again when connected.");const now=Date.now();if(now<cooldownUntil){const e=new Error("Please wait before sending again.");e.details={retryAfterMs:cooldownUntil-now};throw e;}const m=message(payload.channel,4,payload.text,now);data[payload.channel].push(m);listeners.get(payload.channel)?.onMessages(data[payload.channel],{initial:false,changes:[{type:"added",message:m}]});cooldownUntil=now+3000;setTimeout(()=>publish("Message added to this local draft only"),0);return {ok:true,serverNowMs:now,cooldownUntilMs:cooldownUntil,retryAfterMs:3000};}
   };
   function reset(options={}){
-    sample=["standard","translation","long","empty","no-clan","reconnecting","failed","busy"].includes(options.sample)?options.sample:"standard";
-    translation.reset();
+    sample=["standard","translation","translation-slow","translation-error","long","empty","no-clan","reconnecting","failed","busy"].includes(options.sample)?options.sample:"standard";
     controller.dispose({resetSession:true});listeners.clear();cooldownUntil=0;
     const now=Date.now();sequence=0;
     for(const channel of ["global","clan"])data[channel]=sample==="empty"?[]:lines[channel].map(([person,text],i)=>message(channel,person,text,now-(lines[channel].length-i)*65000));
     if(sample==="long")for(const channel of ["global","clan"]){data[channel].push(message(channel,1,"We are waiting for the last march to return before choosing our next destination. Keep an eye on your reports and leave a reserve at home. I will post another update as soon as we have word from the scouts along the northern road.",now-20000));data[channel].push(message(channel,4,"First, review the scout report.\nThen, decide how many troops to send.\nWe will meet in the War Room when everyone is ready.",now-10000));}
     if(sample==="no-clan")data.clan=[];
-    if(sample==="translation")for(const channel of ["global","clan"])window.ChatTranslationPreview.phrases.forEach((p,i)=>data[channel].push(message(channel,i%4,p[["es","fr","de","pt","es","fr"][i]],now-(6-i)*2500)));
+    if(sample.startsWith("translation"))for(const channel of ["global","clan"])window.ChatTranslationPreview.phrases.forEach((p,i)=>data[channel].push(message(channel,i%4,p[["es","fr","de","pt","es","fr"][i]],now-(6-i)*2500)));
     $("chatMessageInput").value="";$("chatStatus").hidden=true;
     document.querySelector(".movement-context").hidden=sample!=="busy";
     $("connection").dataset.state=sample;
@@ -70,11 +67,11 @@
     controller.start({api,uid,clanId:sample==="no-clan"?"":"preview-clan"});
     controller.selectChannel(sample==="no-clan"?"clan":options.channel||"global",{focus:false,forceBottom:true});
     controller.setMode(options.mode||"full");
-    translation.setLanguage(options.locale||"device");
+    controller.setTranslationLanguage(options.locale||"device");
     window.dispatchEvent(new Event("crownlands:hud-occupancy-changed"));publish("Local example ready");
   }
-  function incoming(){const d=controller.diagnostics(),channel=d.channel;if(channel==="clan"&&sample==="no-clan"){publish("Clan messages are unavailable without membership");return;}const text=sample==="translation"?window.ChatTranslationPreview.phrases[0].es:"A fresh dispatch has arrived. The scouts are returning along the western road.";const m=message(channel,0,text,Date.now());data[channel].push(m);listeners.get(channel)?.onMessages(data[channel],{initial:false,changes:[{type:"added",message:m}]});publish("Incoming message added locally");}
-  window.addEventListener("message",e=>{if(e.origin!==location.origin||e.source!==parent||e.data?.type!=="chat-review")return;const o=e.data;if(o.action==="reset"||o.action==="sample")reset(o);else if(o.action==="incoming")incoming();else if(o.action==="channel"){controller.selectChannel(o.channel,{focus:false,forceBottom:true});publish();}else if(o.action==="mode"){controller.setMode(o.mode);publish();}else if(o.action==="locale")translation.setLanguage(o.locale);});
+  function incoming(){const d=controller.diagnostics(),channel=d.channel;if(channel==="clan"&&sample==="no-clan"){publish("Clan messages are unavailable without membership");return;}const text=sample.startsWith("translation")?window.ChatTranslationPreview.phrases[0].es:"A fresh dispatch has arrived. The scouts are returning along the western road.";const m=message(channel,0,text,Date.now());data[channel].push(m);listeners.get(channel)?.onMessages(data[channel],{initial:false,changes:[{type:"added",message:m}]});publish("Incoming message added locally");}
+  window.addEventListener("message",e=>{if(e.origin!==location.origin||e.source!==parent||e.data?.type!=="chat-review")return;const o=e.data;if(o.action==="reset"||o.action==="sample")reset(o);else if(o.action==="incoming")incoming();else if(o.action==="channel"){controller.selectChannel(o.channel,{focus:false,forceBottom:true});publish();}else if(o.action==="mode"){controller.setMode(o.mode);publish();}else if(o.action==="locale")controller.setTranslationLanguage(o.locale);});
   $("reopen").addEventListener("click",()=>{controller.setMode("full");publish();});
   document.addEventListener("click",()=>setTimeout(()=>publish(),0));
   $("chatDialog").addEventListener("close",()=>setTimeout(()=>publish(),0));

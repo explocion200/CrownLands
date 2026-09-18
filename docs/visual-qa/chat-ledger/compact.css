@@ -24,6 +24,8 @@
 .history-footer { min-height:32px; padding-inline:22px; gap:8px; }
 .chat-load-older { min-height:32px; font-size:12px; }
 .history-footer>span { font-size:11px; }
+#chatTranslationStatus[data-state="error"] { color:#8b3d32; font-style:normal; }
+#chatTranslationRetry { min-width:44px; text-align:center; }
 .composer-panel { padding:7px 20px; }
 .chat-composer { grid-template-columns:minmax(0,1fr) 92px; gap:10px; }
 .compose-label { margin-bottom:4px; }

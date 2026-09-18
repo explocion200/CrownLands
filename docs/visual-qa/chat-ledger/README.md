@@ -13,7 +13,8 @@ Open `index.html?viewport=desktop` or choose Mobile landscape (844 × 390) / Sma
 - Real `chat-ui.js` controller with a local fixture API. Synthetic messages only. The fixture uses its own preview unread-storage namespace.
 - Current 250-character limit, three-second send cooldown, Global 24-hour retention, Clan membership restriction, and compact-preview collision logic retained.
 - Preview adds standard arrow-key navigation between tabs; runtime integration remains subject to design approval.
-- Translate beside the channel tabs chooses the browser-reported preferred language automatically. While enabled, prepared examples in the selected channel and compact preview use that target; Show originals restores the untouched source messages.
+- Translate beside the channel tabs chooses the browser-reported preferred language automatically. While enabled, prepared examples in the selected channel and compact preview use that target; Show originals restores the untouched source messages. The on/off choice now persists per account on this device, with a separate preview storage namespace.
+- The reusable `chat-translation.js` coordinator handles bounded asynchronous batches, session-only translation caching, stale-account/language response rejection, loading, timeout, and explicit retry. `chat-ui.js` uses this optional adapter and preserves reading position through translated row replacements. It keeps the New messages button visible across refreshes until the reader reaches the bottom.
 - Translation is a clearly labeled local demonstration with English, Spanish, French, German, Portuguese, and Arabic phrase fixtures. It is not machine translation. Unrecognized text is left unchanged and is never marked translated. No provider, model download, API billing, or external message transfer is used.
 
 ## Review
@@ -24,6 +25,7 @@ Open `index.html?viewport=desktop` or choose Mobile landscape (844 × 390) / Sma
 4. Minimize, reopen, and close. Try Movement alerts at all three sizes. Compact preview uses the existing 160px minimum readable width and hides when the map controls leave insufficient space.
 5. Inspect empty, no-clan, reconnecting, send-failure, and long-message examples. Failed sends must retain the draft text.
 6. Choose Multilingual conversation, then Translate inside chat. Add an incoming sample, switch channels, minimize, and restore the originals. Preview language is a review-only override for checking other language lengths and right-to-left text; normal use selects Device default.
+7. Try Translation loading and Translation failure. Original messages remain readable while the status changes; Retry repeats the request. Reset/reload keeps the preference. Returning to Multilingual conversation simulates service recovery.
 
 This is a draft for visual approval. It does not establish a deployed UI or alter the Master Specification. Remaining validation and review findings belong in `visual-checks.md`.
 

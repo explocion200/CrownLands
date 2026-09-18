@@ -50,3 +50,18 @@ Requested September 17, 2026. Production runtime remains unchanged.
 - Syntax checks passed for all three preview JavaScript files. Whitespace check passed.
 
 The translation button demonstrates the requested interaction with a local phrase table. This does not prove live translation for arbitrary player text; a production translation service, supported-language handling, error states, access controls, and cost/rate limits must be implemented and verified before release.
+
+
+## Revision 3 — asynchronous translation behavior and unread navigation
+
+- Added a shared translation coordinator and optional production-controller integration. The approval draft supplies a local fixture adapter; production entry/build files do not enable translation yet.
+- Translation preference survives reload/reset and applies to Global, Clan, incoming samples, and the compact preview. Preview preference storage is separate from production. Only on/off is persisted; source/translated messages stay in memory.
+- Loading leaves the original readable. Failure and timeout keep originals and offer Retry; unchanged refreshes do not repeatedly retry a failing service.
+- Fixed the existing New messages button being hidden on unrelated rerenders. Incoming messages and asynchronous translations preserved the first visible message and scroll position. The button remained visible after translation finished and jumped to the latest messages when clicked.
+- Verified 844 × 390 landscape and 568 × 320 small landscape loading/failure layouts. Retry and composer remained accessible. Clan without membership disabled translation and sending. The previously saved preference returned after reload, and compact Clan Chat displayed translated sample text.
+- `node tools/validate-chat-translation.js` passed: locale selection (including Chinese script/region), account-scoped preference, untouched originals, ID-only request payload, cache reuse, stale account/language response rejection, channel/source isolation, failure/retry, incoming messages, 20-message batching, inactive-chat suppression, and timeout.
+- Existing `node tools/validate-chat.js`, JavaScript syntax checks, and `git diff --check` passed. A browser-discovered anchor-lookup initialization error was corrected and the affected flow rechecked.
+
+### Remaining dependency
+
+The user was asked to choose whether to prepare Google Cloud Translation on the existing backend because it introduces external message processing and usage charges. No answer was received during this revision. No paid service was enabled, no messages were sent externally, and no backend, production HTML, build configuration, or deployment was changed. The live callable, authoritative message access checks, provider integration, rate/cost limits, and real-provider verification remain pending. The draft must not be described as live or ready to merge until that work and the required release checks are complete.

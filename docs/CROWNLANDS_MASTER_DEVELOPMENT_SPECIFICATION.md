@@ -870,6 +870,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 - Clan messages have no automatic age-based expiry and remain until explicitly deleted through the existing authorized deletion/moderation flow. Shared message TTL is disabled, and the coordinated release migration removes legacy Clan expiry fields while preserving message contents and access controls. The same migration removes Global messages already older than 24 hours. These confirmed rules replace the previous shared seven-day policy; deployment evidence belongs in the coordinated release record.
 - Clan Chat visibility follows clan membership and authorization.
 - Chat must not allow client-side impersonation or unauthorized clan-channel access.
+- Confirmed chat presentation update: Translate targets the device/browser preferred language, remembers the player's on/off preference on that device, and applies to incoming messages while enabled. Originals remain available, including during loading or failure; failure offers a manual retry. Reading older messages keeps its position and shows a New messages jump instead of scrolling automatically. **Status:** `IN DEVELOPMENT`. The draft exercises the client behavior with local translation fixtures. A live translation provider, backend integration, and deployment remain pending; this is not a live translation feature.
 
 ### Social identity
 
