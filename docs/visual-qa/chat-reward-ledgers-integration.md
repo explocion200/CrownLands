@@ -17,6 +17,7 @@ Branch: `codex/approved-chat-and-reward-ui`. The user approved integrating, merg
 - Collect acknowledges already credited rewards without changing the tested balance. Welcome Back rejects repeated Collect feedback. Counts, unknown losses, escaped city names, image loading, reachable actions and horizontal overflow are checked.
 - Focused translation tests cover device language, per-account preferences, original preservation, bounded batches, stale responses, failures, timeout and retry.
 - Production artifact and asset budgets passed. The offline shell is 4.06 MiB, within the bounded allowance; artwork and login budgets are unchanged.
+- The onboarding browser validator waits up to five seconds for its scheduled pointer render instead of relying only on a fixed 450ms delay. Its alignment, hit-testing and top-layer assertions remain required; a missing pointer saves a screenshot and fixture diagnostics.
 - Screenshots and machine-readable results are generated in ignored `release-artifacts/chat-reward-ledgers/` by `node tools/validate-chat-reward-ledgers-browser.js`.
 
 Full release gates, required GitHub checks, merge, local main synchronization and live deployment must be verified before reporting completion. This document records integration, not proof of deployment.

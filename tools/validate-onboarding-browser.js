@@ -32,7 +32,7 @@ async function main() {
     };
     const arrowAt = async selector => {
       await wait(450);
-      const result = await evaluate(`(() => {
+      const inspect = () => evaluate(`(() => {
         const arrow=document.getElementById('onboardingArrow'), control=document.querySelector(${JSON.stringify(selector)});
         if(!arrow || getComputedStyle(arrow).display==='none' || !control) return { visible:false, control:arrow?.dataset.control };
         const tip=(modal.open ? modalBody : profileScreen.classList.contains('open') ? document.getElementById('onboardingProfileTip') : document.getElementById('onboardingMapTip')).querySelector('.onboarding-tip');
@@ -41,6 +41,26 @@ async function main() {
         const endpoint={x:a.x+nums[4]*a.width/arrow.clientWidth,y:a.y+nums[5]*a.height/arrow.clientHeight};
         return { visible:true, correct:chosen===control, clickThrough:control.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)), distance:Math.min(Math.abs(endpoint.y-r.top),Math.abs(endpoint.y-r.bottom)), aligned:Math.abs(endpoint.x-r.x-r.width/2)<2, topLayer:!modal.open||arrow.parentElement===modal };
       })()`);
+      // Fixture readiness precedes the scheduled pointer render. In the full
+      // browser suite, wait for that render instead of assuming 450ms is enough.
+      // Alignment, hit testing and top-layer assertions below remain mandatory.
+      let result;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        result = await inspect();
+        if (result.visible) break;
+        await wait(100);
+      }
+      if (!result.visible) {
+        await screenshot("missing-onboarding-arrow");
+        console.log(await evaluate(`(() => {
+          const control=document.querySelector(${JSON.stringify(selector)}), r=control?.getBoundingClientRect();
+          const tip=document.querySelector('#onboardingMapTip .onboarding-tip');
+          return {hidden:document.hidden,dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id),
+            hit:r?document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,300):null,
+            tip:tip?.outerHTML.slice(0,500),tipRect:tip?.getBoundingClientRect().toJSON(),tipDisplay:tip&&getComputedStyle(tip).display,
+            tipVisibility:tip&&getComputedStyle(tip).visibility,preferences:getOnboardingPrefs(),scope:getOnlineRequestScope()};
+        })()`));
+      }
       assert(result.visible && result.correct && result.clickThrough && result.distance<=7 && result.aligned && result.topLayer, `${selector}: ${JSON.stringify(result)}`);
     };
     for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }]) {
