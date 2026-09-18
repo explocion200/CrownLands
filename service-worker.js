@@ -56,6 +56,8 @@ const STATIC_CACHE_URLS = [
   "/reward-ledger-ui.js?v=20260918-approved-ledgers-r1",
   "/reward-ledger-ui.css?v=20260918-approved-ledgers-r1",
   "/assets/icons/chat-ledger-seal.svg",
+  "/assets/icons/google-translate-attribution.png",
+  "/assets/icons/google-translate-attribution-short.png",
   "/assets/icons/hero-reward-crown.svg",
   "/chat.css?v=20260818-global-clan-chat-r1",
   "/clan-heraldry-v2.css?v=20260825-clan-shield-surfaces-r1",

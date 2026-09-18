@@ -2,6 +2,7 @@ const { onCall: firebaseOnCall, HttpsError } = require("firebase-functions/v2/ht
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const { getApp } = require("firebase-admin/app");
 const { FieldPath, FieldValue, Filter, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
@@ -51,6 +52,7 @@ const DAILY_LOGIN = require("./dailyLoginRewards.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
 const CLAN_HERALDRY_CONFIG = require("./clanHeraldryConfig.js");
 const CHAT = require("./chat.js");
+const CHAT_TRANSLATION = require("./chat-translation.js");
 const REALM_TOPOLOGY = require("./realmTopology.js");
 const CORE_EXPANSION = require("./coreExpansionTopology.js");
 const HOLDING_TOWERS = require("./holding-towers.js");
@@ -19843,6 +19845,45 @@ function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   }
 }
 
+async function authorizeChatTranslation(transaction, request, payload) {
+  requireCompatibleClient(request.data || {});
+  const uid = request.auth.uid;
+  const { profile } = await requireCurrentSeasonParticipation(transaction, uid);
+  const clanId = payload.channel === "clan" ? safeString(profile.clanId, 128) : "";
+  if (payload.channel === "clan") {
+    if (!clanId || clanId !== payload.clanId) throw new HttpsError("permission-denied", "Your Clan Chat membership changed. Refresh chat.");
+    const [clanSnap, memberSnap] = await transaction.getAll(db.doc(`clans/${clanId}`), db.doc(`clans/${clanId}/members/${uid}`));
+    const clan = clanSnap.data() || {}, member = memberSnap.data() || {};
+    if (!clanSnap.exists || !memberSnap.exists || clan.status !== "active" || member.status !== "active" || member.uid !== uid
+      || [clan, member].some(item => item.resetGeneration !== RESET_GENERATION || item.worldId !== ONLINE_WORLD_ID
+        || REALM_TOPOLOGY.normalizeRealmShardId(item.realmShardId) !== getCurrentRealmShardId())) {
+      throw new HttpsError("permission-denied", "Your Clan Chat membership could not be verified.");
+    }
+  }
+  return {
+    messageCollection: payload.channel === "clan" ? `clans/${clanId}/messages` : `globalChat/${getRealmStorageId()}/messages`,
+    isVisible: (message, nowMs) => message.status === "visible" && message.channel === payload.channel
+      && message.channelId === (clanId || "global") && message.resetGeneration === RESET_GENERATION && message.worldId === ONLINE_WORLD_ID
+      && REALM_TOPOLOGY.normalizeRealmShardId(message.realmShardId) === getCurrentRealmShardId()
+      && (payload.channel !== "global" || (message.createdAtMs > nowMs - CHAT.CHAT_RETENTION_MS && message.createdAtMs <= nowMs)),
+  };
+}
+
+const translateChatMessages = CHAT_TRANSLATION.createService({
+  db,
+  authorize: authorizeChatTranslation,
+  fail: (code, message, details) => new HttpsError(code, message, details),
+  provider: CHAT_TRANSLATION.createGoogleProvider({
+    projectId: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT,
+    credential: getApp().options.credential,
+    emulator: process.env.FUNCTIONS_EMULATOR === "true",
+  }),
+});
+
+exports.translateChatMessages = timedCallable("translateChatMessages", {
+  region: "us-central1", maxInstances: 5, timeoutSeconds: 30, invoker: "public",
+}, translateChatMessages);
+
 exports.sendChatMessage = timedCallable("sendChatMessage", {
   region: "us-central1",
   maxInstances: 30,
@@ -34243,6 +34284,21 @@ async function cleanupGlobalChat(nowMs = Date.now(), maxBatches = 8) {
   return { deleted };
 }
 
+async function cleanupExpiredChatTranslations(nowMs) {
+  let deleted = 0;
+  for (let i = 0; i < 8; i += 1) {
+    // A root collection query uses the default index; no shared message TTL changes.
+    const snapshot = await db.collection("chatTranslationCache").where("expiresAtMs", "<=", nowMs).limit(450).get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snapshot.size;
+    if (snapshot.size < 450) break;
+  }
+  return { deleted };
+}
+
 exports.cleanupExpiredChat = onSchedule({
   region: "us-central1",
   schedule: "every 5 minutes",
@@ -34252,12 +34308,13 @@ exports.cleanupExpiredChat = onSchedule({
   memory: "256MiB",
 }, async () => {
   const nowMs = Date.now();
-  const [messages, requests] = await Promise.all([
+  const [messages, requests, translations] = await Promise.all([
     cleanupGlobalChat(nowMs),
     cleanupExpiredChatCollectionGroup("chatSendRequests", nowMs),
+    cleanupExpiredChatTranslations(nowMs),
   ]);
-  console.log("Expired Crownlands chat data cleaned", { messages, requests });
-  return { messages, requests };
+  console.log("Expired Crownlands chat data cleaned", { messages, requests, translations });
+  return { messages, requests, translations };
 });
 
 exports.cleanupExpiredBulkOrderRequests = onSchedule({

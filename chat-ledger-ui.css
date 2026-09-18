@@ -214,3 +214,10 @@
 #chatDialog .history-footer{padding-inline:13px;}
 #chatDialog .history-footer>span{font-size:9px;}
 }
+
+/* Google supplies these attribution badges; preserve their artwork. */
+.chat-google-attribution[hidden]{display:none!important}
+.chat-google-attribution{display:inline-flex;align-items:center;flex-shrink:0}
+.chat-google-attribution img{display:block;width:auto;height:16px}
+#chatDialog .history-footer{flex-wrap:wrap;gap:4px 10px}
+#quickChat .quick-chat-heading .chat-google-attribution img{height:12px}

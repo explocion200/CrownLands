@@ -1131,6 +1131,10 @@
     return callServerFunction("sendChatMessage", payload);
   }
 
+  async function translateChatMessages(payload = {}) {
+    return callServerFunction("translateChatMessages", payload);
+  }
+
   function cleanChatMessage(snapshot) {
     const data = snapshot?.data ? snapshot.data() || {} : snapshot || {};
     return {
@@ -3264,6 +3268,7 @@
     claimClanQuestReward,
     getServerNowMs,
     sendChatMessage,
+    translateChatMessages,
     loadClan,
     searchClans,
     loadClanMembers,

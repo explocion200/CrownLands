@@ -72,7 +72,8 @@
     }
     function status() {
       const states = enabled && view?.active ? view.messages.map(message => display(message, view).state) : [];
-      return { enabled, target, pending: states.filter(s => s === "pending").length, failed: states.filter(s => s === "error").length };
+      return { enabled, target, pending: states.filter(s => s === "pending").length, failed: states.filter(s => s === "error").length,
+        monthlyLimit: enabled && view?.messages.some(message => display(message, view).monthlyLimit === true) };
     }
     async function pump() {
       if (!enabled || !account || !view?.active || activeRequest || !view.messages.length) return;
@@ -109,13 +110,14 @@
           cache.set(id, valid ? { text: item.text, state: item.text === message.text ? "original" : "translated" }
             : { text: message.text, state: "error" });
         }
-      } catch (_error) {
+      } catch (error) {
         if (generation !== epoch) return;
-        for (const [id, message] of entries) cache.set(id, { text: message.text, state: "error" });
+        const monthlyLimit = error?.details?.reason === "translation-monthly-limit";
+        for (const [id, message] of entries) cache.set(id, { text: message.text, state: "error", monthlyLimit });
         // Stop this pass after a failure, rather than sending every remaining page to a failing service.
         for (const message of context.messages) {
           const id = key(message, context);
-          if (!cache.has(id)) cache.set(id, { text: message.text, state: "error" });
+          if (!cache.has(id)) cache.set(id, { text: message.text, state: "error", monthlyLimit });
         }
       } finally {
         clearTimeout(timeout);
