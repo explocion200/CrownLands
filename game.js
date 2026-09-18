@@ -184,14 +184,14 @@ const REWARDED_AD_ITEMS = Object.freeze([
     label: "Gold .5h Boost",
     description: "Receive 30 minutes of Gold production.",
     rewardLabel: "gold",
-    icon: "assets/optimized/pickup-gold-192x192-a1de679b797d.webp",
+    icon: "assets/optimized/pickup-gold-192x192-0f5238966f7a.webp",
   },
   {
     id: "troops",
     label: "Troop .5h Boost",
     description: "Receive 30 minutes of Troop production.",
     rewardLabel: "troops",
-    icon: "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp",
+    icon: "assets/optimized/pickup-troops-192x192-7613afbbad92.webp",
   },
 ]);
 const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-5bb08b2e7f5c.webp";
@@ -641,8 +641,8 @@ const MAP_DETAIL_CLOSE_EXIT_ZOOM = 0.76;
 const MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE = 72;
 const MARCH_ENDPOINT_INTERACTION_SIZE_RATIO = 0.62;
 const ISLAND_MAP_PADDING = 560;
-const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp";
-const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-a1de679b797d.webp";
+const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-7613afbbad92.webp";
+const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-0f5238966f7a.webp";
 const MAP_SWITCH_ARROW_ICON_SRC = "assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp";
 const DEFAULT_PORTAL_VISUAL_SIZE = 92;
 const MIN_PORTAL_VISUAL_SIZE = 60;

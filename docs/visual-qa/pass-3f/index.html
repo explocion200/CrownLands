@@ -130,8 +130,8 @@
     <article class="context" data-view="map">
       <h3>Map Pickups and Protected City</h3>
       <div class="context-stage map-scene">
-        <button class="harvest-bonus-node map-pickup" style="--left:28%;--top:38%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-gold-192x192-a1de679b797d.webp" alt="Gold pickup" /></span></button>
-        <button class="harvest-bonus-node harvest-bonus-troops map-pickup" style="--left:45%;--top:66%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-troops-192x192-ed370610c5b6.webp" alt="Troop pickup" /></span></button>
+        <button class="harvest-bonus-node map-pickup" style="--left:28%;--top:38%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-gold-192x192-0f5238966f7a.webp" alt="Gold pickup" /></span></button>
+        <button class="harvest-bonus-node harvest-bonus-troops map-pickup" style="--left:45%;--top:66%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-troops-192x192-7613afbbad92.webp" alt="Troop pickup" /></span></button>
         <div class="protected-city"><span class="protected-city-label">Redhaven | Protected</span><span class="city-shield-field"><img src="../../../assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" /></span><span class="city-castle"><img src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span></div>
       </div>
     </article>
@@ -165,13 +165,13 @@
     ["Veil of Silence", "veil-of-silence-icon.webp", "item-veil-of-silence-160x160-ea2992af0cd1.webp"],
     ["Swift March Order", "swift-march-order-icon.webp", "item-swift-march-160x160-e857cc4d8977.webp"],
     ["Recall Horn", "recall-horn-icon.webp", "item-recall-horn-160x160-b261d10e9c8b.webp"],
-    ["Gold Pickup", "gold-pickup.png", "pickup-gold-192x192-a1de679b797d.webp"],
-    ["Troop Pickup", "troop-pickup.png", "pickup-troops-192x192-ed370610c5b6.webp"],
+    ["Gold Pickup", "gold-pickup.png", "pickup-gold-192x192-0f5238966f7a.webp"],
+    ["Troop Pickup", "troop-pickup.png", "pickup-troops-192x192-7613afbbad92.webp"],
   ];
   comparisonGrid.innerHTML = comparisons.map(([label, oldArt, newArt]) => `<article class="qa-card"><h3>${label}</h3><div class="old-new"><figure><img src="old-assets/${oldArt}" alt="Old ${label}" /><figcaption>Old</figcaption></figure><figure><img src="${root}assets/optimized/${newArt}" alt="New ${label}" /><figcaption>Pass 3F</figcaption></figure></div></article>`).join("");
   shopItems.innerHTML = items.map(([label, art, price, id]) => `<article class="shop-item" data-shop-item="${id}"><div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="${root}assets/optimized/${art}" alt="" /></div><div class="shop-item-copy"><strong>${label}</strong><span>${price}</span><small>Grounded Crownlands supply item</small></div><button class="shop-buy-btn" type="button">Buy</button></article>`).join("");
-  inventorySlots.innerHTML = [...items, ["Gold Pickup", "pickup-gold-192x192-a1de679b797d.webp", "x1", "gold"]].map(([label, art], index) => `<button class="inventory-slot filled${index === 1 ? " selected" : ""}" type="button"><span class="inventory-slot-icon has-image"><img class="inventory-slot-image" src="${root}assets/optimized/${art}" alt="" /></span><span class="inventory-slot-name">${label}</span><span class="inventory-slot-count">x${index + 1}</span></button>`).join("");
-  const daily = [items[1], items[2], items[3], items[4], items[5], items[6], ["Gold", "pickup-gold-192x192-a1de679b797d.webp"], ["Troops", "pickup-troops-192x192-ed370610c5b6.webp"], items[0], items[3]];
+  inventorySlots.innerHTML = [...items, ["Gold Pickup", "pickup-gold-192x192-0f5238966f7a.webp", "x1", "gold"]].map(([label, art], index) => `<button class="inventory-slot filled${index === 1 ? " selected" : ""}" type="button"><span class="inventory-slot-icon has-image"><img class="inventory-slot-image" src="${root}assets/optimized/${art}" alt="" /></span><span class="inventory-slot-name">${label}</span><span class="inventory-slot-count">x${index + 1}</span></button>`).join("");
+  const daily = [items[1], items[2], items[3], items[4], items[5], items[6], ["Gold", "pickup-gold-192x192-0f5238966f7a.webp"], ["Troops", "pickup-troops-192x192-7613afbbad92.webp"], items[0], items[3]];
   dailyGrid.innerHTML = daily.map(([label, art], index) => `<article class="daily-reward-card ${index < 3 ? "claimed" : index === 3 ? "available" : "locked"}"><img class="daily-reward-card-icon" src="${root}assets/optimized/${art}" alt="" /><strong class="daily-reward-card-amount">${index % 3 === 0 ? "1h" : "x1"}</strong><span class="sr-only">${label}</span></article>`).join("");
   const requested = new URLSearchParams(location.search).get("view");
   if (requested) {

@@ -124,6 +124,7 @@ const retiredHashes = [
   "0f7ac5409316", "dcb8dddc35ea", "48ecb3c2150b", "eaa5b941fe82", "5d50be41ce93",
   "f1cb9c8471ca", "eb20879b085e", "13064480d6c7", "866b66c49b83", "5b5b95051830",
   "5fd9cc116a40", "d7e2adb1b120", "1e09f4efdbff", "9392b160d654",
+  "a1de679b797d", "ed370610c5b6",
 ];
 for (const hash of retiredHashes) {
   assert(!shippedReferences.includes(hash), `Retired Pass 3F asset hash ${hash} is still referenced.`);

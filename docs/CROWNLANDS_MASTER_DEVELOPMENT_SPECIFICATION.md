@@ -1207,6 +1207,12 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 
 **Status:** Established direction, with the current migrated visual foundation `LIVE — ALL PUBLISHED CHANNELS` and continuing polish `IN DEVELOPMENT`.
 
+### Approved shared Gold and troop pickup artwork — September 17, 2026
+
+- Keep the existing coin pouch, coins, cord and wax seal, and the existing helmet, banner, spears and sealed orders. Restyle the pair with sepia ink outlines, painted shading, muted earthy colors and transparent backgrounds to match the illustrated maps.
+- Use the approved pair everywhere those shared raster images appear, including map pickups, reward feedback, Hero Level-Up, Daily Login, shop boosts and the rewards guide. Existing generic vector resource symbols remain separate assets.
+- Preserve pickup click areas, collection rules, reward quantities and timing. Artwork approval authorizes integration; merge and deployment require separate authorization and verification. Approved sources and reference audit: [shared pickup artwork](./visual-qa/offline-earnings/art-notes.md).
+
 ### Needs verification
 
 - Final art production pipeline, asset licensing register, source-file ownership, generation provenance, animation style guide, audio art direction, and approval criteria for new regional art.

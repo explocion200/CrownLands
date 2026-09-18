@@ -30,4 +30,4 @@ The Hero Level-Up draft remains saved separately on `codex/hero-level-up-rewards
 
 ## Shared pickup artwork revision
 
-The user requested restyled Gold and troop images and a shared rollout after approval. See [the comparison](art-review.html) and [saved assets, prompts, and rollout audit](art-notes.md). The production image references remain unchanged until approval and integration.
+The user requested restyled Gold and troop images and a shared rollout after approval. See [the comparison](art-review.html) and [saved assets, prompts, and rollout audit](art-notes.md). The artwork is approved and its shared production references are integrated locally. The Welcome Back layout remains a draft. The shared art update still requires PR gates and separate merge/deployment authorization.

@@ -1,6 +1,6 @@
 # Shared Gold and troop artwork · atlas v1
 
-Status: draft for user approval, refining Welcome Back on `codex/offline-earnings-draft`. The user requested the same two images with changed style and colors, then replacement everywhere those images appear once approved.
+Status: artwork approved and integrated locally on `codex/offline-earnings-draft`; merge and deployment are not authorized yet. The user requested the same two images with changed style and colors, then replacement everywhere those images appear once approved.
 
 ## Saved artwork
 
@@ -13,9 +13,9 @@ Both are 1254 × 1254 PNG files with real alpha. They retain the pouch/coins/cor
 
 Generated using the built-in image generation tool. No API/CLI fallback or external paid provider was used. The tool does not expose a selectable model version in this environment; no specific model version is asserted.
 
-The original files under `assets/` and their optimized runtime derivatives are unchanged. Only the Welcome Back draft points to the proposed versions.
+The approved PNGs now replace `assets/gold-pickup.png` and `assets/troop-pickup.png`. Only the two corresponding manifest entries and derivatives were rebuilt. The old images are retained as `art/gold-pickup-before.png` and `art/troop-pickup-before.png` for the comparison.
 
-## Shared reference audit and rollout after approval
+## Shared reference audit
 
 | Reference | Current consumers / required update |
 | --- | --- |
@@ -31,7 +31,7 @@ The original files under `assets/` and their optimized runtime derivatives are u
 
 After approval, use a single shared pair of optimized assets across runtime consumers, refresh the manifest and relevant cache/version references, and search the complete repository for stale old hashes. Preserve click areas, production values, timing, and reward logic. Check the actual map pickup and reward displays, including alpha after pickup. Existing generic vector currency/resource symbols are separate assets; this request replaces usages of these two raster images.
 
-The two generated masters are intentionally stored as versioned draft files until approval. No source image overwrite, main-branch update, PR, merge, or deployment occurred for this artwork revision.
+Runtime integration is complete for the shared image references listed above. The Welcome Back layout remains an isolated presentation draft and now previews the same optimized pair. The saved Hero Level-Up branch is outside this checkout and must reuse the current shared constants when integrated. No main-branch update, merge, or deployment occurred.
 
 ## Verification
 
@@ -39,8 +39,8 @@ The two generated masters are intentionally stored as versioned draft files unti
 - Before/after comparison loads all 12 images: original/proposed Gold and troops, three small-size pairs, and both map previews.
 - The proposed pair was inspected at 48px, 64px and 96px on parchment and 96px on the map. No opaque rectangle appears behind either image.
 - Welcome Back at 844 × 390 loads both proposed PNGs. Its earnings pane has equal client/scroll widths (434px); Collect remains 44px high and visible.
-- This revision only changes draft images, review pages, and documentation. Runtime behavior tests from the preceding Welcome Back commit remain applicable; no slow emulator/release suite is needed for art approval.
-- Before rollout, encode optimized WebP derivatives and recheck alpha and readability at actual runtime sizes. PNG masters are for review/editing, not the production delivery size.
+- Focused runtime checks passed for Pass 3F art, asset budgets, harvest pickup lifecycle, reward animations, and rewarded ads. Production build and artifact validation passed. The browser comparison uses the encoded runtime pair at 48, 64 and 96px on parchment and at 96px on the map.
+- Encoded and checked optimized WebP derivatives: Gold `pickup-gold-192x192-0f5238966f7a.webp` (11,572 bytes); troops `pickup-troops-192x192-7613afbbad92.webp` (12,780 bytes). Both are 192 × 192 RGBA with transparent corners. Production artifact bytes match the generated files exactly. PNG masters are not production delivery assets.
 
 ## Exact prompts
 
