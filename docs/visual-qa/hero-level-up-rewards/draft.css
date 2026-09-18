@@ -1,0 +1,98 @@
+/* Development-only reward presentation. No production styles are imported. */
+:root { color-scheme:light; font-family:"Segoe UI",Arial,sans-serif; color:#3e3327; background:#343d2e; --ink:#3e3327; --muted:#807052; --line:#c3ad83; --paper:#f0e5c9; }
+* { box-sizing:border-box; }
+body { margin:0; overflow:hidden; }
+body::before { content:""; position:fixed; inset:-5px; background:linear-gradient(#28322566,#26302066),url("../../../assets/worlds/core-expansion-v1/maps/core-v2-north-west-holding-tower-m1-m1.webp") center/cover; filter:blur(2px); }
+[hidden] { display:none!important; }
+h1,h2,h3,p { margin:0; }
+button { font:inherit; cursor:pointer; touch-action:manipulation; }
+button:focus-visible { outline:2px solid #506744; outline-offset:3px; }
+.map-caption { position:fixed; left:26px; top:25px; color:#f3e5c3; text-shadow:0 2px 3px #263021; }
+.map-caption span { display:block; font-size:10px; letter-spacing:2px; margin-bottom:6px; }
+.map-caption strong { font:25px Georgia,serif; }
+.reopen { position:fixed; inset:0; margin:auto; width:230px; height:48px; border:1px solid #a88d5d; background:#ebddba; color:#5e492f; font:16px Georgia,serif; }
+#levelUpRewardModal { width:min(890px,calc(100vw - 24px)); height:min(614px,calc(100dvh - 24px)); max-width:none; max-height:none; margin:auto; padding:6px; border:2px solid #60432d; border-radius:1px; color:var(--ink); background:#764435; box-shadow:inset 0 0 0 2px #cdb17a,0 18px 60px #1b211a80; overflow:hidden; }
+#levelUpRewardModal::backdrop { background:#26302066; backdrop-filter:blur(3px); }
+.reward-parchment { position:relative; height:100%; display:flex; flex-direction:column; border:1px solid #d1b581; background:var(--paper); box-shadow:inset 0 0 0 2px #f9efd5; }
+.reward-header { display:flex; align-items:center; flex:none; gap:24px; min-height:86px; padding:15px 26px; border-bottom:1px solid #bba074; background:linear-gradient(100deg,#e8d7b0,#f5eacf 68%,#e8d6b0); }
+.eyebrow { color:#8a6540; font-size:9px; letter-spacing:1.8px; margin-bottom:5px; }
+.reward-header h1 { font:30px/1.1 Georgia,serif; letter-spacing:-.3px; }
+.header-mark { font-size:20px; color:#a88e58; margin-left:auto; }
+.reward-header>p { max-width:190px; font:italic 13px/1.5 Georgia,serif; color:#806644; }
+.reward-body { display:grid; grid-template-columns:240px minmax(0,1fr); flex:1; min-height:0; }
+.honor-panel { position:relative; display:flex; align-items:center; flex-direction:column; overflow:hidden; padding:20px 20px 14px; border-right:1px solid #c0ab80; background:radial-gradient(ellipse at 50% 30%,#f9f0d777,transparent 75%),repeating-linear-gradient(90deg,#96773c05 0 1px,transparent 1px 4px),#e4d4ae; }
+.honor-panel::before,.honor-panel::after { content:""; position:absolute; inset:10px auto 10px 9px; width:1px; background:#c4ad7d88; }
+.honor-panel::after { left:auto; right:9px; }
+.banner-rod { position:relative; z-index:2; flex:none; width:198px; height:8px; border:1px solid #6e5335; border-radius:3px; background:linear-gradient(#b7a06a,#715538); box-shadow:0 2px 3px #78603f33; }
+.banner-rod::before,.banner-rod::after { content:""; position:absolute; top:-3px; width:12px; height:12px; border-radius:50%; border:1px solid #715632; background:#bba470; }
+.banner-rod::before { left:-7px; }.banner-rod::after { right:-7px; }
+.level-banner { position:relative; width:180px; height:256px; flex:none; display:flex; align-items:center; flex-direction:column; padding-top:19px; color:#f4e4b9; background:linear-gradient(90deg,#643d31,#874c3b 17%,#814836 50%,#724031 88%,#5a352b); clip-path:polygon(0 0,100% 0,100% 83%,50% 100%,0 83%); }
+.level-banner::before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg,#ddba7c09 0 1px,transparent 1px 3px); pointer-events:none; }
+.banner-stitch { position:absolute; inset:7px 8px 41px; border:1px dashed #d0ae7077; border-bottom:none; }
+.banner-stitch::after { content:""; position:absolute; left:23px; bottom:-33px; width:109px; height:1px; background:#c6a76b66; transform:rotate(24deg); }
+.hero-crown { width:96px; height:59px; flex:none; filter:drop-shadow(0 2px 1px #3e241c55); }
+.banner-label { font:10px/1.2 Georgia,serif; letter-spacing:2.5px; margin-top:8px; color:#d7bf8b; }
+#heroLevel { font:75px/.98 Georgia,serif; font-variant-numeric:lining-nums tabular-nums; letter-spacing:-3px; margin-top:6px; text-shadow:0 2px #45291e; }
+.banner-flourish { font-size:12px; color:#c8a569; line-height:1; margin-top:15px; }
+.advancement { text-align:center; width:100%; margin:auto 0 0; padding-top:14px; }
+.advancement-caption { color:#85704c; font-size:8px; letter-spacing:1.3px; }
+.level-step { display:flex; justify-content:center; align-items:center; gap:17px; margin:7px 0 4px; font:23px Georgia,serif; color:#947b56; }
+.level-step svg { width:32px; height:16px; color:#927647; }.level-step strong { color:#566342; font-weight:normal; }
+.advancement p { font:italic 12px Georgia,serif; color:#897351; }
+.reward-ledger { min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#b39a71 #eee2c4; padding:24px 27px 20px; background:linear-gradient(105deg,#f4ebd3,#eee0c0); }
+.ledger-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; }
+.ledger-heading h2 { font:22px Georgia,serif; }.ledger-heading>span { color:#b49b6e; font:italic 16px Georgia,serif; }
+.reward-list { display:flex; flex-direction:column; gap:9px; }
+.reward-row { display:flex; align-items:center; gap:16px; min-height:82px; border:1px solid #c4ae8577; border-left:3px solid #a89b6c; background:linear-gradient(105deg,#faf2deaa,#e7d8b55c); box-shadow:inset 0 0 0 1px #fbf2d6; padding:4px 15px 4px 6px; }
+.reward-row.gold { border-left-color:#b29859; }.reward-row.troops { border-left-color:#9a6751; }
+.reward-art { display:grid; place-items:center; width:76px; height:70px; flex:none; }
+.reward-art img { display:block; width:88px; height:88px; object-fit:contain; }
+.skill .reward-art img { width:60px; height:60px; }
+.reward-copy { min-width:0; flex:1; }
+.reward-copy h3 { font:13px/1.3 Georgia,serif; color:#83663e; margin-bottom:4px; }
+.amount { display:block; font:29px/1.05 Georgia,serif; font-variant-numeric:lining-nums tabular-nums; white-space:nowrap; letter-spacing:-.5px; }
+.skill .amount { color:#52623b; }.amount.long-amount { font-size:23px; letter-spacing:-.6px; }
+.reward-purpose { flex:none; min-width:62px; font:italic 11px/1.6 Georgia,serif; color:#917c56; border-left:1px solid #c9b48b99; padding-left:13px; }
+.troop-destination { display:flex; align-items:center; gap:12px; margin-top:18px; padding-top:13px; border-top:1px solid #c6b38c; }
+.troop-destination>svg { width:43px; height:43px; flex:none; }
+.troop-destination>div { min-width:0; }.troop-destination span { display:block; font-size:9px; letter-spacing:.5px; color:#8b7451; margin-bottom:4px; }
+.troop-destination strong { display:block; font:18px/1.15 Georgia,serif; color:#5c6444; overflow-wrap:anywhere; }
+.reward-footer { flex:none; min-height:78px; display:flex; align-items:center; gap:20px; justify-content:space-between; padding:12px 25px; border-top:1px solid #bba074; background:linear-gradient(#e7d7b4,#ddc9a2); }
+.reward-footer>p { display:flex; align-items:center; gap:8px; font:italic 12px Georgia,serif; color:#82704e; }
+.reward-footer>p svg { width:22px; height:22px; flex:none; color:#6d784e; }
+#collectLevelUpRewardsBtn { display:flex; align-items:center; justify-content:space-between; gap:20px; min-width:216px; min-height:48px; padding:8px 17px; color:#fff0ca; border:1px solid #693a2d; border-radius:2px; background:linear-gradient(#965941,#783f31); box-shadow:inset 0 0 0 2px #b9885c66,0 2px 2px #6f512133; font:18px Georgia,serif; }
+#collectLevelUpRewardsBtn>span { font-size:27px; line-height:.8; color:#d1b486; }
+#collectLevelUpRewardsBtn:hover { filter:brightness(1.07); }
+.local-notice { position:fixed; left:50%; bottom:25px; transform:translateX(-50%); width:max-content; max-width:90vw; padding:12px 18px; border:1px solid #bca77b; background:#424e35; color:#f4e7c6; font-size:13px; text-align:center; }
+@media(max-width:900px) and (orientation:landscape) {
+  #levelUpRewardModal { width:calc(100vw - 16px); height:calc(100dvh - 16px); padding:4px; }
+  .reward-header { min-height:48px; padding:6px 17px; gap:15px; }
+  .eyebrow { font-size:7px; letter-spacing:1.4px; margin-bottom:2px; }.reward-header h1 { font-size:23px; }.header-mark { font-size:16px; }
+  .reward-header>p { font-size:11px; max-width:240px; }
+  .reward-body { grid-template-columns:180px minmax(0,1fr); }
+  .honor-panel { padding:9px 12px 7px; }.banner-rod { width:142px; height:6px; }
+  .banner-rod::before,.banner-rod::after { width:10px; height:10px; }
+  .level-banner { width:132px; height:163px; padding-top:7px; }.banner-stitch { inset:5px 6px 28px; }.banner-stitch::after { width:78px; left:17px; bottom:-22px; }
+  .hero-crown { width:70px; height:42px; }.banner-label { font-size:8px; letter-spacing:1.8px; margin-top:4px; }
+  #heroLevel { font-size:50px; margin-top:4px; letter-spacing:-1px; }.banner-flourish { font-size:9px; margin-top:8px; }
+  .advancement { padding-top:4px; }.advancement-caption { font-size:7px; letter-spacing:1px; }.level-step { font-size:18px; margin:3px 0 2px; gap:11px; }.level-step svg { width:26px; }.advancement p { font-size:10px; }
+  .reward-ledger { padding:9px 17px; }.ledger-heading { margin-bottom:6px; }.ledger-heading h2 { font-size:16px; }.ledger-heading>span { font-size:12px; }
+  .reward-list { gap:5px; }.reward-row { min-height:52px; padding:2px 10px 2px 5px; gap:11px; }
+  .reward-art { width:52px; height:46px; }.reward-art img { width:59px; height:59px; }.skill .reward-art img { width:40px; height:40px; }
+  .reward-copy h3 { font-size:11px; margin-bottom:2px; }.amount { font-size:22px; }.amount.long-amount { font-size:21px; }.reward-purpose { font-size:10px; line-height:1.3; min-width:66px; padding-left:12px; }
+  .troop-destination { gap:9px; margin-top:7px; padding-top:6px; }.troop-destination>svg { width:31px; height:31px; }.troop-destination span { font-size:8px; margin-bottom:2px; }.troop-destination strong { font-size:15px; }
+  .reward-footer { min-height:53px; padding:4px 16px; gap:10px; }.reward-footer>p { font-size:10px; gap:7px; }.reward-footer>p svg { width:18px; height:18px; }
+  #collectLevelUpRewardsBtn { min-width:186px; min-height:44px; font-size:16px; padding:7px 14px; }
+}
+@media(max-width:650px) and (orientation:landscape) {
+  .reward-header { min-height:44px; padding:5px 12px; gap:12px; }.reward-header h1 { font-size:20px; }.eyebrow { font-size:6px; margin-bottom:1px; }.reward-header>p { display:none; }.header-mark { margin-left:auto; }
+  .reward-body { grid-template-columns:125px minmax(0,1fr); }.honor-panel { padding:7px 7px 5px; }.honor-panel::before,.honor-panel::after { display:none; }
+  .banner-rod { width:100px; height:5px; }.banner-rod::before,.banner-rod::after { width:8px; height:8px; top:-2px; }
+  .level-banner { width:94px; height:128px; padding-top:5px; }.hero-crown { width:55px; height:34px; }.banner-label { font-size:6px; letter-spacing:1.2px; margin-top:2px; }#heroLevel { font-size:39px; margin-top:3px; }.banner-flourish { font-size:7px; margin-top:4px; }.banner-stitch { inset:4px 5px 22px; }.banner-stitch::after { width:54px; left:12px; bottom:-15px; }
+  .advancement { padding-top:2px; }.advancement-caption { font-size:6px; letter-spacing:.65px; }.level-step { font-size:16px; gap:7px; margin:2px 0; }.level-step svg { width:21px; }.advancement p { font-size:9px; }
+  .reward-ledger { padding:4px 10px; }.ledger-heading { margin-bottom:2px; }.ledger-heading h2 { font-size:14px; }
+  .reward-list { gap:2px; }.reward-row { min-height:43px; gap:7px; padding:1px 6px 1px 3px; }.reward-art { width:40px; height:38px; }.reward-art img { width:49px; height:49px; }.skill .reward-art img { width:33px; height:33px; }
+  .reward-copy h3 { font-size:9px; margin-bottom:1px; }.amount { font-size:19px; }.amount.long-amount { font-size:17px; letter-spacing:-.3px; }.reward-purpose { font-size:8px; min-width:48px; padding-left:7px; }
+  .troop-destination { margin-top:5px; padding-top:4px; gap:6px; }.troop-destination>svg { width:25px; height:25px; }.troop-destination span { font-size:7px; letter-spacing:.2px; }.troop-destination strong { font-size:12px; }
+  .reward-footer { min-height:51px; padding:3px 10px; }.reward-footer>p { font-size:9px; max-width:230px; }.reward-footer>p svg { width:16px; height:16px; }#collectLevelUpRewardsBtn { min-width:168px; min-height:44px; font-size:15px; padding:6px 11px; }
+}
