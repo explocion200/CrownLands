@@ -7,7 +7,7 @@ Open `index.html?viewport=landscape&sample=standard` through the existing reposi
 ## Presentation
 
 - Parchment ledger with burgundy framing, ink headings, and muted olive city status.
-- Exact Gold and troop totals use the current pickup illustrations from `game.js`.
+- Exact Gold and troop totals preview proposed atlas-style versions of the shared pickup illustrations. The original compositions are preserved.
 - Time away in the header; earnings on the left; city status on the right.
 - Collect remains outside the scrolling content, with a 44px minimum landscape target.
 - Five fictional examples: intact kingdom, lost cities, long lists / large earnings, losses without earnings, and the existing inactivity notice.
@@ -27,3 +27,7 @@ The scoped fix counts the union of known cities using region plus ID, then prese
 The new visuals are not yet wired into the runtime modal. Apply the approved markup and styles to `showOfflineRewardsModal`, retaining the existing production payload, login presentation queue, inactivity notice, Collect animation anchors, and reward sequencing. Include normal asset versioning / packaging and required PR validation at that stage.
 
 The Hero Level-Up draft remains saved separately on `codex/hero-level-up-rewards-draft`.
+
+## Shared pickup artwork revision
+
+The user requested restyled Gold and troop images and a shared rollout after approval. See [the comparison](art-review.html) and [saved assets, prompts, and rollout audit](art-notes.md). The production image references remain unchanged until approval and integration.
