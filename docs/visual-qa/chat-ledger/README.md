@@ -1,5 +1,7 @@
 # Realm Chat ledger — approval draft
 
+Integration update (September 18, 2026): the approved layout is integrated on `codex/approved-chat-and-reward-ui`. The review pages below remain isolated fixtures. Release validation and live deployment are tracked in [integration checks](../chat-reward-ledgers-integration.md); historical draft notes follow.
+
 Development-only presentation draft for Global and Clan Chat. Nothing in this directory is linked from the live game entry or included in the production artifact. No production chat, server, account, or membership writes occur.
 
 Open `index.html?viewport=desktop` or choose Mobile landscape (844 × 390) / Small landscape (568 × 320). Desktop uses the shared 1040 × 790 maximum window. Mobile uses the available landscape screen with fixed navigation and composer, and independently scrolling history.

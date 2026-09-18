@@ -1214,6 +1214,12 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 - Use the approved pair everywhere those shared raster images appear, including map pickups, reward feedback, Hero Level-Up, Daily Login, shop boosts and the rewards guide. Existing generic vector resource symbols remain separate assets.
 - Preserve pickup click areas, collection rules, reward quantities and timing. Artwork approval authorizes integration; merge and deployment require separate authorization and verification. Approved sources and reference audit: [shared pickup artwork](./visual-qa/offline-earnings/art-notes.md).
 
+### Approved Chat and reward ledgers — September 18, 2026
+
+- Global/Clan Chat, Hero Level-Up, and Welcome Back use the approved parchment, burgundy and olive layouts on desktop and mobile landscape. Chat keeps its compact map preview, readable history, unread jump, channel controls and fixed composer. Hero rewards retain the level banner and exact reward totals; Welcome Back retains time away, exact production, city losses and inactivity notices, with a fixed Collect action and independently scrolling contents.
+- These are presentation changes. Chat authorization, retention, cooldowns and moderation, Hero rewards, offline production and authoritative receipts remain unchanged. Collect acknowledges rewards already credited and does not award them again. Both reward screens use the approved shared Gold and troop artwork.
+- **Status:** `IN DEVELOPMENT` until release verification. Live translation remains dependent on a separately approved provider; the sample phrase dictionary is confined to the development draft, and the production Translate control stays hidden without a live adapter.
+
 ### Needs verification
 
 - Final art production pipeline, asset licensing register, source-file ownership, generation provenance, animation style guide, audio art direction, and approval criteria for new regional art.

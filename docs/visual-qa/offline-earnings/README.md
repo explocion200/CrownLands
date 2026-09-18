@@ -1,5 +1,7 @@
 # Welcome Back / Offline Earnings draft
 
+Integration update (September 18, 2026): the approved layout is integrated on `codex/approved-chat-and-reward-ui`. The review pages below remain isolated fixtures. Release validation and live deployment are tracked in [integration checks](../chat-reward-ledgers-integration.md); historical draft notes follow.
+
 Status: local approval draft on `codex/offline-earnings-draft`. No PR, merge, or deployment.
 
 Open `index.html?viewport=landscape&sample=standard` through the existing repository preview server. Review modes: desktop (1440 × 900), mobile landscape (844 × 390), and small landscape (568 × 320). Portrait is outside the agreed game scope.

@@ -388,6 +388,7 @@
     let messages = { global: [], clan: [] };
     let hasOlder = { global: true, clan: true };
     let errors = { global: "", clan: "" };
+    let received = { global: false, clan: false };
     let unread = { global: false, clan: false };
     let lastReadAtMs = { global: null, clan: null };
     let quickMessageLimit = CHAT_QUICK_MESSAGE_LIMIT;
@@ -414,13 +415,20 @@
     });
 
     function translationContext(current) {
-      return { messages: current, channel, clanId, active: Boolean(uid && mode !== "closed" && !errors[channel] && (channel !== "clan" || clanId)) };
+      return { messages: current, channel, clanId, active: Boolean(uid && typeof api?.translateChatMessages === "function" && mode !== "closed" && !errors[channel] && (channel !== "clan" || clanId)) };
     }
     function displayMessage(message) {
       return translation?.display(message, { channel, clanId }) || { text: message.text, state: "original" };
     }
     function renderTranslationControls() {
-      if (!elements.translate || !translation) return;
+      if (!elements.translate) return;
+      const available = Boolean(translation && api?.translateChatMessages);
+      elements.translate.hidden = !available;
+      if (!available) {
+        if (elements.translationStatus) elements.translationStatus.hidden = true;
+        if (elements.translationRetry) elements.translationRetry.hidden = true;
+        return;
+      }
       const state = translation.status();
       let language = state.target;
       try { language = new Intl.DisplayNames([windowRef?.navigator?.language || "en"], { type: "language" }).of(language); } catch (_error) { /* The language code is still readable. */ }
@@ -439,6 +447,32 @@
       if (elements.translationRetry) elements.translationRetry.hidden = !showStatus || !state.failed;
       const historyNote = documentRef.getElementById("historyNote");
       if (historyNote) historyNote.hidden = showStatus;
+    }
+
+    function renderChannelDetails() {
+      const clan = channel === "clan";
+      const labels = {
+        chatChannelAudience: clan ? (clanId ? "Visible to your clan" : "Membership required") : "All rulers of the realm",
+        chatComposeLabel: clan ? "Write to Clan" : "Write to Global",
+        chatHistoryLabel: clan ? "YOUR CLAN'S CORRESPONDENCE" : "THE REALM'S CONVERSATION",
+        chatRetention: clan ? "Clan history" : "Past 24 hours",
+        chatQuickChannel: clan ? "Clan Chat" : "Global Chat",
+        historyNote: clan ? "Clan history" : "Past 24 hours",
+      };
+      for (const [id,text] of Object.entries(labels)) {
+        const element = documentRef.getElementById(id);
+        if (element) element.textContent = text;
+      }
+      documentRef.getElementById("chatHistory")?.setAttribute("aria-labelledby", clan ? "clanTab" : "globalTab");
+      elements.list.setAttribute("aria-label", clan ? "Clan messages" : "Global messages");
+      const connection = documentRef.getElementById("chatConnection");
+      if (connection) {
+        const offline = !uid || windowRef?.navigator?.onLine === false;
+        const unavailable = clan && !clanId;
+        connection.dataset.state = offline || errors[channel] ? "reconnecting" : "connected";
+        connection.querySelector("span").textContent = offline ? "Offline" : unavailable ? "Clan only"
+          : errors[channel] ? "Reconnecting" : received[channel] ? "Connected" : "Connecting";
+      }
     }
 
     function renderNewMessageButton() {
@@ -538,6 +572,8 @@
       }
       if (metadata.initial) hasOlder[targetChannel] = metadata.hasMore !== false;
       errors[targetChannel] = "";
+      received[targetChannel] = true;
+      renderChannelDetails();
       const latestAtMs = latestMessageAtMs(targetChannel);
       if (metadata.initial && lastReadAtMs[targetChannel] === null) {
         lastReadAtMs[targetChannel] = loadLastRead(targetChannel);
@@ -650,6 +686,7 @@
     }
 
     function renderMessages({ scrollToBottom = false, preserveFromTop = false } = {}) {
+      renderChannelDetails();
       pruneGlobalMessages();
       if (mode !== "full") return;
       scrollToBottom ||= !preserveFromTop && isMessageListNearBottom(elements.list);
@@ -701,6 +738,7 @@
     }
 
     function renderComposer() {
+      renderChannelDetails();
       const noClan = channel === "clan" && !clanId;
       const text = String(elements.input?.value || "");
       const length = Array.from(text).length;
@@ -866,6 +904,7 @@
         messages = { global: [], clan: [] };
         hasOlder = { global: true, clan: true };
         errors = { global: "", clan: "" };
+        received = { global: false, clan: false };
         unread = { global: false, clan: false };
         lastReadAtMs = { global: loadLastRead("global"), clan: loadLastRead("clan") };
       }
@@ -890,6 +929,7 @@
       messages.clan = [];
       hasOlder.clan = true;
       errors.clan = "";
+      received.clan = false;
       unread.clan = false;
       lastReadAtMs.clan = loadLastRead("clan");
       subscriptions.updateClan(clanId);
@@ -919,6 +959,7 @@
       delete elements.quickMessages.dataset.messageSignature;
       hasOlder = { global: true, clan: true };
       errors = { global: "", clan: "" };
+      received = { global: false, clan: false };
       unread = { global: false, clan: false };
       lastReadAtMs = { global: null, clan: null };
       if (resetSession) {
@@ -981,7 +1022,16 @@
       elements.toggle.setAttribute("aria-label", mode === "closed" ? "Open chat" : "Collapse chat");
       if (mode === "quick") positionQuickPanel();
     });
-    elements.tabs.forEach(tab => tab.addEventListener("click", () => selectChannel(tab.dataset.chatChannel)));
+    elements.tabs.forEach((tab,index) => {
+      tab.addEventListener("click", () => selectChannel(tab.dataset.chatChannel));
+      tab.addEventListener("keydown", event => {
+        if (!["ArrowLeft","ArrowRight","Home","End"].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? elements.tabs.length - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + elements.tabs.length) % elements.tabs.length;
+        selectChannel(elements.tabs[next].dataset.chatChannel);
+      });
+    });
     elements.translate?.addEventListener("click", () => translation?.setEnabled(!translation.status().enabled));
     elements.translationRetry?.addEventListener("click", () => translation?.retry());
     elements.form.addEventListener("submit", event => {
@@ -1015,6 +1065,8 @@
       renderMessages();
     }
     windowRef?.addEventListener?.("focus", refreshExpiry);
+    windowRef?.addEventListener?.("online", renderChannelDetails);
+    windowRef?.addEventListener?.("offline", renderChannelDetails);
     windowRef?.addEventListener?.("crownlands:server-clock-updated", refreshExpiry);
     windowRef?.addEventListener?.("crownlands:ui-layout-applied", positionQuickPanel);
     windowRef?.addEventListener?.("crownlands:hud-occupancy-changed", positionQuickPanel);

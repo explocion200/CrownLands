@@ -1,5 +1,7 @@
 # Hero Level-Up rewards — approval draft
 
+Integration update (September 18, 2026): the approved layout is integrated on `codex/approved-chat-and-reward-ui`. The review pages below remain isolated fixtures. Release validation and live deployment are tracked in [integration checks](../chat-reward-ledgers-integration.md); historical draft notes follow.
+
 Status: **DRAFT — awaiting visual approval**. No production entry, reward calculation, server action, or release configuration is changed.
 
 Branch: `codex/hero-level-up-rewards-draft`, created through `pnpm run start-feature` from synchronized `origin/main` at `309a2ad11d710163f32d45e965ad0cf336b00485`. The unfinished Chat update remains committed separately on `codex/chat-ledger-draft`.

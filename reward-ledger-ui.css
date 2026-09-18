@@ -1,0 +1,340 @@
+#levelUpRewardModal{color-scheme:light; font-family:"Segoe UI",Arial,sans-serif; color:#3e3327; background:#343d2e; --ink:#3e3327; --muted:#807052; --line:#c3ad83; --paper:#f0e5c9;}
+#levelUpRewardModal *{box-sizing:border-box;}
+#levelUpRewardModal [hidden]{display:none!important;}
+#levelUpRewardModal h1,#levelUpRewardModal h2,#levelUpRewardModal h3,#levelUpRewardModal p{margin:0;}
+#levelUpRewardModal button{font:inherit; cursor:pointer; touch-action:manipulation;}
+#levelUpRewardModal button:focus-visible{outline:2px solid #506744; outline-offset:3px;}
+#levelUpRewardModal{width:min(890px,calc(100vw - 24px)); height:min(614px,calc(100dvh - 24px)); max-width:none; max-height:none; margin:auto; padding:6px; border:2px solid #60432d; border-radius:1px; color:var(--ink); background:#764435; box-shadow:inset 0 0 0 2px #cdb17a,0 18px 60px #1b211a80; overflow:hidden;}
+#levelUpRewardModal::backdrop{background:#26302066; backdrop-filter:blur(3px);}
+#levelUpRewardModal .reward-parchment{position:relative; height:100%; display:flex; flex-direction:column; border:1px solid #d1b581; background:var(--paper); box-shadow:inset 0 0 0 2px #f9efd5;}
+#levelUpRewardModal .reward-header{display:flex; align-items:center; flex:none; gap:24px; min-height:86px; padding:15px 26px; border-bottom:1px solid #bba074; background:linear-gradient(100deg,#e8d7b0,#f5eacf 68%,#e8d6b0);}
+#levelUpRewardModal .eyebrow{color:#8a6540; font-size:9px; letter-spacing:1.8px; margin-bottom:5px;}
+#levelUpRewardModal .reward-header h1{font:30px/1.1 Georgia,serif; letter-spacing:-.3px;}
+#levelUpRewardModal .header-mark{font-size:20px; color:#a88e58; margin-left:auto;}
+#levelUpRewardModal .reward-header>p{max-width:190px; font:italic 13px/1.5 Georgia,serif; color:#806644;}
+#levelUpRewardModal .honor-panel{position:relative; display:flex; align-items:center; flex-direction:column; overflow:hidden; padding:20px 20px 14px; border-right:1px solid #c0ab80; background:radial-gradient(ellipse at 50% 30%,#f9f0d777,transparent 75%),repeating-linear-gradient(90deg,#96773c05 0 1px,transparent 1px 4px),#e4d4ae;}
+#levelUpRewardModal .honor-panel::before,#levelUpRewardModal .honor-panel::after{content:""; position:absolute; inset:10px auto 10px 9px; width:1px; background:#c4ad7d88;}
+#levelUpRewardModal .honor-panel::after{left:auto; right:9px;}
+#levelUpRewardModal .banner-rod{position:relative; z-index:2; flex:none; width:198px; height:8px; border:1px solid #6e5335; border-radius:3px; background:linear-gradient(#b7a06a,#715538); box-shadow:0 2px 3px #78603f33;}
+#levelUpRewardModal .banner-rod::before,#levelUpRewardModal .banner-rod::after{content:""; position:absolute; top:-3px; width:12px; height:12px; border-radius:50%; border:1px solid #715632; background:#bba470;}
+#levelUpRewardModal .banner-rod::before{left:-7px;}
+#levelUpRewardModal .banner-rod::after{right:-7px;}
+#levelUpRewardModal .level-banner{position:relative; width:180px; height:256px; flex:none; display:flex; align-items:center; flex-direction:column; padding-top:19px; color:#f4e4b9; background:linear-gradient(90deg,#643d31,#874c3b 17%,#814836 50%,#724031 88%,#5a352b); clip-path:polygon(0 0,100% 0,100% 83%,50% 100%,0 83%);}
+#levelUpRewardModal .level-banner::before{content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg,#ddba7c09 0 1px,transparent 1px 3px); pointer-events:none;}
+#levelUpRewardModal .banner-stitch{position:absolute; inset:7px 8px 41px; border:1px dashed #d0ae7077; border-bottom:none;}
+#levelUpRewardModal .banner-stitch::after{content:""; position:absolute; left:23px; bottom:-33px; width:109px; height:1px; background:#c6a76b66; transform:rotate(24deg);}
+#levelUpRewardModal .hero-crown{width:96px; height:59px; flex:none; filter:drop-shadow(0 2px 1px #3e241c55);}
+#levelUpRewardModal .banner-label{font:10px/1.2 Georgia,serif; letter-spacing:2.5px; margin-top:8px; color:#d7bf8b;}
+#levelUpRewardModal #levelUpHeroLevel{font:75px/.98 Georgia,serif; font-variant-numeric:lining-nums tabular-nums; letter-spacing:-3px; margin-top:6px; text-shadow:0 2px #45291e;}
+#levelUpRewardModal .banner-flourish{font-size:12px; color:#c8a569; line-height:1; margin-top:15px;}
+#levelUpRewardModal .advancement{text-align:center; width:100%; margin:auto 0 0; padding-top:14px;}
+#levelUpRewardModal .advancement-caption{color:#85704c; font-size:8px; letter-spacing:1.3px;}
+#levelUpRewardModal .level-step{display:flex; justify-content:center; align-items:center; gap:17px; margin:7px 0 4px; font:23px Georgia,serif; color:#947b56;}
+#levelUpRewardModal .level-step svg{width:32px; height:16px; color:#927647;}
+#levelUpRewardModal .level-step strong{color:#566342; font-weight:normal;}
+#levelUpRewardModal .advancement p{font:italic 12px Georgia,serif; color:#897351;}
+#levelUpRewardModal .reward-ledger{min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#b39a71 #eee2c4; padding:24px 27px 20px; background:linear-gradient(105deg,#f4ebd3,#eee0c0);}
+#levelUpRewardModal .ledger-heading{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px;}
+#levelUpRewardModal .ledger-heading h2{font:22px Georgia,serif;}
+#levelUpRewardModal .ledger-heading>span{color:#b49b6e; font:italic 16px Georgia,serif;}
+#levelUpRewardModal .reward-list{display:flex; flex-direction:column; gap:9px;}
+#levelUpRewardModal .reward-row{display:flex; align-items:center; gap:16px; min-height:82px; border:1px solid #c4ae8577; border-left:3px solid #a89b6c; background:linear-gradient(105deg,#faf2deaa,#e7d8b55c); box-shadow:inset 0 0 0 1px #fbf2d6; padding:4px 15px 4px 6px;}
+#levelUpRewardModal .reward-row.gold{border-left-color:#b29859;}
+#levelUpRewardModal .reward-row.troops{border-left-color:#9a6751;}
+#levelUpRewardModal .reward-art{display:grid; place-items:center; width:76px; height:70px; flex:none;}
+#levelUpRewardModal .reward-art img{display:block; width:88px; height:88px; object-fit:contain;}
+#levelUpRewardModal .skill .reward-art img{width:60px; height:60px;}
+#levelUpRewardModal .reward-copy{min-width:0; flex:1;}
+#levelUpRewardModal .reward-copy h3{font:13px/1.3 Georgia,serif; color:#83663e; margin-bottom:4px;}
+#levelUpRewardModal .amount{display:block; font:29px/1.05 Georgia,serif; font-variant-numeric:lining-nums tabular-nums; white-space:nowrap; letter-spacing:-.5px;}
+#levelUpRewardModal .skill .amount{color:#52623b;}
+#levelUpRewardModal .amount.long-amount{font-size:23px; letter-spacing:-.6px;}
+#levelUpRewardModal .reward-purpose{flex:none; min-width:62px; font:italic 11px/1.6 Georgia,serif; color:#917c56; border-left:1px solid #c9b48b99; padding-left:13px;}
+#levelUpRewardModal .troop-destination{display:flex; align-items:center; gap:12px; margin-top:18px; padding-top:13px; border-top:1px solid #c6b38c;}
+#levelUpRewardModal .troop-destination>svg{width:43px; height:43px; flex:none;}
+#levelUpRewardModal .troop-destination>div{min-width:0;}
+#levelUpRewardModal .troop-destination span{display:block; font-size:9px; letter-spacing:.5px; color:#8b7451; margin-bottom:4px;}
+#levelUpRewardModal .troop-destination strong{display:block; font:18px/1.15 Georgia,serif; color:#5c6444; overflow-wrap:anywhere;}
+#levelUpRewardModal .reward-footer{flex:none; min-height:78px; display:flex; align-items:center; gap:20px; justify-content:space-between; padding:12px 25px; border-top:1px solid #bba074; background:linear-gradient(#e7d7b4,#ddc9a2);}
+#levelUpRewardModal .reward-footer>p{display:flex; align-items:center; gap:8px; font:italic 12px Georgia,serif; color:#82704e;}
+#levelUpRewardModal .reward-footer>p svg{width:22px; height:22px; flex:none; color:#6d784e;}
+#levelUpRewardModal #collectLevelUpRewardsBtn{display:flex; align-items:center; justify-content:space-between; gap:20px; min-width:216px; min-height:48px; padding:8px 17px; color:#fff0ca; border:1px solid #693a2d; border-radius:2px; background:linear-gradient(#965941,#783f31); box-shadow:inset 0 0 0 2px #b9885c66,0 2px 2px #6f512133; font:18px Georgia,serif;}
+#levelUpRewardModal #collectLevelUpRewardsBtn>span{font-size:27px; line-height:.8; color:#d1b486;}
+#levelUpRewardModal #collectLevelUpRewardsBtn:hover{filter:brightness(1.07);}
+@media(max-width:900px) and (orientation:landscape){
+#levelUpRewardModal{width:calc(100vw - 16px); height:calc(100dvh - 16px); padding:4px;}
+#levelUpRewardModal .reward-header{min-height:48px; padding:6px 17px; gap:15px;}
+#levelUpRewardModal .eyebrow{font-size:7px; letter-spacing:1.4px; margin-bottom:2px;}
+#levelUpRewardModal .reward-header h1{font-size:23px;}
+#levelUpRewardModal .header-mark{font-size:16px;}
+#levelUpRewardModal .reward-header>p{font-size:11px; max-width:240px;}
+#levelUpRewardModal .honor-panel{padding:9px 12px 7px;}
+#levelUpRewardModal .banner-rod{width:142px; height:6px;}
+#levelUpRewardModal .banner-rod::before,#levelUpRewardModal .banner-rod::after{width:10px; height:10px;}
+#levelUpRewardModal .level-banner{width:132px; height:163px; padding-top:7px;}
+#levelUpRewardModal .banner-stitch{inset:5px 6px 28px;}
+#levelUpRewardModal .banner-stitch::after{width:78px; left:17px; bottom:-22px;}
+#levelUpRewardModal .hero-crown{width:70px; height:42px;}
+#levelUpRewardModal .banner-label{font-size:8px; letter-spacing:1.8px; margin-top:4px;}
+#levelUpRewardModal #levelUpHeroLevel{font-size:50px; margin-top:4px; letter-spacing:-1px;}
+#levelUpRewardModal .banner-flourish{font-size:9px; margin-top:8px;}
+#levelUpRewardModal .advancement{padding-top:4px;}
+#levelUpRewardModal .advancement-caption{font-size:7px; letter-spacing:1px;}
+#levelUpRewardModal .level-step{font-size:18px; margin:3px 0 2px; gap:11px;}
+#levelUpRewardModal .level-step svg{width:26px;}
+#levelUpRewardModal .advancement p{font-size:10px;}
+#levelUpRewardModal .reward-ledger{padding:9px 17px;}
+#levelUpRewardModal .ledger-heading{margin-bottom:6px;}
+#levelUpRewardModal .ledger-heading h2{font-size:16px;}
+#levelUpRewardModal .ledger-heading>span{font-size:12px;}
+#levelUpRewardModal .reward-list{gap:5px;}
+#levelUpRewardModal .reward-row{min-height:52px; padding:2px 10px 2px 5px; gap:11px;}
+#levelUpRewardModal .reward-art{width:52px; height:46px;}
+#levelUpRewardModal .reward-art img{width:59px; height:59px;}
+#levelUpRewardModal .skill .reward-art img{width:40px; height:40px;}
+#levelUpRewardModal .reward-copy h3{font-size:11px; margin-bottom:2px;}
+#levelUpRewardModal .amount{font-size:22px;}
+#levelUpRewardModal .amount.long-amount{font-size:21px;}
+#levelUpRewardModal .reward-purpose{font-size:10px; line-height:1.3; min-width:66px; padding-left:12px;}
+#levelUpRewardModal .troop-destination{gap:9px; margin-top:7px; padding-top:6px;}
+#levelUpRewardModal .troop-destination>svg{width:31px; height:31px;}
+#levelUpRewardModal .troop-destination span{font-size:8px; margin-bottom:2px;}
+#levelUpRewardModal .troop-destination strong{font-size:15px;}
+#levelUpRewardModal .reward-footer{min-height:53px; padding:4px 16px; gap:10px;}
+#levelUpRewardModal .reward-footer>p{font-size:10px; gap:7px;}
+#levelUpRewardModal .reward-footer>p svg{width:18px; height:18px;}
+#levelUpRewardModal #collectLevelUpRewardsBtn{min-width:186px; min-height:44px; font-size:16px; padding:7px 14px;}
+}
+@media(max-width:650px) and (orientation:landscape){
+#levelUpRewardModal .reward-header{min-height:44px; padding:5px 12px; gap:12px;}
+#levelUpRewardModal .reward-header h1{font-size:20px;}
+#levelUpRewardModal .eyebrow{font-size:6px; margin-bottom:1px;}
+#levelUpRewardModal .reward-header>p{display:none;}
+#levelUpRewardModal .header-mark{margin-left:auto;}
+#levelUpRewardModal .honor-panel{padding:7px 7px 5px;}
+#levelUpRewardModal .honor-panel::before,#levelUpRewardModal .honor-panel::after{display:none;}
+#levelUpRewardModal .banner-rod{width:100px; height:5px;}
+#levelUpRewardModal .banner-rod::before,#levelUpRewardModal .banner-rod::after{width:8px; height:8px; top:-2px;}
+#levelUpRewardModal .level-banner{width:94px; height:128px; padding-top:5px;}
+#levelUpRewardModal .hero-crown{width:55px; height:34px;}
+#levelUpRewardModal .banner-label{font-size:6px; letter-spacing:1.2px; margin-top:2px;}
+#levelUpRewardModal #levelUpHeroLevel{font-size:39px; margin-top:3px;}
+#levelUpRewardModal .banner-flourish{font-size:7px; margin-top:4px;}
+#levelUpRewardModal .banner-stitch{inset:4px 5px 22px;}
+#levelUpRewardModal .banner-stitch::after{width:54px; left:12px; bottom:-15px;}
+#levelUpRewardModal .advancement{padding-top:2px;}
+#levelUpRewardModal .advancement-caption{font-size:6px; letter-spacing:.65px;}
+#levelUpRewardModal .level-step{font-size:16px; gap:7px; margin:2px 0;}
+#levelUpRewardModal .level-step svg{width:21px;}
+#levelUpRewardModal .advancement p{font-size:9px;}
+#levelUpRewardModal .reward-ledger{padding:4px 10px;}
+#levelUpRewardModal .ledger-heading{margin-bottom:2px;}
+#levelUpRewardModal .ledger-heading h2{font-size:14px;}
+#levelUpRewardModal .reward-list{gap:2px;}
+#levelUpRewardModal .reward-row{min-height:43px; gap:7px; padding:1px 6px 1px 3px;}
+#levelUpRewardModal .reward-art{width:40px; height:38px;}
+#levelUpRewardModal .reward-art img{width:49px; height:49px;}
+#levelUpRewardModal .skill .reward-art img{width:33px; height:33px;}
+#levelUpRewardModal .reward-copy h3{font-size:9px; margin-bottom:1px;}
+#levelUpRewardModal .amount{font-size:19px;}
+#levelUpRewardModal .amount.long-amount{font-size:17px; letter-spacing:-.3px;}
+#levelUpRewardModal .reward-purpose{font-size:8px; min-width:48px; padding-left:7px;}
+#levelUpRewardModal .troop-destination{margin-top:5px; padding-top:4px; gap:6px;}
+#levelUpRewardModal .troop-destination>svg{width:25px; height:25px;}
+#levelUpRewardModal .troop-destination span{font-size:7px; letter-spacing:.2px;}
+#levelUpRewardModal .troop-destination strong{font-size:12px;}
+#levelUpRewardModal .reward-footer{min-height:51px; padding:3px 10px;}
+#levelUpRewardModal .reward-footer>p{font-size:9px; max-width:230px;}
+#levelUpRewardModal .reward-footer>p svg{width:16px; height:16px;}
+#levelUpRewardModal #collectLevelUpRewardsBtn{min-width:168px; min-height:44px; font-size:15px; padding:6px 11px;}
+}
+#modal.offline-reward-modal{color-scheme:light;font-family:"Segoe UI",Arial,sans-serif;color:#3e3327;background:#343d2e;--ink:#3e3327;--paper:#f0e5c9}
+#modal.offline-reward-modal *{box-sizing:border-box}
+#modal.offline-reward-modal [hidden]{display:none!important}
+#modal.offline-reward-modal h1,#modal.offline-reward-modal h2,#modal.offline-reward-modal h3,#modal.offline-reward-modal p{margin:0}
+#modal.offline-reward-modal button{font:inherit;cursor:pointer;touch-action:manipulation}
+#modal.offline-reward-modal button:focus-visible,#modal.offline-reward-modal [tabindex="0"]:focus-visible{outline:2px solid #506744;outline-offset:2px}
+#modal.offline-reward-modal #offlineTitle:focus{outline:none}
+#modal.offline-reward-modal{width:min(900px,calc(100vw - 24px));height:min(576px,calc(100dvh - 24px));max-width:none;max-height:none;margin:auto;padding:6px;border:2px solid #60432d;border-radius:1px;color:var(--ink);background:#764435;box-shadow:inset 0 0 0 2px #cdb17a,0 18px 60px #1b211a80;overflow:hidden}
+#modal.offline-reward-modal::backdrop{background:#26302066;backdrop-filter:blur(3px)}
+#modal.offline-reward-modal .parchment{height:100%;display:flex;flex-direction:column;border:1px solid #d1b581;background:var(--paper);box-shadow:inset 0 0 0 2px #f9efd5}
+#modal.offline-reward-modal .welcome-header{display:flex;align-items:center;justify-content:space-between;flex:none;gap:20px;min-height:95px;padding:17px 28px;border-bottom:1px solid #bba074;background:linear-gradient(100deg,#e8d7b0,#f5eacf 68%,#e8d6b0)}
+#modal.offline-reward-modal .eyebrow{color:#785735;font-size:9px;letter-spacing:1.8px;margin-bottom:5px}
+#modal.offline-reward-modal .welcome-header h1{font:34px/1.1 Georgia,serif;letter-spacing:-.3px}
+#modal.offline-reward-modal .away-time{display:flex;align-items:center;gap:12px;border-left:1px solid #bc9f6c;padding-left:25px;min-width:177px}
+#modal.offline-reward-modal .away-time svg{width:27px;height:35px;color:#8b744e;flex:none}
+#modal.offline-reward-modal .away-time span{display:block;font-size:8px;letter-spacing:1.5px;color:#796645;margin-bottom:5px}
+#modal.offline-reward-modal .away-time strong{font:23px Georgia,serif}
+#modal.offline-reward-modal .section-heading{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex:none}
+#modal.offline-reward-modal .section-heading h2{font:21px Georgia,serif}
+#modal.offline-reward-modal .folio{color:#9a8053;font:italic 16px Georgia,serif}
+#modal.offline-reward-modal .earnings{padding:25px 25px 17px;min-width:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#b39a71 #eee2c4;background:linear-gradient(110deg,#f6ecd3,#eee0bf)}
+#modal.offline-reward-modal .reward-list{display:flex;flex-direction:column;gap:13px}
+#modal.offline-reward-modal .reward-row{display:flex;align-items:center;gap:12px;min-height:111px;border:1px solid #c4ae85;border-left:3px solid #b49856;background:linear-gradient(105deg,#faf2deaa,#e7d8b555);box-shadow:inset 0 0 0 1px #fbf2d6;padding:9px 12px 9px 3px}
+#modal.offline-reward-modal .reward-row.troops{border-left-color:#956953}
+#modal.offline-reward-modal .reward-row>img{display:block;width:94px;height:94px;object-fit:contain;flex:none}
+#modal.offline-reward-modal .reward-row>div{min-width:0}
+#modal.offline-reward-modal .reward-row h3{font:15px Georgia,serif;color:#705732;margin-bottom:6px}
+#modal.offline-reward-modal .amount{display:block;font:32px/1.05 Georgia,serif;font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;letter-spacing:-.6px}
+#modal.offline-reward-modal .amount.long-amount{font-size:27px}
+#modal.offline-reward-modal .reward-row p{font-size:10px;line-height:1.4;color:#716245;margin-top:9px}
+#modal.offline-reward-modal .receipt-note{font:italic 12px/1.5 Georgia,serif;color:#7f6c49;margin-top:23px;padding-top:14px;border-top:1px solid #cab58c;display:flex;gap:10px}
+#modal.offline-reward-modal .receipt-note>span{color:#a48953}
+#modal.offline-reward-modal .holdings{display:flex;flex-direction:column;min-height:0;min-width:0;padding:25px 25px 17px;border-left:1px solid #c0ab80;background:repeating-linear-gradient(90deg,#96773c04 0 1px,transparent 1px 4px),linear-gradient(110deg,#e6d6b1,#eedfbd)}
+#modal.offline-reward-modal .city-ledger{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#af976d #e5d5b0;padding-right:4px}
+#modal.offline-reward-modal .safe-status{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:100%;padding:0 0 12px;text-align:center}
+#modal.offline-reward-modal .city-seal{width:136px;height:143px;flex:none;margin-bottom:8px}
+#modal.offline-reward-modal .safe-status>strong{font:24px Georgia,serif;color:#53613d}
+#modal.offline-reward-modal .safe-status>p{font:italic 13px/1.5 Georgia,serif;color:#776749;margin-top:8px}
+#modal.offline-reward-modal .safe-count{border-top:1px solid #b6ad82;margin-top:17px;padding:9px 27px 0;font-size:10px;letter-spacing:1px;color:#616a49}
+#modal.offline-reward-modal .loss-summary{display:flex;justify-content:space-between;align-items:center;border-top:2px solid #965d48;border-bottom:1px solid #bfa579;background:#e3cbaa80;padding:10px 13px;color:#844938}
+#modal.offline-reward-modal .loss-summary>div{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%}
+#modal.offline-reward-modal .loss-summary span{font:13px Georgia,serif}
+#modal.offline-reward-modal .loss-summary strong{font:30px Georgia,serif}
+#modal.offline-reward-modal .loss-mark{font-size:9px!important;margin-left:10px}
+#modal.offline-reward-modal #lostCities{list-style:none;padding:0;margin:0}
+#modal.offline-reward-modal #lostCities li{display:flex;flex-direction:column;gap:5px;padding:12px 5px;border-bottom:1px solid #b8a27a77}
+#modal.offline-reward-modal #lostCities strong{font:16px/1.2 Georgia,serif;overflow-wrap:anywhere}
+#modal.offline-reward-modal #lostCities span{font-size:10px;color:#746344}
+#modal.offline-reward-modal .expand-cities{min-height:44px;width:100%;margin-top:6px;border:1px solid #a99570;background:#ebdcb8;color:#604b30;font-size:12px}
+#modal.offline-reward-modal .missing-cities{font-size:11px;line-height:1.5;color:#725e41;padding:8px 5px}
+#modal.offline-reward-modal .inactivity-notice{border-top:2px solid #996247;background:#e3cbaa80;padding:15px;line-height:1.5}
+#modal.offline-reward-modal .inactivity-notice>span{font-size:10px;color:#805939}
+#modal.offline-reward-modal .inactivity-notice h3{font:22px/1.3 Georgia,serif;color:#844938;margin:7px 0 12px}
+#modal.offline-reward-modal .inactivity-notice p{font-size:12px;line-height:1.7}
+#modal.offline-reward-modal .welcome-footer{flex:none;min-height:77px;display:flex;align-items:center;gap:20px;justify-content:space-between;padding:12px 26px;border-top:1px solid #bba074;background:linear-gradient(#e7d7b4,#ddc9a2)}
+#modal.offline-reward-modal .welcome-footer>p{display:flex;align-items:center;gap:8px;font:italic 12px Georgia,serif;color:#6b5c3f}
+#modal.offline-reward-modal .welcome-footer>p svg{width:22px;height:22px;flex:none;color:#626e41}
+#modal.offline-reward-modal .welcome-footer button{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:190px;min-height:48px;padding:8px 18px;color:#fff0ca;border:1px solid #693a2d;border-radius:2px;background:linear-gradient(#965941,#783f31);box-shadow:inset 0 0 0 2px #b9885c66,0 2px 2px #6f512133;font:18px Georgia,serif}
+#modal.offline-reward-modal .welcome-footer button>span{font-size:27px;line-height:.8;color:#d1b486}
+#modal.offline-reward-modal .welcome-footer button:hover{filter:brightness(1.07)}
+@media(max-width:900px) and (orientation:landscape){
+#modal.offline-reward-modal{width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:4px}
+#modal.offline-reward-modal .welcome-header{min-height:58px;padding:7px 19px}
+#modal.offline-reward-modal .eyebrow{font-size:7px;letter-spacing:1.4px;margin-bottom:3px}
+#modal.offline-reward-modal .welcome-header h1{font-size:25px}
+#modal.offline-reward-modal .away-time{gap:9px;padding-left:18px;min-width:155px}
+#modal.offline-reward-modal .away-time svg{width:23px;height:29px}
+#modal.offline-reward-modal .away-time span{font-size:7px;letter-spacing:1px;margin-bottom:3px}
+#modal.offline-reward-modal .away-time strong{font-size:20px}
+#modal.offline-reward-modal .earnings,#modal.offline-reward-modal .holdings{padding:12px 18px 10px}
+#modal.offline-reward-modal .section-heading{gap:8px;margin-bottom:10px}
+#modal.offline-reward-modal .section-heading h2{font-size:17px}
+#modal.offline-reward-modal .folio{font-size:13px}
+#modal.offline-reward-modal .reward-list{gap:8px}
+#modal.offline-reward-modal .reward-row{min-height:79px;gap:9px;padding:4px 9px 4px 3px}
+#modal.offline-reward-modal .reward-row>img{width:68px;height:68px}
+#modal.offline-reward-modal .reward-row h3{font-size:13px;margin-bottom:3px}
+#modal.offline-reward-modal .amount{font-size:26px}
+#modal.offline-reward-modal .amount.long-amount{font-size:23px}
+#modal.offline-reward-modal .reward-row p{font-size:10px;margin-top:4px}
+#modal.offline-reward-modal .receipt-note{font-size:10px;margin-top:5px;padding-top:5px;gap:7px}
+#modal.offline-reward-modal .city-seal{width:89px;height:94px;margin-bottom:4px}
+#modal.offline-reward-modal .safe-status{padding-bottom:2px}
+#modal.offline-reward-modal .safe-status>strong{font-size:21px}
+#modal.offline-reward-modal .safe-status>p{font-size:11px;margin-top:5px}
+#modal.offline-reward-modal .safe-count{font-size:9px;padding-top:6px;margin-top:9px}
+#modal.offline-reward-modal .loss-summary{padding:5px 10px}
+#modal.offline-reward-modal .loss-summary span{font-size:12px}
+#modal.offline-reward-modal .loss-summary strong{font-size:23px}
+#modal.offline-reward-modal #lostCities li{padding:8px 4px;gap:3px}
+#modal.offline-reward-modal #lostCities strong{font-size:14px}
+#modal.offline-reward-modal #lostCities span{font-size:10px}
+#modal.offline-reward-modal .missing-cities{font-size:10px}
+#modal.offline-reward-modal .inactivity-notice{padding:10px 12px}
+#modal.offline-reward-modal .inactivity-notice h3{font-size:20px;margin:5px 0 9px}
+#modal.offline-reward-modal .inactivity-notice p{font-size:11px;line-height:1.6}
+#modal.offline-reward-modal .welcome-footer{min-height:54px;padding:4px 18px;gap:10px}
+#modal.offline-reward-modal .welcome-footer>p{font-size:11px;gap:7px}
+#modal.offline-reward-modal .welcome-footer>p svg{width:18px;height:18px}
+#modal.offline-reward-modal .welcome-footer button{min-width:177px;min-height:44px;font-size:17px;padding:7px 15px}
+}
+@media(max-width:650px) and (orientation:landscape){
+#modal.offline-reward-modal .welcome-header{min-height:49px;padding:5px 12px;gap:10px}
+#modal.offline-reward-modal .welcome-header h1{font-size:22px}
+#modal.offline-reward-modal .eyebrow{font-size:6px;letter-spacing:1px}
+#modal.offline-reward-modal .away-time{padding-left:10px;gap:6px;min-width:136px}
+#modal.offline-reward-modal .away-time svg{width:20px;height:25px}
+#modal.offline-reward-modal .away-time strong{font-size:18px}
+#modal.offline-reward-modal .earnings,#modal.offline-reward-modal .holdings{padding:8px 11px}
+#modal.offline-reward-modal .section-heading{margin-bottom:6px;gap:6px}
+#modal.offline-reward-modal .section-heading h2{font-size:14px}
+#modal.offline-reward-modal .folio{font-size:11px}
+#modal.offline-reward-modal .reward-list{gap:5px}
+#modal.offline-reward-modal .reward-row{min-height:69px;gap:5px;padding:4px 5px 4px 0}
+#modal.offline-reward-modal .reward-row>img{width:49px;height:54px}
+#modal.offline-reward-modal .reward-row h3{font-size:11px}
+#modal.offline-reward-modal .amount{font-size:22px}
+#modal.offline-reward-modal .amount.long-amount{font-size:19px;letter-spacing:-.5px}
+#modal.offline-reward-modal .reward-row p{font-size:9px;margin-top:3px}
+#modal.offline-reward-modal .receipt-note{display:none}
+#modal.offline-reward-modal .city-seal{width:74px;height:78px;margin-bottom:3px}
+#modal.offline-reward-modal .safe-status>strong{font-size:18px}
+#modal.offline-reward-modal .safe-status>p{font-size:10px;line-height:1.4;margin-top:4px}
+#modal.offline-reward-modal .safe-count{margin-top:6px;font-size:8px;padding-top:5px}
+#modal.offline-reward-modal .loss-summary{padding:5px 7px}
+#modal.offline-reward-modal .loss-summary>div{gap:8px}
+#modal.offline-reward-modal .loss-summary span{font-size:11px}
+#modal.offline-reward-modal .loss-summary strong{font-size:22px}
+#modal.offline-reward-modal .loss-mark{display:none}
+#modal.offline-reward-modal #lostCities li{padding:7px 3px}
+#modal.offline-reward-modal #lostCities strong{font-size:13px}
+#modal.offline-reward-modal #lostCities span{font-size:9px}
+#modal.offline-reward-modal .expand-cities{font-size:11px}
+#modal.offline-reward-modal .inactivity-notice{padding:8px}
+#modal.offline-reward-modal .inactivity-notice>span{font-size:9px}
+#modal.offline-reward-modal .inactivity-notice h3{font-size:18px}
+#modal.offline-reward-modal .inactivity-notice p{font-size:11px;line-height:1.5}
+#modal.offline-reward-modal .welcome-footer{min-height:51px;padding:3px 10px}
+#modal.offline-reward-modal .welcome-footer>p{font-size:10px;max-width:270px}
+#modal.offline-reward-modal .welcome-footer>p svg{width:16px;height:16px}
+#modal.offline-reward-modal .welcome-footer button{min-width:133px;font-size:16px;padding:6px 12px}
+}
+
+/* The shared modal keeps its lifecycle; the receipt supplies its own framing. */
+#modal.offline-reward-modal > .modal-card { display:block!important; width:100%; height:100%; min-height:0; max-height:none!important; padding:0!important; border:0!important; background:transparent!important; box-shadow:none!important; overflow:hidden; }
+#modal.offline-reward-modal > .modal-card > #modalTitle,
+#modal.offline-reward-modal > .modal-card > #closeModalBtn,
+#modal.offline-reward-modal > .modal-card > #modalHeaderNav { display:none!important; }
+#modal.offline-reward-modal #modalBody { height:100%; min-height:0!important; max-height:none!important; margin:0!important; padding:0!important; overflow:hidden!important; }
+#modal.offline-reward-modal .offline-lost-cities { margin:0; padding:15px; border:0!important; border-top:2px solid #996247!important; background:#e3cbaa80!important; color:#3e3327!important; display:block; }
+#modal.offline-reward-modal .offline-lost-cities > span { display:block; color:#805939!important; font-size:10px; }
+#modal.offline-reward-modal .offline-lost-cities > strong { display:block; font:22px/1.3 Georgia,serif; color:#844938!important; margin:7px 0 12px; }
+#modal.offline-reward-modal .offline-lost-cities p { color:#3e3327!important; font-size:12px; line-height:1.6; }
+
+#modal.offline-reward-modal .notice-body { flex:1; min-height:0; overflow:auto; padding:25px; }
+
+/* Keep the approved two-column receipts independent of legacy reward styling. */
+#levelUpRewardModal .reward-body { display:grid; grid-template-columns:240px minmax(0,1fr); flex:1; min-height:0; }
+#modal.offline-reward-modal .welcome-body { display:grid; grid-template-columns:1.14fr 1fr; flex:1; min-height:0; }
+#levelUpRewardModal .level-up-reward-item,
+#modal.offline-reward-modal .offline-reward-grid > div {
+  color:#3e3327!important; border-color:#c4ae85!important; border-radius:0;
+  background:linear-gradient(105deg,#faf2deaa,#e7d8b55c)!important;
+  box-shadow:inset 0 0 0 1px #fbf2d6!important;
+}
+#levelUpRewardModal .level-up-reward-item.gold,
+#modal.offline-reward-modal .offline-reward-grid > .gold { border-left-color:#b29859!important; }
+#levelUpRewardModal .level-up-reward-item.troops,
+#modal.offline-reward-modal .offline-reward-grid > .troops { border-left-color:#9a6751!important; }
+#levelUpRewardModal .level-up-reward-icon { border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
+#levelUpRewardModal .level-up-reward-icon img { filter:none; }
+#modal.offline-reward-modal .offline-reward-grid { margin:0; padding:0; background:transparent!important; }
+#levelUpRewardModal .level-up-reward-item strong,
+#modal.offline-reward-modal .offline-reward-grid strong { color:#3e3327; text-shadow:none; }
+#levelUpRewardModal .skill strong { color:#52623b; }
+#modal.offline-reward-modal .parchment { color:#3e3327!important; }
+#modal.offline-reward-modal .parchment :is(h1,h2) { color:#3e3327!important; text-shadow:none!important; }
+#modal.offline-reward-modal .reward-row > div { padding:0; border:0; border-radius:0; background:none; box-shadow:none; }
+#modal.offline-reward-modal .reward-row h3 { color:#705732!important; text-shadow:none!important; }
+#modal.offline-reward-modal .reward-row p { color:#716245!important; text-transform:none; letter-spacing:normal; }
+#modal.offline-reward-modal .welcome-footer button { color:#fff0ca!important; border:1px solid #693a2d!important; background:linear-gradient(#965941,#783f31)!important; box-shadow:inset 0 0 0 2px #b9885c66,0 2px 2px #6f512133!important; }
+#modal.offline-reward-modal .safe-status { min-height:0; height:100%; }
+#modal.offline-reward-modal #lostCities strong { white-space:normal; text-overflow:clip; }
+@media(max-width:900px) and (orientation:landscape) {
+  #levelUpRewardModal .reward-body { grid-template-columns:180px minmax(0,1fr); }
+}
+@media(max-width:650px) and (orientation:landscape) {
+  #levelUpRewardModal .reward-body { grid-template-columns:125px minmax(0,1fr); }
+  #modal.offline-reward-modal .welcome-body { grid-template-columns:1.2fr 1fr; }
+}
