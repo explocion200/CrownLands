@@ -1,0 +1,73 @@
+/* Second review: denser chat, preserving the shared window and touch controls. */
+.chat-header { min-height:64px; padding:7px 18px; gap:10px; }
+.chat-heading-icon { width:40px; height:40px; }
+.chat-header h1 { font-size:28px; line-height:1.1; margin-top:1px; }
+.chat-eyebrow { font-size:8px; letter-spacing:1.3px; }
+.channel-bar { padding-inline:18px; gap:12px; }
+.chat-tabs button { min-height:44px; min-width:100px; padding-inline:18px; font-size:17px; }
+.chat-tools { display:flex; align-items:center; gap:17px; min-width:0; }
+.chat-tools>p { color:#766143; font:12px Georgia,serif; }
+.chat-translate { display:flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:4px 11px; border:1px solid #b49d71; border-radius:2px; background:linear-gradient(#efe2c0,#ddcba4); color:#624a2e; box-shadow:inset 0 0 0 1px #f7eccd; font:14px Georgia,serif; white-space:nowrap; }
+.chat-translate svg { width:22px; height:22px; flex:none; }
+.chat-translate .translate-language { border-left:1px solid #b39a6e; padding-left:7px; color:#796342; font:11px "Segoe UI",sans-serif; max-width:140px; overflow:hidden; text-overflow:ellipsis; }
+.chat-translate[aria-pressed="true"] { color:#f9edcb; border-color:#53603a; background:linear-gradient(#6e7b51,#52623b); box-shadow:inset 0 0 0 1px #9ca57b66; }
+.chat-translate[aria-pressed="true"] .translate-language { color:#e9dfbf; border-color:#a2ac80; }
+.history-heading { display:none; }
+.chat-message-list { padding:3px 16px; }
+.chat-message { padding:7px 10px; }
+.chat-message .chat-message-line { grid-template-columns:145px minmax(0,1fr) 60px; gap:12px; align-items:start; font-size:14px; line-height:1.4; }
+.chat-message-sender { grid-column:1; grid-row:1; align-self:start; font-size:14px; min-height:24px; line-height:1.4; }
+.chat-message-text { grid-column:2; grid-row:1; }
+.chat-message time { grid-column:3; grid-row:1; align-self:start; padding-top:3px; text-align:right; }
+.chat-message.is-translated .chat-message-text { color:#415332; }
+.chat-message.is-translated .chat-message-text::after { content:" ▪"; color:#85925d; font-size:10px; }
+.history-footer { min-height:32px; padding-inline:22px; gap:8px; }
+.chat-load-older { min-height:32px; font-size:12px; }
+.history-footer>span { font-size:11px; }
+.composer-panel { padding:7px 20px; }
+.chat-composer { grid-template-columns:minmax(0,1fr) 92px; gap:10px; }
+.compose-label { margin-bottom:4px; }
+.compose-label label { font-size:12px; }
+.chat-composer textarea { height:44px; min-height:44px; max-height:44px; padding:7px 11px; font-size:13px; }
+.chat-composer .primary-btn { min-height:44px; font-size:17px; }
+.composer-footnote { margin-top:4px; font-size:9px; }
+@media(max-width:900px) and (orientation:landscape) {
+  .chat-header { min-height:50px; padding:3px 11px; gap:8px; }
+  .chat-heading-icon { width:32px; height:32px; }
+  .chat-header h1 { font-size:23px; }
+  .chat-eyebrow { display:none; }
+  .channel-bar { padding:0 12px; }
+  .chat-tabs button { min-height:44px; min-width:83px; padding-inline:14px; font-size:15px; }
+  .chat-tools>p { display:none; }
+  .chat-translate { min-height:40px; padding:4px 8px; gap:6px; font-size:13px; }
+  .chat-translate .translate-language { font-size:10px; max-width:120px; }
+  .chat-message-list { padding:2px 10px; }
+  .chat-message { padding:5px 7px; }
+  .chat-message .chat-message-line { grid-template-columns:119px minmax(0,1fr) 47px; gap:9px; font-size:12px; }
+  .chat-message-sender { font-size:13px; }
+  .history-footer { padding-inline:17px; }
+  .history-footer>span { font-size:10px; display:inline; }
+  .composer-panel { padding:5px 14px; }
+  .compose-label { margin-bottom:2px; }
+  .compose-label label { font-size:10px; }
+  .chat-composer { grid-template-columns:minmax(0,1fr) 82px; gap:8px; }
+  .chat-composer textarea { font-size:12px; }
+  .composer-footnote { font-size:8px; margin-top:3px; }
+}
+@media(max-width:650px) and (orientation:landscape) {
+  .chat-header { padding-inline:8px; gap:6px; }
+  .chat-header h1 { font-size:22px; }
+  .chat-heading-icon { width:29px; height:29px; }
+  .channel-bar { padding-inline:9px; gap:5px; }
+  .chat-tabs button { min-width:68px; padding-inline:10px; }
+  .chat-translate { gap:5px; font-size:12px; padding-inline:6px; }
+  .chat-translate svg { width:19px; height:19px; }
+  .chat-translate .translate-language { max-width:95px; padding-left:5px; font-size:10px; }
+  .chat-message-list { padding-inline:7px; }
+  .chat-message { padding:4px 5px; }
+  .chat-message .chat-message-line { grid-template-columns:88px minmax(0,1fr) 45px; gap:6px; }
+  .chat-message-sender { font-size:12px; }
+  .composer-panel { padding-inline:11px; }
+  .history-footer { padding-inline:13px; }
+  .history-footer>span { font-size:9px; }
+}
