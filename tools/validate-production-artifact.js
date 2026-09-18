@@ -167,7 +167,13 @@ if (kingdomLedgersBytes > 64 * 1024) throw new Error("Kingdom ledgers presentati
 const holdingDetailsFiles = ["camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css"];
 const holdingDetailsBytes = holdingDetailsFiles.reduce((total, file) => total + fs.statSync(path.join(dist, file)).size, 0);
 if (holdingDetailsBytes > 100 * 1024) throw new Error("Camp and Clan Tower presentation exceeds its 100 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116) * 1024;
+// Google translation adds the supplied attribution badges, client adapter,
+// status text and provider disclosure. Bound that increment to 16 KiB; the
+// translation engine plus both badges must independently stay below 14 KiB.
+const translationBytes = ["chat-translation.js", "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google attribution exceed their 14 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
