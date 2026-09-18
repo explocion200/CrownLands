@@ -21707,20 +21707,23 @@ function mergeOfflineRewardsSummaries(current = null, next = null) {
   }
   if (!next) return current;
   const lostCitiesById = new Map();
-  [...(current.lostCities || []), ...(next.lostCities || [])].forEach(city => {
-    const key = String(city?.id || city?.name || "").trim();
-    if (key) lostCitiesById.set(key, city);
+  let unlistedLostCityCount = 0;
+  [current, next].forEach(summary => {
+    const cities = summary.lostCities || [];
+    // Preserve counts beyond the server's name limit without counting known overlaps twice.
+    unlistedLostCityCount += Math.max(0, Math.floor(Number(summary.lostCityCount) || 0) - cities.length);
+    cities.forEach(city => {
+      const id = String(city?.id || city?.name || "").trim();
+      const regionId = String(city?.regionId || "").trim().toLowerCase();
+      if (id) lostCitiesById.set(`${regionId}:${id}`, city);
+    });
   });
   return {
     goldGained: Math.max(0, Number(current.goldGained) || 0) + Math.max(0, Number(next.goldGained) || 0),
     troopsGained: Math.max(0, Number(current.troopsGained) || 0) + Math.max(0, Number(next.troopsGained) || 0),
     elapsed: Math.max(0, Number(current.elapsed) || 0) + Math.max(0, Number(next.elapsed) || 0),
     lostCities: [...lostCitiesById.values()],
-    lostCityCount: Math.max(
-      lostCitiesById.size,
-      Math.max((current.lostCities || []).length, Math.floor(Number(current.lostCityCount) || 0))
-        + Math.max((next.lostCities || []).length, Math.floor(Number(next.lostCityCount) || 0))
-    ),
+    lostCityCount: lostCitiesById.size + unlistedLostCityCount,
   };
 }
 

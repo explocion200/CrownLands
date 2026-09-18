@@ -1,0 +1,3 @@
+@import url("../map-selector-atlas/review.css");
+.review-controls select { max-width:280px; }
+.review-controls button { white-space:nowrap; }
