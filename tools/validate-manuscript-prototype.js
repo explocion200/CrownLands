@@ -116,7 +116,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Skills adds the same bounded 32 KiB stylesheet allowance.
 // Full Clan presentation uses the same bounded 100 KiB allowance as the asset validator.
 // Camp/Clan Tower entry wiring adds the same bounded 16 KiB allowance.
-assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32 + 100 + 40 + 16) * 1024, "The service-worker installation cache exceeds 4052 KiB.");
+// Chat and reward ledgers use the same bounded 128 KiB shell allowance.
+assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128) * 1024, "The service-worker installation cache exceeds 4180 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

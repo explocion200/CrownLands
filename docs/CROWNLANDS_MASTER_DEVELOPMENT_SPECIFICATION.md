@@ -870,6 +870,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 - Clan messages have no automatic age-based expiry and remain until explicitly deleted through the existing authorized deletion/moderation flow. Shared message TTL is disabled, and the coordinated release migration removes legacy Clan expiry fields while preserving message contents and access controls. The same migration removes Global messages already older than 24 hours. These confirmed rules replace the previous shared seven-day policy; deployment evidence belongs in the coordinated release record.
 - Clan Chat visibility follows clan membership and authorization.
 - Chat must not allow client-side impersonation or unauthorized clan-channel access.
+- Confirmed chat presentation update: Translate targets the device/browser preferred language, remembers the player's on/off preference on that device, and applies to incoming messages while enabled. Originals remain available, including during loading or failure; failure offers a manual retry. Reading older messages keeps its position and shows a New messages jump instead of scrolling automatically. **Status:** `IN DEVELOPMENT`. The draft exercises the client behavior with local translation fixtures. A live translation provider, backend integration, and deployment remain pending; this is not a live translation feature.
 
 ### Social identity
 
@@ -1212,6 +1213,12 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 - Keep the existing coin pouch, coins, cord and wax seal, and the existing helmet, banner, spears and sealed orders. Restyle the pair with sepia ink outlines, painted shading, muted earthy colors and transparent backgrounds to match the illustrated maps.
 - Use the approved pair everywhere those shared raster images appear, including map pickups, reward feedback, Hero Level-Up, Daily Login, shop boosts and the rewards guide. Existing generic vector resource symbols remain separate assets.
 - Preserve pickup click areas, collection rules, reward quantities and timing. Artwork approval authorizes integration; merge and deployment require separate authorization and verification. Approved sources and reference audit: [shared pickup artwork](./visual-qa/offline-earnings/art-notes.md).
+
+### Approved Chat and reward ledgers — September 18, 2026
+
+- Global/Clan Chat, Hero Level-Up, and Welcome Back use the approved parchment, burgundy and olive layouts on desktop and mobile landscape. Chat keeps its compact map preview, readable history, unread jump, channel controls and fixed composer. Hero rewards retain the level banner and exact reward totals; Welcome Back retains time away, exact production, city losses and inactivity notices, with a fixed Collect action and independently scrolling contents.
+- These are presentation changes. Chat authorization, retention, cooldowns and moderation, Hero rewards, offline production and authoritative receipts remain unchanged. Collect acknowledges rewards already credited and does not award them again. Both reward screens use the approved shared Gold and troop artwork.
+- **Status:** `IN DEVELOPMENT` until release verification. Live translation remains dependent on a separately approved provider; the sample phrase dictionary is confined to the development draft, and the production Translate control stays hidden without a live adapter.
 
 ### Needs verification
 

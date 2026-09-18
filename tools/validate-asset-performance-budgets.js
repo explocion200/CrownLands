@@ -69,7 +69,14 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The Skills ledger adds one stylesheet bounded at 30 KiB to the offline shell.
 // The complete Clan ledger adds at most 84 KiB CSS and 16 KiB client markup.
 // Settings adds at most 32 KiB of scoped CSS and 8 KiB of emblems and markup.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16) * 1024;
+// Approved Chat and reward ledgers add under 116 KiB of shell files, including
+// the existing Chat controller now explicitly available in the offline cache.
+// Reuse current artwork and allow one bounded 128 KiB installation step.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128) * 1024;
+assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
+  "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
+  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 116 * 1024,
+"Chat and reward ledger shell files exceed their 116 KiB budget.");
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills"));
 assert.equal(skillEmblemFiles.length, 8, "Skills must ship exactly eight approved emblems.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);

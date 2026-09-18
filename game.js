@@ -7138,50 +7138,9 @@ function renderLevelUpReward(reward) {
   levelUpRewardSubtitle.textContent = multipleLevels
     ? `Your hero advanced from level ${formatLevelUpRewardAmount(reward.fromLevel)} to ${formatLevelUpRewardAmount(reward.toLevel)}.`
     : "Your hero grew stronger. These rewards are yours.";
-  levelUpRewardBody.innerHTML = `
-    <div class="level-up-step" aria-label="Level ${formatLevelUpRewardAmount(reward.fromLevel)} to level ${formatLevelUpRewardAmount(reward.toLevel)}">
-      <span>Level ${formatLevelUpRewardAmount(reward.fromLevel)}</span>
-      <strong aria-hidden="true">${renderCrownlandsIcon("forward")}</strong>
-      <span class="current">Level ${formatLevelUpRewardAmount(reward.toLevel)}</span>
-    </div>
-    <section class="level-up-reward-grid" aria-label="Level-up rewards">
-      <article class="level-up-reward-item skill">
-        <span class="level-up-reward-icon" aria-hidden="true">${renderCrownlandsIcon("achievements")}</span>
-        <div>
-          <small>Skill ${reward.skillPoints === 1 ? "Point" : "Points"}</small>
-          <strong>+${formatLevelUpRewardAmount(reward.skillPoints)}</strong>
-          <p>Ready to spend in your hero profile.</p>
-        </div>
-      </article>
-      <article class="level-up-reward-item gold">
-        <span class="level-up-reward-icon" aria-hidden="true">
-          <img src="${GOLD_PICKUP_ICON_SRC}" alt="" decoding="async" />
-        </span>
-        <div>
-          <small>Gold</small>
-          <strong>+${formatLevelUpRewardAmount(reward.gold)}</strong>
-          <p>Added to your kingdom treasury.</p>
-        </div>
-      </article>
-      <article class="level-up-reward-item troops">
-        <span class="level-up-reward-icon" aria-hidden="true">
-          <img src="${TROOP_PICKUP_ICON_SRC}" alt="" decoding="async" />
-        </span>
-        <div>
-          <small>Troops</small>
-          <strong>+${formatLevelUpRewardAmount(reward.troops)}</strong>
-          <p>Rallied directly to ${escapeHtml(reward.cityName)}.</p>
-        </div>
-      </article>
-    </section>
-    <div class="level-up-troop-destination">
-          <img src="${TROOP_PICKUP_ICON_SRC}" alt="" decoding="async" aria-hidden="true" />
-      <span>
-        <small>Troop destination</small>
-        <strong>${escapeHtml(reward.cityName)}</strong>
-      </span>
-    </div>
-  `;
+  levelUpRewardBody.innerHTML = window.CrownlandsRewardLedger.renderHero(reward, {
+    gold: GOLD_PICKUP_ICON_SRC, troops: TROOP_PICKUP_ICON_SRC,
+  });
 }
 
 function deferWhileScreenRewardAnimationRuns(callback) {
@@ -14906,12 +14865,9 @@ function showGameServerInactivityNotice(notice = null) {
   modalTitle.textContent = notice.type === "world-slot-reset"
     ? "Realm slot reset"
     : "Inactive holdings surrendered";
-  modalBody.innerHTML = `
-    <div class="offline-reward-panel">
-      ${getGameServerInactivityNoticeMarkup(notice)}
-      <button id="inactivityNoticeCloseBtn" class="offline-collect-btn" type="button">Continue</button>
-    </div>
-  `;
+  modalBody.innerHTML = window.CrownlandsRewardLedger.renderNotice(
+    modalTitle.textContent, getGameServerInactivityNoticeMarkup(notice)
+  );
   modalBody.querySelector("#inactivityNoticeCloseBtn")?.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
   if (pendingGameServerInactivityNotice === notice) pendingGameServerInactivityNotice = null;
@@ -21762,25 +21718,22 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
   const totalLostCities = Math.max(lostList.length, Math.floor(Number(lostCityCount) || 0));
   const inactivityNotice = pendingGameServerInactivityNotice;
   if (inactivityNotice) pendingGameServerInactivityNotice = null;
-  const visibleLostCities = lostList.slice(0, 8);
-  const lostSummary = totalLostCities > 0
-    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(totalLostCities)}</strong><ul>${visibleLostCities.map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${totalLostCities > visibleLostCities.length ? `<small>+${formatNumber(totalLostCities - visibleLostCities.length)} more</small>` : ""}</section>`
-    : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
   modal.className = "modal offline-reward-modal";
   modalTitle.textContent = "Welcome back";
-  modalBody.innerHTML = `
-    <div class="offline-reward-panel">
-      <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
-      <div class="offline-reward-grid">
-        <div><span>Gold collected</span><strong>${formatOfflineRewardAmount(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatOfflineRewardAmount(troopsGained)}</strong><small>Remaining in cities you still own</small></div>
-      </div>
-      ${getGameServerInactivityNoticeMarkup(inactivityNotice)}
-      ${lostSummary}
-      <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
-    </div>
-  `;
-  modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", () => {
+  modalBody.innerHTML = window.CrownlandsRewardLedger.renderOffline({ goldGained, troopsGained }, {
+    gold: GOLD_PICKUP_ICON_SRC, troops: TROOP_PICKUP_ICON_SRC,
+  }, {
+    elapsedText: formatDuration(elapsed),
+    lostCities: lostList.map(city => ({ ...city, regionLabel: getRegionLabel(city.regionId || getCityRegionId(city.id)) })),
+    totalLost: totalLostCities,
+    inactivityMarkup: getGameServerInactivityNoticeMarkup(inactivityNotice),
+  });
+  window.CrownlandsRewardLedger.bindOffline(modalBody);
+  let collected = false;
+  modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", event => {
+    if (collected) return;
+    collected = true;
+    event.currentTarget.disabled = true;
     const rewardCards = modalBody.querySelectorAll(".offline-reward-grid > div");
     const collectedAt = Date.now();
     const goldSourceAnchor = captureAnimationAnchor(rewardCards[0]);
