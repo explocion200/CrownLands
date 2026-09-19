@@ -175,6 +175,41 @@ async function main() {
       });
       await wait(50);
       assert.equal(await evaluate(()=>document.getElementById("chatMessageInput").value),"This text must survive rejection");
+      await evaluate(()=>{
+        window.qaTranslationCalls=[];window.qaTranslationLimited=false;
+        window.qaChatApi.translateChatMessages=async payload=>{
+          window.qaTranslationCalls.push(payload);
+          if(window.qaTranslationLimited)throw Object.assign(new Error("Monthly limit"),{details:{reason:"translation-monthly-limit"}});
+          return {provider:"google",translations:payload.messageIds.map(id=>({id,text:'Hola <img src=x onerror="throw new Error(1)"> '+id}))};
+        };
+        window.qaChat.setTranslationLanguage("es");
+        document.getElementById("chatTranslateBtn").click();
+      });
+      await wait(200);
+      const translated=await evaluate(()=>({
+        visible:!document.getElementById("chatTranslateBtn").hidden,
+        attribution:[...document.querySelectorAll("#chatDialog .chat-google-attribution")].every(node=>!node.hidden&&node.querySelector("img").naturalWidth>0),
+        translated:document.getElementById("chatMessageList").textContent.includes("Hola <img"),
+        injectedImages:document.querySelectorAll("#chatMessageList img[src=x]").length,
+        calls:window.qaTranslationCalls,
+        layout:window.ledgerLayout(document.getElementById("chatDialog"),document.getElementById("chatSendBtn")),
+      }));
+      assert(translated.visible&&translated.attribution&&translated.translated&&!translated.injectedImages);
+      assert(translated.calls.length>0&&translated.calls.every(call=>call.targetLanguage==="es"&&!Object.hasOwn(call,"text")));
+      assert(translated.layout.footerVisible&&!translated.layout.horizontalOverflow,JSON.stringify({viewport,translated}));
+      await screenshot("chat-google-translation-"+viewport.name);
+      await evaluate(()=>window.qaChatListeners.global.onMessages([{id:"translate-incoming",senderUid:"other",senderDisplayName:"Other",text:"Fresh message",createdAtMs:Date.now(),status:"visible"}],{}));
+      await wait(80);
+      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Hola <img src=x onerror=\"throw new Error(1)\"> translate-incoming")),"Incoming messages must translate automatically.");
+      await evaluate(()=>document.getElementById("chatTranslateBtn").click());
+      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Fresh message")),"Show originals restores message text.");
+      await evaluate(()=>{window.qaTranslationLimited=true;document.getElementById("chatTranslateBtn").click();});
+      await wait(80);
+      assert(await evaluate(()=>document.getElementById("chatTranslationStatus").textContent.includes("Monthly translation allowance used")),"Explain quota failures while preserving originals.");
+      await evaluate(()=>{window.qaTranslationLimited=false;document.getElementById("chatTranslationRetry").click();});
+      await wait(80);
+      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Hola <img")),"Retry must recover translations.");
+      await evaluate(()=>document.getElementById("chatTranslateBtn").click());
       results.push({screen:"chat",viewport:viewport.name,layout:{...chat,text:undefined},navigation,unread});
       await evaluate(()=>window.qaChat.dispose({resetSession:true}));
       console.log("Passed reward and Chat integration at "+viewport.width+"x"+viewport.height+".");

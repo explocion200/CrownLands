@@ -427,6 +427,7 @@
       if (!available) {
         if (elements.translationStatus) elements.translationStatus.hidden = true;
         if (elements.translationRetry) elements.translationRetry.hidden = true;
+        documentRef.querySelectorAll(".chat-google-attribution").forEach(node => { node.hidden = true; });
         return;
       }
       const state = translation.status();
@@ -434,7 +435,8 @@
       try { language = new Intl.DisplayNames([windowRef?.navigator?.language || "en"], { type: "language" }).of(language); } catch (_error) { /* The language code is still readable. */ }
       elements.translate.setAttribute("aria-pressed", String(state.enabled));
       elements.translate.setAttribute("aria-label", state.enabled ? `Show original messages. Translation language: ${language}` : `Translate messages to ${language}`);
-      elements.translate.querySelector(".translate-label").textContent = state.enabled ? "Show originals" : "Translate";
+      elements.translate.querySelector(".translate-label").textContent = state.enabled ? "Show originals" : "Translate with Google";
+      elements.translate.title = "Translate chat to your device language with Google Translate. Message text is sent to Google; player names are not sent separately.";
       elements.translate.querySelector(".translate-language").textContent = language;
       elements.translate.disabled = !uid || (channel === "clan" && !clanId);
       const showStatus = state.enabled && !elements.translate.disabled && messages[channel].length > 0;
@@ -442,8 +444,10 @@
         elements.translationStatus.hidden = !showStatus;
         elements.translationStatus.dataset.state = state.failed ? "error" : state.pending ? "pending" : "ready";
         elements.translationStatus.textContent = state.pending ? "Translating… Originals stay visible."
-          : state.failed ? "Translation unavailable. Showing originals." : `${language} · Translation on`;
+          : state.monthlyLimit ? "Monthly translation allowance used. Showing originals."
+          : state.failed ? "Translation unavailable. Showing originals." : `${language} · Automatic translation`;
       }
+      documentRef.querySelectorAll(".chat-google-attribution").forEach(node => { node.hidden = !state.enabled; });
       if (elements.translationRetry) elements.translationRetry.hidden = !showStatus || !state.failed;
       const historyNote = documentRef.getElementById("historyNote");
       if (historyNote) historyNote.hidden = showStatus;
