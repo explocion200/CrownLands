@@ -42,6 +42,6 @@ Focused checks passed before PR preparation: full repository lint; combat policy
 - Backend authority: `functions/index.js`, `functions/combat-authorization.js`.
 - Private persistence and query access: `firestore.rules`, `firestore.indexes.json`, `firebaseClient.js`.
 - Player feedback and timers: `game.js`, `combat-timers-ui.js`, `instant-economy-actions.js`, `index.html`, `styles.css`.
-- Release packaging: `tools/build-production-client.js`, `tools/validate-production-artifact.js`.
+- Release packaging and source fingerprint: `tools/build-production-client.js`, `tools/validate-production-artifact.js`, `tools/generate-release-manifest.js`.
 - Validation: `functions/package.json`, `functions/test/run-emulator-gates.js`, `functions/test/emulator-combat-authorization.js`, `functions/test/emulator-rally-lifecycle.js`, `tools/validate-combat-authorization.js`, `tools/validate-combat-timers-browser.js`.
 - Confirmed design and release notes: the Master Development Specification and this document.
