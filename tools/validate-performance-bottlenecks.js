@@ -7,6 +7,15 @@ const gamePath = path.resolve(__dirname, "..", "game.js");
 const source = fs.readFileSync(gamePath, "utf8");
 const routeWorkerSource = fs.readFileSync(path.resolve(__dirname, "..", "route-worker.js"), "utf8");
 const serverSource = fs.readFileSync(path.resolve(__dirname, "..", "functions", "index.js"), "utf8");
+const indexConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "firestore.indexes.json"), "utf8"));
+// The emulator does not enforce production collection-group indexes. Keep the
+// expiry queries used by the scheduled cleanup jobs deployable in production.
+for (const collectionGroup of ["dailyMissions", "bulkOrderRequests", "cityUpgradeRequests"]) {
+  assert.ok(indexConfig.fieldOverrides.some(field => field.collectionGroup === collectionGroup
+    && field.fieldPath === "expiresAtMs"
+    && field.indexes.some(index => index.queryScope === "COLLECTION_GROUP" && index.order === "ASCENDING")),
+  `Missing production expiry index for ${collectionGroup}.`);
+}
 
 function extractFunction(name) {
   const start = source.indexOf(`function ${name}(`);

@@ -2995,11 +2995,13 @@ function getCityRegionId(cityOrId) {
   }
   const cityId = String(cityOrId || "");
   const base = getPlayableBaseCityById(cityId);
+  if (base) return normalizeRegionId(base.regionId || base.startPool);
   const dynamicNewLandsCity = getDynamicNewLandsCityIdentity(cityId);
+  if (dynamicNewLandsCity) return normalizeRegionId(dynamicNewLandsCity.regionId);
   const prefixedRegionId = [...WORLD_REGION_IDS]
     .sort((left, right) => right.length - left.length)
     .find(regionId => cityId.startsWith(`${regionId}_`));
-  return normalizeRegionId(base?.regionId || base?.startPool || dynamicNewLandsCity?.regionId || prefixedRegionId);
+  return normalizeRegionId(prefixedRegionId);
 }
 
 function getKnownCityId(cityId, canonicalRegionId = "") {
@@ -15926,6 +15928,26 @@ async function requestAuthoritativeMainCityRecovery(api, mainCityId = "", timeou
     timeoutMs,
     "Main city verification is taking too long."
   );
+  const recoveredRegionId = String(result?.currentUser?.mainRegionId || "");
+  if (
+    CORE_EXPANSION_TOPOLOGY_ACTIVE
+    && result?.ok === true
+    && result?.requiresStartingCityClaim === false
+    && ["valid", "repaired"].includes(result?.mainCityRecoveryStatus)
+    && getRegionIds().includes(recoveredRegionId)
+    && isMainCityRegionEligible(recoveredRegionId)
+    && result?.currentUser?.mainIslandId === getOnlineIslandId(recoveredRegionId)
+  ) {
+    // Core city IDs do not encode their region. A cold login (or a recovery
+    // onto another map) must materialize the authoritative map before checking
+    // exact city membership; loading its JSON alone does not fill the city index.
+    await withTimeout(
+      ensureRegionDefinitionLoaded(recoveredRegionId),
+      timeoutMs,
+      "Your main city's map is taking too long to load."
+    );
+    getPlayableBaseCitiesByRegion(recoveredRegionId);
+  }
   return {
     result,
     recovery: resolveMainCityRecoveryResult(result),
