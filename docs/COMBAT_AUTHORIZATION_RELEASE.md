@@ -24,6 +24,8 @@ The private available-record query has a composite index for reset generation, w
 
 No production data migration or backfill is required. Only captures after backend deployment create permissions. Existing active Peace Shields are not removed by this update. Previously dispatched attacks do not receive retroactive cooldowns.
 
+The timer renderer and stylesheet total approximately 5.4 KiB and have an independent 8 KiB production cap. Following the existing per-feature budget accounting, the complete timer/subscription/action-feedback increment has a 16 KiB allowance. Existing `game.js`, global stylesheet, login preload and service-worker cache limits remain unchanged.
+
 ## Validation
 
 - `tools/validate-combat-authorization.js`: offensive-only classification including clan-held objectives, exact expiration boundaries, reset scope, monotonic concurrent deadlines, exact-city/realm/actor permissions, consumed records, changing ownership, capturer-specific locks, trusted arrival snapshots and UI countdowns.
