@@ -1,6 +1,6 @@
 # Active Boosts & Protection / individual chat translation draft
 
-Status: local approval draft on `codex/boosts-and-chat-draft`. No live changes, PR, merge or deployment.
+Status: approved and integrated into the actual game on `codex/approved-ui-completion`. The original review fixture remains here as design evidence. Required release checks and production verification are tracked in [the completion audit](../../APPROVED_UI_COMPLETION_AUDIT.md); preview presence alone does not establish deployment.
 
 Open `index.html?viewport=desktop&view=boosts`. Review controls switch between Boosts & protection, Map & mini chat, and Full chat, at 1440×900, 844×390 and 568×320. Portrait is outside the agreed game scope.
 
@@ -23,7 +23,7 @@ The user's September 19 request intentionally changes the previously confirmed c
 
 Boost copy reflects the existing personal Bag effects only. The deferred officer/leader Clan Tower Veil mechanics are not implemented or redefined by this draft. Swift March and Recall remain per-order consumables, not global timed effects.
 
-Only this folder changes. Existing chat drafts, runtime CSS/controllers, Functions, release files and the production artifact are untouched. Shared assets and chat styles are referenced read-only. Production packaging explicitly enumerates runtime files, excluding this folder.
+The original draft changed only this folder. Its approved design is now implemented in the runtime boost module, Chat controller/styles, and the existing Google callable. Production packaging includes those runtime files and excludes this synthetic fixture. The original branch is retained as history, not as an outstanding implementation.
 
 ## Review actions
 

@@ -23131,6 +23131,7 @@ function renderHudStatusPanelsUncached() {
 
 function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
   if (!badge || !timeElement) return;
+  badge.dataset.expiresAtMs = String(expiresAtMs || 0);
   const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
   if (!remainingSeconds) {
     badge.hidden = true;
@@ -23156,13 +23157,7 @@ function updateShieldStatusBadge() {
 }
 
 function updateActiveItemEffectsStackDensity() {
-  if (!activeItemEffectsStack) return;
-  const activeCount = Array.from(activeItemEffectsStack.querySelectorAll(".effect-status-badge"))
-    .filter(badge => !badge.hidden)
-    .length;
-  activeItemEffectsStack.dataset.activeCount = String(activeCount);
-  activeItemEffectsStack.classList.toggle("compact", activeCount > 2);
-  activeItemEffectsStack.classList.toggle("dense", activeCount > 3);
+  window.CrownlandsBoosts?.update();
 }
 
 function getCityOwnerFlag(city) {
@@ -36871,7 +36866,7 @@ function applyBattleReportTargetFlags(reports = []) {
 }
 
 function renderBattleReportLocateButton(report, extraClass = "") {
-  const cityId = getResolvableReportCityId(report?.cityId);
+  const cityId = getResolvableReportCityId(report?.cityId, report?.regionId);
   const icon = extraClass === "row-action" ? renderBattleReportLedgerIcon("map") : renderCrownlandsIcon("locate");
   if (!cityId) {
     return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>${icon}</button>`;
@@ -36882,33 +36877,47 @@ function renderBattleReportLocateButton(report, extraClass = "") {
   return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${icon}</button>`;
 }
 
-function getResolvableReportCityId(cityId) {
+function getResolvableReportCityId(cityId, regionId = "") {
   const value = String(cityId || "");
   if (!value) return "";
-  return getKnownCityId(value) || (getArmyTargetById(value) ? value : "");
+  // Core city IDs need their recorded region when its definition is not cached.
+  return getKnownCityId(value, regionId) || (getArmyTargetById(value) ? value : "");
 }
 
 async function focusBattleReportTarget(cityId, regionId = "") {
-  const targetCityId = getResolvableReportCityId(cityId);
+  const targetCityId = getResolvableReportCityId(cityId, regionId);
   if (!targetCityId) {
     showToast("That target city is no longer available.");
     return;
   }
   const loadedCity = getArmyTargetById(targetCityId);
   const targetRegionId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetCityId));
+  try {
+    if (targetRegionId !== getActiveMapRegionId()) {
+      const switched = await switchOnlineIsland(targetRegionId);
+      if (!switched || targetRegionId !== getActiveMapRegionId()) {
+        showToast("Could not open that report location. Try again when the map is ready.");
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn("Could not open report location", error);
+    showToast("Could not open that report location. Try again after reconnecting.");
+    return;
+  }
+  const target = getArmyTargetById(targetCityId);
+  if (!target || getCityRegionId(target) !== targetRegionId) {
+    showToast("That report target is no longer available on this map.");
+    return;
+  }
   if (modal.open) modal.close();
   scoutNearbySourceId = null;
   regroupSourceId = null;
   sendMode = false;
   selectedTargetId = null;
-  if (targetRegionId !== getActiveMapRegionId()) {
-    const switched = await switchOnlineIsland(targetRegionId);
-    if (!switched || targetRegionId !== getActiveMapRegionId()) return;
-  }
   if (getCampTargetById(targetCityId)) selectRewardCamp(targetCityId);
   else selectCity(targetCityId);
-  const target = getArmyTargetById(targetCityId);
-  showToast(target ? `Viewing ${target.name}` : "Viewing report target");
+  showToast(`Viewing ${target.name}`);
 }
 
 function bindBattleReportJumpButtons() {

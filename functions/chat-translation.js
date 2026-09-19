@@ -12,8 +12,9 @@ function cacheKey(path, text, language) {
 }
 
 function validatePayload(data, fail) {
-  const { channel, messageIds, targetLanguage } = data;
+  const { channel, messageIds, targetLanguage, operation = "translate" } = data;
   if (!["global", "clan"].includes(channel)
+    || !["translate", "detect"].includes(operation)
     || !Array.isArray(messageIds) || !messageIds.length || messageIds.length > MAX_BATCH
     || messageIds.some(id => typeof id !== "string" || !/^[a-f0-9]{40}$/.test(id))
     || new Set(messageIds).size !== messageIds.length
@@ -22,17 +23,37 @@ function validatePayload(data, fail) {
     || ["text", "texts", "contents", "senderUid"].some(key => Object.hasOwn(data, key))) {
     throw fail("invalid-argument", "Choose a chat channel, message IDs and translation language.");
   }
-  return { channel, messageIds, targetLanguage, clanId: data.clanId || "" };
+  return { channel, messageIds, targetLanguage, operation, clanId: data.clanId || "" };
 }
 
 // Google credentials stay on the backend. The provider receives message text only,
 // with no player names, account IDs, clan IDs or client-supplied text.
 function createGoogleProvider({ projectId, credential, fetchImpl = fetch, emulator = false }) {
-  return async (contents, targetLanguage) => {
+  return async (contents, targetLanguage, operation = "translate") => {
     if (emulator) throw new Error("External translation is disabled in emulators.");
     if (!/^[a-z0-9-]+$/.test(projectId || "")) throw new Error("Translation project is unavailable.");
     const token = await credential.getAccessToken();
     const parent = `projects/${projectId}/locations/global`;
+    if (operation === "detect") {
+      const results = [];
+      const signal = globalThis.AbortSignal.timeout(8000);
+      // Detection accepts one text per request; bound concurrency and share one deadline.
+      for (let offset = 0; offset < contents.length; offset += 4) {
+        results.push(...await Promise.all(contents.slice(offset, offset + 4).map(async content => {
+          const response = await fetchImpl(`https://translation.googleapis.com/v3/${parent}:detectLanguage`, {
+            method: "POST", signal,
+            headers: { authorization: `Bearer ${token.access_token}`, "content-type": "application/json", "x-goog-user-project": projectId },
+            body: JSON.stringify({ content, mimeType: "text/plain" }),
+          });
+          if (!response.ok) throw new Error(`Language detection HTTP ${response.status}.`);
+          const result = await response.json();
+          const best = result.languages?.[0];
+          if (!best || typeof best.languageCode !== "string" || !Number.isFinite(best.confidence)) throw new Error("Incomplete language detection.");
+          return JSON.stringify({ language: best.languageCode, confidence: best.confidence });
+        })));
+      }
+      return results;
+    }
     const response = await fetchImpl(`https://translation.googleapis.com/v3/${parent}:translateText`, {
       method: "POST",
       headers: { authorization: `Bearer ${token.access_token}`, "content-type": "application/json", "x-goog-user-project": projectId },
@@ -62,7 +83,7 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
         || typeof message.text !== "string" || !message.text.trim() || Array.from(message.text).length > 250) {
         throw fail("not-found", "One or more messages are no longer available. Refresh chat.");
       }
-      const key = cacheKey(refs[index].path, message.text, payload.targetLanguage);
+      const key = cacheKey(refs[index].path, message.text, payload.operation === "detect" ? "language-detection-v1" : payload.targetLanguage);
       return { id: snapshot.id, source: message.text, cacheRef: db.doc(`chatTranslationCache/${key}`),
         expiresAtMs: payload.channel === "global" ? Math.min(current + CACHE_LIFETIME_MS, message.createdAtMs + CACHE_LIFETIME_MS) : current + CACHE_LIFETIME_MS };
     });
@@ -112,7 +133,7 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
     if (batch.pending.length) {
       let translated;
       try {
-        translated = await provider(batch.pending.map(item => item.source), payload.targetLanguage);
+        translated = await provider(batch.pending.map(item => item.source), payload.targetLanguage, payload.operation);
         if (!Array.isArray(translated) || translated.length !== batch.pending.length
           || translated.some(text => typeof text !== "string" || !text.trim() || text.length > 3000)) throw new Error("Incomplete translation.");
       } catch (_error) {
@@ -141,6 +162,12 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
         throw fail("not-found", "These messages changed. Refresh chat before translating.");
       }
     });
+    if (payload.operation === "detect") {
+      return { detections: batch.messages.map(({ id, text }) => {
+        const detected = JSON.parse(text);
+        return { id, language: String(detected.language || "").slice(0, 16), confidence: Number(detected.confidence) || 0 };
+      }), provider: "google" };
+    }
     return { translations: batch.messages.map(({ id, text }) => ({ id, text })), targetLanguage: payload.targetLanguage, provider: "google" };
   };
 }

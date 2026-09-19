@@ -13,7 +13,7 @@ const required = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
-  "combat-timers-ui.js", "combat-timers-ui.css",
+  "combat-timers-ui.js", "combat-timers-ui.css", "active-boosts-ui.js", "active-boosts-ui.css",
   "shop-ui.js", "shop-ui.css",
   "achievements-ui.js", "achievements-ui.css",
   "player-profile-ui.js", "player-profile-ui.css",
@@ -180,7 +180,12 @@ if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google a
 const combatTimerBytes = ["combat-timers-ui.js", "combat-timers-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (combatTimerBytes > 8 * 1024) throw new Error("Combat timer presentation exceeds its 8 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16) * 1024;
+// Approved Boosts uses existing artwork: at most 16 KiB of new presentation,
+// and 32 KiB total including individual chat controls and navigation wiring.
+const activeBoostBytes = ["active-boosts-ui.js", "active-boosts-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (activeBoostBytes > 16 * 1024) throw new Error("Active Boosts presentation exceeds its 16 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
