@@ -2074,6 +2074,10 @@ let realmAnnouncementExitTimer = 0;
 let loginPresentationGeneration = 0;
 let loginPresentationSequence = null;
 let onlineGlobalStatsUnsubscribe = null;
+let onlineCombatAuthorizationUnsubscribe = null;
+let onlineCombatAuthorization = { uid: "", shieldExpiresAtMs: 0, retaliation: [] };
+let combatTimersInterval = 0;
+let activeRetaliationId = "";
 let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
 let onlineCrownCitadelSnapshot = null;
@@ -4274,6 +4278,7 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
   const payload = {
     clanId: state?.clanId,
     rallyId: armyId,
+    retaliationId: !rally && kind === "attack" ? getTargetRetaliation(to)?.id || "" : "",
     armyId,
     sourceType,
     targetType,
@@ -11733,6 +11738,7 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.lastCityRelinquishedAtMs = normalizeTimestampMs(patch.lastCityRelinquishedAtMs);
     changed = true;
   }
+  applyCombatCooldownProfile(patch);
   const mainCityRepair = normalizeSingleMainCityAssignment(nextMainCityId || state.mainCityId);
   changed = mainCityRepair.changed || changed;
   if (changed) {
@@ -11838,6 +11844,10 @@ function applyServerCityUpdates(cityUpdates = [], options = {}) {
     }
     if (update.relinquishedAtMs !== undefined) {
       city.relinquishedAtMs = timestampToMs(update.relinquishedAtMs);
+      changed = true;
+    }
+    if (update.retaliationAbandonLocks !== undefined) {
+      city.retaliationAbandonLocks = { ...update.retaliationAbandonLocks };
       changed = true;
     }
     if (update.relocatedAtMs !== undefined) {
@@ -12378,6 +12388,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.gear = normalizeCommonGearState(profile.gear);
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
+  applyCombatCooldownProfile(profile);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
   if (profile.dailyLoginReward && typeof profile.dailyLoginReward === "object") {
     applyDailyLoginRewardProfileState(profile.dailyLoginReward, { autoOpen: false });
@@ -16525,6 +16536,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
         ? current.lastCapturedAtMs ?? online.lastCapturedAtMs ?? current.lastCapturedAt ?? online.lastCapturedAt
         : online.lastCapturedAtMs ?? current.lastCapturedAtMs ?? online.lastCapturedAt ?? current.lastCapturedAt),
       deedAwardedAtMs: normalizeTimestampMs(online.deedAwardedAtMs ?? current.deedAwardedAtMs),
+      retaliationAbandonLocks: { ...(online.retaliationAbandonLocks || {}) },
       deedCampId: String(online.deedCampId ?? current.deedCampId ?? ""),
       neutralClaimSource: String(online.neutralClaimSource ?? current.neutralClaimSource ?? ""),
       isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : foreignMainCityFlag),
@@ -17432,6 +17444,7 @@ function toOnlineArmyMovement(mission) {
     defenderKingPower: normalizePowerValue(mission.defenderKingPower),
     attackProtection: normalizeAttackProtectionSnapshot(mission.attackProtection),
     acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
+    retaliationId: String(mission.retaliationId || ""),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
     protectionHandling: mission.protectionHandling === "auto_cap" ? "auto_cap" : "reconfirm",
     useSwiftMarchOrder: Boolean(mission.useSwiftMarchOrder),
@@ -18470,6 +18483,56 @@ function clearOnlineCoreExpansionWatcher() {
 function clearOnlineGlobalStatsWatcher() {
   if (typeof onlineGlobalStatsUnsubscribe === "function") onlineGlobalStatsUnsubscribe();
   onlineGlobalStatsUnsubscribe = null;
+  if (typeof onlineCombatAuthorizationUnsubscribe === "function") onlineCombatAuthorizationUnsubscribe();
+  onlineCombatAuthorizationUnsubscribe = null;
+  if (combatTimersInterval) window.clearInterval(combatTimersInterval);
+  combatTimersInterval = 0;
+  if (onlineCombatAuthorization.uid !== getCurrentOnlineUid()) {
+    onlineCombatAuthorization = { uid: "", shieldExpiresAtMs: 0, retaliation: [] };
+  }
+  renderCombatTimers();
+}
+
+function renderCombatTimers() {
+  const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
+  const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
+  ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs);
+  ui?.renderFeedback(modalBody, { records: ownSnapshot.retaliation, activeId: activeRetaliationId,
+    getCityRecord: id => getTargetRetaliation(cityById(id)), nowMs });
+}
+
+function getTargetRetaliation(target) {
+  if (!target || onlineCombatAuthorization.uid !== getCurrentOnlineUid()) return null;
+  return globalThis.CrownlandsCombatTimersUI?.activeRecords(onlineCombatAuthorization.retaliation, getClanQuestServerNowMs())
+    .find(record => record.cityId === target.id && record.regionId === getCityRegionId(target)) || null;
+}
+
+function getOffensiveShieldCooldownRemaining() {
+  return onlineCombatAuthorization.uid === getCurrentOnlineUid()
+    ? Math.max(0, Number(onlineCombatAuthorization.shieldExpiresAtMs) - getClanQuestServerNowMs()) : 0;
+}
+
+function applyCombatCooldownProfile(profile) {
+  if (profile?.peaceShieldCooldownResetGeneration !== RESET_GENERATION) return;
+  onlineCombatAuthorization = {
+    ...onlineCombatAuthorization, uid: getCurrentOnlineUid(),
+    shieldExpiresAtMs: Math.max(0, Number(profile.peaceShieldCooldownExpiresAtMs) || 0),
+  };
+  renderCombatTimers();
+}
+
+function subscribeOnlineCombatAuthorization() {
+  const api = getOnlineApi();
+  if (onlineCombatAuthorizationUnsubscribe || !api?.subscribeCombatAuthorization || !api?.isSignedIn?.()) return;
+  onlineCombatAuthorizationUnsubscribe = api.subscribeCombatAuthorization({
+    onState: snapshot => { onlineCombatAuthorization = snapshot; renderCombatTimers(); },
+    onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineGlobalStatsWatcher();
+      console.warn("Could not synchronize combat timers", error);
+    },
+  });
+  if (!combatTimersInterval) combatTimersInterval = window.setInterval(renderCombatTimers, 1000);
 }
 
 function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
@@ -18595,6 +18658,7 @@ function subscribeOnlineCoreExpansion() {
 
 function subscribeOnlineGlobalStats() {
   const api = getOnlineApi();
+  subscribeOnlineCombatAuthorization();
   if (typeof onlineGlobalStatsUnsubscribe === "function") return;
   if (!state || !api?.subscribePlayerGlobalStats || !api?.isSignedIn?.()) return;
   onlineGlobalStatsUnsubscribe = api.subscribePlayerGlobalStats({
@@ -22146,7 +22210,8 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   const acceptedAttackProtection = kind === "attack"
     ? normalizeAttackProtectionSnapshot(options.attackProtection)
     : null;
-  const attackProtection = kind === "attack"
+  const retaliationId = kind === "attack" && owner === "player" ? String(options.retaliationId || "") : "";
+  const attackProtection = kind === "attack" && !retaliationId
     ? acceptedAttackProtection
       ? acceptedAttackProtection.mode === "normal" ? null : acceptedAttackProtection
       : createAttackProtectionSnapshot(source, target, requestedSend, owner)
@@ -22189,6 +22254,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     attackPowerPerTroop: kind === "scout" ? 0 : getAttackPower(1, owner),
     attackProtection,
     acceptedAttackProtection,
+    retaliationId,
     demoAttack: null,
     protectionHandling: options.protectionHandling === "auto_cap" ? "auto_cap" : "reconfirm",
     useSwiftMarchOrder,
@@ -29614,6 +29680,7 @@ async function loadAttackProtectionPreview(source, target) {
       targetRegionId: getCityRegionId(target),
       targetType: isRewardCampTarget(target) ? "camp" : "city",
       requestedTroops: Math.max(1, Math.floor(Number(source.troops) || 1)),
+      retaliationId: activeRetaliationId,
     });
     return {
       attackProtection: normalizeAttackProtectionSnapshot(result?.attackProtection),
@@ -29779,6 +29846,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
   const needsCombatForecast = orderKind === "attack";
+  activeRetaliationId = needsCombatForecast ? getTargetRetaliation(target)?.id || "" : "";
   const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
@@ -29894,6 +29962,7 @@ function isOrderRouteReady(route, troops = selectedTroopAmount) {
 function getTroopSliderSendLimit(source, target) {
   const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
   if (availableTroops < 1 || !target) return 0;
+  if (activeTroopOrderKind === "attack" && activeRetaliationId) return availableTroops;
   if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce" || isRallyTroopOrderKind()) return availableTroops;
   const previewMatches = activeTroopSliderRoute?.sourceId === source.id
     && activeTroopSliderRoute?.targetId === target.id;
@@ -30000,6 +30069,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       </div>
 
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
+      ${activeRetaliationId && orderKind === "attack" ? '<div class="troop-retaliation-note" data-retaliation-note></div>' : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
       ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${CLAN_RALLY_MIN_PARTICIPANTS}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
@@ -30079,6 +30149,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
 }
 
 function updateTroopSliderModal(source, target, route) {
+  renderCombatTimers();
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
   const legalSendLimit = getTroopSliderSendLimit(source, target);
@@ -30235,7 +30306,7 @@ function updateTroopSliderModal(source, target, route) {
 
   const report = getScoutReportForTarget(target);
   if (!report) {
-    const attackProtection = normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
+    const attackProtection = activeRetaliationId ? null : normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
       || createAttackProtectionSnapshot(source, target, selectedTroopAmount, "player");
     const protectionNotice = getAttackProtectionNotice(attackProtection);
     const notice = modalBody.querySelector("#troopSliderActionNotice");
@@ -30481,11 +30552,16 @@ async function confirmTroopSliderOrder() {
     renderAll();
     return;
   }
+  if (activeRetaliationId && !globalThis.CrownlandsCombatTimersUI.activeRecords(onlineCombatAuthorization.retaliation, getClanQuestServerNowMs()).some(record => record.id === activeRetaliationId)) {
+    rejectGameAction("Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.");
+    return;
+  }
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
     protectionHandling: "auto_cap",
     kind: activeTroopOrderKind,
+    retaliationId: activeRetaliationId,
     useSwiftMarchOrder: activeSwiftMarchOrderSelected && canUseSwiftMarchOrderOnLaunch(source, target),
   });
   if (!launched) return;
@@ -30563,12 +30639,18 @@ function getRelinquishDestinationPreview(city, { loadedOnly = false } = {}) {
   return candidates[0]?.city || null;
 }
 
+function getCityRetaliationAbandonMessage(city) {
+  const expiry = Number(city?.retaliationAbandonLocks?.[getCurrentOnlineUid()]) || 0;
+  const remainingMs = expiry - getClanQuestServerNowMs();
+  return remainingMs > 0 ? `City Cannot Be Abandoned: the capture retaliation period ends in ${formatDuration(Math.ceil(remainingMs / 1000))}.` : "";
+}
+
 function renderRelinquishCityAction(city) {
   if (!canRelinquishCity(city)) return "";
   const policy = getCityRelinquishPolicy();
   const cooldownText = getCityRelinquishCooldownText();
   return `
-    <div class="relinquish-city-action-panel">
+    <div class="relinquish-city-action-panel" data-relinquish-city-id="${escapeHtml(city.id)}">
       <div class="relinquish-city-action-copy">
         <strong>Relinquish Castle</strong>
         <small>March stationed troops to your nearest friendly city and make this city neutral.</small>
@@ -30594,6 +30676,15 @@ function updateCityRelinquishCountdown() {
   const resetCopy = modalBody.querySelector("[data-relinquish-city-reset]");
   if (!button || !resetCopy) {
     stopCityRelinquishCountdown();
+    return;
+  }
+  const city = cityById(button.closest("[data-relinquish-city-id]")?.dataset.relinquishCityId);
+  const retaliationMessage = getCityRetaliationAbandonMessage(city);
+  if (retaliationMessage) {
+    button.disabled = true;
+    button.setAttribute("aria-disabled", "true");
+    button.textContent = "Retaliation lock";
+    resetCopy.textContent = retaliationMessage;
     return;
   }
   const policy = getCityRelinquishPolicy();
@@ -30632,7 +30723,7 @@ function showRelinquishCityConfirm(cityId) {
     showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
     return;
   }
-  const unavailableMessage = getCityRelinquishUnavailableMessage();
+  const unavailableMessage = getCityRetaliationAbandonMessage(city) || getCityRelinquishUnavailableMessage();
   if (unavailableMessage) {
     showToast(unavailableMessage);
     updateCityRelinquishCountdown();
@@ -30731,7 +30822,7 @@ async function relinquishCity(cityId) {
     showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
     return false;
   }
-  const unavailableMessage = getCityRelinquishUnavailableMessage();
+  const unavailableMessage = getCityRetaliationAbandonMessage(city) || getCityRelinquishUnavailableMessage();
   if (unavailableMessage) {
     showToast(unavailableMessage);
     return false;
@@ -31510,6 +31601,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     const overviewMarkup = `
       <div class="city-stat-panel modal-city-stats">
+        ${getTargetRetaliation(city) ? `<div class="stat-wide troop-retaliation-note" data-retaliation-city="${escapeHtml(city.id)}">Retaliation Available</div>` : ""}
         ${clanAlly
           ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally</strong>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}<small>Scout and Attack are disabled. You may send clan reinforcements.</small></div>`
           : clanIdentity.clanId
@@ -31539,6 +31631,7 @@ function showCityInfoModal(cityId) {
     if (!stronghold) {
       modalTitle.textContent = city.name;
       bindCityDetailsPanel(city);
+      renderCombatTimers();
     }
     if (stronghold) {
       bindStrongholdInfoTabs(city);
@@ -34772,6 +34865,9 @@ function formatShieldReturnSummary(summary = null) {
 
 async function useServerInventoryItem(item, quantity = 1) {
   if (!item || !usesServerEconomyAuthority()) return false;
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID && getOffensiveShieldCooldownRemaining() > 0) {
+    throw new Error(`Peace Shield unavailable: you recently attacked another player. Available in ${formatDuration(Math.ceil(getOffensiveShieldCooldownRemaining() / 1000))}.`);
+  }
   const result = await getOnlineApi().activateInventoryItem({ itemId: item.id, quantity });
   applyServerEconomyResult(result);
   settleConfirmedInventoryItem(item, result, quantity);

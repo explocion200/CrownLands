@@ -495,6 +495,18 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Failed attacks and lost defenses award reduced XP according to current configuration. Exact current award calculation is **NEEDS VERIFICATION**.
 - Field Medics returns a configured share of losses to the Main City. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 
+### Offensive shield cooldown and city retaliation
+
+Confirmed September 19, 2026. **Status:** `IN DEVELOPMENT` until the authorized release is independently verified.
+
+- A successful player-initiated PvP attack dispatch starts a 15-minute Peace Shield activation cooldown. Each later qualifying dispatch restarts it. This includes player-held Camps, Strongholds, the Crown Citadel, and clan-held Towers. Every contributing ruler receives the cooldown when a combined PvP Rally actually launches; forming/joining a Rally does not start it. Existing active-shield removal/retention rules remain unchanged.
+- Incoming attacks, defending, casualties, losing cities, scouting, friendly transfers/reinforcements, automatic return combat, and attacks on neutral/NPC objectives do not start the cooldown. The server persists the expiration and rejects activation without consuming an item while it is active.
+- Existing regular-city King Power protection uses Protected Assault from a 2× power ratio and Protected Raid from 2.5×. If a ruler protected by those rules captures a stronger ruler's regular city, the displaced ruler receives one independent 15-minute launch authorization for that exact immutable city and map. This lifts only that city's King Power attack limits for the authorized march. It does not remove anyone's global protection, enable ordinary-city Rallies, grant scouting rights, or bypass Main City, Peace Shield, clan, route, troop, or anti-farming rules.
+- The right survives changes of ownership. A launch before expiration remains authorized throughout travel and arrival, even after the window ends. Successful march creation and consumption of that capture's right are atomic; failed or concurrent duplicate attempts cannot consume an additional right.
+- The capturing ruler cannot relinquish that city until the original capture window ends, even if retaliation has already launched. The lock applies only while that capturer owns the city. Another owner does not inherit it; their own qualifying capture may create a separate lock.
+- Server records restore the timers across refresh, login, reconnect, device, and map changes. Directly beneath Gold, a compact Shield Cooldown row precedes Retaliation. One opportunity shows its countdown; several show an expandable count with every city, map/ID, and independent countdown. Expired/used opportunities disappear. Desktop and mobile landscape are supported. Attack, Bag, and relinquishment provide contextual feedback.
+- Implementation, schema, and validation evidence are recorded in [Combat authorization release notes](./COMBAT_AUTHORIZATION_RELEASE.md).
+
 ### Scouting and reports
 
 - The Battle Reports list uses the approved parchment ledger with medieval Attack, Defense, Scout, and Realm Activity emblems. Defensive losses use a red shield; successful defenses retain olive. Desktop and mobile landscape preserve all report fields in five compact columns beneath fixed filters, with a vertically scrolling list and Realm Activity proclamations. Existing outcomes, report/scout retention, navigation, reconnection/Retry, and account read watermark remain unchanged. New-this-visit highlights are presentation only. Scout detail presentation is specified separately below. Confirmed September 14, 2026; approval does not establish deployment status.

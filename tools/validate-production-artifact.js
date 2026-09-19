@@ -13,6 +13,7 @@ const required = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
+  "combat-timers-ui.js", "combat-timers-ui.css",
   "shop-ui.js", "shop-ui.css",
   "achievements-ui.js", "achievements-ui.css",
   "player-profile-ui.js", "player-profile-ui.css",
@@ -173,7 +174,13 @@ if (holdingDetailsBytes > 100 * 1024) throw new Error("Camp and Clan Tower prese
 const translationBytes = ["chat-translation.js", "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google attribution exceed their 14 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16) * 1024;
+// Combat timers add a small renderer/stylesheet and authoritative subscription/
+// action feedback wiring. Bound that feature increment to 16 KiB, with an
+// independent 8 KiB cap for the new presentation files.
+const combatTimerBytes = ["combat-timers-ui.js", "combat-timers-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (combatTimerBytes > 8 * 1024) throw new Error("Combat timer presentation exceeds its 8 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

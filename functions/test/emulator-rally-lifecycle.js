@@ -547,6 +547,10 @@ async function main() {
     armyId: `${rallyId}_attack`,
   });
   assert(blockedLaunch.body.error, "A Rally launched before every participant arrived and became Ready.");
+  for (const actor of [rallyCreator, ally]) {
+    const actorProfile = (await db.doc(`players/${actor.uid}`).get()).data() || {};
+    assert(!actorProfile.peaceShieldCooldownExpiresAtMs, "Forming/joining a Rally or a blocked launch started a cooldown.");
+  }
   const beforeReady = (await db.doc(`clans/${clanId}/rallies/${rallyId}`).get()).data() || {};
   assert(beforeReady.status === "forming", "The blocked launch changed the forming Rally state.");
   assert(
@@ -592,6 +596,11 @@ async function main() {
     armyId: attackArmyId,
   });
   assert(launched.movement?.troops === 150_000_000, "The launched Rally did not combine both Ready contributions.");
+  for (const actor of [rallyCreator, ally]) {
+    const actorProfile = (await db.doc(`players/${actor.uid}`).get()).data() || {};
+    assert(actorProfile.peaceShieldCooldownExpiresAtMs === launched.movement.launchedAtMs + 900_000, "A PvP Rally contributor did not receive the launch-time shield cooldown.");
+    assert(actorProfile.itemEffects.shieldExpiresAtMs > launched.movement.launchedAtMs, "Rally dispatch changed existing active-shield retention.");
+  }
   assert(
     launched.movement?.participantUids?.includes(rallyCreator.uid)
       && launched.movement?.participantUids?.includes(ally.uid),

@@ -57,6 +57,7 @@ const REALM_TOPOLOGY = require("./realmTopology.js");
 const CORE_EXPANSION = require("./coreExpansionTopology.js");
 const HOLDING_TOWERS = require("./holding-towers.js");
 const ANTI_HANDOFF = require("./anti-handoff-policy.js");
+const COMBAT_AUTHORIZATION = require("./combat-authorization.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -5859,6 +5860,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
       ? "auto_cap"
       : "reconfirm",
     useSwiftMarchOrder: raw.useSwiftMarchOrder === true || data.useSwiftMarchOrder === true,
+    retaliationId: safeString(raw.retaliationId || data.retaliationId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"),
   };
 }
 
@@ -7674,6 +7676,62 @@ function shouldDeactivatePeaceShieldForAttack(target = {}, targetType = "city", 
   if (targetType === "camp" || isStronghold(target)) return true;
   const targetOwnerUid = getOwnerUid(target);
   return Boolean(targetOwnerUid && targetOwnerUid !== attackerUid);
+}
+
+function combatAuthorizationRealm() {
+  return { worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() };
+}
+
+function offensiveShieldCooldownPatch(profile, uid, target, kind, nowMs) {
+  return COMBAT_AUTHORIZATION.isOffensivePvp({
+    kind, attackerUid: uid, attackerClanId: safeString(profile?.clanId, 128),
+    targetOwnerUid: getOwnerUid(target), targetClanId: safeString(target?.clanId || target?.ownerClanId, 128),
+  }) ? COMBAT_AUTHORIZATION.shieldCooldownPatch(profile, RESET_GENERATION, nowMs) : {};
+}
+
+async function readRetaliationAuthorization(transaction, { uid, recordId, target, targetRef, targetType, kind, nowMs }) {
+  if (!recordId) return null;
+  if (kind !== "attack" || targetType !== "city" || isStronghold(target) || !getOwnerUid(target) || getOwnerUid(target) === uid) {
+    throw new HttpsError("failed-precondition", "Retaliation is only available for an attack on the exact captured regular city.");
+  }
+  const ref = db.doc(`players/${uid}/retaliationWindows/${recordId}`);
+  const snap = await transaction.get(ref);
+  const record = snap.exists ? snap.data() : null;
+  const message = COMBAT_AUTHORIZATION.retaliationError(record, {
+    uid, cityId: target.id, regionId: target.regionId, ...combatAuthorizationRealm(), nowMs,
+  });
+  if (message || record.cityPath !== targetRef.path) {
+    throw new HttpsError("failed-precondition", message || "Retaliation is not valid for this city.", {
+      reason: "retaliation-unavailable", retaliationId: recordId,
+    });
+  }
+  return { ref, record: { ...record, id: recordId } };
+}
+
+function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
+  if (!authorization) return;
+  if (Date.now() >= authorization.record.expiresAtMs) {
+    throw new HttpsError("failed-precondition", "Retaliation Expired: the 15-minute launch window for this city has ended.");
+  }
+  const used = { status: "used", usedArmyId: movement.id, usedAtMs: nowMs };
+  // Both writes belong to the launch transaction: a failed dispatch consumes nothing.
+  transaction.set(authorization.ref, { ...used, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  movement.retaliationAuthorization = { ...authorization.record, ...used };
+}
+
+function recordCaptureRetaliation(transaction, { armyId, target, targetRef, originalOwnerUid, capturerUid, highPower, lowPower, nowMs }) {
+  if (!originalOwnerUid || originalOwnerUid === capturerUid || isStronghold(target)
+    || getAttackProtectionMode(Math.max(0, highPower) / Math.max(1, lowPower)) === "normal") return null;
+  const id = crypto.createHash("sha256").update(`${RESET_GENERATION}:${armyId}:${targetRef.path}`).digest("hex");
+  const record = {
+    id, ...combatAuthorizationRealm(), originalOwnerUid, capturerUid,
+    cityId: target.id, regionId: target.regionId, cityPath: targetRef.path,
+    cityName: safeString(target.name || target.id, 80),
+    capturedAtMs: nowMs, expiresAtMs: nowMs + COMBAT_AUTHORIZATION.COMBAT_WINDOW_MS,
+    status: "available", usedAtMs: 0, usedArmyId: "", sourceArmyId: armyId,
+  };
+  transaction.set(db.doc(`players/${originalOwnerUid}/retaliationWindows/${id}`), record);
+  return COMBAT_AUTHORIZATION.captureAbandonLocks(target, capturerUid, nowMs);
 }
 
 function getCurrentDateKey(now = new Date()) {
@@ -18814,6 +18872,12 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
     }
 
     const source = sourceEntry.city;
+    const retaliationLockExpiresAtMs = COMBAT_AUTHORIZATION.abandonLockExpiresAt(source, uid, nowMs);
+    if (retaliationLockExpiresAtMs) {
+      throw new HttpsError("failed-precondition",
+        `City Cannot Be Abandoned: the capture retaliation period ends in ${formatCooldownMs(retaliationLockExpiresAtMs - nowMs)}.`,
+        { reason: "retaliation-abandon-lock", expiresAtMs: retaliationLockExpiresAtMs });
+    }
     const profileMainCityId = safeString(economy.profileAfter.mainCityId || economy.profileBefore.mainCityId, 96);
     if (!isStronghold(source) && (source.isMainCity || source.id === profileMainCityId)) {
       throw new HttpsError("failed-precondition", "You cannot relinquish your main city.");
@@ -19100,6 +19164,12 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
     const extraCityUpdates = [];
     const shieldReturnSummary = { outgoing: 0, incoming: 0, total: 0 };
     if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
+      const cooldownExpiresAtMs = COMBAT_AUTHORIZATION.shieldCooldownExpiresAt(economy.profileAfter, RESET_GENERATION);
+      if (cooldownExpiresAtMs > nowMs) {
+        throw new HttpsError("failed-precondition",
+          `Peace Shield unavailable: you recently attacked another player. Available in ${formatCooldownMs(cooldownExpiresAtMs - nowMs)}.`,
+          { reason: "offensive-shield-cooldown", expiresAtMs: cooldownExpiresAtMs });
+      }
       const currentExpiresAtMs = timestampToMs(itemEffects.shieldExpiresAtMs);
       if (currentExpiresAtMs > nowMs) {
         throw new HttpsError("failed-precondition", `${item.label} is already active.`);
@@ -22939,7 +23009,6 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   const uid = requireAuth(request);
   await ensureTravelNetworkContext();
   await requireCurrentClanActorProfile(uid);
-  const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
   if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally to launch.");
@@ -22957,6 +23026,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   }
 
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
+    const nowMs = Date.now();
     const [rallySnap, callerProfileSnap, clanSnap, callerMemberSnap] = await Promise.all([
       transaction.get(rallyRef),
       transaction.get(db.doc(`players/${uid}`)),
@@ -23349,6 +23419,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
     }
     attackPackages.forEach(participant => {
+      const cooldown = offensiveShieldCooldownPatch(participantProfiles.get(participant.uid)?.profile, participant.uid, target, "attack", nowMs);
+      if (cooldown.peaceShieldCooldownExpiresAtMs) {
+        transaction.set(db.doc(`players/${participant.uid}`), cooldown, { merge: true });
+      }
       enqueueDailyMissionEvent(transaction, {
         uid: participant.uid,
         eventId: `rally_launch_${movement.id}_${participant.uid}`,
@@ -23482,7 +23556,11 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       globalStats: defenderGlobalStats,
       city: target,
     }));
-    const attackProtection = createServerAttackProtectionSnapshot({
+    const retaliation = await readRetaliationAuthorization(transaction, {
+      uid, recordId: safeString(data.retaliationId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"),
+      target, targetRef, targetType, kind: "attack", nowMs: Date.now(),
+    });
+    const attackProtection = retaliation ? null : createServerAttackProtectionSnapshot({
       sourceTroops,
       target,
       targetType,
@@ -23503,6 +23581,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       ok: true,
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       attackProtection: protectionPreview,
+      retaliation: retaliation?.record || null,
       combatForecast: createCombatForecast({
         attackerProfile,
         target,
@@ -25557,6 +25636,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
     const launchRateRef = armyLaunchRateLimitRef(uid);
 
     return runTransactionWithInfrastructureRetry(async transaction => {
+      const nowMs = Date.now();
       const [sourceSnap, targetSnap, garrisonSnap, armySnap, profileSnap, launchRateSnap] = await Promise.all([
         transaction.get(sourceRef),
         transaction.get(targetRef),
@@ -25624,7 +25704,39 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
       const availableTroops = sourceType === "tower"
         ? Math.max(0, Math.floor(safeNumber(garrisonSnap?.data()?.troops, 0)))
         : Math.max(0, Math.floor(safeNumber(source.troops, 0)));
-      const troops = kind === "scout" ? 1 : clampInt(order.requestedTroops || order.troops, 1, Math.max(1, availableTroops));
+      const requestedTroops = kind === "scout" ? 1 : clampInt(order.requestedTroops || order.troops, 1, Math.max(1, availableTroops));
+      const retaliation = await readRetaliationAuthorization(transaction, {
+        uid, recordId: order.retaliationId, target, targetRef, targetType, kind, nowMs,
+      });
+      if (retaliation && (order.requestedTroops || order.troops) > availableTroops) {
+        throw new HttpsError("failed-precondition", "Not enough troops in your Tower garrison. Your retaliation opportunity has not been used.");
+      }
+      const defenderProfileSnap = kind === "attack" && targetOwnerUid && targetOwnerUid !== uid
+        ? await transaction.get(db.doc(`players/${targetOwnerUid}`)) : null;
+      const defenderProfile = defenderProfileSnap?.data() || {};
+      if (kind === "attack") {
+        if (clanId && defenderProfile.clanId === clanId) throw new HttpsError("failed-precondition", "You cannot attack a clan ally.");
+        if (targetType === "city" && isProtectedMainCity(target, uid, getMainCityProtectionProfile(defenderProfile))) {
+          throw new HttpsError("failed-precondition", "Main cities cannot be attacked.");
+        }
+        if (targetType === "city" && isCityShielded(target, uid, nowMs)) {
+          throw new HttpsError("failed-precondition", "That city is protected by a Royal Peace Shield.");
+        }
+      }
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const defenseContext = kind === "attack"
+        ? await getAuthoritativeDefensePackages(transaction, { target, targetType, targetRegionId: order.targetRegionId, ownerProfile: defenderProfile, nowMs }) : null;
+      const breachSnap = kind === "attack" && targetType === "city" && targetOwnerUid && !isStronghold(target)
+        ? await transaction.get(protectedAssaultBreachRef(targetRef, uid)) : null;
+      const attackProtection = kind === "attack" && !retaliation ? createServerAttackProtectionSnapshot({
+        sourceTroops: availableTroops, target, targetType, requestedTroops, attackerUid: uid,
+        attackerKingPower: stats?.kingPower || 0,
+        defenderKingPower: getPlayerPowerSnapshot({ profile: defenderProfile, city: target }),
+        attackerProfile: profileAfter, defenderProfile,
+        defenderBonuses: defenseContext.ownerBonuses, defensePower: defenseContext.packages.totalDefense,
+        assaultStage: isCurrentProtectedAssaultBreach(breachSnap?.data(), { attackerUid: uid, defenderUid: targetOwnerUid, city: target }) ? "capture" : "breach",
+      }) : null;
+      const troops = attackProtection?.effectiveTroops || requestedTroops;
       if (!availableTroops || troops > availableTroops) {
         throw new HttpsError("failed-precondition", "Not enough troops at the selected Holding Tower origin.");
       }
@@ -25671,7 +25783,6 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
           antiFarmPolicy: antiFarmContext.policy,
         };
       }
-      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
       const movement = {
         id: order.id,
         worldId: ONLINE_WORLD_ID,
@@ -25685,6 +25796,8 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         kind,
         launchKind: kind,
         holdingTowerMovement: true,
+        attackProtection,
+        attackCombatSnapshot: kind === "attack" ? createAttackCombatSnapshot(troops, profileAfter) : null,
         sourceType,
         sourceTowerId: sourceType === "tower" ? source.id : "",
         targetType,
@@ -25714,7 +25827,8 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         createdByServer: true,
         serverAuthorityVersion: 3,
       };
-      let profilePatch = {};
+      commitRetaliationLaunch(transaction, retaliation, movement, nowMs);
+      let profilePatch = offensiveShieldCooldownPatch(profileAfter, uid, target, kind, nowMs);
       const cityPatches = [];
       const launchCityPatches = [];
       const launchCityUpdates = [];
@@ -25801,6 +25915,8 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         cityUpdates: launchCityUpdates,
         currentUser: {
           towerGarrisonTroops: profilePatch.towerGarrisonTroops,
+          peaceShieldCooldownExpiresAtMs: COMBAT_AUTHORIZATION.shieldCooldownExpiresAt({ ...profileAfter, ...profilePatch }, RESET_GENERATION),
+          peaceShieldCooldownResetGeneration: RESET_GENERATION,
           itemEffects: profilePatch.itemEffects || economy.itemEffects,
           globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
         },
@@ -25863,6 +25979,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
   const launchRateRef = armyLaunchRateLimitRef(uid);
 
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
+    const nowMs = Date.now();
     const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap, launchRateSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
@@ -26065,7 +26182,13 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
         ownerGlobalStats: defenderGlobalStatsData,
       })
       : null;
-    const attackProtection = resolvedKind === "attack"
+    const retaliation = await readRetaliationAuthorization(transaction, {
+      uid, recordId: order.retaliationId, target, targetRef, targetType: order.targetType, kind: resolvedKind, nowMs,
+    });
+    if (retaliation && (order.requestedTroops || order.troops) > sourceTroops) {
+      throw new HttpsError("failed-precondition", "Not enough troops in the source city. Your retaliation opportunity has not been used.");
+    }
+    const attackProtection = resolvedKind === "attack" && !retaliation
       ? createServerAttackProtectionSnapshot({
         sourceTroops,
         target,
@@ -26271,7 +26394,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       serverAuthorityVersion: 3,
     };
 
-    let profileOverrides = {};
+    commitRetaliationLaunch(transaction, retaliation, movement, nowMs);
+    let profileOverrides = offensiveShieldCooldownPatch(attackerProfile, uid, target, resolvedKind, nowMs);
     if (resolvedKind === "reinforce") {
       const assignmentToken = getClanReinforcementAssignmentToken(targetOwnerUid, reinforcementTargetKey);
       reserveOrdinaryCityReinforcementSlot(transaction, {
@@ -26424,6 +26548,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
         economyUpdatedAtMs: timestampToMs(attackerEconomy.profilePatch?.economyUpdatedAtMs),
         shopItems: attackerEconomy.shopItems,
         itemEffects: profileOverrides.itemEffects || attackerEconomy.itemEffects,
+        peaceShieldCooldownExpiresAtMs: COMBAT_AUTHORIZATION.shieldCooldownExpiresAt({ ...attackerProfile, ...profileOverrides }, RESET_GENERATION),
+        peaceShieldCooldownResetGeneration: RESET_GENERATION,
         itemPurchaseCooldowns: attackerEconomy.itemPurchaseCooldowns,
         character: attackerProfile.character || null,
         upgrades: normalizeSkillUpgrades(attackerProfile.upgrades),
@@ -28073,7 +28199,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     )
       ? "capture"
       : "breach";
-    const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp"
+    const committedRetaliation = COMBAT_AUTHORIZATION.hasCommittedRetaliation(army, {
+      cityId: target.id, regionId: targetRegionId, ...combatAuthorizationRealm(),
+    });
+    const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp" && !committedRetaliation
       ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
       : null;
     const convertedTransferReinforcement = effectiveKind === "attack" && (
@@ -28121,7 +28250,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ? launchDefenderKingPower || currentDefenderKingPower
         : currentDefenderKingPower
     );
-    const baseAttackProtection = storedAttackProtection || (
+    const baseAttackProtection = committedRetaliation ? null : storedAttackProtection || (
       (convertedReinforcement || isRallyReturnAttack) && targetType !== "camp"
         ? createServerAttackProtectionSnapshot({
           sourceTroops: Math.max(
@@ -30539,7 +30668,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           legacySnapshots: strongholdLegacySnapshots,
         });
       }
+      const retaliationAbandonLocks = recordCaptureRetaliation(transaction, {
+        armyId, target: { ...target, regionId: targetRegionId }, targetRef,
+        originalOwnerUid: oldOwnerUid, capturerUid: attackerUid,
+        highPower: currentDefenderKingPower, lowPower: currentAttackerKingPower, nowMs,
+      });
       const targetPatch = {
+        ...(retaliationAbandonLocks ? { retaliationAbandonLocks } : {}),
         ownerKind: "player",
         ownerUid: attackerUid,
         ownerName: attackerName,

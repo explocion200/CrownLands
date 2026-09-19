@@ -114,6 +114,8 @@ service cloud.firestore {
           'shopItems',
           'gear',
           'itemEffects',
+          'peaceShieldCooldownExpiresAtMs',
+          'peaceShieldCooldownResetGeneration',
           'itemPurchaseCooldowns',
           'dailyLoginReward',
           'cityUpgradeReceipts',
@@ -320,6 +322,11 @@ service cloud.firestore {
 
       match /protectedDefenseXpClaims/{attackerUid} {
         allow read, create, update, delete: if false;
+      }
+
+      match /retaliationWindows/{captureId} {
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
       }
 
       match /cityUpgradeXp/{document=**} {

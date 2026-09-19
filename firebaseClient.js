@@ -1928,6 +1928,8 @@
     delete cleanProfile.mainRegionId;
     delete cleanProfile.mainCityChangedAtMs;
     delete cleanProfile.lastCityRelinquishedAtMs;
+    delete cleanProfile.peaceShieldCooldownExpiresAtMs;
+    delete cleanProfile.peaceShieldCooldownResetGeneration;
     delete cleanProfile.dailyLoginReward;
     delete cleanProfile.reportsViewedAtMs;
     // Reports are written by battle/scout settlement, never by a cached profile save.
@@ -2272,6 +2274,32 @@
         if (typeof handlers.onError === "function") handlers.onError(error);
       }
     );
+  }
+
+  function subscribeCombatAuthorization(handlers = {}) {
+    if (!client.db || !client.user?.uid) return null;
+    const { doc, collection, query, where } = client.modules.firestore;
+    const uid = client.user.uid;
+    const snapshot = { shieldExpiresAtMs: 0, retaliation: [] };
+    const emit = () => { if (client.user?.uid === uid) handlers.onState?.({ ...snapshot, uid }); };
+    const onError = error => handlers.onError?.(error);
+    const profileStop = subscribeScopedSnapshot(doc(client.db, "players", uid), profileSnapshot => {
+      if (profileSnapshot.metadata?.hasPendingWrites) return;
+      const profile = profileSnapshot.data() || {};
+      snapshot.shieldExpiresAtMs = profile.peaceShieldCooldownResetGeneration === RESET_GENERATION
+        ? Math.max(0, Number(profile.peaceShieldCooldownExpiresAtMs) || 0) : 0;
+      emit();
+    }, onError);
+    const recordsStop = subscribeScopedSnapshot(query(
+      collection(client.db, "players", uid, "retaliationWindows"),
+      where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where), where("status", "==", "available"),
+    ), recordsSnapshot => {
+      if (recordsSnapshot.metadata?.hasPendingWrites) return;
+      snapshot.retaliation = recordsSnapshot.docs.map(record => ({ ...record.data(), id: record.id }));
+      emit();
+    }, onError);
+    return () => { profileStop(); recordsStop(); };
   }
 
   async function purchaseShopItem({ itemId = "", cost = 0, quantity = 1 } = {}) {
@@ -3311,6 +3339,7 @@
     loadCrownCitadelReignLeaderboard,
     loadStrongholdLegacyLeaderboard,
     subscribePlayerGlobalStats,
+    subscribeCombatAuthorization,
     sendArmyOrder,
     loadArmyOrder,
     submitRecoverableArmyOrder,
