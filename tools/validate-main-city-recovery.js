@@ -59,6 +59,8 @@ const decisionSandbox = {
   cleanEditorRegionId: value => String(value || "").trim().toLowerCase(),
   isMainCityRegionEligible: regionId => regionId !== restrictedRegionId,
   getOnlineIslandId: regionId => `main-${regionId}`,
+  ensureRegionDefinitionLoaded: async () => null,
+  getPlayableBaseCitiesByRegion: () => [],
   withTimeout: (promise, timeoutMs, message) => Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error(message)), timeoutMs)),
@@ -436,6 +438,7 @@ async function validateAuthoritativeRecoveryRequests() {
 
 function createSyncSandbox() {
   const sandbox = {
+    CORE_EXPANSION_TOPOLOGY_ACTIVE: false,
     state: null,
     response: null,
     forceTimeout: false,
@@ -638,9 +641,79 @@ async function validateSecondaryRecoveryConsumer() {
   assert.equal(sandbox.restarts, 1);
 }
 
+async function validateColdCoreRecovery() {
+  const maps = require(path.join(root, "functions", "core-expansion-world-layout.json")).maps;
+  const coreMaps = maps.filter(map => map.purpose === "core_support");
+  assert.ok(coreMaps.length > 1, "Cold recovery requires multiple eligible Core maps.");
+  const indexedCities = new Map();
+  const loadedDefinitions = new Map();
+  let loads = 0;
+  let scans = 0;
+  const sandbox = {
+    ...decisionSandbox,
+    state: { cities: [] },
+    REGION_CATALOG_SUMMARIES_BY_ID: new Map(maps.map(map => [map.id, map])),
+    WORLD_REGION_IDS: maps.map(map => map.id),
+    getRegionIds: () => { scans += 1; return maps.map(map => map.id); },
+    getRegionById: id => maps.find(map => map.id === id),
+    normalizeRegionId: id => maps.some(map => map.id === id) ? id : "west",
+    isMainCityRegionEligible: id => coreMaps.some(map => map.id === id),
+    getPlayableBaseCityById: id => indexedCities.get(id) || null,
+    ensureRegionDefinitionLoaded: async id => {
+      loads += 1;
+      loadedDefinitions.set(id, JSON.parse(fs.readFileSync(path.join(root, "assets", "worlds", "core-expansion-v1", "regions", `${id}.json`), "utf8")));
+    },
+    getPlayableBaseCitiesByRegion: id => {
+      const cities = loadedDefinitions.get(id)?.cities;
+      assert.ok(cities, "City indexing ran before the map definition loaded.");
+      cities.forEach(city => indexedCities.set(city.id, city));
+      return cities;
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${cityIdentitySource}\n${decisionSource}`, sandbox);
+  const resultFor = (map, status = "valid") => ({
+    ok: true, requiresStartingCityClaim: false, mainCityRecoveryStatus: status,
+    currentUser: { mainCityId: map.cities[0].id, mainRegionId: map.id, mainIslandId: `main-${map.id}` },
+  });
+  const request = result => sandbox.requestAuthoritativeMainCityRecovery({ repairMainCityAssignment: async () => result }, "", 50);
+  for (const map of coreMaps) {
+    indexedCities.clear();
+    loadedDefinitions.clear();
+    const result = resultFor(map);
+    assert.throws(() => sandbox.resolveMainCityRecoveryResult(result), /authoritative recovery result/i,
+      "The cold-map fixture no longer reproduces the original failure.");
+    // Setup already fetched the home JSON; that alone must not be treated as a populated city index.
+    await sandbox.ensureRegionDefinitionLoaded(map.id);
+    assert.equal(indexedCities.size, 0);
+    assert.equal((await request(result)).recovery.mainCityId, result.currentUser.mainCityId);
+    assert.equal((await request(result)).recovery.status, "valid", "Warm login failed.");
+  }
+  indexedCities.clear();
+  loadedDefinitions.clear();
+  const changedHome = resultFor(coreMaps[0], "repaired");
+  assert.equal((await request(changedHome)).recovery.mainRegionId, coreMaps[0].id,
+    "Recovery to a different, uncached Core map failed.");
+  scans = 0;
+  for (let i = 0; i < 1000; i += 1) assert.equal(sandbox.getCityRegionId(changedHome.currentUser.mainCityId), coreMaps[0].id);
+  assert.equal(scans, 0, "Cached city lookups still scan/sort the active world.");
+  const wrongCity = { ...changedHome, currentUser: { ...changedHome.currentUser, mainCityId: coreMaps[1].cities[0].id } };
+  await assert.rejects(request(wrongCity), /authoritative recovery result/i, "A city from another map was accepted.");
+  const forgedCity = { ...changedHome, currentUser: { ...changedHome.currentUser, mainCityId: "core_000000000000000000" } };
+  await assert.rejects(request(forgedCity), /authoritative recovery result/i, "Core ID syntax bypassed exact city membership.");
+  const beforeInvalid = loads;
+  await assert.rejects(request({ ...changedHome, currentUser: { ...changedHome.currentUser, mainRegionId: "unknown" } }), /authoritative recovery result/i);
+  assert.equal(loads, beforeInvalid, "An invalid response triggered map loading.");
+  sandbox.ensureRegionDefinitionLoaded = async () => { throw new Error("map unavailable"); };
+  await assert.rejects(request(changedHome), /map unavailable/i, "A failed map load was hidden.");
+  sandbox.ensureRegionDefinitionLoaded = () => new Promise(() => {});
+  await assert.rejects(request(changedHome), /map is taking too long/i, "Map loading was not bounded.");
+}
+
 Promise.all([
   validateAuthoritativeRecoveryRequests(),
   validateSecondaryRecoveryConsumer(),
+  validateColdCoreRecovery(),
 ])
   .then(() => console.log("Main-city recovery validation passed."))
   .catch(error => {

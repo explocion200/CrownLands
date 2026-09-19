@@ -36,6 +36,32 @@ async function main() {
     assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"), "ready");
     for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }, { name: "short-landscape", width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: false });
+      const recovery = await evaluate(`(async () => {
+        const region = REGION_CATALOG.regions.find(entry => entry.purpose === 'core_support'
+          && entry.id !== getActiveMapRegionId() && isMainCityRegionEligible(entry.id));
+        if (!region) throw new Error('No alternate eligible Core map for cold recovery.');
+        const definition = await (await fetch(region.regionDefinitionPath)).json();
+        const city = definition.cities.find(entry => !state.cities.some(current => current.id === entry.id));
+        regionDefinitionCache.delete(region.id);
+        editorMapCache.delete(region.id);
+        playableBaseCitiesByRegionCache?.delete(region.id);
+        for (const [id, entry] of playableBaseCitiesByIdCache || []) {
+          if (entry.regionId === region.id) playableBaseCitiesByIdCache.delete(id);
+        }
+        const response = { ok: true, requiresStartingCityClaim: false, mainCityRecoveryStatus: 'repaired',
+          currentUser: { mainCityId: city.id, mainRegionId: region.id, mainIslandId: getOnlineIslandId(region.id) } };
+        let rejectedCold = false;
+        try { resolveMainCityRecoveryResult(response); } catch (_) { rejectedCold = true; }
+        const api = { repairMainCityAssignment: async () => response };
+        const cold = await requestAuthoritativeMainCityRecovery(api);
+        const warm = await requestAuthoritativeMainCityRecovery(api);
+        return { rejectedCold, coldId: cold.recovery.mainCityId, warmId: warm.recovery.mainCityId,
+          expectedId: city.id, regionId: getCityRegionId(city.id), expectedRegionId: region.id };
+      })()`);
+      assert.equal(recovery.rejectedCold, true, `${viewport.name}: cold Core fixture did not reproduce the missing city index.`);
+      assert.equal(recovery.coldId, recovery.expectedId, `${viewport.name}: cold recovery failed.`);
+      assert.equal(recovery.warmId, recovery.expectedId, `${viewport.name}: warm recovery failed.`);
+      assert.equal(recovery.regionId, recovery.expectedRegionId, `${viewport.name}: recovery selected the wrong map.`);
       for (const kind of ["attack", "transfer", "rally_create", "rally_join"]) {
         for (const speed of [1, 1.6 * 1.08 + .0115]) {
           const summary = await evaluate(`(() => {
@@ -102,7 +128,7 @@ async function main() {
       qa.old.onMessages([qa.message('stale-listener',qa.base)]);
       qa.handlers.global.onMessages([qa.message('expired-cache',1),qa.message('fresh-reconnect',qa.base)],{initial:true}); })()`);
     assert.equal(await evaluate("releaseChatQa.controller.diagnostics().renderedMessages"), 1);
-    console.log("Coordinated browser checks passed: attack/transfer/rally dialogs with 0% and stacked bonuses at desktop/landscape/short-landscape; map-stable reports; open-client Global expiry, pagination, reopening, stale listeners, reconnect, and retained Clan history.");
+    console.log("Coordinated browser checks passed: cold/warm Core Main City recovery and attack/transfer/rally dialogs with 0% and stacked bonuses at desktop/landscape/short-landscape; map-stable reports; open-client Global expiry, pagination, reopening, stale listeners, reconnect, and retained Clan history.");
   } finally {
     if (client) await client.send("Browser.close").catch(() => {});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }
