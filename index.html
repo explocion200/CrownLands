@@ -204,6 +204,13 @@
             </button>
           </div>
           <div class="profile-gold"><span aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-gold"></use></svg></span><strong id="goldText">0</strong></div>
+          <div id="combatTimers" class="combat-timers" aria-label="Combat timers" hidden>
+            <div data-shield-cooldown hidden><span>Shield Cooldown</span><strong role="timer">15:00</strong></div>
+            <details hidden>
+              <summary><span>Retaliation</span><strong>1 Active</strong></summary>
+              <div class="retaliation-list-panel"><p>One attack per captured city. Launch before its timer ends.</p><ul data-retaliation-list></ul></div>
+            </details>
+          </div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
@@ -559,6 +566,7 @@
   <script src="royal-stables-gear-ui.js?v=royal-stables-gear-r1"></script>
   <script src="common-gear-box-ui.js?v=common-gear-box-r1"></script>
   <script src="item-bag-ui.js?v=item-bag-r1"></script>
+  <script src="combat-timers-ui.js?v=combat-timers-r1"></script>
   <script src="shop-ui.js?v=royal-shop-r1"></script>
   <script src="city-details-ui.js?v=20260909-city-details-r1"></script>
   <script src="daily-login-ui.js?v=20260912-daily-cycle-r1"></script>

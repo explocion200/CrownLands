@@ -13,6 +13,7 @@ const required = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
+  "combat-timers-ui.js",
   "shop-ui.js", "shop-ui.css",
   "achievements-ui.js", "achievements-ui.css",
   "player-profile-ui.js", "player-profile-ui.css",

@@ -381,11 +381,13 @@ function patchInventoryProjectedUi() {
   ownedLabel?.classList.toggle("ib-large-owned", count >= 100000);
   const projectedExpiresAtMs = getProjectedItemEffectExpiresAtMs(item);
   const remaining = Math.max(0, Math.ceil((projectedExpiresAtMs - Date.now()) / 1000));
+  const shieldCooldown = itemId === ROYAL_PEACE_SHIELD_ITEM_ID && typeof getOffensiveShieldCooldownRemaining === "function"
+    ? Math.ceil(getOffensiveShieldCooldownRemaining() / 1000) : 0;
   modalBody.querySelectorAll("[data-inventory-active]").forEach(effectLine => {
-    effectLine.hidden = remaining === 0;
-    setTextIfChanged(effectLine, remaining ? `Active: ${formatDuration(remaining)}` : "");
+    effectLine.hidden = remaining === 0 && shieldCooldown === 0;
+    setTextIfChanged(effectLine, shieldCooldown ? `Peace Shield unavailable · ${formatDuration(shieldCooldown)}` : remaining ? `Active: ${formatDuration(remaining)}` : "");
   });
-  useButton.disabled = count < 1 || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
+  useButton.disabled = shieldCooldown > 0 || count < 1 || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
   useButton.classList.toggle("pending", getInstantPendingItemDelta(itemId) < 0);
 }
 
