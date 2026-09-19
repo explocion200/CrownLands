@@ -36880,33 +36880,30 @@ function renderBattleReportLocateButton(report, extraClass = "") {
 function getResolvableReportCityId(cityId, regionId = "") {
   const value = String(cityId || "");
   if (!value) return "";
-  // Core city IDs need their recorded region when its definition is not cached.
+  // Uncached Core IDs need the recorded region.
   return getKnownCityId(value, regionId) || (getArmyTargetById(value) ? value : "");
 }
 
 async function focusBattleReportTarget(cityId, regionId = "") {
-  const targetCityId = getResolvableReportCityId(cityId, regionId);
-  if (!targetCityId) {
+  const targetId = getResolvableReportCityId(cityId, regionId);
+  if (!targetId) {
     showToast("That target city is no longer available.");
     return;
   }
-  const loadedCity = getArmyTargetById(targetCityId);
-  const targetRegionId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetCityId));
+  const loadedCity = getArmyTargetById(targetId);
+  const mapId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetId));
   try {
-    if (targetRegionId !== getActiveMapRegionId()) {
-      const switched = await switchOnlineIsland(targetRegionId);
-      if (!switched || targetRegionId !== getActiveMapRegionId()) {
-        showToast("Could not open that report location. Try again when the map is ready.");
-        return;
-      }
+    if (mapId !== getActiveMapRegionId()
+      && (!await switchOnlineIsland(mapId) || mapId !== getActiveMapRegionId())) {
+      throw new Error("Report map unavailable");
     }
   } catch (error) {
     console.warn("Could not open report location", error);
-    showToast("Could not open that report location. Try again after reconnecting.");
+    showToast("Could not open that location. Reconnect and try again.");
     return;
   }
-  const target = getArmyTargetById(targetCityId);
-  if (!target || getCityRegionId(target) !== targetRegionId) {
+  const target = getArmyTargetById(targetId);
+  if (!target || getCityRegionId(target) !== mapId) {
     showToast("That report target is no longer available on this map.");
     return;
   }
@@ -36915,8 +36912,8 @@ async function focusBattleReportTarget(cityId, regionId = "") {
   regroupSourceId = null;
   sendMode = false;
   selectedTargetId = null;
-  if (getCampTargetById(targetCityId)) selectRewardCamp(targetCityId);
-  else selectCity(targetCityId);
+  if (getCampTargetById(targetId)) selectRewardCamp(targetId);
+  else selectCity(targetId);
   showToast(`Viewing ${target.name}`);
 }
 
