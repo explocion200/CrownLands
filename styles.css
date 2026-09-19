@@ -10303,30 +10303,6 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 .profile-gold span { font-size: 1rem; }
 .profile-gold strong { font-size: .96rem; }
 
-.combat-timers { display: grid; gap: 3px; width: 190px; max-width: 40vw; color: #f3e5bf; font-size: 11px; line-height: 1.35; }
-.combat-timers > div, .combat-timers summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; padding: 3px 7px; border: 1px solid #aa946759; border-radius: 5px; background: #292c22e8; }
-.combat-timers strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.top-hud:has(#combatTimers details[open]) { z-index: 80; }
-.combat-timers details { position: relative; }
-.combat-timers summary { cursor: pointer; min-height: 30px; list-style: none; }
-.combat-timers summary::-webkit-details-marker { display: none; }
-.combat-timers summary::after { content: "▾"; }
-.combat-timers details[open] summary::after { content: "▴"; }
-.combat-timers summary:focus-visible { outline: 2px solid #e4c678; outline-offset: 2px; }
-.retaliation-list-panel { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: min(300px, 76vw); max-height: min(220px, 42vh); overflow-y: auto; overscroll-behavior: contain; padding: 10px; border: 1px solid #ad9462; border-radius: 6px; background: #eee0bc; color: #37392b; box-shadow: 0 5px 15px #0005; }
-.retaliation-list-panel p { margin: 0 0 7px; font-size: 11px; }
-.retaliation-list-panel ul { list-style: none; margin: 0; padding: 0; }
-.retaliation-list-panel li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid #85765340; }
-.retaliation-list-panel small { display: block; font-size: 9px; opacity: .75; overflow-wrap: anywhere; }
-.troop-retaliation-note { padding: 6px 10px; border: 1px solid #998b53; border-radius: 5px; color: #494429; background: #e9dfb9; font-size: 12px; }
-@media (orientation: landscape) and (max-height: 600px) {
-  .combat-timers { width: 166px; font-size: 10px; gap: 2px; }
-  .combat-timers > div { min-height: 20px; padding-block: 2px; }
-}
-@media (orientation: landscape) and (max-height: 360px) {
-  .game-view:has(#combatTimers:not([hidden])) #chatToggleBtn { top: 200px; }
-}
-
 .character-level-badge {
   position: absolute;
   z-index: 3;

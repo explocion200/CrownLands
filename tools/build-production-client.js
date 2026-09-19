@@ -21,7 +21,7 @@ const rootFiles = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
-  "combat-timers-ui.js",
+  "combat-timers-ui.js", "combat-timers-ui.css",
   "shop-ui.js", "shop-ui.css",
   "quests-ui.js", "quests-ui.css",
   "achievements-ui.js", "achievements-ui.css",

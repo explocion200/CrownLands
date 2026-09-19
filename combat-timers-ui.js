@@ -34,6 +34,19 @@
     const times = list.querySelectorAll("[data-retaliation-time]");
     records.forEach((record, index) => { times[index].textContent = remaining(record.expiresAtMs, nowMs); });
   }
-  root.CrownlandsCombatTimersUI = { remaining, activeRecords, render };
+  function renderFeedback(container, { records, activeId, getCityRecord, nowMs }) {
+    container?.querySelectorAll("[data-retaliation-city]").forEach(element => {
+      const record = getCityRecord(element.dataset.retaliationCity);
+      element.hidden = !record;
+      if (record) element.textContent = `Retaliation Available — ${remaining(record.expiresAtMs, nowMs)} remaining to launch one attack on this city.`;
+    });
+    const note = container?.querySelector("[data-retaliation-note]");
+    if (!note) return;
+    const record = activeRecords(records, nowMs).find(entry => entry.id === activeId);
+    note.textContent = record
+      ? `Retaliation Available — ${remaining(record.expiresAtMs, nowMs)} remaining. One attack on this city; King Power limits are lifted for this launch.`
+      : "Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.";
+  }
+  root.CrownlandsCombatTimersUI = { remaining, activeRecords, render, renderFeedback };
   if (typeof module !== "undefined") module.exports = root.CrownlandsCombatTimersUI;
 })(globalThis);

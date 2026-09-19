@@ -18495,20 +18495,10 @@ function clearOnlineGlobalStatsWatcher() {
 
 function renderCombatTimers() {
   const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
-  globalThis.CrownlandsCombatTimersUI?.render(document.getElementById("combatTimers"), ownSnapshot, getClanQuestServerNowMs());
-  modalBody?.querySelectorAll("[data-retaliation-city]").forEach(element => {
-    const record = getTargetRetaliation(cityById(element.dataset.retaliationCity));
-    element.hidden = !record;
-    if (record) element.textContent = `Retaliation Available — ${globalThis.CrownlandsCombatTimersUI.remaining(record.expiresAtMs, getClanQuestServerNowMs())} remaining to launch one attack on this city.`;
-  });
-  const note = modalBody?.querySelector("[data-retaliation-note]");
-  if (note) {
-    const record = onlineCombatAuthorization.retaliation.find(entry => entry.id === activeRetaliationId);
-    const active = record?.status === "available" && !record.usedArmyId && Number(record.expiresAtMs) > getClanQuestServerNowMs();
-    note.textContent = active
-      ? `Retaliation Available — ${globalThis.CrownlandsCombatTimersUI.remaining(record.expiresAtMs, getClanQuestServerNowMs())} remaining. One attack on this city; King Power limits are lifted for this launch.`
-      : "Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.";
-  }
+  const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
+  ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs);
+  ui?.renderFeedback(modalBody, { records: ownSnapshot.retaliation, activeId: activeRetaliationId,
+    getCityRecord: id => getTargetRetaliation(cityById(id)), nowMs });
 }
 
 function getTargetRetaliation(target) {
