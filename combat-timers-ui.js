@@ -44,19 +44,19 @@
       button.disabled = true;
       const feedback = element.querySelector("[data-location-feedback]");
       feedback.textContent = "Opening map…";
+      let located = false;
       try {
-        const located = await context.navigate(record.cityId, record.regionId);
-        if (contexts.get(element).snapshot.uid !== context.snapshot.uid) return;
-        if (located) element.querySelector("details").open = false;
-        feedback.textContent = located ? "" : "Location unavailable. Reconnect and try again.";
+        located = await context.navigate(record.cityId, record.regionId);
       } catch {
-        if (contexts.get(element).snapshot.uid === context.snapshot.uid)
-          feedback.textContent = "Location unavailable. Reconnect and try again.";
+        // Keep the list available for retry.
       } finally {
         context.pending = false;
         contexts.get(element).pending = false;
         button.disabled = false;
       }
+      if (contexts.get(element).snapshot.uid !== context.snapshot.uid) return;
+      if (located) element.querySelector("details").open = false;
+      feedback.textContent = located ? "" : "Location unavailable. Reconnect and try again.";
     });
   }
   function render(element, snapshot = {}, nowMs = Date.now(), navigate) {
