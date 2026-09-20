@@ -228,16 +228,19 @@ async function main() {
       const mini=await evaluate(()=>{
         const preview=document.getElementById("quickChat"),r=preview.getBoundingClientRect();
         const button=preview.querySelector(".per-message-translate"),b=button?.getBoundingClientRect();
-        return {background:getComputedStyle(preview).backgroundImage,visible:!preview.hidden,bounds:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewportHeight:innerHeight,
+        return {background:getComputedStyle(preview).backgroundImage,visible:!preview.hidden,height:r.height,width:r.width,bounds:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewportHeight:innerHeight,
           buttonVisible:!button||b.top>=r.top&&b.bottom<=r.bottom,arrow:document.querySelector('#chatToggleBtn use').getAttribute('href'),
           sharedResult:preview.textContent.includes("Hola <img"),mode:window.qaChat.diagnostics().mode};
       });
       assert(mini.visible&&mini.buttonVisible&&mini.arrow==="#cl-icon-back"&&mini.background.includes("0.72")&&mini.bounds.top>=0&&mini.bounds.bottom<=viewport.height,JSON.stringify({viewport,mini}));
+      assert(mini.height===64&&mini.width<=360,"Mini chat keeps its original fixed footprint.");
       await screenshot("chat-individual-mini-"+viewport.name);
       await evaluate(()=>document.getElementById("chatToggleBtn").click());
       assert(await evaluate(()=>document.getElementById("quickChat").hidden),"Arrow collapses preview");
       await evaluate(()=>{document.getElementById("chatToggleBtn").click();document.getElementById("openChatLedger").click();});
       assert(await evaluate(()=>document.getElementById("chatDialog").open),"Open chat enters the ledger");
+      await evaluate(()=>{window.qaChat.setMode("closed");document.getElementById("openRealmChat").click();});
+      assert(await evaluate(()=>document.getElementById("chatDialog").open),"Realm Chat shortcut opens the real ledger");
       results.push({screen:"chat",viewport:viewport.name,layout:{...chat,text:undefined},navigation,unread});
       await evaluate(()=>window.qaChat.dispose({resetSession:true}));
       await evaluate(()=>{
@@ -245,27 +248,26 @@ async function main() {
         updateShieldStatusBadge();
       });
       const boostHud=await evaluate(()=>{
-        const buttons=[...document.querySelectorAll('#activeItemEffectsStack button')];
-        return buttons.map(button=>{const r=button.getBoundingClientRect();return {id:button.id,top:r.top,bottom:r.bottom,left:r.left,right:r.right,
-          hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};});
+        const badges=[...document.querySelectorAll('#activeItemEffectsStack .effect-status-badge:not([hidden])')];
+        return badges.map(badge=>{const r=badge.getBoundingClientRect();return {id:badge.id,top:r.top,bottom:r.bottom,left:r.left,right:r.right,
+          passive:badge.tagName==="DIV",background:getComputedStyle(badge).backgroundImage,loaded:badge.querySelector("img").naturalWidth>0};});
       });
-      assert(boostHud.every(item=>item.hit&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
-      assert(Math.abs(boostHud[1].top-boostHud[4].top)<1,"All four effect icons fit one compact HUD row");
-      await evaluate(()=>{
-        document.getElementById("allEffects").click();
-      });await wait(180);
-      for(const id of ["shieldStatusBadge","warDrumsStatusBadge","taxDecreeStatusBadge","veilStatusBadge"]){
-        await evaluate(id=>document.querySelector('#boostList [data-effect-id="'+id+'"]').click(),id);await wait(80);
-        const boost=await evaluate(()=>window.ledgerLayout(document.getElementById("boostDialog"),document.getElementById("backToMap")));
-        assert(boost.footerVisible&&!boost.horizontalOverflow&&!boost.brokenImages.length,JSON.stringify({viewport,id,boost}));
-        if(id==="warDrumsStatusBadge")assert(boost.text.includes("+30% base troop production")&&boost.text.includes("does not increase battle power"));
-        if(id==="veilStatusBadge")assert(boost.text.includes("personal item effect"));
-        await screenshot("boost-"+id+"-"+viewport.name);
-      }
+      assert.equal(boostHud.length,4);
+      assert(boostHud.every(item=>item.passive&&item.loaded&&item.background.includes("114, 54, 58")&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
+      assert(boostHud.slice(1).every((item,i)=>item.top>=boostHud[i].bottom&&Math.abs(item.right-boostHud[0].right)<1),"All four passive effects form a vertical stack.");
+      assert(await evaluate(()=>{
+        const buttons=["openRealmChat","chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn","logBtn","outgoingAttackBtn","incomingAttackBtn","fullscreenBtn"]
+          .map(id=>document.getElementById(id)).filter(node=>node&&!node.hidden&&node.getBoundingClientRect().width);
+        const clear=(a,b)=>a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom;
+        const chat=document.getElementById("openRealmChat"),c=chat.getBoundingClientRect();
+        return buttons.every(button=>button===chat||clear(c,button.getBoundingClientRect()))
+          &&[...document.querySelectorAll("#activeItemEffectsStack .effect-status-badge:not([hidden])")].every(badge=>buttons.every(button=>clear(badge.getBoundingClientRect(),button.getBoundingClientRect())));
+      }),"Chat shortcut and active effects must not cover other map controls.");
+      assert(await evaluate(()=>!document.getElementById("allEffects")&&!document.getElementById("boostDialog")),"Retired overview and entry point are absent.");
+      await screenshot("restored-effects-"+viewport.name);
       await evaluate(()=>{state.itemEffects={};updateShieldStatusBadge();});
-      assert(await evaluate(()=>document.getElementById("boostDialog").textContent.includes("No active effects")&&document.querySelectorAll('#boostList button').length===0),"Expired effects must disappear without closing the dialog");
-      await evaluate(()=>document.getElementById("backToMap").click());
-      results.push({screen:"boosts",viewport:viewport.name,allEffects:true,expiry:true});
+      assert(await evaluate(()=>document.querySelectorAll('#activeItemEffectsStack .effect-status-badge:not([hidden])').length===0),"Expired effects disappear.");
+      results.push({screen:"effects",viewport:viewport.name,vertical:true,passive:true,expiry:true});
       console.log("Passed reward and Chat integration at "+viewport.width+"x"+viewport.height+".");
     }
     assert.deepEqual(errors,[],"Uncaught runtime errors.");
