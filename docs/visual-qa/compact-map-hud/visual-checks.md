@@ -1,5 +1,13 @@
 # Focused draft checks — September 20, 2026
 
+Runtime integration checks now pass using the actual game fixture at 1440×900, 844×390 and 568×320. The original draft observations below are historical.
+
+- Chat stays 64 px high, with per-message translation controls accessible through its internal scroll area; both full-chat entry points work.
+- Original burgundy passive effect indicators retain approved art, disappear at expiry and stay clear of map buttons. Realm Chat sits beside Reports, clear of march controls.
+- Combat timers remain below Gold at 156×48 px / 148×48 px. All 12 test cities retain independent deadlines and reachable Map actions; the list adjusts around chat.
+- Location checks cover exact saved identity, last-row scrolling, duplicate-click suppression, failure/retry, expiry, account clearing and no permission consumption. The game callback is wired; the shared report loader also passes checks for 1,480 uncached Core cities, other destinations and failed travel/account changes.
+- Existing combat policy checks and asset budgets pass. Local browser evidence is in ignored `release-artifacts/combat-timers/` and `release-artifacts/chat-reward-ledgers/`; release checks and live verification are recorded separately.
+
 - JavaScript syntax: `node --check` passed for `preview.js` and `review.js`.
 - Desktop (1440×900): inspected complete rendered page. Quick chat measured 360×64 px. Original burgundy gradient and ivory arrow verified from computed styles. Four item tiles appear vertically on the right.
 - Mobile landscape (844×390): inspected screenshot; quick chat remains 360×64 px before and after an individual translation. Timer stack and navigation stay separate.

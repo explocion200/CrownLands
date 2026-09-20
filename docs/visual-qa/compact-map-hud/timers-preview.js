@@ -17,17 +17,7 @@
     {cityName:"Windsor Crossing",cityId:"city-819",regionId:"West Crownlands"}
   ];
   function render(){
-    window.CrownlandsCombatTimersUI.render(element,snapshot,Date.now());
-    for(const row of element.querySelectorAll("[data-retaliation-list] li")){
-      const id=row.querySelector("[data-retaliation-time]").dataset.retaliationTime;
-      const city=snapshot.retaliation.find(record=>record.id===id);
-      if(!city||row.querySelector("[data-city-location]"))continue;
-      const button=document.createElement("button");
-      button.type="button";button.className="retaliation-location";button.dataset.cityLocation=id;
-      button.setAttribute("aria-label","View "+city.cityName+" on map");button.title="View "+city.cityName+" on map";
-      button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-8 8-13A8 8 0 0 0 4 9c0 5 8 13 8 13Z"/><circle cx="12" cy="9" r="3"/></svg><span>Map</span>';
-      row.append(button);
-    }
+    window.CrownlandsCombatTimersUI.render(element,snapshot,Date.now(),showLocation);
   }
   function reset(next){
     selected=["multiple","single","shield","none","expiring"].includes(next)?next:"multiple";
@@ -39,10 +29,8 @@
     document.getElementById("mapNotice").hidden=true;
     render();
   }
-  element.addEventListener("click",event=>{
-    const button=event.target.closest("[data-city-location]");
-    if(!button)return;
-    const city=snapshot.retaliation.find(record=>record.id===button.dataset.cityLocation&&record.expiresAtMs>Date.now());
+  function showLocation(cityId,regionId){
+    const city=snapshot.retaliation.find(record=>record.cityId===cityId&&record.regionId===regionId&&record.expiresAtMs>Date.now());
     if(!city){render();return;}
     element.querySelector("details").open=false;
     element.querySelector("summary").focus({preventScroll:true});
@@ -53,7 +41,8 @@
     const notice=document.getElementById("mapNotice");
     notice.textContent="Preview location · "+city.cityName;notice.hidden=false;
     if(parent!==window)parent.postMessage({type:"boosts-chat-status",message:"Sample location: "+city.cityName+" · "+city.regionId+". Retaliation remains available."},location.origin);
-  });
+    return true;
+  }
   window.addEventListener("message",event=>{
     if(event.origin!==location.origin||event.source!==parent||event.data?.type!=="boosts-chat-review")return;
     if(event.data.action==="reset"||event.data.timers&&event.data.timers!==selected)reset(event.data.timers);

@@ -53,18 +53,64 @@ async function main() {
         const timers = document.getElementById("combatTimers"), gold = document.querySelector(".profile-gold");
         const r = timers.getBoundingClientRect(), g = gold.getBoundingClientRect();
         const panel = timers.querySelector(".retaliation-list-panel"), p = panel.getBoundingClientRect();
-        return { belowGold: r.top >= g.bottom, width: r.width, bounds: { x: r.x, y: r.y, bottom: r.bottom },
+        const chat=document.getElementById("quickChat"),c=chat.getBoundingClientRect();
+        return { belowGold: r.top >= g.bottom, width: r.width,height:r.height, bounds: { x: r.x, y: r.y, bottom: r.bottom },
+          chatBounds:{x:c.x,y:c.y,width:c.width,height:c.height},panelBounds:{x:p.x,y:p.y,width:p.width,height:p.height},
+          chatClear:chat.hidden||p.right<=c.left||p.left>=c.right||p.bottom<=c.top||p.top>=c.bottom,
           listVisible: p.left >= 0 && p.right <= innerWidth && p.top >= 0 && p.bottom <= innerHeight,
-          scrollable: panel.scrollHeight > panel.clientHeight, count: timers.querySelectorAll("li").length, text: timers.innerText,
+          scrollable: panel.scrollHeight > panel.clientHeight, count: timers.querySelectorAll("li").length, locations:timers.querySelectorAll(".retaliation-location").length,text: timers.innerText,
           listOnTop: panel.contains(document.elementFromPoint(p.left + 15, p.bottom - 15)) };
       });
-      assert(layout.belowGold && layout.width <= 190 && layout.listVisible && layout.scrollable && layout.listOnTop, JSON.stringify({ viewport, layout }));
+      assert(layout.belowGold && layout.width <= 156 && layout.height<=48 && layout.listVisible && layout.scrollable && layout.listOnTop, JSON.stringify({ viewport, layout }));
       assert.equal(layout.count, 12);
+      assert.equal(layout.locations,12);
+      assert(layout.chatClear,"City list must not cover mini chat: "+JSON.stringify({viewport,layout}));
       assert.match(layout.text, /12 Active/);
       const shot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(artifacts, viewport.name + ".png"), Buffer.from(shot.data, "base64"));
       results.push({ viewport, layout });
     }
+    const navigation = await evaluate(async () => {
+      const element=document.getElementById("combatTimers"),ui=CrownlandsCombatTimersUI;
+      const snapshot=structuredClone(combatFixture),before=JSON.stringify(snapshot),calls=[];
+      let resolve,success=false;
+      const navigate=(cityId,regionId)=>{calls.push([cityId,regionId]);return new Promise(done=>{resolve=done;});};
+      ui.render(element,snapshot,combatFixtureNow,navigate);
+      const list=element.querySelector(".retaliation-list-panel");
+      const last=element.querySelector("li:last-child button");
+      last.scrollIntoView({block:"nearest"});
+      const r=last.getBoundingClientRect(),p=list.getBoundingClientRect();
+      const reachable=r.top>=p.top&&r.bottom<=p.bottom&&last.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));
+      last.focus();last.click();element.querySelector("li button").click();
+      const duplicateBlocked=calls.length===1&&last.disabled;
+      resolve(false);await Promise.resolve();await Promise.resolve();
+      const failureRetainsList=element.querySelector("details").open&&!last.disabled&&element.textContent.includes("Reconnect and try again");
+      last.click();resolve(true);await Promise.resolve();await Promise.resolve();
+      success=!element.querySelector("details").open;
+      const permissionPreserved=JSON.stringify(snapshot)===before&&ui.activeRecords(snapshot.retaliation,combatFixtureNow).length===12;
+      ui.render(element,snapshot,combatFixtureNow+900_001,navigate);
+      element.querySelector("[data-retaliation-location]")?.click();
+      const expiredIgnored=calls.length===2;
+      ui.render(element,{},combatFixtureNow,navigate);
+      const signedOutIgnored=element.querySelectorAll("[data-retaliation-location]").length===0;
+      // Exercise the real game callback on a loaded fixture city as well.
+      const target=state.cities[0],originalSelect=selectCity,originalRegion=getActiveMapRegionId;
+      // The benchmark uses synthetic cities independently of its backdrop.
+      getActiveMapRegionId=()=>getCityRegionId(target);
+      let selected="";
+      selectCity=id=>{selected=id;};
+      onlineCombatAuthorization={uid:"combat-viewer",retaliation:[{id:"real-map",cityId:target.id,cityName:target.name,regionId:getCityRegionId(target),status:"available",expiresAtMs:getClanQuestServerNowMs()+60_000}]};
+      renderCombatTimers();
+      element.querySelector("details").open=true;
+      element.querySelector("[data-retaliation-location]").click();
+      await Promise.resolve();await Promise.resolve();
+      selectCity=originalSelect;
+      getActiveMapRegionId=originalRegion;
+      const runtimeWired=selected===target.id&&!element.querySelector("details").open;
+      return {reachable,duplicateBlocked,failureRetainsList,success,permissionPreserved,expiredIgnored,signedOutIgnored,runtimeWired,calls};
+    });
+    assert(Object.entries(navigation).filter(([key])=>key!=="calls").every(([,value])=>value),JSON.stringify(navigation));
+    assert.deepEqual(navigation.calls,[["city-11","Northgate March"],["city-11","Northgate March"]],"Map uses the selected record's exact immutable city and map.");
     const states = await evaluate(() => {
       const element = document.getElementById("combatTimers"), ui = CrownlandsCombatTimersUI;
       const single = { ...combatFixture, retaliation: [combatFixture.retaliation[0]] };
@@ -89,7 +135,7 @@ async function main() {
     assert.equal(states.reconstructed, "14:30");
     assert.equal(states.reboundCount, 12);
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(artifacts, "verification.json"), JSON.stringify({ results, states, errors }, null, 2));
+    fs.writeFileSync(path.join(artifacts, "verification.json"), JSON.stringify({ results, navigation, states, errors }, null, 2));
     console.log("Combat timers browser passed: under Gold, all 12 records, scrolling at three supported sizes, single-city label, independent expiry, account clearing and timestamp reconstruction.");
   } finally {
     if (client) await client.send("Browser.close").catch(() => {});

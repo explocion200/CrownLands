@@ -24,6 +24,7 @@ const functionSource = name => {
 function createSession() {
   const events = [];
   const context = {
+    getCurrentOnlineUid: () => "report-viewer",
     state: { cities: [] }, CORE_EXPANSION_TOPOLOGY_ACTIVE: true,
     REGION_CATALOG_RUNTIME: catalogRuntime, REGION_CATALOG_SUMMARIES_BY_ID: summaries,
     WORLD_REGION_IDS: [...summaries.keys()], DEFAULT_ONLINE_REGION_ID: homeRegion,
@@ -83,7 +84,7 @@ async function main() {
 
   for (const target of [destination, camp]) {
     const { context, events } = createSession();
-    await context.focusBattleReportTarget(target.id, target.regionId);
+    assert.equal(await context.focusBattleReportTarget(target.id, target.regionId),true);
     assert.deepEqual(events[0], ["switch", target.regionId], "Navigate using the saved report region before resolving the city.");
     assert(events.some(event => Array.isArray(event) && event[0] === (target === camp ? "camp" : "city") && event[1] === target.id && event[2] === false));
     assert.equal(context.modal.open, false);
@@ -97,19 +98,20 @@ async function main() {
   assert(!loaded.events.some(event => event[0] === "switch"), "A cached current-map location does not require a connection.");
   assert(loaded.events.some(event => event[0] === "city"));
 
-  for (const failure of ["offline", "rejected", "missing-target", "wrong-map"]) {
+  for (const failure of ["offline", "rejected", "missing-target", "wrong-map", "account-changed"]) {
     const { context, events } = createSession();
     context.switchOnlineIsland = async regionId => {
       if (failure === "rejected") throw new Error("Network unavailable");
       if (failure === "offline") return false;
       context.activeRegion = regionId;
+      if (failure === "account-changed") context.getCurrentOnlineUid = () => "different-viewer";
       context.state.cities = failure === "wrong-map" ? [{ ...destination, regionId: homeRegion }] : [];
       return true;
     };
-    await context.focusBattleReportTarget(destination.id, destination.regionId);
+    assert.equal(await context.focusBattleReportTarget(destination.id, destination.regionId),false);
     assert(!events.some(event => ["city", "camp"].includes(event[0])), `${failure}: do not select a missing or off-map target.`);
     assert(!events.some(event => event[0] === "toast" && event[1].startsWith("Viewing")), `${failure}: do not claim successful navigation.`);
-    assert(events.some(event => event[0] === "toast"), `${failure}: show recovery feedback.`);
+    if(failure!=="account-changed")assert(events.some(event => event[0] === "toast"), `${failure}: show recovery feedback.`);
     assert.equal(context.modal.open, true, `${failure}: preserve the report until navigation succeeds.`);
   }
   console.log(`Validated report location links for ${cityCount} uncached Core cities, all report types, Camps, New Lands, and map-load recovery.`);

@@ -658,6 +658,8 @@
       if (!elements.quickMessages || mode !== "quick") return;
       const current = messages[channel].slice(-quickMessageLimit);
       translation?.update(translationContext(current));
+      const wasAtBottom = isMessageListNearBottom(elements.quickMessages);
+      const priorTop = elements.quickMessages.scrollTop;
       const signature = JSON.stringify([channel, clanId, current, current.map(displayMessage)]);
       if (elements.quickMessages.dataset.messageSignature === signature) return;
       elements.quickMessages.dataset.messageSignature = signature;
@@ -686,6 +688,7 @@
         elements.quickMessages.append(row);
         if (focusedId === message.id) row.querySelector("button")?.focus({ preventScroll: true });
       });
+      elements.quickMessages.scrollTop = wasAtBottom && !focusedId ? elements.quickMessages.scrollHeight : priorTop;
     }
 
     function renderMessages({ scrollToBottom = false, preserveFromTop = false } = {}) {
@@ -861,7 +864,7 @@
         const rect = element.getBoundingClientRect();
         return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
       });
-      const panelHeight = Math.min(Math.max(64, elements.quick.scrollHeight), Math.max(64, viewportHeight - 24));
+      const panelHeight = 64;
       let geometry = calculateQuickPanelGeometry({
         toggleRect,
         viewportWidth,
@@ -1009,7 +1012,8 @@
     }
 
     elements.list.addEventListener("scroll", detectVisibleMessages, { passive: true });
-    documentRef.getElementById("openChatLedger")?.addEventListener("click", () => updateMode("full"));
+    for (const id of ["openChatLedger", "openRealmChat"])
+      documentRef.getElementById(id)?.addEventListener("click", () => updateMode("full"));
     elements.toggle.addEventListener("click", () => updateMode("toggle"));
     elements.quick.addEventListener("click", event => {
       if (event.target.closest("button, a")) return;

@@ -1,24 +1,29 @@
-.combat-timers { display: grid; gap: 3px; width: 190px; max-width: 40vw; color: #f3e5bf; font-size: 11px; line-height: 1.35; }
-.combat-timers > div, .combat-timers summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; padding: 3px 7px; border: 1px solid #aa946759; border-radius: 5px; background: #292c22e8; }
-.combat-timers strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.top-hud:has(#combatTimers details[open]) { z-index: 80; }
-.combat-timers details { position: relative; }
-.combat-timers summary { cursor: pointer; min-height: 30px; list-style: none; }
-.combat-timers summary::-webkit-details-marker { display: none; }
-.combat-timers summary::after { content: "▾"; }
-.combat-timers details[open] summary::after { content: "▴"; }
-.combat-timers summary:focus-visible { outline: 2px solid #e4c678; outline-offset: 2px; }
-.retaliation-list-panel { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; width: min(300px, 76vw); max-height: min(220px, 42vh); overflow-y: auto; overscroll-behavior: contain; padding: 10px; border: 1px solid #ad9462; border-radius: 6px; background: #eee0bc; color: #37392b; box-shadow: 0 5px 15px #0005; }
-.retaliation-list-panel p { margin: 0 0 7px; font-size: 11px; }
-.retaliation-list-panel ul { list-style: none; margin: 0; padding: 0; }
-.retaliation-list-panel li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid #85765340; }
-.retaliation-list-panel small { display: block; font-size: 9px; opacity: .75; overflow-wrap: anywhere; }
-.troop-retaliation-note { padding: 6px 10px; border: 1px solid #998b53; border-radius: 5px; color: #494429; background: #e9dfb9; font-size: 12px; }
-@media (orientation: landscape) and (max-height: 600px) {
-  .combat-timers { width: 166px; font-size: 10px; gap: 2px; }
-  .combat-timers > div { min-height: 20px; padding-block: 2px; }
+/* Compact server-backed deadlines below Gold; the list retains full city identity. */
+.combat-timers{display:grid;width:156px;max-width:40vw;border:1px solid #aa946759;border-radius:4px;background:#292c22e8;color:#f3e5bf;font:11px/1.2 "Segoe UI",sans-serif;text-shadow:none}
+.combat-timers>[data-shield-cooldown],.combat-timers summary{display:flex;justify-content:space-between;align-items:center;min-height:18px;gap:6px;padding:2px 6px}
+.combat-timers strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+.combat-timers details{position:relative}
+.combat-timers summary{display:grid;grid-template-columns:minmax(0,1fr) auto 8px;min-height:28px;cursor:pointer;list-style:none}
+.combat-timers:not(:has([data-shield-cooldown][hidden])) summary{border-top:1px solid #aa946733}
+.combat-timers summary::-webkit-details-marker{display:none}
+.combat-timers summary::after{content:"▾";font-size:9px;opacity:.8}
+.combat-timers details[open] summary::after{content:"▴"}
+.combat-timers summary:focus-visible{outline:2px solid #e4c678;outline-offset:2px}
+.top-hud:has(#combatTimers details[open]){z-index:80}
+.retaliation-list-panel{position:absolute;z-index:5;top:calc(100% + 4px);left:0;width:224px;max-height:min(174px,42vh);overflow-y:auto;overscroll-behavior:contain;padding:6px 8px;border:1px solid #ad9462;border-radius:4px;background:#eee0bc;color:#37392b;box-shadow:0 4px 10px #0005;scrollbar-width:thin;scrollbar-color:#9b8359 transparent}
+.retaliation-list-panel p{margin:0 0 4px;font-size:10px;line-height:1.25;font-weight:400}
+.retaliation-list-panel [data-location-feedback]:empty{display:none}
+.retaliation-list-panel ul{list-style:none;margin:0;padding:0}
+.retaliation-list-panel li{display:grid;grid-template-columns:minmax(0,1fr) auto 34px;gap:6px;padding:4px 0;font-size:11px;align-items:center;border-top:1px solid #85765340}
+.retaliation-list-panel li>span{display:block;min-width:0;overflow-wrap:anywhere}
+.retaliation-list-panel small{display:block;margin-top:1px;font-size:9px;line-height:1.2;opacity:.75;overflow-wrap:anywhere}
+.retaliation-location{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:34px;min-height:34px;padding:2px;border:1px solid #9e895e;border-radius:3px;background:#e4d4ac;color:#51452d;font:9px/1 "Segoe UI",sans-serif;box-shadow:inset 0 1px #fff3d7}
+.retaliation-location:hover{background:#f1e5c5}
+.retaliation-location:focus-visible{outline:2px solid #486371;outline-offset:1px}
+.retaliation-location:disabled{opacity:.6;cursor:wait}
+.retaliation-location svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.troop-retaliation-note{padding:6px 10px;border:1px solid #998b53;border-radius:5px;color:#494429;background:#e9dfb9;font-size:12px}
+@media(orientation:landscape) and (max-height:600px){
+ .combat-timers{width:148px;font-size:10px}
+ .retaliation-list-panel{left:calc(100% + 8px);top:-19px;width:220px;max-height:min(166px,calc(100dvh - 206px))}
 }
-@media (orientation: landscape) and (max-height: 360px) {
-  .game-view:has(#combatTimers:not([hidden])) #chatToggleBtn { top: 200px; }
-}
-

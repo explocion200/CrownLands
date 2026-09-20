@@ -18496,7 +18496,7 @@ function clearOnlineGlobalStatsWatcher() {
 function renderCombatTimers() {
   const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
   const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
-  ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs);
+  ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs, focusBattleReportTarget);
   ui?.renderFeedback(modalBody, { records: ownSnapshot.retaliation, activeId: activeRetaliationId,
     getCityRecord: id => getTargetRetaliation(cityById(id)), nowMs });
 }
@@ -23131,7 +23131,6 @@ function renderHudStatusPanelsUncached() {
 
 function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
   if (!badge || !timeElement) return;
-  badge.dataset.expiresAtMs = String(expiresAtMs || 0);
   const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
   if (!remainingSeconds) {
     badge.hidden = true;
@@ -23157,7 +23156,11 @@ function updateShieldStatusBadge() {
 }
 
 function updateActiveItemEffectsStackDensity() {
-  window.CrownlandsBoosts?.update();
+  if (!activeItemEffectsStack) return;
+  const count = [...activeItemEffectsStack.children].filter(badge => !badge.hidden).length;
+  activeItemEffectsStack.dataset.activeCount = String(count);
+  activeItemEffectsStack.classList.toggle("compact", count > 2);
+  activeItemEffectsStack.classList.toggle("dense", count > 3);
 }
 
 function getCityOwnerFlag(city) {
@@ -36885,10 +36888,11 @@ function getResolvableReportCityId(cityId, regionId = "") {
 }
 
 async function focusBattleReportTarget(cityId, regionId = "") {
+  const uid = getCurrentOnlineUid();
   const targetId = getResolvableReportCityId(cityId, regionId);
   if (!targetId) {
     showToast("That target city is no longer available.");
-    return;
+    return false;
   }
   const loadedCity = getArmyTargetById(targetId);
   const mapId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetId));
@@ -36900,12 +36904,13 @@ async function focusBattleReportTarget(cityId, regionId = "") {
   } catch (error) {
     console.warn("Could not open report location", error);
     showToast("Could not open that location. Reconnect and try again.");
-    return;
+    return false;
   }
+  if (uid !== getCurrentOnlineUid()) return false;
   const target = getArmyTargetById(targetId);
   if (!target || getCityRegionId(target) !== mapId) {
     showToast("That report target is no longer available on this map.");
-    return;
+    return false;
   }
   if (modal.open) modal.close();
   scoutNearbySourceId = null;
@@ -36915,6 +36920,7 @@ async function focusBattleReportTarget(cityId, regionId = "") {
   if (getCampTargetById(targetId)) selectRewardCamp(targetId);
   else selectCity(targetId);
   showToast(`Viewing ${target.name}`);
+  return true;
 }
 
 function bindBattleReportJumpButtons() {
