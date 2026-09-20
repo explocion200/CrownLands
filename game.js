@@ -6873,10 +6873,9 @@ function setTextIfChanged(element, value) {
   if (element.textContent !== text) element.textContent = text;
 }
 
-function setAttributeIfChanged(element, name, value) {
-  if (!element) return;
+function setAttrIfChanged(element, name, value) {
   const text = String(value);
-  if (element.getAttribute(name) !== text) element.setAttribute(name, text);
+  if (element && element.getAttribute(name) !== text) element.setAttribute(name, text);
 }
 
 function setHiddenIfChanged(element, hidden) {
@@ -10089,8 +10088,8 @@ function updateReportUnreadBadge() {
   const unreadCount = getUnreadReportCount();
   setHiddenIfChanged(reportUnreadBadge, unreadCount <= 0);
   setTextIfChanged(reportUnreadBadge, unreadCount > 99 ? "99+" : String(unreadCount));
-  setAttributeIfChanged(reportUnreadBadge, "aria-label", `${unreadCount} unread ${unreadCount === 1 ? "report" : "reports"}`);
-  setAttributeIfChanged(logBtn, "aria-label", unreadCount > 0
+  setAttrIfChanged(reportUnreadBadge, "aria-label", `${unreadCount} unread ${unreadCount === 1 ? "report" : "reports"}`);
+  setAttrIfChanged(logBtn, "aria-label", unreadCount > 0
     ? `Reports, ${unreadCount > 99 ? "more than 99" : unreadCount} unread`
     : "Reports");
 }
@@ -13461,7 +13460,7 @@ function updateIslandSwitcherUi() {
   const regionId = getActiveOnlineRegionId();
   const label = getRegionLabel(regionId);
   setTextIfChanged(islandSwitchLabel, "Map");
-  setAttributeIfChanged(islandSwitchBtn, "title", `Map - viewing ${label}`);
+  setAttrIfChanged(islandSwitchBtn, "title", `Map - viewing ${label}`);
   updateIslandMapTileSummariesInPlace();
 }
 
@@ -23032,7 +23031,7 @@ function renderHud() {
   updateReportUnreadBadge();
   const regularCityCount = getOwnedRegularCityCountForDisplay();
   setTextIfChanged(cityText, `${formatNumber(regularCityCount)} cities`);
-  setAttributeIfChanged(cityListBtn, "aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
+  setAttrIfChanged(cityListBtn, "aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -23145,8 +23144,8 @@ function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
   const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
   if (!remainingSeconds) {
     setHiddenIfChanged(badge, true);
-    setAttributeIfChanged(badge, "title", "");
-    setAttributeIfChanged(badge, "aria-label", `${label} inactive`);
+    setAttrIfChanged(badge, "title", "");
+    setAttrIfChanged(badge, "aria-label", `${label} inactive`);
     setTextIfChanged(timeElement, "");
     return;
   }
@@ -23154,8 +23153,8 @@ function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
   const remainingText = formatDuration(remainingSeconds);
   setHiddenIfChanged(badge, false);
   setTextIfChanged(timeElement, remainingText);
-  setAttributeIfChanged(badge, "title", `${label} active: ${remainingText} remaining`);
-  setAttributeIfChanged(badge, "aria-label", `${label} active, ${remainingText} remaining`);
+  setAttrIfChanged(badge, "title", `${label} active: ${remainingText} remaining`);
+  setAttrIfChanged(badge, "aria-label", `${label} active, ${remainingText} remaining`);
 }
 
 function updateShieldStatusBadge() {
@@ -23169,7 +23168,7 @@ function updateShieldStatusBadge() {
 function updateActiveItemEffectsStackDensity() {
   if (!activeItemEffectsStack) return;
   const count = [...activeItemEffectsStack.children].filter(badge => !badge.hidden).length;
-  setAttributeIfChanged(activeItemEffectsStack, "data-active-count", count);
+  setAttrIfChanged(activeItemEffectsStack, "data-active-count", count);
   activeItemEffectsStack.classList.toggle("compact", count > 2);
   activeItemEffectsStack.classList.toggle("dense", count > 3);
 }
@@ -32963,7 +32962,7 @@ function renderDailyLoginRewardButton() {
         : status?.nextDay > status?.monthLengthDays
           ? `${status.monthKey} daily reward track complete; open quests and achievements`
           : "Open daily rewards, quests, and achievements";
-  setAttributeIfChanged(dailyLoginRewardBtn, "aria-label", label);
+  setAttrIfChanged(dailyLoginRewardBtn, "aria-label", label);
 }
 
 function updateDailyLoginRewardHudState() {
@@ -35801,8 +35800,8 @@ function updateIncomingAttackUi() {
   lastAudioIncomingAttackIds = incomingIds;
   setTextIfChanged(incomingAttackCount, formatNumber(incoming.length));
   setTextIfChanged(incomingAttackTime, formatDuration(incoming[0].remaining));
-  setAttributeIfChanged(incomingAttackBtn, "title", `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`);
-  setAttributeIfChanged(incomingAttackBtn, "aria-label", incomingAttackBtn.title);
+  setAttrIfChanged(incomingAttackBtn, "title", `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`);
+  setAttrIfChanged(incomingAttackBtn, "aria-label", incomingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("incoming-attack-modal")) {
     renderIncomingAttacksModalContent(incoming);
@@ -35821,7 +35820,7 @@ function updateOutgoingAttackUi() {
     setTextIfChanged(outgoingAttackCount, "0");
     setTextIfChanged(outgoingAttackTime, "Marches");
     outgoingAttackBtn.removeAttribute("title");
-    setAttributeIfChanged(outgoingAttackBtn, "aria-label", "Kingdom activity");
+    setAttrIfChanged(outgoingAttackBtn, "aria-label", "Kingdom activity");
     if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
     return;
   }
@@ -35846,8 +35845,8 @@ function updateOutgoingAttackUi() {
   if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
   setTextIfChanged(outgoingAttackCount, formatNumber(total));
   setTextIfChanged(outgoingAttackTime, status);
-  setAttributeIfChanged(outgoingAttackBtn, "title", titleParts.join(" - "));
-  setAttributeIfChanged(outgoingAttackBtn, "aria-label", outgoingAttackBtn.title);
+  setAttrIfChanged(outgoingAttackBtn, "title", titleParts.join(" - "));
+  setAttrIfChanged(outgoingAttackBtn, "aria-label", outgoingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
     renderOutgoingAttacksModalContent(operations);

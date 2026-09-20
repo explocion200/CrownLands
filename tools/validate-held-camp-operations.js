@@ -65,7 +65,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(objectives, context);
 for (const name of [
-  "setTextIfChanged", "setAttributeIfChanged", "setHiddenIfChanged",
+  "setTextIfChanged", "setAttrIfChanged", "setHiddenIfChanged",
   "getCampConfigForType", "getRewardCampConfig", "normalizeOnlineCampState",
   "getCampTargetById", "applyOnlineHeldCamps", "applyOnlineCamps",
   "getHeldCampsForActiveOperations", "getActiveOperationsSnapshot", "updateOutgoingAttackUi",
