@@ -17753,6 +17753,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
         return false;
       }
       recordMarchInteractionTiming("server-order-accepted", mission.clientSubmitStartedAt);
+      try { window.CrownlandsJourney?.track("first_action", mission.kind); } catch { /* Optional analytics cannot affect an accepted order. */ }
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
       mission.peaceShieldDeactivated = Boolean(result?.peaceShieldDeactivated);
       mission.serverPending = false;
@@ -19462,6 +19463,7 @@ async function startFromInput(forceFresh = false) {
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
+    try { window.CrownlandsJourney?.track("game_entry"); } catch { /* Optional analytics cannot block entry. */ }
     startLoginPresentationDailyRefresh(presentationGeneration);
     markLoginPresentationMapReady(presentationGeneration);
     retryPendingRewardedAdClaim();

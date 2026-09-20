@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "player-journey.js", "player-journey.css",
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",

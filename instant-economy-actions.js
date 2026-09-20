@@ -869,6 +869,9 @@ async function executeInstantCityUpgrade(action) {
   const reportedUpgraded = toWhole(result?.upgraded);
   const upgraded = authoritativeMode ? reportedUpgraded : Math.min(chunkLevels, reportedUpgraded);
   if (upgraded < 1) throw new Error("The city upgrade was not confirmed by the server.");
+  if (!result?.replayed) {
+    try { window.CrownlandsJourney?.track("first_action", "city_upgrade"); } catch { /* Optional analytics cannot affect a confirmed upgrade. */ }
+  }
   const xpReceipt = result?.cityUpgradeXp || {};
   const capSuppressedXp = toWhole(xpReceipt.capSuppressedXp);
   const rebuildSuppressedXp = toWhole(xpReceipt.rebuildSuppressedXp);

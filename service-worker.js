@@ -32,6 +32,8 @@ function getNotificationOpenUrl(notificationData = {}) {
 }
 
 const STATIC_CACHE_URLS = [
+  "/player-journey.js?v=20260920-journey-r1",
+  "/player-journey.css?v=20260920-journey-r1",
   "/index.html",
   "/play/index.html",
   "/manifest.webmanifest",
