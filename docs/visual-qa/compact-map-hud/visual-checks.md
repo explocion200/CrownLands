@@ -18,3 +18,9 @@ Only the new `docs/visual-qa/compact-map-hud/` folder changes. Production runtim
 - Single-city state shows its countdown. Shield-only state hides Retaliation. No active timers hides the entire card.
 - Desktop: card measured 156×48 px; expanded list 224×174 px. Both were visually reviewed. The 12-second Retaliation sample expired independently while Shield Cooldown remained visible.
 - JavaScript syntax and Git whitespace checks passed. No backend or gameplay behavior changes.
+
+## Retaliation location actions
+
+- Every one of the five city rows has a named Map button. Selecting Ravenbrook shows its own name and map/ID in the sample location marker, closes the list, and keeps all five retaliation opportunities available.
+- At 568×320 the last city's Map button remains reachable by scrolling; selecting Windsor Crossing shows that distinct destination. Buttons remain separate from their countdowns.
+- The control uses only local fixture data. Real cross-map loading and recovery must be connected and tested during runtime integration; this draft does not perform a player action.

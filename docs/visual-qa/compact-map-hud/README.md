@@ -13,6 +13,10 @@ Open `index.html?viewport=desktop&view=map` and switch between Desktop, Mobile l
 
 The Combat timers review selector offers several cities, one city, shield only, none active and a 12-second expiry example. These deadlines are synthetic and do not change any live player timer.
 
+Each retaliation city now has a 34 px Map button with a location-pin symbol. It closes the list and highlights that city's sample location, keeping the permission available. This is a visual demonstration, not actual world travel. Runtime integration must navigate using the saved city and region identities, load an uncached destination when necessary, and retain usable feedback on failure, following the existing report-location navigation behavior. The live timer renderer and backend remain unchanged during draft review.
+
+Chat distinction: the live game already provides Open chat inside the mini preview and the toggle arrow; the separate Realm Chat shortcut is a functional local-draft control, not an already deployed addition.
+
 The small-landscape fixture keeps the existing 64 px navigation icons and lets the preview contract horizontally to 178 px at 568 px viewport width. It does not return to a portrait layout.
 
 This request supersedes the Active Boosts overview presentation recorded in Master Specification § “Approved Active Boosts and mini Chat completion.” The specification and runtime implementation should be updated together after this draft is approved. No gameplay rule change is proposed.
