@@ -1,0 +1,44 @@
+/* Historical reference: 1fccf9bcb chat.css + crownlands-palette.css,
+   2fb3c4165 ui-layout-config.js and ui-contrast-correction.css.
+   This file affects only this approval fixture. */
+.effect-hud{top:50%;right:12px;transform:translateY(-50%)}
+#effectRack{display:flex;flex-direction:column;align-items:flex-end;gap:6.72px}
+.effect-token{display:block;position:relative;width:58px;height:58px;min-height:0;padding:0;border:0;border-radius:0;background:linear-gradient(180deg,#72363a,#542728);box-shadow:inset 0 1px 0 rgba(255,248,232,.16),0 4px 9px rgba(47,33,19,.34);color:#f2e2bf;cursor:default}
+.effect-token img{display:block;width:100%;height:100%;object-fit:contain;border:0;border-radius:0;filter:drop-shadow(0 3px 3px rgba(0,0,0,.72))}
+.effect-token time{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);min-width:34px;max-width:calc(100% - 4px);padding:2.24px 3.52px;border:1px solid rgba(244,221,165,.72);border-radius:3px;background:rgba(24,18,13,.9);box-shadow:0 2px 5px rgba(0,0,0,.58);color:#fff7df;font:700 9.28px/1 "Segoe UI",sans-serif;white-space:nowrap;text-shadow:0 1px 1px #000}
+.item-dock{position:fixed;right:12px;bottom:12px;display:flex;gap:12px;z-index:5}
+.item-dock button{display:grid;place-items:center;width:64px;height:64px;border:0;padding:0;background:none}
+.item-dock img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 3px 3px #0008)}
+.chat-dock{position:fixed;right:313px;bottom:16px;gap:9px;align-items:center}
+#chatToggleBtn.resource-pill{width:56px;min-width:56px;max-width:56px;height:56px;border:2px solid #997643;border-radius:10px;color:#f2e2bf!important;background:linear-gradient(180deg,#72363a,#542728)!important;box-shadow:inset 0 1px 0 rgba(255,248,232,.16),0 4px 9px rgba(47,33,19,.34)!important}
+#chatToggleBtn .chat-toggle-chevron{width:34px;height:34px}
+#quickChat{display:flex;flex-direction:column;flex:none;width:360px;max-width:calc(100vw - 390px);height:64px;min-height:64px;max-height:64px;padding:3.2px 8.32px;overflow:hidden}
+#quickChat .quick-chat-heading{flex:none;height:15px;min-height:15px;margin:0 0 1.6px;padding:0 0 1.28px;align-items:center}
+#quickChat .quick-chat-heading strong{font-size:9.92px;letter-spacing:.8px}
+#quickChat .quick-chat-heading button{font:600 10px/1 Georgia,serif;min-height:0;height:14px;padding:0}
+#quickChat .quick-chat-messages{display:flex;flex-direction:column;gap:2.24px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#b69a6470 transparent;overscroll-behavior:contain}
+#quickChat .mini-row{flex:none;font-size:10.88px;line-height:12px}
+#quickChat .mini-line{gap:4px;min-height:12px}
+#quickChat .mini-line strong,#quickChat .mini-line .mini-text{font-size:10.88px;line-height:12px}
+#quickChat .message-tools{min-height:28px;gap:3px 6px;flex-wrap:nowrap}
+#quickChat .per-message-translate{min-height:28px;padding:0 1px;font-size:10px}
+#quickChat .translation-note{display:none}
+#quickChat .google-badge{height:11px}
+.map-tools{left:12px;bottom:92px}
+#chatDialog .message-content .message-tools{margin-left:0}
+@media(max-width:900px) and (orientation:landscape){
+ .effect-hud{top:50%;right:12px}
+ #effectRack{gap:3.52px}
+ .effect-token{width:46px;height:46px;padding:0}
+ .effect-token img{width:46px;height:46px}
+ .effect-token time{font-size:7.36px}
+ .chat-dock{right:313px;bottom:16px;gap:9px}
+ #quickChat{width:360px;max-width:calc(100vw - 390px);height:64px;min-height:64px;max-height:64px;padding:3.2px 8.32px}
+ #chatToggleBtn.resource-pill{width:56px;min-width:56px;max-width:56px;height:56px}
+ .map-tools{bottom:92px;left:12px}
+}
+@media(max-width:650px) and (orientation:landscape){
+ #quickChat{max-width:calc(100vw - 390px)}
+ #quickChat .mini-line strong{max-width:74px}
+ .map-tools{bottom:88px}
+}
