@@ -8,16 +8,6 @@
 #chatDialog button:focus-visible,#chatDialog textarea:focus-visible,#chatDialog [tabindex="0"]:focus-visible{outline:2px solid #486371;outline-offset:-2px}
 #chatDialog .cl-icon{width:24px;height:24px}
 #chatDialog .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-#chatToggleBtn{border-radius:3px;border-color:#b39762;background:linear-gradient(#ede0bc,#bba274);box-shadow:inset 0 0 0 2px #f4e3b9,0 4px 8px #22281b66}
-#chatToggleBtn>img{width:44px;height:44px}
-#chatToggleBtn .chat-toggle-unread,#chatDialog .chat-tab-unread{border-color:#eee0bd;background:#8b3d32;box-shadow:none}
-#quickChat{border:1px solid #9b794c;border-left:4px solid #68734b;border-radius:2px;background:linear-gradient(110deg,#f0e4c7fa,#dbca9efa);color:#342b1e;box-shadow:inset 0 0 0 2px #f7ebcc99,0 5px 16px #25261866}
-#quickChat .quick-chat-heading{color:#4e5c36;border-bottom-color:#b8a379;text-shadow:none;font-family:Georgia,serif;margin-bottom:3px}
-#quickChat .quick-chat-heading strong{font-size:10px}
-#quickChat .quick-chat-heading span{font:10px Georgia,serif;color:#705335}
-#quickChat .quick-chat-messages p{color:#342b1e;font:12px/1.12 "Segoe UI",sans-serif;text-shadow:none}
-#quickChat .quick-chat-messages strong{color:#784332;font-weight:600}
-#quickChat .quick-chat-empty{color:#6c5b40;font:12px Georgia,serif}
 #chatDialog .chat-tab-unread{width:8px;height:8px}
 #chatDialog{width:min(1040px,calc(100vw - 24px));height:min(790px,calc(100dvh - 24px));max-width:none;max-height:none;margin:auto;padding:7px;border:2px solid #60402b;border-radius:0;background:#783e31;color:var(--ink);box-shadow:inset 0 0 0 2px #d8b57a,0 12px 48px #171a1680;overflow:hidden}
 #chatDialog::backdrop{background:#20291f65;backdrop-filter:blur(3px)}
@@ -104,12 +94,7 @@
 #chatDialog .chat-status{font-size:10px;margin-top:4px}
 #chatDialog .chat-empty-state{font-size:15px}
 #chatDialog .chat-new-messages{min-height:36px;font-size:12px}
-#quickChat .quick-chat-heading span{display:none}
 }
-#quickChat{padding:3px 7px}
-#quickChat .quick-chat-heading{height:12px;min-height:12px;line-height:12px;margin:0 0 1px;padding:0 0 1px}
-#quickChat .quick-chat-messages{gap:1px}
-#quickChat .quick-chat-messages p{font-size:12px;line-height:13px}
 @media(max-width:900px) and (orientation:landscape){
 #chatDialog .chat-message .chat-message-line{grid-template-columns:126px minmax(0,1fr) 48px;gap:10px;align-items:start}
 #chatDialog .chat-message-sender{align-self:start}
@@ -148,11 +133,6 @@
 #chatDialog .chat-tabs button{min-height:44px; min-width:100px; padding-inline:18px; font-size:17px;}
 #chatDialog .chat-tools{display:flex; align-items:center; gap:17px; min-width:0;}
 #chatDialog .chat-tools>p{color:#766143; font:12px Georgia,serif;}
-#chatDialog .chat-translate{display:flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:4px 11px; border:1px solid #b49d71; border-radius:2px; background:linear-gradient(#efe2c0,#ddcba4); color:#624a2e; box-shadow:inset 0 0 0 1px #f7eccd; font:14px Georgia,serif; white-space:nowrap;}
-#chatDialog .chat-translate svg{width:22px; height:22px; flex:none;}
-#chatDialog .chat-translate .translate-language{border-left:1px solid #b39a6e; padding-left:7px; color:#796342; font:11px "Segoe UI",sans-serif; max-width:140px; overflow:hidden; text-overflow:ellipsis;}
-#chatDialog .chat-translate[aria-pressed="true"]{color:#f9edcb; border-color:#53603a; background:linear-gradient(#6e7b51,#52623b); box-shadow:inset 0 0 0 1px #9ca57b66;}
-#chatDialog .chat-translate[aria-pressed="true"] .translate-language{color:#e9dfbf; border-color:#a2ac80;}
 #chatDialog .history-heading{display:none;}
 #chatDialog .chat-message-list{padding:3px 16px;}
 #chatDialog .chat-message{padding:7px 10px;}
@@ -182,8 +162,6 @@
 #chatDialog .channel-bar{padding:0 12px;}
 #chatDialog .chat-tabs button{min-height:44px; min-width:83px; padding-inline:14px; font-size:15px;}
 #chatDialog .chat-tools>p{display:none;}
-#chatDialog .chat-translate{min-height:40px; padding:4px 8px; gap:6px; font-size:13px;}
-#chatDialog .chat-translate .translate-language{font-size:10px; max-width:120px;}
 #chatDialog .chat-message-list{padding:2px 10px;}
 #chatDialog .chat-message{padding:5px 7px;}
 #chatDialog .chat-message .chat-message-line{grid-template-columns:119px minmax(0,1fr) 47px; gap:9px; font-size:12px;}
@@ -203,9 +181,6 @@
 #chatDialog .chat-heading-icon{width:29px; height:29px;}
 #chatDialog .channel-bar{padding-inline:9px; gap:5px;}
 #chatDialog .chat-tabs button{min-width:68px; padding-inline:10px;}
-#chatDialog .chat-translate{gap:5px; font-size:12px; padding-inline:6px;}
-#chatDialog .chat-translate svg{width:19px; height:19px;}
-#chatDialog .chat-translate .translate-language{max-width:95px; padding-left:5px; font-size:10px;}
 #chatDialog .chat-message-list{padding-inline:7px;}
 #chatDialog .chat-message{padding:4px 5px;}
 #chatDialog .chat-message .chat-message-line{grid-template-columns:88px minmax(0,1fr) 45px; gap:6px;}
@@ -220,4 +195,17 @@
 .chat-google-attribution{display:inline-flex;align-items:center;flex-shrink:0}
 .chat-google-attribution img{display:block;width:auto;height:16px}
 #chatDialog .history-footer{flex-wrap:wrap;gap:4px 10px}
-#quickChat .quick-chat-heading .chat-google-attribution img{height:12px}
+
+/* Approved pre-ledger mini preview: exact original 72% brown background. */
+#chatToggleBtn.resource-pill{border:2px solid #b58a3bc7;border-radius:10px;color:#f6e8c8!important;background:linear-gradient(#543621c7,#2d1d13c7),repeating-linear-gradient(90deg,#eddcb00f 0 1px,transparent 1px 7px)!important;box-shadow:inset 0 0 0 2px #e7ddc414,inset 0 -4px #140c0847,0 4px 12px #0004!important}
+#quickChat{height:auto;min-height:64px;max-height:calc(100dvh - 24px);padding:5px 9px;border:1px solid rgba(198,154,69,.72);border-radius:6px;opacity:1;background:linear-gradient(180deg,rgba(49,33,23,.72),rgba(22,16,12,.72)),repeating-linear-gradient(90deg,rgba(232,216,176,.045) 0 1px,transparent 1px 7px);box-shadow:inset 0 0 0 1px rgba(236,220,179,.08),0 12px 26px rgba(0,0,0,.38);backdrop-filter:none;color:#f7ebcf;cursor:default;overflow-y:auto}
+#quickChat .quick-chat-heading{align-items:center;margin-bottom:4px}#quickChat .quick-chat-heading button{border:0;background:none;padding:2px 0;color:#eadfc7;font:11px Georgia,serif;min-height:28px;cursor:pointer}
+#quickChat .quick-chat-messages{gap:5px}#quickChat .mini-row{min-width:0}#quickChat .mini-row p{font:12px/1.3 "Segoe UI",sans-serif}#quickChat .mini-row strong{font:600 12px Georgia,serif}
+:is(#chatDialog,#quickChat) .message-tools{display:flex;align-items:center;flex-wrap:wrap;gap:3px 9px;min-height:28px}
+#chatDialog .message-tools{margin-left:150px}
+:is(#chatDialog,#quickChat) .per-message-translate{min-height:28px;padding:2px 1px;border:0;background:none;color:#546444;font:12px "Segoe UI",sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+:is(#chatDialog,#quickChat) .per-message-translate:disabled{cursor:wait;opacity:.7;text-decoration:none}
+:is(#chatDialog,#quickChat) .message-error{font:11px/1.3 "Segoe UI",sans-serif;color:#894032}
+#quickChat .per-message-translate{font-size:10px;color:#f0dcad}#quickChat .message-error{font-size:10px;color:#ffd2b4}#quickChat .chat-google-attribution img{height:12px;background:#eee7d8;padding:1px;border-radius:1px}
+@media(max-width:900px) and (orientation:landscape){#chatDialog .message-tools{margin-left:106px}#chatDialog .per-message-translate{font-size:11px}#quickChat .mini-row p,#quickChat .mini-row strong{font-size:11px}}
+@media(max-width:650px) and (orientation:landscape){#chatDialog .message-tools{margin-left:94px}}

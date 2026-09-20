@@ -115,10 +115,23 @@ async function main() {
   identity = { releaseId: info.currentReleaseId, worldId: info.worldId, resetGeneration: info.resetGeneration, realmShardId: info.sharedRealmId };
   const leaderClaim = await call("claimStartingCity", leader, { playerName: leader.label });
   const allyClaim = await call("claimStartingCity", ally, { playerName: ally.label });
+  // Starting-city allocation can choose a hardcoded travel target. Never turn
+  // either actor's real Main City into a neutral target or secondary source.
+  const reservedCityIds = new Set([leaderClaim.cityId, allyClaim.cityId]);
+  const travelCity = (regionId, preferredIndex) => {
+    const count = fixture.planner.getModel(regionId).map.cities.length;
+    for (let offset = 0; offset < count; offset++) {
+      const city = canonicalCity(fixture.planner, regionId, (preferredIndex + offset) % count);
+      if (reservedCityIds.has(city.id)) continue;
+      reservedCityIds.add(city.id);
+      return city;
+    }
+    throw new Error(`No distinct travel fixture city in ${regionId}.`);
+  };
   const stateRef = db.doc(`realmGenerations/${identity.resetGeneration}/expansion/current`);
   await stateRef.set({ activeRegionIds: fixture.activeRegionIds, admittingRegionIds: fixture.activeRegionIds,
     nextActivationOrdinal: fixture.activeRegionIds.length }, { merge: true });
-  const source = canonicalCity(fixture.planner, fixture.activeRegionIds[0], 10);
+  const source = travelCity(fixture.activeRegionIds[0], 10);
   const farRegion = fixture.activeRegionIds[12];
   for (const regionId of [source.regionId, fixture.activeRegionIds[1], fixture.activeRegionIds[2], farRegion]) {
     await call("ensureMainIsland", leader, { regionId });
@@ -134,23 +147,23 @@ async function main() {
       upgrades: { marchOrders: 5 }, itemEffects: {}, gold: 1_000_000, goldFloat: 1_000_000, economyUpdatedAtMs: Date.now() + 3_600_000 }, { merge: true });
   }
   await own(source, leader, 50_000);
-  const scoutTarget = canonicalCity(fixture.planner, farRegion, 11);
+  const scoutTarget = travelCity(farRegion, 11);
   await neutral(scoutTarget);
   await verifyPreviewFreshness(leader, source, scoutTarget);
   await march(leader, source, scoutTarget, "scout", 7);
   for (const [ordinal, minMaps] of [[0, 1], [1, 2], [2, 3], [12, 7]]) {
-    const target = canonicalCity(fixture.planner, fixture.activeRegionIds[ordinal], 12);
+    const target = travelCity(fixture.activeRegionIds[ordinal], 12);
     await neutral(target);
     const { result } = await march(leader, source, target, "attack", minMaps);
     assert(result.outcome, "Attack generated no battle outcome.");
   }
-  const transferTarget = canonicalCity(fixture.planner, farRegion, 13);
+  const transferTarget = travelCity(farRegion, 13);
   await own(transferTarget, leader, 100);
   const before = (await cityRef(transferTarget).get()).data().troops;
   await march(leader, source, transferTarget, "transfer", 7);
   assert((await cityRef(transferTarget).get()).data().troops >= before + 10);
   await march(leader, transferTarget, source, "transfer", 7);
-  const alliedCity = canonicalCity(fixture.planner, farRegion, 14);
+  const alliedCity = travelCity(farRegion, 14);
   await own(alliedCity, ally, 5_000);
   await march(leader, source, alliedCity, "reinforce", 7);
   const stations = await db.collection("reinforcements").where("ownerUid", "==", leader.uid).get();

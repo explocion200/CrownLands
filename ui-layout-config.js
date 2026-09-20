@@ -53,11 +53,11 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
           "zIndex": 55
         },
         "activeEffects": {
-          "anchor": "centerRight",
-          "offsetX": 12,
-          "offsetY": 0,
-          "width": 66,
-          "height": 176,
+          "anchor": "topRight",
+          "offsetX": 54,
+          "offsetY": 10,
+          "width": 207,
+          "height": 84,
           "visible": true,
           "zIndex": 56
         },
@@ -177,11 +177,11 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
           "zIndex": 55
         },
         "activeEffects": {
-          "anchor": "centerRight",
-          "offsetX": 12,
-          "offsetY": 0,
-          "width": 66,
-          "height": 176,
+          "anchor": "topRight",
+          "offsetX": 68,
+          "offsetY": 18,
+          "width": 260,
+          "height": 102,
           "visible": true,
           "zIndex": 56
         },

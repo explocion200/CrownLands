@@ -42,6 +42,7 @@ async function main() {
       playRewardAnimation=(kind,options)=>window.rewardFeedback.push({kind,anchor:options.sourceAnchor});
       getEffectiveAnimationMode=()=>"off";
       window.ledgerLayout=(dialog,button)=>{
+        for(const animation of dialog.getAnimations({subtree:true}))if(Number.isFinite(animation.effect?.getComputedTiming().endTime))animation.finish();
         const r=dialog.getBoundingClientRect(), b=button.getBoundingClientRect();
         return {bounds:{x:r.x,y:r.y,width:r.width,height:r.height}, footerVisible:b.top>=r.top&&b.bottom<=r.bottom&&b.left>=r.left&&b.right<=r.right,
           buttonHeight:b.height, horizontalOverflow:dialog.scrollWidth>dialog.clientWidth+1, text:dialog.innerText,
@@ -148,7 +149,7 @@ async function main() {
       });
       await screenshot("chat-"+viewport.name);
       assert(chat.footerVisible&&!chat.horizontalOverflow&&chat.buttonHeight>=44&&chat.historyHeight>=40&&chat.historyScrollable&&chat.ownRows>0,JSON.stringify({viewport,chat}));
-      assert(await evaluate(()=>document.getElementById("chatTranslateBtn").hidden),"A sample translation provider must never appear as a live service.");
+      assert(await evaluate(()=>!document.getElementById("chatTranslateBtn")&&!document.querySelector(".per-message-translate")),"No channel-wide control or unverified translation buttons.");
       const navigation=await evaluate(()=>{
         document.getElementById("chatMessageInput").value="Keep this unsent draft";
         window.qaChat.selectChannel("clan");
@@ -179,39 +180,92 @@ async function main() {
         window.qaTranslationCalls=[];window.qaTranslationLimited=false;
         window.qaChatApi.translateChatMessages=async payload=>{
           window.qaTranslationCalls.push(payload);
+          if(payload.operation==="detect")return {detections:payload.messageIds.map(id=>({id,language:id==="same-language"?"es":"en",confidence:id==="uncertain"?.1:.99}))};
           if(window.qaTranslationLimited)throw Object.assign(new Error("Monthly limit"),{details:{reason:"translation-monthly-limit"}});
           return {provider:"google",translations:payload.messageIds.map(id=>({id,text:'Hola <img src=x onerror="throw new Error(1)"> '+id}))};
         };
+        window.qaChat.setTranslationLanguage("en");
         window.qaChat.setTranslationLanguage("es");
-        document.getElementById("chatTranslateBtn").click();
       });
-      await wait(200);
+      await wait(150);
+      assert(await evaluate(()=>window.qaTranslationCalls.every(call=>call.operation==="detect")),"Detection must not automatically translate.");
+      await evaluate(()=>{
+        const button=document.querySelector("#chatMessageList .per-message-translate");
+        window.qaSelectedTranslationId=button.dataset.messageId;button.focus();button.click();
+      });
+      await wait(180);
       const translated=await evaluate(()=>({
-        visible:!document.getElementById("chatTranslateBtn").hidden,
-        attribution:[...document.querySelectorAll("#chatDialog .chat-google-attribution")].every(node=>!node.hidden&&node.querySelector("img").naturalWidth>0),
-        translated:document.getElementById("chatMessageList").textContent.includes("Hola <img"),
+        visible:!document.getElementById("chatTranslateBtn"),
+        attribution:[...document.querySelectorAll("#chatDialog .chat-google-attribution")].some(node=>!node.hidden&&node.querySelector("img").naturalWidth>0),
+        translated:document.querySelectorAll("#chatMessageList .is-translated").length,
         injectedImages:document.querySelectorAll("#chatMessageList img[src=x]").length,
+        focusPreserved:document.activeElement.dataset.messageId===window.qaSelectedTranslationId,
         calls:window.qaTranslationCalls,
         layout:window.ledgerLayout(document.getElementById("chatDialog"),document.getElementById("chatSendBtn")),
       }));
-      assert(translated.visible&&translated.attribution&&translated.translated&&!translated.injectedImages);
-      assert(translated.calls.length>0&&translated.calls.every(call=>call.targetLanguage==="es"&&!Object.hasOwn(call,"text")));
+      assert(translated.visible&&translated.attribution&&translated.translated===1&&!translated.injectedImages&&translated.focusPreserved,JSON.stringify(translated));
+      assert(translated.calls.filter(call=>call.operation!=="detect").every(call=>call.messageIds.length===1&&call.targetLanguage==="es"&&!Object.hasOwn(call,"text")));
       assert(translated.layout.footerVisible&&!translated.layout.horizontalOverflow,JSON.stringify({viewport,translated}));
       await screenshot("chat-google-translation-"+viewport.name);
-      await evaluate(()=>window.qaChatListeners.global.onMessages([{id:"translate-incoming",senderUid:"other",senderDisplayName:"Other",text:"Fresh message",createdAtMs:Date.now(),status:"visible"}],{}));
+      await evaluate(()=>{
+        document.querySelector('#chatMessageList [data-message-id="'+window.qaSelectedTranslationId+'"] .per-message-translate').click();
+        document.getElementById("chatNewMessagesBtn").click();
+        const now=Date.now();
+        window.qaChatListeners.global.onMessages([
+          {id:"same-language",text:"Hola amigo"},{id:"neutral",text:"12:30 (42,18)"},{id:"uncertain",text:"uncertain name"},{id:"translate-incoming",text:"Fresh message"}
+        ].map((item,i)=>({...item,senderUid:"other",senderDisplayName:"Other",createdAtMs:now+i,status:"visible"})),{});
+        const list=document.getElementById("chatMessageList");list.scrollTop=list.scrollHeight;list.dispatchEvent(new Event("scroll"));
+      });
+      await wait(150);
+      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Fresh message")&&!document.querySelector('#chatMessageList [data-message-id="same-language"] .per-message-translate')&&!document.querySelector('#chatMessageList [data-message-id="neutral"] .per-message-translate')&&!document.querySelector('#chatMessageList [data-message-id="uncertain"] .per-message-translate')),"Same-language, neutral and uncertain messages must not offer translation.");
+      await evaluate(()=>{window.qaTranslationLimited=true;document.querySelector('#chatMessageList [data-message-id="translate-incoming"] .per-message-translate').click();});
       await wait(80);
-      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Hola <img src=x onerror=\"throw new Error(1)\"> translate-incoming")),"Incoming messages must translate automatically.");
-      await evaluate(()=>document.getElementById("chatTranslateBtn").click());
-      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Fresh message")),"Show originals restores message text.");
-      await evaluate(()=>{window.qaTranslationLimited=true;document.getElementById("chatTranslateBtn").click();});
+      assert(await evaluate(()=>document.querySelector('#chatMessageList [data-message-id="translate-incoming"]').textContent.includes("Monthly allowance used")),"Explain quota failures on the affected message.");
+      await evaluate(()=>{window.qaTranslationLimited=false;document.querySelector('#chatMessageList [data-message-id="translate-incoming"] .per-message-translate').click();});
       await wait(80);
-      assert(await evaluate(()=>document.getElementById("chatTranslationStatus").textContent.includes("Monthly translation allowance used")),"Explain quota failures while preserving originals.");
-      await evaluate(()=>{window.qaTranslationLimited=false;document.getElementById("chatTranslationRetry").click();});
-      await wait(80);
-      assert(await evaluate(()=>document.getElementById("chatMessageList").textContent.includes("Hola <img")),"Retry must recover translations.");
-      await evaluate(()=>document.getElementById("chatTranslateBtn").click());
+      assert(await evaluate(()=>document.querySelector('#chatMessageList [data-message-id="translate-incoming"] .chat-message-text').textContent.includes("Hola <img")),"Retry must recover that message.");
+      await evaluate(()=>window.qaChat.setMode("quick"));await wait(120);
+      const mini=await evaluate(()=>{
+        const preview=document.getElementById("quickChat"),r=preview.getBoundingClientRect();
+        const button=preview.querySelector(".per-message-translate"),b=button?.getBoundingClientRect();
+        return {background:getComputedStyle(preview).backgroundImage,visible:!preview.hidden,bounds:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewportHeight:innerHeight,
+          buttonVisible:!button||b.top>=r.top&&b.bottom<=r.bottom,arrow:document.querySelector('#chatToggleBtn use').getAttribute('href'),
+          sharedResult:preview.textContent.includes("Hola <img"),mode:window.qaChat.diagnostics().mode};
+      });
+      assert(mini.visible&&mini.buttonVisible&&mini.arrow==="#cl-icon-back"&&mini.background.includes("0.72")&&mini.bounds.top>=0&&mini.bounds.bottom<=viewport.height,JSON.stringify({viewport,mini}));
+      await screenshot("chat-individual-mini-"+viewport.name);
+      await evaluate(()=>document.getElementById("chatToggleBtn").click());
+      assert(await evaluate(()=>document.getElementById("quickChat").hidden),"Arrow collapses preview");
+      await evaluate(()=>{document.getElementById("chatToggleBtn").click();document.getElementById("openChatLedger").click();});
+      assert(await evaluate(()=>document.getElementById("chatDialog").open),"Open chat enters the ledger");
       results.push({screen:"chat",viewport:viewport.name,layout:{...chat,text:undefined},navigation,unread});
       await evaluate(()=>window.qaChat.dispose({resetSession:true}));
+      await evaluate(()=>{
+        state.itemEffects={shieldExpiresAtMs:Date.now()+120000,warDrumsExpiresAtMs:Date.now()+100000,royalTaxDecreeExpiresAtMs:Date.now()+80000,veilOfSilenceExpiresAtMs:Date.now()+30000};
+        updateShieldStatusBadge();
+      });
+      const boostHud=await evaluate(()=>{
+        const buttons=[...document.querySelectorAll('#activeItemEffectsStack button')];
+        return buttons.map(button=>{const r=button.getBoundingClientRect();return {id:button.id,top:r.top,bottom:r.bottom,left:r.left,right:r.right,
+          hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};});
+      });
+      assert(boostHud.every(item=>item.hit&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
+      assert(Math.abs(boostHud[1].top-boostHud[4].top)<1,"All four effect icons fit one compact HUD row");
+      await evaluate(()=>{
+        document.getElementById("allEffects").click();
+      });await wait(180);
+      for(const id of ["shieldStatusBadge","warDrumsStatusBadge","taxDecreeStatusBadge","veilStatusBadge"]){
+        await evaluate(id=>document.querySelector('#boostList [data-effect-id="'+id+'"]').click(),id);await wait(80);
+        const boost=await evaluate(()=>window.ledgerLayout(document.getElementById("boostDialog"),document.getElementById("backToMap")));
+        assert(boost.footerVisible&&!boost.horizontalOverflow&&!boost.brokenImages.length,JSON.stringify({viewport,id,boost}));
+        if(id==="warDrumsStatusBadge")assert(boost.text.includes("+30% base troop production")&&boost.text.includes("does not increase battle power"));
+        if(id==="veilStatusBadge")assert(boost.text.includes("personal item effect"));
+        await screenshot("boost-"+id+"-"+viewport.name);
+      }
+      await evaluate(()=>{state.itemEffects={};updateShieldStatusBadge();});
+      assert(await evaluate(()=>document.getElementById("boostDialog").textContent.includes("No active effects")&&document.querySelectorAll('#boostList button').length===0),"Expired effects must disappear without closing the dialog");
+      await evaluate(()=>document.getElementById("backToMap").click());
+      results.push({screen:"boosts",viewport:viewport.name,allEffects:true,expiry:true});
       console.log("Passed reward and Chat integration at "+viewport.width+"x"+viewport.height+".");
     }
     assert.deepEqual(errors,[],"Uncaught runtime errors.");

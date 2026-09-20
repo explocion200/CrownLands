@@ -4,140 +4,123 @@
   if (root) root.CrownlandsChatTranslation = api;
 })(typeof window !== "undefined" ? window : null, function () {
   "use strict";
-  const BATCH_LIMIT = 20;
-  const CACHE_LIMIT = 400;
-
+  const BATCH_LIMIT = 20, CACHE_LIMIT = 400;
   function preferredLanguage(preferences = [], fallback = "en") {
     for (const value of [...preferences, fallback, "en"]) {
       try {
         const locale = new Intl.Locale(value);
         if (locale.language === "zh") return locale.script === "Hant" || ["TW", "HK", "MO"].includes(locale.region) ? "zh-TW" : "zh-CN";
         return locale.language;
-      } catch (_error) { /* Try the next browser preference. */ }
+      } catch (_error) { /* Try the next device preference. */ }
     }
     return "en";
   }
-
+  function hasLanguage(text) {
+    return (String(text).replace(/https?:\/\/\S+/gu, "").match(/\p{L}/gu) || []).length >= 2;
+  }
+  function isForeign(language, confidence, target) {
+    return /^[a-z]{2,3}(?:-[A-Za-z0-9]+)*$/.test(language || "") && language !== "und"
+      && confidence >= 0.8 && language.split("-")[0] !== target.split("-")[0];
+  }
   function create(options = {}) {
-    let account = "", enabled = false, epoch = 0, activeRequest = null;
-    let target = options.language || "en", view = null;
+    let account = "", target = options.language || "en", epoch = 0, view = null, activeRequest = null;
     const cache = new Map();
-    const notify = () => options.onChange?.();
-    const preferenceKey = () => `${options.storagePrefix || "crownlands-chat-translation"}:${account}`;
     const key = (message, context) => JSON.stringify([context.channel, context.clanId || "", target, message.id, message.text]);
-
-    function invalidate() {
+    const notify = () => options.onChange?.();
+    function cancel(clear = false) {
       epoch += 1;
-      activeRequest?.abort();
-      activeRequest = null;
-      cache.clear();
-    }
-    function setAccount(uid) {
-      if (account === uid) return;
-      invalidate();
-      view = null;
-      account = String(uid || "");
-      enabled = false;
-      if (account) {
-        try { enabled = options.storage?.getItem(preferenceKey()) === "true"; } catch (_error) { /* Session-only when storage is blocked. */ }
+      activeRequest?.abort(); activeRequest = null;
+      if (clear) cache.clear();
+      else for (const [id, item] of cache) {
+        if (item.detecting) cache.delete(id);
+        else if (item.state === "pending") cache.set(id, { ...item, state: "original" });
       }
-    }
-    function setEnabled(value) {
-      enabled = Boolean(value);
-      if (account) {
-        try { options.storage?.setItem(preferenceKey(), String(enabled)); } catch (_error) { /* Session-only when storage is blocked. */ }
-      }
-      if (!enabled) invalidate();
-      notify();
-      pump();
-    }
-    function setLanguage(value) {
-      if (value === target) return;
-      invalidate();
-      target = value;
-      notify();
-      pump();
     }
     function display(message, context) {
-      const entry = enabled && cache.get(key(message, context));
-      return entry || { text: message.text, state: "original" };
+      const item = cache.get(key(message, context));
+      return item ? { ...item, text: item.state === "translated" ? item.translated : message.text }
+        : { text: message.text, state: "original", eligible: false };
     }
-    function update(context) {
-      view = context;
-      pump();
-    }
-    function retry() {
-      for (const [id, entry] of cache) if (entry.state === "error") cache.delete(id);
-      pump();
-    }
-    function status() {
-      const states = enabled && view?.active ? view.messages.map(message => display(message, view).state) : [];
-      return { enabled, target, pending: states.filter(s => s === "pending").length, failed: states.filter(s => s === "error").length,
-        monthlyLimit: enabled && view?.messages.some(message => display(message, view).monthlyLimit === true) };
-    }
-    async function pump() {
-      if (!enabled || !account || !view?.active || activeRequest || !view.messages.length) return;
-      // Only the selected, visible channel is translated; originals never leave the client via this adapter.
-      const context = view;
-      const batch = context.messages.filter(message => !cache.has(key(message, context))).slice(-BATCH_LIMIT);
-      if (!batch.length) return;
-      const generation = epoch, language = target;
-      const entries = batch.map(message => [key(message, context), message]);
-      const abort = new AbortController();
-      activeRequest = abort;
-      for (const [id, message] of entries) cache.set(id, { text: message.text, state: "pending" });
-      // Notify asynchronously: a render may be the caller of update().
-      queueMicrotask(notify);
-      let timeout;
+    async function request(payload, abort) {
+      let timer;
       try {
-        const result = await Promise.race([
+        return await Promise.race([
           Promise.resolve().then(() => {
-            if (abort.signal.aborted) throw new Error("Translation cancelled.");
-            return options.translate({
-            channel: context.channel,
-            clanId: context.channel === "clan" ? context.clanId : "",
-            messageIds: batch.map(message => message.id),
-            targetLanguage: language,
-            }, { signal: abort.signal });
+            if (abort.signal.aborted) throw Error("Cancelled");
+            return options.translate(payload, { signal: abort.signal });
           }),
-          new Promise((_, reject) => { timeout = setTimeout(() => { abort.abort(); reject(new Error("Translation timed out.")); }, options.timeoutMs || 12000); }),
+          new Promise((_, reject) => { timer = setTimeout(() => { abort.abort(); reject(Error("Timed out")); }, options.timeoutMs || 12000); }),
         ]);
-        if (generation !== epoch) return;
-        const translated = new Map((result?.translations || []).map(item => [item.id, item]));
-        for (const [id, message] of entries) {
-          const item = translated.get(message.id);
-          const valid = typeof item?.text === "string" && item.text.trim() && item.text.length <= 3000;
-          cache.set(id, valid ? { text: item.text, state: item.text === message.text ? "original" : "translated" }
-            : { text: message.text, state: "error" });
-        }
-      } catch (error) {
-        if (generation !== epoch) return;
-        const monthlyLimit = error?.details?.reason === "translation-monthly-limit";
-        for (const [id, message] of entries) cache.set(id, { text: message.text, state: "error", monthlyLimit });
-        // Stop this pass after a failure, rather than sending every remaining page to a failing service.
-        for (const message of context.messages) {
-          const id = key(message, context);
-          if (!cache.has(id)) cache.set(id, { text: message.text, state: "error", monthlyLimit });
-        }
-      } finally {
-        clearTimeout(timeout);
-        if (generation === epoch) {
-          activeRequest = null;
-          // Retain the current view when trimming; no cached text is persisted to disk.
-          const visible = new Set((view?.messages || []).map(message => key(message, view)));
-          for (const id of cache.keys()) {
-            if (cache.size <= CACHE_LIMIT) break;
-            if (!visible.has(id)) cache.delete(id);
-          }
-          notify();
-          pump();
-        }
+      } finally { clearTimeout(timer); }
+    }
+    function trim() {
+      const visible = new Set((view?.messages || []).map(message => key(message, view)));
+      for (const id of cache.keys()) {
+        if (cache.size <= CACHE_LIMIT) break;
+        if (!visible.has(id)) cache.delete(id);
       }
     }
-    return Object.freeze({ setAccount, setEnabled, setLanguage, display, update, retry, status,
-      clear() { invalidate(); view = null; },
-      dispose() { invalidate(); view = null; account = ""; enabled = false; },
+    async function detect() {
+      if (!account || !view?.active || activeRequest) return;
+      const context = view, generation = epoch;
+      const batch = context.messages.filter(message => hasLanguage(message.text) && !cache.has(key(message, context))).slice(-BATCH_LIMIT);
+      if (!batch.length) return;
+      const abort = new AbortController(); activeRequest = abort;
+      const entries = batch.map(message => [key(message, context), message]);
+      for (const [id] of entries) cache.set(id, { state: "original", detecting: true, eligible: false });
+      try {
+        const result = await request({ channel: context.channel, clanId: context.clanId || "", messageIds: batch.map(message => message.id), targetLanguage: target, operation: "detect" }, abort);
+        if (generation !== epoch) return;
+        const detected = new Map((result?.detections || []).map(item => [item.id, item]));
+        for (const [id, message] of entries) {
+          const item = detected.get(message.id);
+          cache.set(id, { state: "original", eligible: isForeign(item?.language, item?.confidence, target) });
+        }
+      } catch (_error) {
+        if (generation !== epoch) return;
+        // Unknown languages have no Translate control. Reopening chat permits a fresh check.
+        for (const message of context.messages) if (!cache.has(key(message, context)) || cache.get(key(message, context)).detecting)
+          cache.set(key(message, context), { state: "original", eligible: false, detectionFailed: true });
+      } finally {
+        if (generation === epoch) { activeRequest = null; trim(); notify(); detect(); }
+      }
+    }
+    async function toggle(message, context) {
+      const id = key(message, context), item = cache.get(id);
+      if (!account || !view?.active || view.channel !== context.channel || (view.clanId || "") !== (context.clanId || "")
+        || !view.messages.some(current => key(current, view) === id) || !item?.eligible || item.state === "pending") return;
+      if (item.translated) { item.state = item.state === "translated" ? "original" : "translated"; notify(); return; }
+      // An explicit row action takes priority over background language detection.
+      cancel();
+      const generation = epoch, abort = new AbortController(); activeRequest = abort;
+      cache.set(id, { ...item, state: "pending" }); notify();
+      try {
+        const result = await request({ channel: context.channel, clanId: context.clanId || "", messageIds: [message.id], targetLanguage: target }, abort);
+        if (generation !== epoch) return;
+        const translated = result?.translations?.find(value => value.id === message.id)?.text;
+        if (typeof translated !== "string" || !translated.trim() || translated.length > 3000) throw Error("Missing translation");
+        cache.set(id, { eligible: translated !== message.text, state: translated === message.text ? "original" : "translated", translated });
+      } catch (error) {
+        if (generation === epoch) cache.set(id, { ...item, state: "error", monthlyLimit: error?.details?.reason === "translation-monthly-limit" });
+      } finally {
+        if (generation === epoch) { activeRequest = null; trim(); notify(); detect(); }
+      }
+    }
+    return Object.freeze({
+      setAccount(uid) { if (account !== uid) { cancel(true); account = String(uid || ""); view = null; } },
+      setLanguage(language) { if (target !== language) { cancel(true); target = language; notify(); detect(); } },
+      update(context) {
+        if (view && (view.channel !== context.channel || view.clanId !== context.clanId || view.active !== context.active)) {
+          cancel();
+          for (const [id, item] of cache) if (item.detectionFailed) cache.delete(id);
+        }
+        view = context; detect();
+      },
+      display, toggle,
+      status() { return { target, mode: "individual", pending: [...cache.values()].filter(item => item.state === "pending").length }; },
+      clear() { cancel(true); view = null; },
+      dispose() { cancel(true); view = null; account = ""; },
     });
   }
-  return Object.freeze({ preferredLanguage, create, BATCH_LIMIT });
+  return Object.freeze({ preferredLanguage, hasLanguage, isForeign, create, BATCH_LIMIT });
 });

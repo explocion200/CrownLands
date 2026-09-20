@@ -24,6 +24,15 @@ async function main() {
   }});
   assert.deepEqual(await provider(["<hello>","Hi"],"es"),["<hola>","Hola"]);
   assert.equal(calls,1);
+  const detections = createGoogleProvider({projectId:"test-project",credential,fetchImpl:async(url,options)=>{
+    assert.equal(url,"https://translation.googleapis.com/v3/projects/test-project/locations/global:detectLanguage");
+    assert.deepEqual(JSON.parse(options.body),{content:"Hola amigo",mimeType:"text/plain"});
+    return {ok:true,json:async()=>({languages:[{languageCode:"es",confidence:.96}]})};
+  }});
+  assert.deepEqual(JSON.parse((await detections(["Hola amigo"],"en","detect"))[0]),{language:"es",confidence:.96});
+  assert.equal(validatePayload({...valid,operation:"detect"},fail).operation,"detect");
+  assert.throws(()=>validatePayload({...valid,operation:"free-text"},fail));
+  await assert.rejects(createGoogleProvider({projectId:"test-project",credential,fetchImpl:async()=>({ok:true,json:async()=>({languages:[]})})})(["Hola"],"en","detect"),/Incomplete/);
   for(const response of [{ok:false,status:403},{ok:true,json:async()=>({translations:[]})},{ok:true,json:async()=>({translations:[{translatedText:""}]})}]) {
     await assert.rejects(createGoogleProvider({projectId:"test-project",credential,fetchImpl:async()=>response})(["Hi"],"es"));
   }

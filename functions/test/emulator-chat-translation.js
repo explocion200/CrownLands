@@ -54,6 +54,11 @@ async function main(){
   await rejectCode(call("translateChatMessages",null,globalData),"UNAUTHENTICATED");
   assert.equal((await call("translateChatMessages",actor,globalData)).translations[0].text,"Hello");
   assert.equal((await call("translateChatMessages",actor,clanData)).translations[0].text,"Hello");
+  const detectionCache=db.doc(`chatTranslationCache/${cacheKey(global.ref.path,"Bonjour","language-detection-v1")}`);
+  await detectionCache.set({state:"ready",text:JSON.stringify({language:"fr",confidence:.99}),expiresAtMs:Date.now()+60000});
+  assert.equal((await call("translateChatMessages",actor,{...globalData,operation:"detect"})).detections[0].language,"fr");
+  await rejectCode(call("translateChatMessages",outsider,{...clanData,operation:"detect"}),"PERMISSION_DENIED");
+  await rejectCode(call("translateChatMessages",actor,{...globalData,operation:"detect",text:"forged"}),"INVALID_ARGUMENT");
   await rejectCode(call("translateChatMessages",outsider,clanData),"PERMISSION_DENIED");
   await rejectCode(call("translateChatMessages",actor,{...globalData,text:"forged"}),"INVALID_ARGUMENT");
   await global.ref.update({status:"removed"});
@@ -118,6 +123,19 @@ async function main(){
   const limited=request(winner);
   await db.doc(`serverRateLimits/translation_${limited.auth.uid}`).set({minute:Math.floor(clock/60000),count:30});
   await rejectCode(service()(limited),"resource-exhausted");
+  clock=Date.UTC(2030,2,1);
+  let detectCalls=0;
+  const detecting=service(async(texts,_language,operation)=>{
+    assert.equal(operation,"detect");detectCalls++;return texts.map(()=>JSON.stringify({language:"fr",confidence:.98}));
+  });
+  const detectionRequest=request(await make("Bonjour"));detectionRequest.data.operation="detect";
+  assert.equal((await detecting(detectionRequest)).detections[0].language,"fr");
+  assert.equal((await db.doc("chatTranslationUsage/2030-03").get()).data().reservedCharacters,7,"Detection shares the existing monthly reservation.");
+  detectionRequest.data.targetLanguage="de";await detecting(detectionRequest);
+  assert.equal(detectCalls,1,"Source detection cache must be shared across target languages.");
+  const detectedMessage=detectionRequest.data.messageIds[0];
+  await service()(request(detectedMessage));
+  assert.equal((await db.doc("chatTranslationUsage/2030-03").get()).data().reservedCharacters,14,"Translation and detection both count towards the single cap.");
   console.log("Chat translation emulator passed: current realm, auth, clan isolation/revocation, moderation/expiry, private cache, concurrent cap and deduplication, Unicode counts, month rollover, timeout reservation, edits and rate limit.");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

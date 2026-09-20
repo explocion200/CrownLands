@@ -151,6 +151,9 @@ async function main() {
       assert(startup.profileStart >= startup.skillEnd, "Startup read the profile before skill migration settled.");
       if (!baselineRoot) assert(startup.snapshotStart < startup.skillEnd, "Independent saved-state loading waited for skill migration.");
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
+      // The short-landscape preview now occupies these map gesture coordinates.
+      // Collapse it through its real control before exercising unobscured map input.
+      await evaluate("if (!document.getElementById('quickChat').hidden) document.getElementById('chatToggleBtn').click()");
       await wait(400);
       const interruptedTouch = baselineRoot ? null : await verifyInterruptedTouch(client,evaluate);
       const pickups = baselineRoot ? null : await verifyPickupInteractions(client,evaluate);
