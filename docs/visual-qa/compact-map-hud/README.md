@@ -9,6 +9,9 @@ Open `index.html?viewport=desktop&view=map` and switch between Desktop, Mobile l
 - Restore the right-centered vertical item-timer stack, 12 px from the right, from `2fb3c4165:ui-layout-config.js`. Restore the same original burgundy tile backgrounds and dark timer labels. Retain the approved newer shared item artwork.
 - Remove the Active Boosts overview dialog and all links to it. Inactive effects disappear; the empty example leaves the map unobstructed. Timers are passive indicators.
 - Preserve individual translation, full chat, Google integration, Peace Shield cooldowns and retaliation mechanics. This fixture uses fictional messages, timers and prepared translations; it makes no provider calls or gameplay changes.
+- Compact combat timers: Shield Cooldown and Retaliation share one narrow card immediately below Gold. It is 156 px wide on desktop and 148 px in landscape, with a 28 px Retaliation tap target. The city list is 224 px wide (220 px in landscape), retains each name, map/ID and independent countdown, and scrolls. On short landscape screens the list opens beside the card to avoid covering chat. The existing `combat-timers-ui.js` renderer supplies all countdowns and visibility rules; `timers.css` contains draft-only presentation overrides.
+
+The Combat timers review selector offers several cities, one city, shield only, none active and a 12-second expiry example. These deadlines are synthetic and do not change any live player timer.
 
 The small-landscape fixture keeps the existing 64 px navigation icons and lets the preview contract horizontally to 178 px at 568 px viewport width. It does not return to a portrait layout.
 

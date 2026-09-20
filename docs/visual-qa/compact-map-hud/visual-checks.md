@@ -10,3 +10,11 @@
 - Recent messages scroll inside the fixed-height preview. The newer artwork and the existing full conversation remain available.
 
 Only the new `docs/visual-qa/compact-map-hud/` folder changes. Production runtime, backend, combat protections and existing approved previews are untouched. Full release checks and PR preparation are not run for this approval-only draft.
+
+## Compact combat timer revision
+
+- Uses the actual game markup and `CrownlandsCombatTimersUI` renderer with fictional deadlines.
+- Short landscape (568×320): measured card 148×48 px, x=18, y=119; Retaliation tap target 28 px tall. Expanded list is 220×114 px at x=173, y=119, scrolls through five cities and does not overlap quick chat.
+- Single-city state shows its countdown. Shield-only state hides Retaliation. No active timers hides the entire card.
+- Desktop: card measured 156×48 px; expanded list 224×174 px. Both were visually reviewed. The 12-second Retaliation sample expired independently while Shield Cooldown remained visible.
+- JavaScript syntax and Git whitespace checks passed. No backend or gameplay behavior changes.

@@ -1,8 +1,14 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Compact map HUD draft</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="chat.css"><link rel="stylesheet" href="chat-ledger-ui.css"><link rel="stylesheet" href="docs/visual-qa/compact-map-hud/draft.css"><link rel="stylesheet" href="docs/visual-qa/compact-map-hud/restore.css"><script src="docs/visual-qa/chat-ledger/translation-preview.js" defer></script><script src="docs/visual-qa/compact-map-hud/preview.js" defer></script></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Compact map HUD draft</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="chat.css"><link rel="stylesheet" href="chat-ledger-ui.css"><link rel="stylesheet" href="docs/visual-qa/compact-map-hud/draft.css"><link rel="stylesheet" href="docs/visual-qa/compact-map-hud/restore.css"><link rel="stylesheet" href="combat-timers-ui.css"><link rel="stylesheet" href="docs/visual-qa/compact-map-hud/timers.css"><script src="combat-timers-ui.js" defer></script><script src="docs/visual-qa/compact-map-hud/timers-preview.js" defer></script><script src="docs/visual-qa/chat-ledger/translation-preview.js" defer></script><script src="docs/visual-qa/compact-map-hud/preview.js" defer></script></head><body>
 <svg width="0" height="0" class="icon-library" aria-hidden="true"><defs><symbol id="cl-icon-back" viewBox="0 0 24 24"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2"/></symbol><symbol id="translate-mark" viewBox="0 0 24 24"><path d="M3 4h12M9 2v2M6 7c1 4 4 6 7 7M12 5c-1 5-4 8-9 10m10 5 4-10 4 10m-6-4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol></defs></svg>
 <header class="map-title"><span>THE CROWN MARCHES</span><strong>Stoneward</strong><small>Lord Edmund · Level 24</small></header>
-<div class="ruler-resources"><span><img src="assets/optimized/pickup-gold-192x192-0f5238966f7a.webp" alt="">482,650</span><span>8 cities</span></div>
+<div class="ruler-resources"><div class="resource-values"><span><img src="assets/optimized/pickup-gold-192x192-0f5238966f7a.webp" alt="">482,650</span><span>8 cities</span></div><div id="combatTimers" class="combat-timers" aria-label="Combat timers" hidden>
+            <div data-shield-cooldown hidden><span>Shield Cooldown</span><strong role="timer">15:00</strong></div>
+            <details hidden>
+              <summary><span>Retaliation</span><strong>1 Active</strong></summary>
+              <div class="retaliation-list-panel"><p>One attack per captured city. Launch before its timer ends.</p><ul data-retaliation-list></ul></div>
+            </details>
+          </div></div>
 <section class="effect-hud" aria-label="Active item timers"><div id="effectRack"></div></section>
 <div class="map-caption">Crownlands realm <span>Stoneward crossing</span></div>
 <nav class="map-tools" aria-label="Map controls"><button id="openChat" type="button">Realm Chat</button></nav>

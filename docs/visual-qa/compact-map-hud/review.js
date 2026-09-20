@@ -2,7 +2,7 @@
 const frame=document.getElementById("preview"),canvas=document.getElementById("canvas"),query=new URLSearchParams(location.search);
 const sizes={desktop:[1440,900],landscape:[844,390],small:[568,320]};
 let viewport=Object.hasOwn(sizes,query.get("viewport"))?query.get("viewport"):"desktop";
-const controls=["view","sample","locale"].map(id=>document.getElementById(id));
+const controls=["view","sample","locale","timers"].map(id=>document.getElementById(id));
 for(const c of controls)if([...c.options].some(o=>o.value===query.get(c.id)))c.value=query.get(c.id);
 function sync(){const p=new URLSearchParams({viewport});controls.forEach(c=>p.set(c.id,c.value));history.replaceState(null,"","?"+p);}
 function resize(){const [w,h]=sizes[viewport],scale=Math.min(1,(document.documentElement.clientWidth-24)/w);Object.assign(frame.style,{width:w+"px",height:h+"px",transform:"scale("+scale+")"});Object.assign(canvas.style,{width:w*scale+"px",height:h*scale+"px"});document.getElementById("dimensions").textContent=w+" × "+h+" · "+Math.round(scale*100)+"% preview";document.querySelectorAll("[data-viewport]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.viewport===viewport)));sync();}
