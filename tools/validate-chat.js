@@ -231,8 +231,8 @@ requires(game, /function disposeOnlineChat[\s\S]*?CrownlandsChat\?\.dispose/, "C
 requires(game, /disposeOnlineChat\(\{ resetSession: true \}\)/, "Authentication teardown must reset the Chat session default.");
 requires(game, /crownlands:chat-player-profile/, "Chat sender names must open public profiles.");
 requires(game, /function notifyMovementHudOccupancyChange[\s\S]*?crownlands:hud-occupancy-changed/, "Movement HUD visibility changes must trigger collision recalculation.");
-requires(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;[\s\S]*?notifyMovementHudOccupancyChange\(incomingAttackBtn/, "Incoming HUD visibility changes must notify the chat collision runtime.");
-requires(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;[\s\S]*?notifyMovementHudOccupancyChange\(outgoingAttackBtn/, "Outgoing HUD visibility changes must notify the chat collision runtime.");
+requires(game, /setHiddenIfChanged\(incomingAttackBtn, incoming\.length === 0\);[\s\S]*?notifyMovementHudOccupancyChange\(incomingAttackBtn/, "Incoming HUD visibility changes must notify the chat collision runtime.");
+requires(game, /setHiddenIfChanged\(outgoingAttackBtn, total === 0\);[\s\S]*?notifyMovementHudOccupancyChange\(outgoingAttackBtn/, "Outgoing HUD visibility changes must notify the chat collision runtime.");
 for (const id of ["chatToggleBtn", "quickChat", "chatDialog", "chatMessageList", "chatMessageInput", "chatSendBtn"]) {
   requires(html, new RegExp(`id=["']${id}["']`), `Missing chat UI element #${id}.`);
 }

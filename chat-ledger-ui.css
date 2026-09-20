@@ -217,7 +217,6 @@
 #quickChat .quick-chat-messages{display:flex;flex-direction:column;gap:2.24px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#b69a6470 transparent;overscroll-behavior:contain}
 #quickChat .mini-row{flex:none}#quickChat .mini-row p,#quickChat .mini-row strong{font-size:10.88px;line-height:12px}
 #quickChat .message-tools{gap:3px 6px;flex-wrap:nowrap}
-#openRealmChat{position:fixed;left:116px;bottom:12px;z-index:56;width:80px;min-height:44px;padding:4px;border:1px solid #997643;border-radius:4px;background:linear-gradient(180deg,#72363a,#542728);color:#f2e2bf;font:12px Georgia,serif}
 #activeItemEffectsStack{height:auto!important}
 @media(orientation:landscape) and (max-height:600px){
  #activeItemEffectsStack{top:calc(50% - 3px)!important}

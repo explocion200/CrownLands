@@ -658,10 +658,10 @@
       if (!elements.quickMessages || mode !== "quick") return;
       const current = messages[channel].slice(-quickMessageLimit);
       translation?.update(translationContext(current));
-      const wasAtBottom = isMessageListNearBottom(elements.quickMessages);
-      const priorTop = elements.quickMessages.scrollTop;
       const signature = JSON.stringify([channel, clanId, current, current.map(displayMessage)]);
       if (elements.quickMessages.dataset.messageSignature === signature) return;
+      const wasAtBottom = isMessageListNearBottom(elements.quickMessages);
+      const priorTop = elements.quickMessages.scrollTop;
       elements.quickMessages.dataset.messageSignature = signature;
       const focusedId = elements.quickMessages.contains(documentRef.activeElement) ? documentRef.activeElement.dataset.messageId : null;
       elements.quickMessages.replaceChildren();
@@ -721,12 +721,14 @@
         const result = displayMessage(message), body = row.querySelector(".chat-message-text");
         row.classList.toggle("is-own", message.senderUid === uid);
         row.classList.toggle("is-translated", result.state === "translated");
-        body.textContent = result.text;
-        body.dir = "auto";
+        if (body.textContent !== result.text) body.textContent = result.text;
+        if (body.dir !== "auto") body.dir = "auto";
         renderMessageTools(row, message, result);
-        body.dataset.translationState = result.state;
-        body.title = result.state === "translated" ? `Original: ${message.text}` : "";
-        body.setAttribute("aria-description", result.state === "translated" ? "Translated message. Use Show original below this message." : "");
+        if (body.dataset.translationState !== result.state) body.dataset.translationState = result.state;
+        const title = result.state === "translated" ? `Original: ${message.text}` : "";
+        if (body.title !== title) body.title = title;
+        const description = result.state === "translated" ? "Translated message. Use Show original below this message." : "";
+        if (body.getAttribute("aria-description") !== description) body.setAttribute("aria-description", description);
       }
       if (scrollToBottom) elements.list.scrollTop = elements.list.scrollHeight;
       else if (anchorId && Array.from(elements.list.children).some(row => row.dataset.messageId === anchorId)) {
@@ -1012,8 +1014,7 @@
     }
 
     elements.list.addEventListener("scroll", detectVisibleMessages, { passive: true });
-    for (const id of ["openChatLedger", "openRealmChat"])
-      documentRef.getElementById(id)?.addEventListener("click", () => updateMode("full"));
+    documentRef.getElementById("openChatLedger")?.addEventListener("click", () => updateMode("full"));
     elements.toggle.addEventListener("click", () => updateMode("toggle"));
     elements.quick.addEventListener("click", event => {
       if (event.target.closest("button, a")) return;

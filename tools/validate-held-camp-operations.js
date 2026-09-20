@@ -44,7 +44,10 @@ const context = {
   onlineHeldCampStates: new Map(), onlineCampStates: new Map(),
   onlineClanRallies: [], onlineReinforcements: [], onlineCampVfxHydrated: false,
   outgoingAttackBtn: {
-    hidden: true, classList: { toggle() {} }, setAttribute() {}, removeAttribute() {},
+    hidden: true, classList: { toggle() {} },
+    getAttribute(name) { return this[name] ?? null; },
+    setAttribute(name, value) { this[name] = String(value); },
+    removeAttribute(name) { delete this[name]; },
   },
   outgoingAttackCount: {}, outgoingAttackTime: {}, modal: { open: false },
   getCurrentOnlineUid: () => uid,
@@ -62,6 +65,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(objectives, context);
 for (const name of [
+  "setTextIfChanged", "setAttributeIfChanged", "setHiddenIfChanged",
   "getCampConfigForType", "getRewardCampConfig", "normalizeOnlineCampState",
   "getCampTargetById", "applyOnlineHeldCamps", "applyOnlineCamps",
   "getHeldCampsForActiveOperations", "getActiveOperationsSnapshot", "updateOutgoingAttackUi",

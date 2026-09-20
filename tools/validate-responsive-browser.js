@@ -261,10 +261,12 @@ async function main() {
         const first = list.firstElementChild;
         const sender = first.querySelector('button'); sender.focus(); list.scrollTop=0;
         const observer = new MutationObserver(()=>{}); observer.observe(list,{childList:true});
+        const unchangedObserver = new MutationObserver(()=>{}); unchangedObserver.observe(first,{subtree:true,childList:true,characterData:true});
         const start = performance.now();
         for(let i=80;i<180;i++) handlers.global.onMessages([message(i)],{});
         const updatesMs = performance.now()-start;
         const mutations = observer.takeRecords(); observer.disconnect();
+        const unchangedTextMutations = unchangedObserver.takeRecords().length; unchangedObserver.disconnect();
         const sameFirst = first === list.firstElementChild;
         const focusPreserved = document.activeElement === sender;
         const actualCount = list.children.length;
@@ -279,12 +281,13 @@ async function main() {
         const hiddenMutations = hiddenObserver.takeRecords().length; hiddenObserver.disconnect();
         controller.setMode('full');
         const reopened = list.lastElementChild.dataset.messageId === 'message-180';
-        return {updatesMs, added:mutations.reduce((n,r)=>n+r.addedNodes.length,0),removedNodes:mutations.reduce((n,r)=>n+r.removedNodes.length,0),sameFirst,focusPreserved,actualCount,edited,removed,hiddenMutations,reopened};
+        return {updatesMs, unchangedTextMutations, added:mutations.reduce((n,r)=>n+r.addedNodes.length,0),removedNodes:mutations.reduce((n,r)=>n+r.removedNodes.length,0),sameFirst,focusPreserved,actualCount,edited,removed,hiddenMutations,reopened};
       })()`);
       assert.equal(chat.actualCount, 180);
       assert(chat.edited && chat.removed && chat.reopened);
       if (!baselineRoot) {
         assert(chat.sameFirst && chat.focusPreserved, "Chat updates replaced unchanged rows or focus.");
+        assert.equal(chat.unchangedTextMutations, 0, "Incoming chat rewrote an unchanged message's text.");
         assert.equal(chat.added, 100); assert.equal(chat.removedNodes, 0); assert.equal(chat.hiddenMutations, 0);
       }
       await wait(250);
