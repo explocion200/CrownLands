@@ -25,7 +25,7 @@ assert.deepEqual(Object.keys(game.events()[1][2]).sort(),['action_type','page_lo
 assert.equal(game.events()[1][2].page_location,'https://game.playcrownlands.com/play/');
 assert.equal(game.events()[1][2].page_referrer,'');
 game.track('ruler_name','private');assert.equal(game.events().length,2,'Unknown event names cannot transmit data');
-for(const page of ['/support.html','/privacy.html','/terms.html','/game-rules.html']) {
+for(const page of ['support','privacy','terms','game-rules'].flatMap(slug=>['/'+slug,'/'+slug+'/', '/'+slug+'.html'])) {
   const quiet=fixture('playcrownlands.com','cl_analytics_v1=yes',page);quiet.track('play_click');assert.equal(quiet.scripts.length,0);
 }
 const preview=fixture('deploy-preview-4--crownlands-website-preview.netlify.app','cl_analytics_v1=yes');preview.track('homepage_view');assert.equal(preview.scripts.length,0);

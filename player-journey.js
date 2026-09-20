@@ -7,7 +7,7 @@
   const production = location.protocol === 'https:' && [
     'playcrownlands.com', 'www.playcrownlands.com', 'game.playcrownlands.com',
   ].includes(location.hostname);
-  const privatePage = /\/(support|privacy|terms|game-rules)\.html$/.test(location.pathname);
+  const privatePage = /\/(support|privacy|terms|game-rules)(?:\.html)?\/?$/.test(location.pathname);
   const allowed = new Set(['homepage_view', 'play_click', 'game_entry', 'first_action']);
   const actions = new Set(['city_upgrade', 'attack', 'scout', 'transfer']);
   const denied = { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' };
