@@ -33,11 +33,19 @@ This document records confirmed rules, verified deployment status, unresolved co
 
 ### Deployment authority
 
-1. `https://playcrownlands.com` is the primary LIVE web authority. Its public pages and the canonical game application at `https://game.playcrownlands.com` are separately published surfaces and must both be checked when player-facing documentation is part of a release.
+1. `https://playcrownlands.com` is the single player-facing website. The normal browser homepage remains the public website; the canonical game and installed-app entry is `https://playcrownlands.com/play/`. This September 20, 2026 decision supersedes the separate `game.playcrownlands.com` game address. The website and game may retain separate build repositories behind same-origin routing; both publications must be verified together when entry routing changes.
 2. itch.io is a secondary published distribution channel and may temporarily lag web production.
 3. A feature is not LIVE merely because it was implemented, committed, pushed, reviewed, or merged.
 4. LIVE status requires a verified deployment to the named channel. When risk warrants it, production smoke-test evidence is also required.
 5. A feature present on web but absent from the published itch.io build must be recorded as `LIVE — WEB`, not `LIVE — ALL PUBLISHED CHANNELS`.
+
+### Confirmed installed-game launch behavior — September 20, 2026
+
+- Opening an installed Crownlands app must lead to the game at `/play/`, never leave the player on the public homepage. Existing homepage shortcuts need a standalone/iOS launch redirect; ordinary browser visits to `/` retain the homepage.
+- Keep the manifest identity and launch path `/play/`. Serve the manifest, game resources and active game service worker from `playcrownlands.com`; the website must no longer retire that worker. Preserve notification query parameters and fragments during entry redirects.
+- Old game-host entry links lead to the primary domain. Browser-managed install identities and authentication storage are origin-bound: old subdomain installations may require reinstalling from the primary domain and signing in again. Do not describe redirects as a silent transfer of the installed app or session.
+- Keep the current public website and its guides. Route game resources to the independently validated game publication without bundling game logic into public pages. A game worker must not substitute the game shell for ordinary public-page navigation.
+- The historical production snapshots below predate this domain decision. Verify the named website and game deployments, installed launch, worker update, offline shell, and sign-in domain configuration before reporting the new routing as deployed.
 
 ### Evidence precedence
 

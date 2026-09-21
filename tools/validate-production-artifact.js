@@ -281,7 +281,7 @@ function validateEntryResources(html, documentUrl, directoryUrl, baseHref) {
 const itchDirectory = new URL(ITCH_DIRECTORY_PATH, ITCH_DOCUMENT_URL);
 const indexedResourceCount = validateEntryResources(productionIndex, ITCH_DOCUMENT_URL, itchDirectory, "./");
 validateEntryResources(productionPlayIndex, new URL("play/index.html", itchDirectory), itchDirectory, "../");
-const webDirectory = new URL("https://game.playcrownlands.com/");
+const webDirectory = new URL("https://playcrownlands.com/");
 for (const entry of ["play", "play/", "play/index.html"]) {
   validateEntryResources(productionPlayIndex, new URL(entry, webDirectory), webDirectory, "../");
 }
