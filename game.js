@@ -2314,11 +2314,12 @@ let clanTreasuryClanId = "";
 const holdingTowerSnapshots = new Map();
 let selectedHoldingTowerId = "";
 let holdingTowerLoading = false;
-let holdingTowerActionInFlight = "";
+const holdingTowerActionsInFlight = new Set();
 let holdingTowerDetailsTab = "overview";
 let selectedTowerMapId = "";
 let holdingTowerRealtimeUnsubscribe = null;
-let holdingTowerRequestToken = 0;
+const holdingTowerRequestTokens = new Map();
+let holdingTowerModalSession = null;
 let clanGiftCountdownTimer = 0;
 let clanJoinCountdownTimer = 0;
 let battleReportFilter = "all";
@@ -4024,15 +4025,41 @@ function getHoldingTowerQaScenario() {
   return String(new URLSearchParams(window.location.search).get("towerQa") || "").toLowerCase();
 }
 
+function beginHoldingTowerModalSession(towerId, view) {
+  holdingTowerModalSession?.cleanup();
+  const session = { towerId, view };
+  session.cleanup = () => {
+    modal.removeEventListener("close", session.cleanup);
+    if (holdingTowerModalSession !== session) return;
+    holdingTowerModalSession = null;
+    selectedHoldingTowerId = "";
+    holdingTowerLoading = false;
+    if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
+    holdingTowerRealtimeUnsubscribe = null;
+    modalBody._clanTowerClockCleanup?.();
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal");
+  };
+  holdingTowerModalSession = session;
+  selectedHoldingTowerId = view === "details" ? towerId : "";
+  // Install before any network request, including a slow first load.
+  modal.addEventListener("close", session.cleanup, { once: true });
+  return session;
+}
+
+function isHoldingTowerModalSessionCurrent(session) {
+  return Boolean(session && holdingTowerModalSession === session && modal.open);
+}
+
 function renderHoldingTowerModal(tower) {
-  if (!tower || !HOLDING_TOWER_UI) return;
+  if (!tower || !HOLDING_TOWER_UI || selectedHoldingTowerId !== tower.id
+      || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
   const neutral = tower.ownerKind !== "clan";
   const treasuryBalance = clanTreasuryStatus?.treasury?.balance;
   modal.classList.add("holding-tower-modal", "clan-tower-details-modal");
   modalTitle.textContent = tower.name || "Clan Tower";
   const upgradeCount = modalBody.querySelector("[data-tower-upgrade-count]")?.value;
   modalBody.innerHTML = HOLDING_TOWER_UI.renderPanel(tower, {
-    actionBusy: Boolean(holdingTowerActionInFlight),
+    actionBusy: holdingTowerActionsInFlight.has(tower.id),
     clanShieldHtml: neutral ? "" : renderClanShield(tower.clanEmblem, {
       size: "large",
       instance: `tower-${tower.id}`,
@@ -4057,25 +4084,32 @@ function renderHoldingTowerModal(tower) {
 async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe = false } = {}) {
   const towerVisual = getHoldingTowerVisual(towerId);
   if (!towerVisual) return null;
+  const session = holdingTowerModalSession;
+  const isCurrentDetails = () => isHoldingTowerModalSessionCurrent(session)
+    && session.view === "details" && session.towerId === towerId;
   const qaScenario = getHoldingTowerQaScenario();
   if (qaScenario) {
     const snapshot = HOLDING_TOWER_UI.createQaSnapshot(towerVisual, qaScenario === "desktop" || qaScenario === "mobile" ? "owner" : qaScenario);
     holdingTowerSnapshots.set(towerId, snapshot);
-    if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(snapshot);
+    if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
     return snapshot;
   }
   const api = getOnlineApi();
   if (!api?.getHoldingTowerState || !api?.isSignedIn?.()) throw new Error("Sign in to inspect this Clan Tower.");
-  const token = ++holdingTowerRequestToken;
+  const token = (holdingTowerRequestTokens.get(towerId) || 0) + 1;
+  holdingTowerRequestTokens.set(towerId, token);
   const result = await api.getHoldingTowerState({ towerId });
-  if (token !== holdingTowerRequestToken) return null;
+  if (token !== holdingTowerRequestTokens.get(towerId)) return null;
   const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
   holdingTowerSnapshots.set(towerId, snapshot);
-  if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(snapshot);
-  if (subscribe && result?.worldActive && api.subscribeHoldingTowerState) {
+  if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
+  if (subscribe && isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = api.subscribeHoldingTowerState(towerId, {
-      onTower: () => void refreshHoldingTower(towerId),
+      onTower: () => {
+        if (isCurrentDetails()) void refreshHoldingTower(towerId)
+          .catch(error => console.warn("Holding Tower realtime refresh failed", error));
+      },
       onError: error => console.warn("Holding Tower realtime refresh failed", error),
     });
   }
@@ -4085,7 +4119,7 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
 async function openHoldingTower(towerId = "") {
   const tower = getHoldingTowerVisual(towerId);
   if (!tower) return;
-  selectedHoldingTowerId = tower.id;
+  const session = beginHoldingTowerModalSession(tower.id, "details");
   holdingTowerDetailsTab = "overview";
   holdingTowerLoading = true;
   modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal", "troop-slider-modal");
@@ -4103,20 +4137,17 @@ async function openHoldingTower(towerId = "") {
       refreshHoldingTower(tower.id, { subscribe: true }),
       state?.clanId ? loadClanTreasuryStatus().catch(() => null) : Promise.resolve(null),
     ]);
+    if (!isHoldingTowerModalSessionCurrent(session)) return;
     const current = holdingTowerSnapshots.get(tower.id);
     if (current) renderHoldingTowerModal(current);
   } catch (error) {
     console.warn("Could not open Holding Tower", error);
-    modalBody.innerHTML = `<div class="holding-tower-loading error"><strong>Clan Tower unavailable</strong><span>${escapeHtml(error?.message || "Try again after reconnecting.")}</span></div>`;
+    if (isHoldingTowerModalSessionCurrent(session)) {
+      modalBody.innerHTML = `<div class="holding-tower-loading error"><strong>Clan Tower unavailable</strong><span>${escapeHtml(error?.message || "Try again after reconnecting.")}</span></div>`;
+    }
   } finally {
-    holdingTowerLoading = false;
+    if (holdingTowerModalSession === session) holdingTowerLoading = false;
   }
-  modal.addEventListener("close", () => {
-    if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
-    holdingTowerRealtimeUnsubscribe = null;
-    selectedHoldingTowerId = "";
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal");
-  }, { once: true });
 }
 
 function renderHoldingTowerTreasuryQa(scenario = "treasury-locked") {
@@ -4155,6 +4186,7 @@ function createHoldingTowerOperationId(action = "tower") {
 }
 
 async function runHoldingTowerSpendAction(tower, action) {
+  if (holdingTowerActionsInFlight.has(tower.id)) return;
   const api = getOnlineApi();
   const method = {
     upgrade: "queueHoldingTowerWallUpgrades",
@@ -4165,7 +4197,7 @@ async function runHoldingTowerSpendAction(tower, action) {
   const count = action === "upgrade"
     ? Math.max(1, Math.min(10, Math.floor(Number(modalBody.querySelector("[data-tower-upgrade-count]")?.value) || 1)))
     : undefined;
-  holdingTowerActionInFlight = action;
+  holdingTowerActionsInFlight.add(tower.id);
   renderHoldingTowerModal(tower);
   try {
     const result = await api[method]({
@@ -4179,7 +4211,7 @@ async function runHoldingTowerSpendAction(tower, action) {
   } catch (error) {
     rejectGameAction(error?.message || "The Clan Tower order failed.");
   } finally {
-    holdingTowerActionInFlight = "";
+    holdingTowerActionsInFlight.delete(tower.id);
     const current = holdingTowerSnapshots.get(tower.id) || tower;
     renderHoldingTowerModal(current);
   }
@@ -4219,6 +4251,7 @@ function showHoldingTowerOrderComposer(tower, mode) {
     rejectGameAction(sourceModes.has(mode) ? "No owned city with troops is available." : "No eligible destination is available on this map.");
     return;
   }
+  beginHoldingTowerModalSession(tower.id, "order");
   const usesTowerTroops = !sourceModes.has(mode);
   const maxTroops = usesTowerTroops ? Math.max(1, Number(tower.ownStationedTroops) || 1) : Math.max(1, Number(candidates[0].troops) || 1);
   const rally = mode === "rally-attack" || mode === "rally-from";
@@ -4258,6 +4291,8 @@ function showHoldingTowerOrderComposer(tower, mode) {
 }
 
 async function submitHoldingTowerOrder(tower, mode, candidates) {
+  if (holdingTowerActionsInFlight.has(tower.id)) return;
+  const session = holdingTowerModalSession;
   const api = getOnlineApi();
   const selectedId = String(modalBody.querySelector("[data-tower-order-target]")?.value || "");
   const candidate = candidates.find(entry => entry.id === selectedId);
@@ -4298,7 +4333,7 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
       requestedTroops: troops,
     },
   };
-  holdingTowerActionInFlight = mode;
+  holdingTowerActionsInFlight.add(tower.id);
   modalBody.querySelector("button[type='submit']")?.setAttribute("disabled", "");
   try {
     const result = rally
@@ -4308,14 +4343,16 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
     if (result?.movement) adoptServerArmyMovement(result.movement);
     if (result?.rally) upsertClanRallySnapshot(result.rally);
     showToast(rally ? `Rally formed against ${to.name}.` : `${kind === "reinforce" ? "Reinforcements" : kind === "transfer" ? "Withdrawal" : kind === "scout" ? "Scouts" : "Army"} dispatched.`);
-    await refreshHoldingTower(tower.id);
-    modal.close();
+    if (isHoldingTowerModalSessionCurrent(session)) modal.close();
     renderSelectionChangeNow();
+    // The order is already accepted. A failed read must not offer to send it again.
+    void refreshHoldingTower(tower.id).then(() => renderSelectionChangeNow())
+      .catch(error => console.warn("Holding Tower post-order refresh failed", error));
   } catch (error) {
     rejectGameAction(error?.message || "The Clan Tower order could not be sent.");
-    showHoldingTowerOrderComposer(tower, mode);
+    if (isHoldingTowerModalSessionCurrent(session)) showHoldingTowerOrderComposer(tower, mode);
   } finally {
-    holdingTowerActionInFlight = "";
+    holdingTowerActionsInFlight.delete(tower.id);
   }
 }
 
@@ -27687,7 +27724,6 @@ function renderSelectedClanTowerWheel(towerId) {
     showHoldingTowerOrderComposer(snapshot,action);
     if (modalBody.querySelector("[data-tower-order-form]")) {
       if (!modal.open) modal.showModal();
-      modal.addEventListener("close", () => modal.classList.remove("holding-tower-modal", "clan-tower-details-modal"), {once:true});
     }
   }));
   cityLayer.appendChild(wheel);
