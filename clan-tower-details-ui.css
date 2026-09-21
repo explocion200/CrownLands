@@ -417,5 +417,5 @@
 @media(max-height:600px),(max-width:1000px){.modal.holding-tower-modal.clan-tower-details-modal{width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;padding:4px!important;}}
 
 /* Personal troop commands stay on the map, outside tower details. */
-.clan-tower-action-wheel.gold-camp-action-wheel{width:0;height:0;pointer-events:none}
+.clan-tower-action-wheel.gold-camp-action-wheel{width:0;height:0;transform-origin:0 0;pointer-events:none}
 .clan-tower-action-wheel .gold-camp-wheel-action{left:var(--tower-action-x)!important;top:var(--tower-action-y)!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;pointer-events:auto;min-width:62px;min-height:52px}

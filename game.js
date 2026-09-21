@@ -21291,8 +21291,38 @@ function isHarvestBonusTerrainSafePoint(x, y, regionId) {
   return true;
 }
 
-function isValidHarvestBonusPoint(x, y, regionId) {
+function getHarvestBonusMapArtBounds(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
+  const art = getIllustratedMapPresentation(activeRegionId);
+  const rectangles = [];
+  const addImageRect = (x, y, width, height) => {
+    const start = islandImagePointToWorld(activeRegionId, { x, y });
+    const end = islandImagePointToWorld(activeRegionId, { x: x + width, y: y + height });
+    rectangles.push({ left: start.x, top: start.y, right: end.x, bottom: end.y });
+  };
+  for (const item of art?.scenery || []) {
+    addImageRect(item.x - item.w / 2, item.y - item.h / 2, item.w, item.h);
+  }
+  for (const item of art?.landmarks || []) addImageRect(item.x, item.y, item.width, item.height);
+  for (const tower of WORLD_HOLDING_TOWERS) {
+    if (normalizeRegionId(tower.regionId) !== activeRegionId) continue;
+    const left = tower.visualX - tower.width * tower.anchorX;
+    const top = tower.visualY - tower.width * tower.anchorY;
+    rectangles.push({ left, top, right: left + tower.width, bottom: top + tower.width });
+  }
+  return rectangles;
+}
+
+function isHarvestBonusClearOfMapArt(x, y, rectangles) {
+  // Reserve the whole pickup footprint, including its largest low-zoom hit area.
+  const padding = HARVEST_BONUS_LAND_CLEARANCE;
+  return rectangles.every(rect => x + padding < rect.left || x - padding > rect.right
+    || y + padding < rect.top || y - padding > rect.bottom);
+}
+
+function isValidHarvestBonusPoint(x, y, regionId, mapArtBounds = null) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (!isHarvestBonusClearOfMapArt(x, y, mapArtBounds || getHarvestBonusMapArtBounds(activeRegionId))) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCamps(x, y, activeRegionId)) return false;
@@ -21304,11 +21334,12 @@ function isValidHarvestBonusPoint(x, y, regionId) {
 function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   const bounds = getIslandMapBounds(activeRegionId);
+  const mapArtBounds = getHarvestBonusMapArtBounds(activeRegionId);
   const center = {
     x: Math.round(bounds.left + bounds.width / 2),
     y: Math.round(bounds.top + bounds.height / 2),
   };
-  if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId)) return center;
+  if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId, mapArtBounds)) return center;
 
   const shortestDimension = Math.max(1, Math.min(bounds.width, bounds.height));
   for (const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS) {
@@ -21320,7 +21351,7 @@ function createHarvestBonusPoint(regionId) {
       const radius = maximumRadius * Math.sqrt(radiusFraction);
       const x = Math.round(center.x + Math.cos(angle) * radius);
       const y = Math.round(center.y + Math.sin(angle) * radius);
-      if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
+      if (!isValidHarvestBonusPoint(x, y, activeRegionId, mapArtBounds)) continue;
       // Increasing radii make this the closest valid candidate in the zone.
       return { x, y };
     }
@@ -27716,6 +27747,27 @@ async function selectClanTowerOnMap(towerId) {
   }
 }
 
+function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".clan-tower-action-wheel")) {
+  if (!wheel) return;
+  const visual = getHoldingTowerVisual(wheel.dataset.towerId);
+  if (!visual) return;
+  const scale = Math.max(0.1, zoom);
+  // The south-facing tower occupies the middle half of its square sprite.
+  // Keep the city-sized controls beside its base as the artwork zooms.
+  const side = Math.max(72, visual.width * scale / 4 + 40);
+  const below = (1 - visual.anchorY) * visual.width * scale + 50;
+  wheel.style.transform = `scale(${1 / scale})`;
+  const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
+  // The smallest landscape viewport needs a compact row above the bottom HUD.
+  const positions = mapViewportHeight <= 360
+    ? [...buttons].map((_, index) => [(index - (buttons.length - 1) / 2) * 72, -40])
+    : [[0, below], [-side, 0], [side, 0], [-side, -72], [side, -72]];
+  buttons.forEach((button, index) => {
+    button.style.setProperty("--tower-action-x", `${positions[index][0]}px`);
+    button.style.setProperty("--tower-action-y", `${positions[index][1]}px`);
+  });
+}
+
 function renderSelectedClanTowerWheel(towerId) {
   const visual = getHoldingTowerVisual(towerId);
   if (!visual || !cityLayer.querySelector(`[data-holding-tower-id="${towerId}"]`)) return;
@@ -27724,14 +27776,11 @@ function renderSelectedClanTowerWheel(towerId) {
   const point = worldToMapPoint({x:visual.visualX,y:visual.visualY});
   const wheel = document.createElement("div");
   wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";
+  wheel.dataset.towerId = towerId;
   wheel.style.left = `${point.x}px`;
   wheel.style.top = `${point.y}px`;
-  // Keep touch targets readable when zoomed out and Info above the bottom HUD.
-  wheel.style.transform = `scale(${1 / Math.max(0.1, zoom)})`;
-  const positions = mapViewportHeight <= 360
-    ? actions.map((_, index) => [(index - (actions.length - 1) / 2) * 72, -40])
-    : [[0,48],[-96,0],[96,0],[-80,-80],[80,-80]];
-  wheel.innerHTML = actions.map((entry,index) => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : entry.icon === "information" ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" style="--tower-action-x:${positions[index][0]}px;--tower-action-y:${positions[index][1]}px" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
+  wheel.innerHTML = actions.map(entry => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : entry.icon === "information" ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
+  updateClanTowerActionWheelLayout(wheel);
   wheel.querySelectorAll("[data-clan-tower-map-action]").forEach(button => button.addEventListener("click",event => {
     event.stopPropagation();
     const action = button.dataset.clanTowerMapAction;
@@ -38806,6 +38855,7 @@ function applyCameraTransform() {
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
+  if (selectedTowerMapId) updateClanTowerActionWheelLayout();
   updateMainCityReturnButtonForCamera(rect);
   scheduleOnboardingPointer();
 }

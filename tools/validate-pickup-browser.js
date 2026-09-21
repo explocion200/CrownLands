@@ -1,6 +1,43 @@
 "use strict";
 const assert = require("node:assert/strict");
 
+async function verifyPickupMapClearance(evaluate) {
+  const results = await evaluate(`(async () => {
+    const original={region:getActiveMapRegionId(),cities:state.cities,bonuses:state.harvestBonuses,random:Math.random};
+    const results=[];
+    try {
+      for(const region of REGION_CATALOG.regions.filter(region=>region.permanentCore)) {
+        await ensureRegionDefinitionLoaded(region.id);
+        centerOnRegion(region.id);
+        state.cities=getPlayableBaseCitiesByRegion(region.id).map(createNeutralCityFromBase);
+        state.harvestBonuses=[];
+        const bounds=getIslandMapBounds(region.id),art=getIllustratedMapPresentation(region.id);
+        let seed=12345;
+        Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/0x100000000);
+        const points=Array.from({length:20},()=>createHarvestBonusPoint(region.id));
+        for(const point of points) {
+          if(!point)throw Error('No clear central pickup position on '+region.id);
+          if(Math.hypot(point.x-bounds.left-bounds.width/2,point.y-bounds.top-bounds.height/2)>Math.min(bounds.width,bounds.height)*0.35+1)throw Error('Pickup escaped the central search area');
+          const image=worldToIslandImagePointRaw(region.id,point),dimensions=getIslandImageDimensions(region.id);
+          const px=64*dimensions.width/bounds.width,py=64*dimensions.height/bounds.height;
+          const boxes=[...(art?.scenery||[]).map(item=>({x:item.x-item.w/2,y:item.y-item.h/2,width:item.w,height:item.h})),...(art?.landmarks||[])];
+          for(const box of boxes) {
+            if(image.x+px>=box.x&&image.x-px<=box.x+box.width&&image.y+py>=box.y&&image.y-py<=box.y+box.height)throw Error('Pickup overlaps map art on '+region.id);
+          }
+          if(!isHarvestBonusFarFromCities(point.x,point.y,region.id)||!isHarvestBonusFarFromCamps(point.x,point.y,region.id))throw Error('Pickup overlaps a structure on '+region.id);
+        }
+        results.push({region:region.id,placements:points.length});
+      }
+      return results;
+    } finally {
+      Math.random=original.random;state.cities=original.cities;state.harvestBonuses=original.bonuses;
+      await ensureRegionDefinitionLoaded(original.region);centerOnRegion(original.region);renderAll();
+    }
+  })()`);
+  assert.equal(results.length,25,"Clearance must cover all 25 current Core maps.");
+  return {maps:results.length,placements:results.reduce((total,result)=>total+result.placements,0)};
+}
+
 async function verifyPickupInteractions(client, evaluate, baselinePlacement = "null", baselineEditorMap = "null", bonusType = "gold") {
   const placement = await evaluate(`(() => {
     const original = {valid:isValidHarvestBonusPoint,random:Math.random,bonuses:state.harvestBonuses,editorMap:getEditorMap,buildMap:buildCatalogEditorMap};
@@ -94,7 +131,7 @@ async function verifyPickupInteractions(client, evaluate, baselinePlacement = "n
   }
 }
 
-module.exports = { verifyPickupInteractions };
+module.exports = { verifyPickupInteractions, verifyPickupMapClearance };
 
 if (require.main === module) (async () => {
   const fs = require("node:fs"), path = require("node:path");
@@ -127,6 +164,7 @@ if (require.main === module) (async () => {
       for(let i=0;i<240&&!await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");i++)await new Promise(resolve=>setTimeout(resolve,250));
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"),"ready");
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
+      console.log(JSON.stringify({viewport:viewport.name,clearance:await verifyPickupMapClearance(evaluate)}));
       for (const bonusType of ["gold", "troops"]) {
         const result={viewport:viewport.name,...await verifyPickupInteractions(client,evaluate,baseline,baselineMap,bonusType)};
         results.push(result);console.log(JSON.stringify(result));

@@ -271,6 +271,7 @@ const centerPlacementContext = {
   HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
   normalizeRegionId: value => String(value || ""),
   getIslandMapBounds: regionId => currentMapBounds[regionId],
+  getHarvestBonusMapArtBounds: () => [],
   isValidHarvestBonusPoint: () => true,
 };
 vm.createContext(centerPlacementContext);
@@ -297,6 +298,7 @@ const deterministicMath = {
   },
 };
 const obstructedCenterContext = {
+  getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,
   HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
@@ -317,6 +319,7 @@ assert.ok(expandedDistance >= 140 && expandedDistance <= 170, "An obstructed cen
 assert.ok(expandedDistance <= 800 * 0.25, "Center placement expanded beyond the second search zone unnecessarily.");
 
 const thirdZoneContext = {
+  getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,
   HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
@@ -337,6 +340,7 @@ assert.ok(thirdZoneDistance >= 225 && thirdZoneDistance <= 255, "An obstructed c
 assert.ok(thirdZoneDistance > 800 * 0.25 && thirdZoneDistance <= 800 * 0.35, "The third-zone fallback escaped the 35% center boundary.");
 
 const noSafePointContext = {
+  getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,
   HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
