@@ -14,6 +14,8 @@ const campUi = context.CrownlandsCampDetailsUi;
 const owner = context.CROWNLANDS_HOLDING_TOWER_UI.createQaSnapshot({ id:"qa", name:"Tower", artSrc:"assets/test.webp" }, "owner");
 const money = { treasuryBalance:24_000_000, clanShieldHtml:'<svg data-test-clan-flag></svg>' };
 const html = towerUi.render(owner, money);
+assert.match(html, /Minimum force<\/small><strong>3 members/);
+assert.match(html, /at least three eligible clan members in a rally, including the leader/);
 assert.equal((html.match(/data-test-clan-flag/g) || []).length, 2, "Clan flag remains beside title and controlling clan.");
 assert.equal((html.match(/data-tower-player-flag=/g) || []).length, 3);
 assert(!/data-tower-action="(?:reinforce|withdraw|attack-from|rally-from|rally-attack)"/.test(html), "Details must not contain troop commands.");

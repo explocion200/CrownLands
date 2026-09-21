@@ -96,6 +96,7 @@ async function main() {
     const submitOrder = async (tower, mode) => {
       await click(await elementPoint(`[data-clan-tower-map-action="${mode}"]`));
       await ready(`modal.open && !!modalBody.querySelector('[data-tower-order-mode="${mode}"]')`);
+      if (mode === "rally-attack") assert(await evaluate('modalBody.textContent.includes("At least 3 eligible clan members, including the leader")'));
       await delay(350);
       const expected = await evaluate(`({candidate:modalBody.querySelector('[data-tower-order-target]').value,troops:Number(modalBody.querySelector('[data-tower-order-troops]').value),count:towerMapOrders.length})`);
       // Short landscape screens use the dialog's existing scrollable body.
@@ -148,6 +149,18 @@ async function main() {
       touch = viewport.touch;
       await client.send("Emulation.setDeviceMetricsOverride", {width:viewport.width,height:viewport.height,deviceScaleFactor:1,mobile:touch});
       await client.send("Emulation.setTouchEmulationEnabled", {enabled:touch,maxTouchPoints:5});
+      assert(await evaluate(`(() => {
+        for (const targetType of ['tower','city']) for (const activity of [false,true]) {
+          for (const [count,inbound] of [[2,false],[3,true],[3,false]]) {
+            const rally={id:'minimum-qa',status:'forming',leaderUid:getCurrentOnlineUid(),targetType,targetId:HOLDING_TOWER_DEFINITIONS[0].id,
+              participants:Array.from({length:count},(_,i)=>({uid:'minimum-'+i,ownerName:'Ruler '+i,troops:1,status:inbound&&i===count-1?'inbound':'assembled'}))};
+            const container=document.createElement('div');container.innerHTML=renderClanRallyCard(rally,activity);
+            const launch=container.querySelector('[data-rally-action="launch"]');
+            if(!launch||launch.disabled!==(inbound||(targetType==='tower'&&count<3)))return false;
+          }
+        }
+        return true;
+      })()`), 'Both Rally views must require three Ready Tower contributors and preserve ordinary two-member rallies');
       for (const level of [1,0.6]) {
         for (let index=0;index<4;index++) {
           const tower=await prepare(index,level);
@@ -158,6 +171,7 @@ async function main() {
           await click(await elementPoint('[data-clan-tower-map-action="info"]'));
           await ready("modal.open && !!modalBody.querySelector('.clan-tower-details')");
           assert.equal(await evaluate("modalBody.querySelector('h1').textContent"),tower.name);
+          assert(await evaluate('modalBody.querySelector(".identity-facts").textContent.includes("3 members")'));
           assert.equal(await evaluate("!!modalBody.querySelector('[data-tower-order-form],[data-tower-action]')"),false,"Orders leaked into the info window.");
           await click(await elementPoint('[data-tower-close]'));
           await ready("!modal.open");

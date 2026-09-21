@@ -117,6 +117,23 @@
       ],
       "tests": [],
       "reason": "Records the explicitly confirmed Clan Tower building, Shop, combat, construction and visual decisions; no separate executable behavior in this specification."
+    },
+    {
+      "paths": [
+        "rallies-activity-ui.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-holding-details-ui.js"
+      ],
+      "tests": [
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-rally-lifecycle.js"
+      ],
+      "reason": "Lower Tower-target attacks/capture to three eligible unique contributors including the leader. Cover two-versus-three launch boundaries for neutral and clan-owned Towers, troop/probation/duplicate eligibility, both rally launch interfaces and Tower descriptions at desktop/mobile sizes. Shared launch minimum preserves ordinary two-member rallies; exercise its existing lifecycle suite."
     }
   ]
 }

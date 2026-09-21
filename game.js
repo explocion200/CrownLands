@@ -4304,7 +4304,7 @@ function showHoldingTowerOrderComposer(tower, mode) {
   modalTitle.textContent = label;
   modalBody.innerHTML = `
     <form class="holding-tower-order-composer" data-tower-order-form data-tower-order-mode="${mode}">
-      <header><span>${usesTowerTroops ? `From ${escapeHtml(tower.name)}` : `To ${escapeHtml(tower.name)}`}</span><h3>${label}</h3><p>${rally ? "The Rally uses the existing clan assembly and launch system." : "Distance, timing, troop subtraction, and arrival are verified by the server."}</p></header>
+      <header><span>${usesTowerTroops ? `From ${escapeHtml(tower.name)}` : `To ${escapeHtml(tower.name)}`}</span><h3>${label}</h3><p>${mode === "rally-attack" ? "At least 3 eligible clan members, including the leader, must each contribute troops and be Ready before launch." : rally ? "The Rally uses the existing clan assembly and launch system." : "Distance, timing, troop subtraction, and arrival are verified by the server."}</p></header>
       <label>${sourceModes.has(mode) ? "Owned city origin" : "Destination"}
         <select data-tower-order-target>${candidates.map(candidate => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name || candidate.id)} · ${formatNumber(candidate.troops || 0)} troops</option>`).join("")}</select>
       </label>
@@ -25431,6 +25431,10 @@ function renderClanRewardsPanel() {
   </section>`;
 }
 
+function getClanRallyMinimumParticipants(rally) {
+  return rally?.targetType === "tower" ? 3 : CLAN_RALLY_MIN_PARTICIPANTS;
+}
+
 function getRallyParticipantForCurrentPlayer(rally) {
   const uid = getCurrentOnlineUid();
   return (Array.isArray(rally?.participants) ? rally.participants : [])
@@ -25492,11 +25496,12 @@ function renderClanRallyCard(rally, activityLedger = false) {
       </li>`;
   }).join("");
   let controls = "";
-  const allReady = activeParticipants.length >= CLAN_RALLY_MIN_PARTICIPANTS
+  const minimumParticipants = getClanRallyMinimumParticipants(rally);
+  const allReady = activeParticipants.length >= minimumParticipants
     && activeParticipants.every(participant => participant.status === "assembled");
   if (forming && canManageFormingRally) {
     controls = `
-      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy || !allReady ? "disabled" : ""}>${allReady ? "Launch" : `Waiting for ${CLAN_RALLY_MIN_PARTICIPANTS}+ Ready`}</button>
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy || !allReady ? "disabled" : ""}>${allReady ? "Launch" : `Waiting for ${minimumParticipants}+ Ready`}</button>
       <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
   } else if (forming && ownParticipant) {
     controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
@@ -30340,7 +30345,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ${activeRetaliationId && orderKind === "attack" ? '<div class="troop-retaliation-note" data-retaliation-note></div>' : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
-      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${CLAN_RALLY_MIN_PARTICIPANTS}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${getClanRallyMinimumParticipants(activeRallyOrderContext?.rally || target)}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
 
       ${orderKind === "attack" && !campTarget ? renderOnboardingTip("attack", target, "order") : ""}
       <div class="troop-slider-control">

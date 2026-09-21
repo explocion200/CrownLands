@@ -627,7 +627,7 @@ The current Core mappings are fixed:
 - Holding Towers are clan-owned military objectives and grant no passive realm bonus.
 - A clan may control all four Towers.
 - Neutral Towers begin at Wall Level 1 with full integrity and 10,000,000 NPC defenders.
-- Tower conquest is rally-only and requires five unique eligible clan members, each contributing at least one troop.
+- Attacking or capturing a neutral or clan-owned Tower is rally-only and requires at least three unique eligible clan members in total, including the rally leader, each contributing at least one troop. Every contribution must be Ready at launch. Confirmed September 21, 2026; this replaces the previous five-member minimum.
 - A new clan member has a 24-hour Tower participation probation.
 - Each contributor’s troops remain personally attributed inside the shared clan garrison.
 - Surviving attackers remain in the Tower after capture.
@@ -773,7 +773,7 @@ The current reset path preserves clan identity, roster, membership, roles, name,
 - If a Rally return's original city is still owned by the participant, the army returns there. If it is neutral or clan-owned, the army returns to the participant's Main City. If an enemy owns it, the returning army attacks that city.
 - Ordinary objective Rallies are not restricted by ordinary-city attack protection, neutral-city caps, or anti-farming gates. Committing Rally troops does not remove a Royal Peace Shield.
 - The ordinary Rally lifecycle correction above is `LIVE — ALL PUBLISHED CHANNELS`. PR #171 merged as `1e5cdad...`, PR #180 merged the stale Rally-ownership correction as `1a0efbcb...`, and descendant build `a561374b...` established the first verified cross-channel baseline. Current web and itch.io build `fdf326a...` retains the correction. The corrected beginner guide remains live on the canonical game host and itch artifact but not on the separately published primary-domain public site.
-- The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`; its five-member minimum does not replace the ordinary Rally minimum globally.
+- The three-member Holding Tower attack and conquest rule documented in Section 8 is target-specific and `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`; its three-member minimum does not replace the ordinary Rally minimum globally.
 
 ### Clan Treasury
 
@@ -1560,7 +1560,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Achievement count | Earlier proposal of 50 | Superseded; current confirmed count is 40 |
 | Season item persistence | Earlier broad statement that items persist | Superseded by explicit player identity, clan, and Common Gear allowlist; normal consumables do not persist |
 | Bag stacking | Earlier limited-stacking discussion versus all-identical-item request | Both published clients group identical Bag items by quantity |
-| Rally size | 2–20-player ordinary Rally versus five-member-minimum Tower conquest Rally | Both apply to different target types; Tower rule is implemented pending merge and authorized deployment and is not live |
+| Rally size | Ordinary Rallies require two members; Tower Rallies previously required five | Confirmed September 21: attacks on and capture of neutral or clan-owned Towers require three eligible contributors including the leader. Ordinary Rally minimum remains two. Pending merge and authorized deployment. |
 | Mobile portrait | Earlier portrait Gear QA | Does not establish portrait game support; landscape is authoritative |
 | Item pricing | Older fixed prices versus scalable pricing | Scalable formula is confirmed and `LIVE — ALL PUBLISHED CHANNELS` |
 | Clan heraldry | v1 compatibility versus v2 presentation | v1 remains unchanged until deliberate v2 save; v2 is `LIVE — ALL PUBLISHED CHANNELS` |

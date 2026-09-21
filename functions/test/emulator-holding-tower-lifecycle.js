@@ -50,8 +50,8 @@ async function resolve(actor, movement) {
 
 async function main() {
   const actors = [];
-  for (let index = 0; index < 6; index++) actors.push(await createActor(`Tower Ruler ${index + 1}`));
-  const [leader, member] = actors, outsider = actors[5];
+  for (let index = 0; index < 4; index++) actors.push(await createActor(`Tower Ruler ${index + 1}`));
+  const [leader, member] = actors, outsider = actors[3];
   const realm = await call("getRealmInfo", leader);
   assert.equal(realm.worldTopology, "core-expansion-v1");
   identity = { releaseId: realm.currentReleaseId, resetGeneration: realm.resetGeneration, worldId: realm.worldId, realmShardId: realm.sharedRealmId };
@@ -65,9 +65,9 @@ async function main() {
   const garrisonRef = actor => towerRef.collection("garrison").doc(actor.uid);
   const cityRef = city => db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${city.regionId}/cities/${city.id}`);
   await towerRef.set({ ...towers.createNeutralTowerState(tower.id, { nowMs: now }), ...identity });
-  await db.doc(`clans/${clanId}`).set({ ...identity, status: "active", leaderUid: leader.uid, name: "Tower Test Clan", tag: "TTC", memberCount: 5 });
+  await db.doc(`clans/${clanId}`).set({ ...identity, status: "active", leaderUid: leader.uid, name: "Tower Test Clan", tag: "TTC", memberCount: 3 });
   const participants = [];
-  for (const [index, actor] of actors.slice(0, 5).entries()) {
+  for (const [index, actor] of actors.slice(0, 3).entries()) {
     const role = index ? "member" : "leader";
     await db.doc(`clans/${clanId}/members/${actor.uid}`).set({ ...identity, clanId, uid: actor.uid, role, status: "active", joinedAtMs: now - 172_800_000 });
     await db.doc(`players/${actor.uid}`).set({ clanId, clanRole: role, committedRallyTroops: index ? contribution : 0,
@@ -94,23 +94,24 @@ async function main() {
   assert.equal(replay.duplicate, true);
   assert.equal((await cityRef(leader.home).get()).data().troops, troopsAfterCreation, "Replaying Tower rally creation deducted troops twice.");
   // Assemble additional fixture contributions to exercise target-specific launch and capture rules.
-  await rallyRef.update({ participants: participants.slice(0, 4) });
+  await rallyRef.update({ participants: participants.slice(0, 2) });
   const tooSmall = await invoke("launchClanRally", leader, { clanId, rallyId });
-  assert(tooSmall.error, "Four players were allowed to conquer a Tower.");
+  assert.match(tooSmall.error?.message || "", /At least 3 assembled players/, "Two players were allowed to attack a neutral Tower.");
+  assert.equal((await rallyRef.get()).data().status, "forming");
   await rallyRef.update({ participants });
   const launched = await call("launchClanRally", leader, { clanId, rallyId });
   const battle = await resolve(leader, launched.movement);
-  assert.equal(battle.result.success, true, "The overwhelming five-player rally did not capture the neutral Tower.");
+  assert.equal(battle.result.success, true, "The overwhelming three-player rally did not capture the neutral Tower.");
   const captured = (await towerRef.get()).data();
   assert.equal(captured.clanId, clanId);
   assert.equal(captured.wallLevel, 1);
   assert.equal(captured.wallIntegrityBps, 0);
   const garrison = await towerRef.collection("garrison").get();
-  assert.equal(garrison.size, 5, "Survivors were not attributed to all five contributors.");
+  assert.equal(garrison.size, 3, "Survivors were not attributed to all three contributors.");
   for (const row of garrison.docs) assert(row.data().troops > 0 && row.data().troops <= contribution);
   const owned = (await call("getHoldingTowerState", member, { towerId: tower.id })).towers[0];
   assert.equal(owned.ownerMember, true);
-  assert.equal(owned.garrison.length, 5);
+  assert.equal(owned.garrison.length, 3);
   assert.equal(owned.ownStationedTroops, (await garrisonRef(member).get()).data().troops);
   assert(owned.permissions.withdrawOwn && owned.permissions.reinforce && owned.permissions.attackFrom);
   const privateView = (await call("getHoldingTowerState", outsider, { towerId: tower.id })).towers[0];
@@ -125,7 +126,7 @@ async function main() {
   });
   const memberQuery = await queryGarrison(member);
   assert.equal(memberQuery.status, 200, "Owning-clan garrison subscription query was denied.");
-  assert.equal((await memberQuery.json()).filter(row => row.document).length, 5);
+  assert.equal((await memberQuery.json()).filter(row => row.document).length, 3);
   assert.equal((await queryGarrison(outsider)).status, 403, "An outsider could query private garrisons.");
   const unchanged = garrison.docs.map(row => [row.id, row.data().troops]);
   await call("resolveArmyOrder", leader, { armyId: launched.movement.id, routeRegionIds: launched.movement.routeRegionIds });
@@ -213,6 +214,10 @@ async function main() {
   await call("createClanRally",leader,{clanId,rallyId:towerRallyId,sourceType:"tower",targetType:"tower",sourceRegionId:tower.regionId,targetRegionId:second.regionId,
     army:{id:towerRallyId,kind:"attack",fromId:tower.id,toId:second.id,troops:1_000_000,requestedTroops:1_000_000}});
   const towerParticipants=participants.map(p=>({...p,sourceId:tower.id,sourceRegionId:tower.regionId,troops:1_000_000}));
+  await towerRallyRef.update({participants:towerParticipants.slice(0,2)});
+  const tooSmallOwned=await invoke("launchClanRally",leader,{clanId,rallyId:towerRallyId});
+  assert.match(tooSmallOwned.error?.message || "",/At least 3 assembled players/,"Two players were allowed to attack a clan-owned Tower.");
+  assert.equal((await towerRallyRef.get()).data().status,"forming");
   await towerRallyRef.update({participants:towerParticipants});
   const trained=await call("launchClanRally",leader,{clanId,rallyId:towerRallyId});
   const launchParticipants=(await towerRallyRef.get()).data().participants;
@@ -236,7 +241,7 @@ async function main() {
   const reports=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.filter(r=>r.battleId===trained.movement.id);
   assert.equal(reports.length,1,"Battle retry duplicated the defender recovery report.");
   console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
-  console.log("Tower lifecycle passed: callable rally creation/replay, four-player rejection, five-player capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
+  console.log("Tower lifecycle passed: callable rally creation/replay, two-player rejection for neutral and clan-owned Towers, three-player launch and capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -50,7 +50,7 @@ assert.doesNotMatch(client, /Royal Peace Shields are removed on commitment/, "Th
 requires(client, /Rally commitment does not remove an active Royal Peace Shield/, "The Rally preview does not explain that commitment preserves a Peace Shield.");
 requires(server, /status:\s*RALLY_STATUS_FORMING[\s\S]*?validatedRouteVersion:\s*AUTHORITATIVE_ROUTES_VERSION[\s\S]*?participants/, "Private forming rally state is incomplete.");
 requires(server, /reconcileInvalidRallyParticipantsBeforeLaunch[\s\S]*?cancelClanRallyRequest[\s\S]*?withdrawClanRallyContributionRequest[\s\S]*?Invalid contributions were returned and removed/, "Invalid Rally contributors are not reconciled before launch.");
-requires(server, /activeParticipants\.length < RALLY_MIN_PARTICIPANTS[\s\S]*?unreadyParticipants\.length[\s\S]*?All participants must be Ready before launch/, "Launch does not atomically require 2–20 Ready participants.");
+requires(server, /minimumParticipants = rally\.targetType === "tower" \? HOLDING_TOWERS\.TOWER_MIN_RALLY_MEMBERS : RALLY_MIN_PARTICIPANTS[\s\S]*?activeParticipants\.length < minimumParticipants[\s\S]*?unreadyParticipants\.length[\s\S]*?All participants must be Ready before launch/, "Launch does not atomically enforce the target-specific minimum and Ready participants.");
 const launchSource = server.slice(server.indexOf("exports.launchClanRally"), server.indexOf("exports.previewArmyProtection"));
 assert.doesNotMatch(launchSource, /createAlliedTargetReturnMovement|returnedInbound\.push/, "Launch still turns an inbound contribution around while launching the rest.");
 requires(launchSource, /const participantUids = assembledParticipants\.map[\s\S]*?collectionGroup\("cities"\)[\s\S]*?where\("ownerUid",\s*"in",\s*participantUids\)/, "A 20-player Rally launch does not load participant cities with one bounded query.");
@@ -214,7 +214,7 @@ requires(server, /function settleRallyCancellationReceipt[\s\S]*?receipt\.receip
 requires(firebaseClient, /createClanRally[\s\S]*?joinClanRally[\s\S]*?withdrawClanRallyContribution[\s\S]*?launchClanRally[\s\S]*?cancelClanRally/, "Firebase rally callable wrappers are incomplete.");
 requires(firebaseClient, /function subscribeClanRallies[\s\S]*?where\("status",\s*"in",\s*\["forming",\s*"launched",\s*"recalling"\]\)/, "Realtime clan rally subscription is missing.");
 requires(client, /beginCreateClanRally[\s\S]*?beginJoinClanRallyContribution/, "Map rally creation or ally joining is missing.");
-requires(client, /Waiting for \$\{CLAN_RALLY_MIN_PARTICIPANTS\}\+ Ready[\s\S]*?Every contribution must arrive and show Ready/, "The War Room does not communicate or enforce all-Ready launch behavior.");
+requires(client, /Waiting for \$\{minimumParticipants\}\+ Ready[\s\S]*?Every contribution must arrive and show Ready/, "The War Room does not communicate or enforce all-Ready launch behavior.");
 requires(client, /bindClanRallyControls[\s\S]*?data-rally-action/, "Role-appropriate rally controls are not bound.");
 requires(client, /function getClanRallyParticipantStatusLabel[\s\S]*?rallyStatus === "recalling"[\s\S]*?participantStatus === "assembled"\) return "Marching"/, "Launched and returning rally participants do not receive truthful client status labels.");
 requires(client, /renderClanRallyCard[\s\S]*?recalling \? "returning" : launched \? "marching" : "assembled"/, "Rally troop totals remain labeled assembled after launch or recall.");

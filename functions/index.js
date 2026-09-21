@@ -23263,8 +23263,9 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
     const validatedRoute = buildServerGeneratedArmyRoute(assembly, target);
     const activeParticipants = activeRallyParticipants(rally);
     const unreadyParticipants = activeParticipants.filter(participant => participant.status !== RALLY_PARTICIPANT_ASSEMBLED);
-    if (activeParticipants.length < RALLY_MIN_PARTICIPANTS) {
-      throw new HttpsError("failed-precondition", `At least ${RALLY_MIN_PARTICIPANTS} assembled players are required to launch a rally.`);
+    const minimumParticipants = rally.targetType === "tower" ? HOLDING_TOWERS.TOWER_MIN_RALLY_MEMBERS : RALLY_MIN_PARTICIPANTS;
+    if (activeParticipants.length < minimumParticipants) {
+      throw new HttpsError("failed-precondition", `At least ${minimumParticipants} assembled players are required to launch a rally.`);
     }
     const participantLimit = rally.targetType === "tower" ? CLAN_MEMBER_LIMIT : RALLY_MAX_PARTICIPANTS;
     if (activeParticipants.length > participantLimit) {
@@ -23342,7 +23343,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
     if (towerRallyValidation && !towerRallyValidation.valid) {
       throw new HttpsError(
         "failed-precondition",
-        `A Holding Tower rally needs 5 unique eligible current clan members with at least 1 troop each; ${towerRallyValidation.count} qualify.`
+        `A Clan Tower rally needs ${towerRallyValidation.required} unique eligible current clan members with at least 1 troop each; ${towerRallyValidation.count} qualify.`
       );
     }
     if (towerRallyValidation && towerRallyValidation.count !== assembledParticipants.length) {
