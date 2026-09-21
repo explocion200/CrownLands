@@ -711,7 +711,7 @@ Locked items show their unlock level; quantity upgrades show their required leve
 
 Use the approved hand-drawn medieval map style: dark ink outlines, muted olive and ochre, weathered stone and timber, textured surfaces and an elevated three-quarter view. The source reference and exact generation prompts are in `docs/art-prompts/clan-buildings/`. All four Towers share sixteen building sprites: four visual stages for Levels 1–3, 4–6, 7–9 and 10.
 
-Place the Shop left of the Tower, Workshop right, Infirmary lower-left and Training Grounds lower-right, forming a horseshoe. Artwork scales with the world map. Action icons keep their established screen size and sit outside the compound. Construction shows scaffolding, and unbuilt buildings remain accessible in the Buildings tab. Reserve the entire compound in pickup exclusion checks. Verify mouse and touch entry points at desktop and landscape-mobile sizes.
+Place the Shop left of the Tower, Workshop right, Infirmary lower-left and Training Grounds lower-right, forming a compact horseshoe around a shared dirt-and-stone courtyard with connecting paths and a clear approach to the Tower entrance. The buildings should read as one cohesive settlement; show the courtyard once the first building is built or under construction. Artwork scales with the world map. Action icons keep their established screen size and sit outside the compound. Construction shows scaffolding, and unbuilt buildings remain accessible in the Buildings tab. Reserve the entire compound in pickup exclusion checks. Verify mouse and touch entry points at desktop and landscape-mobile sizes.
 
 
 ### Tower Veil

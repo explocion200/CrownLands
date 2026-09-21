@@ -4451,13 +4451,27 @@ function ensureHoldingTowerMapSubscriptions() {
 }
 
 function renderClanTowerMapBuildings(visibleTowers, fragment) {
-  cityLayer.querySelectorAll(".holding-tower-building-node").forEach(node => node.remove());
+  cityLayer.querySelectorAll(".holding-tower-building-node, .holding-tower-courtyard").forEach(node => node.remove());
   const definitions = window.CrownlandsClanTowerBuildings;
   if (!definitions) return;
   for (const visual of visibleTowers) {
     const tower = holdingTowerSnapshots.get(visual.id);
     if (!tower || tower.ownerKind !== "clan") continue;
     const point = worldToMapPoint({ x: visual.visualX, y: visual.visualY });
+    const hasBuildings = definitions.DEFINITIONS.some(building => definitions.level(tower.buildings?.[building.id]) || tower.buildingProject?.buildingId === building.id);
+    if (!hasBuildings) continue;
+    // One continuous ground plane binds the individual sprites to the Tower base.
+    // Keep its whole footprint within the compound's existing pickup exclusion.
+    const courtyard = document.createElement("img");
+    courtyard.className = "holding-tower-courtyard";
+    courtyard.src = "assets/clan-buildings/courtyard.webp";
+    courtyard.alt = "";
+    courtyard.draggable = false;
+    courtyard.style.left = `${point.x + (.5 - visual.anchorX) * visual.width}px`;
+    courtyard.style.top = `${point.y + (1 - visual.anchorY + .06) * visual.width}px`;
+    courtyard.style.width = `${visual.width * 1.04}px`;
+    courtyard.style.height = `${visual.width * .47}px`;
+    fragment.appendChild(courtyard);
     for (const building of definitions.DEFINITIONS) {
       const level = definitions.level(tower.buildings?.[building.id]);
       const constructing = tower.buildingProject?.buildingId === building.id;
@@ -4468,9 +4482,10 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
       node.dataset.clanBuildingTower = visual.id;
       node.dataset.clanBuildingId = building.id;
       node.setAttribute("aria-label", `${building.name} · ${level ? `Level ${level}` : "Under construction"} · ${visual.name}`);
-      node.style.left = `${point.x + (building.x + .5 - visual.anchorX) * visual.width}px`;
-      node.style.top = `${point.y + (1 - visual.anchorY + building.y) * visual.width}px`;
-      node.style.width = `${visual.width * .34}px`;
+      // Tighten the horseshoe while leaving a clear approach through the middle.
+      node.style.left = `${point.x + (building.x * .9 + .5 - visual.anchorX) * visual.width}px`;
+      node.style.top = `${point.y + (1 - visual.anchorY + building.y * .8) * visual.width}px`;
+      node.style.width = `${visual.width * .32}px`;
       node.innerHTML = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
       fragment.appendChild(node);
     }
@@ -27394,6 +27409,8 @@ function renderCitiesUncached(force = false) {
     const node = existingNode || document.createElement("button");
     existingHoldingTowerNodes.delete(tower.id);
     node.className = "holding-tower-node";
+    const buildingState = holdingTowerSnapshots.get(tower.id);
+    node.classList.toggle("has-buildings", buildingState?.ownerKind === "clan" && (Object.values(buildingState.buildings || {}).some(level => level > 0) || Boolean(buildingState.buildingProject)));
     node.classList.toggle("selected", selectedTowerMapId === tower.id);
     node.type = "button";
     node.dataset.holdingTowerId = tower.id;

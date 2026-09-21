@@ -95,6 +95,12 @@ async function main() {
       await client.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:5});
       await evaluate(`(async()=>{if(modal.open)modal.close();await ensureRegionDefinitionLoaded(buildingFixture.regionId);zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll();})()`);
       await ready('cityLayer.querySelectorAll(".holding-tower-building-node").length===4');
+      await ready('cityLayer.querySelector(".holding-tower-courtyard")?.naturalWidth > 0');
+      assert(await evaluate(`(()=>{
+        const ground=cityLayer.querySelector('.holding-tower-courtyard');
+        const label=cityLayer.querySelector('.holding-tower-node.has-buildings .holding-tower-map-label').getBoundingClientRect();
+        return getComputedStyle(ground).pointerEvents==='none' && [...cityLayer.querySelectorAll('.holding-tower-building-node')].every(node=>node.getBoundingClientRect().bottom<label.top);
+      })()`), 'Courtyard must allow map gestures and the Tower label must clear the buildings');
       const layouts=await evaluate(`(()=>{const result=[];selectedTowerMapId=buildingFixture.id;renderSelectedClanTowerWheel(buildingFixture.id);const prior=zoom;for(const z of [.4,.6,.8,1]){zoom=z;updateCameraTransform();result.push({buttons:[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().toJSON()),buildings:[...cityLayer.querySelectorAll('.holding-tower-building-node')].map(b=>b.getBoundingClientRect().toJSON())});}zoom=prior;updateCameraTransform();clearSelection(false);return result;})()`);
       for(const layout of layouts)for(const button of layout.buttons){assert(Math.abs(button.width-64)<.2 && Math.abs(button.height-64)<.2);for(const building of layout.buildings)assert(button.right<=building.left || button.left>=building.right || button.bottom<=building.top || button.top>=building.bottom,'A fixed-size action overlaps a compound building');}
       await click(await elementPoint('[data-clan-building-id="shop"]'));
@@ -129,9 +135,20 @@ async function main() {
       fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/buildings-${viewport.width}.png`),Buffer.from(shot.data,'base64'));
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), 'Document overflowed horizontally');
       await evaluate('modal.close();clearSelection(false);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
+      await delay(300);
+      await evaluate('zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);updateCameraTransform()');
+      await delay(200);
       const mapShot=await client.send('Page.captureScreenshot',{format:'png'});
       fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/map-${viewport.width}.png`),Buffer.from(mapShot.data,'base64'));
       console.log(`Clan building map taps, selection, stock/unlock labels, purchase and construction actions, pause state and layout passed at ${viewport.width}x${viewport.height}.`);
+    }
+    for (const fixture of [
+      {ownerKind:'clan',buildings:{},buildingProject:null,expected:0},
+      {ownerKind:'clan',buildings:{},buildingProject:{buildingId:'shop'},expected:1},
+      {ownerKind:'neutral',buildings:{shop:10},buildingProject:null,expected:0},
+    ]) {
+      await evaluate(`holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture,...${JSON.stringify(fixture)}});cityRenderSignature='';renderAll()`);
+      assert.equal(await evaluate('cityLayer.querySelectorAll(".holding-tower-courtyard").length'),fixture.expected,'Courtyard must follow building construction and ownership');
     }
     assert.deepEqual(errors, []);
   } finally {

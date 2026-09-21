@@ -183,9 +183,9 @@ if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google a
 const combatTimerBytes = ["combat-timers-ui.js", "combat-timers-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (combatTimerBytes > 10 * 1024) throw new Error("Combat timer presentation exceeds its 10 KiB budget.");
-// Four new buildings share sixteen transparent 512px WebPs. Source PNGs never ship.
+// Sixteen building sprites and one shared courtyard. Source PNGs never ship.
 const buildingArt = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/clan-buildings/"));
-if (buildingArt.length !== 16 || buildingArt.some(file => !file.endsWith(".webp") || fs.statSync(file).size > 100 * 1024)) throw new Error("Clan building art must contain exactly sixteen WebPs, each under 100 KiB.");
+if (buildingArt.length !== 17 || !buildingArt.some(file => path.basename(file) === "courtyard.webp") || buildingArt.some(file => !file.endsWith(".webp") || fs.statSync(file).size > 100 * 1024)) throw new Error("Clan building art must contain sixteen sprites and one courtyard WebP, each under 100 KiB.");
 const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
 if (buildingPayload > 1248 * 1024) throw new Error("Clan buildings exceed the dedicated 1248 KiB art/presentation budget.");
 // Reserve a further 16 KiB for map, client API and report integration.

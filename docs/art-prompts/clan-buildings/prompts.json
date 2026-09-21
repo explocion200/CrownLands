@@ -97,6 +97,12 @@
       "stage": 4,
       "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. An elite medieval training grounds: elegant stone and dark timber drill lodge with deep muted burgundy pennant, low stone enclosed practice yard, straw targets, weapon racks. The open training yard remains the focus.",
       "file": "assets/clan-buildings/training-4.png"
+    },
+    {
+      "id": "courtyard",
+      "file": "assets/clan-buildings/courtyard.png",
+      "runtime": "assets/clan-buildings/courtyard.webp",
+      "prompt": "Use case: stylized-concept. Asset type: a TRANSPARENT ground-only courtyard sprite for this medieval strategy map. Reference image is STYLE ONLY. Create one empty low horizontal oval settlement clearing seen from the same elevated three-quarter perspective, width approximately twice its height, centered with generous transparent margins. Muted olive and ochre, delicate dark-brown ink strokes and lightly hand-painted weathering. Worn buff dirt, irregular sparse warm grey cobblestones embedded in the earth, subtle tracks joining four sides to an open central forecourt, one narrow entrance path going toward bottom center and fading out. Organic rough edges fading naturally into real transparency with a few small olive grass tufts. Low-contrast and subtle so it can sit below a stone tower and four separate building sprites. The ground is completely flat and empty, no structures, no ruins, no fences, no walls, no plants taller than grass, no furniture, no rocks taller than paving stones, no tower, no buildings, no labels or text, no watermark, no thick enclosing border, no rectangular grass tile, no surrounding landscape, no solid background. Actual alpha transparency outside the irregular ground shape. Do not draw the reference landscape. Output only this isolated empty courtyard ground asset, 1024 by 1024 square canvas; horizontal ground oval in middle."
     }
   ]
 }
