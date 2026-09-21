@@ -640,18 +640,79 @@ The current Core mappings are fixed:
 
 - Tower wall levels have no maximum.
 - A Tower wall upgrade costs five times the equivalent regular-city wall upgrade cost.
-- Each wall level takes ten minutes to construct.
+- New wall levels use the scaling duration and Workshop reduction in the Clan Tower buildings revision below; already-paid legacy jobs retain ten minutes.
 - A Tower may queue up to ten wall levels.
 - Capture reduces the Tower wall by five levels, never below Level 1, and sets wall integrity to zero.
 - A wall must be fully repaired before another upgrade begins.
 - Repair cost equals five times the equivalent regular-city wall cost multiplied by the damaged percentage.
 - Repairs are manually initiated and paid from the Clan Treasury.
-- Repairs use the unmodified regular-city wall repair rate. Speed items and modifiers do not apply.
-- No player item or modifier accelerates Tower wall construction.
+- Repairs use the regular-city base repair rate with the completed Engineers’ Workshop reduction. Player speed items and other modifiers do not apply.
+- Only the completed Engineers’ Workshop accelerates Tower wall construction; player items and modifiers do not.
 - Repair and upgrade cannot be started while the Tower is under attack.
 - An existing repair continues through an attack.
 - Construction pauses during an attack.
 - Queued construction is lost without refund when the Tower is captured.
+
+### Clan Tower buildings (confirmed September 21, 2026)
+
+**Status: IN DEVELOPMENT — not deployed.** This revision supersedes the earlier fixed ten-minute wall timer and 75% combined recovery cap. It applies to the dynamically resolved current Core realm and generation. Existing ownership, garrisons and Treasury balances are preserved; existing Towers begin with all four buildings unbuilt. War Hall is removed; players have no gameplay cap on troops stationed in Clan Towers.
+
+The four buildings each have ten levels:
+
+| Building | Completed-level benefit |
+| --- | --- |
+| Clan Shop | Extra personal item purchases, with the catalogue and quantities below. |
+| Engineers’ Workshop | Wall construction and paid repair durations reduced by 5% per level, up to 50%. Does not accelerate building projects. |
+| Infirmary | Adds 1.5 percentage points of casualty recovery per level, up to 15 points, only for troops defending this Tower. |
+| Training Grounds | Adds 1 percentage point per level, up to 10 points, to attack strength for every participant in a Rally launched from this Tower. |
+
+Training Grounds stacks additively with each participant’s Swordmastery and equipped attack gear; skill caps are unchanged. The completed level is locked when the Rally launches, including all participants, and persists through later building upgrades, Tower capture or ownership changes. It does not affect solo attacks, Tower defense, city-origin Rallies or troop production.
+
+Combined casualty recovery is capped at **90%**. Ordinary attacking and defending troops use Field Medics plus equipped casualty gear. Tower defenders additionally use that Tower’s completed Infirmary bonus at battle resolution. Each owner’s recovered troops return through the existing recovery system to that owner’s Main City, with no wounded storage. Reports distinguish skill, gear and clan contributions, including the applied share when capped.
+
+| Target building level | Treasury Gold paid upfront | Construction time |
+| --- | ---: | ---: |
+| 1 | 5,000,000 | 30 minutes |
+| 2 | 10,000,000 | 1 hour |
+| 3 | 20,000,000 | 2 hours |
+| 4 | 40,000,000 | 4 hours |
+| 5 | 80,000,000 | 6 hours |
+| 6 | 160,000,000 | 8 hours |
+| 7 | 320,000,000 | 10 hours |
+| 8 | 640,000,000 | 12 hours |
+| 9 | 1,280,000,000 | 18 hours |
+| 10 | 2,560,000,000 | 24 hours |
+
+All four buildings to Level 10 cost 20.46 billion donated Gold and 14 days 6 hours of uninterrupted construction. Leaders and Officers use existing Treasury permissions. Each Tower has one building project at a time, no waiting queue and no cancellation/refund. Its independent wall queue may run concurrently. Starting requires fully repaired walls and no incoming attack. Attacks or damage pause projects without losing progress; they resume automatically once those conditions clear. Completed benefits remain active during upgrades, attacks and repairs. Level 0 has no benefit.
+
+Capture cancels unfinished construction without refund and lowers each completed building by one level, with a floor of Level 1; unbuilt stays Level 0. Inherited benefits apply immediately, including Workshop assistance with the initial repair. Seasonal reset and clan disband/neutralization clear buildings through the existing Tower reset lifecycle.
+
+New wall jobs targeting level T use `10 + 2 × (T − 2)` base minutes, multiplied by the completed Workshop reduction. Each job locks its duration when it starts. Queued new jobs use the Workshop level when their own turn begins. Already-paid wall jobs from before this update retain their original ten-minute durations. Active construction and repair timers never change retroactively. Existing wall Gold costs, unlimited wall levels and ten-entry queue are unchanged. Repairs retain the existing proportional regular-city base calculation and Gold cost, with only the Workshop time reduction added; an existing repair continues under attack but a new repair cannot start then.
+
+#### Clan Shop catalogue and allowances
+
+The Shop is accessible only through an owned Tower’s Shop building or Buildings tab; no personal garrison is required. The selected Tower must have a completed Shop to buy. Members can browse immediately and buy after 24 hours in the clan. Every built Shop uses the highest completed Shop level among Towers currently owned by that clan. Losing the highest-level Shop lowers the catalogue and stock limits immediately.
+
+| Item | Unlock level | Initial allowance | Increased allowance |
+| --- | ---: | --- | --- |
+| Recall Horn | 1 | 1 daily | — |
+| Swift March Order | 1 | 1 daily | 2 daily at Level 4 |
+| Royal Tax Decree | 2 | 1 daily | 2 daily at Level 6 |
+| War Drums | 3 | 1 daily | 2 daily at Level 7 |
+| Veil of Silence | 5 | 1 daily | 2 daily at Level 8 |
+| Common Gear Box | 9 | 1 daily | — |
+| Royal Peace Shield | 10 | 1 per rolling 72 hours | — |
+
+Prices use the same current personal production-based calculation as the main shop. Purchases use personal Gold and give ordinary inventory items or unopened Gear Boxes. Main-shop allowances are independent. Clan Shop usage belongs to the player and is shared across all Clan Shops, remaining spent after leaving, rejoining, switching clans, upgrading or losing a Shop. A lower limit never erases or clamps the number already purchased. Normal allowances reset at 00:00 UTC. The Shield’s 72-hour wait starts only on a successful purchase. Seasonal usage resets with the existing seasonal purchase reset; owned gear and unopened Gear Boxes remain preserved. Transactions and receipts prevent duplicate charges or concurrent purchases exceeding stock.
+
+Locked items show their unlock level; quantity upgrades show their required level. The Shop displays personal Gold, prices, remaining quantities and reset timers. Building details show completed/current and next-level benefits, construction cost/time, Treasury balance, permissions and pause reasons.
+
+#### Building artwork and map layout
+
+Use the approved hand-drawn medieval map style: dark ink outlines, muted olive and ochre, weathered stone and timber, textured surfaces and an elevated three-quarter view. The source reference and exact generation prompts are in `docs/art-prompts/clan-buildings/`. All four Towers share sixteen building sprites: four visual stages for Levels 1–3, 4–6, 7–9 and 10.
+
+Place the Shop left of the Tower, Workshop right, Infirmary lower-left and Training Grounds lower-right, forming a horseshoe. Artwork scales with the world map. Action icons keep their established screen size and sit outside the compound. Construction shows scaffolding, and unbuilt buildings remain accessible in the Buildings tab. Reserve the entire compound in pickup exclusion checks. Verify mouse and touch entry points at desktop and landscape-mobile sizes.
+
 
 ### Tower Veil
 
@@ -1057,7 +1118,7 @@ Status: `IN DEVELOPMENT` on `codex/treasury-gear-draft`, with user-approved desi
 - The approved Barracks Manage Gear screen follows the Treasury parchment layout and matching dimensions: up to 1200 × 790 pixels on desktop, fitting the viewport on mobile landscape. Portrait is not a design target.
 - The War Captain is a static, transparent full-body illustration in the approved medieval ink-and-wash style, centered between the eight equipped slots. It has no animation in any motion setting. The equipment bag occupies the middle pane; selected-item details occupy the right, with Equip/Unequip and Upgrade kept visible.
 - Common items retain the light gray `#d9dad6` background and burgundy selected borders. The Gold icon reuses the approved crown-stamped coin. All existing information, quantities, levels, costs, matching-copy requirements, and upgrade confirmation behavior are retained.
-- Armor retains troop production in all owned cities; the Officer Sword retains attack strength for all attacks; the Valor Medallion retains casualty recovery with Field Medics, the 75% combined cap, and recovery to the Main City. Shared server-authoritative equipment actions remain unchanged. Gatehouse and Royal Stables retain their existing presentation.
+- Armor retains troop production in all owned cities; the Officer Sword retains attack strength for all attacks; the Valor Medallion retains casualty recovery with Field Medics, the combined recovery cap (raised to 90% by the confirmed Clan Tower buildings revision), and recovery to the Main City. Shared server-authoritative equipment actions remain unchanged. Gatehouse and Royal Stables retain their existing presentation.
 
 Status: `IN DEVELOPMENT` on `codex/barracks-gear-draft`; the user approved the layout, static character, merge, and deployment on 11 September 2026. Runtime integration is complete; release status requires separate channel verification. Review details: [Barracks equipment](./visual-qa/barracks-gear/README.md).
 

@@ -2320,6 +2320,10 @@ let selectedTowerMapId = "";
 let holdingTowerRealtimeUnsubscribe = null;
 const holdingTowerRequestTokens = new Map();
 let holdingTowerModalSession = null;
+let holdingTowerBuildingSelection = "shop";
+const clanBuildingRequestIds = new Map();
+let holdingTowerMapSubscriptionsKey = "";
+let holdingTowerMapUnsubscribers = [];
 let clanGiftCountdownTimer = 0;
 let clanJoinCountdownTimer = 0;
 let battleReportFilter = "all";
@@ -4067,9 +4071,13 @@ function renderHoldingTowerModal(tower) {
       label: `${tower.clanName} shield`,
     }),
     treasuryBalance,
+    buildingSelection: holdingTowerBuildingSelection,
+    personalGold: state.gold,
+    itemArt: Object.fromEntries([...SHOP_ITEMS, COMMON_GEAR_BOX_ITEM].map(item => [item.id, item.icon])),
   });
   window.CrownlandsClanTowerDetailsUi?.mount(modalBody, {
     selected: holdingTowerDetailsTab,
+    onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
     onSelect: key => { holdingTowerDetailsTab = key; },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
@@ -4102,6 +4110,15 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   const result = await api.getHoldingTowerState({ towerId });
   if (token !== holdingTowerRequestTokens.get(towerId)) return null;
   const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
+  if (snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
+    try {
+      const shop = await api.getClanTowerShop({ towerId });
+      if (token !== holdingTowerRequestTokens.get(towerId)) return null;
+      snapshot.clanShop = shop.clanShop;
+      applyServerEconomyResult(shop, { renderCities: false });
+    } catch (error) { snapshot.clanShopError = error?.message || "Clan Shop unavailable."; }
+  }
+  if (token !== holdingTowerRequestTokens.get(towerId)) return null;
   holdingTowerSnapshots.set(towerId, snapshot);
   if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
   if (isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
@@ -4213,7 +4230,7 @@ async function runHoldingTowerSpendAction(tower, action) {
   try {
     const result = await api[method]({
       towerId: tower.id,
-      count,
+      levels: count,
       operationId: createHoldingTowerOperationId(action),
     });
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
@@ -4367,7 +4384,116 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
   }
 }
 
+async function runClanTowerBuildingAction(tower, kind, id) {
+  if (holdingTowerActionsInFlight.has(tower.id)) return;
+  const api = getOnlineApi();
+  const method = kind === "build" ? "startClanTowerBuilding" : "purchaseClanTowerShopItem";
+  if (!api?.[method]) return;
+  const actionSession = onlineSessionGeneration;
+  const isCurrent = () => actionSession === onlineSessionGeneration;
+  const key = `${actionSession}:${tower.id}:${kind}:${id}`;
+  const operationId = clanBuildingRequestIds.get(key) || createHoldingTowerOperationId(kind);
+  clanBuildingRequestIds.set(key, operationId);
+  const item = tower.clanShop?.items?.find(row => row.id === id);
+  holdingTowerActionsInFlight.add(tower.id);
+  renderHoldingTowerModal(tower);
+  try {
+    const result = await api[method]({ towerId: tower.id, operationId,
+      ...(kind === "build" ? { buildingId: id } : { itemId: id, quantity: 1, cost: item?.price }),
+    });
+    if (!isCurrent()) return;
+    clanBuildingRequestIds.delete(key);
+    if (kind === "buy") applyServerEconomyResult(result, { renderCities: false });
+    if (result?.treasury) clanTreasuryStatus = { ...(clanTreasuryStatus || {}), treasury: result.treasury };
+    if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
+    if (result?.clanShop) holdingTowerSnapshots.set(tower.id, { ...holdingTowerSnapshots.get(tower.id), clanShop: result.clanShop });
+    showToast(kind === "build" ? "Building construction started." : "Clan Shop purchase added to your Bag.");
+  } catch (error) {
+    if (isCurrent()) rejectGameAction(error?.message || "The Tower order could not be completed.");
+  } finally {
+    holdingTowerActionsInFlight.delete(tower.id);
+    if (isCurrent()) {
+      await refreshHoldingTower(tower.id).catch(() => renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower));
+      cityRenderSignature = "";
+      renderCities();
+    }
+  }
+}
+
+function ensureHoldingTowerMapSubscriptions() {
+  const api = getOnlineApi();
+  const key = api?.isReady?.() && api?.isSignedIn?.() && api?.subscribeHoldingTowerState
+    ? `${api.getUser?.()?.uid || ""}:${state?.clanId || ""}:${JSON.stringify(api.getRealmIdentity?.() || {})}` : "";
+  if (key === holdingTowerMapSubscriptionsKey) return;
+  holdingTowerMapUnsubscribers.forEach(unsubscribe => unsubscribe());
+  holdingTowerMapUnsubscribers = [];
+  holdingTowerMapSubscriptionsKey = key;
+  holdingTowerSnapshots.clear();
+  if (!key) return;
+  holdingTowerMapUnsubscribers = WORLD_HOLDING_TOWERS.map(visual => api.subscribeHoldingTowerState(visual.id, {
+    onTower: raw => {
+      if (key !== holdingTowerMapSubscriptionsKey) return;
+      const previous = holdingTowerSnapshots.get(visual.id);
+      const keepPrivate = raw && previous?.clanId === raw.clanId;
+      holdingTowerSnapshots.set(visual.id, { ...visual, ...(keepPrivate ? previous : {}), ...(raw || {}),
+        buildings: window.CrownlandsClanTowerBuildings.normalizeLevels(raw?.buildings), buildingProject: raw?.buildingProject || null,
+      });
+      cityRenderSignature = "";
+      renderCities();
+      if (selectedHoldingTowerId && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) {
+        void refreshHoldingTower(selectedHoldingTowerId).catch(error => console.warn("Tower building refresh failed", error));
+      }
+    },
+    onError: error => console.warn("Tower map subscription failed", error),
+  }));
+}
+
+function renderClanTowerMapBuildings(visibleTowers, fragment) {
+  cityLayer.querySelectorAll(".holding-tower-building-node").forEach(node => node.remove());
+  const definitions = window.CrownlandsClanTowerBuildings;
+  if (!definitions) return;
+  for (const visual of visibleTowers) {
+    const tower = holdingTowerSnapshots.get(visual.id);
+    if (!tower || tower.ownerKind !== "clan") continue;
+    const point = worldToMapPoint({ x: visual.visualX, y: visual.visualY });
+    for (const building of definitions.DEFINITIONS) {
+      const level = definitions.level(tower.buildings?.[building.id]);
+      const constructing = tower.buildingProject?.buildingId === building.id;
+      if (!level && !constructing) continue;
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = `holding-tower-building-node${constructing ? " constructing" : ""}${!level ? " unbuilt" : ""}${selectedTowerMapId === visual.id ? " selected" : ""}`;
+      node.dataset.clanBuildingTower = visual.id;
+      node.dataset.clanBuildingId = building.id;
+      node.setAttribute("aria-label", `${building.name} · ${level ? `Level ${level}` : "Under construction"} · ${visual.name}`);
+      node.style.left = `${point.x + (building.x + .5 - visual.anchorX) * visual.width}px`;
+      node.style.top = `${point.y + (1 - visual.anchorY + building.y) * visual.width}px`;
+      node.style.width = `${visual.width * .34}px`;
+      node.innerHTML = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
+      fragment.appendChild(node);
+    }
+  }
+}
+
+async function openClanTowerBuilding(towerId, buildingId) {
+  holdingTowerBuildingSelection = buildingId;
+  await openHoldingTower(towerId);
+  if (selectedHoldingTowerId !== towerId || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
+  holdingTowerDetailsTab = "buildings";
+  renderHoldingTowerModal(holdingTowerSnapshots.get(towerId));
+}
+
 function bindHoldingTowerControls(tower) {
+  modalBody.querySelectorAll("[data-clan-building-select]").forEach(button => button.addEventListener("click", () => {
+    holdingTowerBuildingSelection = button.dataset.clanBuildingSelect;
+    const scroll = modalBody.querySelector(".ctb-building-list")?.scrollTop || 0;
+    renderHoldingTowerModal(tower);
+    const list = modalBody.querySelector(".ctb-building-list");
+    if (list) list.scrollTop = scroll;
+  }));
+  modalBody.querySelectorAll("[data-clan-building-start]").forEach(button => button.addEventListener("click", () => void runClanTowerBuildingAction(tower, "build", button.dataset.clanBuildingStart)));
+  modalBody.querySelectorAll("[data-clan-shop-buy]").forEach(button => button.addEventListener("click", () => void runClanTowerBuildingAction(tower, "buy", button.dataset.clanShopBuy)));
+
   modalBody.querySelectorAll("[data-tower-action]").forEach(button => {
     button.addEventListener("click", () => {
       const action = String(button.dataset.towerAction || "");
@@ -9489,7 +9615,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
 
 function returnSavedTroops(skill, losses, reason, excludeCityId = null) {
   const percent = skill === "fieldMedics"
-    ? Math.min(COMMON_GEAR?.CASUALTY_RECOVERY_CAP_PERCENT || 75,
+    ? Math.min(COMMON_GEAR?.CASUALTY_RECOVERY_CAP_PERCENT || 90,
       getSkillPercent(skill) + Math.max(0, Number(getCommonGearBonuses().casualtyEfficiency) || 0))
     : getSkillPercent(skill);
   const lost = Math.max(0, Math.floor(Number(losses) || 0));
@@ -10047,6 +10173,7 @@ function normalizeBattleReports(reports) {
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: count(report.fieldMedicsRecovered),
+        clanTrainingPercent: Math.max(0, Math.min(10, Number(report.clanTrainingPercent) || 0)),
         casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
         gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
@@ -21308,7 +21435,7 @@ function getHarvestBonusMapArtBounds(regionId) {
     if (normalizeRegionId(tower.regionId) !== activeRegionId) continue;
     const left = tower.visualX - tower.width * tower.anchorX;
     const top = tower.visualY - tower.width * tower.anchorY;
-    rectangles.push({ left, top, right: left + tower.width, bottom: top + tower.width });
+    rectangles.push({ left: left - tower.width * .1, top, right: left + tower.width * 1.1, bottom: top + tower.width * 1.3 });
   }
   return rectangles;
 }
@@ -27105,6 +27232,8 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
     tower.width,
     tower.anchorX,
     tower.anchorY,
+    JSON.stringify(holdingTowerSnapshots.get(tower.id)?.buildings || {}),
+    holdingTowerSnapshots.get(tower.id)?.buildingProject?.id || "",
   ].join(":")).join("|");
 
   return [
@@ -27207,6 +27336,7 @@ function renderCities(force = false) {
 }
 
 function renderCitiesUncached(force = false) {
+  ensureHoldingTowerMapSubscriptions();
   if (isCameraInteractionActive()) {
     queueDeferredMapRender();
     return;
@@ -27251,6 +27381,7 @@ function renderCitiesUncached(force = false) {
   if (regroupSource) renderRegroupRadius(regroupSource);
 
   const cityFragment = document.createDocumentFragment();
+  renderClanTowerMapBuildings(visibleHoldingTowers, cityFragment);
   visibleHoldingTowers.forEach(tower => {
     const mapPoint = worldToMapPoint({ x: tower.visualX, y: tower.visualY });
     let existingNode = existingHoldingTowerNodes.get(tower.id);
@@ -27754,12 +27885,13 @@ function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".cla
   const scale = Math.max(0.1, zoom);
   // The south-facing tower occupies the middle half of its square sprite.
   // Keep the city-sized controls beside its base as the artwork zooms.
-  const side = Math.max(72, visual.width * scale / 4 + 40);
-  const below = (1 - visual.anchorY) * visual.width * scale + 50;
+  const hasBuildings = Object.values(holdingTowerSnapshots.get(visual.id)?.buildings || {}).some(level => level > 0) || Boolean(holdingTowerSnapshots.get(visual.id)?.buildingProject);
+  const side = Math.max(72, visual.width * scale * (hasBuildings ? .58 : .25) + 40);
+  const below = (1 - visual.anchorY + (hasBuildings ? .27 : 0)) * visual.width * scale + 50;
   wheel.style.transform = `scale(${1 / scale})`;
   const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
   // The smallest landscape viewport needs a compact row above the bottom HUD.
-  const positions = mapViewportHeight <= 360
+  const positions = mapViewportHeight <= 360 && !hasBuildings
     ? [...buttons].map((_, index) => [(index - (buttons.length - 1) / 2) * 72, -40])
     : [[0, below], [-side, 0], [side, 0], [-side, -72], [side, -72]];
   buttons.forEach((button, index) => {
@@ -37110,6 +37242,7 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
           : totalAttackPower - baseAttackPower - gearAttackStrengthBonusPower
       )),
       gearAttackStrengthBonusPower,
+      clanTrainingBonusPower: Math.max(0, Math.floor(Number(raw.clanTrainingBonusPower) || 0)),
       totalAttackPower,
     };
   }
@@ -37197,6 +37330,7 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
     basePower: Math.max(0, Math.floor(Number(participant.basePower) || 0)),
     swordmasteryLevel: Math.max(0, Math.floor(Number(participant.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(participant.swordmasteryPercent) || 0),
+    clanTrainingPercent: Math.max(0, Number(participant.clanTrainingPercent) || 0),
     gearAttackStrengthPercent: Math.max(0, Number(participant.gearAttackStrengthPercent) || 0),
     defenseCombatVersion: Math.max(0, Math.floor(Number(participant.defenseCombatVersion) || 0)),
     baseDefensePowerPerTroop: Math.max(1, Number(participant.baseDefensePowerPerTroop) || 1),
@@ -37523,6 +37657,8 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     participantSummary,
     skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
+    clanTrainingBonusPower: attacker ? sumDetailedBattleParticipantPower(participants, "clanTrainingBonusPower") : 0,
+    clanTrainingPercent: attacker ? Math.max(0, ...participants.map(p => p.clanTrainingPercent || 0)) : 0,
     skillPercentText,
     gearLabel: explicitCombatGear?.sourceLabel || (attacker ? "War Captain gear" : "Defensive Commander gear"),
     gearBonusPower,
@@ -37819,7 +37955,7 @@ function renderBattleRewards(report = null) {
         ? renderBattleMetric(
             "Casualty recovery",
             `+${formatNumber(report.fieldMedicsRecovered)}`,
-            "Field Medics + Barracks gear · 75% combined cap · returned to the main city"
+            "Field Medics + Barracks gear · 90% combined cap · returned to the main city"
           )
         : "",
       report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
@@ -39250,11 +39386,11 @@ function flushMainMapPinchUpdate() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .holding-tower-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .holding-tower-node, .holding-tower-building-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
 
 function isMapCommandInteractionTarget(target) {
-  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button"));
+  return Boolean(target?.closest(".holding-tower-building-node, .city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button"));
 }
 
 function findNearestCityTapNode(candidateNodes, distanceToNode, excludedCityId = "") {
@@ -39886,7 +40022,7 @@ cityLayer.addEventListener("pointerdown", event => {
   if (towerButton) trackHoldingTowerTap(event, towerButton);
   else if (cityButton) trackCityTap(event, cityButton);
   else if (campButton) trackCampTap(event, campButton);
-  if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .holding-tower-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
+  if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .holding-tower-node, .holding-tower-building-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
 });
 cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
@@ -39933,6 +40069,13 @@ if (portalLayer) {
   });
 }
 cityLayer.addEventListener("click", event => {
+  const buildingButton = event.target.closest(".holding-tower-building-node");
+  if (buildingButton) {
+    if (isMapInteractionBlocked() || suppressMapClick) return;
+    event.stopPropagation();
+    void openClanTowerBuilding(buildingButton.dataset.clanBuildingTower, buildingButton.dataset.clanBuildingId);
+    return;
+  }
   if (isMapInteractionBlocked()) return;
   if (suppressMapClick) return;
   if (event.target.closest(".city-wheel-action, .gold-camp-wheel-action")) return;

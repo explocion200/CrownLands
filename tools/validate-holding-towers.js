@@ -304,7 +304,7 @@ assert.match(server, /baseGoldPerHour \+= Math\.max\(0, safeNumber\(stats\.baseG
 assert.notEqual(towers.getUtcDateKey(NOW), towers.getUtcDateKey(towers.getNextUtcDayStartMs(NOW)));
 assert.deepEqual(towers.MANAGER_ROLES, ["leader", "officer"]);
 
-// Wall purchases are canonical-cost adapters: 5x, sequential fixed ten minutes, max ten, and no level cap.
+// Wall purchases are canonical-cost adapters: 5x, sequential scaling construction times, max ten, and no level cap.
 assert.equal(towers.getEquivalentCityWallCost(12, canonicalCost), 1_200_000);
 assert.equal(towers.getTowerWallUpgradeCost(12, canonicalCost), 6_000_000);
 assert.equal(towers.getTowerVeilCost(12, canonicalCost), 1_200_000);
@@ -316,13 +316,13 @@ assert.equal(towers.materializeTowerState(queued.state, NOW + 599_999).wallLevel
 const afterOneLevel = towers.materializeTowerState(queued.state, NOW + 600_000);
 assert.equal(afterOneLevel.wallLevel, 2);
 assert.equal(afterOneLevel.upgradeQueue.length, 2);
-assert.equal(towers.materializeTowerState(queued.state, NOW + 1_800_000).wallLevel, 4);
+assert.equal(towers.materializeTowerState(queued.state, NOW + 2_160_000).wallLevel, 4);
 expectError(() => towers.queueWallUpgrades(ownedTower(), 11, Number.MAX_SAFE_INTEGER, () => 1, NOW), /At most 10/);
 expectError(() => towers.queueWallUpgrades(ownedTower(undefined, { wallIntegrityBps: 9_999 }), 1, 1_000_000, () => 1, NOW), /tower-wall-damaged/);
 const highLevel = towers.queueWallUpgrades(ownedTower(undefined, { wallLevel: 1_000_000 }), 10, 100, () => 1, NOW);
 assert.equal(highLevel.state.upgradeQueue.at(-1).targetLevel, 1_000_010, "Tower walls must not have a gameplay level cap.");
 
-// Incoming attacks pause fixed-time construction without refunding or losing the queue.
+// Incoming attacks pause construction without refunding or losing the queue.
 const partBuilt = towers.materializeTowerState(queued.state, NOW + 200_000);
 const attacked = towers.materializeTowerState({ ...partBuilt, incomingRallyIds: ["rally-1"], attackBlocked: true }, NOW + 400_000);
 assert.equal(attacked.wallLevel, 1);

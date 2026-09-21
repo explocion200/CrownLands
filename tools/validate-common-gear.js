@@ -51,7 +51,7 @@ assert.equal(gear.SHOP_DAILY_LIMIT, 1);
 assert.equal(gear.SHOP_PRICE_HOURS, 1, "The Common Gear Box must cost one raw Gold-production hour.");
 assert.equal(serverGear.SHOP_PRICE_HOURS, gear.SHOP_PRICE_HOURS, "Client and server Gear Box hour costs must stay synchronized.");
 assert.equal(gear.RELIC_BONUS_CHANCE_PERCENT, 1);
-assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 75);
+assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 90);
 assert.deepEqual(gear.BONUS_BY_LEVEL, { 1: .25, 2: .5, 3: .8, 4: 1.15, 5: 1.5 });
 assert.deepEqual(gear.UPGRADE_BY_LEVEL, {
   1: { duplicates: 1, baseGoldHours: .5 },

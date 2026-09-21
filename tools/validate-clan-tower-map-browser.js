@@ -51,7 +51,7 @@ async function main() {
         const snapshot = HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(towerId),towerMapScenario);
         if (towerMapScenario === 'ineligible') snapshot.permissions = {inspect:true};
         return {worldActive:true,towers:[snapshot]};
-      }, subscribeHoldingTowerState: () => () => {},
+      }, subscribeHoldingTowerState: () => () => {}, getClanTowerShop: undefined,
       createClanRally: async payload => {towerMapOrders.push(payload);return {ok:true};},
       sendHoldingTowerArmyOrder: async payload => {towerMapOrders.push(payload);return {ok:true};}
       });

@@ -863,6 +863,10 @@
     return callServerFunction("sendRegroupOrders", payload);
   }
 
+  async function getClanTowerShop(payload = {}) { return callServerFunction("getClanTowerShop", payload); }
+  async function purchaseClanTowerShopItem(payload = {}) { return callServerFunction("purchaseClanTowerShopItem", payload); }
+  async function startClanTowerBuilding(payload = {}) { return callServerFunction("startClanTowerBuilding", payload); }
+
   async function getHoldingTowerState(payload = {}) {
     return callServerFunction("getHoldingTowerState", payload);
   }
@@ -3359,6 +3363,9 @@
     sendNearbyScouts,
     sendRegroupOrders,
     getHoldingTowerState,
+    getClanTowerShop,
+    purchaseClanTowerShopItem,
+    startClanTowerBuilding,
     getClanTreasuryStatus,
     donateClanTreasuryGold,
     queueHoldingTowerWallUpgrades,

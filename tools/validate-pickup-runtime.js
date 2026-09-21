@@ -202,7 +202,7 @@ async function run() {
     vm.runInContext(extract("getHarvestBonusMapArtBounds")+"\n"+extract("isHarvestBonusClearOfMapArt"),context);
     const bounds=context.getHarvestBonusMapArtBounds("current");
     assert.equal(bounds.length,3,"Another map's Tower affected the current map.");
-    for(const point of [{x:1200,y:2200},{x:1290,y:2200},{x:2000,y:2350},{x:1700,y:2910},{x:1700,y:3140}]) {
+    for(const point of [{x:1200,y:2200},{x:1290,y:2200},{x:2000,y:2350},{x:1700,y:2910},{x:1700,y:3140},{x:1700,y:3200}]) {
       assert.equal(context.isHarvestBonusClearOfMapArt(point.x,point.y,bounds),false,`Obstructed pickup accepted at ${JSON.stringify(point)}`);
     }
     assert.equal(context.isHarvestBonusClearOfMapArt(1200,2600,bounds),true,"Clear central space was rejected.");

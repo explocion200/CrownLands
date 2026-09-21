@@ -1,0 +1,102 @@
+{
+  "tool": "Built-in image_gen",
+  "styleReference": "style-reference.png",
+  "assets": [
+    {
+      "id": "shop",
+      "stage": 1,
+      "file": "assets/clan-buildings/shop-1.png",
+      "prompt": "Use case: stylized-concept. Create ONE production game sprite: a modest medieval clan shop, first progression stage (levels 1-3). A small timber merchant stall with ochre cloth awning, a chest, two barrels, and neatly stacked sacks, no people. Hand-drawn historical strategy map illustration with dark brown ink outlines, lightly crosshatched textures, muted olive/ochre earth palette, weathered timber, elevated three-quarter view showing roof and front/right side, diffuse daylight. Match an antique illustrated medieval landscape map. Single isolated building, centered, all parts fully visible with generous clear margin, square 1024x1024 canvas, true transparent alpha background and only a tiny soft ground-contact shadow. Readable silhouette at 80 pixels. No scene, scenery, text, letters, numbers, labels, frame, watermark, grass tile, neon, photorealism, or glossy 3D. This sprite will be composited beside a large clan tower on an existing map."
+    },
+    {
+      "id": "shop",
+      "stage": 2,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A prosperous medium medieval trading shop with a timber upper floor on stone foundations, ochre awning, crates and barrels.",
+      "file": "assets/clan-buildings/shop-2.png"
+    },
+    {
+      "id": "shop",
+      "stage": 3,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A substantial stone medieval merchant hall with two ochre awnings, tiled roof, arched shopfront, barrels and neatly stacked sacks.",
+      "file": "assets/clan-buildings/shop-3.png"
+    },
+    {
+      "id": "shop",
+      "stage": 4,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A prestigious grand medieval trading guildhall, pale stone and dark timber, ornate carved entrance, ochre awnings, deep muted burgundy pennant, crates and chest, dignified rather than palace-sized.",
+      "file": "assets/clan-buildings/shop-4.png"
+    },
+    {
+      "id": "workshop",
+      "stage": 1,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A small rough-timber medieval engineers workshop: lean-to roof, carpenter workbench, wood beams, hand tools and compact stone forge chimney.",
+      "file": "assets/clan-buildings/workshop-1.png"
+    },
+    {
+      "id": "workshop",
+      "stage": 2,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A medium medieval engineers workshop with timber-framed stone base, tiled roof, workbench, stacked beams, stone forge and short chimney.",
+      "file": "assets/clan-buildings/workshop-2.png"
+    },
+    {
+      "id": "workshop",
+      "stage": 3,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A substantial stone medieval engineers workshop, timber crane and pulley, solid tiled roof, workbenches and neatly stacked cut stone.",
+      "file": "assets/clan-buildings/workshop-3.png"
+    },
+    {
+      "id": "workshop",
+      "stage": 4,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A master medieval engineers guild workshop, finely built stone walls and dark timber, large wooden lifting crane, forge chimney, carved doorway, ordered masonry supplies.",
+      "file": "assets/clan-buildings/workshop-4.png"
+    },
+    {
+      "id": "infirmary",
+      "stage": 1,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A small medieval healer infirmary cottage, pale plaster and dark timber, thatched ochre roof, small herb planters and a bench, no cross symbols.",
+      "file": "assets/clan-buildings/infirmary-1.png"
+    },
+    {
+      "id": "infirmary",
+      "stage": 2,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A medium medieval infirmary cottage, stone foundation and timber framing, shingled roof, herb beds and linen canopy over the entrance, no cross symbols.",
+      "file": "assets/clan-buildings/infirmary-2.png"
+    },
+    {
+      "id": "infirmary",
+      "stage": 3,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A substantial stone medieval infirmary hall with timber porch, tiled roof, herb planters and a small sheltered courtyard, no cross symbols.",
+      "file": "assets/clan-buildings/infirmary-3.png"
+    },
+    {
+      "id": "infirmary",
+      "stage": 4,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A grand medieval infirmary with pale stone arcaded entrance, dark timber gables, tiled roofs, peaceful enclosed herb courtyard and linen awning, no cross symbols.",
+      "file": "assets/clan-buildings/infirmary-4.png"
+    },
+    {
+      "id": "training",
+      "stage": 1,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A small medieval sword training ground: low timber fenced practice yard, two straw practice dummies, wooden weapon rack and small timber shelter.",
+      "file": "assets/clan-buildings/training-1.png"
+    },
+    {
+      "id": "training",
+      "stage": 2,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A medium medieval sword training yard: timber fenced sand practice area, three straw dummies, weapon racks, timber practice lodge.",
+      "file": "assets/clan-buildings/training-2.png"
+    },
+    {
+      "id": "training",
+      "stage": 3,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. A substantial medieval training grounds compound: low stone boundary and gate, timber-framed training lodge, straw sword targets, ordered weapon racks in open practice yard.",
+      "file": "assets/clan-buildings/training-3.png"
+    },
+    {
+      "id": "training",
+      "stage": 4,
+      "prompt": "Use case: stylized-concept. ONE production medieval strategy game building sprite, square canvas, true transparent alpha background. Hand-drawn historical landscape-map illustration: dark brown ink outlines, lightly crosshatched textured surfaces, muted olive/ochre/stone-grey earth colors, weathered timber and masonry. Elevated three-quarter view showing roof and front/right side, diffuse daylight. Centered isolated structure fully visible, generous transparent margin, clear silhouette at 80 pixels, tiny contact shadow only. No text, numbers, labels, people, watermark, frame, scenery, grass tile, photorealism, glossy 3D, or bright saturated colors. An elite medieval training grounds: elegant stone and dark timber drill lodge with deep muted burgundy pennant, low stone enclosed practice yard, straw targets, weapon racks. The open training yard remains the focus.",
+      "file": "assets/clan-buildings/training-4.png"
+    }
+  ]
+}

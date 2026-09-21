@@ -56,6 +56,7 @@ const CHAT_TRANSLATION = require("./chat-translation.js");
 const REALM_TOPOLOGY = require("./realmTopology.js");
 const CORE_EXPANSION = require("./coreExpansionTopology.js");
 const HOLDING_TOWERS = require("./holding-towers.js");
+const CLAN_BUILDINGS = HOLDING_TOWERS.BUILDINGS;
 const ANTI_HANDOFF = require("./anti-handoff-policy.js");
 const COMBAT_AUTHORIZATION = require("./combat-authorization.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
@@ -137,10 +138,10 @@ function getCommonGearBonuses(profileOrGear = {}) {
   return COMMON_GEAR.getBonuses(profileOrGear);
 }
 
-function getCasualtyRecoveryPercent(profile = {}) {
+function getCasualtyRecoveryPercent(profile = {}, clanInfirmaryPercent = 0) {
   return Math.min(
     COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT,
-    getSkillPercent(profile, "fieldMedics") + getCommonGearBonuses(profile).casualtyEfficiency
+    getSkillPercent(profile, "fieldMedics") + getCommonGearBonuses(profile).casualtyEfficiency + Math.max(0, clanInfirmaryPercent)
   );
 }
 
@@ -6401,6 +6402,7 @@ function normalizeRallyParticipant(raw = {}) {
     attackSkillLevel: Math.max(0, Math.floor(safeNumber(raw.attackSkillLevel, 0))),
     attackBonusPercent: Math.max(0, safeNumber(raw.attackBonusPercent, 0)),
     attackGearPercent: Math.max(0, safeNumber(raw.attackGearPercent, 0)),
+    clanTrainingPercent: Math.max(0, Math.min(10, safeNumber(raw.clanTrainingPercent, 0))),
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, 0)),
     objectiveMarchSpeedBonusPercent: Math.max(0, safeNumber(raw.objectiveMarchSpeedBonusPercent, 0)),
     marchSpeedMultiplier: Math.max(0.01, safeNumber(raw.marchSpeedMultiplier, 1)),
@@ -6652,6 +6654,7 @@ function createRallyParticipantSnapshot({
   assembledAtMs = 0,
   ownerKingPower = 0,
   objectiveMarchSpeedBonusPercent = 0,
+  clanTrainingPercent = 0,
 } = {}) {
   const marchSpeedMultiplier = addCommonGearMarchSpeed(profile, "attack", skillMultiplier(profile, "marchOrders")
     * (1 + Math.max(0, safeNumber(objectiveMarchSpeedBonusPercent, 0)) / 100));
@@ -6668,11 +6671,12 @@ function createRallyParticipantSnapshot({
     joinArmyId,
     joinedAtMs,
     assembledAtMs,
+    clanTrainingPercent: Math.max(0, Math.min(10, clanTrainingPercent)),
     attackSkillLevel: getSkillLevel(profile, "swordmastery"),
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
     attackGearPercent: getCommonGearBonuses(profile).attackStrength,
     attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
-      skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100
+      skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100 + Math.max(0, Math.min(10, clanTrainingPercent)) / 100
     ),
     objectiveMarchSpeedBonusPercent,
     marchSpeedMultiplier,
@@ -9057,20 +9061,23 @@ function createBattleAttackPowerBreakdown(
   basePower = 0,
   effectivePower = 0,
   swordmasteryPercent = 0,
-  gearAttackStrengthPercent = 0
+  gearAttackStrengthPercent = 0,
+  clanTrainingPercent = 0
 ) {
   const baseAttackPower = Math.max(0, Math.floor(safeNumber(basePower, 0)));
   const totalAttackPower = Math.max(baseAttackPower, Math.floor(safeNumber(effectivePower, baseAttackPower)));
   const totalBonusPower = Math.max(0, totalAttackPower - baseAttackPower);
   const skillPercent = Math.max(0, safeNumber(swordmasteryPercent, 0));
   const gearPercent = Math.max(0, safeNumber(gearAttackStrengthPercent, 0));
-  const combinedPercent = skillPercent + gearPercent;
+  const clanPercent = Math.max(0, Math.min(10, safeNumber(clanTrainingPercent, 0)));
+  const combinedPercent = skillPercent + gearPercent + clanPercent;
   const gearAttackStrengthBonusPower = combinedPercent > 0
     ? Math.floor(totalBonusPower * gearPercent / combinedPercent)
     : 0;
   return {
     baseAttackPower,
-    swordmasteryBonusPower: Math.max(0, totalBonusPower - gearAttackStrengthBonusPower),
+    swordmasteryBonusPower: Math.max(0, totalBonusPower - gearAttackStrengthBonusPower - Math.floor(totalBonusPower * clanPercent / (combinedPercent || 1))),
+    clanTrainingBonusPower: Math.floor(totalBonusPower * clanPercent / (combinedPercent || 1)),
     gearAttackStrengthBonusPower,
     totalAttackPower,
   };
@@ -9197,6 +9204,7 @@ function createBattleCasualtyRecoverySnapshot({
   recoveredTroops = 0,
   fieldMedicsPercent = undefined,
   casualtyGearPercent = undefined,
+  clanInfirmaryPercent = 0,
   combinedRecoveryPercent = undefined,
 } = {}) {
   const normalizedLosses = Math.max(0, Math.floor(safeNumber(losses, 0)));
@@ -9208,17 +9216,19 @@ function createBattleCasualtyRecoverySnapshot({
     casualtyGearPercent,
     getCommonGearBonuses(profile).casualtyEfficiency
   ));
+  const clanPercent = Math.max(0, Math.min(15, safeNumber(clanInfirmaryPercent, 0)));
   const capPercent = COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT;
   const combinedPercent = Math.min(
     capPercent,
-    Math.max(0, safeNumber(combinedRecoveryPercent, skillPercent + gearPercent))
+    Math.max(0, safeNumber(combinedRecoveryPercent, skillPercent + gearPercent + clanPercent))
   );
   const skillOnlyPercent = Math.min(capPercent, skillPercent);
-  const appliedGearPercent = Math.max(0, combinedPercent - skillOnlyPercent);
+  const appliedGearPercent = Math.max(0, Math.min(gearPercent, combinedPercent - skillOnlyPercent));
+  const appliedClanPercent = Math.max(0, combinedPercent - skillOnlyPercent - appliedGearPercent);
   const creditedTroops = Math.max(0, Math.floor(safeNumber(recoveredTroops, 0)));
   const calculatedGearRecoveredTroops = Math.max(
     0,
-    Math.floor(normalizedLosses * combinedPercent / 100)
+    Math.floor(normalizedLosses * (skillOnlyPercent + appliedGearPercent) / 100)
       - Math.floor(normalizedLosses * skillOnlyPercent / 100)
   );
   return {
@@ -9227,6 +9237,9 @@ function createBattleCasualtyRecoverySnapshot({
     fieldMedicsPercent: skillPercent,
     gearPercent,
     appliedGearPercent,
+    clanInfirmaryPercent: clanPercent,
+    appliedClanPercent,
+    clanRecoveredTroops: Math.min(creditedTroops, Math.max(0, Math.floor(normalizedLosses * combinedPercent / 100) - Math.floor(normalizedLosses * (skillOnlyPercent + appliedGearPercent) / 100))),
     combinedPercent,
     capPercent,
     losses: normalizedLosses,
@@ -9379,11 +9392,12 @@ function createDetailedBattleSnapshot({
     const startingTroops = Math.max(0, Math.floor(safeNumber(row.troops, 0)));
     const swordmasteryPercent = Math.max(0, safeNumber(row.attackBonusPercent, 0));
     const gearAttackStrengthPercent = Math.max(0, safeNumber(row.attackGearPercent, 0));
+    const clanTrainingPercent = Math.max(0, Math.min(10, safeNumber(row.clanTrainingPercent, 0)));
     const effectivePower = Math.max(0, Math.floor(safeNumber(row.effectivePower, 0)));
     const basePower = getBattleAttackerBasePower({
       troops: startingTroops,
       effectivePower,
-      bonusPercent: swordmasteryPercent + gearAttackStrengthPercent,
+      bonusPercent: swordmasteryPercent + gearAttackStrengthPercent + clanTrainingPercent,
       attackPowerPerTroop: row.attackPowerPerTroop,
     });
     return {
@@ -9397,13 +9411,15 @@ function createDetailedBattleSnapshot({
       basePower,
       swordmasteryLevel: Math.max(0, Math.floor(safeNumber(row.attackSkillLevel, 0))),
       swordmasteryPercent,
+      clanTrainingPercent,
       gearAttackStrengthPercent,
       effectivePower,
       powerBreakdown: createBattleAttackPowerBreakdown(
         basePower,
         effectivePower,
         swordmasteryPercent,
-        gearAttackStrengthPercent
+        gearAttackStrengthPercent,
+        clanTrainingPercent
       ),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(settled.survivors, row.troops))),
@@ -11884,6 +11900,9 @@ function getHoldingTowerPublicState(state = {}, nowMs = Date.now()) {
       ? current.upgradeQueue[0].progressStartedAtMs + current.upgradeQueue[0].remainingMs
       : 0,
     queuedUpgradeCount: current.upgradeQueue.length,
+    buildings: current.buildings,
+    buildingProject: current.buildingProject,
+    nextWallUpgradeDurationMs: CLAN_BUILDINGS.wallDuration((current.upgradeQueue.at(-1)?.targetLevel || current.wallLevel) + 1, current.buildings.workshop),
     attackBlocked: current.attackBlocked,
     incomingRallyCount: current.incomingRallyIds.length,
     veilActive: Boolean(current.veil),
@@ -21266,6 +21285,114 @@ function holdingTowerReceiptResult(snapshot = null) {
   return raw.result && typeof raw.result === "object" ? raw.result : null;
 }
 
+function getClanShopUsage(profile = {}) {
+  const usage = profile.clanShopUsage || {};
+  return usage.worldId === ONLINE_WORLD_ID && usage.resetGeneration === RESET_GENERATION
+    && usage.realmShardId === getCurrentRealmShardId() ? usage : {};
+}
+
+async function readClanTowerShop(transaction, economy, towerId, nowMs) {
+  const profile = economy.profileAfter;
+  assertCurrentClanActorProfile(profile);
+  const clanId = safeString(profile.clanId, 128);
+  if (!clanId) throw new HttpsError("permission-denied", "Join a clan to use its Tower Shop.");
+  if (!HOLDING_TOWERS.getTowerDefinition(towerId)) throw new HttpsError("invalid-argument", "Choose a Clan Tower.");
+  const [clanSnap, memberSnap, ...towerSnaps] = await Promise.all([
+    transaction.get(db.doc(`clans/${clanId}`)),
+    transaction.get(db.doc(`clans/${clanId}/members/${economy.uid}`)),
+    ...HOLDING_TOWERS.TOWERS.map(t => transaction.get(holdingTowerRef(t.id))),
+  ]);
+  if (!clanSnap.exists || clanSnap.data().status !== "active" || !memberSnap.exists) {
+    throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
+  }
+  assertCurrentClan(clanSnap.data());
+  const member = memberSnap.data();
+  const states = towerSnaps.map((snap, i) => normalizeCurrentHoldingTower(snap, HOLDING_TOWERS.TOWERS[i].id, nowMs));
+  const tower = states.find(t => t.id === towerId);
+  if (tower.clanId !== clanId || tower.ownerKind !== "clan") throw new HttpsError("permission-denied", "Your clan no longer owns this Tower.");
+  const level = Math.max(0, ...states.filter(t => t.ownerKind === "clan" && t.clanId === clanId).map(t => t.buildings.shop));
+  const eligibility = HOLDING_TOWERS.getEligibility(member, nowMs, clanId);
+  const usage = getClanShopUsage(profile);
+  return { tower, member, usage, status: {
+    level, localLevel: tower.buildings.shop, eligible: eligibility.eligible, eligibleAtMs: eligibility.eligibleAtMs,
+    items: CLAN_BUILDINGS.shopStatus(level, usage, nowMs).map(item => ({ ...item,
+      price: item.id === COMMON_GEAR_BOX_ITEM_ID ? getCommonGearBoxPriceForEconomy(economy) : getShopItemPriceForEconomy(economy, item.id),
+    })),
+  } };
+}
+
+exports.getClanTowerShop = timedCallable("getClanTowerShop", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  assertHoldingTowerWorldActive();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const nowMs = Date.now();
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const shop = await readClanTowerShop(transaction, economy, safeString(request.data?.towerId, 96), nowMs);
+    writePreparedEconomy(transaction, economy);
+    return createEconomyResponse(economy, { ok: true, clanShop: shop.status, serverTimeMs: nowMs });
+  }, "getClanTowerShop");
+});
+
+exports.purchaseClanTowerShopItem = timedCallable("purchaseClanTowerShopItem", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  assertHoldingTowerWorldActive();
+  const data = request.data || {}, towerId = safeString(data.towerId, 96), itemId = safeString(data.itemId, 64);
+  const quantity = data.quantity === undefined ? 1 : Number(data.quantity);
+  if (!CLAN_BUILDINGS.SHOP_ITEMS.some(item => item.id === itemId) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 2) {
+    throw new HttpsError("invalid-argument", "Choose an available Clan Shop item and quantity.");
+  }
+  const operationId = requireHoldingTowerOperationId(request, "clan_shop_purchase");
+  const receiptRef = db.doc(`players/${uid}/clanShopReceipts/${getRealmStorageId()}_${operationId}`);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const nowMs = Date.now();
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const [shop, receiptSnap] = await Promise.all([
+      readClanTowerShop(transaction, economy, towerId, nowMs), transaction.get(receiptRef),
+    ]);
+    if (receiptSnap.exists) {
+      const previous = receiptSnap.data();
+      if (previous.towerId !== towerId || previous.itemId !== itemId || previous.quantity !== quantity) {
+        throw new HttpsError("already-exists", "This purchase request was already used for another order.");
+      }
+      writePreparedEconomy(transaction, economy);
+      return createEconomyResponse(economy, { ok: true, duplicate: true, clanShop: shop.status, spentGold: 0 });
+    }
+    assertHoldingTowerMemberEligible(shop.member, nowMs, shop.tower.clanId);
+    if (!shop.tower.buildings.shop) throw new HttpsError("failed-precondition", "Build this Tower's Clan Shop first.");
+    const item = shop.status.items.find(row => row.id === itemId);
+    if (data.cost !== undefined && Number(data.cost) !== item.price) throw new HttpsError("failed-precondition", "The price changed. Refresh the Shop and try again.");
+    let usage;
+    try { usage = CLAN_BUILDINGS.purchaseUsage(shop.status.level, shop.usage, itemId, quantity, nowMs); }
+    catch (error) { throw new HttpsError("failed-precondition", error.message.replace(/-/g, " ")); }
+    const spentGold = item.price * quantity;
+    if (!Number.isSafeInteger(spentGold) || economy.goldFloat < spentGold) throw new HttpsError("failed-precondition", "Not enough personal Gold.");
+    const goldFloat = economy.goldFloat - spentGold;
+    const patch = { goldFloat, gold: Math.floor(goldFloat), clanShopUsage: {
+      ...usage, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
+    } };
+    if (itemId === COMMON_GEAR_BOX_ITEM_ID) {
+      patch.gear = normalizeCommonGear(economy.profileAfter);
+      patch.gear.commonGearBoxes += quantity;
+      patch.gear.updatedAtMs = nowMs;
+    } else {
+      patch.shopItems = { ...economy.shopItems, [itemId]: Math.max(0, Math.floor(safeNumber(economy.shopItems[itemId], 0))) + quantity };
+    }
+    writePreparedEconomy(transaction, economy, patch);
+    transaction.create(receiptRef, { operationId, towerId, itemId, quantity, spentGold,
+      worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(), createdAtMs: nowMs });
+    return createEconomyResponse(economy, { ok: true, ...patch, spentGold, purchasedQuantity: quantity,
+      clanShop: { ...shop.status, items: CLAN_BUILDINGS.shopStatus(shop.status.level, usage, nowMs).map(row => ({ ...row, price: shop.status.items.find(i => i.id === row.id).price })) },
+      ...(patch.gear ? { commonGearStatus: createCommonGearClientStatus({ gear: patch.gear }, nowMs, economy) } : {}),
+    });
+  }, "purchaseClanTowerShopItem");
+});
+
+exports.startClanTowerBuilding = timedCallable("startClanTowerBuilding", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => (
+  applyHoldingTowerTreasurySpend(request, "tower_building_started", ({ tower, treasury, uid, nowMs, operationId }) => (
+    HOLDING_TOWERS.startBuilding(tower, safeString(request.data?.buildingId, 32), treasury.balance, { uid }, nowMs, operationId)
+  ))
+));
+
 exports.getHoldingTowerState = timedCallable(
   "getHoldingTowerState",
   { region: "us-central1", maxInstances: 30, invoker: "public" },
@@ -23234,6 +23361,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       const profile = entry.profile || {};
       return createRallyParticipantSnapshot({
         uid: participant.uid,
+        clanTrainingPercent: rally.assemblyType === "tower" ? CLAN_BUILDINGS.bonus("training", assembly.buildings?.training) : 0,
         profile,
         source: {
           id: participant.sourceId,
@@ -26570,7 +26698,7 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
       const ownerUid = safeString(raw.uid || raw.ownerUid || doc?.id, 128);
       const troops = Math.max(0, Math.floor(safeNumber(raw.troops, 0)));
       const profileEntry = profileEntries instanceof Map ? profileEntries.get(ownerUid) : null;
-      const profile = profileEntry?.data || profileEntry || {};
+      const profile = profileEntry?.profile || profileEntry?.data || profileEntry || {};
       const profileIsCurrent = safeString(profile.worldId, 120) === ONLINE_WORLD_ID
         && safeString(profile.resetGeneration, 120) === RESET_GENERATION
         && REALM_TOPOLOGY.normalizeRealmShardId(profile.realmShardId) === getCurrentRealmShardId()
@@ -26595,7 +26723,8 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
         effectivePower,
         shieldwallDisciplinePercent,
         gearDefenderStrengthPercent,
-        fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile) : 0,
+        fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile, CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary)) : 0,
+        clanInfirmaryPercent: profileIsCurrent ? CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary) : 0,
         fieldMedicsSkillPercent: profileIsCurrent ? getSkillPercent(profile, "fieldMedics") : 0,
         casualtyGearPercent: Math.max(0, safeNumber(gearBonuses.casualtyEfficiency, 0)),
       } : null;
@@ -26657,6 +26786,7 @@ function extendHoldingTowerPaidRepair(tower = {}, battleFortification = null, no
   const addedMs = Math.round(
     getSiegeRepairWindowMinutes(tower.wallLevel) * 60_000
       * Math.min(1, addedDamagePower / fullWallPower)
+      * (1 - (tower.repair.workshopReductionPercent || 0) / 100)
   );
   return {
     ...tower,
@@ -27171,6 +27301,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       transaction.set(receiptRef, {
         id: receiptRef.id,
         receiptKind: "holding_tower_rally_battle",
+        clanTrainingPercent: allocation.clanTrainingPercent || 0,
         status: "pending",
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
@@ -27206,6 +27337,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         fieldMedicsPercent: allocation.fieldMedicsPercent,
         fieldMedicsSkillPercent: allocation.fieldMedicsSkillPercent,
         casualtyGearPercent: allocation.casualtyGearPercent,
+        clanInfirmaryPercent: allocation.clanInfirmaryPercent || 0,
         stationOnVictory: shouldStation,
         stationedAtBattle: shouldStation,
         holdingTowerGarrisonId: garrisonRef?.id || "",
@@ -27312,6 +27444,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         fieldMedicsPercent: allocation.fieldMedicsPercent,
         fieldMedicsSkillPercent: allocation.fieldMedicsSkillPercent,
         casualtyGearPercent: allocation.casualtyGearPercent,
+        clanInfirmaryPercent: allocation.clanInfirmaryPercent || 0,
         towerGarrisonCounterSettledAtBattle: Boolean(profileIsCurrent),
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
@@ -31722,6 +31855,7 @@ async function settleReinforcementBattleReceipt(event) {
         recoveredTroops: recovery?.credited || 0,
         fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
         casualtyGearPercent: receipt.casualtyGearPercent,
+        clanInfirmaryPercent: receipt.clanInfirmaryPercent || 0,
         combinedRecoveryPercent: receipt.fieldMedicsPercent,
       })
       : null;
@@ -32119,6 +32253,7 @@ async function settleRallyBattleReceipt(event) {
         recoveredTroops: recovery?.credited || 0,
         fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
         casualtyGearPercent: receipt.casualtyGearPercent,
+        clanInfirmaryPercent: receipt.clanInfirmaryPercent || 0,
         combinedRecoveryPercent: receipt.fieldMedicsPercent,
       })
       : null;
@@ -32316,6 +32451,7 @@ async function settleRallyBattleReceipt(event) {
         towerId: safeString(receipt.targetId, 96),
         towerBattle: receipt.battle && typeof receipt.battle === "object" ? receipt.battle : null,
         rallyParticipants: Array.isArray(receipt.rallyParticipants) ? receipt.rallyParticipants : [],
+        clanTrainingPercent: receipt.clanTrainingPercent || 0,
       });
     }
     writeReport(transaction, contributorUid, report, economy.profileSnap, {
@@ -34299,6 +34435,8 @@ async function maintainHoldingTowersForCurrentRealm(nowMs = Date.now()) {
         || after.wallLevel !== before.wallLevel
         || after.wallIntegrityBps !== before.wallIntegrityBps
         || JSON.stringify(after.upgradeQueue || []) !== JSON.stringify(before.upgradeQueue || [])
+        || JSON.stringify(after.buildings || {}) !== JSON.stringify(before.buildings || {})
+        || JSON.stringify(after.buildingProject || null) !== JSON.stringify(before.buildingProject || null)
         || JSON.stringify(after.repair || null) !== JSON.stringify(before.repair || null)
         || JSON.stringify(after.veil || null) !== JSON.stringify(before.veil || null)
         || JSON.stringify(after.veilUsage || null) !== JSON.stringify(before.veilUsage || null)

@@ -656,8 +656,8 @@ async function main() {
   vm.createContext(capContext);
   vm.runInContext(`${extractFunction(serverSource, "getCasualtyRecoveryPercent")}; this.getCasualtyRecoveryPercent = getCasualtyRecoveryPercent;`, capContext, { filename: "functions/index.js" });
   assert.equal(capContext.getCasualtyRecoveryPercent({}), 51.5, "Barracks casualty gear did not stack above max Field Medics.");
-  casualtySkillPercent = 74;
-  assert.equal(capContext.getCasualtyRecoveryPercent({}), 75, "Field Medics plus gear exceeded the 75% casualty cap.");
+  casualtySkillPercent = 89;
+  assert.equal(capContext.getCasualtyRecoveryPercent({}), 90, "Field Medics plus gear exceeded the 90% casualty cap.");
 
   const casualtySnapshotContext = {
     BASE_TROOP_ATTACK_POWER: 1.25,
@@ -677,7 +677,7 @@ async function main() {
     },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
     getCasualtyRecoveryPercent(profile) {
-      return Math.min(75, (Number(profile?.fieldMedicsPercent) || 0) + commonGear.getBonuses(profile).casualtyEfficiency);
+      return Math.min(90, (Number(profile?.fieldMedicsPercent) || 0) + commonGear.getBonuses(profile).casualtyEfficiency);
     },
   };
   vm.createContext(casualtySnapshotContext);
@@ -719,10 +719,10 @@ async function main() {
   assert.match(clientUiSource, /Attack sources: Swordmastery[\s\S]*?War Captain gear/);
   assert.match(clientUiSource, /March Orders[\s\S]*?Royal Stables gear[\s\S]*?combined speed/);
   assert.match(clientUiSource, /function getBattleSideBonusEntries[\s\S]*?gearRecoveredTroops[\s\S]*?recovery\.sourceLabel[\s\S]*?gear · main city/);
-  assert.match(clientSource, /function renderBattleRewards[\s\S]*?Field Medics \+ Barracks gear · 75% combined cap · returned to the main city/);
+  assert.match(clientSource, /function renderBattleRewards[\s\S]*?Field Medics \+ Barracks gear · 90% combined cap · returned to the main city/);
 
   assert.match(commonGear.getDefinition(gearKeys["gatehouse:necklace"]).statLabel, /new wall damage/i);
-  assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*75% combined cap.*main city/i);
+  assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*90% combined cap.*main city/i);
 
   console.log("Validated equipped-only gear aggregation, immediate upgrade/unequip effects, movement and rally ETA parity, scoped production, owner-wide allied defense, attribution, and casualty caps.");
 }

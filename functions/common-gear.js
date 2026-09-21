@@ -12,7 +12,7 @@
   const SHOP_DAILY_LIMIT = 1;
   const SHOP_PRICE_HOURS = 1;
   const RELIC_BONUS_CHANCE_PERCENT = 1;
-  const CASUALTY_RECOVERY_CAP_PERCENT = 75;
+  const CASUALTY_RECOVERY_CAP_PERCENT = 90;
   const UPGRADE_RECEIPT_LIMIT = 24;
   const BONUS_BY_LEVEL = Object.freeze({ 1: 0.25, 2: 0.5, 3: 0.8, 4: 1.15, 5: 1.5 });
   const UPGRADE_BY_LEVEL = Object.freeze({
@@ -144,7 +144,7 @@
     if (buildingId === "barracks") {
       if (ARMOR_SLOTS.has(slot)) return ["troopProductionAllCities", "troop production in all owned cities"];
       if (slot === "weapon") return ["attackStrength", "attack strength for all attacks"];
-      return ["casualtyEfficiency", "casualty recovery with Field Medics (75% combined cap; recovered troops return to the main city)"];
+      return ["casualtyEfficiency", "casualty recovery with Field Medics (90% combined cap; recovered troops return to the main city)"];
     }
     if (buildingId === "treasury") {
       if (slot === "necklace") return ["goldProductionAllCities", "gold production in all owned cities"];

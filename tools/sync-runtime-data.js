@@ -68,6 +68,9 @@ async function main() {
     "Server Common Gear definitions",
   );
 
+  await validateOrWrite(path.join(root, "functions", "clan-tower-buildings.js"),
+    await fsp.readFile(path.join(root, "clan-tower-buildings.js"), "utf8"), "Clan Tower building definitions");
+
   fingerprintWorldMaps({ checkOnly });
   syncCoreExpansionAssets({ checkOnly });
 

@@ -1,0 +1,145 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const { CdpClient } = require("./map-benchmark/cdp-client");
+const { createMapBenchmarkServer } = require("./map-benchmark/server");
+const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function main() {
+  const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
+  assert(executable, "Set CHROME_PATH to Chromium.");
+  const server = createMapBenchmarkServer(), address = await server.listen();
+  let session, client;
+  const errors = [];
+  try {
+    session = await startBrowserSession(executable);
+    client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
+    await Promise.all(["Page.enable", "Runtime.enable"].map(method => client.send(method)));
+    client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
+    const evaluate = async expression => {
+      const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+      return result.result.value;
+    };
+    const ready = async expression => {
+      for (let attempt = 0; attempt < 240; attempt++) { if (await evaluate(expression)) return; await delay(100); }
+      console.error(errors,await evaluate("({open:modal.open,tab:holdingTowerDetailsTab,html:modalBody.innerHTML.slice(0,900)})"));throw Error(`Timed out: ${expression}`);
+    };
+    let touch = false;
+    const click = async point => {
+      if (touch) {
+        await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...point, id: 1 }] });
+        await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        return;
+      }
+      await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", ...point, button: "none", buttons: 0 });
+      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point, button: "left", buttons: 1, clickCount: 1 });
+      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point, button: "left", buttons: 0, clickCount: 1 });
+    };
+    await client.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
+    await ready('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"');
+    await evaluate(`(async () => {
+      const api = getOnlineApi();
+      window.towerMapReads = [];
+      window.towerMapOrders = [];
+      window.towerMapScenario = 'neutral';
+      getOnlineApi = () => ({ ...api, getHoldingTowerState: async ({towerId}) => {
+        towerMapReads.push(towerId);
+        const snapshot = HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(towerId),towerMapScenario);
+        if (towerMapScenario === 'ineligible') snapshot.permissions = {inspect:true};
+        return {worldActive:true,towers:[snapshot]};
+      }, subscribeHoldingTowerState: () => () => {}, getClanTowerShop: undefined,
+      createClanRally: async payload => {towerMapOrders.push(payload);return {ok:true};},
+      sendHoldingTowerArmyOrder: async payload => {towerMapOrders.push(payload);return {ok:true};}
+      });
+    })()`);
+    const elementPoint = async selector => {
+      const result = await evaluate(`(() => {
+        const node=document.querySelector(${JSON.stringify(selector)});if(!node)return null;
+        const r=node.getBoundingClientRect();
+        const x=node.matches('.holding-tower-node')?(Math.max(0,r.left)+Math.min(innerWidth,r.right))/2:r.left+r.width/2;
+        const y=node.matches('.holding-tower-node')?(Math.max(0,r.top)+Math.min(innerHeight,r.bottom))/2:r.top+r.height/2;
+        return {z:getComputedStyle(node).zIndex,hitZ:getComputedStyle(document.elementFromPoint(x,y)).zIndex,position:getComputedStyle(node).position,x,y,width:r.width,height:r.height,hit:node.contains(document.elementFromPoint(x,y)),hitElement:document.elementFromPoint(x,y)?.outerHTML.slice(0,300),frame:mapFrame.getBoundingClientRect().toJSON()};
+      })()`);
+      if (!result?.hit) {
+        console.error(await evaluate(`({modal:modal.getBoundingClientRect().toJSON(),body:modalBody.getBoundingClientRect().toJSON(),scroll:modalBody.scrollTop,scrollHeight:modalBody.scrollHeight,clientHeight:modalBody.clientHeight,overflow:getComputedStyle(modalBody).overflowY})`));
+        const shot=await client.send("Page.captureScreenshot",{format:"png"});
+        fs.writeFileSync(require("node:path").resolve(__dirname,"../.codex_tmp_tower-selection-blocked.png"),Buffer.from(shot.data,"base64"));
+      }
+      assert(result?.hit, `Control is not reachable: ${selector}: ${JSON.stringify(result)}`);
+      if (selector.includes("data-clan-tower-map-action")) assert(result.width >= 44 && result.height >= 44, "Map actions became too small to tap.");
+      return {x:result.x,y:result.y};
+    };
+    await evaluate(`(() => {
+      const api=getOnlineApi(); window.buildingCalls=[];
+      window.buildingFixture=HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id),'owner');
+      Object.assign(buildingFixture,{buildings:{shop:10,workshop:4,infirmary:7,training:1},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repair:null});
+      state.gold=1e9;clanTreasuryStatus={treasury:{balance:1e10}};
+      const status=()=>({level:10,localLevel:buildingFixture.buildings.shop,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(10,{},Date.now()).map(i=>({...i,price:1000}))});
+      loadClanTreasuryStatus=async()=>clanTreasuryStatus;
+      applyServerEconomyResult=()=>{};
+      getOnlineApi=()=>({...api,isReady:()=>true,isSignedIn:()=>true,getUser:()=>({uid:'building-qa'}),subscribeHoldingTowerState:()=>()=>{},
+        getHoldingTowerState:async()=>({worldActive:true,towers:[{...buildingFixture}]}),
+        getClanTowerShop:async()=>({clanShop:status()}),
+        startClanTowerBuilding:async p=>{buildingCalls.push(p);buildingFixture.buildingProject={buildingId:p.buildingId,targetLevel:buildingFixture.buildings[p.buildingId]+1,remainingMs:1800000,progressStartedAtMs:Date.now()};return {tower:buildingFixture};},
+        purchaseClanTowerShopItem:async p=>{buildingCalls.push(p);return {clanShop:status()};}
+      });
+      ensureHoldingTowerMapSubscriptions();
+    })()`);
+    for (const viewport of [{width:1440,height:900,touch:false},{width:844,height:390,touch:true},{width:568,height:320,touch:true}]) {
+      touch=viewport.touch;
+      await client.send('Emulation.setDeviceMetricsOverride',{width:viewport.width,height:viewport.height,deviceScaleFactor:1,mobile:touch});
+      await client.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:5});
+      await evaluate(`(async()=>{if(modal.open)modal.close();await ensureRegionDefinitionLoaded(buildingFixture.regionId);zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll();})()`);
+      await ready('cityLayer.querySelectorAll(".holding-tower-building-node").length===4');
+      const layouts=await evaluate(`(()=>{const result=[];selectedTowerMapId=buildingFixture.id;renderSelectedClanTowerWheel(buildingFixture.id);const prior=zoom;for(const z of [.4,.6,.8,1]){zoom=z;updateCameraTransform();result.push({buttons:[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().toJSON()),buildings:[...cityLayer.querySelectorAll('.holding-tower-building-node')].map(b=>b.getBoundingClientRect().toJSON())});}zoom=prior;updateCameraTransform();clearSelection(false);return result;})()`);
+      for(const layout of layouts)for(const button of layout.buttons){assert(Math.abs(button.width-64)<.2 && Math.abs(button.height-64)<.2);for(const building of layout.buildings)assert(button.right<=building.left || button.left>=building.right || button.bottom<=building.top || button.top>=building.bottom,'A fixed-size action overlaps a compound building');}
+      await click(await elementPoint('[data-clan-building-id="shop"]'));
+      await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector(".ctb-shop-items")');
+      await delay(100);
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-clan-building-select]").length'),4);
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-clan-shop-buy]").length'),7);
+      assert(await evaluate('modalBody.textContent.includes("1 purchase every 72 hours")'));
+      const reachable = async selector => {
+        await evaluate(`modalBody.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'nearest'})`);await delay(100);
+        await click(await elementPoint(selector));
+      };
+      const before=await evaluate('buildingCalls.length');
+      await reachable('[data-clan-shop-buy="recall_horn"]');
+      await ready(`buildingCalls.length===${before+1} && !holdingTowerActionsInFlight.size`);
+      assert.equal((await evaluate('buildingCalls.at(-1)')).itemId,'recall_horn');
+      await reachable('[data-clan-building-select="training"]');
+      assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("Training Grounds")'));
+      assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("+1% rally attack strength")'));
+      await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
+      const orders=await evaluate('buildingCalls.length');
+      await reachable('[data-clan-building-start="training"]');
+      await ready(`buildingCalls.length===${orders+1} && !holdingTowerActionsInFlight.size`);
+      assert.equal((await evaluate('buildingCalls.at(-1)')).buildingId,'training');
+      await evaluate('buildingFixture.buildingProject.progressStartedAtMs=0;buildingFixture.attackBlocked=true;renderHoldingTowerModal(buildingFixture)');
+      assert(await evaluate('modalBody.textContent.includes("Construction paused")'));
+      await evaluate('buildingFixture.buildingProject=null;buildingFixture.attackBlocked=false;holdingTowerBuildingSelection="shop";renderHoldingTowerModal({...buildingFixture,clanShop:{level:1,localLevel:1,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(1,{},Date.now()).map(i=>({...i,price:1000}))}})');
+      assert(await evaluate('modalBody.querySelector("[data-clan-shop-buy=shield_12h]").disabled'));
+      assert(await evaluate('modalBody.textContent.includes("Unlocks at Shop Level 10")'));
+      const shot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.mkdirSync(require('node:path').resolve(__dirname,'../tmp/clan-buildings/qa'),{recursive:true});
+      fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/buildings-${viewport.width}.png`),Buffer.from(shot.data,'base64'));
+      assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), 'Document overflowed horizontally');
+      await evaluate('modal.close();clearSelection(false);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
+      const mapShot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/map-${viewport.width}.png`),Buffer.from(mapShot.data,'base64'));
+      console.log(`Clan building map taps, selection, stock/unlock labels, purchase and construction actions, pause state and layout passed at ${viewport.width}x${viewport.height}.`);
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
+    if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }
+    await server.close();
+  }
+}
+
+if (require.main === module) main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+module.exports = { run: main };

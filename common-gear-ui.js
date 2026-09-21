@@ -17,6 +17,9 @@ function normalizeBattleCasualtyRecovery(value = null) {
     losses: Math.max(0, Math.floor(Number(value.losses) || 0)),
     recoveredTroops: Math.max(0, Math.floor(Number(value.recoveredTroops) || 0)),
     gearRecoveredTroops,
+    clanInfirmaryPercent: Math.max(0, Number(value.clanInfirmaryPercent) || 0),
+    appliedClanPercent: Math.max(0, Number(value.appliedClanPercent) || 0),
+    clanRecoveredTroops: Math.max(0, Math.floor(Number(value.clanRecoveredTroops) || 0)),
     returnsToMainCity: value.returnsToMainCity !== false,
   };
 }
@@ -103,6 +106,7 @@ function getBattleSideBonusEntries(side = {}) {
       help: side.skillPercentText,
     });
   }
+  if (side.clanTrainingBonusPower > 0) entries.push({ icon: renderCrownlandsIcon("attack"), label: "Training Grounds", value: `+${formatNumber(side.clanTrainingBonusPower)} power`, help: `+${side.clanTrainingPercent}% · locked at Tower rally launch` });
   if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
     entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
   }

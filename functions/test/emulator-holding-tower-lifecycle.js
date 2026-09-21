@@ -144,6 +144,98 @@ async function main() {
   assert.equal((await garrisonRef(member).get()).data().troops, before - 900);
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.filter(row => row.id !== member.uid).map(row => [row.id, row.data().troops]), others,
     "Personal orders changed another player's garrison.");
+  // New Tower services use donated Gold, one construction slot, and private per-player Shop usage.
+  const treasuryRef = db.doc(`clans/${clanId}/treasury/${identity.resetGeneration}`);
+  await treasuryRef.set({...identity,balance:30_000_000_000,totalDonated:30_000_000_000,totalSpent:0,revision:1});
+  await towerRef.update({wallIntegrityBps:10000,buildings:{shop:0,workshop:0,infirmary:0,training:0},buildingProject:null});
+  const buildPayload = {towerId:tower.id,buildingId:"shop",operationId:`build_${randomUUID()}`};
+  assert((await invoke("startClanTowerBuilding",member,buildPayload)).error,"A regular member could spend the Treasury.");
+  const build = await call("startClanTowerBuilding",leader,buildPayload);
+  assert.equal(build.tower.buildingProject.targetLevel,1);
+  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000);
+  assert.equal((await call("startClanTowerBuilding",leader,buildPayload)).duplicate,true);
+  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000,"Build retry charged Gold twice.");
+  assert((await invoke("startClanTowerBuilding",leader,{...buildPayload,buildingId:"workshop",operationId:`busy_${randomUUID()}`})).error);
+  await towerRef.update({"buildingProject.progressStartedAtMs":Date.now()-1_801_000});
+  assert.equal((await call("getHoldingTowerState",leader,{towerId:tower.id})).towers[0].buildings.shop,1);
+  await towerRef.update({buildings:{shop:1,workshop:10,infirmary:10,training:10},buildingProject:null});
+  const second=towers.TOWERS[1],secondRef=db.doc(`holdingTowers/${second.id}`);
+  await secondRef.set({...towers.createNeutralTowerState(second.id),...identity,ownerKind:"clan",clanId,wallIntegrityBps:10000,buildings:{shop:10}});
+  const memberProfile=db.doc(`players/${member.uid}`),memberRef=db.doc(`clans/${clanId}/members/${member.uid}`);
+  await memberProfile.update({gold:1e12,goldFloat:1e12});
+  const shop=(await call("getClanTowerShop",member,{towerId:tower.id})).clanShop;
+  assert.equal(shop.localLevel,1);assert.equal(shop.level,10);assert.equal(shop.eligible,true);
+  const price=shop.items.find(item=>item.id==="swift_march_order").price;
+  const stockBefore=(await memberProfile.get()).data().shopItems?.swift_march_order || 0;
+  const purchase={towerId:tower.id,itemId:"swift_march_order",quantity:1,cost:price,operationId:`buy_${randomUUID()}`};
+  const bought=await call("purchaseClanTowerShopItem",member,purchase);
+  assert.equal(bought.shopItems.swift_march_order,stockBefore+1);
+  assert.equal((await call("purchaseClanTowerShopItem",member,purchase)).duplicate,true);
+  assert.equal((await memberProfile.get()).data().shopItems.swift_march_order,stockBefore+1);
+  const simultaneous=await Promise.all([0,1].map(i=>invoke("purchaseClanTowerShopItem",member,{...purchase,towerId:i?second.id:tower.id,operationId:`race_${randomUUID()}`})));
+  assert.equal(simultaneous.filter(r=>!r.error).length,1,"Concurrent purchases exceeded the shared stock.");
+  await secondRef.update({clanId:"enemy"});
+  assert.equal((await call("getClanTowerShop",member,{towerId:tower.id})).clanShop.level,1);
+  assert((await invoke("purchaseClanTowerShopItem",member,{...purchase,operationId:`drop_${randomUUID()}`})).error);
+  await secondRef.update({clanId});
+  assert.equal((await call("getClanTowerShop",member,{towerId:second.id})).clanShop.items.find(i=>i.id==="swift_march_order").remaining,0);
+  await memberRef.update({joinedAtMs:Date.now()});
+  assert.equal((await call("getClanTowerShop",member,{towerId:tower.id})).clanShop.eligible,false);
+  assert((await invoke("purchaseClanTowerShopItem",member,{towerId:tower.id,itemId:"recall_horn",operationId:`new_${randomUUID()}`})).error);
+  await memberRef.update({joinedAtMs:now-172_800_000});
+  const boxesBefore=(await memberProfile.get()).data().gear?.commonGearBoxes || 0;
+  const mainAllowanceBefore=(await memberProfile.get()).data().gear?.shopPurchase || null;
+  await call("purchaseClanTowerShopItem",member,{towerId:tower.id,itemId:"common_gear_box",operationId:`box_${randomUUID()}`});
+  assert.equal((await memberProfile.get()).data().gear.commonGearBoxes,boxesBefore+1);
+  assert.deepEqual((await memberProfile.get()).data().gear.shopPurchase || null,mainAllowanceBefore,"Clan purchase consumed the main-shop allowance.");
+  const shield={towerId:tower.id,itemId:"shield_12h",operationId:`shield_${randomUUID()}`};
+  await call("purchaseClanTowerShopItem",member,shield);
+  assert((await invoke("purchaseClanTowerShopItem",member,{...shield,operationId:`shield_again_${randomUUID()}`})).error);
+  await memberProfile.update({"clanShopUsage.shieldReadyAtMs":Date.now()-1});
+  await call("purchaseClanTowerShopItem",member,{...shield,operationId:`shield_ready_${randomUUID()}`});
+  assert((await invoke("getClanTowerShop",outsider,{towerId:tower.id})).error);
+  const forged = await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/players/${member.uid}?updateMask.fieldPaths=clanShopUsage`,{
+    method:"PATCH",headers:{authorization:`Bearer ${member.token}`,"content-type":"application/json"},body:JSON.stringify({fields:{clanShopUsage:{mapValue:{fields:{}}}}})});
+  assert.equal(forged.status,403,"Client could clear authoritative Clan Shop stock.");
+  // A current-generation change resets only seasonal usage; inventory and gear boxes survive.
+  await memberProfile.update({"clanShopUsage.resetGeneration":"previous-season"});
+  const resetShop=(await call("getClanTowerShop",member,{towerId:tower.id})).clanShop;
+  assert.equal(resetShop.items.find(i=>i.id==="swift_march_order").remaining,2);
+  assert.equal((await memberProfile.get()).data().gear.commonGearBoxes,boxesBefore+1);
+  // Resolve an actual Tower-origin rally: launch bonus survives source changes, defender recovery goes home.
+  const enemyClan=`enemy_${randomUUID()}`;
+  await db.doc(`clans/${enemyClan}`).set({...identity,status:"active",leaderUid:outsider.uid,name:"Enemy Test",tag:"ET",memberCount:1});
+  await db.doc(`clans/${enemyClan}/members/${outsider.uid}`).set({...identity,clanId:enemyClan,uid:outsider.uid,role:"leader",status:"active",joinedAtMs:now-172800000});
+  await db.doc(`players/${outsider.uid}`).update({clanId:enemyClan,clanRole:"leader"});
+  await secondRef.update({clanId:enemyClan,buildings:{shop:1,workshop:0,infirmary:10,training:0},wallIntegrityBps:0});
+  await secondRef.collection("garrison").doc(outsider.uid).set({...identity,towerId:second.id,clanId:enemyClan,uid:outsider.uid,ownerUid:outsider.uid,troops:100_000_000});
+  const towerRallyId=`training_${randomUUID()}`,towerRallyRef=db.doc(`clans/${clanId}/rallies/${towerRallyId}`);
+  await call("createClanRally",leader,{clanId,rallyId:towerRallyId,sourceType:"tower",targetType:"tower",sourceRegionId:tower.regionId,targetRegionId:second.regionId,
+    army:{id:towerRallyId,kind:"attack",fromId:tower.id,toId:second.id,troops:1_000_000,requestedTroops:1_000_000}});
+  const towerParticipants=participants.map(p=>({...p,sourceId:tower.id,sourceRegionId:tower.regionId,troops:1_000_000}));
+  await towerRallyRef.update({participants:towerParticipants});
+  const trained=await call("launchClanRally",leader,{clanId,rallyId:towerRallyId});
+  const launchParticipants=(await towerRallyRef.get()).data().participants;
+  assert(launchParticipants.every(p=>p.clanTrainingPercent===10),"Training Grounds was not applied to every participant at launch.");
+  const lockedPower=(await towerRallyRef.get()).data().attackPower;
+  await towerRef.update({"buildings.training":1});
+  const defenderBefore=(await cityRef(outsider.home).get()).data().troops;
+  await resolve(leader,trained.movement);
+  assert.equal((await towerRallyRef.get()).data().attackPower,lockedPower,"Changing the source building changed an in-flight Rally.");
+  let defenderReport;
+  for(let attempt=0;attempt<60;attempt++) {
+    defenderReport=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.find(r=>r.battleId===trained.movement.id);
+    if(defenderReport)break;
+    await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+  assert(defenderReport?.casualtyRecovery,"Tower defender recovery report was not produced.");
+  assert.equal(defenderReport.casualtyRecovery.clanInfirmaryPercent,15);
+  assert(defenderReport.casualtyRecovery.clanRecoveredTroops>0,"Infirmary recovered no troops from a damaging attack.");
+  assert((await cityRef(outsider.home).get()).data().troops>=defenderBefore+defenderReport.casualtyRecovery.recoveredTroops,"Tower casualties did not recover to their owner's Main City.");
+  await call("resolveArmyOrder",leader,{armyId:trained.movement.id,routeRegionIds:trained.movement.routeRegionIds});
+  const reports=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.filter(r=>r.battleId===trained.movement.id);
+  assert.equal(reports.length,1,"Battle retry duplicated the defender recovery report.");
+  console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
   console.log("Tower lifecycle passed: callable rally creation/replay, four-player rejection, five-player capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }
 

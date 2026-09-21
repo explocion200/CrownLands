@@ -54,7 +54,7 @@ function harness() {
   };
   const context = vm.createContext({
     console: { warn: (...args) => warnings.push(args) }, modal, modalBody, modalTitle: {},
-    state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
+    SHOP_ITEMS: [], COMMON_GEAR_BOX_ITEM: { id: "common_gear_box" }, state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
     window: { CrownlandsClanTowerDetailsUi: { mount() {} } },
     HOLDING_TOWER_UI: { renderPanel(tower, options) { renders.push({ id: tower.id, ...options }); return `Tower ${tower.id} revision ${tower.revision || 0}`; } },
     getHoldingTowerVisual: id => ({ id, name: id, kind: "holdingTower", artSrc: `${id}.webp` }),

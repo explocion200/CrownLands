@@ -1,35 +1,115 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "90b8f2ef900c6d448314687ed307b78e25f2b3aa",
+  "baseCommit": "593169c24ee5fcc3feee6e066f3b9873f48afa7e",
   "coverage": [
     {
       "paths": [
-        ".github/workflows/crownlands-release-gate.yml",
-        "AGENTS.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/SAFE_UPDATE_WORKFLOW.md",
-        "functions/package.json",
-        "functions/test/run-emulator-gates.js",
-        "tools/change-risk-classifier.js",
-        "tools/prepare-pr.js",
-        "tools/run-focused-validators.js",
-        "tools/run-validation-tier.js",
-        "tools/safe-update-lib.js",
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/validate-focused-browser-smoke.js",
-        "tools/validate-release-gate.js",
-        "tools/validation-plan.js"
+        "firebaseClient.js",
+        "firestore.rules",
+        "functions/clan-tower-buildings.js",
+        "functions/clan-tower-construction.js",
+        "functions/common-gear.js",
+        "functions/holding-towers.js",
+        "functions/index.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ],
       "tests": [
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/test-safe-update-pipeline.js",
-        "tools/validate-release-gate.js",
-        "tools/test-focused-browser-smoke-cleanup.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-report-system.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-holding-tower-rules.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
       ],
-      "reason": "Change only validation selection, workflow policy, and test orchestration. Cover complete-diff selection, stale or missing plans, affected server coverage, exact emulator selection, failure handling, cached success, branch/push protections, CI wiring, and browser-helper compatibility with nightly runs. The browser helper changes require its cleanup tests and desktop/mobile production smoke; no gameplay implementation or emulator scenarios changed."
+      "reason": "Authoritative construction and repair timers, capture/reset, Treasury roles, shared Shop stock/prices/idempotency and rules; Tower rally launch snapshots and per-owner defender recovery/report settlement touch existing combat/gear helpers."
+    },
+    {
+      "paths": [
+        "assets/clan-buildings/infirmary-1.png",
+        "assets/clan-buildings/infirmary-1.webp",
+        "assets/clan-buildings/infirmary-2.png",
+        "assets/clan-buildings/infirmary-2.webp",
+        "assets/clan-buildings/infirmary-3.png",
+        "assets/clan-buildings/infirmary-3.webp",
+        "assets/clan-buildings/infirmary-4.png",
+        "assets/clan-buildings/infirmary-4.webp",
+        "assets/clan-buildings/shop-1.png",
+        "assets/clan-buildings/shop-1.webp",
+        "assets/clan-buildings/shop-2.png",
+        "assets/clan-buildings/shop-2.webp",
+        "assets/clan-buildings/shop-3.png",
+        "assets/clan-buildings/shop-3.webp",
+        "assets/clan-buildings/shop-4.png",
+        "assets/clan-buildings/shop-4.webp",
+        "assets/clan-buildings/training-1.png",
+        "assets/clan-buildings/training-1.webp",
+        "assets/clan-buildings/training-2.png",
+        "assets/clan-buildings/training-2.webp",
+        "assets/clan-buildings/training-3.png",
+        "assets/clan-buildings/training-3.webp",
+        "assets/clan-buildings/training-4.png",
+        "assets/clan-buildings/training-4.webp",
+        "assets/clan-buildings/workshop-1.png",
+        "assets/clan-buildings/workshop-1.webp",
+        "assets/clan-buildings/workshop-2.png",
+        "assets/clan-buildings/workshop-2.webp",
+        "assets/clan-buildings/workshop-3.png",
+        "assets/clan-buildings/workshop-3.webp",
+        "assets/clan-buildings/workshop-4.png",
+        "assets/clan-buildings/workshop-4.webp",
+        "battle-report-detail-ui.js",
+        "clan-tower-buildings-ui.css",
+        "clan-tower-buildings-ui.js",
+        "clan-tower-details-ui.js",
+        "common-gear-ui.js",
+        "docs/art-prompts/clan-buildings/prompts.json",
+        "docs/art-prompts/clan-buildings/style-reference.png",
+        "game.js",
+        "holding-tower-ui.js",
+        "index.html",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-pickup-runtime.js",
+        "tools/validate-report-system.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-pickup-runtime.js",
+        "tools/validate-report-system.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Map building selection and artwork, Buildings/Shop controls, fixed-size actions outside the compound, expanded pickup exclusion, scoped reports and asynchronous Tower client lifecycle. Verify desktop and landscape touch at 1440x900, 844x390 and 568x320 plus exact shipped assets and feature payload budgets."
+    },
+    {
+      "paths": [
+        "clan-tower-buildings.js",
+        "common-gear.js",
+        "tools/build-production-client.js",
+        "tools/sync-runtime-data.js",
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Shared building catalogue/curves, recovery cap and client/server data parity; production inclusion excludes source PNGs and caps sixteen optimized sprites and the feature-specific payload."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Records the explicitly confirmed Clan Tower building, Shop, combat, construction and visual decisions; no separate executable behavior in this specification."
     }
   ]
 }
