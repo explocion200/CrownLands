@@ -101,12 +101,9 @@ async function main() {
     assert.equal(watches.length, 3);
     const garrison = watches[2];
     assert.equal(garrison.ref.path, "holdingTowers/tower-a/garrison");
-    assert.deepEqual(JSON.parse(JSON.stringify(garrison.ref.filters)), [
-      { field: "worldId", op: "==", value: "current-world" },
-      { field: "resetGeneration", op: "==", value: "current-reset" },
-      { field: "realmShardId", op: "==", value: "shard_0001" },
-      { field: "clanId", op: "==", value: "clan-a" },
-    ]);
+    assert.deepEqual(Object.fromEntries(garrison.ref.filters.map(({ field, op, value }) => {
+      assert.equal(op, "=="); return [field, value];
+    })), { worldId: "current-world", resetGeneration: "current-reset", realmShardId: "shard_0001", clanId: "clan-a" });
     garrison.next(); assert.equal(updates, 1);
     client.user = { uid: "different-ruler" }; garrison.next(); assert.equal(updates, 1, "A stale account listener delivered private updates.");
     client.user = { uid: "ruler" }; stop(); garrison.next(); assert.equal(updates, 1);

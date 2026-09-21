@@ -3146,8 +3146,8 @@
     if (handlers.garrisonClanId && collection && query && where) {
       unsubscribers.push(subscribeScopedSnapshot(query(
         collection(client.db, "holdingTowers", String(towerId).slice(0, 96), "garrison"),
-        where("worldId", "==", ONLINE_WORLD_ID),
         where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
         ...getRealmShardQueryConstraints(where),
         where("clanId", "==", String(handlers.garrisonClanId).slice(0, 128))
       ), () => handlers.onGarrison?.(), error => handlers.onError?.(error, "holdingTowerGarrison")));
