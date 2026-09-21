@@ -121,6 +121,29 @@ async function main() {
         assert.equal(payload.army.toId, expected.candidate);
       }
     };
+    const verifyZoom = async () => {
+      const measurements = await evaluate(`(() => {
+        const originalZoom=zoom, originalCamera={...camera}, wheel=cityLayer.querySelector('.clan-tower-action-wheel');
+        const sizes=[];
+        for(const level of [0.4,0.6,0.8,1,0.5]) {
+          zoom=level;updateCameraTransform();
+          if(wheel!==cityLayer.querySelector('.clan-tower-action-wheel'))throw Error('Zoom rebuilt the controls');
+          const rects=[...wheel.querySelectorAll('button')].map(button=>button.getBoundingClientRect().toJSON());
+          sizes.push({zoom,rects});
+        }
+        zoom=originalZoom;Object.assign(camera,originalCamera);updateCameraTransform();
+        return sizes;
+      })()`);
+      for (const sample of measurements) {
+        for (const rect of sample.rects) {
+          assert(Math.abs(rect.width-64)<0.2 && Math.abs(rect.height-64)<0.2,`Tower button scaled during camera zoom: ${JSON.stringify(sample)}`);
+        }
+        for(let i=0;i<sample.rects.length;i++)for(let j=i+1;j<sample.rects.length;j++) {
+          const a=sample.rects[i],b=sample.rects[j];
+          assert(a.right<=b.left || b.right<=a.left || a.bottom<=b.top || b.bottom<=a.top,"Tower controls overlap after zooming.");
+        }
+      }
+    };
     for (const viewport of [{width:1440,height:900,touch:false},{width:844,height:390,touch:true},{width:568,height:320,touch:true}]) {
       touch = viewport.touch;
       await client.send("Emulation.setDeviceMetricsOverride", {width:viewport.width,height:viewport.height,deviceScaleFactor:1,mobile:touch});
@@ -129,6 +152,7 @@ async function main() {
         for (let index=0;index<4;index++) {
           const tower=await prepare(index,level);
           await select(tower);
+          await verifyZoom();
           const actions=await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)");
           assert.deepEqual(actions,["info","scout","rally-attack"]);
           await click(await elementPoint('[data-clan-tower-map-action="info"]'));
@@ -142,6 +166,7 @@ async function main() {
       }
       const tower=await prepare(0,1,"owner");
       await select(tower);
+      await verifyZoom();
       for (const level of [0.6, 1]) {
         await evaluate(`zoom=${level};centerOnRegion(HOLDING_TOWER_DEFINITIONS[0].regionId);renderAll()`);
         await delay(180);

@@ -181,11 +181,32 @@ async function run() {
       HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
       normalizeRegionId: value => value,
       getIslandMapBounds: () => ({ left: 0, top: 0, width: 1000, height: 800 }),
+      getHarvestBonusMapArtBounds: () => [],
       isValidHarvestBonusPoint: () => ++checks >= 2,
     };
     vm.createContext(context); vm.runInContext(extract("createHarvestBonusPoint"), context);
     assert(context.createHarvestBonusPoint("region-0001"));
     assert.equal(checks, 2, "Search kept testing farther candidates after finding the closest valid point");
+  });
+  await check("pickup footprints clear registered scenery and the entire Tower image", () => {
+    const art = {scenery:[{x:100,y:100,w:40,h:60}],landmarks:[{x:400,y:150,width:200,height:300}]};
+    const context = {
+      HARVEST_BONUS_LAND_CLEARANCE: 64,
+      normalizeRegionId: value => value,
+      getIllustratedMapPresentation: region => region === "current" ? art : null,
+      islandImagePointToWorld: (_, point) => ({x:1000+point.x*2,y:2000+point.y*2}),
+      WORLD_HOLDING_TOWERS: [{regionId:"current",visualX:1700,visualY:3100,width:200,anchorX:0.5,anchorY:1},
+        {regionId:"other",visualX:1200,visualY:2600,width:600,anchorX:0.5,anchorY:1}],
+    };
+    vm.createContext(context);
+    vm.runInContext(extract("getHarvestBonusMapArtBounds")+"\n"+extract("isHarvestBonusClearOfMapArt"),context);
+    const bounds=context.getHarvestBonusMapArtBounds("current");
+    assert.equal(bounds.length,3,"Another map's Tower affected the current map.");
+    for(const point of [{x:1200,y:2200},{x:1290,y:2200},{x:2000,y:2350},{x:1700,y:2910},{x:1700,y:3140}]) {
+      assert.equal(context.isHarvestBonusClearOfMapArt(point.x,point.y,bounds),false,`Obstructed pickup accepted at ${JSON.stringify(point)}`);
+    }
+    assert.equal(context.isHarvestBonusClearOfMapArt(1200,2600,bounds),true,"Clear central space was rejected.");
+    assert.equal(context.isHarvestBonusClearOfMapArt(1305,2200,bounds),true,"Scenery clearance did not end outside the full pickup footprint.");
   });
   assert.equal(failures.length, 0, `${failures.length} pickup regressions failed`);
 }
