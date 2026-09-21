@@ -147,7 +147,8 @@ const entrypointBudgets = {
   // bounded 16 KiB of runtime wiring. Decorative presentation lives in separate
   // runtime-cached modules; the aggregate installation cache limit is unchanged.
   // Tower lifecycle and replay guards add under 3 KiB beyond the compact HUD.
-  "game.js": (1766 + 16 + 1 + 3) * 1024,
+  // Captured-pointer Tower taps and zoom-safe actions add under 3 KiB.
+  "game.js": (1766 + 16 + 1 + 3 + 3) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
