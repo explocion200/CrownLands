@@ -1303,16 +1303,17 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 
 The August 24 implementation verification did not execute tests or builds because the task was strictly read-only and repository scripts could generate artifacts. Test presence and assertions were inspected; passing CI/runtime status remains **NEEDS VERIFICATION**.
 
-### Confirmed risk-based release validation policy
+### Confirmed targeted release validation policy
 
-- Local `prepare-pr` and GitHub Actions must use one deterministic classifier over the complete `origin/main...HEAD` branch difference. Classification of only the latest commit is prohibited.
-- **Fast** is limited to non-operational documentation, wording in explicitly listed static public pages, CSS, crawl metadata, and non-map visual assets. It requires syntax/lint, applicable focused validators, production-client build and artifact validation, and focused desktop plus landscape-mobile browser smoke.
-- **Standard** is limited to explicitly allowlisted isolated frontend behavior that cannot affect multiplayer authority, stored gameplay state, realm selection, economy, combat, progression, resets, or deployment contracts. It requires the complete static gate, production-client build and artifact validation, and focused desktop plus landscape-mobile browser smoke.
-- **Full** requires the complete static gate and every automatically discovered multiplayer emulator gate. It is mandatory for Functions, Firestore rules/indexes, Firebase clients/config, authoritative or generation-scoped calls, login or realm admission, reset logic, gameplay logic, economy, combat, maps/routes, clans, progression, scheduled jobs, release/deployment contracts, package or validation infrastructure, production-data-affecting work, unknown paths, and any ambiguous change.
-- The highest-risk file determines the branch tier. Documentation, CSS, or other lower-risk files cannot disguise or downgrade a critical change, including a critical rename.
-- `validation:full` is an upgrade-only local/PR override. Manual selection and labels must never downgrade a Full classifier result.
-- The required GitHub checks remain `Static validation`, `Multiplayer emulator validation`, and `Validate`. When Fast or Standard safely skips emulators, the multiplayer check must succeed with an explicit not-required explanation.
-- Pushes to `main`, manual workflow runs, and the scheduled nightly validation always run Full.
+Confirmed by the user on September 21, 2026: ordinary changes test changed or added behavior and affected shared dependencies, not every feature in the game. This supersedes the earlier filename-based Fast/Standard/Full policy.
+
+- Local `prepare-pr` and GitHub Actions use the same committed `validation-plan.json` against the complete `origin/main...HEAD` branch difference. Looking only at the last commit is prohibited.
+- The plan identifies the exact base commit and covers every changed path with selected tests and reasons. Authors and reviewers inspect shared dependencies and the adequacy of assertions; automated file coverage does not prove semantic test coverage. Missing or stale coverage stops preparation rather than silently skipping checks.
+- Known server/authority changes require relevant emulator suites. Balance changes retain their focused balance audits. Visual changes require checks of affected behavior at desktop and landscape-mobile sizes. A small edit in `game.js`, Functions or the Master Specification does not by itself require unrelated suites.
+- Local preparation runs selected static tests, changed-file syntax/lint and applicable build/artifact or dependency checks. Selected emulator suites run in GitHub before merge and do not need to be duplicated locally. New or edited tests run, and workflow changes retain workflow-protection tests.
+- The required GitHub checks remain `Static validation`, `Multiplayer emulator validation`, and `Validate`. If no emulator suite applies, that required job succeeds with an explicit explanation.
+- Successful local checks can be reused only for identical tested inputs on a clean tree. CI checks run independently; disposable build artifacts are rebuilt when required. Changed implementation or base requires review of the plan and fresh affected validation.
+- Full regression remains available through the nightly schedule, manual workflow runs, `pnpm run validation:full`, preparation's explicit full override and the `validation:full` PR label. Merging does not automatically repeat the full game suite. Authorized releases still verify the deployed build and smoke-test affected production behavior.
 
 ### Verified test gap
 

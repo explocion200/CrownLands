@@ -1,8 +1,6 @@
 name: Crownlands release gate
 
 on:
-  push:
-    branches: ["main"]
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   schedule:
@@ -20,6 +18,7 @@ jobs:
     outputs:
       tier: ${{ steps.risk.outputs.tier }}
       requires_emulators: ${{ steps.risk.outputs.requires_emulators }}
+      base_ref: ${{ steps.risk.outputs.base_ref }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -33,7 +32,7 @@ jobs:
       - name: Classify complete branch diff
         id: risk
         env:
-          FORCE_FULL: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'validation:full') }}
+          FORCE_FULL: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'validation:full') }}
         run: |
           args=(--base origin/main --github-output "$GITHUB_OUTPUT")
           if [ "$FORCE_FULL" = "true" ]; then args+=(--force-full); fi
@@ -66,12 +65,11 @@ jobs:
         working-directory: functions
         env:
           VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
+          VALIDATION_BASE: ${{ needs.classify.outputs.base_ref }}
         run: |
-          if [ "$VALIDATION_TIER" = "Fast" ]; then
-            pnpm run gate:fast
-          else
-            pnpm run gate:static
-          fi
+          args=(--base "$VALIDATION_BASE" --phase static --skip-install --no-cache)
+          if [ "$VALIDATION_TIER" = "Full" ]; then args+=(--force-full); fi
+          node ../tools/run-validation-tier.js "${args[@]}"
 
   emulator:
     name: Multiplayer emulator validation
@@ -83,11 +81,15 @@ jobs:
         if: ${{ needs.classify.outputs.requires_emulators != 'true' }}
         env:
           VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
-        run: echo "Multiplayer emulator validation is not required for this classified $VALIDATION_TIER change."
+        run: echo "No emulator suites are required for this reviewed $VALIDATION_TIER change plan."
       - uses: actions/checkout@v6
         if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
+          fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch authoritative main ref
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - uses: pnpm/setup@v2
         if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
@@ -109,7 +111,13 @@ jobs:
       - name: Run multiplayer emulator gate
         if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         working-directory: functions
-        run: pnpm run test:emulators
+        env:
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
+          VALIDATION_BASE: ${{ needs.classify.outputs.base_ref }}
+        run: |
+          args=(--base "$VALIDATION_BASE" --phase emulators --skip-install --no-cache)
+          if [ "$VALIDATION_TIER" = "Full" ]; then args+=(--force-full); fi
+          node ../tools/run-validation-tier.js "${args[@]}"
 
   validate:
     name: Validate

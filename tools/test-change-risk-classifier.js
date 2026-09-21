@@ -1,141 +1,94 @@
 "use strict";
-
 const assert = require("node:assert/strict");
-const childProcess = require("node:child_process");
+const cp = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const {
-  classifyChanges,
-  classifyGitDiff,
-  classifyPath,
-  parseNameStatus,
-} = require("./change-risk-classifier");
+const { classifyChanges, classifyGitDiff, parseNameStatus } = require("./change-risk-classifier");
+const { WORKFLOW_TESTS } = require("./validation-plan");
 const { focusedValidatorFiles } = require("./run-focused-validators");
 const { focusedPages } = require("./validate-focused-browser-smoke");
+const baseCommit = "a".repeat(40);
+const staticTest = "tools/validate-clan-tower-map-browser.js";
+const emulatorTest = "functions/test/emulator-holding-tower-lifecycle.js";
+const group = (paths, tests = [staticTest]) => ({ paths, tests, reason: "Cover changed Tower controls and affected shared map behavior." });
+const plan = (...coverage) => ({ schemaVersion: 1, baseCommit, coverage });
+const classify = (files, ...coverage) => classifyChanges(files, { plan: plan(...coverage), baseCommit });
 
-function expectPath(filePath, expectedTier) {
-  const actual = classifyPath(filePath);
-  assert.equal(actual.tier, expectedTier, `${filePath}: ${actual.reason}`);
-}
-
-function expectChanges(files, expectedTier, options = {}) {
-  const actual = classifyChanges(files, options);
-  assert.equal(actual.tier, expectedTier, actual.files.map(item => `${item.path}: ${item.reason}`).join("\n"));
-  return actual;
-}
-
-for (const filePath of [
-  "README.md",
-  "docs/player-guide.md",
-  "styles.css",
-  "home.html",
-  "game-rules.html",
-  "assets/icons/crown.png",
-  "promo-screenshots/landing.webp",
-]) expectPath(filePath, "Fast");
-
-for (const filePath of [
-  "animation-manager.js",
-  "audio-manager.js",
-  "public-site.js",
-  "roadmap.js",
-  "ui-layout-runtime.js",
-]) expectPath(filePath, "Standard");
-
-for (const filePath of [
-  ".github/workflows/crownlands-release-gate.yml",
-  "AGENTS.md",
-  "assets/worlds/world_01/maps/versioned/map.webp",
-  "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-  "docs/SAFE_UPDATE_WORKFLOW.md",
-  "firebaseClient.js",
-  "firestore.indexes.json",
-  "firestore.rules",
-  "functions/index.js",
-  "functions/styles.css",
-  "game.js",
-  "economy-config.js",
-  "map-new-lands.js",
-  "clan-rally-controller.js",
-  "package.json",
-  "release-config.js",
-  "service-worker.js",
-  "tools/prepare-pr.js",
-]) expectPath(filePath, "Full");
-
-expectChanges(["docs/player-guide.md", "styles.css"], "Fast");
-expectChanges(["README.md", "animation-manager.js"], "Standard");
-
-const disguisedGameplay = expectChanges(["styles.css", "docs/player-guide.md", "game.js"], "Full");
-assert.equal(disguisedGameplay.files.find(item => item.path === "game.js").tier, "Full");
-
-const disguisedBackend = expectChanges(["home.html", "functions/index.js"], "Full");
-assert.equal(disguisedBackend.requiresEmulators, true);
-
-const criticalRename = classifyChanges([
-  { status: "R100", paths: ["firebaseClient.js", "firebase-client.css"] },
-]);
-assert.equal(criticalRename.tier, "Full", "Renaming a critical file to a safe-looking extension must remain Full.");
-
-expectChanges(["experimental-widget.js"], "Full");
-expectChanges([], "Full");
-
-const forced = expectChanges(["README.md"], "Full", { forceFull: true });
-assert.equal(forced.forcedFull, true);
-assert.match(forced.decisionReason, /override can only upgrade/);
-
+const ui = classify(["game.js", "styles.css", "docs/player-guide.md"], group(["game.js", "styles.css"]), group(["docs/player-guide.md"], []));
+assert.equal(ui.tier, "Targeted");
+assert.deepEqual(ui.staticTests, [staticTest]);
+assert.deepEqual(ui.emulatorTests, []);
+assert.equal(ui.buildRequired, true);
+assert.equal(ui.files[0].status, "M");
+assert.throws(() => classify(["functions/index.js"], group(["functions/index.js"])), /needs affected emulator coverage/);
+assert.deepEqual(classify(["functions/index.js"], group(["functions/index.js"], [emulatorTest])).emulatorTests, [emulatorTest]);
+assert.throws(() => classify(["README.md", "functions/index.js"], group(["README.md"], [])), /missing.*functions\/index.js/);
+assert.throws(() => classify(["experimental-widget.js"], group(["experimental-widget.js"], [])), /has no tests/);
+assert.throws(() => classifyChanges(["game.js"]), /Add validation-plan.json/);
+assert.throws(() => classifyChanges(["game.js"], { plan: plan(group(["game.js"])), baseCommit: "b".repeat(40) }), /stale/);
+assert.throws(() => classify(["game.js"], group(["game.js"]), group(["game.js"])), /Duplicate/);
+assert.throws(() => classify(["game.js"], group(["README.md"])), /unrelated coverage/);
+assert.throws(() => classify(["game.js"], group(["game.js"], ["node tools/validate-game.js; echo bypass"])), /Unsupported test/);
+assert.throws(() => classify(["game.js"], group(["game.js"], ["../validate-game.js"])), /Invalid repository path/);
+assert.throws(() => classify(["game.js"], { ...group(["game.js"]), reason: "ok" }), /meaningful reason/);
+assert.throws(() => classify(["game.js"], group(["game.js"], ["C:/validate-game.js"])), /Invalid repository path/);
+assert.equal(classify(["README.md"], group(["README.md"], [])).buildRequired, false);
+assert.equal(classify(["package.json"], group(["package.json"])).dependencyAuditRequired, true);
+const renamed = [{ status: "R100", paths: ["firebaseClient.js", "firebase-client.css"] }];
+assert.throws(() => classify(renamed, group(renamed[0].paths)), /needs affected emulator coverage/);
+assert.throws(() => classify(renamed, group(["firebase-client.css"], [emulatorTest])), /missing.*firebaseClient/);
+assert.equal(classify(renamed, group(renamed[0].paths, [emulatorTest])).requiresEmulators, true);
+assert.throws(() => classify([{ status: "D", paths: ["game.js"] }], group(["game.js"], [])), /has no tests/);
+assert.deepEqual(classify([{ status: "D", paths: [staticTest] }], group([staticTest], ["tools/test-map.js"])).staticTests, ["tools/test-map.js"]);
+assert.deepEqual(classify(["tools/test-new-feature.js"], group(["tools/test-new-feature.js"])).staticTests, ["tools/test-new-feature.js", staticTest].sort());
+assert.ok(WORKFLOW_TESTS.every(test => classify(["tools/prepare-pr.js"], group(["tools/prepare-pr.js"])).staticTests.includes(test)));
 assert.deepEqual(parseNameStatus("M\0styles.css\0R100\0game.js\0game.css\0"), [
-  { status: "M", paths: ["styles.css"] },
-  { status: "R100", paths: ["game.js", "game.css"] },
+  { status: "M", paths: ["styles.css"] }, { status: "R100", paths: ["game.js", "game.css"] },
 ]);
-
+assert.throws(() => parseNameStatus("R100\0game.js\0"), /Could not parse/);
+assert.equal(classifyChanges([], { forceFull: true }).tier, "Full");
+assert.equal(classifyChanges(["game.js"], { forceFull: true }).requiresEmulators, true);
 assert.deepEqual(focusedPages(["home.html"]), ["home.html"]);
 assert.deepEqual(focusedPages(["animation-manager.js", "styles.css"]), ["index.html"]);
 assert.ok(focusedValidatorFiles(["home.html"]).includes("validate-public-site-content.js"));
-assert.ok(focusedValidatorFiles(["styles.css"]).includes("validate-ui-readability.js"));
-assert.ok(focusedValidatorFiles(["animation-manager.js"]).includes("validate-animation-system.js"));
-
-function git(cwd, args) {
-  const result = childProcess.spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  return result.stdout.trim();
-}
 
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-risk-classifier-test-"));
+const git = args => cp.execFileSync("git", args, { cwd: temporaryRoot, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).trim();
 try {
-  git(temporaryRoot, ["init"]);
-  git(temporaryRoot, ["config", "user.name", "Crownlands Test"]);
-  git(temporaryRoot, ["config", "user.email", "test@example.invalid"]);
-  fs.writeFileSync(path.join(temporaryRoot, "game.js"), "const authority = true;\n", "utf8");
-  fs.writeFileSync(path.join(temporaryRoot, "README.md"), "baseline\n", "utf8");
-  git(temporaryRoot, ["add", "game.js", "README.md"]);
-  git(temporaryRoot, ["commit", "-m", "baseline"]);
-  git(temporaryRoot, ["branch", "-M", "main"]);
-  const base = git(temporaryRoot, ["rev-parse", "HEAD"]);
-  git(temporaryRoot, ["switch", "-c", "codex/risk-test"]);
-
-  fs.appendFileSync(path.join(temporaryRoot, "game.js"), "const changedAuthority = true;\n", "utf8");
-  git(temporaryRoot, ["add", "game.js"]);
-  git(temporaryRoot, ["commit", "-m", "critical first commit"]);
-  fs.appendFileSync(path.join(temporaryRoot, "README.md"), "safe-looking final commit\n", "utf8");
-  git(temporaryRoot, ["add", "README.md"]);
-  git(temporaryRoot, ["commit", "-m", "docs final commit"]);
-
-  assert.equal(
-    classifyGitDiff(temporaryRoot, { baseRef: "HEAD~1", headRef: "HEAD" }).tier,
-    "Fast",
-    "The final commit is intentionally safe-looking for this regression fixture.",
-  );
-  const completeBranch = classifyGitDiff(temporaryRoot, { baseRef: base, headRef: "HEAD" });
-  assert.equal(completeBranch.tier, "Full", "Complete branch classification must retain the earlier critical change.");
-  assert.deepEqual(completeBranch.files.map(item => item.path), ["game.js", "README.md"]);
+  git(["init"]);
+  git(["config", "user.name", "Crownlands Test"]);
+  git(["config", "user.email", "test@example.invalid"]);
+  fs.mkdirSync(path.join(temporaryRoot, "tools"));
+  fs.writeFileSync(path.join(temporaryRoot, staticTest), "// test fixture\n");
+  fs.writeFileSync(path.join(temporaryRoot, "game.js"), "const baseline = true;\n");
+  fs.writeFileSync(path.join(temporaryRoot, "README.md"), "baseline\n");
+  git(["add", "."]);
+  git(["commit", "-m", "baseline"]);
+  git(["branch", "-M", "main"]);
+  const base = git(["rev-parse", "HEAD"]);
+  git(["switch", "-c", "codex/selection-test"]);
+  fs.appendFileSync(path.join(temporaryRoot, "game.js"), "const firstChange = true;\n");
+  git(["add", "."]);
+  git(["commit", "-m", "game change"]);
+  fs.appendFileSync(path.join(temporaryRoot, "README.md"), "safe-looking final commit\n");
+  const committedPlan = { ...plan(group(["game.js"]), group(["README.md"], [])), baseCommit: base };
+  fs.writeFileSync(path.join(temporaryRoot, "validation-plan.json"), JSON.stringify(committedPlan));
+  git(["add", "."]);
+  git(["commit", "-m", "docs and complete change plan"]);
+  const completeBranch = classifyGitDiff(temporaryRoot, { baseRef: "main" });
+  assert.deepEqual(completeBranch.staticTests, [staticTest], "Earlier code changes remain covered when the last commit edits docs.");
+  assert.ok(completeBranch.files.some(file => file.path === "game.js"));
+  fs.writeFileSync(path.join(temporaryRoot, "validation-plan.json"), "invalid uncommitted plan");
+  assert.deepEqual(classifyGitDiff(temporaryRoot, { baseRef: "main" }).staticTests, [staticTest], "Selection reads the committed plan.");
+  assert.throws(() => classifyChanges(["game.js"], { plan: plan(group(["game.js"], ["tools/test-missing.js"])), repoRoot: temporaryRoot }), /does not exist/);
+  const advancedBase = git(["commit-tree", `${base}^{tree}`, "-p", base, "-m", "main advanced independently"]);
+  git(["update-ref", "refs/heads/main", advancedBase]);
+  assert.throws(() => classifyGitDiff(temporaryRoot, { baseRef: "main" }), /behind its validation base/);
+  assert.equal(classifyGitDiff(temporaryRoot, { baseRef: "main", forceFull: true }).tier, "Full");
 } finally {
-  const expectedPrefix = path.join(os.tmpdir(), "crownlands-risk-classifier-test-");
-  if (!temporaryRoot.startsWith(expectedPrefix)) {
-    throw new Error(`Refusing to clean unexpected test path: ${temporaryRoot}`);
-  }
-  fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  const resolved = path.resolve(temporaryRoot);
+  assert.ok(resolved.startsWith(path.join(os.tmpdir(), "crownlands-risk-classifier-test-")));
+  fs.rmSync(resolved, { recursive: true, force: true });
 }
-
-console.log("Validated Fast, Standard, Full, mixed critical disguises, renames, unknown paths, full override, and complete-branch classification.");
+console.log("Validated focused selection, missing coverage, server dependencies, renames/deletions, stale plans, complete branch diffs, and explicit full runs.");

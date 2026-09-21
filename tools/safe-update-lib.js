@@ -354,6 +354,7 @@ function runRiskBasedValidation(repoRoot, options = {}) {
     baseRef: options.baseRef || "origin/main",
     headRef: options.headRef || "HEAD",
     forceFull: Boolean(options.forceFull),
+    phase: options.forceFull ? "all" : "static",
   });
 }
 
@@ -391,7 +392,9 @@ function markdownAudit(audit) {
   const validation = audit.validation;
   const validationTier = validation?.tier || "not recorded";
   const emulatorResult = validation?.requiresEmulators
-    ? "complete multiplayer emulator gate passed"
+    ? (validation.emulatorsDeferred
+      ? `${validation.emulatorTests?.length || "full set of"} affected emulator suites selected; execution is required in GitHub before merge`
+      : "selected multiplayer emulator validation passed")
     : "not required for this classified change; required check remains successful with that explanation";
   return [
     "## Safety audit",
@@ -416,7 +419,7 @@ function markdownAudit(audit) {
     "- Node 22 confirmed",
     `- Risk classification: \`${validationTier}\` (${validation?.decisionReason || "classification unavailable"})`,
     `- Multiplayer emulator validation: ${emulatorResult}`,
-    `- ${validationTier} validation gate passed`,
+    `- ${validationTier} local ${validation?.validationPhase || "all"} validation passed${validation?.reusedStatic ? " (reused for unchanged tested inputs)" : ""}`,
     "- Pre-push receipt matches the exact branch HEAD and latest `origin/main`",
   ].join("\n");
 }

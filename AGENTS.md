@@ -59,20 +59,23 @@
 ## Validation and pull requests
 
 - Use Node.js 22 and `pnpm`.
-- Run focused tests during implementation when relevant.
+- Test changed or added behavior and affected shared dependencies. Do not run unrelated game suites for an ordinary update.
+- Commit `validation-plan.json` with the exact current base commit, coverage for every path in the complete branch diff (except the plan itself), selected test files, and reasons explaining affected behavior and dependencies. Review dependency coverage; filenames alone cannot prove it.
+- Include relevant emulator suites for server-authoritative changes. Check affected visual behavior at desktop and landscape-mobile sizes. Documentation-only changes can explain why no runtime tests apply.
 - Commit the completed update on its feature branch.
 - When the update is ready, run:
 
   `pnpm run prepare-pr`
 
-- Allow `prepare-pr` to fetch the latest `main`, audit the complete change, run validation and emulator gates, push safely, and create or update the pull request.
+- Allow `prepare-pr` to fetch the latest `main`, audit the complete change, run selected local static checks and applicable build validation, push safely, and create or update the pull request. Selected emulator suites run in GitHub before merge; do not repeat the entire multiplayer suite locally.
+- Full regression is reserved for the nightly schedule or an explicit manual/`validation:full` override. Do not automatically rerun the full suite after merging.
 - Never force-push.
-- If the branch is behind `origin/main`, stop and reconcile the latest `main` carefully. Rerun all validation afterward.
+- If the branch is behind `origin/main`, stop and reconcile the latest `main` carefully. Update the plan's base and dependency coverage, then rerun selected validation.
 - Do not consider a pull request ready until it is current with `main` and these required GitHub checks pass:
   - `Static validation`
   - `Multiplayer emulator validation`
   - `Validate`
-- If implementation changes after validation, rerun `prepare-pr`.
+- If implementation changes after validation, review the affected-test plan and rerun `prepare-pr`. Unchanged successful local checks may be reused only for identical tested inputs; CI checks run independently.
 - Do not merge while required checks are pending or failing.
 
 ## Completion report

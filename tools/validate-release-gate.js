@@ -21,6 +21,8 @@ const riskClassifierTests = read("tools/test-change-risk-classifier.js");
 const validationRunner = read("tools/run-validation-tier.js");
 const browserSmoke = read("tools/validate-focused-browser-smoke.js");
 const safeUpdateDocs = read("docs/SAFE_UPDATE_WORKFLOW.md");
+const selection = read("tools/validation-plan.js");
+const safeUpdateLib = read("tools/safe-update-lib.js");
 
 assert.equal(packageJson.packageManager, "pnpm@11.9.0", "The repository pnpm version must match CI.");
 assert.equal(packageJson.engines?.node, "22", "The Functions runtime must remain pinned to Node 22.");
@@ -41,21 +43,22 @@ requireMatch(workflow, /name:\s*Validate/, "The required Validate check name cha
 requireMatch(workflow, /git fetch --no-tags origin \+refs\/heads\/main:refs\/remotes\/origin\/main/, "CI does not fetch authoritative origin/main.");
 requireMatch(workflow, /node tools\/change-risk-classifier\.js/, "CI does not use the shared risk classifier.");
 requireMatch(workflow, /schedule:[\s\S]*cron:\s*["']17 5 \* \* \*["']/, "Nightly Full validation schedule is missing.");
-requireMatch(workflow, /github\.event_name != 'pull_request'[\s\S]*validation:full/, "Push, manual, nightly, and validation:full label overrides must force Full.");
-requireMatch(workflow, /pnpm run gate:fast[\s\S]*pnpm run gate:static/, "Static CI does not select the classified Fast or Standard/Full gate.");
-requireMatch(workflow, /pnpm run test:emulators/, "Emulator CI does not use the shared release command.");
-requireMatch(workflow, /not required for this classified \$VALIDATION_TIER change/, "Safe emulator skips must explain why the required check passes.");
+requireMatch(workflow, /github\.event_name == 'schedule'[\s\S]*github\.event_name == 'workflow_dispatch'[\s\S]*validation:full/, "Nightly, manual and labeled runs must retain explicit Full overrides.");
+assert.doesNotMatch(workflow, /^\s+push:/m, "Merging must not repeat a full regression run already covered by scheduled/manual checks.");
+requireMatch(workflow, /--phase static --skip-install --no-cache[\s\S]*run-validation-tier\.js/, "Static CI must use independent focused checks.");
+requireMatch(workflow, /--phase emulators --skip-install --no-cache[\s\S]*run-validation-tier\.js/, "Emulator CI must execute the reviewed selection.");
+requireMatch(workflow, /No emulator suites are required for this reviewed \$VALIDATION_TIER change plan/, "Safe emulator skips must explain why the required check passes.");
 requireMatch(workflow, /requires_emulators == 'true'/, "Emulator execution is not guarded by the fail-closed classifier output.");
 assert.doesNotMatch(workflow, /validation_tier[\s\S]*type:\s*choice/i, "Manual tier choices must never downgrade classifier results.");
 assert.doesNotMatch(workflow, /node\s+functions\/test\/emulator-/, "Workflow must not maintain a manual emulator-file list.");
 
 requireMatch(packageJson.scripts?.["test:emulators"] || "", /run-emulator-gates\.js/, "Emulator script does not use automatic discovery.");
 requireMatch(packageJson.scripts?.["gate:fast"] || "", /lint[\s\S]*test-change-risk-classifier[\s\S]*run-focused-validators[\s\S]*build-production-client[\s\S]*validate-production-artifact[\s\S]*validate-focused-browser-smoke/, "Fast validation is missing required syntax, focused, build, artifact, or browser checks.");
-requireMatch(packageJson.scripts?.["gate:static"] || "", /test-change-risk-classifier[\s\S]*validate-focused-browser-smoke/, "Standard/Full static validation is missing classifier or browser coverage.");
+requireMatch(packageJson.scripts?.["gate:static"] || "", /test-change-risk-classifier[\s\S]*test-targeted-validation[\s\S]*validate-focused-browser-smoke/, "Full static validation is missing selection or browser coverage.");
 requireMatch(packageJson.scripts?.["gate:release"] || "", /--frozen-lockfile[\s\S]*gate:static[\s\S]*test:emulators/, "Local release gate is incomplete.");
 requireMatch(emulatorRunner, /readdirSync\(testDirectory\)/, "Emulator runner does not discover tests from disk.");
 requireMatch(emulatorRunner, /\^emulator-\.\*\\\.js\$/, "Emulator runner discovery pattern changed.");
-requireMatch(emulatorRunner, /resetGate,[\s\S]*discoveredGates\.filter/, "Reset gate must run before the remaining emulator files.");
+requireMatch(emulatorRunner, /selectGates\(discoveredGates, process\.argv\.slice\(2\)\)/, "Emulator lifecycle must use the tested suite selector.");
 requireMatch(emulatorRunner, /node_modules["'],\s*["']firebase-tools["'],\s*["']lib["'],\s*["']bin["'],\s*["']firebase\.js["']/, "Emulator gate must launch the pinned CLI without a detachable Windows shim.");
 requireMatch(emulatorRunner, /for \(const fileName of orderedGates\)[\s\S]*emulators:exec/, "Each emulator gate must run in an isolated emulator lifecycle.");
 for (const isolatedPort of [/websocketPort:\s*portBase \+ 3/, /hub:[\s\S]*port:\s*portBase \+ 4/, /logging:[\s\S]*port:\s*portBase \+ 5/, /eventarc:[\s\S]*port:\s*portBase \+ 6/, /tasks:[\s\S]*port:\s*portBase \+ 7/]) {
@@ -76,11 +79,16 @@ requireMatch(prePushCheck, /refs\/heads\/main[\s\S]*assertClean[\s\S]*fetchOrigi
 requireMatch(safeUpdateTests, /mkdtempSync[\s\S]*init[\s\S]*--bare[\s\S]*Unfinished tracked or untracked work[\s\S]*behind origin\\\/main/, "Safe-update integration coverage is incomplete.");
 requireMatch(riskClassifier, /baseRef = "origin\/main"/, "Risk classifier must default to origin/main.");
 requireMatch(riskClassifier, /`\$\{baseRef\}\.\.\.\$\{headRef\}`/, "Risk classifier must compare the complete three-dot branch diff.");
-requireMatch(riskClassifier, /not on a reviewed Fast or Standard allowlist/, "Unknown classifier paths must fail closed.");
+requireMatch(riskClassifier, /selectValidation\(changes, options\.plan, options\)/, "Classifier must enforce reviewed change coverage.");
+requireMatch(selection, /Changed file is missing from/, "Uncovered changes must stop validation.");
+requireMatch(selection, /Server\/authority change needs affected emulator coverage/, "Backend coverage cannot be client-only.");
+requireMatch(safeUpdateLib, /phase: options\.forceFull \? "all" : "static"/, "Normal preparation must defer selected emulator runs to CI.");
+requireMatch(preparePr, /selectedTests:/, "Preparation receipt must record selected tests.");
 for (const coverage of [/styles\.css/, /game\.js/, /functions\/index\.js/, /experimental-widget\.js/, /completeBranch/]) {
   requireMatch(riskClassifierTests, coverage, "Classifier tests are missing disguised critical, unknown, or complete-branch coverage.");
 }
-requireMatch(validationRunner, /classification\.tier === "Full"[\s\S]*gate:release[\s\S]*gate:fast[\s\S]*gate:static/, "Local validation runner does not enforce all three tiers.");
+requireMatch(validationRunner, /classification\.tier === "Full"[\s\S]*gate:static[\s\S]*test:emulators/, "Explicit Full regression must retain both complete suites.");
+requireMatch(validationRunner, /classification\.staticTests[\s\S]*classification\.emulatorTests\.flatMap/, "Targeted validation must execute both reviewed test selections.");
 for (const browserCoverage of [/Page\.navigate/, /name: "desktop"/, /name: "landscape-mobile"/]) {
   requireMatch(browserSmoke, browserCoverage, "Focused browser smoke must exercise desktop and landscape-mobile production pages.");
 }

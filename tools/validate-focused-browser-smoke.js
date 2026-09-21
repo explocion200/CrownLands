@@ -8,7 +8,7 @@ const http = require("node:http");
 const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
-const { classifyGitDiff, STATIC_PUBLIC_PAGES } = require("./change-risk-classifier");
+const { gitChanges, STATIC_PUBLIC_PAGES } = require("./change-risk-classifier");
 const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client");
 
 const root = path.resolve(__dirname, "..");
@@ -386,8 +386,8 @@ async function startBrowserSession(executable, options = {}) {
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
-  const classification = classifyGitDiff(root, options);
-  const pages = focusedPages(classification.files.map(item => item.path));
+  const changedPaths = gitChanges(root, options.baseRef, options.headRef).flatMap(change => change.paths);
+  const pages = focusedPages(changedPaths);
   if (pages.includes("index.html")) {
     await require("./validate-pwa-entry-routing").run();
     pages.push("play", "play/", "play/index.html", "html/18910922/index.html", "html/18910922/play/index.html");
@@ -430,7 +430,7 @@ async function main() {
     server.close();
     if (browserProcess && profilePath) await closeBrowser(client, browserProcess, profilePath);
   }
-  if (classification.files.some(item => ["game.js", "holding-tower-ui.css", "clan-tower-details-ui.js", "tools/validate-clan-tower-map-browser.js"].includes(item.path))) {
+  if (changedPaths.some(file => ["game.js", "holding-tower-ui.css", "clan-tower-details-ui.js", "tools/validate-clan-tower-map-browser.js"].includes(file))) {
     await require("./validate-clan-tower-map-browser").run();
   }
 }

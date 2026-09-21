@@ -3,6 +3,20 @@ const path = require("node:path");
 const { randomInt } = require("node:crypto");
 const { spawnSync } = require("node:child_process");
 
+function selectGates(discovered, args = []) {
+  const requested = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== "--file" || !args[index + 1]) throw new Error("Use --file emulator-name.js for each selected emulator suite.");
+    const file = args[++index];
+    if (!/^emulator-[a-z0-9-]+\.js$/.test(file) || !discovered.includes(file)) throw new Error(`Unknown emulator suite: ${file}`);
+    requested.push(file);
+  }
+  const selected = [...new Set(args.length ? requested : discovered)].sort((left, right) => left.localeCompare(right));
+  const reset = "emulator-reset-gate.js";
+  return selected.includes(reset) ? [reset, ...selected.filter(file => file !== reset)] : selected;
+}
+
+function main() {
 const testDirectory = __dirname;
 const functionsDirectory = path.resolve(testDirectory, "..");
 const firebaseCli = path.join(functionsDirectory, "node_modules", "firebase-tools", "lib", "bin", "firebase.js");
@@ -35,10 +49,7 @@ if (!fs.existsSync(firebaseCli)) {
   throw new Error("The pinned Firebase CLI is missing. Run pnpm install --frozen-lockfile first.");
 }
 
-const orderedGates = [
-  resetGate,
-  ...discoveredGates.filter(fileName => fileName !== resetGate),
-];
+const orderedGates = selectGates(discoveredGates, process.argv.slice(2));
 
 function createIsolatedFirebaseConfig(attemptId) {
   const portBase = randomInt(12000, 52000);
@@ -143,3 +154,7 @@ for (const fileName of orderedGates) {
 }
 
 console.log(`\n[Crownlands emulator gate] Passed ${orderedGates.length} emulator files.`);
+}
+
+if (require.main === module) main();
+module.exports = { selectGates };
