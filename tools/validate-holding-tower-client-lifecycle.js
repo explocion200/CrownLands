@@ -68,7 +68,7 @@ function harness() {
   });
   vm.runInContext(`${declarations}\n${functions}`, context);
   const tower = id => ({ id, name: id, kind: "holdingTower", ownerKind: "neutral", ownStationedTroops: 100 });
-  const finish = (request, revision = 1) => request.resolve({ worldActive: true, towers: [{ ...tower(request.towerId), revision }] });
+  const finish = (request, revision = 1, patch = {}) => request.resolve({ worldActive: true, towers: [{ ...tower(request.towerId), revision, ...patch }] });
   const open = id => context.openHoldingTower(id);
   const replace = () => { modal.close(); modalBody.innerHTML = "Unrelated dialog"; modal.showModal(); };
   const order = () => {
@@ -80,6 +80,39 @@ function harness() {
 }
 
 async function main() {
+  {
+    const firebase = fs.readFileSync(path.join(__dirname, "..", "firebaseClient.js"), "utf8");
+    const watches = [];
+    const client = { configured: true, db: {}, user: { uid: "ruler" }, modules: { firestore: {
+      doc: (_db, ...parts) => ({ path: parts.join("/") }), collection: (_db, ...parts) => ({ path: parts.join("/") }),
+      where: (field, op, value) => ({ field, op, value }), query: (ref, ...filters) => ({ ...ref, filters }),
+      onSnapshot(ref, next, error) { const watch = { ref, next, error, active: true }; watches.push(watch); return () => { watch.active = false; }; },
+    } } };
+    const context = vm.createContext({ client, RESET_GENERATION: "current-reset", ONLINE_WORLD_ID: "current-world", REALM_SHARD_ID: "shard_0001" });
+    vm.runInContext([
+      firebase.slice(firebase.indexOf("  function subscribeScopedSnapshot("), firebase.indexOf("  function cleanPlayerName(")),
+      firebase.slice(firebase.indexOf("  function getRealmShardQueryConstraints("), firebase.indexOf("  const GLOBAL_CHAT_RETENTION_MS")),
+      firebase.slice(firebase.indexOf("  function subscribeHoldingTowerState("), firebase.indexOf("  function subscribeIsland(")),
+    ].join("\n"), context);
+    context.subscribeHoldingTowerState("tower-a", {})();
+    assert.equal(watches.length, 1, "An outsider subscribed to a private garrison.");
+    let updates = 0;
+    const stop = context.subscribeHoldingTowerState("tower-a", { garrisonClanId: "clan-a", onGarrison: () => updates++ });
+    assert.equal(watches.length, 3);
+    const garrison = watches[2];
+    assert.equal(garrison.ref.path, "holdingTowers/tower-a/garrison");
+    assert.deepEqual(JSON.parse(JSON.stringify(garrison.ref.filters)), [
+      { field: "worldId", op: "==", value: "current-world" },
+      { field: "resetGeneration", op: "==", value: "current-reset" },
+      { field: "realmShardId", op: "==", value: "shard_0001" },
+      { field: "clanId", op: "==", value: "clan-a" },
+    ]);
+    garrison.next(); assert.equal(updates, 1);
+    client.user = { uid: "different-ruler" }; garrison.next(); assert.equal(updates, 1, "A stale account listener delivered private updates.");
+    client.user = { uid: "ruler" }; stop(); garrison.next(); assert.equal(updates, 1);
+    assert(watches.every(watch => !watch.active), "Public or private Tower listener survived cleanup.");
+  }
+
   for (const fails of [false, true]) {
     const h = harness(), opening = h.open("tower-a");
     h.replace();
@@ -99,6 +132,20 @@ async function main() {
     assert.equal(h.subscriptions[0].towerId, "tower-b");
     h.modal.close(); assert.equal(h.subscriptions[0].active, false);
     assert.equal(h.listeners.size, 0);
+  }
+
+  {
+    const h = harness(), opening = h.open("tower-a");
+    h.finish(h.reads[0], 1, { ownerMember: true, clanId: "clan-a" }); await opening;
+    const initial = h.subscriptions[0];
+    assert.equal(initial.callbacks.garrisonClanId, "clan-a");
+    initial.callbacks.onGarrison(); h.finish(h.reads[1], 2, { ownerMember: true, clanId: "clan-a" }); await flush();
+    assert.match(h.modalBody.innerHTML, /revision 2$/, "A garrison-only update did not refresh the open Tower.");
+    initial.callbacks.onError(new Error("Membership removed"), "holdingTowerGarrison");
+    h.finish(h.reads[2], 3, { ownerMember: false }); await flush();
+    assert.equal(initial.active, false);
+    assert.equal(h.subscriptions.at(-1).callbacks.garrisonClanId, "", "Loss of ownership left a private garrison listener active.");
+    h.modal.close(); assert(h.subscriptions.every(subscription => !subscription.active));
   }
 
   {

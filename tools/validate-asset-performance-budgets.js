@@ -72,7 +72,7 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Approved Chat and reward ledgers add under 116 KiB of shell files, including
 // the existing Chat controller now explicitly available in the offline cache.
 // Reuse current artwork and allow one bounded 128 KiB installation step.
-// Tower request cancellation and replay guards add under 2 KiB of client code.
+// Tower lifecycle guards and scoped garrison updates add under 4 KiB of client code.
 // Allow one bounded 4 KiB step with no added assets or installed dependencies.
 const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4) * 1024;
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
@@ -144,8 +144,8 @@ const entrypointBudgets = {
   // Approved Leaderboards, Atlas navigation, and five holding views add a
   // bounded 16 KiB of runtime wiring. Decorative presentation lives in separate
   // runtime-cached modules; the aggregate installation cache limit is unchanged.
-  // Tower lifecycle and replay guards add under 2 KiB beyond the compact HUD.
-  "game.js": (1766 + 16 + 1 + 2) * 1024,
+  // Tower lifecycle and replay guards add under 3 KiB beyond the compact HUD.
+  "game.js": (1766 + 16 + 1 + 3) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,

@@ -4103,15 +4103,25 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
   holdingTowerSnapshots.set(towerId, snapshot);
   if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
-  if (subscribe && isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
-    if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
-    holdingTowerRealtimeUnsubscribe = api.subscribeHoldingTowerState(towerId, {
-      onTower: () => {
+  if (isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
+    const garrisonClanId = snapshot.ownerMember ? String(snapshot.clanId || "") : "";
+    if (subscribe || session.garrisonClanId !== garrisonClanId) {
+      session.garrisonClanId = garrisonClanId;
+      if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
+      const refreshSnapshot = () => {
         if (isCurrentDetails()) void refreshHoldingTower(towerId)
           .catch(error => console.warn("Holding Tower realtime refresh failed", error));
-      },
-      onError: error => console.warn("Holding Tower realtime refresh failed", error),
-    });
+      };
+      holdingTowerRealtimeUnsubscribe = api.subscribeHoldingTowerState(towerId, {
+        garrisonClanId,
+        onTower: refreshSnapshot,
+        onGarrison: refreshSnapshot,
+        onError: (error, source) => {
+          console.warn("Holding Tower realtime refresh failed", error);
+          if (source === "holdingTowerGarrison") refreshSnapshot();
+        },
+      });
+    }
   }
   return snapshot;
 }

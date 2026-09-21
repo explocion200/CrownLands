@@ -105,6 +105,16 @@ async function main() {
   assert.equal(privateView.ownerMember, false);
   assert.equal(privateView.exactDefenders, null);
   assert.equal(privateView.garrison.length, 0);
+  const garrisonQuery = { structuredQuery: { from: [{ collectionId: "garrison" }], where: { compositeFilter: { op: "AND", filters:
+    [["worldId", identity.worldId], ["resetGeneration", identity.resetGeneration], ["realmShardId", identity.realmShardId], ["clanId", clanId]]
+      .map(([field, value]) => ({ fieldFilter: { field: { fieldPath: field }, op: "EQUAL", value: { stringValue: value } } })) } } } };
+  const queryGarrison = actor => fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/holdingTowers/${tower.id}:runQuery`, {
+    method: "POST", headers: { authorization: `Bearer ${actor.token}`, "content-type": "application/json" }, body: JSON.stringify(garrisonQuery),
+  });
+  const memberQuery = await queryGarrison(member);
+  assert.equal(memberQuery.status, 200, "Owning-clan garrison subscription query was denied.");
+  assert.equal((await memberQuery.json()).filter(row => row.document).length, 5);
+  assert.equal((await queryGarrison(outsider)).status, 403, "An outsider could query private garrisons.");
   const unchanged = garrison.docs.map(row => [row.id, row.data().troops]);
   await call("resolveArmyOrder", leader, { armyId: launched.movement.id, routeRegionIds: launched.movement.routeRegionIds });
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.map(row => [row.id, row.data().troops]), unchanged, "Battle retry duplicated survivors.");
@@ -122,7 +132,7 @@ async function main() {
   assert.equal((await garrisonRef(member).get()).data().troops, before - 900);
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.filter(row => row.id !== member.uid).map(row => [row.id, row.data().troops]), others,
     "Personal orders changed another player's garrison.");
-  console.log("Tower lifecycle passed: four-player rejection, five-player capture, attributed survivors, owned controls, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
+  console.log("Tower lifecycle passed: four-player rejection, five-player capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
