@@ -45,6 +45,13 @@ const HOLDING_TOWER_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "core-v2-holding-tower-3", name: "Blackthorn Tower", quadrant: "south-west", regionId: "core-v2-south-west-holding-tower-m1-p1", artSrc: "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp", reservedX: 724, reservedY: 543, width: 184, anchorX: 0.5, anchorY: 0.969 }),
   Object.freeze({ id: "core-v2-holding-tower-4", name: "Stoneward Tower", quadrant: "south-east", regionId: "core-v2-south-east-holding-tower-p1-p1", artSrc: "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp", reservedX: 736, reservedY: 555, width: 184, anchorX: 0.5, anchorY: 0.969 }),
 ]);
+const CLAN_TOWER_MAP_ART = "assets/clan-buildings/tower.webp";
+const CLAN_TOWER_BUILDING_PLACEMENT = Object.freeze({
+  shop: Object.freeze({ x: -.40, y: .02 }),
+  workshop: Object.freeze({ x: .40, y: .02 }),
+  infirmary: Object.freeze({ x: -.32, y: .45 }),
+  training: Object.freeze({ x: .32, y: .45 }),
+});
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(REGION_CATALOG.version) || Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
@@ -3994,7 +4001,7 @@ function generateCurrentCoreHoldingTowerSlots() {
       y: Math.round(point.y),
       visualX: Math.round(visualPoint.x),
       visualY: Math.round(visualPoint.y),
-      artSrc: getIllustratedLandmarkAsset(regionId, tower?.id) || String(tower?.artSrc || ""),
+      artSrc: CLAN_TOWER_MAP_ART,
       width: islandImageVisualSizeToWorld(regionId, width, width),
       anchorX: Number.isFinite(anchorX) ? Math.max(0, Math.min(1, anchorX)) : 0.5,
       anchorY: Number.isFinite(anchorY) ? Math.max(0.5, Math.min(1.25, anchorY)) : 0.969,
@@ -4017,7 +4024,7 @@ function getHoldingTowerVisual(towerId = "") {
     targetType: "tower",
     x: Number(configured.reservedX) || 0,
     y: Number(configured.reservedY) || 0,
-    artSrc: getIllustratedLandmarkAsset(configured.regionId, configured.id) || String(configured.artSrc || ""),
+    artSrc: CLAN_TOWER_MAP_ART,
   } : null;
 }
 
@@ -4460,17 +4467,16 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
     const point = worldToMapPoint({ x: visual.visualX, y: visual.visualY });
     const hasBuildings = definitions.DEFINITIONS.some(building => definitions.level(tower.buildings?.[building.id]) || tower.buildingProject?.buildingId === building.id);
     if (!hasBuildings) continue;
-    // One continuous ground plane binds the individual sprites to the Tower base.
-    // Keep its whole footprint within the compound's existing pickup exclusion.
+    // Transparent paths leave the original map grass visible between buildings.
     const courtyard = document.createElement("img");
     courtyard.className = "holding-tower-courtyard";
     courtyard.src = "assets/clan-buildings/courtyard.webp";
     courtyard.alt = "";
     courtyard.draggable = false;
-    courtyard.style.left = `${point.x + (.5 - visual.anchorX) * visual.width}px`;
-    courtyard.style.top = `${point.y + (1 - visual.anchorY + .06) * visual.width}px`;
+    courtyard.style.left = `${point.x + (.45 - visual.anchorX) * visual.width}px`;
+    courtyard.style.top = `${point.y + (1 - visual.anchorY + .24) * visual.width}px`;
     courtyard.style.width = `${visual.width * 1.04}px`;
-    courtyard.style.height = `${visual.width * .47}px`;
+    courtyard.style.height = `${visual.width * .54}px`;
     fragment.appendChild(courtyard);
     for (const building of definitions.DEFINITIONS) {
       const level = definitions.level(tower.buildings?.[building.id]);
@@ -4482,10 +4488,10 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
       node.dataset.clanBuildingTower = visual.id;
       node.dataset.clanBuildingId = building.id;
       node.setAttribute("aria-label", `${building.name} · ${level ? `Level ${level}` : "Under construction"} · ${visual.name}`);
-      // Tighten the horseshoe while leaving a clear approach through the middle.
-      node.style.left = `${point.x + (building.x * .9 + .5 - visual.anchorX) * visual.width}px`;
-      node.style.top = `${point.y + (1 - visual.anchorY + building.y * .8) * visual.width}px`;
-      node.style.width = `${visual.width * .32}px`;
+      const placement = CLAN_TOWER_BUILDING_PLACEMENT[building.id];
+      node.style.left = `${point.x + (placement.x + .5 - visual.anchorX) * visual.width}px`;
+      node.style.top = `${point.y + (1 - visual.anchorY + placement.y) * visual.width}px`;
+      node.style.width = `${visual.width * .44}px`;
       node.innerHTML = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
       fragment.appendChild(node);
     }
@@ -21452,7 +21458,7 @@ function getHarvestBonusMapArtBounds(regionId) {
     if (normalizeRegionId(tower.regionId) !== activeRegionId) continue;
     const left = tower.visualX - tower.width * tower.anchorX;
     const top = tower.visualY - tower.width * tower.anchorY;
-    rectangles.push({ left: left - tower.width * .1, top, right: left + tower.width * 1.1, bottom: top + tower.width * 1.3 });
+    rectangles.push({ left: left - tower.width * .2, top, right: left + tower.width * 1.2, bottom: top + tower.width * 1.65 });
   }
   return rectangles;
 }
@@ -27905,8 +27911,8 @@ function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".cla
   // The south-facing tower occupies the middle half of its square sprite.
   // Keep the city-sized controls beside its base as the artwork zooms.
   const hasBuildings = Object.values(holdingTowerSnapshots.get(visual.id)?.buildings || {}).some(level => level > 0) || Boolean(holdingTowerSnapshots.get(visual.id)?.buildingProject);
-  const side = Math.max(72, visual.width * scale * (hasBuildings ? .58 : .25) + 40);
-  const below = (1 - visual.anchorY + (hasBuildings ? .27 : 0)) * visual.width * scale + 50;
+  const side = Math.max(72, visual.width * scale * (hasBuildings ? .65 : .25) + 40);
+  const below = (1 - visual.anchorY + (hasBuildings ? .63 : 0)) * visual.width * scale + 50;
   wheel.style.transform = `scale(${1 / scale})`;
   const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
   // The smallest landscape viewport needs a compact row above the bottom HUD.

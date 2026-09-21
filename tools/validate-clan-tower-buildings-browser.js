@@ -89,11 +89,19 @@ async function main() {
       });
       ensureHoldingTowerMapSubscriptions();
     })()`);
+    const frameTower = () => evaluate(`zoom=innerWidth<600?.4:innerHeight<560?.5:.8;centerOnRegion(buildingFixture.regionId);if(innerHeight<560)camera.y+=(innerWidth<600?50:18)/zoom;if(innerWidth<600)camera.x-=56/zoom;updateCameraTransform()`);
+    const screenshot = async name => {
+      const directory = require('node:path').resolve(__dirname,'../tmp/clan-buildings/qa');
+      fs.mkdirSync(directory,{recursive:true});
+      const shot = await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').join(directory,name),Buffer.from(shot.data,'base64'));
+    };
     for (const viewport of [{width:1440,height:900,touch:false},{width:844,height:390,touch:true},{width:568,height:320,touch:true}]) {
       touch=viewport.touch;
       await client.send('Emulation.setDeviceMetricsOverride',{width:viewport.width,height:viewport.height,deviceScaleFactor:1,mobile:touch});
       await client.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:5});
       await evaluate(`(async()=>{if(modal.open)modal.close();await ensureRegionDefinitionLoaded(buildingFixture.regionId);zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll();})()`);
+      await frameTower();
       await ready('cityLayer.querySelectorAll(".holding-tower-building-node").length===4');
       await ready('cityLayer.querySelector(".holding-tower-courtyard")?.naturalWidth > 0');
       assert(await evaluate(`(()=>{
@@ -101,8 +109,26 @@ async function main() {
         const label=cityLayer.querySelector('.holding-tower-node.has-buildings .holding-tower-map-label').getBoundingClientRect();
         return getComputedStyle(ground).pointerEvents==='none' && [...cityLayer.querySelectorAll('.holding-tower-building-node')].every(node=>node.getBoundingClientRect().bottom<label.top);
       })()`), 'Courtyard must allow map gestures and the Tower label must clear the buildings');
+      for (const level of [1,4,7,10]) {
+        await evaluate(`buildingFixture.buildings={shop:${level},workshop:${level},infirmary:${level},training:${level}};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll()`);
+        const stage = level === 10 ? 4 : Math.ceil(level / 3);
+        await ready(`(()=>{const images=[...cityLayer.querySelectorAll('.holding-tower-building-node>img')];return images.length===4&&images.every(img=>img.complete&&img.naturalWidth>0&&img.src.endsWith('-${stage}.webp'));})()`);
+        if (level === 1 || level === 10) {
+          for (const id of ['shop','workshop','infirmary','training']) {
+            await click(await elementPoint(`[data-clan-building-id="${id}"]`));
+            await ready(`modal.open&&holdingTowerDetailsTab==='buildings'&&holdingTowerBuildingSelection==='${id}'`);
+            await evaluate('modal.close();clearSelection(false)');
+            await delay(300);
+            await frameTower();
+          }
+          await client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:10,y:150,button:'none',buttons:0});
+          await screenshot(`approved-${viewport.width}-level-${level}.png`);
+        }
+      }
+      await evaluate('buildingFixture.buildings={shop:10,workshop:4,infirmary:7,training:1};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
       const layouts=await evaluate(`(()=>{const result=[];selectedTowerMapId=buildingFixture.id;renderSelectedClanTowerWheel(buildingFixture.id);const prior=zoom;for(const z of [.4,.6,.8,1]){zoom=z;updateCameraTransform();result.push({buttons:[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().toJSON()),buildings:[...cityLayer.querySelectorAll('.holding-tower-building-node')].map(b=>b.getBoundingClientRect().toJSON())});}zoom=prior;updateCameraTransform();clearSelection(false);return result;})()`);
       for(const layout of layouts)for(const button of layout.buttons){assert(Math.abs(button.width-64)<.2 && Math.abs(button.height-64)<.2);for(const building of layout.buildings)assert(button.right<=building.left || button.left>=building.right || button.bottom<=building.top || button.top>=building.bottom,'A fixed-size action overlaps a compound building');}
+      await frameTower();
       await click(await elementPoint('[data-clan-building-id="shop"]'));
       await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector(".ctb-shop-items")');
       await delay(100);
@@ -136,7 +162,7 @@ async function main() {
       assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), 'Document overflowed horizontally');
       await evaluate('modal.close();clearSelection(false);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
       await delay(300);
-      await evaluate('zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);updateCameraTransform()');
+      await frameTower();
       await delay(200);
       const mapShot=await client.send('Page.captureScreenshot',{format:'png'});
       fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/map-${viewport.width}.png`),Buffer.from(mapShot.data,'base64'));
@@ -149,6 +175,16 @@ async function main() {
     ]) {
       await evaluate(`holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture,...${JSON.stringify(fixture)}});cityRenderSignature='';renderAll()`);
       assert.equal(await evaluate('cityLayer.querySelectorAll(".holding-tower-courtyard").length'),fixture.expected,'Courtyard must follow building construction and ownership');
+    }
+    await client.send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+    await evaluate('holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture,buildings:{},buildingProject:null});cityRenderSignature="";renderAll()');
+    await frameTower();
+    await delay(200);
+    await screenshot('approved-tower-only.png');
+    for (const index of [0,1,2,3]) {
+      await evaluate(`(async()=>{const tower=HOLDING_TOWER_DEFINITIONS[${index}];await ensureRegionDefinitionLoaded(tower.regionId);centerOnRegion(tower.regionId);cityRenderSignature='';renderAll()})()`);
+      await ready(`cityLayer.querySelector('[data-holding-tower-id="core-v2-holding-tower-${index+1}"] .holding-tower-art')?.naturalWidth>0`);
+      assert(await evaluate(`getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[${index}].id).artSrc==='assets/clan-buildings/tower.webp'`),'A Core Tower retained the previous art');
     }
     assert.deepEqual(errors, []);
   } finally {

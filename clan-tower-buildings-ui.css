@@ -12,7 +12,7 @@
 .clan-tower-details #clanTower-buildingsPanel{overflow:hidden;padding:0;min-height:0}
 .holding-tower-courtyard{position:absolute;z-index:5;pointer-events:none;user-select:none;transform:translate(-50%,-50%);opacity:.88}
 .holding-tower-node.has-buildings{contain:layout style}
-.holding-tower-node.has-buildings .holding-tower-map-label{bottom:calc(var(--holding-tower-width) * -.31)}
+.holding-tower-node.has-buildings .holding-tower-map-label{bottom:calc(var(--holding-tower-width) * -.54)}
 .holding-tower-building-node{position:absolute;z-index:7;pointer-events:auto;padding:0;border:0;background:none;transform:translate(-50%,-100%);touch-action:none;cursor:pointer;aspect-ratio:1;isolation:isolate}
 .holding-tower-building-node>img{width:100%;height:100%;object-fit:contain;pointer-events:none}.holding-tower-building-node .ctb-map-label{position:absolute;left:50%;bottom:0;transform:translate(-50%,70%);white-space:nowrap;background:#352c1ae8;color:#f6e5b5;border-radius:3px;padding:2px 5px;font:600 11px Georgia,serif;pointer-events:none;display:none}.holding-tower-building-node:hover .ctb-map-label,.holding-tower-building-node:focus-visible .ctb-map-label,.holding-tower-building-node.selected .ctb-map-label{display:block}
 .holding-tower-building-node.constructing:after{content:"";position:absolute;inset:18% 8% 12%;border:4px double #644522;background:repeating-linear-gradient(90deg,transparent 0 28%,#846037 29% 32%,transparent 33% 48%),repeating-linear-gradient(0deg,transparent 0 31%,#846037 32% 35%,transparent 36% 65%);opacity:.85;pointer-events:none}.holding-tower-building-node.unbuilt>img{opacity:.25}
