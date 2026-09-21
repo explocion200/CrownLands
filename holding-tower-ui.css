@@ -22,6 +22,7 @@
   transition: opacity .18s ease;
 }
 .holding-tower-node:hover::after,
+.holding-tower-node.selected::after,
 .holding-tower-node:focus-visible::after { opacity: 1; }
 .holding-tower-node:focus-visible { outline: 3px solid #f3d27a; outline-offset: 2px; }
 .holding-tower-art {

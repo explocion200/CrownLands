@@ -70,7 +70,7 @@ async function main() {
   for (const [index, actor] of actors.slice(0, 5).entries()) {
     const role = index ? "member" : "leader";
     await db.doc(`clans/${clanId}/members/${actor.uid}`).set({ ...identity, clanId, uid: actor.uid, role, status: "active", joinedAtMs: now - 172_800_000 });
-    await db.doc(`players/${actor.uid}`).set({ clanId, clanRole: role, committedRallyTroops: contribution,
+    await db.doc(`players/${actor.uid}`).set({ clanId, clanRole: role, committedRallyTroops: index ? contribution : 0,
       rallyResetGeneration: identity.resetGeneration }, { merge: true });
     participants.push({ uid: actor.uid, ownerName: actor.label, role: index ? "ally" : "leader", troops: contribution,
       sourceId: actor.home.id, sourceRegionId: actor.home.regionId, status: "assembled", joinedAtMs: now - 1000, assembledAtMs: now - 1000 });
@@ -79,10 +79,22 @@ async function main() {
   assert.equal(neutral.ownerKind, "neutral");
   assert.equal(neutral.permissions.createRallyAttack, true);
   const rallyId = `tower_capture_${randomUUID()}`, rallyRef = db.doc(`clans/${clanId}/rallies/${rallyId}`);
-  // Start with an assembled fixture so this test focuses on launch, battle and ownership transitions.
-  await rallyRef.set({ ...identity, id: rallyId, clanId, leaderUid: leader.uid, status: "forming", targetType: "tower",
-    targetId: tower.id, targetRegionId: tower.regionId, assemblyCityId: leader.home.id, assemblyRegionId: leader.home.regionId,
-    assemblyType: "city", participants: participants.slice(0, 4) });
+  await cityRef(leader.home).update({ troops: contribution, troopFloat: contribution });
+  const creationPayload = { clanId, rallyId, sourceType: "city", targetType: "tower",
+    sourceRegionId: leader.home.regionId, targetRegionId: tower.regionId,
+    army: { id: rallyId, kind: "attack", fromId: leader.home.id, toId: tower.id, troops: contribution, requestedTroops: contribution } };
+  const created = await call("createClanRally", leader, creationPayload);
+  assert.equal(created.rally.targetId, tower.id);
+  assert.equal(created.rally.targetType, "tower");
+  assert.equal(created.rally.assemblyCityId, leader.home.id);
+  assert.equal(created.rally.participants.length, 1);
+  assert.equal(created.rally.participants[0].troops, contribution);
+  const troopsAfterCreation = (await cityRef(leader.home).get()).data().troops;
+  const replay = await call("createClanRally", leader, creationPayload);
+  assert.equal(replay.duplicate, true);
+  assert.equal((await cityRef(leader.home).get()).data().troops, troopsAfterCreation, "Replaying Tower rally creation deducted troops twice.");
+  // Assemble additional fixture contributions to exercise target-specific launch and capture rules.
+  await rallyRef.update({ participants: participants.slice(0, 4) });
   const tooSmall = await invoke("launchClanRally", leader, { clanId, rallyId });
   assert(tooSmall.error, "Four players were allowed to conquer a Tower.");
   await rallyRef.update({ participants });
@@ -132,7 +144,7 @@ async function main() {
   assert.equal((await garrisonRef(member).get()).data().troops, before - 900);
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.filter(row => row.id !== member.uid).map(row => [row.id, row.data().troops]), others,
     "Personal orders changed another player's garrison.");
-  console.log("Tower lifecycle passed: four-player rejection, five-player capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
+  console.log("Tower lifecycle passed: callable rally creation/replay, four-player rejection, five-player capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
