@@ -11,6 +11,38 @@ const index = read("index.html");
 const home = read("home.html");
 const game = read("game.js");
 const serviceWorker = read("service-worker.js");
+const appEntry = read("app-entry.js");
+
+function verifyInstalledEntryRouting() {
+  for (const [url, mode, expected] of [
+    ["https://playcrownlands.com/", "browser", null],
+    ["https://playcrownlands.com/", "standalone", "https://playcrownlands.com/play/"],
+    ["https://playcrownlands.com/index.html?notification=incoming_army#report", "ios", "https://playcrownlands.com/play/?notification=incoming_army#report"],
+    ["https://playcrownlands.com/play/", "standalone", null],
+    ["https://game.playcrownlands.com/play/?notification=incoming_army#report", "standalone", "https://playcrownlands.com/play/?notification=incoming_army#report"],
+    ["https://game.playcrownlands.com/", "browser", "https://playcrownlands.com/"],
+    ["https://crownland.netlify.app/", "standalone", "https://playcrownlands.com/play/"],
+    ["https://crownland.netlify.app/index.html", "browser", "https://playcrownlands.com/play/"],
+    ["https://playcrownlands.com/game-rules.html", "standalone", null],
+    ["http://127.0.0.1:8790/", "browser", null],
+    ["https://deploy-preview-123--crownland.netlify.app/play/", "browser", null],
+    ["https://html-classic.itch.zone/html/18910922/index.html", "standalone", null],
+  ]) {
+    let destination = null;
+    const location = new URL(url);
+    location.replace = value => { destination = value; };
+    vm.runInNewContext(appEntry, { URL, window: {
+      location,
+      navigator: { standalone: mode === "ios" },
+      matchMedia: () => ({ matches: mode === "standalone" }),
+    } });
+    assert.equal(destination, expected, `Installed entry routing failed for ${mode}: ${url}`);
+  }
+  assert.match(index, /<script src="app-entry\.js"><\/script>/);
+  assert(index.indexOf('src="app-entry.js"') < index.indexOf('rel="stylesheet"'), "Legacy entry migration must run before rendering the game.");
+  assert.match(home, /<script src="\/app-entry\.js"><\/script>/);
+  assert.match(serviceWorker, /"\/app-entry\.js"/, "Launch recovery must be cached with the game shell.");
+}
 
 assert.equal(manifest.start_url, "/play/", "Installed Crownlands must launch the existing game-entry route.");
 assert.equal(manifest.id, "/play/", "The installed-app identity must remain anchored to the game entry.");
@@ -104,6 +136,7 @@ async function dispatchNavigation(url) {
 }
 
 async function run() {
+  verifyInstalledEntryRouting();
   const publicResponse = await dispatchNavigation("https://playcrownlands.com/");
   assert.equal(await publicResponse.text(), "PUBLIC WEBSITE", "Offline public root must remain the public website.");
 

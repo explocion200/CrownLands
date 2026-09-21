@@ -360,11 +360,11 @@ async function anonymousProductionChecks() {
   const checks = [
     ["marketing-root", "https://playcrownlands.com/"],
     ["canonical-play-redirect", "https://playcrownlands.com/play/"],
-    ["game-entry", "https://game.playcrownlands.com/play/"],
-    ["manifest", "https://game.playcrownlands.com/manifest.webmanifest"],
-    ["service-worker", "https://game.playcrownlands.com/service-worker.js"],
-    ["release-config", "https://game.playcrownlands.com/release-config.js"],
-    ["release-manifest", "https://game.playcrownlands.com/release-manifest.js"],
+    ["game-entry", "https://playcrownlands.com/play/"],
+    ["manifest", "https://playcrownlands.com/manifest.webmanifest"],
+    ["service-worker", "https://playcrownlands.com/service-worker.js"],
+    ["release-config", "https://playcrownlands.com/release-config.js"],
+    ["release-manifest", "https://playcrownlands.com/release-manifest.js"],
   ];
   const results = [];
   for (const [id, url] of checks) {
@@ -516,7 +516,7 @@ function buildFindings(report) {
     {
       id: "STAB-005", severity: "P3", classification: "telemetry-required", status: "blocked",
       title: "Authenticated production login and second-tab recovery are not verified by repository tests",
-      affectedEnvironment: "game.playcrownlands.com production",
+      affectedEnvironment: "playcrownlands.com/play/ production",
       reproduction: "Use the approved pre-seeded QA account for cold login, warm login, refresh, second-tab replacement, interrupted connection, and logout.",
       evidence: "No QA account identity or authorization was supplied to this audit run, so no authenticated production writes were attempted.",
       likelyOwner: "Release QA",
@@ -561,7 +561,7 @@ function buildAcceptance(report) {
     anonymousProductionResourcesReachable: report.productionAnonymous.length > 0 && report.productionAnonymous.every(check => check.ok),
     anonymousProductionIdentityMatches: (() => {
       const checks = Object.fromEntries(report.productionAnonymous.map(check => [check.id, check]));
-      return checks["canonical-play-redirect"]?.finalUrl === "https://game.playcrownlands.com/play/"
+      return checks["canonical-play-redirect"]?.finalUrl === "https://playcrownlands.com/play/"
         && checks["game-entry"]?.detail?.buildId === report.source.commit
         && checks["service-worker"]?.detail?.cacheVersion === report.source.commit
         && checks["release-config"]?.detail?.releaseId === report.repository.releaseId

@@ -3,7 +3,7 @@
   'use strict';
   const measurementId = 'G-K5W0M2NPFN';
   const cookieName = 'cl_analytics_v1';
-  const game = location.hostname === 'game.playcrownlands.com';
+  const game = /^\/play(?:\/index\.html|\/)?$/.test(location.pathname) || location.hostname === 'game.playcrownlands.com';
   const production = location.protocol === 'https:' && [
     'playcrownlands.com', 'www.playcrownlands.com', 'game.playcrownlands.com',
   ].includes(location.hostname);
@@ -92,7 +92,7 @@
     if (!game && location.pathname === '/') track('homepage_view');
     document.addEventListener('click', event => {
       const anchor = event.target.closest('a[href]');
-      if (anchor && /^https:\/\/game\.playcrownlands\.com\/play\//.test(anchor.href)) track('play_click');
+      if (anchor && /^https:\/\/playcrownlands\.com\/play\//.test(anchor.href)) track('play_click');
     });
     // Reconcile a choice changed in another Crownlands tab before any further collection.
     window.addEventListener('focus', () => {
