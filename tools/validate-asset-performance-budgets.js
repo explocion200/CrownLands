@@ -144,7 +144,8 @@ const entrypointBudgets = {
   // Approved Leaderboards, Atlas navigation, and five holding views add a
   // bounded 16 KiB of runtime wiring. Decorative presentation lives in separate
   // runtime-cached modules; the aggregate installation cache limit is unchanged.
-  "game.js": (1766 + 16 + 1) * 1024, // Compact HUD: restored density and safe location navigation.
+  // Tower lifecycle and replay guards add under 2 KiB beyond the compact HUD.
+  "game.js": (1766 + 16 + 1 + 2) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
