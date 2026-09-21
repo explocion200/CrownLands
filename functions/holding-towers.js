@@ -1,9 +1,11 @@
 "use strict";
 
-const MODEL_VERSION = 1;
+const BUILDINGS = require("./clan-tower-buildings");
+const CONSTRUCTION = require("./clan-tower-construction");
+const MODEL_VERSION = 2;
 const TOWER_ACCESS_PROBATION_MS = 24 * 60 * 60 * 1000;
 const TOWER_NEUTRAL_DEFENDERS = 10_000_000;
-const TOWER_MIN_RALLY_MEMBERS = 5;
+const TOWER_MIN_RALLY_MEMBERS = 3;
 const TOWER_UPGRADE_MULTIPLIER = 5;
 const TOWER_UPGRADE_DURATION_MS = 10 * 60 * 1000;
 const TOWER_UPGRADE_QUEUE_LIMIT = 10;
@@ -136,6 +138,8 @@ function createNeutralTowerState(towerId, {
     wallIntegrityBps: WALL_FULL_INTEGRITY_BPS,
     neutralDefenders: TOWER_NEUTRAL_DEFENDERS,
     upgradeQueue: [],
+    buildings: BUILDINGS.normalizeLevels(),
+    buildingProject: null,
     repair: null,
     veil: null,
     veilUsage: { utcDate: getUtcDateKey(createdAtMs), count: 0 },
@@ -159,7 +163,9 @@ function normalizeQueue(raw = []) {
         targetLevel,
         cost: clampInteger(entry?.cost),
         queuedAtMs: timestampToMs(entry?.queuedAtMs),
-        remainingMs: clampInteger(entry?.remainingMs, 0, TOWER_UPGRADE_DURATION_MS),
+        timingVersion: entry?.timingVersion === 2 ? 2 : 1,
+        durationMs: clampInteger(entry?.durationMs, 0) || (entry?.timingVersion === 2 ? 0 : TOWER_UPGRADE_DURATION_MS),
+        remainingMs: clampInteger(entry?.remainingMs, 0),
         progressStartedAtMs: timestampToMs(entry?.progressStartedAtMs),
       };
     })
@@ -182,6 +188,7 @@ function normalizeTowerState(raw = {}, nowMs = Date.now()) {
       startedAtMs: timestampToMs(raw.repair.startedAtMs),
       completeAtMs: timestampToMs(raw.repair.completeAtMs),
       baseWindowMinutes: clampInteger(raw.repair.baseWindowMinutes),
+      workshopReductionPercent: Math.min(50, Math.max(0, finiteNumber(raw.repair.workshopReductionPercent))),
       startedByUid: String(raw.repair.startedByUid || ""),
       clanId: String(raw.repair.clanId || ""),
     }
@@ -221,6 +228,8 @@ function normalizeTowerState(raw = {}, nowMs = Date.now()) {
       ? clampInteger(raw.neutralDefenders, 0)
       : 0,
     upgradeQueue: normalizeQueue(raw.upgradeQueue),
+    buildings: ownerKind === "clan" ? BUILDINGS.normalizeLevels(raw.buildings) : BUILDINGS.normalizeLevels(),
+    buildingProject: ownerKind === "clan" ? CONSTRUCTION.normalizeProject(raw.buildingProject, raw) : null,
     repair,
     veil,
     veilUsage,
@@ -246,48 +255,18 @@ function materializeRepair(state, nowMs) {
   return { ...state, wallIntegrityBps: clampInteger(integrity, repair.startIntegrityBps, WALL_FULL_INTEGRITY_BPS) };
 }
 
-function materializeUpgradeQueue(state, nowMs) {
-  const queue = state.upgradeQueue.map(entry => ({ ...entry }));
-  let wallLevel = state.wallLevel;
-  const canProgress = !state.attackBlocked
-    && state.wallIntegrityBps === WALL_FULL_INTEGRITY_BPS
-    && !state.repair;
-  if (!queue.length) return { ...state, upgradeQueue: queue };
-  if (!canProgress) {
-    const active = queue[0];
-    if (active.progressStartedAtMs) {
-      const elapsed = Math.max(0, nowMs - active.progressStartedAtMs);
-      active.remainingMs = Math.max(1, (active.remainingMs || TOWER_UPGRADE_DURATION_MS) - elapsed);
-      active.progressStartedAtMs = 0;
-    }
-    return { ...state, upgradeQueue: queue };
-  }
-
-  let cursorMs = nowMs;
-  while (queue.length) {
-    const active = queue[0];
-    const remainingMs = active.remainingMs || TOWER_UPGRADE_DURATION_MS;
-    const startedAtMs = active.progressStartedAtMs || cursorMs;
-    const completeAtMs = startedAtMs + remainingMs;
-    if (completeAtMs > nowMs) {
-      active.remainingMs = remainingMs;
-      active.progressStartedAtMs = startedAtMs;
-      break;
-    }
-    wallLevel = active.targetLevel;
-    queue.shift();
-    cursorMs = completeAtMs;
-  }
-  if (queue.length && !queue[0].progressStartedAtMs) queue[0].progressStartedAtMs = cursorMs;
-  return { ...state, wallLevel, upgradeQueue: queue };
-}
-
 function materializeTowerState(raw = {}, nowMs = Date.now()) {
   const currentTimeMs = Math.max(0, Math.floor(finiteNumber(nowMs, Date.now())));
   let state = normalizeTowerState(raw, currentTimeMs);
+  const resumeAtMs = state.repair && state.repair.completeAtMs <= currentTimeMs
+    ? state.repair.completeAtMs : currentTimeMs;
   state = materializeRepair(state, currentTimeMs);
-  state = materializeUpgradeQueue(state, currentTimeMs);
+  state = CONSTRUCTION.advance(state, currentTimeMs, resumeAtMs);
   return { ...state, updatedAtMs: currentTimeMs };
+}
+
+function startBuilding(rawState, buildingId, treasuryBalance, actor, nowMs = Date.now(), operationId = "") {
+  return CONSTRUCTION.start(materializeTowerState(rawState, nowMs), buildingId, treasuryBalance, actor, nowMs, operationId);
 }
 
 function getMembershipJoinedAtMs(member = {}) {
@@ -586,7 +565,9 @@ function queueWallUpgrades(rawState, count, treasuryBalance, canonicalCityUpgrad
       targetLevel,
       cost,
       queuedAtMs: Math.max(0, Math.floor(finiteNumber(nowMs, Date.now()))),
-      remainingMs: TOWER_UPGRADE_DURATION_MS,
+      timingVersion: 2,
+      durationMs: 0,
+      remainingMs: 0,
       progressStartedAtMs: 0,
     });
     level = targetLevel;
@@ -595,7 +576,7 @@ function queueWallUpgrades(rawState, count, treasuryBalance, canonicalCityUpgrad
   if (balance < totalCost) throw new Error("insufficient-clan-treasury");
   if (!state.upgradeQueue.length && queue.length) queue[0].progressStartedAtMs = Math.max(0, Math.floor(finiteNumber(nowMs, Date.now())));
   return {
-    state: { ...state, upgradeQueue: queue, updatedAtMs: nowMs },
+    state: materializeTowerState({ ...state, upgradeQueue: queue, updatedAtMs: nowMs }, nowMs),
     totalCost,
     treasuryBalance: balance - totalCost,
   };
@@ -612,7 +593,8 @@ function startPaidRepair(rawState, treasuryBalance, canonicalCityUpgradeCost, ge
   if (typeof getBaseRepairWindowMinutes !== "function") throw new TypeError("A canonical base repair-rate function is required.");
   const baseWindowMinutes = requireSafePositiveInteger(getBaseRepairWindowMinutes(state.wallLevel), "baseRepairWindowMinutes");
   const missingBps = WALL_FULL_INTEGRITY_BPS - state.wallIntegrityBps;
-  const durationMs = Math.max(1, Math.round(baseWindowMinutes * 60_000 * missingBps / WALL_FULL_INTEGRITY_BPS));
+  const workshopReductionPercent = BUILDINGS.bonus("workshop", state.buildings.workshop);
+  const durationMs = Math.max(1, Math.round(baseWindowMinutes * 60_000 * missingBps / WALL_FULL_INTEGRITY_BPS * (1 - workshopReductionPercent / 100)));
   const repair = {
     id: String(operationId || `repair_${nowMs}`),
     paidCost: cost,
@@ -620,6 +602,7 @@ function startPaidRepair(rawState, treasuryBalance, canonicalCityUpgradeCost, ge
     startedAtMs: nowMs,
     completeAtMs: nowMs + durationMs,
     baseWindowMinutes,
+    workshopReductionPercent,
     startedByUid: String(actor?.uid || ""),
     clanId: state.clanId,
   };
@@ -668,6 +651,8 @@ function conquerTower(rawState, clan = {}, nowMs = Date.now()) {
     clanName: String(clan.name || clan.clanName || ""),
     clanTag: String(clan.tag || clan.clanTag || ""),
     clanEmblem: clan.emblem || clan.shield || null,
+    buildings: Object.fromEntries(Object.entries(state.buildings).map(([id, level]) => [id, level ? Math.max(1, level - 1) : 0])),
+    buildingProject: null,
     wallLevel: Math.max(1, state.wallLevel - TOWER_CONQUEST_LEVEL_LOSS),
     wallIntegrityBps: 0,
     neutralDefenders: 0,
@@ -714,6 +699,8 @@ function getCombinedGarrisonTroops(garrisons = {}) {
 }
 
 module.exports = Object.freeze({
+  BUILDINGS,
+  startBuilding,
   MODEL_VERSION,
   TOWER_ACCESS_PROBATION_MS,
   TOWER_NEUTRAL_DEFENDERS,

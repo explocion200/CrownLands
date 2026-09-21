@@ -117,6 +117,7 @@ service cloud.firestore {
           'peaceShieldCooldownExpiresAtMs',
           'peaceShieldCooldownResetGeneration',
           'itemPurchaseCooldowns',
+          'clanShopUsage',
           'dailyLoginReward',
           'cityUpgradeReceipts',
           'reportsViewedAtMs',

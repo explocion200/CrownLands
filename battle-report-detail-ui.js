@@ -53,7 +53,12 @@
   }
   function gearEffects({left,right,report,viewerRole}) {
     const cards=[left,right].map(side=>{const entries=getBattleSideBonusEntries({...side,gearOnly:true,casualtyRecovery:side.casualtyRecovery || (viewerRole === side.role ? report.casualtyRecovery : null)});return entries.length ? bonusCard(side,entries,true) : "";}).filter(Boolean);
-    return cards.length ? section("gear","Gear Effects",`<div class="two-column">${cards.join("")}</div>`,"shield") : "";
+    const recovery = report.casualtyRecovery;
+    const clanRows = [];
+    if (recovery?.clanInfirmaryPercent > 0) clanRows.push(metric("troops", "Clan Infirmary", `+${formatNumber(recovery.clanRecoveredTroops || 0)} recovered`, `+${recovery.clanInfirmaryPercent}% Tower defense recovery; ${recovery.combinedPercent}% combined (90% cap). Returned to your Main City.`));
+    if (report.clanTrainingPercent > 0) clanRows.push(metric("sword", "Training Grounds", `+${report.clanTrainingPercent}% attack strength`, "Applied to this rally at launch from its Clan Tower."));
+    const clanSection = clanRows.length ? section("clan", "Clan Building Effects", clanRows.map(row => `<p><strong>${esc(row.label)} · ${esc(row.amount)}</strong><br><small>${esc(row.help)}</small></p>`).join(""), "realm") : "";
+    return (cards.length ? section("gear","Gear Effects", `<div class="two-column">${cards.join("")}</div>`, "shield") : "") + clanSection;
   }
   function walls(defender,siege) {
     if (!siege || defender.wallFree) return "";

@@ -91,7 +91,7 @@ for (const definition of towers.TOWERS) {
   assert.equal(neutral.veilUsage.count, 0);
 }
 
-// Authoritative 24-hour membership probation and five-person Rally gate.
+// Authoritative 24-hour membership probation and three-person Rally gate.
 const eligibleMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - 25 * HOUR_MS });
 const probationMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - 23 * HOUR_MS });
 assert.equal(towers.isEligibleMember(probationMember("new"), NOW, "clan-red"), false);
@@ -102,14 +102,24 @@ const members = new Map(Array.from({ length: 6 }, (_, index) => {
   return [uid, eligibleMember(uid)];
 }));
 const participants = count => Array.from({ length: count }, (_, index) => ({ uid: `member-${index + 1}`, troops: index + 1, status: "assembled" }));
-assert.equal(towers.validateTowerRallyParticipants(participants(4), members, NOW, "clan-red").valid, false);
-assert.equal(towers.validateTowerRallyParticipants(participants(5), members, NOW, "clan-red").valid, true);
-assert.equal(towers.validateTowerRallyParticipants([...participants(4), { uid: "member-5", troops: 0 }], members, NOW, "clan-red").count, 4);
+for (const count of [0, 1, 2, 3, 4]) {
+  const result = towers.validateTowerRallyParticipants(participants(count), members, NOW, "clan-red");
+  assert.equal(result.required, 3);
+  assert.equal(result.valid, count >= 3);
+}
+assert.equal(towers.validateTowerRallyParticipants(participants(3).map(p => ({...p, troops: 1})), members, NOW, "clan-red").valid, true);
 const membersWithProbation = new Map(members);
-membersWithProbation.set("member-5", probationMember("member-5"));
-assert.equal(towers.validateTowerRallyParticipants(participants(5), membersWithProbation, NOW, "clan-red").count, 4);
-assert.equal(towers.validateTowerRallyParticipants(participants(4), members, NOW, "clan-red").count, 4, "A withdrawn fifth contribution must no longer count.");
-assert.equal(towers.validateTowerRallyParticipants([...participants(4), { uid: "member-4", troops: 900 }], members, NOW, "clan-red").count, 4, "Duplicate participant records must not count twice.");
+membersWithProbation.set("member-3", probationMember("member-3"));
+for (const [label, contributors, roster] of [
+  ["zero troops", [...participants(2), {uid: "member-3", troops: 0}], members],
+  ["probation", participants(3), membersWithProbation],
+  ["withdrawn third member", participants(2), members],
+  ["duplicate member", [...participants(2), {uid: "member-2", troops: 900}], members],
+]) {
+  const result = towers.validateTowerRallyParticipants(contributors, roster, NOW, "clan-red");
+  assert.equal(result.count, 2, `${label} counted toward the minimum`);
+  assert.equal(result.valid, false, `${label} allowed a Tower attack`);
+}
 
 // Normal scouting automatically considers authoritative City and personal Tower origins.
 const scoutPlayer = "ricky";
@@ -304,7 +314,7 @@ assert.match(server, /baseGoldPerHour \+= Math\.max\(0, safeNumber\(stats\.baseG
 assert.notEqual(towers.getUtcDateKey(NOW), towers.getUtcDateKey(towers.getNextUtcDayStartMs(NOW)));
 assert.deepEqual(towers.MANAGER_ROLES, ["leader", "officer"]);
 
-// Wall purchases are canonical-cost adapters: 5x, sequential fixed ten minutes, max ten, and no level cap.
+// Wall purchases are canonical-cost adapters: 5x, sequential scaling construction times, max ten, and no level cap.
 assert.equal(towers.getEquivalentCityWallCost(12, canonicalCost), 1_200_000);
 assert.equal(towers.getTowerWallUpgradeCost(12, canonicalCost), 6_000_000);
 assert.equal(towers.getTowerVeilCost(12, canonicalCost), 1_200_000);
@@ -316,13 +326,13 @@ assert.equal(towers.materializeTowerState(queued.state, NOW + 599_999).wallLevel
 const afterOneLevel = towers.materializeTowerState(queued.state, NOW + 600_000);
 assert.equal(afterOneLevel.wallLevel, 2);
 assert.equal(afterOneLevel.upgradeQueue.length, 2);
-assert.equal(towers.materializeTowerState(queued.state, NOW + 1_800_000).wallLevel, 4);
+assert.equal(towers.materializeTowerState(queued.state, NOW + 2_160_000).wallLevel, 4);
 expectError(() => towers.queueWallUpgrades(ownedTower(), 11, Number.MAX_SAFE_INTEGER, () => 1, NOW), /At most 10/);
 expectError(() => towers.queueWallUpgrades(ownedTower(undefined, { wallIntegrityBps: 9_999 }), 1, 1_000_000, () => 1, NOW), /tower-wall-damaged/);
 const highLevel = towers.queueWallUpgrades(ownedTower(undefined, { wallLevel: 1_000_000 }), 10, 100, () => 1, NOW);
 assert.equal(highLevel.state.upgradeQueue.at(-1).targetLevel, 1_000_010, "Tower walls must not have a gameplay level cap.");
 
-// Incoming attacks pause fixed-time construction without refunding or losing the queue.
+// Incoming attacks pause construction without refunding or losing the queue.
 const partBuilt = towers.materializeTowerState(queued.state, NOW + 200_000);
 const attacked = towers.materializeTowerState({ ...partBuilt, incomingRallyIds: ["rally-1"], attackBlocked: true }, NOW + 400_000);
 assert.equal(attacked.wallLevel, 1);

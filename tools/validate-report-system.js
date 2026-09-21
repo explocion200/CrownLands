@@ -236,7 +236,7 @@ assert.match(functionBody(client, "getLegacyBattleSides"), /applyRecordedGearEff
 const serverGearSandbox = {
   Math,
   Number,
-  COMMON_GEAR: { CASUALTY_RECOVERY_CAP_PERCENT: 75 },
+  COMMON_GEAR: { CASUALTY_RECOVERY_CAP_PERCENT: 90 },
   safeNumber(value, fallback = 0) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
@@ -267,11 +267,11 @@ assert.equal(casualtySnapshot.gearPercent, 1.5);
 assert.equal(casualtySnapshot.combinedPercent, 11.5);
 assert.equal(casualtySnapshot.gearRecoveredTroops, 1, "Casualty gear recovery is not isolated from Field Medics.");
 const cappedCasualtySnapshot = serverGearSandbox.createBattleCasualtyRecoverySnapshot({
-  profile: { fieldMedicsPercent: 74, casualtyGearPercent: 1.5 },
+  profile: { fieldMedicsPercent: 89, casualtyGearPercent: 1.5 },
   losses: 200,
-  recoveredTroops: 150,
+  recoveredTroops: 180,
 });
-assert.equal(cappedCasualtySnapshot.appliedGearPercent, 1, "The report does not expose gear's applied share after the 75% cap.");
+assert.equal(cappedCasualtySnapshot.appliedGearPercent, 1, "The report does not expose gear's applied share after the 90% cap.");
 assert.equal(cappedCasualtySnapshot.gearRecoveredTroops, 2);
 const authoritativeBreakdowns = {
   attackPowerBreakdown: { gearAttackStrengthBonusPower: 15, totalAttackPower: 1_265 },

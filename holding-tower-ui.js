@@ -203,8 +203,8 @@
       </section>`;
   }
 
-  function renderPanel(tower, { actionBusy = false, clanShieldHtml = "", treasuryBalance = null, nowMs = Date.now() } = {}) {
-    if (global.CrownlandsClanTowerDetailsUi) return global.CrownlandsClanTowerDetailsUi.render(tower, {actionBusy, clanShieldHtml, treasuryBalance, nowMs});
+  function renderPanel(tower, { actionBusy = false, clanShieldHtml = "", treasuryBalance = null, nowMs = Date.now(), ...buildingOptions } = {}) {
+    if (global.CrownlandsClanTowerDetailsUi) return global.CrownlandsClanTowerDetailsUi.render(tower, {actionBusy, clanShieldHtml, treasuryBalance, nowMs, ...buildingOptions});
     const integrity = Math.min(100, Math.max(0, Math.floor(Number(tower.wallIntegrityBps) || 0) / 100));
     const integrityBps = Math.min(10_000, Math.max(0, Math.floor(Number(tower.wallIntegrityBps) || 0)));
     const neutral = tower.ownerKind !== "clan";

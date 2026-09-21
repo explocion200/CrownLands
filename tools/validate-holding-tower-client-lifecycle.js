@@ -54,7 +54,7 @@ function harness() {
   };
   const context = vm.createContext({
     console: { warn: (...args) => warnings.push(args) }, modal, modalBody, modalTitle: {},
-    state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
+    onlineSessionGeneration: 0, SHOP_ITEMS: [], COMMON_GEAR_BOX_ITEM: { id: "common_gear_box" }, state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
     window: { CrownlandsClanTowerDetailsUi: { mount() {} } },
     HOLDING_TOWER_UI: { renderPanel(tower, options) { renders.push({ id: tower.id, ...options }); return `Tower ${tower.id} revision ${tower.revision || 0}`; } },
     getHoldingTowerVisual: id => ({ id, name: id, kind: "holdingTower", artSrc: `${id}.webp` }),
@@ -108,6 +108,19 @@ async function main() {
     client.user = { uid: "different-ruler" }; garrison.next(); assert.equal(updates, 1, "A stale account listener delivered private updates.");
     client.user = { uid: "ruler" }; stop(); garrison.next(); assert.equal(updates, 1);
     assert(watches.every(watch => !watch.active), "Public or private Tower listener survived cleanup.");
+  }
+
+  {
+    const h = harness(), shop = deferred(); let applied = 0;
+    h.api.getClanTowerShop = () => shop.promise;
+    h.context.applyServerEconomyResult = () => { applied++; };
+    const opening = h.open("tower-a");
+    h.finish(h.reads[0], 1, { ownerMember: true }); await flush();
+    h.context.onlineSessionGeneration++; h.replace();
+    shop.resolve({ clanShop: { level: 10 } }); await opening;
+    assert.equal(applied, 0, "A late Shop response changed another account's economy.");
+    assert.equal(h.modalBody.innerHTML, "Unrelated dialog");
+    assert.equal(vm.runInContext("holdingTowerSnapshots.size", h.context), 0);
   }
 
   for (const fails of [false, true]) {

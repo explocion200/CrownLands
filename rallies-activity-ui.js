@@ -46,14 +46,15 @@ function renderRalliesActivityCard(rally, context) {
   const force = recalling ? returningTroops || assembledTroops : assembledTroops;
   const ready = activeParticipants.filter(person => person.status === "assembled").length;
   const count = activeParticipants.length || participants.length;
-  const allReady = activeParticipants.length >= CLAN_RALLY_MIN_PARTICIPANTS && ready === activeParticipants.length;
+  const minimumParticipants = getClanRallyMinimumParticipants(rally);
+  const allReady = activeParticipants.length >= minimumParticipants && ready === activeParticipants.length;
   const horns = getProjectedInventoryCount(RECALL_HORN_ITEM_ID);
   const recallBusy = recallHornRequests.has(String(rally.armyId || ""));
   const actionBusy = busy || recallBusy;
   const command = (action, label, style = "", disabled = false) => `<button class="rally-command ${style}" data-rally-action="${action}" data-rally-id="${escapeHtml(rally.id)}" ${action === "recall" ? `data-rally-army-id="${escapeHtml(rally.armyId || "")}"` : ""} type="button" ${disabled || actionBusy ? "disabled" : ""}>${label}</button>`;
   let note = "", controls = "";
   if (forming && canManageFormingRally) {
-    note = allReady ? "<strong>All contributions are ready.</strong> Launch when you choose." : activeParticipants.length < CLAN_RALLY_MIN_PARTICIPANTS ? `At least ${CLAN_RALLY_MIN_PARTICIPANTS} rulers must be ready to launch.` : `${activeParticipants.length - ready} ${activeParticipants.length - ready === 1 ? "contribution is" : "contributions are"} still inbound. Every army must arrive before launch.`;
+    note = allReady ? "<strong>All contributions are ready.</strong> Launch when you choose." : activeParticipants.length < minimumParticipants ? `At least ${minimumParticipants} rulers must be ready to launch.` : `${activeParticipants.length - ready} ${activeParticipants.length - ready === 1 ? "contribution is" : "contributions are"} still inbound. Every army must arrive before launch.`;
     controls = command("cancel", "Cancel", "danger") + command("launch", "Launch", "primary", !allReady);
   } else if (forming && ownParticipant) {
     note = "Your contribution is committed. The creator or Clan Leader gives the launch order.";

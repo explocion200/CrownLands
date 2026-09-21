@@ -7,6 +7,7 @@ const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "player-journey.js", "player-journey.css",
+  "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
@@ -182,8 +183,13 @@ if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google a
 const combatTimerBytes = ["combat-timers-ui.js", "combat-timers-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (combatTimerBytes > 10 * 1024) throw new Error("Combat timer presentation exceeds its 10 KiB budget.");
-// The retired Boosts overview no longer ships; retain the existing total cap.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32) * 1024;
+// Sixteen building sprites, the shared Tower and transparent paths. Source PNGs never ship.
+const buildingArt = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/clan-buildings/"));
+if (buildingArt.length !== 18 || !["courtyard.webp", "tower.webp"].every(name => buildingArt.some(file => path.basename(file) === name)) || buildingArt.some(file => !file.endsWith(".webp") || fs.statSync(file).size > 100 * 1024)) throw new Error("Clan building art must contain sixteen buildings, one Tower and one paths WebP, each under 100 KiB.");
+const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
+if (buildingPayload > 1248 * 1024) throw new Error("Clan buildings exceed the dedicated 1248 KiB art/presentation budget.");
+// Reserve a further 16 KiB for map, client API and report integration.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

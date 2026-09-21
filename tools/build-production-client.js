@@ -11,6 +11,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 
 const rootFiles = [
   "app-entry.js",
+  "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "player-journey.js", "player-journey.css",
   "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js", "community.html",
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
@@ -72,6 +73,7 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
+copyDirectoryFiles("assets/clan-buildings", relativePath => relativePath.endsWith(".webp"));
 copy("assets/flag-symbols/runtime.svg");
 copyDirectoryFiles("assets/clan-heraldry", relativePath => /(?:manifest\.json|charges-(?:full|micro)\.svg)$/i.test(relativePath));
 copy("assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg");

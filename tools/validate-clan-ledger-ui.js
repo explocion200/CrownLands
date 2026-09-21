@@ -28,7 +28,7 @@ const context = vm.createContext({
 });
 for(const [name,next] of [
   ["renderClanRosterMember","renderClanRenameEditor"], ["renderClanMembersPanel","renderClanRewardsPanel"],
-  ["renderClanRewardsPanel","getRallyParticipantForCurrentPlayer"], ["getRallyParticipantForCurrentPlayer","getClanRallyParticipantStatusLabel"],
+  ["renderClanRewardsPanel","getClanRallyMinimumParticipants"], ["getClanRallyMinimumParticipants","getRallyParticipantForCurrentPlayer"], ["getRallyParticipantForCurrentPlayer","getClanRallyParticipantStatusLabel"],
   ["getClanRallyParticipantStatusLabel","renderClanRallyCard"], ["renderClanRallyCard","renderClanRallyPanel"],
   ["handleClanClick","updateProfileTabHeader"],
 ]) vm.runInContext(production(name,next),context);
@@ -54,6 +54,14 @@ async function main() {
   assert.match(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
   assert.doesNotMatch(context.renderClanRallyCard(rally),/<script>/);
   rally.participants[1].status="assembled";
+  assert.doesNotMatch(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
+  rally.targetType="tower";
+  assert.equal(context.getClanRallyMinimumParticipants(rally),require("../functions/holding-towers").TOWER_MIN_RALLY_MEMBERS);
+  assert.match(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
+  assert.match(context.renderClanRallyCard(rally),/Waiting for 3\+ Ready/);
+  rally.participants.push({uid:"third",status:"inbound",troops:1});
+  assert.match(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
+  rally.participants[2].status="assembled";
   assert.doesNotMatch(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
   context.state.clanRole="member";rally.leaderUid="other";rally.participants=rally.participants.filter(p=>p.uid!=="self");
   assert.match(context.renderClanRallyCard(rally),/data-rally-action="join"/);
