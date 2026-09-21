@@ -22,6 +22,7 @@ const coreExpansionGates = new Set([
   "emulator-shared-camp-rewards.js",
   "emulator-chat-translation.js",
   "emulator-combat-authorization.js",
+  "emulator-holding-tower-lifecycle.js",
 ]);
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))

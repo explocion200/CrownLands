@@ -342,6 +342,8 @@ async function validateRallyTargets() {
     rejectGameAction: message => rejected.push(message),
     createOnlineArmyId: unexpectedSubmission,
     rallyActionRequests: new Set(),
+    holdingTowerActionsInFlight: new Set(),
+    holdingTowerModalSession: null,
     getRouteSegments: unexpectedSubmission,
   };
   const submitCity = vm.runInNewContext(

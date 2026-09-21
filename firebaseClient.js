@@ -3125,9 +3125,9 @@
 
   function subscribeHoldingTowerState(towerId = "", handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid || !towerId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc, collection, query, where, onSnapshot } = client.modules.firestore;
     if (!doc || !onSnapshot) return () => {};
-    return subscribeScopedSnapshot(
+    const unsubscribers = [subscribeScopedSnapshot(
       doc(client.db, "holdingTowers", String(towerId).slice(0, 96)),
       snapshot => {
         if (typeof handlers.onTower === "function") {
@@ -3142,7 +3142,17 @@
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error, "holdingTower");
       }
-    );
+    )];
+    if (handlers.garrisonClanId && collection && query && where) {
+      unsubscribers.push(subscribeScopedSnapshot(query(
+        collection(client.db, "holdingTowers", String(towerId).slice(0, 96), "garrison"),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        ...getRealmShardQueryConstraints(where),
+        where("clanId", "==", String(handlers.garrisonClanId).slice(0, 128))
+      ), () => handlers.onGarrison?.(), error => handlers.onError?.(error, "holdingTowerGarrison")));
+    }
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
 
   function subscribeIsland(islandId, handlers = {}) {

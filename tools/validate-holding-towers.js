@@ -1,5 +1,6 @@
 "use strict";
 require("./validate-holding-details-ui.js");
+require("./validate-holding-tower-client-lifecycle.js");
 
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
