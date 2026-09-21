@@ -239,8 +239,7 @@ async function main() {
       assert(await evaluate(()=>document.getElementById("quickChat").hidden),"Arrow collapses preview");
       await evaluate(()=>{document.getElementById("chatToggleBtn").click();document.getElementById("openChatLedger").click();});
       assert(await evaluate(()=>document.getElementById("chatDialog").open),"Open chat enters the ledger");
-      await evaluate(()=>{window.qaChat.setMode("closed");document.getElementById("openRealmChat").click();});
-      assert(await evaluate(()=>document.getElementById("chatDialog").open),"Realm Chat shortcut opens the real ledger");
+      assert(await evaluate(()=>!document.getElementById("openRealmChat")),"The redundant Realm Chat shortcut is absent.");
       results.push({screen:"chat",viewport:viewport.name,layout:{...chat,text:undefined},navigation,unread});
       await evaluate(()=>window.qaChat.dispose({resetSession:true}));
       await evaluate(()=>{
@@ -256,17 +255,30 @@ async function main() {
       assert(boostHud.every(item=>item.passive&&item.loaded&&item.background.includes("114, 54, 58")&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
       assert(boostHud.slice(1).every((item,i)=>item.top>=boostHud[i].bottom&&Math.abs(item.right-boostHud[0].right)<1),"All four passive effects form a vertical stack.");
       assert(await evaluate(()=>{
-        const buttons=["openRealmChat","chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn","logBtn","outgoingAttackBtn","incomingAttackBtn","fullscreenBtn"]
+        const buttons=["chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn","logBtn","outgoingAttackBtn","incomingAttackBtn","fullscreenBtn"]
           .map(id=>document.getElementById(id)).filter(node=>node&&!node.hidden&&node.getBoundingClientRect().width);
         const clear=(a,b)=>a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom;
-        const chat=document.getElementById("openRealmChat"),c=chat.getBoundingClientRect();
-        return buttons.every(button=>button===chat||clear(c,button.getBoundingClientRect()))
-          &&[...document.querySelectorAll("#activeItemEffectsStack .effect-status-badge:not([hidden])")].every(badge=>buttons.every(button=>clear(badge.getBoundingClientRect(),button.getBoundingClientRect())));
-      }),"Chat shortcut and active effects must not cover other map controls.");
+        return [...document.querySelectorAll("#activeItemEffectsStack .effect-status-badge:not([hidden])")].every(badge=>buttons.every(button=>clear(badge.getBoundingClientRect(),button.getBoundingClientRect())));
+      }),"Active effects must not cover other map controls.");
       assert(await evaluate(()=>!document.getElementById("allEffects")&&!document.getElementById("boostDialog")),"Retired overview and entry point are absent.");
       await screenshot("restored-effects-"+viewport.name);
       await evaluate(()=>{state.itemEffects={};updateShieldStatusBadge();});
       assert(await evaluate(()=>document.querySelectorAll('#activeItemEffectsStack .effect-status-badge:not([hidden])').length===0),"Expired effects disappear.");
+      const idleHud = await evaluate(()=>{
+        const originalNow=Date.now, now=Date.now();
+        const observer=new MutationObserver(()=>{});
+        try {
+          Date.now=()=>now;
+          const paint=()=>{renderHud();updateShieldStatusBadge();updateIslandSwitcherUi();updateIncomingAttackUi();updateOutgoingAttackUi();};
+          paint();
+          for(const id of ["reportUnreadBadge","logBtn","dailyLoginRewardBadge","dailyLoginRewardBtn","cityListBtn","activeItemEffectsStack","islandSwitchBtn","incomingAttackBtn","outgoingAttackBtn"])
+            observer.observe(document.getElementById(id),{subtree:true,childList:true,attributes:true,characterData:true});
+          for(let i=0;i<20;i++)paint();
+          return {unchangedHudMutations:observer.takeRecords().length};
+        } finally {Date.now=originalNow;observer.disconnect();}
+      });
+      assert.equal(idleHud.unchangedHudMutations,0,"Unchanged HUD refreshes must not rewrite controls.");
+      results.push({screen:"idle-hud",viewport:viewport.name,...idleHud});
       results.push({screen:"effects",viewport:viewport.name,vertical:true,passive:true,expiry:true});
       console.log("Passed reward and Chat integration at "+viewport.width+"x"+viewport.height+".");
     }

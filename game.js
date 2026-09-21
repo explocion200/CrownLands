@@ -6873,6 +6873,14 @@ function setTextIfChanged(element, value) {
   if (element.textContent !== text) element.textContent = text;
 }
 
+function setAttrIfChanged(element, name, value) {
+  const text = String(value);
+  if (element && element.getAttribute(name) !== text) element.setAttribute(name, text);
+}
+
+function setHiddenIfChanged(element, hidden) {
+  if (element && element.hidden !== hidden) element.hidden = hidden;
+}
 
 function createCharacterProgress() {
   return { level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 };
@@ -10078,10 +10086,10 @@ function getUnreadReportCount() {
 function updateReportUnreadBadge() {
   if (!reportUnreadBadge || !logBtn) return;
   const unreadCount = getUnreadReportCount();
-  reportUnreadBadge.hidden = unreadCount <= 0;
-  reportUnreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
-  reportUnreadBadge.setAttribute("aria-label", `${unreadCount} unread ${unreadCount === 1 ? "report" : "reports"}`);
-  logBtn.setAttribute("aria-label", unreadCount > 0
+  setHiddenIfChanged(reportUnreadBadge, unreadCount <= 0);
+  setTextIfChanged(reportUnreadBadge, unreadCount > 99 ? "99+" : String(unreadCount));
+  setAttrIfChanged(reportUnreadBadge, "aria-label", `${unreadCount} unread ${unreadCount === 1 ? "report" : "reports"}`);
+  setAttrIfChanged(logBtn, "aria-label", unreadCount > 0
     ? `Reports, ${unreadCount > 99 ? "more than 99" : unreadCount} unread`
     : "Reports");
 }
@@ -13447,12 +13455,12 @@ function updateOnlinePlayersUi() {
 function updateIslandSwitcherUi() {
   if (!islandSwitchBtn) return;
   const show = Boolean(state);
-  islandSwitchBtn.hidden = !show;
+  setHiddenIfChanged(islandSwitchBtn, !show);
   if (!show) return;
   const regionId = getActiveOnlineRegionId();
   const label = getRegionLabel(regionId);
-  if (islandSwitchLabel) islandSwitchLabel.textContent = "Map";
-  islandSwitchBtn.title = `Map - viewing ${label}`;
+  setTextIfChanged(islandSwitchLabel, "Map");
+  setAttrIfChanged(islandSwitchBtn, "title", `Map - viewing ${label}`);
   updateIslandMapTileSummariesInPlace();
 }
 
@@ -23023,7 +23031,7 @@ function renderHud() {
   updateReportUnreadBadge();
   const regularCityCount = getOwnedRegularCityCountForDisplay();
   setTextIfChanged(cityText, `${formatNumber(regularCityCount)} cities`);
-  if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
+  setAttrIfChanged(cityListBtn, "aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -23098,7 +23106,7 @@ function formatCitadelAssaultCountdown(remainingMs = 0) {
 function updateCitadelAssaultCountdown() {
   if (!citadelAssaultCountdown) return;
   const visible = Boolean(state && getActiveMapRegionId() === CITADEL_ASSAULT_REGION_ID);
-  citadelAssaultCountdown.hidden = !visible;
+  setHiddenIfChanged(citadelAssaultCountdown, !visible);
   if (!visible) return;
   const nowMs = Date.now();
   const nextAtMs = getNextCitadelAssaultAtMs(nowMs);
@@ -23135,18 +23143,18 @@ function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
   if (!badge || !timeElement) return;
   const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
   if (!remainingSeconds) {
-    badge.hidden = true;
-    badge.title = "";
-    badge.setAttribute("aria-label", `${label} inactive`);
-    timeElement.textContent = "";
+    setHiddenIfChanged(badge, true);
+    setAttrIfChanged(badge, "title", "");
+    setAttrIfChanged(badge, "aria-label", `${label} inactive`);
+    setTextIfChanged(timeElement, "");
     return;
   }
 
   const remainingText = formatDuration(remainingSeconds);
-  badge.hidden = false;
-  timeElement.textContent = remainingText;
-  badge.title = `${label} active: ${remainingText} remaining`;
-  badge.setAttribute("aria-label", `${label} active, ${remainingText} remaining`);
+  setHiddenIfChanged(badge, false);
+  setTextIfChanged(timeElement, remainingText);
+  setAttrIfChanged(badge, "title", `${label} active: ${remainingText} remaining`);
+  setAttrIfChanged(badge, "aria-label", `${label} active, ${remainingText} remaining`);
 }
 
 function updateShieldStatusBadge() {
@@ -23160,7 +23168,7 @@ function updateShieldStatusBadge() {
 function updateActiveItemEffectsStackDensity() {
   if (!activeItemEffectsStack) return;
   const count = [...activeItemEffectsStack.children].filter(badge => !badge.hidden).length;
-  activeItemEffectsStack.dataset.activeCount = String(count);
+  setAttrIfChanged(activeItemEffectsStack, "data-active-count", count);
   activeItemEffectsStack.classList.toggle("compact", count > 2);
   activeItemEffectsStack.classList.toggle("dense", count > 3);
 }
@@ -32937,9 +32945,9 @@ function renderDailyLoginRewardButton() {
   const status = dailyLoginRewardStatus;
   const alerts = getCollectibleRewardAlertSummary();
   const eligible = Boolean(active && alerts.total > 0);
-  dailyLoginRewardBtn.disabled = !active;
+  if (dailyLoginRewardBtn.disabled !== !active) dailyLoginRewardBtn.disabled = !active;
   dailyLoginRewardBtn.classList.toggle("is-claimable", eligible);
-  if (dailyLoginRewardBadge) dailyLoginRewardBadge.hidden = !eligible;
+  setHiddenIfChanged(dailyLoginRewardBadge, !eligible);
   const alertLabels = [
     alerts.rewards ? `${alerts.rewards} daily login` : "",
     alerts.quests ? `${alerts.quests} quest` : "",
@@ -32954,7 +32962,7 @@ function renderDailyLoginRewardButton() {
         : status?.nextDay > status?.monthLengthDays
           ? `${status.monthKey} daily reward track complete; open quests and achievements`
           : "Open daily rewards, quests, and achievements";
-  dailyLoginRewardBtn.setAttribute("aria-label", label);
+  setAttrIfChanged(dailyLoginRewardBtn, "aria-label", label);
 }
 
 function updateDailyLoginRewardHudState() {
@@ -35773,14 +35781,14 @@ function updateIncomingAttackUi() {
   const incoming = getIncomingAttacks();
   const incomingIds = new Set(incoming.map(attack => String(attack.key || getArmyTokenId(attack))));
   const incomingWasHidden = incomingAttackBtn.hidden;
-  incomingAttackBtn.hidden = incoming.length === 0;
+  setHiddenIfChanged(incomingAttackBtn, incoming.length === 0);
   notifyMovementHudOccupancyChange(incomingAttackBtn, incomingWasHidden);
   incomingAttackBtn.classList.toggle("active", incoming.length > 0);
   if (!incoming.length) {
     if (lastAudioIncomingAttackIds.size > 0) syncWorldMusicState();
     lastAudioIncomingAttackIds = incomingIds;
-    if (incomingAttackCount) incomingAttackCount.textContent = "0";
-    if (incomingAttackTime) incomingAttackTime.textContent = "Threats";
+    setTextIfChanged(incomingAttackCount, "0");
+    setTextIfChanged(incomingAttackTime, "Threats");
     if (modal.open && modal.classList.contains("incoming-attack-modal")) modal.close();
     return;
   }
@@ -35790,10 +35798,10 @@ function updateIncomingAttackUi() {
     crownlandsAudio?.setMusicState("danger");
   }
   lastAudioIncomingAttackIds = incomingIds;
-  if (incomingAttackCount) incomingAttackCount.textContent = formatNumber(incoming.length);
-  if (incomingAttackTime) incomingAttackTime.textContent = formatDuration(incoming[0].remaining);
-  incomingAttackBtn.title = `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`;
-  incomingAttackBtn.setAttribute("aria-label", incomingAttackBtn.title);
+  setTextIfChanged(incomingAttackCount, formatNumber(incoming.length));
+  setTextIfChanged(incomingAttackTime, formatDuration(incoming[0].remaining));
+  setAttrIfChanged(incomingAttackBtn, "title", `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`);
+  setAttrIfChanged(incomingAttackBtn, "aria-label", incomingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("incoming-attack-modal")) {
     renderIncomingAttacksModalContent(incoming);
@@ -35805,14 +35813,14 @@ function updateOutgoingAttackUi() {
   const operations = getActiveOperationsSnapshot();
   const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   const outgoingWasHidden = outgoingAttackBtn.hidden;
-  outgoingAttackBtn.hidden = total === 0;
+  setHiddenIfChanged(outgoingAttackBtn, total === 0);
   notifyMovementHudOccupancyChange(outgoingAttackBtn, outgoingWasHidden);
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
-    if (outgoingAttackCount) outgoingAttackCount.textContent = "0";
-    if (outgoingAttackTime) outgoingAttackTime.textContent = "Marches";
+    setTextIfChanged(outgoingAttackCount, "0");
+    setTextIfChanged(outgoingAttackTime, "Marches");
     outgoingAttackBtn.removeAttribute("title");
-    outgoingAttackBtn.setAttribute("aria-label", "Kingdom activity");
+    setAttrIfChanged(outgoingAttackBtn, "aria-label", "Kingdom activity");
     if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
     return;
   }
@@ -35835,10 +35843,10 @@ function updateOutgoingAttackUi() {
   if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
   if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
   if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
-  if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(total);
-  if (outgoingAttackTime) outgoingAttackTime.textContent = status;
-  outgoingAttackBtn.title = titleParts.join(" - ");
-  outgoingAttackBtn.setAttribute("aria-label", outgoingAttackBtn.title);
+  setTextIfChanged(outgoingAttackCount, formatNumber(total));
+  setTextIfChanged(outgoingAttackTime, status);
+  setAttrIfChanged(outgoingAttackBtn, "title", titleParts.join(" - "));
+  setAttrIfChanged(outgoingAttackBtn, "aria-label", outgoingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
     renderOutgoingAttacksModalContent(operations);

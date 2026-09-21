@@ -208,8 +208,8 @@ assert.match(css, /\.incoming-attack-btn,[\s\S]{0,240}border-color:\s*#ffb49d !i
 assert.match(css, /\.bottom-nav :is\(\.outgoing-attack-btn, \.incoming-attack-btn\) :is\(\.cl-icon, span, strong, small\)[\s\S]{0,180}color:\s*#fffdf2 !important;[\s\S]{0,180}text-shadow:\s*0 1px 2px #000/, "Operation alert text is not forced above the global muted-text rule with the high-contrast ivory treatment.");
 assert.match(uiLayoutRuntime, /function restoreOperationAlertStack\(\)[\s\S]*?nav\.appendChild\(incoming\);[\s\S]*?nav\.appendChild\(outgoing\);[\s\S]*?nav\.appendChild\(reports\);/, "The layout runtime does not restore Incoming and Outgoing above Reports in deterministic order.");
 assert.match(uiLayoutRuntime, /restoreOperationAlertStack\(\);[\s\S]{0,400}?id === "outgoingMarch" \|\| id === "incomingMarch"\) return;/, "The layout runtime can still detach operation alerts into independent HUD positions.");
-assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "Incoming Attacks no longer preserves dynamic visibility.");
-assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
+assert.match(game, /setHiddenIfChanged\(incomingAttackBtn, incoming\.length === 0\);/, "Incoming Attacks no longer preserves dynamic visibility.");
+assert.match(game, /setHiddenIfChanged\(outgoingAttackBtn, total === 0\);/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
 const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260819-player-flags-v2-r1");
