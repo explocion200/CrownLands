@@ -3,7 +3,7 @@
 
 const childProcess = require("node:child_process");
 const path = require("node:path");
-const { classifyGitDiff } = require("./change-risk-classifier");
+const { gitChanges } = require("./change-risk-classifier");
 
 const root = path.resolve(__dirname, "..");
 
@@ -62,8 +62,8 @@ function runValidator(fileName) {
 }
 
 function main() {
-  const classification = classifyGitDiff(root, parseArguments(process.argv.slice(2)));
-  const paths = classification.files.map(item => item.path);
+  const { baseRef, headRef } = parseArguments(process.argv.slice(2));
+  const paths = gitChanges(root, baseRef, headRef).flatMap(change => change.paths);
   const validators = focusedValidatorFiles(paths);
   if (!validators.length) {
     console.log("[Crownlands] No content-specific validator applies; syntax, build, artifact, and browser gates still run.");

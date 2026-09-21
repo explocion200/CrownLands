@@ -5,8 +5,6 @@ const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const TIER_RANK = Object.freeze({ Fast: 1, Standard: 2, Full: 3 });
-
 const STATIC_PUBLIC_PAGES = new Set([
   "about.html",
   "battle-economy-guide.html",
@@ -29,181 +27,28 @@ const STATIC_PUBLIC_PAGES = new Set([
   "world.html",
 ]);
 
-const STATIC_PUBLIC_FILES = new Set([
-  "ads.txt",
-  "robots.txt",
-  "sitemap.xml",
-]);
-
-const STANDARD_FRONTEND_FILES = new Map([
-  ["animation-manager.js", "isolated client animation behavior"],
-  ["audio-manager.js", "isolated client audio behavior"],
-  ["patch-notes.js", "client-rendered public patch-note presentation"],
-  ["public-site.js", "isolated public-site interaction behavior"],
-  ["roadmap-data.js", "client-rendered public roadmap data"],
-  ["roadmap.js", "isolated public-roadmap interaction behavior"],
-  ["ui-layout-config.js", "isolated local UI-layout configuration"],
-  ["ui-layout-runtime.js", "isolated local UI-layout behavior"],
-]);
-
-const CRITICAL_EXACT_PATHS = new Set([
-  ".firebaserc",
-  ".node-version",
-  "AGENTS.md",
-  "base-cities.js",
-  "common-gear-ui.js",
-  "common-gear.js",
-  "economy-config.js",
-  "firebase-config.js",
-  "firebase-messaging-sw.js",
-  "firebase.json",
-  "firebaseClient.js",
-  "firestore.indexes.json",
-  "firestore.rules",
-  "game.js",
-  "index.html",
-  "instant-economy-actions.js",
-  "manifest.webmanifest",
-  "netlify.toml",
-  "region-catalog.js",
-  "release-config.js",
-  "release-manifest.js",
-  "route-worker.js",
-  "service-worker.js",
-  "world-config.js",
-  "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-  "docs/SAFE_UPDATE_WORKFLOW.md",
-]);
-
-const CRITICAL_PREFIXES = [
-  ".github/",
-  ".githooks/",
-  "firebase-hosting-redirect/",
-  "functions/",
-  "functions-auto-reset/",
-  "tools/",
-];
-
-const CRITICAL_NAME_PATTERN = /(?:^|[/_.-])(?:auth|backend|battle|build|city|clan|combat|contract|deploy|economy|firebase|firestore|function|generation|login|map|progression|realm|release|reset|route|scheduled|schema|season|server|state|storage|world)(?:$|[/_.-])/i;
-const CRITICAL_DOCUMENT_PATTERN = /(?:^|\/)(?:backend|deploy(?:ment)?|firebase|firestore|monthly-realm-operations|production-data|release|reset)(?:$|[-_.\/])/i;
-const CRITICAL_VISUAL_PATTERN = /(?:^|\/)(?:islands?|maps?|regions?|routes?|worlds?)(?:$|[-_.\/])/i;
-const VISUAL_EXTENSION_PATTERN = /\.(?:avif|gif|ico|jpe?g|png|svg|webp)$/i;
+const { PLAN_PATH, normalizePath, selectValidation } = require("./validation-plan");
 
 function normalizeRepoPath(value) {
-  return String(value || "")
-    .replace(/\\/g, "/")
-    .replace(/^\.\//, "")
-    .replace(/\/{2,}/g, "/")
-    .replace(/\/$/, "");
-}
-
-function classifyPath(inputPath) {
-  const filePath = normalizeRepoPath(inputPath);
-  const lowerPath = filePath.toLowerCase();
-  const baseName = path.posix.basename(filePath);
-
-  if (!filePath) {
-    return { tier: "Full", reason: "an empty or unreadable path is ambiguous" };
-  }
-
-  if (CRITICAL_EXACT_PATHS.has(filePath)
-      || CRITICAL_PREFIXES.some(prefix => filePath.startsWith(prefix))) {
-    return { tier: "Full", reason: "the path is explicitly release-, backend-, authority-, or validation-critical" };
-  }
-
-  if (/(?:^|\/)package\.json$/i.test(filePath)
-      || /(?:^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/i.test(filePath)) {
-    return { tier: "Full", reason: "package scripts, dependencies, and lockfiles are release-contract inputs" };
-  }
-
-  if ((lowerPath.startsWith("docs/") || /\.(?:md|mdx|txt)$/i.test(filePath))
-      && CRITICAL_DOCUMENT_PATTERN.test(filePath)) {
-    return { tier: "Full", reason: "the document is an operational reset, backend, deployment, or release contract" };
-  }
-
-  if (STATIC_PUBLIC_PAGES.has(filePath)) {
-    return { tier: "Fast", reason: "the file is an explicitly allowlisted static public page" };
-  }
-
-  if (STATIC_PUBLIC_FILES.has(filePath)) {
-    return { tier: "Fast", reason: "the file is allowlisted static public-site wording or crawl metadata" };
-  }
-
-  if (lowerPath.startsWith("docs/") || /\.(?:md|mdx)$/i.test(filePath)) {
-    return { tier: "Fast", reason: "the file is non-operational documentation" };
-  }
-
-  if (/\.css$/i.test(filePath)) {
-    return { tier: "Fast", reason: "CSS cannot change multiplayer authority or stored gameplay state" };
-  }
-
-  if (VISUAL_EXTENSION_PATTERN.test(filePath)) {
-    if (CRITICAL_VISUAL_PATTERN.test(filePath)) {
-      return { tier: "Full", reason: "map, route, region, island, and world assets are gameplay-critical" };
-    }
-    return { tier: "Fast", reason: "the file is a non-map visual asset with no executable or stored-state contract" };
-  }
-
-  if (STANDARD_FRONTEND_FILES.has(filePath)) {
-    return { tier: "Standard", reason: STANDARD_FRONTEND_FILES.get(filePath) };
-  }
-
-  if (CRITICAL_NAME_PATTERN.test(filePath) || CRITICAL_NAME_PATTERN.test(baseName)) {
-    return { tier: "Full", reason: "the path names a gameplay, authority, state, reset, map, or release concern" };
-  }
-
-  return { tier: "Full", reason: "the path is not on a reviewed Fast or Standard allowlist" };
+  return normalizePath(value);
 }
 
 function normalizeChange(change) {
   if (typeof change === "string") return { status: "M", paths: [normalizeRepoPath(change)] };
-  const paths = Array.isArray(change?.paths) ? change.paths : [change?.path];
-  return {
-    status: String(change?.status || "M"),
-    paths: paths.map(normalizeRepoPath).filter(Boolean),
-  };
+  return { status: String(change.status || "M"), paths: (change.paths || [change.path]).map(normalizeRepoPath) };
 }
 
 function classifyChanges(inputChanges, options = {}) {
   const changes = inputChanges.map(normalizeChange);
-  const fileClassifications = [];
-  for (const change of changes) {
-    for (const filePath of change.paths) {
-      fileClassifications.push({
-        path: filePath,
-        status: change.status,
-        ...classifyPath(filePath),
-      });
-    }
-  }
-  fileClassifications.sort((left, right) => left.path.localeCompare(right.path));
-
-  let tier = "Full";
-  let decisionReason = "no changed files were found, so classification is ambiguous";
-  if (fileClassifications.length) {
-    tier = fileClassifications.reduce((highest, item) => (
-      TIER_RANK[item.tier] > TIER_RANK[highest] ? item.tier : highest
-    ), "Fast");
-    decisionReason = tier === "Full"
-      ? "at least one changed path is critical or not explicitly allowlisted"
-      : `every changed path is explicitly allowlisted at ${tier} or lower risk`;
-  }
-
   if (options.forceFull) {
-    tier = "Full";
-    decisionReason = "the validation:full override can only upgrade the result and was requested";
+    return {
+      tier: "Full", requiresEmulators: true, forcedFull: true,
+      decisionReason: "explicit full regression run (manual override or nightly schedule)",
+      changes, files: changes.flatMap(change => change.paths.map(file => ({ path: file, status: change.status, tier: "Full", reason: "explicit full regression run" }))),
+      baseRef: options.baseRef || null, headRef: options.headRef || null,
+    };
   }
-
-  return {
-    tier,
-    requiresEmulators: tier === "Full",
-    forcedFull: Boolean(options.forceFull),
-    baseRef: options.baseRef || null,
-    headRef: options.headRef || null,
-    decisionReason,
-    changes,
-    files: fileClassifications,
-  };
+  return { ...selectValidation(changes, options.plan, options), baseRef: options.baseRef || null, headRef: options.headRef || null };
 }
 
 function parseNameStatus(output) {
@@ -239,8 +84,21 @@ function gitChanges(repoRoot, baseRef = "origin/main", headRef = "HEAD") {
 function classifyGitDiff(repoRoot, options = {}) {
   const baseRef = options.baseRef || "origin/main";
   const headRef = options.headRef || "HEAD";
+  let plan;
+  let baseCommit;
+  if (!options.forceFull) {
+    baseCommit = childProcess.execFileSync("git", ["merge-base", baseRef, headRef], { cwd: repoRoot, encoding: "utf8", windowsHide: true }).trim();
+    const baseTip = childProcess.execFileSync("git", ["rev-parse", baseRef], { cwd: repoRoot, encoding: "utf8", windowsHide: true }).trim();
+    if (baseCommit !== baseTip) throw new Error("The branch is behind its validation base. Reconcile the base and review the affected-test plan.");
+    try {
+      plan = JSON.parse(childProcess.execFileSync("git", ["show", `${headRef}:${PLAN_PATH}`], { cwd: repoRoot, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }));
+    } catch {
+      throw new Error(`Commit ${PLAN_PATH} before preparation. List the changed files, affected tests, shared dependencies, and baseCommit.`);
+    }
+  }
   return classifyChanges(gitChanges(repoRoot, baseRef, headRef), {
     ...options,
+    plan, baseCommit, repoRoot,
     baseRef,
     headRef,
   });
@@ -252,17 +110,16 @@ function formatClassification(result) {
     `[Crownlands] Decision: ${result.decisionReason}.`,
   ];
   if (result.baseRef) lines.push(`[Crownlands] Complete branch diff: ${result.baseRef}...${result.headRef}.`);
-  lines.push("[Crownlands] Changed files and risk reasons:");
-  if (!result.files.length) lines.push("  (none; fail-closed Full validation applies)");
+  lines.push("[Crownlands] Changed files:");
+  if (!result.files.length) lines.push("  (none)");
   for (const item of result.files) {
-    lines.push(`  ${item.status}\t${item.path}\t${item.tier} — ${item.reason}`);
+    lines.push(`  ${item.status}\t${item.path}`);
   }
-  if (result.tier !== "Full") {
-    lines.push(`[Crownlands] ${result.tier} is safe because every path matched a reviewed lower-tier allowlist; critical and unknown paths always force Full.`);
-    lines.push("[Crownlands] Multiplayer emulator validation is not required for this classified change.");
-  } else {
-    lines.push("[Crownlands] Full validation is required; lower-risk files cannot mask a critical or unknown path.");
-  }
+  if (result.tier === "Targeted") {
+    for (const group of result.coverage) lines.push(`[Crownlands] Coverage: ${group.reason}`);
+    lines.push(`[Crownlands] Selected ${result.staticTests.length} focused validator(s), ${result.emulatorTests.length} emulator file(s); production build ${result.buildRequired ? "required" : "not affected"}.`);
+    for (const test of [...result.staticTests, ...result.emulatorTests]) lines.push(`  ${test}`);
+  } else lines.push("[Crownlands] Explicit full regression run selected.");
   return lines.join("\n");
 }
 
@@ -276,6 +133,7 @@ function writeGithubOutput(filePath, result) {
     `tier=${result.tier}`,
     `requires_emulators=${result.requiresEmulators}`,
     `forced_full=${result.forcedFull}`,
+    `base_ref=${result.baseRef || "origin/main"}`,
     `summary<<${delimiter}`,
     formatClassification(result),
     delimiter,
@@ -305,7 +163,7 @@ function main() {
   const options = parseArguments(process.argv.slice(2));
   const repoRoot = path.resolve(__dirname, "..");
   const result = options.files.length
-    ? classifyChanges(options.files, options)
+    ? classifyChanges(options.files, { ...options, plan: options.forceFull ? undefined : JSON.parse(fs.readFileSync(path.join(repoRoot, PLAN_PATH), "utf8")), repoRoot })
     : classifyGitDiff(repoRoot, options);
   printClassification(result);
   if (options.githubOutput) writeGithubOutput(options.githubOutput, result);
@@ -321,13 +179,9 @@ if (require.main === module) {
 }
 
 module.exports = {
-  CRITICAL_EXACT_PATHS,
   STATIC_PUBLIC_PAGES,
-  STANDARD_FRONTEND_FILES,
-  TIER_RANK,
   classifyChanges,
   classifyGitDiff,
-  classifyPath,
   formatClassification,
   gitChanges,
   normalizeRepoPath,

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "90b8f2ef900c6d448314687ed307b78e25f2b3aa",
+  "coverage": [
+    {
+      "paths": [
+        ".github/workflows/crownlands-release-gate.yml",
+        "AGENTS.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/SAFE_UPDATE_WORKFLOW.md",
+        "functions/package.json",
+        "functions/test/run-emulator-gates.js",
+        "tools/change-risk-classifier.js",
+        "tools/prepare-pr.js",
+        "tools/run-focused-validators.js",
+        "tools/run-validation-tier.js",
+        "tools/safe-update-lib.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-focused-browser-smoke.js",
+        "tools/validate-release-gate.js",
+        "tools/validation-plan.js"
+      ],
+      "tests": [
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js",
+        "tools/test-focused-browser-smoke-cleanup.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Change only validation selection, workflow policy, and test orchestration. Cover complete-diff selection, stale or missing plans, affected server coverage, exact emulator selection, failure handling, cached success, branch/push protections, CI wiring, and browser-helper compatibility with nightly runs. The browser helper changes require its cleanup tests and desktop/mobile production smoke; no gameplay implementation or emulator scenarios changed."
+    }
+  ]
+}

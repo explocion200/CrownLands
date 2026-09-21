@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
 const {
   SafetyError,
   assertClean,
@@ -61,15 +63,18 @@ function createOrUpdatePr(repoRoot, audit) {
   } else {
     body = `## Summary\n\n${title}\n\n${safetySection}`;
   }
+  const bodyPath = path.resolve(repoRoot, runGit(repoRoot, ["rev-parse", "--git-path", "crownlands-safe-update/pr-body.md"]).stdout.trim());
+  fs.mkdirSync(path.dirname(bodyPath), { recursive: true });
+  fs.writeFileSync(bodyPath, body, "utf8");
   let url;
   if (existing.length) {
     url = existing[0].url;
-    run("gh", ["pr", "edit", url, "--body", body], { cwd: repoRoot, stdio: "inherit" });
+    run("gh", ["pr", "edit", url, "--body-file", bodyPath], { cwd: repoRoot, stdio: "inherit" });
     console.log(`[Crownlands] Updated existing pull request: ${url}`);
   } else {
     const created = run("gh", [
       "pr", "create", "--base", "main", "--head", audit.branch,
-      "--title", title, "--body", body,
+      "--title", title, "--body-file", bodyPath,
     ], { cwd: repoRoot });
     url = created.stdout.trim().split(/\r?\n/).find(line => /^https:\/\//.test(line)) || created.stdout.trim();
     console.log(`[Crownlands] Created pull request: ${url}`);
@@ -119,6 +124,8 @@ function main() {
     scopes,
     validationTier: classification.tier,
     validationForcedFull: classification.forcedFull,
+    validationPhase: classification.validationPhase,
+    selectedTests: [...(classification.staticTests || []), ...(classification.emulatorTests || [])],
   });
   console.log("[Crownlands] Preparation receipt saved for this exact commit and origin/main state.");
   if (options.checkOnly) {
