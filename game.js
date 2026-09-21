@@ -4106,19 +4106,21 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   const api = getOnlineApi();
   if (!api?.getHoldingTowerState || !api?.isSignedIn?.()) throw new Error("Sign in to inspect this Clan Tower.");
   const token = (holdingTowerRequestTokens.get(towerId) || 0) + 1;
+  const requestSession = onlineSessionGeneration, requestClanId = state?.clanId || "";
+  const isCurrentRequest = () => requestSession === onlineSessionGeneration && requestClanId === (state?.clanId || "") && token === holdingTowerRequestTokens.get(towerId);
   holdingTowerRequestTokens.set(towerId, token);
   const result = await api.getHoldingTowerState({ towerId });
-  if (token !== holdingTowerRequestTokens.get(towerId)) return null;
+  if (!isCurrentRequest()) return null;
   const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
   if (snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
     try {
       const shop = await api.getClanTowerShop({ towerId });
-      if (token !== holdingTowerRequestTokens.get(towerId)) return null;
+      if (!isCurrentRequest()) return null;
       snapshot.clanShop = shop.clanShop;
       applyServerEconomyResult(shop, { renderCities: false });
     } catch (error) { snapshot.clanShopError = error?.message || "Clan Shop unavailable."; }
   }
-  if (token !== holdingTowerRequestTokens.get(towerId)) return null;
+  if (!isCurrentRequest()) return null;
   holdingTowerSnapshots.set(towerId, snapshot);
   if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
   if (isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {

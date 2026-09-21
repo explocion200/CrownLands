@@ -169,7 +169,7 @@ async function main() {
   const stockBefore=(await memberProfile.get()).data().shopItems?.swift_march_order || 0;
   const purchase={towerId:tower.id,itemId:"swift_march_order",quantity:1,cost:price,operationId:`buy_${randomUUID()}`};
   const bought=await call("purchaseClanTowerShopItem",member,purchase);
-  assert.equal(bought.shopItems.swift_march_order,stockBefore+1);
+  assert.equal(bought.currentUser.shopItems.swift_march_order,stockBefore+1);
   assert.equal((await call("purchaseClanTowerShopItem",member,purchase)).duplicate,true);
   assert.equal((await memberProfile.get()).data().shopItems.swift_march_order,stockBefore+1);
   const simultaneous=await Promise.all([0,1].map(i=>invoke("purchaseClanTowerShopItem",member,{...purchase,towerId:i?second.id:tower.id,operationId:`race_${randomUUID()}`})));
