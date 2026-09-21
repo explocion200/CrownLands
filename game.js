@@ -2368,6 +2368,7 @@ let performanceLastSampleTime = performance.now();
 let performanceFps = 0;
 let cityTapState = null;
 let campTapState = null;
+let holdingTowerTapState = null;
 let armyTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
@@ -27080,6 +27081,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
     selectedTargetId || "",
     selectedTowerMapId,
     selectedTowerMapId ? JSON.stringify(holdingTowerSnapshots.get(selectedTowerMapId)?.permissions || {}) : "",
+    selectedTowerMapId ? `${zoom}:${mapViewportWidth}:${mapViewportHeight}` : "",
     sendMode ? 1 : 0,
     scoutNearbySourceId || "",
     regroupSourceId || "",
@@ -27228,9 +27230,11 @@ function renderCitiesUncached(force = false) {
     const node = existingNode || document.createElement("button");
     existingHoldingTowerNodes.delete(tower.id);
     node.className = "holding-tower-node";
+    node.classList.toggle("selected", selectedTowerMapId === tower.id);
     node.type = "button";
     node.dataset.holdingTowerId = tower.id;
     node.setAttribute("aria-label", `Open ${tower.name}`);
+    node.setAttribute("aria-pressed", String(selectedTowerMapId === tower.id));
     node.title = `${tower.name} · Shared clan military foothold`;
     node.style.left = `${mapPoint.x}px`;
     node.style.top = `${mapPoint.y}px`;
@@ -27722,7 +27726,11 @@ function renderSelectedClanTowerWheel(towerId) {
   wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";
   wheel.style.left = `${point.x}px`;
   wheel.style.top = `${point.y}px`;
-  const positions = [[0,92],[-96,30],[96,30],[-80,-72],[80,-72]];
+  // Keep touch targets readable when zoomed out and Info above the bottom HUD.
+  wheel.style.transform = `scale(${1 / Math.max(0.1, zoom)})`;
+  const positions = mapViewportHeight <= 360
+    ? actions.map((_, index) => [(index - (actions.length - 1) / 2) * 72, -40])
+    : [[0,48],[-96,0],[96,0],[-80,-80],[80,-80]];
   wheel.innerHTML = actions.map((entry,index) => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : entry.icon === "information" ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" style="--tower-action-x:${positions[index][0]}px;--tower-action-y:${positions[index][1]}px" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
   wheel.querySelectorAll("[data-clan-tower-map-action]").forEach(button => button.addEventListener("click",event => {
     event.stopPropagation();
@@ -39145,6 +39153,7 @@ function beginPinch() {
   const mid = midpointBetween(a, b);
   cityTapState = null;
   campTapState = null;
+  holdingTowerTapState = null;
   armyTapState = null;
   pinchState = {
     startDistance: Math.max(1, distanceBetween(a, b)),
@@ -39191,7 +39200,7 @@ function flushMainMapPinchUpdate() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .holding-tower-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
 
 function isMapCommandInteractionTarget(target) {
@@ -39263,6 +39272,11 @@ function resolveCampTapButton(event) {
   return campButton && cityLayer.contains(campButton) ? campButton : null;
 }
 
+function resolveHoldingTowerTapButton(event) {
+  const button = event?.target?.closest?.(".holding-tower-node[data-holding-tower-id]");
+  return button && cityLayer?.contains(button) ? button : null;
+}
+
 function resolveArmyTapToken(event) {
   if (!event || !armyLayer) return null;
   const token = event.target?.closest?.(".army-token[data-army-token-id]") || null;
@@ -39321,6 +39335,20 @@ function trackCampTap(event, campButton = resolveCampTapButton(event)) {
   return campButton;
 }
 
+function trackHoldingTowerTap(event, button = resolveHoldingTowerTapButton(event)) {
+  if (!button) return null;
+  cityTapState = campTapState = armyTapState = null;
+  holdingTowerTapState = {
+    pointerId: event.pointerId,
+    towerId: button.dataset.holdingTowerId,
+    x: event.clientX,
+    y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
+  };
+  return button;
+}
+
 function trackArmyTap(event, token = resolveArmyTapToken(event)) {
   if (!token) return null;
   armyTapState = {
@@ -39363,12 +39391,15 @@ function startPan(event) {
 
   const isTouch = event.pointerType === "touch";
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const { cityButton, armyToken } = startedOnCommand
+  const towerButton = startedOnCommand ? null : resolveHoldingTowerTapButton(event);
+  const { cityButton, armyToken } = startedOnCommand || towerButton
     ? { cityButton: null, armyToken: null }
     : resolveMapTapTargets(event, sendMode, getCityTapExcludedSourceId());
   if (cityButton) trackCityTap(event, cityButton);
   if (armyToken) trackArmyTap(event, armyToken);
-  const startedOnMapNode = Boolean(cityButton || armyToken) || isMapNodeInteractionTarget(event.target);
+  if (towerButton) trackHoldingTowerTap(event, towerButton);
+  else holdingTowerTapState = null;
+  const startedOnMapNode = Boolean(cityButton || armyToken || towerButton) || isMapNodeInteractionTarget(event.target);
 
   if (isTouch && !startedOnCommand) event.preventDefault();
 
@@ -39405,6 +39436,7 @@ function movePan(event) {
     panState.moved = true;
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
     if (campTapState?.pointerId === event.pointerId) campTapState = null;
+    if (holdingTowerTapState?.pointerId === event.pointerId) holdingTowerTapState = null;
     if (armyTapState?.pointerId === event.pointerId) armyTapState = null;
   }
   if (panState.startedOnMapNode && !panState.moved) return;
@@ -39494,6 +39526,20 @@ function trySelectTrackedArmyTap(event) {
   return true;
 }
 
+function trySelectTrackedHoldingTowerTap(event, { requireSameTarget = false } = {}) {
+  if (isMapInteractionBlocked() || holdingTowerTapState?.pointerId !== event.pointerId) return false;
+  const tapState = holdingTowerTapState;
+  holdingTowerTapState = null;
+  if (hasMapTapMoved(tapState, event)) return false;
+  if (requireSameTarget && resolveHoldingTowerTapButton(event)?.dataset.holdingTowerId !== tapState.towerId) return false;
+  const tower = getHoldingTowerVisual(tapState.towerId);
+  if (!tower || normalizeRegionId(tower.regionId) !== getActiveMapRegionId()) return false;
+  suppressMapClick = true;
+  void selectClanTowerOnMap(tapState.towerId);
+  window.setTimeout(() => { suppressMapClick = false; }, 80);
+  return true;
+}
+
 function releaseMapPointer(pointerId) {
   try {
     mapFrame?.releasePointerCapture?.(pointerId);
@@ -39506,7 +39552,7 @@ function cancelMapGesture() {
   for (const id of activePointers.keys()) releaseMapPointer(id);
   activePointers.clear();
   panState = pinchState = null;
-  cityTapState = campTapState = armyTapState = null;
+  cityTapState = campTapState = holdingTowerTapState = armyTapState = null;
   suppressMapClick = true;
   cancelAnimationFrame(mainMapPinchAnimationFrame);
   mainMapPinchAnimationFrame = 0;
@@ -39520,7 +39566,7 @@ function endPan(event) {
   if (event.type === "pointercancel") cancelMapGesture();
   else finishTrackedMapPointer(event, { renderPanelAfter: false });
   if (event.type !== "pointerup"
-    || !(trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event))) renderPanel();
+    || !(trySelectTrackedHoldingTowerTap(event) || trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event))) renderPanel();
 }
 
 function preventNativeMapTouch(event) {
@@ -39784,14 +39830,25 @@ clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const cityButton = startedOnCommand ? null : resolveCityTapButton(event, getCityTapExcludedSourceId());
-  const campButton = cityButton || startedOnCommand ? null : resolveCampTapButton(event);
-  if (cityButton) trackCityTap(event, cityButton);
+  const towerButton = startedOnCommand ? null : resolveHoldingTowerTapButton(event);
+  const cityButton = startedOnCommand || towerButton ? null : resolveCityTapButton(event, getCityTapExcludedSourceId());
+  const campButton = cityButton || towerButton || startedOnCommand ? null : resolveCampTapButton(event);
+  if (towerButton) trackHoldingTowerTap(event, towerButton);
+  else if (cityButton) trackCityTap(event, cityButton);
   else if (campButton) trackCampTap(event, campButton);
-  if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
+  if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .holding-tower-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
 });
 cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
+  if (holdingTowerTapState?.pointerId === event.pointerId) {
+    const button = resolveHoldingTowerTapButton(event);
+    if (!hasMapTapMoved(holdingTowerTapState, event) && button?.dataset.holdingTowerId === holdingTowerTapState.towerId) {
+      event.stopPropagation();
+      finishTrackedMapPointer(event, { renderPanelAfter: false });
+      trySelectTrackedHoldingTowerTap(event, { requireSameTarget: true });
+    } else holdingTowerTapState = null;
+    return;
+  }
   if (campTapState?.pointerId === event.pointerId) {
     const campButton = resolveCampTapButton(event);
     const moved = hasMapTapMoved(campTapState, event);
@@ -39834,6 +39891,7 @@ cityLayer.addEventListener("click", event => {
     event.stopPropagation();
     cityTapState = null;
     campTapState = null;
+    holdingTowerTapState = null;
     void selectClanTowerOnMap(holdingTowerButton.dataset.holdingTowerId);
     return;
   }

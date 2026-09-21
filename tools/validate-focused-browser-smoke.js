@@ -430,6 +430,9 @@ async function main() {
     server.close();
     if (browserProcess && profilePath) await closeBrowser(client, browserProcess, profilePath);
   }
+  if (classification.files.some(item => ["game.js", "holding-tower-ui.css", "clan-tower-details-ui.js", "tools/validate-clan-tower-map-browser.js"].includes(item.path))) {
+    await require("./validate-clan-tower-map-browser").run();
+  }
 }
 
 if (require.main === module) {
