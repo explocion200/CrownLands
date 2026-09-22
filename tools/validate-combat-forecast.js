@@ -54,7 +54,7 @@ requiredClientSnippets.forEach(snippet => {
   if (!`${clientSource}\n${clientUiSource}`.includes(snippet)) throw new Error(`Missing combat forecast UI behavior: ${snippet}`);
 });
 
-const attackModalSource = readFunction(clientSource, "updateTroopSliderModal");
+const attackModalSource = readFunction(clientSource, "updateTroopSliderModal") + readFunction(clientSource, "updateTroopOrderPreview");
 [
   '<div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
   '<div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',

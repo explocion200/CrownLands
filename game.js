@@ -4359,6 +4359,7 @@ function updateHoldingTowerOrderAvailability() {
   const hasDestination = Boolean(target);
   const neutralBlockReason = session.mode === "attack-from" && target && getHoldingTowerTargetType(target) === "city"
     ? getNeutralCaptureBlockReason(target, "player") : "";
+  if (session.mapOrder && tower && target) updateHoldingTowerTroopOrderView(session, tower, target, amount || 0, Number(input?.max) || 0);
   const amountLabel = modalBody.querySelector("[data-tower-order-amount]");
   if (amountLabel) amountLabel.textContent = formatNumber(amount || 0);
   const remainingLabel = modalBody.querySelector("[data-tower-order-remaining]");
@@ -4371,6 +4372,10 @@ function updateHoldingTowerOrderAvailability() {
         : !validAmount ? "Choose a troop count within your available troops."
           : fromTower ? `${formatNumber(tower.ownStationedTroops)} of your troops stationed here.` : "Choose your city and the troops to send.";
   if (status) status.hidden = Boolean(session.mapOrder && allowed && hasDestination && !neutralBlockReason && validAmount);
+  if (session.mapOrder && status && !status.hidden) {
+    const previewNotice = modalBody.querySelector("#troopSliderActionNotice");
+    if (previewNotice) previewNotice.hidden = true;
+  }
   const submit = modalBody.querySelector("button[type='submit']");
   if (submit) submit.disabled = busy || !allowed || !validAmount || !hasDestination || Boolean(neutralBlockReason);
 }
@@ -4422,6 +4427,7 @@ function showHoldingTowerOrderComposer(tower, mode, selectedCandidate = null) {
   if (selectedCandidate) {
     modal.classList.remove("holding-tower-modal");
     modal.classList.add("troop-slider-modal");
+    mountHoldingTowerTroopOrderView(tower, mode, selectedCandidate, maxTroops, session);
   }
   const select = modalBody.querySelector("[data-tower-order-target]");
   const troopInput = modalBody.querySelector("[data-tower-order-troops]");
@@ -4445,16 +4451,23 @@ function showHoldingTowerOrderComposer(tower, mode, selectedCandidate = null) {
 
 function renderHoldingTowerMapOrder(tower, mode, candidate, maxTroops) {
   const incoming = mode === "reinforce", attack = mode === "attack-from";
-  const source = incoming ? candidate : tower, target = incoming ? tower : candidate;
-  const command = attack ? "Attack" : incoming ? "Send" : "Transfer";
   const amount = Math.max(1, Math.floor(maxTroops / 2));
-  return `<form class="troop-slider-panel report-shell" data-order-kind="${attack ? "attack" : "transfer"}" data-tower-order-form data-tower-order-mode="${mode}">
-    <header class="window-header"><img class="heading-art" src="assets/icons/${attack ? "skills/swordmastery.svg" : "troop-orders/marching-banner.svg"}" alt=""><div class="heading"><p>MILITARY ORDERS</p><h2>${command} troops</h2></div><span class="order-kind">${attack ? "Attack order" : "Friendly movement"}</span><button type="button" class="close-button" data-tower-order-back aria-label="Close Troop Orders">×</button></header>
-    <main class="order-body" tabindex="0" aria-label="Order details"><div class="order-route">${renderTroopOrderLocation(source, "From", "", attack)}<svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>${renderTroopOrderLocation(target, "To", incoming ? "Your clan's Tower" : attack ? "Enemy holding" : "Your city", attack)}</div>
-      <div class="order-columns selection-layout"><section class="force-column"><div class="force-summary"><div><p class="force-label">Troops to send</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong data-tower-order-amount>${formatNumber(amount)}</strong></div></div><p class="remaining"><b data-tower-order-remaining>${formatNumber(maxTroops - amount)}</b> of <span data-tower-order-max>${formatNumber(maxTroops)}</span> remain at source</p></div>
-      <input data-tower-order-target type="hidden" value="${escapeHtml(candidate.id)}"><input data-tower-order-troops class="troop-amount-slider troop-range" type="range" min="1" max="${Math.floor(maxTroops)}" value="${amount}" aria-label="Troops to send"><div class="troop-slider-limits range-labels"><span>1</span><span>Max <span data-tower-order-max>${formatNumber(maxTroops)}</span></span></div>
-      <p class="order-note">${incoming ? "These troops remain yours while defending the clan's Tower." : "Only your own stationed troops are available for this order."}</p></section></div>
-    </main><footer class="order-actions"><p class="order-action-notice" data-tower-order-status role="status"></p><button type="button" class="cancel-order" data-tower-order-back>Cancel</button><button type="submit" class="confirm-order ${attack ? "" : "friendly"}">${command}</button></footer></form>`;
+  const command = attack ? "Attack" : incoming ? "Send" : "Transfer";
+  const warning = attack ? getPeaceShieldAttackWarning(candidate) : "";
+  return `<form class="troop-slider-panel" data-tower-order-form data-tower-order-mode="${mode}">
+    <div class="troop-route-summary"><small><b id="troopSliderRemaining"></b></small><div class="destination"><small>Region · ${incoming ? "Your clan's tower" : attack ? "Enemy holding" : "Your city"}</small></div></div>
+    <div class="troop-slider-control">
+      <div class="troop-slider-readout"><span>Troops to ${attack ? "attack with" : "send"}</span><strong id="troopSliderAmount">${formatMarchesNumber(amount)}</strong></div>
+      <input type="hidden" data-tower-order-target value="${escapeHtml(candidate.id)}">
+      <input id="troopAmountSlider" data-tower-order-troops type="range" min="1" max="${Math.floor(maxTroops)}" value="${amount}" aria-label="Troops to ${attack ? "attack with" : "transfer"}">
+      <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">Max ${formatMarchesNumber(maxTroops)}</span></div>
+    </div>
+    <div id="troopSliderPreview" class="troop-slider-preview"></div>
+    <p class="tower-map-order-note">${incoming ? "Your reinforcements remain yours at the Clan Tower." : "Only your own stationed troops can be sent from this Clan Tower."} Travel and battle figures are estimates; the server confirms at dispatch.</p>
+    ${warning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(warning)}</span></div>` : ""}
+    <div id="troopSliderActionNotice" role="status" hidden></div>
+    <div class="troop-slider-actions"><p class="order-action-notice" data-tower-order-status role="status" hidden></p><button type="button" id="troopSliderCancel" data-tower-order-back>Cancel</button><button type="submit" id="troopSliderConfirm">${command}</button></div>
+  </form>`;
 }
 
 async function submitHoldingTowerOrder(tower, mode) {
@@ -10734,7 +10747,9 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
     }
   }
 
-  if (
+  if (modal?.open && holdingTowerModalSession?.view === "order") {
+    updateHoldingTowerOrderAvailability();
+  } else if (
     modal?.open
     && modal.classList.contains("troop-slider-modal")
     && activeTroopOrderKind === "attack"
@@ -31052,6 +31067,15 @@ function updateTroopSliderModal(source, target, route) {
     });
     return;
   }
+  updateTroopOrderPreview(source, target, route, {
+    orderKind, amount: selectedTroopAmount, attackProtection: activeAttackProtectionPreview,
+    combatForecast: activeCombatForecastPreview, retaliationId: activeRetaliationId, travelSummary,
+  });
+}
+
+function updateTroopOrderPreview(source, target, route, { orderKind, amount, attackProtection: attackProtectionPreview, combatForecast, retaliationId, travelSummary }) {
+  const actionNotice = modalBody.querySelector("#troopSliderActionNotice");
+  const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (isRallyTroopOrderKind(orderKind)) {
     const isJoin = orderKind === "rally_join";
     if (actionNotice) {
@@ -31060,7 +31084,7 @@ function updateTroopSliderModal(source, target, route) {
     }
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
-      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatMarchesNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
+      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatMarchesNumber(amount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
       ${travelSummary}
     `;
     return;
@@ -31068,7 +31092,7 @@ function updateTroopSliderModal(source, target, route) {
   if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
-      <div><span>Arrival</span><strong>${formatMarchesNumber(target.troops + selectedTroopAmount)} troops</strong></div>
+      <div><span>Arrival</span><strong>${formatMarchesNumber(target.troops + amount)} troops</strong></div>
       ${travelSummary}
     `;
     return;
@@ -31077,7 +31101,7 @@ function updateTroopSliderModal(source, target, route) {
   if (orderKind === "reinforce") {
     const ownStationed = getStationedReinforcementsForTarget(target)
       .find(entry => entry.ownerUid === getCurrentOnlineUid());
-    const afterArrival = Math.max(0, Math.floor(Number(ownStationed?.troops) || 0)) + selectedTroopAmount;
+    const afterArrival = Math.max(0, Math.floor(Number(ownStationed?.troops) || 0)) + amount;
     previewEl.className = "troop-slider-preview transfer reinforce";
     previewEl.innerHTML = `
       <div><span>Your stationed support</span><strong>${formatNumber(afterArrival)} troops</strong><small>Owned by you and merged at this holding</small></div>
@@ -31100,10 +31124,10 @@ function updateTroopSliderModal(source, target, route) {
     const preview = calculateBattlePreviewForTroops(
       source,
       scoutedTarget,
-      selectedTroopAmount,
+      amount,
       route,
       null,
-      activeCombatForecastPreview,
+      combatForecast,
       report
     );
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
@@ -31117,8 +31141,8 @@ function updateTroopSliderModal(source, target, route) {
 
   const report = getScoutReportForTarget(target);
   if (!report) {
-    const attackProtection = activeRetaliationId ? null : normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
-      || createAttackProtectionSnapshot(source, target, selectedTroopAmount, "player");
+    const attackProtection = retaliationId ? null : normalizeAttackProtectionSnapshot(attackProtectionPreview)
+      || createAttackProtectionSnapshot(source, target, amount, "player");
     const protectionNotice = getAttackProtectionNotice(attackProtection);
     const notice = modalBody.querySelector("#troopSliderActionNotice");
     if (notice) { notice.textContent = protectionNotice || ""; notice.hidden = !protectionNotice; }
@@ -31146,10 +31170,10 @@ function updateTroopSliderModal(source, target, route) {
   const preview = calculateBattlePreviewForTroops(
     source,
     scoutedTarget,
-    selectedTroopAmount,
+    amount,
     route,
-    activeAttackProtectionPreview,
-    activeCombatForecastPreview,
+    attackProtectionPreview,
+    combatForecast,
     report
   );
   const raid = preview.attackProtection?.mode === "raid";

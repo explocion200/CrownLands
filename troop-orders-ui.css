@@ -393,6 +393,8 @@
 #modal.troop-slider-modal .swift-march-launch-toggle i{display:none !important}
 #modal.troop-slider-modal .order-actions .order-action-notice{font:11px/1.4 'Segoe UI',sans-serif !important;color:#803f38 !important;margin:0 !important;padding:0 !important;min-width:0 !important;background:none !important;border:0 !important}
 #modal.troop-slider-modal .order-actions .order-action-notice[hidden]{display:block !important;visibility:hidden !important}
+#modal.troop-slider-modal [data-tower-order-form] .order-action-notice{grid-area:1/1 !important}
+#modal.troop-slider-modal [data-tower-order-status][hidden]{display:none !important}
 #modal.troop-slider-modal .order-actions .confirm-order{color:#fff1cf !important}
 #modal.troop-slider-modal .order-actions .cancel-order{grid-column:2 !important}
 #modal.troop-slider-modal .order-actions .confirm-order{grid-column:3 !important}

@@ -1,71 +1,57 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "eb6c5acf488268daedaa5f23500ffccb5f8e8e26",
+  "baseCommit": "815f348a0f2b141e0737a553d7755f51ac8b3a13",
   "coverage": [
-    {
-      "reason": "Isolated Incoming Threats approval preview and its focused browser validator. Exercise desktop and both landscape sizes, six states, filters including Legion, unknown disclosure, long text, crowd scrolling and last-row location controls, profiles, close/reopen, wrapper controls and shared report icon/background delivery. No actual-game, account, authoritative combat, backend or production entry path changes.",
-      "tests": [
-        "tools/validate-incoming-threats-draft.js"
-      ],
-      "paths": [
-        "docs/visual-qa/incoming-threats/index.html",
-        "docs/visual-qa/incoming-threats/preview.html",
-        "docs/visual-qa/incoming-threats/preview.js",
-        "docs/visual-qa/incoming-threats/draft.css",
-        "docs/visual-qa/incoming-threats/review.js",
-        "docs/visual-qa/incoming-threats/review.css",
-        "tools/validate-incoming-threats-draft.js"
-      ]
-    },
-    {
-      "reason": "Record the explicitly approved Incoming Threats presentation, integration, compatibility and verification scope; preserve all existing combat and notification policies.",
-      "tests": [],
-      "paths": [
-        "docs/visual-qa/incoming-threats/README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ]
-    },
     {
       "paths": [
         "game.js",
-        "index.html",
-        "incoming-threats-ui.js",
-        "incoming-threats-ui.css",
-        "tools/validate-incoming-threats-browser.js"
+        "troop-orders-ui.js",
+        "troop-orders-ui.css",
+        "tools/validate-clan-tower-orders-browser.js"
       ],
-      "reason": "Integrate only incoming threat rendering and location delegation. Actual-game browser coverage verifies all three desktop/landscape sizes, filters, Legion, private troop estimates, full own stats, pending snapshots, non-city labels, countdown DOM/focus/scroll stability, changed rows, failed map retry and duplicate clicks, and existing automatic expiry closure. Existing validators cover incoming privacy, region navigation, shared modal and profile routes, Kingdom Activity isolation and asset/cache budgets. Army subscriptions, combat rules and server code are unchanged, so emulators are not selected.",
+      "reason": "Use the shared city order presentation, power breakdown and scout-based forecast for personal Clan Tower attacks and transfers, including incoming support. Keep Tower dispatch and permission checks separate, disclose local route/combat estimates, refresh expired scout intelligence, and preserve city/rally renderers. Browser coverage checks real map entry paths, desktop and two mobile-landscape sizes, keyboard range input, exact personal counts, reachable dispatch, async cancellation, failed-send retry and duplicate guards. Shared route/reconnect, rally, combat math, report expiry and asset checks cover dependencies. No backend, authoritative rules, inventory or data writes changed, so no emulator suite is required.",
       "tests": [
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-active-operations.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-universal-profile-links.js",
-        "tools/validate-report-location-navigation.js",
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-interaction-health.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-report-system.js",
         "tools/validate-asset-performance-budgets.js"
       ]
     },
     {
       "paths": [
-        "tools/build-production-client.js",
-        "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-combat-forecast.js"
       ],
-      "reason": "Package and fingerprint the two new Incoming Threats modules in the game build, enforce their 40 KiB budget and exclude draft actions. Production artifact and shared shell/cache checks cover distribution dependencies.",
+      "reason": "Follow the compact forecast markup into the shared renderer while retaining every scout disclosure, protection, combat and report assertion.",
       "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-incoming-threats-browser.js"
+        "tools/validate-combat-forecast.js",
+        "tools/validate-clan-tower-orders-browser.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-incoming-army-estimates.js"
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
-      "reason": "Follow the estimate label into the extracted runtime renderer and its map delegation into the existing region-safe report navigator. Keep every privacy/estimate assertion and add real-browser disclosure and navigation coverage.",
+      "reason": "Stub only the new visual adapter in the existing isolated lifecycle harness; retain cancellation, membership/revision/session checks, personal troop limits, neutral caps and dispatch/retry assertions. The real adapter is covered by the browser tests.",
       "tests": [
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-report-location-navigation.js"
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-clan-tower-orders-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-clan-tower-map-browser.js"
+      ],
+      "reason": "Keep the existing map/rally integration coverage while allowing legitimate source-city troop production between source selection and opening the panel. The chosen maximum must remain bounded by the observed before/after personal source count.",
+      "tests": [
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clan-tower-orders-browser.js"
       ]
     }
   ]
