@@ -111,7 +111,7 @@
       const you = Boolean(row.ownerUid && row.ownerUid === options.viewerUid);
       return `<tr data-tower-participant="${esc(row.ownerUid)}"${you ? ' class="report-recipient"' : ""}><th scope="row"><div class="participant-identity">${row.ownerUid ? renderBattleKingdomFlag(`${row.battleRole}-${row.ownerUid}`, row.ownerName, "participant-roster-flag") : ""}<div>${row.ownerUid ? renderPlayerNameLink(row.ownerUid, row.ownerName) : esc(row.ownerName)}${you ? '<span class="recipient-label">You</span>' : ""}<small>${row.battleRole === "attacker" ? row.role === "leader" ? "Attacker · Rally leader" : "Attacker" : "Defender"}</small></div></div></th><td>${count(row.startingTroops)}</td><td><strong>${count(row.effectivePower)}</strong><small>${row.battleRole === "attacker" ? "Attack power" : "Defense power"}</small></td><td>${count(row.losses)}</td><td>${count(row.survivors)}</td></tr>`;
     }).join("")}</tbody></table><p class="notice">Battle-time troops and power for everyone involved. Casualties are before recovery; survivors are troops left at the battle. Tower walls contributed ${count(snapshot.siege?.startingWallPower)} defense power separately.</p>`;
-    return section("participants", "Battle participants", content, "troops", "Your results first");
+    return section("participants", "Participants", content, "troops", "Your results first");
   }
   function render(options) {
     const participants = towerParticipants(options);
