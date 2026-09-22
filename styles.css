@@ -7718,9 +7718,9 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   font-weight: 1000;
   line-height: 1;
 }
-.clan-hud-btn.has-rallies::before,
-.profile-tabs button.has-rallies::after {
-  content: attr(data-rally-count);
+.clan-hud-btn.has-clan-notifications::before,
+.profile-tabs button.has-clan-notifications::after {
+  content: attr(data-clan-notification-count);
   position: absolute;
   z-index: 4;
   min-width: 20px;
@@ -7735,14 +7735,14 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   box-shadow: 0 3px 8px rgba(0,0,0,.52);
   font: 900 .66rem/1 var(--font-ui);
 }
-.clan-hud-btn.has-rallies::before {
+.clan-hud-btn.has-clan-notifications::before {
   right: -5px;
   top: -4px;
 }
 .profile-tabs button {
   position: relative;
 }
-.profile-tabs button.has-rallies::after {
+.profile-tabs button.has-clan-notifications::after {
   right: -5px;
   top: -7px;
 }

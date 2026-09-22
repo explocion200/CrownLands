@@ -1,164 +1,64 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e6f52048108232177999601389d57f07defb8ccf",
+  "baseCommit": "fbecfd6663ab42cb5d9283d7c64b23899766144e",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/notification-delivery.js",
-        "functions/maintenance-deletes.js",
-        "functions/test/emulator-notification-delivery.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
-      ],
-      "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-notification-system.js",
-        "tools/validate-report-system.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-performance-bottlenecks.js",
-        "functions/test/emulator-notification-delivery.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-chat.js",
-        "tools/validate-daily-missions.js",
-        "functions/test/emulator-daily-missions.js"
-      ],
-      "reason": "Bind reports to their recipient and complete Tower scouting/returns; queue Tower defender alerts. Exercise partial push failures, invalid tokens, fresh receipts, concurrent leases, crash recovery and expired/deleted receipts. Cleanup splits oversized indexed deletes without retrying unrelated failures. Cover shared report, army, chat and transaction dependencies. User-requested full static and multiplayer regression runs with validation:full before release. Production memory-limit evidence requires 512 MiB and concurrency eight for Daily Mission event workers, with durable retries and instance limits preserved. Existing mission event and exactly-once reward emulator checks cover behavior."
-    },
-    {
-      "paths": [
         "game.js",
-        "tools/test-game-display.js",
-        "tools/validate-game-display-browser.js"
+        "styles.css",
+        "interface-theme.css",
+        "tools/validate-clan-notifications-browser.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/test-game-display.js",
-        "tools/validate-game-display-browser.js",
-        "tools/validate-performance-bottlenecks.js",
-        "tools/validate-responsive-runtime.js",
-        "tools/validate-responsive-browser.js",
+        "tools/validate-clan-notifications-browser.js",
+        "tools/validate-clans.js",
+        "tools/validate-clan-heraldry-v2.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-clan-tower-map-browser.js",
         "tools/validate-foreground-resume.js",
         "tools/validate-connection-recovery.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-incoming-army-estimates.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
       ],
-      "reason": "Restore fullscreen entry and X exit at desktop and landscape mobile sizes, including refusal, retry and native fullscreen help. Fault-inject a failed frame and verify continued scheduling, cache cleanup and bounded diagnostics. Exercise shared map, HUD, foreground and recovery dependencies. March labels preserve estimate bounds without locale construction or duplicate formatting; unchanged accessibility/navigation attributes are not rewritten. Incoming-estimate and map-interaction tests preserve private transfers, endpoint clearance and live troop values."
+      "reason": "Pending clan applications update the HUD and profile Clan tab for Leaders/Officers without read-to-dismiss behavior. Exercise live arrival, accept/reject, failed review, rally coexistence, role/clan/account/session changes, fallback loading and reconnect persistence without duplicate subscriptions. Render the complete saved heraldry in clan icons, editor map preview and Tower flags; test failed/draft/confirmed saves, old revision responses, live owner changes, neutralization and frozen v1 compatibility. Browser checks and inspected captures at 1440x900, 844x390 and 568x320 cover badges, touch targets and exact SVG/colour/finish parity. Shared Tower, clan, foreground/recovery and asset/cache contracts are affected. No backend, permission or data writes change, so no emulator suite is required."
     },
     {
       "paths": [
-        "service-worker.js",
-        "manifest.webmanifest",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-audio-delivery.js"
+        "tools/validate-clans.js",
+        "tools/validate-clan-heraldry-v2.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-audio-contract.js",
-        "tools/validate-audio-delivery.js"
+        "tools/validate-clans.js",
+        "tools/validate-clan-heraldry-v2.js",
+        "tools/validate-clan-notifications-browser.js"
       ],
-      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing. The audio fetch fixture models FetchEvent.waitUntil and waits for background caching before testing cache diagnostics; the separate blocked-cache regression verifies that responses themselves remain immediate. A reproduced itch-specific audio cache interception is fixed by resolving the bypass against the worker's app directory; nested MP3/OGG/WAV and Range requests bypass caching, while the nested manifest remains managed."
+      "reason": "Existing source assertions now recognize revision-preserving server-confirmed saves. Real-browser failed/successful saves and late older snapshots verify behavior; renderer contracts retain micro leaderboard budgets and v1 equality."
     },
     {
       "paths": [
-        "functions/package.json",
-        "tools/validate-stability-regressions.js"
+        "tools/validate-clan-tower-map-browser.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-notification-system.js"
+        "tools/validate-clan-tower-map-browser.js"
       ],
-      "reason": "Wire report, cleanup, push, frame and worker fault regressions into the full pretest gate. No dependencies change; the full regression also runs the existing production dependency audit."
+      "reason": "Use complete saved chief/quartered arrangements and explicit full rendering for Tower expectations. Preserve existing all-four-Towers desktop/touch/keyboard ownership, selection, orders, restrictions and modal checks."
     },
     {
       "paths": [
-        "tools/validate-notification-system.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-notification-system.js",
-        "tools/validate-stability-regressions.js",
-        "functions/test/emulator-notification-delivery.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
       ],
-      "reason": "Require delivery-helper wiring and Tower attack outbox creation; behavioral fault tests and real Firestore transactions supplement source-level assertions."
+      "reason": "Normalized Git-object comparison against fbecfd6663ab42cb5d9283d7c64b23899766144e measures game.js growing from 1,875,534 to 1,879,030 bytes (+3,496). Bound this feature at 4 KiB additional source allowance. Existing asset, total install-cache, request and FPS budgets are unchanged; all current asset/cache checks pass."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/fullscreen-landscape-launch.md",
-        "docs/GAME_STABILITY_AUDIT_2026_09_22.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record confirmed fullscreen restoration, observed defects, coverage, measurement limits and release verification. Prose does not change deferred gameplay design."
-    },
-    {
-      "paths": [
-        "tools/validate-report-system.js"
-      ],
-      "tests": [
-        "tools/validate-report-system.js"
-      ],
-      "reason": "The report autosave fixture must provide the current signed-in UID required by the existing account-switch guard. Assert that the save really executes before checking server-owned report exclusion; production authentication behavior is unchanged."
-    },
-    {
-      "paths": [
-        "tools/validate-authoritative-army-orders.js"
-      ],
-      "tests": [
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-release-gate.js",
-        "tools/test-targeted-validation.js"
-      ],
-      "reason": "The full regression exposed an obsolete workflow-command assertion left by the earlier targeted-validation migration. Verify the actual CI-to-runner-to-full-static chain and preserve the exhaustive route-parity requirement; do not change or bypass release gates."
-    },
-    {
-      "paths": [
-        "tools/validate-onboarding-guidance.js",
-        "tools/validate-onboarding-browser.js"
-      ],
-      "tests": [
-        "tools/validate-onboarding-guidance.js",
-        "tools/validate-onboarding-browser.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/test-player-identity-safety.js",
-        "tools/validate-player-identity-browser.js"
-      ],
-      "reason": "The earlier identity-protection fix requires a verified saved profile before first-claim guidance and a dedicated revision-checked identity write before projections. Model those actual APIs in source/browser fixtures, preserve fresh-claim redirect/replay and draft/retry checks, and assert that a missing profile cannot enable onboarding or a failed identity write reach projections. No runtime identity policy changes."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-rallies.js"
-      ],
-      "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/validate-holding-towers.js"
-      ],
-      "reason": "The earlier Tower control change added live clan ownership filtering. Supply the actual ally predicate and Tower snapshots in the Rally fixture, model the source as clan-owned, and assert that newly friendly Towers are excluded. Gameplay eligibility is unchanged."
-    },
-    {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "reason": "The full suite exposed an offline-shell allowance unchanged since 90b8f2e. Git object measurements prove 49,907 bytes already added by approved Tower/identity/fullscreen changes and 1,385 bytes from this audit. Bound this source growth at 52 KiB without dropping offline dependencies; retain runtime resource/FPS limits and report their failures separately."
+      "reason": "Record the user's confirmed application-alert persistence and complete saved-heraldry presentation decisions, marked pending merge and authorized deployment. No unrelated gameplay rules change."
     }
   ]
 }

@@ -258,14 +258,14 @@ async function main() {
         await prepare(0,viewport.height<560?.4:1,scenario);await select(tower);
         await evaluate(`(() => {
           const current=holdingTowerSnapshots.get(${JSON.stringify(tower.id)});
-          window.liveTowerClan={id:current.clanId,name:'Owner Saved Standard',shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,division:'split',charge:'wolf',primary:'#1d4352',secondary:'#d8bd78'},banner:{charge:'crown'}};
+          window.liveTowerClan={id:current.clanId,name:'Owner Saved Standard',heraldryRevision:2,shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,division:'pale',chargeLayout:'chief',finish:'battleworn',charge:'wolf',primary:'#24445f',secondary:'#d8bd78'},banner:{charge:'crown'}};
           clanPublicSnapshotCache.set(current.clanId,{id:current.clanId,name:'Old cached clan',shield:CLAN_HERALDRY_CONFIG.DEFAULT_V2});
           applyHoldingTowerClanSnapshot(current.id,current.clanId,liveTowerClan);
         })()`);
         const verifyOwnerFlags = async includeUi => {
           await ready("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent===liveTowerClan.name");
           const result=await evaluate(`(() => {
-          const expected=(size,label)=>{const node=document.createElement('div');node.innerHTML=renderClanHeraldry(liveTowerClan.shield,{size,label});return node.firstElementChild.outerHTML;};
+          const expected=(size,label)=>{const node=document.createElement('div');node.innerHTML=renderClanHeraldry(liveTowerClan.shield,{size,variant:'full',label});return node.firstElementChild.outerHTML;};
           const banner=cityLayer.querySelector('.holding-tower-clan-banner');
           const result={mapName:banner.querySelector('strong').textContent,map:banner.querySelector('.clan-heraldry-v2').outerHTML===expected('small',liveTowerClan.name+' clan flag')};
           if(!${includeUi})return result;
@@ -279,7 +279,7 @@ async function main() {
         await click(await elementPoint('[data-clan-tower-map-action="info"]'));
         await ready('modal.open && !!modalBody.querySelector(".clan-tower-details")');
         await verifyOwnerFlags(true);
-        await evaluate(`liveTowerClan={...liveTowerClan,name:'Updated Owner Standard',shield:{...liveTowerClan.shield,charge:'eagle',primary:'#7a2638'}};applyHoldingTowerClanSnapshot(${JSON.stringify(tower.id)},liveTowerClan.id,liveTowerClan)`);
+        await evaluate(`liveTowerClan={...liveTowerClan,heraldryRevision:3,name:'Updated Owner Standard',shield:{...liveTowerClan.shield,chargeLayout:'quartered',charge:'eagle',primary:'#7a2638'}};applyHoldingTowerClanSnapshot(${JSON.stringify(tower.id)},liveTowerClan.id,liveTowerClan)`);
         await verifyOwnerFlags(true);
         if(scenario==='owner') {
           await evaluate('toast.classList.remove("visible")');await delay(200);
