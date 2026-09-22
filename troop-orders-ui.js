@@ -1,4 +1,5 @@
 /* Approved order presentation. The existing slider, route and send handlers own all actions. */
+/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower */
 function troopOrderNumber(value) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
