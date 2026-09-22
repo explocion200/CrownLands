@@ -83,3 +83,11 @@ assert.equal(neutral.defender.ownerName, "Neutral defenders");
 assert.equal(neutral.participantUids.length, 3, "Neutral garrison became a report recipient");
 console.log("Clan Tower snapshots: all participants, exact individual power/losses, separate walls, mixed rally bonuses, zero-loss defenders and neutral privacy passed.");
 module.exports = { snapshot };
+
+const limitedSnapshot = context.createHoldingTowerBattleSnapshot({ ...input,
+  result: { ...input.result, captured: false, captureBlockedReason: "clan_tower_limit" } });
+assert.equal(limitedSnapshot.outcome, "victory");
+assert.equal(limitedSnapshot.combatRule.id, "clan_tower_raid");
+assert.equal(limitedSnapshot.combatRule.captureAllowed, false);
+assert.equal(limitedSnapshot.formula.captureRequiresAttackPowerAboveDefense, false);
+assert.deepEqual(JSON.parse(JSON.stringify(limitedSnapshot.totals)), snapshot.totals, "Ownership cap changed combat totals");

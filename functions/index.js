@@ -9691,6 +9691,11 @@ function createHoldingTowerBattleSnapshot({ armyId, tower, defense, defenderAllo
     attackerPackages: packages, attackerAllocation, result,
     outcome: result.success ? "victory" : "defeat", nowMs,
   });
+  if (result.captureBlockedReason === "clan_tower_limit") {
+    snapshot.combatRule = { id: "clan_tower_raid", captureAllowed: false,
+      breachRequired: false, maxDefenderLossPercent: 100 };
+    snapshot.formula.captureRequiresAttackPowerAboveDefense = false;
+  }
   // Rally members can have different launch bonuses. Sum their recorded contributions.
   const attackBreakdown = Object.fromEntries(Object.keys(snapshot.attackers[0]?.powerBreakdown || {})
     .map(key => [key, snapshot.attackers.reduce((total, row) => total + (row.powerBreakdown[key] || 0), 0)]));
@@ -27196,6 +27201,15 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
     }
     assertCurrentClan(attackingClanSnap.data() || {});
     const tower = normalizeCurrentHoldingTower(towerSnap, towerDefinition.id, nowMs);
+    // Read every active Core Tower in this transaction. Concurrent victories on
+    // different Towers must conflict and recheck ownership before either captures.
+    const otherTowerSnapshots = await Promise.all(HOLDING_TOWERS.TOWERS
+      .filter(definition => definition.id !== tower.id)
+      .map(definition => transaction.get(holdingTowerRef(definition.id))));
+    const alreadyOwnsTower = otherTowerSnapshots.some(snapshot => {
+      const owned = normalizeCurrentHoldingTower(snapshot, snapshot.id, nowMs);
+      return owned.ownerKind === "clan" && owned.clanId === rally.clanId;
+    });
     const participantSnapshots = getRallyAttackPackages(rally);
     const participantEntries = new Map();
     const liveParticipantProfiles = new Map();
@@ -27264,6 +27278,10 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
           nowMs,
         }
       );
+    const captured = result.success && !alreadyOwnsTower;
+    const captureBlockedReason = alreadyOwnsTower ? "clan_tower_limit" : "";
+    result.captured = captured;
+    result.captureBlockedReason = captureBlockedReason;
     const attackerAllocation = allocateRallyAttackerLosses(packages, result.attackerLosses);
     const rallyParticipantBreakdown = attackerAllocation.map(entry => ({
       uid: entry.uid,
@@ -27321,7 +27339,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
 
     const nextIncoming = tower.incomingRallyIds.filter(id => id !== armyId);
     let settledTower;
-    if (result.success) {
+    if (captured) {
       settledTower = HOLDING_TOWERS.conquerTower(tower, {
         id: rally.clanId,
         name: attackingClanSnap.data()?.name,
@@ -27344,7 +27362,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       const remainsEligible = entry.profileIsCurrent
         && safeString(profile.clanId, 128) === rally.clanId
         && isCurrentHoldingTowerMember(entry.member || {}, nowMs, rally.clanId);
-      const shouldStation = result.success && remainsEligible && allocation.survivors > 0;
+      const shouldStation = captured && remainsEligible && allocation.survivors > 0;
       if (entry.profileIsCurrent && entry.profileRef) {
         transaction.set(entry.profileRef, {
           committedRallyTroops: Math.max(0, getProfileCommittedRallyTroops(profile) - allocation.troops),
@@ -27406,6 +27424,8 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         targetName: tower.name,
         targetRegionId: tower.regionId,
         targetType: "tower",
+        captured,
+        captureBlockedReason,
         opponentUid: "",
         opponentName: tower.ownerKind === "clan" ? tower.clanName : "Neutral defenders",
         opponentFlag: null,
@@ -27425,6 +27445,8 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         towerGarrisonCounterSettledAtBattle: Boolean(entry.profileIsCurrent && shouldStation),
         returnReason: friendlyAtResolution
           ? "tower_became_friendly"
+          : result.success && alreadyOwnsTower
+            ? "clan_tower_limit"
           : result.success
             ? "tower_access_revoked"
             : "tower_rally_return",
@@ -27450,7 +27472,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       attackerReceiptIds.push(receiptRef.id);
     }
 
-    if (result.success) {
+    if (captured) {
       garrisonSnap.docs
         .filter(doc => isCurrentHoldingTowerGarrison(doc.data() || {}, tower.id, tower.clanId))
         .forEach(doc => transaction.delete(doc.ref));
@@ -27510,6 +27532,8 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         targetName: tower.name,
         targetRegionId: tower.regionId,
         targetType: "tower",
+        captured,
+        captureBlockedReason,
         opponentUid: rally.leaderUid,
         opponentName: normalizePlayerName(leaderProfile.playerName || rally.leaderName, "Ruler"),
         opponentFlag: leaderProfile.flag || rally.leaderFlag || null,
@@ -27536,7 +27560,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
     transaction.set(towerRef, holdingTowerStateWritePatch(settledTower, nowMs), { merge: true });
     const terminalParticipants = attackerAllocation.map(allocation => ({
       ...allocation,
-      status: result.success && allocation.survivors > 0
+      status: captured && allocation.survivors > 0
         ? participantEntries.get(allocation.uid)?.profileIsCurrent
           && safeString(participantEntries.get(allocation.uid)?.profile?.clanId, 128) === rally.clanId
           && isCurrentHoldingTowerMember(participantEntries.get(allocation.uid)?.member || {}, nowMs, rally.clanId)
@@ -27553,7 +27577,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       participantCount: 0,
       assembledTroops: 0,
       resolvedAtMs: nowMs,
-      outcome: result.success ? "tower_conquered" : friendlyAtResolution ? "tower_friendly_return" : "tower_held",
+      outcome: captured ? "tower_conquered" : result.success ? "tower_raid_victory" : friendlyAtResolution ? "tower_friendly_return" : "tower_held",
       settlementReceiptIds: attackerReceiptIds,
       settlementPending: attackerReceiptIds.length,
       updatedAtMs: nowMs,
@@ -27572,6 +27596,8 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       towerId: tower.id,
       towerName: tower.name,
       success: result.success,
+      captured,
+      captureBlockedReason,
       friendlyAtResolution,
       attackerLosses: result.attackerLosses,
       defenderLosses: result.defenderLosses,
@@ -27594,7 +27620,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       result: armyResult,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true }));
-    writeClanAudit(transaction, rally.clanId, rally.leaderUid, result.success ? "holding_tower_conquered" : "holding_tower_rally_resolved", {
+    writeClanAudit(transaction, rally.clanId, rally.leaderUid, captured ? "holding_tower_conquered" : "holding_tower_rally_resolved", {
       towerId: tower.id,
       towerName: tower.name,
       armyId,
@@ -31984,6 +32010,9 @@ async function settleReinforcementBattleReceipt(event) {
       gold: progress.gold,
       goldFloat: progress.goldFloat,
     });
+    if (holdingTowerDefense && receipt.captureBlockedReason === "clan_tower_limit") {
+      report.summary += " Tower ownership is unchanged: the attacking clan already owns a Clan Tower.";
+    }
     writeReport(transaction, contributorUid, report, economy.profileSnap, {
       character: progress.character,
       gold: progress.gold,
@@ -32524,6 +32553,9 @@ async function settleRallyBattleReceipt(event) {
       casualtyRecovery,
       nowMs,
     });
+    if (holdingTowerBattle && receipt.captureBlockedReason === "clan_tower_limit") {
+      report.summary += " No capture: your clan already owns a Clan Tower. Ownership is unchanged.";
+    }
     if (holdingTowerBattle) {
       Object.assign(report, {
         targetType: "tower",

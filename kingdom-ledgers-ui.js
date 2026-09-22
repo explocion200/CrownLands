@@ -9,7 +9,7 @@ const ATLAS_STRONGHOLD_BONUS_ICONS = Object.freeze({
  "core-v2-ironwatch-p0-p1": "assets/icons/skills/shieldwallDiscipline.svg"
 });
 // Decorative SVG overlays stay outside layout and never intercept map gestures.
-function atlasFeatureFrame(kind, citadel = false, bonusIcon = "") {
+function atlasFeatureFrame(kind, citadel = false, bonusIcon = "", hasClanFlag = false) {
  const corners = (art, inset = 0, bottomArt = art) => [
   `translate(${inset} ${inset})`,
   `translate(${262-inset} ${inset}) scale(-1 1)`,
@@ -27,8 +27,8 @@ function atlasFeatureFrame(kind, citadel = false, bonusIcon = "") {
    <rect x="13" y="13" width="236" height="177" fill="none" stroke="#c4cc9b" stroke-width="1.3"/>
    <path d="M38 7h72m42 0h72M38 196h186M7 42v119m248-119v119" fill="none" stroke="#94a477" stroke-width="1"/>
    ${corners(turret, 0, '<path d="M2 26V3h29v8H11v15Z" fill="#607557" stroke="#293e2d" stroke-width="1.5"/><path d="M5 24V6h23M13 7v3m8-3v3" fill="none" stroke="#c4cc9b" stroke-width="1"/><circle cx="7" cy="7" r="2" fill="#344b35"/>')}
-   <path d="M116 1h30v17l-15 12-15-12Z" fill="#354e36" stroke="#c4cc9b" stroke-width="1.5"/>
-   <path d="M123 19V8h4V4h3v4h3V4h3v4h3v11Zm6 0v-5h4v5" fill="#d8d9ad" stroke="#233825" stroke-width=".7"/>`;
+   ${hasClanFlag ? "" : `<g class="neutral-tower-crest"><path d="M116 1h30v17l-15 12-15-12Z" fill="#354e36" stroke="#c4cc9b" stroke-width="1.5"/>
+   <path d="M123 19V8h4V4h3v4h3V4h3v4h3v11Zm6 0v-5h4v5" fill="#d8d9ad" stroke="#233825" stroke-width=".7"/></g>`}`;
  } else if (kind === "camp") {
   const fitting = `<path d="M1 1h27v6H11l-4 4v17H1Z" fill="#dcb465" stroke="#755323" stroke-width="1.4"/>
    <path d="M3 26V3h23M10 9l4-4" fill="none" stroke="#fff0ba" stroke-width="1.2"/>

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f9f17e6fc27cf2f0fa833fc71ed448f5bb6f6feb",
+  "baseCommit": "c01652e2f5970025d41c02a75b4c3490bac57e26",
   "coverage": [
     {
       "paths": [
@@ -8,55 +8,37 @@
         "functions/test/emulator-clan-tower-battle-reports.js",
         "tools/validate-clan-tower-battle-reports.js"
       ],
-      "reason": "Save a private detailed snapshot atomically with Clan Tower rally resolution using actual individual attacker packages and defender casualty allocations. Test both sides' exact powers/losses/survivors, distinct shared wall power, launch bonuses, neutral garrisons, zero-loss defenders, and unchanged combat inputs. Real callable/emulator tests exercise three attackers and three defenders, offline receipt delivery, each participant's snapshot access, outsider denial, durable personal reports and resolution replay on wall-held, defeat and capture outcomes. Existing Tower lifecycle and normal city report gear tests cover the reused combat/report dependencies.",
       "tests": [
         "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-report-system.js",
+        "tools/validate-holding-towers.js",
         "functions/test/emulator-clan-tower-battle-reports.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-battle-report-gear-effects.js"
-      ]
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Read all four current-realm Towers atomically at rally resolution to enforce one clan holding, including concurrent victories and ownership changes during travel. Cover normal capture, damage-only victories against owned and neutral targets, survivor returns, unchanged wall/building levels on raids, stale-generation exclusion, exact personal reports and offline delivery. Existing Tower lifecycle exercises shared launch, membership, fortification, garrison and settlement dependencies."
     },
     {
       "paths": [
         "game.js",
-        "battle-report-detail-ui.js",
-        "battle-report-detail-ui.css",
-        "tools/validate-battle-report-detail.js",
+        "kingdom-ledgers-ui.js",
+        "kingdom-ledgers-ui.css",
+        "tools/validate-clan-tower-atlas-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/map-benchmark/ledgers-qa-runtime.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-atlas-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-report-system.js",
         "tools/validate-clan-tower-reports-browser.js"
       ],
-      "reason": "Preserve Tower snapshot identity and render every participant at the top of the actual battle-report dialog with its recipient first, saved flags, full numeric values and a shared-wall explanation. Exercise all six recipient viewpoints at desktop and two landscape-mobile sizes through the real report loader, normalization, renderer and flag hydration. Check overflow and scrolling. Existing report validators cover viewer-side orientation, escaping, historical unknowns, city/rally/camp reports, gear effects, navigation, retention and reconnect behavior.",
-      "tests": [
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-clan-tower-reports-browser.js",
-        "tools/validate-report-system.js"
-      ]
+      "reason": "Render complete current-owner heraldry instead of the Tower crest in real map cards. Check desktop and two landscape sizes, published flag edits, stale flag rejection, ownership changes, neutral fallback, overview visibility and camera preservation. Extend only the loopback map fixture. Preserve existing Tower subscription lifecycle and detailed report normalization/recipient ordering while explaining non-capturing victories."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the user's confirmed Clan Tower reporting and recipient-first requirement, with unchanged combat, privacy and retention rules. Implementation and delivery are verified by the focused report and emulator tests.",
-      "tests": []
-    },
-    {
-      "paths": [
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Allow 4 KiB beyond the existing 48 KiB full-report presentation cap for the complete Clan Tower participant roster and its scoped mobile styles. Continue enforcing the new 52 KiB maximum and all existing production artifact, manifest, asset and deployment contracts; no new art or dependencies.",
-      "tests": [
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/test/run-emulator-gates.js"
-      ],
-      "reason": "Register the new Tower report suite with the current Core expansion fixture so its callables and security rules run against the live topology rather than the legacy test world. The runner change is one suite entry; required targeted-validation and safe-update workflow tests remain enabled.",
-      "tests": [
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "tools/test-targeted-validation.js"
-      ]
+      "tests": [],
+      "reason": "Record the explicitly confirmed one-Tower ownership rule, normal battle results without capture at the limit, and owner heraldry on the map selector; identify that it supersedes the former four-Tower allowance and remains pending deployment."
     }
   ]
 }

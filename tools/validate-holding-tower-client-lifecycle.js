@@ -78,7 +78,7 @@ function harness() {
     isHoldingTowerTarget: target => target.kind === "holdingTower", isRewardCampTarget: () => false,
     getCityRegionId: () => "region", createOnlineArmyId: () => "army-1", getTargetRetaliation: () => null,
     applyServerArmyResult() {}, adoptServerArmyMovement() {}, upsertClanRallySnapshot() {}, renderSelectionChangeNow() {},
-    renderCities() {}, cityRenderSignature: "",
+    renderCities() {}, rerenderIslandSwitcherModalIfOpen() {}, cityRenderSignature: "",
   });
   vm.runInContext(`${declarations}\n${neutralRules}\n${mapOrders}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
   const tower = id => ({ id, name: id, kind: "holdingTower", ownerKind: "neutral", ownStationedTroops: 100 });

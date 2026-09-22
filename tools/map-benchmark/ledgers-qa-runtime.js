@@ -35,7 +35,33 @@
       showLeaderboardModal();
       if (surface === 'clans') modalBody.querySelector('[data-leaderboard-tab="clans"]').click();
     } else if (surface === 'maps') {
+      if (query.get('towerFlags') === '1') {
+        // Synthetic published owners; the actual map renderer and update hooks run.
+        const api = getOnlineApi();
+        getOnlineApi = () => ({ ...api, subscribeHoldingTowerState: () => () => {} });
+        ensureHoldingTowerMapSubscriptions();
+        const shield = { ...CLAN_HERALDRY_CONFIG.DEFAULT_V2, shape:'heater', division:'quartered',
+          primary:'#7a2638', secondary:'#24445f', charge:'lion', secondaryCharge:'eagle',
+          chargeColor:'#d8bd78', secondaryChargeColor:'#b7c3bf', borderColor:'#a18448',
+          chargeLayout:'quartered', finish:'weathered' };
+        const clans = [
+          {id:'atlas-amber',name:'The Amber Wardens',shield,heraldryRevision:3},
+          {id:'atlas-raven',name:'The Raven Guard',shield:{...shield,primary:'#253f3a',charge:'eagle'},heraldryRevision:2},
+          {id:'atlas-lion',name:'The Lion Court',shield:{...shield,primary:'#24445f',secondary:'#b99a58',chargeLayout:'single'},heraldryRevision:1},
+        ];
+        WORLD_HOLDING_TOWERS.forEach((visual,index) => {
+          const clan = clans[index];
+          applyHoldingTowerMapSnapshot(visual, clan ? { ownerKind:'clan',clanId:clan.id,clanName:clan.name,clanEmblem:clan.shield,ownershipRevision:1 } : null);
+          if(clan)applyHoldingTowerClanSnapshot(visual.id,clan.id,clan);
+        });
+        window.atlasTowerQa = { clans, shield };
+      }
       showIslandSwitcherModal();
+      if(query.get('towerFlags')==='1') {
+        const picker=getIslandMapPickerElement(),region=WORLD_REGIONS.find(r=>r.id===WORLD_HOLDING_TOWERS[0].regionId);
+        const pos=getIslandMapPosition(region),zoom=innerWidth<600?.7:1;
+        getIslandMapPickerCameraController(picker).renderNow({x:picker.clientWidth/2-pos.x*zoom,y:picker.clientHeight/2-pos.y*zoom,zoom});
+      }
     } else {
       const kind = query.get('holding') || 'gold';
       const names = { gold:'Aurum Keep', training:'Greybanner Hold', speed:'Swiftgate', defense:'Ironwatch', crown:'Crown Citadel' };
