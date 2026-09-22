@@ -43,6 +43,16 @@
         "tools/validate-holding-tower-client-lifecycle.js",
         "tools/validate-clan-tower-orders-browser.js"
       ]
+    },
+    {
+      "paths": [
+        "tools/validate-clan-tower-map-browser.js"
+      ],
+      "reason": "Keep the existing map/rally integration coverage while allowing legitimate source-city troop production between source selection and opening the panel. The chosen maximum must remain bounded by the observed before/after personal source count.",
+      "tests": [
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clan-tower-orders-browser.js"
+      ]
     }
   ]
 }

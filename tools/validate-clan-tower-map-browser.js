@@ -114,7 +114,10 @@ async function main() {
         await click(await elementPoint('[data-clan-tower-map-action="rally-attack"]'));
         await ready('modal.open && !!modalBody.querySelector("[data-order-kind=rally_create]")');
         assert.equal(await evaluate('selectedSourceId'),source.id);
-        assert.equal(await evaluate('Number(modalBody.querySelector("#rallyTroopNumber").max)'),Math.floor(source.troops));
+        const limit = await evaluate(`({maximum:Number(modalBody.querySelector('#rallyTroopNumber').max),current:Math.floor(cityById(${JSON.stringify(source.id)}).troops)})`);
+        // The city's production clock may tick between selecting it and opening the panel.
+        assert(limit.maximum >= Math.floor(source.troops) && limit.maximum <= limit.current,
+          `Rally limit must use the source city's troops at panel opening: ${JSON.stringify({source:source.troops,...limit})}`);
         assert.equal(await evaluate('!!modalBody.querySelector("[data-tower-order-target]")'),false);
         assert.match(await evaluate('modalBody.textContent'),/3.*Ready/);
         await ready('!modalBody.querySelector("#troopSliderConfirm").disabled');
