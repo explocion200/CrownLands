@@ -10,6 +10,29 @@
   --cl-mobile-ui-width: calc(100vw - var(--cl-mobile-ui-left) - var(--cl-mobile-ui-right));
 }
 
+#fullscreenBtn[hidden],
+#setupFullscreenBtn[hidden] {
+  display: none !important;
+}
+
+.rotate-warning #landscapeDisplayBtn {
+  min-height: 44px;
+  margin-top: 1rem;
+  padding: .65rem 1.2rem;
+}
+
+.rotate-warning p {
+  margin: .85rem 0 0;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.rotate-warning a {
+  color: inherit;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 900px), (max-height: 700px), (pointer: coarse) {
   /* Login/setup content must remain reachable when browser chrome, a notch,
      or the on-screen keyboard reduces the visual viewport. */

@@ -5,7 +5,7 @@
   "description": "A medieval real-time browser strategy game.",
   "start_url": "/play/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#17110d",
   "theme_color": "#5a262b",

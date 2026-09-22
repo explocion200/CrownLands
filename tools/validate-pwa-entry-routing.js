@@ -17,9 +17,12 @@ function verifyInstalledEntryRouting() {
   for (const [url, mode, expected] of [
     ["https://playcrownlands.com/", "browser", null],
     ["https://playcrownlands.com/", "standalone", "https://playcrownlands.com/play/"],
+    ["https://playcrownlands.com/?notification=incoming_army#report", "fullscreen", "https://playcrownlands.com/play/?notification=incoming_army#report"],
     ["https://playcrownlands.com/index.html?notification=incoming_army#report", "ios", "https://playcrownlands.com/play/?notification=incoming_army#report"],
     ["https://playcrownlands.com/play/", "standalone", null],
+    ["https://playcrownlands.com/play/", "fullscreen", null],
     ["https://game.playcrownlands.com/play/?notification=incoming_army#report", "standalone", "https://playcrownlands.com/play/?notification=incoming_army#report"],
+    ["https://game.playcrownlands.com/play/", "fullscreen", "https://playcrownlands.com/play/"],
     ["https://game.playcrownlands.com/", "browser", "https://playcrownlands.com/"],
     ["https://crownland.netlify.app/", "standalone", "https://playcrownlands.com/play/"],
     ["https://crownland.netlify.app/index.html", "browser", "https://playcrownlands.com/play/"],
@@ -34,7 +37,7 @@ function verifyInstalledEntryRouting() {
     vm.runInNewContext(appEntry, { URL, window: {
       location,
       navigator: { standalone: mode === "ios" },
-      matchMedia: () => ({ matches: mode === "standalone" }),
+      matchMedia: query => ({ matches: query === `(display-mode: ${mode})` }),
     } });
     assert.equal(destination, expected, `Installed entry routing failed for ${mode}: ${url}`);
   }
@@ -47,7 +50,7 @@ function verifyInstalledEntryRouting() {
 assert.equal(manifest.start_url, "/play/", "Installed Crownlands must launch the existing game-entry route.");
 assert.equal(manifest.id, "/play/", "The installed-app identity must remain anchored to the game entry.");
 assert.equal(manifest.scope, "/", "The installed app must keep the full Crownlands origin in scope.");
-assert.equal(manifest.display, "standalone", "Crownlands must launch as a standalone installed app.");
+assert.equal(manifest.display, "fullscreen", "Crownlands must request fullscreen installed launch, with the browser's standard standalone fallback.");
 assert.equal(manifest.orientation, "landscape", "The game PWA must retain landscape orientation.");
 assert.deepEqual(
   manifest.icons.map(icon => icon.src),

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Crownlands - Medieval Realm Conquest</title>
   <meta name="description" content="Crownlands is a medieval real-time browser strategy game." />
   <meta name="robots" content="noindex, nofollow" />
@@ -478,10 +478,12 @@
         </div>
       </section>
     </section>
-    <div class="rotate-warning" aria-hidden="true">
+    <div class="rotate-warning" role="region" aria-label="Landscape play">
       <div>
-        <strong>Rotate your phone</strong>
-        <span>This version is built for horizontal play.</span>
+        <strong>Play in landscape</strong>
+        <span id="landscapeDisplayHelp">Turn your device sideways, or let Crownlands try fullscreen landscape.</span>
+        <button id="landscapeDisplayBtn" type="button" class="primary-btn">Start landscape</button>
+        <p>If your device stays upright, turn off rotation lock and rotate it. For app-style play, install from <a href="https://playcrownlands.com/play/" target="_blank" rel="noopener">playcrownlands.com/play/</a>.</p>
       </div>
     </div>
   </main>
