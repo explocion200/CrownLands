@@ -177,7 +177,7 @@ function isStaticAssetRequest(url) {
 function isAudioMediaRequest(url) {
   return (
     url.origin === self.location.origin
-    && url.pathname.startsWith("/audio/")
+    && url.pathname.startsWith(`${APP_BASE_URL.pathname}audio/`)
     && /\.(?:mp3|ogg|wav)$/i.test(url.pathname)
   );
 }

@@ -72,7 +72,7 @@
         "tools/validate-audio-contract.js",
         "tools/validate-audio-delivery.js"
       ],
-      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing. The audio fetch fixture models FetchEvent.waitUntil and waits for background caching before testing cache diagnostics; the separate blocked-cache regression verifies that responses themselves remain immediate."
+      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing. The audio fetch fixture models FetchEvent.waitUntil and waits for background caching before testing cache diagnostics; the separate blocked-cache regression verifies that responses themselves remain immediate. A reproduced itch-specific audio cache interception is fixed by resolving the bypass against the worker's app directory; nested MP3/OGG/WAV and Range requests bypass caching, while the nested manifest remains managed."
     },
     {
       "paths": [
