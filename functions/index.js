@@ -23726,14 +23726,16 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
   const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.toRegionId);
   const fromId = safeString(data.fromId || data.sourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const toId = safeString(data.toId || data.targetCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const targetType = data.targetType === "camp" ? "camp" : "city";
+  const targetType = data.targetType === "tower" ? "tower" : data.targetType === "camp" ? "camp" : "city";
   if (!fromId || !toId || fromId === toId) {
     throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
   }
   if (!getServerWorldTargetIds(sourceRegionId).has(fromId)) {
     throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
   }
-  const allowedTargets = targetType === "camp"
+  const allowedTargets = targetType === "tower"
+    ? new Set(HOLDING_TOWERS.TOWERS.filter(tower => normalizeRegionId(tower.regionId) === targetRegionId).map(tower => tower.id))
+    : targetType === "camp"
     ? getServerWorldCampIds(targetRegionId)
     : getServerWorldTargetIds(targetRegionId);
   if (!allowedTargets.has(toId)) {
@@ -24064,9 +24066,10 @@ exports.previewArmyRoute = timedCallable(
     const uid = requireAuth(request);
     const nowMs = Date.now();
     const order = normalizeAuthoritativeRouteRequest(request.data || {});
+    if (order.targetType === "tower") assertHoldingTowerWorldActive();
     await requireActiveWorldRegionIds([order.sourceRegionId, order.targetRegionId]);
     const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
-    const targetRef = order.targetType === "camp"
+    const targetRef = order.targetType === "tower" ? holdingTowerRef(order.toId) : order.targetType === "camp"
       ? campRefForRegion(order.targetRegionId, order.toId)
       : cityRefForRegion(order.targetRegionId, order.toId);
     const playerRef = db.doc(`players/${uid}`);
@@ -24083,11 +24086,11 @@ exports.previewArmyRoute = timedCallable(
       const missingTargetCamp = order.targetType === "camp" && !targetSnap.exists
         ? createNeutralRewardCampState(getAuthoritativeRewardCampSeed(order.targetRegionId, order.toId))
         : null;
-      if (!targetSnap.exists && !missingTargetCamp) {
+      if (!targetSnap.exists && !missingTargetCamp && order.targetType !== "tower") {
         throw new HttpsError("not-found", "Destination was not found.");
       }
       let source = { id: sourceSnap.id, ...sourceSnap.data() };
-      const target = order.targetType === "camp"
+      const target = order.targetType === "tower" ? normalizeCurrentHoldingTower(targetSnap, order.toId, nowMs) : order.targetType === "camp"
         ? getRewardCampCombatTarget(targetSnap.exists
           ? { id: targetSnap.id, ...targetSnap.data() }
           : missingTargetCamp)

@@ -80,6 +80,24 @@ async function main() {
   assert.equal(neutral.permissions.createRallyAttack, true);
   const rallyId = `tower_capture_${randomUUID()}`, rallyRef = db.doc(`clans/${clanId}/rallies/${rallyId}`);
   await cityRef(leader.home).update({ troops: contribution, troopFloat: contribution });
+  const previewRequest = { fromId: leader.home.id, toId: tower.id, targetType: "tower", kind: "attack",
+    sourceRegionId: leader.home.regionId, targetRegionId: tower.regionId, requestedTroops: contribution };
+  const cityBeforePreview = (await cityRef(leader.home).get()).data();
+  const towerBeforePreview = (await towerRef.get()).data();
+  const preview = await call("previewArmyRoute", leader, previewRequest);
+  assert.equal(preview.targetCity.targetType, "tower");
+  assert.equal(preview.targetCity.id, tower.id);
+  assert.equal(preview.requestedTroops, contribution);
+  assert(preview.durationMs > 0 && preview.points.length >= 2, "Tower Rally needs a verified route before submission.");
+  assert.deepEqual((await cityRef(leader.home).get()).data(), cityBeforePreview, "Route preview changed the source garrison.");
+  assert.deepEqual((await towerRef.get()).data(), towerBeforePreview, "Route preview changed the Tower.");
+  const wrongSourcePreview = await invoke("previewArmyRoute", outsider, previewRequest);
+  assert.equal(wrongSourcePreview.error?.status, "PERMISSION_DENIED");
+  const wrongTowerRegion = towers.TOWERS.find(candidate => candidate.regionId !== tower.regionId).regionId;
+  const wrongRegionPreview = await invoke("previewArmyRoute", leader, { ...previewRequest, targetRegionId: wrongTowerRegion });
+  assert.equal(wrongRegionPreview.error?.status, "INVALID_ARGUMENT");
+  const inventedTowerPreview = await invoke("previewArmyRoute", leader, { ...previewRequest, toId: "unknown-tower" });
+  assert.equal(inventedTowerPreview.error?.status, "INVALID_ARGUMENT");
   const creationPayload = { clanId, rallyId, sourceType: "city", targetType: "tower",
     sourceRegionId: leader.home.regionId, targetRegionId: tower.regionId,
     army: { id: rallyId, kind: "attack", fromId: leader.home.id, toId: tower.id, troops: contribution, requestedTroops: contribution } };
