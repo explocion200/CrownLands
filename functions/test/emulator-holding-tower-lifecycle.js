@@ -147,18 +147,67 @@ async function main() {
     "Personal orders changed another player's garrison.");
   // New Tower services use donated Gold, one construction slot, and private per-player Shop usage.
   const treasuryRef = db.doc(`clans/${clanId}/treasury/${identity.resetGeneration}`);
-  await treasuryRef.set({...identity,balance:30_000_000_000,totalDonated:30_000_000_000,totalSpent:0,revision:1});
+  const readTreasury = actor => fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/${treasuryRef.path}`, {
+    headers: { authorization: `Bearer ${actor.token}` },
+  });
+  assert.equal((await readTreasury(member)).status,404,"An empty Treasury must allow a member listener before the first donation.");
+  assert.equal((await readTreasury(outsider)).status,403,"An outsider could listen to an empty Treasury.");
+  await cityRef(member.home).update({level:100,productionUpdatedAtMs:Date.now()});
+  await db.doc(`players/${member.uid}`).update({gold:1e9,goldFloat:1e9,economyUpdatedAtMs:Date.now()});
+  const emptyTreasury = await call("getClanTreasuryStatus",member);
+  assert.equal(emptyTreasury.treasury.balance,0);
+  assert(emptyTreasury.allowance.remaining >= 20_000_000,"The donation fixture needs enough raw production allowance.");
+  const donationPayload = {amount:20_000_000,operationId:`donation_${randomUUID()}`};
+  const donation = await call("donateClanTreasuryGold",member,donationPayload);
+  assert.equal(donation.balance,20_000_000);
+  assert.equal(donation.revision,1);
+  const personalAfterDonation = (await db.doc(`players/${member.uid}`).get()).data().gold;
+  assert(personalAfterDonation < 981_000_000,"The donation did not deduct personal Gold.");
+  assert.equal((await call("donateClanTreasuryGold",member,donationPayload)).duplicate,true);
+  assert.equal((await db.doc(`players/${member.uid}`).get()).data().gold,personalAfterDonation,"Donation replay charged personal Gold twice.");
+  assert.equal((await call("getClanTreasuryStatus",leader)).treasury.balance,20_000_000,"A member's donation was not available to the Leader.");
+  assert.equal((await readTreasury(member)).status,200);
+  assert.equal((await readTreasury(outsider)).status,403);
+  const treasuryWrite = await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/${treasuryRef.path}?updateMask.fieldPaths=balance`, {
+    method:"PATCH",headers:{authorization:`Bearer ${member.token}`,"content-type":"application/json"},
+    body:JSON.stringify({fields:{balance:{integerValue:"999999999"}}}),
+  });
+  assert.equal(treasuryWrite.status,403,"A member could write the Treasury directly.");
   await towerRef.update({wallIntegrityBps:10000,buildings:{shop:0,workshop:0,infirmary:0,training:0},buildingProject:null});
   const buildPayload = {towerId:tower.id,buildingId:"shop",operationId:`build_${randomUUID()}`};
   assert((await invoke("startClanTowerBuilding",member,buildPayload)).error,"A regular member could spend the Treasury.");
   const build = await call("startClanTowerBuilding",leader,buildPayload);
   assert.equal(build.tower.buildingProject.targetLevel,1);
-  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000);
+  assert.equal((await treasuryRef.get()).data().balance,15_000_000);
+  assert.equal(build.treasury.revision,2);
   assert.equal((await call("startClanTowerBuilding",leader,buildPayload)).duplicate,true);
-  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000,"Build retry charged Gold twice.");
+  assert.equal((await treasuryRef.get()).data().balance,15_000_000,"Build retry charged Gold twice.");
   assert((await invoke("startClanTowerBuilding",leader,{...buildPayload,buildingId:"workshop",operationId:`busy_${randomUUID()}`})).error);
   await towerRef.update({"buildingProject.progressStartedAtMs":Date.now()-1_801_000});
   assert.equal((await call("getHoldingTowerState",leader,{towerId:tower.id})).towers[0].buildings.shop,1);
+  const upgraded = await call("startClanTowerBuilding",leader,{...buildPayload,operationId:`upgrade_${randomUUID()}`});
+  assert.equal(upgraded.tower.buildingProject.targetLevel,2);
+  assert.equal(upgraded.treasury.balance,5_000_000);
+  assert.equal(upgraded.treasury.revision,3);
+  const wallPayload = {towerId:tower.id,levels:1,operationId:`walls_${randomUUID()}`};
+  assert((await invoke("queueHoldingTowerWallUpgrades",member,wallPayload)).error,"A regular member could buy walls.");
+  // Officers can spend the same Treasury, even while a building is being upgraded.
+  await db.doc(`clans/${clanId}/members/${actors[2].uid}`).update({role:"officer"});
+  await db.doc(`players/${actors[2].uid}`).update({clanRole:"officer"});
+  const walls = await call("queueHoldingTowerWallUpgrades",actors[2],wallPayload);
+  assert(walls.cost > 0);
+  assert.equal(walls.treasury.balance,5_000_000-walls.cost);
+  assert.equal(walls.treasury.revision,4);
+  assert.equal((await call("queueHoldingTowerWallUpgrades",actors[2],wallPayload)).duplicate,true);
+  const shared = (await call("getClanTreasuryStatus",member)).treasury;
+  assert.equal(shared.balance,walls.treasury.balance);
+  assert.equal(shared.totalDonated,20_000_000);
+  assert.equal(shared.totalSpent,15_000_000+walls.cost);
+  await towerRef.update({buildingProject:null});
+  const insufficient = await invoke("startClanTowerBuilding",leader,{...buildPayload,operationId:`unfunded_${randomUUID()}`});
+  assert.match(insufficient.error?.message || "",/Treasury/i,"An unaffordable upgrade was accepted.");
+  assert.equal((await treasuryRef.get()).data().balance,shared.balance,"A rejected upgrade spent donated Gold.");
+  console.log("Clan Treasury passed: real member donation and replay, Leader building/upgrade, Officer walls and replay, shared balance/ledger, insufficient funds and private read-only subscription access.");
   await towerRef.update({buildings:{shop:1,workshop:10,infirmary:10,training:10},buildingProject:null});
   const second=towers.TOWERS[1],secondRef=db.doc(`holdingTowers/${second.id}`);
   await secondRef.set({...towers.createNeutralTowerState(second.id),...identity,ownerKind:"clan",clanId,wallIntegrityBps:10000,buildings:{shop:10}});
@@ -240,6 +289,64 @@ async function main() {
   await call("resolveArmyOrder",leader,{armyId:trained.movement.id,routeRegionIds:trained.movement.routeRegionIds});
   const reports=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.filter(r=>r.battleId===trained.movement.id);
   assert.equal(reports.length,1,"Battle retry duplicated the defender recovery report.");
+  // NPC expansion limits apply before Tower troops leave, across all owned maps.
+  const layout = require("../core-expansion-world-layout.json");
+  const homeIds = new Set(actors.map(actor => actor.home.id));
+  const targetCities = layout.maps.find(map => map.id === tower.regionId).cities.filter(city => !homeIds.has(city.id));
+  const [npcTarget, rivalTarget] = targetCities;
+  const portfolio = layout.maps.filter(map => map.permanentCore && map.id !== tower.regionId)
+    .flatMap(map => map.cities).filter(city => !homeIds.has(city.id)).slice(0, 30);
+  assert.equal(portfolio.length, 30);
+  const fixtureCity = (city, ownerUid = "") => ({ ...city, ...identity, regionId: city.regionId,
+    ownerKind: ownerUid ? "player" : "neutral", ownerUid, isMainCity: false, level: 1,
+    troops: 10, troopFloat: 10, shieldUntilMs: 0, productionUpdatedAtMs: Date.now() });
+  await cityRef(npcTarget).set(fixtureCity(npcTarget));
+  await cityRef(rivalTarget).set(fixtureCity(rivalTarget, outsider.uid));
+  const setCityCount = async count => {
+    const batch = db.batch();
+    portfolio.forEach((city, index) => batch.set(cityRef(city), fixtureCity(city, index < count - 1 ? member.uid : "")));
+    await batch.commit();
+  };
+  const expectNpcBlocked = async pattern => {
+    const payload = order(tower, npcTarget, "attack", 100, "tower", "city");
+    const troopsBefore = (await garrisonRef(member).get()).data().troops;
+    const profileBefore = (await memberProfile.get()).data();
+    const result = await invoke("sendHoldingTowerArmyOrder", member, payload);
+    assert.equal(result.error?.status, "FAILED_PRECONDITION");
+    assert.match(result.error?.message || "", pattern);
+    assert.equal((await db.doc(`armies/${payload.army.id}`).get()).exists, false, "A blocked NPC order created a march.");
+    assert.equal((await garrisonRef(member).get()).data().troops, troopsBefore, "A blocked NPC order spent Tower troops.");
+    assert.deepEqual((await memberProfile.get()).data(), profileBefore, "A blocked launch changed the player's economy or protection.");
+  };
+  await setCityCount(29);
+  const preAttackTroops = (await garrisonRef(member).get()).data().troops;
+  const allowedNpc = await call("sendHoldingTowerArmyOrder", member, order(tower, npcTarget, "attack", 100, "tower", "city"));
+  assert.equal(allowedNpc.movement.toId, npcTarget.id, "A player at 29 cities could not launch an NPC attack.");
+  await setCityCount(30);
+  await expectNpcBlocked(/30 or more cities/);
+  await resolve(member, allowedNpc.movement);
+  const canceledNpc = (await db.doc(`armies/${allowedNpc.movement.id}`).get()).data();
+  assert.equal(canceledNpc.result.blocked, "neutral_capture_limit", "An in-flight Tower attack bypassed the updated city limit.");
+  assert.equal((await cityRef(npcTarget).get()).data().ownerKind, "neutral");
+  assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled Tower attack failed to return its troops.");
+  await resolve(member, allowedNpc.movement);
+  assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled attack retry duplicated returned troops.");
+  await setCityCount(31);
+  await expectNpcBlocked(/30 or more cities/);
+  const rivalAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, rivalTarget, "attack", 100, "tower", "city"));
+  assert.equal(rivalAttack.movement.toId, rivalTarget.id, "The neutral cap blocked a player-owned city attack.");
+  const campMap = layout.maps.find(map => map.permanentCore && map.camps?.length);
+  const camp = {...campMap.camps[0], regionId: campMap.id};
+  await db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${camp.regionId}/camps/${camp.id}`).set({ ...camp, ...identity, ownerUid: "", holderUid: "" });
+  const campAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 100, "tower", "camp"));
+  assert.equal(campAttack.movement.targetType, "camp", "The neutral cap blocked a reward Camp attack.");
+  const cappedMove = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 100, "tower", "city"));
+  assert.equal(cappedMove.movement.kind, "transfer", "The neutral cap blocked a friendly transfer.");
+  await setCityCount(29);
+  const currentDaily = (await memberProfile.get()).data().daily;
+  await memberProfile.update({daily: {...currentDaily, date: new Date().toISOString().slice(0, 10), neutralCaptures: 30}});
+  await expectNpcBlocked(/Daily neutral capture limit reached/);
+  console.log("Tower NPC cap passed: 29-city launch, 30/31-city rejection before troop/economy changes, cross-map count, in-flight cancellation/replay, daily cap, and allowed player-city/Camp/transfer orders.");
   console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
   console.log("Tower lifecycle passed: callable rally creation/replay, two-player rejection for neutral and clan-owned Towers, three-player launch and capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }

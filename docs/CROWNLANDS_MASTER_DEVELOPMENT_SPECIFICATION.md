@@ -633,6 +633,7 @@ The current Core mappings are fixed:
 - Surviving attackers remain in the Tower after capture.
 - All valid defenders fight together.
 - A Tower may launch solo attacks, rallies, and scouting against normal valid targets. Tower conquest itself remains rally-only.
+- Tower-origin attacks on regular neutral NPC cities use the same expansion limits as city-origin attacks: block launch at 30 or more owned regular cities or after 30 neutral captures that player-local day. Recheck at arrival if eligibility changes during travel. Player-owned city attacks, scouting, troop transfers and objective targets retain their existing rules.
 - When a member leaves or is removed from the clan, that member’s surviving Tower troops return to the member’s Main City.
 - Clan disbanding neutralizes and resets controlled Towers.
 
@@ -691,7 +692,7 @@ New wall jobs targeting level T use `10 + 2 × (T − 2)` base minutes, multipli
 
 #### Clan Shop catalogue and allowances
 
-The Shop is accessible only through an owned Tower’s Shop building or Buildings tab; no personal garrison is required. The selected Tower must have a completed Shop to buy. Members can browse immediately and buy after 24 hours in the clan. Every built Shop uses the highest completed Shop level among Towers currently owned by that clan. Losing the highest-level Shop lowers the catalogue and stock limits immediately.
+The Shop is accessible through an owned Tower’s Store map button, Shop building or Buildings tab; no personal garrison is required. The Store map button is enabled only after that selected Tower completes its Shop building. The selected Tower must have a completed Shop to buy. Members can browse immediately and buy after 24 hours in the clan. Every built Shop uses the highest completed Shop level among Towers currently owned by that clan. Losing the highest-level Shop lowers the catalogue and stock limits immediately.
 
 | Item | Unlock level | Initial allowance | Increased allowance |
 | --- | ---: | --- | --- |
@@ -727,9 +728,11 @@ Place the Shop left of the Tower, Workshop right, Infirmary lower-left and Train
 
 ### Tower scouting and presentation
 
-- All Clan Tower attacks and troop movement are initiated from the tower's controls on the map, like cities, outside the Clan Tower details window. Do not place Attack, Move, Reinforce or Rally controls or an embedded troop-order composer inside the details UI. Map orders use the normal city troop-order design adapted to the Tower origin; outgoing orders select only the player's personally stationed troops, never the combined clan garrison. The details garrison displays each player's name, saved personal flag and stationed troop count.
-- **September 21, 2026:** Clan Tower map action icons keep a constant screen size throughout zooming. Arrange the controls around the Tower's base using the established city action-button treatment, with spacing that follows the Tower artwork.
-- Display the controlling clan's saved flag/heraldry beside the Clan Tower name in the persistent window header, visible on every tab, and beside the controlling clan's name in Overview. Neutral towers have no clan flag.
+- Clan Tower troop orders are initiated from map controls, outside the Clan Tower details window: Send from the Tower for outgoing troops, or Send from an owned city for incoming troops. Do not place Attack, Move, Reinforce or Rally controls or an embedded troop-order composer inside the details UI. Map orders use the normal city troop-order design adapted to the Tower; outgoing orders select only the player's personally stationed troops, never the combined clan garrison. The details garrison displays each player's name, saved personal flag and stationed troop count.
+- **September 21, 2026:** Clan Tower map action buttons use a compact 56px size, reduced from 64px, and keep a constant screen size throughout zooming. Arrange the controls around the Tower's base using the established city action-button treatment, with spacing that follows the Tower artwork.
+- **Owned-Tower controls, revised September 21, 2026:** Show Store, Send and Info around the Tower on the map. Send works like city Send: select a destination on the map, then choose a troop count using the city troop-order presentation. An owned city means transfer; a valid enemy city or reward Camp means attack. Do not show Move/Attack/Rally mode choices or a separate Reinforce button. To send troops into an owned clan Tower, use Send from an owned city and select the Tower. Outgoing orders use only the member's personally stationed troops. Preserve the 24-hour military participation probation, normal attack restrictions and neutral expansion limits. Store opens that Tower's Clan Shop and stays disabled with an explanation until its local Shop building is complete; no garrison is required to browse. Info opens the existing details window; troop orders remain outside it. Neutral and rival Tower controls retain their existing conquest rules.
+- Show the controlling clan's full name and saved heraldry above every owned Tower, even when unselected, using the city-label treatment. Keep the Tower name at its base. Ownership changes, neutralization and membership changes must refresh the banner and clear stale order permissions. Neutral Towers show no clan banner. This presentation update does not change troop ownership, balance or building rules.
+- Display the controlling clan's saved flag/heraldry beside the Clan Tower name in the persistent window header, visible on every tab, and beside the controlling clan's name in Overview. Both the map banner and window flags follow the current owning clan's saved heraldry, including later flag edits; never substitute the viewer's clan or an outdated capture-time design. Neutral towers have no clan flag.
 - There is no separate `Scout From Tower` action and no manual Tower-origin selector.
 - The normal target-driven Scout action automatically selects the closest eligible origin from either the player's personally owned Cities or a clan Holding Tower where that player has personally stationed troops and remains Tower-eligible.
 - Tower screens use the established Crownlands burgundy manuscript headers, parchment and ivory surfaces, tan information boxes, dark readable ink, and existing action-button treatments. Desktop and 844×390 landscape layouts must remain readable.

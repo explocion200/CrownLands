@@ -60,10 +60,14 @@
     const add=(allowed,action,label,icon)=>{if(allowed)actions.push({action,label,icon});};
     add(!t.ownerMember&&p.scout,"scout","Scout","scout");
     add(!t.ownerMember&&p.createRallyAttack,"rally-attack","Rally Attack","attack");
-    add(t.ownerMember&&p.reinforce,"reinforce","Reinforce","reinforcement");
-    add(t.ownerMember&&p.withdrawOwn,"withdraw","Move Mine","transfer");
-    add(t.ownerMember&&p.attackFrom,"attack-from","Attack","attack");
-    add(t.ownerMember&&p.rallyFrom,"rally-from","Rally","attack");
+    if(t.ownerMember) {
+      const probation=t.eligibility?.eligible===false;
+      const unavailable=probation?"Military actions unlock after 24 hours in the clan.":"Tower permissions are syncing. Try again shortly.";
+      const canSend=Boolean(Number(t.ownStationedTroops)>0&&(p.withdrawOwn||p.attackFrom));
+      const hasStore=Number(t.buildings?.shop)>0;
+      actions.push({action:"store",label:"Store",icon:"shop",disabled:!hasStore,reason:hasStore?"":"Complete this Tower's Clan Shop building to open the Store."});
+      actions.push({action:"send",label:"Send",icon:"forward",disabled:!canSend,reason:canSend?"":probation?unavailable:Number(t.ownStationedTroops)===0?"Station your own troops here before sending orders.":unavailable});
+    }
     return actions;
   }
   global.CrownlandsClanTowerDetailsUi=Object.freeze({render,mount,mapActions});

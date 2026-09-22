@@ -1,4 +1,5 @@
 /* Approved order presentation. The existing slider, route and send handlers own all actions. */
+/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower */
 function troopOrderNumber(value) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
@@ -8,10 +9,11 @@ function troopOrderContribution(value, signed = false) {
   return `${Math.abs(value - rounded) > 0.000001 ? "≈" : ""}${signed ? "+" : ""}${troopOrderNumber(rounded)}`;
 }
 function renderTroopOrderLocation(city, label, description, showLevel) {
+  const tower = isHoldingTowerTarget(city);
   const camp = isRewardCampTarget(city);
   const level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level || 1);
-  const art = camp ? city.artSrc || getCampConfigForType(city.campType).artSrc : isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(level));
-  return `<div class="order-location ${label === "To" ? "destination" : ""}"><img class="location-art" src="${escapeHtml(art)}" alt=""><div class="location-copy"><span class="location-label">${label}</span><div class="location-title"><h2>${escapeHtml(city.name)}</h2>${showLevel && !camp ? `<span class="location-level">Level ${formatNumber(level)}</span>` : ""}</div><p>${escapeHtml(getRegionLabel(getCityRegionId(city)))}</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}</div></div>`;
+  const art = tower ? city.artSrc || CLAN_TOWER_MAP_ART : camp ? city.artSrc || getCampConfigForType(city.campType).artSrc : isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(level));
+  return `<div class="order-location ${label === "To" ? "destination" : ""}"><img class="location-art" src="${escapeHtml(art)}" alt=""><div class="location-copy"><span class="location-label">${label}</span><div class="location-title"><h2>${escapeHtml(city.name)}</h2>${showLevel && !camp && !tower ? `<span class="location-level">Level ${formatNumber(level)}</span>` : ""}</div><p>${escapeHtml(getRegionLabel(getCityRegionId(city)))}</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}</div></div>`;
 }
 function decorateTroopOrderView(source, target, orderKind, commandLabel) {
   const panel = modalBody.querySelector(".troop-slider-panel");

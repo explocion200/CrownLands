@@ -21643,6 +21643,7 @@ exports.donateClanTreasuryGold = timedCallable(
         balance: donation.treasury.balance,
         totalDonated: donation.treasury.totalDonated,
         totalSpent: donation.treasury.totalSpent,
+        revision: treasury.revision + 1,
         allowance: donation.allowance,
         utcDate,
         serverTimeMs: nowMs,
@@ -21746,6 +21747,7 @@ async function applyHoldingTowerTreasurySpend(request, operationType, applySpend
     const result = {
       ok: true,
       operationType,
+      clanId,
       tower: {
         ...getHoldingTowerPublicState(spend.state, nowMs),
         upgradeQueue: spend.state.upgradeQueue,
@@ -21758,6 +21760,7 @@ async function applyHoldingTowerTreasurySpend(request, operationType, applySpend
         balance: spend.treasuryBalance,
         totalDonated: treasury.totalDonated,
         totalSpent,
+        revision: treasury.revision + 1,
       },
       serverTimeMs: nowMs,
     };
@@ -25838,6 +25841,11 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
       const producedSource = sourceType === "city" ? getEconomyCityByRef(economy, sourceRef) : null;
       if (producedSource?.city) source = producedSource.city;
       const profileAfter = economy.profileAfter || profile;
+      const neutralCaptureBlockReason = kind === "attack" && targetType === "city"
+        ? getServerNeutralCaptureBlockReason(economy, profileAfter, target) : "";
+      if (neutralCaptureBlockReason) {
+        throw new HttpsError("failed-precondition", neutralCaptureBlockReason);
+      }
       const availableTroops = sourceType === "tower"
         ? Math.max(0, Math.floor(safeNumber(garrisonSnap?.data()?.troops, 0)))
         : Math.max(0, Math.floor(safeNumber(source.troops, 0)));

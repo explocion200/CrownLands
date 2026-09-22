@@ -48,8 +48,12 @@ async function main() {
       window.towerMapScenario = 'neutral';
       getOnlineApi = () => ({ ...api, getHoldingTowerState: async ({towerId}) => {
         towerMapReads.push(towerId);
-        const snapshot = HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(towerId),towerMapScenario);
-        if (towerMapScenario === 'ineligible') snapshot.permissions = {inspect:true};
+        const snapshot = HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(towerId),towerMapScenario.startsWith('store')?'owner':towerMapScenario);
+        snapshot.buildings={shop:towerMapScenario==='store'||towerMapScenario==='store-probation'?1:0};
+        if(towerMapScenario==='store-building')snapshot.buildingProject={buildingId:'shop',targetLevel:1,remainingMs:10000};
+        if(towerMapScenario==='store-probation'){snapshot.permissions={inspect:true};snapshot.eligibility={eligible:false,remainingMs:3600000};}
+        if (towerMapScenario === 'ineligible') {snapshot.permissions = {inspect:true};snapshot.eligibility={eligible:false,remainingMs:3600000};}
+        if (towerMapScenario === 'empty') {snapshot.ownStationedTroops=0;snapshot.permissions={inspect:true,reinforce:true};}
         return {worldActive:true,towers:[snapshot]};
       }, subscribeHoldingTowerState: () => () => {}, getClanTowerShop: undefined,
       createClanRally: async payload => {towerMapOrders.push(payload);return {ok:true};},
@@ -76,10 +80,10 @@ async function main() {
     const prepare = async (index, level, scenario = "neutral") => {
       const tower = await evaluate(`(async()=>{
         if(modal.open)modal.close();clearSelection(false);
-        towerMapScenario=${JSON.stringify(scenario)};holdingTowerSnapshots.clear();
+        towerMapScenario=${JSON.stringify(scenario)};holdingTowerSnapshots.clear();holdingTowerClanIdentities.clear();
         const tower=HOLDING_TOWER_DEFINITIONS[${index}];
         await ensureRegionDefinitionLoaded(tower.regionId);
-        zoom=${level};centerOnRegion(tower.regionId);renderAll();
+        zoom=${level};centerOnRegion(tower.regionId);releaseSelectionRenderDelay();renderAll();
         return {id:tower.id,name:tower.name};
       })()`);
       await delay(180);
@@ -94,8 +98,18 @@ async function main() {
       assert.equal(await evaluate(`cityLayer.querySelector('[data-holding-tower-id="${tower.id}"]').getAttribute('aria-pressed')`), "true");
     };
     const submitOrder = async (tower, mode) => {
-      await click(await elementPoint(`[data-clan-tower-map-action="${mode}"]`));
+      const outgoing = ['withdraw','attack-from'].includes(mode);
+      if (outgoing) {
+        await click(await elementPoint('[data-clan-tower-map-action="send"]'));
+        await ready(`sendMode && selectedSourceId===${JSON.stringify(tower.id)} && !modal.open`);
+        await evaluate(`selectCity(getHoldingTowerComposerTargets(${JSON.stringify(mode)},holdingTowerSnapshots.get(${JSON.stringify(tower.id)})).find(target=>getHoldingTowerTargetType(target)==='city').id)`);
+      } else if (mode==='reinforce') {
+        await evaluate('beginSendMode(playerCities().find(city=>city.troops>0).id)');
+        await click(await elementPoint(`[data-holding-tower-id="${tower.id}"]`));
+      } else await click(await elementPoint(`[data-clan-tower-map-action="${mode}"]`));
       await ready(`modal.open && !!modalBody.querySelector('[data-tower-order-mode="${mode}"]')`);
+      assert.equal(await evaluate("!!modalBody.querySelector('[data-tower-send-mode]')"),false,'Tower orders must infer their action from the map destination.');
+      if(mode!=='rally-attack')assert(await evaluate("!!modalBody.querySelector('.troop-slider-panel .troop-range')"),'Map orders must use the city troop-slider presentation.');
       if (mode === "rally-attack") assert(await evaluate('modalBody.textContent.includes("At least 3 eligible clan members, including the leader")'));
       await delay(350);
       const expected = await evaluate(`({candidate:modalBody.querySelector('[data-tower-order-target]').value,troops:Number(modalBody.querySelector('[data-tower-order-troops]').value),count:towerMapOrders.length})`);
@@ -120,6 +134,8 @@ async function main() {
       } else {
         assert.equal(payload.sourceType, "tower"); assert.equal(payload.army.fromId, tower.id);
         assert.equal(payload.army.toId, expected.candidate);
+        assert.equal(payload.army.kind, mode === 'withdraw' ? 'transfer' : 'attack');
+        assert(expected.troops <= 685200, 'Send used the combined clan garrison.');
       }
     };
     const verifyZoom = async () => {
@@ -137,7 +153,7 @@ async function main() {
       })()`);
       for (const sample of measurements) {
         for (const rect of sample.rects) {
-          assert(Math.abs(rect.width-64)<0.2 && Math.abs(rect.height-64)<0.2,`Tower button scaled during camera zoom: ${JSON.stringify(sample)}`);
+          assert(Math.abs(rect.width-56)<0.2 && Math.abs(rect.height-56)<0.2,`Tower button size changed from its compact 56px during camera zoom: ${JSON.stringify(sample)}`);
         }
         for(let i=0;i<sample.rects.length;i++)for(let j=i+1;j<sample.rects.length;j++) {
           const a=sample.rects[i],b=sample.rects[j];
@@ -180,15 +196,134 @@ async function main() {
       }
       const tower=await prepare(0,1,"owner");
       await select(tower);
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['info','store','send']);
+      assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
       await verifyZoom();
       for (const level of [0.6, 1]) {
         await evaluate(`zoom=${level};centerOnRegion(HOLDING_TOWER_DEFINITIONS[0].regionId);renderAll()`);
         await delay(180);
         await elementPoint('[data-clan-tower-map-action="info"]');
       }
-      for (const mode of ["reinforce","withdraw","attack-from","rally-from"]) await submitOrder(tower,mode);
+      for (const mode of ["reinforce","withdraw","attack-from"]) {
+        await prepare(0,1,'owner');await select(tower);
+        await submitOrder(tower,mode);
+      }
+      await prepare(0,1,'owner');await select(tower);
+      await click(await elementPoint('[data-clan-tower-map-action="send"]'));
+      await ready('sendMode && !modal.open');
+      await evaluate(`(() => {
+        window.towerCityCountGetter=getOwnedRegularCityCountForDisplay;
+        getOwnedRegularCityCountForDisplay=()=>29;
+        const target=getHoldingTowerComposerTargets('attack-from',holdingTowerSnapshots.get(${JSON.stringify(tower.id)})).find(city=>city.owner==='neutral'&&getHoldingTowerTargetType(city)==='city');
+        if(!target)throw Error('Missing neutral city fixture');
+        selectCity(target.id);
+      })()`);
+      for (const count of [29,30,31]) {
+        await evaluate(`getOwnedRegularCityCountForDisplay=()=>${count};updateHoldingTowerOrderAvailability()`);
+        assert.equal(await evaluate("modalBody.querySelector('button[type=submit]').disabled"),count>=30,`Tower NPC button used the wrong boundary at ${count} cities.`);
+        if(count>=30) {
+          assert.match(await evaluate("modalBody.querySelector('[data-tower-order-status]').textContent"),/30 or more cities/);
+          const sent=await evaluate('towerMapOrders.length');
+          await evaluate("modalBody.querySelector('[data-tower-order-form]').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
+          assert.equal(await evaluate('towerMapOrders.length'),sent,'A forced form submission bypassed the NPC limit.');
+        }
+      }
+      await evaluate('toast.classList.remove("visible");modalBody.scrollTop=0');
+      await delay(250);
+      const capDirectory=require('node:path').resolve(__dirname,'../tmp/clan-tower-controls');
+      fs.mkdirSync(capDirectory,{recursive:true});
+      const capShot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').join(capDirectory,`npc-limit-${viewport.width}.png`),Buffer.from(capShot.data,'base64'));
+      await evaluate('getOwnedRegularCityCountForDisplay=towerCityCountGetter;delete window.towerCityCountGetter;modal.close()');
       await prepare(0,1,"ineligible");await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),["info"],"Server-denied actions were exposed.");
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['info','false'],['store','true'],['send','true']]);
+      await click(await elementPoint('[data-clan-tower-map-action="send"]'));
+      assert.equal(await evaluate('modal.open'),false,'A probation member opened troop orders.');
+      await prepare(0,1,"empty");await select(tower);
+      assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),'true');
+      assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=send]').getAttribute('aria-disabled')"),'true');
+      for(const scenario of ['store-building','store','store-probation']) {
+        await prepare(0,.4,scenario);await select(tower);
+        assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),scenario==='store-building'?'true':'false');
+        await click(await elementPoint('[data-clan-tower-map-action="store"]'));
+        if(scenario==='store-building')assert.equal(await evaluate('modal.open'),false,'An unfinished Store opened.');
+        else {
+          await ready("modal.open && !!modalBody.querySelector('#clanTower-buildingsPanel:not([hidden]) .ctb-shop')");
+          assert.equal(await evaluate('holdingTowerBuildingSelection'),'shop');
+          await evaluate('modal.close()');
+        }
+      }
+      // Live owner heraldry overrides both capture-time flags and an older clan cache.
+      for (const scenario of ['owner','enemy']) {
+        await prepare(0,viewport.height<560?.4:1,scenario);await select(tower);
+        await evaluate(`(() => {
+          const current=holdingTowerSnapshots.get(${JSON.stringify(tower.id)});
+          window.liveTowerClan={id:current.clanId,name:'Owner Saved Standard',shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,division:'split',charge:'wolf',primary:'#1d4352',secondary:'#d8bd78'},banner:{charge:'crown'}};
+          clanPublicSnapshotCache.set(current.clanId,{id:current.clanId,name:'Old cached clan',shield:CLAN_HERALDRY_CONFIG.DEFAULT_V2});
+          applyHoldingTowerClanSnapshot(current.id,current.clanId,liveTowerClan);
+        })()`);
+        const verifyOwnerFlags = async includeUi => {
+          await ready("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent===liveTowerClan.name");
+          const result=await evaluate(`(() => {
+          const expected=(size,label)=>{const node=document.createElement('div');node.innerHTML=renderClanHeraldry(liveTowerClan.shield,{size,label});return node.firstElementChild.outerHTML;};
+          const banner=cityLayer.querySelector('.holding-tower-clan-banner');
+          const result={mapName:banner.querySelector('strong').textContent,map:banner.querySelector('.clan-heraldry-v2').outerHTML===expected('small',liveTowerClan.name+' clan flag')};
+          if(!${includeUi})return result;
+          const flags=[...modalBody.querySelectorAll('.window-header .clan-flag,.controller .clan-flag')];
+          return {...result,uiName:modalBody.querySelector('.plain-owner').textContent,flags:flags.map(flag=>flag.firstElementChild.outerHTML===expected('large',liveTowerClan.name+' shield'))};
+        })()`);
+          const name=await evaluate('liveTowerClan.name');
+          assert.deepEqual(result,{mapName:name,map:true,...(includeUi?{uiName:name,flags:[true,true]}:{})},'Map, header or Overview did not render the owning clan\'s exact saved heraldry.');
+        };
+        await verifyOwnerFlags(false);
+        await click(await elementPoint('[data-clan-tower-map-action="info"]'));
+        await ready('modal.open && !!modalBody.querySelector(".clan-tower-details")');
+        await verifyOwnerFlags(true);
+        await evaluate(`liveTowerClan={...liveTowerClan,name:'Updated Owner Standard',shield:{...liveTowerClan.shield,charge:'eagle',primary:'#7a2638'}};applyHoldingTowerClanSnapshot(${JSON.stringify(tower.id)},liveTowerClan.id,liveTowerClan)`);
+        await verifyOwnerFlags(true);
+        if(scenario==='owner') {
+          await evaluate('toast.classList.remove("visible")');await delay(200);
+          const shot=await client.send('Page.captureScreenshot',{format:'png'});
+          fs.writeFileSync(require('node:path').join(capDirectory,`owner-flag-ui-${viewport.width}.png`),Buffer.from(shot.data,'base64'));
+        }
+        await evaluate('modal.close()');await delay(150);
+        if(scenario==='owner') {
+          const shot=await client.send('Page.captureScreenshot',{format:'png'});
+          fs.writeFileSync(require('node:path').join(capDirectory,`owner-flag-map-${viewport.width}.png`),Buffer.from(shot.data,'base64'));
+        }
+        await evaluate('clanPublicSnapshotCache.delete(liveTowerClan.id);delete window.liveTowerClan');
+      }
+      // Public ownership is visible without selecting a Tower and is removed on neutralization.
+      for (let index=0;index<4;index++) {
+        const current=await prepare(index,viewport.height<560?.6:1,'owner');
+        await evaluate(`holdingTowerSnapshots.set(${JSON.stringify(current.id)},HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(${JSON.stringify(current.id)}),'owner'));renderCities()`);
+        assert.equal(await evaluate('selectedTowerMapId'),'');
+        assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
+        assert(await evaluate("!getComputedStyle(cityLayer.querySelector('.holding-tower-node')).contain.includes('paint')"),'The ownership banner is paint-clipped.');
+        const originalFlag=await evaluate("cityLayer.querySelector('.holding-tower-clan-banner svg').outerHTML");
+        await evaluate(`holdingTowerSnapshots.set(${JSON.stringify(current.id)},{...holdingTowerSnapshots.get(${JSON.stringify(current.id)}),clanName:'Changed Clan',clanEmblem:{shape:'round',primary:'#225544'}});renderCities()`);
+        assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'Changed Clan');
+        assert.notEqual(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner svg').outerHTML"),originalFlag,'A flag update did not redraw the heraldry.');
+        await evaluate(`holdingTowerSnapshots.set(${JSON.stringify(current.id)},HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(${JSON.stringify(current.id)}),'neutral'));renderCities()`);
+        assert.equal(await evaluate("cityLayer.querySelectorAll('.holding-tower-clan-banner').length"),0);
+      }
+      await prepare(0,.6,'enemy');await select(tower);
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['info','scout','rally-attack']);
+      assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
+      await prepare(0,viewport.height<560?.4:1,'owner');await select(tower);
+      await evaluate('toast.classList.remove("visible")');
+      await delay(350);
+      const screenshotDirectory=require('node:path').resolve(__dirname,'../tmp/clan-tower-controls');
+      fs.mkdirSync(screenshotDirectory,{recursive:true});
+      const mapShot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').join(screenshotDirectory,`map-${viewport.width}.png`),Buffer.from(mapShot.data,'base64'));
+      await click(await elementPoint('[data-clan-tower-map-action="send"]'));
+      await ready('sendMode && !modal.open');
+      await evaluate('selectCity(playerCities()[0].id)');
+      await ready("modal.open && !!modalBody.querySelector('[data-tower-order-form]')");
+      await delay(300);
+      const sendShot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').join(screenshotDirectory,`send-${viewport.width}.png`),Buffer.from(sendShot.data,'base64'));
       await prepare(0,1);
       let point=await elementPoint(`[data-holding-tower-id="${tower.id}"]`);
       const before=await evaluate("towerMapReads.length");

@@ -1300,6 +1300,21 @@
     return snapshot.docs.map((item, index) => ({ id: item.id, rank: index + 1, ...item.data() }));
   }
 
+  function subscribeClanTreasury(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { doc } = client.modules.firestore;
+    return subscribeScopedSnapshot(
+      doc(client.db, "clans", String(clanId).slice(0, 128), "treasury", RESET_GENERATION),
+      snapshot => {
+        const raw = snapshot.exists() ? snapshot.data() : null;
+        const current = raw?.resetGeneration === RESET_GENERATION && raw.worldId === ONLINE_WORLD_ID
+          && String(raw.realmShardId || "legacy") === REALM_SHARD_ID;
+        handlers.onTreasury?.(current ? raw : { balance: 0, totalDonated: 0, totalSpent: 0, revision: 0 });
+      },
+      error => handlers.onError?.(error, "treasury")
+    );
+  }
+
   function subscribeClanSocialState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
     const { doc } = client.modules.firestore;
@@ -3182,17 +3197,36 @@
     if (!client.configured || !client.db || !client.user?.uid || !towerId) return () => {};
     const { doc, collection, query, where, onSnapshot } = client.modules.firestore;
     if (!doc || !onSnapshot) return () => {};
+    let ownerClanId = "", stopClan = null, stopped = false;
+    const followOwnerClan = tower => {
+      if (typeof handlers.onClan !== "function") return;
+      const clanId = tower?.ownerKind === "clan" ? String(tower.clanId || "").slice(0, 128) : "";
+      if (clanId === ownerClanId) return;
+      stopClan?.();
+      stopClan = null;
+      ownerClanId = clanId;
+      if (!clanId) return;
+      // Do not present an old capture-time flag while the current owner loads.
+      handlers.onClan(null, clanId);
+      stopClan = subscribeScopedSnapshot(doc(client.db, "clans", clanId), snapshot => {
+        if (stopped || ownerClanId !== clanId) return;
+        const clan = snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } : null;
+        const current = clan?.status === "active" && clan.resetGeneration === RESET_GENERATION
+          && clan.worldId === ONLINE_WORLD_ID && String(clan.realmShardId || "legacy") === REALM_SHARD_ID;
+        handlers.onClan(current ? clan : null, clanId);
+      }, error => {
+        if (stopped || ownerClanId !== clanId) return;
+        handlers.onClan(null, clanId);
+        handlers.onError?.(error, "holdingTowerClan");
+      });
+    };
     const unsubscribers = [subscribeScopedSnapshot(
       doc(client.db, "holdingTowers", String(towerId).slice(0, 96)),
       snapshot => {
-        if (typeof handlers.onTower === "function") {
-          const tower = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
-          handlers.onTower(
-            tower?.resetGeneration === RESET_GENERATION && tower?.worldId === ONLINE_WORLD_ID
-              ? tower
-              : null
-          );
-        }
+        const raw = snapshot.exists() ? { ...snapshot.data(), id: snapshot.id } : null;
+        const tower = raw?.resetGeneration === RESET_GENERATION && raw?.worldId === ONLINE_WORLD_ID ? raw : null;
+        handlers.onTower?.(tower);
+        followOwnerClan(tower);
       },
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error, "holdingTower");
@@ -3207,7 +3241,11 @@
         where("clanId", "==", String(handlers.garrisonClanId).slice(0, 128))
       ), () => handlers.onGarrison?.(), error => handlers.onError?.(error, "holdingTowerGarrison")));
     }
-    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+    return () => {
+      stopped = true;
+      stopClan?.();
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
   }
 
   function subscribeIsland(islandId, handlers = {}) {
@@ -3371,6 +3409,7 @@
     subscribeClanState,
     subscribeClanApplications,
     subscribeClanSocialState,
+    subscribeClanTreasury,
     subscribeClanQuestProgress,
     subscribeDailyMissionState,
     subscribeSeasonalAchievementState,
