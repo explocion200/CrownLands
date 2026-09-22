@@ -24545,6 +24545,10 @@ exports.claimDailyMissionReward = timedCallable(
 exports.applyDailyMissionEvent = onDocumentCreated({
   region: "us-central1",
   document: "dailyMissionEvents/{eventId}",
+  // Burst events share a loaded world catalog and Firestore snapshots. The
+  // default 256 MiB / 80-request instance has exceeded its memory limit live.
+  memory: "512MiB",
+  concurrency: 8,
   maxInstances: 30,
   retry: true,
 }, withDocumentRealmShard(async event => {

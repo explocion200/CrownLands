@@ -23,9 +23,11 @@
         "functions/test/emulator-scout-report-lifecycle.js",
         "functions/test/emulator-report-delivery-rules.js",
         "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-chat.js"
+        "functions/test/emulator-chat.js",
+        "tools/validate-daily-missions.js",
+        "functions/test/emulator-daily-missions.js"
       ],
-      "reason": "Bind reports to their recipient and complete Tower scouting/returns; queue Tower defender alerts. Exercise partial push failures, invalid tokens, fresh receipts, concurrent leases, crash recovery and expired/deleted receipts. Cleanup splits oversized indexed deletes without retrying unrelated failures. Cover shared report, army, chat and transaction dependencies. User-requested full static and multiplayer regression runs with validation:full before release."
+      "reason": "Bind reports to their recipient and complete Tower scouting/returns; queue Tower defender alerts. Exercise partial push failures, invalid tokens, fresh receipts, concurrent leases, crash recovery and expired/deleted receipts. Cleanup splits oversized indexed deletes without retrying unrelated failures. Cover shared report, army, chat and transaction dependencies. User-requested full static and multiplayer regression runs with validation:full before release. Production memory-limit evidence requires 512 MiB and concurrency eight for Daily Mission event workers, with durable retries and instance limits preserved. Existing mission event and exactly-once reward emulator checks cover behavior."
     },
     {
       "paths": [

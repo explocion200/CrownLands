@@ -9,6 +9,10 @@ const server = read("functions/index.js"), game = read("game.js");
 const section = (source, start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
 
 async function main() {
+  const missionWorker = section(server, "exports.applyDailyMissionEvent =", "exports.applySeasonalAchievementEvent =");
+  assert.match(missionWorker, /memory: "512MiB"/);
+  assert.match(missionWorker, /concurrency: 8/);
+  assert.match(missionWorker, /retry: true/, "Mission events must retain durable retry while bounding per-instance work.");
   const estimateContext = vm.createContext({});
   vm.runInContext(section(game, "function formatTroopEstimateBound(", "function getIncomingTroopEstimate("), estimateContext);
   vm.runInContext('Number.prototype.toLocaleString = () => { throw new Error("Hot march labels must not construct locale formatters"); };', estimateContext);
