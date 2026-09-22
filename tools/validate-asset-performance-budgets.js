@@ -78,7 +78,12 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Allow one bounded 4 KiB step with no added assets, dependencies, or requests.
 // Tower zoom layout and pickup artwork clearance add 2,510 bytes of code/CSS.
 // Bound that addition at 3 KiB; no new art, dependencies or network requests.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3) * 1024;
+// Since the last budget revision (90b8f2e), approved Tower buildings/controls,
+// identity protection and fullscreen launch added 49,907 normalized shell bytes.
+// This audit adds 1,385 bytes for recovery and controls. Bound the combined
+// 51,292-byte increase at 52 KiB; retain every offline dependency and all runtime
+// image, request, heap and FPS limits. This is source growth, not a speed gain.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52) * 1024;
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 116 * 1024,
@@ -150,7 +155,9 @@ const entrypointBudgets = {
   // runtime-cached modules; the aggregate installation cache limit is unchanged.
   // Tower lifecycle and replay guards add under 3 KiB beyond the compact HUD.
   // Captured-pointer Tower taps and zoom-safe actions add under 3 KiB.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3) * 1024,
+  // Of the measured shell growth above, game.js accounts for 41,972 bytes
+  // (40,705 already on main; 1,267 in this audit), bounded at 41 KiB.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,

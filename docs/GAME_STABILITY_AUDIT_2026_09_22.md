@@ -34,6 +34,8 @@ A focused 10-second, 100-city/50-march instrumented comparison at the same 4× C
 
 ## Limits and release checks
 
+Full regression also exposed stale test assumptions: the audio fixture lacked the worker background-task API, the report autosave fixture lacked its signed-in UID, and the army validator expected the pre-migration CI command. These fixtures now exercise the actual contracts. The offline-shell byte allowance was last updated at `90b8f2e`; intervening approved Tower, identity and fullscreen work added 49,907 normalized bytes before this audit, which adds 1,385 bytes. A bounded 52 KiB allowance records that 51,292-byte source increase while preserving all offline dependencies. This adjustment does not change the map runtime budgets or turn their resource failures into passes.
+
 Automated tests do not prove every possible game state or device. Actual OS notification display, delivery to a sleeping phone, browser permission prompts, native fullscreen/rotation and existing PWA manifest updates need physical-device checks. Production player actions are not used as destructive test fixtures. Firebase Messaging and Firestore cannot share a transaction: a crash after external delivery but before recording success can still cause an at-least-once retry; the stable notification tag helps consolidate display.
 
 No new mechanic is inferred for the explicitly deferred Tower Veil purchase/inventory design. Its current activation behavior and documented pending design remain unchanged. Deployment alone does not repair expired history or authorize world resets.

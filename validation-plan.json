@@ -113,6 +113,38 @@
         "tools/validate-report-system.js"
       ],
       "reason": "The report autosave fixture must provide the current signed-in UID required by the existing account-switch guard. Assert that the save really executes before checking server-owned report exclusion; production authentication behavior is unchanged."
+    },
+    {
+      "paths": [
+        "tools/validate-authoritative-army-orders.js"
+      ],
+      "tests": [
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-release-gate.js",
+        "tools/test-targeted-validation.js"
+      ],
+      "reason": "The full regression exposed an obsolete workflow-command assertion left by the earlier targeted-validation migration. Verify the actual CI-to-runner-to-full-static chain and preserve the exhaustive route-parity requirement; do not change or bypass release gates."
+    },
+    {
+      "paths": [
+        "tools/validate-clan-rallies.js"
+      ],
+      "tests": [
+        "tools/validate-clan-rallies.js",
+        "tools/validate-holding-towers.js"
+      ],
+      "reason": "The earlier Tower control change added live clan ownership filtering. Supply the actual ally predicate and Tower snapshots in the Rally fixture, model the source as clan-owned, and assert that newly friendly Towers are excluded. Gameplay eligibility is unchanged."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "reason": "The full suite exposed an offline-shell allowance unchanged since 90b8f2e. Git object measurements prove 49,907 bytes already added by approved Tower/identity/fullscreen changes and 1,385 bytes from this audit. Bound this source growth at 52 KiB without dropping offline dependencies; retain runtime resource/FPS limits and report their failures separately."
     }
   ]
 }
