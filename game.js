@@ -26905,7 +26905,7 @@ async function saveFlagEditor() {
   const editingState = state;
   const editingUid = getCurrentOnlineUid();
   const editingProfile = onlineProfileReady;
-  const editingDraft = flagDraft;
+  let editingDraft = flagDraft;
   const isCurrentEdit = () => state === editingState && getCurrentOnlineUid() === editingUid
     && flagDraft === editingDraft && (!signedIn || onlineProfileReady === editingProfile);
   let identitySaved = false;
@@ -26951,6 +26951,7 @@ async function saveFlagEditor() {
     if (!signedIn) saveGame();
     flagSavedBaseline = { ...nextFlag };
     flagDraft = { ...nextFlag };
+    editingDraft = flagDraft;
     if (flagEditorSaveStatus) {
       flagEditorSaveStatus.textContent = signedIn ? "Saved everywhere" : "Saved locally";
       flagEditorSaveStatus.dataset.state = "success";
