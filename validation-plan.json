@@ -73,6 +73,17 @@
       ],
       "tests": [],
       "reason": "Record the user's confirmed application-alert persistence and complete saved-heraldry presentation decisions, marked pending merge and authorized deployment. No unrelated gameplay rules change."
+    },
+    {
+      "paths": [
+        "tools/validate-clan-ledger-ui.js"
+      ],
+      "tests": [
+        "tools/validate-clans.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
+      ],
+      "reason": "Combined regression exposed an isolated Clan ledger fixture missing the new Tower-kind predicate and assembly-link renderer. Load those actual production helpers and assert Tower minimum participation, an assembly action and escaped city names. Preserve all existing readiness, permissions and confirmation guards; runtime code is unchanged."
     }
   ]
 }
