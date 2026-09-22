@@ -1,0 +1,3 @@
+@import url("../battle-report-detail/review.css");
+.review-header,.review-controls,.review-note{max-width:1440px}
+.review-controls select{max-width:270px}
