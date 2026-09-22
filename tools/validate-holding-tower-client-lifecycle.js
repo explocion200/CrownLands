@@ -7,6 +7,7 @@ const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "..", "game.js"), "utf8");
 const declarations = source.slice(source.indexOf("const holdingTowerSnapshots ="), source.indexOf("let clanGiftCountdownTimer"));
 const functions = source.slice(source.indexOf("function beginHoldingTowerModalSession("), source.indexOf("function generateStrongholdSlots("));
+const neutralRules = source.slice(source.indexOf("function pendingNeutralCaptureCount("), source.indexOf("function showNeutralCaptureLimitModal("));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function deferred() {
@@ -36,6 +37,7 @@ function harness() {
     "[data-tower-order-target]": { value: "city-1", addEventListener() {} },
     "[data-tower-order-troops]": { value: "25", max: "100", addEventListener() {} },
     "[data-tower-order-form]": { addEventListener() {} },
+    "[data-tower-order-status]": { textContent: "" },
     "button[type='submit']": { setAttribute() {} },
   };
   const modalBody = { innerHTML: "", querySelector: selector => inputs[selector] || null, querySelectorAll: () => [] };
@@ -63,28 +65,75 @@ function harness() {
     renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null,
     showToast() {}, rejectGameAction: message => errors.push(message),
     playerCities: () => [{ id: "city-1", name: "Home", troops: 100 }],
+    WORLD_CAMPS: [], isStronghold: city => city?.kind === "stronghold", isClanAllyCity: () => false, isProtectedMainCity: () => false,
+    getRewardCampConfig: camp => camp.campType, NEUTRAL_CITY_COUNT_LIMIT: 30, DAILY_NEUTRAL_CAPTURE_LIMIT: 30,
+    ownedCityCount: 1, ensureDailyCaptureTracker: () => context.state.daily || {neutralCaptures: 0},
+    getOwnedRegularCityCountForDisplay: () => context.ownedCityCount,
+    cityById: id => context.state.cities.find(city => city.id === id),
+    getArmyTargetById: id => context.state.cities.find(city => city.id === id),
     isHoldingTowerTarget: target => target.kind === "holdingTower", isRewardCampTarget: () => false,
     getCityRegionId: () => "region", createOnlineArmyId: () => "army-1", getTargetRetaliation: () => null,
     applyServerArmyResult() {}, adoptServerArmyMovement() {}, upsertClanRallySnapshot() {}, renderSelectionChangeNow() {},
     renderCities() {}, cityRenderSignature: "",
   });
-  vm.runInContext(`${declarations}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
+  vm.runInContext(`${declarations}\n${neutralRules}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
   const tower = id => ({ id, name: id, kind: "holdingTower", ownerKind: "neutral", ownStationedTroops: 100 });
   const finish = (request, revision = 1, patch = {}) => request.resolve({ worldActive: true, towers: [{ ...tower(request.towerId), revision, ...patch }] });
   const open = id => context.openHoldingTower(id);
   const replace = () => { modal.close(); modalBody.innerHTML = "Unrelated dialog"; modal.showModal(); };
-  const order = () => {
+  const order = (mode = "withdraw") => {
     const own = { ...tower("tower-a"), ownerKind: "clan", clanId: "clan-a", ownershipRevision: 1,
       ownerMember: true, permissions: {withdrawOwn: true, reinforce: true, attackFrom: true, rallyFrom: true} };
     context.cacheTower(own);
-    context.showHoldingTowerOrderComposer(own, "withdraw");
+    context.showHoldingTowerOrderComposer(own, mode);
     modal.showModal();
-    return () => context.submitHoldingTowerOrder(own, "withdraw");
+    context.updateHoldingTowerOrderAvailability();
+    return () => context.submitHoldingTowerOrder(own, mode);
   };
   return { context, api, modal, modalBody, inputs, reads, subscriptions, warnings, errors, listeners, renders, tower, finish, open, replace, order };
 }
 
 async function main() {
+  for (const count of [29, 30, 31]) {
+    const h = harness();
+    h.context.ownedCityCount = count;
+    h.context.state.cities = [{id: "city-1", name: "NPC City", owner: "neutral"}];
+    const send = h.order("attack-from");
+    let sent = 0;
+    h.api.sendHoldingTowerArmyOrder = async () => { sent++; return {ok: true}; };
+    assert.equal(h.inputs["button[type='submit']"].disabled, count >= 30);
+    await send();
+    assert.equal(sent, count < 30 ? 1 : 0, `Tower NPC attack used the wrong boundary at ${count} cities.`);
+    if (count >= 30) {
+      assert.match(h.inputs["[data-tower-order-status]"].textContent, /30 or more cities/);
+      assert.match(h.errors[0], /30 or more cities/);
+      assert.equal(h.inputs["[data-tower-order-troops]"].value, "25");
+    } else { h.finish(h.reads[0]); await flush(); }
+  }
+  for (const reason of ["city-count", "daily", "pending"]) {
+    const h = harness();
+    h.context.ownedCityCount = 29;
+    h.context.state.cities = [{id: "city-1", name: "NPC City", owner: "neutral"}];
+    const send = h.order("attack-from");
+    assert.equal(h.inputs["button[type='submit']"].disabled, false);
+    if (reason === "city-count") h.context.ownedCityCount = 30;
+    if (reason === "daily") h.context.state.daily = {neutralCaptures: 30};
+    if (reason === "pending") h.context.state.attacks = [{id: "pending", owner: "player", kind: "attack", toId: "city-1", targetOwnerAtLaunch: "neutral"}];
+    let sent = 0;
+    h.api.sendHoldingTowerArmyOrder = async () => { sent++; return {ok: true}; };
+    await send();
+    assert.equal(sent, 0, `An open Tower draft bypassed the updated ${reason} limit.`);
+    assert.equal(h.inputs["button[type='submit']"].disabled, true);
+    assert.match(h.errors[0], reason === "daily" ? /Daily neutral capture limit/ : /30 or more cities/);
+    // Player-owned cities and reward camps are not neutral expansion targets.
+    h.context.state.cities[0].owner = "enemy";
+    h.context.updateHoldingTowerOrderAvailability();
+    assert.equal(h.inputs["button[type='submit']"].disabled, false);
+    h.context.state.cities = [];
+    h.context.WORLD_CAMPS = [{id: "city-1", name: "Camp", owner: "neutral", campType: "gold"}];
+    h.context.updateHoldingTowerOrderAvailability();
+    assert.equal(h.inputs["button[type='submit']"].disabled, false);
+  }
   {
     const firebase = fs.readFileSync(path.join(__dirname, "..", "firebaseClient.js"), "utf8");
     const watches = [];

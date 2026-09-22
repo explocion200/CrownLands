@@ -4310,14 +4310,19 @@ function updateHoldingTowerOrderAvailability() {
   if (input && fromTower) input.max = String(Math.max(0, Number(tower?.ownStationedTroops) || 0));
   const amount = Number(input?.value);
   const validAmount = Number.isSafeInteger(amount) && amount > 0 && amount <= Number(input?.max);
-  const hasDestination = Boolean(modalBody.querySelector("[data-tower-order-target]")?.value);
+  const selectedId = modalBody.querySelector("[data-tower-order-target]")?.value;
+  const target = tower && getHoldingTowerComposerTargets(session.mode, tower).find(candidate => candidate.id === selectedId);
+  const hasDestination = Boolean(target);
+  const neutralBlockReason = session.mode === "attack-from" && target && getHoldingTowerTargetType(target) === "city"
+    ? getNeutralCaptureBlockReason(target, "player") : "";
   const status = modalBody.querySelector("[data-tower-order-status]");
   if (status) status.textContent = !allowed ? "Tower access changed or is syncing. Reopen the order from the map."
     : !hasDestination ? "No eligible destination is available on this map."
-      : !validAmount ? "Choose a troop count within your available troops."
-        : fromTower ? `${formatNumber(tower.ownStationedTroops)} of your troops stationed here.` : "Choose your city and the troops to send.";
+      : neutralBlockReason ? neutralBlockReason
+        : !validAmount ? "Choose a troop count within your available troops."
+          : fromTower ? `${formatNumber(tower.ownStationedTroops)} of your troops stationed here.` : "Choose your city and the troops to send.";
   const submit = modalBody.querySelector("button[type='submit']");
-  if (submit) submit.disabled = busy || !allowed || !validAmount || !hasDestination;
+  if (submit) submit.disabled = busy || !allowed || !validAmount || !hasDestination || Boolean(neutralBlockReason);
   modalBody.querySelectorAll("[data-tower-send-mode]").forEach(button => {
     button.disabled = busy || !sameOwner || !getHoldingTowerOrderPermission(tower, button.dataset.towerSendMode);
   });
@@ -4406,6 +4411,13 @@ async function submitHoldingTowerOrder(tower, mode) {
   const candidate = getHoldingTowerComposerTargets(mode, tower).find(entry => entry.id === selectedId);
   const troops = Number(modalBody.querySelector("[data-tower-order-troops]")?.value);
   if (!candidate || !api) return;
+  const neutralBlockReason = mode === "attack-from" && getHoldingTowerTargetType(candidate) === "city"
+    ? getNeutralCaptureBlockReason(candidate, "player") : "";
+  if (neutralBlockReason) {
+    rejectGameAction(neutralBlockReason);
+    updateHoldingTowerOrderAvailability();
+    return;
+  }
   const sourceModes = new Set(["reinforce", "rally-attack"]);
   const availableTroops = Number(sourceModes.has(mode) ? candidate.troops : tower.ownStationedTroops) || 0;
   if (!Number.isSafeInteger(troops) || troops < 1 || troops > availableTroops) {

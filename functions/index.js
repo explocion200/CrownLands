@@ -25838,6 +25838,11 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
       const producedSource = sourceType === "city" ? getEconomyCityByRef(economy, sourceRef) : null;
       if (producedSource?.city) source = producedSource.city;
       const profileAfter = economy.profileAfter || profile;
+      const neutralCaptureBlockReason = kind === "attack" && targetType === "city"
+        ? getServerNeutralCaptureBlockReason(economy, profileAfter, target) : "";
+      if (neutralCaptureBlockReason) {
+        throw new HttpsError("failed-precondition", neutralCaptureBlockReason);
+      }
       const availableTroops = sourceType === "tower"
         ? Math.max(0, Math.floor(safeNumber(garrisonSnap?.data()?.troops, 0)))
         : Math.max(0, Math.floor(safeNumber(source.troops, 0)));

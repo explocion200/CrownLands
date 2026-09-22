@@ -15,7 +15,18 @@
         "tools/validate-modal-lifecycle-browser.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Tower Send retains existing movement/rally payloads and personal garrison authority. Exercise fresh target and troop checks, permission/ownership changes, delayed responses, duplicate clicks, failed sends, garrison listener cleanup, clan identity refresh, map selection and shared modal lifecycle. The existing emulator lifecycle checks downstream callable reinforcement/withdrawal and attributed garrison behavior; backend APIs and rules are unchanged."
+      "reason": "Tower Send retains existing movement/rally payloads and personal garrison authority. Exercise fresh target and troop checks, permission/ownership changes, delayed responses, duplicate clicks, failed sends, garrison listener cleanup, clan identity refresh, map selection and shared modal lifecycle. Reuse the normal neutral expansion rule in Tower attack availability and submit checks, including 29/30/31-city boundaries, daily/pending capture limits, stale drafts and unaffected player-city/Camp targets."
+    },
+    {
+      "paths": [
+        "functions/index.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "tests": [
+        "tools/validate-holding-towers.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "The Tower army callable now uses the existing authoritative neutral-capture helper before any march, troop or economy writes. Emulator coverage exercises real cross-map city counts at 29, 30 and 31, rejected-launch state preservation, arrival cancellation and replay-safe troop returns, the shared daily cap, and unaffected player-city, Camp and transfer orders. Existing Tower lifecycle coverage verifies the callable's reinforcement, withdrawal, garrison and Rally dependencies. No API/schema or numeric balance changes."
     },
     {
       "paths": [
@@ -37,7 +48,7 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user's confirmed map-only Reinforce/Send/Info menu, personal outgoing orders and persistent ownership banner. Existing gameplay and release authorization requirements are preserved; this prose has no separate runtime behavior."
+      "reason": "Records the user's confirmed map-only Reinforce/Send/Info menu, personal outgoing orders and persistent ownership banner, and clarifies that Tower attacks obey the established neutral expansion limits at launch and arrival. Existing thresholds and release authorization requirements are preserved; this prose has no separate runtime behavior."
     }
   ]
 }

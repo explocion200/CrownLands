@@ -200,6 +200,32 @@ async function main() {
         await elementPoint('[data-clan-tower-map-action="info"]');
       }
       for (const mode of ["reinforce","withdraw","attack-from","rally-from"]) await submitOrder(tower,mode);
+      await click(await elementPoint('[data-clan-tower-map-action="send"]'));
+      await ready("modal.open && !!modalBody.querySelector('[data-tower-send-mode]')");
+      await click(await elementPoint('[data-tower-send-mode="attack-from"]'));
+      await evaluate(`(() => {
+        window.towerCityCountGetter=getOwnedRegularCityCountForDisplay;
+        const target=getHoldingTowerComposerTargets('attack-from',holdingTowerSnapshots.get(${JSON.stringify(tower.id)})).find(city=>city.owner==='neutral'&&getHoldingTowerTargetType(city)==='city');
+        if(!target)throw Error('Missing neutral city fixture');
+        modalBody.querySelector('[data-tower-order-target]').value=target.id;
+      })()`);
+      for (const count of [29,30,31]) {
+        await evaluate(`getOwnedRegularCityCountForDisplay=()=>${count};updateHoldingTowerOrderAvailability()`);
+        assert.equal(await evaluate("modalBody.querySelector('button[type=submit]').disabled"),count>=30,`Tower NPC button used the wrong boundary at ${count} cities.`);
+        if(count>=30) {
+          assert.match(await evaluate("modalBody.querySelector('[data-tower-order-status]').textContent"),/30 or more cities/);
+          const sent=await evaluate('towerMapOrders.length');
+          await evaluate("modalBody.querySelector('[data-tower-order-form]').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
+          assert.equal(await evaluate('towerMapOrders.length'),sent,'A forced form submission bypassed the NPC limit.');
+        }
+      }
+      await evaluate('toast.classList.remove("visible");modalBody.scrollTop=0');
+      await delay(250);
+      const capDirectory=require('node:path').resolve(__dirname,'../tmp/clan-tower-controls');
+      fs.mkdirSync(capDirectory,{recursive:true});
+      const capShot=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(require('node:path').join(capDirectory,`npc-limit-${viewport.width}.png`),Buffer.from(capShot.data,'base64'));
+      await evaluate('getOwnedRegularCityCountForDisplay=towerCityCountGetter;delete window.towerCityCountGetter;modal.close()');
       await prepare(0,1,"ineligible");await select(tower);
       assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['info','false'],['reinforce','true'],['send','true']]);
       await click(await elementPoint('[data-clan-tower-map-action="send"]'));

@@ -240,6 +240,64 @@ async function main() {
   await call("resolveArmyOrder",leader,{armyId:trained.movement.id,routeRegionIds:trained.movement.routeRegionIds});
   const reports=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.filter(r=>r.battleId===trained.movement.id);
   assert.equal(reports.length,1,"Battle retry duplicated the defender recovery report.");
+  // NPC expansion limits apply before Tower troops leave, across all owned maps.
+  const layout = require("../core-expansion-world-layout.json");
+  const homeIds = new Set(actors.map(actor => actor.home.id));
+  const targetCities = layout.maps.find(map => map.id === tower.regionId).cities.filter(city => !homeIds.has(city.id));
+  const [npcTarget, rivalTarget] = targetCities;
+  const portfolio = layout.maps.filter(map => map.permanentCore && map.id !== tower.regionId)
+    .flatMap(map => map.cities).filter(city => !homeIds.has(city.id)).slice(0, 30);
+  assert.equal(portfolio.length, 30);
+  const fixtureCity = (city, ownerUid = "") => ({ ...city, ...identity, regionId: city.regionId,
+    ownerKind: ownerUid ? "player" : "neutral", ownerUid, isMainCity: false, level: 1,
+    troops: 10, troopFloat: 10, shieldUntilMs: 0, productionUpdatedAtMs: Date.now() });
+  await cityRef(npcTarget).set(fixtureCity(npcTarget));
+  await cityRef(rivalTarget).set(fixtureCity(rivalTarget, outsider.uid));
+  const setCityCount = async count => {
+    const batch = db.batch();
+    portfolio.forEach((city, index) => batch.set(cityRef(city), fixtureCity(city, index < count - 1 ? member.uid : "")));
+    await batch.commit();
+  };
+  const expectNpcBlocked = async pattern => {
+    const payload = order(tower, npcTarget, "attack", 100, "tower", "city");
+    const troopsBefore = (await garrisonRef(member).get()).data().troops;
+    const profileBefore = (await memberProfile.get()).data();
+    const result = await invoke("sendHoldingTowerArmyOrder", member, payload);
+    assert.equal(result.error?.status, "FAILED_PRECONDITION");
+    assert.match(result.error?.message || "", pattern);
+    assert.equal((await db.doc(`armies/${payload.army.id}`).get()).exists, false, "A blocked NPC order created a march.");
+    assert.equal((await garrisonRef(member).get()).data().troops, troopsBefore, "A blocked NPC order spent Tower troops.");
+    assert.deepEqual((await memberProfile.get()).data(), profileBefore, "A blocked launch changed the player's economy or protection.");
+  };
+  await setCityCount(29);
+  const preAttackTroops = (await garrisonRef(member).get()).data().troops;
+  const allowedNpc = await call("sendHoldingTowerArmyOrder", member, order(tower, npcTarget, "attack", 100, "tower", "city"));
+  assert.equal(allowedNpc.movement.toId, npcTarget.id, "A player at 29 cities could not launch an NPC attack.");
+  await setCityCount(30);
+  await expectNpcBlocked(/30 or more cities/);
+  await resolve(member, allowedNpc.movement);
+  const canceledNpc = (await db.doc(`armies/${allowedNpc.movement.id}`).get()).data();
+  assert.equal(canceledNpc.result.blocked, "neutral_capture_limit", "An in-flight Tower attack bypassed the updated city limit.");
+  assert.equal((await cityRef(npcTarget).get()).data().ownerKind, "neutral");
+  assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled Tower attack failed to return its troops.");
+  await resolve(member, allowedNpc.movement);
+  assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled attack retry duplicated returned troops.");
+  await setCityCount(31);
+  await expectNpcBlocked(/30 or more cities/);
+  const rivalAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, rivalTarget, "attack", 100, "tower", "city"));
+  assert.equal(rivalAttack.movement.toId, rivalTarget.id, "The neutral cap blocked a player-owned city attack.");
+  const campMap = layout.maps.find(map => map.permanentCore && map.camps?.length);
+  const camp = {...campMap.camps[0], regionId: campMap.id};
+  await db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${camp.regionId}/camps/${camp.id}`).set({ ...camp, ...identity, ownerUid: "", holderUid: "" });
+  const campAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 100, "tower", "camp"));
+  assert.equal(campAttack.movement.targetType, "camp", "The neutral cap blocked a reward Camp attack.");
+  const cappedMove = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 100, "tower", "city"));
+  assert.equal(cappedMove.movement.kind, "transfer", "The neutral cap blocked a friendly transfer.");
+  await setCityCount(29);
+  const currentDaily = (await memberProfile.get()).data().daily;
+  await memberProfile.update({daily: {...currentDaily, date: new Date().toISOString().slice(0, 10), neutralCaptures: 30}});
+  await expectNpcBlocked(/Daily neutral capture limit reached/);
+  console.log("Tower NPC cap passed: 29-city launch, 30/31-city rejection before troop/economy changes, cross-map count, in-flight cancellation/replay, daily cap, and allowed player-city/Camp/transfer orders.");
   console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
   console.log("Tower lifecycle passed: callable rally creation/replay, two-player rejection for neutral and clan-owned Towers, three-player launch and capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
 }

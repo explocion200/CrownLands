@@ -633,6 +633,7 @@ The current Core mappings are fixed:
 - Surviving attackers remain in the Tower after capture.
 - All valid defenders fight together.
 - A Tower may launch solo attacks, rallies, and scouting against normal valid targets. Tower conquest itself remains rally-only.
+- Tower-origin attacks on regular neutral NPC cities use the same expansion limits as city-origin attacks: block launch at 30 or more owned regular cities or after 30 neutral captures that player-local day. Recheck at arrival if eligibility changes during travel. Player-owned city attacks, scouting, troop transfers and objective targets retain their existing rules.
 - When a member leaves or is removed from the clan, that member’s surviving Tower troops return to the member’s Main City.
 - Clan disbanding neutralizes and resets controlled Towers.
 
