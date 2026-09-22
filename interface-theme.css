@@ -2059,8 +2059,8 @@ input[type="range"] {
 
 .daily-login-reward-badge,
 .report-unread-badge,
-.clan-hud-btn.has-rallies::before,
-.profile-tabs button.has-rallies::after {
+.clan-hud-btn.has-clan-notifications::before,
+.profile-tabs button.has-clan-notifications::after {
   min-width: 19px;
   height: 19px;
   padding: 0 4px;

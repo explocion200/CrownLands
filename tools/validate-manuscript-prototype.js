@@ -122,7 +122,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Tower zoom layout and pickup clearance use the same bounded 3 KiB allowance.
 // Approved Tower/identity/fullscreen work plus this audit adds 51,292 measured
 // bytes since 90b8f2e; mirror the asset validator's bounded 52 KiB step.
-assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52) * 1024, "The service-worker installation cache exceeds 4243 KiB.");
+// Match the measured 3,574-byte badge/heraldry addition after the Rally merge.
+assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4) * 1024, "The service-worker installation cache exceeds 4247 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

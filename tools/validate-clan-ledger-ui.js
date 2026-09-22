@@ -27,11 +27,14 @@ const context = vm.createContext({
   getRegionLabel:()=>"The Crown Marches",formatDuration:String,
 });
 for(const [name,next] of [
+  ["isHoldingTowerTarget","getTroopOrderSourceById"],
   ["renderClanRosterMember","renderClanRenameEditor"], ["renderClanMembersPanel","renderClanRewardsPanel"],
   ["renderClanRewardsPanel","getClanRallyMinimumParticipants"], ["getClanRallyMinimumParticipants","getRallyParticipantForCurrentPlayer"], ["getRallyParticipantForCurrentPlayer","getClanRallyParticipantStatusLabel"],
   ["getClanRallyParticipantStatusLabel","renderClanRallyCard"], ["renderClanRallyCard","renderClanRallyPanel"],
   ["handleClanClick","updateProfileTabHeader"],
 ]) vm.runInContext(production(name,next),context);
+const rallySource=fs.readFileSync(path.join(root,"rallies-activity-ui.js"),"utf8");
+vm.runInContext(rallySource.slice(rallySource.indexOf("function renderRallyAssemblyLink("),rallySource.indexOf("async function focusClanRallyAssembly(")),context);
 function button(action,extra={}) {return {disabled:false,dataset:{clanAction:action,...extra}};}
 async function click(target) {await context.handleClanClick({target:{closest:()=>target},preventDefault(){}});}
 async function main() {
@@ -51,6 +54,9 @@ async function main() {
   assert.doesNotMatch(context.renderClanMembersPanel(false,false),/data-clan-action="accept"/);
   assert.match(context.renderClanMembersPanel(false,false),/data-clan-action="leave"/);
   const rally={id:"rally",status:"forming",leaderUid:"self",targetName:'<script>bad</script>',participants:[{uid:"self",status:"assembled",troops:40000},{uid:"ally",status:"inbound",troops:20000}]};
+  assert.equal(context.getClanRallyMinimumParticipants({kind:"holdingTower"}),3);
+  rally.assemblyCityName='<script>assembly</script>';
+  assert.match(context.renderClanRallyCard(rally),/data-rally-action="assembly"/);
   assert.match(context.renderClanRallyCard(rally),/data-rally-action="launch"[^>]*disabled/);
   assert.doesNotMatch(context.renderClanRallyCard(rally),/<script>/);
   rally.participants[1].status="assembled";

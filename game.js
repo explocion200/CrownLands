@@ -2287,6 +2287,8 @@ let activeClanQuestPeriod = null;
 let clanQuestServerClockOffsetMs = 0;
 let clanApplicationsUnsubscribe = null;
 let activeClanApplicationsSubscriptionId = "";
+let clanApplicationsScope = "";
+let clanApplicationsSubscriptionGeneration = 0;
 let clanApplicationsError = "";
 let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
@@ -4112,6 +4114,7 @@ function renderHoldingTowerModal(tower) {
     actionBusy: holdingTowerActionsInFlight.has(tower.id),
     clanShieldHtml: clanIdentity?.emblem ? renderClanHeraldry(clanIdentity.emblem, {
       size: "large",
+      variant: "full",
       instance: `tower-${tower.id}`,
       label: `${clanIdentity.name} shield`,
     }) : "",
@@ -4581,11 +4584,20 @@ async function runClanTowerBuildingAction(tower, kind, id) {
   }
 }
 
+function preserveNewerClanHeraldry(clan, previous) {
+  if (clan && previous?.id === clan.id
+      && (Number(previous.heraldryRevision) || 0) > (Number(clan.heraldryRevision) || 0)) {
+    return { ...clan, shield: previous.shield, banner: previous.banner, heraldryRevision: previous.heraldryRevision };
+  }
+  return clan;
+}
+
 function getHoldingTowerClanIdentity(tower) {
   if (tower?.ownerKind !== "clan" || !tower.clanId) return null;
   const live = holdingTowerClanIdentities.get(tower.id);
   if (live?.clanId === tower.clanId) {
-    return { name: live.clan?.name || tower.clanName || "Unknown clan", emblem: live.clan?.shield || live.clan?.banner || null };
+    const clan = preserveNewerClanHeraldry(live.clan, getCachedClanPublicSnapshot(tower.clanId));
+    return { name: clan?.name || tower.clanName || "Unknown clan", emblem: clan?.shield || clan?.banner || null };
   }
   const clan = getCachedClanPublicSnapshot(tower.clanId);
   return { name: clan?.name || tower.clanName || "Unknown clan", emblem: clan?.shield || clan?.banner || tower.clanEmblem };
@@ -4594,7 +4606,9 @@ function getHoldingTowerClanIdentity(tower) {
 function applyHoldingTowerClanSnapshot(towerId, clanId, clan) {
   const tower = holdingTowerSnapshots.get(towerId);
   if (tower?.ownerKind !== "clan" || tower.clanId !== clanId || (clan && clan.id !== clanId)) return;
-  const identity = clan ? { name: clan.name, shield: clan.shield || clan.banner || null } : null;
+  clan = preserveNewerClanHeraldry(clan, holdingTowerClanIdentities.get(towerId)?.clan);
+  clan = preserveNewerClanHeraldry(clan, getCachedClanPublicSnapshot(clanId));
+  const identity = clan ? { id: clanId, name: clan.name, shield: clan.shield || clan.banner || null, heraldryRevision: Number(clan.heraldryRevision) || 0 } : null;
   const signature = JSON.stringify([clanId, identity]);
   if (holdingTowerClanIdentities.get(towerId)?.signature === signature) return;
   holdingTowerClanIdentities.set(towerId, { clanId, clan: identity, signature });
@@ -24377,39 +24391,49 @@ function renderClanHudAccess() {
   const clanName = activeClan?.name || state.clanName || "Clan";
   const clanTag = activeClan?.tag || state.clanTag || "";
   const shield = hasClan ? activeClan?.shield || activeClan?.banner : null;
+  const applicationCount = hasClan && ["leader", "officer"].includes(state.clanRole)
+    && clanApplicationsScope === `${getOnlineRequestScope()}:${state.clanId}`
+    ? clanApplications.filter(application => application.status === "pending" && application.clanId === state.clanId).length : 0;
+  const rallyCount = hasClan ? onlineClanRallies.length : 0;
+  const notificationCount = applicationCount + rallyCount;
+  const notificationLabel = [
+    applicationCount ? `${applicationCount} pending ${applicationCount === 1 ? "application" : "applications"}` : "",
+    rallyCount ? `${rallyCount} active ${rallyCount === 1 ? "rally" : "rallies"}` : "",
+  ].filter(Boolean).join(", ");
   const signature = [
     heroLevel < 10 ? "locked" : "unlocked",
     state.clanId || "",
     clanName,
     clanTag,
     onlineClanRallies.length,
+    applicationCount,
     JSON.stringify(normalizeClanHeraldry(shield)),
   ].join("|");
   if (signature === lastClanHudSignature) return;
   lastClanHudSignature = signature;
   clanHudBtn.classList.toggle("is-search", !hasClan);
   clanHudBtn.classList.toggle("has-clan", hasClan);
-  clanHudBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
-  clanHudBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
-    ? String(onlineClanRallies.length)
-    : "";
-  if (clanTabBtn) {
-    clanTabBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
-    clanTabBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
-      ? String(onlineClanRallies.length)
-      : "";
+  for (const button of [clanHudBtn, clanTabBtn]) {
+    if (!button) continue;
+    button.classList.toggle("has-rallies", rallyCount > 0);
+    button.classList.toggle("has-clan-notifications", notificationCount > 0);
+    button.dataset.rallyCount = rallyCount ? String(rallyCount) : "";
+    button.dataset.applicationCount = applicationCount ? String(applicationCount) : "";
+    button.dataset.clanNotificationCount = notificationCount ? String(notificationCount) : "";
+    button.title = notificationLabel;
   }
+  clanTabBtn?.setAttribute("aria-label", `Clan${notificationLabel ? `, ${notificationLabel}` : ""}`);
   clanHudBtn.setAttribute(
     "aria-label",
     heroLevel < 10
       ? "Clan unlocks at Hero Level 10"
       : hasClan
-        ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}`
+        ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}${notificationLabel ? `, ${notificationLabel}` : ""}`
         : "Find a clan"
   );
   clanHudIcon.innerHTML = renderClanHeraldry(
     shield,
-    { size: "small", instance: "hud", label: hasClan ? `${clanName} clan shield` : "Find a clan" }
+    { size: "small", variant: "full", instance: "hud", label: hasClan ? `${clanName} clan shield` : "Find a clan" }
   );
 }
 
@@ -24433,7 +24457,7 @@ function renderProfileClanAffiliation() {
   profileClanAffiliation.dataset.clanSignature = signature;
   profileClanShield.innerHTML = renderClanHeraldry(
     shield,
-    { size: "mini", instance: "own-profile", label: `${clanName} clan shield` }
+    { size: "mini", variant: "full", instance: "own-profile", label: `${clanName} clan shield` }
   );
   profileClanName.textContent = `${clanTag ? `[${clanTag}] ` : ""}${clanName}`;
   profileClanAffiliation.dataset.publicClanId = state.clanId;
@@ -24558,7 +24582,7 @@ function updateClanQuestCountdown() {
   if (warning) warning.hidden = remainingMs > CLAN_QUEST_EXPIRATION_WARNING_MS;
 }
 
-function stopClanRealtimeSubscriptions({ clear = true } = {}) {
+function stopClanRealtimeSubscriptions({ clear = true, preserveApplications = false } = {}) {
   resetClanTreasuryState();
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
@@ -24573,9 +24597,6 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   activeClanQuestSubscriptionKey = "";
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
   clanGiftCountdownTimer = 0;
-  if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
-  clanApplicationsUnsubscribe = null;
-  activeClanApplicationsSubscriptionId = "";
   if (clear) {
     onlineClanRallies = [];
     clanRosterReady = false;
@@ -24584,7 +24605,6 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanApplicationsError = "";
     clanSnapshot = null;
     clanMembers = [];
-    clanApplications = [];
     clanQuestProgress = null;
     clanMemberRewards = null;
     clanGiftActivity = null;
@@ -24593,6 +24613,7 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanRenameEditorOpen = false;
     clanRenameSaving = false;
   }
+  stopClanApplicationSubscription({ clear: clear && !preserveApplications });
 }
 
 function applyClanMembersSnapshot(members = [], changes = []) {
@@ -24645,7 +24666,7 @@ function startClanRealtimeSubscriptions(api, clanId) {
     }
     return true;
   }
-  stopClanRealtimeSubscriptions({ clear: true });
+  stopClanRealtimeSubscriptions({ clear: true, preserveApplications: clanApplicationsScope === `${getOnlineRequestScope()}:${id}` });
   startClanTreasurySubscription(api, id);
   activeClanSubscriptionId = id;
   clanRosterReady = false;
@@ -24654,7 +24675,7 @@ function startClanRealtimeSubscriptions(api, clanId) {
       const previousIdentity = clanSnapshot
         ? `${clanSnapshot.id}|${clanSnapshot.name || ""}|${clanSnapshot.tag || ""}|${JSON.stringify(clanSnapshot.shield || clanSnapshot.banner)}`
         : "";
-      clanSnapshot = clan?.status === "active" ? clan : null;
+      clanSnapshot = clan?.status === "active" ? preserveNewerClanHeraldry(clan, clanSnapshot) : null;
       const nextIdentity = clanSnapshot
         ? `${clanSnapshot.id}|${clanSnapshot.name || ""}|${clanSnapshot.tag || ""}|${JSON.stringify(clanSnapshot.shield || clanSnapshot.banner)}`
         : "";
@@ -24855,26 +24876,41 @@ function startClanSocialStateSubscription(api, clanId) {
 }
 
 function stopClanApplicationSubscription({ clear = true } = {}) {
+  clanApplicationsSubscriptionGeneration += 1;
   if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
   clanApplicationsUnsubscribe = null;
   activeClanApplicationsSubscriptionId = "";
   clanApplicationsError = "";
-  if (clear) clanApplications = [];
+  if (clear) {
+    clanApplications = [];
+    clanApplicationsScope = "";
+  }
+  renderClanHudAccess();
 }
 
 function startClanApplicationSubscription(api, clanId) {
   const id = String(clanId || "").trim();
-  if (!id || !api?.subscribeClanApplications) return false;
-  if (activeClanApplicationsSubscriptionId === id && typeof clanApplicationsUnsubscribe === "function") return true;
-  stopClanApplicationSubscription({ clear: true });
+  if (!id || id !== state?.clanId || !["leader", "officer"].includes(state.clanRole) || !api?.subscribeClanApplications) return false;
+  const scope = `${getOnlineRequestScope()}:${id}`;
+  if (activeClanApplicationsSubscriptionId === id && clanApplicationsScope === scope && typeof clanApplicationsUnsubscribe === "function") return true;
+  stopClanApplicationSubscription({ clear: clanApplicationsScope !== scope });
   activeClanApplicationsSubscriptionId = id;
+  clanApplicationsScope = scope;
+  const generation = clanApplicationsSubscriptionGeneration;
+  const session = getOnlineSessionRequestScope();
+  const isCurrent = () => generation === clanApplicationsSubscriptionGeneration
+    && session === getOnlineSessionRequestScope() && state?.clanId === id
+    && ["leader", "officer"].includes(state.clanRole);
   clanApplicationsUnsubscribe = api.subscribeClanApplications(id, {
     onApplications: applications => {
+      if (!isCurrent()) return;
       clanApplications = Array.isArray(applications) ? applications : [];
       clanApplicationsError = "";
+      renderClanHudAccess();
       if (activeProfileTab === "clan") renderClanView();
     },
     onError: error => {
+      if (!isCurrent()) return;
       markOnlineRealtimeRecoveryNeeded(error);
       console.warn("Clan application subscription failed", error);
       clanApplicationsError = "Applications could not be loaded. Reopen the Clan screen to retry.";
@@ -24924,7 +24960,15 @@ async function refreshClanState(options = {}) {
       if (["leader", "officer"].includes(state.clanRole)) {
         const applicationSubscriptionStarted = startClanApplicationSubscription(api, state.clanId);
         if (!applicationSubscriptionStarted) {
-          clanApplications = await api.loadClanApplications(state.clanId);
+          const clanId = state.clanId;
+          const session = getOnlineSessionRequestScope();
+          const generation = clanApplicationsSubscriptionGeneration;
+          const applications = await api.loadClanApplications(clanId);
+          if (state !== requestedState || session !== getOnlineSessionRequestScope()
+              || state.clanId !== clanId || !["leader", "officer"].includes(state.clanRole)
+              || generation !== clanApplicationsSubscriptionGeneration) return;
+          clanApplications = applications;
+          clanApplicationsScope = `${getOnlineRequestScope()}:${clanId}`;
           clanApplicationsError = "";
         }
       } else {
@@ -24946,6 +24990,7 @@ async function refreshClanState(options = {}) {
     if (!options.silent) showToast(error?.message || "Could not load clans.");
   } finally {
     clanUiLoading = false;
+    renderClanHudAccess();
     renderClanView();
     renderCities(true);
   }
@@ -25083,7 +25128,7 @@ function renderClanShieldEditor(value = null) {
       <header class="clan-shield-editor-preview">
         <div class="clan-shield-preview-stage" data-qa-preview>
           <div class="clan-shield-preview-full">${renderClanHeraldry(shield, { size: "editor", variant: "full", label: `Preview of ${clanSnapshot?.name || "clan"} heraldry` })}</div>
-          <div class="clan-shield-micro-preview"><span>Map size</span>${renderClanHeraldry(shield, { size: "mini", variant: "micro", label: `Micro preview of ${clanSnapshot?.name || "clan"} heraldry` })}</div>
+          <div class="clan-shield-micro-preview"><span>Map size</span>${renderClanHeraldry(shield, { size: "mini", variant: "full", label: `Map preview of ${clanSnapshot?.name || "clan"} heraldry` })}</div>
         </div>
         <div class="clan-shield-editor-intro">
           <span>House heraldry</span>
@@ -25196,6 +25241,8 @@ async function saveClanShieldEditor() {
     return;
   }
   clanShieldSaving = true;
+  const clanId = state.clanId;
+  const session = getOnlineSessionRequestScope();
   renderClanView();
   try {
     const validation = CLAN_HERALDRY_CONFIG.validateV2Write({ ...clanShieldDraft }, { existing: clanSnapshot?.shield });
@@ -25203,13 +25250,17 @@ async function saveClanShieldEditor() {
     const shield = validation.value;
     const previousRevision = Math.max(0, Number(clanSnapshot?.heraldryRevision) || 0);
     const result = await api.updateClanProfile({ shield });
+    if (session !== getOnlineSessionRequestScope() || state?.clanId !== clanId || clanSnapshot?.id !== clanId) return;
     if (!result?.ok || !result?.clan?.shield) {
       throw new Error("The server did not confirm the new Clan Heraldry.");
     }
     const savedShield = normalizeClanHeraldry(result.clan.shield, result.clan.banner);
     if (savedShield.version !== CLAN_HERALDRY_CONFIG.CURRENT_VERSION) throw new Error("The server returned legacy heraldry after a v2 save.");
     if (Math.max(0, Number(result.clan.heraldryRevision) || 0) <= previousRevision) throw new Error("The server did not advance the heraldry revision.");
-    clanSnapshot = { ...clanSnapshot, ...result.clan, shield: savedShield };
+    clanSnapshot = preserveNewerClanHeraldry({ ...clanSnapshot, ...result.clan, shield: savedShield }, clanSnapshot);
+    for (const tower of holdingTowerSnapshots.values()) {
+      if (tower.ownerKind === "clan" && tower.clanId === clanId) applyHoldingTowerClanSnapshot(tower.id, clanId, clanSnapshot);
+    }
     renderClanHudAccess();
     renderProfileClanAffiliation();
     clanShieldEditorOpen = false;
@@ -27869,7 +27920,7 @@ function renderCitiesUncached(force = false) {
     node.style.setProperty("--holding-tower-width", `${tower.width}px`);
     node.style.setProperty("--holding-tower-translate-x", `${(-tower.anchorX * 100).toFixed(3)}%`);
     node.style.setProperty("--holding-tower-translate-y", `${(-tower.anchorY * 100).toFixed(3)}%`);
-    const clanBanner = clanIdentity ? `<span class="holding-tower-clan-banner"><strong class="city-ruler-name">${escapeHtml(clanIdentity.name)}</strong>${clanIdentity.emblem ? renderClanHeraldry(clanIdentity.emblem, {size:"small", instance:`map-${tower.id}`, label:`${clanIdentity.name} clan flag`}) : ""}</span>` : "";
+    const clanBanner = clanIdentity ? `<span class="holding-tower-clan-banner"><strong class="city-ruler-name">${escapeHtml(clanIdentity.name)}</strong>${clanIdentity.emblem ? renderClanHeraldry(clanIdentity.emblem, {size:"small", variant:"full", instance:`map-${tower.id}`, label:`${clanIdentity.name} clan flag`}) : ""}</span>` : "";
     const towerHtml = `${clanBanner}<img class="holding-tower-art" src="${escapeHtml(tower.artSrc)}" alt="" draggable="false" decoding="async" loading="lazy" fetchpriority="low" /><span class="holding-tower-map-label">${escapeHtml(tower.name)}</span>`;
     if (node._renderContent !== towerHtml) {
       node.innerHTML = towerHtml;
