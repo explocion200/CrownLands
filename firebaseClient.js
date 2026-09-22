@@ -1918,15 +1918,18 @@
   }
 
   async function savePlayerProfile(profile = {}) {
+    const requestedUid = client.user?.uid;
     await init();
     const uid = requireSignedIn();
-    if (!uid) return false;
+    if (!uid || uid !== requestedUid) return false;
     const { doc, setDoc, serverTimestamp, deleteField } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
     const cleanProfile = sanitizeForFirestore(profile);
-    if (Object.prototype.hasOwnProperty.call(cleanProfile, "flag")) {
-      cleanProfile.flag = cleanPlayerFlag(cleanProfile.flag, uid);
-    }
+    // Autosaves never edit identity, even when handed a stale startup snapshot.
+    delete cleanProfile.playerName;
+    delete cleanProfile.displayName;
+    delete cleanProfile.flag;
+    delete cleanProfile.identityRevision;
     delete cleanProfile.mainCityId;
     delete cleanProfile.mainIslandId;
     delete cleanProfile.mainRegionId;
@@ -1956,7 +1959,6 @@
     }
     await setDoc(ref, {
       uid,
-      displayName: client.user.displayName || "",
       email: client.user.email || "",
       photoURL: client.user.photoURL || "",
       ...cleanProfile,
@@ -1966,12 +1968,55 @@
   }
 
   async function loadPlayerProfile() {
+    const requestedUid = client.user?.uid;
     await init();
     const uid = requireSignedIn();
-    if (!uid) return null;
-    const { doc, getDoc } = client.modules.firestore;
-    const snap = await getDoc(doc(client.db, "players", uid));
+    if (!uid || uid !== requestedUid) throw new Error("Your account changed. Please enter the kingdom again.");
+    const { doc, getDocFromServer } = client.modules.firestore;
+    const snap = await getDocFromServer(doc(client.db, "players", uid));
+    if (client.user?.uid !== uid) throw new Error("Your account changed. Please enter the kingdom again.");
     return snap.exists() ? snap.data() : null;
+  }
+
+  async function savePlayerIdentity(changes = {}, expectedRevision = 0) {
+    const requestedUid = client.user?.uid;
+    const requestedSession = client.activeSessionId;
+    const requestedGeneration = client.activeSessionActivationGeneration;
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || uid !== requestedUid) throw new Error("Your account changed. Please enter the kingdom again.");
+    const { doc, runTransaction, serverTimestamp } = client.modules.firestore;
+    const patch = {};
+    if (Object.prototype.hasOwnProperty.call(changes, "playerName")) {
+      patch.playerName = cleanPlayerName(changes.playerName, "");
+      if (!patch.playerName) throw new Error("Enter a ruler name.");
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, "flag")) patch.flag = cleanPlayerFlag(changes.flag, uid);
+    const sameFlag = (a, b) => ["version", "primary", "secondary", "symbolColor", "pattern", "symbol"]
+      .every(key => a?.[key] === b?.[key]);
+    const ref = doc(client.db, "players", uid);
+    return runTransaction(client.db, async transaction => {
+      const snap = await transaction.get(ref);
+      if (client.user?.uid !== uid || client.activeSessionId !== requestedSession
+        || client.activeSessionActivationGeneration !== requestedGeneration) {
+        throw new Error("Your account changed. Please enter the kingdom again.");
+      }
+      if (!snap.exists()) throw new Error("Load your kingdom before changing your name or flag.");
+      const profile = snap.data();
+      if (profile.resetGeneration !== RESET_GENERATION || profile.worldId !== ONLINE_WORLD_ID) {
+        throw new Error("The realm changed. Please enter the kingdom again.");
+      }
+      const revision = Math.max(0, Math.floor(Number(profile.identityRevision) || 0));
+      const unchanged = (!Object.prototype.hasOwnProperty.call(patch, "playerName") || patch.playerName === profile.playerName)
+        && (!Object.prototype.hasOwnProperty.call(patch, "flag") || sameFlag(patch.flag, profile.flag));
+      // A retry after an uncertain commit must not apply the edit twice.
+      if (unchanged) return { playerName: profile.playerName, flag: profile.flag, identityRevision: revision };
+      if (revision !== expectedRevision) {
+        throw new Error("Your name or flag changed in another session. Reload the game before editing again.");
+      }
+      transaction.update(ref, { ...patch, identityRevision: revision + 1, updatedAt: serverTimestamp() });
+      return { playerName: profile.playerName, flag: profile.flag, ...patch, identityRevision: revision + 1 };
+    });
   }
 
   function timestampToMs(value) {
@@ -2339,15 +2384,21 @@
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {
+    const requestedUid = client.user?.uid;
     await init();
     const uid = requireSignedIn();
-    if (!uid || !snapshot) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    if (!uid || uid !== requestedUid || !snapshot) return false;
+    const { doc, setDoc, serverTimestamp, deleteField } = client.modules.firestore;
     const ref = doc(client.db, "players", uid, "saves", slot);
     const cleanSnapshot = sanitizeForFirestore(snapshot);
+    // Identity belongs only to the player profile, not a second autosave copy.
+    cleanSnapshot.playerName = deleteField();
+    cleanSnapshot.displayName = deleteField();
+    cleanSnapshot.flag = deleteField();
+    cleanSnapshot.identityRevision = deleteField();
     await setDoc(ref, {
       version: Number(cleanSnapshot.version) || 0,
-      playerName: cleanSnapshot.playerName || "",
+      playerName: deleteField(),
       gameSeconds: Number(cleanSnapshot.gameSeconds) || 0,
       state: cleanSnapshot,
       updatedAt: serverTimestamp(),
@@ -3263,6 +3314,7 @@
     leaveGameServer,
     subscribeGameServerMembership,
     savePlayerProfile,
+    savePlayerIdentity,
     loadPlayerProfile,
     collectEconomy,
     getDailyLoginRewardStatus,

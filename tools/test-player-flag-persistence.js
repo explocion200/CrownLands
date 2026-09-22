@@ -44,6 +44,7 @@ function createHarness(api) {
     let flagDraft = ${JSON.stringify(draft)};
     let flagSavedBaseline = ${JSON.stringify(baseline)};
     let flagSaveInFlight = false;
+    let onlineProfileReady = {};
     const flagEditorSaveStatus = { textContent: "", dataset: {} };
     const ONLINE_SAVE_SLOT = "default-test";
     let commitCount = 0;
@@ -65,6 +66,7 @@ function createHarness(api) {
     function saveGame() { localSaveCount += 1; }
     function renderFlagEditor() { renderCount += 1; }
     function showToast() {}
+    async function saveOnlinePlayerIdentity(changes) { return testApi.savePlayerIdentity(changes); }
     ${saveFlagEditor}
     globalThis.harness = {
       invoke: saveFlagEditor,
@@ -86,7 +88,7 @@ function createHarness(api) {
 function createSuccessfulApi(calls, profileSave = async () => true) {
   return {
     isSignedIn: () => true,
-    savePlayerProfile: async value => {
+    savePlayerIdentity: async value => {
       calls.profile.push(value);
       return profileSave(value);
     },
@@ -155,14 +157,16 @@ async function testFailureThenRetry() {
   assert.deepEqual(plain(failed.baseline), baseline, "A failed save changed the saved baseline.");
   assert.equal(failed.status, "Save failed — retry");
   assert.equal(failed.saveInFlight, false);
-  assertExactDestinationFlags(calls);
+  assert.deepEqual(plain(calls.profile[0].flag), expectedStoredFlag);
+  assert.equal(calls.identity.length, 0, "A failed identity edit still propagated the draft.");
   fail = false;
   await harness.invoke();
   const retried = harness.read();
   assert.equal(retried.commitCount, 1);
   assert.deepEqual(plain(retried.lastCommittedFlag), expectedStoredFlag);
   assert.equal(retried.status, "Saved everywhere");
-  assertExactDestinationFlags(calls, 1);
+  assert.deepEqual(plain(calls.profile[1].flag), expectedStoredFlag);
+  assertExactDestinationFlags({ ...calls, profile: calls.profile.slice(1) });
 }
 
 async function testRepeatedTapGuard() {
@@ -174,11 +178,11 @@ async function testRepeatedTapGuard() {
   const repeated = harness.invoke();
   assert.equal(harness.read().saveInFlight, true);
   assert.deepEqual(Object.fromEntries(Object.entries(calls).map(([key, values]) => [key, values.length])), {
-    profile: 1, identity: 1, snapshot: 1, presence: 1,
+    profile: 1, identity: 0, snapshot: 0, presence: 0,
   }, "A repeated tap started duplicate writes.");
-  assertExactDestinationFlags(calls);
   resolveProfile(true);
   await Promise.all([first, repeated]);
+  assertExactDestinationFlags(calls);
   assert.equal(harness.read().commitCount, 1);
 }
 

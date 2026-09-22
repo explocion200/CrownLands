@@ -78,12 +78,13 @@ function firestoreValue(value) {
 }
 
 async function patchFlag(user, flag) {
+  const revision = Number((await db.doc(`players/${user.uid}`).get()).data()?.identityRevision) || 0;
   const response = await fetch(
-    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=flag`,
+    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=flag&updateMask.fieldPaths=identityRevision`,
     {
       method: "PATCH",
       headers: { authorization: `Bearer ${user.token}`, "content-type": "application/json" },
-      body: JSON.stringify({ fields: { flag: firestoreValue(flag) } }),
+      body: JSON.stringify({ fields: { flag: firestoreValue(flag), identityRevision: firestoreValue(revision + 1) } }),
     }
   );
   return { status: response.status, body: await response.json().catch(() => null) };
@@ -130,9 +131,10 @@ async function assertStoredFlag(documentPath, fieldPath, expected, label) {
 
 async function main() {
   const user = await createAuthUser();
+  const playerName = "Flag Sentinel";
   await db.doc(`players/${user.uid}`).set({
     uid: user.uid,
-    playerName: "Flag Rules Sentinel",
+    playerName,
     resetGeneration: realm.resetGeneration,
     worldId: realm.worldId,
     releaseId: realm.releaseId,
@@ -146,11 +148,18 @@ async function main() {
   assert((await patchFlag(user, v2)).status === 200, "A valid version:2 flag was denied.");
   assert((await patchFlag(user, legacyV2)).status === 200, "A readable legacy-only symbol was denied.");
   assert((await patchFlag(user, v2)).status === 200, "The approved version:2 flag could not be restored.");
+  const revision = (await db.doc(`players/${user.uid}`).get()).data().identityRevision;
+  assert((await patchDocument(user, `players/${user.uid}`, { flag: v1 })).status === 403,
+    "An old-client autosave changed the flag without an explicit edit revision.");
+  assert((await patchDocument(user, `players/${user.uid}`, { flag: v1, identityRevision: revision })).status === 403,
+    "A stale edit revision changed the flag.");
+  assert((await patchDocument(user, `players/${user.uid}`, { flag: v1, identityRevision: revision + 1, gameSeconds: 0 })).status === 403,
+    "A broad autosave could impersonate a dedicated identity edit.");
 
   const saveId = `default-${realm.resetGeneration}`;
   const validSave = await patchDocument(user, `players/${user.uid}/saves/${saveId}`, {
     version: 26,
-    playerName: "Flag Rules Sentinel",
+    playerName,
     gameSeconds: 10,
     state: { resetGeneration: realm.resetGeneration, flag: v2 },
   });
@@ -159,6 +168,10 @@ async function main() {
     state: { resetGeneration: realm.resetGeneration, flag: { ...v2, version: 3 } },
   });
   assert(invalidSave.status === 403, "A save snapshot accepted an unknown nested flag version.");
+  const staleIdentitySave = await patchDocument(user, `players/${user.uid}/saves/${saveId}`, {
+    state: { resetGeneration: realm.resetGeneration, playerName: "Startup", flag: v1 },
+  });
+  assert(staleIdentitySave.status === 403, "A save slot accepted startup identity over the canonical profile.");
 
   const presencePath = `islands/${realm.worldId}-ashenfen_march/presence/${user.uid}`;
   const validPresence = await patchDocument(user, presencePath, { uid: user.uid, flag: v2 });
@@ -166,16 +179,18 @@ async function main() {
   const invalidPresence = await patchDocument(user, presencePath, { flag: { ...v2, imageUrl: "https://example.test/flag.svg" } });
   assert(invalidPresence.status === 403, "Presence accepted an unexpected flag field.");
 
-  const claim = await callFunction("claimStartingCity", user, { playerName: "Flag Rules Sentinel" });
+  const claim = await callFunction("claimStartingCity", user, { playerName });
+  assert(claim.currentUser?.playerName === playerName, "The starting-city claim changed the valid ruler name.");
   const identity = await callFunction("syncPlayerIdentity", user, {
-    ownerName: "Flag Rules Sentinel",
-    ownerFlag: v2,
+    ownerName: "Startup Name",
+    ownerFlag: v1,
     ownerKingPower: 123,
     mainCityId: claim.cityId,
     mainRegionId: claim.regionId,
     mainIslandId: claim.islandId,
   });
   assert(identity?.ok === true, `Identity sync did not confirm success: ${JSON.stringify(identity)}`);
+  assert(identity.ownerName !== "Startup Name", "Background sync accepted an old client's fallback name.");
   assert(stableJson(identity.ownerFlag) === stableJson(v2), `Identity sync returned a different flag: ${JSON.stringify(identity.ownerFlag)}`);
   assert(identity.cityUpdates >= 1, `Identity sync did not update the claimed city: ${JSON.stringify(identity)}`);
 
@@ -184,6 +199,9 @@ async function main() {
   await assertStoredFlag(presencePath, "flag", v2, "Presence");
   await assertStoredFlag(`islands/${claim.islandId}/cities/${claim.cityId}`, "ownerFlag", v2, "Owned city identity");
   await assertStoredFlag(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`, "flag", v2, "Leaderboard identity");
+  const afterSync = (await db.doc(`players/${user.uid}`).get()).data();
+  assert(afterSync.playerName === playerName, "Projection repair overwrote the canonical ruler name.");
+  assert(afterSync.identityRevision === revision, "Projection repair rewrote the identity edit revision.");
 
   for (const [label, invalidFlag] of [
     ["unknown version", { ...v2, version: 3 }],
