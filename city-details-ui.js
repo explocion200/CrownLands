@@ -88,7 +88,7 @@ function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", 
       ${cityDetailsRow("invested", "Invested gold", values.invested, "ledger", "Clears when captured")}
     </dl>
     <div class="cd-management">${mainCityBlock}${renderRelinquishCityAction(city)}</div>
-    ${renderHoldingReinforcementPanel(city)}` : foreignMarkup;
+    ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}` : foreignMarkup;
   return `<section class="cd-panel" data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineRequestScope())}" data-cd-owned="${owned}">
     <div class="cd-ledger">
       <section class="cd-portrait"><img data-cd-art src="${escapeHtml(getCastleAsset(getCastleStage(projected.level)))}" alt=""><div><p class="cd-relation">${relation}</p><span class="cd-level">Level <b data-cd-value="level">${formatNumber(projected.level)}</b></span><div class="cd-owner">${owner}</div><span class="cd-allegiance">${cityDetailsIcon("allegiance")}${owned ? "Your kingdom" : relation}</span></div></section>

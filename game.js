@@ -4380,6 +4380,7 @@ function showHoldingTowerOrderComposer(tower, mode, selectedCandidate = null) {
     rejectGameAction("This Tower order is unavailable. Check your membership and stationed troops.");
     return;
   }
+  if (mode === "rally-attack") { beginCreateClanRally(tower); return; }
   const sourceModes = new Set(["reinforce", "rally-attack"]);
   const candidates = getHoldingTowerComposerTargets(mode, tower);
   if (mode !== "rally-attack" && (!selectedCandidate || !candidates.some(candidate => candidate.id === selectedCandidate.id))) {
@@ -24684,6 +24685,8 @@ function startClanRallySubscription(api, clanId) {
   clanRalliesUnsubscribe = api.subscribeClanRallies(id, {
     onRallies: rallies => {
       onlineClanRallies = Array.isArray(rallies) ? rallies : [];
+      renderCities();
+      updateVisibleCityDynamicText();
       renderClanHudAccess();
       if (activeProfileTab === "clan") renderClanView();
       updateOutgoingAttackUi();
@@ -25809,7 +25812,7 @@ function renderClanRewardsPanel() {
 }
 
 function getClanRallyMinimumParticipants(rally) {
-  return rally?.targetType === "tower" ? 3 : CLAN_RALLY_MIN_PARTICIPANTS;
+  return rally?.targetType === "tower" || isHoldingTowerTarget(rally) ? 3 : CLAN_RALLY_MIN_PARTICIPANTS;
 }
 
 function getRallyParticipantForCurrentPlayer(rally) {
@@ -25894,7 +25897,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
         <b>${activeParticipants.length || participants.length}/${CLAN_RALLY_MAX_PARTICIPANTS}</b>
       </header>
       <div class="clan-rally-summary">
-        <span>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span><span>Assembly ${escapeHtml(rally.assemblyCityName || rally.assemblyCityId || "City")}</span>
+        <span>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span><span>Assembly ${renderRallyAssemblyLink(rally)}</span>
         <span><strong>${formatNumber(recalling ? returningTroops || assembledTroops : assembledTroops)}</strong> ${recalling ? "returning" : launched ? "marching" : "assembled"}</span>
         <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
@@ -25922,6 +25925,8 @@ function upsertClanRallySnapshot(rally = null) {
       ...onlineClanRallies.filter(entry => entry.id !== rally.id),
     ].sort((left, right) => normalizeTimestampMs(right.updatedAtMs) - normalizeTimestampMs(left.updatedAtMs))
     : onlineClanRallies.filter(entry => entry.id !== rally.id);
+  renderCities();
+  updateVisibleCityDynamicText();
   renderClanHudAccess();
   renderClanView();
   updateOutgoingAttackUi();
@@ -25974,6 +25979,7 @@ function confirmClanRallyAction(rally, action) {
 }
 
 async function runClanRallyAction(action, rally) {
+  if (action === "assembly") { await focusClanRallyAssembly(rally); return; }
   if (!rally?.id || rallyActionRequests.has(rally.id)) return;
   if (action === "join") {
     if (modal.open) modal.close();
@@ -27621,6 +27627,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
       : city;
     const report = city.owner === "player" ? null : getScoutReport(city.id);
     const clanAlly = isClanAllyCity(city);
+    const rallyAssembly = getCityRallyAssembly(city);
     return [
       city.id,
       city.owner,
@@ -27630,6 +27637,8 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
       clanAlly ? 1 : 0,
+      rallyAssembly.ready,
+      rallyAssembly.inbound,
       getFlagSignature(getCityOwnerFlag(city), city.ownerUid || (city.owner === "player" ? getCurrentOnlineUid() : "")),
       getStableEnemyCityPowerBand(city),
       city.kind || "",
@@ -27751,16 +27760,18 @@ function updateVisibleCityDynamicText() {
     const city = cityById(node.dataset.cityId);
     if (!city) return;
     const troops = Math.floor(Number(city.troops) || 0);
-    if (node.dataset.troopTextValue === String(troops)) return;
-    node.dataset.troopTextValue = String(troops);
+    const assembly = getCityRallyAssembly(city);
+    const troopTextValue = `${troops}:${assembly.ready}:${assembly.inbound}`;
+    if (node.dataset.troopTextValue === troopTextValue) return;
+    node.dataset.troopTextValue = troopTextValue;
     const playerCount = node.querySelector(".city-army-count");
-    if (playerCount) playerCount.textContent = `${formatNumber(troops)} troops`;
+    if (playerCount) playerCount.textContent = `${formatNumber(troops + assembly.ready)} troops`;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const knownTroops = getVisibleCityGarrisonTroops(city, scoutReport);
     const foreignCount = node.querySelector(".foreign-garrison");
     if (foreignCount) {
       const clanAlly = isClanAllyCity(city);
-      foreignCount.textContent = `${knownTroops === undefined ? "?" : formatNumber(knownTroops)} troops`;
+      foreignCount.textContent = `${knownTroops === undefined ? "?" : formatNumber(knownTroops + assembly.ready)} troops`;
       foreignCount.classList.toggle("unknown", knownTroops === undefined);
       foreignCount.classList.toggle("revealed", knownTroops !== undefined && !clanAlly);
       foreignCount.classList.toggle("clan-visible", knownTroops !== undefined && clanAlly);
@@ -27768,7 +27779,7 @@ function updateVisibleCityDynamicText() {
     const ownerName = getCityOwnerDisplayName(city);
     const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
     const powerBandLabel = getEnemyCityPowerBandLabel(getStableEnemyCityPowerBand(city), city);
-    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
+    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} garrison troops`}.${assembly.ready || assembly.inbound ? ` ${rallyAssemblyText(assembly)}.` : ""}${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
   });
   modalBody?.querySelectorAll("[data-live-city-garrison]").forEach(value => {
     const city = cityById(value.dataset.liveCityGarrison);
@@ -27778,6 +27789,7 @@ function updateVisibleCityDynamicText() {
     value.textContent = visibleTroops === undefined ? "Unknown" : (isStronghold(city) ? formatLedgerNumber : formatNumber)(visibleTroops);
   });
   if (typeof patchCityDetailsPanel === "function") patchCityDetailsPanel();
+  patchCityRallyAssemblyPanels();
 }
 
 function renderCities(force = false) {
@@ -27976,6 +27988,9 @@ function renderCitiesUncached(force = false) {
       ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
       : "";
     const visibleGarrison = getVisibleCityGarrisonTroops(city, scoutReport);
+    const assembly = getCityRallyAssembly(city);
+    const displayedTroops = visibleGarrison === undefined ? "?" : formatNumber(visibleGarrison + assembly.ready);
+    const assemblyLabel = assembly.ready || assembly.inbound ? `<span class="city-rally-count">${rallyAssemblyText(assembly).replace(" · ", "<br>")}</span>` : "";
     const garrisonVisibilityClass = visibleGarrison === undefined
       ? "unknown"
       : clanAlly ? "clan-visible" : "revealed";
@@ -27991,7 +28006,7 @@ function renderCitiesUncached(force = false) {
               ${clanTagMarkup}
               <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>${crownBadge}</span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
-              <span class="city-army-count">${formatNumber(city.troops)} troops</span>
+              <span class="city-army-count">${displayedTroops} troops</span>${assemblyLabel}
             </span>
           </span>
         </span>`
@@ -28004,7 +28019,7 @@ function renderCitiesUncached(force = false) {
             <span class="foreign-selected-crest">${ownerFlag}</span>
             <span class="foreign-selected-data">
               <strong class="city-name">${escapeHtml(city.name)}</strong>
-              <span class="foreign-garrison ${garrisonVisibilityClass}">${visibleGarrison === undefined ? "?" : formatNumber(visibleGarrison)} troops</span>
+              <span class="foreign-garrison ${garrisonVisibilityClass}">${displayedTroops} troops</span>${assemblyLabel}
             </span>
           </span>
         </span>`
@@ -28012,7 +28027,7 @@ function renderCitiesUncached(force = false) {
         <span class="city-label foreign-city-label">
           ${rivalOwnerRow}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
-          ${clanAlly ? `<span class="foreign-garrison ${garrisonVisibilityClass}">${visibleGarrison === undefined ? "?" : formatNumber(visibleGarrison)} troops</span>` : ""}
+          ${clanAlly ? `<span class="foreign-garrison ${garrisonVisibilityClass}">${displayedTroops} troops</span>${assemblyLabel}` : ""}
           <span class="foreign-city-shield">
             ${ownerFlag}
             <span class="city-label-level">${formatNumber(city.level)}</span>
@@ -28029,7 +28044,7 @@ function renderCitiesUncached(force = false) {
       <span class="city-ring"></span>
         ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" decoding="async" /></span>`;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} garrison troops`}.${assembly.ready || assembly.inbound ? ` ${rallyAssemblyText(assembly)}.` : ""}${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
     btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
     const cityHtml = `
       ${structureHtml}
@@ -29459,9 +29474,9 @@ function beginCreateClanRally(targetOrId) {
     rejectGameAction("Clan rallies require the online Crownlands server.");
     return;
   }
-  const sourceOption = findPreferredAttackSource(target);
+  const sourceOption = findLastSelectedAttackSource(target);
   if (!sourceOption) {
-    rejectGameAction("No owned city or Stronghold with troops can reach that objective.");
+    rejectGameAction("Select an owned city with available troops that can reach this objective, then choose Rally.");
     return;
   }
   activeRallyOrderContext = {
@@ -30504,7 +30519,7 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
       toId: target.id,
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
-      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      targetType: getHoldingTowerTargetType(target),
       kind: orderKind === "rally_create" ? "attack" : orderKind,
       requestedTroops: safeRequestedTroops,
     });
@@ -32224,7 +32239,7 @@ function showCrownCitadelInfoModal(city) {
             ? `<div class="stat-wide clan-garrison-access"><span>Garrison visibility</span><strong>Shared by clan</strong><small>Exact owner troops are live. Defense bonuses and reinforcement details remain private.</small></div>`
             : !owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
           ${owned ? renderRelinquishCityAction(city) : ""}
-          ${renderHoldingReinforcementPanel(city)}
+          ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}
         </div>
       </section>
       <section id="citadelReignsPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="citadelReignsTab" data-citadel-info-panel="reigns" hidden>
@@ -32368,7 +32383,7 @@ function showCityInfoModal(cityId) {
           : report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
-        ${renderHoldingReinforcementPanel(city)}
+        ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}
       </div>
     `;
     modalBody.innerHTML = stronghold
@@ -32422,7 +32437,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip" data-holding-field="limit"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip" data-holding-field="benefits"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
         ${renderRelinquishCityAction(city)}
-        ${renderHoldingReinforcementPanel(city)}
+        ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}
       </div>
     `;
     modalBody.innerHTML = strongholdInfoPanelMarkup(city, overviewMarkup);

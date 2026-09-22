@@ -43,6 +43,7 @@ async function main() {
     await ready('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"');
     await evaluate(`(async () => {
       const api = getOnlineApi();
+      state.clanId = 'benchmark-clan'; state.clanRole = 'leader';
       window.towerMapReads = [];
       window.towerMapOrders = [];
       window.towerMapScenario = 'neutral';
@@ -56,6 +57,11 @@ async function main() {
         if (towerMapScenario === 'empty') {snapshot.ownStationedTroops=0;snapshot.permissions={inspect:true,reinforce:true};}
         return {worldActive:true,towers:[snapshot]};
       }, subscribeHoldingTowerState: () => () => {}, getClanTowerShop: undefined,
+      previewArmyRoute: async payload => {
+        if(payload.targetType!=='tower')return api.previewArmyRoute(payload);
+        const from=cityById(payload.fromId),to=getHoldingTowerVisual(payload.toId);
+        return {points:[{x:from.x,y:from.y},{x:to.x,y:to.y}],durationMs:60000,requestedTroops:payload.requestedTroops};
+      },
       createClanRally: async payload => {towerMapOrders.push(payload);return {ok:true};},
       sendHoldingTowerArmyOrder: async payload => {towerMapOrders.push(payload);return {ok:true};}
       });
@@ -98,6 +104,31 @@ async function main() {
       assert.equal(await evaluate(`cityLayer.querySelector('[data-holding-tower-id="${tower.id}"]').getAttribute('aria-pressed')`), "true");
     };
     const submitOrder = async (tower, mode) => {
+      if (mode === 'rally-attack') {
+        const source = await evaluate(`(() => {
+          const city=playerCities().find(city=>city.troops>0);
+          rememberOwnedAttackSource(city);
+          return {id:city.id,troops:city.troops};
+        })()`);
+        const before = await evaluate('towerMapOrders.length');
+        await click(await elementPoint('[data-clan-tower-map-action="rally-attack"]'));
+        await ready('modal.open && !!modalBody.querySelector("[data-order-kind=rally_create]")');
+        assert.equal(await evaluate('selectedSourceId'),source.id);
+        assert.equal(await evaluate('Number(modalBody.querySelector("#rallyTroopNumber").max)'),Math.floor(source.troops));
+        assert.equal(await evaluate('!!modalBody.querySelector("[data-tower-order-target]")'),false);
+        assert.match(await evaluate('modalBody.textContent'),/3.*Ready/);
+        await ready('!modalBody.querySelector("#troopSliderConfirm").disabled');
+        await evaluate('modalBody.querySelector("#troopSliderConfirm").scrollIntoView({block:"center"})');
+        const troops=await evaluate('selectedTroopAmount');
+        await click(await elementPoint('#troopSliderConfirm'));
+        await ready(`towerMapOrders.length===${before+1} && !modal.open`);
+        const payload=await evaluate('towerMapOrders.at(-1)');
+        assert.equal(payload.army.targetType,'tower');
+        assert.equal(payload.army.fromId,source.id);
+        assert.equal(payload.army.toId,tower.id);
+        assert.equal(payload.army.troops,troops);
+        return;
+      }
       const outgoing = ['withdraw','attack-from'].includes(mode);
       if (outgoing) {
         await click(await elementPoint('[data-clan-tower-map-action="send"]'));

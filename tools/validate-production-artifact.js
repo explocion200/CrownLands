@@ -149,10 +149,12 @@ if (scoutReportBytes > 64 * 1024) throw new Error("Scout Report presentation exc
 const marchesUiBytes = ["marches-activity-ui.js", "marches-activity-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (marchesUiBytes > 36 * 1024) throw new Error("Marches presentation exceeds its 36 KiB payload budget.");
-// Rallies adds at most 60 KiB of scoped presentation and reused emblems, plus 4 KiB for mounting/entries.
+// The 60,093-byte Rally presentation gains 5,791 bytes for assembly visibility
+// and map navigation. Bound the new source at one 6 KiB step, reusing all art;
+// the global offline-shell and runtime performance budgets remain unchanged.
 const ralliesUiBytes = ["rallies-activity-ui.js", "rallies-activity-ui.css", "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (ralliesUiBytes > 60 * 1024) throw new Error("Rallies presentation exceeds its 60 KiB payload budget.");
+if (ralliesUiBytes > 66 * 1024) throw new Error("Rallies presentation exceeds its 66 KiB payload budget.");
 // Reinforcements adds at most 60 KiB of scoped presentation plus 4 KiB of mounting, reusing packaged art.
 const reinforcementUiBytes = ["reinforcements-activity-ui.js", "reinforcements-activity-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);

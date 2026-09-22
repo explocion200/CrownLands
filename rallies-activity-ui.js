@@ -1,7 +1,82 @@
 /* Approved Kingdom Activity presentation; shared Clan War Room and server actions remain authoritative. */
-/* exported renderRalliesActivityHeader, renderRalliesActivityFooter, renderClanRallyOperationPanel, renderRalliesActivityCard, captureRalliesActivityView, bindRalliesActivityView */
+/* exported renderRalliesActivityHeader, renderRalliesActivityFooter, renderClanRallyOperationPanel, renderRalliesActivityCard, captureRalliesActivityView, bindRalliesActivityView, getCityRallyAssembly, rallyAssemblyText, renderCityRallyAssemblyPanel, patchCityRallyAssemblyPanels, renderRallyAssemblyLink, focusClanRallyAssembly */
 let selectedActivityRallyId = "";
 let activityRallyScope = "";
+
+// Presentation only. Reserved troops never re-enter spendable garrison or defense.
+function getCityRallyAssembly(city) {
+  const totals = { ready: 0, inbound: 0 };
+  if (!state?.clanId || !city || (city.owner !== "player" && !isClanAllyCity(city))) return totals;
+  for (const rally of onlineClanRallies) {
+    if (rally.status !== "forming" || rally.clanId !== state.clanId || rally.assemblyType === "tower"
+      || rally.assemblyCityId !== city.id || normalizeRegionId(rally.assemblyRegionId) !== getCityRegionId(city)
+      || rally.leaderUid !== (city.ownerUid || (city.owner === "player" ? getCurrentOnlineUid() : ""))) continue;
+    for (const person of Array.isArray(rally.participants) ? rally.participants : []) {
+      const troops = Number(person.troops);
+      if (!Number.isFinite(troops) || troops <= 0) continue;
+      if (person.status === "assembled") totals.ready += Math.floor(troops);
+      if (person.status === "inbound") totals.inbound += Math.floor(troops);
+    }
+  }
+  return totals;
+}
+
+function rallyAssemblyText(totals) {
+  return [totals.ready ? `${formatNumber(totals.ready)} rally ready` : "",
+    totals.inbound ? `${formatNumber(totals.inbound)} inbound` : ""].filter(Boolean).join(" · ");
+}
+
+function renderCityRallyAssemblyPanel(city) {
+  if (city.owner !== "player" && !isClanAllyCity(city)) return "";
+  const totals = getCityRallyAssembly(city);
+  return `<section class="city-rally-assembly" data-city-rally-assembly="${escapeHtml(city.id)}" data-rally-region="${escapeHtml(getCityRegionId(city))}" ${totals.ready || totals.inbound ? "" : "hidden"}>${renderCityRallyAssemblyContent(totals)}</section>`;
+}
+
+function renderCityRallyAssemblyContent(totals) {
+  return `<strong>Rally assembly</strong><span>${formatNumber(totals.ready)} ready here · ${formatNumber(totals.inbound)} inbound</span><small>Ready troops are reserved for the rally. They are separate from the available garrison.</small>`;
+}
+
+function patchCityRallyAssemblyPanels() {
+  modalBody?.querySelectorAll("[data-city-rally-assembly]").forEach(panel => {
+    const city = cityById(panel.dataset.cityRallyAssembly);
+    const totals = city && getCityRegionId(city) === panel.dataset.rallyRegion ? getCityRallyAssembly(city) : { ready: 0, inbound: 0 };
+    panel.hidden = !totals.ready && !totals.inbound;
+    const markup = renderCityRallyAssemblyContent(totals);
+    if (panel.innerHTML !== markup) panel.innerHTML = markup;
+  });
+}
+
+function renderRallyAssemblyLink(rally) {
+  const name = escapeHtml(rally.assemblyCityName || rally.assemblyCityId || "City");
+  return `<button type="button" class="rally-assembly-link" data-rally-action="assembly" data-rally-id="${escapeHtml(rally.id)}" aria-label="Show assembly city ${name} on map" title="Show assembly city on map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/></svg><span>${name}</span></button>`;
+}
+
+async function focusClanRallyAssembly(rally) {
+  if (!rally?.assemblyCityId || !state?.clanId || rally.clanId !== state.clanId) return;
+  const scope = getOnlineRequestScope();
+  const clanId = state.clanId;
+  const regionId = normalizeRegionId(rally.assemblyRegionId);
+  try {
+    if (regionId !== getActiveMapRegionId()) {
+      const switched = await switchOnlineIsland(regionId);
+      if (!switched) { showToast("The assembly map is unavailable. Try again."); return; }
+    }
+    if (scope !== getOnlineRequestScope() || clanId !== state?.clanId || regionId !== getActiveMapRegionId()) return;
+    const target = rally.assemblyType === "tower" ? getHoldingTowerVisual(rally.assemblyCityId) : cityById(rally.assemblyCityId);
+    if (!target || getCityRegionId(target) !== regionId) {
+      showToast("That assembly location is no longer available.");
+      return;
+    }
+    if (modal.open) modal.close();
+    closeProfileScreen();
+    clearSelection(false);
+    if (rally.assemblyType === "tower") await selectClanTowerOnMap(target.id);
+    else selectCity(target.id);
+    centerOnWorldPoint(target, regionId);
+  } catch (error) {
+    if (scope === getOnlineRequestScope() && clanId === state?.clanId) showToast(error?.message || "Could not open the assembly map.");
+  }
+}
 
 function getActivityRallyIdentity(rally) {
   const target = getArmyTargetById(rally.targetId) || getPlayableBaseCityById(rally.targetId);
@@ -71,7 +146,7 @@ function renderRalliesActivityCard(rally, context) {
   if (actionBusy) note = recallBusy ? "Sounding the Recall Horn…" : "Sending your order…";
   return `<section class="rally-detail" data-activity-rally-detail="${escapeHtml(rally.id)}" aria-labelledby="activityRallyTitle">
     <header class="rally-title"><div class="target-seal"><img src="${identity.art}" alt=""></div><div class="target-heading"><h3 id="activityRallyTitle">${escapeHtml(rally.targetName || rally.targetId || "Objective")}</h3><p>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${identity.type}</p></div><span class="status-pill ${identity.state}">${identity.label}</span></header>
-    <div class="rally-scroll" tabindex="0" aria-label="Rally information and all participants"><div class="rally-overview"><div class="rally-meta"><div><small>Rally creator</small>${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</div><div><small>Assembly city</small><strong>${escapeHtml(rally.assemblyCityName || rally.assemblyCityId || "City")}</strong></div></div>
+    <div class="rally-scroll" tabindex="0" aria-label="Rally information and all participants"><div class="rally-overview"><div class="rally-meta"><div><small>Rally creator</small>${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</div><div><small>Assembly city</small>${renderRallyAssemblyLink(rally)}</div></div>
     <div class="muster-totals ${Math.max(force, inboundTroops) > 9999999 ? "large" : ""}"><div><small>${recalling ? "Returning troops" : launched ? "Marching troops" : "Assembled troops"}</small><strong>${formatMarchesNumber(force)}</strong></div><div><small>Incoming troops</small><strong>${formatMarchesNumber(inboundTroops)}</strong></div><div><small>${forming ? "Rulers ready" : "Rulers in rally"}</small><strong class="ready-total">${forming ? `${ready} / ${activeParticipants.length}` : count}</strong></div></div></div>
     <div class="muster-heading"><h4>The muster</h4><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS} rulers${forming ? " · All must be ready" : ""}</span></div>
     <table class="muster-table" aria-label="Rally participants"><thead><tr><th scope="col">Ruler</th><th scope="col">Troops</th><th scope="col">Status</th></tr></thead><tbody>${participants.map((person, index) => {

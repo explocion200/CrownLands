@@ -1,164 +1,75 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e6f52048108232177999601389d57f07defb8ccf",
+  "baseCommit": "fbecfd6663ab42cb5d9283d7c64b23899766144e",
   "coverage": [
     {
       "paths": [
+        "game.js",
+        "rallies-activity-ui.js",
+        "rallies-activity-ui.css",
+        "city-details-ui.js",
+        "stronghold-details-ui.js",
+        "troop-orders-ui.js"
+      ],
+      "tests": [
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-city-details-browser.js",
+        "tools/validate-active-operations.js",
+        "tools/validate-map-interactions.js",
+        "tools/validate-performance-bottlenecks.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js",
+        "tools/validate-holding-towers.js",
+        "functions/test/emulator-rally-lifecycle.js"
+      ],
+      "reason": "Open Rally directly from the last selected owned city for Towers, Strongholds and Citadel; preserve permission, ownership, reachability and available-troop gates. Render reserved ready troops at their assembly city without changing spendable garrison, defense or King Power, and update arrival/launch/cancel visibility. Cover clan privacy, account/region navigation, War Room and Activity links, shared city/holding details, troop slider controls, map reconciliation and performance budgets. Browser checks at 1440x900, 844x390 and 568x320 verify layout and click/touch controls; existing lifecycle emulator covers authoritative troop reservation and settlement."
+    },
+    {
+      "paths": [
         "functions/index.js",
-        "functions/notification-delivery.js",
-        "functions/maintenance-deletes.js",
-        "functions/test/emulator-notification-delivery.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-notification-system.js",
-        "tools/validate-report-system.js",
-        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-authoritative-army-orders.js",
         "tools/validate-holding-towers.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-performance-bottlenecks.js",
-        "functions/test/emulator-notification-delivery.js",
         "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-chat.js",
-        "tools/validate-daily-missions.js",
-        "functions/test/emulator-daily-missions.js"
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-bulk-army-orders.js"
       ],
-      "reason": "Bind reports to their recipient and complete Tower scouting/returns; queue Tower defender alerts. Exercise partial push failures, invalid tokens, fresh receipts, concurrent leases, crash recovery and expired/deleted receipts. Cleanup splits oversized indexed deletes without retrying unrelated failures. Cover shared report, army, chat and transaction dependencies. User-requested full static and multiplayer regression runs with validation:full before release. Production memory-limit evidence requires 512 MiB and concurrency eight for Daily Mission event workers, with durable retries and instance limits preserved. Existing mission event and exactly-once reward emulator checks cover behavior."
+      "reason": "The shared Rally slider requires an authoritative Tower route preview. Validate the known Tower and its actual active region, resolve current Tower coordinates, preserve source ownership and read-only transaction behavior. Emulator tests verify valid routes, foreign sources, wrong regions and invented Towers plus no garrison mutation. Shared ordinary/cross-map/scout/rally-join route previews and march-speed/gear behavior are covered by world-travel and bulk-order emulator suites. Creation/launch restrictions and troop reservation remain unchanged."
     },
     {
       "paths": [
-        "game.js",
-        "tools/test-game-display.js",
-        "tools/validate-game-display-browser.js"
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-clan-tower-map-browser.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/test-game-display.js",
-        "tools/validate-game-display-browser.js",
-        "tools/validate-performance-bottlenecks.js",
-        "tools/validate-responsive-runtime.js",
-        "tools/validate-responsive-browser.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-incoming-army-estimates.js"
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-clan-tower-map-browser.js"
       ],
-      "reason": "Restore fullscreen entry and X exit at desktop and landscape mobile sizes, including refusal, retry and native fullscreen help. Fault-inject a failed frame and verify continued scheduling, cache cleanup and bounded diagnostics. Exercise shared map, HUD, foreground and recovery dependencies. March labels preserve estimate bounds without locale construction or duplicate formatting; unchanged accessibility/navigation attributes are not rewritten. Incoming-estimate and map-interaction tests preserve private transfers, endpoint clearance and live troop values."
+      "reason": "Execute new behavioral source/visibility/navigation regressions and real UI tests. Adapt Tower submission tests to the shared city slider while preserving all four Tower, ownership, NPC cap, zoom, store, keyboard and gesture checks. Test state and network responses are confined to the isolated localhost benchmark."
     },
     {
       "paths": [
-        "service-worker.js",
-        "manifest.webmanifest",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-audio-delivery.js"
-      ],
-      "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-audio-contract.js",
-        "tools/validate-audio-delivery.js"
-      ],
-      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing. The audio fetch fixture models FetchEvent.waitUntil and waits for background caching before testing cache diagnostics; the separate blocked-cache regression verifies that responses themselves remain immediate. A reproduced itch-specific audio cache interception is fixed by resolving the bypass against the worker's app directory; nested MP3/OGG/WAV and Range requests bypass caching, while the nested manifest remains managed."
-    },
-    {
-      "paths": [
-        "functions/package.json",
-        "tools/validate-stability-regressions.js"
-      ],
-      "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-notification-system.js"
-      ],
-      "reason": "Wire report, cleanup, push, frame and worker fault regressions into the full pretest gate. No dependencies change; the full regression also runs the existing production dependency audit."
-    },
-    {
-      "paths": [
-        "tools/validate-notification-system.js"
-      ],
-      "tests": [
-        "tools/validate-notification-system.js",
-        "tools/validate-stability-regressions.js",
-        "functions/test/emulator-notification-delivery.js"
-      ],
-      "reason": "Require delivery-helper wiring and Tower attack outbox creation; behavioral fault tests and real Firestore transactions supplement source-level assertions."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/fullscreen-landscape-launch.md",
-        "docs/GAME_STABILITY_AUDIT_2026_09_22.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record confirmed fullscreen restoration, observed defects, coverage, measurement limits and release verification. Prose does not change deferred gameplay design."
+      "reason": "Document the explicitly confirmed remembered-city Rally flow, assembly map shortcut and reserved troop visibility. Mark the update pending merge and deployment; no unrelated balance rules change."
     },
     {
       "paths": [
-        "tools/validate-report-system.js"
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/validate-report-system.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "The report autosave fixture must provide the current signed-in UID required by the existing account-switch guard. Assert that the save really executes before checking server-owned report exclusion; production authentication behavior is unchanged."
-    },
-    {
-      "paths": [
-        "tools/validate-authoritative-army-orders.js"
-      ],
-      "tests": [
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-release-gate.js",
-        "tools/test-targeted-validation.js"
-      ],
-      "reason": "The full regression exposed an obsolete workflow-command assertion left by the earlier targeted-validation migration. Verify the actual CI-to-runner-to-full-static chain and preserve the exhaustive route-parity requirement; do not change or bypass release gates."
-    },
-    {
-      "paths": [
-        "tools/validate-onboarding-guidance.js",
-        "tools/validate-onboarding-browser.js"
-      ],
-      "tests": [
-        "tools/validate-onboarding-guidance.js",
-        "tools/validate-onboarding-browser.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/test-player-identity-safety.js",
-        "tools/validate-player-identity-browser.js"
-      ],
-      "reason": "The earlier identity-protection fix requires a verified saved profile before first-claim guidance and a dedicated revision-checked identity write before projections. Model those actual APIs in source/browser fixtures, preserve fresh-claim redirect/replay and draft/retry checks, and assert that a missing profile cannot enable onboarding or a failed identity write reach projections. No runtime identity policy changes."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-rallies.js"
-      ],
-      "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/validate-holding-towers.js"
-      ],
-      "reason": "The earlier Tower control change added live clan ownership filtering. Supply the actual ally predicate and Tower snapshots in the Rally fixture, model the source as clan-owned, and assert that newly friendly Towers are excluded. Gameplay eligibility is unchanged."
-    },
-    {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "reason": "The full suite exposed an offline-shell allowance unchanged since 90b8f2e. Git object measurements prove 49,907 bytes already added by approved Tower/identity/fullscreen changes and 1,385 bytes from this audit. Bound this source growth at 52 KiB without dropping offline dependencies; retain runtime resource/FPS limits and report their failures separately."
+      "reason": "Measured packaged Rally presentation grows from 60,093 bytes to 65,884 bytes for the requested assembly visibility and navigation. Bound the 5,791-byte source addition with a 6 KiB module allowance; preserve all global offline-shell, request, art, heap and FPS budgets. No new images, dependencies or network calls are added for presentation."
     }
   ]
 }

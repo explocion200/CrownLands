@@ -20,10 +20,11 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel) {
   panel.classList.add("report-shell");
   panel.dataset.orderKind = orderKind;
   const attack = orderKind === "attack", transfer = orderKind === "transfer";
+  const rally = orderKind === "rally_create" || orderKind === "rally_join";
   const oldRoute = panel.querySelector(".troop-route-summary");
   const destinationNote = oldRoute.querySelector(".destination small").textContent.split(" · ").slice(1).join(" · ");
   const remaining = oldRoute.querySelector("#troopSliderRemaining").parentElement;
-  remaining.innerHTML = `<b id="troopSliderRemaining">${formatMarchesNumber(source.troops - selectedTroopAmount)}</b> of <span id="troopSliderSourceTotal">${formatMarchesNumber(source.troops)}</span> remain at source`;
+  remaining.innerHTML = `<b id="troopSliderRemaining">${formatMarchesNumber(source.troops - selectedTroopAmount)}</b> of <span id="troopSliderSourceTotal">${formatMarchesNumber(source.troops)}</span> ${rally ? "available at source" : "remain at source"}`;
   remaining.className = "remaining";
   const control = panel.querySelector(".troop-slider-control");
   control.className = "force-column";
@@ -51,7 +52,7 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel) {
   const swift = panel.querySelector(".swift-march-launch-option");
   const notes = [...panel.children].filter(element => ![oldRoute, control, actions, preview, swift].includes(element));
   const header = document.createElement("header"); header.className = "window-header";
-  header.innerHTML = `<img class="heading-art" src="assets/icons/${attack ? "skills/swordmastery.svg" : orderKind === "reinforce" ? "skills/shieldwallDiscipline.svg" : "troop-orders/marching-banner.svg"}" alt=""><div class="heading"><p>MILITARY ORDERS</p><h2>${commandLabel} troops</h2></div><span class="order-kind">${attack ? "Attack order" : "Friendly movement"}</span><button type="button" class="close-button" aria-label="Close Troop Orders">×</button>`;
+  header.innerHTML = `<img class="heading-art" src="assets/icons/${attack ? "skills/swordmastery.svg" : orderKind === "reinforce" ? "skills/shieldwallDiscipline.svg" : "troop-orders/marching-banner.svg"}" alt=""><div class="heading"><p>MILITARY ORDERS</p><h2>${commandLabel}${rally ? "" : " troops"}</h2></div><span class="order-kind">${rally ? "Clan rally" : attack ? "Attack order" : "Friendly movement"}</span><button type="button" class="close-button" aria-label="Close Troop Orders">×</button>`;
   header.querySelector("button").addEventListener("click", () => modal.close());
   const body = document.createElement("main"); body.className = "order-body"; body.tabIndex = 0; body.setAttribute("aria-label", "Order details");
   body.innerHTML = `<div class="order-route">${renderTroopOrderLocation(source, "From", "", attack)}<svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>${renderTroopOrderLocation(target, "To", destinationNote, attack)}</div><div class="order-columns ${attack ? "selection-layout attack-layout" : transfer ? "selection-layout transfer-layout" : ""}"></div>`;

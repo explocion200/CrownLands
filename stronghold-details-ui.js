@@ -58,6 +58,8 @@
       strength.append(card);
     }
     details.append(strength);
+    const rallyAssembly = source.querySelector("[data-city-rally-assembly]");
+    if (rallyAssembly) details.append(rallyAssembly);
     const walls = source.querySelector('.fortification-status');
     if (walls) details.append(walls);
     const disclosures = create('div', 'overview-disclosures');

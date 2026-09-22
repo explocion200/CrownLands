@@ -1,4 +1,12 @@
-/* Approved Rallies presentation, scoped to Kingdom Activity. */
+/* Shared rally assembly indicators and Kingdom Activity presentation. */
+.city-rally-count{display:block;color:#ffe49b;font-size:10px;line-height:1.25;white-space:nowrap;text-shadow:0 1px 2px #211b13}
+.city-rally-assembly{display:grid;gap:5px;padding:10px 12px;margin:10px 0;border:1px solid #b8a684;background:#e9dcb4;color:#352f23;font:13px/1.4 "Segoe UI",Arial,sans-serif}
+.city-rally-assembly[hidden]{display:none}
+.city-rally-assembly small{font-size:11px}
+.clan-rally-card .rally-assembly-link,#modal.rallies-activity-ledger .rally-assembly-link{display:inline-flex!important;align-items:center;gap:6px;min-height:44px!important;padding:5px 8px!important;max-width:100%;border:1px solid #b8a684!important;background:#e9dcb4!important;color:#352f23!important;text-align:left;white-space:normal;cursor:pointer}
+.rally-assembly-link svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6}
+.rally-assembly-link span{min-width:0;overflow-wrap:anywhere}
+.rally-assembly-link:focus-visible{outline:2px solid #435735;outline-offset:2px}
 #modal.outgoing-attack-modal.rallies-activity-ledger{display:block !important;font-weight:400 !important}
 #modal.outgoing-attack-modal.rallies-activity-ledger:not([open]){display:none !important}
 #modal.outgoing-attack-modal.rallies-activity-ledger::before,#modal.outgoing-attack-modal.rallies-activity-ledger::after{display:none !important}
