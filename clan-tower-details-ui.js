@@ -65,7 +65,7 @@
       const unavailable=probation?"Military actions unlock after 24 hours in the clan.":"Tower permissions are syncing. Try again shortly.";
       const canSend=Boolean(Number(t.ownStationedTroops)>0&&(p.withdrawOwn||p.attackFrom||p.rallyFrom));
       actions.push({action:"reinforce",label:"Reinforce",icon:"reinforcement",disabled:!p.reinforce,reason:p.reinforce?"":unavailable});
-      actions.push({action:"send",label:"Send",icon:"transfer",disabled:!canSend,reason:canSend?"":probation?unavailable:Number(t.ownStationedTroops)===0?"Station your own troops here before sending orders.":unavailable});
+      actions.push({action:"send",label:"Send",icon:"forward",disabled:!canSend,reason:canSend?"":probation?unavailable:Number(t.ownStationedTroops)===0?"Station your own troops here before sending orders.":unavailable});
     }
     return actions;
   }

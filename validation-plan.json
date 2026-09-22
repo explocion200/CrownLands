@@ -30,7 +30,7 @@
         "tools/validate-clan-tower-buildings-browser.js",
         "tools/validate-clan-heraldry-v2.js"
       ],
-      "reason": "Verify the three owned-Tower actions, probation/empty-garrison explanations, Move/Attack/Rally choice and submissions, private details, and shared v1/v2 clan heraldry. Browser coverage checks persistent banners and identity changes across all four Towers, fixed-size controls and gestures, and compound/building clearance at desktop and two landscape-mobile sizes."
+      "reason": "Verify the three owned-Tower actions, probation/empty-garrison explanations, Move/Attack/Rally choice and submissions, private details, and shared v1/v2 clan heraldry. Tower Send uses the same forward-arrow icon and shared blue action-button style as city Send. Browser coverage checks persistent banners and identity changes across all four Towers, fixed-size controls and gestures, and compound/building clearance at desktop and two landscape-mobile sizes."
     },
     {
       "paths": [
