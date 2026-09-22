@@ -1,6 +1,6 @@
 # Incoming Threats approval draft
 
-Status: awaiting design approval. Created September 22, 2026 on `codex/incoming-threats-draft`, based on main `eb6c5acf488268daedaa5f23500ffccb5f8e8e26`.
+Status: approved for integration, merge and deployment September 22, 2026. Created on `codex/incoming-threats-draft`, based on main `eb6c5acf488268daedaa5f23500ffccb5f8e8e26`. Deployment must be verified separately.
 
 Open `index.html?viewport=desktop&sample=standard` through the local repository server. The review toolbar also offers 844×390 and 568×320 mobile landscape. Portrait gameplay is outside this review.
 
@@ -22,7 +22,7 @@ The current game entry points are `getIncomingAttacks`, `renderIncomingAttacksMo
 
 On later integration, keep authoritative visibility, source fallbacks, exact region/target identity, existing target eligibility and accepted arrival deadlines. A missing off-map city snapshot must stay explicitly unavailable rather than displaying zero. Navigation must use the real target map; this preview's background is illustrative. Verify applicable non-city targets separately before adapting city-only labels.
 
-No runtime entry, production stylesheet, backend function, data, combat rule or Master Specification was changed. Approval of the draft is still needed before actual-game integration and release.
+The approved design is integrated by `incoming-threats-ui.js/css`, mounted from the real game entry. The existing army feed, estimate helper, player-profile route and report-location navigator provide actual data/actions. The production bundle contains these runtime modules, not preview scripts. Own troop/defense totals display in full; enemy estimate formatting stays authoritative. The Master Specification records approval. No backend function, data, subscription or combat rule is changed.
 
 ## Verification
 
@@ -38,4 +38,4 @@ Passed at 1440×900, 844×390 and 568×320 across all six examples (18 combinati
 
 Screenshots were visually inspected for the standard desktop and both landscape sizes, long names at 568×320, and unavailable city details at 844×390. Local captures and machine-readable evidence are in ignored `release-artifacts/incoming-threats/`.
 
-These checks verify the isolated draft. Real subscriptions, countdown updates, accounts and cross-map navigation await runtime integration; they have not been claimed as verified by the preview.
+The separate `tools/validate-incoming-threats-browser.js` checks the actual game at all three sizes: filters, Legion, 18 rows, full own stats/estimated enemy stats, unavailable snapshots, camp labels, stable DOM/scroll/focus on countdowns, live row changes, one pending location request, failure/retry, and existing automatic close on expiry. Existing estimate, report navigation, universal profile, activity and modal lifecycle validators cover shared dependencies. Local evidence is in ignored `release-artifacts/incoming-threats-runtime/`. The benchmark server's unsupported `/play/?updateCheck=...` probe is excluded from asset failures; production `/play/` is verified separately. Production accounts and live combat are not exercised by the local fixture.

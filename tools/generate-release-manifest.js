@@ -70,6 +70,7 @@ function createManifest() {
     "app-entry.js",
     "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png",
     "chat-ledger-ui.css", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
+    "incoming-threats-ui.css", "incoming-threats-ui.js",
     "marches-activity-ui.css", "marches-activity-ui.js",
     "rallies-activity-ui.css", "rallies-activity-ui.js",
     "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",

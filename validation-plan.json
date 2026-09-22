@@ -18,10 +18,54 @@
       ]
     },
     {
-      "reason": "Draft scope, current-runtime integration references and verified visual review notes only. No executable behavior.",
+      "reason": "Record the explicitly approved Incoming Threats presentation, integration, compatibility and verification scope; preserve all existing combat and notification policies.",
       "tests": [],
       "paths": [
-        "docs/visual-qa/incoming-threats/README.md"
+        "docs/visual-qa/incoming-threats/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ]
+    },
+    {
+      "paths": [
+        "game.js",
+        "index.html",
+        "incoming-threats-ui.js",
+        "incoming-threats-ui.css",
+        "tools/validate-incoming-threats-browser.js"
+      ],
+      "reason": "Integrate only incoming threat rendering and location delegation. Actual-game browser coverage verifies all three desktop/landscape sizes, filters, Legion, private troop estimates, full own stats, pending snapshots, non-city labels, countdown DOM/focus/scroll stability, changed rows, failed map retry and duplicate clicks, and existing automatic expiry closure. Existing validators cover incoming privacy, region navigation, shared modal and profile routes, Kingdom Activity isolation and asset/cache budgets. Army subscriptions, combat rules and server code are unchanged, so emulators are not selected.",
+      "tests": [
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-active-operations.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-universal-profile-links.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-asset-performance-budgets.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Package and fingerprint the two new Incoming Threats modules in the game build, enforce their 40 KiB budget and exclude draft actions. Production artifact and shared shell/cache checks cover distribution dependencies.",
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-incoming-threats-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-incoming-army-estimates.js"
+      ],
+      "reason": "Follow the estimate label into the extracted runtime renderer and its map delegation into the existing region-safe report navigator. Keep every privacy/estimate assertion and add real-browser disclosure and navigation coverage.",
+      "tests": [
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-report-location-navigation.js"
       ]
     }
   ]

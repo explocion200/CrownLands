@@ -1,0 +1,186 @@
+/* Approved Incoming Threats only. No draft code or data is loaded by the game. */
+#modal.incoming-attack-modal.incoming-threats-ledger{display:block!important;font-weight:400!important}
+#modal.incoming-attack-modal.incoming-threats-ledger:not([open]){display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger::before,#modal.incoming-attack-modal.incoming-threats-ledger::after{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger>.modal-card{height:100%!important;max-height:none!important;display:block!important;padding:0!important;margin:0!important;width:100%!important;min-width:0!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important}
+#modal.incoming-attack-modal.incoming-threats-ledger>.modal-card>:not(#modalBody){display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger #modalBody{height:100%!important;max-height:none!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;scrollbar-gutter:auto!important}
+#modal.incoming-attack-modal.incoming-threats-ledger *{font-variant:normal!important;text-shadow:none!important;text-transform:none!important;letter-spacing:normal!important}
+#modal.incoming-attack-modal.incoming-threats-ledger :is(p,span,strong,small,button,a,div,footer,nav){font-family:"Segoe UI",Arial,sans-serif!important;font-weight:400!important}
+#modal.incoming-attack-modal.incoming-threats-ledger :is(button,a){margin:0!important;border-radius:0!important;min-width:0!important;transition:none!important;background-image:none!important;box-shadow:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger :is(h2,h3,p,span,strong,small,button,a,div,footer,nav){color:inherit!important}
+#modal.incoming-attack-modal.incoming-threats-ledger :is(h2,h3){background:none!important;box-shadow:none!important;border:0!important;padding:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger{color-scheme:light!important;--paper:#f2e8cd!important;--ink:#352f23!important;--muted:#716247!important;--line:#b8a684!important;--olive:#4b583c!important;--red:#803f38!important;font-family:"Segoe UI",Arial,sans-serif!important;color:var(--ink)!important;background:#30382a!important}
+#modal.incoming-attack-modal.incoming-threats-ledger *{box-sizing:border-box!important}
+#modal.incoming-attack-modal.incoming-threats-ledger h2,#modal.incoming-attack-modal.incoming-threats-ledger h2,#modal.incoming-attack-modal.incoming-threats-ledger h3,#modal.incoming-attack-modal.incoming-threats-ledger p{margin:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger button{font:inherit!important;color:inherit!important;cursor:pointer!important;touch-action:manipulation!important}
+#modal.incoming-attack-modal.incoming-threats-ledger button:focus-visible,#modal.incoming-attack-modal.incoming-threats-ledger main:focus-visible{outline:2px solid #376872!important;outline-offset:-3px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger button:hover{filter:brightness(1.06)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger [hidden]{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger svg{width:24px!important;height:24px!important;flex:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger button:disabled{opacity:.45!important;cursor:default!important}
+#modal.incoming-attack-modal.incoming-threats-ledger{width:min(1200px,calc(100vw - 24px))!important;height:min(660px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;margin:auto!important;padding:5px!important;border:1px solid #766346!important;border-radius:2px!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important;overflow:hidden!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger{height:100%!important;display:flex!important;flex-direction:column!important;border:1px solid var(--line)!important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .window-header{display:flex!important;align-items:center!important;gap:12px!important;flex:none!important;min-height:76px!important;padding:9px 19px!important;border-bottom:1px solid var(--line)!important;background:#e9dcb483!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading-art{width:42px!important;height:48px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading p{font-size:8px!important;letter-spacing:1.8px!important;color:var(--muted)!important;margin-bottom:4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading h2{font:29px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading{min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .header-note{margin-left:auto!important;font:italic 13px Georgia,serif!important;color:var(--muted)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .close-button{width:44px!important;height:44px!important;min-width:44px!important;border:0!important;background:transparent!important;font:28px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary{display:flex!important;align-items:center!important;gap:20px!important;flex:none!important;min-height:76px!important;padding:11px 24px!important;background:linear-gradient(90deg,#e7d2b059,#e8dfbd30)!important;border-bottom:1px solid #c4b28b!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-number{font:36px Georgia,serif!important;color:var(--red)!important;font-variant-numeric:tabular-nums!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy h2{font:20px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy p{font-size:11px!important;color:var(--muted)!important;margin-top:4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival{margin-left:auto!important;display:flex!important;align-items:center!important;gap:16px!important;padding-left:22px!important;border-left:1px solid #c9b28d!important;text-align:right!important;flex:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival span{display:block!important;font-size:10px!important;color:var(--muted)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival small{display:block!important;font:14px Georgia,serif!important;margin-top:4px!important;max-width:240px!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival strong{font:32px Georgia,serif!important;color:var(--red)!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters{display:flex!important;align-items:center!important;gap:6px!important;padding:5px 18px!important;background:#e9dcba!important;flex:none!important;border-bottom:1px solid var(--line)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button{min-width:90px!important;min-height:44px!important;display:flex!important;gap:7px!important;align-items:center!important;justify-content:center!important;background:transparent!important;border:1px solid transparent!important;padding:0 12px!important;font:15px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button[aria-pressed=true]{border-color:#633c36!important;background:#753f3a!important;color:#fbefd3!important;box-shadow:inset 0 0 0 2px #b59c7866!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button span{font:11px "Segoe UI",sans-serif!important;min-width:21px!important;padding:2px 5px!important;border:1px solid #b39b745c!important;border-radius:2px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters svg{width:25px!important;height:28px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .sort-note{margin-left:auto!important;font-size:10px!important;color:var(--muted)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .column-labels,#modal.incoming-attack-modal.incoming-threats-ledger .threat-row{display:grid!important;grid-template-columns:109px minmax(0,1fr) minmax(0,1.28fr) 140px 80px!important;gap:17px!important;align-items:center!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .column-labels{flex:none!important;margin:0 18px!important;padding:9px 16px 8px 19px!important;font-size:9px!important;letter-spacing:1px!important;text-transform:uppercase!important;color:var(--muted)!important;border-bottom:1px solid #b9a780!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .column-labels>span:nth-child(4),#modal.incoming-attack-modal.incoming-threats-ledger .column-labels>span:last-child{text-align:center!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-list{flex:1!important;min-height:0!important;overflow:auto!important;padding:0 18px 12px!important;overscroll-behavior:contain!important;touch-action:pan-y!important;scrollbar-width:thin!important;scrollbar-color:#a68e62 #e5d9bb!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row{--tone:#803f38!important;min-height:91px!important;border-left:3px solid var(--tone)!important;border-bottom:1px solid #bfad85!important;padding:11px 16px!important;background:linear-gradient(90deg,#eee0bd5c,transparent)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row:nth-child(even){background:#e7dabb40!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row.scout{--tone:#576548!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row.legion{--tone:#88612e!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row.urgent{background:linear-gradient(90deg,#d5a99742,#f1e2bd30)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row.located{box-shadow:inset 0 0 0 2px #748060!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .arrival{min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .arrival time{display:block!important;font:29px/1.05 Georgia,serif!important;color:var(--tone)!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label{display:flex!important;align-items:center!important;gap:5px!important;margin-top:5px!important;color:var(--tone)!important;font:12px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label svg{width:23px!important;height:24px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .urgency{display:block!important;font-size:9px!important;color:var(--red)!important;margin-top:3px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker,#modal.incoming-attack-modal.incoming-threats-ledger .city{min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker-label,#modal.incoming-attack-modal.incoming-threats-ledger .city-region{display:block!important;font-size:9px!important;color:var(--muted)!important;margin-bottom:2px!important;line-height:1.35!important;overflow-wrap:anywhere!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .profile{min-height:44px!important;border:0!important;background:transparent!important;padding:2px 0!important;font:19px/1.15 Georgia,serif!important;text-align:left!important;text-decoration:underline!important;text-decoration-color:#b8a079!important;text-underline-offset:4px!important;overflow-wrap:anywhere!important;max-width:100%!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker .npc-name{display:block!important;font:19px Georgia,serif!important;padding:5px 0 7px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .origin{font-size:11px!important;color:var(--muted)!important;overflow-wrap:anywhere!important;line-height:1.45!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .origin strong{font-weight:400!important;color:var(--ink)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-title{display:flex!important;gap:7px!important;align-items:baseline!important;flex-wrap:wrap!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-title h3{font:21px/1.15 Georgia,serif!important;overflow-wrap:anywhere!important;min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .level{font-size:9px!important;color:#715d3f!important;white-space:nowrap!important;border:1px solid #baa782!important;background:#e9dbbb80!important;padding:2px 5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats{display:flex!important;gap:7px 14px!important;align-items:center!important;flex-wrap:wrap!important;margin-top:7px!important;font-size:10px!important;color:var(--muted)!important;line-height:1.4!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats strong{font:14px Georgia,serif!important;color:var(--ink)!important;font-variant-numeric:tabular-nums!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .pending-note{font-size:11px!important;color:#7b5e38!important;line-height:1.45!important;margin-top:6px!important;max-width:250px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force{text-align:center!important;min-width:0!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force>span{display:block!important;font-size:9px!important;color:var(--muted)!important;margin-bottom:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force strong{display:block!important;font:18px/1.2 Georgia,serif!important;overflow-wrap:anywhere!important;font-variant-numeric:tabular-nums!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force small{display:block!important;margin-top:4px!important;font-size:9px!important;color:var(--muted)!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force.unknown strong{font-size:15px!important;color:#776448!important;font-style:italic!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .locate{width:80px!important;min-height:50px!important;padding:5px 3px!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:4px!important;border:1px solid #a9946c!important;background:#e4d6b2!important;box-shadow:inset 0 0 0 2px #fff5da66!important;font:11px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .locate svg{width:23px!important;height:23px!important;color:#5a6043!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer{flex:none!important;display:flex!important;align-items:center!important;gap:15px!important;justify-content:space-between!important;min-height:30px!important;padding:6px 22px!important;border-top:1px solid #c4b18d!important;background:#e9dcb45e!important;font-size:10px!important;color:#736044!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer>span:first-child{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer>span:last-child{flex:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state{min-height:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;text-align:center!important;gap:12px!important;padding:25px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state svg{width:68px!important;height:72px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state h2{font:28px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state p{max-width:360px!important;font-size:13px!important;color:var(--muted)!important;line-height:1.6!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state button{min-height:44px!important;padding:0 18px!important;border:1px solid #ac956c!important;background:#e4d2ab!important;font:15px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .all-clear .summary-number{color:var(--olive)!important}
+@media(max-height:600px),(max-width:1000px){
+#modal.incoming-attack-modal.incoming-threats-ledger .window-header{min-height:48px!important;padding:1px 10px!important;gap:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading-art{width:30px!important;height:34px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading p{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading h2{font-size:22px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .header-note{font-size:11px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .close-button{font-size:26px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary{min-height:48px!important;padding:5px 14px!important;gap:10px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-number{font-size:28px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy{gap:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy h2{font-size:16px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy p{font-size:9px!important;margin-top:2px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival{gap:10px!important;padding-left:12px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival span{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival small{font-size:11px!important;margin-top:2px!important;max-width:190px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival strong{font-size:25px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters{padding:1px 9px!important;gap:3px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button{font-size:13px!important;padding:0 9px!important;min-width:76px!important;gap:6px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters svg{width:22px!important;height:24px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .sort-note{font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .column-labels{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-list{padding:0 9px 7px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row{grid-template-columns:78px minmax(0,1fr) minmax(0,1.25fr) 112px 61px!important;gap:11px!important;padding:7px 8px!important;min-height:91px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .arrival time{font-size:24px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label{font-size:10px!important;margin-top:4px!important;gap:3px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label svg{width:20px!important;height:21px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .urgency{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker-label,#modal.incoming-attack-modal.incoming-threats-ledger .city-region{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .profile,#modal.incoming-attack-modal.incoming-threats-ledger .attacker .npc-name{font-size:15px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .profile{padding:2px 0!important;min-height:44px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .origin{font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-title h3{font-size:17px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-title{gap:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .level{font-size:8px!important;padding:1px 4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats{font-size:9px!important;gap:3px 9px!important;margin-top:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats strong{font-size:12px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force strong{font-size:15px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force>span,#modal.incoming-attack-modal.incoming-threats-ledger .force small{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force.unknown strong{font-size:13px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .pending-note{font-size:9px!important;margin-top:4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .locate{width:61px!important;min-height:48px!important;font-size:10px!important;gap:2px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .locate svg{width:21px!important;height:21px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer{min-height:23px!important;padding:4px 12px!important;font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state{gap:7px!important;padding:12px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state svg{width:39px!important;height:42px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state h2{font-size:22px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .empty-state p{font-size:11px!important}
+}
+@media(max-width:650px){
+#modal.incoming-attack-modal.incoming-threats-ledger{width:calc(100vw - 12px)!important;height:calc(100dvh - 12px)!important;padding:4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .window-header{padding-inline:5px!important;gap:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading h2{font-size:20px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .header-note{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .close-button{margin-left:auto!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .heading-art{width:25px!important;height:30px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary{min-height:44px!important;padding:4px 10px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-number{font-size:26px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy h2{font-size:15px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .summary-copy p{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival{gap:7px!important;padding-left:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival strong{font-size:23px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .next-arrival small{font-size:10px!important;max-width:112px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters{padding-inline:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button{font-size:12px!important;min-width:70px!important;padding-inline:6px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .filters button span{font-size:10px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .sort-note{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-list{padding-inline:5px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .threat-row{grid-template-columns:64px minmax(0,.9fr) minmax(0,1.1fr) 50px!important;grid-template-areas:"arrival attacker city locate" "arrival force city locate"!important;gap:2px 8px!important;padding:7px 6px!important;min-height:104px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .arrival{grid-area:arrival!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker{grid-area:attacker!important;align-self:start!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city{grid-area:city!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force{grid-area:force!important;text-align:left!important;display:flex!important;align-items:baseline!important;flex-wrap:wrap!important;gap:2px 4px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .locate{grid-area:locate!important;width:50px!important;min-height:48px!important;font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force>span,#modal.incoming-attack-modal.incoming-threats-ledger .force small{margin:0!important;font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force strong{font-size:13px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .force.unknown strong{font-size:12px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .arrival time{font-size:21px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label{font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .kind-label svg{width:18px!important;height:20px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .urgency{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .attacker-label{display:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .profile,#modal.incoming-attack-modal.incoming-threats-ledger .attacker .npc-name{font-size:13px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-title h3{font-size:15px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats{gap:3px 6px!important;font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-stats strong{font-size:12px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .origin{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .city-region{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .level{font-size:8px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .pending-note{font-size:9px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer{padding-inline:9px!important;font-size:8px!important}
+}
+
+#modal.incoming-attack-modal.incoming-threats-ledger .window-header>svg{width:42px!important;height:48px!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .player-name-link{display:inline-block!important;min-height:44px!important;background:none!important;border:0!important;box-shadow:none!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .profile .player-name-label{font:inherit!important;color:inherit!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .ledger-footer span{color:#736044!important}
+@media(max-height:600px),(max-width:1000px){#modal.incoming-attack-modal.incoming-threats-ledger .window-header>svg{width:30px!important;height:34px!important}}
+@media(max-width:650px){#modal.incoming-attack-modal.incoming-threats-ledger .window-header>svg{width:25px!important;height:30px!important}}
