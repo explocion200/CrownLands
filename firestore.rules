@@ -98,6 +98,15 @@ service cloud.firestore {
         || (request.resource.data.state is map && validOptionalPlayerFlag(request.resource.data.state));
     }
 
+    function validSavedPlayerIdentity(uid) {
+      let profile = get(/databases/$(database)/documents/players/$(uid)).data;
+      let saved = request.resource.data.get('state', {});
+      return (!request.resource.data.keys().hasAny(['playerName'])
+          || request.resource.data.playerName == profile.get('playerName', null))
+        && (!saved.keys().hasAny(['playerName']) || saved.playerName == profile.get('playerName', null))
+        && (!saved.keys().hasAny(['flag']) || saved.flag == profile.get('flag', null));
+    }
+
     function validPlayerProfileNameCreate() {
       return !request.resource.data.keys().hasAny(['playerName'])
         || validPlayerNameValue(request.resource.data.playerName);
@@ -171,7 +180,8 @@ service cloud.firestore {
            'worldId',
            'realmShardId',
            'releaseId',
-           'cloudSaveSlot'
+          'cloudSaveSlot',
+          'identityRevision'
         ]);
     }
 
@@ -195,6 +205,7 @@ service cloud.firestore {
           'activeRegionId',
           'playerName',
           'flag',
+          'identityRevision',
           'daily',
           'scoutReports',
           'battleReports',
@@ -211,7 +222,13 @@ service cloud.firestore {
           && request.resource.data.get('activeSession', {}).get('version', 0) != 2
         ))
         && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName))
-        && (!affected.hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag));
+        && (!affected.hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag))
+        && (!affected.hasAny(['playerName', 'flag', 'identityRevision']) || (
+          affected.hasOnly(['playerName', 'flag', 'identityRevision', 'updatedAt'])
+          && request.resource.data.identityRevision is int
+          && request.resource.data.identityRevision == resource.data.get('identityRevision', 0) + 1
+          && resource.data.get('resetGeneration', '') == currentResetGeneration()
+        ));
     }
 
     function ownsCityOwnerIdentity() {
@@ -268,7 +285,8 @@ service cloud.firestore {
           && saveId == 'default-' + currentResetGeneration();
         allow create, update: if ownsPlayerDoc(uid)
           && saveId == 'default-' + currentResetGeneration()
-          && validPlayerSaveFlag();
+          && validPlayerSaveFlag()
+          && validSavedPlayerIdentity(uid);
         allow delete: if false;
       }
 

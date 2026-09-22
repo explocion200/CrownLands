@@ -2005,6 +2005,8 @@ let onlineSaveRetryAtMs = 0;
 let onlineSaveRetryIndex = 0;
 let onlineSaveAuthUid = "";
 let onlineSaveGeneration = 0;
+let onlineProfileReady = null;
+let onlineIdentityEditInFlight = false;
 let onlineSessionGeneration = 0;
 let onlineReportRequestGeneration = 0;
 let onlineReportSyncState = "loading";
@@ -6402,7 +6404,7 @@ async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShiel
 }
 
 async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = {}) {
-  if (!state) return false;
+  if (!canSaveOnlineProfile()) return false;
   const api = getOnlineApi();
   const currentUid = getCurrentOnlineUid();
   const nextFlag = normalizeFlag(state.flag);
@@ -12524,13 +12526,18 @@ function getPlayerProfileSnapshot() {
 function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
   const currentProfile = profile && isCurrentResetProfile(profile) ? profile : null;
   const currentCloudSnapshot = cloudSnapshot && isCurrentResetProfile(cloudSnapshot) ? cloudSnapshot : null;
-  if (!currentProfile) return currentCloudSnapshot;
+  // A save-slot snapshot cannot establish the player's identity or existence.
+  if (!currentProfile) return null;
   if (!currentCloudSnapshot) return currentProfile;
   const profileSavedAtMs = getProfileGameSaveMs(currentProfile);
   const cloudSavedAtMs = getProfileGameSaveMs(currentCloudSnapshot);
   const merged = cloudSavedAtMs > profileSavedAtMs
     ? { ...currentProfile, ...currentCloudSnapshot }
     : { ...currentCloudSnapshot, ...currentProfile };
+  ["playerName", "displayName", "flag", "identityRevision", "uid"].forEach(key => {
+    delete merged[key];
+    if (currentProfile[key] !== undefined) merged[key] = currentProfile[key];
+  });
   if (hasServerEconomyApi()) {
     [
       "gold",
@@ -12572,14 +12579,19 @@ function mergeOnlineBattleReports(profileReports = []) {
 
 function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
   if (!state || !profile || typeof profile !== "object") return;
-  state.playerName = cleanName(profile.playerName || profile.displayName) || fallbackPlayerName;
+  if (profile.uid && profile.uid !== getCurrentOnlineUid()) return;
+  const identityRevision = Math.max(0, Math.floor(Number(profile.identityRevision) || 0));
+  if (identityRevision >= (Number(state.identityRevision) || 0)) {
+    state.playerName = cleanName(profile.playerName || profile.displayName) || fallbackPlayerName;
+    state.flag = normalizeFlag(profile.flag, getCurrentOnlineUid() || profile.uid || profile.playerName);
+    state.identityRevision = identityRevision;
+  }
   state.clanId = String(profile.clanId || "");
   state.clanName = String(profile.clanName || "");
   state.clanTag = String(profile.clanTag || "");
   state.clanRole = String(profile.clanRole || "");
   state.clanJoinCooldownUntilMs = normalizeTimestampMs(profile.clanJoinCooldownUntilMs);
   state.pendingClanApplicationId = String(profile.pendingClanApplicationId || "");
-  state.flag = normalizeFlag(profile.flag, getCurrentOnlineUid() || profile.uid || profile.playerName);
   if (hasCurrentSkillPointSystem(profile)) {
     state.character = normalizeCharacterProgress(profile.character);
     state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
@@ -12749,7 +12761,24 @@ async function prepareOfflineProgressFromProfile(profile = null) {
   return true;
 }
 
+function canSaveOnlineProfile() {
+  return Boolean(state && onlineWorldConnected && onlineProfileReady
+    && onlineProfileReady.state === state
+    && onlineProfileReady.uid === getCurrentOnlineUid()
+    && onlineProfileReady.session === onlineSessionGeneration
+    && onlineProfileReady.resetGeneration === RESET_GENERATION
+    && onlineProfileReady.worldId === ONLINE_WORLD_ID);
+}
+
+function markOnlineProfileReady() {
+  onlineProfileReady = {
+    state, uid: getCurrentOnlineUid(), session: onlineSessionGeneration,
+    resetGeneration: RESET_GENERATION, worldId: ONLINE_WORLD_ID,
+  };
+}
+
 function queueOnlineSave() {
+  if (!canSaveOnlineProfile()) return;
   const api = getOnlineApi();
   if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return;
   Object.values(onlineSaveTargets).forEach(target => {
@@ -12789,6 +12818,7 @@ function scheduleOnlineSaveRetry() {
 function resetOnlineSaveCircuitForAuth(uid = "") {
   const nextUid = String(uid || "");
   if (nextUid === onlineSaveAuthUid) return;
+  onlineProfileReady = null;
   clearInstantEconomyActions();
   onlineSaveAuthUid = nextUid;
   onlineSaveGeneration += 1;
@@ -12803,7 +12833,7 @@ function resetOnlineSaveCircuitForAuth(uid = "") {
 }
 
 async function flushOnlineSave(force = false) {
-  if (!state) return false;
+  if (!canSaveOnlineProfile()) return false;
   if (onlineSaveInFlight) return onlineSavePromise || false;
   const api = getOnlineApi();
   if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -12818,6 +12848,7 @@ async function flushOnlineSave(force = false) {
 
   onlineSaveInFlight = true;
   const saveGeneration = onlineSaveGeneration;
+  const readyProfile = onlineProfileReady;
   requestedTargets.forEach(name => {
     onlineSaveTargets[name].queued = false;
   });
@@ -12831,7 +12862,7 @@ async function flushOnlineSave(force = false) {
         : api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT),
     }));
     const results = await Promise.allSettled(writes.map(write => write.promise));
-    if (saveGeneration !== onlineSaveGeneration) return false;
+    if (saveGeneration !== onlineSaveGeneration || readyProfile !== onlineProfileReady || !canSaveOnlineProfile()) return false;
     let successCount = 0;
     let failureCount = 0;
     let transientFailure = false;
@@ -12839,7 +12870,7 @@ async function flushOnlineSave(force = false) {
     results.forEach((result, index) => {
       const targetName = writes[index].name;
       const target = onlineSaveTargets[targetName];
-      if (result.status === "fulfilled") {
+      if (result.status === "fulfilled" && result.value !== false) {
         successCount += 1;
         return;
       }
@@ -15583,6 +15614,7 @@ function retireActiveOnlineIslandSubscription() {
 }
 
 function disconnectOnlineWorld() {
+  onlineProfileReady = null;
   onlineSessionGeneration += 1;
   harvestSpawnRequestInFlight = false;
   pendingHarvestBonusIds = new Set();
@@ -16171,16 +16203,24 @@ async function requestAuthoritativeMainCityRecovery(api, mainCityId = "", timeou
   };
 }
 
-async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
+async function setupOnlineWorld() {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
 
   if (onlineWorldConnected && isOnlineWorldActive()) return true;
 
+  onlineProfileReady = null;
+  const entryState = state;
+  const entryUid = getCurrentOnlineUid();
+  const entrySession = onlineSessionGeneration;
+  const isCurrentEntry = () => state === entryState && getCurrentOnlineUid() === entryUid
+    && onlineSessionGeneration === entrySession;
+
   onlineLastError = "";
   updateOnlineUi();
   onlineStatusDetail.textContent = "Checking the Crownlands realm...";
   await verifyRealmCompatibility(api);
+  if (!isCurrentEntry()) return false;
   // These reads do not depend on skill migration. Keep the authoritative
   // profile read after migration so a stale skill build cannot be applied.
   const savedStateReads = Promise.allSettled([
@@ -16214,6 +16254,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     savedStateReads,
   ]);
   const [profileResult] = profileResults;
+  if (!isCurrentEntry()) return false;
   const profileLoadFailed = profileResult.status === "rejected";
   if (profileResult.status === "fulfilled") profile = profileResult.value;
   else console.warn("Could not load online profile before island setup", profileResult.reason);
@@ -16227,14 +16268,15 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     : null;
   if (snapshotResult.status === "fulfilled") cloudSnapshot = snapshotResult.value;
   else console.warn("Could not load cloud player state before island setup", snapshotResult.reason);
-  if (profileLoadFailed && requireOnlineProfile) {
-    console.warn("Continuing online setup without the player profile.");
+  if (profileLoadFailed || !api.loadPlayerProfile) {
+    throw new Error("Your saved profile could not be loaded. Please retry entering the kingdom.");
   }
   profile = mergeOnlineProfileSources(profile, cloudSnapshot);
 
   const hasCurrentProfile = Boolean(profile && isCurrentResetProfile(profile));
   if (hasCurrentProfile) {
     applyOnlineProfileSnapshot(profile, state.playerName);
+    markOnlineProfileReady();
     if (skillPointSyncResult?.skillPointSystemReset?.applied) {
       addLog("Skills and saved presets were reset for the new skill point system. All earned points are ready to spend again.");
       showToast("Skills reset for the new point system");
@@ -16250,8 +16292,10 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   }
   if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
   let homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
+  if (!isCurrentEntry()) return false;
   let activeRegionId = homeRegionId;
   await ensureRegionDefinitionLoaded(homeRegionId);
+  if (!isCurrentEntry()) return false;
   const mainIslandId = getOnlineIslandId(homeRegionId);
   const storedMainCityId = String(profile?.mainCityId
     || (hasCurrentProfile ? state.online?.mainCityId : "")
@@ -16281,6 +16325,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     onlineStatusDetail.textContent = "Verifying your main city...";
     try {
       const { result: repair, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId);
+      if (!isCurrentEntry()) return false;
       if (recovery.status === "claim-required") {
         needsMainCityClaim = true;
         clearSingleMainCityAssignment();
@@ -16372,10 +16417,17 @@ async function connectOnlineIsland(regionId, {
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (onlineWorldLoading) return false;
 
+  const entryState = state;
+  const entryUid = getCurrentOnlineUid();
+  const entrySession = onlineSessionGeneration;
+  const isCurrentEntry = () => state === entryState && getCurrentOnlineUid() === entryUid
+    && onlineSessionGeneration === entrySession;
+
   onlineLastError = "";
   updateOnlineUi();
   const targetRegionId = normalizeRegionId(regionId);
   await ensureRegionDefinitionLoaded(targetRegionId, { protectedRegionIds: [getActiveMapRegionId()] });
+  if (!isCurrentEntry()) return false;
   const islandId = getOnlineIslandId(targetRegionId);
   const homeRegion = normalizeRegionId(homeRegionId || state.online?.mainRegionId || targetRegionId);
   const mainIslandId = getOnlineIslandId(homeRegion);
@@ -16433,6 +16485,7 @@ async function connectOnlineIsland(regionId, {
       : Promise.resolve(true);
 
     const [, mapArtReady] = await Promise.all([islandSetupPromise, mapArtReadyPromise]);
+    if (!isCurrentEntry()) return false;
     if (!mapArtReady) {
       throw new Error(`${getRegionLabel(targetRegionId)} map art could not be verified. Retry opening the map.`);
     }
@@ -16444,6 +16497,7 @@ async function connectOnlineIsland(regionId, {
         playerName: state.playerName,
         flag: state.flag,
       }), isNewHomeClaim ? 45000 : 20000, "Starting city claim is taking too long.");
+      if (!isCurrentEntry()) return false;
 
       if (!claim?.cityId) throw new Error("No starting city was claimed.");
       applyVerifiedRealmIdentity(claim.currentUser || claim);
@@ -16453,7 +16507,9 @@ async function connectOnlineIsland(regionId, {
       if (verifiedRealmInfo) {
         verifiedRealmInfo = { ...verifiedRealmInfo, realmShardId: REALM_SHARD_ID };
       }
-      if (claim.currentUser) applyOnlineProfileSnapshot(claim.currentUser, state.playerName);
+      if (!claim.currentUser) throw new Error("Your saved profile could not be confirmed. Please retry entering the kingdom.");
+      applyOnlineProfileSnapshot(claim.currentUser, state.playerName);
+      markOnlineProfileReady();
       if (!claim.alreadyClaimed && claim.cityId) enableOnboardingGuidance({ onlyIfNew: true });
       const claimedRegionId = claim?.islandId ? getRegionIdFromOnlineIslandId(claim.islandId) : "";
       const redirectedRegionId = claimedRegionId && claimedRegionId !== targetRegionId ? claimedRegionId : "";
@@ -16507,6 +16563,7 @@ async function connectOnlineIsland(regionId, {
       timeoutMessage: `${getRegionLabel(targetRegionId)} city list is taking too long.`,
     });
     if (!subscriptionStarted) return false;
+    if (!isCurrentEntry()) return false;
 
     onlineWorldConnected = true;
     onlineLastError = "";
@@ -16519,6 +16576,7 @@ async function connectOnlineIsland(regionId, {
     subscribeOnlineGlobalStats();
     subscribeOnlineCrownCitadel();
     await recoverPendingOnlineArmyMovements();
+    if (!isCurrentEntry()) return false;
     // Presence owns its generation guard and retries on the regular heartbeat.
     // The verified city snapshot already makes this map ready for interaction.
     void publishOnlinePresence(true);
@@ -19632,6 +19690,7 @@ async function startFromInput(forceFresh = false) {
     clearEnemyPowerBandCache();
     await ensureRegionDefinitionLoaded(DEFAULT_ONLINE_REGION_ID);
     state = createOnlineEntryState(playerName);
+    onlineProfileReady = null;
     state.online = null;
     onlineWorldConnected = false;
     onlineCitiesLoaded = false;
@@ -24606,8 +24665,11 @@ async function refreshClanState(options = {}) {
   }
   clanUiLoading = true;
   renderClanView();
+  const requestedState = state;
+  const requestedUid = getCurrentOnlineUid();
   try {
     const profile = options.skipProfileLoad ? null : await api.loadPlayerProfile?.();
+    if (state !== requestedState || getCurrentOnlineUid() !== requestedUid) return;
     if (profile) applyOnlineProfileSnapshot(profile, state?.playerName || "Ruler");
     if (state?.clanId) {
       const subscriptionsStarted = startClanRealtimeSubscriptions(api, state.clanId);
@@ -26631,7 +26693,12 @@ async function saveProfileName() {
     return;
   }
   const previousName = state.playerName;
-  state.playerName = nextName;
+  try {
+    await saveOnlinePlayerIdentity({ playerName: nextName });
+  } catch (error) {
+    showToast(error?.message || "Could not save your ruler name. Please retry.");
+    return;
+  }
   const mainCity = state.mainCityId ? cityById(state.mainCityId) : null;
   if (mainCity?.name === `${previousName} Keep`) mainCity.name = `${nextName} Keep`;
   playerCities().forEach(city => {
@@ -26654,6 +26721,28 @@ async function saveProfileName() {
     showToast("Ruler name saved. Online sync will retry.");
   } else {
     showToast("Ruler name updated everywhere.");
+  }
+}
+
+async function saveOnlinePlayerIdentity(changes) {
+  const api = getOnlineApi();
+  if (!canSaveOnlineProfile() || !api?.savePlayerIdentity) {
+    throw new Error("Load your saved kingdom before changing your name or flag.");
+  }
+  if (onlineIdentityEditInFlight) throw new Error("Your previous edit is still saving. Please retry in a moment.");
+  const readyProfile = onlineProfileReady;
+  onlineIdentityEditInFlight = true;
+  try {
+    const saved = await api.savePlayerIdentity(changes, Number(state.identityRevision) || 0);
+    if (!canSaveOnlineProfile() || onlineProfileReady !== readyProfile) {
+      throw new Error("Your session changed. Reopen your profile to see the saved identity.");
+    }
+    state.playerName = saved.playerName;
+    state.flag = normalizeFlag(saved.flag, getCurrentOnlineUid());
+    state.identityRevision = saved.identityRevision;
+    return saved;
+  } finally {
+    onlineIdentityEditInFlight = false;
   }
 }
 
@@ -26813,6 +26902,14 @@ async function saveFlagEditor() {
   const storedFlag = PLAYER_FLAG_CONFIG.toStoredFlag(nextFlag, stableKey);
   const api = getOnlineApi();
   const signedIn = Boolean(api?.isSignedIn?.());
+  const editingState = state;
+  const editingUid = getCurrentOnlineUid();
+  const editingProfile = onlineProfileReady;
+  const editingDraft = flagDraft;
+  const isCurrentEdit = () => state === editingState && getCurrentOnlineUid() === editingUid
+    && flagDraft === editingDraft && (!signedIn || onlineProfileReady === editingProfile);
+  let identitySaved = false;
+  let savedRevision = null;
   flagSaveInFlight = true;
   if (flagEditorSaveStatus) {
     flagEditorSaveStatus.textContent = signedIn ? "Saving everywhere…" : "Saving locally…";
@@ -26822,14 +26919,16 @@ async function saveFlagEditor() {
 
   try {
     if (signedIn) {
-      if (!api.savePlayerProfile || !api.syncPlayerIdentity || !api.saveGameSnapshot || !api.savePresence) {
+      if (!api.savePlayerIdentity || !api.syncPlayerIdentity || !api.saveGameSnapshot || !api.savePresence) {
         throw new Error("Flag sync is not available. Please retry after reconnecting.");
       }
+      await saveOnlinePlayerIdentity({ flag: storedFlag });
+      identitySaved = true;
+      savedRevision = state.identityRevision;
       const cloudState = { ...getPlayerCloudStateSnapshot(), flag: storedFlag };
       const leaderboardEntry = { ...getKingPowerLeaderboardSnapshot(), flag: storedFlag };
       const activeIslandId = state.online?.islandId || getOnlineIslandId(getActiveOnlineRegionId());
       const results = await Promise.all([
-        api.savePlayerProfile(stripServerEconomyProfileFields(cloudState)),
         api.syncPlayerIdentity({
           ownerName: state.playerName || "Ruler",
           ownerFlag: storedFlag,
@@ -26841,8 +26940,10 @@ async function saveFlagEditor() {
         api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT),
         api.savePresence(activeIslandId, { ...getOnlinePresenceSnapshot(), flag: storedFlag }),
       ]);
+      if (!isCurrentEdit()) return;
+      if (state.identityRevision !== savedRevision) return;
       if (results.some(result => result === false)) throw new Error("One or more flag destinations did not confirm the save.");
-      const identityResult = results[1];
+      const identityResult = results[0];
       if (identityResult?.globalStats) applyGlobalStatsSnapshot(identityResult.globalStats, { render: false });
     }
 
@@ -26856,15 +26957,18 @@ async function saveFlagEditor() {
     }
     showToast(signedIn ? "Kingdom flag updated everywhere." : "Kingdom flag saved locally.");
   } catch (error) {
+    if (!isCurrentEdit()) return;
     console.warn("Could not save kingdom flag everywhere", error);
     if (flagEditorSaveStatus) {
-      flagEditorSaveStatus.textContent = "Save failed — retry";
+      flagEditorSaveStatus.textContent = identitySaved ? "Flag saved; sync pending — retry" : "Save failed — retry";
       flagEditorSaveStatus.dataset.state = "error";
     }
     showToast(error?.message || "Could not save the kingdom flag. Please retry.");
   } finally {
-    flagSaveInFlight = false;
-    renderFlagEditor();
+    if (isCurrentEdit()) {
+      flagSaveInFlight = false;
+      renderFlagEditor();
+    }
   }
 }
 

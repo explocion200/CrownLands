@@ -497,7 +497,7 @@ const CLAN_QUEST_REWARDS = Object.freeze([
 const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
 const GLOBAL_PLAYER_STATS_VERSION = 11;
-const PLAYER_IDENTITY_SYNC_VERSION = 1;
+const PLAYER_IDENTITY_SYNC_VERSION = 2;
 const MAIN_CITY_ASSIGNMENT_VERSION = 3;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
 const ECONOMY_MAX_CITY_CHECKPOINT_WRITES = 300;
@@ -13789,7 +13789,7 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
   return stats;
 }
 
-async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation = "writeCurrentOwnerPatches") {
+async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation = "writeCurrentOwnerPatches", identityGuard = null) {
   const playerUid = safeString(ownerUid, 128);
   if (!playerUid) return 0;
   const byPath = new Map();
@@ -13812,6 +13812,7 @@ async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation =
     const results = await Promise.all(writes.slice(index, index + 25).map(async entry => {
       let wrote = false;
       await runTransactionWithInfrastructureRetry(async transaction => {
+        if (identityGuard) identityGuard.requireSameIdentity(await transaction.get(identityGuard.profileRef));
         const snapshot = await transaction.get(entry.ref);
         if (!snapshot.exists || getOwnerUid(snapshot.data() || {}) !== playerUid) return;
         transaction.set(entry.ref, entry.data, { merge: true });
@@ -13897,9 +13898,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       ref: profileRef,
       data: {
         uid: playerUid,
-        playerName: identity.ownerName,
-        displayName: identity.ownerName,
-        flag: identity.ownerFlag,
         clanId: identity.clanId,
         clanName: identity.clanName,
         clanTag: identity.clanTag,
@@ -16348,12 +16346,13 @@ exports.syncSkillPointSystem = onCall({
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   await verifyCurrentSeasonParticipation(uid);
-  const data = request.data || {};
   const authToken = request.auth?.token || {};
   const profileRef = db.doc(`players/${uid}`);
   const profileSnap = await profileRef.get();
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
-  const identity = getCanonicalPlayerIdentity(uid, profile, data, authToken);
+  // This is a projection repair, never an identity edit. In particular, older
+  // clients send random entry-state flags and their Google name during login.
+  const identity = getCanonicalPlayerIdentity(uid, profile, {}, authToken);
   const nowMs = Date.now();
   const identitySyncSignature = getPlayerIdentitySyncSignature(identity);
   if (
@@ -16366,6 +16365,8 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       unchanged: true,
       updatedCities: 0,
       updatedArmies: 0,
+      ownerName: identity.ownerName,
+      ownerFlag: identity.ownerFlag,
       globalStats: globalStatsSnap.exists ? globalStatsForClient(globalStatsSnap.data() || {}) : null,
     };
   }
@@ -16446,11 +16447,6 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       ref: profileRef,
       data: {
         uid,
-        playerName: identity.ownerName,
-        displayName: identity.ownerName,
-        flag: identity.ownerFlag,
-        identitySyncVersion: PLAYER_IDENTITY_SYNC_VERSION,
-        identitySyncSignature,
         kingPower: serverKingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         kingPowerUpdatedAtMs: nowMs,
@@ -16556,19 +16552,29 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     });
   });
 
-  for (let index = 0; index < writes.length; index += 450) {
-    const batch = db.batch();
-    writes.slice(index, index + 450).forEach(write => {
-      batch.set(write.ref, write.data, { merge: true });
-    });
-    await batch.commit();
-  }
+  const requireSameIdentity = snapshot => {
+    if (!snapshot.exists || getPlayerIdentitySyncSignature(
+      getCanonicalPlayerIdentity(uid, snapshot.data() || {}, {}, authToken)
+    ) !== identitySyncSignature) {
+      throw new HttpsError("aborted", "Your identity changed while syncing. Please retry.");
+    }
+  };
+  await runTransactionWithInfrastructureRetry(async transaction => {
+    requireSameIdentity(await transaction.get(profileRef));
+    writes.forEach(write => transaction.set(write.ref, write.data, { merge: true }));
+  }, "syncPlayerIdentityProjections");
   // Identity projections come from collection-query snapshots. Re-read each asset
   // transactionally so a concurrent capture, return, or relinquishment wins.
   const [cityUpdates, armyUpdates] = await Promise.all([
-    writeCurrentOwnerPatches(uid, cityProjectionWrites, "writeCurrentOwnerIdentityCityProjections"),
-    writeCurrentOwnerPatches(uid, armyProjectionWrites, "writeCurrentOwnerIdentityArmyProjections"),
+    writeCurrentOwnerPatches(uid, cityProjectionWrites, "writeCurrentOwnerIdentityCityProjections", { profileRef, requireSameIdentity }),
+    writeCurrentOwnerPatches(uid, armyProjectionWrites, "writeCurrentOwnerIdentityArmyProjections", { profileRef, requireSameIdentity }),
   ]);
+
+  // Only mark a repair complete after every projection succeeded.
+  await runTransactionWithInfrastructureRetry(async transaction => {
+    requireSameIdentity(await transaction.get(profileRef));
+    transaction.update(profileRef, { identitySyncVersion: PLAYER_IDENTITY_SYNC_VERSION, identitySyncSignature });
+  }, "completePlayerIdentitySync");
 
   return {
     ok: true,
@@ -17860,6 +17866,7 @@ function createFreshResetPlayerProfile({
     photoURL: safeString(requestData.photoURL || authToken.picture || previous.photoURL, 300),
     playerName,
     flag,
+    identityRevision: Math.max(0, Math.floor(safeNumber(previous.identityRevision, 0))),
     resetGeneration: RESET_GENERATION,
     worldId: ONLINE_WORLD_ID,
     realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(realmShardId),
@@ -17922,6 +17929,7 @@ function createStartingCityCurrentUser(profile = {}, {
   const currentUser = {
     playerName: normalizePlayerName(profile.playerName || profile.displayName),
     flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
+    identityRevision: Math.max(0, Math.floor(safeNumber(profile.identityRevision, 0))),
     gold: Math.max(0, Math.floor(safeNumber(profile.gold, TEST_STARTING_GOLD))),
     character: normalizeCharacterProgress(profile.character),
     upgrades: normalizeSkillUpgrades(profile.upgrades),

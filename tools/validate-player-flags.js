@@ -207,7 +207,7 @@ assert.match(game, /flagDiscardDialog\.addEventListener\("close"/);
 const saveFlag = extractFunction(game, "saveFlagEditor");
 assert.match(saveFlag, /flagSaveInFlight \|\| !isFlagEditorDirty\(\)/, "Repeated saves are not guarded.");
 assert.match(saveFlag, /createVersion2Flag\(flagDraft/);
-assert.match(saveFlag, /api\.savePlayerProfile/);
+assert.match(saveFlag, /saveOnlinePlayerIdentity\(\{ flag: storedFlag \}\)/);
 assert.match(saveFlag, /api\.syncPlayerIdentity/);
 assert.match(saveFlag, /api\.saveGameSnapshot/);
 assert.match(saveFlag, /api\.savePresence/);

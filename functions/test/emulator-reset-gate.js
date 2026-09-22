@@ -520,6 +520,7 @@ async function main() {
       displayName: "Preserved Ruler",
       playerName: "Preserved Ruler",
       flag: preservedFlag,
+      identityRevision: 7,
       createdAtMs: preservedAccountCreatedAtMs,
       createdAt: Timestamp.fromMillis(preservedAccountCreatedAtMs),
       notificationPreferences: { incomingAttacks: false, rallies: true, clanGifts: false },
@@ -943,6 +944,7 @@ async function main() {
     `Player display/name identity was not preserved (displayName=${profile.displayName}, playerName=${profile.playerName}).`
   );
   const expectedPreservedFlag = playerFlagConfig.toStoredFlag(preservedFlag, users[0].uid);
+  assert(profile.identityRevision === 7, "The season transition lost the identity edit revision.");
   assert(
     JSON.stringify(profile.flag) === JSON.stringify(expectedPreservedFlag),
     "Personal flag components were not preserved through legacy-field migration."

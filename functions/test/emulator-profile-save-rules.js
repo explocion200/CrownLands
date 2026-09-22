@@ -159,6 +159,15 @@ async function main() {
   });
   assert(profileWrite.status === 200, `Client-owned profile update was denied: ${JSON.stringify(profileWrite.body)}`);
 
+  assert((await patchPlayer(user, { playerName: "Startup Name" })).status === 403,
+    "An ordinary autosave changed the ruler name.");
+  const renamed = await patchPlayer(user, { playerName: "Chosen Name", identityRevision: 1 });
+  assert(renamed.status === 200, `An explicit name edit failed: ${JSON.stringify(renamed.body)}`);
+  assert((await patchPlayer(user, { playerName: "Old Tab", identityRevision: 1 })).status === 403,
+    "A stale tab overwrote a newer name edit.");
+  assert((await patchPlayer(user, { playerName: "Profile Sentinel", identityRevision: 2 })).status === 200,
+    "The next explicit name edit was denied.");
+
   const protectedWrite = await patchPlayer(user, {
     freeSkillResetCredits: 99,
   });
