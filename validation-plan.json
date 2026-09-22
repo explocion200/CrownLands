@@ -43,7 +43,7 @@
         "tools/validate-clan-heraldry-v2.js",
         "tools/validate-military-ui.js"
       ],
-      "reason": "Verify Store/Send/Info, local completed-Shop gating during initial construction, upgrades and probation, no-garrison Store browsing, and city-style troop sliders without mode choices. The shared troop-location renderer now displays Tower art without inventing a city level; military UI tests cover its existing city presentation dependency. Browser coverage checks both march directions, attacks and NPC denial, Store navigation, persistent banners, gestures and compound clearance on desktop and two landscape-mobile sizes."
+      "reason": "Verify Store/Send/Info, local completed-Shop gating during initial construction, upgrades and probation, no-garrison Store browsing, and city-style troop sliders without mode choices. The shared troop-location renderer now displays Tower art without inventing a city level; military UI tests cover its existing city presentation dependency. Browser coverage checks compact 56px Tower actions across zoom levels, touch reachability and non-overlap, both march directions, attacks and NPC denial, Store navigation, persistent banners, gestures and compound clearance on desktop and two landscape-mobile sizes."
     },
     {
       "paths": [

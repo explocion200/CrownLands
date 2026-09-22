@@ -153,7 +153,7 @@ async function main() {
       })()`);
       for (const sample of measurements) {
         for (const rect of sample.rects) {
-          assert(Math.abs(rect.width-64)<0.2 && Math.abs(rect.height-64)<0.2,`Tower button scaled during camera zoom: ${JSON.stringify(sample)}`);
+          assert(Math.abs(rect.width-56)<0.2 && Math.abs(rect.height-56)<0.2,`Tower button size changed from its compact 56px during camera zoom: ${JSON.stringify(sample)}`);
         }
         for(let i=0;i<sample.rects.length;i++)for(let j=i+1;j<sample.rects.length;j++) {
           const a=sample.rects[i],b=sample.rects[j];
