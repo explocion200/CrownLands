@@ -33,6 +33,7 @@
         "clan-tower-details-ui.js",
         "troop-orders-ui.js",
         "holding-tower-ui.css",
+        "tools/validate-clan-tower-buildings-browser.js",
         "tools/validate-clan-tower-map-browser.js",
         "tools/validate-holding-details-ui.js"
       ],
