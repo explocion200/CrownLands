@@ -61,7 +61,7 @@ async function focusClanRallyAssembly(rally) {
       const switched = await switchOnlineIsland(regionId);
       if (!switched) { showToast("The assembly map is unavailable. Try again."); return; }
     }
-    if (scope !== getOnlineRequestScope() || clanId !== state.clanId || regionId !== getActiveMapRegionId()) return;
+    if (scope !== getOnlineRequestScope() || clanId !== state?.clanId || regionId !== getActiveMapRegionId()) return;
     const target = rally.assemblyType === "tower" ? getHoldingTowerVisual(rally.assemblyCityId) : cityById(rally.assemblyCityId);
     if (!target || getCityRegionId(target) !== regionId) {
       showToast("That assembly location is no longer available.");
@@ -74,7 +74,7 @@ async function focusClanRallyAssembly(rally) {
     else selectCity(target.id);
     centerOnWorldPoint(target, regionId);
   } catch (error) {
-    if (scope === getOnlineRequestScope() && clanId === state.clanId) showToast(error?.message || "Could not open the assembly map.");
+    if (scope === getOnlineRequestScope() && clanId === state?.clanId) showToast(error?.message || "Could not open the assembly map.");
   }
 }
 

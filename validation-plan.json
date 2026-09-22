@@ -60,6 +60,16 @@
       ],
       "tests": [],
       "reason": "Document the explicitly confirmed remembered-city Rally flow, assembly map shortcut and reserved troop visibility. Mark the update pending merge and deployment; no unrelated balance rules change."
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Measured packaged Rally presentation grows from 60,093 bytes to 65,884 bytes for the requested assembly visibility and navigation. Bound the 5,791-byte source addition with a 6 KiB module allowance; preserve all global offline-shell, request, art, heap and FPS budgets. No new images, dependencies or network calls are added for presentation."
     }
   ]
 }
