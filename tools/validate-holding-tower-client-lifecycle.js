@@ -8,6 +8,8 @@ const source = fs.readFileSync(path.join(__dirname, "..", "game.js"), "utf8");
 const declarations = source.slice(source.indexOf("const holdingTowerSnapshots ="), source.indexOf("let clanGiftCountdownTimer"));
 const functions = source.slice(source.indexOf("function beginHoldingTowerModalSession("), source.indexOf("function generateStrongholdSlots("));
 const neutralRules = source.slice(source.indexOf("function pendingNeutralCaptureCount("), source.indexOf("function showNeutralCaptureLimitModal("));
+const mapOrders = source.slice(source.indexOf("function getTroopOrderSourceById("), source.indexOf("function getHoldingTowerQaScenario("))
+  + source.slice(source.indexOf("async function selectClanTowerOnMap("), source.indexOf("function updateClanTowerActionWheelLayout("));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function deferred() {
@@ -56,13 +58,13 @@ function harness() {
   };
   const context = vm.createContext({
     console: { warn: (...args) => warnings.push(args) }, modal, modalBody, modalTitle: {},
-    onlineSessionGeneration: 0, SHOP_ITEMS: [], COMMON_GEAR_BOX_ITEM: { id: "common_gear_box" }, state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
+    onlineSessionGeneration: 0, sendMode: false, selectedSourceId: null, selectedTargetId: null, SHOP_ITEMS: [], COMMON_GEAR_BOX_ITEM: { id: "common_gear_box" }, state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
     window: { CrownlandsClanTowerDetailsUi: { mount() {} }, CrownlandsClanTowerBuildings: { normalizeLevels: levels => levels || {} } },
     HOLDING_TOWER_UI: { renderPanel(tower, options) { renders.push({ id: tower.id, ...options }); return `Tower ${tower.id} revision ${tower.revision || 0}`; } },
     getHoldingTowerVisual: id => ({ id, name: id, kind: "holdingTower", artSrc: `${id}.webp` }),
     getHoldingTowerQaScenario: () => "", getOnlineApi: () => api,
     escapeHtml: String, formatNumber: String, renderClanShield: () => "", loadClanTreasuryStatus: async () => null,
-    renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null,
+    renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null, renderTroopOrderLocation: () => "", clearSelection() {},
     showToast() {}, rejectGameAction: message => errors.push(message),
     playerCities: () => [{ id: "city-1", name: "Home", troops: 100 }],
     WORLD_CAMPS: [], isStronghold: city => city?.kind === "stronghold", isClanAllyCity: () => false, isProtectedMainCity: () => false,
@@ -76,7 +78,7 @@ function harness() {
     applyServerArmyResult() {}, adoptServerArmyMovement() {}, upsertClanRallySnapshot() {}, renderSelectionChangeNow() {},
     renderCities() {}, cityRenderSignature: "",
   });
-  vm.runInContext(`${declarations}\n${neutralRules}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
+  vm.runInContext(`${declarations}\n${neutralRules}\n${mapOrders}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
   const tower = id => ({ id, name: id, kind: "holdingTower", ownerKind: "neutral", ownStationedTroops: 100 });
   const finish = (request, revision = 1, patch = {}) => request.resolve({ worldActive: true, towers: [{ ...tower(request.towerId), revision, ...patch }] });
   const open = id => context.openHoldingTower(id);
@@ -85,7 +87,7 @@ function harness() {
     const own = { ...tower("tower-a"), ownerKind: "clan", clanId: "clan-a", ownershipRevision: 1,
       ownerMember: true, permissions: {withdrawOwn: true, reinforce: true, attackFrom: true, rallyFrom: true} };
     context.cacheTower(own);
-    context.showHoldingTowerOrderComposer(own, mode);
+    context.showHoldingTowerOrderComposer(own, mode, context.getHoldingTowerComposerTargets(mode, own)[0]);
     modal.showModal();
     context.updateHoldingTowerOrderAvailability();
     return () => context.submitHoldingTowerOrder(own, mode);
@@ -94,6 +96,36 @@ function harness() {
 }
 
 async function main() {
+  for (const patch of [{ownerMember:false}, {clanId:'other'}, {ownershipRevision:2}]) {
+    const h=harness();h.order();h.modal.close();
+    const own=h.context.cachedTower('tower-a');
+    h.context.beginHoldingTowerSendMode(own);
+    assert.equal(h.context.sendMode,true);
+    assert.equal(h.modal.open,false,'Send must wait for a map destination.');
+    assert.equal(h.context.getTroopOrderSourceById(own.id).troops,100,'Send used the whole clan garrison.');
+    h.context.cacheTower({...own,...patch});
+    assert.equal(h.context.getTroopOrderSourceById(own.id),null,'A captured Tower or removed member retained a usable Send origin.');
+  }
+  {
+    const h=harness();h.order();h.modal.close();
+    const own=h.context.cachedTower('tower-a');h.context.beginHoldingTowerSendMode(own);
+    h.context.onlineSessionGeneration++;
+    assert.equal(h.context.getTroopOrderSourceById(own.id),null,'A previous account retained its Tower Send origin.');
+  }
+  for(const cancel of [false,true]) {
+    const h=harness();h.context.state.cities=[{id:'city-1',name:'Home',owner:'player',troops:100}];
+    h.context.sendMode=true;h.context.selectedSourceId='city-1';
+    const opening=h.context.selectClanTowerOnMap('tower-a');
+    if(cancel)h.context.selectedSourceId=null;
+    h.finish(h.reads[0],1,{ownerMember:true,clanId:'clan-a',ownershipRevision:1,permissions:{reinforce:true}});
+    await opening;
+    assert.equal(h.modal.open,!cancel,'A canceled city-to-Tower selection reopened its order.');
+    if(!cancel){
+      assert(h.modalBody.innerHTML.includes('data-tower-order-mode="reinforce"'));
+      assert(h.modalBody.innerHTML.includes('type="range"'));
+      assert(!h.modalBody.innerHTML.includes('data-tower-send-mode'));
+    }
+  }
   for (const count of [29, 30, 31]) {
     const h = harness();
     h.context.ownedCityCount = count;
@@ -328,6 +360,15 @@ async function main() {
     await send();
     assert.equal(h.modalBody.innerHTML,draft,'A failed order rebuilt and erased its draft.');
     assert.equal(h.inputs["button[type='submit']"].disabled,false,'A failed order cannot be retried.');
+  }
+  {
+    const h=harness(),send=h.order();
+    h.api.sendHoldingTowerArmyOrder=async()=>({ok:false,message:'Order blocked'});
+    const draft=h.modalBody.innerHTML;
+    await send();
+    assert.equal(h.modal.open,true,'A server-denied order closed its draft.');
+    assert.equal(h.modalBody.innerHTML,draft);
+    assert.deepEqual(h.errors,['Order blocked']);
   }
   for (const amount of ['0','-5','1.5','101','not a number']) {
     const h=harness(),send=h.order(); let sent=0;

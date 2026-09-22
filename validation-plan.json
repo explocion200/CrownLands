@@ -15,7 +15,7 @@
         "tools/validate-modal-lifecycle-browser.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Tower Send retains existing movement/rally payloads and personal garrison authority. Exercise fresh target and troop checks, permission/ownership changes, delayed responses, duplicate clicks, failed sends, garrison listener cleanup, clan identity refresh, map selection and shared modal lifecycle. Reuse the normal neutral expansion rule in Tower attack availability and submit checks, including 29/30/31-city boundaries, daily/pending capture limits, stale drafts and unaffected player-city/Camp targets."
+      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. Preserve 29/30/31-city boundaries and daily/pending NPC limits."
     },
     {
       "paths": [
@@ -31,6 +31,7 @@
     {
       "paths": [
         "clan-tower-details-ui.js",
+        "troop-orders-ui.js",
         "holding-tower-ui.css",
         "tools/validate-clan-tower-map-browser.js",
         "tools/validate-holding-details-ui.js"
@@ -39,16 +40,17 @@
         "tools/validate-holding-towers.js",
         "tools/validate-clan-tower-map-browser.js",
         "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-heraldry-v2.js"
+        "tools/validate-clan-heraldry-v2.js",
+        "tools/validate-military-ui.js"
       ],
-      "reason": "Verify the three owned-Tower actions, probation/empty-garrison explanations, Move/Attack/Rally choice and submissions, private details, and shared v1/v2 clan heraldry. Tower Send uses the same forward-arrow icon and shared blue action-button style as city Send. Browser coverage checks persistent banners and identity changes across all four Towers, fixed-size controls and gestures, and compound/building clearance at desktop and two landscape-mobile sizes."
+      "reason": "Verify Store/Send/Info, local completed-Shop gating during initial construction, upgrades and probation, no-garrison Store browsing, and city-style troop sliders without mode choices. The shared troop-location renderer now displays Tower art without inventing a city level; military UI tests cover its existing city presentation dependency. Browser coverage checks both march directions, attacks and NPC denial, Store navigation, persistent banners, gestures and compound clearance on desktop and two landscape-mobile sizes."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user's confirmed map-only Reinforce/Send/Info menu, personal outgoing orders and persistent ownership banner, and clarifies that Tower attacks obey the established neutral expansion limits at launch and arrival. Existing thresholds and release authorization requirements are preserved; this prose has no separate runtime behavior."
+      "reason": "Records the revised Store/Send/Info menu, city-style map destination selection without mode tabs, city-origin reinforcement, local Store construction gating, personal troops and persistent ownership banner. Tower NPC attacks retain established limits at launch and arrival. Existing thresholds and release authorization requirements are preserved; prose has no separate runtime behavior."
     }
   ]
 }

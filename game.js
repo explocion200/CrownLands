@@ -2326,6 +2326,7 @@ let holdingTowerLoading = false;
 const holdingTowerActionsInFlight = new Set();
 let holdingTowerDetailsTab = "overview";
 let selectedTowerMapId = "";
+let holdingTowerSendContext = null;
 let holdingTowerRealtimeUnsubscribe = null;
 const holdingTowerRequestTokens = new Map();
 let holdingTowerModalSession = null;
@@ -4036,6 +4037,28 @@ function isHoldingTowerTarget(target = null) {
   return Boolean(target && (target.kind === "holdingTower" || target.targetType === "tower"));
 }
 
+function getTroopOrderSourceById(id) {
+  const city = cityById(id);
+  if (city) return city;
+  const tower = holdingTowerSnapshots.get(id);
+  const context = holdingTowerSendContext;
+  if (!tower?.ownerMember || !context || context.id !== id || context.onlineSession !== onlineSessionGeneration
+    || context.clanId !== tower.clanId || context.ownershipRevision !== tower.ownershipRevision) return null;
+  return { ...getHoldingTowerVisual(id), ...tower, owner: "player", troops: Math.max(0, Number(tower.ownStationedTroops) || 0) };
+}
+
+function beginHoldingTowerSendMode(tower) {
+  if (!getHoldingTowerOrderPermission(tower, "withdraw") && !getHoldingTowerOrderPermission(tower, "attack-from")) return;
+  if (!(tower.ownStationedTroops > 0)) { rejectGameAction("Station your own troops here before sending orders."); return; }
+  clearSelection(false);
+  holdingTowerSendContext = { id: tower.id, clanId: tower.clanId, ownershipRevision: tower.ownershipRevision, onlineSession: onlineSessionGeneration };
+  selectedTowerMapId = tower.id;
+  selectedSourceId = tower.id;
+  sendMode = true;
+  renderSelectionChangeNow();
+  showToast("Select one of your cities to move troops, or an enemy to attack.");
+}
+
 function getHoldingTowerQaScenario() {
   if (!['localhost', '127.0.0.1'].includes(String(window.location.hostname || "").toLowerCase())) return "";
   return String(new URLSearchParams(window.location.search).get("towerQa") || "").toLowerCase();
@@ -4054,6 +4077,10 @@ function beginHoldingTowerModalSession(towerId, view) {
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
     modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal");
+    if (session.mapOrder) {
+      modal.classList.remove("troop-slider-modal");
+      clearSelection(false);
+    }
   };
   holdingTowerModalSession = session;
   selectedHoldingTowerId = view === "details" ? towerId : "";
@@ -4307,30 +4334,34 @@ function updateHoldingTowerOrderAvailability() {
   const allowed = sameOwner && session.onlineSession === onlineSessionGeneration && getHoldingTowerOrderPermission(tower, session.mode);
   const input = modalBody.querySelector("[data-tower-order-troops]");
   const fromTower = ["withdraw", "attack-from", "rally-from"].includes(session.mode);
-  if (input && fromTower) input.max = String(Math.max(0, Number(tower?.ownStationedTroops) || 0));
-  const amount = Number(input?.value);
-  const validAmount = Number.isSafeInteger(amount) && amount > 0 && amount <= Number(input?.max);
   const selectedId = modalBody.querySelector("[data-tower-order-target]")?.value;
   const target = tower && getHoldingTowerComposerTargets(session.mode, tower).find(candidate => candidate.id === selectedId);
+  if (input) input.max = String(Math.max(0, Number(fromTower ? tower?.ownStationedTroops : target?.troops) || 0));
+  const amount = Number(input?.value);
+  const validAmount = Number.isSafeInteger(amount) && amount > 0 && amount <= Number(input?.max);
+  input?.style?.setProperty("--slider-progress", `${Number(input.max) <= 1 ? 100 : 100 * (amount - 1) / (Number(input.max) - 1)}%`);
   const hasDestination = Boolean(target);
   const neutralBlockReason = session.mode === "attack-from" && target && getHoldingTowerTargetType(target) === "city"
     ? getNeutralCaptureBlockReason(target, "player") : "";
+  const amountLabel = modalBody.querySelector("[data-tower-order-amount]");
+  if (amountLabel) amountLabel.textContent = formatNumber(amount || 0);
+  const remainingLabel = modalBody.querySelector("[data-tower-order-remaining]");
+  if (remainingLabel) remainingLabel.textContent = formatNumber(Math.max(0, Number(input?.max) - (amount || 0)));
+  modalBody.querySelectorAll("[data-tower-order-max]").forEach(label => { label.textContent = formatNumber(Number(input?.max) || 0); });
   const status = modalBody.querySelector("[data-tower-order-status]");
   if (status) status.textContent = !allowed ? "Tower access changed or is syncing. Reopen the order from the map."
     : !hasDestination ? "No eligible destination is available on this map."
       : neutralBlockReason ? neutralBlockReason
         : !validAmount ? "Choose a troop count within your available troops."
           : fromTower ? `${formatNumber(tower.ownStationedTroops)} of your troops stationed here.` : "Choose your city and the troops to send.";
+  if (status) status.hidden = Boolean(session.mapOrder && allowed && hasDestination && !neutralBlockReason && validAmount);
   const submit = modalBody.querySelector("button[type='submit']");
   if (submit) submit.disabled = busy || !allowed || !validAmount || !hasDestination || Boolean(neutralBlockReason);
-  modalBody.querySelectorAll("[data-tower-send-mode]").forEach(button => {
-    button.disabled = busy || !sameOwner || !getHoldingTowerOrderPermission(tower, button.dataset.towerSendMode);
-  });
 }
 
-function showHoldingTowerOrderComposer(tower, mode) {
+function showHoldingTowerOrderComposer(tower, mode, selectedCandidate = null) {
   if (holdingTowerActionsInFlight.has(tower.id)) return;
-  if (mode === "send") mode = ["withdraw", "attack-from", "rally-from"].find(value => getHoldingTowerOrderPermission(tower, value));
+  if (mode === "send") { beginHoldingTowerSendMode(tower); return; }
   const outgoing = ["withdraw", "attack-from", "rally-from"].includes(mode);
   if (!getHoldingTowerOrderPermission(tower, mode)) {
     rejectGameAction("This Tower order is unavailable. Check your membership and stationed troops.");
@@ -4338,14 +4369,18 @@ function showHoldingTowerOrderComposer(tower, mode) {
   }
   const sourceModes = new Set(["reinforce", "rally-attack"]);
   const candidates = getHoldingTowerComposerTargets(mode, tower);
+  if (mode !== "rally-attack" && (!selectedCandidate || !candidates.some(candidate => candidate.id === selectedCandidate.id))) {
+    rejectGameAction("Choose a valid destination on the map.");
+    return;
+  }
   if (!candidates.length && !outgoing) {
     rejectGameAction(sourceModes.has(mode) ? "No owned city with troops is available." : "No eligible destination is available on this map.");
     return;
   }
   const session = beginHoldingTowerModalSession(tower.id, "order");
-  Object.assign(session, { mode, clanId: tower.clanId, ownershipRevision: tower.ownershipRevision, onlineSession: onlineSessionGeneration });
+  Object.assign(session, { mode, mapOrder: Boolean(selectedCandidate), clanId: tower.clanId, ownershipRevision: tower.ownershipRevision, onlineSession: onlineSessionGeneration });
   const usesTowerTroops = !sourceModes.has(mode);
-  const maxTroops = usesTowerTroops ? Math.max(1, Number(tower.ownStationedTroops) || 1) : Math.max(1, Number(candidates[0].troops) || 1);
+  const maxTroops = usesTowerTroops ? Math.max(1, Number(tower.ownStationedTroops) || 1) : Math.max(1, Number((selectedCandidate || candidates[0]).troops) || 1);
   const rally = mode === "rally-attack" || mode === "rally-from";
   const label = {
     reinforce: "Reinforce Tower",
@@ -4357,10 +4392,9 @@ function showHoldingTowerOrderComposer(tower, mode) {
   modal.classList.remove("clan-tower-details-modal");
   modal.classList.add("holding-tower-modal");
   modalTitle.textContent = outgoing ? "Send from Tower" : label;
-  modalBody.innerHTML = `
+  modalBody.innerHTML = selectedCandidate ? renderHoldingTowerMapOrder(tower, mode, selectedCandidate, maxTroops) : `
     <form class="holding-tower-order-composer" data-tower-order-form data-tower-order-mode="${mode}">
       <header><span>${usesTowerTroops ? `From ${escapeHtml(tower.name)}` : `To ${escapeHtml(tower.name)}`}</span><h3>${label}</h3><p>${mode === "rally-attack" ? "At least 3 eligible clan members, including the leader, must each contribute troops and be Ready before launch." : rally ? "Choose an enemy objective and gather your clan for a rally." : outgoing ? "Command only your own stationed troops. Move returns them to one of your cities." : "Send troops from one of your cities to defend your clan's tower."}</p></header>
-      ${outgoing ? `<div class="holding-tower-order-modes" role="group" aria-label="Outgoing order">${[["withdraw", "Move"], ["attack-from", "Attack"], ["rally-from", "Rally"]].map(([value, text]) => `<button type="button" data-tower-send-mode="${value}" aria-pressed="${mode === value}" ${getHoldingTowerOrderPermission(tower, value) ? "" : "disabled"}>${text}</button>`).join("")}</div>` : ""}
       <div class="holding-tower-order-fields"><label>${sourceModes.has(mode) ? "Owned city origin" : "Destination"}
         <select data-tower-order-target>${candidates.length ? candidates.map(candidate => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name || candidate.id)}${sourceModes.has(mode) ? ` · ${formatNumber(candidate.troops || 0)} troops` : ""}</option>`).join("") : '<option value="">No eligible destination</option>'}</select>
       </label>
@@ -4368,15 +4402,12 @@ function showHoldingTowerOrderComposer(tower, mode) {
       <p class="holding-tower-order-status" data-tower-order-status role="status"></p>
       <div class="holding-tower-order-actions"><button type="button" data-tower-order-back>Back</button><button type="submit" class="${rally || mode === "attack-from" ? "danger-action" : ""}">${label}</button></div>
     </form>`;
+  if (selectedCandidate) {
+    modal.classList.remove("holding-tower-modal");
+    modal.classList.add("troop-slider-modal");
+  }
   const select = modalBody.querySelector("[data-tower-order-target]");
   const troopInput = modalBody.querySelector("[data-tower-order-troops]");
-  modalBody.querySelectorAll("[data-tower-send-mode]").forEach(button => button.addEventListener("click", () => {
-    const current = holdingTowerSnapshots.get(tower.id);
-    if (!isHoldingTowerModalSessionCurrent(session) || !current || holdingTowerActionsInFlight.has(tower.id)) return;
-    showHoldingTowerOrderComposer(current, button.dataset.towerSendMode);
-    modalBody.querySelector(`[data-tower-send-mode="${button.dataset.towerSendMode}"]`)?.focus();
-    updateHoldingTowerOrderAvailability();
-  }));
   troopInput?.addEventListener("input", updateHoldingTowerOrderAvailability);
   select?.addEventListener("change", () => {
     if (!usesTowerTroops && troopInput) {
@@ -4387,12 +4418,26 @@ function showHoldingTowerOrderComposer(tower, mode) {
     }
     updateHoldingTowerOrderAvailability();
   });
-  modalBody.querySelector("[data-tower-order-back]")?.addEventListener("click", () => modal.close());
+  modalBody.querySelectorAll("[data-tower-order-back]").forEach(button => button.addEventListener("click", () => modal.close()));
   modalBody.querySelector("[data-tower-order-form]")?.addEventListener("submit", event => {
     event.preventDefault();
     void submitHoldingTowerOrder(tower, mode);
   });
   updateHoldingTowerOrderAvailability();
+}
+
+function renderHoldingTowerMapOrder(tower, mode, candidate, maxTroops) {
+  const incoming = mode === "reinforce", attack = mode === "attack-from";
+  const source = incoming ? candidate : tower, target = incoming ? tower : candidate;
+  const command = attack ? "Attack" : incoming ? "Send" : "Transfer";
+  const amount = Math.max(1, Math.floor(maxTroops / 2));
+  return `<form class="troop-slider-panel report-shell" data-order-kind="${attack ? "attack" : "transfer"}" data-tower-order-form data-tower-order-mode="${mode}">
+    <header class="window-header"><img class="heading-art" src="assets/icons/${attack ? "skills/swordmastery.svg" : "troop-orders/marching-banner.svg"}" alt=""><div class="heading"><p>MILITARY ORDERS</p><h2>${command} troops</h2></div><span class="order-kind">${attack ? "Attack order" : "Friendly movement"}</span><button type="button" class="close-button" data-tower-order-back aria-label="Close Troop Orders">×</button></header>
+    <main class="order-body" tabindex="0" aria-label="Order details"><div class="order-route">${renderTroopOrderLocation(source, "From", "", attack)}<svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>${renderTroopOrderLocation(target, "To", incoming ? "Your clan's Tower" : attack ? "Enemy holding" : "Your city", attack)}</div>
+      <div class="order-columns selection-layout"><section class="force-column"><div class="force-summary"><div><p class="force-label">Troops to send</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong data-tower-order-amount>${formatNumber(amount)}</strong></div></div><p class="remaining"><b data-tower-order-remaining>${formatNumber(maxTroops - amount)}</b> of <span data-tower-order-max>${formatNumber(maxTroops)}</span> remain at source</p></div>
+      <input data-tower-order-target type="hidden" value="${escapeHtml(candidate.id)}"><input data-tower-order-troops class="troop-amount-slider troop-range" type="range" min="1" max="${Math.floor(maxTroops)}" value="${amount}" aria-label="Troops to send"><div class="troop-slider-limits range-labels"><span>1</span><span>Max <span data-tower-order-max>${formatNumber(maxTroops)}</span></span></div>
+      <p class="order-note">${incoming ? "These troops remain yours while defending the clan's Tower." : "Only your own stationed troops are available for this order."}</p></section></div>
+    </main><footer class="order-actions"><p class="order-action-notice" data-tower-order-status role="status"></p><button type="button" class="cancel-order" data-tower-order-back>Cancel</button><button type="submit" class="confirm-order ${attack ? "" : "friendly"}">${command}</button></footer></form>`;
 }
 
 async function submitHoldingTowerOrder(tower, mode) {
@@ -4466,6 +4511,7 @@ async function submitHoldingTowerOrder(tower, mode) {
       ? await api.createClanRally(payload)
       : await api.sendHoldingTowerArmyOrder(payload);
     if (session.onlineSession !== onlineSessionGeneration) return;
+    if (result?.ok === false) throw new Error(result.message || "The Clan Tower order was denied.");
     applyServerArmyResult(result);
     if (result?.movement) adoptServerArmyMovement(result.movement);
     if (result?.rally) upsertClanRallySnapshot(result.rally);
@@ -14942,7 +14988,7 @@ function showIslandSwitcherModal() {
 }
 
 function prepareSelectionForIslandSwitch() {
-  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  const source = selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
   if (sendMode && source?.owner === "player") {
     selectedTargetId = null;
     scoutNearbySourceId = null;
@@ -27610,7 +27656,7 @@ function renderCitiesUncached(force = false) {
     queueDeferredMapRender();
     return;
   }
-  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  const source = selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
   const bulkOrdersSupported = canUseBulkArmyOrders();
   let scoutNearbySource = bulkOrdersSupported && scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
   if (scoutNearbySourceId && scoutNearbySource?.owner !== "player") {
@@ -28140,6 +28186,32 @@ function beginStrongholdReinforcement(strongholdId) {
 }
 
 async function selectClanTowerOnMap(towerId) {
+  if (sendMode && selectedSourceId) {
+    const sourceId = selectedSourceId, requestSession = onlineSessionGeneration;
+    if (holdingTowerSnapshots.has(sourceId)) {
+      rejectGameAction("Choose one of your cities or an enemy city. Tower conquest requires a Clan Rally.");
+      return;
+    }
+    selectedTargetId = towerId;
+    try {
+      const tower = await refreshHoldingTower(towerId);
+      if (!sendMode || selectedSourceId !== sourceId || selectedTargetId !== towerId || onlineSessionGeneration !== requestSession) return;
+      const source = cityById(sourceId);
+      if (!tower || !source || source.owner !== "player") return;
+      if (!getHoldingTowerOrderPermission(tower, "reinforce")) {
+        rejectGameAction(tower.ownerMember ? "Tower reinforcement requires 24 hours in the clan." : "You can send troops only into your clan's Tower.");
+        return;
+      }
+      selectedTowerMapId = towerId;
+      syncHoldingTowerSelectionSubscription();
+      showHoldingTowerOrderComposer(tower, "reinforce", source);
+      if (!modal.open) modal.showModal();
+      updateHoldingTowerOrderAvailability();
+    } catch (error) {
+      if (onlineSessionGeneration === requestSession) rejectGameAction(error?.message || "Tower orders unavailable. Try again.");
+    }
+    return;
+  }
   clearSelection(false);
   selectedTowerMapId = towerId;
   renderSelectionChangeNow();
@@ -28195,6 +28267,8 @@ function renderSelectedClanTowerWheel(towerId) {
     const currentAction = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot).find(entry => entry.action === action);
     if (!currentAction || currentAction.disabled) { showToast(currentAction?.reason || "Tower permissions are syncing. Try again shortly."); return; }
     if (action === "scout") { void scoutTarget(snapshot); return; }
+    if (action === "store") { void openClanTowerBuilding(towerId, "shop"); return; }
+    if (action === "send") { beginHoldingTowerSendMode(snapshot); return; }
     showHoldingTowerOrderComposer(snapshot,action);
     if (modalBody.querySelector("[data-tower-order-form]")) {
       if (!modal.open) modal.showModal();
@@ -28359,12 +28433,12 @@ function beginRewardCampOrder(campId) {
 }
 
 function selectRewardCamp(campId) {
-  selectedTowerMapId = "";
+  if (!holdingTowerSendContext) selectedTowerMapId = "";
   if (!state || isGamePausedByOutcome()) return;
   const camp = getCampTargetById(campId);
   if (!camp) return;
   playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(camp) });
-  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  const source = selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
   if (sendMode && source?.owner === "player") {
     selectedTargetId = camp.id;
     renderSelectionChangeNow();
@@ -30018,7 +30092,7 @@ function togglePerformancePanel(force = null) {
 function renderPanel() {
   renderOnboardingMapTip();
   actionButtons.innerHTML = "";
-  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  const source = selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
 
   if (commanderPanel) commanderPanel.classList.remove("visible");
 
@@ -30065,13 +30139,13 @@ function renderSelectionChangeNow() {
 }
 
 function selectCity(id) {
-  selectedTowerMapId = "";
+  if (!holdingTowerSendContext) selectedTowerMapId = "";
   if (!state || isGamePausedByOutcome()) return;
   const clicked = cityById(id);
   if (!clicked) return;
   if (scoutNearbySourceId && scoutNearbySourceId !== clicked.id) scoutNearbySourceId = null;
   if (regroupSourceId && regroupSourceId !== clicked.id) regroupSourceId = null;
-  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  const source = selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
 
   if (sendMode && source) {
     if (clicked.id === source.id) {
@@ -30130,6 +30204,8 @@ function selectCity(id) {
 }
 
 function beginSendMode(sourceId) {
+  holdingTowerSendContext = null;
+  selectedTowerMapId = "";
   const source = cityById(sourceId);
   if (!source || source.owner !== "player") return;
   if (source.troops < 1) {
@@ -30154,7 +30230,7 @@ function scheduleOrderRoutePrefetch(targetId = "") {
   if (routePrefetchTimer) window.clearTimeout(routePrefetchTimer);
   routePrefetchTimer = window.setTimeout(() => {
     routePrefetchTimer = 0;
-    const source = cityById(selectedSourceId);
+    const source = getTroopOrderSourceById(selectedSourceId);
     const target = getArmyTargetById(targetId);
     if (!source || !target || source.id === target.id) return;
     void findRouteAsync(source, target).catch(() => null);
@@ -30162,6 +30238,17 @@ function scheduleOrderRoutePrefetch(targetId = "") {
 }
 
 function showTroopSliderModal(source, target) {
+  if (isHoldingTowerTarget(source)) {
+    const tower = getTroopOrderSourceById(source.id);
+    if (!tower) { rejectGameAction("Tower access changed. Reopen Send from the map."); return; }
+    const mode = target.owner === "player" ? "withdraw" : "attack-from";
+    showHoldingTowerOrderComposer(tower, mode, target);
+    if (modalBody.querySelector("[data-tower-order-form]")) {
+      if (!modal.open) modal.showModal();
+      updateHoldingTowerOrderAvailability();
+    }
+    return;
+  }
   void showTroopSliderModalAsync(source, target);
 }
 
@@ -31099,6 +31186,7 @@ async function confirmTroopSliderOrder() {
 }
 
 function cancelSendMode() {
+  if (holdingTowerSendContext) clearSelection(false);
   activeTroopRouteRequestId += 1;
   cancelPendingRouteWorkerRequests();
   cancelAuthoritativeRoutePreviewRefresh();
@@ -35652,6 +35740,7 @@ function showAttackPreview(source, target) {
 }
 
 function clearSelection(shouldRender = true) {
+  holdingTowerSendContext = null;
   selectedTowerMapId = "";
   syncHoldingTowerSelectionSubscription();
   selectedSourceId = null;

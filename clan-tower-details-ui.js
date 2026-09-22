@@ -63,8 +63,9 @@
     if(t.ownerMember) {
       const probation=t.eligibility?.eligible===false;
       const unavailable=probation?"Military actions unlock after 24 hours in the clan.":"Tower permissions are syncing. Try again shortly.";
-      const canSend=Boolean(Number(t.ownStationedTroops)>0&&(p.withdrawOwn||p.attackFrom||p.rallyFrom));
-      actions.push({action:"reinforce",label:"Reinforce",icon:"reinforcement",disabled:!p.reinforce,reason:p.reinforce?"":unavailable});
+      const canSend=Boolean(Number(t.ownStationedTroops)>0&&(p.withdrawOwn||p.attackFrom));
+      const hasStore=Number(t.buildings?.shop)>0;
+      actions.push({action:"store",label:"Store",icon:"shop",disabled:!hasStore,reason:hasStore?"":"Complete this Tower's Clan Shop building to open the Store."});
       actions.push({action:"send",label:"Send",icon:"forward",disabled:!canSend,reason:canSend?"":probation?unavailable:Number(t.ownStationedTroops)===0?"Station your own troops here before sending orders.":unavailable});
     }
     return actions;

@@ -47,9 +47,6 @@
   background: var(--cl-ivory);
 }
 .holding-tower-order-status { margin: 0; font-size: .75rem; }
-.holding-tower-order-modes { display: flex; flex-wrap: wrap; gap: .4rem; }
-.holding-tower-order-modes button { flex: 1; min-height: 44px; }
-.holding-tower-order-modes button[aria-pressed="true"] { outline: 2px solid #8b642f; outline-offset: 2px; }
 .holding-tower-order-fields { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: .6rem; }
 .holding-tower-order-fields :is(input, select) { min-width: 0; width: 100%; }
 .holding-tower-order-actions button { min-height: 44px; }

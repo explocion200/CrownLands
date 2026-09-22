@@ -19,14 +19,18 @@ assert.match(html, /at least three eligible clan members in a rally, including t
 assert.equal((html.match(/data-test-clan-flag/g) || []).length, 2, "Clan flag remains beside title and controlling clan.");
 assert.equal((html.match(/data-tower-player-flag=/g) || []).length, 3);
 assert(!/data-tower-action="(?:reinforce|withdraw|attack-from|rally-from|rally-attack)"/.test(html), "Details must not contain troop commands.");
-assert.deepEqual(Array.from(towerUi.mapActions(owner), a=>a.action), ["info","reinforce","send"]);
+assert.deepEqual(Array.from(towerUi.mapActions(owner), a=>a.action), ["info","store","send"]);
 assert.deepEqual(Array.from(towerUi.mapActions({...owner,worldActive:false}), a=>a.action), ["info"]);
-assert.deepEqual(Array.from(towerUi.mapActions({...owner,permissions:{inspect:true}}), a=>[a.action,Boolean(a.disabled)]), [["info",false],["reinforce",true],["send",true]]);
+assert.deepEqual(Array.from(towerUi.mapActions({...owner,buildings:{shop:0},permissions:{inspect:true}}), a=>[a.action,Boolean(a.disabled)]), [["info",false],["store",true],["send",true]]);
 const emptyActions=towerUi.mapActions({...owner,ownStationedTroops:0,permissions:{inspect:true,reinforce:true}});
-assert.equal(emptyActions.find(a=>a.action==='reinforce').disabled,false);
+assert.equal(towerUi.mapActions({...owner,ownStationedTroops:0,buildings:{shop:1}}).find(a=>a.action==='store').disabled,false);
 assert.match(emptyActions.find(a=>a.action==='send').reason,/your own troops/);
 const probationActions=towerUi.mapActions({...owner,eligibility:{eligible:false},permissions:{inspect:true}});
-assert(probationActions.filter(a=>a.disabled).every(a=>a.reason.includes('24 hours')));
+assert(probationActions.find(a=>a.action==='send').reason.includes('24 hours'));
+for(const level of [0,1]) {
+  const store=towerUi.mapActions({...owner,buildings:{shop:level},buildingProject:{buildingId:'shop',targetLevel:level+1},eligibility:{eligible:false}}).find(a=>a.action==='store');
+  assert.equal(store.disabled,level===0,'Store access must use the local completed level, even during construction or probation.');
+}
 const outsider = {...owner, ownerMember:false, exactDefenders:null, garrison:[{ownerName:"PRIVATE GARRISON",troops:100}], permissions:{scout:true,createRallyAttack:true}};
 assert(!towerUi.render(outsider,money).includes("PRIVATE GARRISON"), "Private contributions never render for outsiders.");
 assert(towerUi.render(outsider,money).includes("Hidden"));
