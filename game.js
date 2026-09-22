@@ -38003,7 +38003,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
       id: String(target.id || "").slice(0, 96),
       name: String(target.name || "Unknown holding").slice(0, 80),
       regionId: String(target.regionId || "").slice(0, 80),
-      targetType: target.targetType === "camp" ? "camp" : "city",
+      targetType: target.targetType === "tower" ? "tower" : target.targetType === "camp" ? "camp" : "city",
       strongholdType: String(target.strongholdType || "").slice(0, 32),
       level: target.targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
       fortifications: target.fortifications && typeof target.fortifications === "object"
@@ -38085,7 +38085,8 @@ function getDetailedBattleSideParticipants(snapshot = null, role = "attacker") {
   if (role === "attacker") {
     return snapshot.attackers?.length ? snapshot.attackers : snapshot.attacker ? [snapshot.attacker] : [];
   }
-  return [snapshot.defender, ...(snapshot.reinforcements || [])].filter(Boolean);
+  return [snapshot.defender, ...(snapshot.reinforcements || [])].filter(participant => participant
+    && (snapshot.target?.targetType !== "tower" || participant.ownerUid || participant.startingTroops > 0));
 }
 
 function sumDetailedBattleParticipantPower(participants = [], field = "") {
@@ -38188,7 +38189,9 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     ? participants.length > 1
       ? `${formatNumber(participants.length)} rally armies`
       : "1 attacking army"
-    : snapshot?.reinforcements?.length
+    : snapshot?.target?.targetType === "tower"
+      ? `${formatNumber(participants.filter(row => row.ownerUid).length)} defending players${participants.some(row => !row.ownerUid) ? " · Neutral garrison" : ""}`
+      : snapshot?.reinforcements?.length
       ? `1 garrison + ${formatNumber(snapshot.reinforcements.length)} reinforcements`
       : "1 defending garrison";
   return {
@@ -38215,8 +38218,8 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     sharedClanBonusPower,
     otherBonusPower,
     wallFree: !attacker && campTarget,
-    reinforcementCount: attacker ? 0 : Math.max(0, snapshot?.reinforcements?.length || 0),
-    reinforcementTroops: attacker ? 0 : (snapshot?.reinforcements || []).reduce(
+    reinforcementCount: attacker || snapshot?.target?.targetType === "tower" ? 0 : Math.max(0, snapshot?.reinforcements?.length || 0),
+    reinforcementTroops: attacker || snapshot?.target?.targetType === "tower" ? 0 : (snapshot?.reinforcements || []).reduce(
       (total, participant) => total + Math.max(0, Math.floor(Number(participant?.startingTroops) || 0)),
       0
     ),
@@ -38252,6 +38255,7 @@ function formatBattleReportValue(value, fallback = "Not recorded") {
 }
 
 function getBattleTargetTypeLabel(target = {}) {
+  if (target.targetType === "tower") return "Clan Tower";
   if (target.targetType === "camp") return "Reward camp";
   const strongholdType = String(target.strongholdType || "").toLowerCase();
   if (strongholdType === "crown" || strongholdType === "crown_citadel") return "Crown Citadel";
@@ -38682,7 +38686,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
   const left = viewerRole === "defender" ? defender : attacker;
   const right = viewerRole === "defender" ? attacker : defender;
   if (window.CrownlandsBattleReportUI) {
-    return window.CrownlandsBattleReportUI.render({ report, snapshot, badge, left, right, defender, viewerRole,
+    return window.CrownlandsBattleReportUI.render({ report, snapshot, badge, left, right, defender, viewerRole, viewerUid: getCurrentOnlineUid(),
       target: snapshot.target, siege: snapshot.siege, ruleLabel, resultLabel: getViewerBattleResultLabel(snapshot, viewerRole, report),
       forecast: viewerRole === "attacker" ? renderBattleForecastChanges(report, snapshot) : "" });
   }
@@ -38709,6 +38713,11 @@ function applyDetailedBattleFlags(snapshot) {
     ["attacker", snapshot.attacker.ownerFlag],
     ["defender", snapshot.defender.ownerFlag],
   ]);
+  for (const role of ["attacker", "defender"]) {
+    getDetailedBattleSideParticipants(snapshot, role).forEach(participant => {
+      flags.set(`${role}-${participant.ownerUid}`, participant.ownerFlag);
+    });
+  }
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
     const side = element.dataset.battleParticipantFlag;
     FlagRenderer.render(element, flags.get(side), {

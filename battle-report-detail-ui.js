@@ -98,8 +98,24 @@
   function shell(report,content,loading=false) {
     return `<div class="report-shell detail-ledger-shell"><header class="window-header"><button id="battleReportBackBtn" class="back-button" type="button" aria-label="Back to reports" data-audio-effect="none"><span aria-hidden="true">‹</span> Reports</button><div class="heading"><p>ROYAL DISPATCHES</p><h2>${esc(getBattleReportTypeLabel(report.type))}</h2></div><div class="report-time">${renderBattleReportAge(report)}</div>${loading ? '' : renderBattleReportLocateButton(report,"battle-report-locate-detail map-button")}<button class="close-button" data-detail-close type="button" aria-label="Close Battle Report">×</button></header><nav class="section-nav" aria-label="Report sections"></nav><div class="report-body" tabindex="0" aria-label="Full battle report">${content}</div><footer class="report-footer"><span>Battle reports · retained for 24 hours</span><span>Scroll for the full account</span></footer></div>`;
   }
+  function towerParticipants(options) {
+    const snapshot = options.snapshot;
+    if (snapshot?.target?.targetType !== "tower") return "";
+    const count = number => number != null && Number.isFinite(Number(number))
+      ? esc(Math.max(0, Math.floor(Number(number))).toLocaleString()) : "Not recorded";
+    const rows = ["attacker", "defender"].flatMap(role => getDetailedBattleSideParticipants(snapshot, role)
+      .map(participant => ({ ...participant, battleRole: role })));
+    const priority = row => row.ownerUid && row.ownerUid === options.viewerUid ? 0 : row.battleRole === options.viewerRole ? 1 : 2;
+    rows.sort((a, b) => priority(a) - priority(b));
+    const content = `<table class="rally-table tower-participants"><thead><tr><th scope="col">Player</th><th scope="col">Starting troops</th><th scope="col">Battle power</th><th scope="col">Casualties</th><th scope="col">Survivors</th></tr></thead><tbody>${rows.map(row => {
+      const you = Boolean(row.ownerUid && row.ownerUid === options.viewerUid);
+      return `<tr data-tower-participant="${esc(row.ownerUid)}"${you ? ' class="report-recipient"' : ""}><th scope="row"><div class="participant-identity">${row.ownerUid ? renderBattleKingdomFlag(`${row.battleRole}-${row.ownerUid}`, row.ownerName, "participant-roster-flag") : ""}<div>${row.ownerUid ? renderPlayerNameLink(row.ownerUid, row.ownerName) : esc(row.ownerName)}${you ? '<span class="recipient-label">You</span>' : ""}<small>${row.battleRole === "attacker" ? row.role === "leader" ? "Attacker · Rally leader" : "Attacker" : "Defender"}</small></div></div></th><td>${count(row.startingTroops)}</td><td><strong>${count(row.effectivePower)}</strong><small>${row.battleRole === "attacker" ? "Attack power" : "Defense power"}</small></td><td>${count(row.losses)}</td><td>${count(row.survivors)}</td></tr>`;
+    }).join("")}</tbody></table><p class="notice">Battle-time troops and power for everyone involved. Casualties are before recovery; survivors are troops left at the battle. Tower walls contributed ${count(snapshot.siege?.startingWallPower)} defense power separately.</p>`;
+    return section("participants", "Battle participants", content, "troops", "Your results first");
+  }
   function render(options) {
-    return shell(options.report,summary(options)+rally(options.snapshot)+forces(options.left,options.right)+bonuses(options.left,options.right)+gearEffects(options)+walls(options.defender,options.siege)+rewards(options.report));
+    const participants = towerParticipants(options);
+    return shell(options.report,participants+summary(options)+(participants ? "" : rally(options.snapshot))+forces(options.left,options.right)+bonuses(options.left,options.right)+gearEffects(options)+walls(options.defender,options.siege)+rewards(options.report));
   }
   function loading(report,badge) {
     return shell(report,`<section id="battleDetail-summary" data-detail-section="summary" data-detail-label="Summary" class="loading-state" role="status">${emblem("dispatch")}<h2 tabindex="-1">${esc(report.cityName)}</h2><p>${esc(badge.label)} · Loading participant battle statistics…<br>Loading the authoritative battle snapshot…</p></section>`,true);
