@@ -3,19 +3,50 @@
   "baseCommit": "f9f17e6fc27cf2f0fa833fc71ed448f5bb6f6feb",
   "coverage": [
     {
-      "paths": ["functions/index.js", "functions/test/emulator-clan-tower-battle-reports.js", "tools/validate-clan-tower-battle-reports.js"],
+      "paths": [
+        "functions/index.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "tools/validate-clan-tower-battle-reports.js"
+      ],
       "reason": "Save a private detailed snapshot atomically with Clan Tower rally resolution using actual individual attacker packages and defender casualty allocations. Test both sides' exact powers/losses/survivors, distinct shared wall power, launch bonuses, neutral garrisons, zero-loss defenders, and unchanged combat inputs. Real callable/emulator tests exercise three attackers and three defenders, offline receipt delivery, each participant's snapshot access, outsider denial, durable personal reports and resolution replay on wall-held, defeat and capture outcomes. Existing Tower lifecycle and normal city report gear tests cover the reused combat/report dependencies.",
-      "tests": ["tools/validate-clan-tower-battle-reports.js", "tools/validate-report-system.js", "functions/test/emulator-clan-tower-battle-reports.js", "functions/test/emulator-holding-tower-lifecycle.js", "functions/test/emulator-battle-report-gear-effects.js"]
+      "tests": [
+        "tools/validate-clan-tower-battle-reports.js",
+        "tools/validate-report-system.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ]
     },
     {
-      "paths": ["game.js", "battle-report-detail-ui.js", "battle-report-detail-ui.css", "tools/validate-battle-report-detail.js", "tools/validate-clan-tower-reports-browser.js"],
+      "paths": [
+        "game.js",
+        "battle-report-detail-ui.js",
+        "battle-report-detail-ui.css",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-clan-tower-reports-browser.js"
+      ],
       "reason": "Preserve Tower snapshot identity and render every participant at the top of the actual battle-report dialog with its recipient first, saved flags, full numeric values and a shared-wall explanation. Exercise all six recipient viewpoints at desktop and two landscape-mobile sizes through the real report loader, normalization, renderer and flag hydration. Check overflow and scrolling. Existing report validators cover viewer-side orientation, escaping, historical unknowns, city/rally/camp reports, gear effects, navigation, retention and reconnect behavior.",
-      "tests": ["tools/validate-battle-report-detail.js", "tools/validate-clan-tower-reports-browser.js", "tools/validate-report-system.js"]
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-clan-tower-reports-browser.js",
+        "tools/validate-report-system.js"
+      ]
     },
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
       "reason": "Record the user's confirmed Clan Tower reporting and recipient-first requirement, with unchanged combat, privacy and retention rules. Implementation and delivery are verified by the focused report and emulator tests.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Allow 4 KiB beyond the existing 48 KiB full-report presentation cap for the complete Clan Tower participant roster and its scoped mobile styles. Continue enforcing the new 52 KiB maximum and all existing production artifact, manifest, asset and deployment contracts; no new art or dependencies.",
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ]
     }
   ]
 }

@@ -9697,6 +9697,12 @@ function createHoldingTowerBattleSnapshot({ armyId, tower, defense, defenderAllo
   snapshot.attacker.basePower = attackBreakdown.baseAttackPower || 0;
   snapshot.attacker.powerBreakdown = attackBreakdown;
   snapshot.totals.attackPowerBreakdown = attackBreakdown;
+  snapshot.gearEffects = createBattleGearEffectsSnapshot({
+    attackerParticipants: snapshot.attackers,
+    defenderParticipants: [snapshot.defender, ...snapshot.reinforcements],
+    attackPowerBreakdown: attackBreakdown,
+    defensePowerBreakdown: snapshot.totals.defensePowerBreakdown,
+  });
   return snapshot;
 }
 
