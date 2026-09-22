@@ -1,44 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c01652e2f5970025d41c02a75b4c3490bac57e26",
+  "baseCommit": "b737bdd2c1b63bc4babf2c619eb152f065ba1177",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "tools/validate-clan-tower-battle-reports.js"
+        "docs/visual-qa/clan-shop/index.html",
+        "docs/visual-qa/clan-shop/review.js",
+        "docs/visual-qa/clan-shop/preview.html",
+        "docs/visual-qa/clan-shop/preview.js",
+        "docs/visual-qa/clan-shop/draft.css",
+        "tools/validate-clan-shop-draft-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-holding-towers.js",
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-clan-shop-draft-browser.js"
       ],
-      "reason": "Read all four current-realm Towers atomically at rally resolution to enforce one clan holding, including concurrent victories and ownership changes during travel. Cover normal capture, damage-only victories against owned and neutral targets, survivor returns, unchanged wall/building levels on raids, stale-generation exclusion, exact personal reports and offline delivery. Existing Tower lifecycle exercises shared launch, membership, fortification, garrison and settlement dependencies."
+      "reason": "Interactive design draft only; game entry and authoritative rules are untouched. Load the shared building/allowance module and verify all seven illustrated items, viewport fit, visible purchase controls, scroll access, all ten upgrade levels, single simulated charges, failure/retry without loss, daily/72-hour allowances, membership and construction states at desktop and two mobile landscape sizes. No backend changes require emulators."
     },
     {
       "paths": [
-        "game.js",
-        "kingdom-ledgers-ui.js",
-        "kingdom-ledgers-ui.css",
-        "tools/validate-clan-tower-atlas-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/map-benchmark/ledgers-qa-runtime.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-atlas-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-report-system.js",
-        "tools/validate-clan-tower-reports-browser.js"
-      ],
-      "reason": "Render complete current-owner heraldry instead of the Tower crest in real map cards. Check desktop and two landscape sizes, published flag edits, stale flag rejection, ownership changes, neutral fallback, overview visibility and camera preservation. Extend only the loopback map fixture. Preserve existing Tower subscription lifecycle and detailed report normalization/recipient ordering while explaining non-capturing victories. Also verify each map crest is above all decorative border layers, all four Stronghold icons and the Citadel/camp crests remain, per-card type badges are hidden, and the top color legend stays visible."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/visual-qa/clan-shop/README.md",
+        "docs/visual-qa/clan-shop/visual-checks.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly confirmed one-Tower ownership rule, normal battle results without capture at the limit, and owner heraldry on the map selector; identify that it supersedes the former four-Tower allowance and remains pending deployment."
+      "reason": "Document the proposal, current source rules, completed preview checks and future integration requirements. The draft remains subject to approval and is not a live game change."
     }
   ]
 }

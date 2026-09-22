@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Clan Shop preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/clan-shop/draft.css"><script src="clan-tower-buildings.js" defer></script><script src="economy-config.js" defer></script><script src="docs/visual-qa/clan-shop/preview.js" defer></script></head>
+<body><div class="world-backdrop" aria-hidden="true"></div>
+<dialog id="shopDialog" aria-labelledby="shopTitle">
+ <div class="shop-shell">
+  <header class="window-header"><img id="shopSign" src="assets/clan-buildings/shop-3.webp" alt=""><div class="heading"><p>Ravenwatch · Clan Tower</p><h1 id="shopTitle">Clan Shop <span id="shopLevel"></span></h1></div><div class="wallet"><span>Your Gold</span><strong><img src="assets/icons/royal-shop-gold-r1.svg" alt="Gold"><span id="goldBalance"></span></strong></div><button id="closeShop" type="button" class="close" aria-label="Close Clan Shop">×</button></header>
+  <nav class="shop-tabs" aria-label="Clan Shop sections"><div role="tablist"><button id="tab-wares" role="tab" data-section="wares" aria-controls="waresPanel" aria-selected="true">Provisions</button><button id="tab-upgrades" role="tab" data-section="upgrades" aria-controls="upgradesPanel" aria-selected="false">Shop upgrades</button></div><span class="clan-name">The Amber Wardens</span></nav>
+  <div id="waresPanel" class="wares-panel" role="tabpanel" aria-labelledby="tab-wares">
+   <section class="catalogue" aria-label="Clan provisions"><header class="catalogue-header"><div><h2>The tower stores</h2><p>Extra purchases for clan members</p></div><span id="unlockedCount"></span></header><p id="catalogueAlert" class="notice" hidden></p><div id="catalogueScroll" class="scroll-region" tabindex="0" aria-label="All Clan Shop items"><div id="itemGrid" role="listbox" aria-label="Choose a provision"></div></div><footer class="catalogue-footer"><span>Daily allowance renews at <b>00:00 UTC</b></span><span>Peace Shield: <b>every 72 hours</b></span></footer></section>
+   <section id="selection" class="selection" aria-label="Selected item"></section>
+  </div>
+  <div id="upgradesPanel" class="upgrades-panel" role="tabpanel" aria-labelledby="tab-upgrades" hidden></div>
+ </div>
+</dialog>
+<div id="dismissed" hidden><p>Clan Shop preview closed.</p><button id="reopen">Reopen Clan Shop</button></div>
+<p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>
+</body></html>
