@@ -9579,7 +9579,9 @@ function createDetailedBattleSnapshot({
     battleId,
     armyId: safeString(armyId, 96),
     modelVersion: BATTLE_SNAPSHOT_MODEL_VERSION,
-    combatModel: targetType === "camp"
+    combatModel: targetType === "tower"
+      ? "clan_tower_wall_then_garrison"
+      : targetType === "camp"
       ? "camp_troops_only"
       : siege
         ? "city_wall_then_garrison"
@@ -9593,7 +9595,7 @@ function createDetailedBattleSnapshot({
       id: safeString(target.id, 96),
       name: safeString(target.name || target.id, 80),
       regionId: normalizeRegionId(target.regionId),
-      targetType: targetType === "camp" ? "camp" : "city",
+      targetType: targetType === "tower" ? "tower" : targetType === "camp" ? "camp" : "city",
       strongholdType: safeString(target.strongholdType, 32),
       level: targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
       fortifications: {
@@ -9645,6 +9647,63 @@ function createDetailedBattleSnapshot({
     createdAtMs: nowMs,
     createdAt: FieldValue.serverTimestamp(),
   };
+}
+
+// Adapt the personally attributed Tower garrison to the shared private report model.
+// Walls belong to the Tower; no player's effectivePower includes them.
+function createHoldingTowerBattleSnapshot({ armyId, tower, defense, defenderAllocation,
+  packages, attackerAllocation, result, leaderUid, leaderProfile, nowMs }) {
+  const rows = defense.contributions.map(row => ({
+    ...row,
+    reinforcementId: row.id,
+    defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+    baseDefensePowerPerTroop: BASE_TROOP_DEFENSE_POWER,
+    gearDefenderStrengthBonusPower: createBattleDefensePowerBreakdown({ ...row,
+      defenseCombatVersion: DEFENSE_COMBAT_VERSION }, { siege: true }).gearDefenderStrengthBonusPower,
+    personalBonusPercent: 0, sharedBonusPercent: 0, bonusPercent: 0,
+    baseCityWalls: 0, cityWalls: 0, cityWallSharePercent: 0, cityWallDefense: 0,
+    cityLevelDefensePercent: 0, stoneworksPercent: 0, stoneworksBonus: 0,
+    gearWallStrengthPercent: 0, fortificationPower: 0,
+  }));
+  const owner = defense.neutralTroops > 0 || !rows.length ? {
+    ownerUid: "", ownerName: defense.neutralTroops > 0 ? "Neutral defenders" : tower.clanName || "Empty garrison",
+    ownerFlag: null, troops: defense.neutralTroops,
+    basePower: Math.floor(defense.neutralTroops * BASE_TROOP_DEFENSE_POWER),
+    effectivePower: Math.floor(defense.neutralTroops * BASE_TROOP_DEFENSE_POWER),
+    defenseCombatVersion: DEFENSE_COMBAT_VERSION, baseDefensePowerPerTroop: BASE_TROOP_DEFENSE_POWER,
+    shieldwallDisciplineLevel: 0, shieldwallDisciplinePercent: 0,
+    gearDefenderStrengthPercent: 0, gearDefenderStrengthBonusPower: 0,
+    bonusPercent: 0, cityLevelDefensePercent: 0, stoneworksPercent: 0, gearWallStrengthPercent: 0,
+  } : rows.shift();
+  const ownerAllocation = defenderAllocation.contributions.find(row => row.ownerUid === owner.ownerUid);
+  const snapshot = createDetailedBattleSnapshot({
+    battleId: armyId, armyId, target: { ...tower, level: tower.wallLevel }, targetType: "tower",
+    attackerUid: leaderUid, attackerProfile: leaderProfile,
+    defenderUid: owner.ownerUid,
+    defenderProfile: { clanId: tower.clanId, clanName: tower.clanName, clanTag: tower.clanTag },
+    defensePackages: {
+      owner: { ...owner, baseCityWalls: defense.fortification.fullWallPower,
+        cityWalls: defense.fortification.fullWallPower },
+      reinforcements: rows, fortification: defense.fortification,
+      totalDefense: defense.totalDefense, defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+    },
+    allocation: { ...defenderAllocation, ownerLosses: ownerAllocation?.losses ?? defenderAllocation.ownerLosses },
+    attackerPackages: packages, attackerAllocation, result,
+    outcome: result.success ? "victory" : "defeat", nowMs,
+  });
+  // Rally members can have different launch bonuses. Sum their recorded contributions.
+  const attackBreakdown = Object.fromEntries(Object.keys(snapshot.attackers[0]?.powerBreakdown || {})
+    .map(key => [key, snapshot.attackers.reduce((total, row) => total + (row.powerBreakdown[key] || 0), 0)]));
+  snapshot.attacker.basePower = attackBreakdown.baseAttackPower || 0;
+  snapshot.attacker.powerBreakdown = attackBreakdown;
+  snapshot.totals.attackPowerBreakdown = attackBreakdown;
+  snapshot.gearEffects = createBattleGearEffectsSnapshot({
+    attackerParticipants: snapshot.attackers,
+    defenderParticipants: [snapshot.defender, ...snapshot.reinforcements],
+    attackPowerBreakdown: attackBreakdown,
+    defensePowerBreakdown: snapshot.totals.defensePowerBreakdown,
+  });
+  return snapshot;
 }
 
 function writeDetailedBattleSnapshot(transaction, snapshot = null) {
@@ -26734,6 +26793,7 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
         basePower,
         effectivePower,
         shieldwallDisciplinePercent,
+        shieldwallDisciplineLevel: profileIsCurrent ? getSkillLevel(profile, "shieldwallDiscipline") : 0,
         gearDefenderStrengthPercent,
         fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile, CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary)) : 0,
         clanInfirmaryPercent: profileIsCurrent ? CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary) : 0,
@@ -27226,6 +27286,12 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
       troops: defense.totalTroops,
     };
     const leaderProfile = participantEntries.get(rally.leaderUid)?.profile || {};
+    if (!friendlyAtResolution) {
+      writeDetailedBattleSnapshot(transaction, createHoldingTowerBattleSnapshot({
+        armyId, tower, defense, defenderAllocation, packages, attackerAllocation,
+        result, leaderUid: rally.leaderUid, leaderProfile, nowMs,
+      }));
+    }
     const rawAttackWinXp = friendlyAtResolution ? 0 : getCaptureXpAward(
       towerCombatTarget,
       tower.clanId,

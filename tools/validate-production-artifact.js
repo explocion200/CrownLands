@@ -138,10 +138,11 @@ if (profileUiBytes > 44 * 1024) throw new Error("Profile presentation exceeds it
 // Skills adds at most 30 KiB of scoped CSS, 16 KiB of eight emblems, and 2 KiB of card markup.
 // Clan adds at most 84 KiB of scoped CSS and 16 KiB of client presentation, reusing existing art.
 // Settings adds at most 32 KiB of scoped CSS and 8 KiB of emblems and markup.
-// Full Battle Reports adds at most 48 KiB of scoped presentation and 4 KiB of mounting/entries, reusing existing art.
+// Full Battle Reports: original 48 KiB plus 4 KiB for complete Clan Tower participant rosters/styles.
+// The existing 4 KiB mounting allowance and reused-art approach remain unchanged.
 const battleReportDetailBytes = ["battle-report-detail-ui.js", "battle-report-detail-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (battleReportDetailBytes > 48 * 1024) throw new Error("Full Battle Report presentation exceeds its 48 KiB payload budget.");
+if (battleReportDetailBytes > 52 * 1024) throw new Error("Full Battle Report presentation exceeds its 52 KiB payload budget.");
 // Scout Reports adds at most 64 KiB of scoped presentation and 4 KiB for game mounting/entries; no new art.
 const scoutReportBytes = ["scout-report-ui.js", "scout-report-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);

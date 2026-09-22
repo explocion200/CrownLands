@@ -62,3 +62,15 @@ const loading=ui.loading({type:"attack",cityName:"Thornfield"},options.badge);
 assert(loading.includes('role="status"') && loading.includes('id="battleReportBackBtn"') && loading.includes("data-detail-close"));
 assert(!loading.includes("data-report-jump") && !loading.includes("122000"),"Loading fabricated settled data");
 console.log("Validated full-report values, viewer order, escaping, historical fallback, gear, rally, all camp rewards, red defense shield, and navigation hooks.");
+const towerSnapshot = require("./validate-clan-tower-battle-reports").snapshot;
+for (const viewerUid of towerSnapshot.participantUids) {
+  const before = JSON.stringify(towerSnapshot);
+  const result = ui.render({...options, snapshot:towerSnapshot, target:towerSnapshot.target,
+    viewerUid, viewerRole:viewerUid.startsWith("attacker") ? "attacker" : "defender"});
+  assert.equal(JSON.stringify(towerSnapshot),before,"Personal ordering changed the shared snapshot");
+  assert.equal(/data-tower-participant="([^"]+)"/.exec(result)[1],viewerUid);
+  assert(result.indexOf('data-detail-section="participants"') < result.indexOf('data-detail-section="summary"'));
+  assert.equal((result.match(/data-tower-participant=/g)||[]).length,6);
+  for (const text of ["You","Attack power","Defense power","Casualties","19,292","5,000 defense power separately"]) assert(result.includes(text),text);
+  assert(!result.includes('data-detail-section="rally"'),"Tower participants were duplicated as a second rally roster");
+}

@@ -1,57 +1,61 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "815f348a0f2b141e0737a553d7755f51ac8b3a13",
+  "baseCommit": "f9f17e6fc27cf2f0fa833fc71ed448f5bb6f6feb",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "troop-orders-ui.js",
-        "troop-orders-ui.css",
-        "tools/validate-clan-tower-orders-browser.js"
+        "functions/index.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "tools/validate-clan-tower-battle-reports.js"
       ],
-      "reason": "Use the shared city order presentation, power breakdown and scout-based forecast for personal Clan Tower attacks and transfers, including incoming support. Keep Tower dispatch and permission checks separate, disclose local route/combat estimates, refresh expired scout intelligence, and preserve city/rally renderers. Browser coverage checks real map entry paths, desktop and two mobile-landscape sizes, keyboard range input, exact personal counts, reachable dispatch, async cancellation, failed-send retry and duplicate guards. Shared route/reconnect, rally, combat math, report expiry and asset checks cover dependencies. No backend, authoritative rules, inventory or data writes changed, so no emulator suite is required.",
+      "reason": "Save a private detailed snapshot atomically with Clan Tower rally resolution using actual individual attacker packages and defender casualty allocations. Test both sides' exact powers/losses/survivors, distinct shared wall power, launch bonuses, neutral garrisons, zero-loss defenders, and unchanged combat inputs. Real callable/emulator tests exercise three attackers and three defenders, offline receipt delivery, each participant's snapshot access, outsider denial, durable personal reports and resolution replay on wall-held, defeat and capture outcomes. Existing Tower lifecycle and normal city report gear tests cover the reused combat/report dependencies.",
       "tests": [
-        "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-military-ui.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-interaction-health.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-clan-tower-battle-reports.js",
         "tools/validate-report-system.js",
-        "tools/validate-asset-performance-budgets.js"
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-combat-forecast.js"
+        "game.js",
+        "battle-report-detail-ui.js",
+        "battle-report-detail-ui.css",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-clan-tower-reports-browser.js"
       ],
-      "reason": "Follow the compact forecast markup into the shared renderer while retaining every scout disclosure, protection, combat and report assertion.",
+      "reason": "Preserve Tower snapshot identity and render every participant at the top of the actual battle-report dialog with its recipient first, saved flags, full numeric values and a shared-wall explanation. Exercise all six recipient viewpoints at desktop and two landscape-mobile sizes through the real report loader, normalization, renderer and flag hydration. Check overflow and scrolling. Existing report validators cover viewer-side orientation, escaping, historical unknowns, city/rally/camp reports, gear effects, navigation, retention and reconnect behavior.",
       "tests": [
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-tower-orders-browser.js"
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-clan-tower-reports-browser.js",
+        "tools/validate-report-system.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-holding-tower-client-lifecycle.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Stub only the new visual adapter in the existing isolated lifecycle harness; retain cancellation, membership/revision/session checks, personal troop limits, neutral caps and dispatch/retry assertions. The real adapter is covered by the browser tests.",
+      "reason": "Record the user's confirmed Clan Tower reporting and recipient-first requirement, with unchanged combat, privacy and retention rules. Implementation and delivery are verified by the focused report and emulator tests.",
+      "tests": []
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Allow 4 KiB beyond the existing 48 KiB full-report presentation cap for the complete Clan Tower participant roster and its scoped mobile styles. Continue enforcing the new 52 KiB maximum and all existing production artifact, manifest, asset and deployment contracts; no new art or dependencies.",
       "tests": [
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-clan-tower-orders-browser.js"
+        "tools/validate-production-artifact.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-clan-tower-map-browser.js"
+        "functions/test/run-emulator-gates.js"
       ],
-      "reason": "Keep the existing map/rally integration coverage while allowing legitimate source-city troop production between source selection and opening the panel. The chosen maximum must remain bounded by the observed before/after personal source count.",
+      "reason": "Register the new Tower report suite with the current Core expansion fixture so its callables and security rules run against the live topology rather than the legacy test world. The runner change is one suite entry; required targeted-validation and safe-update workflow tests remain enabled.",
       "tests": [
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-orders-browser.js"
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "tools/test-targeted-validation.js"
       ]
     }
   ]
