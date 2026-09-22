@@ -335,6 +335,17 @@ async function main() {
   await expectNpcBlocked(/30 or more cities/);
   const rivalAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, rivalTarget, "attack", 100, "tower", "city"));
   assert.equal(rivalAttack.movement.toId, rivalTarget.id, "The neutral cap blocked a player-owned city attack.");
+  const towerAlert = await db.doc(`serverNotificationOutbox/incoming_${rivalAttack.movement.id}_${rivalAttack.movement.targetOwnerUid}`).get();
+  assert.equal(towerAlert.exists, true, "Tower attacks must atomically queue the defender's alert.");
+  assert.equal(towerAlert.data().notification.kind, "attack");
+  assert.equal(towerAlert.data().notification.sourceCityId, tower.id);
+  const scoutTower = await call("sendHoldingTowerArmyOrder", outsider, order(outsider.home, tower, "scout", 1, "city", "tower"));
+  const towerScouting = await resolve(outsider, scoutTower.movement);
+  assert.equal(towerScouting.status, "returning", "Tower scouting must persist its report and begin the return march.");
+  const scoutProfile = (await db.doc(`players/${outsider.uid}`).get()).data();
+  const towerScoutReport = scoutProfile.battleReports.find(report => report.cityId === tower.id && report.type === "scout");
+  assert.equal(towerScoutReport?.uid, outsider.uid, "The Tower scout report must retain its recipient identity.");
+  await resolve(outsider, scoutTower.movement);
   const campMap = layout.maps.find(map => map.permanentCore && map.camps?.length);
   const camp = {...campMap.camps[0], regionId: campMap.id};
   await db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${camp.regionId}/camps/${camp.id}`).set({ ...camp, ...identity, ownerUid: "", holderUid: "" });

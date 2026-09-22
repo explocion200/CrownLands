@@ -79,7 +79,9 @@ const outbox = extractFunction(server, "queueIncomingArmyNotification");
 assert.match(outbox, /incoming_\$\{armyId\}_\$\{defenderUid\}/, "Retargeted attacks reuse another defender's outbox id.");
 assert.match(sourceSection(server, "exports.sendNearbyScouts", "exports.sendRegroupOrders"), /notifications\.forEach[\s\S]*?queueIncomingArmyNotification\(transaction, notification\.armyId/, "Bulk scouts bypass the retryable notification outbox.");
 assert.match(extractFunction(server, "refreshActiveArmyTargetOwner"), /queueIncomingArmyNotification\(batch, armyDoc\.id[\s\S]*?await batch\.commit\(\)/, "Retargeted attacks do not atomically queue their new-defender alert.");
-assert.equal((server.match(/sendIncomingArmyNotification\(/g) || []).length, 2, "A launch path still sends push directly instead of using the outbox.");
+assert.equal((server.match(/sendIncomingArmyNotification\(/g) || []).length, 1, "A launch path still sends push directly instead of using the outbox worker.");
+assert.match(server, /send: sendIncomingArmyNotification/, "The outbox worker must own delivery.");
+assert.match(sourceSection(server, "exports.sendHoldingTowerArmyOrder", "exports.sendArmyOrder"), /queueIncomingArmyNotification\(transaction, movement.id/, "Tower-origin attacks must queue their defender notification atomically.");
 
 assert.match(rules, /match \/notificationTokens\/\{tokenId\}[\s\S]*?token\.size\(\) >= 20[\s\S]*?installationId\.size\(\) <= 160/, "Notification token writes are not size-bounded or installation-aware.");
 

@@ -50,10 +50,13 @@ async function main() {
       window.originalDisplayMatchMedia=window.matchMedia;
       window.matchMedia=query=>query==='(display-mode: fullscreen)'?{matches:true}:originalDisplayMatchMedia(query);
       document.querySelector('.resource-bar').classList.add('has-home-return');
+      window.dispatchEvent(new Event('crownlands:ui-layout-refresh'));
       updateFullscreenButton();
     })()`);
-    assert.equal(await evaluate("getComputedStyle(document.getElementById('fullscreenBtn')).display"),"none","Manifest fullscreen must not expose a nonfunctional DOM exit control, even beside Home.");
-    await evaluate("window.matchMedia=originalDisplayMatchMedia;document.querySelector('.resource-bar').classList.remove('has-home-return');updateFullscreenButton()");
+    const legacyControl = await buttonBounds("fullscreenBtn");
+    assert.equal(legacyControl.reachable,true,`Older fullscreen installations must retain reachable help beside Home: ${JSON.stringify(legacyControl)}`);
+    assert.equal(await evaluate("document.getElementById('fullscreenBtn').getAttribute('aria-label')"),"Fullscreen help");
+    await evaluate("window.matchMedia=originalDisplayMatchMedia;document.querySelector('.resource-bar').classList.remove('has-home-return');window.dispatchEvent(new Event('crownlands:ui-layout-refresh'));updateFullscreenButton()");
 
     await viewport(390,844,true);
     assert.equal(await evaluate("isMobileGameDisplay()"),true);

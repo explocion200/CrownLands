@@ -211,7 +211,7 @@ requireMatch(html, /daily-rewards\.css\?v=20260819-targeted-ui-contrast-r2/, "Th
 requireMatch(read("docs/visual-qa/daily-rewards-navigation/index.html"), /mobile-viewport\.css[\s\S]*Daily Login[\s\S]*Quests[\s\S]*Achievements/, "The responsive reward-navigation visual QA fixture is missing or incomplete.");
 requireMatch(
   serviceWorker,
-  /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null\)/,
+  /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null, event\)/,
   "The service worker does not runtime-cache the refreshed Daily Rewards stylesheet."
 );
 assert.doesNotMatch(html, /id="dailyMissionsSection"/, "Daily Missions are still embedded in the Player Profile UI.");

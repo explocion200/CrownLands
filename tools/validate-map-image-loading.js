@@ -126,7 +126,7 @@ const decodeIndex = backgroundSource.indexOf("await image.decode()");
 const readyIndex = backgroundSource.indexOf('mapBg.classList.add("image-map-ready")');
 assert(decodeIndex >= 0 && readyIndex > decodeIndex, "Map art must decode before it is revealed.");
 assert(
-  worker.includes('if (request.destination === "image")') && worker.includes("cacheFirst(request)"),
+  worker.includes('if (request.destination === "image")') && worker.includes("cacheFirst(request, event)"),
   "Map images should continue using cache-first service-worker delivery."
 );
 assert(

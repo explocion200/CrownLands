@@ -21325,111 +21325,120 @@ function getPathMetrics(points) {
   return metrics;
 }
 
+let lastFrameFailureLogTime = -Infinity;
 function frame(now) {
-  const rawDt = (now - lastFrameTime) / 1000;
-  lastFrameTime = now;
-  crownlandsAnimations?.sampleFrame?.(now, Boolean(state) && document.visibilityState !== "hidden" && !isMapInteractionBlocked());
-  const dt = Math.min(rawDt, 0.25);
-  renderableArmiesFrameCacheActive = true;
-  renderableArmiesFrameCache = null;
-  playerCitiesFrameCacheActive = true;
-  playerCitiesFrameCache = null;
-  samplePerformancePanel(now);
-  updateDeploymentCheck(dt);
+  try {
+    const rawDt = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+    crownlandsAnimations?.sampleFrame?.(now, Boolean(state) && document.visibilityState !== "hidden" && !isMapInteractionBlocked());
+    const dt = Math.min(rawDt, 0.25);
+    renderableArmiesFrameCacheActive = true;
+    renderableArmiesFrameCache = null;
+    playerCitiesFrameCacheActive = true;
+    playerCitiesFrameCache = null;
+    samplePerformancePanel(now);
+    updateDeploymentCheck(dt);
 
-  if (state && !isGamePausedByOutcome()) {
-    simulationUpdateAccumulatorMs = Math.min(
-      250,
-      simulationUpdateAccumulatorMs + dt * 1000
-    );
-    if (simulationUpdateAccumulatorMs >= SIMULATION_UPDATE_INTERVAL_MS) {
-      updateGame(simulationUpdateAccumulatorMs / 1000);
-      simulationUpdateAccumulatorMs = 0;
-      playerCitiesFrameCache = null;
-    }
-    saveTimer += dt;
-    if (saveTimer >= SAVE_EVERY_SECONDS) {
-      saveTimer = 0;
-      if (!usesServerEconomyAuthority()) saveGame();
-    }
-    if (onlineSaveQueued) {
-      onlineSaveTimer += dt;
-      if (onlineSaveTimer >= ONLINE_SAVE_SECONDS) {
-        onlineSaveTimer = 0;
-        flushOnlineSave();
+    if (state && !isGamePausedByOutcome()) {
+      simulationUpdateAccumulatorMs = Math.min(
+        250,
+        simulationUpdateAccumulatorMs + dt * 1000
+      );
+      if (simulationUpdateAccumulatorMs >= SIMULATION_UPDATE_INTERVAL_MS) {
+        updateGame(simulationUpdateAccumulatorMs / 1000);
+        simulationUpdateAccumulatorMs = 0;
+        playerCitiesFrameCache = null;
       }
-    }
-    if (isOnlineWorldActive()) {
-      onlineCitySyncTimer += dt;
-      if (onlineCitySyncTimer >= ONLINE_CITY_SYNC_SECONDS) {
-        onlineCitySyncTimer = 0;
-        syncOwnedCitiesToOnline();
+      saveTimer += dt;
+      if (saveTimer >= SAVE_EVERY_SECONDS) {
+        saveTimer = 0;
+        if (!usesServerEconomyAuthority()) saveGame();
       }
-      if (usesServerEconomyAuthority()) {
-        serverEconomySyncTimer += dt;
-        if (serverEconomySyncTimer >= SERVER_ECONOMY_SYNC_SECONDS) {
-          serverEconomySyncTimer = 0;
-          refreshServerEconomy();
+      if (onlineSaveQueued) {
+        onlineSaveTimer += dt;
+        if (onlineSaveTimer >= ONLINE_SAVE_SECONDS) {
+          onlineSaveTimer = 0;
+          flushOnlineSave();
         }
       }
-      onlinePresenceTimer += dt;
-      if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
-        onlinePresenceTimer = 0;
-        publishOnlinePresence();
+      if (isOnlineWorldActive()) {
+        onlineCitySyncTimer += dt;
+        if (onlineCitySyncTimer >= ONLINE_CITY_SYNC_SECONDS) {
+          onlineCitySyncTimer = 0;
+          syncOwnedCitiesToOnline();
+        }
+        if (usesServerEconomyAuthority()) {
+          serverEconomySyncTimer += dt;
+          if (serverEconomySyncTimer >= SERVER_ECONOMY_SYNC_SECONDS) {
+            serverEconomySyncTimer = 0;
+            refreshServerEconomy();
+          }
+        }
+        onlinePresenceTimer += dt;
+        if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
+          onlinePresenceTimer = 0;
+          publishOnlinePresence();
+        }
+        leaderboardSaveTimer += dt;
+        if (leaderboardSaveTimer >= LEADERBOARD_SAVE_SECONDS) {
+          leaderboardSaveTimer = 0;
+          publishKingPowerLeaderboard();
+        }
+        overdueArmyResolveTimer += dt;
+        if (overdueArmyResolveTimer >= ONLINE_ARMY_RESOLVE_RETRY_SECONDS) {
+          overdueArmyResolveTimer = 0;
+          recoverPendingOnlineArmyMovements();
+          retryOverdueOnlineArmyResolutions();
+        }
       }
-      leaderboardSaveTimer += dt;
-      if (leaderboardSaveTimer >= LEADERBOARD_SAVE_SECONDS) {
-        leaderboardSaveTimer = 0;
-        publishKingPowerLeaderboard();
-      }
-      overdueArmyResolveTimer += dt;
-      if (overdueArmyResolveTimer >= ONLINE_ARMY_RESOLVE_RETRY_SECONDS) {
-        overdueArmyResolveTimer = 0;
-        recoverPendingOnlineArmyMovements();
-        retryOverdueOnlineArmyResolutions();
-      }
+    } else {
+      simulationUpdateAccumulatorMs = 0;
     }
-  } else {
-    simulationUpdateAccumulatorMs = 0;
-  }
 
-  // Display consumers resolve the signed-in identity from several independent
-  // surfaces (marches, HUD status, and city signatures). King Power cannot
-  // change between those consumers after this frame's simulation has run, so
-  // share one calculation for the display portion of the frame only.
-  kingPowerRenderFrameCacheActive = true;
-  kingPowerRenderFrameCache = null;
-  if (state) {
-    if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
-      renderArmies();
+    // Display consumers resolve the signed-in identity from several independent
+    // surfaces (marches, HUD status, and city signatures). King Power cannot
+    // change between those consumers after this frame's simulation has run, so
+    // share one calculation for the display portion of the frame only.
+    kingPowerRenderFrameCacheActive = true;
+    kingPowerRenderFrameCache = null;
+    if (state) {
+      if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
+        renderArmies();
+      }
+      if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
+        lastCityDynamicTextTime = now;
+        updateVisibleCityDynamicText();
+      }
+      if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
+        lastHudRenderTime = now;
+        renderHud();
+      }
+      if (now - lastHudStatusRenderTime > HUD_STATUS_RENDER_INTERVAL_MS) {
+        lastHudStatusRenderTime = now;
+        renderHudStatusPanels();
+      }
+      if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
+        lastRenderTime = now;
+        renderPaths();
+        renderCities();
+        renderPanel();
+      }
     }
-    if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
-      lastCityDynamicTextTime = now;
-      updateVisibleCityDynamicText();
-    }
-    if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
-      lastHudRenderTime = now;
-      renderHud();
-    }
-    if (now - lastHudStatusRenderTime > HUD_STATUS_RENDER_INTERVAL_MS) {
-      lastHudStatusRenderTime = now;
-      renderHudStatusPanels();
-    }
-    if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
-      lastRenderTime = now;
-      renderPaths();
-      renderCities();
-      renderPanel();
-    }
-  }
 
-  renderableArmiesFrameCacheActive = false;
-  renderableArmiesFrameCache = null;
-  playerCitiesFrameCacheActive = false;
-  playerCitiesFrameCache = null;
-  kingPowerRenderFrameCacheActive = false;
-  kingPowerRenderFrameCache = null;
-  requestAnimationFrame(frame);
+  } catch (error) {
+    if (now - lastFrameFailureLogTime >= 10000) {
+      lastFrameFailureLogTime = now;
+      console.warn("Crownlands frame failed; retrying on the next frame.", error);
+    }
+  } finally {
+    renderableArmiesFrameCacheActive = false;
+    renderableArmiesFrameCache = null;
+    playerCitiesFrameCacheActive = false;
+    playerCitiesFrameCache = null;
+    kingPowerRenderFrameCacheActive = false;
+    kingPowerRenderFrameCache = null;
+    requestAnimationFrame(frame);
+  }
 }
 
 function updateGame(dt) {
@@ -29664,7 +29673,9 @@ function formatTroopEstimateBound(value = 0) {
     { value: 1_000, suffix: "K" },
   ];
   const unit = units.find(entry => count >= entry.value);
-  if (!unit) return count.toLocaleString("en-US");
+  // Integers below 1,000 have no en-US grouping. Avoid constructing locale
+  // formatters for every visible march on every animation update.
+  if (!unit) return String(count);
   const scaled = count / unit.value;
   return `${scaled.toFixed(Number.isInteger(scaled) ? 0 : 1)}${unit.suffix}`;
 }
@@ -29917,9 +29928,11 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   const marchClass = clanAlly && isHostileClanMarch(attack) ? " clan-attack" : "";
   const className = `army-token ${ownerClass}${marchClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
   if (token.className !== className) token.className = className;
-  token.dataset.endpointInteractionDisabled = String(endpointInteractionDisabled);
-  token.tabIndex = endpointInteractionDisabled ? -1 : 0;
-  token.setAttribute("aria-disabled", String(endpointInteractionDisabled));
+  const disabledText = String(endpointInteractionDisabled);
+  if (token.dataset.endpointInteractionDisabled !== disabledText) token.dataset.endpointInteractionDisabled = disabledText;
+  const tabIndex = endpointInteractionDisabled ? -1 : 0;
+  if (token.tabIndex !== tabIndex) token.tabIndex = tabIndex;
+  if (token.getAttribute("aria-disabled") !== disabledText) token.setAttribute("aria-disabled", disabledText);
   if (endpointInteractionDisabled && document.activeElement === token) token.blur();
   const expanded = String(selected);
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
@@ -29940,11 +29953,11 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     delete iconElement.dataset.clIcon;
     iconElement.textContent = armyIcon;
   }
+  const troopDisplay = showTroops ? getArmyTroopDisplayText(attack) : "";
   if (countElement) {
     if (countElement.hidden === showTroops) countElement.hidden = !showTroops;
     if (showTroops) {
-      const troopText = getArmyTroopDisplayText(attack);
-      if (countElement.textContent !== troopText) countElement.textContent = troopText;
+      if (countElement.textContent !== troopDisplay) countElement.textContent = troopDisplay;
     } else if (countElement.textContent) {
       countElement.textContent = "";
     }
@@ -29953,7 +29966,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     const timeText = formatDuration(attack.remaining);
     if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
   }
-  if (navigation) navigation.hidden = !selected;
+  if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
   const navigationRelationship = isPersonalArmy(attack)
     ? "player"
     : clanAlly
@@ -29962,8 +29975,8 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (navigation?.dataset.armyRelationship !== navigationRelationship) {
     navigation.dataset.armyRelationship = navigationRelationship;
   }
-  if (fromButton) fromButton.disabled = endpointInteractionDisabled;
-  if (toButton) toButton.disabled = endpointInteractionDisabled;
+  if (fromButton && fromButton.disabled !== endpointInteractionDisabled) fromButton.disabled = endpointInteractionDisabled;
+  if (toButton && toButton.disabled !== endpointInteractionDisabled) toButton.disabled = endpointInteractionDisabled;
   const endpointSignature = `${attack.fromId || ""}:${attack.fromName || ""}:${attack.toId || ""}:${attack.toName || ""}`;
   if (token.dataset.armyEndpointSignature !== endpointSignature) {
     token.dataset.armyEndpointSignature = endpointSignature;
@@ -29978,7 +29991,6 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
       toButton.setAttribute("aria-label", `Go to ${toDetails.name}`);
     }
   }
-  const troopDisplay = showTroops ? getArmyTroopDisplayText(attack) : "";
   const troopDescription = isArmyTroopEstimate(attack)
     ? `estimated ${troopDisplay} troops`
     : troopDisplay
@@ -39161,6 +39173,10 @@ function startGameFromGesture(forceFresh = false) {
 
 async function toggleFullscreen() {
   gameDisplayEntryRequested = true;
+  if (!getGameFullscreenElement() && window.matchMedia?.("(display-mode: fullscreen)")?.matches) {
+    showToast("This window uses browser-controlled fullscreen. Use the browser's exit control, or reopen the updated installed app.");
+    return;
+  }
   if (!getGameFullscreenElement()) return enterGameFullscreen({ showFailure: true });
   try {
     const exit = document.exitFullscreen || document.webkitExitFullscreen;
@@ -39176,10 +39192,11 @@ function updateFullscreenButton() {
   const isActive = Boolean(getGameFullscreenElement());
   const nativeFullscreen = !isActive && window.matchMedia?.("(display-mode: fullscreen)")?.matches;
   fullscreenButtons.forEach(button => {
-    // Manifest fullscreen belongs to the installed-app window, not the DOM exit API.
-    button.hidden = Boolean(nativeFullscreen);
+    // Older fullscreen installations need guidance; never silently lose the control.
+    button.hidden = false;
     button.classList.toggle("active", isActive);
-    button.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
+    button.setAttribute("aria-label", isActive ? "Exit fullscreen" : nativeFullscreen ? "Fullscreen help" : "Enter fullscreen");
+    button.title = isActive ? "Exit fullscreen" : nativeFullscreen ? "Browser fullscreen help" : "Enter fullscreen";
     button.innerHTML = isActive
       ? `<span class="fullscreen-glyph" aria-hidden="true">${renderCrownlandsIcon("close")}</span>`
       : `<span class="fullscreen-glyph" aria-hidden="true">${renderCrownlandsIcon("fullscreen")}</span>`;

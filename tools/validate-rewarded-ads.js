@@ -215,7 +215,7 @@ assert.match(indexSource, /href="privacy\.html"/);
 assert.match(gameSource, /assets\/optimized\/pickup-gold-[^"']+\.webp/);
 assert.match(gameSource, /assets\/optimized\/pickup-troops-[^"']+\.webp/);
 assert.match(serviceWorkerSource, /url\.pathname\.startsWith\("\/assets\/"\)/);
-assert.match(serviceWorkerSource, /cacheFirst\(request\)/);
+assert.match(serviceWorkerSource, /cacheFirst\(request, event\)/);
 assert.doesNotMatch(serviceWorkerSource, /login-display-ad\.js/);
 assert.match(adsConfigSource, /testAdUnitPath:\s*"\/22639388115\/rewarded_web_example"/);
 assert.match(adsConfigSource, /approvedProductionHosts:\s*Object\.freeze/);

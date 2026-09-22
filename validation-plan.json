@@ -1,69 +1,105 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f0ad4c341d3b558de6b6ba44229886c87510986d",
+  "baseCommit": "e6f52048108232177999601389d57f07defb8ccf",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "firebaseClient.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-clan-treasury-client.js"
-      ],
-      "tests": [
-        "tools/validate-holding-towers.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clans.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
-      ],
-      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. The Tower public listener follows the owning clan document for both map and details heraldry, with exact saved V2 flag rendering, edit/capture refresh, stale-cache and callable protection, neutralization, inactive/other-realm filtering and account/listener cleanup; no private subscriptions are added for outsiders. Preserve 29/30/31-city boundaries and daily/pending NPC limits. Treasury reads, donations and spend replies share a scoped, revision-ordered cache and private live subscription. Check cross-member balance updates in the panel and open Tower, stale responses, in-flight loads, failed-load retry prevention, account/clan/reset cleanup and donation draft preservation. Browser checks verify donation-enabled building and wall controls and retained tab/quantity on desktop and landscape mobile."
-    },
-    {
-      "paths": [
         "functions/index.js",
+        "functions/notification-delivery.js",
+        "functions/maintenance-deletes.js",
+        "functions/test/emulator-notification-delivery.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
       "tests": [
+        "tools/validate-stability-regressions.js",
+        "tools/validate-notification-system.js",
+        "tools/validate-report-system.js",
+        "tools/validate-scout-report-lifecycle.js",
         "tools/validate-holding-towers.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-transaction-retries.js",
+        "tools/validate-performance-bottlenecks.js",
+        "functions/test/emulator-notification-delivery.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-scout-report-lifecycle.js",
+        "functions/test/emulator-report-delivery-rules.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-chat.js"
       ],
-      "reason": "The Tower army callable now uses the existing authoritative neutral-capture helper before any march, troop or economy writes. Emulator coverage exercises real cross-map city counts at 29, 30 and 31, rejected-launch state preservation, arrival cancellation and replay-safe troop returns, the shared daily cap, and unaffected player-city, Camp and transfer orders. Tower lifecycle coverage verifies reinforcement, withdrawal, garrison and Rally dependencies. Treasury callable responses expose the persisted revision and spending clan so late responses cannot restore spent Gold. Real member donations fund Leader building construction and upgrades and Officer wall construction; verify shared balances, ledgers, retry receipts, insufficient funds, role restrictions and private read-only access. Existing prices, caps and collection paths are unchanged."
+      "reason": "Bind reports to their recipient and complete Tower scouting/returns; queue Tower defender alerts. Exercise partial push failures, invalid tokens, fresh receipts, concurrent leases, crash recovery and expired/deleted receipts. Cleanup splits oversized indexed deletes without retrying unrelated failures. Cover shared report, army, chat and transaction dependencies. User-requested full static and multiplayer regression runs with validation:full before release."
     },
     {
       "paths": [
-        "firestore.rules"
+        "game.js",
+        "tools/test-game-display.js",
+        "tools/validate-game-display-browser.js"
       ],
       "tests": [
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-stability-regressions.js",
+        "tools/test-game-display.js",
+        "tools/validate-game-display-browser.js",
+        "tools/validate-performance-bottlenecks.js",
+        "tools/validate-responsive-runtime.js",
+        "tools/validate-responsive-browser.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-map-interactions.js",
+        "tools/validate-incoming-army-estimates.js"
       ],
-      "reason": "Allow current clan members to subscribe to the current-generation Treasury before its first donation creates the document. Verify absent and populated reads, outsider denial and server-only writes in the active shared Core realm. Existing generation and shard restrictions remain in force."
+      "reason": "Restore fullscreen entry and X exit at desktop and landscape mobile sizes, including refusal, retry and native fullscreen help. Fault-inject a failed frame and verify continued scheduling, cache cleanup and bounded diagnostics. Exercise shared map, HUD, foreground and recovery dependencies. March labels preserve estimate bounds without locale construction or duplicate formatting; unchanged accessibility/navigation attributes are not rewritten. Incoming-estimate and map-interaction tests preserve private transfers, endpoint clearance and live troop values."
     },
     {
       "paths": [
-        "clan-tower-details-ui.js",
-        "troop-orders-ui.js",
-        "holding-tower-ui.css",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-holding-details-ui.js"
+        "service-worker.js",
+        "manifest.webmanifest",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-map-image-loading.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-public-site-content.js",
+        "tools/validate-rewarded-ads.js"
       ],
       "tests": [
-        "tools/validate-holding-towers.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-heraldry-v2.js",
-        "tools/validate-military-ui.js"
+        "tools/validate-stability-regressions.js",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-map-image-loading.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-public-site-content.js",
+        "tools/validate-rewarded-ads.js",
+        "tools/validate-audio-contract.js"
       ],
-      "reason": "Verify Store/Send/Info, local completed-Shop gating during initial construction, upgrades and probation, no-garrison Store browsing, and city-style troop sliders without mode choices. The shared troop-location renderer now displays Tower art without inventing a city level; military UI tests cover its existing city presentation dependency. Browser coverage checks compact 56px Tower actions across zoom levels, touch reachability and non-overlap, both march directions, attacks and NPC denial, Store navigation, persistent banners, gestures and compound clearance on desktop and two landscape-mobile sizes."
+      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "functions/package.json",
+        "tools/validate-stability-regressions.js"
+      ],
+      "tests": [
+        "tools/validate-stability-regressions.js",
+        "tools/validate-notification-system.js"
+      ],
+      "reason": "Wire report, cleanup, push, frame and worker fault regressions into the full pretest gate. No dependencies change; the full regression also runs the existing production dependency audit."
+    },
+    {
+      "paths": [
+        "tools/validate-notification-system.js"
+      ],
+      "tests": [
+        "tools/validate-notification-system.js",
+        "tools/validate-stability-regressions.js",
+        "functions/test/emulator-notification-delivery.js"
+      ],
+      "reason": "Require delivery-helper wiring and Tower attack outbox creation; behavioral fault tests and real Firestore transactions supplement source-level assertions."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/fullscreen-landscape-launch.md",
+        "docs/GAME_STABILITY_AUDIT_2026_09_22.md"
       ],
       "tests": [],
-      "reason": "Records the revised Store/Send/Info menu, city-style map destination selection without mode tabs, city-origin reinforcement, local Store construction gating, personal troops and persistent ownership banner. Tower NPC attacks retain established limits at launch and arrival. Existing thresholds and release authorization requirements are preserved; prose has no separate runtime behavior."
+      "reason": "Record confirmed fullscreen restoration, observed defects, coverage, measurement limits and release verification. Prose does not change deferred gameplay design."
     }
   ]
 }
