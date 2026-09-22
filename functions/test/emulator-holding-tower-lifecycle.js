@@ -147,18 +147,67 @@ async function main() {
     "Personal orders changed another player's garrison.");
   // New Tower services use donated Gold, one construction slot, and private per-player Shop usage.
   const treasuryRef = db.doc(`clans/${clanId}/treasury/${identity.resetGeneration}`);
-  await treasuryRef.set({...identity,balance:30_000_000_000,totalDonated:30_000_000_000,totalSpent:0,revision:1});
+  const readTreasury = actor => fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/${treasuryRef.path}`, {
+    headers: { authorization: `Bearer ${actor.token}` },
+  });
+  assert.equal((await readTreasury(member)).status,404,"An empty Treasury must allow a member listener before the first donation.");
+  assert.equal((await readTreasury(outsider)).status,403,"An outsider could listen to an empty Treasury.");
+  await cityRef(member.home).update({level:100,productionUpdatedAtMs:Date.now()});
+  await db.doc(`players/${member.uid}`).update({gold:1e9,goldFloat:1e9,economyUpdatedAtMs:Date.now()});
+  const emptyTreasury = await call("getClanTreasuryStatus",member);
+  assert.equal(emptyTreasury.treasury.balance,0);
+  assert(emptyTreasury.allowance.remaining >= 20_000_000,"The donation fixture needs enough raw production allowance.");
+  const donationPayload = {amount:20_000_000,operationId:`donation_${randomUUID()}`};
+  const donation = await call("donateClanTreasuryGold",member,donationPayload);
+  assert.equal(donation.balance,20_000_000);
+  assert.equal(donation.revision,1);
+  const personalAfterDonation = (await db.doc(`players/${member.uid}`).get()).data().gold;
+  assert(personalAfterDonation < 981_000_000,"The donation did not deduct personal Gold.");
+  assert.equal((await call("donateClanTreasuryGold",member,donationPayload)).duplicate,true);
+  assert.equal((await db.doc(`players/${member.uid}`).get()).data().gold,personalAfterDonation,"Donation replay charged personal Gold twice.");
+  assert.equal((await call("getClanTreasuryStatus",leader)).treasury.balance,20_000_000,"A member's donation was not available to the Leader.");
+  assert.equal((await readTreasury(member)).status,200);
+  assert.equal((await readTreasury(outsider)).status,403);
+  const treasuryWrite = await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/${treasuryRef.path}?updateMask.fieldPaths=balance`, {
+    method:"PATCH",headers:{authorization:`Bearer ${member.token}`,"content-type":"application/json"},
+    body:JSON.stringify({fields:{balance:{integerValue:"999999999"}}}),
+  });
+  assert.equal(treasuryWrite.status,403,"A member could write the Treasury directly.");
   await towerRef.update({wallIntegrityBps:10000,buildings:{shop:0,workshop:0,infirmary:0,training:0},buildingProject:null});
   const buildPayload = {towerId:tower.id,buildingId:"shop",operationId:`build_${randomUUID()}`};
   assert((await invoke("startClanTowerBuilding",member,buildPayload)).error,"A regular member could spend the Treasury.");
   const build = await call("startClanTowerBuilding",leader,buildPayload);
   assert.equal(build.tower.buildingProject.targetLevel,1);
-  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000);
+  assert.equal((await treasuryRef.get()).data().balance,15_000_000);
+  assert.equal(build.treasury.revision,2);
   assert.equal((await call("startClanTowerBuilding",leader,buildPayload)).duplicate,true);
-  assert.equal((await treasuryRef.get()).data().balance,29_995_000_000,"Build retry charged Gold twice.");
+  assert.equal((await treasuryRef.get()).data().balance,15_000_000,"Build retry charged Gold twice.");
   assert((await invoke("startClanTowerBuilding",leader,{...buildPayload,buildingId:"workshop",operationId:`busy_${randomUUID()}`})).error);
   await towerRef.update({"buildingProject.progressStartedAtMs":Date.now()-1_801_000});
   assert.equal((await call("getHoldingTowerState",leader,{towerId:tower.id})).towers[0].buildings.shop,1);
+  const upgraded = await call("startClanTowerBuilding",leader,{...buildPayload,operationId:`upgrade_${randomUUID()}`});
+  assert.equal(upgraded.tower.buildingProject.targetLevel,2);
+  assert.equal(upgraded.treasury.balance,5_000_000);
+  assert.equal(upgraded.treasury.revision,3);
+  const wallPayload = {towerId:tower.id,levels:1,operationId:`walls_${randomUUID()}`};
+  assert((await invoke("queueHoldingTowerWallUpgrades",member,wallPayload)).error,"A regular member could buy walls.");
+  // Officers can spend the same Treasury, even while a building is being upgraded.
+  await db.doc(`clans/${clanId}/members/${actors[2].uid}`).update({role:"officer"});
+  await db.doc(`players/${actors[2].uid}`).update({clanRole:"officer"});
+  const walls = await call("queueHoldingTowerWallUpgrades",actors[2],wallPayload);
+  assert(walls.cost > 0);
+  assert.equal(walls.treasury.balance,5_000_000-walls.cost);
+  assert.equal(walls.treasury.revision,4);
+  assert.equal((await call("queueHoldingTowerWallUpgrades",actors[2],wallPayload)).duplicate,true);
+  const shared = (await call("getClanTreasuryStatus",member)).treasury;
+  assert.equal(shared.balance,walls.treasury.balance);
+  assert.equal(shared.totalDonated,20_000_000);
+  assert.equal(shared.totalSpent,15_000_000+walls.cost);
+  await towerRef.update({buildingProject:null});
+  const insufficient = await invoke("startClanTowerBuilding",leader,{...buildPayload,operationId:`unfunded_${randomUUID()}`});
+  assert.match(insufficient.error?.message || "",/Treasury/i,"An unaffordable upgrade was accepted.");
+  assert.equal((await treasuryRef.get()).data().balance,shared.balance,"A rejected upgrade spent donated Gold.");
+  console.log("Clan Treasury passed: real member donation and replay, Leader building/upgrade, Officer walls and replay, shared balance/ledger, insufficient funds and private read-only subscription access.");
   await towerRef.update({buildings:{shop:1,workshop:10,infirmary:10,training:10},buildingProject:null});
   const second=towers.TOWERS[1],secondRef=db.doc(`holdingTowers/${second.id}`);
   await secondRef.set({...towers.createNeutralTowerState(second.id),...identity,ownerKind:"clan",clanId,wallIntegrityBps:10000,buildings:{shop:10}});

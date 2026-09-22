@@ -492,7 +492,8 @@ service cloud.firestore {
       match /treasury/{resetId} {
         allow read: if clanMember(clanId)
           && resetId == currentResetGeneration()
-          && isCurrentGeneration(resource.data);
+          && (!exists(/databases/$(database)/documents/clans/$(clanId)/treasury/$(resetId))
+            || isCurrentGeneration(resource.data));
         allow create, update, delete: if false;
       }
 

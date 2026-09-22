@@ -1300,6 +1300,21 @@
     return snapshot.docs.map((item, index) => ({ id: item.id, rank: index + 1, ...item.data() }));
   }
 
+  function subscribeClanTreasury(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { doc } = client.modules.firestore;
+    return subscribeScopedSnapshot(
+      doc(client.db, "clans", String(clanId).slice(0, 128), "treasury", RESET_GENERATION),
+      snapshot => {
+        const raw = snapshot.exists() ? snapshot.data() : null;
+        const current = raw?.resetGeneration === RESET_GENERATION && raw.worldId === ONLINE_WORLD_ID
+          && String(raw.realmShardId || "legacy") === REALM_SHARD_ID;
+        handlers.onTreasury?.(current ? raw : { balance: 0, totalDonated: 0, totalSpent: 0, revision: 0 });
+      },
+      error => handlers.onError?.(error, "treasury")
+    );
+  }
+
   function subscribeClanSocialState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
     const { doc } = client.modules.firestore;
@@ -3394,6 +3409,7 @@
     subscribeClanState,
     subscribeClanApplications,
     subscribeClanSocialState,
+    subscribeClanTreasury,
     subscribeClanQuestProgress,
     subscribeDailyMissionState,
     subscribeSeasonalAchievementState,

@@ -6,17 +6,19 @@
       "paths": [
         "game.js",
         "firebaseClient.js",
-        "tools/validate-holding-tower-client-lifecycle.js"
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-clan-treasury-client.js"
       ],
       "tests": [
         "tools/validate-holding-towers.js",
         "tools/validate-clan-tower-map-browser.js",
         "tools/validate-clans.js",
+        "tools/validate-clan-treasury-client.js",
         "tools/validate-map-interactions.js",
         "tools/validate-modal-lifecycle-browser.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. The Tower public listener follows the owning clan document for both map and details heraldry, with exact saved V2 flag rendering, edit/capture refresh, stale-cache and callable protection, neutralization, inactive/other-realm filtering and account/listener cleanup; no private subscriptions are added for outsiders. Preserve 29/30/31-city boundaries and daily/pending NPC limits."
+      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. The Tower public listener follows the owning clan document for both map and details heraldry, with exact saved V2 flag rendering, edit/capture refresh, stale-cache and callable protection, neutralization, inactive/other-realm filtering and account/listener cleanup; no private subscriptions are added for outsiders. Preserve 29/30/31-city boundaries and daily/pending NPC limits. Treasury reads, donations and spend replies share a scoped, revision-ordered cache and private live subscription. Check cross-member balance updates in the panel and open Tower, stale responses, in-flight loads, failed-load retry prevention, account/clan/reset cleanup and donation draft preservation. Browser checks verify donation-enabled building and wall controls and retained tab/quantity on desktop and landscape mobile."
     },
     {
       "paths": [
@@ -27,7 +29,16 @@
         "tools/validate-holding-towers.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "The Tower army callable now uses the existing authoritative neutral-capture helper before any march, troop or economy writes. Emulator coverage exercises real cross-map city counts at 29, 30 and 31, rejected-launch state preservation, arrival cancellation and replay-safe troop returns, the shared daily cap, and unaffected player-city, Camp and transfer orders. Existing Tower lifecycle coverage verifies the callable's reinforcement, withdrawal, garrison and Rally dependencies. No API/schema or numeric balance changes."
+      "reason": "The Tower army callable now uses the existing authoritative neutral-capture helper before any march, troop or economy writes. Emulator coverage exercises real cross-map city counts at 29, 30 and 31, rejected-launch state preservation, arrival cancellation and replay-safe troop returns, the shared daily cap, and unaffected player-city, Camp and transfer orders. Tower lifecycle coverage verifies reinforcement, withdrawal, garrison and Rally dependencies. Treasury callable responses expose the persisted revision and spending clan so late responses cannot restore spent Gold. Real member donations fund Leader building construction and upgrades and Officer wall construction; verify shared balances, ledgers, retry receipts, insufficient funds, role restrictions and private read-only access. Existing prices, caps and collection paths are unchanged."
+    },
+    {
+      "paths": [
+        "firestore.rules"
+      ],
+      "tests": [
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Allow current clan members to subscribe to the current-generation Treasury before its first donation creates the document. Verify absent and populated reads, outsider denial and server-only writes in the active shared Core realm. Existing generation and shard restrictions remain in force."
     },
     {
       "paths": [

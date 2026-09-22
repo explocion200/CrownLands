@@ -21643,6 +21643,7 @@ exports.donateClanTreasuryGold = timedCallable(
         balance: donation.treasury.balance,
         totalDonated: donation.treasury.totalDonated,
         totalSpent: donation.treasury.totalSpent,
+        revision: treasury.revision + 1,
         allowance: donation.allowance,
         utcDate,
         serverTimeMs: nowMs,
@@ -21746,6 +21747,7 @@ async function applyHoldingTowerTreasurySpend(request, operationType, applySpend
     const result = {
       ok: true,
       operationType,
+      clanId,
       tower: {
         ...getHoldingTowerPublicState(spend.state, nowMs),
         upgradeQueue: spend.state.upgradeQueue,
@@ -21758,6 +21760,7 @@ async function applyHoldingTowerTreasurySpend(request, operationType, applySpend
         balance: spend.treasuryBalance,
         totalDonated: treasury.totalDonated,
         totalSpent,
+        revision: treasury.revision + 1,
       },
       serverTimeMs: nowMs,
     };

@@ -2320,6 +2320,11 @@ let clanTreasuryStatus = null;
 let clanTreasuryLoading = false;
 let clanTreasuryActionInFlight = false;
 let clanTreasuryClanId = "";
+let clanTreasuryRequest = null;
+let clanTreasuryLoadAttempted = false;
+let clanTreasuryUnsubscribe = null;
+let clanTreasurySubscriptionScope = "";
+let clanTreasuryEpoch = 0;
 const holdingTowerSnapshots = new Map();
 const holdingTowerClanIdentities = new Map();
 let selectedHoldingTowerId = "";
@@ -4098,7 +4103,8 @@ function renderHoldingTowerModal(tower) {
   if (!tower || !HOLDING_TOWER_UI || selectedHoldingTowerId !== tower.id
       || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
   const clanIdentity = getHoldingTowerClanIdentity(tower);
-  const treasuryBalance = clanTreasuryStatus?.treasury?.balance;
+  const treasuryBalance = tower.ownerMember && tower.clanId === state.clanId
+    && clanTreasuryClanId === state.clanId ? clanTreasuryStatus?.treasury?.balance : undefined;
   modal.classList.add("holding-tower-modal", "clan-tower-details-modal");
   modalTitle.textContent = tower.name || "Clan Tower";
   const upgradeCount = modalBody.querySelector("[data-tower-upgrade-count]")?.value;
@@ -4206,7 +4212,7 @@ async function openHoldingTower(towerId = "") {
     }
     await Promise.all([
       refreshHoldingTower(tower.id, { subscribe: true }),
-      state?.clanId ? loadClanTreasuryStatus().catch(() => null) : Promise.resolve(null),
+      state?.clanId ? loadClanTreasuryStatus({ force: true }).catch(() => null) : Promise.resolve(null),
     ]);
     if (!isHoldingTowerModalSessionCurrent(session)) return;
     const current = holdingTowerSnapshots.get(tower.id);
@@ -4265,6 +4271,9 @@ async function runHoldingTowerSpendAction(tower, action) {
     veil: "activateHoldingTowerVeil",
   }[action];
   if (!method || !api?.[method]) return;
+  const clanId = state.clanId;
+  const scope = getClanTreasuryScope();
+  const isCurrent = () => scope === getClanTreasuryScope();
   const count = action === "upgrade"
     ? Math.max(1, Math.min(10, Math.floor(Number(modalBody.querySelector("[data-tower-upgrade-count]")?.value) || 1)))
     : undefined;
@@ -4276,15 +4285,18 @@ async function runHoldingTowerSpendAction(tower, action) {
       levels: count,
       operationId: createHoldingTowerOperationId(action),
     });
+    if (!isCurrent()) return;
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
-    if (result?.treasury) clanTreasuryStatus = { ...(clanTreasuryStatus || {}), treasury: result.treasury };
+    if (result?.treasury) applyClanTreasuryStatus(clanId, { clanId: result.clanId, treasury: result.treasury }, scope);
     showToast(action === "upgrade" ? "Wall upgrade added to the Tower queue." : action === "repair" ? "Paid Wall repair started." : "Veil of Silence activated for 10 minutes.");
   } catch (error) {
-    rejectGameAction(error?.message || "The Clan Tower order failed.");
+    if (isCurrent()) rejectGameAction(error?.message || "The Clan Tower order failed.");
   } finally {
     holdingTowerActionsInFlight.delete(tower.id);
-    const current = holdingTowerSnapshots.get(tower.id) || tower;
-    renderHoldingTowerModal(current);
+    if (isCurrent()) {
+      const current = holdingTowerSnapshots.get(tower.id) || tower;
+      renderHoldingTowerModal(current);
+    }
   }
 }
 
@@ -4536,7 +4548,9 @@ async function runClanTowerBuildingAction(tower, kind, id) {
   const method = kind === "build" ? "startClanTowerBuilding" : "purchaseClanTowerShopItem";
   if (!api?.[method]) return;
   const actionSession = onlineSessionGeneration;
-  const isCurrent = () => actionSession === onlineSessionGeneration;
+  const clanId = state.clanId;
+  const scope = getClanTreasuryScope();
+  const isCurrent = () => scope === getClanTreasuryScope();
   const key = `${actionSession}:${tower.id}:${kind}:${id}`;
   const operationId = clanBuildingRequestIds.get(key) || createHoldingTowerOperationId(kind);
   clanBuildingRequestIds.set(key, operationId);
@@ -4550,8 +4564,8 @@ async function runClanTowerBuildingAction(tower, kind, id) {
     if (!isCurrent()) return;
     clanBuildingRequestIds.delete(key);
     if (kind === "buy") applyServerEconomyResult(result, { renderCities: false });
-    if (result?.treasury) clanTreasuryStatus = { ...(clanTreasuryStatus || {}), treasury: result.treasury };
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
+    if (result?.treasury) applyClanTreasuryStatus(clanId, { clanId: result.clanId, treasury: result.treasury }, scope);
     if (result?.clanShop) holdingTowerSnapshots.set(tower.id, { ...holdingTowerSnapshots.get(tower.id), clanShop: result.clanShop });
     showToast(kind === "build" ? "Building construction started." : "Clan Shop purchase added to your Bag.");
   } catch (error) {
@@ -24535,6 +24549,7 @@ function updateClanQuestCountdown() {
 }
 
 function stopClanRealtimeSubscriptions({ clear = true } = {}) {
+  resetClanTreasuryState();
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
   if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
@@ -24614,12 +24629,14 @@ function startClanRealtimeSubscriptions(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanState) return false;
   if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") {
+    startClanTreasurySubscription(api, id);
     if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
       startClanRallySubscription(api, id);
     }
     return true;
   }
   stopClanRealtimeSubscriptions({ clear: true });
+  startClanTreasurySubscription(api, id);
   activeClanSubscriptionId = id;
   clanRosterReady = false;
   clanStateUnsubscribe = api.subscribeClanState(id, {
@@ -24902,6 +24919,7 @@ async function refreshClanState(options = {}) {
         stopClanApplicationSubscription({ clear: true });
       }
       startClanSocialStateSubscription(api, state.clanId);
+      void loadClanTreasuryStatus({ force: true });
     } else {
       stopClanRealtimeSubscriptions({ clear: true });
       clanApplications = [];
@@ -25437,26 +25455,106 @@ function renderClanRenameEditor() {
     </section>`;
 }
 
+function getClanTreasuryScope() {
+  return [onlineSessionGeneration, getCurrentOnlineUid(), state?.clanId || "", clanTreasuryEpoch].join(":");
+}
+
+function resetClanTreasuryState() {
+  clanTreasuryUnsubscribe?.();
+  clanTreasuryUnsubscribe = null;
+  clanTreasurySubscriptionScope = "";
+  clanTreasuryEpoch++;
+  clanTreasuryStatus = null;
+  clanTreasuryClanId = "";
+  clanTreasuryRequest = null;
+  clanTreasuryLoading = false;
+  clanTreasuryLoadAttempted = false;
+  clanTreasuryActionInFlight = false;
+}
+
+function refreshClanTreasuryViews() {
+  if (activeProfileTab === "clan") {
+    const input = clanContent?.querySelector("[data-clan-treasury-donation]");
+    const value = input?.value;
+    const focused = input && document.activeElement === input;
+    renderClanView();
+    const replacement = clanContent?.querySelector("[data-clan-treasury-donation]");
+    if (replacement && value !== undefined) {
+      replacement.value = value;
+      if (focused) replacement.focus({ preventScroll: true });
+    }
+  }
+  const tower = holdingTowerSnapshots.get(selectedHoldingTowerId);
+  if (tower?.ownerMember && tower.clanId === state?.clanId) renderHoldingTowerModal(tower);
+}
+
+function applyClanTreasuryStatus(clanId, update, scope = getClanTreasuryScope()) {
+  if (!update || scope !== getClanTreasuryScope() || clanId !== state?.clanId
+      || (update.clanId && update.clanId !== clanId)) return false;
+  const previous = clanTreasuryClanId === clanId ? clanTreasuryStatus : null;
+  const incoming = update.treasury;
+  // A delayed callable/receipt must not undo a newer donation or spend snapshot.
+  const treasury = incoming && (!previous?.treasury
+    || Number(incoming.revision || 0) >= Number(previous.treasury.revision || 0))
+    ? incoming : previous?.treasury;
+  clanTreasuryClanId = clanId;
+  clanTreasuryStatus = { ...previous, ...update, clanId, treasury };
+  refreshClanTreasuryViews();
+  return true;
+}
+
+function startClanTreasurySubscription(api, clanId) {
+  if (!clanId || clanId !== state?.clanId || !api?.subscribeClanTreasury) return;
+  const scope = getClanTreasuryScope();
+  if (clanTreasurySubscriptionScope === scope && clanTreasuryUnsubscribe) return;
+  clanTreasuryUnsubscribe?.();
+  clanTreasuryClanId = clanId;
+  clanTreasurySubscriptionScope = scope;
+  clanTreasuryUnsubscribe = api.subscribeClanTreasury(clanId, {
+    onTreasury: treasury => applyClanTreasuryStatus(clanId, { treasury }, scope),
+    onError: error => {
+      if (scope !== getClanTreasuryScope()) return;
+      markOnlineRealtimeRecoveryNeeded(error);
+      console.warn("Clan Treasury subscription failed", error);
+    },
+  });
+}
+
 async function loadClanTreasuryStatus({ force = false } = {}) {
   const clanId = String(state?.clanId || "");
   const api = getOnlineApi();
   if (!clanId || !api?.getClanTreasuryStatus || !api?.isSignedIn?.()) return null;
-  if (!force && clanTreasuryClanId === clanId && clanTreasuryStatus) return clanTreasuryStatus;
-  if (clanTreasuryLoading) return clanTreasuryStatus;
+  if (clanTreasuryClanId !== clanId) {
+    resetClanTreasuryState();
+    clanTreasuryClanId = clanId;
+  }
+  startClanTreasurySubscription(api, clanId);
+  if (clanTreasuryRequest) return clanTreasuryRequest;
+  if (!force && clanTreasuryStatus?.allowance) return clanTreasuryStatus;
+  const scope = getClanTreasuryScope();
   clanTreasuryLoading = true;
-  clanTreasuryClanId = clanId;
-  if (activeProfileTab === "clan") renderClanView();
-  try {
-    clanTreasuryStatus = await api.getClanTreasuryStatus();
-    return clanTreasuryStatus;
-  } catch (error) {
-    if (!/current Core|not active/i.test(String(error?.message || ""))) {
-      console.warn("Could not load the Clan Treasury", error);
+  clanTreasuryLoadAttempted = true;
+  const request = (async () => {
+    try {
+      const result = await api.getClanTreasuryStatus();
+      return applyClanTreasuryStatus(clanId, result, scope) ? clanTreasuryStatus : null;
+    } catch (error) {
+      if (scope === getClanTreasuryScope() && !/current Core|not active/i.test(String(error?.message || ""))) {
+        console.warn("Could not load the Clan Treasury", error);
+      }
+      return null;
     }
-    return null;
+  })();
+  clanTreasuryRequest = request;
+  refreshClanTreasuryViews();
+  try {
+    return await request;
   } finally {
-    clanTreasuryLoading = false;
-    if (activeProfileTab === "clan") renderClanView();
+    if (clanTreasuryRequest === request && scope === getClanTreasuryScope()) {
+      clanTreasuryRequest = null;
+      clanTreasuryLoading = false;
+      refreshClanTreasuryViews();
+    }
   }
 }
 
@@ -25472,8 +25570,9 @@ async function donateClanTreasuryFromPanel() {
   }
   const clanId = state.clanId;
   const uid = getCurrentOnlineUid();
+  const scope = getClanTreasuryScope();
   if (!await confirmClanLedgerAction("Donate to the Treasury?", `Donate ${formatNumber(amount)} of your personal Gold to the Clan Treasury. Donations are final and cannot be withdrawn.`, "Donate Gold")) return;
-  if (state.clanId !== clanId || getCurrentOnlineUid() !== uid || clanTreasuryActionInFlight) return;
+  if (scope !== getClanTreasuryScope() || state.clanId !== clanId || getCurrentOnlineUid() !== uid || clanTreasuryActionInFlight) return;
   clanTreasuryActionInFlight = true;
   renderClanView();
   try {
@@ -25481,25 +25580,28 @@ async function donateClanTreasuryFromPanel() {
       amount,
       operationId: `treasury_donation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     });
-    clanTreasuryStatus = {
-      ...(clanTreasuryStatus || {}),
+    if (scope !== getClanTreasuryScope()) return;
+    applyClanTreasuryStatus(clanId, {
+      clanId: result?.clanId,
       treasury: {
-        ...(clanTreasuryStatus?.treasury || {}),
         balance: result?.balance,
         totalDonated: result?.totalDonated,
         totalSpent: result?.totalSpent,
+        revision: result?.revision,
       },
       allowance: result?.allowance || clanTreasuryStatus?.allowance,
       utcDate: result?.utcDate || clanTreasuryStatus?.utcDate,
-    };
+    }, scope);
     applyServerEconomyResult(result);
     showToast(`${formatNumber(amount)} Gold donated to the Clan Treasury.`);
     playRewardSound("gold");
   } catch (error) {
-    rejectGameAction(error?.message || "The Treasury donation could not be completed.");
+    if (scope === getClanTreasuryScope()) rejectGameAction(error?.message || "The Treasury donation could not be completed.");
   } finally {
-    clanTreasuryActionInFlight = false;
-    renderClanView();
+    if (scope === getClanTreasuryScope()) {
+      clanTreasuryActionInFlight = false;
+      refreshClanTreasuryViews();
+    }
   }
 }
 
@@ -26001,10 +26103,10 @@ function renderClanView() {
   const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   const canLead = state.clanRole === "leader";
   if (clanTreasuryClanId !== state.clanId) {
+    resetClanTreasuryState();
     clanTreasuryClanId = state.clanId;
-    clanTreasuryStatus = null;
   }
-  if (!clanTreasuryStatus && !clanTreasuryLoading) {
+  if (!clanTreasuryStatus?.allowance && !clanTreasuryLoading && !clanTreasuryLoadAttempted) {
     window.setTimeout(() => void loadClanTreasuryStatus(), 0);
   }
   if (canLead && clanShieldEditorOpen) {

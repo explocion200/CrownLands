@@ -64,6 +64,7 @@ function harness() {
     getHoldingTowerVisual: id => ({ id, name: id, kind: "holdingTower", artSrc: `${id}.webp` }),
     getHoldingTowerQaScenario: () => "", getOnlineApi: () => api,
     escapeHtml: String, formatNumber: String, renderClanShield: () => "", loadClanTreasuryStatus: async () => null,
+    getClanTreasuryScope: () => String(context.onlineSessionGeneration), clanTreasuryClanId: "",
     renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null, renderTroopOrderLocation: () => "", clearSelection() {},
     showToast() {}, rejectGameAction: message => errors.push(message),
     playerCities: () => [{ id: "city-1", name: "Home", troops: 100 }],

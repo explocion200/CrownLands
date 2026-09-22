@@ -77,16 +77,18 @@ async function main() {
       const api=getOnlineApi(); window.buildingCalls=[];
       window.buildingFixture=HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id),'owner');
       Object.assign(buildingFixture,{buildings:{shop:10,workshop:4,infirmary:7,training:1},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repair:null});
-      state.gold=1e9;clanTreasuryStatus={treasury:{balance:1e10}};
+      state.gold=1e9;state.clanId=buildingFixture.clanId;clanTreasuryClanId=state.clanId;clanTreasuryStatus={treasury:{balance:1e10}};
       const status=()=>({level:10,localLevel:buildingFixture.buildings.shop,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(10,{},Date.now()).map(i=>({...i,price:1000}))});
       loadClanTreasuryStatus=async()=>clanTreasuryStatus;
       applyServerEconomyResult=()=>{};
       getOnlineApi=()=>({...api,isReady:()=>true,isSignedIn:()=>true,getUser:()=>({uid:'building-qa'}),subscribeHoldingTowerState:()=>()=>{},
+        subscribeClanTreasury:(_clanId,handlers)=>{window.treasuryLive=handlers;return()=>{};},
         getHoldingTowerState:async()=>({worldActive:true,towers:[{...buildingFixture}]}),
         getClanTowerShop:async()=>({clanShop:status()}),
         startClanTowerBuilding:async p=>{buildingCalls.push(p);buildingFixture.buildingProject={buildingId:p.buildingId,targetLevel:buildingFixture.buildings[p.buildingId]+1,remainingMs:1800000,progressStartedAtMs:Date.now()};return {tower:buildingFixture};},
         purchaseClanTowerShopItem:async p=>{buildingCalls.push(p);return {clanShop:status()};}
       });
+      startClanTreasurySubscription(getOnlineApi(),state.clanId);
       ensureHoldingTowerMapSubscriptions();
     })()`);
     const frameTower = () => evaluate(`zoom=innerWidth<600?.4:innerHeight<560?.5:.8;centerOnRegion(buildingFixture.regionId);if(innerHeight<560)camera.y+=(innerWidth<600?50:18)/zoom;if(innerWidth<600)camera.x-=56/zoom;updateCameraTransform()`);
@@ -147,6 +149,17 @@ async function main() {
       assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("Training Grounds")'));
       assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("+1% rally attack strength")'));
       await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
+      await evaluate('clanTreasuryStatus=null;treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:0})');
+      assert(await evaluate('modalBody.querySelector("[data-clan-building-start=training]").disabled'));
+      assert(await evaluate('modalBody.querySelector("[data-tower-action=upgrade]").disabled'));
+      await evaluate('modalBody.querySelector("[data-tower-upgrade-count]").value="2";treasuryLive.onTreasury({balance:20000000,totalDonated:20000000,totalSpent:0,revision:1})');
+      assert(await evaluate('!modalBody.querySelector("[data-clan-building-start=training]").disabled'), 'A clan donation did not enable the building upgrade.');
+      assert(await evaluate('!modalBody.querySelector("[data-tower-action=upgrade]").disabled'), 'A clan donation did not enable wall construction.');
+      assert.equal(await evaluate('holdingTowerDetailsTab'), 'buildings', 'A live donation changed the selected tab.');
+      assert.equal(await evaluate('modalBody.querySelector("[data-tower-upgrade-count]").value'), '2', 'A live donation reset the wall quantity.');
+      assert(await evaluate('modalBody.querySelector(".ctb-construction").textContent.includes((20000000).toLocaleString())'));
+      assert(await evaluate('renderClanTreasuryPanel().includes(formatNumber(20000000))'), 'The clan panel disagrees with the Tower Treasury.');
+      await evaluate('treasuryLive.onTreasury({balance:10000000000,totalDonated:10000000000,totalSpent:0,revision:2})');
       const orders=await evaluate('buildingCalls.length');
       await reachable('[data-clan-building-start="training"]');
       await ready(`buildingCalls.length===${orders+1} && !holdingTowerActionsInFlight.size`);
