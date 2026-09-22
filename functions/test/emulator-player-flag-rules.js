@@ -131,9 +131,10 @@ async function assertStoredFlag(documentPath, fieldPath, expected, label) {
 
 async function main() {
   const user = await createAuthUser();
+  const playerName = "Flag Sentinel";
   await db.doc(`players/${user.uid}`).set({
     uid: user.uid,
-    playerName: "Flag Rules Sentinel",
+    playerName,
     resetGeneration: realm.resetGeneration,
     worldId: realm.worldId,
     releaseId: realm.releaseId,
@@ -158,7 +159,7 @@ async function main() {
   const saveId = `default-${realm.resetGeneration}`;
   const validSave = await patchDocument(user, `players/${user.uid}/saves/${saveId}`, {
     version: 26,
-    playerName: "Flag Rules Sentinel",
+    playerName,
     gameSeconds: 10,
     state: { resetGeneration: realm.resetGeneration, flag: v2 },
   });
@@ -178,7 +179,8 @@ async function main() {
   const invalidPresence = await patchDocument(user, presencePath, { flag: { ...v2, imageUrl: "https://example.test/flag.svg" } });
   assert(invalidPresence.status === 403, "Presence accepted an unexpected flag field.");
 
-  const claim = await callFunction("claimStartingCity", user, { playerName: "Flag Rules Sentinel" });
+  const claim = await callFunction("claimStartingCity", user, { playerName });
+  assert(claim.currentUser?.playerName === playerName, "The starting-city claim changed the valid ruler name.");
   const identity = await callFunction("syncPlayerIdentity", user, {
     ownerName: "Startup Name",
     ownerFlag: v1,
@@ -198,7 +200,7 @@ async function main() {
   await assertStoredFlag(`islands/${claim.islandId}/cities/${claim.cityId}`, "ownerFlag", v2, "Owned city identity");
   await assertStoredFlag(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`, "flag", v2, "Leaderboard identity");
   const afterSync = (await db.doc(`players/${user.uid}`).get()).data();
-  assert(afterSync.playerName === "Flag Rules Sentinel", "Projection repair overwrote the canonical ruler name.");
+  assert(afterSync.playerName === playerName, "Projection repair overwrote the canonical ruler name.");
   assert(afterSync.identityRevision === revision, "Projection repair rewrote the identity edit revision.");
 
   for (const [label, invalidFlag] of [
