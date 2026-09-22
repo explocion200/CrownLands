@@ -53,8 +53,8 @@ async function main(){
    assert(await evaluate(`Array.from(modalBody.querySelectorAll('.island-map-clan-flag')).every(f=>getComputedStyle(f).display!=='none'&&f.getBoundingClientRect().width>=15)`),'Whole-realm view hid owners');
    // Report outcome must not call a capped victory a capture or a held defense.
    assert.equal(await evaluate(`getBattleRuleLabel({combatRule:{id:'clan_tower_raid'}})`),'One Clan Tower per clan â€” attack allowed, capture disabled');
-   assert.equal(await evaluate(`getViewerBattleResultLabel({combatRule:{id:'clan_tower_raid',captureAllowed:false},outcome:'victory'},'attacker')`),'Your side won — Tower ownership unchanged');
-   assert.equal(await evaluate(`getViewerBattleResultLabel({combatRule:{id:'clan_tower_raid',captureAllowed:false},outcome:'victory'},'defender')`),'Opponent won — your clan keeps the Tower');
+   assert.equal(await evaluate(`getViewerBattleResultLabel({combatRule:{id:'clan_tower_raid',captureAllowed:false},outcome:'victory'},'attacker')`),'Your side won \u2014 Tower ownership unchanged');
+   assert.equal(await evaluate(`getViewerBattleResultLabel({combatRule:{id:'clan_tower_raid',captureAllowed:false},outcome:'victory'},'defender')`),'Opponent won \u2014 your clan keeps the Tower');
    console.log(`Clan Tower atlas ${width}x${height}: complete flags, neutral fallback, live edits/capture, camera preservation and overview passed.`);
   }
   assert.deepEqual(errors,[]);
