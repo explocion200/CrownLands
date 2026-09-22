@@ -1,5 +1,5 @@
 /* Approved order presentation. The existing slider, route and send handlers own all actions. */
-/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower */
+/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower, mountHoldingTowerTroopOrderView, updateHoldingTowerTroopOrderView */
 function troopOrderNumber(value) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
@@ -15,7 +15,7 @@ function renderTroopOrderLocation(city, label, description, showLevel) {
   const art = tower ? city.artSrc || CLAN_TOWER_MAP_ART : camp ? city.artSrc || getCampConfigForType(city.campType).artSrc : isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(level));
   return `<div class="order-location ${label === "To" ? "destination" : ""}"><img class="location-art" src="${escapeHtml(art)}" alt=""><div class="location-copy"><span class="location-label">${label}</span><div class="location-title"><h2>${escapeHtml(city.name)}</h2>${showLevel && !camp && !tower ? `<span class="location-level">Level ${formatNumber(level)}</span>` : ""}</div><p>${escapeHtml(getRegionLabel(getCityRegionId(city)))}</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}</div></div>`;
 }
-function decorateTroopOrderView(source, target, orderKind, commandLabel) {
+function decorateTroopOrderView(source, target, orderKind, commandLabel, amountSelected = selectedTroopAmount) {
   const panel = modalBody.querySelector(".troop-slider-panel");
   panel.classList.add("report-shell");
   panel.dataset.orderKind = orderKind;
@@ -24,7 +24,7 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel) {
   const oldRoute = panel.querySelector(".troop-route-summary");
   const destinationNote = oldRoute.querySelector(".destination small").textContent.split(" · ").slice(1).join(" · ");
   const remaining = oldRoute.querySelector("#troopSliderRemaining").parentElement;
-  remaining.innerHTML = `<b id="troopSliderRemaining">${formatMarchesNumber(source.troops - selectedTroopAmount)}</b> of <span id="troopSliderSourceTotal">${formatMarchesNumber(source.troops)}</span> ${rally ? "available at source" : "remain at source"}`;
+  remaining.innerHTML = `<b id="troopSliderRemaining">${formatMarchesNumber(source.troops - amountSelected)}</b> of <span id="troopSliderSourceTotal">${formatMarchesNumber(source.troops)}</span> ${rally ? "available at source" : "remain at source"}`;
   remaining.className = "remaining";
   const control = panel.querySelector(".troop-slider-control");
   control.className = "force-column";
@@ -80,14 +80,14 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel) {
   }
   panel.replaceChildren(header, body, actions);
 }
-function updateTroopOrderPower() {
+function updateTroopOrderPower(amount = selectedTroopAmount, forecastPreview = activeCombatForecastPreview) {
   const element = modalBody.querySelector("#troopOrderPower");
   if (!element) return;
-  const forecast = normalizeCombatForecast(activeCombatForecastPreview);
+  const forecast = normalizeCombatForecast(forecastPreview);
   const skillPercent = forecast ? forecast.swordmasteryPercent : getSkillPercent("swordmastery");
   const gearPercent = forecast ? forecast.attackStrengthPercent : Math.max(0, Number(getCommonGearBonuses().attackStrength) || 0);
   const perTroop = forecast ? forecast.attackPowerPerTroop : getAttackPower(1, "player");
-  const base = selectedTroopAmount * BASE_TROOP_ATTACK_POWER;
+  const base = amount * BASE_TROOP_ATTACK_POWER;
   const gear = normalizeCommonGearState(state.gear);
   const weapon = gear.instances[gear.equipped?.barracks?.weapon];
   const definition = weapon ? COMMON_GEAR?.getDefinition(weapon.gearKey) : null;
@@ -102,5 +102,46 @@ function updateTroopOrderPower() {
     ["assets/icons/skills/swordmastery.svg", "Swordmastery", `Level ${skillLevel} · +${troopOrderNumber(skillPercent)}% attack`, base * skillPercent / 100, true],
     [definition?.art || "assets/optimized/gear-barracks-weapon-192x192-b7b87ac61ab5.webp", weaponName, weaponNote, base * gearPercent / 100, true],
   ];
-  element.innerHTML = `<header><div><span>YOUR ATTACK POWER${localOnly ? " · ESTIMATE" : ""}</span><strong>${formatMarchesNumber(Math.floor(selectedTroopAmount * perTroop))}</strong></div><img src="assets/icons/skills/swordmastery.svg" alt=""></header>${rows.map(([art, name, note, value, signed], index) => `<div class="power-source"><img class="${index === 2 ? "common-item" : ""}" src="${escapeHtml(art)}" alt=""><div><strong>${escapeHtml(name)}</strong><small>${escapeHtml(note)}</small></div><b>${troopOrderContribution(value, signed)}</b></div>`).join("")}<p class="power-equation"><span>${troopOrderNumber(perTroop)} power / troop</span><strong>+${troopOrderNumber(skillPercent + gearPercent)}% total bonus</strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.${localOnly ? " Based on your current local profile; the server confirms at launch." : ""}</p>`;
+  element.innerHTML = `<header><div><span>YOUR ATTACK POWER${localOnly ? " · ESTIMATE" : ""}</span><strong>${formatMarchesNumber(Math.floor(amount * perTroop))}</strong></div><img src="assets/icons/skills/swordmastery.svg" alt=""></header>${rows.map(([art, name, note, value, signed], index) => `<div class="power-source"><img class="${index === 2 ? "common-item" : ""}" src="${escapeHtml(art)}" alt=""><div><strong>${escapeHtml(name)}</strong><small>${escapeHtml(note)}</small></div><b>${troopOrderContribution(value, signed)}</b></div>`).join("")}<p class="power-equation"><span>${troopOrderNumber(perTroop)} power / troop</span><strong>+${troopOrderNumber(skillPercent + gearPercent)}% total bonus</strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.${localOnly ? " Based on your current local profile; the server confirms at launch." : ""}</p>`;
+}
+
+function getHoldingTowerTroopOrderLocations(tower, mode, candidate) {
+  const personalTower = { ...getHoldingTowerVisual(tower.id), ...tower, owner: "player", troops: Math.max(0, Math.floor(Number(tower.ownStationedTroops) || 0)) };
+  return mode === "reinforce" ? { source: candidate, target: personalTower } : { source: personalTower, target: candidate };
+}
+
+function mountHoldingTowerTroopOrderView(tower, mode, candidate, maxTroops, session) {
+  const { source, target } = getHoldingTowerTroopOrderLocations(tower, mode, candidate);
+  const attack = mode === "attack-from";
+  decorateTroopOrderView(source, target, attack ? "attack" : "transfer", attack ? "Attack" : mode === "reinforce" ? "Send" : "Transfer", Math.max(1, Math.floor(maxTroops / 2)));
+  // Tower launch uses its own authoritative callable. Its city-only preview endpoints
+  // cannot verify a Tower origin; show clearly labelled local estimates instead.
+  session.route = createInstantOrderRoute(source, target);
+  void findRouteAsync(source, target).then(route => {
+    if (!isHoldingTowerModalSessionCurrent(session) || session.onlineSession !== onlineSessionGeneration) return;
+    if (route?.points?.length) session.route = route;
+    updateHoldingTowerOrderAvailability();
+  }).catch(() => {
+    // Keep the initial estimate; dispatch still validates the route on the server.
+  });
+}
+
+function updateHoldingTowerTroopOrderView(session, tower, candidate, amount, maximum) {
+  const { source, target } = getHoldingTowerTroopOrderLocations(tower, session.mode, candidate);
+  const orderKind = session.mode === "attack-from" ? "attack" : "transfer";
+  modalBody.querySelector("#troopSliderAmount").textContent = formatMarchesNumber(amount);
+  modalBody.querySelector("#troopSliderRemaining").textContent = formatMarchesNumber(Math.max(0, maximum - amount));
+  modalBody.querySelector("#troopSliderSourceTotal").textContent = formatMarchesNumber(maximum);
+  modalBody.querySelector("#troopSliderMaxLabel").textContent = `Max ${formatMarchesNumber(maximum)}`;
+  updateTroopOrderPower(amount, null);
+  const retaliationId = orderKind === "attack" ? getTargetRetaliation(target)?.id || "" : "";
+  const attackProtection = retaliationId ? { version: ATTACK_PROTECTION_VERSION, mode: "normal" } : createAttackProtectionSnapshot(source, target, amount, "player");
+  const notice = modalBody.querySelector("#troopSliderActionNotice");
+  notice.textContent = "";
+  notice.hidden = true;
+  const route = session.route;
+  const duration = route?.points?.length ? travelTime(source, target, "player", route.length, amount, orderKind) : null;
+  const bonus = Math.max(0, (getTravelSpeedMultiplier("player", orderKind) - 1) * 100);
+  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(bonus)}%</strong><span>Travel time</span><strong>${duration === null ? "Confirmed at dispatch" : `Estimated ${formatDuration(duration)}`}</strong></div>`;
+  updateTroopOrderPreview(source, target, route, { orderKind, amount, attackProtection, combatForecast: null, retaliationId, travelSummary });
 }
