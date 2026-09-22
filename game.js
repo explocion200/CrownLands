@@ -2321,6 +2321,7 @@ let clanTreasuryLoading = false;
 let clanTreasuryActionInFlight = false;
 let clanTreasuryClanId = "";
 const holdingTowerSnapshots = new Map();
+const holdingTowerClanIdentities = new Map();
 let selectedHoldingTowerId = "";
 let holdingTowerLoading = false;
 const holdingTowerActionsInFlight = new Set();
@@ -4096,18 +4097,18 @@ function isHoldingTowerModalSessionCurrent(session) {
 function renderHoldingTowerModal(tower) {
   if (!tower || !HOLDING_TOWER_UI || selectedHoldingTowerId !== tower.id
       || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
-  const neutral = tower.ownerKind !== "clan";
+  const clanIdentity = getHoldingTowerClanIdentity(tower);
   const treasuryBalance = clanTreasuryStatus?.treasury?.balance;
   modal.classList.add("holding-tower-modal", "clan-tower-details-modal");
   modalTitle.textContent = tower.name || "Clan Tower";
   const upgradeCount = modalBody.querySelector("[data-tower-upgrade-count]")?.value;
-  modalBody.innerHTML = HOLDING_TOWER_UI.renderPanel(tower, {
+  modalBody.innerHTML = HOLDING_TOWER_UI.renderPanel({ ...tower, clanName: clanIdentity?.name || tower.clanName }, {
     actionBusy: holdingTowerActionsInFlight.has(tower.id),
-    clanShieldHtml: neutral ? "" : renderClanHeraldry(getHoldingTowerClanIdentity(tower)?.emblem, {
+    clanShieldHtml: clanIdentity?.emblem ? renderClanHeraldry(clanIdentity.emblem, {
       size: "large",
       instance: `tower-${tower.id}`,
-      label: `${tower.clanName} shield`,
-    }),
+      label: `${clanIdentity.name} shield`,
+    }) : "",
     treasuryBalance,
     buildingSelection: holdingTowerBuildingSelection,
     personalGold: state.gold,
@@ -4567,8 +4568,24 @@ async function runClanTowerBuildingAction(tower, kind, id) {
 
 function getHoldingTowerClanIdentity(tower) {
   if (tower?.ownerKind !== "clan" || !tower.clanId) return null;
+  const live = holdingTowerClanIdentities.get(tower.id);
+  if (live?.clanId === tower.clanId) {
+    return { name: live.clan?.name || tower.clanName || "Unknown clan", emblem: live.clan?.shield || live.clan?.banner || null };
+  }
   const clan = getCachedClanPublicSnapshot(tower.clanId);
   return { name: clan?.name || tower.clanName || "Unknown clan", emblem: clan?.shield || clan?.banner || tower.clanEmblem };
+}
+
+function applyHoldingTowerClanSnapshot(towerId, clanId, clan) {
+  const tower = holdingTowerSnapshots.get(towerId);
+  if (tower?.ownerKind !== "clan" || tower.clanId !== clanId || (clan && clan.id !== clanId)) return;
+  const identity = clan ? { name: clan.name, shield: clan.shield || clan.banner || null } : null;
+  const signature = JSON.stringify([clanId, identity]);
+  if (holdingTowerClanIdentities.get(towerId)?.signature === signature) return;
+  holdingTowerClanIdentities.set(towerId, { clanId, clan: identity, signature });
+  cityRenderSignature = "";
+  renderCities();
+  if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(tower);
 }
 
 function syncHoldingTowerSelectionSubscription() {
@@ -4596,6 +4613,9 @@ function syncHoldingTowerSelectionSubscription() {
 
 function applyHoldingTowerMapSnapshot(visual, raw) {
   const previous = holdingTowerSnapshots.get(visual.id);
+  if (raw?.ownerKind !== "clan" || holdingTowerClanIdentities.get(visual.id)?.clanId !== raw.clanId) {
+    holdingTowerClanIdentities.delete(visual.id);
+  }
   const keepPrivate = raw && previous?.clanId === raw.clanId && previous?.ownerKind === raw.ownerKind
     && previous?.ownershipRevision === raw.ownershipRevision;
   // A late callable response must not restore the previous owner's permissions.
@@ -4624,6 +4644,7 @@ function ensureHoldingTowerMapSubscriptions() {
   holdingTowerMapUnsubscribers = [];
   holdingTowerMapSubscriptionsKey = key;
   holdingTowerSnapshots.clear();
+  holdingTowerClanIdentities.clear();
   for (const [id, token] of holdingTowerRequestTokens) holdingTowerRequestTokens.set(id, token + 1);
   syncHoldingTowerSelectionSubscription();
   updateHoldingTowerOrderAvailability();
@@ -4633,6 +4654,10 @@ function ensureHoldingTowerMapSubscriptions() {
     onTower: raw => {
       if (key !== holdingTowerMapSubscriptionsKey) return;
       applyHoldingTowerMapSnapshot(visual, raw);
+    },
+    onClan: (clan, clanId) => {
+      if (key !== holdingTowerMapSubscriptionsKey) return;
+      applyHoldingTowerClanSnapshot(visual.id, clanId, clan);
     },
     onError: error => console.warn("Tower map subscription failed", error),
   }));
@@ -27721,7 +27746,7 @@ function renderCitiesUncached(force = false) {
     node.style.setProperty("--holding-tower-width", `${tower.width}px`);
     node.style.setProperty("--holding-tower-translate-x", `${(-tower.anchorX * 100).toFixed(3)}%`);
     node.style.setProperty("--holding-tower-translate-y", `${(-tower.anchorY * 100).toFixed(3)}%`);
-    const clanBanner = clanIdentity ? `<span class="holding-tower-clan-banner"><strong class="city-ruler-name">${escapeHtml(clanIdentity.name)}</strong>${renderClanHeraldry(clanIdentity.emblem, {size:"small", instance:`map-${tower.id}`, label:`${clanIdentity.name} clan flag`})}</span>` : "";
+    const clanBanner = clanIdentity ? `<span class="holding-tower-clan-banner"><strong class="city-ruler-name">${escapeHtml(clanIdentity.name)}</strong>${clanIdentity.emblem ? renderClanHeraldry(clanIdentity.emblem, {size:"small", instance:`map-${tower.id}`, label:`${clanIdentity.name} clan flag`}) : ""}</span>` : "";
     const towerHtml = `${clanBanner}<img class="holding-tower-art" src="${escapeHtml(tower.artSrc)}" alt="" draggable="false" decoding="async" loading="lazy" fetchpriority="low" /><span class="holding-tower-map-label">${escapeHtml(tower.name)}</span>`;
     if (node._renderContent !== towerHtml) {
       node.innerHTML = towerHtml;

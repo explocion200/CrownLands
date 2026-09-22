@@ -194,6 +194,94 @@ async function main() {
     client.user = { uid: "different-ruler" }; garrison.next(); assert.equal(updates, 1, "A stale account listener delivered private updates.");
     client.user = { uid: "ruler" }; stop(); garrison.next(); assert.equal(updates, 1);
     assert(watches.every(watch => !watch.active), "Public or private Tower listener survived cleanup.");
+
+    const identities = [], towers = [];
+    const stopOwner = context.subscribeHoldingTowerState('tower-a', {
+      onTower: tower => towers.push(tower), onClan: (clan, clanId) => identities.push({clan, clanId}),
+    });
+    const publicTower = watches.at(-1);
+    const scope = {resetGeneration:'current-reset',worldId:'current-world',realmShardId:'shard_0001'};
+    const emit = (watch, id, data) => watch.next({id,exists:()=>Boolean(data),data:()=>data});
+    emit(publicTower,'tower-a',{...scope,ownerKind:'clan',clanId:'clan-a'});
+    const ownerA = watches.at(-1);
+    assert.equal(ownerA.ref.path,'clans/clan-a','Tower identity did not follow its actual owner.');
+    assert.equal(identities.at(-1).clan,null,'A capture-time flag remained while the live owner loaded.');
+    const flag = {version:2,charge:'wolf',primary:'#225544'};
+    emit(ownerA,'clan-a',{...scope,status:'active',name:'Owner A',shield:flag});
+    assert.deepEqual(identities.at(-1).clan.shield,flag);
+    emit(ownerA,'clan-a',{...scope,status:'active',name:'Renamed A',shield:{...flag,charge:'eagle'}});
+    assert.equal(identities.at(-1).clan.shield.charge,'eagle','A saved clan flag edit was not delivered.');
+    for(const invalid of [{realmShardId:'other'},{resetGeneration:'old'},{worldId:'old'},{status:'disbanded'}]) {
+      emit(ownerA,'clan-a',{...scope,status:'active',shield:flag,...invalid});
+      assert.equal(identities.at(-1).clan,null,'An inactive or other-realm clan supplied the Tower flag.');
+    }
+    emit(publicTower,'tower-a',{...scope,ownerKind:'clan',clanId:'clan-b'});
+    const ownerB = watches.at(-1), count = identities.length;
+    assert.equal(ownerB.ref.path,'clans/clan-b');
+    assert.equal(ownerA.active,false,'Capture retained the previous owner listener.');
+    emit(ownerA,'clan-a',{...scope,status:'active',shield:flag});
+    assert.equal(identities.length,count,'A late former-owner callback replaced the current flag.');
+    emit(ownerB,'clan-b',{...scope,status:'active',shield:{...flag,charge:'stag'}});
+    assert.equal(identities.at(-1).clan.shield.charge,'stag');
+    emit(publicTower,'tower-a',{...scope,ownerKind:'neutral',clanId:''});
+    assert.equal(ownerB.active,false,'Neutralization retained a clan listener.');
+    const neutralCount = identities.length;
+    emit(ownerB,'clan-b',{...scope,status:'active',shield:flag});
+    assert.equal(identities.length,neutralCount);
+    emit(publicTower,'tower-a',{...scope,ownerKind:'clan',clanId:'clan-a'});
+    const rejoined = watches.at(-1), signedInCount = identities.length;
+    client.user = {uid:'another-account'};
+    emit(rejoined,'clan-a',{...scope,status:'active',shield:flag});
+    assert.equal(identities.length,signedInCount,'A previous account supplied a clan flag.');
+    client.user = {uid:'ruler'};
+    stopOwner();
+    emit(rejoined,'clan-a',{...scope,status:'active',shield:flag});
+    assert.equal(identities.length,signedInCount);
+    assert(watches.every(watch=>!watch.active),'A live owner flag listener survived cleanup.');
+    assert.equal(towers.at(-1).clanId,'clan-a');
+  }
+
+  {
+    const h=harness();
+    h.context.getCachedClanPublicSnapshot=()=>({name:'Stale cached name',shield:{charge:'old-cache'}});
+    h.context.renderClanHeraldry=emblem=>JSON.stringify(emblem);
+    const opening=h.open('tower-a');
+    h.finish(h.reads[0],1,{ownerKind:'clan',clanId:'clan-a',clanName:'Captured name',clanEmblem:{charge:'old-capture'}});
+    await opening;
+    const saved={id:'clan-a',name:'Actual owner',shield:{version:2,charge:'wolf'},banner:{charge:'old-legacy'}};
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',saved);
+    assert.equal(h.context.getHoldingTowerClanIdentity(h.context.cachedTower('tower-a')).emblem,saved.shield);
+    assert.equal(h.renders.at(-1).clanShieldHtml,JSON.stringify(saved.shield),'Open Tower UI did not use the actual owner flag.');
+    const renderCount=h.renders.length;
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',{...saved,totalKingPower:999});
+    assert.equal(h.renders.length,renderCount,'Unrelated clan activity rebuilt the Tower window.');
+    saved.shield={version:2,charge:'eagle'};
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',saved);
+    assert.equal(h.renders.at(-1).clanShieldHtml,JSON.stringify(saved.shield),'Open Tower UI did not refresh a saved flag edit.');
+    const refresh=h.context.refreshHoldingTower('tower-a');
+    h.finish(h.reads.at(-1),2,{ownerKind:'clan',clanId:'clan-a',clanEmblem:{charge:'old-capture'}});
+    await refresh;
+    assert.equal(h.renders.at(-1).clanShieldHtml,JSON.stringify(saved.shield),'A Tower read restored its capture-time flag.');
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',null);
+    assert.equal(h.renders.at(-1).clanShieldHtml,'','An unavailable clan invented a default flag.');
+    const legacy={shape:'round',primary:'#225544',charge:'lion'};
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',{id:'clan-a',name:'Legacy owner',banner:legacy});
+    assert.equal(h.renders.at(-1).clanShieldHtml,JSON.stringify(legacy),'A legacy owning clan lost its saved banner.');
+    h.modal.close();
+    h.context.getCachedClanPublicSnapshot=()=>null;
+    h.context.applyHoldingTowerMapSnapshot({id:'tower-a'}, {ownerKind:'clan',clanId:'clan-b',clanEmblem:{charge:'new-capture'}});
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',saved);
+    assert.equal(h.context.getHoldingTowerClanIdentity(h.context.cachedTower('tower-a')).emblem.charge,'new-capture');
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-b',{id:'clan-a',shield:{charge:'wrong-owner'}});
+    assert.equal(h.context.getHoldingTowerClanIdentity(h.context.cachedTower('tower-a')).emblem.charge,'new-capture');
+    h.context.applyHoldingTowerMapSnapshot({id:'tower-a'},null);
+    assert.equal(h.context.getHoldingTowerClanIdentity(h.context.cachedTower('tower-a')),null);
+    assert.equal(vm.runInContext('holdingTowerClanIdentities.size',h.context),0);
+    h.context.cacheTower({id:'tower-a',ownerKind:'clan',clanId:'clan-a'});
+    h.context.applyHoldingTowerClanSnapshot('tower-a','clan-a',saved);
+    vm.runInContext("holdingTowerMapSubscriptionsKey='old-account'",h.context);
+    h.context.ensureHoldingTowerMapSubscriptions();
+    assert.equal(vm.runInContext('holdingTowerClanIdentities.size',h.context),0,'Changing account retained Tower clan identities.');
   }
 
   {

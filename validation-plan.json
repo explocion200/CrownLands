@@ -5,6 +5,7 @@
     {
       "paths": [
         "game.js",
+        "firebaseClient.js",
         "tools/validate-holding-tower-client-lifecycle.js"
       ],
       "tests": [
@@ -15,7 +16,7 @@
         "tools/validate-modal-lifecycle-browser.js",
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. Preserve 29/30/31-city boundaries and daily/pending NPC limits."
+      "reason": "Tower Send uses city-style map destination selection, transferring to an owned city or attacking a valid enemy without mode tabs. City Send to an owned Tower reinforces it. Exercise personal troop limits, map-source ownership/session changes, canceled async selections, incoming and outgoing payloads, duplicate clicks, server denials and draft preservation, garrison listener cleanup, map selection and shared modal lifecycle. The Tower public listener follows the owning clan document for both map and details heraldry, with exact saved V2 flag rendering, edit/capture refresh, stale-cache and callable protection, neutralization, inactive/other-realm filtering and account/listener cleanup; no private subscriptions are added for outsiders. Preserve 29/30/31-city boundaries and daily/pending NPC limits."
     },
     {
       "paths": [
