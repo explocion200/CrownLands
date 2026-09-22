@@ -1,6 +1,6 @@
 # Fullscreen and landscape launch
 
-The game manifest requests `fullscreen` with `landscape` orientation. Browsers that do not support that display mode use the standard standalone/browser fallback. The manifest identity, start route and scope remain `/play/`, `/play/` and `/`; fullscreen-installed homepage shortcuts receive the same game-entry recovery as standalone shortcuts.
+The game manifest requests `fullscreen` with `landscape` orientation. Browsers that do not support that display mode use the standard standalone/browser fallback. The manifest identity, start route and scope remain `/play/`, `/play/` and `/`. Fullscreen installs start directly at the game route; the existing standalone/iOS homepage-shortcut recovery remains intact. Fullscreen mode alone does not redirect the public homepage because a normal browser window can also be fullscreen.
 
 On mobile, or in an installed desktop app, pressing an entry control requests fullscreen synchronously before login awaits. Automatic entry uses the first non-control gameplay pointer release instead. The attempt happens once per page load and never repeats after the player exits fullscreen. The existing fullscreen button remains an explicit retry. Installed mobile launches also request a landscape lock at startup; entering fullscreen retries the lock for platforms that require it. Failed or unsupported APIs do not block login.
 

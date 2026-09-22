@@ -4,7 +4,6 @@
   "coverage": [
     {
       "paths": [
-        "app-entry.js",
         "manifest.webmanifest",
         "tools/validate-pwa-entry-routing.js"
       ],
@@ -12,7 +11,7 @@
         "tools/validate-pwa-entry-routing.js",
         "tools/test-game-display.js"
       ],
-      "reason": "Fullscreen manifest launch and same-origin scope; installed homepage recovery in fullscreen/standalone/iOS modes, legacy redirects and offline entry remain correct."
+      "reason": "Fullscreen manifest launch and same-origin scope; canonical browser/fullscreen entries, legacy redirects, installed standalone/iOS homepage recovery and offline entry remain correct. Fullscreen alone does not turn the public homepage into the game."
     },
     {
       "paths": [

@@ -17,7 +17,9 @@ function verifyInstalledEntryRouting() {
   for (const [url, mode, expected] of [
     ["https://playcrownlands.com/", "browser", null],
     ["https://playcrownlands.com/", "standalone", "https://playcrownlands.com/play/"],
-    ["https://playcrownlands.com/?notification=incoming_army#report", "fullscreen", "https://playcrownlands.com/play/?notification=incoming_army#report"],
+    // Fullscreen alone is not proof of installation; ordinary browser windows
+    // can use it too. Fullscreen PWA launches already start directly at /play/.
+    ["https://playcrownlands.com/?notification=incoming_army#report", "fullscreen", null],
     ["https://playcrownlands.com/index.html?notification=incoming_army#report", "ios", "https://playcrownlands.com/play/?notification=incoming_army#report"],
     ["https://playcrownlands.com/play/", "standalone", null],
     ["https://playcrownlands.com/play/", "fullscreen", null],
