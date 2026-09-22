@@ -1,89 +1,72 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "71fed197f0aa3412eb8d8962e6f8e6ddd1753f4e",
+  "baseCommit": "eb6c5acf488268daedaa5f23500ffccb5f8e8e26",
   "coverage": [
+    {
+      "reason": "Isolated Incoming Threats approval preview and its focused browser validator. Exercise desktop and both landscape sizes, six states, filters including Legion, unknown disclosure, long text, crowd scrolling and last-row location controls, profiles, close/reopen, wrapper controls and shared report icon/background delivery. No actual-game, account, authoritative combat, backend or production entry path changes.",
+      "tests": [
+        "tools/validate-incoming-threats-draft.js"
+      ],
+      "paths": [
+        "docs/visual-qa/incoming-threats/index.html",
+        "docs/visual-qa/incoming-threats/preview.html",
+        "docs/visual-qa/incoming-threats/preview.js",
+        "docs/visual-qa/incoming-threats/draft.css",
+        "docs/visual-qa/incoming-threats/review.js",
+        "docs/visual-qa/incoming-threats/review.css",
+        "tools/validate-incoming-threats-draft.js"
+      ]
+    },
+    {
+      "reason": "Record the explicitly approved Incoming Threats presentation, integration, compatibility and verification scope; preserve all existing combat and notification policies.",
+      "tests": [],
+      "paths": [
+        "docs/visual-qa/incoming-threats/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ]
+    },
     {
       "paths": [
         "game.js",
-        "styles.css",
-        "interface-theme.css",
-        "tools/validate-clan-notifications-browser.js"
+        "index.html",
+        "incoming-threats-ui.js",
+        "incoming-threats-ui.css",
+        "tools/validate-incoming-threats-browser.js"
       ],
+      "reason": "Integrate only incoming threat rendering and location delegation. Actual-game browser coverage verifies all three desktop/landscape sizes, filters, Legion, private troop estimates, full own stats, pending snapshots, non-city labels, countdown DOM/focus/scroll stability, changed rows, failed map retry and duplicate clicks, and existing automatic expiry closure. Existing validators cover incoming privacy, region navigation, shared modal and profile routes, Kingdom Activity isolation and asset/cache budgets. Army subscriptions, combat rules and server code are unchanged, so emulators are not selected.",
       "tests": [
-        "tools/validate-clan-notifications-browser.js",
-        "tools/validate-clans.js",
-        "tools/validate-clan-heraldry-v2.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-city-details-browser.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-incoming-army-estimates.js",
         "tools/validate-active-operations.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-performance-bottlenecks.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "tools/validate-authoritative-army-orders.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-bulk-army-orders.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-universal-profile-links.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-asset-performance-budgets.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Pending clan applications update the HUD and profile Clan tab for Leaders/Officers without read-to-dismiss behavior. Exercise live arrival, accept/reject, failed review, rally coexistence, role/clan/account/session changes, fallback loading and reconnect persistence without duplicate subscriptions. Render the complete saved heraldry in clan icons, editor map preview and Tower flags; test failed/draft/confirmed saves, old revision responses, live owner changes, neutralization and frozen v1 compatibility. Browser checks and inspected captures at 1440x900, 844x390 and 568x320 cover badges, touch targets and exact SVG/colour/finish parity. Shared Tower, clan, foreground/recovery and asset/cache contracts are affected. This PR adds no backend, permission or data writes; release integration nevertheless reruns the merged Rally backend dependency suites. Reconciled with merged Rally PR #329 without changing its implementation. Run both updates together, including Rally browser/source, shared city/map/order dependencies and all four previously selected route/reservation emulator suites."
-    },
-    {
-      "paths": [
-        "tools/validate-clans.js",
-        "tools/validate-clan-heraldry-v2.js"
-      ],
+      "reason": "Package and fingerprint the two new Incoming Threats modules in the game build, enforce their 40 KiB budget and exclude draft actions. Production artifact and shared shell/cache checks cover distribution dependencies.",
       "tests": [
-        "tools/validate-clans.js",
-        "tools/validate-clan-heraldry-v2.js",
-        "tools/validate-clan-notifications-browser.js"
-      ],
-      "reason": "Existing source assertions now recognize revision-preserving server-confirmed saves. Real-browser failed/successful saves and late older snapshots verify behavior; renderer contracts retain micro leaderboard budgets and v1 equality."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-tower-map-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-map-browser.js"
-      ],
-      "reason": "Use complete saved chief/quartered arrangements and explicit full rendering for Tower expectations. Preserve existing all-four-Towers desktop/touch/keyboard ownership, selection, orders, restrictions and modal checks."
-    },
-    {
-      "paths": [
+        "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
-      ],
-      "reason": "Against merged Rally base 71fed197f0aa3412eb8d8962e6f8e6ddd1753f4e, game.js grows from 1,876,661 to 1,880,157 bytes (+3,496), plus 78 CSS bytes. The combined update crosses the previous offline-shell ceiling. Bound the measured 3,574-byte total addition with a 4 KiB offline-shell allowance, matching the existing 4 KiB client-source allowance. Preserve every offline dependency and all image, network-request, heap and FPS budgets."
+        "tools/validate-incoming-threats-browser.js"
+      ]
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "tools/validate-incoming-army-estimates.js"
       ],
-      "tests": [],
-      "reason": "Record the user's confirmed application-alert persistence and complete saved-heraldry presentation decisions, marked pending merge and authorized deployment. No unrelated gameplay rules change."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-ledger-ui.js"
-      ],
+      "reason": "Follow the estimate label into the extracted runtime renderer and its map delegation into the existing region-safe report navigator. Keep every privacy/estimate assertion and add real-browser disclosure and navigation coverage.",
       "tests": [
-        "tools/validate-clans.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
-      ],
-      "reason": "Combined regression exposed an isolated Clan ledger fixture missing the new Tower-kind predicate and assembly-link renderer. Load those actual production helpers and assert Tower minimum participation, an assembly action and escaped city names. Preserve all existing readiness, permissions and confirmation guards; runtime code is unchanged."
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-report-location-navigation.js"
+      ]
     }
   ]
 }

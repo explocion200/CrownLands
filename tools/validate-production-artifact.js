@@ -25,6 +25,7 @@ const required = [
   "battle-reports-ledger-ui.css",
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
+  "incoming-threats-ui.css", "incoming-threats-ui.js",
   "marches-activity-ui.css", "marches-activity-ui.js",
   "rallies-activity-ui.css", "rallies-activity-ui.js",
   "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",
@@ -145,6 +146,11 @@ if (battleReportDetailBytes > 48 * 1024) throw new Error("Full Battle Report pre
 const scoutReportBytes = ["scout-report-ui.js", "scout-report-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (scoutReportBytes > 64 * 1024) throw new Error("Scout Report presentation exceeds its 64 KiB payload budget.");
+// Incoming Threats reuses the shipped report emblems and stays below 40 KiB.
+const incomingUiBytes = ["incoming-threats-ui.js", "incoming-threats-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (incomingUiBytes > 40 * 1024) throw new Error("Incoming Threats presentation exceeds its 40 KiB payload budget.");
+if (fs.readFileSync(path.join(dist, "incoming-threats-ui.js"), "utf8").includes("Location preview:")) throw new Error("Incoming Threats shipped a draft action.");
 // Marches adds at most 36 KiB of scoped presentation and 4 KiB of mounting/entries, reusing existing art.
 const marchesUiBytes = ["marches-activity-ui.js", "marches-activity-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);

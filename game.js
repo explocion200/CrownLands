@@ -36809,91 +36809,43 @@ function showIncomingAttacksModal() {
 }
 
 function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
-  if (!incoming.length) {
-    modalTitle.textContent = "Incoming Threats";
-    modalBody.innerHTML = `<div class="incoming-attack-empty">No active incoming attacks or scouts.</div>`;
-    return;
-  }
-
-  modalTitle.textContent = incoming.length === 1 ? "Incoming Threat" : "Incoming Threats";
-  const summary = formatIncomingThreatSummary(incoming);
-  const markup = `
-    <div class="incoming-attack-panel">
-      <div class="incoming-attack-summary">
-        <strong>${formatNumber(incoming.length)}</strong>
-        <span>${summary} ${incoming.length === 1 ? "is" : "are"} heading toward your cities.</span>
-        <small>Soonest arrival: ${formatDuration(incoming[0].remaining)}</small>
-      </div>
-      <div class="incoming-attack-list">
-        ${incoming.map(renderIncomingAttackCard).join("")}
-      </div>
-    </div>
-  `;
-
-  if (patchOperationModalText(modalBody, markup)) return;
-  modalBody.innerHTML = markup;
-  modalBody.querySelectorAll("[data-incoming-city]").forEach(button => {
-    button.addEventListener("click", () => focusIncomingAttackCity(button.dataset.incomingCity));
-  });
+  modalTitle.textContent = "Incoming Threats";
+  renderIncomingThreatsLedger(incoming);
 }
 
 function renderIncomingAttackCard(attack) {
   const city = attack.target;
   const isCitadelAssault = attack.eventKind === CITADEL_ASSAULT_EVENT_KIND;
   const sourceName = isCitadelAssault ? CROWN_CITADEL_NAME : attack.source?.name || attack.fromName || "Unknown city";
-  const regionName = getRegionLabel(getCityRegionId(city));
-  const defense = city.incomingSnapshotPending ? 0 : getCityStats(city).totalDefense;
-  const isScout = attack.kind === "scout";
-  const threatLabel = isScout ? "Scout" : isCitadelAssault ? "Legion" : "Attack";
-  const forceLabel = isScout ? "Scout" : "Attacker";
-  const estimatedTroops = getArmyTroopDisplayText(attack);
-  const forceDetails = isScout
-    ? `1 scout from ${escapeHtml(sourceName)}`
-    : `Estimated troops: ${escapeHtml(estimatedTroops)} from ${escapeHtml(sourceName)}`;
-  const cityDetails = city.incomingSnapshotPending
-    ? "City status will refresh when this map opens"
-    : `Lv ${formatNumber(city.level)} - ${formatNumber(city.troops)} troops - ${formatNumber(defense)} defense`;
-  return `
-    <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""} ${isCitadelAssault ? "citadel-assault-card" : ""}">
-      <div class="incoming-attack-badge">
-        <strong>${formatDuration(attack.remaining)}</strong>
-        <small>${threatLabel}</small>
-      </div>
-      <div class="incoming-attack-city">
-        <span>${escapeHtml(regionName)}</span>
-        <strong>${escapeHtml(city.name)}</strong>
-        <small>${escapeHtml(cityDetails)}</small>
-      </div>
-      <div class="incoming-attack-force">
-        <span>${forceLabel}</span>
-        ${renderPlayerNameLink(attack.ownerUid, attack.attackerName || "Enemy", "incoming-attacker-link")}
-        <small>${forceDetails}</small>
-      </div>
-      <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">${renderCrownlandsIcon("locate")}</button>
-    </article>
-  `;
+  const regionId = normalizeRegionId(attack.targetRegionId || getCityRegionId(city));
+  const pending = Boolean(city.incomingSnapshotPending);
+  const identity = isCitadelAssault
+    ? '<strong class="npc-name">Citadel Legion</strong>'
+    : renderPlayerNameLink(attack.ownerUid, attack.attackerName || "Enemy", "profile incoming-attacker-link");
+  return renderIncomingThreatRow({
+    key: String(attack.key || getArmyTokenId(attack)), id: city.id, name: city.name,
+    regionId, regionName: getRegionLabel(regionId), origin: sourceName, identity,
+    kind: attack.kind === "scout" ? "scout" : isCitadelAssault ? "legion" : "attack",
+    remaining: Math.max(0, Number(attack.remaining) || 0), force: getArmyTroopDisplayText(attack),
+    regularCity: !isRewardCampTarget(city) && !isHoldingTowerTarget(city) && !isStronghold(city) && !isCrownCitadel(city),
+    level: city.level, troops: city.troops, defense: pending ? null : getCityStats(city).totalDefense, pending,
+  });
 }
 
 async function focusIncomingAttackCity(cityId, explicitRegionId = "") {
-  const incoming = getIncomingAttacks().find(attack => String(attack.toId || "") === String(cityId || ""));
+  const requestedRegion = explicitRegionId ? normalizeRegionId(explicitRegionId) : "";
+  const incoming = getIncomingAttacks().find(attack => String(attack.toId || "") === String(cityId || "")
+    && (!requestedRegion || normalizeRegionId(attack.targetRegionId || getCityRegionId(attack.target)) === requestedRegion));
   const city = incoming?.target
     || getArmyTargetById(cityId)
     || getOwnedCitySnapshotById(cityId)
     || getPlayableBaseCityById(cityId);
   if (!city) {
     showToast("That city is no longer available.");
-    return;
+    return false;
   }
   const regionId = normalizeRegionId(explicitRegionId || incoming?.targetRegionId || getCityRegionId(city));
-  if (modal.open) modal.close();
-  if (regionId !== getActiveMapRegionId()) {
-    const switched = await switchOnlineIsland(regionId);
-    if (!switched || regionId !== getActiveMapRegionId()) return;
-  }
-  requestAnimationFrame(() => {
-    centerOnCity(city.id);
-    showToast(`Viewing ${city.name}`);
-  });
+  return focusBattleReportTarget(city.id, regionId);
 }
 
 function showOutgoingAttacksModal() {

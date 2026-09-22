@@ -35,6 +35,7 @@ const rootFiles = [
   "battle-reports-ledger-ui.css",
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
+  "incoming-threats-ui.css", "incoming-threats-ui.js",
   "marches-activity-ui.css", "marches-activity-ui.js",
   "rallies-activity-ui.css", "rallies-activity-ui.js",
   "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",

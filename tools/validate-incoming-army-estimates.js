@@ -196,7 +196,7 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /function focusIncomingAttackCity\(cityId, explicitRegionId[\s\S]*?incoming\?\.targetRegionId[\s\S]*?switchOnlineIsland\(regionId\)/,
+  /function focusIncomingAttackCity\(cityId, explicitRegionId[\s\S]*?incoming\?\.targetRegionId[\s\S]*?focusBattleReportTarget\(city\.id, regionId\)/,
   "Incoming notification navigation must open the attacked city's map."
 );
 assert.match(
@@ -251,8 +251,8 @@ assert.equal(
   "A public movement targeting another player must not become an incoming alert."
 );
 assert.match(
-  clientSource,
-  /Estimated troops: \$\{escapeHtml\(estimatedTroops\)\}/,
+  fs.readFileSync(path.join(root, "incoming-threats-ui.js"), "utf8"),
+  /scout \? "Incoming" : "Estimated"/,
   "The incoming-threat modal must label the range as an estimate."
 );
 assert.match(
