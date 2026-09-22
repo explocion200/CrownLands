@@ -483,7 +483,7 @@ async function validateProfileSave() {
   const scope = {
     init: async () => {}, requireSignedIn: () => "report-reader",
     sanitizeForFirestore: value => JSON.parse(JSON.stringify(value)),
-    client: { db: {}, user: {}, modules: { firestore: {
+    client: { db: {}, user: { uid: "report-reader" }, modules: { firestore: {
       doc: () => ({}), serverTimestamp: () => 123,
       setDoc: async (_ref, data) => { savedProfile = data; },
     } } },
@@ -492,7 +492,7 @@ async function validateProfileSave() {
   const end = api.indexOf("  async function loadPlayerProfile(", start);
   vm.runInNewContext(api.slice(start, end), scope);
   const staleProfile = { battleReports: [], marchPercent: 50 };
-  await scope.savePlayerProfile(staleProfile);
+  assert.equal(await scope.savePlayerProfile(staleProfile), true, "The signed-in report-save fixture must reach its write.");
   assert.ok(!Object.hasOwn(savedProfile, "battleReports"), "A stale client save can overwrite settled server reports.");
   assert.equal(savedProfile.marchPercent, 50, "Unrelated profile preferences were dropped.");
   assert.ok(Object.hasOwn(staleProfile, "battleReports"), "Saving mutated the local snapshot.");

@@ -100,6 +100,15 @@
       ],
       "tests": [],
       "reason": "Record confirmed fullscreen restoration, observed defects, coverage, measurement limits and release verification. Prose does not change deferred gameplay design."
+    },
+    {
+      "paths": [
+        "tools/validate-report-system.js"
+      ],
+      "tests": [
+        "tools/validate-report-system.js"
+      ],
+      "reason": "The report autosave fixture must provide the current signed-in UID required by the existing account-switch guard. Assert that the save really executes before checking server-owned report exclusion; production authentication behavior is unchanged."
     }
   ]
 }
