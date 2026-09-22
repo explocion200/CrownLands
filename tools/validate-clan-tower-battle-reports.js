@@ -72,7 +72,7 @@ const launchGear = context.createHoldingTowerBattleSnapshot({ ...input,
   leaderProfile: { ...input.leaderProfile, attackStrength: 50 },
   packages: packages.map(row => ({ ...row, attackGearPercent: 0 })),
 });
-assert.equal(launchGear.gearEffects.attacker.attackStrength.bonusPower, 0,
+assert.equal(launchGear.gearEffects.attacker.attackStrength, null,
   "Gear equipped after launch appeared in the battle's attack bonus");
 const neutral = context.createHoldingTowerBattleSnapshot({ ...input,
   defense: { ...input.defense, contributions: [], neutralTroops: 42000 },

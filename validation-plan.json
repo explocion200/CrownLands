@@ -47,6 +47,16 @@
       "tests": [
         "tools/validate-production-artifact.js"
       ]
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js"
+      ],
+      "reason": "Register the new Tower report suite with the current Core expansion fixture so its callables and security rules run against the live topology rather than the legacy test world. The runner change is one suite entry; required targeted-validation and safe-update workflow tests remain enabled.",
+      "tests": [
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "tools/test-targeted-validation.js"
+      ]
     }
   ]
 }
