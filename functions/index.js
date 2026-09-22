@@ -8,6 +8,8 @@ const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
+const { deliverNotificationOutbox } = require("./notification-delivery");
+const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
 const FORCE_CORE_EXPANSION_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true"
   && process.env.CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR === "1";
@@ -9699,6 +9701,7 @@ function finalizeLevelUpReward(progress = null, troopCredit = null) {
 
 function writeReport(transaction, uid, report, profileSnap = null, extraProfilePatch = {}) {
   if (!uid || !report?.id) return;
+  report = { ...report, uid };
   const profileRef = db.doc(`players/${uid}`);
   const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
   const successfulScout = isSuccessfulScoutIntelReport(report);
@@ -14361,19 +14364,20 @@ async function removeNotificationTokenDocs(uid, tokenDocIds = []) {
   await batch.commit();
 }
 
-async function sendIncomingArmyNotification(notification = {}) {
+async function sendIncomingArmyNotification(notification = {}, completedTokenIds = []) {
   const defenderUid = safeString(notification.defenderUid, 128);
-  if (!defenderUid) return false;
+  const resultState = { deliveredTokenIds: [], completedTokenIds: [], retryError: null };
+  if (!defenderUid) return resultState;
   const tokenSnap = await db.collection(`players/${defenderUid}/notificationTokens`)
     .where("enabled", "==", true)
     .limit(100)
     .get();
-  if (tokenSnap.empty) return false;
+  if (tokenSnap.empty) return resultState;
 
   const tokenDocs = tokenSnap.docs
     .map(doc => ({ id: doc.id, token: safeString(doc.data()?.token, 512) }))
-    .filter(entry => entry.token);
-  if (!tokenDocs.length) return false;
+    .filter(entry => entry.token && !completedTokenIds.includes(entry.id));
+  if (!tokenDocs.length) return resultState;
 
   const data = {
     type: "incoming_army",
@@ -14414,8 +14418,12 @@ async function sendIncomingArmyNotification(notification = {}) {
   const invalidTokenDocIds = [];
   const deliveryErrors = [];
   result.responses.forEach((response, index) => {
-    if (!response.success && isInvalidMessagingTokenError(response.error)) {
+    if (response.success) {
+      resultState.deliveredTokenIds.push(tokenDocs[index].id);
+      resultState.completedTokenIds.push(tokenDocs[index].id);
+    } else if (isInvalidMessagingTokenError(response.error)) {
       invalidTokenDocIds.push(tokenDocs[index]?.id);
+      resultState.completedTokenIds.push(tokenDocs[index].id);
     } else if (!response.success && response.error) {
       deliveryErrors.push(response.error);
     }
@@ -14425,8 +14433,8 @@ async function sendIncomingArmyNotification(notification = {}) {
       console.warn("Could not remove invalid notification tokens", error);
     });
   }
-  if (result.successCount === 0 && deliveryErrors.length) throw deliveryErrors[0];
-  return result.successCount > 0;
+  resultState.retryError = deliveryErrors[0] || null;
+  return resultState;
 }
 
 function queueIncomingArmyNotification(writer, armyId = "", notification = null, nowMs = Date.now()) {
@@ -14454,9 +14462,7 @@ async function cleanupExpiredNotificationOutbox(nowMs = Date.now(), limit = 250)
     .limit(Math.max(1, Math.min(500, Math.floor(limit))))
     .get();
   if (snapshot.empty) return { removed: 0 };
-  const batch = db.batch();
-  snapshot.docs.forEach(doc => batch.delete(doc.ref));
-  await batch.commit();
+  await deleteMaintenanceDocuments(db, snapshot.docs);
   return { removed: snapshot.size };
 }
 
@@ -14464,30 +14470,11 @@ exports.deliverIncomingArmyNotification = onDocumentCreated({
   document: "serverNotificationOutbox/{notificationId}",
   region: "us-central1",
   retry: true,
+  timeoutSeconds: 60,
 }, async event => {
   const snapshot = event.data;
   if (!snapshot?.exists) return;
-  const record = snapshot.data() || {};
-  if (record.status === "delivered" || record.status === "skipped") return;
-  const attempts = Math.max(0, Math.floor(safeNumber(record.attempts, 0))) + 1;
-  try {
-    const delivered = await sendIncomingArmyNotification(record.notification || {});
-    await snapshot.ref.set({
-      status: delivered ? "delivered" : "skipped",
-      attempts,
-      deliveredAtMs: Date.now(),
-      lastError: FieldValue.delete(),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-  } catch (error) {
-    await snapshot.ref.set({
-      status: "pending",
-      attempts,
-      lastError: safeString(error?.message || error, 240),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    throw error;
-  }
+  await deliverNotificationOutbox(snapshot.ref, { db, send: sendIncomingArmyNotification, fieldValue: FieldValue });
 });
 
 function requireCommonGearInstance(gear, instanceId) {
@@ -24558,6 +24545,10 @@ exports.claimDailyMissionReward = timedCallable(
 exports.applyDailyMissionEvent = onDocumentCreated({
   region: "us-central1",
   document: "dailyMissionEvents/{eventId}",
+  // Burst events share a loaded world catalog and Firestore snapshots. The
+  // default 256 MiB / 80-request instance has exceeded its memory limit live.
+  memory: "512MiB",
+  concurrency: 8,
   maxInstances: 30,
   retry: true,
 }, withDocumentRealmShard(async event => {
@@ -24785,9 +24776,7 @@ async function cleanupExpiredBulkOrderRequests(nowMs = Date.now()) {
       oldestExpiredByMs,
       Math.max(0, nowMs - timestampToMs(snapshot.docs[0]?.data()?.expiresAtMs))
     );
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
+    await deleteMaintenanceDocuments(db, snapshot.docs);
     deleted += snapshot.size;
     if (snapshot.size < BULK_ORDER_CLEANUP_LIMIT) break;
   }
@@ -26051,6 +26040,9 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         transaction.set(targetRef, holdingTowerStateWritePatch(target, nowMs, { create: true }), { merge: false });
       }
       reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs);
+      queueIncomingArmyNotification(transaction, movement.id, createIncomingArmyNotification({
+        defenderUid: targetOwnerUid, attackerUid: uid, movement, source, target,
+      }), nowMs);
       return {
         ok: true,
         peaceShieldDeactivated,
@@ -27055,6 +27047,8 @@ async function resolveHoldingTowerDirectMovementById({ armyId = "", callerUid = 
     let scoutReport = null;
     const report = makeReport({
       id: veilBlocked ? `${armyId}_scout_tower_veiled_${uid}` : getCurrentScoutReportId(uid, tower.id),
+      uid,
+      nowMs,
       type: "scout",
       outcome: "scout",
       city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId },
@@ -34544,9 +34538,7 @@ async function cleanupExpiredChatCollectionGroup(collectionId = "", nowMs = Date
       .limit(450)
       .get();
     if (snapshot.empty) break;
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
+    await deleteMaintenanceDocuments(db, snapshot.docs);
     deleted += snapshot.size;
     batches += 1;
     if (snapshot.size < 450) break;

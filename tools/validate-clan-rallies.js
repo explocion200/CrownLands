@@ -279,6 +279,7 @@ async function validateRallyTargets() {
     .map(target => ({ ...target, kind: "stronghold" }));
   assert.equal(objectives.length, 5, "Expected all four current Core Strongholds and the Crown Citadel.");
   const towerTargets = towers.TOWERS.map(tower => ({ ...tower, kind: "holdingTower" }));
+  towerTargets[0].clanId = "test-clan";
   const assemblyCity = { id: "assembly-city", kind: "city", owner: "player", troops: 10 };
   const invalidTargets = [
     { id: "ordinary-city", kind: "city", owner: "neutral" },
@@ -303,12 +304,16 @@ async function validateRallyTargets() {
     isRewardCampTarget: target => target?.kind === "camp",
     state: { clanId: "test-clan", cities: [...objectives, ...invalidTargets] },
     playerCities: () => [assemblyCity],
+    clanRosterReady: false,
+    getCityClanIdentity: target => ({ clanId: target?.clanId || "" }),
+    holdingTowerSnapshots: new Map(),
   };
   const clientAllows = vm.runInNewContext(`
     ${extractFunction(client, "isStronghold", "readVisualSize")}
     ${extractFunction(client, "isHoldingTowerTarget", "getHoldingTowerQaScenario")}
     ${extractFunction(client, "getHoldingTowerTargetType", "showHoldingTowerOrderComposer")}
     ${extractFunction(client, "isRallyObjectiveTarget", "canCurrentPlayerCreateClanRally")}
+    ${extractFunction(client, "isClanAllyCity", "getVisibleCityGarrisonTroops")}
     isRallyObjectiveTarget;
   `, clientContext);
   for (const target of [...objectives, ...towerTargets, ...invalidTargets, null, {}]) {
@@ -329,6 +334,9 @@ async function validateRallyTargets() {
     "A Tower-origin Rally must offer only Strongholds, the Citadel, and other canonical Towers."
   );
   assert.equal(composerTargets("rally-attack", towerTargets[0])[0], assemblyCity, "A normal city may still supply a Tower Rally.");
+  clientContext.holdingTowerSnapshots.set(towerTargets[1].id, { clanId: "test-clan" });
+  assert(!composerTargets("rally-from", towerTargets[0]).some(target => target.id === towerTargets[1].id),
+    "Tower-origin Rallies must exclude Towers now owned by the same clan.");
 
   const rejected = [];
   const unexpectedSubmission = () => assert.fail("An invalid Rally target reached order submission.");
@@ -354,20 +362,40 @@ async function validateRallyTargets() {
     assert.equal(submitCity({ id: "source" }, target, {}), false);
   }
   let selectedTarget = null;
+  let candidateReads = 0;
+  submissionContext.modal = { open: true };
+  submissionContext.onlineSessionGeneration = 1;
+  submissionContext.updateHoldingTowerOrderAvailability = () => {};
+  submissionContext.getHoldingTowerComposerTargets = (mode, tower) => {
+    candidateReads += 1;
+    return composerTargets(mode, tower);
+  };
   submissionContext.modalBody = {
     querySelector: selector => ({ value: selector === "[data-tower-order-target]" ? selectedTarget.id : "1" }),
   };
   const submitTower = vm.runInNewContext(
-    `async ${extractFunction(client, "submitHoldingTowerOrder", "bindHoldingTowerControls")}; submitHoldingTowerOrder;`,
+    `${extractFunction(client, "isHoldingTowerModalSessionCurrent", "renderHoldingTowerModal")}
+    ${extractFunction(client, "getHoldingTowerOrderPermission", "updateHoldingTowerOrderAvailability")}
+    async ${extractFunction(client, "submitHoldingTowerOrder", "bindHoldingTowerControls")}; submitHoldingTowerOrder;`,
     submissionContext
   );
+  function openTowerOrder(target, mode, ownerMember) {
+    const current = { ...target, ownerMember, ownershipRevision: 1, ownStationedTroops: 10,
+      permissions: { rallyFrom: ownerMember, createRallyAttack: !ownerMember } };
+    submissionContext.holdingTowerSnapshots.set(current.id, current);
+    submissionContext.holdingTowerModalSession = { view: "order", mode, onlineSession: 1,
+      clanId: current.clanId, ownershipRevision: current.ownershipRevision };
+    return current;
+  }
+  const sourceTower = openTowerOrder(towerTargets[0], "rally-from", true);
   for (const target of invalidTargets) {
     selectedTarget = target;
-    await submitTower(towerTargets[0], "rally-from", [target]);
+    await submitTower(sourceTower, "rally-from");
   }
-  selectedTarget = invalidTargets[1];
-  await submitTower(invalidTargets[4], "rally-attack", [selectedTarget]);
-  assert.equal(rejected.length, invalidTargets.length * 2 + 1, "Every invalid target must be rejected by the form before creating an order.");
+  selectedTarget = assemblyCity;
+  await submitTower(openTowerOrder(invalidTargets[4], "rally-attack", false), "rally-attack");
+  assert.equal(candidateReads, invalidTargets.length + 1, "Every Tower form must reach fresh candidate validation with a valid modal session.");
+  assert.equal(rejected.length, invalidTargets.length + 1, "Invalid city Rallies and noncanonical Tower targets must be rejected; invalid outgoing selections are excluded by fresh candidates.");
 }
 
 validateRallyTargets().then(() => {

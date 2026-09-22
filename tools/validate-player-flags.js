@@ -199,7 +199,7 @@ assert.match(game, /const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG\.SELECTABLE_SYMBOLS;
 assert.match(game, /EXTERNAL_FLAG_ICON_KEYS\.has\(iconKey\)[\s\S]*?`assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}`/, "Approved flag icons are not routed through the app-relative runtime sprite.");
 assert.doesNotMatch(game, /`\/assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}`/, "Flag symbols still use a deployment-root-only sprite URL.");
 assert.match(worker, /function isStaticAssetRequest[\s\S]*?svg/, "SVG assets must be handled as cacheable static requests.");
-assert.match(worker, /event\.respondWith\(\s*cacheFirst\(request\)/, "Static SVG assets must use runtime caching after their first successful load.");
+assert.match(worker, /event\.respondWith\(\s*cacheFirst\(request, event\)/, "Static SVG assets must use runtime caching after their first successful load.");
 assert.doesNotMatch(worker, /"\/assets\/flag-symbols\/runtime\.svg"/, "The 81 KiB flag symbol sprite must not inflate the install-time cache.");
 assert.match(game, /function isFlagEditorDirty\(\)/);
 assert.match(game, /flagDiscardDialog\.addEventListener\("close"/);

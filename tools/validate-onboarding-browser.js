@@ -102,9 +102,10 @@ async function main() {
       assert.notEqual(await evaluate("state.playerName"), 'Guided Ruler', 'Guidance must not save the name automatically.');
       await screenshot(`name-save-${viewport.name}`);
       await evaluate(`(async () => {
-        const identity=syncPlayerIdentityToAllOwnedCities, save=flushOnlineSave;
+        const identity=syncPlayerIdentityToAllOwnedCities, save=flushOnlineSave, original=getOnlineApi;
+        getOnlineApi=()=>({...original(),savePlayerIdentity:async(changes,revision)=>({playerName:state.playerName,flag:state.flag,...changes,identityRevision:revision+1})});
         syncPlayerIdentityToAllOwnedCities=async()=>true;flushOnlineSave=async()=>true;
-        try {await saveProfileName();} finally {syncPlayerIdentityToAllOwnedCities=identity;flushOnlineSave=save;}
+        try {await saveProfileName();} finally {syncPlayerIdentityToAllOwnedCities=identity;flushOnlineSave=save;getOnlineApi=original;}
         if(state.playerName!=='Guided Ruler' || !profileNameEditor.hidden)throw Error('Explicit name save failed');
         profileNameEditBtn.click();profileNameInput.value='Discarded name';profileNameCancelBtn.click();
         if(state.playerName!=='Guided Ruler')throw Error('Cancelling name edit changed the saved name');
@@ -131,19 +132,21 @@ async function main() {
       assert.equal(await evaluate("getOnboardingPrefs().dismissed.includes('flag')"), false, 'A failed save dismissed flag guidance.');
       await evaluate(`(async () => {
         const original=getOnlineApi;
-        let fail=true; window.onboardingSaveCalls=0;
-        const save=async()=>{onboardingSaveCalls++;if(fail)throw Error('Controlled flag save failure');return {};};
-        getOnlineApi=()=>({isSignedIn:()=>true,savePlayerProfile:save,syncPlayerIdentity:save,saveGameSnapshot:save,savePresence:save});
+        let fail=true; window.onboardingSaveCalls={identity:0,projection:0};
+        const save=async()=>{onboardingSaveCalls.projection++;return {};};
+        const saveIdentity=async(changes,revision)=>{onboardingSaveCalls.identity++;if(fail)throw Error('Controlled flag save failure');return {playerName:state.playerName,flag:state.flag,...changes,identityRevision:revision+1};};
+        getOnlineApi=()=>({...original(),savePlayerIdentity:saveIdentity,syncPlayerIdentity:save,saveGameSnapshot:save,savePresence:save});
         try {
           await saveFlagEditor();
           if(JSON.stringify(state.flag)!==onboardingSavedFlag || !isFlagEditorDirty())throw Error('Failed save lost the draft or committed a flag');
+          if(onboardingSaveCalls.projection!==0)throw Error('Failed identity save reached projections');
           fail=false;await saveFlagEditor();
           if(JSON.stringify(state.flag)===onboardingSavedFlag || isFlagEditorDirty())throw Error('Explicit retry did not save the flag');
         } finally {getOnlineApi=original;}
         document.querySelector('#flagPrimaryColors button:not(.active)').click();
         toast.classList.remove('visible');
       })()`);
-      assert.equal(await evaluate("onboardingSaveCalls"), 8);
+      assert.deepEqual(await evaluate("onboardingSaveCalls"), { identity: 2, projection: 3 });
       await evaluate("document.querySelector('#onboardingProfileTip [data-onboarding-dismiss]').click();profileCloseBtn.click()");
       assert.equal(await evaluate("flagDiscardDialog.open"), true, 'Guidance bypassed unsaved-flag protection.');
       await evaluate("document.getElementById('flagDiscardChangesBtn').click();selectCity(onboardingQaSource.id);toast.classList.remove('visible')");

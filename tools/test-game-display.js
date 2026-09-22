@@ -54,7 +54,9 @@ async function main() {
   assert.equal(installedMobile.run("isInstalledAppDisplayMode()"),true);
   await installedMobile.run("enterGameFullscreen()");
   assert.deepEqual(installedMobile.calls,["landscape"],"Manifest fullscreen must not request duplicate fullscreen.");
-  assert.equal(installedMobile.control.hidden,true,"Native installed fullscreen must not offer a nonfunctional DOM exit button.");
+  assert.equal(installedMobile.control.hidden,false,"Older fullscreen installations must retain a visible help control.");
+  await installedMobile.run("toggleFullscreen()");
+  assert.match(installedMobile.calls.at(-1),/browser-controlled fullscreen/);
   assert.equal(mobile.control.hidden,false,"DOM fullscreen must keep its exit button.");
 
   const unsupported = fixture({ios:true,fullscreen:false,lock:false});

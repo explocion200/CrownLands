@@ -52,18 +52,21 @@ function verifyInstalledEntryRouting() {
 assert.equal(manifest.start_url, "/play/", "Installed Crownlands must launch the existing game-entry route.");
 assert.equal(manifest.id, "/play/", "The installed-app identity must remain anchored to the game entry.");
 assert.equal(manifest.scope, "/", "The installed app must keep the full Crownlands origin in scope.");
-assert.equal(manifest.display, "fullscreen", "Crownlands must request fullscreen installed launch, with the browser's standard standalone fallback.");
+assert.equal(manifest.display, "standalone", "Installed launch must allow the game's fullscreen entry and exit controls to work.");
 assert.equal(manifest.orientation, "landscape", "The game PWA must retain landscape orientation.");
 assert.deepEqual(
   manifest.icons.map(icon => icon.src),
   [
-    "/assets/icons/crownlands-icon-192.png",
-    "/assets/icons/crownlands-icon-512.png",
-    "/assets/icons/crownlands-maskable-192.png",
-    "/assets/icons/crownlands-maskable-512.png",
+    "assets/icons/crownlands-icon-192.png",
+    "assets/icons/crownlands-icon-512.png",
+    "assets/icons/crownlands-maskable-192.png",
+    "assets/icons/crownlands-maskable-512.png",
   ],
   "The manifest must keep the approved Crownlands icon family.",
 );
+for (const base of ["https://playcrownlands.com/", "https://html-classic.itch.zone/html/test-upload/"]) {
+  for (const icon of manifest.icons) assert.ok(new URL(icon.src, `${base}manifest.webmanifest`).href.startsWith(`${base}assets/icons/`), "Install icons must remain within the current published game directory.");
+}
 
 assert.match(netlify, /from = "\/play\/"\s+to = "\/play\/index\.html"\s+status = 200\s+force = true/);
 assert.match(netlify, /from = "\/"\s+to = "\/home\.html"\s+status = 200\s+force = true/);

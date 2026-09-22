@@ -177,7 +177,7 @@ function isStaticAssetRequest(url) {
 function isAudioMediaRequest(url) {
   return (
     url.origin === self.location.origin
-    && url.pathname.startsWith("/audio/")
+    && url.pathname.startsWith(`${APP_BASE_URL.pathname}audio/`)
     && /\.(?:mp3|ogg|wav)$/i.test(url.pathname)
   );
 }
@@ -215,6 +215,7 @@ function getNavigationFallbackUrl(url) {
 async function putInCache(request, response) {
   if (!isCacheableResponse(response)) return false;
   try {
+    const cachedResponse = response.clone();
     const url = new URL(request.url);
     const isRegionDefinition = /\/assets\/worlds\/[^/]+\/regions\/[^/]+\.json$/i.test(url.pathname);
     const isWorldImage = url.pathname.includes("/assets/worlds/") && /\.(?:png|jpe?g|webp)$/i.test(url.pathname);
@@ -225,7 +226,7 @@ async function putInCache(request, response) {
         ? MAX_WORLD_IMAGE_CACHE_ENTRIES
         : MAX_RUNTIME_CACHE_ENTRIES;
     const cache = await caches.open(cacheName);
-    await cache.put(request, response.clone());
+    await cache.put(request, cachedResponse);
     if (typeof cache.keys === "function" && typeof cache.delete === "function") {
       const keys = await cache.keys();
       await Promise.all(keys.slice(0, Math.max(0, keys.length - maximumEntries)).map(key => cache.delete(key)));
@@ -237,18 +238,18 @@ async function putInCache(request, response) {
   }
 }
 
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
+async function cacheFirst(request, event) {
+  const cached = await caches.match(request).catch(() => null);
   if (cached) return cached;
   const response = await fetch(request);
-  await putInCache(request, response);
+  event.waitUntil(putInCache(request, response));
   return response;
 }
 
-async function networkFirst(request, fallbackUrl = "/index.html") {
+async function networkFirst(request, fallbackUrl = "/index.html", event) {
   try {
     const response = await fetch(request);
-    await putInCache(request, response);
+    event.waitUntil(putInCache(request, response));
     return response;
   } catch (error) {
     const cache = await caches.open(CACHE_NAME);
@@ -297,19 +298,19 @@ self.addEventListener("fetch", event => {
   if (isAudioMediaRequest(url)) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, getNavigationFallbackUrl(url)));
+    event.respondWith(networkFirst(request, getNavigationFallbackUrl(url), event));
     return;
   }
 
   if (!isStaticAssetRequest(url)) return;
 
   if (isNetworkFirstAsset(url)) {
-    event.respondWith(networkFirst(request, null));
+    event.respondWith(networkFirst(request, null, event));
     return;
   }
 
   event.respondWith(
-    cacheFirst(request).catch(() => {
+    cacheFirst(request, event).catch(() => {
       if (request.destination === "image") {
         // A decoded 64x64 placeholder looks like a successfully loaded world map
         // to the client. Surface map failures so the previous island stays visible

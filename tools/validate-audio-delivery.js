@@ -82,7 +82,9 @@ const self = {
 };
 self.self = self;
 
-vm.runInNewContext(serviceWorkerSource, {
+function loadWorker(href = "https://crownlands.test/service-worker.js") {
+  self.location.href = href;
+  vm.runInNewContext(serviceWorkerSource, {
   URL,
   Request,
   Response,
@@ -97,19 +99,27 @@ vm.runInNewContext(serviceWorkerSource, {
   fetch: networkFetch,
   importScripts() {},
   self,
-});
+  });
+}
+loadWorker();
 
 async function dispatchFetch(request) {
   const fetchHandler = listeners.get("fetch");
   assert.equal(typeof fetchHandler, "function", "The service worker must register a fetch handler.");
   let responsePromise = null;
+  const backgroundTasks = [];
   fetchHandler({
     request,
+    waitUntil(value) {
+      backgroundTasks.push(Promise.resolve(value));
+    },
     respondWith(value) {
       responsePromise = Promise.resolve(value);
     },
   });
-  return responsePromise;
+  const response = await responsePromise;
+  await Promise.all(backgroundTasks);
+  return response;
 }
 
 async function run() {
@@ -153,6 +163,19 @@ async function run() {
   assert.equal(resolvedCacheFailureResponse.status, 200);
   assert.equal(await resolvedCacheFailureResponse.text(), "complete");
   assert.equal(cacheWarningCount, 1, "A skipped cache write should emit one bounded diagnostic.");
+
+  loadWorker("https://crownlands.test/html/test-build/service-worker.js");
+  const beforeAudio = { fetches: networkFetchCount, writes: cachePutCount };
+  for (const extension of ["mp3", "ogg", "wav"]) {
+    for (const headers of [{}, { Range: "bytes=0-31" }]) {
+      assert.equal(await dispatchFetch(new Request(`https://crownlands.test/html/test-build/audio/music/track.${extension}`, { headers })),
+        null, "Nested itch audio must stream directly, including requests without a Range header.");
+    }
+  }
+  assert.deepEqual({ fetches: networkFetchCount, writes: cachePutCount }, beforeAudio,
+    "Nested audio must not enter the worker's fetch/cache path.");
+  assert.equal((await dispatchFetch(new Request("https://crownlands.test/html/test-build/audio/manifest.json"))).status, 200);
+  assert.equal(cachePutCount, beforeAudio.writes + 1, "The nested audio manifest must still be cached.");
 
   assert.match(editorServerSource, /\["\.mp3",\s*"audio\/mpeg"\]/);
   assert.match(editorServerSource, /\["\.ogg",\s*"audio\/ogg"\]/);

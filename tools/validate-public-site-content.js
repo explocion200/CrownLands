@@ -206,7 +206,7 @@ for (const page of publicPages) {
   assert.doesNotMatch(staticCacheSource, new RegExp(`/${page.replaceAll(".", "\\.")}`), `${page} should not inflate the install cache.`);
 }
 assert.match(serviceWorkerSource, /request\.mode === "navigate"[\s\S]*networkFirst\(request/);
-assert.match(serviceWorkerSource, /url\.pathname\.endsWith\("\.css"\)[\s\S]*networkFirst\(request, null\)/);
+assert.match(serviceWorkerSource, /url\.pathname\.endsWith\("\.css"\)[\s\S]*networkFirst\(request, null, event\)/);
 assert.match(netlifySource, /from = "\/"\s+to = "\/home\.html"\s+status = 200\s+force = true/);
 assert.match(netlifySource, /from = "\/play\/"\s+to = "\/play\/index\.html"\s+status = 200\s+force = true/);
 assert.match(manifestSource, /"start_url": "\/play\/"/);

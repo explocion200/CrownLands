@@ -214,6 +214,7 @@ assert.equal(
 
 const emulatorTestPath = path.join(root, "functions", "test", "emulator-bulk-army-orders.js");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "crownlands-release-gate.yml"), "utf8");
+const validationRunner = fs.readFileSync(path.join(root, "tools", "run-validation-tier.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "functions", "package.json"), "utf8"));
 const emulatorRunner = fs.readFileSync(path.join(root, "functions", "test", "run-emulator-gates.js"), "utf8");
 assert.equal(fs.existsSync(emulatorTestPath), true, "Bulk-order emulator coverage is missing.");
@@ -233,7 +234,11 @@ assert.match(packageJson.scripts?.["test:emulators"] || "", /run-emulator-gates\
   "The release gate must execute the discovered emulator coverage.");
 assert.match(packageJson.scripts?.["gate:static"] || "", /test:route-parity/,
   "The release gate must execute exhaustive server/client route parity coverage.");
-assert.match(workflow, /pnpm run gate:static/,
-  "GitHub Actions must execute the shared static release gate.");
+assert.match(workflow, /--phase static --skip-install --no-cache[\s\S]*run-validation-tier\.js/,
+  "GitHub Actions must execute the shared validation runner for static checks.");
+assert.match(workflow, /VALIDATION_TIER.*Full.*--force-full/,
+  "Full CI runs must pass the explicit full-regression override to the runner.");
+assert.match(validationRunner, /classification\.tier === "Full"[\s\S]*runPnpm\("gate:static"\)/,
+  "Full validation must retain the static gate containing exhaustive route parity.");
 
 console.log("Validated authoritative route previews and launches, atomic paid bulk orders, bounded idempotency, launch throttling, and army backlog health guards.");
