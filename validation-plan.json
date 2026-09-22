@@ -58,7 +58,8 @@
         "tools/validate-map-image-loading.js",
         "tools/validate-player-flags.js",
         "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js"
+        "tools/validate-rewarded-ads.js",
+        "tools/validate-audio-delivery.js"
       ],
       "tests": [
         "tools/validate-stability-regressions.js",
@@ -68,9 +69,10 @@
         "tools/validate-player-flags.js",
         "tools/validate-public-site-content.js",
         "tools/validate-rewarded-ads.js",
-        "tools/validate-audio-contract.js"
+        "tools/validate-audio-contract.js",
+        "tools/validate-audio-delivery.js"
       ],
-      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing."
+      "reason": "Standalone installed windows allow DOM fullscreen exit; relative icons resolve on both canonical and nested itch URLs. Asset responses bypass slow cache writes while preserving cloned responses; failed cache reads fall back to network. Cover offline navigation, manifest scope, release assets, map images, flags, rewards, ads and audio fetch routing. The audio fetch fixture models FetchEvent.waitUntil and waits for background caching before testing cache diagnostics; the separate blocked-cache regression verifies that responses themselves remain immediate."
     },
     {
       "paths": [

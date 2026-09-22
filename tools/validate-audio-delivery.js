@@ -103,13 +103,19 @@ async function dispatchFetch(request) {
   const fetchHandler = listeners.get("fetch");
   assert.equal(typeof fetchHandler, "function", "The service worker must register a fetch handler.");
   let responsePromise = null;
+  const backgroundTasks = [];
   fetchHandler({
     request,
+    waitUntil(value) {
+      backgroundTasks.push(Promise.resolve(value));
+    },
     respondWith(value) {
       responsePromise = Promise.resolve(value);
     },
   });
-  return responsePromise;
+  const response = await responsePromise;
+  await Promise.all(backgroundTasks);
+  return response;
 }
 
 async function run() {
