@@ -150,7 +150,7 @@ assert.match(gameSource, /function renderClanHeraldry[\s\S]*?ClanHeraldryRendere
 assert.match(gameSource, /function renderClanShieldChoiceIcon[\s\S]*?CLAN_HERALDRY_ASSETS\.symbolHref[\s\S]*?<use href=/);
 assert.match(gameSource, /function renderClanShieldEditor[\s\S]*?Clan Heraldry[\s\S]*?Save Clan Heraldry/);
 assert.match(gameSource, /createV2DraftFromV1[\s\S]*?clanShieldMigrationNotice/);
-assert.match(gameSource, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{ shield \}\)[\s\S]*?heraldryRevision[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?renderClanHudAccess\(\);[\s\S]*?renderProfileClanAffiliation\(\);/, "A confirmed shield save must refresh every persistent local identity surface immediately.");
+assert.match(gameSource, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{ shield \}\)[\s\S]*?heraldryRevision[\s\S]*?clanSnapshot\s*=\s*preserveNewerClanHeraldry\(\{[\s\S]*?renderClanHudAccess\(\);[\s\S]*?renderProfileClanAffiliation\(\);/, "A confirmed shield save must refresh every persistent local identity surface immediately.");
 assert.match(gameSource, /function randomizeClanShieldDraft[\s\S]*?primary[\s\S]*?secondary[\s\S]*?borderColor[\s\S]*?chargeColor[\s\S]*?secondaryChargeColor[\s\S]*?normalizeClanHeraldryDraft/, "Inspire Me must randomize and normalize all saved color channels.");
 assert.match(gameSource, /action === "randomize-shield"[\s\S]*?randomizeClanShieldDraft\(\);[\s\S]*?rerenderClanShieldEditor\(\);/, "Inspire Me must refresh the editor preview immediately.");
 assert.match(gameSource, /action === "cancel-shield"[\s\S]*?clanShieldDraft\s*=\s*null[\s\S]*?renderClanView\(\);/, "Cancel must discard the draft without replacing the saved shield.");

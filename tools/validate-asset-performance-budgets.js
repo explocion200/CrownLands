@@ -83,7 +83,8 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // This audit adds 1,385 bytes for recovery and controls. Bound the combined
 // 51,292-byte increase at 52 KiB; retain every offline dependency and all runtime
 // image, request, heap and FPS limits. This is source growth, not a speed gain.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52) * 1024;
+// After the Rally merge, badges/heraldry add 3,574 bytes to the complete shell.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4) * 1024;
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 116 * 1024,
@@ -157,7 +158,8 @@ const entrypointBudgets = {
   // Captured-pointer Tower taps and zoom-safe actions add under 3 KiB.
   // Of the measured shell growth above, game.js accounts for 41,972 bytes
   // (40,705 already on main; 1,267 in this audit), bounded at 41 KiB.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41) * 1024,
+  // Pending-application badges and saved-heraldry revision guards add 3,496 bytes.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
