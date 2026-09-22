@@ -19,9 +19,14 @@ assert.match(html, /at least three eligible clan members in a rally, including t
 assert.equal((html.match(/data-test-clan-flag/g) || []).length, 2, "Clan flag remains beside title and controlling clan.");
 assert.equal((html.match(/data-tower-player-flag=/g) || []).length, 3);
 assert(!/data-tower-action="(?:reinforce|withdraw|attack-from|rally-from|rally-attack)"/.test(html), "Details must not contain troop commands.");
-assert.deepEqual(Array.from(towerUi.mapActions(owner), a=>a.action), ["info","reinforce","withdraw","attack-from","rally-from"]);
+assert.deepEqual(Array.from(towerUi.mapActions(owner), a=>a.action), ["info","reinforce","send"]);
 assert.deepEqual(Array.from(towerUi.mapActions({...owner,worldActive:false}), a=>a.action), ["info"]);
-assert.deepEqual(Array.from(towerUi.mapActions({...owner,permissions:{inspect:true}}), a=>a.action), ["info"]);
+assert.deepEqual(Array.from(towerUi.mapActions({...owner,permissions:{inspect:true}}), a=>[a.action,Boolean(a.disabled)]), [["info",false],["reinforce",true],["send",true]]);
+const emptyActions=towerUi.mapActions({...owner,ownStationedTroops:0,permissions:{inspect:true,reinforce:true}});
+assert.equal(emptyActions.find(a=>a.action==='reinforce').disabled,false);
+assert.match(emptyActions.find(a=>a.action==='send').reason,/your own troops/);
+const probationActions=towerUi.mapActions({...owner,eligibility:{eligible:false},permissions:{inspect:true}});
+assert(probationActions.filter(a=>a.disabled).every(a=>a.reason.includes('24 hours')));
 const outsider = {...owner, ownerMember:false, exactDefenders:null, garrison:[{ownerName:"PRIVATE GARRISON",troops:100}], permissions:{scout:true,createRallyAttack:true}};
 assert(!towerUi.render(outsider,money).includes("PRIVATE GARRISON"), "Private contributions never render for outsiders.");
 assert(towerUi.render(outsider,money).includes("Hidden"));

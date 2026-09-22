@@ -34,7 +34,7 @@ function harness() {
   };
   const inputs = {
     "[data-tower-order-target]": { value: "city-1", addEventListener() {} },
-    "[data-tower-order-troops]": { value: "25" },
+    "[data-tower-order-troops]": { value: "25", max: "100", addEventListener() {} },
     "[data-tower-order-form]": { addEventListener() {} },
     "button[type='submit']": { setAttribute() {} },
   };
@@ -55,28 +55,33 @@ function harness() {
   const context = vm.createContext({
     console: { warn: (...args) => warnings.push(args) }, modal, modalBody, modalTitle: {},
     onlineSessionGeneration: 0, SHOP_ITEMS: [], COMMON_GEAR_BOX_ITEM: { id: "common_gear_box" }, state: { cities: [], clanId: "" }, clanTreasuryStatus: null,
-    window: { CrownlandsClanTowerDetailsUi: { mount() {} } },
+    window: { CrownlandsClanTowerDetailsUi: { mount() {} }, CrownlandsClanTowerBuildings: { normalizeLevels: levels => levels || {} } },
     HOLDING_TOWER_UI: { renderPanel(tower, options) { renders.push({ id: tower.id, ...options }); return `Tower ${tower.id} revision ${tower.revision || 0}`; } },
     getHoldingTowerVisual: id => ({ id, name: id, kind: "holdingTower", artSrc: `${id}.webp` }),
     getHoldingTowerQaScenario: () => "", getOnlineApi: () => api,
     escapeHtml: String, formatNumber: String, renderClanShield: () => "", loadClanTreasuryStatus: async () => null,
+    renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null,
     showToast() {}, rejectGameAction: message => errors.push(message),
     playerCities: () => [{ id: "city-1", name: "Home", troops: 100 }],
     isHoldingTowerTarget: target => target.kind === "holdingTower", isRewardCampTarget: () => false,
     getCityRegionId: () => "region", createOnlineArmyId: () => "army-1", getTargetRetaliation: () => null,
     applyServerArmyResult() {}, adoptServerArmyMovement() {}, upsertClanRallySnapshot() {}, renderSelectionChangeNow() {},
+    renderCities() {}, cityRenderSignature: "",
   });
-  vm.runInContext(`${declarations}\n${functions}`, context);
+  vm.runInContext(`${declarations}\n${functions}\nthis.cacheTower = tower => holdingTowerSnapshots.set(tower.id, tower); this.cachedTower = id => holdingTowerSnapshots.get(id);`, context);
   const tower = id => ({ id, name: id, kind: "holdingTower", ownerKind: "neutral", ownStationedTroops: 100 });
   const finish = (request, revision = 1, patch = {}) => request.resolve({ worldActive: true, towers: [{ ...tower(request.towerId), revision, ...patch }] });
   const open = id => context.openHoldingTower(id);
   const replace = () => { modal.close(); modalBody.innerHTML = "Unrelated dialog"; modal.showModal(); };
   const order = () => {
-    context.showHoldingTowerOrderComposer(tower("tower-a"), "withdraw");
+    const own = { ...tower("tower-a"), ownerKind: "clan", clanId: "clan-a", ownershipRevision: 1,
+      ownerMember: true, permissions: {withdrawOwn: true, reinforce: true, attackFrom: true, rallyFrom: true} };
+    context.cacheTower(own);
+    context.showHoldingTowerOrderComposer(own, "withdraw");
     modal.showModal();
-    return () => context.submitHoldingTowerOrder(tower("tower-a"), "withdraw", [{ id: "city-1", name: "Home" }]);
+    return () => context.submitHoldingTowerOrder(own, "withdraw");
   };
-  return { context, api, modal, modalBody, reads, subscriptions, warnings, errors, listeners, renders, tower, finish, open, replace, order };
+  return { context, api, modal, modalBody, inputs, reads, subscriptions, warnings, errors, listeners, renders, tower, finish, open, replace, order };
 }
 
 async function main() {
@@ -227,6 +232,72 @@ async function main() {
     if (!fails) { h.finish(h.reads[0]); await flush(); }
     assert.equal(h.modalBody.innerHTML, "Unrelated dialog", "An old order response replaced another dialog.");
     assert.equal(h.modal.open, true, "An old accepted order closed another dialog.");
+  }
+  for (const patch of [
+    { ownerKind: "neutral", clanId: "", ownerMember: false, permissions: {} },
+    { clanId: "clan-b", ownerMember: false },
+    { ownershipRevision: 3 },
+    { ownStationedTroops: 10 },
+    { permissions: {} },
+  ]) {
+    const h = harness(), send = h.order(); let sent = 0;
+    h.api.sendHoldingTowerArmyOrder = async () => { sent++; return {ok:true}; };
+    vm.runInContext(`holdingTowerSnapshots.set('tower-a', {...holdingTowerSnapshots.get('tower-a'), ...${JSON.stringify(patch)}})`, h.context);
+    await send();
+    assert.equal(sent, 0, `A stale composer dispatched an order after ${JSON.stringify(patch)}.`);
+    assert.equal(h.inputs["[data-tower-order-troops]"].value, "25", "A denied order lost the player's draft.");
+  }
+  {
+    const h = harness(), send = h.order(), action = deferred();
+    h.api.sendHoldingTowerArmyOrder = () => action.promise;
+    const pending = send();
+    h.context.onlineSessionGeneration++;
+    h.replace(); action.resolve({ok:true}); await pending;
+    assert.equal(h.reads.length, 0, "A previous account's order triggered reads in the new session.");
+    assert.equal(h.modalBody.innerHTML, "Unrelated dialog");
+  }
+  {
+    const h = harness(); h.order();
+    const older = h.context.refreshHoldingTower('tower-a');
+    h.context.applyHoldingTowerMapSnapshot({id:'tower-a',name:'Tower'}, {
+      ownerKind: 'clan', clanId: 'clan-b', ownershipRevision: 2, clanName: 'New owners',
+    });
+    h.finish(h.reads[0], 1, {ownerKind:'clan',clanId:'clan-a',ownerMember:true,permissions:{withdrawOwn:true}});
+    assert.equal(await older,null,'A response from before capture was accepted.');
+    const current=h.context.cachedTower('tower-a');
+    assert.equal(current.clanId,'clan-b');
+    assert.equal(current.permissions,undefined,'Capture retained private permissions.');
+    assert.equal(current.ownStationedTroops,undefined,'Capture retained the previous garrison count.');
+    assert.equal(h.inputs["button[type='submit']"].disabled,true);
+    h.context.applyHoldingTowerMapSnapshot({id:'tower-a',name:'Tower'},null);
+    assert.equal(h.context.cachedTower('tower-a').clanId,undefined,'Neutralization retained the clan identity.');
+  }
+  {
+    const h = harness(), send = h.order();
+    h.api.sendHoldingTowerArmyOrder = async () => {throw new Error('Try again');};
+    const draft=h.modalBody.innerHTML;
+    await send();
+    assert.equal(h.modalBody.innerHTML,draft,'A failed order rebuilt and erased its draft.');
+    assert.equal(h.inputs["button[type='submit']"].disabled,false,'A failed order cannot be retried.');
+  }
+  for (const amount of ['0','-5','1.5','101','not a number']) {
+    const h=harness(),send=h.order(); let sent=0;
+    h.api.sendHoldingTowerArmyOrder=async()=>{sent++;return {ok:true};};
+    h.inputs['[data-tower-order-troops]'].value=amount;
+    await send();assert.equal(sent,0,`Invalid troop count ${amount} was sent.`);
+  }
+  {
+    const h=harness();h.order();
+    vm.runInContext("selectedTowerMapId='tower-a'",h.context);
+    h.context.syncHoldingTowerSelectionSubscription();
+    assert.equal(h.subscriptions[0].callbacks.garrisonClanId,'clan-a');
+    h.subscriptions[0].callbacks.onGarrison();
+    h.finish(h.reads[0],2,{ownerKind:'clan',clanId:'clan-a',ownershipRevision:1,ownerMember:true,ownStationedTroops:10,permissions:{withdrawOwn:true}});
+    await flush();
+    assert.equal(h.inputs['[data-tower-order-troops]'].max,'10');
+    assert.equal(h.inputs["button[type='submit']"].disabled,true,'A garrison update left an oversized draft sendable.');
+    vm.runInContext("selectedTowerMapId=''",h.context);h.context.syncHoldingTowerSelectionSubscription();
+    assert.equal(h.subscriptions[0].active,false,'Deselecting a tower retained its private subscription.');
   }
   console.log("Validated Tower dialog cancellation, request ordering, realtime cleanup/reconnect, spend completion, and safe order submission/refresh.");
 }

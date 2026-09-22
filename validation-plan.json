@@ -1,52 +1,43 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "fdb4c82fbb54adf610fa09dd62906539a7de47b9",
+  "baseCommit": "f0ad4c341d3b558de6b6ba44229886c87510986d",
   "coverage": [
     {
       "paths": [
-        "manifest.webmanifest",
-        "tools/validate-pwa-entry-routing.js"
-      ],
-      "tests": [
-        "tools/validate-pwa-entry-routing.js",
-        "tools/test-game-display.js"
-      ],
-      "reason": "Fullscreen manifest launch and same-origin scope; canonical browser/fullscreen entries, legacy redirects, installed standalone/iOS homepage recovery and offline entry remain correct. Fullscreen alone does not turn the public homepage into the game."
-    },
-    {
-      "paths": [
         "game.js",
-        "tools/test-game-display.js"
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
       "tests": [
-        "tools/test-game-display.js",
-        "tools/validate-game-display-browser.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clans.js",
+        "tools/validate-map-interactions.js",
         "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-login-resilience.js",
-        "tools/validate-login-session-behavior.js"
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Fullscreen requests retain gesture activation before asynchronous entry, landscape locks coalesce and fail safely, desktop/windowed and installed modes work, exit/retry stays usable, and existing login and fullscreen dialog lifecycles remain intact. No backend behavior changes."
+      "reason": "Tower Send retains existing movement/rally payloads and personal garrison authority. Exercise fresh target and troop checks, permission/ownership changes, delayed responses, duplicate clicks, failed sends, garrison listener cleanup, clan identity refresh, map selection and shared modal lifecycle. The existing emulator lifecycle checks downstream callable reinforcement/withdrawal and attributed garrison behavior; backend APIs and rules are unchanged."
     },
     {
       "paths": [
-        "index.html",
-        "mobile-viewport.css",
-        "tools/validate-game-display-browser.js"
+        "clan-tower-details-ui.js",
+        "holding-tower-ui.css",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-holding-details-ui.js"
       ],
       "tests": [
-        "tools/validate-game-display-browser.js",
-        "tools/validate-mobile-ui-viewport.js",
-        "tools/validate-pwa-entry-routing.js"
+        "tools/validate-holding-towers.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-heraldry-v2.js"
       ],
-      "reason": "Portrait fallback action stays reachable above login; desktop and 844x390 landscape UI, real DOM fullscreen/exit, hidden native-fullscreen controls, canonical install metadata and notch-aware viewport boundaries are checked."
+      "reason": "Verify the three owned-Tower actions, probation/empty-garrison explanations, Move/Attack/Rally choice and submissions, private details, and shared v1/v2 clan heraldry. Browser coverage checks persistent banners and identity changes across all four Towers, fixed-size controls and gestures, and compound/building clearance at desktop and two landscape-mobile sizes."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/fullscreen-landscape-launch.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user's confirmed fullscreen/landscape preference, old-origin reinstall requirement, platform restrictions and physical-device release QA. Documentation has no independent runtime behavior."
+      "reason": "Records the user's confirmed map-only Reinforce/Send/Info menu, personal outgoing orders and persistent ownership banner. Existing gameplay and release authorization requirements are preserved; this prose has no separate runtime behavior."
     }
   ]
 }

@@ -9,8 +9,54 @@
   background: transparent;
   cursor: pointer;
   pointer-events: auto;
-  contain: layout style paint;
+  contain: layout style;
 }
+.holding-tower-clan-banner {
+  position: absolute;
+  left: 50%;
+  /* The approved sprite has a transparent margin above its flagpole. */
+  bottom: 78%;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: 180px;
+  padding-bottom: 5px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.6));
+}
+.holding-tower-clan-banner * { pointer-events: none; }
+.holding-tower-clan-banner .city-ruler-name {
+  max-width: 180px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.holding-tower-clan-banner .clan-heraldry-v2,
+.holding-tower-clan-banner .clan-shield { width: 40px; }
+
+.holding-tower-modal .holding-tower-order-composer {
+  color: var(--manuscript-ink);
+  border-color: var(--manuscript-rule);
+  background: var(--manuscript-paper-surface);
+}
+.holding-tower-modal .holding-tower-order-composer :is(h3, label, header span, header p, .holding-tower-order-status) { color: var(--manuscript-ink); }
+.holding-tower-modal .holding-tower-order-composer :is(input, select) {
+  color: var(--manuscript-ink);
+  border-color: var(--manuscript-rule);
+  background: var(--cl-ivory);
+}
+.holding-tower-order-status { margin: 0; font-size: .75rem; }
+.holding-tower-order-modes { display: flex; flex-wrap: wrap; gap: .4rem; }
+.holding-tower-order-modes button { flex: 1; min-height: 44px; }
+.holding-tower-order-modes button[aria-pressed="true"] { outline: 2px solid #8b642f; outline-offset: 2px; }
+.holding-tower-order-fields { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: .6rem; }
+.holding-tower-order-fields :is(input, select) { min-width: 0; width: 100%; }
+.holding-tower-order-actions button { min-height: 44px; }
+@media (max-height: 560px) and (min-width: 600px) {
+  .holding-tower-modal .holding-tower-order-composer { gap: .4rem; padding: .65rem; }
+}
+.clan-tower-action-wheel .gold-camp-wheel-action[aria-disabled="true"] { opacity: .65; }
 .holding-tower-node::after {
   content: "";
   position: absolute;
