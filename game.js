@@ -38738,26 +38738,88 @@ function showHelpModal() {
   `;
   modal.showModal();
 }
-async function toggleFullscreen() {
-  const fullscreenTarget = document.documentElement;
+let gameDisplayEntryRequested = false;
+let landscapeLockRequest = null;
+
+function isMobileGameDisplay() {
+  return Boolean(window.navigator?.userAgentData?.mobile || window.matchMedia?.("(pointer: coarse)")?.matches);
+}
+
+function getGameFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+async function requestLandscapeOrientation() {
+  if (!isMobileGameDisplay() || document.visibilityState === "hidden" || !window.screen?.orientation?.lock) return false;
+  if (landscapeLockRequest) return landscapeLockRequest;
+  // Fullscreen changes and entry can arrive together; concurrent locks abort each other.
+  landscapeLockRequest = (async () => {
+    try {
+      await window.screen.orientation.lock("landscape");
+      return true;
+    } catch (_) {
+      return false;
+    }
+  })();
   try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else if (fullscreenTarget.requestFullscreen) {
-      await fullscreenTarget.requestFullscreen({ navigationUI: "hide" });
-    } else {
-      showToast("Fullscreen is not available in this browser.");
+    return await landscapeLockRequest;
+  } finally {
+    landscapeLockRequest = null;
+  }
+}
+
+async function enterGameFullscreen({ showFailure = false } = {}) {
+  try {
+    if (!getGameFullscreenElement() && !window.matchMedia?.("(display-mode: fullscreen)")?.matches) {
+      const target = document.documentElement;
+      if (target.requestFullscreen) await target.requestFullscreen({ navigationUI: "hide" });
+      else if (target.webkitRequestFullscreen) await target.webkitRequestFullscreen();
+      else if (showFailure) showToast("Install Crownlands from playcrownlands.com/play/ for app-style play.");
     }
   } catch (_) {
-    showToast("Fullscreen is not available in this browser.");
+    if (showFailure) showToast("This browser could not enter fullscreen. Try the installed app.");
+  }
+  const landscape = await requestLandscapeOrientation();
+  const help = document.getElementById("landscapeDisplayHelp");
+  if (help && isMobileGameDisplay()) {
+    help.textContent = landscape
+      ? "Landscape requested. Turn your device sideways if needed."
+      : "Your browser cannot rotate automatically. Turn off rotation lock and turn your device sideways.";
+  }
+  updateFullscreenButton();
+}
+
+function prepareGameDisplayForEntry() {
+  if (gameDisplayEntryRequested || (!isMobileGameDisplay() && !isInstalledAppDisplayMode())) return;
+  gameDisplayEntryRequested = true;
+  // Call synchronously from the entry gesture, before login/network awaits consume activation.
+  void enterGameFullscreen();
+}
+
+function startGameFromGesture(forceFresh = false) {
+  prepareGameDisplayForEntry();
+  return startFromInput(forceFresh);
+}
+
+async function toggleFullscreen() {
+  gameDisplayEntryRequested = true;
+  if (!getGameFullscreenElement()) return enterGameFullscreen({ showFailure: true });
+  try {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) await exit.call(document);
+  } catch (_) {
+    showToast("Could not leave fullscreen. Use your browser's exit control.");
   }
   updateFullscreenButton();
 }
 
 function updateFullscreenButton() {
   if (!fullscreenButtons.length) return;
-  const isActive = Boolean(document.fullscreenElement);
+  const isActive = Boolean(getGameFullscreenElement());
+  const nativeFullscreen = !isActive && window.matchMedia?.("(display-mode: fullscreen)")?.matches;
   fullscreenButtons.forEach(button => {
+    // Manifest fullscreen belongs to the installed-app window, not the DOM exit API.
+    button.hidden = Boolean(nativeFullscreen);
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
     button.innerHTML = isActive
@@ -39914,6 +39976,7 @@ function randomChoice(items) {
 function isInstalledAppDisplayMode() {
   return Boolean(
     window.matchMedia?.("(display-mode: standalone)")?.matches
+    || window.matchMedia?.("(display-mode: fullscreen)")?.matches
     || window.navigator?.standalone === true
   );
 }
@@ -39994,11 +40057,11 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-if (startBtn) startBtn.addEventListener("click", () => startFromInput(false));
-if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
+if (startBtn) startBtn.addEventListener("click", () => startGameFromGesture(false));
+if (freshBtn) freshBtn.addEventListener("click", () => startGameFromGesture(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
-if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromInput(false));
-if (serverRealmBtn) serverRealmBtn.addEventListener("click", () => startFromInput(false));
+if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startGameFromGesture(false));
+if (serverRealmBtn) serverRealmBtn.addEventListener("click", () => startGameFromGesture(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 if (installAppBtn) installAppBtn.addEventListener("click", handleInstallAppClick);
 window.addEventListener("crownlands:online-ready", () => {
@@ -40046,10 +40109,19 @@ window.addEventListener("crownlands:online-error", event => {
 window.addEventListener("crownlands:session-replaced", handleOnlineSessionReplaced);
 if (playerNameInput) {
   playerNameInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") startFromInput(false);
+    if (event.key === "Enter") startGameFromGesture(false);
   });
 }
 fullscreenButtons.forEach(button => button.addEventListener("click", toggleFullscreen));
+document.getElementById("landscapeDisplayBtn")?.addEventListener("click", () => {
+  gameDisplayEntryRequested = true;
+  void enterGameFullscreen({ showFailure: true });
+});
+document.addEventListener("pointerup", event => {
+  if (!event.isTrusted || !state || setupScreen?.classList.contains("visible")
+    || event.target?.closest?.("button, a, input, textarea, select, [contenteditable]")) return;
+  prepareGameDisplayForEntry();
+});
 if (shopBtn) shopBtn.addEventListener("click", showShopModal);
 if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitcherModal);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
@@ -40254,7 +40326,12 @@ mapFrame.addEventListener("gesturestart", preventNativeMapTouch, { passive: fals
 mapFrame.addEventListener("gesturechange", preventNativeMapTouch, { passive: false });
 mapFrame.addEventListener("gestureend", preventNativeMapTouch, { passive: false });
 window.addEventListener("resize", updateCameraTransform);
-document.addEventListener("fullscreenchange", updateFullscreenButton);
+function handleGameFullscreenChange() {
+  updateFullscreenButton();
+  if (getGameFullscreenElement()) void requestLandscapeOrientation();
+}
+document.addEventListener("fullscreenchange", handleGameFullscreenChange);
+document.addEventListener("webkitfullscreenchange", handleGameFullscreenChange);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") markGameBackgrounded();
   else {
@@ -40535,6 +40612,7 @@ if (holdingTowerQaScenario) {
   window.setTimeout(() => void openHoldingTower("core-v2-holding-tower-1"), 80);
 }
 registerPwaInstallPrompt();
+if (isInstalledAppDisplayMode()) void requestLandscapeOrientation();
 registerCrownlandsServiceWorker();
 if (new URLSearchParams(window.location.search).has("perf")) togglePerformancePanel(true);
 requestAnimationFrame(frame);

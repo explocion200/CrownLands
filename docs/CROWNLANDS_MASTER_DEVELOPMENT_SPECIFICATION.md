@@ -1271,6 +1271,7 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 - A landscape-orientation prompt may block or redirect unsupported portrait play.
 - PC/browser play is supported.
 - PWA installation and launcher support are live where the browser/platform supports them.
+- Installed game launches request fullscreen landscape. Mobile entry requests fullscreen and a landscape lock from the entry gesture where supported; declined or unavailable browser APIs must not block login, repeatedly reopen fullscreen after exit, or rotate the page with CSS. The portrait fallback offers a fullscreen/landscape action and manual rotation guidance. Existing installations from a different origin may require reinstalling from `https://playcrownlands.com/play/` to remove browser-owned out-of-scope chrome. Confirmed September 21, 2026; this enhancement requires deployment and physical-device verification before it is described as live.
 - Public informational pages may remain portrait-responsive; the landscape-only rule applies to the game experience.
 
 **Status:** `LIVE — ALL PUBLISHED CHANNELS` for the landscape/PC/PWA foundation.

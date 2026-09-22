@@ -1,68 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "487089e4c656f8ac3390433240234772522f637c",
+  "baseCommit": "fdb4c82fbb54adf610fa09dd62906539a7de47b9",
   "coverage": [
     {
       "paths": [
-        "firebaseClient.js",
-        "firestore.rules",
-        "functions/test/emulator-player-flag-rules.js",
-        "functions/test/emulator-profile-save-rules.js"
+        "manifest.webmanifest",
+        "tools/validate-pwa-entry-routing.js"
       ],
       "tests": [
-        "tools/test-player-identity-safety.js",
-        "tools/test-player-flag-persistence.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-login-session-behavior.js",
-        "functions/test/emulator-player-flag-rules.js",
-        "functions/test/emulator-profile-save-rules.js"
+        "tools/validate-pwa-entry-routing.js",
+        "tools/test-game-display.js"
       ],
-      "reason": "Autosave identity exclusion, authoritative profile reads, account/session guards, revision-checked explicit edits, old-client rejection, snapshot consistency and canonical flag propagation."
-    },
-    {
-      "paths": [
-        "functions/index.js",
-        "functions/test/emulator-reset-gate.js"
-      ],
-      "tests": [
-        "tools/validate-king-power.js",
-        "tools/validate-city-relinquishment-limit.js",
-        "tools/validate-random-starter-flags.js",
-        "tools/validate-main-city-recovery.js",
-        "functions/test/emulator-player-flag-rules.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-main-city-recovery.js",
-        "functions/test/emulator-city-relinquishment-limit.js"
-      ],
-      "reason": "Canonical identity-only repair, transactional protection of projections against concurrent edits, shared ownership-patch behavior, stats rebuild preservation and reset/claim identity revision persistence."
+      "reason": "Fullscreen manifest launch and same-origin scope; canonical browser/fullscreen entries, legacy redirects, installed standalone/iOS homepage recovery and offline entry remain correct. Fullscreen alone does not turn the public homepage into the game."
     },
     {
       "paths": [
         "game.js",
-        "tools/test-player-identity-safety.js",
-        "tools/test-player-flag-persistence.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-player-identity-browser.js"
+        "tools/test-game-display.js"
       ],
       "tests": [
-        "tools/test-player-identity-safety.js",
-        "tools/test-player-flag-persistence.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-player-identity-browser.js",
+        "tools/test-game-display.js",
+        "tools/validate-game-display-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
         "tools/validate-login-resilience.js",
-        "tools/validate-login-session-behavior.js",
-        "tools/validate-login-stability-matrix.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/validate-main-city-recovery.js"
+        "tools/validate-login-session-behavior.js"
       ],
-      "reason": "Delayed and failed login hydration, fail-closed startup saves, stale snapshots and async callbacks, realm/account/session invalidation, intentional rename/flag persistence and existing login/recovery flows. Browser checks run real game code and reachable edit controls at 1440x900 and 844x390."
+      "reason": "Fullscreen requests retain gesture activation before asynchronous entry, landscape locks coalesce and fail safely, desktop/windowed and installed modes work, exit/retry stays usable, and existing login and fullscreen dialog lifecycles remain intact. No backend behavior changes."
     },
     {
       "paths": [
-        "docs/player-identity-save-protection.md"
+        "index.html",
+        "mobile-viewport.css",
+        "tools/validate-game-display-browser.js"
+      ],
+      "tests": [
+        "tools/validate-game-display-browser.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-pwa-entry-routing.js"
+      ],
+      "reason": "Portrait fallback action stays reachable above login; desktop and 844x390 landscape UI, real DOM fullscreen/exit, hidden native-fullscreen controls, canonical install metadata and notch-aware viewport boundaries are checked."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/fullscreen-landscape-launch.md"
       ],
       "tests": [],
-      "reason": "Documents the diagnosed incident, implementation protections and coordinated deployment/recovery boundaries; no new game-design decision."
+      "reason": "Records the user's confirmed fullscreen/landscape preference, old-origin reinstall requirement, platform restrictions and physical-device release QA. Documentation has no independent runtime behavior."
     }
   ]
 }
