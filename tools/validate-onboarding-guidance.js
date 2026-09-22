@@ -80,17 +80,17 @@ assert.equal(session.getOnboardingPrefs().enabled, false, "Adding identity tips 
 assert.deepEqual(Array.from(session.getOnboardingPrefs().dismissed), ["upgrade"]);
 // A fresh claim may redirect into a second, already-claimed admission. Exercise
 // the actual admission prefix so the tips cannot be lost before that return.
-const admissionStart = game.indexOf("      if (claim.currentUser) applyOnlineProfileSnapshot(claim.currentUser, state.playerName);");
+const admissionStart = game.indexOf("      if (!claim.currentUser) throw new Error(");
 const admissionEnd = game.indexOf("      const claimedCity =", admissionStart);
 assert(admissionStart > 0 && admissionEnd > admissionStart);
 const admission = game.slice(admissionStart, admissionEnd);
 const admissionSession = createSession();
 Object.assign(admissionSession, {
   uid: "redirected-new-ruler", realm: "current-realm", state: { online: {}, playerName: "Test" },
-  claim: { cityId: "new-home", islandId: "spawn-map", alreadyClaimed: false },
+  claim: { cityId: "new-home", islandId: "spawn-map", alreadyClaimed: false, currentUser: { uid: "redirected-new-ruler" } },
   islandId: "requested-map", targetRegionId: "requested-map", profile: null,
   allowWelcomeBack: false, announceLocation: false, onlineStatusDetail: {},
-  applyOnlineProfileSnapshot() {}, getRegionIdFromOnlineIslandId: id => id,
+  applyOnlineProfileSnapshot() {}, markOnlineProfileReady() {}, getRegionIdFromOnlineIslandId: id => id,
   getRegionLabel: id => id, connectOnlineIsland: id => id,
 });
 assert.equal(vm.runInContext(`(function () { ${admission} })()`, admissionSession), "spawn-map");
@@ -99,6 +99,11 @@ admissionSession.saveOnboardingPrefs({ enabled: false, dismissed: ["upgrade"] })
 admissionSession.claim.alreadyClaimed = true;
 vm.runInContext(`(function () { ${admission} })()`, admissionSession);
 assert.equal(admissionSession.getOnboardingPrefs().enabled, false, "Admission replay overrode the ruler's dismissal.");
+admissionSession.uid = "unverified-new-ruler";
+admissionSession.claim.currentUser = null;
+admissionSession.claim.alreadyClaimed = false;
+assert.throws(() => vm.runInContext(`(function () { ${admission} })()`, admissionSession), /saved profile could not be confirmed/);
+assert.equal(admissionSession.getOnboardingPrefs(), null, "An unverified profile must not enable onboarding.");
 assert.match(game, /orderKind === "attack" && !campTarget \? renderOnboardingTip/);
 assert.match(game, /renderOnboardingTip\("scout", city, "report"\)/);
 assert.match(game, /data-onboarding-scope/);

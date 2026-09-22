@@ -127,6 +127,20 @@
     },
     {
       "paths": [
+        "tools/validate-onboarding-guidance.js",
+        "tools/validate-onboarding-browser.js"
+      ],
+      "tests": [
+        "tools/validate-onboarding-guidance.js",
+        "tools/validate-onboarding-browser.js",
+        "tools/validate-login-realm-sequence.js",
+        "tools/test-player-identity-safety.js",
+        "tools/validate-player-identity-browser.js"
+      ],
+      "reason": "The earlier identity-protection fix requires a verified saved profile before first-claim guidance and a dedicated revision-checked identity write before projections. Model those actual APIs in source/browser fixtures, preserve fresh-claim redirect/replay and draft/retry checks, and assert that a missing profile cannot enable onboarding or a failed identity write reach projections. No runtime identity policy changes."
+    },
+    {
+      "paths": [
         "tools/validate-clan-rallies.js"
       ],
       "tests": [
