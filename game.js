@@ -4416,7 +4416,7 @@ function showHoldingTowerOrderComposer(tower, mode, selectedCandidate = null) {
   modalTitle.textContent = outgoing ? "Send from Tower" : label;
   modalBody.innerHTML = selectedCandidate ? renderHoldingTowerMapOrder(tower, mode, selectedCandidate, maxTroops) : `
     <form class="holding-tower-order-composer" data-tower-order-form data-tower-order-mode="${mode}">
-      <header><span>${usesTowerTroops ? `From ${escapeHtml(tower.name)}` : `To ${escapeHtml(tower.name)}`}</span><h3>${label}</h3><p>${mode === "rally-attack" ? "At least 3 eligible clan members, including the leader, must each contribute troops and be Ready before launch." : rally ? "Choose an enemy objective and gather your clan for a rally." : outgoing ? "Command only your own stationed troops. Move returns them to one of your cities." : "Send troops from one of your cities to defend your clan's tower."}</p></header>
+      <header><span>${usesTowerTroops ? `From ${escapeHtml(tower.name)}` : `To ${escapeHtml(tower.name)}`}</span><h3>${label}</h3><p>${mode === "rally-attack" ? "At least 3 eligible clan members, including the leader, must each contribute troops and be Ready before launch. Each clan may own one Tower. If your clan already owns one, victories cause damage without capturing." : rally ? "Choose an enemy objective and gather your clan for a rally." : outgoing ? "Command only your own stationed troops. Move returns them to one of your cities." : "Send troops from one of your cities to defend your clan's tower."}</p></header>
       <div class="holding-tower-order-fields"><label>${sourceModes.has(mode) ? "Owned city origin" : "Destination"}
         <select data-tower-order-target>${candidates.length ? candidates.map(candidate => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name || candidate.id)}${sourceModes.has(mode) ? ` · ${formatNumber(candidate.troops || 0)} troops` : ""}</option>`).join("") : '<option value="">No eligible destination</option>'}</select>
       </label>
@@ -4627,6 +4627,7 @@ function applyHoldingTowerClanSnapshot(towerId, clanId, clan) {
   holdingTowerClanIdentities.set(towerId, { clanId, clan: identity, signature });
   cityRenderSignature = "";
   renderCities();
+  rerenderIslandSwitcherModalIfOpen();
   if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(tower);
 }
 
@@ -4671,6 +4672,7 @@ function applyHoldingTowerMapSnapshot(visual, raw) {
   updateHoldingTowerOrderAvailability();
   cityRenderSignature = "";
   renderCities();
+  rerenderIslandSwitcherModalIfOpen();
   if (selectedTowerMapId === visual.id || selectedHoldingTowerId === visual.id) {
     void refreshHoldingTower(visual.id).then(() => renderSelectionChangeNow())
       .catch(error => console.warn("Tower map refresh failed", error));
@@ -4687,6 +4689,7 @@ function ensureHoldingTowerMapSubscriptions() {
   holdingTowerMapSubscriptionsKey = key;
   holdingTowerSnapshots.clear();
   holdingTowerClanIdentities.clear();
+  rerenderIslandSwitcherModalIfOpen();
   for (const [id, token] of holdingTowerRequestTokens) holdingTowerRequestTokens.set(id, token + 1);
   syncHoldingTowerSelectionSubscription();
   updateHoldingTowerOrderAvailability();
@@ -14142,9 +14145,19 @@ function updateIslandMapTileSummariesInPlace() {
     const summaryText = getIslandTileSummaryText(regionId);
     const summary = button.querySelector(".island-map-owned");
     if (summary && summary.textContent !== summaryText) summary.textContent = summaryText;
+    const towerFrame = button.querySelector(".island-map-tower-frame");
+    if (towerFrame) {
+      const markup = renderIslandMapTowerFrame(regionId);
+      if (towerFrame._renderContent !== markup) {
+        towerFrame.innerHTML = markup;
+        towerFrame._renderContent = markup;
+      }
+    }
 
     const ariaParts = [getRegionLabel(regionId), getIslandTileAriaSummary(regionId)];
     ariaParts.push(...islandMapFeatures(regionId).ariaPhrases);
+    const towerIdentity = getIslandMapTowerIdentity(regionId);
+    if (towerIdentity) ariaParts.push(`Clan Tower controlled by ${towerIdentity.name}`);
     if (regionId === activeRegionId) ariaParts.push("current map");
     if (regionId === homeRegionId) ariaParts.push("home island");
     button.setAttribute("aria-label", ariaParts.join(", "));
@@ -14384,6 +14397,21 @@ function islandMapFeatures(regionId) {
   return HOLDING_TOWER_UI.createMapFeaturePresentation(normalizeRegionId(regionId), HOLDING_TOWER_DEFINITIONS, REGION_CATALOG_SUMMARIES_BY_ID, WORLD_CAMPS);
 }
 
+function getIslandMapTowerIdentity(regionId) {
+  const definition = HOLDING_TOWER_DEFINITIONS.find(tower => tower.regionId === normalizeRegionId(regionId));
+  return definition ? getHoldingTowerClanIdentity(holdingTowerSnapshots.get(definition.id)) : null;
+}
+
+function renderIslandMapTowerFrame(regionId) {
+  const identity = getIslandMapTowerIdentity(regionId);
+  const flag = identity?.emblem ? renderClanHeraldry(identity.emblem, {
+    size: "small", variant: "full", instance: `atlas-${regionId}`,
+    label: `${identity.name} clan flag`,
+  }) : "";
+  return `${KINGDOM_UI.atlasFeatureFrame("tower", false, "", Boolean(flag))}${flag
+    ? `<span class="island-map-clan-flag" title="${escapeHtml(identity.name)}">${flag}</span>` : ""}`;
+}
+
 
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const regionId = normalizeRegionId(region.id);
@@ -14396,6 +14424,8 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const previewSrc = getIslandPreviewArtSrc(regionId) || getIslandMapArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   ariaParts.push(...feature.ariaPhrases);
+  const towerIdentity = getIslandMapTowerIdentity(regionId);
+  if (towerIdentity) ariaParts.push(`Clan Tower controlled by ${towerIdentity.name}`);
   for (const landmark of getIllustratedMapPresentation(regionId)?.landmarks || []) {
     if (landmark.kind === "stronghold" || landmark.kind === "citadel") ariaParts.push(`contains ${landmark.name}`);
   }
@@ -14416,7 +14446,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
       ${feature.markup}
       ${hasRedTrim ? KINGDOM_UI.atlasFeatureFrame("royal", (getIllustratedMapPresentation(regionId)?.landmarks || []).some(landmark => landmark.kind === "citadel"), KINGDOM_UI.strongholdIcons[regionId] || "") : ""}
-      ${feature.hasClanTower ? KINGDOM_UI.atlasFeatureFrame("tower") : ""}
+      ${feature.hasClanTower ? `<span class="island-map-tower-frame">${renderIslandMapTowerFrame(regionId)}</span>` : ""}
       ${feature.hasCamp ? KINGDOM_UI.atlasFeatureFrame("camp") : ""}
       ${isActive ? `<span class="island-map-active-label">Current map</span>` : ""}
       ${isHome ? `<span class="island-map-home-label">Home map</span>` : ""}
@@ -37908,7 +37938,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
   const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
   const rawCombatRule = value.combatRule && typeof value.combatRule === "object" ? value.combatRule : {};
-  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid"]
+  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid"]
     .includes(rawCombatRule.id)
     ? rawCombatRule.id
     : "normal_capture";
@@ -38395,6 +38425,9 @@ function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", re
     return "The Citadel Legion returned the holding to neutral control";
   }
   if (snapshot.combatRule?.id === "protected_raid") return "Protected raid completed — no capture";
+  if (snapshot.combatRule?.id === "clan_tower_raid" && snapshot.outcome === "victory") {
+    return viewerRole === "attacker" ? "Your side won — Tower ownership unchanged" : "Opponent won — your clan keeps the Tower";
+  }
   if (snapshot.outcome === "breach") {
     return viewerRole === "attacker" ? "Your side breached the wall" : "Opponent breached the wall";
   }
@@ -38431,6 +38464,7 @@ function renderRallyParticipantResults(snapshot = null) {
 }
 
 function getBattleRuleLabel(snapshot = null) {
+  if (snapshot?.combatRule?.id === "clan_tower_raid") return "One Clan Tower per clan — attack allowed, capture disabled";
   if (snapshot?.target?.targetType === "camp") return "Camp combat — 1.00 defense per troop, no level or walls";
   if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
   if (snapshot?.combatRule?.id === "protected_breach") return "Protected breach — wall breach only";

@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const towers = require("../holding-towers.js");
 if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIREBASE_EMULATOR_HUB) {
   throw new Error("Local Auth, Firestore and Functions emulators are required.");
@@ -78,21 +78,30 @@ async function main() {
   const readAs = (actor, document) => fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/${document}`, {
     headers: { authorization: `Bearer ${actor.token}` },
   });
-  for (const scenario of ["wall-held", "defeat", "capture"]) {
+  for (const scenario of ["wall-held", "defeat", "capture", "raid", "neutral-raid", "lost-before-arrival", "stale-ownership"]) {
+    const neutral = scenario === "neutral-raid";
+    const victory = !["wall-held", "defeat"].includes(scenario);
+    const limited = ["raid", "neutral-raid"].includes(scenario);
+    const otherRef = db.doc(`holdingTowers/${towers.TOWERS[1].id}`);
+    await otherRef.set({ ...towers.createNeutralTowerState(towers.TOWERS[1].id, { nowMs: now }), ...identity,
+      ...(["raid", "neutral-raid", "lost-before-arrival", "stale-ownership"].includes(scenario)
+        ? { ownerKind: "clan", clanId: clanIds[0], clanName: "Report Clan 0" } : {}),
+      ...(scenario === "stale-ownership" ? { resetGeneration: "archived-generation" } : {}),
+    });
     const allGarrisons = await towerRef.collection("garrison").get();
     for (const doc of allGarrisons.docs) await doc.ref.delete();
     await towerRef.set({ ...towers.createNeutralTowerState(tower.id, { nowMs: now }), ...identity,
-      ownerKind: "clan", clanId: clanIds[1], clanName: "Report Clan 1", clanTag: "RC1",
-      neutralDefenders: 0, wallLevel: scenario === "wall-held" ? 20 : 1,
+      ownerKind: neutral ? "neutral" : "clan", clanId: neutral ? "" : clanIds[1], clanName: "Report Clan 1", clanTag: "RC1",
+      neutralDefenders: neutral ? 6000000 : 0, buildings: {shop:3,workshop:3,infirmary:3,training:3}, wallLevel: scenario === "wall-held" ? 20 : 1,
       wallIntegrityBps: scenario === "wall-held" ? 10000 : 0 });
-    for (const [index, actor] of defenders.entries()) {
+    for (const [index, actor] of (neutral ? [] : defenders).entries()) {
       await towerRef.collection("garrison").doc(actor.uid).set({ ...identity, towerId: tower.id,
         clanId: clanIds[1], uid: actor.uid, ownerUid: actor.uid, ownerName: actor.label,
         troops: 1000000 * (index + 1) });
       await db.doc(`players/${actor.uid}`).update({ towerGarrisonTroops: 1000000 * (index + 1),
         towerGarrisonResetGeneration: identity.resetGeneration });
     }
-    const troops = scenario === "capture" ? 100000000 : scenario === "wall-held" ? 1 : 100000;
+    const troops = victory ? 100000000 : scenario === "wall-held" ? 1 : 100000;
     await sourceRef.update({ troops, troopFloat: troops, productionUpdatedAtMs: Date.now() });
     const rallyId = `reports_${randomUUID()}`, clanId = clanIds[0];
     await call("createClanRally", attackers[0], { clanId, rallyId, sourceType: "city", targetType: "tower",
@@ -106,15 +115,32 @@ async function main() {
     for (const actor of attackers.slice(1)) await db.doc(`players/${actor.uid}`).update({ committedRallyTroops: troops,
       rallyResetGeneration: identity.resetGeneration });
     const launched = await call("launchClanRally", attackers[0], { clanId, rallyId });
+    const towerBefore = (await towerRef.get()).data();
+    if (scenario === "lost-before-arrival") await otherRef.update({ownerKind:"neutral",clanId:""});
     const battle = await resolve(attackers[0], launched.movement);
-    assert.equal(battle.result.success, scenario === "capture");
+    assert.equal(battle.result.success, victory);
+    assert.equal(battle.result.captured, victory && !limited);
+    assert.equal(battle.result.captureBlockedReason, limited ? "clan_tower_limit" : "");
+    const towerAfter = (await towerRef.get()).data();
+    assert.equal(towerAfter.clanId, victory && !limited ? clanIds[0] : towerBefore.clanId);
+    if (limited) {
+      assert.equal(towerAfter.ownerKind,towerBefore.ownerKind);
+      assert.equal(towerAfter.ownershipRevision,towerBefore.ownershipRevision);
+      assert.equal(towerAfter.wallLevel,towerBefore.wallLevel);
+      assert.deepEqual(towerAfter.buildings,towerBefore.buildings);
+      assert.equal(towerAfter.wallIntegrityBps,0);
+      assert.equal((await towerRef.collection("garrison").get()).size,0,"Non-capturing attackers must not station");
+    }
+    const involved = neutral ? attackers : actors.slice(0,6);
     const battleId = launched.movement.id, snapshotPath = `battleSnapshots/${storageId}/entries/${battleId}`;
     const snapshot = (await db.doc(snapshotPath).get()).data();
     assert(snapshot, "Tower combat did not save its detailed snapshot");
     assert.equal(snapshot.target.targetType, "tower");
-    assert.deepEqual([...snapshot.participantUids].sort(), actors.slice(0, 6).map(actor => actor.uid).sort());
+    assert.deepEqual([...snapshot.participantUids].sort(), involved.map(actor => actor.uid).sort());
     const attackingRows = snapshot.attackers, defendingRows = [snapshot.defender, ...snapshot.reinforcements];
-    assert.equal(attackingRows.length, 3); assert.equal(defendingRows.length, 3);
+    assert.equal(attackingRows.length, 3); assert.equal(defendingRows.length, neutral ? 1 : 3);
+    assert.equal(snapshot.combatRule.captureAllowed,!limited);
+    if(limited)assert.equal(snapshot.combatRule.id,"clan_tower_raid");
     const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
     assert.equal(sum(attackingRows, "effectivePower"), snapshot.totals.attackPower);
     assert.equal(sum(defendingRows, "effectivePower") + snapshot.siege.startingWallPower, snapshot.totals.defensePower);
@@ -124,14 +150,15 @@ async function main() {
     // Defenders make no callable requests after battle: server triggers must deliver offline.
     let reports = [];
     for (let attempt = 0; attempt < 75; attempt++) {
-      reports = await Promise.all(actors.slice(0, 6).map(async actor => (await db.doc(`players/${actor.uid}`).get()).data().battleReports?.find(report => report.battleId === battleId)));
+      reports = await Promise.all(involved.map(async actor => (await db.doc(`players/${actor.uid}`).get()).data().battleReports?.find(report => report.battleId === battleId)));
       if (reports.every(Boolean)) break;
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     assert(reports.every(Boolean), "Every offline attacker and defender must receive the report");
-    for (const [index, actor] of actors.slice(0, 6).entries()) {
+    for (const [index, actor] of involved.entries()) {
       const report = reports[index], rows = index < 3 ? attackingRows : defendingRows;
       const row = rows.find(row => row.ownerUid === actor.uid);
+      if(limited)assert.match(report.summary,/ownership is unchanged/i);
       assert.equal(report.uid, actor.uid); assert.equal(report.type, index < 3 ? "attack" : "defense");
       assert.equal(report[index < 3 ? "attackerLosses" : "defenderLosses"], row.losses);
       assert.equal(report[index < 3 ? "survivors" : "defendersLeft"], row.survivors);
@@ -141,14 +168,52 @@ async function main() {
       assert.equal((await readAs(actor, snapshotPath)).status, 200, "Participant cannot read shared battle details");
     }
     assert.equal((await readAs(outsider, snapshotPath)).status, 403, "Nonparticipant learned private battle statistics");
-    assert.equal((await readAs(attackers[0], `players/${defenders[0].uid}/serverReports/${reports[3].id}`)).status, 403);
+    if(!neutral)assert.equal((await readAs(attackers[0], `players/${defenders[0].uid}/serverReports/${reports[3].id}`)).status, 403);
     await call("resolveArmyOrder", attackers[0], { armyId: battleId, routeRegionIds: launched.movement.routeRegionIds });
     assert.deepEqual((await db.doc(snapshotPath).get()).data(), snapshot, "Retry rewrote battle-time statistics");
-    for (const actor of actors.slice(0, 6)) {
+    for (const actor of involved) {
       const profile = (await db.doc(`players/${actor.uid}`).get()).data();
       assert.equal(profile.battleReports.filter(report => report.battleId === battleId).length, 1, "Retry duplicated a report");
     }
-    console.log(`Clan Tower ${scenario}: six private reports, exact powers/casualties, offline delivery and retry verified.`);
+    if(limited) {
+      for(const id of battle.result.attackerSettlementReceipts) {
+        const receipt=(await db.doc(`rallyBattleReceipts/${storageId}/entries/${id}`).get()).data();
+        assert(receipt,"Missing attacker settlement");assert.equal(receipt.stationOnVictory,false);assert.equal(receipt.stationedAtBattle,false);
+        assert(receipt.returnArmyId,"Survivors must get a return march");
+        const returning=(await db.doc(`armies/${receipt.returnArmyId}`).get()).data();
+        assert.equal(returning.ownerUid,receipt.contributorUid);assert.equal(returning.troops,receipt.survivors);
+      }
+    }
+    console.log(`Clan Tower ${scenario}: ${involved.length} private reports, ownership, exact powers/casualties, offline delivery and retry verified.`);
   }
+  // Two victories arriving together must produce exactly one new clan holding.
+  for(const definition of towers.TOWERS) {
+    const ref=db.doc(`holdingTowers/${definition.id}`);
+    for(const doc of (await ref.collection("garrison").get()).docs)await doc.ref.delete();
+    await ref.set({...towers.createNeutralTowerState(definition.id,{nowMs:Date.now()}),...identity,
+      neutralDefenders:10000,wallIntegrityBps:0});
+  }
+  for(const actor of attackers)await db.doc(`players/${actor.uid}`).update({committedRallyTroops:0,towerGarrisonTroops:0});
+  const racing=[];
+  for(const target of towers.TOWERS.slice(0,2)) {
+    const troops=1000000,rallyId=`race_${randomUUID()}`,clanId=clanIds[0];
+    await sourceRef.update({troops:100000000,troopFloat:100000000,productionUpdatedAtMs:Date.now()});
+    await call("createClanRally",attackers[0],{clanId,rallyId,sourceType:"city",targetType:"tower",
+      sourceRegionId:attackers[0].home.regionId,targetRegionId:target.regionId,
+      army:{id:rallyId,kind:"attack",fromId:attackers[0].home.id,toId:target.id,troops,requestedTroops:troops}});
+    await db.doc(`clans/${clanId}/rallies/${rallyId}`).update({participants:attackers.map((actor,index)=>({
+      uid:actor.uid,ownerName:actor.label,role:index?"ally":"leader",troops,sourceId:actor.home.id,
+      sourceRegionId:actor.home.regionId,status:"assembled",joinedAtMs:now-1000,assembledAtMs:now-1000}))});
+    for(const actor of attackers.slice(1))await db.doc(`players/${actor.uid}`).update({committedRallyTroops:FieldValue.increment(troops),rallyResetGeneration:identity.resetGeneration});
+    const launched=await call("launchClanRally",attackers[0],{clanId,rallyId});
+    await db.doc(`armies/${launched.movement.id}`).update({arrivesAtMs:Date.now()-1000});
+    racing.push(launched.movement);
+  }
+  const raceResults=await Promise.all(racing.map(movement=>call("resolveArmyOrder",attackers[0],{armyId:movement.id,routeRegionIds:movement.routeRegionIds})));
+  assert(raceResults.every(entry=>entry.result.success),"Both assaults should win their combat");
+  assert.equal(raceResults.filter(entry=>entry.result.captured).length,1,"Concurrent arrivals granted multiple Clan Towers");
+  const holdings=await Promise.all(towers.TOWERS.map(tower=>db.doc(`holdingTowers/${tower.id}`).get()));
+  assert.equal(holdings.filter(doc=>doc.data().clanId===clanIds[0]).length,1);
+  console.log("Concurrent Clan Tower victories: one capture, one non-capturing victory.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
