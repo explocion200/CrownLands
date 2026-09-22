@@ -31,7 +31,7 @@
         "tools/validate-report-system.js",
         "tools/validate-clan-tower-reports-browser.js"
       ],
-      "reason": "Render complete current-owner heraldry instead of the Tower crest in real map cards. Check desktop and two landscape sizes, published flag edits, stale flag rejection, ownership changes, neutral fallback, overview visibility and camera preservation. Extend only the loopback map fixture. Preserve existing Tower subscription lifecycle and detailed report normalization/recipient ordering while explaining non-capturing victories."
+      "reason": "Render complete current-owner heraldry instead of the Tower crest in real map cards. Check desktop and two landscape sizes, published flag edits, stale flag rejection, ownership changes, neutral fallback, overview visibility and camera preservation. Extend only the loopback map fixture. Preserve existing Tower subscription lifecycle and detailed report normalization/recipient ordering while explaining non-capturing victories. Also verify each map crest is above all decorative border layers, all four Stronghold icons and the Citadel/camp crests remain, per-card type badges are hidden, and the top color legend stays visible."
     },
     {
       "paths": [

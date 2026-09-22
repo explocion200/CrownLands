@@ -37,6 +37,22 @@ async function main(){
    })()`);
    assert.equal(before.flags,3);assert.equal(before.neutral,1);assert.equal(before.ownCrest,0);
    assert(before.full&&before.visible&&!before.overflow,JSON.stringify(before));assert(before.width>=30&&before.height>=30);assert.equal(before.pointer,'none');assert.match(before.aria,/Amber Wardens/);
+   const layers=await evaluate(`(() => {
+     const legend=modalBody.querySelector('.island-map-feature-legend');
+     const crests=Array.from(modalBody.querySelectorAll('.feature-crest'));
+     return {legend:legend.getBoundingClientRect().height>0&&['Clan Tower','Camp','Stronghold / Citadel'].every(name=>legend.textContent.includes(name)),
+       badgesHidden:Array.from(modalBody.querySelectorAll('.island-map-feature-badges')).every(node=>getComputedStyle(node).display==='none'),
+       icons:Array.from(modalBody.querySelectorAll('.stronghold-bonus-icon')).map(node=>node.getAttribute('href')),
+       crown:Boolean(modalBody.querySelector('.crest-royal .citadel-crest')),camp:Boolean(modalBody.querySelector('.crest-camp')),
+       foreground:crests.length>0&&crests.every(crest=>{
+         const tile=crest.closest('.island-map-icon'),z=Number(getComputedStyle(crest).zIndex);
+         const borders=[...tile.querySelectorAll('.feature-frame:not(.feature-crest),.island-map-feature-trim')].map(node=>Number(getComputedStyle(node).zIndex)||0);
+         borders.push(Number(getComputedStyle(tile,'::before').zIndex)||0,Number(getComputedStyle(tile,'::after').zIndex)||0);
+         return z>Math.max(...borders)&&getComputedStyle(crest).pointerEvents==='none';
+       })};
+   })()`);
+   assert(layers.legend&&layers.badgesHidden&&layers.foreground&&layers.crown&&layers.camp,JSON.stringify(layers));
+   assert.equal(new Set(layers.icons).size,4,'Keep all four Stronghold specialization icons in the foreground');
    fs.writeFileSync(path.join(artifacts,`${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
    // Live published edits update without rebuilding the tile or resetting its camera.
    await evaluate(`window.atlasOldTile=atlasTile();window.atlasOldCamera=getIslandMapPickerElement().getAttribute('style');
@@ -65,4 +81,3 @@ async function main(){
  }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
-
