@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Training Grounds preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/training-grounds/draft.css"><script src="clan-tower-buildings.js" defer></script><script src="docs/visual-qa/training-grounds/preview.js" defer></script></head>
+<body><div class="world-backdrop" aria-hidden="true"></div>
+<dialog id="trainingDialog" aria-labelledby="trainingTitle"><div class="training-shell">
+ <header class="window-header"><img class="header-emblem" src="assets/icons/skills/swordmastery.svg" alt=""><div class="heading"><p>Ravenwatch · Clan Tower</p><h1 id="trainingTitle">Training Grounds</h1></div><div class="treasury"><span>Clan Treasury</span><strong><img src="assets/icons/royal-shop-gold-r1.svg" alt="Gold"><span id="balance"></span></strong></div><button id="closeTraining" class="close" aria-label="Close Training Grounds">×</button></header>
+ <div class="training-body">
+  <aside class="building-panel" tabindex="0" aria-label="Training Grounds building and level"><p class="overline">The Amber Wardens</p><div class="building-art"><img id="buildingArt" src="assets/clan-buildings/training-2.webp" alt="Training Grounds building"></div><h2 id="buildingLevel"></h2><div id="levelTrack" class="level-track"></div><p id="buildingCaption" class="building-caption"></p><div class="building-seal" aria-hidden="true">◆</div><p class="building-note">Completed rally benefits stay active during upgrades and attacks.</p></aside>
+  <section class="detail-panel" aria-label="Training Grounds improvements">
+   <nav class="training-tabs" aria-label="Training Grounds sections"><div role="tablist"><button id="tab-overview" type="button" role="tab" aria-controls="overviewPanel" aria-selected="true" data-section="overview">Overview</button><button id="tab-levels" type="button" role="tab" aria-controls="levelsPanel" aria-selected="false" data-section="levels">All levels</button></div><span class="local-scope">This Clan Tower</span></nav>
+   <div id="overviewPanel" class="detail-scroll" tabindex="0" role="tabpanel" aria-labelledby="tab-overview"></div>
+   <div id="levelsPanel" class="detail-scroll" tabindex="0" role="tabpanel" aria-labelledby="tab-levels" hidden></div>
+  </section>
+ </div>
+ <footer class="upgrade-footer"><dl id="upgradeFacts"></dl><button id="upgrade" class="primary" type="button" aria-describedby="upgradeNote"></button><p id="upgradeNote" role="status"></p></footer>
+</div></dialog>
+<div id="dismissed" hidden><p>Training Grounds preview closed.</p><button id="reopen" class="primary">Reopen Training Grounds</button></div>
+<p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>
+</body></html>

@@ -1,38 +1,38 @@
 {
-  "schemaVersion": 1,
-  "baseCommit": "740a2d8afaec6cefe375cdd597a05ece65b7c161",
   "coverage": [
     {
+      "reason": "Approved standalone Training Grounds reference using shared building helpers and existing art. Check three viewports, fixed footer, reachable levels, staged art, paused/blocked states, sample upgrades/retries and additive rally power illustrations.",
       "paths": [
-        "docs/visual-qa/infirmary/index.html",
-        "docs/visual-qa/infirmary/review.css",
-        "docs/visual-qa/infirmary/review.js",
-        "docs/visual-qa/infirmary/preview.html",
-        "docs/visual-qa/infirmary/draft.css",
-        "docs/visual-qa/infirmary/preview.js",
-        "tools/validate-infirmary-draft-browser.js"
+        "docs/visual-qa/training-grounds/index.html",
+        "docs/visual-qa/training-grounds/review.css",
+        "docs/visual-qa/training-grounds/review.js",
+        "docs/visual-qa/training-grounds/preview.html",
+        "docs/visual-qa/training-grounds/draft.css",
+        "docs/visual-qa/training-grounds/preview.js",
+        "tools/validate-training-grounds-draft-browser.js"
       ],
       "tests": [
-        "tools/validate-infirmary-draft-browser.js"
-      ],
-      "reason": "Isolated Infirmary review draft using current shared building helpers and existing approved art. Check desktop and two landscape sizes, fixed footer and reachable levels, bonus/art/cost references, blocked and paused states, in-memory upgrades and retry/reset handling, illustrative additive recovery and 90% cap, and native-size review controls. Production runtime, server mechanics and permissions are unchanged."
+        "tools/validate-training-grounds-draft-browser.js"
+      ]
     },
     {
+      "reason": "Record the approved Training Grounds presentation, existing rules and actual-game integration and validation scope. No mechanic, balance or deployment status changes.",
       "paths": [
-        "docs/visual-qa/infirmary/README.md",
+        "docs/visual-qa/training-grounds/README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "tests": [],
-      "reason": "Record the approved Infirmary presentation, integration routes and validation scope. No mechanics or balance rules change."
+      "tests": []
     },
     {
       "paths": [
-        "infirmary-ui.js",
-        "infirmary-ui.css",
+        "training-grounds-ui.js",
+        "training-grounds-ui.css",
         "game.js",
-        "tools/validate-infirmary-browser.js"
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js"
       ],
       "tests": [
+        "tools/validate-training-grounds-browser.js",
         "tools/validate-infirmary-browser.js",
         "tools/validate-engineers-workshop-browser.js",
         "tools/validate-clan-shop-browser.js",
@@ -40,7 +40,7 @@
         "tools/validate-holding-tower-client-lifecycle.js",
         "tools/validate-clan-tower-buildings.js"
       ],
-      "reason": "Integrate the approved Infirmary via the existing Tower session, Treasury and building-action routes shared with the Workshop. Exercise the real frontend at desktop and two landscape sizes with controlled API replies: balance/level authority, permissions, pauses, duplicate requests and retry identity, countdown refresh, stale clan responses, ownership loss, navigation, cleanup, additive recovery/cap examples and state preservation. Recheck Workshop, Shop, map building entry points and construction helpers. No server code, callables, rules or data change; no emulator suite is needed."
+      "reason": "Integrate the approved Training Grounds through the shared Tower session, building-action and Treasury routes. Test actual-game desktop and two landscape layouts, authoritative balances/levels, paused/blocked/pending/failed requests, retry identity, duplicate guards, countdown refresh, example arithmetic and state, navigation and stale sessions. Recheck all sibling building screens, map/touch entry points, live donations enabling both building and wall upgrades, Tower lifecycle and construction helpers. No server changes; no emulator suite applies."
     },
     {
       "paths": [
@@ -50,9 +50,11 @@
         "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/validate-infirmary-browser.js"
+        "tools/validate-training-grounds-browser.js"
       ],
-      "reason": "Load and package Infirmary assets after the shared building module and precache them. Actual-game browser checks verify asset loading and isolated styling. The production build and artifact validation run as mandatory selected-build gates."
+      "reason": "Load, precache and publish Training Grounds assets after shared building helpers. Actual-game browser checks verify loaded assets and isolated styling; mandatory production build and artifact gates verify packaging."
     }
-  ]
+  ],
+  "schemaVersion": 1,
+  "baseCommit": "5e7a2544e050f387e83a7449b728e62527e01033"
 }
