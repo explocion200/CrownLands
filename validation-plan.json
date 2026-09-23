@@ -19,10 +19,40 @@
     },
     {
       "paths": [
-        "docs/visual-qa/infirmary/README.md"
+        "docs/visual-qa/infirmary/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document the proposed design, current rule sources, sample-only behavior, review controls, checks and integration remaining after approval."
+      "reason": "Record the approved Infirmary presentation, integration routes and validation scope. No mechanics or balance rules change."
+    },
+    {
+      "paths": [
+        "infirmary-ui.js",
+        "infirmary-ui.css",
+        "game.js",
+        "tools/validate-infirmary-browser.js"
+      ],
+      "tests": [
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-clan-tower-buildings.js"
+      ],
+      "reason": "Integrate the approved Infirmary via the existing Tower session, Treasury and building-action routes shared with the Workshop. Exercise the real frontend at desktop and two landscape sizes with controlled API replies: balance/level authority, permissions, pauses, duplicate requests and retry identity, countdown refresh, stale clan responses, ownership loss, navigation, cleanup, additive recovery/cap examples and state preservation. Recheck Workshop, Shop, map building entry points and construction helpers. No server code, callables, rules or data change; no emulator suite is needed."
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-infirmary-browser.js"
+      ],
+      "reason": "Load and package Infirmary assets after the shared building module and precache them. Actual-game browser checks verify asset loading and isolated styling. The production build and artifact validation run as mandatory selected-build gates."
     }
   ]
 }

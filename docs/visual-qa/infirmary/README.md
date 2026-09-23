@@ -2,7 +2,7 @@
 
 Branch: `codex/infirmary-draft`. Base: `740a2d8afaec6cefe375cdd597a05ece65b7c161`.
 
-An interactive design proposal for the Clan Tower Infirmary, following the approved Engineers’ Workshop layout. This preview is not integrated into the game or deployed. All sample state stays in memory. Upgrade controls cannot spend real Gold or call the backend.
+The approved design reference for the Clan Tower Infirmary, following the Engineers’ Workshop layout. The presentation is now integrated into the actual game through `infirmary-ui.js` and `infirmary-ui.css`; deployment is verified separately. This standalone preview still keeps sample state entirely in memory. Its upgrade controls cannot spend real Gold or call the backend.
 
 ## Presentation
 
@@ -29,8 +29,10 @@ Choose desktop (1440 × 900), landscape (844 × 390), or small landscape (568 ×
 
 Level and state controls cover unbuilt through Level 10, construction, paused work, incoming attacks, damaged walls, another project, insufficient/unavailable Treasury, ordinary members, and a failed sample upgrade followed by retry. Reset/close cancels a pending sample request.
 
-## Validation and next step
+## Validation and game integration
 
 `node tools/validate-infirmary-draft-browser.js` checks the three viewports, visible footer and click targets, reachable level rows, all art stages, shared bonus values, simulated upgrades/retries, blocked states, sample recovery arithmetic/cap, and outer review controls. Screenshots and results go to ignored `release-artifacts/infirmary/`.
 
-After design approval, integrate through the existing selected-building route using authoritative Tower/Treasury snapshots and the existing construction action. Preserve permission checks, modal lifecycle, stale-response protection and server-only completion. Recheck the actual game and follow the repository PR workflow before any approved merge/deployment.
+The actual Infirmary map building and Tower Buildings tab open the approved layout, with Tower Info and navigation to the other buildings. Live Tower/Treasury snapshots drive the displayed level, balance, permissions and construction state. Upgrades reuse the existing `startClanTowerBuilding` action and operation identity. Duplicate requests are blocked, failures preserve retry identity, and account/clan changes prevent stale responses from applying to another clan. Countdown expiry requests fresh state once without granting a level locally. Switching buildings or closing clears the clock. Ownership loss returns to the public Tower view.
+
+`node tools/validate-infirmary-browser.js` exercises the actual game at all three sizes with controlled API replies: balance/level authority, pending/failed requests and retries, current benefits during construction, paused work, permissions, attack/damage/repair blocking, another building project, unavailable/insufficient balance, example cap arithmetic and state preservation, navigation, stale clan responses and ownership loss. The shared Workshop, Shop, building entry points, construction helpers and Tower lifecycle are covered by the selected validation plan. No backend mechanics or functions change.

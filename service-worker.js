@@ -32,6 +32,8 @@ function getNotificationOpenUrl(notificationData = {}) {
 }
 
 const STATIC_CACHE_URLS = [
+  "/infirmary-ui.js?v=20260923-infirmary-r1",
+  "/infirmary-ui.css?v=20260923-infirmary-r1",
   "/engineers-workshop-ui.js?v=20260923-workshop-r1",
   "/engineers-workshop-ui.css?v=20260923-workshop-r1",
   "/clan-shop-ui.js?v=20260922-clan-shop-r1",
