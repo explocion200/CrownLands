@@ -31,11 +31,15 @@ async function main() {
     await evaluate("__CROWNLANDS_BENCHMARK__.closeModal()");
     await wait(200);
     await evaluate(`window.modalLifecycleQa = {
+      closeButton() {
+        return modal.classList.contains('help-handbook-modal') ? modalBody.querySelector('#closeHelp') : closeModalBtn;
+      },
       closeState() {
-        const rect = closeModalBtn.getBoundingClientRect();
+        const button = this.closeButton();
+        const rect = button.getBoundingClientRect();
         return { open: modal.open, classes: modal.className,
           visible: rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.left >= 0 && rect.bottom <= innerHeight && rect.right <= innerWidth,
-          usable: !closeModalBtn.disabled && closeModalBtn.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) };
+          usable: !button.disabled && button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) };
       }
     };`);
     const guidanceVisibility = await evaluate(`(async () => {
@@ -80,7 +84,7 @@ async function main() {
           await wait(350);
           const status = await evaluate("modalLifecycleQa.closeState()");
           assert(status.open && status.visible && status.usable, `Reports poisoned ${destination} at ${JSON.stringify({ fullscreen, viewport, status })}`);
-          await evaluate("closeModalBtn.click()");
+          await evaluate("modalLifecycleQa.closeButton().click()");
           await wait(100);
           assert.equal(await evaluate("modal.open"), false);
         }

@@ -7,6 +7,7 @@
         "game.js",
         "player-profile-ui.css",
         "tools/validate-public-player-profile-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
         "docs/visual-qa/public-player-profile/index.html",
         "docs/visual-qa/public-player-profile/preview.html",
         "docs/visual-qa/public-player-profile/preview.js",
