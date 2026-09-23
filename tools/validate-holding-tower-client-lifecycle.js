@@ -22,7 +22,7 @@ function harness() {
   const listeners = new Map(), classes = new Set(), reads = [], subscriptions = [], warnings = [], errors = [], renders = [];
   const modal = {
     open: false,
-    classList: { add: (...names) => names.forEach(name => classes.add(name)), remove: (...names) => names.forEach(name => classes.delete(name)) },
+    classList: { toggle: (name, force) => { const enabled = force === undefined ? !classes.has(name) : Boolean(force); if (enabled) classes.add(name); else classes.delete(name); return enabled; }, contains: name => classes.has(name), add: (...names) => names.forEach(name => classes.add(name)), remove: (...names) => names.forEach(name => classes.delete(name)) },
     addEventListener(type, callback, options) { listeners.set(callback, { type, once: options?.once }); },
     removeEventListener(type, callback) { listeners.delete(callback); },
     showModal() { this.open = true; },
@@ -42,7 +42,7 @@ function harness() {
     "[data-tower-order-status]": { textContent: "" },
     "button[type='submit']": { setAttribute() {} },
   };
-  const modalBody = { innerHTML: "", querySelector: selector => inputs[selector] || null, querySelectorAll: () => [] };
+  const modalBody = { dataset: {}, innerHTML: "", querySelector: selector => inputs[selector] || null, querySelectorAll: () => [] };
   const api = {
     isSignedIn: () => true,
     getHoldingTowerState(payload) {

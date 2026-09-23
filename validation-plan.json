@@ -1,45 +1,45 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b737bdd2c1b63bc4babf2c619eb152f065ba1177",
+  "baseCommit": "2cad4759c3c328af53be6ffaa2c931183abef279",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/help-first-steps/content.js",
-        "docs/visual-qa/help-first-steps/index.html",
-        "docs/visual-qa/help-first-steps/preview.html",
-        "docs/visual-qa/help-first-steps/preview.js",
-        "docs/visual-qa/help-first-steps/review.js",
-        "docs/visual-qa/help-first-steps/draft.css",
-        "tools/validate-help-first-steps-draft-browser.js"
+        "docs/visual-qa/clan-shop/index.html",
+        "docs/visual-qa/clan-shop/review.js",
+        "docs/visual-qa/clan-shop/preview.html",
+        "docs/visual-qa/clan-shop/preview.js",
+        "docs/visual-qa/clan-shop/draft.css",
+        "tools/validate-clan-shop-draft-browser.js"
       ],
       "tests": [
-        "tools/validate-help-first-steps-draft-browser.js"
+        "tools/validate-clan-shop-draft-browser.js"
       ],
-      "reason": "Isolated Help design draft with no runtime game or backend changes. Exercise all five chapters, 21 topic cards, current artwork, independent reading scroll, desktop and two landscape sizes, search/escaping/empty results, expanded explanations and scroll preservation, keyboard navigation, cross-links, local-only tips and close/reopen. Verify the review wrapper switches chapters. No emulator suites apply because this preview reads no accounts and mutates no shared state."
+      "reason": "Interactive design draft only; game entry and authoritative rules are untouched. Load the shared building/allowance module and verify all seven illustrated items, viewport fit, visible purchase controls, scroll access, all ten upgrade levels, single simulated charges, failure/retry without loss, daily/72-hour allowances, membership and construction states at desktop and two mobile landscape sizes. No backend changes require emulators."
     },
     {
       "paths": [
-        "docs/visual-qa/help-first-steps/README.md",
-        "docs/visual-qa/help-first-steps/visual-checks.md"
+        "docs/visual-qa/clan-shop/README.md",
+        "docs/visual-qa/clan-shop/visual-checks.md"
       ],
       "tests": [],
-      "reason": "Document design scope, source references, approval/integration boundary and actual visual evidence. No production rules or Master Specification changes."
+      "reason": "Document the proposal, current source rules, completed preview checks and future integration requirements. The draft remains subject to approval and is not a live game change."
     },
     {
       "paths": [
         "game.js",
-        "help-handbook-content.js",
-        "help-handbook-ui.js",
-        "help-handbook-ui.css",
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-onboarding-browser.js"
+        "clan-shop-ui.js",
+        "clan-shop-ui.css",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
       "tests": [
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-onboarding-guidance.js",
-        "tools/validate-onboarding-browser.js"
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
-      "reason": "Integrate the approved handbook into the real Help button. Preserve existing account/realm-scoped tutorial preferences, replay and contextual controls. Verify all chapters, artwork, search, reading position, footer reachability, keyboard navigation, live preference writes and stale-account rejection at desktop and two landscape sizes. No backend or gameplay rules change."
+      "reason": "Use the approved catalogue in the real Store and building entry. Preserve existing server-authoritative prices, allowance and idempotent callables; no backend changes. Cover live wallet/Bag updates, duplicate blocking, error/retry operation identity, stale/unavailable stock, membership, ownership loss, construction permissions, all other building/map entry points and refresh/session cleanup at desktop and two mobile landscape sizes."
     },
     {
       "paths": [
@@ -49,9 +49,10 @@
         "tools/generate-release-manifest.js"
       ],
       "tests": [
+        "tools/validate-clan-shop-browser.js",
         "tools/validate-help-handbook-browser.js"
       ],
-      "reason": "Load, fingerprint, cache and package the three handbook assets. Existing production build/artifact checks run automatically; the focused browser loads the actual game entry and confirms the integration."
+      "reason": "Load, cache, fingerprint and package the approved Clan Shop assets; validate through the actual game entry and mandatory production build/artifact checks. Check that the newly merged Help entry remains functional after reconciling the shared asset lists."
     }
   ]
 }

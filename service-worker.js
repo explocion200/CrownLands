@@ -32,6 +32,8 @@ function getNotificationOpenUrl(notificationData = {}) {
 }
 
 const STATIC_CACHE_URLS = [
+  "/clan-shop-ui.js?v=20260922-clan-shop-r1",
+  "/clan-shop-ui.css?v=20260922-clan-shop-r1",
   "/help-handbook-content.js?v=20260922-handbook-r1",
   "/help-handbook-ui.js?v=20260922-handbook-r1",
   "/help-handbook-ui.css?v=20260922-handbook-r1",
