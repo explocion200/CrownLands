@@ -4085,7 +4085,7 @@ function beginHoldingTowerModalSession(towerId, view) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal", "infirmary-modal");
     if (session.mapOrder) {
       modal.classList.remove("troop-slider-modal");
       clearSelection(false);
@@ -4112,16 +4112,22 @@ function renderHoldingTowerModal(tower) {
     && tower.ownerMember && tower.worldActive !== false;
   const workshopOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "workshop"
     && tower.ownerMember && tower.worldActive !== false;
+  const infirmaryOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "infirmary"
+    && tower.ownerMember && tower.worldActive !== false;
   modal.classList.toggle("clan-shop-modal", Boolean(shopOpen));
   modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
+  modal.classList.toggle("infirmary-modal", Boolean(infirmaryOpen));
   if (!workshopOpen) delete modalBody.dataset.workshopReady;
-  if (workshopOpen) {
+  if (!infirmaryOpen) delete modalBody.dataset.infirmaryReady;
+  if (workshopOpen || infirmaryOpen) {
     delete modalBody.dataset.clanShopReady;
     const session = holdingTowerModalSession;
-    const workshopView = session.workshopView || (session.workshopView = {});
-    const refreshWorkshop = async (refreshBalance = false) => {
-      if (workshopView.refreshing || !isHoldingTowerModalSessionCurrent(session)) return;
-      workshopView.refreshing = true;
+    const buildingId = infirmaryOpen ? "infirmary" : "workshop";
+    const viewKey = `${buildingId}View`;
+    const buildingView = session[viewKey] || (session[viewKey] = {});
+    const refreshBuilding = async (refreshBalance = false) => {
+      if (buildingView.refreshing || !isHoldingTowerModalSessionCurrent(session)) return;
+      buildingView.refreshing = true;
       try {
         if (refreshBalance) {
           renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
@@ -4129,26 +4135,27 @@ function renderHoldingTowerModal(tower) {
         }
         if (!isHoldingTowerModalSessionCurrent(session)) return;
         await refreshHoldingTower(tower.id);
-        workshopView.failed = false;
-        workshopView.feedback = "";
+        buildingView.failed = false;
+        buildingView.feedback = "";
       } catch (error) {
         if (!isHoldingTowerModalSessionCurrent(session)) return;
-        workshopView.feedback = error?.message || "Workshop status unavailable. Please retry.";
-        workshopView.failed = true;
+        buildingView.feedback = error?.message || "Building status unavailable. Please retry.";
+        buildingView.failed = true;
       } finally {
-        workshopView.refreshing = false;
+        buildingView.refreshing = false;
         if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
       }
     };
-    modalTitle.textContent = "Engineers’ Workshop";
-    window.CrownlandsEngineersWorkshopUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
-      view: workshopView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
+    modalTitle.textContent = infirmaryOpen ? "Infirmary" : "Engineers’ Workshop";
+    const buildingUi = infirmaryOpen ? window.CrownlandsInfirmaryUi : window.CrownlandsEngineersWorkshopUi;
+    buildingUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
+      view: buildingView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
       onClose: () => modal.close(),
       onBack: () => { holdingTowerDetailsTab = "overview"; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
       onBuilding: id => { holdingTowerBuildingSelection = id; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
-      onBuild: () => void runClanTowerBuildingAction(tower, "build", "workshop"),
-      onRefresh: () => void refreshWorkshop(true),
-      onCountdownComplete: () => void refreshWorkshop(),
+      onBuild: () => void runClanTowerBuildingAction(tower, "build", buildingId),
+      onRefresh: () => void refreshBuilding(true),
+      onCountdownComplete: () => void refreshBuilding(),
     });
     return;
   }
@@ -4207,7 +4214,7 @@ function renderHoldingTowerModal(tower) {
     onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
     onSelect: key => {
       holdingTowerDetailsTab = key;
-      if (key === "buildings" && ["shop", "workshop"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
+      if (key === "buildings" && ["shop", "workshop", "infirmary"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
     },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
@@ -4655,7 +4662,7 @@ async function runClanTowerBuildingAction(tower, kind, id) {
   clanBuildingRequestIds.set(key, operationId);
   const item = tower.clanShop?.items?.find(row => row.id === id);
   const view = holdingTowerModalSession?.towerId === tower.id
-    ? holdingTowerModalSession[kind === "build" && id === "workshop" ? "workshopView" : "shopView"] : null;
+    ? holdingTowerModalSession[kind === "build" && ["workshop", "infirmary"].includes(id) ? `${id}View` : "shopView"] : null;
   if (view) { view.feedback = kind === "buy" ? "Confirming your purchase…" : "Starting construction…"; view.failed = false; }
   holdingTowerActionsInFlight.add(tower.id);
   renderHoldingTowerModal(tower);
