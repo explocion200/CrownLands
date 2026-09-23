@@ -19,10 +19,39 @@
     },
     {
       "paths": [
-        "docs/visual-qa/engineers-workshop/README.md"
+        "docs/visual-qa/engineers-workshop/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document the requested proposal, source rules, review controls, validation scope and integration remaining after visual approval."
+      "reason": "Record the approved Workshop presentation, integration routes and validation scope. No mechanics or balance rules change."
+    },
+    {
+      "paths": [
+        "engineers-workshop-ui.js",
+        "engineers-workshop-ui.css",
+        "game.js",
+        "tools/validate-engineers-workshop-browser.js"
+      ],
+      "tests": [
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-clan-tower-buildings.js"
+      ],
+      "reason": "Integrate the approved Workshop through the shared Tower session, Treasury and building action routes. Exercise real frontend with controlled API replies at desktop and landscape sizes: balance, levels, permissions, pauses, duplicate requests, idempotent retry, countdown refresh, stale clan response, ownership loss, navigation and cleanup. Recheck existing Shop and building entry/action paths and shared construction helpers. Server code, callables, rules and data are unchanged; no emulator suite is required."
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-engineers-workshop-browser.js"
+      ],
+      "reason": "Load and package the new Workshop assets after the shared building module and precache both. Actual-game browser checks verify asset loading and scoped styling. The production build and artifact validator run as mandatory selected-build gates."
     }
   ]
 }

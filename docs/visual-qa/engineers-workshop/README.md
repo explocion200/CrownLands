@@ -2,7 +2,7 @@
 
 Branch: `codex/engineers-workshop-draft`. Base: `1764bf3097a3921e5f8a589c7228b41014c46a12`.
 
-This is an interactive proposal for the Clan Tower's Engineers’ Workshop. It is not integrated into the game or deployed. The preview uses sample state entirely in memory, with no authentication, storage or backend requests. Sample upgrade clicks never spend real Gold.
+This is the approved interactive reference for the Clan Tower's Engineers’ Workshop, now integrated through `engineers-workshop-ui.js` and `engineers-workshop-ui.css` in the actual game. The standalone preview still uses sample state entirely in memory, with no authentication, storage or backend requests. Sample upgrade clicks never spend real Gold. Deployment is verified separately from this source record.
 
 ## Presentation
 
@@ -29,6 +29,8 @@ Controls provide Levels 0–10 and ten examples: ready, upgrading, paused, incom
 
 Focused browser validation: `node tools/validate-engineers-workshop-draft-browser.js`. It checks all three viewport sizes, header/footer fit, visible click targets, no horizontal content overflow, all ten reachable levels, existing art stages and benefit values, simulated pending/failure/retry/reset behavior, blocked states, maximum/unbuilt presentation, tab/close/reopen controls and the outer review controls. Screenshots and checks are recorded locally in ignored `release-artifacts/engineers-workshop/`. No production build or emulator suite is needed to review this isolated proposal.
 
-## After visual approval
+## Approved game integration
 
-Integrate the approved presentation through the existing selected-building route and preserve live Tower/Clan Treasury snapshots, permission checks, construction callbacks, countdowns and modal lifecycle. Replace sample state with authoritative data and verify live refreshes and rejected/stale operations. Run the repository PR workflow when the approved integration is ready. No Master Specification design change, PR, merge or deployment is included in this draft.
+The existing Workshop map building and Buildings tab open the approved layout. Live Tower/Clan Treasury snapshots drive permission checks, construction status and completed benefits. Upgrades reuse `startClanTowerBuilding`, its operation identity and existing Treasury response handling. Pending requests cannot be submitted twice; failed requests retain retry identity. The timer requests a fresh snapshot once per completed project timer, never grants a level locally, and is cleaned up on navigation/close. Tower Info and the four-building selector remain available. Ownership loss returns to the public Tower view.
+
+`node tools/validate-engineers-workshop-browser.js` exercises the actual game at all three viewport sizes, including pending/failure/retry, Treasury refresh failure/recovery, paused projects, another building underway, all blocking conditions, staged art, scroll/tab preservation, countdown refresh limits, navigation, closing during an operation and stale clan responses. Supporting checks cover shared Tower lifecycle, existing building entry points and Clan Shop. No backend mechanics or functions change.

@@ -4085,7 +4085,7 @@ function beginHoldingTowerModalSession(towerId, view) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal");
     if (session.mapOrder) {
       modal.classList.remove("troop-slider-modal");
       clearSelection(false);
@@ -4110,7 +4110,48 @@ function renderHoldingTowerModal(tower) {
     && clanTreasuryClanId === state.clanId ? clanTreasuryStatus?.treasury?.balance : undefined;
   const shopOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "shop"
     && tower.ownerMember && tower.worldActive !== false;
+  const workshopOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "workshop"
+    && tower.ownerMember && tower.worldActive !== false;
   modal.classList.toggle("clan-shop-modal", Boolean(shopOpen));
+  modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
+  if (!workshopOpen) delete modalBody.dataset.workshopReady;
+  if (workshopOpen) {
+    delete modalBody.dataset.clanShopReady;
+    const session = holdingTowerModalSession;
+    const workshopView = session.workshopView || (session.workshopView = {});
+    const refreshWorkshop = async (refreshBalance = false) => {
+      if (workshopView.refreshing || !isHoldingTowerModalSessionCurrent(session)) return;
+      workshopView.refreshing = true;
+      try {
+        if (refreshBalance) {
+          renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+          await loadClanTreasuryStatus({ force: true });
+        }
+        if (!isHoldingTowerModalSessionCurrent(session)) return;
+        await refreshHoldingTower(tower.id);
+        workshopView.failed = false;
+        workshopView.feedback = "";
+      } catch (error) {
+        if (!isHoldingTowerModalSessionCurrent(session)) return;
+        workshopView.feedback = error?.message || "Workshop status unavailable. Please retry.";
+        workshopView.failed = true;
+      } finally {
+        workshopView.refreshing = false;
+        if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+      }
+    };
+    modalTitle.textContent = "Engineers’ Workshop";
+    window.CrownlandsEngineersWorkshopUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
+      view: workshopView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
+      onClose: () => modal.close(),
+      onBack: () => { holdingTowerDetailsTab = "overview"; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
+      onBuilding: id => { holdingTowerBuildingSelection = id; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
+      onBuild: () => void runClanTowerBuildingAction(tower, "build", "workshop"),
+      onRefresh: () => void refreshWorkshop(true),
+      onCountdownComplete: () => void refreshWorkshop(),
+    });
+    return;
+  }
   if (shopOpen) {
     const session = holdingTowerModalSession;
     const shopView = session.shopView || (session.shopView = {});
@@ -4166,7 +4207,7 @@ function renderHoldingTowerModal(tower) {
     onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
     onSelect: key => {
       holdingTowerDetailsTab = key;
-      if (key === "buildings" && holdingTowerBuildingSelection === "shop" && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
+      if (key === "buildings" && ["shop", "workshop"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
     },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
@@ -4613,7 +4654,8 @@ async function runClanTowerBuildingAction(tower, kind, id) {
   const operationId = clanBuildingRequestIds.get(key) || createHoldingTowerOperationId(kind);
   clanBuildingRequestIds.set(key, operationId);
   const item = tower.clanShop?.items?.find(row => row.id === id);
-  const view = holdingTowerModalSession?.towerId === tower.id ? holdingTowerModalSession.shopView : null;
+  const view = holdingTowerModalSession?.towerId === tower.id
+    ? holdingTowerModalSession[kind === "build" && id === "workshop" ? "workshopView" : "shopView"] : null;
   if (view) { view.feedback = kind === "buy" ? "Confirming your purchase…" : "Starting construction…"; view.failed = false; }
   holdingTowerActionsInFlight.add(tower.id);
   renderHoldingTowerModal(tower);
@@ -4631,7 +4673,7 @@ async function runClanTowerBuildingAction(tower, kind, id) {
     showToast(kind === "build" ? "Building construction started." : "Clan Shop purchase added to your Bag.");
   } catch (error) {
     if (isCurrent()) {
-      if (view) { view.feedback = error?.message || "The purchase could not be confirmed. Please retry."; view.failed = true; }
+      if (view) { view.feedback = error?.message || "The Tower order could not be confirmed. Please retry."; view.failed = true; }
       rejectGameAction(error?.message || "The Tower order could not be completed.");
     }
   } finally {

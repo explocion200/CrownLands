@@ -712,6 +712,10 @@ Prices use the same current personal production-based calculation as the main sh
 
 Locked items show their unlock level; quantity upgrades show their required level. The Shop displays personal Gold, prices, remaining quantities and reset timers. Building details show completed/current and next-level benefits, construction cost/time, Treasury balance, permissions and pause reasons.
 
+#### Engineers’ Workshop presentation (confirmed September 23, 2026)
+
+Use the approved parchment layout with the existing staged building illustration and completed level on the left, and Overview / All levels tabs on the right. Compare the current and next level's wall construction and paid repair time reduction. Explain that building projects are not accelerated and existing wall/repair timers remain unchanged. Keep Clan Treasury in the header; fix upgrade cost, duration/countdown and the primary action in a visible footer. Scroll the details independently on desktop and landscape mobile. Show active construction, pauses, permission/balance restrictions and failed requests clearly before secondary details. Retain Tower Info and other-building navigation. Use authoritative Tower and Treasury snapshots; a countdown reaching zero requests fresh state and never grants a level locally. This presentation does not change any construction rule, permission, cost or duration above.
+
 #### Building artwork and map layout
 
 Use the approved settlement and Tower concepts in `docs/art-prompts/clan-buildings/approved-settlement.png` and `approved-tower.png`: dark brown ink outlines, muted ochre roofs, pale olive-grey stone and aged timber in one consistent elevated map view. Every Tower doorway, building entrance and Training Grounds gate faces south. All four active Core Towers use the same approved Tower design and share sixteen building sprites: four visual stages for Levels 1–3, 4–6, 7–9 and 10. Upgrades add architectural detail while retaining the same materials, orientation and recognisable building design. Exact image-generation prompts are recorded with the references.
