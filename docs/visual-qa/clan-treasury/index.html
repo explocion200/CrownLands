@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crownlands · Clan Treasury draft</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+<header class="review-header"><div><p>CROWNLANDS · DESIGN REVIEW</p><h1>Clan Treasury</h1></div><span class="draft-badge">Draft for approval</span></header>
+<nav class="review-controls" aria-label="Design preview controls">
+ <div class="control-group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div>
+ <div class="control-group"><label for="sample">Example</label><select id="sample"><option value="ready">Ready to donate</option><option value="first">First donation today</option><option value="low">Low personal Gold</option><option value="empty">No personal Gold</option><option value="exhausted">Daily allowance used</option><option value="unavailable">Treasury unavailable</option><option value="error">Donation fails once</option></select><button id="reset">Reset preview</button></div>
+</nav>
+<p class="review-note">Try the slider, enter an exact amount, or choose Max. Review a donation and its result using sample Gold. Existing donation rules are preserved; this draft never contacts the game backend.</p>
+<main><div id="canvas"><iframe id="preview" title="Clan Treasury design preview"></iframe></div></main>
+<footer><span id="dimensions"></span><a id="fullWindow" href="preview.html" target="_blank" rel="noopener">Open full-window preview ↗</a><span id="reviewStatus" role="status">Interactive draft · Sample balances only</span></footer>
+</body></html>

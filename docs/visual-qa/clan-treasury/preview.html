@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Clan Treasury preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/clan-treasury/draft.css"><script src="docs/visual-qa/clan-treasury/preview.js" defer></script></head>
+<body><div class="world-backdrop" aria-hidden="true"></div>
+<dialog id="treasuryDialog" aria-labelledby="treasuryTitle">
+ <div class="treasury-shell">
+  <header class="window-header"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><div><p class="eyebrow">Clan · Rewards</p><h1 id="treasuryTitle">Clan Treasury</h1></div><span class="season-label">Current season</span><button id="closeTreasury" class="close" aria-label="Close Clan Treasury">×</button></header>
+  <div class="treasury-body">
+   <section class="treasury-record scroll-panel" aria-label="Clan funds">
+    <p class="eyebrow">For the strength of the clan</p>
+    <img class="treasury-art" src="assets/optimized/pickup-gold-192x192-0f5238966f7a.webp" alt="A leather purse filled with Gold coins">
+    <p class="balance-label">Treasury balance</p><strong id="balance" class="balance">84,250,000</strong><span class="gold-unit">Gold</span>
+    <div class="season-totals"><div><span>Total donated</span><strong id="totalDonated">134,250,000</strong></div><div><span>Total spent</span><strong id="totalSpent">50,000,000</strong></div></div>
+    <p class="funds-note">Shared Gold for your Clan Tower.<br>Leaders and Officers spend these funds.</p>
+    <details class="treasury-rules"><summary>Treasury rules</summary><p>Every member can donate personal Gold. Donations are final and cannot be withdrawn.</p><p>The balance and seasonal totals reset each season. The balance also resets if the clan disbands.</p></details>
+   </section>
+   <section class="donation-panel scroll-panel" aria-labelledby="donationTitle">
+    <div class="section-heading"><div><p class="eyebrow">Contribute to your clan</p><h2 id="donationTitle">Donate Gold</h2></div><span id="allowanceBadge" class="state-badge">Allowance locked</span></div>
+    <div class="personal-stats"><div><span>Your Gold</span><strong id="personalGold">32,400,000</strong></div><div><span>Can donate now</span><strong id="canDonate">18,000,000</strong></div></div>
+    <form id="donationForm" novalidate>
+     <label for="amount">Donation amount</label>
+     <div class="amount-control"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><input id="amount" type="number" inputmode="numeric" min="1" step="1" max="18000000" value="4500000" aria-describedby="amountHint amountError"><button id="max" type="button">Max</button></div>
+     <label class="sr-only" for="amountSlider">Choose donation amount</label><input id="amountSlider" type="range" min="0" max="18000000" step="1" value="4500000">
+     <div class="slider-labels"><span>0</span><span id="amountHint">Maximum 18,000,000 Gold</span></div>
+     <p id="amountError" class="amount-error" role="alert" hidden></p>
+    </form>
+    <div class="after-donation" aria-label="Balance preview"><span>After donating</span><div><span>You keep</span><strong id="personalAfter">27,900,000</strong></div><div><span>Treasury becomes</span><strong id="treasuryAfter">88,750,000</strong></div></div>
+    <section class="allowance-card" aria-labelledby="allowanceTitle">
+     <div class="allowance-heading"><h3 id="allowanceTitle">Your daily allowance</h3><span>Resets 00:00 UTC</span></div>
+     <div class="allowance-numbers"><div><span>Donated today</span><strong id="donatedToday">6,000,000</strong></div><div><span>Remaining today</span><strong id="remaining">18,000,000</strong></div><div><span>Daily cap</span><strong id="dailyCap">24,000,000</strong></div></div>
+     <div id="allowanceProgress" class="progress" role="progressbar" aria-label="Daily allowance used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25"><i></i></div>
+     <p id="allowanceNote">Today's cap is locked. Your first donation set it at 2,000,000 raw Gold/hour × 12.</p>
+    </section>
+   </section>
+  </div>
+  <footer class="donation-footer"><div><p id="feedback" role="status" aria-live="polite">Every contribution strengthens your clan.</p><small id="footerNote">Gold donations are final. Review your amount before confirming.</small></div><button id="reviewDonation" class="primary" form="donationForm" type="submit">Review donation</button></footer>
+ </div>
+</dialog>
+<dialog id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmNote"><div class="confirm-content"><p class="eyebrow">Clan Treasury</p><h2 id="confirmTitle">Confirm your donation</h2><p class="confirm-amount"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><strong id="confirmAmount"></strong><span>Gold</span></p><p id="confirmNote">This Gold leaves your personal balance and cannot be withdrawn from the Treasury.</p><dl><div><dt>Your Gold afterward</dt><dd id="confirmPersonal"></dd></div><div><dt>Treasury afterward</dt><dd id="confirmTreasury"></dd></div></dl><p id="confirmAllowance"></p><p id="confirmStatus" role="status" aria-live="polite"></p><div class="confirm-actions"><button id="cancelDonation" class="secondary" autofocus>Go back</button><button id="confirmDonation" class="primary">Donate Gold</button></div></div></dialog>
+<div id="dismissed" hidden><p>Clan Treasury preview closed.</p><button id="reopen" class="primary">Reopen Treasury</button></div>
+</body></html>

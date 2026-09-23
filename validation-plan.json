@@ -1,60 +1,28 @@
 {
+  "schemaVersion": 1,
+  "baseCommit": "2836aad365412670b6bc1f766cb2000a2ed512c5",
   "coverage": [
     {
-      "reason": "Approved standalone Training Grounds reference using shared building helpers and existing art. Check three viewports, fixed footer, reachable levels, staged art, paused/blocked states, sample upgrades/retries and additive rally power illustrations.",
-      "paths": [
-        "docs/visual-qa/training-grounds/index.html",
-        "docs/visual-qa/training-grounds/review.css",
-        "docs/visual-qa/training-grounds/review.js",
-        "docs/visual-qa/training-grounds/preview.html",
-        "docs/visual-qa/training-grounds/draft.css",
-        "docs/visual-qa/training-grounds/preview.js",
-        "tools/validate-training-grounds-draft-browser.js"
-      ],
       "tests": [
-        "tools/validate-training-grounds-draft-browser.js"
-      ]
+        "tools/validate-clan-treasury-draft-browser.js"
+      ],
+      "paths": [
+        "docs/visual-qa/clan-treasury/index.html",
+        "docs/visual-qa/clan-treasury/review.css",
+        "docs/visual-qa/clan-treasury/review.js",
+        "docs/visual-qa/clan-treasury/preview.html",
+        "docs/visual-qa/clan-treasury/draft.css",
+        "docs/visual-qa/clan-treasury/preview.js",
+        "tools/validate-clan-treasury-draft-browser.js"
+      ],
+      "reason": "Standalone Treasury design draft uses existing artwork and review styles. Check desktop and both landscape sizes, fixed review action, scrolling, exact amount/slider/Max, personal and daily bounds, confirmation and cancel, sample balance arithmetic, duplicate-click prevention, failure retry, stale reset cancellation, first-donation allowance and unavailable/exhausted states. Verify loaded assets and no backend requests. Actual game scripts, shared styles, backend functions and production packaging are unchanged; no gameplay or emulator suite applies."
     },
     {
-      "reason": "Record the approved Training Grounds presentation, existing rules and actual-game integration and validation scope. No mechanic, balance or deployment status changes.",
+      "tests": [],
       "paths": [
-        "docs/visual-qa/training-grounds/README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/visual-qa/clan-treasury/README.md"
       ],
-      "tests": []
-    },
-    {
-      "paths": [
-        "training-grounds-ui.js",
-        "training-grounds-ui.css",
-        "game.js",
-        "tools/validate-training-grounds-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
-      ],
-      "tests": [
-        "tools/validate-training-grounds-browser.js",
-        "tools/validate-infirmary-browser.js",
-        "tools/validate-engineers-workshop-browser.js",
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-clan-tower-buildings.js"
-      ],
-      "reason": "Integrate the approved Training Grounds through the shared Tower session, building-action and Treasury routes. Test actual-game desktop and two landscape layouts, authoritative balances/levels, paused/blocked/pending/failed requests, retry identity, duplicate guards, countdown refresh, example arithmetic and state, navigation and stale sessions. Recheck all sibling building screens, map/touch entry points, live donations enabling both building and wall upgrades, Tower lifecycle and construction helpers. No server changes; no emulator suite applies."
-    },
-    {
-      "paths": [
-        "index.html",
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-training-grounds-browser.js"
-      ],
-      "reason": "Load, precache and publish Training Grounds assets after shared building helpers. Actual-game browser checks verify loaded assets and isolated styling; mandatory production build and artifact gates verify packaging."
+      "reason": "Document proposal scope, existing Treasury rules, review URL and focused validation. This is not an approved gameplay or deployment-status change."
     }
-  ],
-  "schemaVersion": 1,
-  "baseCommit": "5e7a2544e050f387e83a7449b728e62527e01033"
+  ]
 }
