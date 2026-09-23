@@ -222,10 +222,9 @@ async function main() {
       assert.equal(await evaluate("modalBody.querySelector('.onboarding-tip')"), null, 'A Camp attack displayed a beginner tip.');
       await evaluate("modal.close()");
       await evaluate("saveOnboardingPrefs({enabled:false,dismissed:[]});renderOnboardingMapTip();showProfileSettings();document.getElementById('helpBtn').click()");
-      assert.equal(await evaluate("modalTitle.textContent"), "First steps & help");
-      assert.equal(await evaluate("modalBody.querySelectorAll('.onboarding-help-steps li').length"), 5);
-      assert.doesNotMatch(await evaluate("modalBody.textContent"), /camp/i);
-      await evaluate("modalBody.querySelector('[data-onboarding-enable]').click()");
+      assert.equal(await evaluate("modalTitle.textContent"), "Help & first steps");
+      assert.equal(await evaluate("modalBody.querySelectorAll('.topic-card').length"), 5);
+      await evaluate("modalBody.querySelector('#tips').click();modalBody.querySelector('#backToGame').click()");
       assert.equal(await evaluate("getOnboardingPrefs().enabled && getOnboardingPrefs().dismissed.length===0 && !modal.open"), true);
       await evaluate(`(() => {
         const uid=getCurrentOnlineUid;
