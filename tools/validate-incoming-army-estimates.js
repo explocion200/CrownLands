@@ -250,6 +250,24 @@ assert.equal(
   null,
   "A public movement targeting another player must not become an incoming alert."
 );
+let rosterReads = 0;
+const activeTarget = { id: "west-001", regionId: "west", owner: "player", ownerUid: "defender-1", troops: 123 };
+const remoteTarget = { id: "east-007", regionId: "east", owner: "player", ownerUid: "defender-1", troops: 456 };
+crossMapSandbox.getArmyTargetById = id => id === activeTarget.id ? activeTarget : null;
+crossMapSandbox.getOwnedCitySnapshotById = () => { rosterReads++; return remoteTarget; };
+for (let index = 0; index < 100; index++) {
+  assert.equal(crossMapSandbox.getIncomingArmyTargetSnapshot({toId: activeTarget.id}), activeTarget);
+}
+assert.equal(rosterReads, 0, "Active-map alerts must not rebuild the full owned-city roster for every march.");
+assert.equal(crossMapSandbox.getIncomingArmyTargetSnapshot({toId: remoteTarget.id}), remoteTarget);
+assert.equal(rosterReads, 1, "Off-map alerts must still resolve the current owned-city snapshot.");
+activeTarget.owner = "enemy";
+activeTarget.ownerUid = "another-player";
+assert.equal(crossMapSandbox.getIncomingArmyTargetSnapshot({toId: activeTarget.id}), null,
+  "A newly captured local city must not use a stale owned snapshot.");
+assert.equal(rosterReads, 1);
+assert.equal(crossMapSandbox.getIncomingArmyTargetSnapshot({toId: "missing-camp", targetType: "camp"}), null);
+assert.equal(rosterReads, 1, "Camp alerts must never scan the city roster.");
 assert.match(
   fs.readFileSync(path.join(root, "incoming-threats-ui.js"), "utf8"),
   /scout \? "Incoming" : "Estimated"/,
