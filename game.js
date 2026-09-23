@@ -2103,6 +2103,7 @@ const playerIdentityCache = new Map();
 const enemyPowerBandCache = new Map();
 let enemyPowerBandCommitTimer = null;
 let publicPlayerProfileRequestId = 0;
+let publicPlayerLocationPending = false;
 let publicClanProfileRequestId = 0;
 const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
@@ -13325,14 +13326,15 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
   if (!raw || typeof raw !== "object") return null;
   const uid = String(raw.uid || raw.ownerUid || raw.id || fallbackUid || "").trim();
   if (!uid) return null;
+  const mainRegionId = String(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId) || "").trim();
   return {
     uid,
     displayName: cleanName(raw.playerName || raw.displayName || raw.ownerName || raw.name || "") || "",
     flag: normalizeFlag(raw.flag || raw.ownerFlag, uid),
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
-    mainCityId: getKnownCityId(raw.mainCityId),
-    mainRegionId: String(raw.mainRegionId || "").trim(),
+    mainCityId: getKnownCityId(raw.mainCityId, mainRegionId),
+    mainRegionId,
     mainIslandId: String(raw.mainIslandId || "").trim(),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
     clanId: String(raw.clanId || raw.ownerClanId || ""),
@@ -13440,36 +13442,36 @@ function renderPublicPlayerProfile(profile) {
   modalTitle.textContent = `${profile.displayName}'s Profile`;
   modalBody.innerHTML = `
     <div class="public-player-profile">
-      <section class="public-profile-section public-profile-player">
-        <div class="public-profile-heading"><span>Player Info</span></div>
+      <section class="public-profile-section public-profile-player" tabindex="0" aria-label="Ruler identity">
+        <div class="public-profile-heading"><span>Ruler</span></div>
         <div class="public-profile-identity">
           <span id="publicPlayerFlag" class="kingdom-flag public-profile-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
           <strong>${escapeHtml(profile.displayName)}</strong>
         </div>
-        <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId ? "" : "disabled"}>
-          <span aria-hidden="true">⌖</span>
-          <span><strong>Main City</strong><small>${profile.mainCityId ? `${escapeHtml(getRegionLabel(profile.mainRegionId))} · View on map` : "Location unavailable"}</small></span>
-        </button>
+        <div class="public-profile-power">${renderCrownlandsIcon("crown")}<span><small>King Power</small><strong>${formatNumber(profile.kingPower)}</strong></span></div>
       </section>
-      <section class="public-profile-section">
+      <section class="public-profile-section" tabindex="0" aria-label="Public kingdom information">
         <div class="public-profile-heading"><span>Kingdom</span></div>
-        <div class="public-profile-stat"><strong>${formatNumber(profile.cityCount)}</strong><span>${profile.cityCount === 1 ? "City" : "Cities"} owned</span></div>
-        <div class="public-profile-stat public-profile-troop-estimate"><strong>${profile.troopEstimate ? escapeHtml(profile.troopEstimate.label) : "Unavailable"}</strong><span>Estimated troops</span></div>
+        <div class="public-profile-stat"><img src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" alt=""><div><strong>${formatNumber(profile.cityCount)}</strong><span>${profile.cityCount === 1 ? "City" : "Cities"} owned</span></div></div>
+        <div class="public-profile-stat public-profile-troop-estimate"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><strong>${profile.troopEstimate ? escapeHtml(profile.troopEstimate.label) : "Unavailable"}</strong><span>Estimated troops</span></div></div>
         <div class="public-profile-strongholds">
           <div><strong>${formatNumber(profile.strongholdCount)}</strong><span>${profile.strongholdCount === 1 ? "Stronghold" : "Strongholds"} held</span></div>
           ${strongholds.length ? `<ul>${strongholds.map(stronghold => `<li>${escapeHtml(stronghold.name)}</li>`).join("")}</ul>` : `<p>No strongholds held.</p>`}
         </div>
       </section>
-      <section class="public-profile-section">
-        <div class="public-profile-heading"><span>Clan</span></div>
+      <section class="public-profile-section" tabindex="0" aria-label="Clan affiliation">
+        <div class="public-profile-heading"><span>Allegiance</span></div>
         ${profile.clanId
           ? `<button class="public-profile-clan" type="button" data-public-clan-id="${escapeHtml(profile.clanId)}" aria-label="View ${escapeHtml(clanName)} clan profile">
               ${renderClanHeraldry(clan.shield || clan.banner || profile.clanShield, { size: "small", instance: `public-${profile.uid}`, label: `${clanName} shield` })}
               <span class="public-profile-clan-copy"><strong>${clanTag ? `[${escapeHtml(clanTag)}] ` : ""}${escapeHtml(clanName)}</strong><small>View clan public profile</small></span>
             </button>`
-          : `<p class="public-profile-empty">Not in a clan.</p>`}
+          : `<div class="public-profile-empty">${renderCrownlandsIcon("flag")}<strong>Independent ruler</strong><span>Not in a clan.</span></div>`}
       </section>
-    </div>`;
+    </div>
+    <footer class="public-profile-footer"><div><span>Main City</span><strong>${profile.mainCityId ? escapeHtml(getRegionLabel(profile.mainRegionId || getCityRegionId(profile.mainCityId))) : "Location unavailable"}</strong></div>
+      <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId && !publicPlayerLocationPending ? "" : "disabled"}>${renderCrownlandsIcon("locate")}<span>${publicPlayerLocationPending ? "Locating…" : "View Main City"}</span></button>
+    </footer><p class="public-profile-location-status" role="status"></p>`;
   FlagRenderer.render(modalBody.querySelector("#publicPlayerFlag"), profile.flag, { stableKey: profile.uid, context: "public-profile" });
 }
 
@@ -13522,31 +13524,63 @@ async function showPublicPlayerProfile(uid = "") {
 }
 
 async function focusPublicPlayerMainCity(cityId = "", regionId = "") {
-  const targetId = String(cityId || "").trim();
+  if (publicPlayerLocationPending) return false;
+  const targetId = getKnownCityId(String(cityId || "").trim(), regionId);
   const knownCity = cityById(targetId) || getOwnedCitySnapshotById(targetId);
-  const targetRegion = normalizeRegionId(regionId || (knownCity ? getCityRegionId(knownCity) : ""));
+  const targetRegion = normalizeRegionId(regionId || getCityRegionId(knownCity || targetId));
   if (!targetId) {
     showToast("That main city is unavailable.");
-    return;
+    return false;
   }
-  if (modal.open) modal.close();
-  if (targetRegion && targetRegion !== getActiveMapRegionId()) {
-    const switched = await switchOnlineIsland(targetRegion);
-    if (!switched || targetRegion !== getActiveMapRegionId()) return;
+  // Preserve unsaved profile edits if this destination was opened above them.
+  const resume = () => { closeProfileScreen({ force: true }); void focusPublicPlayerMainCity(targetId, targetRegion); };
+  if (profileScreen?.classList.contains("open")) {
+    if (!skillsView?.hidden && isSelectedSkillPresetDraftDirty()) { requestSkillPresetDraftExit(resume); return false; }
+    if (!flagEditorView?.hidden && isFlagEditorDirty()) { requestFlagEditorExit(resume); return false; }
   }
-  const city = cityById(targetId);
-  if (!city) {
-    showToast("That main city is no longer available.");
-    return;
+  const requestId = publicPlayerProfileRequestId;
+  const uid = getCurrentOnlineUid();
+  const isCurrent = () => modal.open && requestId === publicPlayerProfileRequestId && uid === getCurrentOnlineUid();
+  const button = modalBody.querySelector("[data-public-main-city]");
+  publicPlayerLocationPending = true;
+  if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); button.querySelector("span").textContent = "Locating…"; }
+  try {
+    if (targetRegion !== getActiveMapRegionId()) {
+      const switched = await switchOnlineIsland(targetRegion, { preserveModal: true });
+      if (!switched || targetRegion !== getActiveMapRegionId()) throw Error("Could not open that map. Try again when connected.");
+    }
+    if (!isCurrent()) return false;
+    const city = cityById(targetId);
+    if (!city || getCityRegionId(city) !== targetRegion) throw Error("That main city is no longer available. Reopen the profile to refresh its location.");
+    closeProfileScreen();
+    if (profileScreen?.classList.contains("open")) return false;
+    modal.close();
+    scoutNearbySourceId = null;
+    regroupSourceId = null;
+    holdingTowerSendContext = null;
+    sendMode = false;
+    selectedSourceId = null;
+    selectedTargetId = null;
+    selectCity(city.id);
+    showToast(`Viewing ${city.name}`);
+    return true;
+  } catch (error) {
+    if (isCurrent()) {
+      const message = error?.message || "Could not open that map. Please try again.";
+      const status = modalBody.querySelector(".public-profile-location-status");
+      if (status) status.textContent = message;
+      showToast(message);
+    }
+    return false;
+  } finally {
+    publicPlayerLocationPending = false;
+    const currentButton = modalBody.querySelector("[data-public-main-city]");
+    if (currentButton) {
+      currentButton.disabled = !currentButton.dataset.publicMainCity;
+      currentButton.removeAttribute("aria-busy");
+      currentButton.querySelector("span").textContent = "View Main City";
+    }
   }
-  scoutNearbySourceId = null;
-  regroupSourceId = null;
-  sendMode = false;
-  selectedSourceId = null;
-  selectedTargetId = city.id;
-  renderSelectionChangeNow();
-  requestAnimationFrame(() => centerOnCity(city.id));
-  showToast(`Viewing ${city.name}`);
 }
 
 async function showPublicClanDetails(clanId = "") {
@@ -15212,7 +15246,7 @@ function cancelMapVisualTransition(transition, reason = "map-switch-cancelled") 
   }
 }
 
-async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionSide = "" } = {}) {
+async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionSide = "", preserveModal = false } = {}) {
   const targetRegionId = normalizeRegionId(regionId);
   if (!isWorldRegionRuntimeActive(targetRegionId)) {
     showToast("That New Lands map has not opened yet.");
@@ -15242,7 +15276,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
         return false;
       }
       centerOnRegion(targetRegionId);
-      if (modal.open) modal.close();
+      if (!preserveModal && modal.open) modal.close();
       finishMapVisualTransition(transition);
       return true;
     } catch (error) {
@@ -15251,7 +15285,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     }
   }
   if (targetRegionId === getActiveOnlineRegionId() && onlineWorldConnected) {
-    if (modal.open) modal.close();
+    if (!preserveModal && modal.open) modal.close();
     syncMapSurfaceToActiveIsland();
     updateCameraTransform();
     return true;
@@ -15262,7 +15296,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     let transitionSettled = false;
     setMapSwitchLoading(`Loading ${getRegionLabel(targetRegionId)}...`);
     prepareSelectionForIslandSwitch();
-    if (fromMapPicker && modal.open) modal.close();
+    if (!preserveModal && fromMapPicker && modal.open) modal.close();
     try {
       const ready = await preloadIslandMap(targetRegionId);
       if (!ready) {
@@ -15272,7 +15306,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
       state.activeRegionId = targetRegionId;
       onlineActiveRegionId = targetRegionId;
       updateIslandSwitcherUi();
-      if (modal.open) modal.close();
+      if (!preserveModal && modal.open) modal.close();
       centerOnRegion(targetRegionId);
       renderAll();
       transitionSettled = finishMapVisualTransition(transition);
@@ -15293,7 +15327,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
   let transitionSettled = false;
   setMapSwitchLoading(`Loading ${targetLabel}...`);
   prepareSelectionForIslandSwitch();
-  if (fromMapPicker && modal.open) modal.close();
+  if (!preserveModal && fromMapPicker && modal.open) modal.close();
   try {
     onlineStatusDetail.textContent = `Preparing ${targetLabel}...`;
     const [mapReady] = await Promise.all([
@@ -15321,7 +15355,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     onlinePresence = [];
     onlineCitiesLoaded = false;
     onlineWorldConnected = false;
-    if (modal.open) modal.close();
+    if (!preserveModal && modal.open) modal.close();
     const connected = await connectOnlineIsland(targetRegionId, {
       claimHome: false,
       homeRegionId,

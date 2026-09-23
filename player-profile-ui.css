@@ -1,4 +1,87 @@
-/* Approved Player Profile overview. All overrides are scoped to this tab. */
+/* Public ruler dossier. Isolated from the public clan and own-profile screens. */
+#modal.public-player-profile-modal:has(.public-player-profile){width:min(950px,calc(100vw - 28px)) !important;max-height:calc(100dvh - 24px) !important;padding:0 !important;border:3px double #927b51 !important;border-radius:3px !important;background:#eee1bd !important;color:#372e22 !important;box-shadow:0 14px 50px #0009 !important}
+#modal:has(.public-player-profile) .modal-card{padding:0 !important;background:linear-gradient(120deg,#f6ecd2,#e9dab5) !important;border:0 !important;border-radius:0 !important;color:#372e22 !important;max-height:calc(100dvh - 30px) !important;overflow:auto !important}
+#modal:has(.public-player-profile) #modalTitle{margin:0 !important;padding:18px 55px 16px 22px !important;border-bottom:3px double #ab9061 !important;font:27px/1.2 Georgia,serif !important;color:#493625 !important;background:#e9d9b3 !important}
+#modal:has(.public-player-profile) .modal-close{background:#e1d0a7 !important;color:#59442d !important;border:1px solid #b7a078 !important;border-radius:2px !important}
+#modal:has(.public-player-profile) #modalBody{padding:16px !important;color:#372e22 !important}
+#modal .public-player-profile{grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+#modal .public-player-profile .public-profile-section{padding:14px;border:1px solid #c1ad80 !important;border-radius:1px !important;background:linear-gradient(125deg,#fff6dd70,#ddc99940) !important;box-shadow:inset 0 0 0 3px #fff9e133;min-width:0}
+#modal .public-player-profile .public-profile-heading{margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid #c6b58c;color:#7a6040 !important;font:11px/1.2 Georgia,serif;letter-spacing:2px}
+#modal .public-profile-identity{flex-direction:column;gap:12px;text-align:center;margin:0 0 14px;font:22px/1.15 Georgia,serif;overflow-wrap:anywhere}
+#modal .public-profile-flag{width:100px;height:100px}
+#modal .public-profile-power{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 4px;border-top:1px solid #c6b58c}
+#modal .public-profile-power .cl-icon{width:30px;height:30px;color:#8f6b30}
+#modal .public-profile-power span{display:grid;gap:3px;min-width:0}
+#modal .public-profile-power strong{font:21px/1.15 Georgia,serif;color:#574321 !important;overflow-wrap:anywhere}
+#modal .public-profile-power small{font-size:11px;color:#76654c !important}
+#modal .public-profile-stat{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:nowrap}
+#modal .public-profile-stat>:is(img,svg){width:35px;height:38px;flex:none;color:#76613d}
+#modal .public-profile-stat>div{min-width:0;display:grid;gap:3px}
+#modal .public-profile-stat strong{font:24px/1.12 Georgia,serif;color:#413522 !important}
+#modal .public-profile-stat span{font-size:12px;color:#75654c !important}
+#modal .public-profile-troop-estimate{margin-top:4px}
+#modal .public-profile-strongholds{margin-top:12px;border-top:1px solid #c6b58c;padding-top:12px}
+#modal .public-profile-strongholds>div{gap:7px;align-items:baseline;color:#76654c !important;font-size:12px}
+#modal .public-profile-strongholds>div strong{font:22px Georgia,serif;color:#574321 !important}
+#modal .public-profile-strongholds ul{max-height:90px;overflow:auto;margin:8px 0 0;padding-left:18px;font:14px/1.55 Georgia,serif;color:#584a33 !important;scrollbar-width:thin}
+#modal .public-profile-strongholds p{font-size:12px;color:#75654c !important}
+#modal .public-player-profile .public-profile-clan{flex-direction:column;text-align:center;gap:14px;padding:4px 6px 12px;border:0 !important;border-radius:1px !important;background:transparent !important;color:#493625 !important;box-shadow:none !important}
+#modal .public-profile-clan .clan-shield-size-small{width:98px;height:112px}
+#modal .public-profile-clan-copy{gap:8px}
+#modal .public-profile-clan-copy strong{font:19px/1.2 Georgia,serif;color:#493625 !important}
+#modal .public-profile-clan-copy small{color:#68623c !important;font-size:11px;text-decoration:underline;text-underline-offset:3px}
+#modal .public-player-profile .public-profile-empty{display:grid;justify-items:center;gap:10px;padding:12px 0;text-align:center;color:#76654c !important;font-size:12px}
+#modal .public-profile-empty svg{width:65px;height:65px;opacity:.55}
+#modal .public-profile-empty strong{font:18px Georgia,serif;color:#584a33 !important}
+#modal .public-profile-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px;padding:12px 14px;border:1px solid #b7a078;background:#d3c79f66}
+#modal .public-profile-footer>div{display:grid;gap:3px;min-width:0}
+#modal .public-profile-footer>div span{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#76654c !important}
+#modal .public-profile-footer>div strong{font:18px Georgia,serif;color:#493625 !important;overflow-wrap:anywhere}
+#modal .public-profile-footer .public-profile-location{width:auto;flex:none;min-height:42px;gap:9px;padding:9px 17px;border:1px solid #663e37 !important;border-radius:2px !important;background:linear-gradient(#87564b,#6b3e37) !important;color:#fff2d6 !important;font:15px Georgia,serif}
+#modal .public-profile-location svg{width:23px;height:23px}
+#modal .public-profile-footer .public-profile-location span{color:#fff2d6 !important}
+#modal .public-profile-location-status{margin:0;color:#803d34 !important;font-size:12px}
+#modal .public-profile-location-status:not(:empty){padding:10px 2px 0}
+#modal:has(.public-player-profile) button:focus-visible{outline:2px solid #755326 !important;outline-offset:3px !important}
+@media(max-height:600px) and (orientation:landscape){
+  #modal.public-player-profile-modal:has(.public-player-profile){width:min(920px,calc(100vw - 16px)) !important;max-height:calc(100dvh - 12px) !important}
+  #modal:has(.public-player-profile) .modal-card{max-height:calc(100dvh - 18px) !important}
+  #modal:has(.public-player-profile) #modalTitle{font-size:20px !important;padding:9px 45px 8px 14px !important}
+  #modal:has(.public-player-profile) #modalBody{padding:8px !important}
+  #modal .public-player-profile{gap:8px}
+  #modal .public-player-profile .public-profile-section{padding:8px;max-height:calc(100dvh - 150px);overflow:auto;scrollbar-width:thin}
+  #modal .public-player-profile .public-profile-heading{font-size:9px;letter-spacing:1.3px;margin-bottom:8px;padding-bottom:6px}
+  #modal .public-profile-identity{font-size:17px;gap:6px;margin-bottom:6px}
+  #modal .public-profile-flag{width:60px;height:60px}
+  #modal .public-profile-power{padding:7px 0;gap:6px}
+  #modal .public-profile-power strong{font-size:17px}
+  #modal .public-profile-power small{font-size:10px}
+  #modal .public-profile-stat{gap:7px;padding:4px 0}
+  #modal .public-profile-stat>:is(img,svg){width:25px;height:28px}
+  #modal .public-profile-stat strong{font-size:19px}
+  #modal .public-profile-stat span{font-size:10px}
+  #modal .public-profile-strongholds{margin-top:6px;padding-top:6px}
+  #modal .public-profile-strongholds>div{font-size:10px}
+  #modal .public-profile-strongholds>div strong{font-size:17px}
+  #modal .public-profile-strongholds ul{font-size:11px;max-height:46px;margin-top:5px}
+  #modal .public-player-profile .public-profile-clan{gap:7px;padding:0 0 6px}
+  #modal .public-profile-clan .clan-shield-size-small{width:57px;height:65px}
+  #modal .public-profile-clan-copy{gap:6px}
+  #modal .public-profile-clan-copy strong{font-size:15px}
+  #modal .public-profile-clan-copy small{font-size:10px}
+  #modal .public-profile-footer{margin-top:8px;padding:6px 9px;gap:8px}
+  #modal .public-profile-footer>div strong{font-size:15px}
+  #modal .public-profile-footer .public-profile-location{min-height:38px;font-size:13px;padding:6px 11px}
+  #modal .public-player-profile .public-profile-empty{gap:6px;padding:6px 0}
+  #modal .public-profile-empty svg{width:46px;height:46px}
+  #modal .public-profile-empty strong{font-size:15px}
+}
+@media(max-height:360px) and (orientation:landscape){
+  #modal .public-profile-flag{width:46px;height:46px}
+  #modal .public-profile-identity{font-size:16px;gap:4px;margin-bottom:4px}
+  #modal .public-profile-power{padding:5px 0}
+}
+/* Approved Player Profile overview. All overrides below are scoped to this tab. */
 .profile-ledger-crown{display:none}
 #profileScreen.profile-ledger-active :is(h2,h3,p,span,strong,small,dt,dd,button){color:inherit !important;text-shadow:none !important;font-weight:400 !important;text-transform:none !important;letter-spacing:normal !important}
 #profileScreen.profile-ledger-active :is(.profile-identity,.kingdom-overview,.profile-achievement-summary){margin:0 !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;gap:0 !important;grid-column:auto !important;grid-row:auto !important;align-content:stretch !important}
