@@ -16,7 +16,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
     const run=code=>evaluate(`document.getElementById("game").contentWindow.eval(${JSON.stringify(code)})`);
     await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
     await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/public-player-profile/preview.html"});
-    let ready=false;for(let i=0;i<400;i++){ready=await evaluate('document.documentElement.dataset.publicProfileReady==="true"');if(ready)break;await delay(100);}assert(ready,"Profile fixture did not load");
+    let ready=false;for(let i=0;i<400;i++){ready=await evaluate('document.documentElement?.dataset.publicProfileReady==="true"');if(ready)break;await delay(100);}assert(ready,"Profile fixture did not load");
     const catalog=require("../functions/core-expansion-region-catalog.json");
     const locations=catalog.regions.filter(r=>r.lifecycle==="active"&&r.permanentCore).flatMap(r=>JSON.parse(fs.readFileSync(path.resolve(__dirname,"..",r.regionDefinitionPath),"utf8")).cities.map(c=>({mainCityId:c.id,mainRegionId:r.id})));
     const normalized=await run(`(${JSON.stringify(locations)}).every(raw=>normalizePublicPlayerProfile({...raw,uid:'test'}).mainCityId===raw.mainCityId)`);

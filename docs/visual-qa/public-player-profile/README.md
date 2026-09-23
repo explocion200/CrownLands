@@ -1,6 +1,6 @@
 # Public Player Profile
 
-Draft for approval, September 23, 2026. Implemented in the actual client on `codex/public-player-profile`; not merged or deployed.
+Approved September 23, 2026, with authorization to merge and deploy after required checks. Implemented in the actual client on `codex/public-player-profile`. Deployment is established by release verification, not design approval.
 
 Open `index.html?viewport=desktop` using the repository benchmark server. Mobile landscape is 844 × 390, small landscape is 568 × 320. No portrait design. The preview embeds the production client and uses loopback-only synthetic identities and mock services. No production data is loaded or changed.
 
@@ -16,6 +16,6 @@ The location action now waits for a successful map switch, confirms the target b
 
 `tools/validate-public-player-profile-browser.js` checks all 1,480 Core city IDs, island-only identity fallback, four profile samples at three viewport sizes, existing estimates and unavailable states, clan navigation, actual unvisited-map navigation from the own-profile overlay, duplicate clicks, failure/retry and stale completion. Screenshots and the synthetic results are written to ignored `release-artifacts/public-player-profile/`.
 
-Related profile privacy, public identity links, report navigation and modal lifecycle remain in the focused validation plan. Production packaging verifies the reused assets and the combined own/public profile presentation stays within 52 KiB (the dossier adds less than 9 KiB of CSS). No backend deployment is required. Live multiplayer verification has not been claimed; release awaits design approval and explicit merge/deployment instruction.
+Related profile privacy, public identity links, report navigation and modal lifecycle remain in the focused validation plan. Production packaging verifies the reused assets and the combined own/public profile presentation stays within 52 KiB (the dossier adds less than 9 KiB of CSS). No backend deployment is required. Live multiplayer verification has not been claimed; production release verification is recorded separately.
 
 Additional diagnostic: the broad asset-budget validator already exceeds its installation-cache limit on current main: 4,437,524 bytes against 4,348,928. This update adds 11,116 bytes to that cache before final small edits. The pre-existing total-cache budget failure is not suppressed or enlarged here; it remains a separate packaging-budget reconciliation. The focused build still validates the actual production artifact and individual Profile presentation bound.

@@ -34,7 +34,8 @@
     },
     {
       "paths": [
-        "docs/visual-qa/public-player-profile/README.md"
+        "docs/visual-qa/public-player-profile/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
       "reason": "Document the draft, reproduced location root cause, focused checks, release limits and measured pre-existing global cache-budget diagnostic."

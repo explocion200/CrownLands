@@ -974,6 +974,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 ### Social identity
 
 - Player flags, profiles, clan identity, public leaderboard identity, and clan heraldry form the current social identity layer.
+- Public player profiles use the approved parchment dossier on desktop and mobile landscape: ruler flag/name and public King Power, city count, estimated troop range, stronghold count/names, and clan heraldry/link. Compact columns scroll as needed while the Main City action stays reachable. Locate resolves the recorded map before selecting an unloaded Core city, returns to the map from the own-profile overlay, preserves unsaved profile edits through existing exit confirmations, and retains retry feedback on navigation failure. Existing public-information privacy, identity and gameplay rules remain unchanged. Approved September 23, 2026; merge and deployment authorized subject to required checks, with live status verified separately.
 - Player name, complete player flag design, account creation date, and notification preferences persist across seasons.
 - Clan ID, name, tag, heraldry, member roster, and member roles persist across seasons.
 - Authentication and active-session data may carry forward as technical account state, but they are not seasonal progression or player customization.
