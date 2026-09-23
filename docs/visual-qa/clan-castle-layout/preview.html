@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Clan Castle layout preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="clan-heraldry-v2.css"><link rel="stylesheet" href="docs/visual-qa/clan-castle-layout/draft.css"><script src="clan-tower-buildings.js" defer></script><script src="clan-tower-details-ui.js" defer></script><script src="functions/clanHeraldryConfig.js" defer></script><script src="functions/clanHeraldryAssets.js" defer></script><script src="functions/clanHeraldryLegacyV1.js" defer></script><script src="functions/clanHeraldryRenderer.js" defer></script><script src="docs/visual-qa/clan-castle-layout/preview.js" defer></script></head>
+<body><main id="map" aria-label="Ravenwatch Clan Castle map draft">
+ <div class="map-art" aria-hidden="true"></div>
+ <header class="realm-hud"><span id="hudFlag" class="clan-flag"></span><div><small>THE CRIMSON WATCH</small><strong>Ravenwatch</strong><span>Clan Tower · The Core</span></div></header>
+ <div class="wallet"><img src="assets/icons/royal-shop-gold-r1.svg" alt="Gold"><strong>4.1B</strong></div>
+ <div class="view-tools"><button id="recenter" aria-label="Recenter on Clan Castle" title="Recenter on Clan Castle">⌖</button><button id="labels" aria-pressed="true" aria-label="Show building names" title="Show building names">Aa</button></div>
+ <div class="scene-region"><div id="compound" class="compound">
+  <img id="paths" class="courtyard" src="assets/clan-buildings/courtyard.webp" alt="">
+  <div class="clan-banner"><span id="castleFlag" class="clan-flag"></span><div><strong id="clanName">The Crimson Watch</strong><small id="ownership">Your clan</small></div></div>
+  <button id="castle" class="map-building castle" data-select="castle" aria-label="Ravenwatch Clan Tower, show map actions" aria-pressed="true"><img src="assets/clan-buildings/tower.webp" alt=""><span class="building-sign"><strong>Ravenwatch</strong><small>Wall Level 12</small></span></button>
+  <div id="buildings"></div>
+ </div></div>
+ <nav id="mapActions" class="map-actions" aria-label="Selected Clan Tower actions"></nav>
+ <aside id="detail" class="detail-dock" aria-label="Selected building" hidden></aside>
+ <aside class="map-caption"><span>RAVENWATCH</span><strong>Northwestern watch</strong><small>Tap a building to enter</small></aside>
+ <nav class="bottom-hud" aria-label="Map menu preview"><button data-menu="Bag" aria-label="Bag"><img src="assets/optimized/hud-bag-192x192-8d79a1879913.webp" alt=""></button><button data-menu="Shop" aria-label="Shop"><img src="assets/optimized/hud-shop-192x192-631cf3c626d5.webp" alt=""></button><button data-menu="Map" aria-label="Map"><img src="assets/optimized/hud-map-192x192-f330cd084a9f.webp" alt=""></button></nav>
+ <p id="toast" role="status" hidden></p>
+</main>
+<dialog id="buildingDialog" aria-labelledby="dialogTitle"><header><div><small id="dialogEyebrow"></small><h1 id="dialogTitle"></h1></div><button id="closeDialog" aria-label="Close building details">×</button></header><div id="dialogContent" class="dialog-content"></div><footer><span>Layout preview · Sample values</span><button id="backToMap">Back to castle</button></footer></dialog>
+</body></html>
