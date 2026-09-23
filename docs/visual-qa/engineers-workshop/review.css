@@ -1,0 +1,3 @@
+@import url("../shop-ui/review.css");
+/* Native dimensions: a smaller review window scrolls rather than resizing the game. */
+main{display:block;overflow:auto;padding-bottom:6px}#canvas{margin:auto;overflow:hidden}iframe{position:static;transform:none}footer a{color:#e3d2a5}.review-controls select{max-width:210px}
