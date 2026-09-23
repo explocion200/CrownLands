@@ -4755,31 +4755,40 @@ function ensureHoldingTowerMapSubscriptions() {
 }
 
 function renderClanTowerMapBuildings(visibleTowers, fragment) {
-  cityLayer.querySelectorAll(".holding-tower-building-node, .holding-tower-courtyard").forEach(node => node.remove());
+  const existing = new Map([...cityLayer.querySelectorAll(".holding-tower-building-node, .holding-tower-courtyard")]
+    .map(node => [node.dataset.clanCourtyardTower
+      ? `${node.dataset.clanCourtyardTower}:ground`
+      : `${node.dataset.clanBuildingTower}:${node.dataset.clanBuildingId}`, node]));
   const definitions = window.CrownlandsClanTowerBuildings;
-  if (!definitions) return;
-  for (const visual of visibleTowers) {
+  for (const visual of definitions ? visibleTowers : []) {
     const tower = holdingTowerSnapshots.get(visual.id);
     if (!tower || tower.ownerKind !== "clan") continue;
     const point = worldToMapPoint({ x: visual.visualX, y: visual.visualY });
     const hasBuildings = definitions.DEFINITIONS.some(building => definitions.level(tower.buildings?.[building.id]) || tower.buildingProject?.buildingId === building.id);
     if (!hasBuildings) continue;
     // Soft dirt clearings leave the original map grass visible between buildings.
-    const courtyard = document.createElement("img");
+    const groundKey = `${visual.id}:ground`;
+    const existingCourtyard = existing.get(groundKey);
+    const courtyard = existingCourtyard || document.createElement("img");
+    existing.delete(groundKey);
     courtyard.className = "holding-tower-courtyard";
-    courtyard.src = "assets/clan-buildings/courtyard.webp?v=dirt-patches-v1";
+    courtyard.dataset.clanCourtyardTower = visual.id;
+    if (!existingCourtyard) courtyard.src = "assets/clan-buildings/courtyard.webp?v=dirt-patches-v1";
     courtyard.alt = "";
     courtyard.draggable = false;
     courtyard.style.left = `${point.x + (.5 - visual.anchorX) * visual.width}px`;
     courtyard.style.top = `${point.y + (1 - visual.anchorY - .056) * visual.width}px`;
     courtyard.style.width = `${visual.width * 1.4}px`;
     courtyard.style.height = `${visual.width * 1.04}px`;
-    fragment.appendChild(courtyard);
+    if (!existingCourtyard) fragment.appendChild(courtyard);
     for (const building of definitions.DEFINITIONS) {
       const level = definitions.level(tower.buildings?.[building.id]);
       const constructing = tower.buildingProject?.buildingId === building.id;
       if (!level && !constructing) continue;
-      const node = document.createElement("button");
+      const buildingKey = `${visual.id}:${building.id}`;
+      const existingNode = existing.get(buildingKey);
+      const node = existingNode || document.createElement("button");
+      existing.delete(buildingKey);
       node.type = "button";
       node.className = `holding-tower-building-node${constructing ? " constructing" : ""}${!level ? " unbuilt" : ""}${selectedTowerMapId === visual.id ? " selected" : ""}`;
       node.dataset.clanBuildingTower = visual.id;
@@ -4789,10 +4798,15 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
       node.style.left = `${point.x + (placement.x + .5 - visual.anchorX) * visual.width}px`;
       node.style.top = `${point.y + (1 - visual.anchorY + placement.y) * visual.width}px`;
       node.style.width = `${visual.width * .44}px`;
-      node.innerHTML = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
-      fragment.appendChild(node);
+      const content = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
+      if (node._renderContent !== content) {
+        node.innerHTML = content;
+        node._renderContent = content;
+      }
+      if (!existingNode) fragment.appendChild(node);
     }
   }
+  for (const node of existing.values()) node.remove();
 }
 
 async function openClanTowerBuilding(towerId, buildingId) {
@@ -19855,10 +19869,14 @@ function getIncomingArmyTargetSnapshot(attack = {}) {
   const isPrivateTargetView = attack.viewerAccess === "target"
     || Boolean(currentUid && targetOwnerUid === currentUid);
   const loadedTarget = getArmyTargetById(targetId);
-  const cachedOwnedTarget = attack.targetType === "camp" ? null : getOwnedCitySnapshotById(targetId);
   const activeLoadedTarget = loadedTarget && getCityRegionId(loadedTarget) === getActiveMapRegionId()
     ? loadedTarget
     : null;
+  // The active-map snapshot wins below. Avoid rebuilding the entire owned-city
+  // roster for every visible incoming march when it cannot affect the result.
+  const cachedOwnedTarget = activeLoadedTarget || attack.targetType === "camp"
+    ? null
+    : getOwnedCitySnapshotById(targetId);
   const target = activeLoadedTarget || cachedOwnedTarget || loadedTarget
     || (attack.targetType === "camp" ? null : getPlayableBaseCityById(targetId));
   if (!target) return null;
@@ -28518,24 +28536,33 @@ async function selectClanTowerOnMap(towerId) {
 
 function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".clan-tower-action-wheel")) {
   if (!wheel) return;
-  const visual = getHoldingTowerVisual(wheel.dataset.towerId);
-  const node = cityLayer?.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
-  if (!visual || !node) return;
   const scale = Math.max(0.1, zoom);
-  const rect = node.getBoundingClientRect();
-  const anchorY = rect.top + visual.anchorY * rect.height;
-  const name = node.querySelector(".holding-tower-map-label");
-  const buildings = [...cityLayer.querySelectorAll(".holding-tower-building-node")]
-    .filter(building => building.dataset.clanBuildingTower === visual.id);
-  const bottom = Math.max(name?.getBoundingClientRect().bottom || rect.bottom, ...buildings.map(building =>
-    Math.max(building.getBoundingClientRect().bottom, building.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom || 0)));
+  let layout = wheel._clanTowerLayout;
+  if (!layout) {
+    const visual = getHoldingTowerVisual(wheel.dataset.towerId);
+    const node = cityLayer?.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
+    if (!visual || !node) return;
+    const rect = node.getBoundingClientRect();
+    const anchorY = rect.top + visual.anchorY * rect.height;
+    const name = node.querySelector(".holding-tower-map-label");
+    const buildings = [...cityLayer.querySelectorAll(".holding-tower-building-node")]
+      .filter(building => building.dataset.clanBuildingTower === visual.id);
+    const bottom = Math.max(name?.getBoundingClientRect().bottom || rect.bottom, ...buildings.map(building =>
+      Math.max(building.getBoundingClientRect().bottom, building.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom || 0)));
+    // Measure once per rendered selection in world units. Camera translation
+    // cancels out; zoom only scales this offset. A city/selection refresh creates
+    // a new wheel, so building, ownership and viewport changes are remeasured.
+    layout = wheel._clanTowerLayout = { bottomOffset: (bottom - anchorY) / scale, scale: null };
+    const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
+    buttons.forEach((button, index) => {
+      button.style.setProperty("--tower-action-x", `${(index - (buttons.length - 1) / 2) * 60}px`);
+    });
+  }
+  if (layout.scale === scale) return;
   // Counter the world zoom: every action remains 56 screen pixels, with 4px gaps.
   wheel.style.transform = `scale(${1 / scale})`;
-  const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
-  buttons.forEach((button, index) => {
-    button.style.setProperty("--tower-action-x", `${(index - (buttons.length - 1) / 2) * 60}px`);
-    button.style.setProperty("--tower-action-y", `${bottom - anchorY + 36}px`);
-  });
+  wheel.style.setProperty("--tower-action-y", `${layout.bottomOffset * scale + 36}px`);
+  layout.scale = scale;
 }
 
 function renderSelectedClanTowerWheel(towerId) {

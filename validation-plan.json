@@ -1,38 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "066c5b32cd0ecf450b42ce353529b87e340575f0",
+  "baseCommit": "23c0c6b9418842a73db4f7ffa48b43162926f310",
   "coverage": [
     {
-      "paths": [
-        "docs/visual-qa/clan-castle-layout/index.html",
-        "docs/visual-qa/clan-castle-layout/review.js",
-        "docs/visual-qa/clan-castle-layout/preview.html",
-        "docs/visual-qa/clan-castle-layout/preview.js",
-        "docs/visual-qa/clan-castle-layout/draft.css",
-        "tools/validate-clan-castle-layout-draft-browser.js",
-        "docs/visual-qa/clan-castle-layout/map-preview.js",
-        "docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png",
-        "game.js",
-        "clan-tower-buildings-ui.css",
-        "assets/clan-buildings/courtyard.webp",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-castle-layout-draft-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
-      ],
-      "reason": "Integrate the approved four-building layout, transparent dirt clearings and compact fixed-screen-size actions into the actual Core Tower renderer. The review now uses production functions without layout overrides. Verify all four Towers, original structure sizes and labels, new offsets and pickup exclusion, ground transparency/hit testing, 56px buttons and 4px gaps across zoom, owner/rival permissions, real pointer/touch entry, Store, Info, Send and Rally order handlers, construction stages and unbuilt compounds at desktop and two landscape sizes. The existing Store test selector is updated for the previously merged Clan Shop UI. Production build/artifact validation covers the optimized WebP and existing byte budgets. No backend, rules, economy or authoritative mechanics change, so no emulator files are selected."
+      "paths": ["game.js", "tools/validate-map-ui-responsiveness-browser.js", "tools/validate-incoming-army-estimates.js"],
+      "tests": ["tools/validate-map-ui-responsiveness-browser.js", "tools/validate-clan-castle-layout-draft-browser.js", "tools/validate-clan-tower-map-browser.js", "tools/validate-clan-tower-buildings-browser.js", "tools/validate-incoming-army-estimates.js", "tools/validate-incoming-threats-browser.js", "tools/validate-responsive-browser.js", "tools/validate-performance-bottlenecks.js"],
+      "reason": "Remove repeated Tower geometry measurements, preserve building DOM and skip unused roster scans for loaded incoming targets. Verify no repeated work, fixed actions across zoom and viewport sizes, retained nodes and focus, upgrades/construction/ownership cleanup, actual actions and permissions, local/off-map incoming privacy, camera/touch interruption and existing menu/chat responsiveness and frame/cache guards."
     },
     {
-      "paths": [
-        "docs/visual-qa/clan-castle-layout/README.md",
-        "docs/visual-qa/clan-castle-layout/art/prompt.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
+      "paths": ["functions/index.js", "functions/test/emulator-maintenance-projections.js"],
+      "tests": ["tools/validate-stability-regressions.js", "tools/validate-authoritative-army-orders.js", "functions/test/emulator-maintenance-projections.js"],
+      "reason": "Fix observed cleanup memory failure using expiry-only/reference-only queries and 512MiB with concurrency one. Real Firestore verifies receipt payloads are not loaded, expired records are deleted, fresh/nonexpiring records survive, age telemetry and replay remain correct. Shared deletion batching and bulk idempotency guards remain covered. Deploy both affected cleanup Functions; no callable or gameplay rule changes."
+    },
+    {
+      "paths": ["docs/MAP_UI_RESPONSIVENESS_AUDIT_2026_09_23.md"],
       "tests": [],
-      "reason": "Record user-approved layout and fixed button-size requirements, integrated renderer and production ground conversion provenance, plus release verification status."
+      "reason": "Record measured root causes, controlled comparisons, current realm and service observations, and remaining verification limits."
     }
   ]
 }

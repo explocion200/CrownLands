@@ -14524,6 +14524,7 @@ async function cleanupExpiredNotificationOutbox(nowMs = Date.now(), limit = 250)
   const snapshot = await db.collection("serverNotificationOutbox")
     .where("expiresAtMs", "<=", nowMs)
     .limit(Math.max(1, Math.min(500, Math.floor(limit))))
+    .select()
     .get();
   if (snapshot.empty) return { removed: 0 };
   await deleteMaintenanceDocuments(db, snapshot.docs);
@@ -24836,6 +24837,7 @@ async function cleanupExpiredBulkOrderRequests(nowMs = Date.now()) {
       .where("expiresAtMs", "<=", nowMs)
       .orderBy("expiresAtMs", "asc")
       .limit(BULK_ORDER_CLEANUP_LIMIT)
+      .select("expiresAtMs")
       .get();
     if (!snapshot.size) break;
     pages += 1;
@@ -24851,6 +24853,7 @@ async function cleanupExpiredBulkOrderRequests(nowMs = Date.now()) {
     .where("expiresAtMs", "<=", nowMs)
     .orderBy("expiresAtMs", "asc")
     .limit(1)
+    .select("expiresAtMs")
     .get();
   const backlogOldestExpiresAtMs = timestampToMs(backlogSnapshot.docs[0]?.data()?.expiresAtMs);
   return {
@@ -34637,6 +34640,7 @@ async function cleanupExpiredChatCollectionGroup(collectionId = "", nowMs = Date
     const snapshot = await db.collectionGroup(collectionId)
       .where("expiresAtMs", "<=", nowMs)
       .limit(450)
+      .select()
       .get();
     if (snapshot.empty) break;
     await deleteMaintenanceDocuments(db, snapshot.docs);
@@ -34706,7 +34710,8 @@ exports.cleanupExpiredBulkOrderRequests = onSchedule({
   timeZone: "Etc/UTC",
   maxInstances: 1,
   timeoutSeconds: 120,
-  memory: "256MiB",
+  memory: "512MiB",
+  concurrency: 1,
 }, async () => {
   const [result, cityUpgrades, notificationOutboxCleanup] = await Promise.all([
     cleanupExpiredBulkOrderRequests(Date.now()),
