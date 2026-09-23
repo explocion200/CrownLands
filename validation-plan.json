@@ -9,15 +9,20 @@
         "docs/visual-qa/clan-castle-layout/preview.html",
         "docs/visual-qa/clan-castle-layout/preview.js",
         "docs/visual-qa/clan-castle-layout/draft.css",
+        "tools/validate-clan-castle-layout-draft-browser.js",
+        "docs/visual-qa/clan-castle-layout/map-preview.js"
+      ],
+      "tests": [
         "tools/validate-clan-castle-layout-draft-browser.js"
       ],
-      "tests": ["tools/validate-clan-castle-layout-draft-browser.js"],
-      "reason": "Standalone interactive layout draft only. Reuses current building art/rules, clan heraldry and mapActions helper with sample snapshots; does not modify runtime entry points or backend. Verify all four building positions and actual mouse/touch hit targets, selected detail and back controls, current owned/rival map actions, all art stages, loading, viewport fit and review controls at desktop and two landscape-mobile sizes. No server changes require emulators."
+      "reason": "Position-only proposal inside the existing mock-game benchmark. Reuse the real game renderer, artwork, labels, controls and building screens; alter only four building left/top offsets in a draft-only wrapper. Verify same-zoom before/after size and style parity, original action placement, changed positions, and actual pointer/touch entry into all four buildings at desktop and two mobile landscape sizes. No production runtime or backend changes; no emulator suites are required."
     },
     {
-      "paths": ["docs/visual-qa/clan-castle-layout/README.md"],
+      "paths": [
+        "docs/visual-qa/clan-castle-layout/README.md"
+      ],
       "tests": [],
-      "reason": "Records the requested visual proposal, reference layout, current source dependencies, measured checks and draft-only limitations. Approval and real map integration remain pending; no confirmed game rules are changed."
+      "reason": "Documents the user-requested scope correction, exact proposed offsets, comparison controls, source dependencies and remaining approval/integration. No game rules are changed."
     }
   ]
 }
