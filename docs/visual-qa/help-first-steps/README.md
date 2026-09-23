@@ -29,3 +29,7 @@ Historical release labels and superseded figures elsewhere in the specification 
 ## Integration after approval
 
 Integrate the approved view into `showHelpModal`, retaining the existing onboarding preference persistence and guidance rerender handlers. Replace the preview tips flag with `enableOnboardingGuidance` / existing preference handling and preserve account isolation. Review the guide against the exact release again before shipping. No backend changes are proposed.
+
+## Approved runtime integration
+
+Approved by the user September 22, 2026. The game Help button now mounts `help-handbook-ui.js/css` with shared handbook content. The tips toggle uses the existing account/realm-scoped onboarding preferences and rejects stale-session changes. Existing contextual tips, dismissal/replay and guided actions remain intact. The draft pages remain available for comparison. Runtime browser and existing onboarding validation pass; deployment remains pending until this PR is merged and published.

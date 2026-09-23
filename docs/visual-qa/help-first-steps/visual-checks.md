@@ -15,3 +15,5 @@ Verified September 22, 2026 using a fresh Chromium session against the local dra
 Command: `node tools/validate-help-first-steps-draft-browser.js`.
 
 Screenshots are generated in ignored `release-artifacts/help-first-steps-draft/`; they are review evidence, not shipped assets. This is a draft only: approval and actual `showHelpModal` integration remain outstanding. No deployment occurred.
+
+Runtime integration: `node tools/validate-help-handbook-browser.js` passed all three sizes through the actual Help button with the complete game styles. Checked persistent tips, stale-account rejection, close cleanup, search and chapter navigation. Existing `validate-onboarding-guidance.js` and `validate-onboarding-browser.js` passed contextual tips, actual actions, dismissal/replay and account isolation at desktop/landscape. Runtime screenshots are in `release-artifacts/help-handbook-game/`. Approval is received; publication remains pending.

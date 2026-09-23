@@ -39177,21 +39177,29 @@ function handleOnboardingGuidanceClick(event) {
 }
 
 function showHelpModal() {
-  modal.className = "modal";
-  modalTitle.textContent = "First steps & help";
-  modalBody.innerHTML = `
-    <section class="onboarding-help">
-      <button type="button" data-onboarding-enable>Show first steps tips</button>
-    </section>
-    <ol class="onboarding-help-steps">
-      ${ONBOARDING_TOPICS.map(topic => {
-        const copy = getOnboardingCopy(topic);
-        return `<li><strong>${escapeHtml(copy.title)}.</strong> ${escapeHtml(copy.text)}</li>`;
-      }).join("")}
-    </ol>
-    <p>Drag to move the map. Scroll or pinch to zoom. Tap empty land to deselect. The realm keeps running.</p>
-  `;
-  modal.showModal();
+  const scope = getOnlineRequestScope();
+  modal.className = "modal help-handbook-modal";
+  modalTitle.textContent = "Help & first steps";
+  window.CrownlandsHelpHandbookUi.mount(modalBody, {
+    tipsEnabled: Boolean(getOnboardingPrefs()?.enabled),
+    canEditTips: Boolean(getCurrentOnlineUid()),
+    onClose: () => modal.close(),
+    onToggleTips: enabled => {
+      if (!getCurrentOnlineUid() || scope !== getOnlineRequestScope()) return null;
+      if (enabled) enableOnboardingGuidance();
+      else saveOnboardingPrefs({ enabled: false, dismissed: getOnboardingPrefs()?.dismissed || [] });
+      const host = document.getElementById("onboardingMapTip");
+      if (host) delete host.dataset.guidanceMarkup;
+      renderOnboardingMapTip();
+      updateOnboardingPointer();
+      return Boolean(getOnboardingPrefs()?.enabled);
+    },
+  });
+  modal.addEventListener("close", () => {
+    modal.classList.remove("help-handbook-modal");
+    delete modalBody.dataset.helpReady;
+  }, { once: true });
+  if (!modal.open) modal.showModal();
 }
 let gameDisplayEntryRequested = false;
 let landscapeLockRequest = null;

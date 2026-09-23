@@ -32,6 +32,9 @@ function getNotificationOpenUrl(notificationData = {}) {
 }
 
 const STATIC_CACHE_URLS = [
+  "/help-handbook-content.js?v=20260922-handbook-r1",
+  "/help-handbook-ui.js?v=20260922-handbook-r1",
+  "/help-handbook-ui.css?v=20260922-handbook-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",
   "/player-journey.css?v=20260920-journey-r1",
