@@ -31,15 +31,16 @@ fs.mkdirSync(dir,{recursive:true});
    await ready('document.getElementById("game")?.contentWindow?.CrownlandsCastlePositionReview?.tower&&document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node").length===4');
    await ready('[...document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node>img,.holding-tower-art")].every(i=>i.complete&&i.naturalWidth)');
    await ready('!document.getElementById("game").contentDocument.querySelector("#toast.visible")');
-   await settings({layout:"current",sample:"owned",level:4});const current=await measures();await capture(width+"-current");
+   assert(await ev(`document.getElementById("game").contentWindow.eval(${JSON.stringify(`WORLD_HOLDING_TOWERS.every(tower=>Object.values(CLAN_TOWER_BUILDING_PLACEMENT).every(place=>{const bounds=getHarvestBonusMapArtBounds(tower.regionId),x=tower.visualX+(place.x+.5-tower.anchorX)*tower.width,y=tower.visualY+(1-tower.anchorY+place.y)*tower.width,left=x-tower.width*.22,right=x+tower.width*.22,top=y-tower.width*.44;return bounds.some(r=>r.left<=left&&r.right>=right&&r.top<=top&&r.bottom>=y)&&!isHarvestBonusClearOfMapArt(x,y-tower.width*.22,bounds);}));`)})`),"Pickup exclusion does not cover the relocated buildings");
    await settings({layout:"proposed",sample:"owned",level:4});
-   await ready('(()=>{const ground=document.getElementById("game").contentDocument.querySelector("[data-castle-dirt-patches]");return ground?.complete&&ground.naturalWidth>0;})()');
-   const ground=await ev('(()=>{const d=document.getElementById("game").contentDocument,n=d.querySelector("[data-castle-dirt-patches]"),s=d.defaultView.getComputedStyle(n),c=d.createElement("canvas");c.width=n.naturalWidth;c.height=n.naturalHeight;const x=c.getContext("2d");x.drawImage(n,0,0);const pixels=x.getImageData(0,0,c.width,c.height).data;let transparent=0,soft=0;for(let i=3;i<pixels.length;i+=4){if(pixels[i]===0)transparent++;if(pixels[i]>0&&pixels[i]<255)soft++;}return{src:n.getAttribute("src"),pointerEvents:s.pointerEvents,z:Number(s.zIndex),buildingZ:Number(d.defaultView.getComputedStyle(d.querySelector(".holding-tower-building-node")).zIndex),transparent:transparent/(pixels.length/4),soft:soft/(pixels.length/4),oldRoads:[...d.querySelectorAll(".holding-tower-courtyard")].some(i=>i.getAttribute("src")==="assets/clan-buildings/courtyard.webp")};})()');
-   assert(!ground.oldRoads&&ground.src.endsWith("dirt-patches-v1.png"),"Old courtyard roads remain");
+   await ready('(()=>{const ground=document.getElementById("game").contentDocument.querySelector(".holding-tower-courtyard");return ground?.complete&&ground.naturalWidth>0;})()');
+   const ground=await ev('(()=>{const d=document.getElementById("game").contentDocument,n=d.querySelector(".holding-tower-courtyard"),s=d.defaultView.getComputedStyle(n),c=d.createElement("canvas");c.width=n.naturalWidth;c.height=n.naturalHeight;const x=c.getContext("2d");x.drawImage(n,0,0);const pixels=x.getImageData(0,0,c.width,c.height).data;let transparent=0,soft=0;for(let i=3;i<pixels.length;i+=4){if(pixels[i]===0)transparent++;if(pixels[i]>0&&pixels[i]<255)soft++;}return{src:n.getAttribute("src"),pointerEvents:s.pointerEvents,z:Number(s.zIndex),buildingZ:Number(d.defaultView.getComputedStyle(d.querySelector(".holding-tower-building-node")).zIndex),transparent:transparent/(pixels.length/4),soft:soft/(pixels.length/4),oldRoads:[...d.querySelectorAll(".holding-tower-courtyard")].some(i=>i.getAttribute("src")==="assets/clan-buildings/courtyard.webp")};})()');
+   assert(!ground.oldRoads&&ground.src.endsWith("courtyard.webp?v=dirt-patches-v1"),"Old courtyard roads remain");
    assert(ground.pointerEvents==="none"&&ground.z<ground.buildingZ,"Ground blocks building controls");
    assert(ground.transparent>.3&&ground.soft>.01,"Dirt decal needs transparent gaps and soft edges");
    const proposed=await measures();await capture(width+"-compact-actions");
-   for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(proposed.tower[key],current.tower[key],"Tower changed: "+key);
+   assert.equal(proposed.buildings.length,4);
+   assert(Math.abs(proposed.buildings[0].box.width/proposed.tower.width-.44)<.001,"Original building size changed");
    assert.equal(proposed.labels,0);assert.equal(proposed.dock,false);
    const checkActionRow=async(before,after)=>{
     assert.deepEqual(after.actions.map(a=>a.id).sort(),before.actions.map(a=>a.id).sort(),"Available actions changed");
@@ -57,7 +58,8 @@ fs.mkdirSync(dir,{recursive:true});
      assert(await ev(`(()=>{const d=document.getElementById("game").contentDocument,n=d.querySelector('[data-clan-tower-map-action="${action.id}"]'),r=n.getBoundingClientRect();return n.contains(d.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})()`),"Action obscured: "+action.id);
     }
    };
-   await checkActionRow(current,proposed);
+   assert.deepEqual(proposed.actions.map(a=>a.id),["store","info","send"]);
+   await checkActionRow(proposed,proposed);
    await ev('document.getElementById("game").contentWindow.eval("zoom*=.9;camera.x+=20;updateCameraTransform();")');
    await checkActionRow(proposed,await measures());
    await settings({layout:"proposed",sample:"owned",level:4});
@@ -72,22 +74,22 @@ fs.mkdirSync(dir,{recursive:true});
    await click('[data-clan-tower-map-action="send"]',height<600);
    assert(await ev('document.getElementById("game").contentWindow.eval("sendMode && holdingTowerSendContext?.id === selectedSourceId")'),"Send did not enter destination selection");
    await settings({layout:"proposed",sample:"owned",level:4});
-   for(const before of current.buildings){
-    const after=proposed.buildings.find(n=>n.id===before.id);assert.equal(before.art,after.art);
-    for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(after.box[key],before.box[key],before.id+" changed: "+key);
-    for(const key of["width","height","background","border","font","transform","text"]){if(typeof after.label[key]==="number")assert(Math.abs(after.label[key]-before.label[key])<.05,before.id+" label changed: "+key);else assert.deepEqual(after.label[key],before.label[key],before.id+" label changed: "+key);}
-    assert(after.box.y<before.box.y,"Building was not moved higher: "+before.id);
+   const offsets={shop:[-.40,-.34],workshop:[.40,-.34],infirmary:[-.40,.26],training:[.40,.26]};
+   for(const before of proposed.buildings){
+    const [x,y]=offsets[before.id];
+    assert(Math.abs((before.box.x+before.box.width/2-proposed.tower.x)/proposed.tower.width-(x+.5))<.001,"Building horizontal placement changed");
+    assert(Math.abs((before.box.y+before.box.height-proposed.tower.y)/proposed.tower.width-(1+y))<.001,"Building vertical placement changed");
+    assert(before.label.text.includes("Lv 4"),"Original level label missing");
     await click('[data-clan-building-id="'+before.id+'"]',height<600);
     await ready('document.getElementById("game").contentDocument.querySelector("dialog[open]")!==null');
     await ev('document.getElementById("game").contentDocument.querySelector("dialog[open]").close()');
     await settings({layout:"proposed",sample:"owned",level:4});
    }
-   await settings({layout:"current",sample:"rival",level:4});const rivalBefore=await measures();
    await settings({layout:"proposed",sample:"rival",level:4});const rivalAfter=await measures();
-   await checkActionRow(rivalBefore,rivalAfter);await capture(width+"-rival-actions");
+   assert.deepEqual(rivalAfter.actions.map(a=>a.id),["scout","info","rally-attack"]);await checkActionRow(rivalAfter,rivalAfter);await capture(width+"-rival-actions");
    await settings({layout:"proposed",sample:"unbuilt",level:4});
    assert.equal(await ev('document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-courtyard").length'),0,"Unbuilt compound added a ground patch");
-   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,sizeAndStyleParity:true,compactActions:proposed.actions.map(a=>({id:a.id,x:a.box.x,y:a.box.y,size:a.box.width})),rivalActions:rivalAfter.actions.map(a=>a.id),ground,entries:true});
+   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,approvedSizeAndPositions:true,pickupExclusion:true,compactActions:proposed.actions.map(a=>({id:a.id,x:a.box.x,y:a.box.y,size:a.box.width})),rivalActions:rivalAfter.actions.map(a=>a.id),ground,entries:true});
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(dir,"checks.json"),JSON.stringify({verifiedAt:new Date().toISOString(),records,errors},null,2));
   console.log(JSON.stringify({passed:true,records,errors},null,2));

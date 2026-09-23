@@ -14,3 +14,5 @@ These look like dirt circles seen from the same elevated map angle, flattened na
 Slightly connect the five patches with very narrow faint trampled-earth necks, subtle and partially broken, joining each outer patch toward the central one. The patches must dominate, not the connectors. Leave abundant fully transparent space between them and around the whole artwork. No outer ring, no circular outline, no long horizontal arcs. Flat ground with no raised banks or platform.
 Earth color should be muted ochre-brown around #b59a59 / #bcaa70, low contrast to the reference map's yellow-olive grass, avoiding saturated orange, bright cream, dark shadows, or rocky texture.
 Deliver just the transparent ground sprite, edge fading to real alpha, no checkerboard painted into the image.
+
+Production derivative: `assets/clan-buildings/courtyard.webp`, resized proportionally to 640×475 and encoded with Pillow WebP quality 78/method 6 (79,658 bytes). Original colors and alpha are retained; no artwork was regenerated. Runtime request uses `?v=dirt-patches-v1` to separate the approved ground from cached road art.

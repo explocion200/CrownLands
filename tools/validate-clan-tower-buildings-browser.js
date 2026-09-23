@@ -109,7 +109,7 @@ async function main() {
       assert(await evaluate(`(()=>{
         const ground=cityLayer.querySelector('.holding-tower-courtyard');
         const label=cityLayer.querySelector('.holding-tower-node.has-buildings .holding-tower-map-label').getBoundingClientRect();
-        return getComputedStyle(ground).pointerEvents==='none' && [...cityLayer.querySelectorAll('.holding-tower-building-node')].every(node=>node.getBoundingClientRect().bottom<label.top);
+        return getComputedStyle(ground).pointerEvents==='none' && [...cityLayer.querySelectorAll('.holding-tower-building-node')].every(node=>{const r=node.getBoundingClientRect();return r.right<=label.left||r.left>=label.right||r.bottom<=label.top||r.top>=label.bottom;});
       })()`), 'Courtyard must allow map gestures and the Tower label must clear the buildings');
       for (const level of [1,4,7,10]) {
         await evaluate(`buildingFixture.buildings={shop:${level},workshop:${level},infirmary:${level},training:${level}};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll()`);

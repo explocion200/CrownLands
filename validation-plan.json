@@ -11,20 +11,28 @@
         "docs/visual-qa/clan-castle-layout/draft.css",
         "tools/validate-clan-castle-layout-draft-browser.js",
         "docs/visual-qa/clan-castle-layout/map-preview.js",
-        "docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png"
+        "docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png",
+        "game.js",
+        "clan-tower-buildings-ui.css",
+        "assets/clan-buildings/courtyard.webp",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-castle-layout-draft-browser.js"
+        "tools/validate-clan-castle-layout-draft-browser.js",
+        "tools/validate-clan-tower-map-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js"
       ],
-      "reason": "Draft-only building positions, decorative dirt-patch replacement and compact action row in the real mock-game renderer. Preserve artwork, dimensions, labels, action appearance/permissions and existing screens. Verify size/style parity, pointer/touch building entry at desktop and two landscape sizes, owned/rival action sets, aligned 4px gaps, unobstructed 56px targets below labels, pan/zoom placement, Info/Store entry and Send destination selection. Verify old-road replacement, real alpha gaps/soft edges, ground hit testing and unbuilt compounds. No production runtime or backend changes require emulator suites."
+      "reason": "Integrate the approved four-building layout, transparent dirt clearings and compact fixed-screen-size actions into the actual Core Tower renderer. The review now uses production functions without layout overrides. Verify all four Towers, original structure sizes and labels, new offsets and pickup exclusion, ground transparency/hit testing, 56px buttons and 4px gaps across zoom, owner/rival permissions, real pointer/touch entry, Store, Info, Send and Rally order handlers, construction stages and unbuilt compounds at desktop and two landscape sizes. The existing Store test selector is updated for the previously merged Clan Shop UI. Production build/artifact validation covers the optimized WebP and existing byte budgets. No backend, rules, economy or authoritative mechanics change, so no emulator files are selected."
     },
     {
       "paths": [
         "docs/visual-qa/clan-castle-layout/README.md",
-        "docs/visual-qa/clan-castle-layout/art/prompt.md"
+        "docs/visual-qa/clan-castle-layout/art/prompt.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document the approved building positions and dirt artwork, generation provenance, compact action-row proposal, focused checks and pending integration."
+      "reason": "Record user-approved layout and fixed button-size requirements, integrated renderer and production ground conversion provenance, plus release verification status."
     }
   ]
 }

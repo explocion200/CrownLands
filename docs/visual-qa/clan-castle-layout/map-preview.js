@@ -3,66 +3,7 @@
   "use strict";
   if (!window.__CROWNLANDS_BENCHMARK__ || location.pathname !== "/__benchmark__/") throw Error("The layout preview requires the mock game.");
   const B=window.CrownlandsClanTowerBuildings;
-  const positions=Object.freeze({
-    shop:{x:-.40,y:-.34},workshop:{x:.40,y:-.34},
-    infirmary:{x:-.40,y:.26},training:{x:.40,y:.26}
-  });
   let layout="proposed",sample="owned",level=4,tower=null,resizeTimer;
-  const originalRender=renderClanTowerMapBuildings;
-  renderClanTowerMapBuildings=function(visibleTowers,fragment){
-    originalRender(visibleTowers,fragment);
-    if(layout!=="proposed")return;
-    const grounds=[...fragment.querySelectorAll(".holding-tower-courtyard")];
-    const developed=visibleTowers.filter(visual=>{
-      const current=holdingTowerSnapshots.get(visual.id);
-      return current?.ownerKind==="clan"&&B.DEFINITIONS.some(d=>B.level(current.buildings?.[d.id])||current.buildingProject?.buildingId===d.id);
-    });
-    grounds.forEach((ground,index)=>{
-      const visual=developed[index];
-      if(!visual)return;
-      const point=worldToMapPoint({x:visual.visualX,y:visual.visualY});
-      ground.src="docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png";
-      ground.dataset.castleDirtPatches="true";
-      ground.style.left=`${point.x+(.5-visual.anchorX)*visual.width}px`;
-      ground.style.top=`${point.y+(1-visual.anchorY-.056)*visual.width}px`;
-      ground.style.width=`${visual.width*1.4}px`;
-      ground.style.height=`${visual.width*1.04}px`;
-      ground.style.opacity=".78";
-    });
-    for(const node of fragment.querySelectorAll(".holding-tower-building-node")){
-      const visual=visibleTowers.find(t=>t.id===node.dataset.clanBuildingTower);
-      const place=positions[node.dataset.clanBuildingId];
-      if(!visual||!place)continue;
-      const point=worldToMapPoint({x:visual.visualX,y:visual.visualY});
-      // Placement only: keep runtime width, height, transforms, labels, artwork and click handlers.
-      node.style.left=`${point.x+(place.x+.5-visual.anchorX)*visual.width}px`;
-      node.style.top=`${point.y+(1-visual.anchorY+place.y)*visual.width}px`;
-    }
-  };
-  const originalActionLayout=updateClanTowerActionWheelLayout;
-  updateClanTowerActionWheelLayout=function(wheel=cityLayer?.querySelector(".clan-tower-action-wheel")){
-    originalActionLayout(wheel);
-    if(!wheel)return;
-    const node=cityLayer.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
-    const name=node?.querySelector(".holding-tower-map-label");
-    // Keep the original label treatment, directly under the Tower entrance.
-    if(name)name.style.bottom=layout==="proposed"?"-3px":"";
-    if(layout!=="proposed"||!node)return;
-    const visual=getHoldingTowerVisual(wheel.dataset.towerId),scale=Math.max(.1,zoom);
-    const rect=node.getBoundingClientRect(),anchorY=rect.top+visual.anchorY*rect.height;
-    const buildings=[...cityLayer.querySelectorAll(".holding-tower-building-node")].filter(n=>n.dataset.clanBuildingTower===visual.id);
-    const bottom=Math.max(name?.getBoundingClientRect().bottom||rect.bottom,...buildings.map(n=>Math.max(n.getBoundingClientRect().bottom,n.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom||0)));
-    const buttons=[...wheel.querySelectorAll("[data-clan-tower-map-action]")];
-    const info=buttons.find(b=>b.dataset.clanTowerMapAction==="info"),others=buttons.filter(b=>b!==info);
-    const ordered=[...others.slice(0,1),...(info?[info]:[]),...others.slice(1)];
-    ordered.forEach((button,index)=>{
-      // Preserve the established 56px controls; only tighten their 4px gaps.
-      button.style.setProperty("--tower-action-x",`${(index-(ordered.length-1)/2)*60}px`);
-      button.style.setProperty("--tower-action-y",`${bottom-anchorY+8+28}px`);
-      wheel.appendChild(button); // Keyboard order follows the visible row.
-    });
-    wheel.style.transform=`scale(${1/scale})`;
-  };
   const originalApi=getOnlineApi();
   getOnlineApi=()=>({
     ...originalApi,isReady:()=>true,isSignedIn:()=>true,
@@ -85,7 +26,7 @@
     updateCameraTransform();
   }
   async function settings(next={}){
-    layout=next.layout==="current"?"current":"proposed";
+    layout="proposed";
     sample=["owned","rival","building","unbuilt"].includes(next.sample)?next.sample:"owned";
     level=[1,4,7,10].includes(Number(next.level))?Number(next.level):4;
     if(sample==="building"&&level===10)level=7;
@@ -107,9 +48,9 @@
     if(innerHeight<560&&document.getElementById("chatToggleBtn")?.getAttribute("aria-expanded")==="true")document.getElementById("chatToggleBtn").click();
     document.documentElement.dataset.castlePositionLayout=layout;
     window.CrownlandsCastlePositionReview.tower=tower;
-    parent.postMessage({type:"castle-layout-status",message:layout==="current"?"Current positions, roads and actions":"Approved buildings and dirt patches · Compact actions underneath"},location.origin);
+    parent.postMessage({type:"castle-layout-status",message:"Integrated game layout · Fixed-size actions underneath"},location.origin);
   }
-  window.CrownlandsCastlePositionReview={settings,frameTower,positions,tower:null};
+  window.CrownlandsCastlePositionReview={settings,frameTower,tower:null};
   window.addEventListener("message",e=>{if(e.origin===location.origin&&e.source===parent&&e.data?.type==="castle-position-settings")void settings(e.data);});
   window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(frameTower,80);});
   parent.postMessage({type:"castle-position-ready"},location.origin);
