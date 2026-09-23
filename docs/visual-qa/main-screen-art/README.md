@@ -10,7 +10,9 @@ Start `node tools/map-benchmark/start-server.js 61704`, then open:
 
 `http://127.0.0.1:61704/docs/visual-qa/main-screen-art/index.html?viewport=desktop`
 
-Choose Desktop (1440 × 900), Mobile landscape (844 × 390), or Small landscape (568 × 320). The iframe uses actual CSS pixels without scaling. Current game / New artwork switches the same mounted HUD, so sizes, positions and map context can be compared directly. Try map zoom, the mini-chat arrow, and the active/quiet/protected examples. The artwork gallery below the map allows closer inspection.
+Choose Desktop (1440 × 900), Mobile landscape (844 × 390), or Small landscape (568 × 320). The iframe uses actual CSS pixels without scaling. Current game / Restyled artwork switches the same mounted HUD, so sizes, positions and map context can be compared directly. Try map zoom, the mini-chat arrow, and the active/quiet/protected examples. The artwork gallery below the map allows closer inspection.
+
+The user requested retaining the original red backgrounds and top icon designs. The current revision restores the exact inherited main-screen colors and surfaces, and redraws the original ornate top artwork in the map's illustrated style. The earlier parchment controls and simplified top emblems are superseded.
 
 This page mounts the repository's current real game through the existing loopback benchmark server, with its mock Firebase adapter and synthetic player/map/chat data. Production account services and the production entry are not used. Main navigation clicks show an appearance-preview message instead of entering account flows; the real chat toggle and map zoom still work. No new gameplay behavior is proposed.
 
@@ -22,32 +24,33 @@ This page mounts the repository's current real game through the existing loopbac
 | Shop | `hud-shop-192x192-631cf3c626d5.webp` | Matte brass scales, ledger; transparent new raster |
 | Cities | `hud-city-list-192x192-29705553a45a.webp` | Limestone gateway, slate roof, parchment; transparent new raster |
 | Maps | `hud-map-192x192-f330cd084a9f.webp` | Folded ink-and-wash map; transparent new raster |
-| Leaderboards | `hud-leaderboard-192x192-8817d6f254ec.webp` | Crown and olive laurel, drawn in the newer SVG icon language |
-| Daily Login | `daily-reward-160x160-9bd7a936016f.webp` | Existing approved `reward-daily-login-r1.svg` |
+| Leaderboards | `hud-leaderboard-192x192-8817d6f254ec.webp` | Same ornate crown medallion, blue heraldic field, gold laurel and small shield; ink-and-wash redraw |
+| Daily Login | `daily-reward-160x160-9bd7a936016f.webp` | Same standing gilt calendar with crown page, blue ribbons and gold coins; ink-and-wash redraw |
 | Reports | `hud-report-192x192-21644b7390fb.webp` | Existing approved `battle-reports-ledger-r1.svg#dispatch` |
-| Player flag frame | `hud-profile-frame-256x200-06acc18a9261.webp` | Flat brass/parchment frame; actual saved flag and level retained |
-| Clan | Actual heraldry renderer | Keep complete saved heraldry and notification counts; restyle the surrounding tile |
-| Gold, Home, Fullscreen, chat arrow | Existing HUD DOM and symbols | Warm parchment surface, brass edge, brown ink; same shapes and values |
-| Active item indicators | Four recently approved shared item images | Keep artwork and passive vertical placement; parchment surrounds, legible dark timers |
-| Incoming / Outgoing / unread counts | Existing movement stack | Muted brick red for danger, slate blue for outgoing, small red wax-colored notification badges |
+| Player flag frame | `hud-profile-frame-256x200-06acc18a9261.webp` | Same decorated brass frame with slate inlay, side banners and tassels; transparent illustrated redraw; actual flag and level retained |
+| Clan | Actual heraldry renderer | Original complete saved heraldry, original red tile and notification counts |
+| Gold, Home, Fullscreen, chat arrow | Existing HUD DOM and symbols | Original backgrounds, colors, borders, labels, shapes and values |
+| Active item indicators | Four recently approved shared item images | Original artwork, passive vertical placement, burgundy surrounds and timers |
+| Incoming / Outgoing / unread counts | Existing movement stack | Original red/blue surfaces and notification styling |
 
-The current root cause of the visual mismatch is the combination of glossy legacy HUD rasters and the shared burgundy HUD rule in `crownlands-palette.css`. This draft scopes overrides to `.hud-art-draft` and explicit main-screen IDs; it does not change the global palette or existing panel styles.
+The remaining mismatch is the glossy rendering of legacy HUD artwork. The user wants the existing burgundy surfaces in `crownlands-palette.css` retained. The revised draft therefore overrides artwork only, scoped to `.hud-art-draft`; the original button background gradients, borders, text colors and dimensions are inherited unchanged.
 
-The restyle proposes changing the burgundy chat-toggle and active-item surrounds confirmed on September 20. This is presented for approval in response to the user's new request to restyle the main screen's red buttons. The authoritative Master Specification remains unchanged until that replacement is approved. The approved mini-chat 64px height, 360px cap, exact 72% brown background, arrow direction and individual translation behavior remain inherited from current main.
+The September 20 burgundy chat-toggle and active-item surrounds remain as approved. The mini-chat 64px height, 360px cap, exact 72% brown background, arrow direction and individual translation behavior remain inherited from current main. This pending artwork draft changes no authoritative gameplay or presentation rule.
 
 Map nodes, player/clan heraldry, pickup Gold/Troop artwork, 56px map action buttons, cooldown and retaliation rules, and all panel content remain unchanged. Existing shared rasters elsewhere in the game remain unchanged until the new draft is approved and reference replacements can be audited together.
 
 ## Artwork
 
-The built-in `image_gen` tool produced four separate edits using each original HUD image as the subject and the live Core Expansion map as the style reference. Full prompts and original output filenames are recorded in `art/provenance.json`. The final workspace assets are `art/hud-{bag,shop,cities,map}-r1.webp`, 384 × 384 with preserved transparency, approximately 181 KiB combined. Only resizing and WebP encoding followed generation; no creative editing by a script. Full-resolution originals remain in the generator output directory.
+The built-in `image_gen` tool produced seven separate edits using each original HUD image as the subject and the live Core Expansion map as the style reference. Full prompts and original output filenames are recorded in `art/provenance.json` and `art/top-art-provenance.json`. Final workspace assets are `art/hud-{bag,shop,cities,map,leaderboard,daily-reward}-r1.webp` at 384 × 384, and `art/hud-profile-frame-r1.webp` at 512 × 400, with preserved transparency. Only resizing and WebP encoding followed generation; no creative editing by a script. Full-resolution originals remain in the generator output directory.
 
-The profile frame and leaderboard emblem are code-native SVGs, matching the existing vector icon system. The Daily Login and Reports assets reuse the current approved SVGs.
+Reports reuses the existing approved dispatch SVG. The simplified profile/leaderboard SVGs and generic Daily Login calendar from the first draft have been removed from the current proposal.
 
 ## Validation and boundaries
 
 Run `node tools/validate-main-screen-art-draft-browser.js`.
 
 - Compare every main button's bounds before/after at all three viewports.
+- Compare original and draft computed backgrounds, text colors and borders; preserve the original red surfaces exactly.
 - Verify visible hit targets, loaded artwork, preserved saved flag markup, unchanged timer width, unchanged mini-chat height/background and working expand/collapse.
 - Verify changing map zoom to 220% does not resize the HUD.
 - Show incoming/outgoing notices, all four active items, and no active items.

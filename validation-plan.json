@@ -11,8 +11,10 @@
         "docs/visual-qa/main-screen-art/preview.js",
         "docs/visual-qa/main-screen-art/runtime-fixture.js",
         "docs/visual-qa/main-screen-art/draft.css",
-        "docs/visual-qa/main-screen-art/profile-frame.svg",
-        "docs/visual-qa/main-screen-art/leaderboard.svg",
+        "docs/visual-qa/main-screen-art/art/hud-profile-frame-r1.webp",
+        "docs/visual-qa/main-screen-art/art/hud-leaderboard-r1.webp",
+        "docs/visual-qa/main-screen-art/art/hud-daily-reward-r1.webp",
+        "docs/visual-qa/main-screen-art/art/top-art-provenance.json",
         "docs/visual-qa/main-screen-art/art/hud-bag-r1.webp",
         "docs/visual-qa/main-screen-art/art/hud-shop-r1.webp",
         "docs/visual-qa/main-screen-art/art/hud-cities-r1.webp",
@@ -23,7 +25,7 @@
       "tests": [
         "tools/validate-main-screen-art-draft-browser.js"
       ],
-      "reason": "Approval-only main-screen art draft mounted on the current real-game loopback benchmark. Cover new transparent artwork, scoped HUD skin, Current/New comparison, native desktop/landscape viewport controls, zoom-independent bounds, button hit targets, incoming/outgoing and effect states, preserved saved heraldry, mini-chat dimensions/background/arrow, timer width, image loading and runtime errors. Shared runtime files and backend rules are not modified; no production entry references this draft, so no emulator suite applies. Future production integration requires its own affected-dependency review."
+      "reason": "Approval-only main-screen art draft mounted on the current real-game loopback benchmark. Cover seven transparent artwork replacements, Current/New comparison, exact preservation of original red backgrounds, colors and borders, native desktop/landscape viewport controls, zoom-independent bounds, button hit targets, incoming/outgoing and effect states, preserved saved heraldry, mini-chat dimensions/background/arrow, timer width, image loading and runtime errors. Shared runtime files and backend rules are not modified; no production entry references this draft, so no emulator suite applies. Future production integration requires its own affected-dependency review."
     },
     {
       "paths": [

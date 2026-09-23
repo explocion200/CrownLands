@@ -7,7 +7,7 @@
  for(const[selector,asset]of[
   ["#inventoryBtn img",prefix+"art/hud-bag-r1.webp"],["#shopBtn img",prefix+"art/hud-shop-r1.webp"],
   ["#cityListBtn img",prefix+"art/hud-cities-r1.webp"],["#islandSwitchBtn img",prefix+"art/hud-map-r1.webp"],
-  ["#leaderboardBtn img",prefix+"leaderboard.svg"],["#dailyLoginRewardBtn img","/assets/icons/reward-daily-login-r1.svg"]
+  ["#leaderboardBtn img",prefix+"art/hud-leaderboard-r1.webp"],["#dailyLoginRewardBtn img",prefix+"art/hud-daily-reward-r1.webp"]
  ]){const el=document.querySelector(selector);if(el)originals.push({el,src:el.getAttribute("src"),asset});}
  const oldReport=document.querySelector("#logBtn .report-icon"),newReport=document.createElementNS("http://www.w3.org/2000/svg","svg");
  newReport.setAttribute("class","nav-icon report-icon hud-art-report");newReport.setAttribute("viewBox","0 0 64 64");newReport.setAttribute("aria-hidden","true");
@@ -32,7 +32,7 @@
   const requested=[1,1.6,2.2].includes(nextZoom)?nextZoom:1;
   if(requested!==previousZoom){previousZoom=requested;await api.setVisualZoom(requested);}
   root.dataset.hudArtApplied="true";
-  inform(draft?"Parchment & ink draft · Existing control sizes and positions":"Current game · Original artwork and burgundy controls");
+  inform(draft?"Original red controls · Original icon designs in the map's illustrated style":"Current game · Original artwork and burgundy controls");
  }
  window.addEventListener("message",event=>{if(event.origin===location.origin&&event.source===parent&&event.data?.type==="hud-art-apply")apply(event.data);});
  // Keep the design review on the map. The real chat arrow still expands/collapses.

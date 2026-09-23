@@ -19,6 +19,6 @@ document.querySelectorAll("[data-viewport]").forEach(b=>b.addEventListener("clic
 document.querySelectorAll("[data-look]").forEach(b=>b.addEventListener("click",()=>{look=b.dataset.look;sync();}));
 sample.addEventListener("change",sync);zoom.addEventListener("change",sync);
 window.addEventListener("message",event=>{if(event.origin===location.origin&&event.source===frame.contentWindow&&event.data?.type==="hud-art-status")document.getElementById("reviewStatus").textContent=event.data.message;});
-const art=[["Bag","bag","Leather & ink"],["Shop","shop","Aged brass"],["Cities","cities","Limestone & slate"],["Maps","map","Painted parchment"]];
+const art=[["Leaderboards","leaderboard","Original crown medallion"],["Daily Login","daily-reward","Original reward calendar"],["Player frame","profile-frame","Original ornate frame"],["Bag","bag","Leather & ink"],["Shop","shop","Aged brass"],["Cities","cities","Limestone & slate"],["Maps","map","Painted parchment"]];
 document.getElementById("artGrid").innerHTML=art.map(([name,key,note])=>'<figure><img src="art/hud-'+key+'-r1.webp" alt="Redrawn '+name+' icon"><figcaption>'+name+'</figcaption><small>'+note+'</small></figure>').join("");
 frame.addEventListener("load",sync);sync();frame.src="preview.html?"+new URLSearchParams({look,sample:sample.value,zoom:zoom.value});

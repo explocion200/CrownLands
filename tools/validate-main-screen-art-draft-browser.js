@@ -17,6 +17,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const ev=async expression=>{const r=await client.send("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
   const wait=async expression=>{for(let i=0;i<700;i++){if(await ev(expression))return;await delay(100);}throw Error("Timeout: "+expression+JSON.stringify(errors));};
   const shot=async name=>fs.writeFileSync(path.join(artifacts,name+".png"),Buffer.from((await client.send("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  const surfaces=()=>ev(`(()=>{const w=document.getElementById('game').contentWindow,d=w.document;return [...d.querySelectorAll('#profileBtn,#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#chatToggleBtn,#logBtn,#fullscreenBtn,#mainCityReturnBtn,.profile-gold,.effect-status-badge,#characterLevelBadge')].map(e=>{const s=w.getComputedStyle(e);return{id:e.id||e.className,background:s.backgroundImage,fill:s.backgroundColor,color:s.color,border:s.borderColor,radius:s.borderRadius};});})()`);
   const measure=()=>ev(`(()=>{const w=document.getElementById('game').contentWindow,d=w.document,ids=['profileBtn','leaderboardBtn','clanHudBtn','dailyLoginRewardBtn','inventoryBtn','shopBtn','cityListBtn','islandSwitchBtn','chatToggleBtn','logBtn','fullscreenBtn'];return{controls:ids.map(id=>{const e=d.getElementById(id),r=e.getBoundingClientRect();return{id,x:r.x,y:r.y,w:r.width,h:r.height,hit:e.contains(d.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),fits:r.x>=-1&&r.y>=-1&&r.right<=w.innerWidth+1&&r.bottom<=w.innerHeight+1};}),chat:{height:d.getElementById('quickChat').getBoundingClientRect().height,background:w.getComputedStyle(d.getElementById('quickChat')).backgroundImage},flag:d.getElementById('hudKingdomFlag').outerHTML,timerWidth:d.getElementById('combatTimers').getBoundingClientRect().width};})()`);
   await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
   await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/main-screen-art/preview.html"});
@@ -26,9 +27,10 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   for(const[width,height]of[[1440,900],[844,390],[568,320]]){
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await delay(250);
    await ev(`mapDraft.HudArtDraft.apply({look:'current',sample:'active',zoom:1})`);await delay(150);
-   const before=await measure();await shot(width+"-current");
+   const before=await measure(),originalSurfaces=await surfaces();await shot(width+"-current");
    await ev(`mapDraft.HudArtDraft.apply({look:'draft',sample:'active',zoom:1})`);await delay(250);
    const after=await measure();await shot(width+"-draft");
+   assert.deepEqual(await surfaces(),originalSurfaces,"Original red surfaces, borders and label colors changed");
    assert(await ev(`['incomingAttackBtn','outgoingAttackBtn'].every(id=>!mapDraft.document.getElementById(id).hidden)`),"Active fixture must show incoming and outgoing controls");
    assert.deepEqual(after.controls.map(({id,x,y,w,h})=>({id,x,y,w,h})),before.controls.map(({id,x,y,w,h})=>({id,x,y,w,h})),"Draft changed control geometry");
    assert.deepEqual(after.chat,before.chat,"Mini-chat size/transparency changed");assert.equal(after.flag,before.flag,"Saved heraldry changed");assert.equal(after.timerWidth,before.timerWidth);
@@ -43,7 +45,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    assert.equal(await ev(`mapDraft.document.querySelectorAll('.effect-status-badge:not([hidden])').length`),4);
    await ev(`mapDraft.HudArtDraft.apply({look:'draft',sample:'quiet',zoom:1})`);await delay(150);
    assert.equal(await ev(`mapDraft.document.querySelectorAll('.effect-status-badge:not([hidden])').length`),0);
-   await shot(width+"-quiet");records.push({width,height,geometryPreserved:true,chatPreserved:true,flagsPreserved:true,zoomIndependent:true,controlsHit:true});
+   await shot(width+"-quiet");records.push({width,height,geometryPreserved:true,originalColorsPreserved:true,chatPreserved:true,flagsPreserved:true,zoomIndependent:true,controlsHit:true});
   }
   // The review shell switches real, unscaled viewport dimensions and both looks.
   await client.send("Emulation.setDeviceMetricsOverride",{width:1520,height:1100,deviceScaleFactor:1,mobile:false});
