@@ -30,7 +30,8 @@
         "clan-shop-ui.js",
         "clan-shop-ui.css",
         "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
       "tests": [
         "tools/validate-clan-shop-browser.js",
