@@ -132,20 +132,21 @@ async function main() {
       for(const layout of layouts)for(const button of layout.buttons){assert(Math.abs(button.width-56)<.2 && Math.abs(button.height-56)<.2,'Tower controls must keep their compact 56px size beside buildings');for(const building of layout.buildings)assert(button.right<=building.left || button.left>=building.right || button.bottom<=building.top || button.top>=building.bottom,'A fixed-size action overlaps a compound building');}
       await frameTower();
       await click(await elementPoint('[data-clan-building-id="shop"]'));
-      await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector(".ctb-shop-items")');
+      await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector("#itemGrid")');
       await delay(100);
-      assert.equal(await evaluate('modalBody.querySelectorAll("[data-clan-building-select]").length'),4);
-      assert.equal(await evaluate('modalBody.querySelectorAll("[data-clan-shop-buy]").length'),7);
-      assert(await evaluate('modalBody.textContent.includes("1 purchase every 72 hours")'));
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-shop-building] option").length'),4);
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-item]").length'),7);
+      assert(await evaluate('modalBody.textContent.includes("every 72 hours")'));
       const reachable = async selector => {
         await evaluate(`modalBody.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',inline:'nearest'})`);await delay(100);
         await click(await elementPoint(selector));
       };
       const before=await evaluate('buildingCalls.length');
+      await reachable('[data-item="recall_horn"]');
       await reachable('[data-clan-shop-buy="recall_horn"]');
       await ready(`buildingCalls.length===${before+1} && !holdingTowerActionsInFlight.size`);
       assert.equal((await evaluate('buildingCalls.at(-1)')).itemId,'recall_horn');
-      await reachable('[data-clan-building-select="training"]');
+      await evaluate(`modalBody.querySelector('[data-shop-building]').value='training';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);
       assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("Training Grounds")'));
       assert(await evaluate('modalBody.querySelector(".ctb-building-detail").textContent.includes("+1% rally attack strength")'));
       await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
@@ -167,8 +168,9 @@ async function main() {
       await evaluate('buildingFixture.buildingProject.progressStartedAtMs=0;buildingFixture.attackBlocked=true;renderHoldingTowerModal(buildingFixture)');
       assert(await evaluate('modalBody.textContent.includes("Construction paused")'));
       await evaluate('buildingFixture.buildingProject=null;buildingFixture.attackBlocked=false;holdingTowerBuildingSelection="shop";renderHoldingTowerModal({...buildingFixture,clanShop:{level:1,localLevel:1,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(1,{},Date.now()).map(i=>({...i,price:1000}))}})');
-      assert(await evaluate('modalBody.querySelector("[data-clan-shop-buy=shield_12h]").disabled'));
-      assert(await evaluate('modalBody.textContent.includes("Unlocks at Shop Level 10")'));
+      await evaluate(`modalBody.querySelector('[data-item="shield_12h"]').click()`);
+      assert.equal(await evaluate(`modalBody.querySelector('#purchase').dataset.action`), 'upgrade');
+      assert(await evaluate('modalBody.textContent.includes("Unlocks at Level 10")'));
       const shot=await client.send('Page.captureScreenshot',{format:'png'});
       fs.mkdirSync(require('node:path').resolve(__dirname,'../tmp/clan-buildings/qa'),{recursive:true});
       fs.writeFileSync(require('node:path').resolve(__dirname,`../tmp/clan-buildings/qa/buildings-${viewport.width}.png`),Buffer.from(shot.data,'base64'));

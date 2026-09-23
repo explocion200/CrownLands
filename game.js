@@ -4084,7 +4084,7 @@ function beginHoldingTowerModalSession(towerId, view) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal");
     if (session.mapOrder) {
       modal.classList.remove("troop-slider-modal");
       clearSelection(false);
@@ -4107,6 +4107,43 @@ function renderHoldingTowerModal(tower) {
   const clanIdentity = getHoldingTowerClanIdentity(tower);
   const treasuryBalance = tower.ownerMember && tower.clanId === state.clanId
     && clanTreasuryClanId === state.clanId ? clanTreasuryStatus?.treasury?.balance : undefined;
+  const shopOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "shop"
+    && tower.ownerMember && tower.worldActive !== false;
+  modal.classList.toggle("clan-shop-modal", Boolean(shopOpen));
+  if (shopOpen) {
+    const session = holdingTowerModalSession;
+    const shopView = session.shopView || (session.shopView = {});
+    modalTitle.textContent = "Clan Shop";
+    window.CrownlandsClanShopUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
+      view: shopView, treasuryBalance, personalGold: state.gold,
+      inventory: { ...state.shopItems, common_gear_box: state.gear?.commonGearBoxes || 0 },
+      itemDetails: Object.fromEntries([...SHOP_ITEMS, COMMON_GEAR_BOX_ITEM].map(item => [item.id, item])),
+      actionBusy: holdingTowerActionsInFlight.has(tower.id),
+      onClose: () => modal.close(),
+      onBack: () => { holdingTowerDetailsTab = "overview"; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
+      onBuilding: id => { holdingTowerBuildingSelection = id; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
+      onBuy: id => void runClanTowerBuildingAction(tower, "buy", id),
+      onBuild: () => void runClanTowerBuildingAction(tower, "build", "shop"),
+      onRefresh: async () => {
+        if (shopView.refreshing || !isHoldingTowerModalSessionCurrent(session)) return;
+        shopView.refreshing = true;
+        renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+        try { await refreshHoldingTower(tower.id); }
+        catch (error) {
+          if (!isHoldingTowerModalSessionCurrent(session)) return;
+          shopView.feedback = error?.message || "Shop unavailable. Please retry.";
+          shopView.failed = true;
+          holdingTowerSnapshots.set(tower.id, { ...(holdingTowerSnapshots.get(tower.id) || tower), clanShop: null, clanShopError: shopView.feedback });
+        }
+        finally {
+          shopView.refreshing = false;
+          if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+        }
+      },
+    });
+    return;
+  }
+  delete modalBody.dataset.clanShopReady;
   modal.classList.add("holding-tower-modal", "clan-tower-details-modal");
   modalTitle.textContent = tower.name || "Clan Tower";
   const upgradeCount = modalBody.querySelector("[data-tower-upgrade-count]")?.value;
@@ -4126,7 +4163,10 @@ function renderHoldingTowerModal(tower) {
   window.CrownlandsClanTowerDetailsUi?.mount(modalBody, {
     selected: holdingTowerDetailsTab,
     onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
-    onSelect: key => { holdingTowerDetailsTab = key; },
+    onSelect: key => {
+      holdingTowerDetailsTab = key;
+      if (key === "buildings" && holdingTowerBuildingSelection === "shop" && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
+    },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
     renderFlag: (element, row) => {
@@ -4572,6 +4612,8 @@ async function runClanTowerBuildingAction(tower, kind, id) {
   const operationId = clanBuildingRequestIds.get(key) || createHoldingTowerOperationId(kind);
   clanBuildingRequestIds.set(key, operationId);
   const item = tower.clanShop?.items?.find(row => row.id === id);
+  const view = holdingTowerModalSession?.towerId === tower.id ? holdingTowerModalSession.shopView : null;
+  if (view) { view.feedback = kind === "buy" ? "Confirming your purchase…" : "Starting construction…"; view.failed = false; }
   holdingTowerActionsInFlight.add(tower.id);
   renderHoldingTowerModal(tower);
   try {
@@ -4584,9 +4626,13 @@ async function runClanTowerBuildingAction(tower, kind, id) {
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
     if (result?.treasury) applyClanTreasuryStatus(clanId, { clanId: result.clanId, treasury: result.treasury }, scope);
     if (result?.clanShop) holdingTowerSnapshots.set(tower.id, { ...holdingTowerSnapshots.get(tower.id), clanShop: result.clanShop });
+    if (view) { view.feedback = kind === "build" ? "Building construction started." : "Purchase added to your Bag."; view.failed = false; }
     showToast(kind === "build" ? "Building construction started." : "Clan Shop purchase added to your Bag.");
   } catch (error) {
-    if (isCurrent()) rejectGameAction(error?.message || "The Tower order could not be completed.");
+    if (isCurrent()) {
+      if (view) { view.feedback = error?.message || "The purchase could not be confirmed. Please retry."; view.failed = true; }
+      rejectGameAction(error?.message || "The Tower order could not be completed.");
+    }
   } finally {
     holdingTowerActionsInFlight.delete(tower.id);
     if (isCurrent()) {
