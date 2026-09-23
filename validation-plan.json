@@ -15,14 +15,15 @@
       "tests": [
         "tools/validate-clan-tower-action-size-browser.js"
       ],
-      "reason": "Local-only actual-size review using the mock game and existing Clan Castle fixture: verify 56/64/72px controls at three zoom settings in desktop and two landscape viewports, normal art scaling, action order, label clearance, click-target visibility, and an unscaled chooser iframe. Production code and backend authority are unchanged; a new size awaits user selection."
+      "reason": "Approved 56px native-size review using unchanged production controls and the existing mock Clan Castle fixture: verify fixed dimensions through zoom on desktop and two landscape sizes, action order, label clearance, click-target visibility, old comparison URLs and unscaled iframes. Remove draft sizing overrides; no production runtime or backend changes."
     },
     {
       "paths": [
-        "docs/visual-qa/clan-tower-action-size/README.md"
+        "docs/visual-qa/clan-tower-action-size/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the current 56px behavior, native-size review instructions, focused evidence and pending size decision; no approved master-spec rule changes."
+      "reason": "Record the explicitly selected 56px desktop/mobile size, unchanged current-game behavior, native-size review instructions and verification scope."
     }
   ]
 }

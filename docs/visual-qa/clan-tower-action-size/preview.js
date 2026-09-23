@@ -1,7 +1,7 @@
 "use strict";
 const game = document.getElementById("game"), loading = document.getElementById("loading");
 const query = new URLSearchParams(location.search);
-let requested = { size: Number(query.get("size")) || 56, zoom: Number(query.get("zoom")) || 60, sample: query.get("sample") === "owned" ? "owned" : "rival" };
+let requested = { zoom: Number(query.get("zoom")) || 60, sample: query.get("sample") === "owned" ? "owned" : "rival" };
 let ready = false, currentSample = null, applying = false, pending = false;
 function reportError(error) { loading.hidden = false; loading.textContent = error.message + " Reload to try again."; }
 async function update() {

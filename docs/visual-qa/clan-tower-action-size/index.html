@@ -3,20 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clan Tower · Action size review</title>
+  <title>Clan Tower · Approved 56px actions</title>
   <link rel="stylesheet" href="review.css">
   <script src="review.js" defer></script>
 </head>
 <body>
   <header>
-    <div class="heading"><div><p class="eyebrow">Crown Lands / Clan Tower</p><h1>Choose the action button size</h1></div><span class="draft">Draft · current game unchanged</span></div>
-    <p class="intro">These are the game’s real Scout, Info and Rally controls, shown at 1:1 scale. Zoom the map to check that they stay the same size.</p>
+    <div class="heading"><div><p class="eyebrow">Crown Lands / Clan Tower</p><h1>Action buttons · 56 × 56 px</h1></div><span class="draft">Size approved</span></div>
+    <p class="intro">Scout, Info and Rally stay at 56 × 56 px on desktop and mobile. These are the game’s real controls at 1:1 scale. Zoom the map to check.</p>
     <div class="controls">
-      <fieldset><legend>Button size</legend><div class="choices" id="sizes">
-        <button type="button" data-size="56" aria-pressed="true">56 px <small>Current</small></button>
-        <button type="button" data-size="64" aria-pressed="false">64 px <small>Roomier</small></button>
-        <button type="button" data-size="72" aria-pressed="false">72 px <small>Largest</small></button>
-      </div></fieldset>
+      <fieldset><legend>Fixed button size</legend><div class="locked-size">56 × 56 px <small>Desktop &amp; mobile</small></div></fieldset>
       <label class="zoom">Map zoom <output id="zoom-value" for="zoom">60%</output><input id="zoom" type="range" min="40" max="100" step="5" value="60"></label>
       <label>View<select id="viewport"><option value="window">Your window · 1:1</option><option value="desktop">Desktop · 1440 × 900</option><option value="landscape">Mobile landscape · 844 × 390</option><option value="small">Small landscape · 568 × 320</option></select></label>
       <label>Tower<select id="sample"><option value="rival">Rival · Scout / Info / Rally</option><option value="owned">Owned · Store / Info / Send</option></select></label>
@@ -25,6 +21,6 @@
     <div class="status"><strong id="measurement" role="status">Loading the sample map…</strong><span>CSS pixels · browser zoom 100% · no preview scaling</span><a id="full-window" href="preview.html?size=56&zoom=60&sample=rival" target="_blank" rel="noopener">Open map full window ↗</a></div>
   </header>
   <main id="stage" aria-label="Actual-size map preview"><iframe id="preview" title="Clan Tower action size preview"></iframe></main>
-  <footer>Only the preview changes. Choose a size before we apply it to the game. Fixed viewports scroll when they do not fit your window.</footer>
+  <footer>The selected 56px size matches the game’s existing setting. This preview changes only the map zoom and framing. Fixed viewports scroll when they do not fit your window.</footer>
 </body>
 </html>

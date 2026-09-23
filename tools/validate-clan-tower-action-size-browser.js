@@ -34,7 +34,7 @@ fs.mkdirSync(directory, { recursive: true });
       await wait('document.documentElement?.dataset.actionSizeReady === "true"');
       await wait('(()=>{const d=document.getElementById("game").contentDocument;return [...d.querySelectorAll(".holding-tower-building-node>img,.holding-tower-art")].filter(image=>{const r=image.getBoundingClientRect();return r.bottom>0&&r.top<d.defaultView.innerHeight&&r.width>0&&r.height>0;}).every(image=>image.complete&&image.naturalWidth>0);})()');
       await wait('!document.getElementById("game").contentDocument.querySelector("#toast.visible")');
-      for (const size of [56, 64, 72]) {
+      for (const size of [56]) {
         for (const percent of [40, 70, 100]) {
           await game(`CrownlandsActionSizeReview.set({size:${size},zoom:${percent}})`);
           const result = await game(`(() => {
@@ -45,13 +45,15 @@ fs.mkdirSync(directory, { recursive: true });
             return {...measurement, clearance: measurement.buttons[0].y-bottom,
               hit: measurement.buttons.every(button => document.querySelector('[data-clan-tower-map-action="'+button.id+'"]').contains(document.elementFromPoint(button.x+button.width/2,button.y+button.height/2))),
               towerWidth:document.querySelector(".holding-tower-node").getBoundingClientRect().width,
-              frameWidth:frame.getBoundingClientRect().width};
+              frameWidth:frame.getBoundingClientRect().width,
+              inlineSize:document.querySelector(".clan-tower-action-wheel").style.getPropertyValue("--cl-action-size")};
           })()`);
           assert.deepEqual(result.buttons.map(button => button.id), ["scout", "info", "rally-attack"]);
           assert(Math.abs(result.zoom - Math.max(percent / 100, result.minimumZoom)) < .001, "Requested map zoom was not applied within the game's bounds");
           assert(result.hit, `A control is obscured at ${width} × ${height}, ${size}px, ${percent}%`);
           assert(Math.abs(result.clearance - 8) < .2, "Keep 8px clearance beneath building labels");
           assert(Math.abs(result.frameWidth - width) < 1, "Preview is not at native viewport width");
+          assert.equal(result.inlineSize, "", "The review must use production sizing without fixture overrides");
           result.buttons.forEach((button, index) => {
             assert(Math.abs(button.width - size) < .1 && Math.abs(button.height - size) < .1, "Button scaled with map");
             assert(button.x >= 0 && button.y >= 0 && button.x + button.width <= width && button.y + button.height <= height, "Control outside viewport");
@@ -65,32 +67,33 @@ fs.mkdirSync(directory, { recursive: true });
       }
       await game('CrownlandsCastlePositionReview.settings({sample:"owned",level:4})');
       await game('CrownlandsActionSizeReview.set({size:64,zoom:60})');
-      assert.deepEqual((await game("CrownlandsActionSizeReview.measure()")).buttons.map(button => button.id), ["store", "info", "send"]);
+      const owned = await game("CrownlandsActionSizeReview.measure()");
+      assert.deepEqual(owned.buttons.map(button => button.id), ["store", "info", "send"]);
+      owned.buttons.forEach(button => assert(Math.abs(button.width - 56) < .1 && Math.abs(button.height - 56) < .1, "Owned actions must retain the same approved size"));
     }
-    for (const size of [56, 64, 72]) {
+    for (const size of [56]) {
       const low = records.find(record => record.width === 1440 && record.size === size && record.percent === 40);
       const high = records.find(record => record.width === 1440 && record.size === size && record.percent === 100);
       assert(Math.abs(high.towerWidth / low.towerWidth - high.zoom / low.zoom) < .01, "Map art should zoom normally");
     }
-    // Check the actual chooser and its native-size iframe, not just the fixture API.
+    // Verify the approved review at native size, including old comparison URLs.
     await client.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
-    await client.send("Page.navigate", { url: address.url + "/docs/visual-qa/clan-tower-action-size/index.html?viewport=landscape" });
+    await client.send("Page.navigate", { url: address.url + "/docs/visual-qa/clan-tower-action-size/index.html?viewport=landscape&size=72" });
     await wait('document.documentElement?.dataset.actionSizeReviewReady === "true"');
-    for (const size of [64, 72, 56]) {
-      await evaluate(`document.querySelector('[data-size="${size}"]').click()`);
-      await wait(`document.getElementById("measurement").textContent.includes("${size} × ${size} px")`);
-    }
+    await wait('document.getElementById("measurement").textContent.includes("56 × 56 px")');
+    assert.equal(await evaluate('document.querySelectorAll("[data-size]").length'), 0, "Unapproved size controls remain");
     await evaluate('document.getElementById("zoom").value=40;document.getElementById("zoom").dispatchEvent(new Event("input",{bubbles:true}))');
     await wait('document.getElementById("measurement").textContent.includes("Map 40%")');
     const frame = await evaluate('(()=>{const frame=document.getElementById("preview"),r=frame.getBoundingClientRect();return{width:r.width,height:r.height,transform:getComputedStyle(frame).transform};})()');
     assert.deepEqual(frame, { width: 844, height: 390, transform: "none" });
-    await evaluate(`document.querySelector('[data-size="64"]').click();document.getElementById("zoom").value=60;document.getElementById("zoom").dispatchEvent(new Event("input",{bubbles:true}))`);
-    await wait('document.getElementById("measurement").textContent.includes("64 × 64 px")&&document.getElementById("measurement").textContent.includes("Map 60%")');
+    await evaluate('document.getElementById("zoom").value=60;document.getElementById("zoom").dispatchEvent(new Event("input",{bubbles:true}))');
+    await wait('document.getElementById("measurement").textContent.includes("56 × 56 px")&&document.getElementById("measurement").textContent.includes("Map 60%")');
+    await wait('!document.getElementById("preview").contentDocument.getElementById("game").contentDocument.querySelector("#toast.visible")');
     await delay(200);
-    await capture("size-chooser");
+    await capture("approved-size-review");
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(directory, "checks.json"), JSON.stringify({ checkedAt: new Date().toISOString(), records, errors, chooserAtNativeScale: frame }, null, 2));
-    console.log(JSON.stringify({ passed: true, measuredCombinations: records.length, viewports: ["1440×900", "844×390", "568×320"], choices: [56, 64, 72], zoom: [40, 70, 100], errors }));
+    console.log(JSON.stringify({ passed: true, measuredCombinations: records.length, viewports: ["1440×900", "844×390", "568×320"], approvedSize: 56, zoom: [40, 70, 100], errors }));
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) {

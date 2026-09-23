@@ -1,9 +1,9 @@
-/* Preview-only size choices. Production code and the approved 56px size stay unchanged. */
+/* Native-size preview of the approved production controls. No layout or size overrides. */
 (function () {
   "use strict";
   if (!window.__CROWNLANDS_BENCHMARK__ || location.pathname !== "/__benchmark__/") throw Error("Action size review requires the mock game.");
-  const originalLayout = updateClanTowerActionWheelLayout;
-  let size = 56, requestedZoom = .6, resizeTimer, measurementFrame = 0;
+  const size = 56;
+  let requestedZoom = .6, resizeTimer, measurementFrame = 0;
   function measure() {
     return {
       type: "tower-size-measurement", size, zoom, minimumZoom: getZoomBoundsForViewport().min,
@@ -17,17 +17,9 @@
     if (measurementFrame) return;
     measurementFrame = requestAnimationFrame(() => { measurementFrame = 0; parent.postMessage(measure(), location.origin); });
   }
-  updateClanTowerActionWheelLayout = function (wheel = cityLayer?.querySelector(".clan-tower-action-wheel")) {
-    originalLayout(wheel);
-    if (!wheel?._clanTowerLayout) return;
-    // The production inverse-camera transform remains in use. Only this mock page
-    // overrides the unapproved size options and their 4px gap / 8px clearance.
-    wheel.style.setProperty("--cl-action-size", size + "px");
-    const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
-    buttons.forEach((button, index) => button.style.setProperty("--tower-action-x", `${(index - (buttons.length - 1) / 2) * (size + 4)}px`));
-    wheel.style.setProperty("--tower-action-y", `${wheel._clanTowerLayout.bottomOffset * Math.max(.1, zoom) + 8 + size / 2}px`);
-    report();
-  };
+  // Read measurements after camera changes without replacing any game function.
+  const cameraObserver = new MutationObserver(report);
+  cameraObserver.observe(mapWorld, { attributes: true, attributeFilter: ["style"] });
   function focus() {
     const tower = window.CrownlandsCastlePositionReview.tower;
     if (!tower) return;
@@ -44,7 +36,6 @@
     report();
   }
   function set(next = {}) {
-    size = [56, 64, 72].includes(Number(next.size)) ? Number(next.size) : 56;
     requestedZoom = Math.max(.4, Math.min(1, (Number(next.zoom) || 60) / 100));
     focus();
   }

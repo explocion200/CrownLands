@@ -1,16 +1,14 @@
 "use strict";
 const preview = document.getElementById("preview");
 const query = new URLSearchParams(location.search);
-const sizes = [56, 64, 72];
 const viewports = { desktop: [1440, 900], landscape: [844, 390], small: [568, 320] };
 const state = {
-  size: sizes.includes(Number(query.get("size"))) ? Number(query.get("size")) : 56,
+  size: 56,
   zoom: Math.max(40, Math.min(100, Number(query.get("zoom")) || (query.get("viewport") === "landscape" || query.get("viewport") === "small" ? 40 : 60))),
   sample: query.get("sample") === "owned" ? "owned" : "rival",
   viewport: Object.hasOwn(viewports, query.get("viewport")) ? query.get("viewport") : "window"
 };
 function drawControls() {
-  document.querySelectorAll("[data-size]").forEach(button => button.setAttribute("aria-pressed", String(Number(button.dataset.size) === state.size)));
   document.getElementById("zoom").value = state.zoom;
   document.getElementById("zoom-value").value = state.zoom + "%";
   document.getElementById("sample").value = state.sample;
@@ -26,10 +24,6 @@ function update() {
   drawControls();
   preview.contentWindow.postMessage({ type: "tower-size-settings", ...state }, location.origin);
 }
-document.getElementById("sizes").addEventListener("click", event => {
-  const button = event.target.closest("[data-size]");
-  if (button) { state.size = Number(button.dataset.size); update(); }
-});
 for (const id of ["zoom", "sample", "viewport"]) document.getElementById(id).addEventListener("input", event => {
   state[id] = id === "zoom" ? Number(event.target.value) : event.target.value;
   update();
