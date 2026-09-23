@@ -20,7 +20,7 @@ function cells(m) {
   return { balance: m.balance, totalDonated: m.totalDonated, totalSpent: m.totalSpent, personalGold: m.personal,
     canDonate: m.ready ? max(m) : null, donatedToday: m.donated, remaining: m.remaining, dailyCap: m.cap };
 }
-function render(data, view = {}) {
+function render(data) {
   const m = model(data);
   let html = template.replace("</header>", '<button id="ct-back" type="button" data-clan-action="reward-section" data-clan-reward="gifts">‹ Back to Rewards</button></header>');
   for (const [id, amount] of Object.entries(cells(m))) html = html.replace(new RegExp(`(id="ct-${id}"[^>]*>)[^<]*`), (_, tag) => tag + (amount === null ? "—" : number(amount)));
