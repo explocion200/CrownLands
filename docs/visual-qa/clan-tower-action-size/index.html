@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clan Tower · Approved 56px actions</title>
+  <link rel="stylesheet" href="review.css">
+  <script src="review.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="heading"><div><p class="eyebrow">Crown Lands / Clan Tower</p><h1>Action buttons · 56 × 56 px</h1></div><span class="draft">Size approved</span></div>
+    <p class="intro">Scout, Info and Rally stay at 56 × 56 px on desktop and mobile. These are the game’s real controls at 1:1 scale. Zoom the map to check.</p>
+    <div class="controls">
+      <fieldset><legend>Fixed button size</legend><div class="locked-size">56 × 56 px <small>Desktop &amp; mobile</small></div></fieldset>
+      <label class="zoom">Map zoom <output id="zoom-value" for="zoom">60%</output><input id="zoom" type="range" min="40" max="100" step="5" value="60"></label>
+      <label>View<select id="viewport"><option value="window">Your window · 1:1</option><option value="desktop">Desktop · 1440 × 900</option><option value="landscape">Mobile landscape · 844 × 390</option><option value="small">Small landscape · 568 × 320</option></select></label>
+      <label>Tower<select id="sample"><option value="rival">Rival · Scout / Info / Rally</option><option value="owned">Owned · Store / Info / Send</option></select></label>
+      <button type="button" id="recenter">Recenter</button>
+    </div>
+    <div class="status"><strong id="measurement" role="status">Loading the sample map…</strong><span>CSS pixels · browser zoom 100% · no preview scaling</span><a id="full-window" href="preview.html?size=56&zoom=60&sample=rival" target="_blank" rel="noopener">Open map full window ↗</a></div>
+  </header>
+  <main id="stage" aria-label="Actual-size map preview"><iframe id="preview" title="Clan Tower action size preview"></iframe></main>
+  <footer>The selected 56px size matches the game’s existing setting. This preview changes only the map zoom and framing. Fixed viewports scroll when they do not fit your window.</footer>
+</body>
+</html>

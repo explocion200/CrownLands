@@ -1,0 +1,31 @@
+:root { color-scheme: light; font-family: Georgia, serif; color: #352b1c; background: #24271c; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { padding: 16px 22px 12px; background: #ede1bf; border-bottom: 3px solid #8d7544; }
+.heading, .controls, .status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; }
+.heading { justify-content: space-between; }
+.eyebrow { margin: 0 0 4px; color: #72613d; font: 11px/1.2 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .12em; }
+h1 { margin: 0; font-size: 24px; font-weight: 500; }
+.draft { border: 1px solid #a48b50; padding: 6px 10px; font: 12px system-ui, sans-serif; border-radius: 3px; }
+.intro { margin: 9px 0 13px; font-size: 14px; line-height: 1.4; }
+fieldset { border: 0; padding: 0; margin: 0; }
+legend, label { font: 12px/1.4 system-ui, sans-serif; font-weight: 600; }
+legend { padding: 0; margin-bottom: 4px; }
+label { display: grid; gap: 4px; }
+.locked-size { padding: 9px 11px; min-height: 38px; border: 1px solid #692c32; border-radius: 3px; background: #692c32; color: #fff2d2; font: 14px system-ui, sans-serif; }
+.locked-size small { margin-left: 8px; font-size: 11px; }
+button, select { font: 13px system-ui, sans-serif; color: #352b1c; border: 1px solid #9e8757; border-radius: 3px; background: #f8eed4; padding: 9px 11px; min-height: 38px; }
+button { cursor: pointer; }
+button:hover { background: #fff6de; }
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #426672; outline-offset: 3px; }
+.zoom { width: 164px; grid-template-columns: 1fr auto; }
+.zoom input { grid-column: 1 / -1; width: 100%; margin: 8px 0; accent-color: #692c32; }
+#recenter { align-self: flex-end; }
+.status { margin-top: 12px; font: 12px/1.4 system-ui, sans-serif; gap: 6px 16px; }
+.status strong { color: #3e5535; font-weight: 650; }
+.status span { color: #746348; }
+.status a { color: #58312a; margin-left: auto; }
+#stage { overflow: auto; width: 100%; padding: 12px; background: #252a1e; }
+#preview { display: block; width: 100%; height: max(390px, calc(100dvh - 255px)); border: 0; margin: 0 auto; }
+footer { padding: 8px 16px 12px; font: 12px/1.4 system-ui, sans-serif; color: #d2c6a3; }
+@media (max-width: 650px) { header { padding: 12px; } h1 { font-size: 21px; } .controls { gap: 10px; } .status a { margin-left: 0; } #stage { padding: 8px; } }
