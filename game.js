@@ -47,10 +47,10 @@ const HOLDING_TOWER_DEFINITIONS = Object.freeze([
 ]);
 const CLAN_TOWER_MAP_ART = "assets/clan-buildings/tower.webp";
 const CLAN_TOWER_BUILDING_PLACEMENT = Object.freeze({
-  shop: Object.freeze({ x: -.40, y: .02 }),
-  workshop: Object.freeze({ x: .40, y: .02 }),
-  infirmary: Object.freeze({ x: -.32, y: .45 }),
-  training: Object.freeze({ x: .32, y: .45 }),
+  shop: Object.freeze({ x: -.40, y: -.34 }),
+  workshop: Object.freeze({ x: .40, y: -.34 }),
+  infirmary: Object.freeze({ x: -.40, y: .26 }),
+  training: Object.freeze({ x: .40, y: .26 }),
 });
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(REGION_CATALOG.version) || Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
@@ -4764,16 +4764,16 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
     const point = worldToMapPoint({ x: visual.visualX, y: visual.visualY });
     const hasBuildings = definitions.DEFINITIONS.some(building => definitions.level(tower.buildings?.[building.id]) || tower.buildingProject?.buildingId === building.id);
     if (!hasBuildings) continue;
-    // Transparent paths leave the original map grass visible between buildings.
+    // Soft dirt clearings leave the original map grass visible between buildings.
     const courtyard = document.createElement("img");
     courtyard.className = "holding-tower-courtyard";
-    courtyard.src = "assets/clan-buildings/courtyard.webp";
+    courtyard.src = "assets/clan-buildings/courtyard.webp?v=dirt-patches-v1";
     courtyard.alt = "";
     courtyard.draggable = false;
-    courtyard.style.left = `${point.x + (.45 - visual.anchorX) * visual.width}px`;
-    courtyard.style.top = `${point.y + (1 - visual.anchorY + .24) * visual.width}px`;
-    courtyard.style.width = `${visual.width * 1.04}px`;
-    courtyard.style.height = `${visual.width * .54}px`;
+    courtyard.style.left = `${point.x + (.5 - visual.anchorX) * visual.width}px`;
+    courtyard.style.top = `${point.y + (1 - visual.anchorY - .056) * visual.width}px`;
+    courtyard.style.width = `${visual.width * 1.4}px`;
+    courtyard.style.height = `${visual.width * 1.04}px`;
     fragment.appendChild(courtyard);
     for (const building of definitions.DEFINITIONS) {
       const level = definitions.level(tower.buildings?.[building.id]);
@@ -28519,22 +28519,22 @@ async function selectClanTowerOnMap(towerId) {
 function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".clan-tower-action-wheel")) {
   if (!wheel) return;
   const visual = getHoldingTowerVisual(wheel.dataset.towerId);
-  if (!visual) return;
+  const node = cityLayer?.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
+  if (!visual || !node) return;
   const scale = Math.max(0.1, zoom);
-  // The south-facing tower occupies the middle half of its square sprite.
-  // Keep the city-sized controls beside its base as the artwork zooms.
-  const hasBuildings = Object.values(holdingTowerSnapshots.get(visual.id)?.buildings || {}).some(level => level > 0) || Boolean(holdingTowerSnapshots.get(visual.id)?.buildingProject);
-  const side = Math.max(72, visual.width * scale * (hasBuildings ? .65 : .25) + 40);
-  const below = (1 - visual.anchorY + (hasBuildings ? .63 : 0)) * visual.width * scale + 50;
+  const rect = node.getBoundingClientRect();
+  const anchorY = rect.top + visual.anchorY * rect.height;
+  const name = node.querySelector(".holding-tower-map-label");
+  const buildings = [...cityLayer.querySelectorAll(".holding-tower-building-node")]
+    .filter(building => building.dataset.clanBuildingTower === visual.id);
+  const bottom = Math.max(name?.getBoundingClientRect().bottom || rect.bottom, ...buildings.map(building =>
+    Math.max(building.getBoundingClientRect().bottom, building.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom || 0)));
+  // Counter the world zoom: every action remains 56 screen pixels, with 4px gaps.
   wheel.style.transform = `scale(${1 / scale})`;
   const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
-  // The smallest landscape viewport needs a compact row above the bottom HUD.
-  const positions = mapViewportHeight <= 360 && !hasBuildings
-    ? [...buttons].map((_, index) => [(index - (buttons.length - 1) / 2) * 72, -40])
-    : [[0, below], [-side, 0], [side, 0], [-side, -72], [side, -72]];
   buttons.forEach((button, index) => {
-    button.style.setProperty("--tower-action-x", `${positions[index][0]}px`);
-    button.style.setProperty("--tower-action-y", `${positions[index][1]}px`);
+    button.style.setProperty("--tower-action-x", `${(index - (buttons.length - 1) / 2) * 60}px`);
+    button.style.setProperty("--tower-action-y", `${bottom - anchorY + 36}px`);
   });
 }
 
@@ -28542,7 +28542,10 @@ function renderSelectedClanTowerWheel(towerId) {
   const visual = getHoldingTowerVisual(towerId);
   if (!visual || !cityLayer.querySelector(`[data-holding-tower-id="${towerId}"]`)) return;
   const snapshot = holdingTowerSnapshots.get(towerId);
-  const actions = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot) || [{action:"info",label:"Info",icon:"information"}];
+  const available = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot) || [{action:"info",label:"Info",icon:"information"}];
+  const info = available.find(entry => entry.action === "info");
+  const others = available.filter(entry => entry !== info);
+  const actions = [...others.slice(0, 1), ...(info ? [info] : []), ...others.slice(1)];
   const point = worldToMapPoint({x:visual.visualX,y:visual.visualY});
   const wheel = document.createElement("div");
   wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";

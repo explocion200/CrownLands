@@ -199,6 +199,9 @@ async function main() {
       touch = viewport.touch;
       await client.send("Emulation.setDeviceMetricsOverride", {width:viewport.width,height:viewport.height,deviceScaleFactor:1,mobile:touch});
       await client.send("Emulation.setTouchEmulationEnabled", {enabled:touch,maxTouchPoints:5});
+      // Match the approved landscape review: dismiss the optional chat overlay
+      // with its normal control before checking map targets underneath it.
+      if (touch) await evaluate(`(() => { const toggle=document.getElementById('chatToggleBtn');if(toggle?.getAttribute('aria-expanded')==='true')toggle.click(); })()`);
       assert(await evaluate(`(() => {
         for (const targetType of ['tower','city']) for (const activity of [false,true]) {
           for (const [count,inbound] of [[2,false],[3,true],[3,false]]) {
@@ -217,7 +220,7 @@ async function main() {
           await select(tower);
           await verifyZoom();
           const actions=await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)");
-          assert.deepEqual(actions,["info","scout","rally-attack"]);
+          assert.deepEqual(actions,["scout","info","rally-attack"]);
           await click(await elementPoint('[data-clan-tower-map-action="info"]'));
           await ready("modal.open && !!modalBody.querySelector('.clan-tower-details')");
           assert.equal(await evaluate("modalBody.querySelector('h1').textContent"),tower.name);
@@ -230,7 +233,7 @@ async function main() {
       }
       const tower=await prepare(0,1,"owner");
       await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['info','store','send']);
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['store','info','send']);
       assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
       await verifyZoom();
       for (const level of [0.6, 1]) {
@@ -270,7 +273,7 @@ async function main() {
       fs.writeFileSync(require('node:path').join(capDirectory,`npc-limit-${viewport.width}.png`),Buffer.from(capShot.data,'base64'));
       await evaluate('getOwnedRegularCityCountForDisplay=towerCityCountGetter;delete window.towerCityCountGetter;modal.close()');
       await prepare(0,1,"ineligible");await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['info','false'],['store','true'],['send','true']]);
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['store','true'],['info','false'],['send','true']]);
       await click(await elementPoint('[data-clan-tower-map-action="send"]'));
       assert.equal(await evaluate('modal.open'),false,'A probation member opened troop orders.');
       await prepare(0,1,"empty");await select(tower);
@@ -282,7 +285,7 @@ async function main() {
         await click(await elementPoint('[data-clan-tower-map-action="store"]'));
         if(scenario==='store-building')assert.equal(await evaluate('modal.open'),false,'An unfinished Store opened.');
         else {
-          await ready("modal.open && !!modalBody.querySelector('#clanTower-buildingsPanel:not([hidden]) .ctb-shop')");
+          await ready("modal.open && !!modalBody.querySelector('.shop-shell #itemGrid')");
           assert.equal(await evaluate('holdingTowerBuildingSelection'),'shop');
           await evaluate('modal.close()');
         }
@@ -342,7 +345,7 @@ async function main() {
         assert.equal(await evaluate("cityLayer.querySelectorAll('.holding-tower-clan-banner').length"),0);
       }
       await prepare(0,.6,'enemy');await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['info','scout','rally-attack']);
+      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['scout','info','rally-attack']);
       assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
       await prepare(0,viewport.height<560?.4:1,'owner');await select(tower);
       await evaluate('toast.classList.remove("visible")');
