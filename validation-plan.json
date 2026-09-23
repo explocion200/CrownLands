@@ -16,7 +16,7 @@
       "tests": [
         "tools/validate-clan-castle-layout-draft-browser.js"
       ],
-      "reason": "Draft-only building positions and decorative dirt-patch replacement within the real mock-game renderer. Preserve building and Tower artwork, dimensions, labels, HUD, map actions and existing screens. Verify size/style parity, pointer/touch entry at desktop and two mobile landscape sizes, replacement of the old road decal, real alpha gaps/soft edges, non-interactive ground beneath structures, and absence of the decal for unbuilt compounds. No production runtime or backend changes require emulator suites."
+      "reason": "Draft-only building positions, decorative dirt-patch replacement and compact action row in the real mock-game renderer. Preserve artwork, dimensions, labels, action appearance/permissions and existing screens. Verify size/style parity, pointer/touch building entry at desktop and two landscape sizes, owned/rival action sets, aligned 4px gaps, unobstructed 56px targets below labels, pan/zoom placement, Info/Store entry and Send destination selection. Verify old-road replacement, real alpha gaps/soft edges, ground hit testing and unbuilt compounds. No production runtime or backend changes require emulator suites."
     },
     {
       "paths": [
@@ -24,7 +24,7 @@
         "docs/visual-qa/clan-castle-layout/art/prompt.md"
       ],
       "tests": [],
-      "reason": "Document the requested ground-art revision and exact built-in image-generation prompt, references, draft asset provenance and pending design approval/integration."
+      "reason": "Document the approved building positions and dirt artwork, generation provenance, compact action-row proposal, focused checks and pending integration."
     }
   ]
 }

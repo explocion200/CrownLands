@@ -39,6 +39,30 @@
       node.style.top=`${point.y+(1-visual.anchorY+place.y)*visual.width}px`;
     }
   };
+  const originalActionLayout=updateClanTowerActionWheelLayout;
+  updateClanTowerActionWheelLayout=function(wheel=cityLayer?.querySelector(".clan-tower-action-wheel")){
+    originalActionLayout(wheel);
+    if(!wheel)return;
+    const node=cityLayer.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
+    const name=node?.querySelector(".holding-tower-map-label");
+    // Keep the original label treatment, directly under the Tower entrance.
+    if(name)name.style.bottom=layout==="proposed"?"-3px":"";
+    if(layout!=="proposed"||!node)return;
+    const visual=getHoldingTowerVisual(wheel.dataset.towerId),scale=Math.max(.1,zoom);
+    const rect=node.getBoundingClientRect(),anchorY=rect.top+visual.anchorY*rect.height;
+    const buildings=[...cityLayer.querySelectorAll(".holding-tower-building-node")].filter(n=>n.dataset.clanBuildingTower===visual.id);
+    const bottom=Math.max(name?.getBoundingClientRect().bottom||rect.bottom,...buildings.map(n=>Math.max(n.getBoundingClientRect().bottom,n.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom||0)));
+    const buttons=[...wheel.querySelectorAll("[data-clan-tower-map-action]")];
+    const info=buttons.find(b=>b.dataset.clanTowerMapAction==="info"),others=buttons.filter(b=>b!==info);
+    const ordered=[...others.slice(0,1),...(info?[info]:[]),...others.slice(1)];
+    ordered.forEach((button,index)=>{
+      // Preserve the established 56px controls; only tighten their 4px gaps.
+      button.style.setProperty("--tower-action-x",`${(index-(ordered.length-1)/2)*60}px`);
+      button.style.setProperty("--tower-action-y",`${bottom-anchorY+8+28}px`);
+      wheel.appendChild(button); // Keyboard order follows the visible row.
+    });
+    wheel.style.transform=`scale(${1/scale})`;
+  };
   const originalApi=getOnlineApi();
   getOnlineApi=()=>({
     ...originalApi,isReady:()=>true,isSignedIn:()=>true,
@@ -79,9 +103,11 @@
     holdingTowerSnapshots.clear();holdingTowerSnapshots.set(tower.id,tower);
     selectedTowerMapId=tower.id;
     cityRenderSignature="";releaseSelectionRenderDelay();renderAll();
+    // Use the existing collapse control so landscape reviewers can see the row.
+    if(innerHeight<560&&document.getElementById("chatToggleBtn")?.getAttribute("aria-expanded")==="true")document.getElementById("chatToggleBtn").click();
     document.documentElement.dataset.castlePositionLayout=layout;
     window.CrownlandsCastlePositionReview.tower=tower;
-    parent.postMessage({type:"castle-layout-status",message:layout==="current"?"Current positions and roads · Original game size, labels and controls":"Revised positions with dirt patches · Original game size, labels and controls"},location.origin);
+    parent.postMessage({type:"castle-layout-status",message:layout==="current"?"Current positions, roads and actions":"Approved buildings and dirt patches · Compact actions underneath"},location.origin);
   }
   window.CrownlandsCastlePositionReview={settings,frameTower,positions,tower:null};
   window.addEventListener("message",e=>{if(e.origin===location.origin&&e.source===parent&&e.data?.type==="castle-position-settings")void settings(e.data);});

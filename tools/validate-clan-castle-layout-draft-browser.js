@@ -30,6 +30,7 @@ fs.mkdirSync(dir,{recursive:true});
    await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/clan-castle-layout/preview.html"});
    await ready('document.getElementById("game")?.contentWindow?.CrownlandsCastlePositionReview?.tower&&document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node").length===4');
    await ready('[...document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node>img,.holding-tower-art")].every(i=>i.complete&&i.naturalWidth)');
+   await ready('!document.getElementById("game").contentDocument.querySelector("#toast.visible")');
    await settings({layout:"current",sample:"owned",level:4});const current=await measures();await capture(width+"-current");
    await settings({layout:"proposed",sample:"owned",level:4});
    await ready('(()=>{const ground=document.getElementById("game").contentDocument.querySelector("[data-castle-dirt-patches]");return ground?.complete&&ground.naturalWidth>0;})()');
@@ -37,10 +38,40 @@ fs.mkdirSync(dir,{recursive:true});
    assert(!ground.oldRoads&&ground.src.endsWith("dirt-patches-v1.png"),"Old courtyard roads remain");
    assert(ground.pointerEvents==="none"&&ground.z<ground.buildingZ,"Ground blocks building controls");
    assert(ground.transparent>.3&&ground.soft>.01,"Dirt decal needs transparent gaps and soft edges");
-   const proposed=await measures();await capture(width+"-dirt-patches");
+   const proposed=await measures();await capture(width+"-compact-actions");
    for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(proposed.tower[key],current.tower[key],"Tower changed: "+key);
    assert.equal(proposed.labels,0);assert.equal(proposed.dock,false);
-   assert.deepEqual(proposed.actions,current.actions,"Map controls moved or restyled");
+   const checkActionRow=async(before,after)=>{
+    assert.deepEqual(after.actions.map(a=>a.id).sort(),before.actions.map(a=>a.id).sort(),"Available actions changed");
+    const row=[...after.actions].sort((a,b)=>a.box.x-b.box.x);
+    assert.equal(row[Math.floor(row.length/2)].id,"info","Info should be centered");
+    const bottom=Math.max(...after.buildings.map(n=>Math.max(n.box.y+n.box.height,n.label.y+n.label.height)));
+    for(const [index,action]of row.entries()){
+     const original=before.actions.find(a=>a.id===action.id);
+     for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(action.box[key],original.box[key],action.id+" restyled: "+key);
+     assert(action.box.width>=44&&action.box.height>=44,"Action touch target too small");
+     assert(Math.abs(action.box.y-row[0].box.y)<.1,"Actions are not aligned");
+     assert(action.box.y>=bottom+7.9,"Actions overlap the building labels");
+     assert(action.box.x>=0&&action.box.x+action.box.width<=width&&action.box.y>=0&&action.box.y+action.box.height<=height,"Action outside viewport");
+     if(index)assert(Math.abs(action.box.x-(row[index-1].box.x+row[index-1].box.width)-4)<.1,"Action gaps should be 4px");
+     assert(await ev(`(()=>{const d=document.getElementById("game").contentDocument,n=d.querySelector('[data-clan-tower-map-action="${action.id}"]'),r=n.getBoundingClientRect();return n.contains(d.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})()`),"Action obscured: "+action.id);
+    }
+   };
+   await checkActionRow(current,proposed);
+   await ev('document.getElementById("game").contentWindow.eval("zoom*=.9;camera.x+=20;updateCameraTransform();")');
+   await checkActionRow(proposed,await measures());
+   await settings({layout:"proposed",sample:"owned",level:4});
+   await click('[data-clan-tower-map-action="info"]',height<600);
+   await ready('document.getElementById("game").contentDocument.querySelector("dialog[open]")!==null');
+   await ev('document.getElementById("game").contentDocument.querySelector("dialog[open]").close()');
+   await settings({layout:"proposed",sample:"owned",level:4});
+   await click('[data-clan-tower-map-action="store"]',height<600);
+   await ready('document.getElementById("game").contentDocument.querySelector("dialog[open]")!==null');
+   await ev('document.getElementById("game").contentDocument.querySelector("dialog[open]").close()');
+   await settings({layout:"proposed",sample:"owned",level:4});
+   await click('[data-clan-tower-map-action="send"]',height<600);
+   assert(await ev('document.getElementById("game").contentWindow.eval("sendMode && holdingTowerSendContext?.id === selectedSourceId")'),"Send did not enter destination selection");
+   await settings({layout:"proposed",sample:"owned",level:4});
    for(const before of current.buildings){
     const after=proposed.buildings.find(n=>n.id===before.id);assert.equal(before.art,after.art);
     for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(after.box[key],before.box[key],before.id+" changed: "+key);
@@ -51,9 +82,12 @@ fs.mkdirSync(dir,{recursive:true});
     await ev('document.getElementById("game").contentDocument.querySelector("dialog[open]").close()');
     await settings({layout:"proposed",sample:"owned",level:4});
    }
+   await settings({layout:"current",sample:"rival",level:4});const rivalBefore=await measures();
+   await settings({layout:"proposed",sample:"rival",level:4});const rivalAfter=await measures();
+   await checkActionRow(rivalBefore,rivalAfter);await capture(width+"-rival-actions");
    await settings({layout:"proposed",sample:"unbuilt",level:4});
    assert.equal(await ev('document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-courtyard").length'),0,"Unbuilt compound added a ground patch");
-   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,sizeAndStyleParity:true,buildingPositionsOnly:true,ground,entries:true});
+   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,sizeAndStyleParity:true,compactActions:proposed.actions.map(a=>({id:a.id,x:a.box.x,y:a.box.y,size:a.box.width})),rivalActions:rivalAfter.actions.map(a=>a.id),ground,entries:true});
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(dir,"checks.json"),JSON.stringify({verifiedAt:new Date().toISOString(),records,errors},null,2));
   console.log(JSON.stringify({passed:true,records,errors},null,2));
