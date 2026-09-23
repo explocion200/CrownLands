@@ -1,44 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "32402768d3ada5d810e14b619f0dbd447f47d13c",
+  "baseCommit": "aa8659da92aeee5770e6df13e3fbee5d480e1474",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "player-profile-ui.css",
-        "tools/validate-public-player-profile-browser.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "docs/visual-qa/public-player-profile/index.html",
-        "docs/visual-qa/public-player-profile/preview.html",
-        "docs/visual-qa/public-player-profile/preview.js",
-        "docs/visual-qa/public-player-profile/review.js",
-        "docs/visual-qa/public-player-profile/runtime-fixture.js"
+        "docs/visual-qa/clan-tower-action-size/index.html",
+        "docs/visual-qa/clan-tower-action-size/review.css",
+        "docs/visual-qa/clan-tower-action-size/review.js",
+        "docs/visual-qa/clan-tower-action-size/preview.html",
+        "docs/visual-qa/clan-tower-action-size/preview.js",
+        "docs/visual-qa/clan-tower-action-size/action-size-fixture.js",
+        "tools/validate-clan-tower-action-size-browser.js"
       ],
       "tests": [
-        "tools/validate-public-player-profile-browser.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-universal-profile-links.js",
-        "tools/validate-report-location-navigation.js",
-        "tools/validate-modal-lifecycle-browser.js"
+        "tools/validate-clan-tower-action-size-browser.js"
       ],
-      "reason": "Public ruler dossier and Main City navigation: preserve region-qualified uncached Core IDs, island fallback, map selection beneath Profile, pending/failure/stale handling and existing public estimate privacy. Browser review covers desktop and two landscape sizes, independent/long/unavailable rulers and clan links; map-switch defaults and shared modal transitions remain covered. No backend or rules changes."
+      "reason": "Local-only actual-size review using the mock game and existing Clan Castle fixture: verify 56/64/72px controls at three zoom settings in desktop and two landscape viewports, normal art scaling, action order, label clearance, click-target visibility, and an unscaled chooser iframe. Production code and backend authority are unchanged; a new size awaits user selection."
     },
     {
       "paths": [
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Account for the small scoped public-profile CSS addition in the individual 52 KiB own/public profile bound; require normal production build and packaged existing assets. Global budgets remain unchanged."
-    },
-    {
-      "paths": [
-        "docs/visual-qa/public-player-profile/README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/visual-qa/clan-tower-action-size/README.md"
       ],
       "tests": [],
-      "reason": "Document the draft, reproduced location root cause, focused checks, release limits and measured pre-existing global cache-budget diagnostic."
+      "reason": "Record the current 56px behavior, native-size review instructions, focused evidence and pending size decision; no approved master-spec rule changes."
     }
   ]
 }
