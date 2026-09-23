@@ -30,7 +30,8 @@ function harness() {
     donateClanTreasuryGold(payload) { const pending = deferred(); donations.push({ ...pending, payload }); return pending.promise; },
   };
   const context = vm.createContext({
-    console, state: { clanId: "clan-a" }, uid: "member-a", onlineSessionGeneration: 1,
+    console, state: { clanId: "clan-a", gold: 50000000 }, uid: "member-a", onlineSessionGeneration: 1,
+    window: { CrownlandsClanTreasuryUi: { closeConfirmation() {}, confirm: async () => true, bind() {} } },
     activeProfileTab: "clan", clanLedgerConfirmationOpen: false,
     selectedHoldingTowerId: "tower-a",
     holdingTowerSnapshots: new Map([["tower-a", { id: "tower-a", ownerMember: true, clanId: "clan-a" }]]),
@@ -41,6 +42,7 @@ function harness() {
     markOnlineRealtimeRecoveryNeeded() {}, formatNumber: String,
     confirmClanLedgerAction: async () => true, rejectGameAction: message => { throw Error(message); },
     applyServerEconomyResult: result => economy.push(result), showToast() {}, playRewardSound() {},
+    refreshServerEconomy: async () => {},
   });
   vm.runInContext(declarations + treasuryFunctions + `
     this.status = () => clanTreasuryStatus;
@@ -121,6 +123,7 @@ async function main() {
     const h = harness(), pending = deferred();
     Object.assign(h.context, {
       holdingTowerActionsInFlight: new Set(), clanBuildingRequestIds: new Map(),
+      holdingTowerModalSession: null,
       modalBody: { querySelector: () => ({ value: "1" }) }, createHoldingTowerOperationId: () => "spend",
       refreshHoldingTower: async () => {}, renderCities() {}, cityRenderSignature: "",
     });

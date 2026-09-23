@@ -2,7 +2,7 @@
 
 Branch: `codex/clan-treasury-draft`. Base: `2836aad365412670b6bc1f766cb2000a2ed512c5`.
 
-This is a standalone, interactive design proposal for the existing Clan Rewards > Treasury panel. It is awaiting visual approval. The actual game, gameplay rules, backend functions and Master Specification are unchanged. All balances and donation outcomes are in-memory samples; the page makes no account or gameplay requests.
+This is the approved interactive design reference for Clan Rewards > Treasury. The actual game presentation is integrated through `clan-treasury-ui.js` and `clan-treasury-ui.css`; deployment is verified separately. This standalone reference keeps its balances and donation outcomes in memory and makes no account or gameplay requests.
 
 ## Presentation
 
@@ -32,4 +32,6 @@ Switch between native-size desktop (1440 × 900), mobile landscape (844 × 390) 
 
 `node tools/validate-clan-treasury-draft-browser.js` checks all three sizes, visible controls, scroll access to allowance/rules, amount bounds, exact slider input, Max, cancel/focus return, confirmation arithmetic, duplicate-click prevention, first-donation locking, failed-donation retry, stale reset cancellation and review controls. It also checks for browser exceptions, missing assets and external network requests. Screenshots and results are saved to ignored `release-artifacts/clan-treasury/`.
 
-No gameplay or server changes are included, so no emulator or gameplay regression suite applies. Runtime integration and deployment follow design approval.
+`node tools/validate-clan-treasury-browser.js` checks the actual game's Clan Rewards entry point at all three sizes, live rerender preservation, confirmation/cancel, amount limits, pending/duplicate guards, exact server response handling, personal Gold refresh, operation-ID reuse after failure, balance changes during confirmation, unavailable state and clan-session cleanup. The focused plan also checks existing Treasury client lifecycle, Clan navigation and Tower building/wall balance dependencies. No backend function or gameplay rule changes are included, so no emulator suite applies.
+
+In the actual Clan window, the Treasury replaces the stacked section/reward navigation with Back to Rewards while open, preserving room for its controls. Other clan and reward panels keep their existing layout. Personal Gold is never deducted locally: a successful donation refreshes it from the existing server economy endpoint. A failed follow-up read does not turn an accepted donation into a payment failure.

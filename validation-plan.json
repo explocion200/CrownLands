@@ -15,14 +15,45 @@
         "docs/visual-qa/clan-treasury/preview.js",
         "tools/validate-clan-treasury-draft-browser.js"
       ],
-      "reason": "Standalone Treasury design draft uses existing artwork and review styles. Check desktop and both landscape sizes, fixed review action, scrolling, exact amount/slider/Max, personal and daily bounds, confirmation and cancel, sample balance arithmetic, duplicate-click prevention, failure retry, stale reset cancellation, first-donation allowance and unavailable/exhausted states. Verify loaded assets and no backend requests. Actual game scripts, shared styles, backend functions and production packaging are unchanged; no gameplay or emulator suite applies."
+      "reason": "Approved standalone Treasury design reference. Check desktop and both landscape sizes, fixed action, scrolling, exact amount/slider/Max, limits, confirmation/cancel, sample arithmetic, duplicate guard, retry, reset and unavailable states; no account calls."
     },
     {
       "tests": [],
       "paths": [
-        "docs/visual-qa/clan-treasury/README.md"
+        "docs/visual-qa/clan-treasury/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Document proposal scope, existing Treasury rules, review URL and focused validation. This is not an approved gameplay or deployment-status change."
+      "reason": "Record the explicitly approved Treasury presentation and actual-game integration. Donation rules, backend and existing feature deployment statuses remain unchanged."
+    },
+    {
+      "paths": [
+        "clan-treasury-ui.js",
+        "clan-treasury-ui.css",
+        "game.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-tower-buildings-browser.js"
+      ],
+      "tests": [
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-tower-buildings-browser.js"
+      ],
+      "reason": "Integrate Clan Rewards Treasury with scoped styles, two scrolling columns, visible donation controls, exact confirmation and return navigation. Exercise real-game desktop and landscape layouts, input preservation on live refresh, limits, pending duplicate guard, receipt/retry identity, personal Gold refresh, changed balances, unavailable state and session cleanup. Existing Treasury client tests cover revision ordering, scoped reads/subscriptions and Tower spends; Clan routing/permissions and all Tower building/wall live-balance dependencies are affected shared paths. Only the presentation and client donation handler change; no server-authoritative rule or backend deployment changes, so no emulator suite applies."
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-clan-treasury-browser.js"
+      ],
+      "reason": "Load, precache and publish the Treasury component. The actual-game browser gate verifies integration and loaded art; mandatory production build/artifact checks verify release packaging. Existing release configuration and backend are unchanged."
     }
   ]
 }

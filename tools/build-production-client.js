@@ -11,6 +11,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 
 const rootFiles = [
   "infirmary-ui.js", "infirmary-ui.css",
+  "clan-treasury-ui.js", "clan-treasury-ui.css",
   "training-grounds-ui.js", "training-grounds-ui.css",
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
   "app-entry.js",
