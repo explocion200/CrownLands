@@ -131,10 +131,11 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 const achievementUiBytes = ["achievements-ui.js", "achievements-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (achievementUiBytes > 60 * 1024) throw new Error("Achievements presentation exceeds its 60 KiB payload budget.");
-// Profile adds scoped presentation and production details, reusing existing art.
+// Own-profile presentation plus the public ruler dossier; both reuse shipped art.
+// The public dossier adds under 9 KiB of scoped CSS. Bound the combined payload.
 const profileUiBytes = ["player-profile-ui.js", "player-profile-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (profileUiBytes > 44 * 1024) throw new Error("Profile presentation exceeds its 44 KiB payload budget.");
+if (profileUiBytes > 52 * 1024) throw new Error("Profile presentation exceeds its 52 KiB payload budget.");
 // Skills adds at most 30 KiB of scoped CSS, 16 KiB of eight emblems, and 2 KiB of card markup.
 // Clan adds at most 84 KiB of scoped CSS and 16 KiB of client presentation, reusing existing art.
 // Settings adds at most 32 KiB of scoped CSS and 8 KiB of emblems and markup.

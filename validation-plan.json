@@ -1,21 +1,44 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "23c0c6b9418842a73db4f7ffa48b43162926f310",
+  "baseCommit": "32402768d3ada5d810e14b619f0dbd447f47d13c",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-map-ui-responsiveness-browser.js", "tools/validate-incoming-army-estimates.js"],
-      "tests": ["tools/validate-map-ui-responsiveness-browser.js", "tools/validate-clan-castle-layout-draft-browser.js", "tools/validate-clan-tower-map-browser.js", "tools/validate-clan-tower-buildings-browser.js", "tools/validate-incoming-army-estimates.js", "tools/validate-incoming-threats-browser.js", "tools/validate-responsive-browser.js", "tools/validate-performance-bottlenecks.js"],
-      "reason": "Remove repeated Tower geometry measurements, preserve building DOM and skip unused roster scans for loaded incoming targets. Verify no repeated work, fixed actions across zoom and viewport sizes, retained nodes and focus, upgrades/construction/ownership cleanup, actual actions and permissions, local/off-map incoming privacy, camera/touch interruption and existing menu/chat responsiveness and frame/cache guards."
+      "paths": [
+        "game.js",
+        "player-profile-ui.css",
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "docs/visual-qa/public-player-profile/index.html",
+        "docs/visual-qa/public-player-profile/preview.html",
+        "docs/visual-qa/public-player-profile/preview.js",
+        "docs/visual-qa/public-player-profile/review.js",
+        "docs/visual-qa/public-player-profile/runtime-fixture.js"
+      ],
+      "tests": [
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-universal-profile-links.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-modal-lifecycle-browser.js"
+      ],
+      "reason": "Public ruler dossier and Main City navigation: preserve region-qualified uncached Core IDs, island fallback, map selection beneath Profile, pending/failure/stale handling and existing public estimate privacy. Browser review covers desktop and two landscape sizes, independent/long/unavailable rulers and clan links; map-switch defaults and shared modal transitions remain covered. No backend or rules changes."
     },
     {
-      "paths": ["functions/index.js", "functions/test/emulator-maintenance-projections.js"],
-      "tests": ["tools/validate-stability-regressions.js", "tools/validate-authoritative-army-orders.js", "functions/test/emulator-maintenance-projections.js"],
-      "reason": "Fix observed cleanup memory failure using expiry-only/reference-only queries and 512MiB with concurrency one. Real Firestore verifies receipt payloads are not loaded, expired records are deleted, fresh/nonexpiring records survive, age telemetry and replay remain correct. Shared deletion batching and bulk idempotency guards remain covered. Deploy both affected cleanup Functions; no callable or gameplay rule changes."
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Account for the small scoped public-profile CSS addition in the individual 52 KiB own/public profile bound; require normal production build and packaged existing assets. Global budgets remain unchanged."
     },
     {
-      "paths": ["docs/MAP_UI_RESPONSIVENESS_AUDIT_2026_09_23.md"],
+      "paths": [
+        "docs/visual-qa/public-player-profile/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
       "tests": [],
-      "reason": "Record measured root causes, controlled comparisons, current realm and service observations, and remaining verification limits."
+      "reason": "Document the draft, reproduced location root cause, focused checks, release limits and measured pre-existing global cache-budget diagnostic."
     }
   ]
 }
