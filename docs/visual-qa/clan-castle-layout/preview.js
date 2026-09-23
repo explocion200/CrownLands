@@ -24,4 +24,3 @@ window.addEventListener("message",e=>{
   if(e.source===game.contentWindow&&e.data?.type==="castle-position-ready"){loading.hidden=true;document.documentElement.dataset.castleLayoutReady="true";update();}
   if(e.source===game.contentWindow&&e.data?.type==="castle-layout-status")parent.postMessage(e.data,location.origin);
 });
-

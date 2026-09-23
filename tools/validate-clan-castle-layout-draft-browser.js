@@ -31,7 +31,13 @@ fs.mkdirSync(dir,{recursive:true});
    await ready('document.getElementById("game")?.contentWindow?.CrownlandsCastlePositionReview?.tower&&document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node").length===4');
    await ready('[...document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-building-node>img,.holding-tower-art")].every(i=>i.complete&&i.naturalWidth)');
    await settings({layout:"current",sample:"owned",level:4});const current=await measures();await capture(width+"-current");
-   await settings({layout:"proposed",sample:"owned",level:4});const proposed=await measures();await capture(width+"-positions-only");
+   await settings({layout:"proposed",sample:"owned",level:4});
+   await ready('(()=>{const ground=document.getElementById("game").contentDocument.querySelector("[data-castle-dirt-patches]");return ground?.complete&&ground.naturalWidth>0;})()');
+   const ground=await ev('(()=>{const d=document.getElementById("game").contentDocument,n=d.querySelector("[data-castle-dirt-patches]"),s=d.defaultView.getComputedStyle(n),c=d.createElement("canvas");c.width=n.naturalWidth;c.height=n.naturalHeight;const x=c.getContext("2d");x.drawImage(n,0,0);const pixels=x.getImageData(0,0,c.width,c.height).data;let transparent=0,soft=0;for(let i=3;i<pixels.length;i+=4){if(pixels[i]===0)transparent++;if(pixels[i]>0&&pixels[i]<255)soft++;}return{src:n.getAttribute("src"),pointerEvents:s.pointerEvents,z:Number(s.zIndex),buildingZ:Number(d.defaultView.getComputedStyle(d.querySelector(".holding-tower-building-node")).zIndex),transparent:transparent/(pixels.length/4),soft:soft/(pixels.length/4),oldRoads:[...d.querySelectorAll(".holding-tower-courtyard")].some(i=>i.getAttribute("src")==="assets/clan-buildings/courtyard.webp")};})()');
+   assert(!ground.oldRoads&&ground.src.endsWith("dirt-patches-v1.png"),"Old courtyard roads remain");
+   assert(ground.pointerEvents==="none"&&ground.z<ground.buildingZ,"Ground blocks building controls");
+   assert(ground.transparent>.3&&ground.soft>.01,"Dirt decal needs transparent gaps and soft edges");
+   const proposed=await measures();await capture(width+"-dirt-patches");
    for(const key of["width","height","background","border","font","transform","text"])assert.deepEqual(proposed.tower[key],current.tower[key],"Tower changed: "+key);
    assert.equal(proposed.labels,0);assert.equal(proposed.dock,false);
    assert.deepEqual(proposed.actions,current.actions,"Map controls moved or restyled");
@@ -45,7 +51,9 @@ fs.mkdirSync(dir,{recursive:true});
     await ev('document.getElementById("game").contentDocument.querySelector("dialog[open]").close()');
     await settings({layout:"proposed",sample:"owned",level:4});
    }
-   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,sizeAndStyleParity:true,positionsOnly:true,entries:true});
+   await settings({layout:"proposed",sample:"unbuilt",level:4});
+   assert.equal(await ev('document.getElementById("game").contentDocument.querySelectorAll(".holding-tower-courtyard").length'),0,"Unbuilt compound added a ground patch");
+   records.push({width,height,towerSize:proposed.tower.width,buildingSize:proposed.buildings[0].box.width,sizeAndStyleParity:true,buildingPositionsOnly:true,ground,entries:true});
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(dir,"checks.json"),JSON.stringify({verifiedAt:new Date().toISOString(),records,errors},null,2));
   console.log(JSON.stringify({passed:true,records,errors},null,2));
@@ -55,4 +63,3 @@ fs.mkdirSync(dir,{recursive:true});
   await server.close();
  }
 })().catch(e=>{console.error(e.stack||e.message);process.exitCode=1;});
-

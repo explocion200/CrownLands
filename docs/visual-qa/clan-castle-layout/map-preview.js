@@ -12,6 +12,23 @@
   renderClanTowerMapBuildings=function(visibleTowers,fragment){
     originalRender(visibleTowers,fragment);
     if(layout!=="proposed")return;
+    const grounds=[...fragment.querySelectorAll(".holding-tower-courtyard")];
+    const developed=visibleTowers.filter(visual=>{
+      const current=holdingTowerSnapshots.get(visual.id);
+      return current?.ownerKind==="clan"&&B.DEFINITIONS.some(d=>B.level(current.buildings?.[d.id])||current.buildingProject?.buildingId===d.id);
+    });
+    grounds.forEach((ground,index)=>{
+      const visual=developed[index];
+      if(!visual)return;
+      const point=worldToMapPoint({x:visual.visualX,y:visual.visualY});
+      ground.src="docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png";
+      ground.dataset.castleDirtPatches="true";
+      ground.style.left=`${point.x+(.5-visual.anchorX)*visual.width}px`;
+      ground.style.top=`${point.y+(1-visual.anchorY-.056)*visual.width}px`;
+      ground.style.width=`${visual.width*1.4}px`;
+      ground.style.height=`${visual.width*1.04}px`;
+      ground.style.opacity=".78";
+    });
     for(const node of fragment.querySelectorAll(".holding-tower-building-node")){
       const visual=visibleTowers.find(t=>t.id===node.dataset.clanBuildingTower);
       const place=positions[node.dataset.clanBuildingId];
@@ -64,7 +81,7 @@
     cityRenderSignature="";releaseSelectionRenderDelay();renderAll();
     document.documentElement.dataset.castlePositionLayout=layout;
     window.CrownlandsCastlePositionReview.tower=tower;
-    parent.postMessage({type:"castle-layout-status",message:layout==="current"?"Current positions · Original game size, labels and controls":"Proposed positions only · Original game size, labels and controls"},location.origin);
+    parent.postMessage({type:"castle-layout-status",message:layout==="current"?"Current positions and roads · Original game size, labels and controls":"Revised positions with dirt patches · Original game size, labels and controls"},location.origin);
   }
   window.CrownlandsCastlePositionReview={settings,frameTower,positions,tower:null};
   window.addEventListener("message",e=>{if(e.origin===location.origin&&e.source===parent&&e.data?.type==="castle-position-settings")void settings(e.data);});

@@ -10,19 +10,21 @@
         "docs/visual-qa/clan-castle-layout/preview.js",
         "docs/visual-qa/clan-castle-layout/draft.css",
         "tools/validate-clan-castle-layout-draft-browser.js",
-        "docs/visual-qa/clan-castle-layout/map-preview.js"
+        "docs/visual-qa/clan-castle-layout/map-preview.js",
+        "docs/visual-qa/clan-castle-layout/art/dirt-patches-v1.png"
       ],
       "tests": [
         "tools/validate-clan-castle-layout-draft-browser.js"
       ],
-      "reason": "Position-only proposal inside the existing mock-game benchmark. Reuse the real game renderer, artwork, labels, controls and building screens; alter only four building left/top offsets in a draft-only wrapper. Verify same-zoom before/after size and style parity, original action placement, changed positions, and actual pointer/touch entry into all four buildings at desktop and two mobile landscape sizes. No production runtime or backend changes; no emulator suites are required."
+      "reason": "Draft-only building positions and decorative dirt-patch replacement within the real mock-game renderer. Preserve building and Tower artwork, dimensions, labels, HUD, map actions and existing screens. Verify size/style parity, pointer/touch entry at desktop and two mobile landscape sizes, replacement of the old road decal, real alpha gaps/soft edges, non-interactive ground beneath structures, and absence of the decal for unbuilt compounds. No production runtime or backend changes require emulator suites."
     },
     {
       "paths": [
-        "docs/visual-qa/clan-castle-layout/README.md"
+        "docs/visual-qa/clan-castle-layout/README.md",
+        "docs/visual-qa/clan-castle-layout/art/prompt.md"
       ],
       "tests": [],
-      "reason": "Documents the user-requested scope correction, exact proposed offsets, comparison controls, source dependencies and remaining approval/integration. No game rules are changed."
+      "reason": "Document the requested ground-art revision and exact built-in image-generation prompt, references, draft asset provenance and pending design approval/integration."
     }
   ]
 }
