@@ -1,46 +1,47 @@
 {
+  "schemaVersion": 1,
+  "baseCommit": "2836aad365412670b6bc1f766cb2000a2ed512c5",
   "coverage": [
     {
-      "reason": "Approved standalone Training Grounds reference using shared building helpers and existing art. Check three viewports, fixed footer, reachable levels, staged art, paused/blocked states, sample upgrades/retries and additive rally power illustrations.",
-      "paths": [
-        "docs/visual-qa/training-grounds/index.html",
-        "docs/visual-qa/training-grounds/review.css",
-        "docs/visual-qa/training-grounds/review.js",
-        "docs/visual-qa/training-grounds/preview.html",
-        "docs/visual-qa/training-grounds/draft.css",
-        "docs/visual-qa/training-grounds/preview.js",
-        "tools/validate-training-grounds-draft-browser.js"
-      ],
       "tests": [
-        "tools/validate-training-grounds-draft-browser.js"
-      ]
+        "tools/validate-clan-treasury-draft-browser.js"
+      ],
+      "paths": [
+        "docs/visual-qa/clan-treasury/index.html",
+        "docs/visual-qa/clan-treasury/review.css",
+        "docs/visual-qa/clan-treasury/review.js",
+        "docs/visual-qa/clan-treasury/preview.html",
+        "docs/visual-qa/clan-treasury/draft.css",
+        "docs/visual-qa/clan-treasury/preview.js",
+        "tools/validate-clan-treasury-draft-browser.js"
+      ],
+      "reason": "Approved standalone Treasury design reference. Check desktop and both landscape sizes, fixed action, scrolling, exact amount/slider/Max, limits, confirmation/cancel, sample arithmetic, duplicate guard, retry, reset and unavailable states; no account calls."
     },
     {
-      "reason": "Record the approved Training Grounds presentation, existing rules and actual-game integration and validation scope. No mechanic, balance or deployment status changes.",
+      "tests": [],
       "paths": [
-        "docs/visual-qa/training-grounds/README.md",
+        "docs/visual-qa/clan-treasury/README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "tests": []
+      "reason": "Record the explicitly approved Treasury presentation and actual-game integration. Donation rules, backend and existing feature deployment statuses remain unchanged."
     },
     {
       "paths": [
-        "training-grounds-ui.js",
-        "training-grounds-ui.css",
+        "clan-treasury-ui.js",
+        "clan-treasury-ui.css",
         "game.js",
-        "tools/validate-training-grounds-browser.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
         "tools/validate-clan-tower-buildings-browser.js"
       ],
       "tests": [
-        "tools/validate-training-grounds-browser.js",
-        "tools/validate-infirmary-browser.js",
-        "tools/validate-engineers-workshop-browser.js",
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-clan-tower-buildings.js"
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-tower-buildings-browser.js"
       ],
-      "reason": "Integrate the approved Training Grounds through the shared Tower session, building-action and Treasury routes. Test actual-game desktop and two landscape layouts, authoritative balances/levels, paused/blocked/pending/failed requests, retry identity, duplicate guards, countdown refresh, example arithmetic and state, navigation and stale sessions. Recheck all sibling building screens, map/touch entry points, live donations enabling both building and wall upgrades, Tower lifecycle and construction helpers. No server changes; no emulator suite applies."
+      "reason": "Integrate Clan Rewards Treasury with scoped styles, two scrolling columns, visible donation controls, exact confirmation and return navigation. Exercise real-game desktop and landscape layouts, input preservation on live refresh, limits, pending duplicate guard, receipt/retry identity, personal Gold refresh, changed balances, unavailable state and session cleanup. Existing Treasury client tests cover revision ordering, scoped reads/subscriptions and Tower spends; Clan routing/permissions and all Tower building/wall live-balance dependencies are affected shared paths. Only the presentation and client donation handler change; no server-authoritative rule or backend deployment changes, so no emulator suite applies."
     },
     {
       "paths": [
@@ -50,11 +51,9 @@
         "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/validate-training-grounds-browser.js"
+        "tools/validate-clan-treasury-browser.js"
       ],
-      "reason": "Load, precache and publish Training Grounds assets after shared building helpers. Actual-game browser checks verify loaded assets and isolated styling; mandatory production build and artifact gates verify packaging."
+      "reason": "Load, precache and publish the Treasury component. The actual-game browser gate verifies integration and loaded art; mandatory production build/artifact checks verify release packaging. Existing release configuration and backend are unchanged."
     }
-  ],
-  "schemaVersion": 1,
-  "baseCommit": "5e7a2544e050f387e83a7449b728e62527e01033"
+  ]
 }

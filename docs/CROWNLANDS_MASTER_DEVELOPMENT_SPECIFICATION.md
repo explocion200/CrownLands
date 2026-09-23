@@ -809,6 +809,10 @@ The current reset path preserves clan identity, roster, membership, roles, name,
 - The UI and ledger record seasonal total donated and total spent values.
 - A member’s daily donation cap is 12 hours of raw base Gold production. That raw Gold/hour value is atomically snapshotted on the first successful donation of each UTC day and remains fixed until the next UTC day.
 
+#### Confirmed Treasury presentation (2026-09-23)
+
+Use the approved parchment Treasury view inside Clan Rewards, with existing Gold artwork, Treasury balance and seasonal donated/spent totals on the left, and personal Gold, an exact amount input, Gold slider and Max control on the right. Max is the lower of personal Gold and the remaining daily allowance. Show the personal and Treasury balances after the selected donation, the daily cap and its locked/preview status, donated/remaining amounts, raw production basis and 00:00 UTC reset. Keep the review action visible while the two detail columns scroll on desktop and landscape mobile. A Back to Rewards control returns to the existing navigation. Confirmation shows the exact amount, resulting balances, allowance impact and the finality warning. Live refreshes preserve the typed amount, expanded rules and scroll position within the current clan/session. Donation responses remain authoritative, retries reuse the operation ID, and personal Gold is refreshed from the existing economy endpoint after acceptance. No donation limit, permission, reset or spending rule changes.
+
 ### Needs verification
 
 - Maximum clan size, invitation rules, role-change cooldowns, gift values and limits, weekly-goal configuration, inactivity handling, clan-name rules, disband recovery, and moderation controls: **NEEDS VERIFICATION**.

@@ -2328,6 +2328,8 @@ let clanTreasuryLoadAttempted = false;
 let clanTreasuryUnsubscribe = null;
 let clanTreasurySubscriptionScope = "";
 let clanTreasuryEpoch = 0;
+let clanTreasuryView = {};
+let clanTreasuryDonationRequest = null;
 const holdingTowerSnapshots = new Map();
 const holdingTowerClanIdentities = new Map();
 let selectedHoldingTowerId = "";
@@ -25720,6 +25722,9 @@ function getClanTreasuryScope() {
 }
 
 function resetClanTreasuryState() {
+  window.CrownlandsClanTreasuryUi?.closeConfirmation();
+  clanTreasuryView = {};
+  clanTreasuryDonationRequest = null;
   clanTreasuryUnsubscribe?.();
   clanTreasuryUnsubscribe = null;
   clanTreasurySubscriptionScope = "";
@@ -25822,23 +25827,45 @@ async function donateClanTreasuryFromPanel() {
   if (clanTreasuryActionInFlight || clanLedgerConfirmationOpen) return;
   const input = clanContent?.querySelector("[data-clan-treasury-donation]");
   if (input && !input.reportValidity()) return;
-  const amount = Math.floor(Number(input?.value) || 0);
+  const amount = Number(input?.value);
   const api = getOnlineApi();
-  if (!amount || !api?.donateClanTreasuryGold) {
+  if (!Number.isSafeInteger(amount) || amount <= 0 || !api?.donateClanTreasuryGold) {
     rejectGameAction("Enter a positive whole-Gold donation.");
     return;
   }
   const clanId = state.clanId;
   const uid = getCurrentOnlineUid();
   const scope = getClanTreasuryScope();
-  if (!await confirmClanLedgerAction("Donate to the Treasury?", `Donate ${formatNumber(amount)} of your personal Gold to the Clan Treasury. Donations are final and cannot be withdrawn.`, "Donate Gold")) return;
+  const canDonate = () => clanTreasuryStatus?.allowance && clanTreasuryStatus?.treasury
+    && amount <= Math.min(Math.floor(Number(state?.gold) || 0), Number(clanTreasuryStatus.allowance.remaining) || 0);
+  if (!canDonate()) {
+    rejectGameAction("Refresh your Treasury and choose an amount within your personal Gold and remaining allowance.");
+    return;
+  }
+  clanLedgerConfirmationOpen = true;
+  let confirmed = false;
+  try {
+    confirmed = await window.CrownlandsClanTreasuryUi.confirm({ amount, status: clanTreasuryStatus, personal: state.gold });
+  } finally { clanLedgerConfirmationOpen = false; }
+  if (!confirmed) return;
   if (scope !== getClanTreasuryScope() || state.clanId !== clanId || getCurrentOnlineUid() !== uid || clanTreasuryActionInFlight) return;
+  if (!canDonate()) {
+    clanTreasuryView.feedback = "Your balance or allowance changed. Review the updated amount before donating.";
+    clanTreasuryView.success = false;
+    refreshClanTreasuryViews();
+    return;
+  }
   clanTreasuryActionInFlight = true;
+  clanTreasuryView.feedback = "";
+  clanTreasuryView.success = false;
+  if (clanTreasuryDonationRequest?.scope !== scope || clanTreasuryDonationRequest.amount !== amount) {
+    clanTreasuryDonationRequest = { scope, amount, operationId: `treasury_donation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}` };
+  }
   renderClanView();
   try {
     const result = await api.donateClanTreasuryGold({
       amount,
-      operationId: `treasury_donation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      operationId: clanTreasuryDonationRequest.operationId,
     });
     if (scope !== getClanTreasuryScope()) return;
     applyClanTreasuryStatus(clanId, {
@@ -25853,10 +25880,24 @@ async function donateClanTreasuryFromPanel() {
       utcDate: result?.utcDate || clanTreasuryStatus?.utcDate,
     }, scope);
     applyServerEconomyResult(result);
+    clanTreasuryDonationRequest = null;
+    clanTreasuryView.feedback = `${amount.toLocaleString("en-US")} Gold donated. Thank you for supporting your clan.`;
+    clanTreasuryView.success = true;
     showToast(`${formatNumber(amount)} Gold donated to the Clan Treasury.`);
     playRewardSound("gold");
+    // Donation receipts carry Treasury totals; refresh personal Gold from the server.
+    // A failed read must never turn an accepted donation into a failed payment.
+    try {
+      await refreshServerEconomy(true, { renderCities: false });
+    } catch (error) {
+      console.warn("Personal Gold refresh after Treasury donation failed", error);
+    }
   } catch (error) {
-    if (scope === getClanTreasuryScope()) rejectGameAction(error?.message || "The Treasury donation could not be completed.");
+    if (scope === getClanTreasuryScope()) {
+      clanTreasuryView.feedback = error?.message || "Donation could not be confirmed. Retry the same amount to check it safely.";
+      clanTreasuryView.success = false;
+      rejectGameAction(clanTreasuryView.feedback);
+    }
   } finally {
     if (scope === getClanTreasuryScope()) {
       clanTreasuryActionInFlight = false;
@@ -25865,54 +25906,18 @@ async function donateClanTreasuryFromPanel() {
   }
 }
 
+function bindClanTreasuryPanel(root = clanContent) {
+  window.CrownlandsClanTreasuryUi?.bind(root, {
+    status: clanTreasuryStatus, personal: state?.gold,
+    loading: clanTreasuryLoading, busy: clanTreasuryActionInFlight,
+  }, clanTreasuryView, () => void loadClanTreasuryStatus({ force: true }));
+}
+
 function renderClanTreasuryPanel() {
-  const treasury = clanTreasuryStatus?.treasury || {};
-  const allowance = clanTreasuryStatus?.allowance || {};
-  const worldUnavailable = !clanTreasuryStatus && !clanTreasuryLoading;
-  const remaining = Math.max(0, Math.floor(Number(allowance.remaining) || 0));
-  const dailyCap = Math.max(0, Math.floor(Number(allowance.dailyCap) || 0));
-  const donatedToday = Math.max(0, Math.floor(Number(allowance.donatedToday) || 0));
-  const allowanceUsedPercent = dailyCap ? Math.min(100, Math.floor(donatedToday * 100 / dailyCap)) : 0;
-  const allowanceLocked = allowance.locked === true;
-  const allowanceRate = Math.max(0, Math.floor(Number(
-    allowanceLocked ? allowance.rawGoldPerHourSnapshot : allowance.previewRawGoldPerHour
-  ) || 0));
-  const balance = Math.max(0, Math.floor(Number(treasury.balance) || 0));
-  const defaultDonation = Math.max(0, Math.min(remaining, Math.floor(Number(state?.gold) || 0)));
-  return `
-    <section class="clan-gift-panel clan-treasury-panel" aria-labelledby="clanTreasuryTitle">
-      <div class="profile-section-heading clan-quest-heading clan-treasury-heading">
-        <span>War Chest · Current Season</span>
-        <h3 id="clanTreasuryTitle">Clan Treasury</h3>
-        <b>${clanTreasuryLoading ? "Syncing…" : `${formatNumber(balance)} Gold`}</b>
-      </div>
-      <div class="treasury-layout"><div class="paper treasury-record"><div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury overview">
-        <div><span>Treasury Balance</span><strong>${formatNumber(balance)}</strong></div>
-        <div><span>Daily Donation Allowance</span><strong>${formatNumber(dailyCap)}</strong></div>
-        <div><span>Remaining Today</span><strong>${formatNumber(remaining)}</strong></div>
-        <div><span>Total Donated</span><strong>${formatNumber(treasury.totalDonated || 0)}</strong></div>
-        <div><span>Total Spent</span><strong>${formatNumber(treasury.totalSpent || 0)}</strong></div>
-      </div>
-      ${worldUnavailable ? "" : `
-        <div class="clan-quest-progress clan-treasury-allowance ${allowanceLocked ? "locked" : "preview"}">
-          <div><strong>${allowanceLocked ? "Daily allowance locked" : "Allowance preview"}</strong><span>${formatNumber(donatedToday)} Gold donated today</span></div>
-          <span class="clan-quest-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${allowanceUsedPercent}"><i style="width:${allowanceUsedPercent}%"></i></span>
-          <small>${allowanceLocked
-            ? `Locked from the first successful donation at ${formatNumber(allowanceRate)} raw Gold/hour × 12 until 00:00 UTC.`
-            : `Preview based on ${formatNumber(allowanceRate)} current raw Gold/hour. Your first successful donation locks today's cap.`}</small>
-        </div>`}
-      </div><div class="paper"><form class="clan-form clan-treasury-donate" data-clan-treasury-form>
-        <label for="clanTreasuryDonation">Donate personal Gold</label>
-        <div>
-          <input id="clanTreasuryDonation" data-clan-treasury-donation type="number" min="1" max="${remaining}" step="1" value="${defaultDonation || ""}" placeholder="Gold amount" ${worldUnavailable || !remaining ? "disabled" : ""} />
-          <button type="submit" class="profile-primary-btn" data-clan-action="donate-treasury" ${worldUnavailable || !remaining || clanTreasuryActionInFlight ? "disabled" : ""}>${clanTreasuryActionInFlight ? "Donating…" : "Donate"}</button>
-        </div>
-        <small>${worldUnavailable
-          ? "Available only in the active current Core realm."
-          : `${formatNumber(remaining)} Gold available to donate today · resets 00:00 UTC`}</small>
-      </form>
-      <p>Donations are final. Leaders and Officers spend Treasury Gold from an owned Holding Tower.</p></div></div>
-    </section>`;
+  return window.CrownlandsClanTreasuryUi.render({
+    status: clanTreasuryStatus, personal: state?.gold,
+    loading: clanTreasuryLoading, busy: clanTreasuryActionInFlight,
+  }, clanTreasuryView);
 }
 
 function renderClanGiftPanel() {
@@ -26308,6 +26313,8 @@ function bindClanRallyControls(root = document) {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  if (clanTreasuryView.scope === getClanTreasuryScope()) window.CrownlandsClanTreasuryUi?.capture(clanContent, clanTreasuryView);
+  else clanTreasuryView = { scope: getClanTreasuryScope() };
   const rosterScrollTop = clanContent.querySelector(".clan-roster")?.scrollTop || 0;
   const applicationScrollTop = clanContent.querySelector(".clan-applications .scroll-region")?.scrollTop || 0;
   syncClanNavigationState();
@@ -26392,6 +26399,7 @@ function renderClanView() {
   const applications = clanContent.querySelector(".clan-applications .scroll-region");
   if (roster) roster.scrollTop = rosterScrollTop;
   if (applications) applications.scrollTop = applicationScrollTop;
+  bindClanTreasuryPanel();
   bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
   updateClanNameChangeCountdown();
@@ -26660,6 +26668,10 @@ async function handleClanClick(event) {
     if (!["gifts", "conquest", "treasury"].includes(button.dataset.clanReward)) return;
     activeClanRewardSection = button.dataset.clanReward;
     renderClanView();
+    if (activeClanRewardSection === "treasury") {
+      clanContent.querySelector("#ct-back")?.focus({ preventScroll: true });
+      return;
+    }
     focusClanNavigationButton("data-clan-reward", activeClanRewardSection);
     return;
   }

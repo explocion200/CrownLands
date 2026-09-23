@@ -156,7 +156,7 @@ async function main() {
       assert(await evaluate('!modalBody.querySelector("#upgrade").disabled'), 'A clan donation did not enable the building upgrade.');
       assert.equal(await evaluate('holdingTowerDetailsTab'), 'buildings', 'A live donation changed the selected tab.');
       assert.equal(await evaluate('modalBody.querySelector("#balance").textContent'), (20000000).toLocaleString());
-      assert(await evaluate('renderClanTreasuryPanel().includes(formatNumber(20000000))'), 'The clan panel disagrees with the Tower Treasury.');
+      assert(await evaluate('renderClanTreasuryPanel().includes((20000000).toLocaleString("en-US"))'), 'The clan panel disagrees with the Tower Treasury.');
       // Wall services now live outside the dedicated building screen. Preserve their live-balance checks.
       await evaluate('modalBody.querySelector("[data-training-back]").click();modalBody.querySelector("[data-tower-tab=walls]").click();treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:2})');
       assert(await evaluate('modalBody.querySelector("[data-tower-action=upgrade]").disabled'));

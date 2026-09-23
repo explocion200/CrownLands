@@ -17,7 +17,7 @@ const context = vm.createContext({
   clanApplications:[{uid:"applicant",displayName:"Bryn"}],clanApplicationsError:"",clanUiLoading:false,
   activeClanRewardSection:"gifts",selectedClanRallyId:"",selectedClanMemberUid:"",clanLedgerConfirmationOpen:false,
   renderClanGiftPanel:()=>"GIFT_CONTENT",renderClanQuestPanel:()=>"QUEST_CONTENT",renderClanTreasuryPanel:()=>"TREASURY_CONTENT",
-  renderClanView:()=>{},focusClanNavigationButton:()=>{},setClanMobileSection:section=>actions.push(["section",section]),
+  renderClanView:()=>{},clanContent:{querySelector:()=>null},focusClanNavigationButton:()=>{},setClanMobileSection:section=>actions.push(["section",section]),
   isClanSectionActive:()=>true,getCurrentOnlineUid:()=>"self",formatNumber:String,escapeHtml:value=>String(value).replaceAll('<','&lt;').replaceAll('"','&quot;'),
   cleanName:String,clanRoleLabel:String,normalizeTimestampMs:Number,formatClanMemberLastLogin:()=>"Recently",
   renderClanMemberFlag:()=>"FLAG",renderClanApplicantFlag:()=>"FLAG",renderPlayerNameLink:(uid,name)=>`<button data-player-profile-uid="${uid}">${name}</button>`,
