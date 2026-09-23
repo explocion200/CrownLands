@@ -1,7 +1,7 @@
 {
   "coverage": [
     {
-      "reason": "Isolated Training Grounds review draft using unchanged shared building helpers, approved art and review CSS. Check desktop and two mobile landscape sizes, fixed footer and reachable levels, art/bonus/cost references, blocked and paused states, simulated upgrade/retry/reset handling, additive rally bonus examples and native-size review controls. No production runtime or server changes; no emulator suite applies.",
+      "reason": "Approved standalone Training Grounds reference using shared building helpers and existing art. Check three viewports, fixed footer, reachable levels, staged art, paused/blocked states, sample upgrades/retries and additive rally power illustrations.",
       "paths": [
         "docs/visual-qa/training-grounds/index.html",
         "docs/visual-qa/training-grounds/review.css",
@@ -16,11 +16,43 @@
       ]
     },
     {
-      "reason": "Document the proposed presentation, unchanged mechanics, sample controls and validation; actual game integration remains pending design approval.",
+      "reason": "Record the approved Training Grounds presentation, existing rules and actual-game integration and validation scope. No mechanic, balance or deployment status changes.",
       "paths": [
-        "docs/visual-qa/training-grounds/README.md"
+        "docs/visual-qa/training-grounds/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": []
+    },
+    {
+      "paths": [
+        "training-grounds-ui.js",
+        "training-grounds-ui.css",
+        "game.js",
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js"
+      ],
+      "tests": [
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-clan-tower-buildings.js"
+      ],
+      "reason": "Integrate the approved Training Grounds through the shared Tower session, building-action and Treasury routes. Test actual-game desktop and two landscape layouts, authoritative balances/levels, paused/blocked/pending/failed requests, retry identity, duplicate guards, countdown refresh, example arithmetic and state, navigation and stale sessions. Recheck all sibling building screens, map/touch entry points, live donations enabling both building and wall upgrades, Tower lifecycle and construction helpers. No server changes; no emulator suite applies."
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-training-grounds-browser.js"
+      ],
+      "reason": "Load, precache and publish Training Grounds assets after shared building helpers. Actual-game browser checks verify loaded assets and isolated styling; mandatory production build and artifact gates verify packaging."
     }
   ],
   "schemaVersion": 1,
