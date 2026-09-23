@@ -1,0 +1,48 @@
+/* Approval-only skin. No layout scale/position rules: uses the real game's HUD. */
+.hud-art-draft {
+ --hud-paper:#e8d9b1;
+ --hud-paper-light:#f3e7c9;
+ --hud-ink:#443624;
+ --hud-edge:#806641;
+ --hud-metal:#b69b60;
+ --hud-shadow:0 2px 4px #30271855,inset 0 0 0 1px #f7edce,inset 0 0 0 3px #aa8d538c;
+}
+.hud-art-report[style*="none"]{display:none!important}
+.hud-art-draft #logBtn img.report-icon{display:none!important}
+.hud-art-draft :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#fullscreenBtn,#mainCityReturnBtn,#chatToggleBtn,.profile-gold,.effect-status-badge){
+ color:var(--hud-ink)!important;
+ border:1px solid var(--hud-edge)!important;
+ border-radius:5px!important;
+ background:radial-gradient(ellipse at 25% 15%,#fff5d444,transparent 65%),repeating-linear-gradient(117deg,#75653c06 0 1px,transparent 1px 4px),linear-gradient(145deg,var(--hud-paper-light),var(--hud-paper) 55%,#d7c493)!important;
+ box-shadow:var(--hud-shadow)!important;
+ text-shadow:none!important;
+}
+.hud-art-draft :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn){
+ padding:5px!important;
+}
+.hud-art-draft :is(.bag-icon,.shop-icon,.city-list-icon,.island-switch-icon,.profile-rank-icon,.daily-login-reward-icon){
+ width:100%!important;height:100%!important;object-fit:contain!important;filter:drop-shadow(0 1px 0 #30281935)!important;animation:none!important;transform:none!important;
+}
+.hud-art-draft #clanHudBtn{padding:3px!important}
+.hud-art-draft #clanHudIcon{filter:none!important}
+.hud-art-draft #profileBtn{border:0!important;border-radius:5px!important;background:transparent!important;box-shadow:none!important;filter:none!important}
+.hud-art-draft #profileBtn::before{background:url("profile-frame.svg") center/100% 100% no-repeat!important;filter:drop-shadow(0 2px 2px #30271855)!important}
+.hud-art-draft #characterLevelBadge{background:#52452e!important;color:#f7ebc9!important;border:1px solid #b99c60!important;border-radius:2px!important;box-shadow:none!important;text-shadow:none!important}
+.hud-art-draft .profile-gold strong{color:#443624!important;text-shadow:none!important}
+.hud-art-draft #chatToggleBtn .chat-toggle-chevron{color:#5c4730!important;filter:none!important}
+.hud-art-draft :is(#fullscreenBtn,#mainCityReturnBtn) :is(svg,span){color:#5c4730!important;filter:none!important;text-shadow:none!important}
+.hud-art-draft .effect-status-badge{border-radius:4px!important}
+.hud-art-draft .effect-status-icon{filter:drop-shadow(0 1px 1px #362b1d55)!important}
+.hud-art-draft .effect-status-timer{background:#51442fe8!important;color:#fff4d8!important;border-color:#c6ad77!important;box-shadow:none!important;text-shadow:none!important}
+.hud-art-draft #logBtn{border:1px solid #806641!important;background:linear-gradient(145deg,#f3e7c9,#decd9f)!important;border-radius:4px!important;box-shadow:var(--hud-shadow)!important}
+.hud-art-draft #logBtn :is(strong,small){color:#443624!important;text-shadow:none!important}
+.hud-art-draft #logBtn .hud-art-report{filter:none!important}
+.hud-art-draft #outgoingAttackBtn{background:linear-gradient(150deg,#708589,#4b6268)!important;border-color:#bda46e!important;box-shadow:inset 0 0 0 1px #cad0b963,0 2px 4px #30271855!important;border-radius:4px!important}
+.hud-art-draft #incomingAttackBtn{background:linear-gradient(150deg,#8e5043,#6d3832)!important;border-color:#ccb17c!important;box-shadow:inset 0 0 0 1px #e2bb8359,0 2px 4px #30271855!important;border-radius:4px!important}
+.hud-art-draft :is(#incomingAttackBtn,#outgoingAttackBtn) :is(strong,small,span){color:#fff1d0!important;text-shadow:none!important}
+.hud-art-draft :is(.report-unread-badge,.daily-login-reward-badge,.chat-toggle-unread){background:#874a3c!important;border:1px solid #e1c897!important;box-shadow:0 1px 2px #39291d66!important;color:#fff5d9!important;animation:none!important}
+.hud-art-draft .clan-hud-btn.has-clan-notifications::before{background:#874a3c!important;border-color:#e1c897!important;box-shadow:none!important;color:#fff5d9!important}
+.hud-art-draft :is(#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#leaderboardBtn,#dailyLoginRewardBtn,#clanHudBtn,#chatToggleBtn,#fullscreenBtn,#mainCityReturnBtn):focus-visible{outline:3px solid #eaddad!important;outline-offset:3px;filter:none!important}
+@media(hover:hover){.hud-art-draft :is(#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#leaderboardBtn,#dailyLoginRewardBtn,#clanHudBtn,#chatToggleBtn,#fullscreenBtn,#mainCityReturnBtn):hover{background-color:#f4e8c8!important;box-shadow:inset 0 0 0 1px #fff5d6,inset 0 0 0 3px #8e7447,0 2px 4px #30271855!important;filter:none!important}}
+/* Mini-chat's 64px preview, original 72% brown fill, per-message translation,
+   combat timer sizes, saved heraldry and zoom-independent map actions are inherited. */

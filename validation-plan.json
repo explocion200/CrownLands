@@ -1,59 +1,36 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2836aad365412670b6bc1f766cb2000a2ed512c5",
+  "baseCommit": "7711dcaf8cd2d1cfc731edcae4358d409abc74b4",
   "coverage": [
     {
-      "tests": [
-        "tools/validate-clan-treasury-draft-browser.js"
-      ],
       "paths": [
-        "docs/visual-qa/clan-treasury/index.html",
-        "docs/visual-qa/clan-treasury/review.css",
-        "docs/visual-qa/clan-treasury/review.js",
-        "docs/visual-qa/clan-treasury/preview.html",
-        "docs/visual-qa/clan-treasury/draft.css",
-        "docs/visual-qa/clan-treasury/preview.js",
-        "tools/validate-clan-treasury-draft-browser.js"
+        "docs/visual-qa/main-screen-art/index.html",
+        "docs/visual-qa/main-screen-art/review.css",
+        "docs/visual-qa/main-screen-art/review.js",
+        "docs/visual-qa/main-screen-art/preview.html",
+        "docs/visual-qa/main-screen-art/preview.js",
+        "docs/visual-qa/main-screen-art/runtime-fixture.js",
+        "docs/visual-qa/main-screen-art/draft.css",
+        "docs/visual-qa/main-screen-art/profile-frame.svg",
+        "docs/visual-qa/main-screen-art/leaderboard.svg",
+        "docs/visual-qa/main-screen-art/art/hud-bag-r1.webp",
+        "docs/visual-qa/main-screen-art/art/hud-shop-r1.webp",
+        "docs/visual-qa/main-screen-art/art/hud-cities-r1.webp",
+        "docs/visual-qa/main-screen-art/art/hud-map-r1.webp",
+        "docs/visual-qa/main-screen-art/art/provenance.json",
+        "tools/validate-main-screen-art-draft-browser.js"
       ],
-      "reason": "Approved standalone Treasury design reference. Check desktop and both landscape sizes, fixed action, scrolling, exact amount/slider/Max, limits, confirmation/cancel, sample arithmetic, duplicate guard, retry, reset and unavailable states; no account calls."
+      "tests": [
+        "tools/validate-main-screen-art-draft-browser.js"
+      ],
+      "reason": "Approval-only main-screen art draft mounted on the current real-game loopback benchmark. Cover new transparent artwork, scoped HUD skin, Current/New comparison, native desktop/landscape viewport controls, zoom-independent bounds, button hit targets, incoming/outgoing and effect states, preserved saved heraldry, mini-chat dimensions/background/arrow, timer width, image loading and runtime errors. Shared runtime files and backend rules are not modified; no production entry references this draft, so no emulator suite applies. Future production integration requires its own affected-dependency review."
     },
     {
+      "paths": [
+        "docs/visual-qa/main-screen-art/README.md"
+      ],
       "tests": [],
-      "paths": [
-        "docs/visual-qa/clan-treasury/README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record the explicitly approved Treasury presentation and actual-game integration. Donation rules, backend and existing feature deployment statuses remain unchanged."
-    },
-    {
-      "paths": [
-        "clan-treasury-ui.js",
-        "clan-treasury-ui.css",
-        "game.js",
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-tower-buildings-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-tower-buildings-browser.js"
-      ],
-      "reason": "Integrate Clan Rewards Treasury with scoped styles, two scrolling columns, visible donation controls, exact confirmation and return navigation. Exercise real-game desktop and landscape layouts, input preservation on live refresh, limits, pending duplicate guard, receipt/retry identity, personal Gold refresh, changed balances, unavailable state and session cleanup. Existing Treasury client tests cover revision ordering, scoped reads/subscriptions and Tower spends; Clan routing/permissions and all Tower building/wall live-balance dependencies are affected shared paths. Only the presentation and client donation handler change; no server-authoritative rule or backend deployment changes, so no emulator suite applies."
-    },
-    {
-      "paths": [
-        "index.html",
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-clan-treasury-browser.js"
-      ],
-      "reason": "Load, precache and publish the Treasury component. The actual-game browser gate verifies integration and loaded art; mandatory production build/artifact checks verify release packaging. Existing release configuration and backend are unchanged."
+      "reason": "Documents the audited current HUD sources, proposed style treatment and pending-approval status, asset provenance, measured validation boundaries and existing smallest-viewport overlap. Does not change the authoritative game specification or claim deployment."
     }
   ]
 }

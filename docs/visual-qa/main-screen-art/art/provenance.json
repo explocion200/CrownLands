@@ -1,0 +1,30 @@
+[
+  {
+    "asset": "hud-bag-r1.webp",
+    "source": "exec-093a86ee-40ca-4ea7-9660-ee634b23f79b.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Create a game HUD icon for Crownlands. Image 1 is the existing subject to redraw; Image 2 is the exact desired visual style reference. Redraw a single worn russet-brown leather satchel with a flap, one central brass buckle and a short handle. Retain the recognizable subject and silhouette but replace glossy 3D rendering with the reference map's hand-inked medieval storybook illustration: dark warm-brown pen contours, subtle hatch marks, flat muted watercolor/gouache washes, restrained ochre, sandstone, olive and slate, softly weathered matte materials. Simple bold readable silhouette at 56px, centered single isolated object filling 85% of a square composition. No tile, no frame, no scene or ground, no added lettering, no glow, no photorealistic highlights. Genuinely transparent alpha background, not a checkerboard painted into the image. Keep all parts inside the image.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  },
+  {
+    "asset": "hud-shop-r1.webp",
+    "source": "exec-386b1331-a9b7-418c-93d0-3cab0ea63b03.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Create a game HUD icon for Crownlands. Image 1 is the existing subject to redraw; Image 2 is the exact desired visual style reference. Redraw a medieval merchant's brass balance scale with two clear bowls and a small closed ledger at its base. Retain the recognizable subject and silhouette but replace glossy 3D rendering with the reference map's hand-inked medieval storybook illustration: dark warm-brown pen contours, subtle hatch marks, flat muted watercolor/gouache washes, restrained ochre, sandstone, olive and slate, softly weathered matte materials. Simple bold readable silhouette at 56px, centered single isolated object filling 85% of a square composition. No tile, no frame, no scene or ground, no added lettering, no glow, no photorealistic highlights. Genuinely transparent alpha background, not a checkerboard painted into the image. Keep all parts inside the image.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  },
+  {
+    "asset": "hud-cities-r1.webp",
+    "source": "exec-c7359504-8177-472d-a8f9-3023f1ca397b.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Create a game HUD icon for Crownlands. Image 1 is the existing subject to redraw; Image 2 is the exact desired visual style reference. Redraw a small limestone castle gateway with two slate-roof turrets, timber gate and an unrolled parchment peeking behind the right tower. Retain the recognizable subject and silhouette but replace glossy 3D rendering with the reference map's hand-inked medieval storybook illustration: dark warm-brown pen contours, subtle hatch marks, flat muted watercolor/gouache washes, restrained ochre, sandstone, olive and slate, softly weathered matte materials. Simple bold readable silhouette at 56px, centered single isolated object filling 85% of a square composition. No tile, no frame, no scene or ground, no added lettering, no glow, no photorealistic highlights. Genuinely transparent alpha background, not a checkerboard painted into the image. Keep all parts inside the image.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  },
+  {
+    "asset": "hud-map-r1.webp",
+    "source": "exec-843c4bf9-ad43-439c-897c-ea7c142ef581.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Create a game HUD icon for Crownlands. Image 1 is the existing subject to redraw; Image 2 is the exact desired visual style reference. Redraw a folded parchment world map showing tiny mountains, a winding slate-blue river and a simple compass mark. Retain the recognizable subject and silhouette but replace glossy 3D rendering with the reference map's hand-inked medieval storybook illustration: dark warm-brown pen contours, subtle hatch marks, flat muted watercolor/gouache washes, restrained ochre, sandstone, olive and slate, softly weathered matte materials. Simple bold readable silhouette at 56px, centered single isolated object filling 85% of a square composition. No tile, no frame, no scene or ground, no added lettering, no glow, no photorealistic highlights. Genuinely transparent alpha background, not a checkerboard painted into the image. Keep all parts inside the image.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  }
+]
