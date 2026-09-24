@@ -27,6 +27,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     getOnlineApi=()=>({...api,donateClanTreasuryGold:async payload=>{ctq.calls.push(payload);if(ctq.hold)await new Promise(r=>ctq.release=r);if(ctq.fail){ctq.fail=false;throw Error('Donation could not be confirmed. Retry.');}const t=clanTreasuryStatus.treasury,a=clanTreasuryStatus.allowance;ctq.nextGold=state.gold-payload.amount;return{clanId:state.clanId,balance:t.balance+payload.amount,totalDonated:t.totalDonated+payload.amount,totalSpent:t.totalSpent,revision:t.revision+1,allowance:{...a,locked:true,remaining:a.remaining-payload.amount,donatedToday:a.donatedToday+payload.amount}};}});
     ctReset();
    })()`);
+   await wait(`!!document.querySelector('.clan-treasury-ui') && [...document.querySelectorAll('.clan-treasury-ui img')].every(img=>img.complete)`);
    await ev('document.fonts.ready');await delay(150);
    const layout=await ev(`(()=>{const p=document.querySelector('.clan-treasury-ui'),b=p.querySelector('#ct-reviewDonation'),r=b.getBoundingClientRect();return{visible:r.top>=0&&r.bottom<=innerHeight&&r.height>=44,hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overflow:[p,...p.querySelectorAll('.scroll-panel')].some(n=>n.scrollWidth>n.clientWidth+1),art:[...p.querySelectorAll('img')].every(n=>n.complete&&n.naturalWidth)}})()`);
    await screenshot(width+'-overview');assert(layout.visible&&layout.hit&&!layout.overflow&&layout.art,JSON.stringify({width,...layout}));

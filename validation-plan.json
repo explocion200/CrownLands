@@ -9,7 +9,8 @@
         "optional-ui-styles.js",
         "service-worker.js",
         "tools/validate-deferred-ui-styles.js",
-        "tools/validate-deferred-ui-styles-browser.js"
+        "tools/validate-deferred-ui-styles-browser.js",
+        "tools/validate-clan-treasury-browser.js"
       ],
       "tests": [
         "tools/validate-deferred-ui-styles.js",
