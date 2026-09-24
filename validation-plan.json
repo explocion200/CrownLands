@@ -11,10 +11,13 @@
         "docs/visual-qa/top-hud-alignment/README.md",
         "docs/visual-qa/top-hud-alignment/review.css",
         "docs/visual-qa/top-hud-alignment/review.js",
-        "docs/visual-qa/top-hud-alignment/runtime-fixture.js"
+        "docs/visual-qa/top-hud-alignment/runtime-fixture.js",
+        "tools/validate-top-hud-alignment-browser.js"
       ],
-      "tests": [],
-      "reason": "Approved loopback-only before/after reference using synthetic benchmark data, never loaded in production. Focused CDP review at 1440x900, 844x390 and 568x320 verifies a 7px left shift to Gold with unchanged sizes, colors, vertical placement, gaps and hit targets, including 220% map zoom. Current game explicitly restores the old margin after integration. Screenshot/measurement evidence is recorded under release-artifacts/top-hud-alignment. No multiplayer or gameplay dependency changes."
+      "tests": [
+        "tools/validate-top-hud-alignment-browser.js"
+      ],
+      "reason": "Approved loopback-only before/after reference using synthetic benchmark data, never loaded in production. Focused CDP review at 1440x900, 844x390 and 568x320 verifies a 7px left shift to Gold with unchanged sizes, colors, vertical placement, gaps and hit targets, including 220% map zoom. Current game explicitly restores the old margin after integration. Screenshot/measurement evidence is recorded under release-artifacts/top-hud-alignment. No multiplayer or gameplay dependency changes. The focused comparator is now a checked-in CI validator; it also verifies the review shell viewport switch, before/after buttons and guide toggle."
     },
     {
       "paths": [
