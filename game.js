@@ -10963,6 +10963,7 @@ async function scoutTarget(target) {
       return;
     }
     const sourceOption = await findNearestScoutSourceAsync(target);
+    if (requestScope !== getOnlineSessionRequestScope()) return;
     const freshTarget = getArmyTargetById(target.id);
     if (!freshTarget || getPendingScoutMission(target.id)) return;
     if (!sourceOption?.city || sourceOption.city.owner !== "player" || sourceOption.city.troops < 1) {
@@ -11034,7 +11035,7 @@ function refreshScoutActionWheels(targetIds) {
     preserveScoutViewInteraction(cityLayer, () => {
       wheel.remove();
       if (tower) renderSelectedClanTowerWheel(id);
-      else if (city) renderSelectedForeignWheel(city);
+      else if (city && (city.owner !== "player" || isStronghold(city))) renderSelectedForeignWheel(city);
       else if (camp) renderSelectedRewardCampWheel(camp);
     });
   }
@@ -11446,7 +11447,7 @@ async function toggleScoutNearby(cityId) {
   const options = serverBulkOrder
     ? getNearbyScoutCandidates(source).map(city => ({ city, route: null }))
     : await getNearbyScoutOptionsAsync(source);
-  if (!isBulkOrderActionCurrent(action)) return;
+  if (requestScope !== getOnlineSessionRequestScope() || !isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
     finishBulkOrderAction(action, { completed: true });
     scoutNearbySourceId = null;

@@ -60,7 +60,7 @@ async function main(){
         window.CrownlandsOnline={...qa.originalApi,
           submitRecoverableArmyOrder:async request=>{qa.calls++;await new Promise(r=>setTimeout(r,80));return {movement:qa.movement(request.armyId),
             ...(qa.tower?{sourceTower:{id:qa.tower.id,ownTroops:99}}:{})};},
-          getHoldingTowerState:async()=>{await new Promise(r=>setTimeout(r,300));throw Error("Fixture Tower refresh unavailable");},
+          getHoldingTowerState:async()=>{qa.towerRefreshFinished=false;await new Promise(r=>setTimeout(r,300));qa.towerRefreshFinished=true;throw Error("Fixture Tower refresh unavailable");},
           isRetryableArmySubmissionError:()=>true,
           resolveArmyOrder:async()=>{qa.resolveCalls++;await new Promise(r=>setTimeout(r,80));const report=qa.report();return {status:"resolved",kind:"scout",reports:[report]};},
           loadServerReports:async()=>[]
@@ -105,8 +105,8 @@ async function main(){
         const start=performance.now();await scoutTarget(qa.target);const elapsed=performance.now()-start;
         const own=holdingTowerSnapshots.get(qa.tower.id).ownStationedTroops;
         const roster=holdingTowerSnapshots.get(qa.tower.id).garrison[0].troops;qa.tower=null;
-        return {elapsed,own,roster,active:state.attacks.some(a=>a.toId===qa.target.id)};})()`);
-      assert.equal(tower.own,99);assert.equal(tower.roster,99);assert(tower.active);assert(tower.elapsed<300,"Accepted scout waited for optional Tower fetch");
+        return {elapsed,own,roster,refreshFinished:qa.towerRefreshFinished,active:state.attacks.some(a=>a.toId===qa.target.id)};})()`);
+      assert.equal(tower.own,99);assert.equal(tower.roster,99);assert(tower.active);assert.equal(tower.refreshFinished,false,"Accepted scout waited for optional Tower fetch");
       row.tower=tower;
       const burst=await evaluate(`(async()=>{const qa=scoutQa;qa.reset();const targets=state.cities.filter(c=>c.owner!=="player").slice(0,24);
         const node=cityLayer.querySelector(".city-node");const reports=targets.map((target,i)=>qa.report(target,i));

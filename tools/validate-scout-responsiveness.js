@@ -115,6 +115,17 @@ async function nearbyChecks() {
   await scope.toggleScoutNearby(source.id);const stale=scope.toggleScoutNearby(source.id);scopeKey="other";
   release({armies:[]});await stale;assert.equal(applied,1,"Old-session batch changed the new account");
 }
-async function main(){await resolutionChecks();await reportReadChecks();await debounceChecks();await nearbyChecks();
+function ownershipChecks() {
+  let renders=0,removed=0,owner="player";
+  const wheel={dataset:{scoutTarget:"target"},remove:()=>removed++};
+  const scope=load({Set,cityLayer:{querySelectorAll:()=>[wheel]},holdingTowerSnapshots:new Map(),
+    cityById:()=>({id:"target",owner}),getCampTargetById:()=>null,isStronghold:()=>false,
+    preserveScoutViewInteraction:(_root,render)=>render(),renderSelectedForeignWheel:()=>renders++,
+    renderSelectedClanTowerWheel:noop,renderSelectedRewardCampWheel:noop,
+  },["refreshScoutActionWheels"]);
+  scope.refreshScoutActionWheels(["target"]);assert.equal(removed,1);assert.equal(renders,0,"A newly owned city regained foreign action controls");
+  owner="enemy";scope.refreshScoutActionWheels(["target"]);assert.equal(renders,1);
+}
+async function main(){await resolutionChecks();await reportReadChecks();await debounceChecks();await nearbyChecks();ownershipChecks();
   console.log("Scout responsiveness passed: two workers, independent delivery, duplicate entry points, 1/2/4/8s retries, early arrivals, stale sessions, nonblocking backfill, single-flight reads, and bounded economy debounce.");}
 main().catch(error=>{console.error(error);process.exitCode=1;});
