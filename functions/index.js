@@ -25015,6 +25015,7 @@ exports.sendNearbyScouts = timedCallable(
   "sendNearbyScouts",
   { region: "us-central1", maxInstances: 20, invoker: "public" },
   async request => {
+    OPERATION_TIMING.scout({ scoutStage: "launch", scoutSourceType: "city", scoutTargetType: "city" });
     const uid = requireAuth(request);
     const data = request.data || {};
     const nowMs = Date.now();
@@ -25023,6 +25024,7 @@ exports.sendNearbyScouts = timedCallable(
     const sourceCityId = safeString(data.sourceCityId || data.fromId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const targetCityIds = normalizeBulkCityIds(data.targetCityIds || data.targetIds, MAX_NEARBY_SCOUT_TARGETS)
       .sort();
+    OPERATION_TIMING.scout({ scoutBatchSize: targetCityIds.length, scoutOriginCandidates: 1 });
     if (!sourceCityId || !getServerWorldTargetIds(sourceRegionId).has(sourceCityId)) {
       throw new HttpsError("invalid-argument", "Choose an owned source city on the current map.");
     }
@@ -25520,6 +25522,7 @@ exports.sendRegroupOrders = timedCallable(
 
 async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()) {
   const targetType = order.targetType === "tower" ? "tower" : order.targetType === "camp" ? "camp" : "city";
+  OPERATION_TIMING.scout({ scoutStage: "launch", scoutTargetType: targetType, scoutBatchSize: 1 });
   if (!order.id || !order.toId || !order.targetRegionId) {
     throw new HttpsError("invalid-argument", "Choose a valid scouting target.");
   }
@@ -25678,6 +25681,7 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
       ref: holdingTowerRef(candidate.id),
       garrisonRef: garrisonRefs[HOLDING_TOWERS.TOWERS.findIndex(tower => tower.id === candidate.id)],
     }));
+    OPERATION_TIMING.scout({ scoutOriginCandidates: cityCandidates.length + towerCandidates.length });
     const source = HOLDING_TOWERS.selectClosestScoutOrigin(
       [...cityCandidates, ...towerCandidates],
       { ...target, regionId: order.targetRegionId },
@@ -25691,6 +25695,7 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
     }
 
     const route = source.route;
+    OPERATION_TIMING.scout({ scoutSourceType: source.sourceType });
     const duration = calculateTravelTime({
       pathLength: route.pathLength,
       troopCount: 1,
@@ -27701,6 +27706,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
   const canonicalMarkerSnap = await canonicalArmyRef(armyId).get();
   if (canonicalMarkerSnap.exists) {
     const marker = canonicalMarkerSnap.data() || {};
+    if (marker.kind === "scout") OPERATION_TIMING.scout({
+      scoutStage: "arrival", scoutSourceType: marker.sourceType || "city", scoutTargetType: marker.targetType || "city",
+    });
     if (marker.rallyAttack === true && marker.targetType === "tower") {
       return resolveHoldingTowerRallyById({ armyId, callerUid, nowMs });
     }

@@ -3,6 +3,37 @@
 const { calculateRoute: calculateCanonicalRoute } = require("./canonical-route-engine.js");
 const worldTravel = require("./world-travel-network.js");
 const { getAuthoritativeTerrainBlockers } = require("./authoritative-route-policy.js");
+const operationTiming = require("./operation-timing.js");
+
+function createTerrainLegCache(maxEntries = 256, maxPoints = 32768) {
+  const entries = new Map();
+  let points = 0;
+  const clone = leg => ({ ...leg, points: leg.points.map(point => ({ ...point })) });
+  return {
+    get(key) {
+      const leg = entries.get(key);
+      if (!leg) return null;
+      entries.delete(key);
+      entries.set(key, leg);
+      return clone(leg);
+    },
+    set(key, leg) {
+      if (!leg?.points?.length || leg.points.length > maxPoints || maxEntries < 1) return;
+      if (entries.has(key)) {
+        points -= entries.get(key).points.length;
+        entries.delete(key);
+      }
+      while (entries.size >= maxEntries || points + leg.points.length > maxPoints) {
+        const oldest = entries.keys().next().value;
+        points -= entries.get(oldest).points.length;
+        entries.delete(oldest);
+      }
+      entries.set(key, clone(leg));
+      points += leg.points.length;
+    },
+    snapshot: () => ({ entries: entries.size, points }),
+  };
+}
 
 const DEFAULT_WORLD_WIDTH = 13000;
 const DEFAULT_WORLD_HEIGHT = 17000;
@@ -391,19 +422,28 @@ function normalizeRouteResult(route) {
 
 function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
   const routeData = createAuthoritativeRouteModels(layout, options);
+  // Geometry is immutable within a planner. Expansion creates another planner.
+  const legCache = createTerrainLegCache();
   const calculateLeg = (regionId, start, end) => {
     // A* tie-breaking and simplification can differ by search direction. Always
     // solve a pair in the same orientation, regardless of instance/cache history,
     // so independently served preview, launch, and reverse journeys agree.
     const key = point => JSON.stringify([point.x, point.y, point.id || ""]);
     const reversed = key(start) > key(end);
-    const job = buildAuthoritativeRouteJob(routeData,
-      { ...(reversed ? end : start), regionId }, { ...(reversed ? start : end), regionId });
-    const leg = job ? calculateCanonicalRoute(job)?.segments?.[0] || null : null;
+    const cacheKey = JSON.stringify([regionId, key(reversed ? end : start), key(reversed ? start : end)]);
+    let leg = legCache.get(cacheKey);
+    operationTiming.routeCache(Boolean(leg));
+    if (!leg) {
+      const job = buildAuthoritativeRouteJob(routeData,
+        { ...(reversed ? end : start), regionId }, { ...(reversed ? start : end), regionId });
+      leg = job ? calculateCanonicalRoute(job)?.segments?.[0] || null : null;
+      if (leg) legCache.set(cacheKey, leg);
+    }
     return leg && reversed ? { ...leg, points: [...leg.points].reverse() } : leg;
   };
   return Object.freeze({
     routeData,
+    getRouteCacheStats: () => legCache.snapshot(),
     getModel: regionId => routeData.models.get(cleanRegionId(regionId)) || null,
     findRegionChain: (sourceRegionId, targetRegionId) => (
       findAuthoritativeRegionChain(routeData.models, sourceRegionId, targetRegionId)
@@ -425,6 +465,7 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
 }
 
 module.exports = Object.freeze({
+  createTerrainLegCache,
   CITY_CLEARANCE,
   STRUCTURE_CLEARANCE,
   DEFAULT_STRONGHOLD_SIZE,
