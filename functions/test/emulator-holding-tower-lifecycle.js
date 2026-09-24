@@ -421,7 +421,7 @@ async function main() {
   await db.doc(`players/${member.uid}`).update({ identitySyncVersion: 0 });
   await call("syncPlayerIdentity", member);
   await assertTroopPower(member);
-  const campTransfer = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 100, "tower", "camp"));
+  const campTransfer = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "transfer", 100, "tower", "camp"));
   await resolve(member, campTransfer.movement);
   await assertTroopPower(member);
   const cappedMove = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 100, "tower", "city"));

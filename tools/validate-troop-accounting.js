@@ -27,6 +27,7 @@ const sandbox = {
   KING_POWER_ARMY_TROOP_VALUE: 2, KING_POWER_AUTHORITY_VERSION: 12,
   FieldValue: { serverTimestamp: () => "timestamp" },
   getCurrentRealmShardId: () => realm.realmShardId,
+  REALM_TOPOLOGY: { normalizeRealmShardId: value => value || "legacy" },
   getOwnerUid: value => value.ownerUid || "", getCityEntryIslandId: entry => entry.city.islandId,
   getOnlineIslandId: () => "island", isCurrentWorldIslandId: id => id === "island",
   isCurrentWorldArmy: army => army.worldId === realm.worldId && army.resetGeneration === realm.resetGeneration
@@ -42,6 +43,7 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext([
+  between(source, "function scopeServerArmyMovement(", "function writeArmyMovementCopies("),
   between(source, "function getTroopKingPower(", "\nfunction "),
   between(source, "function createGlobalStatsSnapshot(", "function getTimedProductionBoostOverlapSeconds("),
   between(source, "function createPatchedCityEntriesForStats(", "function writeGlobalStatsFromEconomy("),
@@ -69,6 +71,16 @@ const economy = { uid: "owner", profileAfter: profile, cityEntries: [{ ref, city
 const outbound = { ...march, id: "tower-out", troops: 120 };
 const departing = sandbox.createPreparedEconomyStatsSnapshot(economy, { towerGarrisonTroops: 280 }, { addActiveArmies: [outbound] });
 assert.equal(departing.armyPower, baseline.armyPower, "Tower departure must conserve troop power.");
+const unscopedOutbound = { ...outbound };
+delete unscopedOutbound.realmShardId;
+assert.equal(sandbox.createPreparedEconomyStatsSnapshot(economy, { towerGarrisonTroops: 280 }, {
+  addActiveArmies: [unscopedOutbound],
+}).armyPower, baseline.armyPower, "A newly created march must use the same realm scope as its canonical write.");
+const cityTransfer = sandbox.createPreparedEconomyStatsSnapshot(economy, {}, {
+  extraCityPatches: [{ ref, city, patch: { troops: 20 } }],
+  addActiveArmies: [{ ...unscopedOutbound, troops: 80 }],
+});
+assert.equal(cityTransfer.armyPower, baseline.armyPower, "City transfers must remain counted before their first canonical read.");
 const arriving = sandbox.createPreparedEconomyStatsSnapshot({ ...economy, profileAfter: { ...profile, towerGarrisonTroops: 280 },
   activeArmies: [march, outbound] }, { towerGarrisonTroops: 400 }, { excludeArmyIds: [outbound.id] });
 assert.equal(arriving.armyPower, baseline.armyPower, "Tower arrival must conserve troop power.");

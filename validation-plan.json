@@ -17,9 +17,12 @@
         "functions/test/emulator-holding-tower-lifecycle.js",
         "functions/test/emulator-bulk-army-orders.js",
         "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-economy-concurrency.js"
+        "functions/test/emulator-economy-concurrency.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-realm-sharding.js"
       ],
-      "reason": "Server troop totals, Tower returns, Camp arrival/combat snapshots, and transactional stats/identity repairs share economy, movement, rally, protection and public-profile dependencies; emulator suites exercise real authority transitions and concurrent economy writes."
+      "reason": "Server troop totals, Tower returns, Camp arrival/combat snapshots, and transactional stats/identity repairs share economy, movement, rally, protection and public-profile dependencies; emulator suites exercise real authority transitions and concurrent economy writes. Canonical movement writes and in-transaction stats share realm scoping; route authority, public projection privacy and shard filtering are covered."
     },
     {
       "paths": [

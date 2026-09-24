@@ -975,6 +975,7 @@ Confirmed: controlled troops must continue contributing to King Power when moved
 
 - Personally owned Clan Tower garrisons contribute the existing 2 power per troop. Tower troops are attributed to their contributor, and current-generation counters exclude prior-season troops.
 - Tower departures, returns, and rally reservations preserve troop power without counting the same troops twice. Camp arrivals and combat settlements update the holder's troop contribution in the same transaction.
+- Newly created marches receive the same realm-shard scope for King Power calculation as for their canonical army write, so city and Tower launches remain counted before the next economy refresh.
 - Stats rebuilds and identity repairs read and publish a consistent transactional snapshot of cities, Camps, marches, and personal troop counters. Identity repair includes held Camps.
 - Kingdom troop summaries and public troop estimates include Tower garrisons, stationed reinforcements, and committed rallies. The replacement-power and defensive-power formulas are unchanged; legitimate casualties, rewards, production, and changes in garrison defense can still change total King Power.
 

@@ -7234,6 +7234,17 @@ function shouldWriteIncomingArmyView(movement = {}) {
   );
 }
 
+function scopeServerArmyMovement(movement = {}) {
+  return {
+    ...movement,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
+      movement.realmShardId || getCurrentRealmShardId()
+    ),
+  };
+}
+
 function writeArmyMovementCopies(writer, movement = {}, {
   includeCreatedAt = false,
   previousTargetOwnerUid = "",
@@ -7244,14 +7255,7 @@ function writeArmyMovementCopies(writer, movement = {}, {
     ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   };
-  const scopedMovement = {
-    ...movement,
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
-      movement.realmShardId || getCurrentRealmShardId()
-    ),
-  };
+  const scopedMovement = scopeServerArmyMovement(movement);
   const canonicalMovement = {
     ...scopedMovement,
     armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
@@ -13709,7 +13713,8 @@ function createPatchedActiveArmiesForStats(economy = null, options = {}) {
   });
   (Array.isArray(options.addActiveArmies) ? options.addActiveArmies : []).forEach(army => {
     const key = getArmyStatsKey(army);
-    if (key) byId.set(key, { ...army, status: army.status || "active" });
+    // Match the canonical write's realm scope before current-world stats filter it.
+    if (key) byId.set(key, { ...scopeServerArmyMovement(army), status: army.status || "active" });
   });
   (Array.isArray(options.armyPatches) ? options.armyPatches : []).forEach(patch => {
     const key = getArmyStatsKey(patch);
