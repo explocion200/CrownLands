@@ -14193,6 +14193,7 @@ async function refreshQueuedPlayerIdentities() {
     while (playerIdentityLookupQueue.size && scope === getOnlineSessionRequestScope()) {
       const batch = Array.from(playerIdentityLookupQueue).slice(0, PLAYER_IDENTITY_LOOKUP_BATCH_SIZE);
       batch.forEach(uid => playerIdentityLookupQueue.delete(uid));
+      const powerLookupMisses = new Map(batch.map(uid => [uid, playerIdentityLookupMisses.get(uid)]));
       const rows = await withTimeout(api.loadPlayerIdentities(batch), 15000, "Kingdom identities are taking too long.");
       if (scope !== getOnlineSessionRequestScope()) break;
       const normalizedRows = (Array.isArray(rows) ? rows : []).map(normalizePlayerIdentity).filter(Boolean);
@@ -14201,6 +14202,11 @@ async function refreshQueuedPlayerIdentities() {
         canonicalizeVisiblePlayerIdentities();
         renderCities(true);
       }
+      // A successfully read legacy row is still a failed current-power lookup.
+      // Its identity/name refresh must not erase the repair cooldown.
+      powerLookupMisses.forEach((missedAt, uid) => {
+        if (missedAt && !getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid })) playerIdentityLookupMisses.set(uid, missedAt);
+      });
       if (await refreshMissingPlayerPowerIdentities(batch, api, scope)) changed = true;
       if (scope !== getOnlineSessionRequestScope()) break;
       batch.forEach(uid => {

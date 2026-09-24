@@ -85,6 +85,17 @@ async function main() {
   assert.equal(attempts, 2);
   assert.equal(e.getStableEnemyCityPowerBand({ ...city, ownerUid: "missing" }), "unknown");
 
+  const legacyRetry = fixture(), l = legacyRetry.s; let repairs = 0;
+  l.getOnlineApi = () => ({ isSignedIn: () => true,
+    loadPlayerIdentities: async () => [row("legacy", 100000, 11)],
+    getCombatPlayerIdentity: async () => { repairs++; throw Error("unavailable"); },
+  });
+  for (let i = 0; i < 3; i++) {
+    l.playerIdentityLookupQueue.add("legacy");
+    await l.refreshQueuedPlayerIdentities();
+  }
+  assert.equal(repairs, 1, "Rereading a legacy row erased its failed power repair cooldown");
+
   for (const stage of ["leaderboard", "repair"]) {
     const stale = fixture(), x = stale.s; let release;
     x.playerIdentityLookupQueue.add("late");
