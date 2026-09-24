@@ -6,6 +6,9 @@ const vm = require("node:vm");
 const root = path.join(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const index = read("index.html"), worker = read("service-worker.js");
+for (const file of ["index.html", "service-worker.js", "tools/build-production-client.js", "tools/generate-release-manifest.js", "tools/validate-production-artifact.js"]) {
+  assert(read(file).includes("optional-ui-styles.js"), `Optional style loader must be included in ${file}`);
+}
 const sheets = [...index.matchAll(/<link rel="crownlands-optional-stylesheet" data-optional-ui-style="([^"]+)" href="([^"]+)"/g)];
 assert.equal(sheets.length, 9);
 for (const [, name, href] of sheets) {

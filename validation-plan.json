@@ -32,13 +32,15 @@
     {
       "paths": [
         "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/generate-release-manifest.js"
       ],
       "tests": [
         "tools/validate-production-artifact.js",
-        "tools/validate-pwa-entry-routing.js"
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-deferred-ui-styles.js"
       ],
-      "reason": "Ship the new loader and keep every optional stylesheet in the production artifact; validate web and itch directory-relative entries and release identity."
+      "reason": "Ship the new loader and keep every optional stylesheet in the production artifact; validate web and itch directory-relative entries and release identity. Include the loader in client source hashing."
     },
     {
       "paths": [
