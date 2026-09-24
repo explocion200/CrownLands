@@ -16,19 +16,19 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  await client.send('Page.navigate',{url:address.url+'/docs/visual-qa/hud-edge-inset/preview.html?look=current&guide=off'});
  let ready=false;for(let i=0;i<500;i++){ready=await ev('document.documentElement?.dataset.hudEdgeReady==="true"');if(ready)break;await pause(100);}assert(ready,JSON.stringify(errors));
  await ev('window.gameWindow=document.getElementById("game").contentWindow;void 0');
- const layout=()=>ev(`(()=>{const d=gameWindow.document;return ['.profile-action-row','.profile-gold','#profileBtn','#leaderboardBtn','#clanHudBtn','#dailyLoginRewardBtn','#fullscreenBtn','#inventoryBtn','#shopBtn','#cityListBtn','#islandSwitchBtn'].map(selector=>{const e=d.querySelector(selector),r=e.getBoundingClientRect(),s=gameWindow.getComputedStyle(e);return {selector,x:r.x,y:r.y,width:r.width,height:r.height,background:s.backgroundImage,color:s.color,hit:e.contains(d.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};});})()`);
+ const layout=()=>ev(`(()=>{const d=gameWindow.document;return ['.profile-action-row','.profile-gold','#profileBtn','#leaderboardBtn','#clanHudBtn','#dailyLoginRewardBtn','#fullscreenBtn','#inventoryBtn','#shopBtn','#cityListBtn','#islandSwitchBtn','#logBtn'].map(selector=>{const e=d.querySelector(selector),r=e.getBoundingClientRect(),s=gameWindow.getComputedStyle(e);return {selector,x:r.x,y:r.y,width:r.width,height:r.height,background:s.backgroundImage,color:s.color,hit:e.contains(d.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};});})()`);
  for(const [width,height] of [[1440,900],[844,390],[568,320]]){
   await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await pause(150);
   await ev('gameWindow.HudEdgeDraft.apply({look:"current",zoom:1,guide:false})');await pause(100);const before=await layout();await shot(width+'-current');
   await ev('gameWindow.HudEdgeDraft.apply({look:"draft",zoom:1,guide:false})');await pause(100);const after=await layout();await shot(width+'-draft');
-  for(let i=0;i<after.length;i++){const original=before[i],changed=after[i];assert.deepEqual({...changed,x:original.x},{...original},'Unexpected geometry, color or target change: '+width+' '+changed.selector);assert(Math.abs(changed.x-original.x-(i<6?(width<=760?3.2:4.48)-before[1].x:0))<.03,'Unexpected horizontal shift');}
-  assert.equal(after[0].x,after[1].x);assert(Math.abs(after[1].x-(width<=760?3.2:4.48))<.03);assert(after.every(r=>r.x>=0));assert(after.slice(2).every(r=>r.hit));
+  for(let i=0;i<after.length;i++){const original=before[i],changed=after[i];assert.deepEqual({...changed,x:original.x},{...original},'Unexpected geometry, color or target change: '+width+' '+changed.selector);assert(Math.abs(changed.x-original.x-(i<6?before.at(-1).x-before[1].x:0))<.03,'Unexpected horizontal shift');}
+  assert.equal(after[0].x,after[1].x);assert(Math.abs(after[1].x-after.at(-1).x)<.03);assert(after.every(r=>r.x>=0));assert(after.slice(2).every(r=>r.hit));
   await ev('gameWindow.HudEdgeDraft.apply({look:"draft",zoom:2.2,guide:true})');await pause(100);assert.deepEqual(await layout(),after,'Zoom changed HUD alignment');await shot(width+'-guide');
   // Simulate a 44px left safe area and the corresponding header inset.
-  await ev('gameWindow.document.documentElement.style.setProperty("--hud-edge-safe-left","44px");gameWindow.document.querySelector(".top-hud").style.setProperty("left","44px","important");gameWindow.dispatchEvent(new gameWindow.Event("crownlands:ui-layout-refresh"));void 0');
-  const safe=await ev('gameWindow.HudEdgeDraft.measure()');assert(Math.abs(safe.goldLeft-44-safe.gap)<.03);assert.equal(safe.rowLeft,safe.goldLeft);
-  await ev('gameWindow.document.documentElement.style.removeProperty("--hud-edge-safe-left");gameWindow.document.querySelector(".top-hud").style.removeProperty("left");void 0');
-  records.push({width,height,beforeLeft:before[0].x,draftLeft:after[0].x,goldLeft:after[1].x,iconGap:width<=760?3.2:4.48,simulatedSafeAreaLeft:safe.goldLeft,buttonSizesUnchanged:true,hitTargets:true,otherControlsUnchanged:true,zoomIndependent:true});
+  await ev('gameWindow.document.querySelector(".top-hud").style.setProperty("left","44px","important");gameWindow.dispatchEvent(new gameWindow.Event("crownlands:ui-layout-refresh"));void 0');
+  const safe=await ev('gameWindow.HudEdgeDraft.measure()');assert.equal(safe.goldLeft,44);assert.equal(safe.rowLeft,safe.goldLeft);
+  await ev('gameWindow.document.querySelector(".top-hud").style.removeProperty("left");void 0');
+  records.push({width,height,beforeLeft:before[0].x,draftLeft:after[0].x,goldLeft:after[1].x,reportsLeft:after.at(-1).x,simulatedSafeAreaLeft:safe.goldLeft,buttonSizesUnchanged:true,hitTargets:true,otherControlsUnchanged:true,zoomIndependent:true});
  }
  // Verify the review controls keep the nested preview at its chosen native size.
  await client.send('Emulation.setDeviceMetricsOverride',{width:1600,height:1050,deviceScaleFactor:1,mobile:false});
@@ -38,7 +38,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  await pause(200);
  assert.deepEqual(await ev('({width:document.getElementById("preview").clientWidth,height:document.getElementById("preview").clientHeight,left:alignmentGame.HudEdgeDraft.measure().goldLeft})'),{width:844,height:390,left:17});
  await ev('document.querySelector("[data-look=draft]").click();document.getElementById("guide").click();void 0');await pause(100);
- assert(Math.abs(await ev('alignmentGame.HudEdgeDraft.measure().goldLeft')-4.48)<.03);
+ assert(Math.abs(await ev('alignmentGame.HudEdgeDraft.measure().goldLeft')-12)<.03);
  assert(await ev('alignmentGame.document.getElementById("hudEdgeGuide").hidden'));
  await shot('review-landscape');
  assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({passed:true,records,errors,failed},null,2));console.log(JSON.stringify({passed:true,records,errors,failed}));

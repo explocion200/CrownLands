@@ -17,7 +17,7 @@
       "tests": [
         "tools/validate-hud-edge-inset-browser.js"
       ],
-      "reason": "Isolated local draft only. Validate the player row/Gold outer inset against the icon gap, unchanged sizes/colors/vertical positions/hit targets, unchanged other controls, map zoom, viewport switches, current/draft comparison and the guide. Simulate a 44px left safe area and a layout refresh to verify the scoped rule survives runtime positioning. No production files, game logic or backend changes; no emulator suites apply."
+      "reason": "Isolated local draft only. Validate the player row/Gold outer inset against the actual Reports button edge on desktop and two landscape sizes, unchanged sizes/colors/vertical positions/hit targets, unchanged Reports and other controls, map zoom, viewport switches, current/draft comparison and the guide. Simulate a 44px header safe area and a layout refresh to verify existing top-HUD notch protection. No production files, game logic or backend changes; no emulator suites apply."
     }
   ]
 }

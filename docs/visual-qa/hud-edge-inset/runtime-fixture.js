@@ -5,8 +5,8 @@
  const guide=document.createElement("div");guide.id="hudEdgeGuide";guide.setAttribute("aria-hidden","true");document.body.append(guide);
  let previousZoom=0;
  const inform=message=>parent.postMessage({type:"hud-edge-status",message},location.origin);
- function measure(){const a=row.getBoundingClientRect(),b=gold.getBoundingClientRect();Object.assign(guide.style,{left:b.left+"px",top:a.top+"px",height:b.bottom-a.top+8+"px"});return{rowLeft:a.left,goldLeft:b.left,gap:parseFloat(getComputedStyle(row).columnGap)};}
- function report(){const m=measure();inform(root.classList.contains("hud-edge-draft")?"Draft · Left inset matches the "+m.gap.toFixed(2)+"px icon gap · Same sizes":"Current game · "+m.goldLeft.toFixed(2)+"px left inset");}
+ function measure(){const a=row.getBoundingClientRect(),b=gold.getBoundingClientRect(),r=document.getElementById("logBtn").getBoundingClientRect();Object.assign(guide.style,{left:b.left+"px",top:a.top+"px",height:r.bottom-a.top+"px"});return{rowLeft:a.left,goldLeft:b.left,reportsLeft:r.left};}
+ function report(){const m=measure();inform(root.classList.contains("hud-edge-draft")?"Draft · Player row, Gold and Reports share a 12px left inset · Same sizes":"Current game · Gold: "+m.goldLeft.toFixed(0)+"px from left · Reports: "+m.reportsLeft.toFixed(0)+"px");}
  async function apply({look="draft",zoom=1,guide:showGuide=true}={}){
   root.classList.toggle("hud-edge-draft",look!=="current");root.dataset.hudEdgeLook=look;guide.hidden=!showGuide;
   if(previousZoom!==zoom){previousZoom=zoom;await api.setVisualZoom(zoom);}
