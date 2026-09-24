@@ -10533,9 +10533,11 @@ function normalizeBattleReports(reports) {
       const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
       if (!type) return null;
       const cityId = getKnownCityId(report.cityId || report.targetCityId || report.city?.id) || String(report.cityId || report.targetCityId || report.city?.id || "");
-      const targetType = report.targetType === "camp" || report.city?.targetType === "camp" || WORLD_CAMPS_BY_ID.has(cityId)
-        ? "camp"
-        : "city";
+      const targetType = report.targetType === "tower" || report.scoutReport?.targetType === "tower"
+        ? "tower"
+        : report.targetType === "camp" || report.city?.targetType === "camp" || WORLD_CAMPS_BY_ID.has(cityId)
+          ? "camp"
+          : "city";
       const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
       const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
@@ -10743,6 +10745,9 @@ function getScoutReport(cityId) {
   state.scoutReports = normalizeScoutReports(state.scoutReports);
   const report = state.scoutReports[cityId];
   if (!report) return null;
+  const tower = report.towerOwnershipKey ? holdingTowerSnapshots.get(cityId) : null;
+  if (tower && report.towerOwnershipKey
+    && report.towerOwnershipKey !== `${tower.clanId || ""}:${tower.ownershipRevision}`) return null;
   if (report.expiresAt <= state.gameSeconds) {
     delete state.scoutReports[cityId];
     return null;
@@ -11062,6 +11067,11 @@ function scheduleScoutPresentation(targetIds = [], startedAt = performance.now()
     scoutPresentationTargetIds.clear();
     if (scope !== getOnlineSessionRequestScope() || !state) return;
     refreshScoutActionWheels(ids);
+    if (ids.includes(selectedHoldingTowerId) && holdingTowerModalSession?.view === "details"
+      && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) {
+      void refreshHoldingTower(selectedHoldingTowerId, { includeShop: false })
+        .catch(() => { /* Keep the saved report available if optional Tower details cannot refresh. */ });
+    }
     const affected = new Set(ids);
     for (const node of cityLayer.querySelectorAll(".city-node")) {
       if (affected.has(node.dataset.cityId)) delete node.dataset.troopTextValue;
@@ -12150,9 +12160,11 @@ function normalizeServerScoutReport(report = null) {
   const troops = Math.max(0, Math.floor(Number(report.troops) || 0));
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
-  const targetType = report.targetType === "camp" || WORLD_CAMPS_BY_ID.has(String(report.cityId || ""))
-    ? "camp"
-    : "city";
+  const targetType = report.targetType === "tower" || report.towerId
+    ? "tower"
+    : report.targetType === "camp" || WORLD_CAMPS_BY_ID.has(String(report.cityId || ""))
+      ? "camp"
+      : "city";
   return {
     ...report,
     targetType,
@@ -12656,6 +12668,11 @@ function applyServerArmyResult(result = null, options = {}) {
   }
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports, { notify: false }) || changed;
+  // Tower scouts begin their return in the same response that supplies private intelligence.
+  if (result.kind === "scout" && result.targetType === "tower" && result.scoutReport?.towerId) {
+    changed = mergeServerScoutReport({ type: "scout", cityId: result.scoutReport.towerId,
+      targetType: "tower", scoutReport: result.scoutReport }) || changed;
+  }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   const newestPlayerReport = Array.isArray(result.reports)
     ? [...result.reports].reverse().find(report => report?.type === "attack" || report?.type === "defense")
@@ -19892,7 +19909,7 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     kind: army.kind,
     launchKind: army.launchKind || army.kind,
     retargetedFromKind: army.retargetedFromKind || "",
-    targetType: army.targetType === "camp" ? "camp" : "city",
+    targetType: army.targetType === "tower" ? "tower" : army.targetType === "camp" ? "camp" : "city",
     fromId: army.fromId,
     toId: army.toId,
     fromName: army.fromName || "",
@@ -20042,7 +20059,7 @@ async function resolveServerArmyMission(mission) {
     if (!result || requestScope !== getOnlineSessionRequestScope()) return false;
     if (scout) recordMarchInteractionTiming("scout-arrival-resolution", startedAt);
     const shouldBackfillScoutReports = scout
-      && ["resolved", "missing", "already-resolved"].includes(result.status)
+      && ["resolved", "returning", "missing", "already-resolved"].includes(result.status)
       && (!Array.isArray(result?.reports) || result.reports.length === 0);
     const resolutionComplete = result?.status === "resolved"
       || result?.status === "missing"
@@ -20113,12 +20130,14 @@ function adoptOwnOnlineArmies() {
     .map(attack => [String(attack.onlineId), attack]));
   const localOnlineIds = new Set(localArmiesByOnlineId.keys());
   for (const army of onlineArmies) {
-    if (army.ownerUid !== uid || isOnlineArmyResolutionBlocked(army)) continue;
+    if (army.ownerUid !== uid || resolvedOnlineArmyIds.has(getOnlineArmyResolutionId(army))) continue;
     const existingMission = localArmiesByOnlineId.get(String(army.id));
     if (existingMission) {
+      // Accepted return snapshots must update the existing march while its arrival call is finishing.
       applyServerMovementToMission(existingMission, army);
       continue;
     }
+    if (isOnlineArmyResolutionBlocked(army)) continue;
     const remaining = getOnlineArmyRemainingSeconds(army);
     if (remaining <= 0) {
       resolveOverdueOnlineArmy(army);
@@ -28962,18 +28981,20 @@ function renderSelectedClanTowerWheel(towerId) {
   const info = available.find(entry => entry.action === "info");
   const others = available.filter(entry => entry !== info);
   const actions = [...others.slice(0, 1), ...(info ? [info] : []), ...others.slice(1)];
+  if (!snapshot?.ownerMember && getScoutReport(towerId)) actions.push({ action: "report", label: "Report", icon: "reports" });
   const point = worldToMapPoint({x:visual.visualX,y:visual.visualY});
   const wheel = document.createElement("div");
   wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";
   wheel.dataset.towerId = towerId;
   wheel.style.left = `${point.x}px`;
   wheel.style.top = `${point.y}px`;
-  wheel.innerHTML = actions.map(entry => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : entry.icon === "information" ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" aria-disabled="${Boolean(entry.disabled)}" title="${escapeHtml(entry.reason || entry.label)}" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ""}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
+  wheel.innerHTML = actions.map(entry => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : ["information", "reports"].includes(entry.icon) ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" aria-disabled="${Boolean(entry.disabled)}" title="${escapeHtml(entry.reason || entry.label)}" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ""}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
   updateClanTowerActionWheelLayout(wheel);
   wheel.querySelectorAll("[data-clan-tower-map-action]").forEach(button => button.addEventListener("click",event => {
     event.stopPropagation();
     const action = button.dataset.clanTowerMapAction;
     if (action === "info") { void openHoldingTower(towerId); return; }
+    if (action === "report") { showScoutReportModal(towerId); return; }
     const snapshot = holdingTowerSnapshots.get(towerId);
     if (!snapshot) return;
     const currentAction = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot).find(entry => entry.action === action);

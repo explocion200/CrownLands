@@ -42,6 +42,14 @@ async function resolutionChecks() {
   requests[0].resolve({status:"already-resolved"});await first;await Promise.all(rest);
   assert.equal(backfill,1,"Resolved receipt did not request missing reports");
   assert.equal(scope.scoutResolutionRequests.size,0,"A missing-report read held the resolution lock");
+  const tower = scope.resolveServerArmyMission({ ...mission("tower-return"), targetType:"tower" });
+  await drain();
+  requests.at(-1).resolve({status:"returning",kind:"scout",targetType:"tower",scoutReport:null,
+    movement:{id:"tower-return",kind:"transfer",returning:true}});
+  await tower;
+  assert.equal(backfill,2,"A returning/Veil-blocked Tower scout did not recover its private report entry");
+  assert(!scope.resolvedOnlineArmyIds.has("tower-return"),"The scout's return leg was prematurely marked resolved");
+  assert.equal(scope.scoutResolutionRequests.size,0);
   // Retries must be keyed to the canonical army, not a transient snapshot object.
   for(let attempt=1;attempt<=5;attempt++) {
     const p=scope.resolveServerArmyMission(mission("retry"));await drain();
