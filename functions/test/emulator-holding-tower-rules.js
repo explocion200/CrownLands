@@ -127,6 +127,14 @@ async function main() {
   assert((await forbiddenPatch(leader, treasuryPath)).status === 403, "A client could write Clan Treasury Gold.");
   assert((await forbiddenPatch(leader, towerPath, "wallLevel")).status === 403, "A client could write Tower Wall Level.");
   assert((await forbiddenPatch(leader, leaderGarrisonPath, "troops")).status === 403, "A client could write Tower garrison troops.");
+  assert((await forbiddenPatch(leader, `players/${leader.uid}`, "towerGarrisonTroops")).status === 403, "A player could inflate their Tower King Power counter.");
+  for (const fields of [
+    { towerGarrisonTroops: { integerValue: "999999999" } },
+    { towerGarrisonResetGeneration: { stringValue: current.resetGeneration } },
+  ]) {
+    const forged = await clientRequest(outsider, `players/${outsider.uid}`, { method: "PATCH", body: { fields } });
+    assert(forged.status === 403, "A new profile could seed a server-owned Tower power field.");
+  }
 
   console.log("Emulator Holding Tower rules passed: public state, clan Treasury privacy, own usage, garrison secrecy, and server-only writes.");
 }

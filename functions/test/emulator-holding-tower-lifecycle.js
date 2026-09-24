@@ -63,6 +63,27 @@ async function main() {
   const clanId = `tower_lifecycle_${randomUUID()}`, now = Date.now(), contribution = 100_000_000;
   const tower = towers.TOWERS[0], towerRef = db.doc(`holdingTowers/${tower.id}`);
   const garrisonRef = actor => towerRef.collection("garrison").doc(actor.uid);
+  const assertTowerPower = async (actor, expectedTowerTroops) => {
+    let stats, profile, board;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      [stats, profile, board] = await Promise.all([
+        db.doc(`players/${actor.uid}/stats/global`).get().then(snap => snap.data()),
+        db.doc(`players/${actor.uid}`).get().then(snap => snap.data()),
+        db.doc(`leaderboards/${identity.resetGeneration}--${identity.realmShardId}/entries/${actor.uid}`).get().then(snap => snap.data()),
+      ]);
+      if (stats?.totalTowerTroops === expectedTowerTroops && stats.kingPower === profile.kingPower && board?.kingPower === stats.kingPower) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    assert.equal(profile.towerGarrisonTroops || 0, expectedTowerTroops, "Personal counter differs from the actual garrison.");
+    assert.equal(stats.totalTowerTroops, expectedTowerTroops, "Tower troops were omitted from authoritative stats.");
+    const militaryTroops = stats.totalTroops + stats.totalMarchingTroops + stats.totalReinforcementTroops + stats.totalRallyTroops + expectedTowerTroops;
+    assert.equal(stats.armyPower, militaryTroops * 2, "A troop was omitted or counted twice in King Power.");
+    assert.equal(stats.kingPower, stats.armyPower + stats.replacementPower + stats.defensivePower);
+    assert.equal(profile.kingPower, stats.kingPower);
+    assert.equal(board.kingPower, stats.kingPower);
+    assert.equal(board.totalTowerTroops, expectedTowerTroops);
+    return stats;
+  };
   const cityRef = city => db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${city.regionId}/cities/${city.id}`);
   await towerRef.set({ ...towers.createNeutralTowerState(tower.id, { nowMs: now }), ...identity });
   await db.doc(`clans/${clanId}`).set({ ...identity, status: "active", leaderUid: leader.uid, name: "Tower Test Clan", tag: "TTC", memberCount: 3 });
@@ -127,6 +148,7 @@ async function main() {
   const garrison = await towerRef.collection("garrison").get();
   assert.equal(garrison.size, 3, "Survivors were not attributed to all three contributors.");
   for (const row of garrison.docs) assert(row.data().troops > 0 && row.data().troops <= contribution);
+  for (const actor of actors.slice(0, 3)) await assertTowerPower(actor, (await garrisonRef(actor).get()).data().troops);
   const owned = (await call("getHoldingTowerState", member, { towerId: tower.id })).towers[0];
   assert.equal(owned.ownerMember, true);
   assert.equal(owned.garrison.length, 3);
@@ -155,12 +177,19 @@ async function main() {
   const others = unchanged.filter(([uid]) => uid !== member.uid);
   const withdrawal = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 1000, "tower", "city"));
   assert.equal((await garrisonRef(member).get()).data().troops, before - 1000);
+  const marchingPower = await assertTowerPower(member, before - 1000);
   const cityBefore = (await cityRef(member.home).get()).data().troops;
   await resolve(member, withdrawal.movement);
   assert((await cityRef(member.home).get()).data().troops >= cityBefore + 1000, "Withdrawal did not reach its owner's city.");
+  const arrivedPower = await assertTowerPower(member, before - 1000);
+  assert(arrivedPower.armyPower >= marchingPower.armyPower, "Withdrawal lost army power without casualties.");
   const reinforcement = await call("sendHoldingTowerArmyOrder", member, order(member.home, tower, "reinforce", 100, "city", "tower"));
   await resolve(member, reinforcement.movement);
   assert.equal((await garrisonRef(member).get()).data().troops, before - 900);
+  const reinforcedPower = await assertTowerPower(member, before - 900);
+  assert(reinforcedPower.armyPower >= arrivedPower.armyPower, "Reinforcement lost army power without casualties.");
+  await resolve(member, reinforcement.movement);
+  assert.equal((await assertTowerPower(member, before - 900)).armyPower, reinforcedPower.armyPower, "Arrival retry duplicated troop power.");
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.filter(row => row.id !== member.uid).map(row => [row.id, row.data().troops]), others,
     "Personal orders changed another player's garrison.");
   // New Tower services use donated Gold, one construction slot, and private per-player Shop usage.
@@ -277,9 +306,11 @@ async function main() {
   await db.doc(`players/${outsider.uid}`).update({clanId:enemyClan,clanRole:"leader"});
   await secondRef.update({clanId:enemyClan,buildings:{shop:1,workshop:0,infirmary:10,training:0},wallIntegrityBps:0});
   await secondRef.collection("garrison").doc(outsider.uid).set({...identity,towerId:second.id,clanId:enemyClan,uid:outsider.uid,ownerUid:outsider.uid,troops:100_000_000});
+  await db.doc(`players/${outsider.uid}`).update({towerGarrisonTroops:100_000_000,towerGarrisonResetGeneration:identity.resetGeneration});
   const towerRallyId=`training_${randomUUID()}`,towerRallyRef=db.doc(`clans/${clanId}/rallies/${towerRallyId}`);
   await call("createClanRally",leader,{clanId,rallyId:towerRallyId,sourceType:"tower",targetType:"tower",sourceRegionId:tower.regionId,targetRegionId:second.regionId,
     army:{id:towerRallyId,kind:"attack",fromId:tower.id,toId:second.id,troops:1_000_000,requestedTroops:1_000_000}});
+  await assertTowerPower(leader, (await garrisonRef(leader).get()).data().troops);
   const towerParticipants=participants.map(p=>({...p,sourceId:tower.id,sourceRegionId:tower.regionId,troops:1_000_000}));
   await towerRallyRef.update({participants:towerParticipants.slice(0,2)});
   const tooSmallOwned=await invoke("launchClanRally",leader,{clanId,rallyId:towerRallyId});
@@ -304,6 +335,7 @@ async function main() {
   assert.equal(defenderReport.casualtyRecovery.clanInfirmaryPercent,15);
   assert(defenderReport.casualtyRecovery.clanRecoveredTroops>0,"Infirmary recovered no troops from a damaging attack.");
   assert((await cityRef(outsider.home).get()).data().troops>=defenderBefore+defenderReport.casualtyRecovery.recoveredTroops,"Tower casualties did not recover to their owner's Main City.");
+  await assertTowerPower(outsider, (await secondRef.collection("garrison").doc(outsider.uid).get()).data().troops);
   await call("resolveArmyOrder",leader,{armyId:trained.movement.id,routeRegionIds:trained.movement.routeRegionIds});
   const reports=(await db.doc(`players/${outsider.uid}`).get()).data().battleReports.filter(r=>r.battleId===trained.movement.id);
   assert.equal(reports.length,1,"Battle retry duplicated the defender recovery report.");
@@ -349,6 +381,7 @@ async function main() {
   assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled Tower attack failed to return its troops.");
   await resolve(member, allowedNpc.movement);
   assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled attack retry duplicated returned troops.");
+  await assertTowerPower(member, preAttackTroops);
   await setCityCount(31);
   await expectNpcBlocked(/30 or more cities/);
   const rivalAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, rivalTarget, "attack", 100, "tower", "city"));
@@ -375,6 +408,9 @@ async function main() {
   const currentDaily = (await memberProfile.get()).data().daily;
   await memberProfile.update({daily: {...currentDaily, date: new Date().toISOString().slice(0, 10), neutralCaptures: 30}});
   await expectNpcBlocked(/Daily neutral capture limit reached/);
+  await call("leaveClan", member);
+  await assertTowerPower(member, 0);
+  assert.equal((await garrisonRef(member).get()).exists, false, "Departed member still has stationed Tower troops.");
   console.log("Tower NPC cap passed: 29-city launch, 30/31-city rejection before troop/economy changes, cross-map count, in-flight cancellation/replay, daily cap, and allowed player-city/Camp/transfer orders.");
   console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
   console.log("Tower lifecycle passed: callable rally creation/replay, two-player rejection for neutral and clan-owned Towers, three-player launch and capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");
