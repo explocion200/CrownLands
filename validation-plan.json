@@ -1,69 +1,39 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7711dcaf8cd2d1cfc731edcae4358d409abc74b4",
+  "baseCommit": "692ed3e6439c18f75840c9c935abae01e33c0c38",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/main-screen-art/index.html",
-        "docs/visual-qa/main-screen-art/review.css",
-        "docs/visual-qa/main-screen-art/review.js",
-        "docs/visual-qa/main-screen-art/preview.html",
-        "docs/visual-qa/main-screen-art/preview.js",
-        "docs/visual-qa/main-screen-art/runtime-fixture.js",
-        "docs/visual-qa/main-screen-art/draft.css",
-        "docs/visual-qa/main-screen-art/art/hud-profile-frame-r1.webp",
-        "docs/visual-qa/main-screen-art/art/hud-leaderboard-r1.webp",
-        "docs/visual-qa/main-screen-art/art/hud-daily-reward-r1.webp",
-        "docs/visual-qa/main-screen-art/art/top-art-provenance.json",
-        "docs/visual-qa/main-screen-art/art/hud-bag-r1.webp",
-        "docs/visual-qa/main-screen-art/art/hud-shop-r1.webp",
-        "docs/visual-qa/main-screen-art/art/hud-cities-r1.webp",
-        "docs/visual-qa/main-screen-art/art/hud-map-r1.webp",
-        "docs/visual-qa/main-screen-art/art/provenance.json",
-        "tools/validate-main-screen-art-draft-browser.js"
+        "docs/visual-qa/top-hud-alignment/draft.css",
+        "docs/visual-qa/top-hud-alignment/index.html",
+        "docs/visual-qa/top-hud-alignment/preview.html",
+        "docs/visual-qa/top-hud-alignment/preview.js",
+        "docs/visual-qa/top-hud-alignment/README.md",
+        "docs/visual-qa/top-hud-alignment/review.css",
+        "docs/visual-qa/top-hud-alignment/review.js",
+        "docs/visual-qa/top-hud-alignment/runtime-fixture.js",
+        "tools/validate-top-hud-alignment-browser.js"
       ],
       "tests": [
-        "tools/validate-main-screen-art-draft-browser.js"
+        "tools/validate-top-hud-alignment-browser.js"
       ],
-      "reason": "Approved before/after reference mounted on the real-game loopback benchmark. Cover seven transparent artwork replacements, explicit legacy comparison after production integration, exact preservation of red backgrounds/colors/borders, native desktop/landscape viewports, zoom-independent bounds, hit targets, operation/effect states, saved heraldry, mini-chat dimensions/background/arrow, timer width and image/script loading. The preview is not referenced by production. No backend changes or emulator suite apply."
+      "reason": "Approved loopback-only before/after reference using synthetic benchmark data, never loaded in production. Focused CDP review at 1440x900, 844x390 and 568x320 verifies a 7px left shift to Gold with unchanged sizes, colors, vertical placement, gaps and hit targets, including 220% map zoom. Current game explicitly restores the old margin after integration. Screenshot/measurement evidence is recorded under release-artifacts/top-hud-alignment. No multiplayer or gameplay dependency changes. The focused comparator is now a checked-in CI validator; it also verifies the review shell viewport switch, before/after buttons and guide toggle."
     },
     {
       "paths": [
-        "docs/visual-qa/main-screen-art/README.md",
+        "main-screen-art-ui.css"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js"
+      ],
+      "reason": "One existing-stylesheet rule aligns the top row with the existing Gold margin. Reuse the real-game HUD browser validator for affected control geometry, hit targets, actual navigation, original colors, image loading and zoom behavior at desktop and two landscape sizes. Focused alignment measurements additionally verify the exact row/Gold edge and unchanged Gold position. The normal production artifact build validates packaging; no new images, runtime JS, backend functions or emulator suites apply."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records explicit design approval, the retained original red surfaces and top icon designs, actual-game source integration, artwork provenance and validation boundaries. The existing smallest-viewport overlap is disclosed; there are no gameplay rule changes or deployment claims."
-    },
-    {
-      "paths": [
-        "index.html",
-        "main-screen-art-ui.css",
-        "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
-        "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
-        "assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",
-        "assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
-        "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
-        "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
-        "assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp",
-        "tools/validate-main-screen-art-browser.js"
-      ],
-      "tests": [
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-main-screen-art-draft-browser.js"
-      ],
-      "reason": "Wire the approved art into the actual HUD without changing gameplay JS. Verify byte-identical approved artwork, real loaded sources, native pointer navigation for Bag/Shop/Cities/Maps/Leaderboards/Daily Login/Reports/Profile, original colors/borders/geometry, chat toggle and map zoom on desktop and two landscape sizes. Main-screen DOM is shared with the comparison fixture, which explicitly restores historical references. Existing flags and passive timers are preserved; no backend or multiplayer contract changes."
-    },
-    {
-      "paths": [
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-main-screen-art-browser.js"
-      ],
-      "reason": "Package the approved stylesheet, seven raster assets and existing report sprite. Cache only the small stylesheet during installation; images retain the runtime cache. Runtime tests verify approved asset bytes, loading and exclusion from install preloads. The production artifact gate bounds the seven approved derivatives and CSS at 336 KiB (60 KiB per image), plus 4 KiB entry metadata, and checks packaging. Notification logic, game mechanics, release contracts and backend functions remain unchanged."
+      "reason": "Records the user-approved top-row alignment and preserved presentation constraints. Documentation only; no gameplay or release-contract changes."
     }
   ]
 }

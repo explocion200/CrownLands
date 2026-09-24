@@ -1,0 +1,2 @@
+@import url("../clan-treasury/review.css");
+.review-header h1{font-family:Georgia,serif}.review-controls{flex-wrap:wrap}.control-group label{font-size:13px;color:#ddceab}.guide-toggle{display:flex;align-items:center;gap:6px}.guide-toggle input{accent-color:#c7a66a}.review-note{max-width:1100px}#reviewStatus{max-width:800px;line-height:1.5}
