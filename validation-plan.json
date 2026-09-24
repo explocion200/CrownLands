@@ -1,15 +1,17 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d08cf59c00c5bdffd49089d187c8ecc06384ebeb",
+  "baseCommit": "a01303edf61d350cdd3a9363d308edf2945acbdc",
   "coverage": [
     {
       "paths": [
-        "reward-ledger-ui.css"
+        "animation-manager.js",
+        "tools/validate-animation-system.js"
       ],
       "tests": [
-        "tools/validate-chat-reward-ledgers-browser.js"
+        "tools/validate-animation-system.js",
+        "tools/validate-performance-bottlenecks.js"
       ],
-      "reason": "Remove the hidden outer modal body scrollbar gutter only for the Welcome Back receipt, preserving its inner scroll containers and fixed Collect footer. The existing reward-ledger browser suite exercises the affected stylesheet and shared modal lifecycle at desktop, landscape mobile, and short landscape sizes, including city losses and inactivity notices. Manual browser measurements reproduce an 8px left versus 23px right frame before the fix and verify equal insets afterward. No gameplay, server, or authority paths change, so emulator suites are unnecessary."
+      "reason": "Count repeated severe foreground frame stalls in automatic decorative-effect adaptation while bounding the influence of one startup/resume stall. The regression fails on the base runtime and passes after the fix. Cover two-window hysteresis, healthy recovery, background/transition exclusion, explicit Full/Reduced/Off preferences, system reduced motion, animation lifecycle and client performance hooks. No server mechanics or authority changes."
     }
   ]
 }

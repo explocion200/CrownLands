@@ -431,15 +431,17 @@
       const sample = this.frameSample;
       const elapsed = now - sample.previous;
       sample.previous = now;
-      // A background gap or startup stall is not evidence of sustained load.
-      if (!active || elapsed <= 0 || elapsed > 250) {
+      // Background/transition frames are not evidence of active gameplay load.
+      if (!active || elapsed <= 0) {
         sample.elapsed = 0;
         sample.count = 0;
         sample.slow = 0;
         sample.healthy = 0;
         return;
       }
-      sample.elapsed += elapsed;
+      // Bound a single startup/resume stall without discarding repeated severe
+      // foreground stalls. Two slow windows still require multiple frames.
+      sample.elapsed += Math.min(elapsed, 250);
       sample.count += 1;
       if (sample.elapsed < 1000) return;
       const average = sample.elapsed / sample.count;
