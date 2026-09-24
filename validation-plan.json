@@ -14,7 +14,23 @@
         "docs/visual-qa/top-hud-alignment/runtime-fixture.js"
       ],
       "tests": [],
-      "reason": "Isolated, loopback-only visual draft; no production entry, CSS, assets, gameplay or backend changes. Focused manual/CDP browser review at desktop 1440x900 and landscape 844x390/568x320 verified the top row shifts exactly 7px left to the existing Gold edge, with unchanged button dimensions, colors, vertical placement, spacing and hit targets, and unchanged geometry at 220% map zoom. Screenshots and measurements are recorded in release-artifacts/top-hud-alignment; no unrelated game or emulator suites apply. This remains a draft awaiting user approval, not a production integration or merge candidate."
+      "reason": "Approved loopback-only before/after reference using synthetic benchmark data, never loaded in production. Focused CDP review at 1440x900, 844x390 and 568x320 verifies a 7px left shift to Gold with unchanged sizes, colors, vertical placement, gaps and hit targets, including 220% map zoom. Current game explicitly restores the old margin after integration. Screenshot/measurement evidence is recorded under release-artifacts/top-hud-alignment. No multiplayer or gameplay dependency changes."
+    },
+    {
+      "paths": [
+        "main-screen-art-ui.css"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js"
+      ],
+      "reason": "One existing-stylesheet rule aligns the top row with the existing Gold margin. Reuse the real-game HUD browser validator for affected control geometry, hit targets, actual navigation, original colors, image loading and zoom behavior at desktop and two landscape sizes. Focused alignment measurements additionally verify the exact row/Gold edge and unchanged Gold position. The normal production artifact build validates packaging; no new images, runtime JS, backend functions or emulator suites apply."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Records the user-approved top-row alignment and preserved presentation constraints. Documentation only; no gameplay or release-contract changes."
     }
   ]
 }

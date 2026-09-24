@@ -8,3 +8,5 @@ body.hud-illustrated #profileBtn::before{
  filter:drop-shadow(0 3px 3px #21190f66)!important;
 }
 body.hud-illustrated #logBtn .report-icon{filter:none!important}
+/* Align the complete top row with the existing Gold panel's left edge. */
+.profile-action-row{margin-left:-7px}
