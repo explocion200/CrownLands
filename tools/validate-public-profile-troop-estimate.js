@@ -45,7 +45,8 @@ assert.equal(totalsSandbox.getTotalMilitaryTroopsFromGlobalStats({
   totalMarchingTroops: 200,
   totalReinforcementTroops: 100,
   totalRallyTroops: 50,
-}), 650, "The public estimate must include stationed, marching, reinforcement, and rally troops.");
+  totalTowerTroops: 125,
+}), 775, "The public estimate must include stationed, marching, reinforcement, rally, and Tower troops.");
 assert.equal(totalsSandbox.getTotalMilitaryTroopsFromGlobalStats({
   totalTroops: -10,
   totalMarchingTroops: 3.9,

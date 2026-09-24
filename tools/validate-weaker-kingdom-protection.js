@@ -126,8 +126,8 @@ vm.runInContext([
   readFunction(source, "calculateCombatResult"),
 ].join("\n\n"), sandbox);
 
-if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 11 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
-  throw new Error("Protection is not using King Power v11 and attack-protection schema v2.");
+if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 12 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
+  throw new Error("Protection is not using King Power v12 and attack-protection schema v2.");
 }
 if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
   || sandbox.ATTACK_PROTECTION_RAID_MIN_RATIO !== 2.5
@@ -137,11 +137,11 @@ if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
   profile: { kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 11, kingPower: 900_000, updatedAtMs: 4000 },
+  globalStats: { version: 12, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
-  throw new Error("A legacy profile snapshot overrides canonical v11 global stats.");
+  throw new Error("A legacy profile snapshot overrides canonical v12 global stats.");
 }
 
 const target = { ownerUid: "defender", totalDefense: 1000, troops: 1000 };

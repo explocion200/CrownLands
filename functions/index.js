@@ -498,7 +498,7 @@ const CLAN_QUEST_REWARDS = Object.freeze([
 ]);
 const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
-const GLOBAL_PLAYER_STATS_VERSION = 11;
+const GLOBAL_PLAYER_STATS_VERSION = 12;
 const PLAYER_IDENTITY_SYNC_VERSION = 2;
 const MAIN_CITY_ASSIGNMENT_VERSION = 3;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -7242,6 +7242,17 @@ function shouldWriteIncomingArmyView(movement = {}) {
   );
 }
 
+function scopeServerArmyMovement(movement = {}) {
+  return {
+    ...movement,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
+      movement.realmShardId || getCurrentRealmShardId()
+    ),
+  };
+}
+
 function writeArmyMovementCopies(writer, movement = {}, {
   includeCreatedAt = false,
   previousTargetOwnerUid = "",
@@ -7252,14 +7263,7 @@ function writeArmyMovementCopies(writer, movement = {}, {
     ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   };
-  const scopedMovement = {
-    ...movement,
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
-      movement.realmShardId || getCurrentRealmShardId()
-    ),
-  };
+  const scopedMovement = scopeServerArmyMovement(movement);
   const canonicalMovement = {
     ...scopedMovement,
     armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
@@ -13717,7 +13721,8 @@ function createPatchedActiveArmiesForStats(economy = null, options = {}) {
   });
   (Array.isArray(options.addActiveArmies) ? options.addActiveArmies : []).forEach(army => {
     const key = getArmyStatsKey(army);
-    if (key) byId.set(key, { ...army, status: army.status || "active" });
+    // Match the canonical write's realm scope before current-world stats filter it.
+    if (key) byId.set(key, { ...scopeServerArmyMovement(army), status: army.status || "active" });
   });
   (Array.isArray(options.armyPatches) ? options.armyPatches : []).forEach(patch => {
     const key = getArmyStatsKey(patch);
@@ -13742,11 +13747,21 @@ function createPreparedEconomyStatsSnapshot(economy = null, profileOverrides = {
     uid: economy.uid,
     profile,
     cityEntries: createPatchedCityEntriesForStats(economy, options.extraCityPatches),
-    heldCamps: economy.heldCamps,
+    heldCamps: createPatchedHeldCampsForStats(economy, options.statsCampPatches),
     activeArmies: createPatchedActiveArmiesForStats(economy, options),
     bonuses: economy.bonuses || null,
     nowMs: options.nowMs || Date.now(),
   });
+}
+
+function createPatchedHeldCampsForStats(economy = null, campPatches = []) {
+  const camps = new Map((economy?.heldCamps || []).map(entry => [entry.ref.path, entry]));
+  (Array.isArray(campPatches) ? campPatches : []).forEach(entry => {
+    if (!entry?.ref || !entry.camp || !entry.patch) return;
+    const camp = getRewardCampCombatTarget({ ...entry.camp, ...entry.patch });
+    if (camp) camps.set(entry.ref.path, { ref: entry.ref, camp });
+  });
+  return [...camps.values()];
 }
 
 function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrides = {}, extraCityPatches = [], options = {}) {
@@ -13915,168 +13930,168 @@ async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation =
 async function rebuildGlobalStatsForPlayer(uid = "") {
   const playerUid = safeString(uid, 128);
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
-  const nowMs = Date.now();
-  const profileRef = db.doc(`players/${playerUid}`);
-  const profileSnap = await profileRef.get();
-  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
-  const currentSeasonProfile = profileSnap.exists
-    && safeString(profile.resetGeneration, 120) === RESET_GENERATION
-    && safeString(profile.worldId, 120) === ONLINE_WORLD_ID;
-  if (!currentSeasonProfile) {
-    return {
+  // Read and publish one consistent troop snapshot; a concurrent march must retry the reads.
+  const rebuilt = await runTransactionWithInfrastructureRetry(async transaction => {
+    const nowMs = Date.now();
+    const profileRef = db.doc(`players/${playerUid}`);
+    const profileSnap = await transaction.get(profileRef);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const currentSeasonProfile = profileSnap.exists
+      && safeString(profile.resetGeneration, 120) === RESET_GENERATION
+      && safeString(profile.worldId, 120) === ONLINE_WORLD_ID;
+    if (!currentSeasonProfile) {
+      return {
+        uid: playerUid,
+        skipped: true,
+        reason: profileSnap.exists ? "archived-player-profile" : "missing-player-profile",
+        stats: null,
+        cityUpdates: 0,
+        armyUpdates: 0,
+        mainCityRepairs: 0,
+      };
+    }
+    const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
+      transaction.get(db.collectionGroup("cities")
+        .where("ownerUid", "==", playerUid)
+        .where("resetGeneration", "==", RESET_GENERATION)
+        .where("worldId", "==", ONLINE_WORLD_ID)),
+      transaction.get(activeArmiesQueryForPlayer(playerUid)),
+      transaction.get(heldRewardCampsQueryForPlayer(playerUid)),
+    ]);
+    const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
+    const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
+    const clanBenefitsSnap = identity.clanId
+      ? await transaction.get(clanWorldBenefitsRef(identity.clanId))
+      : null;
+    const objectiveBonuses = combinePlayerObjectiveBonuses(
+      playerUid,
+      cityEntries,
+      clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
+    );
+    const mainRepair = createMainCityAssignmentRepair(playerUid, profile, cityEntries);
+    const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
+      const army = {
+        id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
+        islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
+        ...armyDoc.data(),
+      };
+      return isCurrentWorldArmy(army);
+    });
+    const activeArmies = createActiveArmiesFromSnapshot(playerUid, activeArmiesSnap);
+    const heldCamps = createHeldCampEntriesFromSnapshot(playerUid, heldCampsSnap);
+    const profileForStats = {
+      ...profile,
+      playerName: identity.ownerName,
+      displayName: identity.ownerName,
+      flag: identity.ownerFlag,
+      ...mainRepair.profileFields,
+    };
+    const stats = createGlobalStatsSnapshot({
       uid: playerUid,
-      skipped: true,
-      reason: profileSnap.exists ? "archived-player-profile" : "missing-player-profile",
-      stats: null,
-      cityUpdates: 0,
-      armyUpdates: 0,
-      mainCityRepairs: 0,
-    };
-  }
-  const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
-    db.collectionGroup("cities")
-      .where("ownerUid", "==", playerUid)
-      .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
-      .get(),
-    activeArmiesQueryForPlayer(playerUid).get(),
-    heldRewardCampsQueryForPlayer(playerUid).get(),
-  ]);
-  const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
-  const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
-  const clanBenefitsSnap = identity.clanId
-    ? await clanWorldBenefitsRef(identity.clanId).get()
-    : null;
-  const objectiveBonuses = combinePlayerObjectiveBonuses(
-    playerUid,
-    cityEntries,
-    clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
-  );
-  const mainRepair = createMainCityAssignmentRepair(playerUid, profile, cityEntries);
-  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
-    const army = {
-      id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
-      islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
-      ...armyDoc.data(),
-    };
-    return isCurrentWorldArmy(army);
-  });
-  const activeArmies = createActiveArmiesFromSnapshot(playerUid, activeArmiesSnap);
-  const heldCamps = createHeldCampEntriesFromSnapshot(playerUid, heldCampsSnap);
-  const profileForStats = {
-    ...profile,
-    playerName: identity.ownerName,
-    displayName: identity.ownerName,
-    flag: identity.ownerFlag,
-    ...mainRepair.profileFields,
-  };
-  const stats = createGlobalStatsSnapshot({
-    uid: playerUid,
-    profile: profileForStats,
-    cityEntries,
-    heldCamps,
-    activeArmies,
-    bonuses: objectiveBonuses,
-    nowMs,
-  });
-  const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(profile, mainRepair);
-  const writes = [
-    {
-      ref: profileRef,
-      data: {
-        uid: playerUid,
-        clanId: identity.clanId,
-        clanName: identity.clanName,
-        clanTag: identity.clanTag,
-        kingPower: stats.kingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        kingPowerUpdatedAtMs: nowMs,
-        ...mainRepair.profileFields,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    },
-    {
-      ref: playerGlobalStatsRef(playerUid),
-      data: stats,
-    },
-    {
-      ref: leaderboardEntryRef(playerUid),
-      data: {
-        uid: playerUid,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        displayName: identity.ownerName,
-        playerName: identity.ownerName,
-        flag: identity.ownerFlag,
-        clanId: identity.clanId,
-        clanName: identity.clanName,
-        clanTag: identity.clanTag,
-        kingPower: stats.kingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        kingPowerUpdatedAtMs: nowMs,
-        cityCount: stats.totalCities,
-        totalTroops: stats.totalTroops,
-        totalCampTroops: stats.totalCampTroops,
-        totalMarchingTroops: stats.totalMarchingTroops,
-        totalReinforcementTroops: stats.totalReinforcementTroops,
-        totalRallyTroops: stats.totalRallyTroops,
-        totalTowerTroops: stats.totalTowerTroops,
-        totalMilitaryTroops: stats.totalMilitaryTroops,
-        armyPower: stats.armyPower,
-        reinforcementTroopPower: stats.reinforcementTroopPower,
-        towerTroopPower: stats.towerTroopPower,
-        replacementPower: stats.replacementPower,
-        defensivePower: stats.defensivePower,
-        goldPerHour: stats.goldPerHour,
-        troopPerHour: stats.troopPerHour,
-        sustainableTroopPerHour: stats.sustainableTroopPerHour,
-        strongholdTroopBonusPercent: stats.strongholdTroopBonusPercent,
-        strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
-        strongholdCount: stats.strongholdCount,
-        mainCityId,
-        mainRegionId,
-        mainIslandId,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    },
-  ];
-
-  const cityProjectionWrites = cityEntries.map(entry => ({
-      ref: entry.ref,
-      data: {
-        ownerName: identity.ownerName,
-        ownerFlag: identity.ownerFlag,
-        ownerKingPower: stats.kingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    }));
-  const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
-      ref: armyDoc.ref,
-      data: {
-        ownerName: identity.ownerName,
-        ownerFlag: identity.ownerFlag,
-        ownerKingPower: stats.kingPower,
-        attackerKingPower: stats.kingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    }));
-  mainRepair.cityPatches.forEach(entry => {
-    cityProjectionWrites.push({
-      ref: entry.ref,
-      data: cleanCityUpdate(entry.city, entry.patch),
+      profile: profileForStats,
+      cityEntries,
+      heldCamps,
+      activeArmies,
+      bonuses: objectiveBonuses,
+      nowMs,
     });
-  });
+    const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(profile, mainRepair);
+    const writes = [
+      {
+        ref: profileRef,
+        data: {
+          uid: playerUid,
+          clanId: identity.clanId,
+          clanName: identity.clanName,
+          clanTag: identity.clanTag,
+          kingPower: stats.kingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          kingPowerUpdatedAtMs: nowMs,
+          ...mainRepair.profileFields,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      },
+      {
+        ref: playerGlobalStatsRef(playerUid),
+        data: stats,
+      },
+      {
+        ref: leaderboardEntryRef(playerUid),
+        data: {
+          uid: playerUid,
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          displayName: identity.ownerName,
+          playerName: identity.ownerName,
+          flag: identity.ownerFlag,
+          clanId: identity.clanId,
+          clanName: identity.clanName,
+          clanTag: identity.clanTag,
+          kingPower: stats.kingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          kingPowerUpdatedAtMs: nowMs,
+          cityCount: stats.totalCities,
+          totalTroops: stats.totalTroops,
+          totalCampTroops: stats.totalCampTroops,
+          totalMarchingTroops: stats.totalMarchingTroops,
+          totalReinforcementTroops: stats.totalReinforcementTroops,
+          totalRallyTroops: stats.totalRallyTroops,
+          totalTowerTroops: stats.totalTowerTroops,
+          totalMilitaryTroops: stats.totalMilitaryTroops,
+          armyPower: stats.armyPower,
+          reinforcementTroopPower: stats.reinforcementTroopPower,
+          rallyTroopPower: stats.rallyTroopPower,
+          towerTroopPower: stats.towerTroopPower,
+          replacementPower: stats.replacementPower,
+          defensivePower: stats.defensivePower,
+          goldPerHour: stats.goldPerHour,
+          troopPerHour: stats.troopPerHour,
+          sustainableTroopPerHour: stats.sustainableTroopPerHour,
+          strongholdTroopBonusPercent: stats.strongholdTroopBonusPercent,
+          strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
+          strongholdCount: stats.strongholdCount,
+          mainCityId,
+          mainRegionId,
+          mainIslandId,
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      },
+    ];
 
-  for (let index = 0; index < writes.length; index += 450) {
-    const batch = db.batch();
-    writes.slice(index, index + 450).forEach(write => {
-      batch.set(write.ref, write.data, { merge: true });
+    const cityProjectionWrites = cityEntries.map(entry => ({
+        ref: entry.ref,
+        data: {
+          ownerName: identity.ownerName,
+          ownerFlag: identity.ownerFlag,
+          ownerKingPower: stats.kingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      }));
+    const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
+        ref: armyDoc.ref,
+        data: {
+          ownerName: identity.ownerName,
+          ownerFlag: identity.ownerFlag,
+          ownerKingPower: stats.kingPower,
+          attackerKingPower: stats.kingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      }));
+    mainRepair.cityPatches.forEach(entry => {
+      cityProjectionWrites.push({
+        ref: entry.ref,
+        data: cleanCityUpdate(entry.city, entry.patch),
+      });
     });
-    await batch.commit();
-  }
+
+    writes.forEach(write => transaction.set(write.ref, write.data, { merge: true }));
+    return { stats, cityProjectionWrites, armyProjectionWrites, mainRepair };
+  }, "rebuildGlobalStatsForPlayer");
+  if (rebuilt.skipped) return rebuilt;
+  const { stats, cityProjectionWrites, armyProjectionWrites, mainRepair } = rebuilt;
   // Stats and identity projections must never restore ownership from the stale query
   // snapshot above. Re-read each asset in a transaction and only refresh metadata while
   // the same player still owns it.
@@ -16429,7 +16444,6 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   // This is a projection repair, never an identity edit. In particular, older
   // clients send random entry-state flags and their Google name during login.
   const identity = getCanonicalPlayerIdentity(uid, profile, {}, authToken);
-  const nowMs = Date.now();
   const identitySyncSignature = getPlayerIdentitySyncSignature(identity);
   if (
     Math.max(0, Math.floor(safeNumber(profile.identitySyncVersion, 0))) >= PLAYER_IDENTITY_SYNC_VERSION
@@ -16447,187 +16461,6 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     };
   }
 
-  const strongholdLegacyRefs = getStrongholdLegacyRefsForPlayer(uid);
-  const [ownedCitiesSnap, activeArmiesSnap, crownReignSnap, strongholdLegacySnaps] = await Promise.all([
-    db.collectionGroup("cities")
-      .where("ownerUid", "==", uid)
-      .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
-      .get(),
-    activeArmiesQueryForPlayer(uid).get(),
-    crownCitadelReignRef(uid).get(),
-    Promise.all(strongholdLegacyRefs.map(ref => ref.get())),
-  ]);
-  const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
-    const islandId = cityDoc.ref.parent.parent?.id || "";
-    if (!isCurrentWorldIslandId(islandId)) return false;
-    const city = cityDoc.data() || {};
-    const regionId = getRegionIdFromCityDoc(cityDoc, city);
-    return getServerWorldTargetIds(regionId).has(cityDoc.id);
-  });
-  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
-    const army = {
-      id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
-      islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
-      ...armyDoc.data(),
-    };
-    return isCurrentWorldArmy(army);
-  });
-  const ownedCityEntries = cityDocs.map(cityDoc => {
-    const city = cityDoc.data() || {};
-    const islandId = safeString(cityDoc.ref.parent.parent?.id, 160);
-    return {
-      ref: cityDoc.ref,
-      city: {
-        id: cityDoc.id,
-        ...city,
-        islandId,
-        regionId: getRegionIdFromCityDoc(cityDoc, city),
-      },
-    };
-  });
-  const mainCityRepair = createMainCityAssignmentRepair(uid, profile, ownedCityEntries);
-  const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(
-    profile,
-    mainCityRepair
-  );
-  const profileForStats = {
-    ...profile,
-    playerName: identity.ownerName,
-    displayName: identity.ownerName,
-    flag: identity.ownerFlag,
-    ...mainCityRepair.profileFields,
-  };
-  const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
-  const clanBenefitsSnap = identity.clanId
-    ? await clanWorldBenefitsRef(identity.clanId).get()
-    : null;
-  const objectiveBonuses = combinePlayerObjectiveBonuses(
-    uid,
-    ownedCityEntries,
-    clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
-  );
-  const globalStats = createGlobalStatsSnapshot({
-    uid,
-    profile: profileForStats,
-    cityEntries: ownedCityEntries,
-    activeArmies,
-    bonuses: objectiveBonuses,
-    nowMs,
-  });
-  const serverKingPower = globalStats.kingPower;
-  const cityCount = globalStats.totalCities;
-
-  const writes = [
-    {
-      ref: profileRef,
-      data: {
-        uid,
-        kingPower: serverKingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        kingPowerUpdatedAtMs: nowMs,
-        ...mainCityRepair.profileFields,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    },
-    {
-      ref: playerGlobalStatsRef(uid),
-      data: globalStats,
-    },
-    {
-      ref: leaderboardEntryRef(uid),
-      data: {
-        uid,
-        displayName: identity.ownerName,
-        playerName: identity.ownerName,
-        flag: identity.ownerFlag,
-        kingPower: serverKingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        kingPowerUpdatedAtMs: nowMs,
-        cityCount,
-        totalTroops: globalStats.totalTroops,
-        totalMarchingTroops: globalStats.totalMarchingTroops,
-        goldPerHour: globalStats.goldPerHour,
-        troopPerHour: globalStats.troopPerHour,
-        strongholdCount: globalStats.strongholdCount,
-        mainCityId,
-        mainRegionId,
-        mainIslandId,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    },
-  ];
-  if (identity.clanId) {
-    writes.push({
-      ref: db.doc(`clans/${identity.clanId}/members/${uid}`),
-      data: {
-        uid,
-        displayName: identity.ownerName,
-        flag: identity.ownerFlag,
-        kingPower: serverKingPower,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  }
-
-  const cityProjectionWrites = cityDocs.map(cityDoc => ({
-    ref: cityDoc.ref,
-    data: {
-      ownerName: identity.ownerName,
-      ownerFlag: identity.ownerFlag,
-      ownerKingPower: serverKingPower,
-      ownerClanId: identity.clanId,
-      ownerClanName: identity.clanName,
-      ownerClanTag: identity.clanTag,
-      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-  }));
-  const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
-    ref: armyDoc.ref,
-    data: {
-      ownerName: identity.ownerName,
-      ownerFlag: identity.ownerFlag,
-      ownerKingPower: serverKingPower,
-      attackerKingPower: serverKingPower,
-      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-      ownerClanId: identity.clanId,
-      ownerClanName: identity.clanName,
-      ownerClanTag: identity.clanTag,
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-  }));
-  if (crownReignSnap.exists) {
-    writes.push({
-      ref: crownReignSnap.ref,
-      data: {
-        playerName: identity.ownerName,
-        playerFlag: identity.ownerFlag,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  }
-  strongholdLegacySnaps.filter(snapshot => snapshot.exists).forEach(snapshot => {
-    writes.push({
-      ref: snapshot.ref,
-      data: {
-        playerName: identity.ownerName,
-        playerFlag: identity.ownerFlag,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  });
-  mainCityRepair.cityPatches.forEach(entry => {
-    cityProjectionWrites.push({
-      ref: entry.ref,
-      data: cleanCityUpdate(entry.city, entry.patch),
-    });
-  });
-
   const requireSameIdentity = snapshot => {
     if (!snapshot.exists || getPlayerIdentitySyncSignature(
       getCanonicalPlayerIdentity(uid, snapshot.data() || {}, {}, authToken)
@@ -16635,10 +16468,206 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       throw new HttpsError("aborted", "Your identity changed while syncing. Please retry.");
     }
   };
-  await runTransactionWithInfrastructureRetry(async transaction => {
-    requireSameIdentity(await transaction.get(profileRef));
-    writes.forEach(write => transaction.set(write.ref, write.data, { merge: true }));
-  }, "syncPlayerIdentityProjections");
+  const { cityProjectionWrites, armyProjectionWrites, serverKingPower, cityCount, globalStats } =
+    await runTransactionWithInfrastructureRetry(async transaction => {
+      const profileSnap = await transaction.get(profileRef);
+      requireSameIdentity(profileSnap);
+      const profile = profileSnap.data() || {};
+      const nowMs = Date.now();
+      const strongholdLegacyRefs = getStrongholdLegacyRefsForPlayer(uid);
+      const [ownedCitiesSnap, activeArmiesSnap, heldCampsSnap, crownReignSnap, strongholdLegacySnaps] = await Promise.all([
+        transaction.get(db.collectionGroup("cities")
+          .where("ownerUid", "==", uid)
+          .where("resetGeneration", "==", RESET_GENERATION)
+          .where("worldId", "==", ONLINE_WORLD_ID)),
+        transaction.get(activeArmiesQueryForPlayer(uid)),
+        transaction.get(heldRewardCampsQueryForPlayer(uid)),
+        transaction.get(crownCitadelReignRef(uid)),
+        Promise.all(strongholdLegacyRefs.map(ref => transaction.get(ref))),
+      ]);
+      const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
+        const islandId = cityDoc.ref.parent.parent?.id || "";
+        if (!isCurrentWorldIslandId(islandId)) return false;
+        const city = cityDoc.data() || {};
+        const regionId = getRegionIdFromCityDoc(cityDoc, city);
+        return getServerWorldTargetIds(regionId).has(cityDoc.id);
+      });
+      const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
+        const army = {
+          id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
+          islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
+          ...armyDoc.data(),
+        };
+        return isCurrentWorldArmy(army);
+      });
+      const ownedCityEntries = cityDocs.map(cityDoc => {
+        const city = cityDoc.data() || {};
+        const islandId = safeString(cityDoc.ref.parent.parent?.id, 160);
+        return {
+          ref: cityDoc.ref,
+          city: {
+            id: cityDoc.id,
+            ...city,
+            islandId,
+            regionId: getRegionIdFromCityDoc(cityDoc, city),
+          },
+        };
+      });
+      const mainCityRepair = createMainCityAssignmentRepair(uid, profile, ownedCityEntries);
+      const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(
+        profile,
+        mainCityRepair
+      );
+      const profileForStats = {
+        ...profile,
+        playerName: identity.ownerName,
+        displayName: identity.ownerName,
+        flag: identity.ownerFlag,
+        ...mainCityRepair.profileFields,
+      };
+      const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
+      const clanBenefitsSnap = identity.clanId
+        ? await transaction.get(clanWorldBenefitsRef(identity.clanId))
+        : null;
+      const objectiveBonuses = combinePlayerObjectiveBonuses(
+        uid,
+        ownedCityEntries,
+        clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
+      );
+      const globalStats = createGlobalStatsSnapshot({
+        uid,
+        profile: profileForStats,
+        cityEntries: ownedCityEntries,
+        heldCamps: createHeldCampEntriesFromSnapshot(uid, heldCampsSnap),
+        activeArmies,
+        bonuses: objectiveBonuses,
+        nowMs,
+      });
+      const serverKingPower = globalStats.kingPower;
+      const cityCount = globalStats.totalCities;
+
+      const writes = [
+        {
+          ref: profileRef,
+          data: {
+            uid,
+            kingPower: serverKingPower,
+            kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+            kingPowerUpdatedAtMs: nowMs,
+            ...mainCityRepair.profileFields,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+        },
+        {
+          ref: playerGlobalStatsRef(uid),
+          data: globalStats,
+        },
+        {
+          ref: leaderboardEntryRef(uid),
+          data: {
+            uid,
+            displayName: identity.ownerName,
+            playerName: identity.ownerName,
+            flag: identity.ownerFlag,
+            kingPower: serverKingPower,
+            kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+            kingPowerUpdatedAtMs: nowMs,
+            cityCount,
+            totalTroops: globalStats.totalTroops,
+            totalMarchingTroops: globalStats.totalMarchingTroops,
+            totalCampTroops: globalStats.totalCampTroops,
+            totalReinforcementTroops: globalStats.totalReinforcementTroops,
+            totalRallyTroops: globalStats.totalRallyTroops,
+            totalTowerTroops: globalStats.totalTowerTroops,
+            totalMilitaryTroops: globalStats.totalMilitaryTroops,
+            armyPower: globalStats.armyPower,
+            reinforcementTroopPower: globalStats.reinforcementTroopPower,
+            rallyTroopPower: globalStats.rallyTroopPower,
+            towerTroopPower: globalStats.towerTroopPower,
+            goldPerHour: globalStats.goldPerHour,
+            troopPerHour: globalStats.troopPerHour,
+            strongholdCount: globalStats.strongholdCount,
+            mainCityId,
+            mainRegionId,
+            mainIslandId,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+        },
+      ];
+      if (identity.clanId) {
+        writes.push({
+          ref: db.doc(`clans/${identity.clanId}/members/${uid}`),
+          data: {
+            uid,
+            displayName: identity.ownerName,
+            flag: identity.ownerFlag,
+            kingPower: serverKingPower,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+        });
+      }
+
+      const cityProjectionWrites = cityDocs.map(cityDoc => ({
+        ref: cityDoc.ref,
+        data: {
+          ownerName: identity.ownerName,
+          ownerFlag: identity.ownerFlag,
+          ownerKingPower: serverKingPower,
+          ownerClanId: identity.clanId,
+          ownerClanName: identity.clanName,
+          ownerClanTag: identity.clanTag,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      }));
+      const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
+        ref: armyDoc.ref,
+        data: {
+          ownerName: identity.ownerName,
+          ownerFlag: identity.ownerFlag,
+          ownerKingPower: serverKingPower,
+          attackerKingPower: serverKingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          ownerClanId: identity.clanId,
+          ownerClanName: identity.clanName,
+          ownerClanTag: identity.clanTag,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+      }));
+      if (crownReignSnap.exists) {
+        writes.push({
+          ref: crownReignSnap.ref,
+          data: {
+            playerName: identity.ownerName,
+            playerFlag: identity.ownerFlag,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+        });
+      }
+      strongholdLegacySnaps.filter(snapshot => snapshot.exists).forEach(snapshot => {
+        writes.push({
+          ref: snapshot.ref,
+          data: {
+            playerName: identity.ownerName,
+            playerFlag: identity.ownerFlag,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+        });
+      });
+      mainCityRepair.cityPatches.forEach(entry => {
+        cityProjectionWrites.push({
+          ref: entry.ref,
+          data: cleanCityUpdate(entry.city, entry.patch),
+        });
+      });
+
+      writes.forEach(write => transaction.set(write.ref, write.data, { merge: true }));
+      return { cityProjectionWrites, armyProjectionWrites, serverKingPower, cityCount, globalStats };
+    }, "syncPlayerIdentityProjections");
   // Identity projections come from collection-query snapshots. Re-read each asset
   // transactionally so a concurrent capture, return, or relinquishment wins.
   const [cityUpdates, armyUpdates] = await Promise.all([
@@ -28008,6 +28037,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         excludeArmyIds: [armyId],
         addActiveArmies: Array.isArray(options.addActiveArmies) ? options.addActiveArmies : [],
         statsCityPatches: Array.isArray(options.statsCityPatches) ? options.statsCityPatches : [],
+        statsCampPatches: Array.isArray(options.statsCampPatches) ? options.statsCampPatches : [],
         nowMs,
       };
       const defenderStatsOptions = {
@@ -29792,6 +29822,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const statsCityPatches = targetType === "city"
         ? [{ ref: targetRef, city: target, patch: targetPatch }]
         : [];
+      const statsCampPatches = targetType === "camp"
+        ? [{ ref: targetRef, camp: target, patch: targetPatch }]
+        : [];
       const participantStats = writeParticipantEconomies({
         character: attackerProgress.character,
         gold: attackerProgress.gold,
@@ -29804,6 +29837,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldFloat: defenderProgress.goldFloat,
       } : {}, {
         statsCityPatches,
+        statsCampPatches,
       });
       if (result.success && targetType === "city" && participantStats.attackerStats) {
         targetPatch.ownerKingPower = participantStats.attackerStats.kingPower;
@@ -30009,7 +30043,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           state: getRewardCampState(remainingActiveArmyIds, attackerUid),
           updatedAt: FieldValue.serverTimestamp(),
         };
-        writeParticipantEconomies();
+        writeParticipantEconomies({}, {}, { statsCampPatches: [{ ref: targetRef, camp: target, patch: campPatch }] });
         transaction.set(targetRef, campPatch, { merge: true });
         markResolved({ kind: "transfer", targetType: "camp", troops: troopCount });
         return {
@@ -30155,7 +30189,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       }
 
-      writeParticipantEconomies();
+      writeParticipantEconomies({}, {}, { statsCampPatches: [{ ref: targetRef, camp: target, patch: campPatch }] });
       transaction.set(targetRef, campPatch, { merge: true });
       if (battle.success) {
         writeOwnershipChangeEvent(transaction, {
