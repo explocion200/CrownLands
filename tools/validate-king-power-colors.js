@@ -93,8 +93,13 @@ async function main() {
   for (let i = 0; i < 3; i++) {
     l.playerIdentityLookupQueue.add("legacy");
     await l.refreshQueuedPlayerIdentities();
+    legacyRetry.advance(1000);
   }
   assert.equal(repairs, 1, "Rereading a legacy row erased its failed power repair cooldown");
+  legacyRetry.advance(297001);
+  l.playerIdentityLookupQueue.add("legacy");
+  await l.refreshQueuedPlayerIdentities();
+  assert.equal(repairs, 2, "Legacy rereads kept extending the repair cooldown forever");
 
   for (const stage of ["leaderboard", "repair"]) {
     const stale = fixture(), x = stale.s; let release;

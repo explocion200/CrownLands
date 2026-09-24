@@ -14210,7 +14210,7 @@ async function refreshQueuedPlayerIdentities() {
       if (await refreshMissingPlayerPowerIdentities(batch, api, scope)) changed = true;
       if (scope !== getOnlineSessionRequestScope()) break;
       batch.forEach(uid => {
-        if (!getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid })) playerIdentityLookupMisses.set(uid, Date.now());
+        if (!getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid }) && !playerIdentityLookupMisses.has(uid)) playerIdentityLookupMisses.set(uid, Date.now());
       });
     }
   } catch (error) {
