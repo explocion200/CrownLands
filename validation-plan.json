@@ -1,106 +1,49 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cc3567f39119174bac28dcd9c39df56b141eefff",
+  "baseCommit": "9fa00c932916e426779cb2ae2585e01ff4d6313c",
   "coverage": [
     {
       "paths": [
         "game.js"
       ],
-      "reason": "Scout action feedback, accepted movement adoption, arrival dedup/backoff, report read/paint batching, Tower refresh and foreground recovery share existing report, movement, account and troop UI dependencies. Exercise real desktop and mobile fixtures plus existing lifecycle/receipt guards.",
+      "reason": "Correct map King Power bands when authoritative strength is missing or on an obsolete version; use existing identity repair with two workers, retry cooldown and session guards, and repaint after profile reads. Exercise exact protection thresholds, stabilization, real map rendering, public-profile navigation and identity/flag dependencies. No server formula, callable contract, authorization, schema or database rule changes; existing server protection logic is executed by the focused validator.",
       "tests": [
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-report-system.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-interaction-health.js",
-        "tools/validate-coordinated-release.js",
-        "tools/validate-clan-tower-king-power.js",
+        "tools/validate-king-power-colors.js",
+        "tools/validate-king-power-colors-browser.js",
+        "tools/validate-weaker-kingdom-protection.js",
         "tools/validate-king-power.js",
-        "functions/test/emulator-report-read-state.js",
-        "functions/test/emulator-report-delivery-rules.js"
+        "tools/validate-combat-authorization.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-public-player-profile-browser.js"
       ]
     },
     {
       "paths": [
-        "functions/index.js",
-        "functions/authoritative-route-planner.js"
+        "styles.css"
       ],
-      "reason": "Cache exact immutable Core terrain legs without changing authoritative routes, closest origin, ownership/cost checks or transactions. Add scout-only operational dimensions; cover shared movement geometry, Tower/Veil permissions, report privacy/lifecycle, atomic batches, concurrent economy and unchanged King Power.",
+      "reason": "Style only the newly explicit unknown enemy strength state; browser checks use the complete production stylesheet cascade on desktop and two landscape mobile sizes and preserve the three established strength colors.",
       "tests": [
-        "tools/validate-scout-route-cache.js",
-        "tools/validate-world-travel-network.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-operation-timing.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-clan-tower-king-power.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-report-read-state.js"
+        "tools/validate-king-power-colors-browser.js",
+        "tools/validate-weaker-kingdom-protection.js"
       ]
     },
     {
       "paths": [
-        "functions/operation-timing.js"
+        "tools/validate-king-power-colors.js"
       ],
-      "reason": "Async-local allowlisted scout dimensions and route-cache counters must remain isolated across simultaneous requests without logging identifiers or intelligence.",
+      "reason": "Behavioral regression coverage executes production identity/color functions for missing and legacy data, exact 2x/2.5x boundaries, stale timestamps, two-worker fallback, stalled requests, retry cooldown and session changes.",
       "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-stability-log-summary.js",
-        "functions/test/emulator-world-travel.js"
+        "tools/validate-king-power-colors.js"
       ]
     },
     {
       "paths": [
-        "tools/read-stability-production.js",
-        "tools/stability-log-summary.js",
-        "tools/validate-operation-timing.js",
-        "tools/validate-stability-log-summary.js"
+        "tools/validate-king-power-colors-browser.js"
       ],
-      "reason": "Keep diagnostic parsing privacy-safe for structured and text logs and separate scout stages/outcomes/source/target from unclassified traffic. Preserve missing evidence and existing aggregate fields.",
+      "reason": "Exercise actual map classes, computed shield colors and accessible labels at 1440x900, 844x390 and 568x320, including delayed authoritative repairs and timed band changes. Production endpoints are blocked.",
       "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-stability-log-summary.js",
-        "tools/validate-stability-audit.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-route-cache.js"
-      ],
-      "reason": "Run new executable regression coverage and matched before/after route/client benchmarks: independent engine caches, cache bounds/parity, 24-target batch retry IDs, two-worker backoff, stale sessions, report batching, real DOM focus/scroll and controlled desktop/mobile timings.",
-      "tests": [
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-route-cache.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/SCOUTING_RESPONSIVENESS.md"
-      ],
-      "reason": "Record implementation boundaries, reproducible controlled measurements and a separately authorized backend-first release/verification procedure; no changed game balance or claimed production improvements.",
-      "tests": []
-    },
-    {
-      "paths": [
-        "tools/validate-connection-recovery.js"
-      ],
-      "reason": "Update the real recovery regression to load the extracted single-flight reader and retain unchanged-snapshot success plus stale-account rejection; assert overlapping reads share one promise.",
-      "tests": [
-        "tools/validate-connection-recovery.js"
+        "tools/validate-king-power-colors-browser.js"
       ]
     }
   ]
