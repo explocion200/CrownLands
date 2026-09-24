@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crownlands · HUD left inset</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+<header class="review-header"><div><p>CROWNLANDS · DESIGN REVIEW</p><h1>Aligned with Reports</h1></div><span class="draft-badge">Approved design</span></header>
+<nav class="review-controls" aria-label="Preview controls">
+ <div class="control-group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div>
+ <div class="control-group"><button data-look="draft">Match Reports</button><button data-look="current">Current game</button></div>
+ <div class="control-group"><label for="zoom">Map zoom</label><select id="zoom"><option value="1">100%</option><option value="1.6">160%</option><option value="2.2">220%</option></select><label class="guide-toggle"><input id="guide" type="checkbox" checked> Edge guide</label></div>
+</nav>
+<p class="review-note">The player row and Gold line up with Reports at 12px from the left edge. Sizes, artwork and spacing stay the same. The existing phone safe area is preserved.</p>
+<main><div id="canvas"><iframe id="preview" title="HUD left inset draft"></iframe></div></main>
+<footer><span id="dimensions"></span><a id="fullWindow" href="preview.html" target="_blank" rel="noopener">Open full-window preview ↗</a><span id="reviewStatus" role="status">Loading the local map…</span></footer>
+</body></html>

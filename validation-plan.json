@@ -1,39 +1,40 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "692ed3e6439c18f75840c9c935abae01e33c0c38",
+  "baseCommit": "9f08953e420c60af6a96bab36e32c2ee199c0f75",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/top-hud-alignment/draft.css",
-        "docs/visual-qa/top-hud-alignment/index.html",
-        "docs/visual-qa/top-hud-alignment/preview.html",
-        "docs/visual-qa/top-hud-alignment/preview.js",
-        "docs/visual-qa/top-hud-alignment/README.md",
-        "docs/visual-qa/top-hud-alignment/review.css",
-        "docs/visual-qa/top-hud-alignment/review.js",
-        "docs/visual-qa/top-hud-alignment/runtime-fixture.js",
-        "tools/validate-top-hud-alignment-browser.js"
+        "docs/visual-qa/hud-edge-inset/draft.css",
+        "docs/visual-qa/hud-edge-inset/index.html",
+        "docs/visual-qa/hud-edge-inset/preview.html",
+        "docs/visual-qa/hud-edge-inset/preview.js",
+        "docs/visual-qa/hud-edge-inset/README.md",
+        "docs/visual-qa/hud-edge-inset/review.css",
+        "docs/visual-qa/hud-edge-inset/review.js",
+        "docs/visual-qa/hud-edge-inset/runtime-fixture.js",
+        "tools/validate-hud-edge-inset-browser.js"
       ],
       "tests": [
-        "tools/validate-top-hud-alignment-browser.js"
+        "tools/validate-hud-edge-inset-browser.js"
       ],
-      "reason": "Approved loopback-only before/after reference using synthetic benchmark data, never loaded in production. Focused CDP review at 1440x900, 844x390 and 568x320 verifies a 7px left shift to Gold with unchanged sizes, colors, vertical placement, gaps and hit targets, including 220% map zoom. Current game explicitly restores the old margin after integration. Screenshot/measurement evidence is recorded under release-artifacts/top-hud-alignment. No multiplayer or gameplay dependency changes. The focused comparator is now a checked-in CI validator; it also verifies the review shell viewport switch, before/after buttons and guide toggle."
+      "reason": "Validate the retained approved preview and before/after comparison at desktop and two landscape sizes. Check alignment with Reports, unchanged geometry/colors/hit targets and other controls, map zoom, viewport switches, guide, and existing header safe-area protection after layout refresh. The preview uses synthetic data; no backend changes or emulator suites apply."
     },
     {
       "paths": [
-        "main-screen-art-ui.css"
+        "main-screen-art-ui.css",
+        "tools/validate-main-screen-art-browser.js"
       ],
       "tests": [
         "tools/validate-main-screen-art-browser.js"
       ],
-      "reason": "One existing-stylesheet rule aligns the top row with the existing Gold margin. Reuse the real-game HUD browser validator for affected control geometry, hit targets, actual navigation, original colors, image loading and zoom behavior at desktop and two landscape sizes. Focused alignment measurements additionally verify the exact row/Gold edge and unchanged Gold position. The normal production artifact build validates packaging; no new images, runtime JS, backend functions or emulator suites apply."
+      "reason": "Move the production player stack to align the row and Gold with Reports at 12px. The actual-game benchmark verifies the inset without preview injection, original artwork and colors, control dimensions and hit targets, existing navigation and chat, and zoom independence at desktop and two landscape sizes. The shared header retains its existing safe-area behavior, covered by the focused inset browser validator. CSS-only presentation change; no server-authoritative changes or emulator suites. Static-style comparisons wait for finite HUD color transitions to settle, avoiding animation-phase mismatches."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user-approved top-row alignment and preserved presentation constraints. Documentation only; no gameplay or release-contract changes."
+      "reason": "Record the explicitly approved follow-up placement and superseded Gold position. Documentation only; runtime coverage is provided by the two focused HUD browser validators."
     }
   ]
 }

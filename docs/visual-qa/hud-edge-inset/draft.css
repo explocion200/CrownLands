@@ -1,0 +1,8 @@
+/* Preserve the pre-release layout for the review's before/after comparison. */
+.profile-stack{left:12px!important}
+/* Match Reports' 12px inset. The top header already supplies this inset;
+   7px cancels the aligned player row and Gold's existing -7px margins.
+   Keep the header's existing safe-area protection for notched devices. */
+html.hud-edge-draft .profile-stack{left:7px!important}
+/* Review overlay only. */
+#hudEdgeGuide{position:fixed;z-index:1000;width:0;border-left:1px dashed #fff2ba;pointer-events:none;filter:drop-shadow(1px 0 1px #352614)}

@@ -10,3 +10,6 @@ body.hud-illustrated #profileBtn::before{
 body.hud-illustrated #logBtn .report-icon{filter:none!important}
 /* Align the complete top row with the existing Gold panel's left edge. */
 .profile-action-row{margin-left:-7px}
+/* Match Reports' 12px outer inset: the header supplies the screen inset,
+   and 7px cancels the row/Gold margins. Preserve the header's safe area. */
+.profile-stack{left:7px!important}
