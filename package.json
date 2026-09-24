@@ -38,7 +38,8 @@
     "validate:map-phase1": "node tools/validate-phase-1-map-results.js",
     "validate:map-budgets:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after",
     "validate:map-capacity:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after --capacity",
-    "validate:map-phase2": "node tools/validate-phase-2-map-results.js"
+    "validate:map-phase2": "node tools/validate-phase-2-map-results.js",
+    "audit:request-counts": "node tools/read-stability-request-counts.js"
   },
   "devDependencies": {
     "playwright": "1.63.0"

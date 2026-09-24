@@ -312,7 +312,7 @@ function summarizeNetwork(requests, origin) {
   const externalHosts = [...new Set(external.map(request => {
     try { return new URL(request.url).host || new URL(request.url).protocol; } catch (_error) { return "non-url"; }
   }))].sort();
-  const productionBackendRequests = [...requests.values()].filter(request => /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|firebaseapp\.com)/i.test(request.url));
+  const productionBackendRequests = [...requests.values()].filter(request => /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|cloudfunctions\.net|firebaseapp\.com|\.run\.app)/i.test(request.url));
   return {
     requestCount: requests.size,
     completedRequestCount: completed.length,
@@ -533,6 +533,7 @@ async function runIsolated(serverAddress, chromePath, scenario, profile) {
       client.send("Network.enable"),
       client.send("Performance.enable"),
     ]);
+    await client.send("Network.setBlockedURLs", { urls: ["*://firestore.googleapis.com/*", "*://*.firestore.googleapis.com/*", "*://*.cloudfunctions.net/*", "*://*.firebaseio.com/*", "*://identitytoolkit.googleapis.com/*", "*://securetoken.googleapis.com/*", "*://*.run.app/*"] });
     const browserVersion = await client.send("Browser.getVersion");
     const watchdogMs = profile.cpuRate > 1 ? 180000 : 240000;
     const run = await withWatchdog(runProfileScenario(client, serverAddress, scenario, profile), watchdogMs);

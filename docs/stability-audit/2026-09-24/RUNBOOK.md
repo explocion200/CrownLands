@@ -10,7 +10,7 @@ Keep gameplay fixes on their own current-main branches. Reproduce a problem, dis
 
 ## Reproduce
 
-Use Node 22 and `pnpm`. Install root development tools with `pnpm install --frozen-lockfile` and the existing backend tools with `pnpm --dir functions install --frozen-lockfile`. For compatibility runs install the pinned browser engines using `pnpm exec playwright install chromium firefox webkit`. Installed Chrome and Edge are used when selected; record their actual versions.
+Use Node 22 and `pnpm`. Install root development tools with `pnpm install --frozen-lockfile`. Install backend tools from the `functions` working directory using the pnpm version pinned in its `package.json` (11.9.0 at this audit), rather than passing a different root pnpm version through `--dir`. The safe-update helpers resolve the existing pinned backend executable. For compatibility runs install the pinned browser engines using `pnpm exec playwright install chromium firefox webkit`. Installed Chrome and Edge are used when selected; record their actual versions.
 
 Run from the repository root, with a **new output directory** each time:
 
@@ -19,6 +19,7 @@ pnpm audit:stability --output-directory=release-artifacts/audit-startup
 pnpm audit:compatibility --output-directory=release-artifacts/audit-compatibility
 pnpm audit:soak --output-directory=release-artifacts/audit-soak
 pnpm audit:production --output-directory=release-artifacts/audit-production
+pnpm audit:request-counts --output-directory=release-artifacts/audit-request-counts
 pnpm audit:stability:full --soak-minutes=0 --output-directory=release-artifacts/audit-matrix
 ```
 
@@ -27,6 +28,12 @@ The final command performs three complete map-matrix repetitions and the startup
 To compare an isolated feature worktree with the exact same harness, set `CROWNLANDS_BENCHMARK_ROOT` to that worktree's absolute path and invoke these tools from the harness checkout. Client files, fixture catalogs and the authoritative contract come from the selected worktree; measurement instrumentation stays in the harness checkout. The audit records and checks both identities. Remove the environment override before measuring the baseline again.
 
 Do not edit executable inputs during a final measurement. Reports record source identity and detect changed inputs. Historical tracked reports are immutable. Tool exits distinguish a successful partial startup probe from a complete matrix; read the coverage statuses, not only the exit code. Unavailable browsers and truncated production logs are never healthy results.
+
+Production collectors use the existing authorized Firebase CLI login. The log collector accepts `--days=1` or `--days=1,7`, `--queries=http,errors,timings`, and an optional comma-separated `--revisions` list. A revision filter must match freshly observed deployed revisions; it cannot silently select an old release. HTTP latency queries include POST only. Error queries include known application failures logged at DEFAULT severity; one failed request may produce several records. Raw messages, player payloads and request/response debug bodies are excluded from exports.
+
+When invoking `pnpm` from PowerShell, quote comma-separated options, for example `'--days=1,7'` and `'--queries=http,errors,timings'`. Otherwise the PowerShell shim can turn the comma-separated value into a space-separated array. Invalid revision values are rejected rather than broadening the query.
+
+The separate request-count collector uses Cloud Monitoring hourly aggregates, all methods/triggers, and complete pagination where available. Its windows end at a completed hour with an availability delay. Counts are not latency distributions or a POST-only error rate. A current revision younger than seven days does not acquire seven days of exposure by querying a seven-day window. Late telemetry backfill can change previously read totals. Both collectors return a failing exit status for partial/unavailable coverage and refuse to overwrite earlier evidence.
 
 ## Required evidence
 
@@ -42,6 +49,8 @@ Do not edit executable inputs during a final measurement. Reports record source 
 | Release compatibility | Validate production file inventory, web `/play/`, installed entry and itch directory-relative artifact paths, cold/reload cases, release metadata and worker identity. Authenticated production gameplay and physical installation are separate coverage. |
 
 Static/emulator baseline failures must be investigated even when a targeted tooling PR passes. A passing required PR check means the selected change is validated, not that every audit finding has been fixed. No weakening of a budget or suppression of an unexplained error to obtain green checks.
+
+The final harness also asserts that each counted lifecycle switch returns success and reaches its requested region, including the return to the starting region. Earlier long-session artifacts made through harness `d7e4182` count resolved requests; preserve that limitation instead of relabeling them as verified transitions. Their retained-heap/listener observations remain useful. Matrix artifacts separately record both switch results, so inspect those directly. Synthetic browsers block live backend URLs, including generation-two `run.app` endpoints, and attempted requests still fail isolation checks.
 
 ## Physical-device handoff
 

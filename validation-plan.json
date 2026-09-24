@@ -3,34 +3,85 @@
   "baseCommit": "a01303edf61d350cdd3a9363d308edf2945acbdc",
   "coverage": [
     {
-      "paths": ["package.json", "pnpm-lock.yaml", "tools/run-stability-audit.js", "tools/run-stability-compatibility.js", "tools/run-stability-soak.js", "tools/stability-audit-report.js", "tools/stability-audit-runtime.js", "tools/validate-stability-audit.js"],
-      "tests": ["tools/validate-stability-audit.js", "tools/validate-map-benchmark.js"],
+      "paths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "tools/run-stability-audit.js",
+        "tools/run-stability-compatibility.js",
+        "tools/run-stability-soak.js",
+        "tools/stability-audit-report.js",
+        "tools/stability-audit-runtime.js",
+        "tools/validate-stability-audit.js"
+      ],
+      "tests": [
+        "tools/validate-stability-audit.js",
+        "tools/validate-map-benchmark.js"
+      ],
       "reason": "Audit-only tooling and pinned development browser dependency. Exercise evidence-derived acceptance, missing/failed cases, duplicate/missing matrix profiles, unchanged existing budgets, current listener counts, deployed identity comparisons, and bounded watchdog success/failure. The shared loopback benchmark regression covers fixture isolation. Manual browser receipts cover startup/fault cases, compatibility, long soaks and the repeated matrix; limitations are recorded in the findings report. Root frozen installation and development dependency audit were checked. No production runtime or authority changes."
     },
     {
-      "paths": ["tools/map-benchmark/server.js", "tools/map-benchmark/fixtures.js", "tools/map-benchmark/realm-contract.js", "tools/map-benchmark/injected-runtime.js", "tools/map-benchmark/early-instrumentation.js", "tools/map-benchmark/run-map-benchmark.js", "tools/validate-map-benchmark.js"],
-      "tests": ["tools/validate-map-benchmark.js", "tools/validate-stability-audit.js"],
-      "reason": "Shared benchmark harness caches scenario fixtures without leaking visual overrides, derives recovery listener counts from the current topology, and samples idle frames in the visible/focused browser. Validate deterministic scenarios, recovery capability parity, current listener budget, loopback-only operation, asset base and cache reuse. Browser calibration, startup/recovery and the isolated repeated matrix provide execution evidence. These are measurement fixes, not a game FPS improvement."
+      "paths": [
+        "tools/map-benchmark/server.js",
+        "tools/map-benchmark/fixtures.js",
+        "tools/map-benchmark/realm-contract.js",
+        "tools/map-benchmark/injected-runtime.js",
+        "tools/map-benchmark/early-instrumentation.js",
+        "tools/map-benchmark/run-map-benchmark.js",
+        "tools/validate-map-benchmark.js"
+      ],
+      "tests": [
+        "tools/validate-map-benchmark.js",
+        "tools/validate-stability-audit.js"
+      ],
+      "reason": "Shared benchmark harness caches scenario fixtures without leaking visual overrides, derives recovery listener counts from the current topology, and samples idle frames in the visible/focused browser. Validate deterministic scenarios, recovery capability parity, current listener budget, loopback-only operation, asset base and cache reuse. Browser calibration, startup/recovery and the isolated repeated matrix provide execution evidence. These are measurement fixes, not a game FPS improvement. Count and block attempts to both callable generations and token endpoints. Reject resolved-but-unsuccessful map transitions and incorrect destinations, including return-to-start; pure failure regressions and real browser probes validate these stricter audit assertions. Earlier soak artifacts retain their requested-transition limitation."
     },
     {
-      "paths": ["tools/read-stability-production.js", "tools/stability-log-summary.js", "tools/validate-stability-log-summary.js"],
-      "tests": ["tools/validate-stability-log-summary.js"],
-      "reason": "Read-only diagnostics record current realm/deployment metadata and bounded aggregate log windows. Test structured and text timings, absent evidence, and private field exclusion. Actual receipts explicitly preserve truncation and unavailable queries. The collector performs no writes and exports no raw logs or account payloads."
+      "paths": [
+        "tools/read-stability-production.js",
+        "tools/stability-log-summary.js",
+        "tools/validate-stability-log-summary.js"
+      ],
+      "tests": [
+        "tools/validate-stability-log-summary.js"
+      ],
+      "reason": "Read-only diagnostics record current realm/deployment metadata and bounded aggregate log windows. Test structured and text timings, absent evidence, and private field exclusion. Actual receipts explicitly preserve truncation and unavailable queries. The collector performs no writes and exports no raw logs or account payloads. Include allowlisted DEFAULT-severity operation failures, suppress raw API debug bodies, and allow only freshly observed deployed revision filters. Completed scoped POST/timing/error queries and bounded partial broad queries are retained with distinct scopes."
     },
     {
-      "paths": ["tools/validate-gear-bonus-gameplay.js"],
-      "tests": ["tools/validate-gear-bonus-gameplay.js"],
+      "paths": [
+        "tools/validate-gear-bonus-gameplay.js"
+      ],
+      "tests": [
+        "tools/validate-gear-bonus-gameplay.js"
+      ],
       "reason": "Repair the isolated route-preview sandbox with the existing production target-type helper and verify the request reaches the mock with a city target. Retain route, gear-bonus and authority assertions; no gameplay implementation changes."
     },
     {
-      "paths": ["tools/validate-holding-towers.js"],
-      "tests": ["tools/validate-holding-towers.js"],
+      "paths": [
+        "tools/validate-holding-towers.js"
+      ],
+      "tests": [
+        "tools/validate-holding-towers.js"
+      ],
       "reason": "Update stale Treasury markup assertions to inspect the extracted production Treasury module and its game integration. All five authoritative treasury presentation metrics and existing holding-tower mechanics remain checked."
     },
     {
-      "paths": ["docs/stability-audit/2026-09-24/RUNBOOK.md", "docs/stability-audit/2026-09-24/FINDINGS.md"],
+      "paths": [
+        "docs/stability-audit/2026-09-24/RUNBOOK.md",
+        "docs/stability-audit/2026-09-24/FINDINGS.md",
+        "docs/stability-audit/2026-09-24/COMPARISON.md"
+      ],
       "tests": [],
       "reason": "Document the approved audit workflow, evidence, incomplete coverage, physical-device checklist and separate release authorization. No runtime changes; review receipts against recorded commands and artifacts."
+    },
+    {
+      "paths": [
+        "tools/read-stability-request-counts.js",
+        "tools/validate-stability-request-counts.js"
+      ],
+      "tests": [
+        "tools/validate-stability-request-counts.js"
+      ],
+      "reason": "Read-only Cloud Monitoring aggregate counts. Validate pagination, numeric/status aggregation, current-revision labels, unavailable/partial queries, page caps and exclusion of private fields. Actual one-day/seven-day hourly query pagination completed; no production writes or request payload exports."
     }
   ]
 }

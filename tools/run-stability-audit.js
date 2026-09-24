@@ -190,7 +190,7 @@ function summarizeOperations(operations = []) {
 }
 
 function isProductionBackendUrl(url) {
-  return /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|cloudfunctions\.net|firebaseapp\.com)/i.test(url);
+  return /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|cloudfunctions\.net|firebaseapp\.com|\.run\.app)/i.test(url);
 }
 
 async function runBrowserAudit() {
@@ -213,7 +213,7 @@ async function runBrowserAudit() {
       client.send("Performance.enable"),
       client.send("Log.enable"),
     ]);
-    await client.send("Network.setBlockedURLs", { urls: ["*://*.firestore.googleapis.com/*", "*://firestore.googleapis.com/*", "*://*.cloudfunctions.net/*", "*://*.firebaseio.com/*", "*://identitytoolkit.googleapis.com/*", "*://*.run.app/*"] });
+    await client.send("Network.setBlockedURLs", { urls: ["*://firestore.googleapis.com/*", "*://*.firestore.googleapis.com/*", "*://*.cloudfunctions.net/*", "*://*.firebaseio.com/*", "*://identitytoolkit.googleapis.com/*", "*://securetoken.googleapis.com/*", "*://*.run.app/*"] });
     const browserVersion = await client.send("Browser.getVersion");
     const caseState = { console: [], exceptions: [], requests: new Map() };
     client.on("Runtime.consoleAPICalled", event => {
