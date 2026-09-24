@@ -163,6 +163,8 @@
       startedAt: performance.now(),
       longTaskStartIndex: longTasks.length,
       frameTimestamps: [],
+      visibilityAtStart: document.visibilityState,
+      focusedAtStart: document.hasFocus(),
     };
     return activeSample.startedAt;
   }
@@ -180,6 +182,9 @@
       name: activeSample.name,
       durationMs,
       frameCount: activeSample.frameTimestamps.length,
+      visibilityAtStart: activeSample.visibilityAtStart,
+      visibilityAtEnd: document.visibilityState,
+      focusedAtStart: activeSample.focusedAtStart,
       fps: durationMs > 0 ? activeSample.frameTimestamps.length * 1000 / durationMs : null,
       medianFrameTimeMs: percentile(frameTimes, 0.5),
       p95FrameTimeMs: percentile(frameTimes, 0.95),

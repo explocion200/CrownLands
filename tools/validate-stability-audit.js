@@ -1,117 +1,98 @@
 "use strict";
-
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
+const { CASE_IDS, buildAcceptance, buildFindings, markdownReport } = require("./stability-audit-report.js");
 
-const { loadAuthoritativeRealmContract } = require("./map-benchmark/realm-contract.js");
-
-const ROOT_DIR = path.resolve(__dirname, "..");
-const BASELINE_PATH = path.join(ROOT_DIR, "benchmark-results", "stability", "baseline.json");
-const REPORT_PATH = path.join(ROOT_DIR, "docs", "stability-audit", "STABILITY_LOGIN_PERFORMANCE_AUDIT.md");
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-function validate() {
-  assert.ok(fs.existsSync(BASELINE_PATH), "Tracked stability baseline is missing.");
-  assert.ok(fs.existsSync(REPORT_PATH), "Stability audit report is missing.");
-  const baseline = readJson(BASELINE_PATH);
-  const report = fs.readFileSync(REPORT_PATH, "utf8");
-  const authoritativeRealm = loadAuthoritativeRealmContract();
-
-  assert.equal(baseline.schemaVersion, 1, "Unexpected stability baseline schema.");
-  assert.equal(baseline.auditProfile.full, true, "Tracked baseline must use the full audit profile.");
-  assert.ok(baseline.auditProfile.soakMinutes >= 60, "Tracked baseline must include at least a 60-minute soak.");
-  assert.ok(baseline.auditProfile.mapSwitches >= 50, "Tracked baseline must include at least 50 map switches.");
-  assert.ok(baseline.auditProfile.foregroundCycles >= 20, "Tracked baseline must include at least 20 foreground recovery cycles.");
-  assert.ok(baseline.auditProfile.reconnectCycles >= 10, "Tracked baseline must include at least 10 reconnect cycles.");
-
-  assert.equal(baseline.repository.releaseId, authoritativeRealm.releaseId, "Baseline release identity drifted.");
-  assert.equal(baseline.repository.apiContractHash, authoritativeRealm.contractHash, "Baseline API contract drifted.");
-  assert.equal(baseline.repository.skillPointSystemVersion, authoritativeRealm.skillPointSystemVersion, "Baseline progression capability drifted.");
-  assert.ok(Object.values(baseline.repository.parity).every(Boolean), "Repository configuration, cache, rules, or index parity failed.");
-
-  const expectedCaseIds = [
-    "cold-desktop",
-    "warm-desktop",
-    "slow-realm-call",
-    "delayed-city-snapshot",
-    "rejected-realm-call",
-    "lost-realm-response",
-    "mobile-throttled-4x",
-    "session-replacement",
-  ];
-  assert.deepEqual(baseline.localBrowser.cases.map(testCase => testCase.id), expectedCaseIds, "Stability browser case matrix drifted.");
-  for (const testCase of baseline.localBrowser.cases) {
-    assert.equal(testCase.uncaughtExceptions.length, 0, `${testCase.id} recorded an uncaught exception.`);
-    assert.equal(testCase.network.productionBackendRequestCount, 0, `${testCase.id} contacted a production backend.`);
-    if (testCase.expected === "ready") {
-      assert.equal(testCase.outcome.ready, true, `${testCase.id} did not reach interactive readiness.`);
-      assert.equal(testCase.runtimeErrors.length, 0, `${testCase.id} recorded an unhandled runtime error.`);
-      assert.equal(testCase.performance.listeners.duplicates.length, 0, `${testCase.id} recorded duplicate listener keys.`);
-    } else {
-      assert.equal(testCase.passed, true, `${testCase.id} did not fail in the expected bounded, actionable way.`);
-      assert.ok(testCase.outcome.elapsedMs < 15000, `${testCase.id} exceeded the bounded failure window.`);
-    }
-  }
-
-  assert.equal(baseline.mapMatrix.status, "complete", "Full A-E matrix was not completed.");
-  assert.equal(baseline.mapMatrix.repetitions.length, 3, "A-E matrix must run three times.");
-  const nominalBudgets = {
-    A: { desktop: [60, 75, 45], mobile: [55, 70, 35] },
-    B: { desktop: [30, 30, 20], mobile: [24, 24, 15] },
-    C: { desktop: [20, 20, 15], mobile: [15, 15, 10] },
-    D: { desktop: [90, 90, 1], mobile: [90, 90, 1] },
-    E: { desktop: [18, 28, 6], mobile: [9, 16, 2] },
+function fixture() {
+  return {
+    source: { commit: "audit-commit", branch: "codex/test", inputDigest: "test", inputsUnchanged: true },
+    generatedAt: "2026-09-24T00:00:00Z", auditProfile: { full: false },
+    repository: { worldTopology: "core-expansion-v1", releaseId: "release", apiContractHash: "contract",
+      staticFallback: { worldId: "legacy-fallback" }, parity: { contracts: true } },
+    localBrowser: { cases: CASE_IDS.map(id => ({
+      id, expected: /rejected|lost/.test(id) ? "failed" : "ready", passed: true,
+      uncaughtExceptions: [], runtimeErrors: [], network: { productionBackendRequestCount: 0 },
+      performance: { listeners: { active: 18, duplicates: [] } },
+      environment: { width: 1440, height: 900, cpuRate: 1 }, outcome: { elapsedMs: 100 },
+    })) },
+    mapMatrix: { repetitions: [] }, productionAnonymous: [],
   };
-  for (const repetition of baseline.mapMatrix.repetitions) {
-    assert.equal(repetition.runCount + repetition.failures.length, 15, `Matrix repetition ${repetition.repetition} did not attempt all 15 scenario/profile combinations.`);
-    for (const run of repetition.runs) {
-      assert.equal(run.duplicateListenerKeys, 0, `${run.scenario}/${run.profile} recorded duplicate listener keys.`);
-      assert.equal(run.productionBackendRequests, 0, `${run.scenario}/${run.profile} contacted a production backend.`);
-      const throttled = run.profile === "mobile-landscape-4x";
-      const profileKind = run.profile === "desktop" ? "desktop" : "mobile";
-      const [idleMinimum, panMinimum, zoomMinimum] = throttled
-        ? run.scenario === "D" ? [10, 9, 1] : [1, 1, 1]
-        : nominalBudgets[run.scenario][profileKind];
-      assert.ok(run.idleFps >= idleMinimum, `${run.scenario}/${run.profile} idle FPS fell below ${idleMinimum}.`);
-      assert.ok(run.panFps >= panMinimum, `${run.scenario}/${run.profile} pan FPS fell below ${panMinimum}.`);
-      assert.ok(run.zoomFps >= zoomMinimum, `${run.scenario}/${run.profile} zoom FPS fell below ${zoomMinimum}.`);
-      assert.ok(run.heapUsedBytes <= (throttled ? 24 : 16) * 1024 * 1024, `${run.scenario}/${run.profile} exceeded its JS heap budget.`);
-    }
-  }
-
-  assert.equal(baseline.productionAuthenticated.status, "blocked", "Authenticated production status must remain blocked without the approved QA account.");
-  assert.equal(baseline.itchAuthenticated.status, "blocked", "Authenticated itch.io status must not be inferred from repository checks.");
-  assert.equal(baseline.acceptance.checks.anonymousProductionResourcesReachable, true, "Public production resources were not all reachable.");
-  assert.equal(baseline.acceptance.checks.anonymousProductionIdentityMatches, true, "Public production build, cache, release, or contract identity drifted.");
-  const findingIds = new Set(baseline.findings.map(finding => finding.id));
-  ["STAB-001", "STAB-002", "STAB-003", "STAB-004", "STAB-005", "STAB-006"].forEach(id => assert.ok(findingIds.has(id), `Missing ${id} finding.`));
-  assert.equal(baseline.findings.find(finding => finding.id === "STAB-003")?.classification, "confirmed", "Listener-budget drift must remain a confirmed finding while base sessions settle above 17.");
-  assert.equal(baseline.findings.find(finding => finding.id === "STAB-004")?.classification, "confirmed", "Heartbeat lifecycle recovery must remain a confirmed finding.");
-  assert.equal(baseline.findings.find(finding => finding.id === "STAB-004")?.status, "fixed", "Heartbeat lifecycle recovery must remain marked fixed.");
-
-  [
-    "# Crown Lands Stability, Login, and Performance Audit",
-    "## Decision summary",
-    "## Deterministic browser matrix",
-    "## Acceptance scorecard",
-    "## Findings",
-    "STAB-003",
-    "STAB-004",
-    "lifecycle generation",
-    "17-listener",
-    "benchmark-results/stability/baseline.json",
-  ].forEach(anchor => assert.ok(report.includes(anchor), `Audit report is missing: ${anchor}`));
-
-  const serialized = JSON.stringify(baseline);
-  assert.ok(!/(?:apiKey|accessToken|refreshToken|idToken|password)\s*["']?\s*:/i.test(serialized), "Stability baseline may contain a credential field.");
-  assert.ok(!/AIza[0-9A-Za-z_-]{20,}/.test(serialized), "Stability baseline contains a Firebase API key pattern.");
-  assert.ok(!/file:\/\//i.test(serialized), "Stability baseline contains a local file URI.");
-
-  console.log("Stability audit validation passed: full profile, contract parity, fault matrix, safety, findings, and report anchors verified.");
 }
 
-validate();
+function evaluate(report) {
+  report.acceptance = buildAcceptance(report);
+  report.findings = buildFindings(report);
+  return report;
+}
+
+const quick = evaluate(fixture());
+assert.equal(quick.acceptance.status, "partial");
+assert.equal(quick.acceptance.exitCode, 0);
+assert.equal(quick.acceptance.checks.listeners.status, "passed");
+assert.equal(quick.acceptance.checks.matrixCompletion.status, "skipped");
+assert.equal(quick.acceptance.checks.authenticatedProduction.status, "unverified");
+assert.equal(quick.findings.length, 0, "Historical defects must not become new findings.");
+assert.ok(!markdownReport(quick).includes("STAB-003"));
+
+for (const [name, mutate] of [
+  ["missing cases", r => { r.localBrowser.cases = []; }],
+  ["failed case", r => { r.localBrowser.cases[0].passed = false; }],
+  ["extra listener", r => { r.localBrowser.cases[0].performance.listeners.active = 19; }],
+  ["duplicate listener", r => { r.localBrowser.cases[0].performance.listeners.duplicates = ["cities"]; }],
+  ["production request", r => { r.localBrowser.cases[0].network.productionBackendRequestCount = 1; }],
+  ["uncaught exception", r => { r.localBrowser.cases[0].uncaughtExceptions = ["failure"]; }],
+  ["changed inputs", r => { r.source.inputsUnchanged = false; }],
+  ["missing full matrix", r => { r.auditProfile.full = true; }],
+]) {
+  const report = fixture(); mutate(report); evaluate(report);
+  assert.equal(report.acceptance.exitCode, 1, name);
+  assert.ok(report.findings.length > 0, name);
+  assert.ok(markdownReport(report).includes("**failed**"), name);
+}
+
+const publicReport = fixture();
+publicReport.productionAnonymous = [
+  { id: "game-entry", ok: true, finalUrl: "https://playcrownlands.com/play/", detail: { buildId: "deployed-commit" } },
+  { id: "service-worker", ok: true, detail: { cacheVersion: "deployed-commit" } },
+  { id: "release-manifest", ok: true, detail: { buildId: "deployed-commit", releaseId: "release" } },
+  { id: "release-config", ok: true, detail: { releaseId: "release", apiContractHash: "contract" } },
+];
+assert.equal(evaluate(publicReport).acceptance.checks.productionIdentity.status, "passed", "Unreleased audit commits need not equal production.");
+publicReport.productionAnonymous[1].detail.cacheVersion = "stale-worker";
+assert.equal(evaluate(publicReport).acceptance.exitCode, 1, "Mixed deployed assets must fail.");
+
+const full = fixture();
+full.auditProfile.full = true;
+full.mapMatrix.repetitions = [1, 2, 3].map(repetition => ({ repetition, runCount: 15, failures: [],
+  budgets: { regression: { passed: true, failures: [] }, capacity: { passed: true, failures: [] } },
+  runs: "ABCDE".split("").flatMap(id => ["desktop", "mobile-landscape", "mobile-landscape-4x"].map(profile => ({
+    key: `${id}/${profile}`, duplicateListenerKeys: 0, productionBackendRequests: 0, uncaughtErrors: 0,
+  }))),
+}));
+assert.equal(evaluate(full).acceptance.status, "passed-with-unverified-coverage");
+full.mapMatrix.repetitions[0].failures.push({ reason: "watchdog" });
+assert.equal(evaluate(full).acceptance.exitCode, 1, "Timed-out profiles are incomplete.");
+full.mapMatrix.repetitions[0].failures = [];
+full.mapMatrix.repetitions[0].budgets.regression.passed = false;
+assert.equal(evaluate(full).acceptance.checks.matrixBudgets.status, "failed");
+full.mapMatrix.repetitions[0].budgets.regression.passed = true;
+full.mapMatrix.repetitions[0].runs[0].key = full.mapMatrix.repetitions[0].runs[1].key;
+assert.equal(evaluate(full).acceptance.checks.matrixCompletion.status, "failed", "Duplicate results cannot replace missing profiles.");
+console.log("Stability audit validation passed: current budgets, missing coverage, stale assets, incomplete matrices, and failure exit codes.");
+
+const { bounded, isProductionBackendUrl } = require("./stability-audit-runtime.js");
+for (const url of ["https://region-project.cloudfunctions.net/call", "https://operation-abc-uc.a.run.app/", "https://firestore.googleapis.com/v1/", "https://identitytoolkit.googleapis.com/v1/accounts", "https://securetoken.googleapis.com/v1/token", "https://project.firebaseio.com/data.json"]) {
+  assert.equal(isProductionBackendUrl(url), true, "Browser recovery and soak probes must block token and gameplay backends.");
+}
+for (const url of ["http://127.0.0.1:9000/game.js", "https://fonts.googleapis.com/css", "data:image/png;base64,test"]) {
+  assert.equal(isProductionBackendUrl(url), false, "Fixture assets and fonts must remain available.");
+}
+for (const file of ["run-stability-compatibility.js", "run-stability-soak.js"]) {
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, file), "utf8");
+  assert(source.includes("isProductionBackendUrl(route.request().url())"), `${file} must use the tested network guard.`);
+}
+(async () => {
+  assert.equal(await bounded(Promise.resolve("done"), 100, "test"), "done");
+  await assert.rejects(bounded(new Promise(() => {}), 5, "stalled browser"), /stalled browser.*watchdog/);
+  await assert.rejects(bounded(Promise.reject(new Error("original failure")), 100, "test"), /original failure/);
+  console.log("Audit watchdog validation passed: success, stalled work, and original failures.");
+})().catch(error => { console.error(error); process.exitCode = 1; });

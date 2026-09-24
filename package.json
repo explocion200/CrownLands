@@ -12,6 +12,9 @@
     "test:change-risk": "node tools/test-change-risk-classifier.js",
     "audit:stability": "node tools/run-stability-audit.js",
     "audit:stability:full": "node tools/run-stability-audit.js --full",
+    "audit:compatibility": "node tools/run-stability-compatibility.js",
+    "audit:soak": "node tools/run-stability-soak.js",
+    "audit:production": "node tools/read-stability-production.js",
     "validate:stability-audit": "node tools/validate-stability-audit.js",
     "validate:login-stability-matrix": "node tools/validate-login-stability-matrix.js",
     "setup:hooks": "node tools/install-git-hooks.js",
@@ -35,6 +38,10 @@
     "validate:map-phase1": "node tools/validate-phase-1-map-results.js",
     "validate:map-budgets:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after",
     "validate:map-capacity:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after --capacity",
-    "validate:map-phase2": "node tools/validate-phase-2-map-results.js"
+    "validate:map-phase2": "node tools/validate-phase-2-map-results.js",
+    "audit:request-counts": "node tools/read-stability-request-counts.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }

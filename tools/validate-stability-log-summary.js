@@ -1,0 +1,22 @@
+"use strict";
+const assert = require("node:assert/strict");
+const { operationTiming } = require("./stability-log-summary.js");
+const expected = { requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, transaction: 120 } };
+assert.deepEqual(operationTiming({jsonPayload: {...expected, privateField: "do not export"}}),expected);
+const text="crownlands_operation { operation: 'sendArmyOrder', privateField: 'do not export', requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, transaction: 120 } }";
+assert.deepEqual(operationTiming({textPayload:text}),expected);
+assert.deepEqual(operationTiming({jsonPayload:{message:text}}),expected);
+assert.equal(operationTiming({textPayload:"unrelated requestDurationMs: 12"}),null);
+assert.equal(operationTiming({textPayload:"crownlands_operation { outcome: 'ok' }"}),null);
+assert.equal(JSON.stringify(operationTiming({textPayload:text})).includes("privateField"),false);
+console.log("Stability log parsing passed: structured/text timings, missing evidence, and allowlisted fields.");
+
+const { operationOutcome, APPLICATION_ERROR_CLAUSE } = require("./stability-log-summary.js");
+assert.deepEqual(operationOutcome({jsonPayload:{event:"crownlands_operation",outcome:"error",code:"unavailable",privateField:"secret"}}),{outcome:"error",code:"unavailable"});
+assert.deepEqual(operationOutcome({textPayload:"crownlands_operation { outcome: 'error', code: 'unavailable', privateField: 'secret' }",severity:"DEFAULT"}),{outcome:"error",code:"unavailable"});
+assert.deepEqual(operationOutcome({jsonPayload:{message:"crownlands_operation { outcome: 'ok' }"}}),{outcome:"ok",code:"ok"});
+assert.deepEqual(operationOutcome({jsonPayload:{event:"crownlands_operation",outcome:"error",code:"private-custom-code"}}),{outcome:"error",code:"unknown"});
+assert.equal(operationOutcome({textPayload:"unrelated outcome: 'error'"}),null);
+assert(APPLICATION_ERROR_CLAUSE.includes('severity>=ERROR') && APPLICATION_ERROR_CLAUSE.includes('Daily mission event processing failed'));
+assert(APPLICATION_ERROR_CLAUSE.includes("outcome: 'error'"));
+console.log("DEFAULT-severity operation failures retain allowlisted outcomes/codes without private fields.");

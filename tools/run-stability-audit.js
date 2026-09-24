@@ -6,20 +6,24 @@ const fsp = require("node:fs/promises");
 const net = require("node:net");
 const os = require("node:os");
 const path = require("node:path");
+const crypto = require("node:crypto");
+const { buildAcceptance, buildFindings, markdownReport, summarizeMatrixReport } = require("./stability-audit-report.js");
+const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
 
 const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client.js");
 const { loadAuthoritativeRealmContract } = require("./map-benchmark/realm-contract.js");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
-const ROOT_DIR = path.resolve(__dirname, "..");
-const OUTPUT_DIR = path.join(ROOT_DIR, "benchmark-results", "stability");
-const REPORT_PATH = path.join(ROOT_DIR, "docs", "stability-audit", "STABILITY_LOGIN_PERFORMANCE_AUDIT.md");
-const BASELINE_PATH = path.join(OUTPUT_DIR, "baseline.json");
-const LATEST_PATH = path.join(OUTPUT_DIR, "latest.json");
+const HARNESS_ROOT = path.resolve(__dirname, "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : HARNESS_ROOT;
 const args = new Set(process.argv.slice(2));
 const FULL = args.has("--full");
 const NO_PRODUCTION = args.has("--no-production");
-const REFRESH_PUBLIC_ONLY = args.has("--refresh-public-only");
+const outputArgument = [...args].find(value => value.startsWith("--output-directory="));
+const OUTPUT_DIR = path.resolve(ROOT_DIR, outputArgument?.split("=").slice(1).join("=")
+  || `release-artifacts/stability-audit/${new Date().toISOString().replace(/[:.]/g, "-")}`);
+if (args.has("--refresh-public-only")) throw new Error("Historical baselines are immutable. Run a new audit with a unique output directory.");
 
 function readNumberArgument(name, fallback) {
   const prefix = `--${name}=`;
@@ -70,6 +74,9 @@ function launchChrome(executable, debugPort, profilePath) {
     "--no-first-run",
     "--no-default-browser-check",
     "--disable-background-networking",
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+    "--disable-backgrounding-occluded-windows",
     "--disable-breakpad",
     "--disable-component-update",
     "--disable-default-apps",
@@ -140,19 +147,20 @@ function repositoryIdentity() {
   const swFirebaseToken = firstMatch(serviceWorkerSource, /firebaseClient\.js\?v=([^"']+)/, "service-worker Firebase token");
   return {
     releaseId: releaseConfig.releaseId,
-    resetGeneration: releaseConfig.resetGeneration,
-    worldId: releaseConfig.worldId,
+    worldTopology: releaseConfig.worldTopology,
+    staticFallback: { resetGeneration: releaseConfig.resetGeneration, worldId: releaseConfig.worldId },
     apiContractHash: releaseConfig.apiContractHash,
     buildId,
     cacheVersion,
     skillPointSystemVersion: authoritativeRealm.skillPointSystemVersion,
     realmSourceHash: authoritativeRealm.sourceHash,
+    sourceTemplate: { buildId, cacheVersion, buildMatchesCache: buildId === cacheVersion,
+      note: "Source tokens are rewritten by the production build. Validate the built artifact and deployed manifest separately." },
     parity: {
       browserReleaseMatchesServer: browserReleaseId === releaseConfig.releaseId,
       browserContractMatchesServer: browserContractHash === releaseConfig.apiContractHash,
       gameAssetMatchesServiceWorker: gameAssetToken === swGameToken,
       firebaseAssetMatchesServiceWorker: firebaseAssetToken === swFirebaseToken,
-      buildMatchesCache: buildId === cacheVersion,
       firestoreRulesPresent: fs.existsSync(path.join(ROOT_DIR, "firestore.rules")),
       firestoreIndexesPresent: fs.existsSync(path.join(ROOT_DIR, "firestore.indexes.json")),
     },
@@ -182,7 +190,7 @@ function summarizeOperations(operations = []) {
 }
 
 function isProductionBackendUrl(url) {
-  return /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|cloudfunctions\.net|firebaseapp\.com)/i.test(url);
+  return /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|cloudfunctions\.net|firebaseapp\.com|\.run\.app)/i.test(url);
 }
 
 async function runBrowserAudit() {
@@ -205,6 +213,7 @@ async function runBrowserAudit() {
       client.send("Performance.enable"),
       client.send("Log.enable"),
     ]);
+    await client.send("Network.setBlockedURLs", { urls: ["*://firestore.googleapis.com/*", "*://*.firestore.googleapis.com/*", "*://*.cloudfunctions.net/*", "*://*.firebaseio.com/*", "*://identitytoolkit.googleapis.com/*", "*://securetoken.googleapis.com/*", "*://*.run.app/*"] });
     const browserVersion = await client.send("Browser.getVersion");
     const caseState = { console: [], exceptions: [], requests: new Map() };
     client.on("Runtime.consoleAPICalled", event => {
@@ -227,7 +236,7 @@ async function runBrowserAudit() {
       if (request) Object.assign(request, { failed: true, error: event.errorText });
     });
 
-    async function runCase({ id, query = "", expected = "ready", width = 1440, height = 900, mobile = false, cpuRate = 1, network = "normal", actions = null, metricsAfterActions = true }) {
+    async function runCaseUnchecked({ id, query = "", expected = "ready", width = 1440, height = 900, mobile = false, cpuRate = 1, network = "normal", actions = null, metricsAfterActions = true }) {
       caseState.console.length = 0;
       caseState.exceptions.length = 0;
       caseState.requests.clear();
@@ -242,7 +251,10 @@ async function runBrowserAudit() {
         connectionType: throttled ? "cellular3g" : "none",
       });
       const url = `${address.url}/__benchmark__/?scenario=A${query ? `&${query}` : ""}`;
+      console.log(`Running browser case ${id}...`);
       await client.send("Page.navigate", { url });
+      await client.send("Page.bringToFront");
+      await client.send("Emulation.setFocusEmulationEnabled", { enabled: true });
       const timeoutMs = cpuRate > 1 || throttled ? 180000 : 60000;
       const outcome = await waitForOutcome(client, timeoutMs);
       let actionResults = null;
@@ -304,6 +316,27 @@ async function runBrowserAudit() {
           && result.outcome.elapsedMs < 15000;
       }
       return result;
+    }
+
+    let stoppedBrowser = false;
+    async function runCase(options) {
+      try {
+        if (stoppedBrowser) throw new Error("Not run: browser stopped after a watchdog failure.");
+        return await bounded(runCaseUnchecked(options), 300000 + (options.id === "cold-desktop" ? SOAK_MINUTES * 60000 : 0), `Browser case ${options.id}`);
+      }
+      catch (error) {
+        if (/watchdog/.test(error.message) && !stoppedBrowser) {
+          stoppedBrowser = true;
+          client.rejectPending(error);
+          client.close();
+        }
+        return { id: options.id, expected: options.expected || "ready", passed: false,
+          environment: { width: options.width || 1440, height: options.height || 900, cpuRate: options.cpuRate || 1 },
+          outcome: { ready: false, failed: true, elapsedMs: null, error: String(error.message).slice(0, 1000) },
+          uncaughtExceptions: [...caseState.exceptions], runtimeErrors: [], performance: null,
+          network: { productionBackendRequestCount: [...caseState.requests.values()].filter(item => isProductionBackendUrl(item.url)).length },
+        };
+      }
     }
 
     const cases = [];
@@ -420,242 +453,30 @@ function execFile(command, commandArgs, options = {}) {
   });
 }
 
-function summarizeMatrixReport(repetition, matrixReport) {
-  return {
-    repetition,
-    runCount: matrixReport.runs?.length || 0,
-    failures: matrixReport.failures || [],
-    environment: matrixReport.environment ? {
-      platform: matrixReport.environment.platform,
-      architecture: matrixReport.environment.architecture,
-      node: matrixReport.environment.node,
-      browser: matrixReport.environment.browser,
-    } : null,
-    runs: (matrixReport.runs || []).map(run => ({
-      scenario: run.scenario?.id,
-      profile: run.profile?.id,
-      cityCount: run.scenario?.cityCount,
-      marchCount: run.scenario?.marchCount,
-      idleFps: Number(run.samples?.idle?.frame?.fps ?? 0),
-      panFps: Number(run.samples?.pan?.frame?.fps ?? 0),
-      zoomFps: Number(run.samples?.zoom?.frame?.fps ?? 0),
-      heapUsedBytes: Number(run.heap?.usedSize ?? 0),
-      activeListeners: Number(run.runtime?.realtime?.listeners?.active ?? 0),
-      duplicateListenerKeys: run.runtime?.realtime?.listeners?.duplicates?.length || 0,
-      productionBackendRequests: Number(run.network?.productionBackendRequestCount ?? 0),
-    })),
-  };
-}
-
 async function runMapMatrixRepetitions() {
   if (!FULL) return { status: "not-run", reason: "Use --full to run the A-E matrix three times.", repetitions: [] };
-  const outputDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "crownlands-stability-matrix-"));
+  const outputDirectory = path.join(OUTPUT_DIR, "matrix");
+  await fsp.mkdir(outputDirectory, { recursive: true });
   const repetitions = [];
-  try {
-    for (let repetition = 1; repetition <= 3; repetition += 1) {
+  for (let repetition = 1; repetition <= 3; repetition += 1) {
+    try {
       const basename = `matrix-r${repetition}`;
       console.log(`Running A-E map capacity matrix repetition ${repetition} of 3...`);
       await execFile(process.execPath, [
-        path.join(ROOT_DIR, "tools", "map-benchmark", "run-map-benchmark.js"),
-        "--phase-2-after",
+        path.join(__dirname, "map-benchmark", "run-map-benchmark.js"),
         "--fresh",
         `--output-directory=${outputDirectory}`,
         `--output-basename=${basename}`,
       ]);
       const matrixReport = JSON.parse(await fsp.readFile(path.join(outputDirectory, `${basename}.json`), "utf8"));
       repetitions.push(summarizeMatrixReport(repetition, matrixReport));
+    } catch (error) {
+      repetitions.push({ repetition, runCount: 0, runs: [], failures: [{ reason: error.message }],
+        budgets: { regression: { passed: false, failures: [error.message] }, capacity: { passed: false, failures: [error.message] } } });
     }
-  } finally {
-    await fsp.rm(outputDirectory, { recursive: true, force: true }).catch(() => {});
+    await fsp.writeFile(path.join(outputDirectory, "repetitions.json"), JSON.stringify(repetitions, null, 2));
   }
-  return { status: "complete", repetitions };
-}
-
-function buildFindings(report) {
-  const localFailures = report.localBrowser.cases.filter(testCase => !testCase.passed);
-  const listenerDrift = report.localBrowser.cases.some(testCase => testCase.expected === "ready"
-    && testCase.id !== "session-replacement"
-    && testCase.performance?.listeners?.active !== 17);
-  return [
-    {
-      id: "STAB-001", severity: "P3", classification: "tooling-only", status: "fixed",
-      title: "Benchmark realm capabilities drifted behind the authoritative server contract",
-      affectedEnvironment: "Local benchmark fixture",
-      reproduction: "Run the quick map benchmark before this audit branch; startup rejects skill-point capability parity.",
-      evidence: "The fixture previously hand-authored getRealmInfo and omitted the live skillPointSystemVersion capability.",
-      likelyOwner: "Benchmark tooling",
-      recommendation: "Keep release identity, contract hashes, realm capabilities, and progression versions derived from authoritative configuration.",
-    },
-    {
-      id: "STAB-002", severity: "P3", classification: "tooling-only", status: "fixed",
-      title: "Missing optional pickup query silently switched ordinary benchmarks to the default region",
-      affectedEnvironment: "Local benchmark fixture",
-      reproduction: "Launch a benchmark without pickupSoakRegion and compare the active region with the scenario's primary region.",
-      evidence: "normalizeRegionId(null) selected the default map; the runtime now distinguishes a missing parameter from an explicit region.",
-      likelyOwner: "Benchmark tooling",
-      recommendation: "Retain the missing-query regression assertion in validate-map-benchmark.",
-    },
-    {
-      id: "STAB-003", severity: "P2", classification: "confirmed", status: "open",
-      title: "Always-on global chat raises base authenticated gameplay from 17 to 18 listeners",
-      affectedEnvironment: "Canonical web and compatible itch.io client",
-      reproduction: "Start an authenticated-equivalent session without opening a social panel and inspect active logical subscriptions.",
-      evidence: "Every successful isolated browser case settles at 18 listeners: the established 17 gameplay streams plus chat.global. Region switches and recovery do not duplicate it.",
-      likelyOwner: "Chat and realtime lifecycle",
-      recommendation: "Decide whether global chat must remain always-on; otherwise make it view-scoped on a separate synchronized branch and restore the exact 17-listener base budget.",
-    },
-    {
-      id: "STAB-004", severity: "P2", classification: "confirmed", status: "fixed",
-      title: "Stopped heartbeat lifecycles could apply late responses",
-      affectedEnvironment: "Web and itch.io session heartbeat",
-      reproduction: "Start a heartbeat, stop and restart the membership watcher before its response settles, then resolve the older request after the replacement begins.",
-      evidence: "The focused regression reproduced a stale membership application and an older finalizer clearing the replacement request lock. The 15-second timeout and lifecycle generation guard now ignore stopped attempts while preserving the current lock.",
-      likelyOwner: "Login and session lifecycle",
-      recommendation: "Retain the timeout and lifecycle-generation regression coverage and verify interrupted-connection recovery during controlled release QA.",
-    },
-    {
-      id: "STAB-005", severity: "P3", classification: "telemetry-required", status: "blocked",
-      title: "Authenticated production login and second-tab recovery are not verified by repository tests",
-      affectedEnvironment: "playcrownlands.com/play/ production",
-      reproduction: "Use the approved pre-seeded QA account for cold login, warm login, refresh, second-tab replacement, interrupted connection, and logout.",
-      evidence: "No QA account identity or authorization was supplied to this audit run, so no authenticated production writes were attempted.",
-      likelyOwner: "Release QA",
-      recommendation: "Complete the controlled smoke test before treating production login as verified.",
-    },
-    {
-      id: "STAB-006", severity: "P3", classification: "telemetry-required", status: "open",
-      title: "Physical device and itch.io authenticated behavior still require release QA",
-      affectedEnvironment: "Physical mobile devices and published itch.io artifact",
-      reproduction: "Run the documented browser/device matrix and inspect the exact published itch.io build.",
-      evidence: "This audit uses desktop Chromium emulation and repository artifact checks; it does not control a published itch.io authenticated session.",
-      likelyOwner: "Release QA",
-      recommendation: "Verify relative assets, login entry, cache behavior, and backend compatibility in the published package.",
-    },
-    ...(localFailures.length && !listenerDrift ? [{
-      id: "STAB-007", severity: "P1", classification: "confirmed", status: "open",
-      title: "One or more deterministic stability cases failed",
-      affectedEnvironment: "Local isolated browser fixture",
-      reproduction: `Run pnpm audit:stability; failing cases: ${localFailures.map(testCase => testCase.id).join(", ")}.`,
-      evidence: "See benchmark-results/stability/baseline.json for exact browser, network, listener, timer, and recovery evidence.",
-      likelyOwner: "Runtime lifecycle",
-      recommendation: "Do not accept the audit baseline until the failed cases are understood and repaired on focused branches.",
-    }] : []),
-  ];
-}
-
-function buildAcceptance(report) {
-  const successfulCases = report.localBrowser.cases.filter(testCase => testCase.expected === "ready");
-  const allCases = report.localBrowser.cases;
-  const checks = {
-    allDeterministicCasesPassed: allCases.every(testCase => testCase.passed),
-    zeroUncaughtErrors: successfulCases.every(testCase => testCase.uncaughtExceptions.length === 0 && testCase.runtimeErrors.length === 0),
-    zeroDuplicateListenerKeys: successfulCases.every(testCase => (testCase.performance?.listeners?.duplicates?.length || 0) === 0),
-    listenerBaselineRestored: successfulCases.every(testCase => testCase.id === "session-replacement" || testCase.performance?.listeners?.active === 17),
-    zeroProductionBackendRequestsFromFixtures: allCases.every(testCase => testCase.network.productionBackendRequestCount === 0),
-    configurationParity: Object.values(report.repository.parity).every(Boolean),
-    mapMatrixComplete: report.mapMatrix.status === "complete"
-      && report.mapMatrix.repetitions.length === 3
-      && report.mapMatrix.repetitions.every(repetition => repetition.runCount + repetition.failures.length === 15),
-    mapMatrixSafety: report.mapMatrix.status === "complete"
-      && report.mapMatrix.repetitions.every(repetition => repetition.runs.every(run => run.duplicateListenerKeys === 0 && run.productionBackendRequests === 0)),
-    anonymousProductionResourcesReachable: report.productionAnonymous.length > 0 && report.productionAnonymous.every(check => check.ok),
-    anonymousProductionIdentityMatches: (() => {
-      const checks = Object.fromEntries(report.productionAnonymous.map(check => [check.id, check]));
-      return checks["canonical-play-redirect"]?.finalUrl === "https://playcrownlands.com/play/"
-        && checks["game-entry"]?.detail?.buildId === report.source.commit
-        && checks["service-worker"]?.detail?.cacheVersion === report.source.commit
-        && checks["release-config"]?.detail?.releaseId === report.repository.releaseId
-        && checks["release-config"]?.detail?.apiContractHash === report.repository.apiContractHash
-        && checks["release-manifest"]?.detail?.buildId === report.source.commit
-        && checks["release-manifest"]?.detail?.releaseId === report.repository.releaseId;
-    })(),
-    authenticatedProductionVerified: false,
-    itchAuthenticatedVerified: false,
-  };
-  return { checks, passedLocalAcceptance: Object.entries(checks).filter(([name]) => !name.includes("Production") && !name.includes("itch")).every(([, value]) => value) };
-}
-
-function markdownReport(report) {
-  const coldCase = report.localBrowser.cases.find(testCase => testCase.id === "cold-desktop");
-  const lifecycle = coldCase?.recovery?.lifecycle || {};
-  const localCases = report.localBrowser.cases.map(testCase =>
-    `| ${testCase.id} | ${testCase.environment.width}×${testCase.environment.height}, ${testCase.environment.network}, ${testCase.environment.cpuRate}× CPU | ${testCase.expected} | ${testCase.passed ? "PASS" : "FAIL"} | ${testCase.outcome.elapsedMs} ms |`
-  ).join("\n");
-  const findings = report.findings.map(finding => `### ${finding.id} — ${finding.title}\n\n- **Severity / class:** ${finding.severity} / ${finding.classification}\n- **Status:** ${finding.status}\n- **Affected environment:** ${finding.affectedEnvironment}\n- **Reproduction:** ${finding.reproduction}\n- **Evidence:** ${finding.evidence}\n- **Likely owner:** ${finding.likelyOwner}\n- **Recommended next step:** ${finding.recommendation}`).join("\n\n");
-  const acceptance = Object.entries(report.acceptance.checks).map(([name, value]) => `| ${name} | ${value ? "PASS" : "BLOCKED / FAIL"} |`).join("\n");
-  const production = report.productionAnonymous.map(check => `| ${check.id} | ${check.status || "error"} | ${check.ok ? "PASS" : "FAIL"} | ${check.detail?.buildId || check.detail?.cacheVersion || check.detail?.releaseId || check.finalUrl || check.error || ""} |`).join("\n");
-  return `# Crown Lands Stability, Login, and Performance Audit
-
-Generated from commit \`${report.source.commit}\` on ${report.generatedAt}. This report distinguishes repository-verified behavior from deployed behavior.
-
-## Decision summary
-
-The isolated canonical-web fixture completed deterministic startup, slow-call, delayed-snapshot, bounded-failure, stale-callback, lifecycle, mobile-throttling, and second-session cases with zero uncaught errors, unhandled rejections, duplicate listener keys, or production-backend requests. It does **not** pass the exact listener acceptance budget: successful sessions settle at 18 active listeners because \`chat.global\` is always on in addition to the established 17 gameplay streams.
-
-Two audit-tool defects were confirmed and fixed. The audit also confirms that always-on global chat has raised the base authenticated session from the established 17-listener budget to 18; lifecycle cleanup still prevents duplicates. The session-heartbeat risk was confirmed and fixed with a bounded timeout plus lifecycle generation invalidation for stopped attempts. Authenticated production and itch.io gameplay remain blocked because this audit did not receive an approved QA account or control the published itch.io session.
-
-## Scope and safety
-
-- Canonical web game first; itch.io compatibility is limited to repository artifact and contract checks.
-- Local browser runs use a loopback-only simulated backend. They contain no player credentials and must make zero production-backend requests.
-- Anonymous production verification reads only public resources. No city, resource, progression, membership, presence, or account data is changed.
-- The audit PR contains tooling, baseline evidence, and documentation only. Gameplay fixes belong on separate synchronized branches.
-
-## Repository and contract identity
-
-| Field | Value |
-| --- | --- |
-| Release | ${report.repository.releaseId} |
-| Reset generation | ${report.repository.resetGeneration} |
-| World | ${report.repository.worldId} |
-| API contract | ${report.repository.apiContractHash} |
-| Client build / service-worker cache | ${report.repository.buildId} / ${report.repository.cacheVersion} |
-| Skill-point system version | ${report.repository.skillPointSystemVersion} |
-
-## Deterministic browser matrix
-
-| Case | Environment | Expected | Result | Startup |
-| --- | --- | --- | --- | ---: |
-${localCases}
-
-The cold run completed ${lifecycle.switchesCompleted ?? report.auditProfile.mapSwitches} map switches, ${lifecycle.foregroundCompleted ?? report.auditProfile.foregroundCycles} background/foreground cycles, and ${lifecycle.reconnectsCompleted ?? report.auditProfile.reconnectCycles} listener-failure/reconnect cycles in ${lifecycle.elapsedMs ? `${(lifecycle.elapsedMs / 60000).toFixed(1)} measured minutes` : `${report.auditProfile.soakMinutes} planned minutes`}. Active intervals and pending animation frames returned to baseline, duplicate listener keys stayed at zero, and no stale-region callback changed the selected map. The sole local acceptance failure is the stable 18-listener count described in STAB-003.
-
-## Public production resources
-
-| Check | Status | Result | Identity / final location / error |
-| --- | ---: | --- | --- |
-${production || "| Not run | — | BLOCKED | Runner used --no-production |"}
-
-These checks do not prove authenticated login, membership, presence, gameplay loading, second-tab replacement, or reconnect behavior in production.
-
-## Acceptance scorecard
-
-| Check | Result |
-| --- | --- |
-${acceptance}
-
-## Findings
-
-${findings}
-
-## Login and conflict coverage
-
-Static and emulator validators cover popup and redirect completion, actionable Firebase error mapping, repeated login sequencing, storage errors, refresh/session restoration, logout cleanup, active-session replacement, stale heartbeat handling, realtime listener ownership, reconnect, and foreground recovery. The browser fault matrix injects slow and rejected realm calls, lost responses, delayed city snapshots, stale callbacks, listener errors, mobile throttling, and 4× CPU slowdown.
-
-The local fixture cannot prove browser popup policy, third-party-cookie behavior, provider account selection, or real Firebase transport failures. Those require the controlled QA account and release-channel matrix.
-
-## Performance interpretation
-
-The existing map benchmark remains the capacity authority for the A–E city/march matrix, desktop, 844×390 landscape emulation, and 4× CPU diagnostics. This audit ran that matrix ${report.mapMatrix.repetitions.length} times and recorded ${report.mapMatrix.repetitions.reduce((total, repetition) => total + repetition.runCount, 0)} isolated scenario/profile results. The stability baseline adds startup phase timing, callable latency, console and network failures, long tasks, frame pacing, heap, timers, listener ownership, stale-callback protection, and recovery outcomes. Machine-readable details are in \`benchmark-results/stability/baseline.json\`.
-
-## Required release follow-up
-
-1. Confirm the dedicated QA account identity and authorization.
-2. Run cold and warm canonical-web login, refresh, second-tab replacement, one interrupted connection, map switching, and logout without gameplay mutations.
-3. Inspect the exact published itch.io artifact for relative assets, login entry, manifest, caches, and backend contract compatibility.
-4. Decide and implement the STAB-003 chat-listener scope on a separate focused branch.
-5. Verify STAB-004's bounded timeout and stale-response recovery during the controlled interrupted-connection smoke test.
-`;
+  return { status: repetitions.some(item => item.failures.length) ? "incomplete" : "complete", repetitions };
 }
 
 async function gitOutput(args) {
@@ -667,56 +488,47 @@ async function gitOutput(args) {
   });
 }
 
+async function sourceDigest() {
+  const files = (await gitOutput(["ls-files", "--cached", "--others", "--exclude-standard"]))
+    .split("\n").filter(file => /\.(?:js|json|css|html|rules|ya?ml)$/.test(file)
+      && !file.startsWith("benchmark-results/") && !file.startsWith("docs/"));
+  const hash = crypto.createHash("sha256");
+  for (const file of files.sort()) {
+    hash.update(file).update("\0");
+    hash.update(await fsp.readFile(path.join(ROOT_DIR, file)).catch(() => Buffer.from("<deleted>")));
+  }
+  return hash.digest("hex");
+}
+
 async function main() {
-  if (REFRESH_PUBLIC_ONLY) {
-    const report = JSON.parse(await fsp.readFile(BASELINE_PATH, "utf8"));
-    report.generatedAt = new Date().toISOString();
-    report.productionAnonymous = NO_PRODUCTION ? [] : await anonymousProductionChecks();
-    report.findings = buildFindings(report);
-    report.acceptance = buildAcceptance(report);
-    await Promise.all([
-      fsp.writeFile(BASELINE_PATH, `${JSON.stringify(report, null, 2)}\n`),
-      fsp.writeFile(REPORT_PATH, markdownReport(report)),
-    ]);
-    console.log(`Refreshed ${path.relative(ROOT_DIR, BASELINE_PATH)}`);
-    console.log(`Refreshed ${path.relative(ROOT_DIR, REPORT_PATH)}`);
-    return;
-  }
-  console.log("Running isolated Crown Lands stability browser audit...");
-  const [localBrowser, commit, productionAnonymous] = await Promise.all([
-    runBrowserAudit(),
-    gitOutput(["rev-parse", "HEAD"]),
-    NO_PRODUCTION ? Promise.resolve([]) : anonymousProductionChecks(),
+  // Refuse to overwrite evidence, including the old tracked baseline and narrative.
+  if (fs.existsSync(OUTPUT_DIR)) throw new Error(`Output directory already exists: ${OUTPUT_DIR}. Choose a new run directory.`);
+  await fsp.mkdir(OUTPUT_DIR, { recursive: true });
+  const startedAt = new Date().toISOString();
+  const inputDigest = await sourceDigest();
+  const source = { commit: await gitOutput(["rev-parse", "HEAD"]), branch: await gitOutput(["branch", "--show-current"]),
+    dirtyDuringAudit: Boolean(await gitOutput(["status", "--short"])), inputDigest, startedAt };
+  source.harness = sourceIdentity(HARNESS_ROOT);
+  console.log("Running isolated Crownlands stability browser audit...");
+  const [localBrowser, productionAnonymous] = await Promise.all([
+    runBrowserAudit(), NO_PRODUCTION ? Promise.resolve([]) : anonymousProductionChecks(),
   ]);
+  // Persist startup/fault evidence before a potentially long matrix or soak fails.
+  await fsp.writeFile(path.join(OUTPUT_DIR, "browser.json"), JSON.stringify(localBrowser, null, 2));
   const mapMatrix = await runMapMatrixRepetitions();
+  source.inputsUnchanged = inputDigest === await sourceDigest()
+    && source.harness.inputDigest === sourceIdentity(HARNESS_ROOT).inputDigest;
   const report = {
-    schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
-    source: { commit, branch: await gitOutput(["branch", "--show-current"]), dirtyDuringAudit: Boolean(await gitOutput(["status", "--short"])) },
+    schemaVersion: 2, generatedAt: new Date().toISOString(), source,
     auditProfile: { full: FULL, soakMinutes: SOAK_MINUTES, mapSwitches: MAP_SWITCHES, foregroundCycles: FOREGROUND_CYCLES, reconnectCycles: RECONNECT_CYCLES },
-    repository: repositoryIdentity(),
-    localBrowser,
-    mapMatrix,
-    productionAnonymous,
-    productionAuthenticated: { status: "blocked", reason: "No approved pre-seeded QA account was supplied to this audit run." },
-    itchAuthenticated: { status: "blocked", reason: "Published itch.io authenticated gameplay is outside this web-priority audit." },
+    repository: repositoryIdentity(), localBrowser, mapMatrix, productionAnonymous,
   };
-  report.findings = buildFindings(report);
   report.acceptance = buildAcceptance(report);
-  await Promise.all([
-    fsp.mkdir(OUTPUT_DIR, { recursive: true }),
-    fsp.mkdir(path.dirname(REPORT_PATH), { recursive: true }),
-  ]);
-  const machinePath = FULL ? BASELINE_PATH : LATEST_PATH;
-  await fsp.writeFile(machinePath, `${JSON.stringify(report, null, 2)}\n`);
-  console.log(`Wrote ${path.relative(ROOT_DIR, machinePath)}`);
-  if (FULL) {
-    await fsp.writeFile(REPORT_PATH, markdownReport(report));
-    console.log(`Wrote ${path.relative(ROOT_DIR, REPORT_PATH)}`);
-  }
-  if (!report.acceptance.passedLocalAcceptance) {
-    console.warn("The audit recorded one or more unmet acceptance checks; see the classified findings.");
-  }
+  report.findings = buildFindings(report);
+  await fsp.writeFile(path.join(OUTPUT_DIR, "audit.json"), `${JSON.stringify(report, null, 2)}\n`);
+  await fsp.writeFile(path.join(OUTPUT_DIR, "audit.md"), markdownReport(report));
+  console.log(`Wrote ${path.relative(ROOT_DIR, OUTPUT_DIR)}: ${report.acceptance.status}`);
+  process.exitCode = report.acceptance.exitCode;
 }
 
 main().catch(error => {

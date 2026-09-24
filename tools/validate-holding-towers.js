@@ -450,6 +450,10 @@ requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?var\(--manuscript-ink\)
 assert.doesNotMatch(holdingTowerStyles, /\.holding-tower-(?:modal|vitals|veil-card|upgrade-copy|queued-levels):is\(/, "A Holding Tower descendant :is() selector was compacted into a non-matching compound selector.");
 requires(holdingTowerUi, /data-tower-action="repair"[^>]*class="[^"]*move-action|class="[^"]*move-action[^>]*data-tower-action="repair"/, "Start Repair does not preserve the existing green move-action treatment.");
 requires(holdingTowerUi, /data-tower-action="veil"[^>]*class="[^"]*secondary|class="[^"]*secondary[^>]*data-tower-action="veil"/, "Veil of Silence does not preserve the existing blue secondary treatment.");
-requires(client, /Treasury Balance[\s\S]*?Daily Donation Allowance[\s\S]*?Remaining Today[\s\S]*?Total Donated[\s\S]*?Total Spent/, "The Clan Treasury does not present the five required readable metrics.");
+requires(client, /CrownlandsClanTreasuryUi\.render\(/, "The game must use the extracted Clan Treasury renderer.");
+const treasuryUi = read("clan-treasury-ui.js");
+for (const [field, label] of [["balance", "Treasury balance"], ["dailyCap", "Daily cap"], ["remaining", "Remaining today"], ["totalDonated", "Total donated"], ["totalSpent", "Total spent"]]) {
+  assert.ok(treasuryUi.includes(`ct-${field}`) && treasuryUi.includes(label), `Clan Treasury is missing its ${field} metric or label.`);
+}
 
 console.log("Validated Holding Tower current-realm activation, automatic scout origins, neutral/reset state, probation, Rally gate, attributed garrisons, Treasury formulas, walls, repairs, conquest, Veil, security, camp reconciliation, and client integration.");

@@ -4,7 +4,8 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ROOT_DIR = path.resolve(__dirname, "..", "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..", "..");
 const SERVER_SOURCE_PATH = path.join(ROOT_DIR, "functions", "index.js");
 const RELEASE_CONFIG_PATH = path.join(ROOT_DIR, "functions", "release-config.json");
 

@@ -169,6 +169,14 @@ async function validateBenchmarkServerAssetBase() {
     assert.equal(definitionResponse.status, 200, "The active Core benchmark region definition was not served.");
     const definition = await definitionResponse.json();
     assert.equal(definition.cities.length, heavyFixture.scenario.cityCount, "The benchmark region definition lost its requested scenario.");
+    assert.equal(server.getFixtureCount(), 2, "Assets must reuse their scenario fixture instead of rebuilding the server world per request.");
+    const visualResponse = await fetch(`${address.url}/__benchmark__/early-instrumentation.js?scenario=A&visualMarches=0&visualKinds=true`);
+    assert.equal(visualResponse.status, 200);
+    const ordinaryResponse = await fetch(`${address.url}/__benchmark__/early-instrumentation.js?scenario=A`);
+    const ordinarySource = await ordinaryResponse.text();
+    const bootstrap = ordinarySource.split("\n")[0];
+    assert.ok(bootstrap.includes('"marchCount":25'), "Visual overrides mutated the cached ordinary fixture.");
+    assert.ok(bootstrap.includes('"expectedListenerCount":18'), "Browser recovery probes must use the current shared Core budget.");
   } finally {
     await server.close();
   }
@@ -183,3 +191,39 @@ Promise.all([
     console.error(error);
     process.exitCode = 1;
   });
+
+// Synthetic clients must count blocked attempts to both callable generations.
+const networkSource = benchmarkRunnerSource.slice(benchmarkRunnerSource.indexOf("function summarizeNetwork("), benchmarkRunnerSource.indexOf("async function runProfileScenario("));
+const startupSource = fs.readFileSync(path.join(root, "tools/run-stability-audit.js"), "utf8");
+const startupMatcher = startupSource.slice(startupSource.indexOf("function isProductionBackendUrl("), startupSource.indexOf("async function runBrowserAudit("));
+const networkContext = vm.createContext({ URL });
+vm.runInContext(networkSource + "\n" + startupMatcher, networkContext);
+for (const url of ["https://region-project.cloudfunctions.net/call", "https://operation-abc-uc.a.run.app/", "https://firestore.googleapis.com/v1/", "https://securetoken.googleapis.com/v1/token"]) {
+  assert(networkContext.isProductionBackendUrl(url), "Startup must identify backend attempts");
+  assert.equal(networkContext.summarizeNetwork(new Map([["request", { url, failed: true }]]), "http://127.0.0.1:9000").productionBackendRequestCount, 1);
+}
+assert.equal(networkContext.isProductionBackendUrl("http://127.0.0.1:9000/game.js"), false);
+assert(benchmarkRunnerSource.includes('client.send("Network.setBlockedURLs"'), "Matrix browser must block live backend calls before navigation");
+assert(benchmarkRunnerSource.includes('"*://*.run.app/*"'), "Matrix must block generation-two function URLs");
+console.log("Benchmark network isolation covers Firebase and both callable generations, including failed requests.");
+
+// A resolved request is not proof that a lifecycle transition happened.
+const lifecycleSource = benchmarkRuntimeSource.slice(benchmarkRuntimeSource.indexOf("async function runLifecycleCycles("), benchmarkRuntimeSource.indexOf("async function runOfflineRecoveryCheck("));
+function lifecycleFixture(failure) {
+  let region = "primary", calls = 0;
+  const listeners = { active: 18, duplicates: [] };
+  const context = vm.createContext({ performance: { now: Date.now },
+    window: { CrownlandsOnline: { __getBenchmarkTelemetry: () => ({listeners}) } },
+    instrumentation: { getTimerSnapshot: () => ({activeTimeouts:0,activeIntervals:0,pendingAnimationFrames:0}) },
+    fixture: { primaryRegionId: "primary", neighborRegionId: "neighbor", expectedListenerCount:18 },
+    getActiveMapRegionId: () => region, waitForMapInteractionReady: async () => {}, wait: async () => {},
+    switchOnlineIsland: async target => { calls++; if(failure === "rejected" || failure === "return" && calls === 6) return false; if(failure !== "unchanged") region = target; return true; },
+    emitBenchmarkArmies() {}, benchmarkState: {stabilityChecks:{}} });
+  vm.runInContext(lifecycleSource, context);
+  return context.runLifecycleCycles({mapSwitches:5,foregroundCycles:0,reconnectCycles:0});
+}
+(async () => {
+  const result = await lifecycleFixture(); assert.equal(result.switchesCompleted,5); assert.equal(result.passed,true);
+  for(const failure of ["rejected","unchanged","return"]) await assert.rejects(lifecycleFixture(failure), /switch did not complete|return did not complete/);
+  console.log("Lifecycle counts require successful transitions and the requested destination, including restoration.");
+})().catch(error => { console.error(error); process.exitCode=1; });

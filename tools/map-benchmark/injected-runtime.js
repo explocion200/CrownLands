@@ -818,11 +818,13 @@
     const neighborStartedAt = performance.now();
     const neighborResult = await switchOnlineIsland(fixture.neighborRegionId, { fromMapPicker: true });
     await waitForMapInteractionReady();
+    if (!neighborResult || getActiveMapRegionId() !== fixture.neighborRegionId) throw new Error("Benchmark neighbor switch did not complete.");
     const neighborLatencyMs = performance.now() - neighborStartedAt;
     const atNeighbor = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const returnStartedAt = performance.now();
     const returnResult = await switchOnlineIsland(fixture.primaryRegionId, { fromMapPicker: true });
     await waitForMapInteractionReady();
+    if (!returnResult || getActiveMapRegionId() !== fixture.primaryRegionId) throw new Error("Benchmark return switch did not complete.");
     const returnLatencyMs = performance.now() - returnStartedAt;
     emitBenchmarkArmies();
     zoom = MIN_ZOOM;
@@ -862,7 +864,7 @@
     await wait(100);
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const result = {
-      passed: emitted && restarted && listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: emitted && restarted && listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       emitted,
       restarted,
       listeners,
@@ -884,14 +886,16 @@
       const targetRegionId = getActiveMapRegionId() === fixture.primaryRegionId
         ? fixture.neighborRegionId
         : fixture.primaryRegionId;
-      await switchOnlineIsland(targetRegionId, { fromMapPicker: true });
+      const switched = await switchOnlineIsland(targetRegionId, { fromMapPicker: true });
       await waitForMapInteractionReady();
+      if (!switched || getActiveMapRegionId() !== targetRegionId) throw new Error("Benchmark lifecycle switch did not complete.");
       switchesCompleted += 1;
       if (delayPerActionMs) await wait(delayPerActionMs);
     }
     if (getActiveMapRegionId() !== fixture.primaryRegionId) {
-      await switchOnlineIsland(fixture.primaryRegionId, { fromMapPicker: true });
+      const restored = await switchOnlineIsland(fixture.primaryRegionId, { fromMapPicker: true });
       await waitForMapInteractionReady();
+      if (!restored || getActiveMapRegionId() !== fixture.primaryRegionId) throw new Error("Benchmark lifecycle return did not complete.");
     }
     for (let index = 0; index < foregroundCycles; index += 1) {
       markGameBackgrounded();
@@ -911,7 +915,7 @@
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const timers = instrumentation.getTimerSnapshot();
     const result = {
-      passed: listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       requestedDurationMs: durationMs,
       elapsedMs: performance.now() - startedAt,
       switchesCompleted,
@@ -937,7 +941,7 @@
     await wait(100);
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const result = {
-      passed: Boolean(synchronized) && listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: Boolean(synchronized) && listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       synchronized: Boolean(synchronized),
       listeners,
     };
