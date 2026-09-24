@@ -862,7 +862,7 @@
     await wait(100);
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const result = {
-      passed: emitted && restarted && listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: emitted && restarted && listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       emitted,
       restarted,
       listeners,
@@ -911,7 +911,7 @@
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const timers = instrumentation.getTimerSnapshot();
     const result = {
-      passed: listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       requestedDurationMs: durationMs,
       elapsedMs: performance.now() - startedAt,
       switchesCompleted,
@@ -937,7 +937,7 @@
     await wait(100);
     const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     const result = {
-      passed: Boolean(synchronized) && listeners.active === 17 && listeners.duplicates.length === 0,
+      passed: Boolean(synchronized) && listeners.active === fixture.expectedListenerCount && listeners.duplicates.length === 0,
       synchronized: Boolean(synchronized),
       listeners,
     };

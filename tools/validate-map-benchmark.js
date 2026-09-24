@@ -169,6 +169,14 @@ async function validateBenchmarkServerAssetBase() {
     assert.equal(definitionResponse.status, 200, "The active Core benchmark region definition was not served.");
     const definition = await definitionResponse.json();
     assert.equal(definition.cities.length, heavyFixture.scenario.cityCount, "The benchmark region definition lost its requested scenario.");
+    assert.equal(server.getFixtureCount(), 2, "Assets must reuse their scenario fixture instead of rebuilding the server world per request.");
+    const visualResponse = await fetch(`${address.url}/__benchmark__/early-instrumentation.js?scenario=A&visualMarches=0&visualKinds=true`);
+    assert.equal(visualResponse.status, 200);
+    const ordinaryResponse = await fetch(`${address.url}/__benchmark__/early-instrumentation.js?scenario=A`);
+    const ordinarySource = await ordinaryResponse.text();
+    const bootstrap = ordinarySource.split("\n")[0];
+    assert.ok(bootstrap.includes('"marchCount":25'), "Visual overrides mutated the cached ordinary fixture.");
+    assert.ok(bootstrap.includes('"expectedListenerCount":18'), "Browser recovery probes must use the current shared Core budget.");
   } finally {
     await server.close();
   }

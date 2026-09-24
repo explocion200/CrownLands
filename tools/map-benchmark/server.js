@@ -6,6 +6,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 const { createFixture, SCENARIOS } = require("./fixtures.js");
+const { CORE_EXPANSION_RUNTIME_BUDGET, LEGACY_RUNTIME_BUDGET } = require("./budgets.js");
 
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 const HOST = "127.0.0.1";
@@ -89,6 +90,8 @@ function applyVisualQaOverrides(fixture, requestUrl) {
 
 function browserFixture(fixture) {
   const { mapData: _mapData, ...safeFixture } = fixture;
+  safeFixture.expectedListenerCount = (fixture.releaseConfig.worldTopology === "core-expansion-v1"
+    ? CORE_EXPANSION_RUNTIME_BUDGET : LEGACY_RUNTIME_BUDGET).activeListeners;
   return safeFixture;
 }
 
@@ -148,6 +151,7 @@ function resolveStaticPath(pathname) {
 
 function createMapBenchmarkServer() {
   const requests = [];
+  const fixtures = new Map();
   const server = http.createServer(async (request, response) => {
     const hostHeader = String(request.headers.host || "");
     if (!hostHeader.startsWith("127.0.0.1:") && hostHeader !== "127.0.0.1") {
@@ -156,7 +160,10 @@ function createMapBenchmarkServer() {
     }
     const requestUrl = new URL(request.url || "/", `http://${hostHeader || HOST}`);
     const scenarioId = getScenarioId(requestUrl, request);
-    const fixture = applyVisualQaOverrides(createFixture(scenarioId), requestUrl);
+    if (!fixtures.has(scenarioId)) fixtures.set(scenarioId, createFixture(scenarioId));
+    const baseFixture = fixtures.get(scenarioId);
+    const visualOverride = requestUrl.searchParams.has("visualMarches") || requestUrl.searchParams.has("visualKinds");
+    const fixture = visualOverride ? applyVisualQaOverrides(structuredClone(baseFixture), requestUrl) : baseFixture;
     requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId });
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -239,6 +246,7 @@ function createMapBenchmarkServer() {
 
   return {
     requests,
+    getFixtureCount: () => fixtures.size,
     listen(port = 0) {
       return new Promise((resolve, reject) => {
         server.once("error", reject);

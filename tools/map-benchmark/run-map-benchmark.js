@@ -110,6 +110,9 @@ function launchChrome(chromePath, debugPort, profilePath) {
     "--no-first-run",
     "--no-default-browser-check",
     "--disable-background-networking",
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+    "--disable-backgrounding-occluded-windows",
     "--disable-breakpad",
     "--disable-component-update",
     "--disable-default-apps",
@@ -358,10 +361,14 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
   await client.send("Emulation.setCPUThrottlingRate", { rate: profile.cpuRate });
   const profileQuery = PROFILE_MARCHES ? "&profile=marches" : PROFILE_ZOOM ? "&profile=zoom" : "";
   await client.send("Page.navigate", { url: `${serverAddress.url}/__benchmark__/?scenario=${scenario.id}${profileQuery}` });
+  await client.send("Page.bringToFront");
+  await client.send("Emulation.setFocusEmulationEnabled", { enabled: true });
   const status = await waitUntilReady(client, profile.cpuRate > 1 ? 180000 : 60000);
   const progressPrefix = `${scenario.id}/${profile.id}`;
   console.log(`  ${progressPrefix}: authenticated fixture ready`);
   const initialRuntime = await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMetrics()");
+  const foreground = await evaluate(client, "({ visibility: document.visibilityState, focused: document.hasFocus() })");
+  if (foreground.visibility !== "visible" || !foreground.focused) throw new Error("Benchmark page is not visible and focused.");
   if (initialRuntime.dataCityCount !== scenario.cityCount || initialRuntime.dataMarchCount !== scenario.marchCount) {
     throw new Error(
       `Fixture count mismatch: expected ${scenario.cityCount}/${scenario.marchCount}, `
@@ -374,7 +381,7 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
 
   if (PROFILE_MARCHES) {
     await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.resetMarchProfile()");
-    const idle = await measuredSample(client, "march-profile-idle", () => delay(10000));
+    const idle = await measuredSample(client, "march-profile-idle", () => evaluate(client, "new Promise(resolve => setTimeout(resolve, 10000))"));
     const marchProfile = await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMarchProfile({ stop: true })");
     const runtime = await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMetrics()");
     const heap = await client.send("Runtime.getHeapUsage");
@@ -418,7 +425,7 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
     };
   }
 
-  const idle = await measuredSample(client, "idle-with-marches", () => delay(SAMPLE_DURATION_MS));
+  const idle = await measuredSample(client, "idle-with-marches", () => evaluate(client, `new Promise(resolve => setTimeout(resolve, ${SAMPLE_DURATION_MS}))`));
   console.log(`  ${progressPrefix}: idle sample complete`);
   const pan = await measuredSample(client, "pan", () => panMap(client, INTERACTION_DURATION_MS));
   console.log(`  ${progressPrefix}: pan sample complete`);
@@ -566,6 +573,8 @@ function buildReport(chromePath, browserVersion, runs, failures = [], partial = 
       runIsolation: "fresh browser process and temporary profile per scenario/profile",
     },
     durations: { idleMs: SAMPLE_DURATION_MS, interactionMs: INTERACTION_DURATION_MS },
+    measurement: { idleClock: "browser setTimeout within an awaited Runtime.evaluate", foregroundRequired: true,
+      note: "Host-side sleeps produced idle frame starvation in this headless browser; this measures browser-side elapsed work. Emulation is not physical-device evidence." },
     runs,
     failures,
   };

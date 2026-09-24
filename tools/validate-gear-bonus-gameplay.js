@@ -284,11 +284,14 @@ async function main() {
     },
     getCityRegionId() { return "region_test"; },
     isRewardCampTarget() { return false; },
+    isHoldingTowerTarget() { return false; },
     normalizeAuthoritativeRoutePreview(result) { return result; },
   };
   vm.createContext(previewContext);
-  vm.runInContext(`${extractFunction(clientSource, "requestAuthoritativeOrderRoute")}; this.requestAuthoritativeOrderRoute = requestAuthoritativeOrderRoute;`, previewContext, { filename: "game.js" });
-  await previewContext.requestAuthoritativeOrderRoute({ id: "source" }, { id: "assembly" }, "rally_join", 100);
+  vm.runInContext(`${extractFunction(clientSource, "getHoldingTowerTargetType")}\n${extractFunction(clientSource, "requestAuthoritativeOrderRoute")}; this.requestAuthoritativeOrderRoute = requestAuthoritativeOrderRoute;`, previewContext, { filename: "game.js" });
+  const previewRoute = await previewContext.requestAuthoritativeOrderRoute({ id: "source" }, { id: "assembly" }, "rally_join", 100);
+  assert.ok(previewRequest, previewRoute?.authoritativeError || "The route preview did not reach the backend adapter.");
+  assert.equal(previewRequest.targetType, "city");
   assert.equal(previewRequest.kind, "rally_join", "The client still previews rally assembly as a transfer.");
 
   const productionProfile = createGearProfile([
