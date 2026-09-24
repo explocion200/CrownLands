@@ -40,6 +40,8 @@ assert(fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes('/ma
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await delay(180);
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(1)`);
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
+   const inset=await ev(`['.profile-action-row','.profile-gold','#logBtn'].map(s=>document.querySelector(s).getBoundingClientRect().left)`);
+   assert.deepEqual(inset,[12,12,12],"Production player row and Gold must align with Reports");
    await ev(`document.body.classList.remove('hud-illustrated')`);assert.deepEqual(await layout(),art,"Artwork skin changes HUD geometry or original colors");
    await ev(`document.body.classList.add('hud-illustrated')`);await shot(width+"-integrated");
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(2.2)`);assert.deepEqual(await layout(),art,"Zoom changes main-screen controls");
@@ -49,7 +51,7 @@ assert(fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes('/ma
     await click(id);await wait(`document.getElementById('modal').open`);await ev(`__CROWNLANDS_BENCHMARK__.closeModal()`);await delay(50);
    }
    await click("profileBtn");await wait(`document.getElementById('profileScreen').classList.contains('open')`);await ev(`document.getElementById('profileCloseBtn').click()`);
-   records.push({width,height,actualNavigation:true,geometryAndColorsPreserved:true,zoomIndependent:true});
+   records.push({width,height,actualNavigation:true,geometryAndColorsPreserved:true,zoomIndependent:true,reportsAlignedInset:inset[0]});
   }
   assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
   fs.writeFileSync(path.join(artifacts,"checks.json"),JSON.stringify({passed:true,assets,records,errors,failedAssets},null,2));console.log(JSON.stringify({passed:true,records,errors,failedAssets}));
