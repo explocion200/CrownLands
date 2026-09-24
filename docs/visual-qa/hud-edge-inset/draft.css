@@ -1,0 +1,8 @@
+/* Local draft: match the outer inset to the space between the top buttons. */
+html.hud-edge-draft{--hud-edge-gap:.28rem;--hud-edge-safe-left:env(safe-area-inset-left,0px)}
+/* The stack is positioned within the already-inset .top-hud. Its aligned
+   player row and Gold both extend 7px left of the stack's origin. */
+html.hud-edge-draft .profile-stack{left:calc(var(--hud-edge-safe-left) + var(--hud-edge-gap) + 7px - max(.75rem,var(--hud-edge-safe-left)))!important}
+@media(max-width:760px){html.hud-edge-draft{--hud-edge-gap:.2rem}}
+/* Review overlay only. */
+#hudEdgeGuide{position:fixed;z-index:1000;width:0;border-left:1px dashed #fff2ba;pointer-events:none;filter:drop-shadow(1px 0 1px #352614)}
