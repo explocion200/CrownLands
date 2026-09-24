@@ -5,6 +5,10 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
+function isProductionBackendUrl(url) {
+  return /(?:firebaseio\.com|firestore\.googleapis\.com|identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|cloudfunctions\.net|\.run\.app)/i.test(url);
+}
+
 async function bounded(promise, milliseconds, label) {
   let timer;
   try {
@@ -29,4 +33,4 @@ function sourceIdentity(root) {
     cpu: os.cpus()[0]?.model, logicalCpus: os.cpus().length, memoryBytes: os.totalmem() };
 }
 
-module.exports = { bounded, sourceIdentity };
+module.exports = { bounded, sourceIdentity, isProductionBackendUrl };

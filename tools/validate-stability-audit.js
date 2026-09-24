@@ -79,7 +79,17 @@ full.mapMatrix.repetitions[0].runs[0].key = full.mapMatrix.repetitions[0].runs[1
 assert.equal(evaluate(full).acceptance.checks.matrixCompletion.status, "failed", "Duplicate results cannot replace missing profiles.");
 console.log("Stability audit validation passed: current budgets, missing coverage, stale assets, incomplete matrices, and failure exit codes.");
 
-const { bounded } = require("./stability-audit-runtime.js");
+const { bounded, isProductionBackendUrl } = require("./stability-audit-runtime.js");
+for (const url of ["https://region-project.cloudfunctions.net/call", "https://operation-abc-uc.a.run.app/", "https://firestore.googleapis.com/v1/", "https://identitytoolkit.googleapis.com/v1/accounts", "https://securetoken.googleapis.com/v1/token", "https://project.firebaseio.com/data.json"]) {
+  assert.equal(isProductionBackendUrl(url), true, "Browser recovery and soak probes must block token and gameplay backends.");
+}
+for (const url of ["http://127.0.0.1:9000/game.js", "https://fonts.googleapis.com/css", "data:image/png;base64,test"]) {
+  assert.equal(isProductionBackendUrl(url), false, "Fixture assets and fonts must remain available.");
+}
+for (const file of ["run-stability-compatibility.js", "run-stability-soak.js"]) {
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, file), "utf8");
+  assert(source.includes("isProductionBackendUrl(route.request().url())"), `${file} must use the tested network guard.`);
+}
 (async () => {
   assert.equal(await bounded(Promise.resolve("done"), 100, "test"), "done");
   await assert.rejects(bounded(new Promise(() => {}), 5, "stalled browser"), /stalled browser.*watchdog/);

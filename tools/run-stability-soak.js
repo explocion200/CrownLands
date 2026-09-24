@@ -4,7 +4,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET } = require("./map-benchmark/budgets.js");
-const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
+const { bounded, sourceIdentity, isProductionBackendUrl } = require("./stability-audit-runtime.js");
 const root = process.env.CROWNLANDS_BENCHMARK_ROOT
   ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..");
 const argument = (name, fallback) => process.argv.find(v => v.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
@@ -36,7 +36,7 @@ async function runProfile(profile, address) {
     page.on("pageerror", error => result.errors.push(error.message));
     page.on("crash", () => result.errors.push("Renderer crashed"));
     await page.route("**/*", route => {
-      if (/(?:firestore\.googleapis|identitytoolkit\.googleapis|cloudfunctions\.net|firebaseio\.com|\.run\.app)/i.test(route.request().url())) {
+      if (isProductionBackendUrl(route.request().url())) {
         result.productionBackendRequests++; return route.abort();
       }
       return route.continue();

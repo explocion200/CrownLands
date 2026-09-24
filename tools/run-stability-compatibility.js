@@ -4,14 +4,13 @@ const path = require("node:path");
 const { chromium, firefox, webkit } = require("playwright");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET } = require("./map-benchmark/budgets.js");
-const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
+const { bounded, sourceIdentity, isProductionBackendUrl } = require("./stability-audit-runtime.js");
 const root = process.env.CROWNLANDS_BENCHMARK_ROOT
   ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..");
 const output = path.resolve(root, process.argv.find(v => v.startsWith("--output-directory="))?.slice(19)
   || `release-artifacts/stability-compatibility/${new Date().toISOString().replace(/[:.]/g, "-")}`);
 const engines = { chrome: [chromium, "chrome"], edge: [chromium, "msedge"], firefox: [firefox], webkit: [webkit] };
 const selected = process.argv.find(v => v.startsWith("--engines="))?.slice(10).split(",") || Object.keys(engines);
-const backend = url => /(?:firestore\.googleapis|identitytoolkit\.googleapis|cloudfunctions\.net|firebaseio\.com|\.run\.app)/i.test(url);
 
 async function sampleFrames(page, durationMs) {
   return bounded(page.evaluate(duration => new Promise(resolve => {
@@ -46,7 +45,7 @@ async function main() {
           const page = await context.newPage(), errors = [], requests = [];
           page.on("pageerror", error => errors.push(error.message));
           await page.route("**/*", route => {
-            if (backend(route.request().url())) { requests.push("blocked production backend request"); return route.abort(); }
+            if (isProductionBackendUrl(route.request().url())) { requests.push("blocked production backend request"); return route.abort(); }
             return route.continue();
           });
           const item = { width, height, status: "failed", errors, productionBackendRequests: requests };

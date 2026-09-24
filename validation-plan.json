@@ -17,7 +17,7 @@
         "tools/validate-stability-audit.js",
         "tools/validate-map-benchmark.js"
       ],
-      "reason": "Audit-only tooling and pinned development browser dependency. Exercise evidence-derived acceptance, missing/failed cases, duplicate/missing matrix profiles, unchanged existing budgets, current listener counts, deployed identity comparisons, and bounded watchdog success/failure. The shared loopback benchmark regression covers fixture isolation. Manual browser receipts cover startup/fault cases, compatibility, long soaks and the repeated matrix; limitations are recorded in the findings report. Root frozen installation and development dependency audit were checked. No production runtime or authority changes."
+      "reason": "Audit-only tooling and pinned development browser dependency. Exercise evidence-derived acceptance, missing/failed cases, duplicate/missing matrix profiles, unchanged existing budgets, current listener counts, deployed identity comparisons, and bounded watchdog success/failure. The shared loopback benchmark regression covers fixture isolation; compatibility/soak network guards also reject token-refresh and both callable generations while allowing fixture assets and fonts. Manual browser receipts cover startup/fault cases, compatibility, long soaks and the repeated matrix; limitations are recorded in the findings report. Root frozen installation and development dependency audit were checked. No production runtime or authority changes."
     },
     {
       "paths": [
