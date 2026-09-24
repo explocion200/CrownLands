@@ -63,7 +63,7 @@
       "tests": [
         "tools/validate-main-screen-art-browser.js"
       ],
-      "reason": "Precache and package the approved stylesheet, seven raster assets and existing report sprite. Runtime tests check cache coverage and actual loaded assets; mandatory production build/artifact validation checks the deployment payload. Notification logic, game mechanics, release contracts and backend functions remain unchanged."
+      "reason": "Package the approved stylesheet, seven raster assets and existing report sprite. Cache only the small stylesheet during installation; images retain the runtime cache. Runtime tests verify approved asset bytes, loading and exclusion from install preloads. The production artifact gate bounds the seven approved derivatives and CSS at 336 KiB (60 KiB per image), plus 4 KiB entry metadata, and checks packaging. Notification logic, game mechanics, release contracts and backend functions remain unchanged."
     }
   ]
 }

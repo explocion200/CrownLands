@@ -41,7 +41,7 @@ Map nodes, player/clan heraldry, pickup Gold/Troop artwork, 56px map action butt
 
 ## Actual-game integration
 
-`index.html` loads `main-screen-art-ui.css` and the seven approved WebP files, copied byte-for-byte into `assets/optimized/hud-*-ink-*`. The stylesheet is scoped to `body.hud-illustrated` and changes only image rendering and the player frame. Main-screen Reports uses the existing dispatch SVG. The service worker precaches the component and art; the production builder and artifact validator require them. No gameplay JavaScript or backend code changes.
+`index.html` loads `main-screen-art-ui.css` and the seven approved WebP files, copied byte-for-byte into `assets/optimized/hud-*-ink-*`. The stylesheet is scoped to `body.hud-illustrated` and changes only image rendering and the player frame. Main-screen Reports uses the existing dispatch SVG. The service worker precaches the small stylesheet; artwork uses the existing runtime image cache. The production builder and artifact validator require all seven assets and cap them at 60 KiB each, with a 336 KiB combined art/stylesheet budget plus 4 KiB for entry metadata. No gameplay JavaScript or backend code changes.
 
 The local review fixture explicitly restores the legacy assets for Current game, so it remains a before/after reference after integration. It never supplies the production runtime implementation.
 
@@ -65,5 +65,7 @@ Run `node tools/validate-main-screen-art-draft-browser.js` and `node tools/valid
 - The actual-game validator loads the production entry without the preview fixture, verifies all runtime art matches approved bytes, exercises pointer clicks on Bag, Shop, Cities, Maps, Leaderboards, Daily Login, Reports and Profile, tests the chat arrow and map zoom, and compares geometry/colors with the art skin toggled. All three viewports pass; screenshots and result JSON are under `release-artifacts/main-screen-art-game/`.
 
 The smallest 568px viewport inherits an existing overlap between expanded mini-chat and the lower active-item indicators. This draft deliberately preserves the main game's geometry; it does not claim to fix that separate layout issue. It is visible in both looks. Desktop and 844px landscape remain the main approval views.
+
+An additional repository-wide `node tools/validate-asset-performance-budgets.js` audit fails its existing installation-cache budget: 4.42 MiB versus 4.15 MiB. A read-only comparison against base `7711dcaf8cd2d1cfc731edcae4358d409abc74b4` confirms main already has 4,636,924 installation bytes; this branch has 4,637,993, a 1,069-byte increase from the stylesheet and entry references. None of the seven new raster images is precached during installation. The baseline comparison is recorded in ignored `release-artifacts/main-screen-art-game/install-budget-baseline.json`. Resolving the pre-existing cache overage is separate work; this update does not raise that installation budget or claim the broader audit passes.
 
 No backend or multiplayer mechanics are modified, so no emulator suite applies. Design approval is recorded in the Master Specification. Required PR checks must pass before merge; production deployment remains unverified until explicitly authorized and completed.

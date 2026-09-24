@@ -211,7 +211,14 @@ if (buildingArt.length !== 18 || !["courtyard.webp", "tower.webp"].every(name =>
 const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
 if (buildingPayload > 1248 * 1024) throw new Error("Clan buildings exceed the dedicated 1248 KiB art/presentation budget.");
 // Reserve a further 16 KiB for map, client API and report integration.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264) * 1024;
+// Seven approved ink-and-wash HUD derivatives: 339,598 image bytes plus a
+// sub-1 KiB stylesheet. Bound this feature at 336 KiB, each image at 60 KiB;
+// allow another 4 KiB for entry/artifact metadata. Images stay runtime-cached.
+const illustratedHudArt = files.filter(file => /^assets\/optimized\/hud-[a-z-]+-ink-\d+x\d+-[a-f0-9]{12}\.webp$/.test(path.relative(dist,file).replace(/\\/g,"/")));
+if (illustratedHudArt.length !== 7 || illustratedHudArt.some(file => fs.statSync(file).size > 60 * 1024)) throw new Error("Illustrated HUD must ship seven WebP images, each under 60 KiB.");
+const illustratedHudBytes = [...illustratedHudArt,path.join(dist,"main-screen-art-ui.css")].reduce((sum,file) => sum+fs.statSync(file).size,0);
+if (illustratedHudBytes > 336 * 1024) throw new Error("Approved HUD artwork and styling exceed their 336 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

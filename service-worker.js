@@ -33,14 +33,6 @@ function getNotificationOpenUrl(notificationData = {}) {
 
 const STATIC_CACHE_URLS = [
   "/main-screen-art-ui.css?v=20260923-hud-ink-r1",
-  "/assets/icons/battle-reports-ledger-r1.svg",
-  "/assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
-  "/assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
-  "/assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",
-  "/assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
-  "/assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
-  "/assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
-  "/assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp",
   "/infirmary-ui.js?v=20260923-infirmary-r1",
   "/infirmary-ui.css?v=20260923-infirmary-r1",
   "/clan-treasury-ui.js?v=20260923-treasury-r1",

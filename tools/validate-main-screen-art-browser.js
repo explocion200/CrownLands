@@ -10,8 +10,9 @@ for(const key of["bag","shop","cities","map","leaderboard","daily-reward","profi
  const hash=crypto.createHash("sha256").update(approved).digest("hex").slice(0,12),size=key==="profile-frame"?"512x400":"384x384";
  assets[key]="assets/optimized/hud-"+key+"-ink-"+size+"-"+hash+".webp";
  assert.deepEqual(fs.readFileSync(path.join(root,assets[key])),approved,"Runtime artwork differs from approved draft");
- assert(fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(assets[key]),"Approved art missing from precache");
+ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(assets[key]),"HUD artwork must use the existing runtime cache, not increase the install preload");
 }
+assert(fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes('/main-screen-art-ui.css?v='),"HUD stylesheet missing from offline shell");
 (async()=>{
  const server=createMapBenchmarkServer(),address=await server.listen();let browser,client;
  const artifacts=path.join(root,"release-artifacts/main-screen-art-game");fs.mkdirSync(artifacts,{recursive:true});
