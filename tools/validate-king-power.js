@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+require("./validate-troop-accounting.js");
 const fs = require("fs");
 const path = require("path");
 const vm = require("node:vm");
@@ -53,7 +54,7 @@ assert.doesNotMatch(profileRenderSource, /formatBaseAndBonusStat|profileKingPowe
   "The player profile must not append a bonus suffix or Power explanation.");
 assert.doesNotMatch(htmlSource, /profilePowerInfoBtn|profileKingPowerBreakdown|profileKingPowerStrongholdBonus/,
   "The player profile still exposes a Power explanation control.");
-if (serverVersion !== clientVersion || serverVersion !== 11) {
+if (serverVersion !== clientVersion || serverVersion !== 12) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
@@ -85,7 +86,7 @@ if (/gold|taxStewardship|royalGranaries|stoneworks|warDrumsExpiresAtMs/i.test(mi
 if (!serverSource.includes('where("holderUid", "=="')) {
   throw new Error("Held reward camps are not queried for King Power.");
 }
-if (!serverSource.includes("heldCamps: economy.heldCamps")) {
+if (!serverSource.includes("heldCamps: createPatchedHeldCampsForStats(economy, options.statsCampPatches)")) {
   throw new Error("Prepared economy snapshots omit held reward camps.");
 }
 if (!serverSource.includes('if (targetType === "camp")')) {
