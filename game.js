@@ -8573,9 +8573,9 @@ function getEnemyCityPowerBand(
   defenderKingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city)
 ) {
   if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
-  const attackerPower = Math.max(1, normalizePowerValue(playerKingPower));
+  const attackerPower = normalizePowerValue(playerKingPower);
   const defenderPower = normalizePowerValue(defenderKingPower);
-  if (defenderPower <= 0) return "in-range";
+  if (attackerPower <= 0 || defenderPower <= 0) return "unknown";
   if (attackerPower / defenderPower >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "protected";
   if (defenderPower > attackerPower) return "overpowering";
   return "in-range";
@@ -8668,7 +8668,7 @@ function getStableEnemyCityPowerBand(city, nowMs = Date.now()) {
     if (ownerUid && enemyPowerBandCache.delete(ownerUid)) scheduleEnemyPowerBandCommit();
     return "";
   }
-  if (!ownerUid) return "in-range";
+  if (!ownerUid) return "unknown";
 
   const record = enemyPowerBandCache.get(ownerUid) || null;
   const attackerSnapshot = getAuthoritativePlayerPowerBandSnapshot();
@@ -8684,7 +8684,7 @@ function getStableEnemyCityPowerBand(city, nowMs = Date.now()) {
       clearEnemyPowerBandPending(record);
       scheduleEnemyPowerBandCommit();
     }
-    return record?.confirmedBand || "in-range";
+    return record?.confirmedBand || "unknown";
   }
 
   const attackerUpdatedAtMs = attackerSnapshot.updatedAtMs;
@@ -8704,7 +8704,7 @@ function getStableEnemyCityPowerBand(city, nowMs = Date.now()) {
       clearEnemyPowerBandPending(record);
       scheduleEnemyPowerBandCommit();
     }
-    return record?.confirmedBand || "in-range";
+    return record?.confirmedBand || "unknown";
   }
 
   const candidateBand = getEnemyCityPowerBand(city, attackerSnapshot.power, defenderSnapshot.power);
@@ -8778,6 +8778,7 @@ function getEnemyCityPowerBandLabel(powerBand, city = null) {
       ? "Weaker kingdom protection: raid only, no capture"
       : "Weaker kingdom protection: two-stage assault required";
   }
+  if (powerBand === "unknown") return "King Power unavailable — attack range not yet verified";
   if (powerBand === "overpowering") return "King Power above yours";
   if (powerBand === "in-range") return "Within your King Power range";
   return "";
@@ -13708,7 +13709,7 @@ async function showPublicPlayerProfile(uid = "") {
     if (requestId !== publicPlayerProfileRequestId || !modal.open) return;
     const profile = normalizePublicPlayerProfile(raw, playerUid);
     if (!profile) throw new Error("That player profile is unavailable.");
-    rememberPlayerIdentity(profile, { force: true });
+    if (rememberPlayerIdentity(profile, { force: true })) renderCities();
     renderPublicPlayerProfile(profile);
     if (profile.clanId && !profile.clanShield && api.loadClan) {
       try {
@@ -14151,22 +14152,65 @@ function queuePlayerIdentityLookupForRecords(records = []) {
   );
 }
 
+async function refreshMissingPlayerPowerIdentities(batch, api, scope) {
+  if (!api?.getCombatPlayerIdentity) return false;
+  // Leaderboard rows from an older King Power version cannot classify range.
+  // Use the existing authoritative repair endpoint, at most two calls at once.
+  const pending = batch.filter(uid => !getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid })
+    && Date.now() - (playerIdentityLookupMisses.get(uid) || 0) >= PLAYER_IDENTITY_CACHE_STALE_MS);
+  let changed = false;
+  const worker = async () => {
+    while (pending.length && scope === getOnlineSessionRequestScope()) {
+      const uid = pending.shift();
+      try {
+        const raw = await withTimeout(api.getCombatPlayerIdentity({ uid }), 15000, "Kingdom strength check is taking too long.");
+        if (scope !== getOnlineSessionRequestScope()) return;
+        const identity = normalizePlayerIdentity(raw);
+        if (identity?.uid === uid && rememberPlayerIdentity(identity, { force: true })) {
+          changed = true;
+          canonicalizeVisiblePlayerIdentities();
+          renderCities();
+        }
+      } catch (error) {
+        if (scope !== getOnlineSessionRequestScope()) return;
+        console.warn("Could not refresh kingdom strength", error);
+      }
+      if (!getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid })) playerIdentityLookupMisses.set(uid, Date.now());
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  return changed;
+}
+
 async function refreshQueuedPlayerIdentities() {
   if (playerIdentityLookupInFlight) return;
   const api = getOnlineApi();
   if (!api?.loadPlayerIdentities || !api?.isSignedIn?.()) return;
+  const scope = getOnlineSessionRequestScope();
   playerIdentityLookupInFlight = true;
   let changed = false;
   try {
-    while (playerIdentityLookupQueue.size) {
+    while (playerIdentityLookupQueue.size && scope === getOnlineSessionRequestScope()) {
       const batch = Array.from(playerIdentityLookupQueue).slice(0, PLAYER_IDENTITY_LOOKUP_BATCH_SIZE);
       batch.forEach(uid => playerIdentityLookupQueue.delete(uid));
-      const rows = await api.loadPlayerIdentities(batch);
+      const powerLookupMisses = new Map(batch.map(uid => [uid, playerIdentityLookupMisses.get(uid)]));
+      const rows = await withTimeout(api.loadPlayerIdentities(batch), 15000, "Kingdom identities are taking too long.");
+      if (scope !== getOnlineSessionRequestScope()) break;
       const normalizedRows = (Array.isArray(rows) ? rows : []).map(normalizePlayerIdentity).filter(Boolean);
-      const found = new Set(normalizedRows.map(row => row.uid));
-      if (rememberPlayerIdentities(normalizedRows, { force: true })) changed = true;
+      if (rememberPlayerIdentities(normalizedRows, { force: true })) {
+        changed = true;
+        canonicalizeVisiblePlayerIdentities();
+        renderCities(true);
+      }
+      // A successfully read legacy row is still a failed current-power lookup.
+      // Its identity/name refresh must not erase the repair cooldown.
+      powerLookupMisses.forEach((missedAt, uid) => {
+        if (missedAt && !getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid })) playerIdentityLookupMisses.set(uid, missedAt);
+      });
+      if (await refreshMissingPlayerPowerIdentities(batch, api, scope)) changed = true;
+      if (scope !== getOnlineSessionRequestScope()) break;
       batch.forEach(uid => {
-        if (!found.has(uid)) playerIdentityLookupMisses.set(uid, Date.now());
+        if (!getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: uid }) && !playerIdentityLookupMisses.has(uid)) playerIdentityLookupMisses.set(uid, Date.now());
       });
     }
   } catch (error) {
@@ -14174,13 +14218,15 @@ async function refreshQueuedPlayerIdentities() {
   } finally {
     playerIdentityLookupInFlight = false;
   }
-  const recordsChanged = canonicalizeVisiblePlayerIdentities();
-  if (changed || recordsChanged) {
-    renderCities(true);
-    renderPaths();
-    renderArmies();
-    updateIncomingAttackUi();
-    updateOutgoingAttackUi();
+  if (scope === getOnlineSessionRequestScope()) {
+    const recordsChanged = canonicalizeVisiblePlayerIdentities();
+    if (changed || recordsChanged) {
+      renderCities(true);
+      renderPaths();
+      renderArmies();
+      updateIncomingAttackUi();
+      updateOutgoingAttackUi();
+    }
   }
   if (playerIdentityLookupQueue.size) window.setTimeout(refreshQueuedPlayerIdentities, 0);
 }

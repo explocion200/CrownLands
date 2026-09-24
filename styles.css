@@ -3005,6 +3005,14 @@ input {
   --enemy-city-name-bg: rgba(109, 23, 19, .9);
   --enemy-city-name-border: rgba(214, 107, 100, .72);
 }
+/* Unverified strength must not look like a confirmed in-range opponent. */
+.city-node.enemy.enemy-power-unknown {
+  --enemy-city-ui: #817665;
+  --enemy-city-ui-dark: #514a40;
+  --enemy-city-ui-border: #b6aa96;
+  --enemy-city-name-bg: rgba(81, 74, 64, .92);
+  --enemy-city-name-border: rgba(182, 170, 150, .8);
+}
 .city-node.enemy.enemy-power-protected {
   --enemy-city-ui: #c9786f;
   --enemy-city-ui-dark: #8f4c46;
