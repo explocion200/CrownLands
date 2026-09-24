@@ -31,21 +31,17 @@ function getNotificationOpenUrl(notificationData = {}) {
   return url.href;
 }
 
+// Optional screen styles are requested when their screen opens and use the
+// bounded runtime cache. Keep installation focused on the playable shell.
 const STATIC_CACHE_URLS = [
   "/main-screen-art-ui.css?v=20260923-hud-ink-r1",
   "/infirmary-ui.js?v=20260923-infirmary-r1",
-  "/infirmary-ui.css?v=20260923-infirmary-r1",
   "/clan-treasury-ui.js?v=20260923-treasury-r1",
-  "/clan-treasury-ui.css?v=20260923-treasury-r1",
   "/training-grounds-ui.js?v=20260923-training-r1",
-  "/training-grounds-ui.css?v=20260923-training-r1",
   "/engineers-workshop-ui.js?v=20260923-workshop-r1",
-  "/engineers-workshop-ui.css?v=20260923-workshop-r1",
   "/clan-shop-ui.js?v=20260922-clan-shop-r1",
-  "/clan-shop-ui.css?v=20260922-clan-shop-r1",
   "/help-handbook-content.js?v=20260922-handbook-r1",
   "/help-handbook-ui.js?v=20260922-handbook-r1",
-  "/help-handbook-ui.css?v=20260922-handbook-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",
   "/player-journey.css?v=20260920-journey-r1",
@@ -53,7 +49,6 @@ const STATIC_CACHE_URLS = [
   "/play/index.html",
   "/manifest.webmanifest",
   "/skills-ledger-ui.css?v=20260913-skills-ledger-r1",
-  "/clan-ledger-ui.css?v=20260913-clan-ledger-r1",
   "/settings-ledger-ui.css?v=20260913-settings-ledger-r1",
   "/assets/icons/settings-ledger.svg",
   "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
@@ -99,11 +94,10 @@ const STATIC_CACHE_URLS = [
   "/city-details-ui.css?v=20260909-city-details-r1",
   "/city-list-ui.css?v=20260909-city-list-r1",
   "/item-bag-ui.js?v=item-bag-r1",
-  "/item-bag-ui.css?v=item-bag-r1",
   "/shop-ui.js?v=royal-shop-r1",
-  "/shop-ui.css?v=royal-shop-r1",
   "/city-details-ui.js?v=20260909-city-details-r1",
   "/modal-ui.js?v=20260915-modal-lifecycle-r1",
+  "/optional-ui-styles.js?v=20260924-deferred-styles-r1",
   "/game.js?v=20260909-city-details-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",

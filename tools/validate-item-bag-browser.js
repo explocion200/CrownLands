@@ -65,7 +65,7 @@ async function main() {
     for (const [width, height] of [[1440,900], [844,390], [568,320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const sample of ['ready', 'unselected', 'shield', 'boost', 'last', 'empty', 'category-empty', 'large']) {
-        await evaluate(`__bagQA.reset('${sample}')`); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
+        await evaluate(`__bagQA.reset('${sample}')`); await wait("!!modalBody.querySelector('.ib-bag-shell')"); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
         // Two frames can now finish before the opening scale transition. Measure
         // settled touch targets without relying on slow rendering to hide it.
         await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");

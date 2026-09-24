@@ -47,7 +47,7 @@ const rootFiles = [
   "objectives-activity-ui.css", "objectives-activity-ui.js",
   "troop-orders-ui.css", "troop-orders-ui.js",
   "kingdom-ledgers-ui.css", "kingdom-ledgers-ui.js", "stronghold-details-ui.css", "stronghold-details-ui.js",
-  "modal-ui.js",
+  "modal-ui.js", "optional-ui-styles.js",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ledger-ui.css", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",

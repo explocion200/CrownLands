@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "optional-ui-styles.js",
   "main-screen-art-ui.css",
   "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
   "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",

@@ -147,6 +147,7 @@ async function main() {
       await ready(`buildingCalls.length===${before+1} && !holdingTowerActionsInFlight.size`);
       assert.equal((await evaluate('buildingCalls.at(-1)')).itemId,'recall_horn');
       await evaluate(`modalBody.querySelector('[data-shop-building]').value='training';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);
+      await ready('modalBody.dataset.trainingReady === "true"');
       assert(await evaluate('modal.classList.contains("training-grounds-modal")'));
       assert.equal(await evaluate('modalBody.querySelector("#currentBenefit").textContent'), '+1%');
       await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
