@@ -48,6 +48,35 @@ async function resolve(actor, movement) {
   return call("resolveArmyOrder", actor, { armyId: movement.id, routeRegionIds: movement.routeRegionIds });
 }
 
+async function assertTroopPower(actor) {
+  await db.runTransaction(async transaction => {
+    const [profileSnap, statsSnap, cities, armies, camps, garrisons] = await Promise.all([
+      transaction.get(db.doc(`players/${actor.uid}`)),
+      transaction.get(db.doc(`players/${actor.uid}/stats/global`)),
+      transaction.get(db.collectionGroup("cities").where("ownerUid", "==", actor.uid)),
+      transaction.get(db.collection("armies").where("ownerUid", "==", actor.uid).where("status", "==", "active")),
+      transaction.get(db.collectionGroup("camps").where("holderUid", "==", actor.uid)),
+      transaction.get(db.collectionGroup("garrison").where("ownerUid", "==", actor.uid)),
+    ]);
+    const current = doc => doc.data().worldId === identity.worldId
+      && doc.data().resetGeneration === identity.resetGeneration && doc.data().realmShardId === identity.realmShardId;
+    const sum = (snapshot, field, filter = () => true) => snapshot.docs.filter(current).filter(filter)
+      .reduce((total, doc) => total + Math.max(0, Math.floor(Number(doc.data()[field]) || 0)), 0);
+    const stats = statsSnap.data(), profile = profileSnap.data();
+    assert.equal(stats.version, 12);
+    assert.equal(stats.totalCityTroops, sum(cities, "troops"), "Saved stats omitted owned-city troops.");
+    assert.equal(stats.totalCampTroops, sum(camps, "currentGarrison"), "Saved stats omitted held Camp troops.");
+    assert.equal(stats.totalMarchingTroops, sum(armies, "troops", doc => doc.data().rallyAttack !== true), "Saved stats omitted an active march.");
+    assert.equal(stats.totalTowerTroops, sum(garrisons, "troops"), "Saved stats omitted personally owned Tower troops.");
+    assert.equal(stats.totalTowerTroops, profile.towerGarrisonTroops || 0);
+    const total = stats.totalCityTroops + stats.totalCampTroops + stats.totalMarchingTroops + stats.totalTowerTroops
+      + (profile.stationedReinforcementTroops || 0) + (profile.committedRallyTroops || 0);
+    assert.equal(stats.armyPower, total * 2, "Troops stopped contributing two power each.");
+    assert.equal(stats.kingPower, stats.armyPower + stats.replacementPower + stats.defensivePower);
+    assert.equal(profile.kingPower, stats.kingPower);
+  });
+}
+
 async function main() {
   const actors = [];
   for (let index = 0; index < 4; index++) actors.push(await createActor(`Tower Ruler ${index + 1}`));
@@ -153,13 +182,26 @@ async function main() {
     army: { id: `tower_order_${randomUUID()}`, kind, fromId: from.id, toId: to.id, requestedTroops: troops, troops } });
   const before = (await garrisonRef(member).get()).data().troops;
   const others = unchanged.filter(([uid]) => uid !== member.uid);
+  await call("collectEconomy", member);
+  await assertTroopPower(member);
   const withdrawal = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 1000, "tower", "city"));
   assert.equal((await garrisonRef(member).get()).data().troops, before - 1000);
+  await assertTroopPower(member);
+  // Both login repair and stale-version rebuild must include the moving troops.
+  await db.doc(`players/${member.uid}`).update({ identitySyncVersion: 0 });
+  await call("syncPlayerIdentity", member);
+  await assertTroopPower(member);
+  await db.doc(`leaderboards/${identity.resetGeneration}--${identity.realmShardId}/entries/${member.uid}`).update({ kingPowerVersion: 11 });
+  await call("getCombatPlayerIdentity", member, { uid: member.uid });
+  await assertTroopPower(member);
   const cityBefore = (await cityRef(member.home).get()).data().troops;
   await resolve(member, withdrawal.movement);
+  await assertTroopPower(member);
   assert((await cityRef(member.home).get()).data().troops >= cityBefore + 1000, "Withdrawal did not reach its owner's city.");
   const reinforcement = await call("sendHoldingTowerArmyOrder", member, order(member.home, tower, "reinforce", 100, "city", "tower"));
+  await assertTroopPower(member);
   await resolve(member, reinforcement.movement);
+  await assertTroopPower(member);
   assert.equal((await garrisonRef(member).get()).data().troops, before - 900);
   assert.deepEqual((await towerRef.collection("garrison").get()).docs.filter(row => row.id !== member.uid).map(row => [row.id, row.data().troops]), others,
     "Personal orders changed another player's garrison.");
@@ -347,8 +389,10 @@ async function main() {
   assert.equal(canceledNpc.result.blocked, "neutral_capture_limit", "An in-flight Tower attack bypassed the updated city limit.");
   assert.equal((await cityRef(npcTarget).get()).data().ownerKind, "neutral");
   assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled Tower attack failed to return its troops.");
+  await assertTroopPower(member);
   await resolve(member, allowedNpc.movement);
   assert.equal((await garrisonRef(member).get()).data().troops, preAttackTroops, "Canceled attack retry duplicated returned troops.");
+  await assertTroopPower(member);
   await setCityCount(31);
   await expectNpcBlocked(/30 or more cities/);
   const rivalAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, rivalTarget, "attack", 100, "tower", "city"));
@@ -367,8 +411,18 @@ async function main() {
   const campMap = layout.maps.find(map => map.permanentCore && map.camps?.length);
   const camp = {...campMap.camps[0], regionId: campMap.id};
   await db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${camp.regionId}/camps/${camp.id}`).set({ ...camp, ...identity, ownerUid: "", holderUid: "" });
-  const campAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 100, "tower", "camp"));
+  const campAttack = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 1_000_000, "tower", "camp"));
   assert.equal(campAttack.movement.targetType, "camp", "The neutral cap blocked a reward Camp attack.");
+  await resolve(member, campAttack.movement);
+  await assertTroopPower(member);
+  assert.equal((await db.doc(`islands/${identity.worldId}--${identity.realmShardId}--${camp.regionId}/camps/${camp.id}`).get()).data().holderUid,
+    member.uid, "The overwhelming force must capture the Camp for the accounting regression.");
+  await db.doc(`players/${member.uid}`).update({ identitySyncVersion: 0 });
+  await call("syncPlayerIdentity", member);
+  await assertTroopPower(member);
+  const campTransfer = await call("sendHoldingTowerArmyOrder", member, order(tower, camp, "attack", 100, "tower", "camp"));
+  await resolve(member, campTransfer.movement);
+  await assertTroopPower(member);
   const cappedMove = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 100, "tower", "city"));
   assert.equal(cappedMove.movement.kind, "transfer", "The neutral cap blocked a friendly transfer.");
   await setCityCount(29);

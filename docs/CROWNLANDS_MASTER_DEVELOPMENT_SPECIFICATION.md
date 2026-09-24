@@ -969,6 +969,15 @@ The verified `origin/main` production-reward hours are 0.5 for Easy, 1 for Mediu
 
 These are verified repository facts for commit `27105ae...`; exact deployed backend data and runtime parity remain **NEEDS VERIFICATION**.
 
+### Troop-accounting correction — September 24, 2026
+
+Confirmed: controlled troops must continue contributing to King Power when moved between holdings. The version 12 correction is implemented pending merge and deployment:
+
+- Personally owned Clan Tower garrisons contribute the existing 2 power per troop. Tower troops are attributed to their contributor, and current-generation counters exclude prior-season troops.
+- Tower departures, returns, and rally reservations preserve troop power without counting the same troops twice. Camp arrivals and combat settlements update the holder's troop contribution in the same transaction.
+- Stats rebuilds and identity repairs read and publish a consistent transactional snapshot of cities, Camps, marches, and personal troop counters. Identity repair includes held Camps.
+- Kingdom troop summaries and public troop estimates include Tower garrisons, stationed reinforcements, and committed rallies. The replacement-power and defensive-power formulas are unchanged; legitimate casualties, rewards, production, and changes in garrison defense can still change total King Power.
+
 ### Needs verification
 
 - Production runtime parity for King Power version 11 and live leaderboard contents.

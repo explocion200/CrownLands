@@ -1,40 +1,68 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9f08953e420c60af6a96bab36e32c2ee199c0f75",
+  "baseCommit": "b2b631559a703dcd4693cbb9742c186630e345fd",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/hud-edge-inset/draft.css",
-        "docs/visual-qa/hud-edge-inset/index.html",
-        "docs/visual-qa/hud-edge-inset/preview.html",
-        "docs/visual-qa/hud-edge-inset/preview.js",
-        "docs/visual-qa/hud-edge-inset/README.md",
-        "docs/visual-qa/hud-edge-inset/review.css",
-        "docs/visual-qa/hud-edge-inset/review.js",
-        "docs/visual-qa/hud-edge-inset/runtime-fixture.js",
-        "tools/validate-hud-edge-inset-browser.js"
+        "functions/index.js"
       ],
       "tests": [
-        "tools/validate-hud-edge-inset-browser.js"
+        "tools/validate-king-power.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-city-relinquishment-limit.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-rally-assembly.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-economy-concurrency.js"
       ],
-      "reason": "Validate the retained approved preview and before/after comparison at desktop and two landscape sizes. Check alignment with Reports, unchanged geometry/colors/hit targets and other controls, map zoom, viewport switches, guide, and existing header safe-area protection after layout refresh. The preview uses synthetic data; no backend changes or emulator suites apply."
+      "reason": "Server troop totals, Tower returns, Camp arrival/combat snapshots, and transactional stats/identity repairs share economy, movement, rally, protection and public-profile dependencies; emulator suites exercise real authority transitions and concurrent economy writes."
     },
     {
       "paths": [
-        "main-screen-art-ui.css",
-        "tools/validate-main-screen-art-browser.js"
+        "game.js"
       ],
       "tests": [
-        "tools/validate-main-screen-art-browser.js"
+        "tools/validate-king-power.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-weaker-kingdom-protection.js"
       ],
-      "reason": "Move the production player stack to align the row and Gold with Reports at 12px. The actual-game benchmark verifies the inset without preview injection, original artwork and colors, control dimensions and hit targets, existing navigation and chat, and zoom independence at desktop and two landscape sizes. The shared header retains its existing safe-area behavior, covered by the focused inset browser validator. CSS-only presentation change; no server-authoritative changes or emulator suites. Static-style comparisons wait for finite HUD color transitions to settle, avoiding animation-phase mismatches."
+      "reason": "Version 12 authority and response normalization retain every troop category in existing numeric summary fields; no markup, styling or layout changes."
+    },
+    {
+      "paths": [
+        "tools/validate-king-power.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-weaker-kingdom-protection.js"
+      ],
+      "tests": [
+        "tools/validate-king-power.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-weaker-kingdom-protection.js"
+      ],
+      "reason": "Run changed regressions against executable server and client functions, including ownership, generation filtering, duplicate exclusion, transaction retry, conservation and version authority."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "tests": [
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Verify immediately persisted troop totals during Tower withdrawal, city arrival, Tower reinforcement, repair/rebuild, canceled attack return, Camp capture and reinforcement."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly approved follow-up placement and superseded Gold position. Documentation only; runtime coverage is provided by the two focused HUD browser validators."
+      "reason": "Document the confirmed existing per-troop rule and the pending accounting corrections without claiming merge or deployment."
     }
   ]
 }

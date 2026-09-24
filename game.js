@@ -1214,7 +1214,7 @@ const CITY_LEVEL_STATS = {
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 11;
+const KING_POWER_AUTHORITY_VERSION = 12;
 const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
 
 const SKILL_CONFIG = {
@@ -8295,6 +8295,9 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
     totalCityTroops: Math.max(0, Math.floor(Number(raw.totalCityTroops) || 0)),
     totalCampTroops: Math.max(0, Math.floor(Number(raw.totalCampTroops) || 0)),
+    totalReinforcementTroops: Math.max(0, Math.floor(Number(raw.totalReinforcementTroops) || 0)),
+    totalRallyTroops: Math.max(0, Math.floor(Number(raw.totalRallyTroops) || 0)),
+    totalTowerTroops: Math.max(0, Math.floor(Number(raw.totalTowerTroops) || 0)),
     totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
     totalCityLevels: Math.max(0, Math.floor(Number(raw.totalCityLevels) || 0)),
     totalVictoryPoints: Math.max(0, Math.floor(Number(raw.totalVictoryPoints) || 0)),
@@ -24010,7 +24013,10 @@ function getKingdomSummary() {
         : getKingPower(),
       cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
       troops: Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
+        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalReinforcementTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalRallyTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalTowerTroops) || 0)),
       gold: Math.floor(Number(state.gold) || 0),
       baseGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseGoldPerHour) || 0)),
       untimedGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.untimedGoldPerHour ?? globalStats.baseGoldPerHour) || 0)),
