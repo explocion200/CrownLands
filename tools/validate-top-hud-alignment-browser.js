@@ -5,7 +5,8 @@ const {createMapBenchmarkServer}=require('./map-benchmark/server');
 const artifacts=path.resolve(__dirname,'../release-artifacts/top-hud-alignment');fs.mkdirSync(artifacts,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{const server=createMapBenchmarkServer(),address=await server.listen();let browser,client;const records=[],errors=[],failed=[];try{
- browser=await startBrowserSession('C:/Program Files/Google/Chrome/Application/chrome.exe');client=await CdpClient.connect(browser.targets.find(t=>t.type==='page').webSocketDebuggerUrl);
+ const executable=[process.env.CHROME_PATH,'C:/Program Files/Google/Chrome/Application/chrome.exe','/usr/bin/google-chrome','/usr/bin/chromium'].find(p=>p&&fs.existsSync(p));assert(executable,'Chromium browser required');
+ browser=await startBrowserSession(executable);client=await CdpClient.connect(browser.targets.find(t=>t.type==='page').webSocketDebuggerUrl);
  await client.send('Page.enable');await client.send('Runtime.enable');await client.send('Network.enable');
  client.on('Runtime.exceptionThrown',e=>errors.push(e.exceptionDetails.exception?.description||e.exceptionDetails.text));
  client.on('Network.responseReceived',e=>{if(e.response.status>=400&&['Script','Image','Stylesheet'].includes(e.type))failed.push(e.response.url);});
