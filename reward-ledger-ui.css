@@ -296,7 +296,7 @@
 #modal.offline-reward-modal > .modal-card > #modalTitle,
 #modal.offline-reward-modal > .modal-card > #closeModalBtn,
 #modal.offline-reward-modal > .modal-card > #modalHeaderNav { display:none!important; }
-#modal.offline-reward-modal #modalBody { height:100%; min-height:0!important; max-height:none!important; margin:0!important; padding:0!important; overflow:hidden!important; }
+#modal.offline-reward-modal #modalBody { height:100%; min-height:0!important; max-height:none!important; margin:0!important; padding:0!important; overflow:hidden!important; scrollbar-gutter:auto!important; }
 #modal.offline-reward-modal .offline-lost-cities { margin:0; padding:15px; border:0!important; border-top:2px solid #996247!important; background:#e3cbaa80!important; color:#3e3327!important; display:block; }
 #modal.offline-reward-modal .offline-lost-cities > span { display:block; color:#805939!important; font-size:10px; }
 #modal.offline-reward-modal .offline-lost-cities > strong { display:block; font:22px/1.3 Georgia,serif; color:#844938!important; margin:7px 0 12px; }

@@ -1,57 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b2b631559a703dcd4693cbb9742c186630e345fd",
+  "baseCommit": "d08cf59c00c5bdffd49089d187c8ecc06384ebeb",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "tools/validate-clan-tower-king-power.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "reward-ledger-ui.css"
       ],
       "tests": [
-        "tools/validate-clan-tower-king-power.js",
-        "tools/validate-king-power.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-clan-tower-battle-reports.js"
+        "tools/validate-chat-reward-ledgers-browser.js"
       ],
-      "reason": "Include personally attributed current-Core Tower troops in the shared military total and both stats projection paths; use generation-aware counters on transfers, scouts, rallies, capture, casualties and returns. The regression reproduces the original drop and verifies realm guards and count conservation. Real Tower lifecycle/battle emulator coverage checks authoritative profile and leaderboard values, retries and clan departure. Shared King Power, public estimates, protection, rally and reinforcement validators cover downstream consumers. The broad legacy validate-holding-towers.js has a pre-existing stale Treasury presentation assertion on origin/main; focused lifecycle and battle suites cover the changed authority paths."
-    },
-    {
-      "paths": [
-        "firestore.rules",
-        "functions/test/emulator-holding-tower-rules.js"
-      ],
-      "tests": [
-        "functions/test/emulator-holding-tower-rules.js"
-      ],
-      "reason": "Keep Tower power counters server-owned by denying client field creation as well as updates; preserve garrison privacy and existing Treasury access."
-    },
-    {
-      "paths": [
-        "firebaseClient.js",
-        "game.js",
-        "tools/validate-clan-tower-king-power-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-king-power.js",
-        "tools/validate-clan-tower-king-power-browser.js",
-        "tools/validate-stat-breakdowns.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
-      ],
-      "reason": "Retain tower/rally/reinforcement counts through both client normalizers and show all owned military troops in the profile without double-counting. Verify actual rendered King Power and troop values at desktop and landscape mobile, plus existing compact stat and public estimate privacy behavior."
-    },
-    {
-      "paths": [
-        "docs/clan-tower-king-power.md"
-      ],
-      "tests": [],
-      "reason": "Document the reproduced accounting defect, current production realm verified read-only, affected authority flows and authorized-release steps for refreshing existing player scores. No new game design or production mutation."
+      "reason": "Remove the hidden outer modal body scrollbar gutter only for the Welcome Back receipt, preserving its inner scroll containers and fixed Collect footer. The existing reward-ledger browser suite exercises the affected stylesheet and shared modal lifecycle at desktop, landscape mobile, and short landscape sizes, including city losses and inactivity notices. Manual browser measurements reproduce an 8px left versus 23px right frame before the fix and verify equal insets afterward. No gameplay, server, or authority paths change, so emulator suites are unnecessary."
     }
   ]
 }
