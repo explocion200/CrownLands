@@ -10,7 +10,15 @@
         "service-worker.js",
         "tools/validate-deferred-ui-styles.js",
         "tools/validate-deferred-ui-styles-browser.js",
-        "tools/validate-clan-treasury-browser.js"
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-shop-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-responsive-browser.js"
       ],
       "tests": [
         "tools/validate-deferred-ui-styles.js",
@@ -26,9 +34,10 @@
         "tools/validate-training-grounds-browser.js",
         "tools/validate-modal-lifecycle-browser.js",
         "tools/validate-pwa-entry-routing.js",
-        "tools/validate-manuscript-prototype.js"
+        "tools/validate-manuscript-prototype.js",
+        "tools/validate-responsive-browser.js"
       ],
-      "reason": "Defer nine optional screen styles until the screen opens, sharing bounded requests with retry and current-view/session guards. Verify no startup fetches, failure/retry and stale completions, real affected screens on desktop/landscape, synchronous Help cleanup during close/reopen, existing offline cache fallback, installed entry routing and the unchanged installation-byte budget. Existing UI action tests retain server authority expectations; no server or economy mechanics change."
+      "reason": "Defer nine optional screen styles until the screen opens, sharing bounded requests with retry and current-view/session guards. Verify no startup fetches, failure/retry and stale completions, real affected screens on desktop/landscape, synchronous Help cleanup during close/reopen, existing offline cache fallback, installed entry routing and the unchanged installation-byte budget. Existing UI action tests retain server authority expectations; no server or economy mechanics change. Affected browser fixtures await the real destination/stylesheet before asserting controls, image readiness or cooldown timing; all original action, layout and authority assertions remain."
     },
     {
       "paths": [

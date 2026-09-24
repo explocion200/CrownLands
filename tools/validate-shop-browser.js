@@ -64,7 +64,7 @@ async function main() {
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
       for (const sample of ['ready','low','limit','pending','large','rewards','cooldown','adlimit','unavailable']) {
-        await evaluate(`__shopQA.reset('${sample}')`); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
+        await evaluate(`__shopQA.reset('${sample}')`); await wait("!!modalBody.querySelector('.rs-shop-shell')"); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
         // Measure settled touch targets after the opening scale transition;
         // two fast frames do not imply that the animation has finished.
         await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");

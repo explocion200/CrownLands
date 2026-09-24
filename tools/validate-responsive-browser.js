@@ -213,6 +213,8 @@ async function main() {
       })()`);
       if (!baselineRoot) assert(scout.pending && scout.released && scout.failedFeedbackReleased, "Scout request feedback or cleanup failed.");
 
+      // Measure cooldown repaint after styles arrive; lazy-load failures have their own regression.
+      await evaluate("typeof loadOptionalUiStyle === 'function' ? loadOptionalUiStyle('shop') : Promise.resolve()");
       const shop = await evaluate(`(() => {
         const interval = window.setInterval;
         const getRemaining = getRewardedAdCooldownRemainingMs;

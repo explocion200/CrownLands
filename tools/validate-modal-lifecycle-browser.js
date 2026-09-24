@@ -81,6 +81,8 @@ async function main() {
           await evaluate("showLogModal(); modalBody.querySelector('[data-reports-close]').click()");
           await wait(100);
           await evaluate(destination);
+          for (let i = 0; i < 600 && await evaluate('!!modalBody.querySelector(".optional-ui-loading")'); i++) await wait(100);
+          assert(!await evaluate('!!modalBody.querySelector(".optional-ui-loading")'), "Destination styles did not load");
           await wait(350);
           const status = await evaluate("modalLifecycleQa.closeState()");
           assert(status.open && status.visible && status.usable, `Reports poisoned ${destination} at ${JSON.stringify({ fullscreen, viewport, status })}`);
