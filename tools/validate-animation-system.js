@@ -396,6 +396,33 @@ for (let index = 0; index < 400; index++) animations.sampleFrame(frameClock += 1
 assert.equal(animations.getEffectiveMode(), "full", "Sustained recovery should restore automatic effects.");
 for (let index = 0; index < 200; index++) animations.sampleFrame(frameClock += 1000, false);
 assert.equal(animations.getEffectiveMode(), "full", "Background gaps must not reduce animation quality.");
+// A single foreground stall or resume gap is not sustained frame pressure.
+animations.sampleFrame(frameClock += 60000);
+for (let index = 0; index < 400; index++) animations.sampleFrame(frameClock += 16);
+assert.equal(animations.getEffectiveMode(), "full", "One long stall must not reduce automatic effects.");
+animations.sampleFrame(frameClock, false);
+for (let index = 0; index < 4; index++) animations.sampleFrame(frameClock += 500);
+assert.equal(animations.getEffectiveMode(), "full", "One severe window must not change quality.");
+for (let index = 0; index < 4; index++) animations.sampleFrame(frameClock += 500);
+assert.equal(animations.getEffectiveMode(), "reduced", "Repeated foreground frames over 250ms must reduce automatic effects.");
+for (const preference of ["full", "reduced", "off"]) {
+  animations.setMode(preference, { persist: false });
+  for (let index = 0; index < 12; index++) animations.sampleFrame(frameClock += 500);
+  assert.equal(animations.getMode(), preference, "Frame pressure must not overwrite the saved preference.");
+  assert.equal(animations.getEffectiveMode(), preference, "Frame pressure must preserve explicit animation modes.");
+}
+animations.setMode("auto", { persist: false });
+for (let index = 0; index < 400; index++) animations.sampleFrame(frameClock += 16);
+assert.equal(animations.getEffectiveMode(), "full", "Healthy frames must recover after severe pressure.");
+animations.sampleFrame(frameClock, false);
+for (let index = 0; index < 4; index++) animations.sampleFrame(frameClock += 500);
+animations.sampleFrame(frameClock += 60000, false);
+for (let index = 0; index < 4; index++) animations.sampleFrame(frameClock += 500);
+assert.equal(animations.getEffectiveMode(), "full", "Background or blocked-transition gaps must break a pressure streak.");
+mediaQuery.matches = true;
+for (let index = 0; index < 400; index++) animations.sampleFrame(frameClock += 16);
+assert.equal(animations.getEffectiveMode(), "reduced", "Performance recovery must still honor system reduced motion.");
+mediaQuery.matches = false;
 animations.clearAll("static-validator");
 animations.setMode(initialMode, { persist: false });
 

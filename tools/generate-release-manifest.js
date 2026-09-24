@@ -68,6 +68,7 @@ function createManifest() {
 
   const clientFiles = [
     "app-entry.js",
+    "optional-ui-styles.js",
     "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png",
     "chat-ledger-ui.css", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
     "incoming-threats-ui.css", "incoming-threats-ui.js",

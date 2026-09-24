@@ -98,10 +98,10 @@ async function main(){
    assert(await ev(`modalBody.querySelector('#upgrade').disabled&&modalBody.querySelector('#upgrade').textContent==='Maximum level'`));
    await ev(`modalBody.querySelector('[data-infirmary-back]').click()`);assert(!await ev('modal.classList.contains("infirmary-modal")'));
    await ev(`modalBody.querySelector('[data-tower-tab="buildings"]').click()`);assert(await ev('modal.classList.contains("infirmary-modal")'));
-   await ev(`modalBody.querySelector('[data-infirmary-building]').value='shop';modalBody.querySelector('[data-infirmary-building]').dispatchEvent(new Event('change'))`);assert(await ev('modal.classList.contains("clan-shop-modal")'));
-   await ev(`modalBody.querySelector('[data-shop-building]').value='infirmary';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);assert(await ev('modal.classList.contains("infirmary-modal")'));
-   await ev(`modalBody.querySelector('[data-infirmary-building]').value='workshop';modalBody.querySelector('[data-infirmary-building]').dispatchEvent(new Event('change'))`);assert(await ev('modal.classList.contains("engineers-workshop-modal")'));
-   await ev(`modalBody.querySelector('[data-workshop-building]').value='infirmary';modalBody.querySelector('[data-workshop-building]').dispatchEvent(new Event('change'))`);assert(await ev('modal.classList.contains("infirmary-modal")'));
+   await ev(`modalBody.querySelector('[data-infirmary-building]').value='shop';modalBody.querySelector('[data-infirmary-building]').dispatchEvent(new Event('change'))`);await ready('modalBody.dataset.clanShopReady === "true"');assert(await ev('modal.classList.contains("clan-shop-modal")'));
+   await ev(`modalBody.querySelector('[data-shop-building]').value='infirmary';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);await ready('modalBody.dataset.infirmaryReady === "true"');assert(await ev('modal.classList.contains("infirmary-modal")'));
+   await ev(`modalBody.querySelector('[data-infirmary-building]').value='workshop';modalBody.querySelector('[data-infirmary-building]').dispatchEvent(new Event('change'))`);await ready('modalBody.dataset.workshopReady === "true"');assert(await ev('modal.classList.contains("engineers-workshop-modal")'));
+   await ev(`modalBody.querySelector('[data-workshop-building]').value='infirmary';modalBody.querySelector('[data-workshop-building]').dispatchEvent(new Event('change'))`);await ready('modalBody.dataset.infirmaryReady === "true"');assert(await ev('modal.classList.contains("infirmary-modal")'));
    // Closing during an operation must not reopen the panel or contaminate a different clan.
    await ev(`infirmaryTower.buildings.infirmary=4;refreshHoldingTower(infirmaryTower.id);infirmaryQa.hold=true;modalBody.querySelector('#upgrade').click();modal.close()`);
    await delay(100);assert(!await ev('modal.classList.contains("infirmary-modal")'));
