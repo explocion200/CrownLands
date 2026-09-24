@@ -1,15 +1,53 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d08cf59c00c5bdffd49089d187c8ecc06384ebeb",
+  "baseCommit": "a01303edf61d350cdd3a9363d308edf2945acbdc",
   "coverage": [
     {
       "paths": [
-        "reward-ledger-ui.css"
+        "game.js",
+        "index.html",
+        "optional-ui-styles.js",
+        "service-worker.js",
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js"
       ],
       "tests": [
-        "tools/validate-chat-reward-ledgers-browser.js"
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-shop-browser.js",
+        "tools/validate-help-handbook-browser.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-manuscript-prototype.js"
       ],
-      "reason": "Remove the hidden outer modal body scrollbar gutter only for the Welcome Back receipt, preserving its inner scroll containers and fixed Collect footer. The existing reward-ledger browser suite exercises the affected stylesheet and shared modal lifecycle at desktop, landscape mobile, and short landscape sizes, including city losses and inactivity notices. Manual browser measurements reproduce an 8px left versus 23px right frame before the fix and verify equal insets afterward. No gameplay, server, or authority paths change, so emulator suites are unnecessary."
+      "reason": "Defer nine optional screen styles until the screen opens, sharing bounded requests with retry and current-view/session guards. Verify no startup fetches, failure/retry and stale completions, real affected screens on desktop/landscape, synchronous Help cleanup during close/reopen, existing offline cache fallback, installed entry routing and the unchanged installation-byte budget. Existing UI action tests retain server authority expectations; no server or economy mechanics change."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-pwa-entry-routing.js"
+      ],
+      "reason": "Ship the new loader and keep every optional stylesheet in the production artifact; validate web and itch directory-relative entries and release identity."
+    },
+    {
+      "paths": [
+        "tools/validate-holding-towers.js"
+      ],
+      "tests": [
+        "tools/validate-holding-towers.js"
+      ],
+      "reason": "Repair the stale Treasury markup assertion to inspect the existing extracted renderer and its game integration, preserving all five metric requirements and the rest of the Holding Tower checks."
     }
   ]
 }

@@ -4129,6 +4129,9 @@ function renderHoldingTowerModal(tower) {
     delete modalBody.dataset.clanShopReady;
     const session = holdingTowerModalSession;
     const buildingId = trainingOpen ? "training" : infirmaryOpen ? "infirmary" : "workshop";
+    if (!ensureModalUiStyle(buildingId, () => {
+      if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+    })) return;
     const viewKey = `${buildingId}View`;
     const buildingView = session[viewKey] || (session[viewKey] = {});
     const refreshBuilding = async (refreshBalance = false) => {
@@ -4168,6 +4171,9 @@ function renderHoldingTowerModal(tower) {
   }
   if (shopOpen) {
     const session = holdingTowerModalSession;
+    if (!ensureModalUiStyle("clan-shop", () => {
+      if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+    })) return;
     const shopView = session.shopView || (session.shopView = {});
     modalTitle.textContent = "Clan Shop";
     window.CrownlandsClanShopUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
@@ -4354,6 +4360,7 @@ function renderHoldingTowerTreasuryQa(scenario = "treasury-locked") {
   };
   modal.classList.add("holding-tower-treasury-qa-modal");
   modalTitle.textContent = "Clan Treasury";
+  if (!ensureModalUiStyle("treasury", () => renderHoldingTowerTreasuryQa(scenario))) return;
   modalBody.innerHTML = `<div class="holding-tower-treasury-qa">${renderClanTreasuryPanel()}</div>`;
 }
 
@@ -26319,6 +26326,10 @@ function bindClanRallyControls(root = document) {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  const styleScope = getOnlineRequestScope();
+  if (!ensureOptionalUiStyle(["clan", "treasury"], clanContent, () => {
+    if (activeProfileTab === "clan" && styleScope === getOnlineRequestScope()) renderClanView();
+  })) return;
   if (clanTreasuryView.scope === getClanTreasuryScope()) window.CrownlandsClanTreasuryUi?.capture(clanContent, clanTreasuryView);
   else clanTreasuryView = { scope: getClanTreasuryScope() };
   const rosterScrollTop = clanContent.querySelector(".clan-roster")?.scrollTop || 0;
@@ -35680,6 +35691,7 @@ function bindShopItemSelection() {
 
 function renderShopModal() {
   if (!state) return;
+  if (!ensureModalUiStyle("shop", renderShopModal)) return;
   rememberShopCarouselScroll();
   const selectableIds = getSelectableShopItemIds();
   if (!selectableIds.includes(selectedShopItemId)) selectedShopItemId = selectableIds[0] || "";
@@ -35732,6 +35744,10 @@ function showInventoryModal() {
   commonGearBoxView?.dispose();
   modal.className = "inventory-modal modal";
   modalTitle.textContent = "ITEM BAG";
+  if (!ensureModalUiStyle("bag", showInventoryModal)) {
+    if (!modal.open) modal.showModal();
+    return;
+  }
   modalBody.innerHTML = renderItemBagPanel(model, selectedEntry, selectedEntryActiveRemaining, selectedEntryActionLabel, effectLabel);
   bindInventoryCategoryControls();
   modalBody.querySelectorAll("[data-inventory-page]").forEach(button => {
@@ -39358,10 +39374,22 @@ function handleOnboardingGuidanceClick(event) {
   if (!modal.open) (profileScreen?.classList.contains("open") ? document.querySelector("#onboardingProfileTip button") || profileCloseBtn : host?.querySelector("button") || logBtn)?.focus();
 }
 
+function ensureModalUiStyle(name, render) {
+  const scope = getOnlineRequestScope();
+  const view = modal.className;
+  return ensureOptionalUiStyle(name, modalBody, () => {
+    if (modal.open && modal.className === view && scope === getOnlineRequestScope()) render();
+  });
+}
+
 function showHelpModal() {
   const scope = getOnlineRequestScope();
   modal.className = "modal help-handbook-modal";
   modalTitle.textContent = "Help & first steps";
+  if (!ensureModalUiStyle("help", showHelpModal)) {
+    if (!modal.open) modal.showModal();
+    return;
+  }
   window.CrownlandsHelpHandbookUi.mount(modalBody, {
     tipsEnabled: Boolean(getOnboardingPrefs()?.enabled),
     canEditTips: Boolean(getCurrentOnlineUid()),
@@ -39377,10 +39405,6 @@ function showHelpModal() {
       return Boolean(getOnboardingPrefs()?.enabled);
     },
   });
-  modal.addEventListener("close", () => {
-    modal.classList.remove("help-handbook-modal");
-    delete modalBody.dataset.helpReady;
-  }, { once: true });
   if (!modal.open) modal.showModal();
 }
 let gameDisplayEntryRequested = false;
@@ -41113,6 +41137,8 @@ document.addEventListener("pointerdown", event => {
 }, true);
 installGameModalLifecycle(modal, handleGameModalClose);
 function handleGameModalClose() {
+  modal.classList.remove("help-handbook-modal");
+  delete modalBody.dataset.helpReady;
   battleReportVisitViewedAtMs = null;
   reinforcementActivityErrors.clear();
   modal.classList.remove("battle-reports-ledger", "battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger", "reinforcements-activity-ledger");
