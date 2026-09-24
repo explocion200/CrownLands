@@ -6,6 +6,14 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "main-screen-art-ui.css",
+  "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
+  "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
+  "assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",
+  "assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
+  "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
+  "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
+  "assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp",
   "infirmary-ui.js", "infirmary-ui.css",
   "clan-treasury-ui.js", "clan-treasury-ui.css",
   "training-grounds-ui.js", "training-grounds-ui.css",

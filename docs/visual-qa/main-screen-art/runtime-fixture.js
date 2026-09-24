@@ -3,13 +3,17 @@
 (() => {
  if(location.hostname!=="127.0.0.1"||!window.__CROWNLANDS_BENCHMARK__||!window.CrownlandsOnline?.__getBenchmarkTelemetry)throw Error("Isolated HUD fixture required");
  const api=window.__CROWNLANDS_BENCHMARK__,root=document.documentElement,$=id=>document.getElementById(id);
+ // Keep the approved before/after reference after production adopts the new art.
+ document.body.classList.remove("hud-illustrated");
  const prefix="/docs/visual-qa/main-screen-art/",originals=[];
- for(const[selector,asset]of[
-  ["#inventoryBtn img",prefix+"art/hud-bag-r1.webp"],["#shopBtn img",prefix+"art/hud-shop-r1.webp"],
-  ["#cityListBtn img",prefix+"art/hud-cities-r1.webp"],["#islandSwitchBtn img",prefix+"art/hud-map-r1.webp"],
-  ["#leaderboardBtn img",prefix+"art/hud-leaderboard-r1.webp"],["#dailyLoginRewardBtn img",prefix+"art/hud-daily-reward-r1.webp"]
- ]){const el=document.querySelector(selector);if(el)originals.push({el,src:el.getAttribute("src"),asset});}
- const oldReport=document.querySelector("#logBtn .report-icon"),newReport=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ for(const[selector,asset,legacy]of[
+  ["#inventoryBtn img",prefix+"art/hud-bag-r1.webp","hud-bag-192x192-8d79a1879913.webp"],["#shopBtn img",prefix+"art/hud-shop-r1.webp","hud-shop-192x192-631cf3c626d5.webp"],
+  ["#cityListBtn img",prefix+"art/hud-cities-r1.webp","hud-city-list-192x192-29705553a45a.webp"],["#islandSwitchBtn img",prefix+"art/hud-map-r1.webp","hud-map-192x192-f330cd084a9f.webp"],
+  ["#leaderboardBtn img",prefix+"art/hud-leaderboard-r1.webp","hud-leaderboard-192x192-8817d6f254ec.webp"],["#dailyLoginRewardBtn img",prefix+"art/hud-daily-reward-r1.webp","daily-reward-160x160-9bd7a936016f.webp"]
+ ]){const el=document.querySelector(selector);if(el)originals.push({el,src:"assets/optimized/"+legacy,asset});}
+ const oldReport=document.createElement("img"),newReport=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ oldReport.className="nav-icon report-icon";oldReport.src="assets/optimized/hud-report-192x192-21644b7390fb.webp";oldReport.width=192;oldReport.height=192;oldReport.alt="";
+ document.querySelector("#logBtn .report-icon").replaceWith(oldReport);
  newReport.setAttribute("class","nav-icon report-icon hud-art-report");newReport.setAttribute("viewBox","0 0 64 64");newReport.setAttribute("aria-hidden","true");
  newReport.innerHTML='<use href="/assets/icons/battle-reports-ledger-r1.svg#dispatch"></use>';
  oldReport.after(newReport);

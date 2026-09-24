@@ -25,14 +25,45 @@
       "tests": [
         "tools/validate-main-screen-art-draft-browser.js"
       ],
-      "reason": "Approval-only main-screen art draft mounted on the current real-game loopback benchmark. Cover seven transparent artwork replacements, Current/New comparison, exact preservation of original red backgrounds, colors and borders, native desktop/landscape viewport controls, zoom-independent bounds, button hit targets, incoming/outgoing and effect states, preserved saved heraldry, mini-chat dimensions/background/arrow, timer width, image loading and runtime errors. Shared runtime files and backend rules are not modified; no production entry references this draft, so no emulator suite applies. Future production integration requires its own affected-dependency review."
+      "reason": "Approved before/after reference mounted on the real-game loopback benchmark. Cover seven transparent artwork replacements, explicit legacy comparison after production integration, exact preservation of red backgrounds/colors/borders, native desktop/landscape viewports, zoom-independent bounds, hit targets, operation/effect states, saved heraldry, mini-chat dimensions/background/arrow, timer width and image/script loading. The preview is not referenced by production. No backend changes or emulator suite apply."
     },
     {
       "paths": [
-        "docs/visual-qa/main-screen-art/README.md"
+        "docs/visual-qa/main-screen-art/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Documents the audited current HUD sources, proposed style treatment and pending-approval status, asset provenance, measured validation boundaries and existing smallest-viewport overlap. Does not change the authoritative game specification or claim deployment."
+      "reason": "Records explicit design approval, the retained original red surfaces and top icon designs, actual-game source integration, artwork provenance and validation boundaries. The existing smallest-viewport overlap is disclosed; there are no gameplay rule changes or deployment claims."
+    },
+    {
+      "paths": [
+        "index.html",
+        "main-screen-art-ui.css",
+        "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
+        "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
+        "assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",
+        "assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
+        "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
+        "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
+        "assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp",
+        "tools/validate-main-screen-art-browser.js"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-main-screen-art-draft-browser.js"
+      ],
+      "reason": "Wire the approved art into the actual HUD without changing gameplay JS. Verify byte-identical approved artwork, real loaded sources, native pointer navigation for Bag/Shop/Cities/Maps/Leaderboards/Daily Login/Reports/Profile, original colors/borders/geometry, chat toggle and map zoom on desktop and two landscape sizes. Main-screen DOM is shared with the comparison fixture, which explicitly restores historical references. Existing flags and passive timers are preserved; no backend or multiplayer contract changes."
+    },
+    {
+      "paths": [
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js"
+      ],
+      "reason": "Precache and package the approved stylesheet, seven raster assets and existing report sprite. Runtime tests check cache coverage and actual loaded assets; mandatory production build/artifact validation checks the deployment payload. Notification logic, game mechanics, release contracts and backend functions remain unchanged."
     }
   ]
 }

@@ -1,0 +1,10 @@
+/* Approved main-screen illustrations. Keep the existing red HUD surfaces,
+   labels, geometry, heraldry, timers and interaction styles unchanged. */
+body.hud-illustrated :is(.bag-icon,.shop-icon,.city-list-icon,.island-switch-icon,.profile-rank-icon,.daily-login-reward-icon){
+ object-fit:contain!important;filter:drop-shadow(0 2px 2px #21190f55)!important;animation:none!important;
+}
+body.hud-illustrated #profileBtn::before{
+ background:url("assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp") center/100% 100% no-repeat!important;
+ filter:drop-shadow(0 3px 3px #21190f66)!important;
+}
+body.hud-illustrated #logBtn .report-icon{filter:none!important}

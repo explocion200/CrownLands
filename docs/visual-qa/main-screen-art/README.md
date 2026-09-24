@@ -1,6 +1,6 @@
-# Main screen art — approval draft
+# Main screen art — approved design
 
-Status: **DRAFT — not integrated into the production entry, not pushed or deployed.**
+Status: **APPROVED — integrated into the actual game on the feature branch; merge and deployment pending.**
 
 Branch: `codex/main-screen-art-draft`. Base: `7711dcaf8cd2d1cfc731edcae4358d409abc74b4`.
 
@@ -37,7 +37,13 @@ The remaining mismatch is the glossy rendering of legacy HUD artwork. The user w
 
 The September 20 burgundy chat-toggle and active-item surrounds remain as approved. The mini-chat 64px height, 360px cap, exact 72% brown background, arrow direction and individual translation behavior remain inherited from current main. This pending artwork draft changes no authoritative gameplay or presentation rule.
 
-Map nodes, player/clan heraldry, pickup Gold/Troop artwork, 56px map action buttons, cooldown and retaliation rules, and all panel content remain unchanged. Existing shared rasters elsewhere in the game remain unchanged until the new draft is approved and reference replacements can be audited together.
+Map nodes, player/clan heraldry, pickup Gold/Troop artwork, 56px map action buttons, cooldown and retaliation rules, and all panel content remain unchanged. This approval covers main-screen artwork; other panels and public-site references retain their current images.
+
+## Actual-game integration
+
+`index.html` loads `main-screen-art-ui.css` and the seven approved WebP files, copied byte-for-byte into `assets/optimized/hud-*-ink-*`. The stylesheet is scoped to `body.hud-illustrated` and changes only image rendering and the player frame. Main-screen Reports uses the existing dispatch SVG. The service worker precaches the component and art; the production builder and artifact validator require them. No gameplay JavaScript or backend code changes.
+
+The local review fixture explicitly restores the legacy assets for Current game, so it remains a before/after reference after integration. It never supplies the production runtime implementation.
 
 ## Artwork
 
@@ -47,7 +53,7 @@ Reports reuses the existing approved dispatch SVG. The simplified profile/leader
 
 ## Validation and boundaries
 
-Run `node tools/validate-main-screen-art-draft-browser.js`.
+Run `node tools/validate-main-screen-art-draft-browser.js` and `node tools/validate-main-screen-art-browser.js`.
 
 - Compare every main button's bounds before/after at all three viewports.
 - Compare original and draft computed backgrounds, text colors and borders; preserve the original red surfaces exactly.
@@ -56,7 +62,8 @@ Run `node tools/validate-main-screen-art-draft-browser.js`.
 - Show incoming/outgoing notices, all four active items, and no active items.
 - Exercise the review shell's look, sample and native viewport controls; save screenshots and result JSON under ignored `release-artifacts/main-screen-art/`.
 - Check page exceptions and image/script/stylesheet failures. The benchmark's pre-existing `/play/?updateCheck=...` fetch can return 404 because the local fixture server has no production `/play/` route; this is not an artwork request.
+- The actual-game validator loads the production entry without the preview fixture, verifies all runtime art matches approved bytes, exercises pointer clicks on Bag, Shop, Cities, Maps, Leaderboards, Daily Login, Reports and Profile, tests the chat arrow and map zoom, and compares geometry/colors with the art skin toggled. All three viewports pass; screenshots and result JSON are under `release-artifacts/main-screen-art-game/`.
 
 The smallest 568px viewport inherits an existing overlap between expanded mini-chat and the lower active-item indicators. This draft deliberately preserves the main game's geometry; it does not claim to fix that separate layout issue. It is visible in both looks. Desktop and 844px landscape remain the main approval views.
 
-No backend or multiplayer mechanics are modified, so no emulator suite applies. Runtime integration, broader shared-asset replacement, PR checks, merge and deployment are pending design approval.
+No backend or multiplayer mechanics are modified, so no emulator suite applies. Design approval is recorded in the Master Specification. Required PR checks must pass before merge; production deployment remains unverified until explicitly authorized and completed.
