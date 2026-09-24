@@ -11,7 +11,8 @@ const { CdpClient, fetchJson } = require("./cdp-client.js");
 const { SCENARIOS } = require("./fixtures.js");
 const { createMapBenchmarkServer } = require("./server.js");
 
-const ROOT_DIR = path.resolve(__dirname, "..", "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..", "..");
 const outputDirectoryArgument = process.argv.find(argument => argument.startsWith("--output-directory="));
 const outputBasenameArgument = process.argv.find(argument => argument.startsWith("--output-basename="));
 const OUTPUT_DIR = outputDirectoryArgument

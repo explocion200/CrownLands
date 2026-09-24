@@ -6,7 +6,8 @@ const vm = require("node:vm");
 
 const { loadAuthoritativeRealmContract } = require("./realm-contract.js");
 
-const ROOT_DIR = path.resolve(__dirname, "..", "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..", "..");
 const MAP_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const CORE_EXPANSION_CATALOG_PATH = path.join(ROOT_DIR, "assets", "worlds", "core-expansion-v1", "region-catalog.json");
 const RELEASE_CONFIG_PATH = path.join(ROOT_DIR, "functions", "release-config.json");

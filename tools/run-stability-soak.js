@@ -5,7 +5,8 @@ const { chromium } = require("playwright");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET } = require("./map-benchmark/budgets.js");
 const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
-const root = path.resolve(__dirname, "..");
+const root = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..");
 const argument = (name, fallback) => process.argv.find(v => v.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
 const output = path.resolve(root, argument("output-directory", `release-artifacts/stability-soak/${new Date().toISOString().replace(/[:.]/g, "-")}`));
 const minutesOverride = argument("minutes", "");
@@ -106,6 +107,7 @@ async function runProfile(profile, address) {
 async function main(){
   await fs.mkdir(path.dirname(output),{recursive:true});await fs.mkdir(output);
   const source=sourceIdentity(root);
+  source.harness=sourceIdentity(path.resolve(__dirname,".."));
   const server=createMapBenchmarkServer(),address=await server.listen();let results;
   try {
     const selected=argument("profiles",profiles.map(p=>p.id).join(",")).split(",");
@@ -114,7 +116,8 @@ async function main(){
     results=parallel?await Promise.all(chosen.map(p=>runProfile(p,address))):[];
     if(!parallel)for(const p of chosen)results.push(await runProfile(p,address));
   }finally{await server.close();}
-  source.inputsUnchanged=source.inputDigest===sourceIdentity(root).inputDigest;
+  source.inputsUnchanged=source.inputDigest===sourceIdentity(root).inputDigest
+    && source.harness.inputDigest===sourceIdentity(path.resolve(__dirname,"..")).inputDigest;
   const report={schemaVersion:1,generatedAt:new Date().toISOString(),source,parallel,shortProbe:minutesOverride!=="",
     note:parallel?"Concurrent lifecycle/memory stress; these are not reference frame-rate measurements.":"Sequential lifecycle/memory soak.",results};
   await fs.writeFile(path.join(output,"soak.json"),JSON.stringify(report,null,2));

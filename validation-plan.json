@@ -8,7 +8,7 @@
       "reason": "Audit-only tooling and pinned development browser dependency. Exercise evidence-derived acceptance, missing/failed cases, duplicate/missing matrix profiles, unchanged existing budgets, current listener counts, deployed identity comparisons, and bounded watchdog success/failure. The shared loopback benchmark regression covers fixture isolation. Manual browser receipts cover startup/fault cases, compatibility, long soaks and the repeated matrix; limitations are recorded in the findings report. Root frozen installation and development dependency audit were checked. No production runtime or authority changes."
     },
     {
-      "paths": ["tools/map-benchmark/server.js", "tools/map-benchmark/injected-runtime.js", "tools/map-benchmark/early-instrumentation.js", "tools/map-benchmark/run-map-benchmark.js", "tools/validate-map-benchmark.js"],
+      "paths": ["tools/map-benchmark/server.js", "tools/map-benchmark/fixtures.js", "tools/map-benchmark/realm-contract.js", "tools/map-benchmark/injected-runtime.js", "tools/map-benchmark/early-instrumentation.js", "tools/map-benchmark/run-map-benchmark.js", "tools/validate-map-benchmark.js"],
       "tests": ["tools/validate-map-benchmark.js", "tools/validate-stability-audit.js"],
       "reason": "Shared benchmark harness caches scenario fixtures without leaking visual overrides, derives recovery listener counts from the current topology, and samples idle frames in the visible/focused browser. Validate deterministic scenarios, recovery capability parity, current listener budget, loopback-only operation, asset base and cache reuse. Browser calibration, startup/recovery and the isolated repeated matrix provide execution evidence. These are measurement fixes, not a game FPS improvement."
     },

@@ -5,7 +5,8 @@ const { chromium, firefox, webkit } = require("playwright");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET } = require("./map-benchmark/budgets.js");
 const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
-const root = path.resolve(__dirname, "..");
+const root = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..");
 const output = path.resolve(root, process.argv.find(v => v.startsWith("--output-directory="))?.slice(19)
   || `release-artifacts/stability-compatibility/${new Date().toISOString().replace(/[:.]/g, "-")}`);
 const engines = { chrome: [chromium, "chrome"], edge: [chromium, "msedge"], firefox: [firefox], webkit: [webkit] };
@@ -32,6 +33,7 @@ async function main() {
     "WebKit on Windows is not physical iOS Safari; viewport changes are not hardware orientation locks.",
     "PWA install and operating-system suspension require separate device verification.",
   ], browsers: [] };
+  report.source.harness = sourceIdentity(path.resolve(__dirname, ".."));
   try {
     for (const name of selected) {
       const result = { name, cases: [], status: "failed" }; let browser;
@@ -89,7 +91,8 @@ async function main() {
       await fs.writeFile(path.join(output, "compatibility.json"), JSON.stringify(report, null, 2));
     }
   } finally { await server.close(); }
-  report.source.inputsUnchanged = report.source.inputDigest === sourceIdentity(root).inputDigest;
+  report.source.inputsUnchanged = report.source.inputDigest === sourceIdentity(root).inputDigest
+    && report.source.harness.inputDigest === sourceIdentity(path.resolve(__dirname, "..")).inputDigest;
   await fs.writeFile(path.join(output, "compatibility.json"), JSON.stringify(report, null, 2));
   process.exitCode = report.source.inputsUnchanged && report.browsers.every(item => item.status === "passed") ? 0 : 1;
 }

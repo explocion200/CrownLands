@@ -8,13 +8,15 @@ const os = require("node:os");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { buildAcceptance, buildFindings, markdownReport, summarizeMatrixReport } = require("./stability-audit-report.js");
-const { bounded } = require("./stability-audit-runtime.js");
+const { bounded, sourceIdentity } = require("./stability-audit-runtime.js");
 
 const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client.js");
 const { loadAuthoritativeRealmContract } = require("./map-benchmark/realm-contract.js");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
-const ROOT_DIR = path.resolve(__dirname, "..");
+const HARNESS_ROOT = path.resolve(__dirname, "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : HARNESS_ROOT;
 const args = new Set(process.argv.slice(2));
 const FULL = args.has("--full");
 const NO_PRODUCTION = args.has("--no-production");
@@ -461,7 +463,7 @@ async function runMapMatrixRepetitions() {
       const basename = `matrix-r${repetition}`;
       console.log(`Running A-E map capacity matrix repetition ${repetition} of 3...`);
       await execFile(process.execPath, [
-        path.join(ROOT_DIR, "tools", "map-benchmark", "run-map-benchmark.js"),
+        path.join(__dirname, "map-benchmark", "run-map-benchmark.js"),
         "--fresh",
         `--output-directory=${outputDirectory}`,
         `--output-basename=${basename}`,
@@ -506,6 +508,7 @@ async function main() {
   const inputDigest = await sourceDigest();
   const source = { commit: await gitOutput(["rev-parse", "HEAD"]), branch: await gitOutput(["branch", "--show-current"]),
     dirtyDuringAudit: Boolean(await gitOutput(["status", "--short"])), inputDigest, startedAt };
+  source.harness = sourceIdentity(HARNESS_ROOT);
   console.log("Running isolated Crownlands stability browser audit...");
   const [localBrowser, productionAnonymous] = await Promise.all([
     runBrowserAudit(), NO_PRODUCTION ? Promise.resolve([]) : anonymousProductionChecks(),
@@ -513,7 +516,8 @@ async function main() {
   // Persist startup/fault evidence before a potentially long matrix or soak fails.
   await fsp.writeFile(path.join(OUTPUT_DIR, "browser.json"), JSON.stringify(localBrowser, null, 2));
   const mapMatrix = await runMapMatrixRepetitions();
-  source.inputsUnchanged = inputDigest === await sourceDigest();
+  source.inputsUnchanged = inputDigest === await sourceDigest()
+    && source.harness.inputDigest === sourceIdentity(HARNESS_ROOT).inputDigest;
   const report = {
     schemaVersion: 2, generatedAt: new Date().toISOString(), source,
     auditProfile: { full: FULL, soakMinutes: SOAK_MINUTES, mapSwitches: MAP_SWITCHES, foregroundCycles: FOREGROUND_CYCLES, reconnectCycles: RECONNECT_CYCLES },

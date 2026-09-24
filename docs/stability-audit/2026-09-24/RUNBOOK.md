@@ -24,6 +24,8 @@ pnpm audit:stability:full --soak-minutes=0 --output-directory=release-artifacts/
 
 The final command performs three complete map-matrix repetitions and the startup cases; the separate soak command supplies the long duration coverage. Run the map matrix alone, on the same machine/browser/power configuration before and after a fix. Concurrent browser validators or load jobs invalidate comparative frame-rate evidence. `audit:soak --parallel` is permitted only as an explicitly labeled concurrent lifecycle/memory stress test. A `--minutes` override is a probe, not the required long soak.
 
+To compare an isolated feature worktree with the exact same harness, set `CROWNLANDS_BENCHMARK_ROOT` to that worktree's absolute path and invoke these tools from the harness checkout. Client files, fixture catalogs and the authoritative contract come from the selected worktree; measurement instrumentation stays in the harness checkout. The audit records and checks both identities. Remove the environment override before measuring the baseline again.
+
 Do not edit executable inputs during a final measurement. Reports record source identity and detect changed inputs. Historical tracked reports are immutable. Tool exits distinguish a successful partial startup probe from a complete matrix; read the coverage statuses, not only the exit code. Unavailable browsers and truncated production logs are never healthy results.
 
 ## Required evidence

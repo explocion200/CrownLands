@@ -8,7 +8,8 @@ const path = require("node:path");
 const { createFixture, SCENARIOS } = require("./fixtures.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET, LEGACY_RUNTIME_BUDGET } = require("./budgets.js");
 
-const ROOT_DIR = path.resolve(__dirname, "..", "..");
+const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
+  ? path.resolve(process.env.CROWNLANDS_BENCHMARK_ROOT) : path.resolve(__dirname, "..", "..");
 const HOST = "127.0.0.1";
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
