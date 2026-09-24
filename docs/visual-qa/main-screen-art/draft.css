@@ -1,0 +1,11 @@
+/* Approval-only art restyle. All original red surfaces, borders and labels
+   are inherited unchanged from the real game's styles. */
+.hud-art-report[style*="none"]{display:none!important}
+.hud-art-draft #logBtn img.report-icon{display:none!important}
+.hud-art-draft :is(.bag-icon,.shop-icon,.city-list-icon,.island-switch-icon,.profile-rank-icon,.daily-login-reward-icon){
+ object-fit:contain!important;filter:drop-shadow(0 2px 2px #21190f55)!important;animation:none!important;
+}
+.hud-art-draft #profileBtn::before{background:url("art/hud-profile-frame-r1.webp") center/100% 100% no-repeat!important;filter:drop-shadow(0 3px 3px #21190f66)!important}
+.hud-art-draft #logBtn .hud-art-report{filter:none!important}
+/* Control geometry, burgundy gradients, gold text, chat arrow/transparency,
+   active-effect backgrounds, saved heraldry and level badge remain original. */

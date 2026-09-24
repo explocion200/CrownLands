@@ -83,8 +83,9 @@
   <link rel="stylesheet" href="clan-tower-details-ui.css?v=20260917-clan-towers-r1" />
   <link rel="stylesheet" href="chat-ledger-ui.css?v=20260919-approved-ui-r1" />
   <link rel="stylesheet" href="reward-ledger-ui.css?v=20260918-approved-ledgers-r1" />
+  <link rel="stylesheet" href="main-screen-art-ui.css?v=20260923-hud-ink-r1" />
 </head>
-<body>
+<body class="hud-illustrated">
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
     <symbol id="cl-icon-attack" viewBox="0 0 32 32"><path d="M8 5l5 2 12 15-3 3L7 10zm16 0l-5 2L7 22l3 3 15-15z"/><path d="M5 23l4 4 3-3-4-4zm22 0l-4 4-3-3 4-4z"/></symbol>
     <symbol id="cl-icon-transfer" viewBox="0 0 32 32"><path d="M6 29h21v-4h-3c0-4-1-7-4-9l6-2 4-6-4-5-5 4-2-8-5 7-7-3 2 8c-4 3-6 8-6 14z"/><path d="M15 11l-8 3 4 3-5 3 4 3-3 4h7c0-5 1-9 4-12z"/></symbol>
@@ -203,13 +204,13 @@
               <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
-              <img class="profile-rank-icon" src="assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+              <img class="profile-rank-icon" src="assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
             </button>
             <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan" data-audio-effect="menu_open">
               <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
             </button>
             <button id="dailyLoginRewardBtn" class="profile-rank-btn daily-login-reward-btn" type="button" aria-label="Open daily rewards">
-              <img class="daily-login-reward-icon" src="assets/optimized/daily-reward-160x160-9bd7a936016f.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
+              <img class="daily-login-reward-icon" src="assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
               <span id="dailyLoginRewardBadge" class="daily-login-reward-badge" aria-hidden="true" hidden>!</span>
             </button>
           </div>
@@ -248,10 +249,10 @@
         <div id="quickChatMessages" class="quick-chat-messages" aria-live="polite"></div>
       </section>
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
-        <img class="bag-icon" src="assets/optimized/hud-bag-192x192-8d79a1879913.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="bag-icon" src="assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
       </button>
       <button id="shopBtn" class="resource-pill shop-btn" type="button" aria-label="Open shop">
-        <img class="shop-icon" src="assets/optimized/hud-shop-192x192-631cf3c626d5.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="shop-icon" src="assets/optimized/hud-shop-ink-384x384-315e187c1111.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
       </button>
       <div id="activeItemEffectsStack" class="active-item-effects-stack">
         <div id="shieldStatusBadge" class="effect-status-badge shield-status-badge" hidden>
@@ -272,11 +273,11 @@
         </div>
       </div>
       <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
-        <img class="city-list-icon" src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="city-list-icon" src="assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
         <span id="cityText" class="sr-only">0 cities</span>
       </button>
       <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" data-audio-effect="menu_open" hidden>
-        <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-f330cd084a9f.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="island-switch-icon" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async" />
         <span id="islandSwitchLabel" class="sr-only">Map</span>
       </button>
 
@@ -340,7 +341,7 @@
           <strong class="nav-btn-heading"><span id="outgoingAttackCount" class="nav-btn-count">0</span> Outgoing</strong>
           <small id="outgoingAttackTime" class="nav-btn-label">Marches</small>
         </button>
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" draggable="false" decoding="async" /><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span><strong class="nav-btn-heading">Reports</strong><small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small></button>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><svg class="nav-icon report-icon" width="192" height="192" viewBox="0 0 64 64" aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#dispatch"></use></svg><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span><strong class="nav-btn-heading">Reports</strong><small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small></button>
       </nav>
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">

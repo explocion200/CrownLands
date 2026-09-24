@@ -1285,6 +1285,8 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 
 ### Current presentation status
 
+- **Approved September 23, 2026 — main-screen artwork:** Preserve the original red/burgundy HUD backgrounds, borders, label colors, layout and control sizes. Restyle the Bag, Shop, Cities and Map images as matte ink-and-wash illustrations matching the current map. Keep the original crown medallion, ornate Daily Login reward calendar and decorated player flag frame designs, redrawing their materials and outlines in that same illustrated style. The Reports button uses the existing illustrated dispatch emblem. Preserve actual saved player/clan heraldry, the player level badge, compact combat timers, active-item indicators, chat arrow, exact mini-chat transparency and zoom-independent controls. This approval supersedes the initial parchment-background and simplified-top-icon draft; release status requires deployment verification.
+
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.
 - Inner Castle Profile entry, current Stronghold/Citadel contrast, scalable Shop presentation, reworked Bag, Clan Heraldry v2, and latest map-touch guard: `LIVE — ALL PUBLISHED CHANNELS`.
 - UI polish remains ongoing: `IN DEVELOPMENT`.

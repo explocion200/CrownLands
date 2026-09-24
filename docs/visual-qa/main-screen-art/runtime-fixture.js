@@ -1,0 +1,51 @@
+"use strict";
+// Presentation-only, loopback-only fixtures. Never loaded by the production entry.
+(() => {
+ if(location.hostname!=="127.0.0.1"||!window.__CROWNLANDS_BENCHMARK__||!window.CrownlandsOnline?.__getBenchmarkTelemetry)throw Error("Isolated HUD fixture required");
+ const api=window.__CROWNLANDS_BENCHMARK__,root=document.documentElement,$=id=>document.getElementById(id);
+ // Keep the approved before/after reference after production adopts the new art.
+ document.body.classList.remove("hud-illustrated");
+ const prefix="/docs/visual-qa/main-screen-art/",originals=[];
+ for(const[selector,asset,legacy]of[
+  ["#inventoryBtn img",prefix+"art/hud-bag-r1.webp","hud-bag-192x192-8d79a1879913.webp"],["#shopBtn img",prefix+"art/hud-shop-r1.webp","hud-shop-192x192-631cf3c626d5.webp"],
+  ["#cityListBtn img",prefix+"art/hud-cities-r1.webp","hud-city-list-192x192-29705553a45a.webp"],["#islandSwitchBtn img",prefix+"art/hud-map-r1.webp","hud-map-192x192-f330cd084a9f.webp"],
+  ["#leaderboardBtn img",prefix+"art/hud-leaderboard-r1.webp","hud-leaderboard-192x192-8817d6f254ec.webp"],["#dailyLoginRewardBtn img",prefix+"art/hud-daily-reward-r1.webp","daily-reward-160x160-9bd7a936016f.webp"]
+ ]){const el=document.querySelector(selector);if(el)originals.push({el,src:"assets/optimized/"+legacy,asset});}
+ const oldReport=document.createElement("img"),newReport=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ oldReport.className="nav-icon report-icon";oldReport.src="assets/optimized/hud-report-192x192-21644b7390fb.webp";oldReport.width=192;oldReport.height=192;oldReport.alt="";
+ document.querySelector("#logBtn .report-icon").replaceWith(oldReport);
+ newReport.setAttribute("class","nav-icon report-icon hud-art-report");newReport.setAttribute("viewBox","0 0 64 64");newReport.setAttribute("aria-hidden","true");
+ newReport.innerHTML='<use href="/assets/icons/battle-reports-ledger-r1.svg#dispatch"></use>';
+ oldReport.after(newReport);
+ const oldFrame=getComputedStyle($("profileBtn"),"::before").backgroundImage;
+ let previousSample="",previousZoom=0;
+ const inform=message=>parent.postMessage({type:"hud-art-status",message},location.origin);
+ function setSample(sample){
+  if(sample===previousSample)return;previousSample=sample;
+  const now=Date.now(),active=sample==="active",protectedMap=sample==="protected";
+  state.itemEffects={...createDefaultItemEffects(),shieldExpiresAtMs:protectedMap?now+7*3600000:0,warDrumsExpiresAtMs:active||protectedMap?now+1428000:0,royalTaxDecreeExpiresAtMs:active||protectedMap?now+1112000:0,veilOfSilenceExpiresAtMs:active||protectedMap?now+276000:0};
+  const city=state.cities.find(c=>c.owner==="player");
+  onlineCombatAuthorization={uid:getCurrentOnlineUid(),shieldExpiresAtMs:active?now+814000:0,retaliation:active&&city?[{id:"hud-draft-retaliation",cityId:city.id,cityName:city.name,regionId:getCityRegionId(city),status:"available",expiresAtMs:now+648000}]:[]};
+  updateShieldStatusBadge();renderCombatTimers();api.setHudOperationState(active?"both":"none");
+ }
+ async function apply({look="draft",sample="active",zoom:nextZoom=1}={}){
+  const draft=look!=="current";root.classList.toggle("hud-art-draft",draft);root.dataset.hudArtLook=draft?"draft":"current";
+  for(const{el,src,asset}of originals)el.src=draft?asset:src;
+  oldReport.hidden=draft;newReport.style.display=draft?"":"none";
+  setSample(sample);
+  const requested=[1,1.6,2.2].includes(nextZoom)?nextZoom:1;
+  if(requested!==previousZoom){previousZoom=requested;await api.setVisualZoom(requested);}
+  root.dataset.hudArtApplied="true";
+  inform(draft?"Original red controls · Original icon designs in the map's illustrated style":"Current game · Original artwork and burgundy controls");
+ }
+ window.addEventListener("message",event=>{if(event.origin===location.origin&&event.source===parent&&event.data?.type==="hud-art-apply")apply(event.data);});
+ // Keep the design review on the map. The real chat arrow still expands/collapses.
+ document.addEventListener("click",event=>{
+  const target=event.target.closest("#profileBtn,#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#logBtn,#incomingAttackBtn,#outgoingAttackBtn,#mainCityReturnBtn,#fullscreenBtn,#openChatLedger,[data-retaliation-location]");
+  if(!target)return;event.preventDefault();event.stopImmediatePropagation();
+  inform((target.getAttribute("aria-label")||target.title||target.textContent.trim()||"Navigation")+" · Appearance preview only");
+ },true);
+ window.HudArtDraft={apply,originalFrame:oldFrame,assets:originals.map(({src,asset})=>({src,asset}))};
+ api.closeModal();pendingOfflineRewardsSummary=null;
+ parent.postMessage({type:"hud-art-fixture-ready"},location.origin);
+})();

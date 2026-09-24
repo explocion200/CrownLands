@@ -1,0 +1,23 @@
+[
+  {
+    "asset": "hud-leaderboard-r1.webp",
+    "source": "exec-549d27b3-fc35-4d3a-8c7f-41fc984485dd.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Image 1 is the edit target; image 2 is the hand-inked Crownlands map style reference. Keep precisely the original crown medallion design: centered gold crown on a dark navy/slate blue circular heraldic field, ornate rim with top finial, gold laurel branches flanking both sides, and small blue shield with gold fleur-de-lis at the bottom. Do not substitute an achievement star, a freestanding crown or a different badge. Square canvas, preserve subject placement and scale. Change only the rendering style and material treatment to match that map: strong warm dark-brown ink contours, matte muted gouache/watercolor washes, subtle hatching, softly worn brass and ochre gold, muted slate-blue, parchment ivory. Retain ornate medieval craftsmanship and recognizable original artwork. No photorealism, gloss, glow or 3D metallic shine. No background tile, text, letters, UI labels or added objects. Genuine transparent alpha around the artwork and in any original openings. All artwork remains fully inside the canvas.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  },
+  {
+    "asset": "hud-daily-reward-r1.webp",
+    "source": "exec-8cfb62cd-cf3d-4a5b-b323-615ddeec13c0.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Image 1 is the edit target; image 2 is the hand-inked Crownlands map style reference. Keep precisely the original illustrated reward calendar: a small standing medieval gilt desk calendar with a crown on its parchment page, gilded bound arch and finials at top, dark navy/slate blue case and ribbons, and loose gold coins at its base. Preserve all identifying shapes and their arrangement. Do not substitute a flat generic calendar or grid of dates. Square canvas, preserve subject placement and scale. Change only the rendering style and material treatment to match that map: strong warm dark-brown ink contours, matte muted gouache/watercolor washes, subtle hatching, softly worn brass and ochre gold, muted slate-blue, parchment ivory. Retain ornate medieval craftsmanship and recognizable original artwork. No photorealism, gloss, glow or 3D metallic shine. No background tile, text, letters, UI labels or added objects. Genuine transparent alpha around the artwork and in any original openings. All artwork remains fully inside the canvas.",
+    "optimization": "384 by 384 WebP, alpha preserved; no creative edits after generation."
+  },
+  {
+    "asset": "hud-profile-frame-r1.webp",
+    "source": "exec-96655065-4ad6-49d3-aef1-eaada1eba585.png",
+    "tool": "Built-in image_gen",
+    "prompt": "Use case: style-transfer. Image 1 is the edit target; image 2 is the hand-inked Crownlands map style reference. Keep precisely the original ornate rectangular medieval player flag frame, with curved decorated top and small central crown, brass/gold border with dark slate blue inlay, symmetrical side banners and hanging tassels, ornament at bottom center. The frame must have a completely transparent empty central window and a transparent outside; do not draw any flag or content inside. Keep its original slightly landscape canvas aspect 256:200 and geometry: the clear window is approximately x=20% through80%, y=26% through77%. Do not shrink or move the opening. Preserve overall ornamental outline and framing. No new simplified frame. Change only the rendering style and material treatment to match that map: strong warm dark-brown ink contours, matte muted gouache/watercolor washes, subtle hatching, softly worn brass and ochre gold, muted slate-blue, parchment ivory. Retain ornate medieval craftsmanship and recognizable original artwork. No photorealism, gloss, glow or 3D metallic shine. No background tile, text, letters, UI labels or added objects. Genuine transparent alpha around the artwork and in any original openings. All artwork remains fully inside the canvas.",
+    "optimization": "512 by 400 WebP, alpha preserved; no creative edits after generation."
+  }
+]
