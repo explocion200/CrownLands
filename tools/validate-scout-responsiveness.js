@@ -61,6 +61,10 @@ async function resolutionChecks() {
   const stale=scope.resolveServerArmyMission(mission("stale"));await drain();
   const before=apply;scopeKey="other:realm:session2";requests.at(-1).resolve({status:"resolved",reports:[]});await stale;
   assert.equal(apply,before,"Old-session arrival changed the new account");
+  const other=scope.resolveServerArmyMission({...mission("attack-stale"),kind:"attack"});await drain();
+  scopeKey="player:realm:session3";requests.at(-1).resolve({status:"resolved"});await other;
+  assert.equal(apply,before,"Old-session attack changed the new account");
+  assert(!scope.resolvingOnlineArmyIds.has("attack-stale"),"Session fencing left another army kind permanently locked");
 }
 async function reportReadChecks() {
   let scopeKey="one",calls=0,resolveRead;

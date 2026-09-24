@@ -20043,7 +20043,7 @@ async function resolveServerArmyMission(mission) {
     return false;
   } finally {
     if (scoutResolutionRequests.get(onlineId) === requestToken) scoutResolutionRequests.delete(onlineId);
-    if (requestScope === getOnlineSessionRequestScope()) resolvingOnlineArmyIds.delete(onlineId);
+    if (!scout || requestScope === getOnlineSessionRequestScope()) resolvingOnlineArmyIds.delete(onlineId);
   }
 }
 
