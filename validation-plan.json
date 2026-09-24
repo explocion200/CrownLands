@@ -60,6 +60,18 @@
         "tools/validate-holding-towers.js"
       ],
       "reason": "Repair the stale Treasury markup assertion to inspect the existing extracted renderer and its game integration, preserving all five metric requirements and the rest of the Holding Tower checks."
+    },
+    {
+      "paths": [
+        "functions/package.json"
+      ],
+      "tests": [
+        "tools/validate-release-gate.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js"
+      ],
+      "reason": "Register the new pure and actual-browser loading regressions in the existing explicit/nightly full static gate so protection persists after this PR. Scripts only: no dependency, engine, callable, server-authority or deployment configuration changes. Existing gate and targeted-selection validators check integration; the new regressions are also selected directly."
     }
   ]
 }
