@@ -6,6 +6,8 @@ The correction includes personally attributed Tower troops in the canonical mili
 
 Tower counters are accepted only for the current Core topology, world, generation and shard. Tower movements use the same guarded counter when adding or subtracting troops. Client profile creation and updates cannot set the counter or its generation. Actual casualties still reduce power; movement, capture survivors, returns and rally reservations count each troop once.
 
+The existing defensive-power formula is unchanged: relocating troops can still change a city's defensive contribution. The correction preserves every controlled troop's two points of army power, rather than freezing total King Power through legitimate defense changes.
+
 ## Release and existing players
 
 Read-only verification on September 24, 2026 confirmed the production pointer in `crown-land-b15e0`: world `main-realm-2026-09`, generation `realm-2026-09`, shared shard `shard_0001`. Runtime configuration selects Core expansion. No production player records were changed during this fix.

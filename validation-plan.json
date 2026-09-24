@@ -41,7 +41,8 @@
         "tools/validate-clan-tower-king-power.js",
         "tools/validate-clan-tower-king-power-browser.js",
         "tools/validate-stat-breakdowns.js",
-        "tools/validate-public-profile-troop-estimate.js"
+        "tools/validate-public-profile-troop-estimate.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ],
       "reason": "Retain tower/rally/reinforcement counts through both client normalizers and show all owned military troops in the profile without double-counting. Verify actual rendered King Power and troop values at desktop and landscape mobile, plus existing compact stat and public estimate privacy behavior."
     },
