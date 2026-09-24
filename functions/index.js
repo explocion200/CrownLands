@@ -4645,6 +4645,15 @@ function isCurrentWorldArmy(army = {}) {
     || isCurrentWorldIslandId(getOnlineIslandId(targetRegionId));
 }
 
+function getProfileTowerGarrisonTroops(profile = {}) {
+  if (!isHoldingTowerWorldActive()
+    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(profile.resetGeneration, 120) !== RESET_GENERATION
+    || REALM_TOPOLOGY.normalizeRealmShardId(profile.realmShardId) !== getCurrentRealmShardId()
+    || safeString(profile.towerGarrisonResetGeneration, 120) !== RESET_GENERATION) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, 0))));
+}
+
 function createGlobalStatsSnapshot({
   uid = "",
   profile = {},
@@ -4669,6 +4678,7 @@ function createGlobalStatsSnapshot({
   const committedRallyTroops = safeString(profileForStats.rallyResetGeneration, 120) === RESET_GENERATION
     ? Math.max(0, Math.floor(safeNumber(profileForStats.committedRallyTroops, 0)))
     : 0;
+  const totalTowerTroops = getProfileTowerGarrisonTroops(profileForStats);
 
   let totalCities = 0;
   let strongholdCount = 0;
@@ -4750,15 +4760,17 @@ function createGlobalStatsSnapshot({
     totalMarchingTroops,
     totalReinforcementTroops: stationedReinforcementTroops,
     totalRallyTroops: committedRallyTroops,
+    totalTowerTroops,
   });
   const armyPower = getTroopKingPower(totalMilitaryTroops);
   const cityTroopPower = getTroopKingPower(totalCityTroops);
   const campTroopPower = getTroopKingPower(totalCampTroops);
   const reinforcementTroopPower = getTroopKingPower(stationedReinforcementTroops);
   const rallyTroopPower = getTroopKingPower(committedRallyTroops);
+  const towerTroopPower = getTroopKingPower(totalTowerTroops);
   const stationedTroopPower = Math.min(
     Number.MAX_SAFE_INTEGER,
-    cityTroopPower + campTroopPower + reinforcementTroopPower + rallyTroopPower
+    cityTroopPower + campTroopPower + reinforcementTroopPower + rallyTroopPower + towerTroopPower
   );
   const marchingPower = getTroopKingPower(totalMarchingTroops);
   replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
@@ -4788,6 +4800,8 @@ function createGlobalStatsSnapshot({
     totalMarchingTroops,
     totalReinforcementTroops: stationedReinforcementTroops,
     totalRallyTroops: committedRallyTroops,
+    totalTowerTroops,
+    totalMilitaryTroops,
     totalCityLevels,
     totalVictoryPoints,
     strongholdCount,
@@ -4831,6 +4845,7 @@ function createGlobalStatsSnapshot({
     campTroopPower: Math.max(0, Math.floor(campTroopPower)),
     reinforcementTroopPower: Math.max(0, Math.floor(reinforcementTroopPower)),
     rallyTroopPower: Math.max(0, Math.floor(rallyTroopPower)),
+    towerTroopPower,
     cityPower: Math.max(0, Math.floor(cityPower)),
     marchingPower: Math.max(0, Math.floor(marchingPower)),
     troopPower: Math.max(0, Math.floor(armyPower)),
@@ -4858,6 +4873,7 @@ function getTotalMilitaryTroopsFromGlobalStats(stats = {}) {
     stats.totalMarchingTroops,
     stats.totalReinforcementTroops,
     stats.totalRallyTroops,
+    stats.totalTowerTroops,
   ].reduce((total, value) => Math.min(
     Number.MAX_SAFE_INTEGER,
     total + Math.max(0, Math.floor(safeNumber(value, 0)))
@@ -13760,8 +13776,12 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     totalCampTroops: stats.totalCampTroops,
     totalMarchingTroops: stats.totalMarchingTroops,
     totalReinforcementTroops: stats.totalReinforcementTroops,
+    totalRallyTroops: stats.totalRallyTroops,
+    totalTowerTroops: stats.totalTowerTroops,
+    totalMilitaryTroops: stats.totalMilitaryTroops,
     armyPower: stats.armyPower,
     reinforcementTroopPower: stats.reinforcementTroopPower,
+    towerTroopPower: stats.towerTroopPower,
     replacementPower: stats.replacementPower,
     defensivePower: stats.defensivePower,
     goldPerHour: stats.goldPerHour,
@@ -13999,8 +14019,12 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         totalCampTroops: stats.totalCampTroops,
         totalMarchingTroops: stats.totalMarchingTroops,
         totalReinforcementTroops: stats.totalReinforcementTroops,
+        totalRallyTroops: stats.totalRallyTroops,
+        totalTowerTroops: stats.totalTowerTroops,
+        totalMilitaryTroops: stats.totalMilitaryTroops,
         armyPower: stats.armyPower,
         reinforcementTroopPower: stats.reinforcementTroopPower,
+        towerTroopPower: stats.towerTroopPower,
         replacementPower: stats.replacementPower,
         defensivePower: stats.defensivePower,
         goldPerHour: stats.goldPerHour,
@@ -20889,7 +20913,7 @@ async function returnDepartingHoldingTowerGarrisons(uid = "", clanId = "", reaso
     });
     const totalTroops = stationed.reduce((total, entry) => total + entry.troops, 0);
     writePreparedEconomy(transaction, economy, {
-      towerGarrisonTroops: Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, totalTroops)) - totalTroops),
+      towerGarrisonTroops: Math.max(0, getProfileTowerGarrisonTroops(profile) - totalTroops),
       towerGarrisonResetGeneration: RESET_GENERATION,
     }, [], { addActiveArmies: movements, nowMs });
     writeClanAudit(transaction, currentClanId, playerUid, "holding_tower_garrison_returned", {
@@ -22614,7 +22638,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       transaction.create(targetRef, holdingTowerStateWritePatch(target, nowMs, { create: true }));
     }
     const towerGarrisonTroops = assemblyType === "tower"
-      ? Math.max(0, Math.floor(safeNumber(currentProfile.towerGarrisonTroops, sourceTroops))) - troops
+      ? Math.max(0, getProfileTowerGarrisonTroops(currentProfile) - troops)
       : 0;
     if (assemblyType === "tower") {
       if (sourcePatch.troops > 0) {
@@ -25701,7 +25725,7 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
     const profileOverrides = {};
     if (source.sourceType === "tower") {
       const remaining = source.troops - 1;
-      const currentTowerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, source.troops)));
+      const currentTowerGarrisonTroops = getProfileTowerGarrisonTroops(profile);
       profileOverrides.towerGarrisonTroops = Math.max(0, currentTowerGarrisonTroops - 1);
       profileOverrides.towerGarrisonResetGeneration = RESET_GENERATION;
       if (remaining > 0) {
@@ -26038,7 +26062,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
       const launchCityUpdates = [];
       if (sourceType === "tower") {
         const remaining = availableTroops - troops;
-        const currentTowerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, availableTroops)));
+        const currentTowerGarrisonTroops = getProfileTowerGarrisonTroops(profileAfter);
         profilePatch.towerGarrisonTroops = Math.max(0, currentTowerGarrisonTroops - troops);
         profilePatch.towerGarrisonResetGeneration = RESET_GENERATION;
         if (remaining > 0) transaction.set(garrisonRef, {
@@ -26967,7 +26991,7 @@ async function resolveHoldingTowerDirectMovementById({ armyId = "", callerUid = 
             updatedAtMs: nowMs,
             updatedAt: FieldValue.serverTimestamp(),
           }, { merge: true });
-          profilePatch.towerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, 0))) + troops;
+          profilePatch.towerGarrisonTroops = getProfileTowerGarrisonTroops(profileAfter) + troops;
           profilePatch.towerGarrisonResetGeneration = RESET_GENERATION;
           destination = sourceTower.id;
         } else {
@@ -27097,7 +27121,7 @@ async function resolveHoldingTowerDirectMovementById({ armyId = "", callerUid = 
         updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
-      const towerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, 0))) + troops;
+      const towerGarrisonTroops = getProfileTowerGarrisonTroops(profileAfter) + troops;
       writePreparedEconomy(transaction, economy, {
         towerGarrisonTroops,
         towerGarrisonResetGeneration: RESET_GENERATION,
@@ -27372,7 +27396,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
           rallyResetGeneration: RESET_GENERATION,
           towerGarrisonTroops: Math.min(
             Number.MAX_SAFE_INTEGER,
-            Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, 0)))
+            getProfileTowerGarrisonTroops(profile)
               + (shouldStation ? allocation.survivors : 0)
           ),
           towerGarrisonResetGeneration: RESET_GENERATION,
@@ -27508,7 +27532,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         transaction.set(defender.profileRef, {
           towerGarrisonTroops: Math.max(
             0,
-            Math.floor(safeNumber(profile.towerGarrisonTroops, allocation.troops)) - allocation.losses
+            getProfileTowerGarrisonTroops(profile) - allocation.losses
           ),
           towerGarrisonResetGeneration: RESET_GENERATION,
           updatedAt: FieldValue.serverTimestamp(),
@@ -28140,7 +28164,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             updatedAtMs: nowMs,
             updatedAt: FieldValue.serverTimestamp(),
           }, { merge: true });
-          const totalTowerTroops = Math.max(0, Math.floor(safeNumber(attackerProfile.towerGarrisonTroops, 0))) + returned;
+          const totalTowerTroops = getProfileTowerGarrisonTroops(attackerProfile) + returned;
+          // The final economy write reads this same profile snapshot after removing the march.
+          attackerProfile.towerGarrisonTroops = totalTowerTroops;
+          attackerProfile.towerGarrisonResetGeneration = RESET_GENERATION;
           transaction.set(attackerProfileEntry.ref, {
             towerGarrisonTroops: totalTowerTroops,
             towerGarrisonResetGeneration: RESET_GENERATION,

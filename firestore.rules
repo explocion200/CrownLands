@@ -144,6 +144,8 @@ service cloud.firestore {
           'reinforcementResetGeneration',
           'committedRallyTroops',
           'rallyResetGeneration',
+          'towerGarrisonTroops',
+          'towerGarrisonResetGeneration',
           'activeClanReinforcementTargets',
           'activeClanReinforcementAssignments',
           'clanReinforcementLimitResetGeneration',

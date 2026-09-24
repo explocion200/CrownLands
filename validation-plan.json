@@ -1,40 +1,57 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9f08953e420c60af6a96bab36e32c2ee199c0f75",
+  "baseCommit": "b2b631559a703dcd4693cbb9742c186630e345fd",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/hud-edge-inset/draft.css",
-        "docs/visual-qa/hud-edge-inset/index.html",
-        "docs/visual-qa/hud-edge-inset/preview.html",
-        "docs/visual-qa/hud-edge-inset/preview.js",
-        "docs/visual-qa/hud-edge-inset/README.md",
-        "docs/visual-qa/hud-edge-inset/review.css",
-        "docs/visual-qa/hud-edge-inset/review.js",
-        "docs/visual-qa/hud-edge-inset/runtime-fixture.js",
-        "tools/validate-hud-edge-inset-browser.js"
+        "functions/index.js",
+        "tools/validate-clan-tower-king-power.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ],
       "tests": [
-        "tools/validate-hud-edge-inset-browser.js"
+        "tools/validate-clan-tower-king-power.js",
+        "tools/validate-king-power.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-clan-tower-battle-reports.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-clan-tower-battle-reports.js"
       ],
-      "reason": "Validate the retained approved preview and before/after comparison at desktop and two landscape sizes. Check alignment with Reports, unchanged geometry/colors/hit targets and other controls, map zoom, viewport switches, guide, and existing header safe-area protection after layout refresh. The preview uses synthetic data; no backend changes or emulator suites apply."
+      "reason": "Include personally attributed current-Core Tower troops in the shared military total and both stats projection paths; use generation-aware counters on transfers, scouts, rallies, capture, casualties and returns. The regression reproduces the original drop and verifies realm guards and count conservation. Real Tower lifecycle/battle emulator coverage checks authoritative profile and leaderboard values, retries and clan departure. Shared King Power, public estimates, protection, rally and reinforcement validators cover downstream consumers. The broad legacy validate-holding-towers.js has a pre-existing stale Treasury presentation assertion on origin/main; focused lifecycle and battle suites cover the changed authority paths."
     },
     {
       "paths": [
-        "main-screen-art-ui.css",
-        "tools/validate-main-screen-art-browser.js"
+        "firestore.rules",
+        "functions/test/emulator-holding-tower-rules.js"
       ],
       "tests": [
-        "tools/validate-main-screen-art-browser.js"
+        "functions/test/emulator-holding-tower-rules.js"
       ],
-      "reason": "Move the production player stack to align the row and Gold with Reports at 12px. The actual-game benchmark verifies the inset without preview injection, original artwork and colors, control dimensions and hit targets, existing navigation and chat, and zoom independence at desktop and two landscape sizes. The shared header retains its existing safe-area behavior, covered by the focused inset browser validator. CSS-only presentation change; no server-authoritative changes or emulator suites. Static-style comparisons wait for finite HUD color transitions to settle, avoiding animation-phase mismatches."
+      "reason": "Keep Tower power counters server-owned by denying client field creation as well as updates; preserve garrison privacy and existing Treasury access."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "firebaseClient.js",
+        "game.js",
+        "tools/validate-clan-tower-king-power-browser.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-king-power.js",
+        "tools/validate-clan-tower-king-power-browser.js",
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-public-profile-troop-estimate.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Retain tower/rally/reinforcement counts through both client normalizers and show all owned military troops in the profile without double-counting. Verify actual rendered King Power and troop values at desktop and landscape mobile, plus existing compact stat and public estimate privacy behavior."
+    },
+    {
+      "paths": [
+        "docs/clan-tower-king-power.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly approved follow-up placement and superseded Gold position. Documentation only; runtime coverage is provided by the two focused HUD browser validators."
+      "reason": "Document the reproduced accounting defect, current production realm verified read-only, affected authority flows and authorized-release steps for refreshing existing player scores. No new game design or production mutation."
     }
   ]
 }

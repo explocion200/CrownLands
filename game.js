@@ -8296,6 +8296,9 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     totalCityTroops: Math.max(0, Math.floor(Number(raw.totalCityTroops) || 0)),
     totalCampTroops: Math.max(0, Math.floor(Number(raw.totalCampTroops) || 0)),
     totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
+    totalReinforcementTroops: Math.max(0, Math.floor(Number(raw.totalReinforcementTroops) || 0)),
+    totalRallyTroops: Math.max(0, Math.floor(Number(raw.totalRallyTroops) || 0)),
+    totalTowerTroops: Math.max(0, Math.floor(Number(raw.totalTowerTroops) || 0)),
     totalCityLevels: Math.max(0, Math.floor(Number(raw.totalCityLevels) || 0)),
     totalVictoryPoints: Math.max(0, Math.floor(Number(raw.totalVictoryPoints) || 0)),
     strongholdCount: Math.max(0, Math.floor(Number(raw.strongholdCount) || 0)),
@@ -24009,8 +24012,11 @@ function getKingdomSummary() {
         ? normalizePowerValue(globalStats.baseKingPower ?? globalStats.kingPower)
         : getKingPower(),
       cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
-      troops: Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
+      troops: Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalReinforcementTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalRallyTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalTowerTroops) || 0))),
       gold: Math.floor(Number(state.gold) || 0),
       baseGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseGoldPerHour) || 0)),
       untimedGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.untimedGoldPerHour ?? globalStats.baseGoldPerHour) || 0)),

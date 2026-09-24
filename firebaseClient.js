@@ -2061,6 +2061,8 @@
       totalCampTroops: Math.max(0, Math.floor(Number(stats.totalCampTroops) || 0)),
       totalMarchingTroops: Math.max(0, Math.floor(Number(stats.totalMarchingTroops) || 0)),
       totalReinforcementTroops: Math.max(0, Math.floor(Number(stats.totalReinforcementTroops) || 0)),
+      totalRallyTroops: Math.max(0, Math.floor(Number(stats.totalRallyTroops) || 0)),
+      totalTowerTroops: Math.max(0, Math.floor(Number(stats.totalTowerTroops) || 0)),
       totalCityLevels: Math.max(0, Math.floor(Number(stats.totalCityLevels) || 0)),
       totalVictoryPoints: Math.max(0, Math.floor(Number(stats.totalVictoryPoints) || 0)),
       strongholdCount: Math.max(0, Math.floor(Number(stats.strongholdCount) || 0)),
