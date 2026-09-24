@@ -1973,6 +1973,14 @@ let bulkOrderActionRequestId = 0;
 let pendingBulkOrderAction = null;
 const bulkOrderRequestIds = new Map();
 const pendingDirectScoutTargets = new Set();
+const scoutResolutionRequests = new Map();
+const scoutResolutionRetries = new Map();
+let scoutPresentationFrame = 0;
+const scoutPresentationTargetIds = new Set();
+let scoutReportRead = null;
+let scoutEconomyRefreshTimer = 0;
+let scoutEconomyRefreshStartedAt = 0;
+let scoutEconomyRefreshRevisionMs = 0;
 const scoutVeilBlocksByTarget = new Map();
 let camera = { x: 0, y: 0 };
 let zoom = 1;
@@ -4240,7 +4248,7 @@ function renderHoldingTowerModal(tower) {
   bindHoldingTowerControls(tower);
 }
 
-async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe = false } = {}) {
+async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe = false, includeShop = true } = {}) {
   const towerVisual = getHoldingTowerVisual(towerId);
   if (!towerVisual) return null;
   const session = holdingTowerModalSession;
@@ -4262,7 +4270,11 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   const result = await api.getHoldingTowerState({ towerId });
   if (!isCurrentRequest()) return null;
   const snapshot = { ...towerVisual, ...(result?.towers?.[0] || {}), worldActive: result?.worldActive, serverTimeMs: result?.serverTimeMs };
-  if (snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
+  const previous = holdingTowerSnapshots.get(towerId);
+  if (!includeShop && previous?.clanId === snapshot.clanId && previous?.ownershipRevision === snapshot.ownershipRevision) {
+    snapshot.clanShop = previous.clanShop;
+  }
+  if (includeShop && snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
     try {
       const shop = await api.getClanTowerShop({ towerId });
       if (!isCurrentRequest()) return null;
@@ -10917,7 +10929,7 @@ function scoutRewardCamp(campId) {
 }
 
 async function scoutTarget(target) {
-  const requestScope = getOnlineRequestScope();
+  const requestScope = getOnlineSessionRequestScope();
   const campTarget = isRewardCampTarget(target);
   const scoutBlockReason = campTarget
     ? ""
@@ -10934,14 +10946,16 @@ async function scoutTarget(target) {
     showToast(`A scout route to ${target.name} is already being calculated.`);
     return;
   }
+  const startedAt = performance.now();
   pendingDirectScoutTargets.add(target.id);
-  renderScoutRequestFeedback();
+  renderScoutRequestFeedback(target.id);
+  requestAnimationFrame(() => recordMarchInteractionTiming("scout-tap-to-pending", startedAt));
   try {
     if (usesServerArmyAuthority()) {
       try {
         await launchAutomaticServerScout(target);
       } catch (error) {
-        if (requestScope !== getOnlineRequestScope()) return;
+        if (requestScope !== getOnlineSessionRequestScope()) return;
         rejectGameAction(getOnlineApi().isRetryableArmySubmissionError(error)
           ? "Scout confirmation pending. Reconnect and retry the same order."
           : error?.message || "The scout could not be dispatched.");
@@ -10949,6 +10963,7 @@ async function scoutTarget(target) {
       return;
     }
     const sourceOption = await findNearestScoutSourceAsync(target);
+    if (requestScope !== getOnlineSessionRequestScope()) return;
     const freshTarget = getArmyTargetById(target.id);
     if (!freshTarget || getPendingScoutMission(target.id)) return;
     if (!sourceOption?.city || sourceOption.city.owner !== "player" || sourceOption.city.troops < 1) {
@@ -10965,25 +10980,130 @@ async function scoutTarget(target) {
     renderAll();
     showToast(`Scout moving from ${source.name} to ${freshTarget.name}`);
   } finally {
-    if (requestScope === getOnlineRequestScope()) {
+    if (requestScope === getOnlineSessionRequestScope()) {
       pendingDirectScoutTargets.delete(target.id);
-      renderScoutRequestFeedback();
+      renderScoutRequestFeedback(target.id);
     }
   }
 }
 
-function renderScoutRequestFeedback() {
-  try { renderCities(true); }
-  catch (error) { console.warn("Scout feedback could not refresh", error); }
+function renderScoutRequestFeedback(targetId = "") {
+  for (const wheel of cityLayer.querySelectorAll("[data-scout-target]")) {
+    const id = wheel.dataset.scoutTarget;
+    if (targetId && id !== targetId) continue;
+    const pending = pendingDirectScoutTargets.has(id) || getPendingScoutMission(id);
+    if (!pending) { refreshScoutActionWheels([id]); continue; }
+    const button = wheel.querySelector('.wheel-scout, .camp-scout-action, [data-clan-tower-map-action="scout"]');
+    if (!button) continue;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-pending");
+    const sending = pendingDirectScoutTargets.has(id);
+    button.setAttribute("aria-label", sending ? "Sending scout…" : "Scout traveling");
+    const label = button.querySelector(".wheel-action-name, strong");
+    if (label) label.textContent = sending ? "Sending…" : "Scouting";
+  }
+}
+
+function preserveScoutViewInteraction(root, render) {
+  const active = document.activeElement;
+  const hadFocus = active && root.contains(active);
+  const attributes = ["id", "data-report-detail", "data-report-jump", "data-scout-jump", "data-scout-close", "data-report-filter", "aria-label"];
+  const identity = hadFocus ? attributes.find(name => active.hasAttribute(name)) : "";
+  const value = identity ? active.getAttribute(identity) : "";
+  const scroll = [...root.querySelectorAll(".report-body, .battle-report-list")]
+    .map(node => ({ className: node.className, top: node.scrollTop }));
+  render();
+  if (hadFocus && identity && !active.isConnected) {
+    const replacement = [...root.querySelectorAll(`[${identity}]`)].find(node => node.getAttribute(identity) === value);
+    replacement?.focus({ preventScroll: true });
+  }
+  for (const saved of scroll) {
+    const node = [...root.querySelectorAll(".report-body, .battle-report-list")].find(node => node.className === saved.className);
+    if (node) node.scrollTop = saved.top;
+  }
+}
+
+function refreshScoutActionWheels(targetIds) {
+  const ids = new Set(targetIds);
+  for (const wheel of cityLayer.querySelectorAll("[data-scout-target]")) {
+    const id = wheel.dataset.scoutTarget;
+    if (!ids.has(id)) continue;
+    const tower = holdingTowerSnapshots.get(id);
+    const city = cityById(id);
+    const camp = getCampTargetById(id);
+    preserveScoutViewInteraction(cityLayer, () => {
+      wheel.remove();
+      if (tower) renderSelectedClanTowerWheel(id);
+      else if (city && (city.owner !== "player" || isStronghold(city))) renderSelectedForeignWheel(city);
+      else if (camp) renderSelectedRewardCampWheel(camp);
+    });
+  }
+}
+
+function renderScoutNearbyFeedback() {
+  for (const button of cityLayer.querySelectorAll(".wheel-scout-nearby")) {
+    const busy = pendingBulkOrderAction?.kind === "scout";
+    button.disabled = Boolean(busy);
+    button.setAttribute("aria-busy", String(Boolean(busy)));
+    button.classList.toggle("busy", Boolean(busy));
+    button.querySelector(".wheel-action-name").textContent = busy ? "Sending…" : scoutNearbySourceId ? "Send All" : "Nearby";
+  }
+}
+
+function scheduleScoutPresentation(targetIds = [], startedAt = performance.now()) {
+  targetIds.forEach(id => scoutPresentationTargetIds.add(id));
+  if (scoutPresentationFrame) return;
+  const scope = getOnlineSessionRequestScope();
+  scoutPresentationFrame = requestAnimationFrame(() => {
+    scoutPresentationFrame = 0;
+    const ids = [...scoutPresentationTargetIds];
+    scoutPresentationTargetIds.clear();
+    if (scope !== getOnlineSessionRequestScope() || !state) return;
+    refreshScoutActionWheels(ids);
+    const affected = new Set(ids);
+    for (const node of cityLayer.querySelectorAll(".city-node")) {
+      if (affected.has(node.dataset.cityId)) delete node.dataset.troopTextValue;
+    }
+    updateVisibleCityDynamicText(affected);
+    preserveScoutViewInteraction(modalBody, () => {
+      const reportsOpen = modal.open && modal.classList.contains("battle-report-modal");
+      if (reportsOpen && !modal.dataset.battleReportDetailId) {
+        showLogModal({ silentAudio: true, preserveScrollTop: getBattleReportListScrollTop() });
+      } else if (reportsOpen) void markLoadedReportsViewed();
+      const openId = String(modal.dataset.scoutReportCityId || "");
+      if (modal.open && openId && ids.includes(openId)) showScoutReportModal(openId);
+    });
+    renderHud();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+    recordMarchInteractionTiming("scout-report-presented", startedAt);
+  });
+}
+
+function clearScoutResponsivenessState() {
+  if (scoutPresentationFrame) cancelAnimationFrame(scoutPresentationFrame);
+  scoutPresentationFrame = 0;
+  scoutPresentationTargetIds.clear();
+  scoutReportRead = null;
+  for (const id of scoutResolutionRequests.keys()) resolvingOnlineArmyIds.delete(id);
+  scoutResolutionRequests.clear();
+  scoutResolutionRetries.clear();
+  queueScoutResolution = createScoutResolutionQueue();
+  clearTimeout(scoutEconomyRefreshTimer);
+  scoutEconomyRefreshTimer = 0;
+  scoutEconomyRefreshStartedAt = 0;
+  scoutEconomyRefreshRevisionMs = 0;
 }
 
 async function launchAutomaticServerScout(target) {
   const api = getOnlineApi();
   if (!api?.sendArmyOrder || !target?.id) return false;
-  const requestScope = getOnlineRequestScope();
+  const requestScope = getOnlineSessionRequestScope();
   const targetType = getHoldingTowerTargetType(target);
   const targetRegionId = getCityRegionId(target);
   const armyId = createOnlineArmyId("scout");
+  const startedAt = performance.now();
   const result = await api.submitRecoverableArmyOrder({
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
@@ -11001,7 +11121,8 @@ async function launchAutomaticServerScout(target) {
       requestedTroops: 1,
     },
   });
-  if (requestScope !== getOnlineRequestScope() || !result?.movement) return false;
+  if (requestScope !== getOnlineSessionRequestScope() || !result?.movement) return false;
+  recordMarchInteractionTiming("scout-launch-accepted", startedAt);
   if (result.alreadyResolved) {
     void loadServerReportsOnce();
     void refreshServerEconomy(true);
@@ -11013,9 +11134,20 @@ async function launchAutomaticServerScout(target) {
   const sourceName = result.movement.fromName || "the nearest eligible holding";
   addLog(`One scout left ${sourceName} for ${result.movement.toName || target.name}.`);
   playGameSound("troop_dispatch", { cooldownMs: 80, regionId: result.movement.sourceRegionId });
-  if (result.sourceTower?.id) await refreshHoldingTower(result.sourceTower.id);
+  if (result.sourceTower?.id) {
+    const tower = holdingTowerSnapshots.get(result.sourceTower.id);
+    if (tower?.ownerMember && tower.clanId === state.clanId && Number.isFinite(result.sourceTower.ownTroops)) {
+      tower.ownStationedTroops = result.sourceTower.ownTroops;
+      const ownRow = tower.garrison?.find(row => row.uid === getCurrentOnlineUid());
+      if (ownRow) ownRow.troops = result.sourceTower.ownTroops;
+    }
+    void refreshHoldingTower(result.sourceTower.id, { includeShop: false })
+      .catch(() => { /* The optional refresh cannot invalidate an accepted march. */ });
+  }
   saveGame();
-  renderAll();
+  renderScoutRequestFeedback(target.id);
+  renderHud();
+  updateOutgoingAttackUi();
   showToast(`Scout moving from ${sourceName} to ${result.movement.toName || target.name}`);
   return true;
 }
@@ -11242,7 +11374,7 @@ function claimBulkArrivalAudio(entry = {}) {
   return true;
 }
 
-function applyServerBulkOrderResult(result = {}) {
+function applyServerBulkOrderResult(result = {}, { render = true } = {}) {
   const cityUpdates = getBulkResultCityUpdates(result);
   applyServerArmyResult({
     currentUser: result.currentUser,
@@ -11254,10 +11386,10 @@ function applyServerBulkOrderResult(result = {}) {
     ? result.armies
     : Array.isArray(result.movements) ? result.movements : result.movement ? [result.movement] : [];
   annotateClientBulkArrivalAudio(armies);
-  armies.forEach(adoptServerArmyMovement);
+  armies.forEach(army => adoptServerArmyMovement(army, { render }));
   onlineLastError = "";
   saveGame();
-  renderAll();
+  if (render) renderAll();
   return armies;
 }
 
@@ -11270,6 +11402,7 @@ async function toggleScoutNearby(cityId) {
     rejectGameAction("Scout Nearby needs the latest Crownlands server. Reconnect and try again.");
     return;
   }
+  const requestScope = getOnlineSessionRequestScope();
   const source = cityById(cityId);
   if (!source || source.owner !== "player") {
     cancelBulkOrderPreview("scout", cityId);
@@ -11304,7 +11437,9 @@ async function toggleScoutNearby(cityId) {
     showToast(pendingBulkOrderAction?.phase === "sending" ? "Scout orders are being sent..." : "Finding reachable scout targets...");
     return;
   }
-  renderAll();
+  const startedAt = performance.now();
+  renderScoutNearbyFeedback();
+  requestAnimationFrame(() => recordMarchInteractionTiming("scout-nearby-tap-to-pending", startedAt));
   const serverBulkOrder = supportsBulkArmyOrders();
   if (serverBulkOrder) action.phase = "sending";
   showToast(serverBulkOrder ? "Sending scout orders..." : "Finding reachable scout targets...");
@@ -11312,7 +11447,7 @@ async function toggleScoutNearby(cityId) {
   const options = serverBulkOrder
     ? getNearbyScoutCandidates(source).map(city => ({ city, route: null }))
     : await getNearbyScoutOptionsAsync(source);
-  if (!isBulkOrderActionCurrent(action)) return;
+  if (requestScope !== getOnlineSessionRequestScope() || !isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
     finishBulkOrderAction(action, { completed: true });
     scoutNearbySourceId = null;
@@ -11342,7 +11477,7 @@ async function toggleScoutNearby(cityId) {
       return;
     }
     action.phase = "sending";
-    renderAll();
+    renderScoutNearbyFeedback();
     try {
       const result = await api.sendNearbyScouts({
         worldId: ONLINE_WORLD_ID,
@@ -11352,7 +11487,9 @@ async function toggleScoutNearby(cityId) {
         targetCityIds: options.map(option => option.city.id),
         requestId: action.requestId,
       });
-      const armies = applyServerBulkOrderResult(result);
+      if (requestScope !== getOnlineSessionRequestScope()) return;
+      recordMarchInteractionTiming("scout-nearby-launch-accepted", startedAt);
+      const armies = applyServerBulkOrderResult(result, { render: false });
       finishBulkOrderAction(action, { completed: true });
       scoutNearbySourceId = null;
       if (armies.length) {
@@ -11366,6 +11503,7 @@ async function toggleScoutNearby(cityId) {
       renderAll();
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
     } catch (error) {
+      if (requestScope !== getOnlineSessionRequestScope()) return;
       const rememberedVeilBlocks = rememberScoutVeilBlocksFromError(error);
       onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       finishBulkOrderAction(action);
@@ -12067,6 +12205,7 @@ function mergeServerScoutReport(rawReport = null) {
 
 function mergeServerReports(reports = [], options = {}) {
   if (!state || !Array.isArray(reports)) return false;
+  const receivedAt = typeof performance === "undefined" ? 0 : performance.now();
   const shouldNotify = options.notify === true;
   const authoritativeSnapshot = options.authoritative === true;
   const reportsPanelOpen = Boolean(modal?.open && modal.classList.contains("battle-report-modal"));
@@ -12076,6 +12215,7 @@ function mergeServerReports(reports = [], options = {}) {
     return false;
   }
   let changed = false;
+  let onlyScoutChanges = true;
   const newDeedCompletionReports = [];
   const newCityCombatReports = [];
   const notificationCandidates = [];
@@ -12128,24 +12268,29 @@ function mergeServerReports(reports = [], options = {}) {
         audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
       });
     }
+    if (normalized.type !== "scout") onlyScoutChanges = false;
     changed = true;
   }
   if (changed) {
     state.battleReports = normalizeBattleReports(state.battleReports);
     saveGame();
-    cityRenderSignature = "";
-    renderCities(true);
-    if (reportListOpen) {
-      const scrollTop = getBattleReportListScrollTop();
-      showLogModal({ silentAudio: true, preserveScrollTop: scrollTop });
-    } else if (reportsPanelOpen) {
-      void markLoadedReportsViewed();
+    if (onlyScoutChanges) {
+      scheduleScoutPresentation([...refreshedScoutCityIds], receivedAt);
+    } else {
+      cityRenderSignature = "";
+      renderCities(true);
+      if (reportListOpen) {
+        const scrollTop = getBattleReportListScrollTop();
+        showLogModal({ silentAudio: true, preserveScrollTop: scrollTop });
+      } else if (reportsPanelOpen) {
+        void markLoadedReportsViewed();
+      }
+      const openScoutCityId = String(modal.dataset.scoutReportCityId || "");
+      if (modal.open && openScoutCityId && refreshedScoutCityIds.has(openScoutCityId)) {
+        showScoutReportModal(openScoutCityId);
+      }
+      renderHud();
     }
-    const openScoutCityId = String(modal.dataset.scoutReportCityId || "");
-    if (modal.open && openScoutCityId && refreshedScoutCityIds.has(openScoutCityId)) {
-      showScoutReportModal(openScoutCityId);
-    }
-    renderHud();
   }
   if (
     shouldNotify
@@ -16057,6 +16202,7 @@ function disconnectOnlineWorld() {
   harvestSpawnRequestInFlight = false;
   pendingHarvestBonusIds = new Set();
   pendingDirectScoutTargets.clear();
+  clearScoutResponsivenessState();
   cancelAuthoritativeRoutePreviewRefresh();
   cancelLoginPresentationSequence();
   disposeOnlineChat();
@@ -17493,7 +17639,7 @@ function isRewardCampTarget(target) {
   return Boolean(target && getRewardCampConfig(target));
 }
 
-function adoptServerArmyMovement(rawMovement) {
+function adoptServerArmyMovement(rawMovement, { render = true } = {}) {
   const movement = normalizeOnlineArmyMovement(rawMovement);
   if (!movement) return null;
   const current = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY) || [];
@@ -17503,9 +17649,11 @@ function adoptServerArmyMovement(rawMovement) {
   ]);
   rebuildOnlineArmies();
   adoptOwnOnlineArmies();
-  renderPaths();
-  renderArmies(true);
-  updateOutgoingAttackUi();
+  if (render) {
+    renderPaths();
+    renderArmies(true);
+    updateOutgoingAttackUi();
+  }
   return movement;
 }
 
@@ -18750,6 +18898,7 @@ function clearOnlineHeldCampWatcher({ clear = true } = {}) {
 }
 
 function purgeResolvedOnlineArmy(onlineId, { removeLocal = true } = {}) {
+  scoutResolutionRetries.delete(String(onlineId));
   const id = String(onlineId || "").trim();
   if (!id) return false;
   let changed = false;
@@ -18783,6 +18932,7 @@ function clearOnlineIslandArmySnapshots() {
 
 function clearOnlineServerReportWatcher() {
   onlineReportRequestGeneration += 1;
+  scoutReportRead = null;
   setOnlineReportSyncState("loading");
   if (typeof onlineServerReportsUnsubscribe === "function") onlineServerReportsUnsubscribe();
   onlineServerReportsUnsubscribe = null;
@@ -19247,7 +19397,18 @@ function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
   }
 }
 
-async function loadServerReportsOnce() {
+function loadServerReportsOnce() {
+  const scope = getOnlineSessionRequestScope();
+  if (scoutReportRead?.scope === scope) return scoutReportRead.promise;
+  const request = { scope, promise: null };
+  scoutReportRead = request;
+  request.promise = performServerReportRead().finally(() => {
+    if (scoutReportRead === request) scoutReportRead = null;
+  });
+  return request.promise;
+}
+
+async function performServerReportRead() {
   const api = getOnlineApi();
   if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
   const requestScope = getOnlineSessionRequestScope();
@@ -19268,6 +19429,24 @@ async function loadServerReportsOnce() {
     console.warn("Could not load server reports", error);
     return false;
   }
+}
+
+function scheduleScoutEconomyRefresh(revisionMs) {
+  scoutEconomyRefreshRevisionMs = Math.max(scoutEconomyRefreshRevisionMs, revisionMs);
+  if (!scoutEconomyRefreshStartedAt) scoutEconomyRefreshStartedAt = performance.now();
+  clearTimeout(scoutEconomyRefreshTimer);
+  const scope = getOnlineSessionRequestScope();
+  const delay = Math.max(0, Math.min(250, 1000 - (performance.now() - scoutEconomyRefreshStartedAt)));
+  scoutEconomyRefreshTimer = setTimeout(() => {
+    scoutEconomyRefreshTimer = 0;
+    scoutEconomyRefreshStartedAt = 0;
+    const revision = scoutEconomyRefreshRevisionMs;
+    scoutEconomyRefreshRevisionMs = 0;
+    if (scope !== getOnlineSessionRequestScope()) return;
+    if (revision <= Math.max(lastAuthoritativeProfileRevisionMs, lastReportDrivenEconomyRefreshAtMs)) return;
+    lastReportDrivenEconomyRefreshAtMs = revision;
+    void refreshServerEconomy(true);
+  }, delay);
 }
 
 function subscribeOnlineServerReports() {
@@ -19294,8 +19473,15 @@ function subscribeOnlineServerReports() {
         lastReportDrivenEconomyRefreshAtMs
       );
       if (newestReportAtMs <= latestKnownAccountAtMs) return;
-      lastReportDrivenEconomyRefreshAtMs = newestReportAtMs;
-      refreshServerEconomy(true);
+      const scoutOnly = reports.filter(report => Math.max(
+        normalizeTimestampMs(report?.occurredAtMs),
+        normalizeTimestampMs(report?.createdAtMs) || timestampToMs(report?.createdAt)
+      ) > latestKnownAccountAtMs).every(report => report.type === "scout");
+      if (scoutOnly) scheduleScoutEconomyRefresh(newestReportAtMs);
+      else {
+        lastReportDrivenEconomyRefreshAtMs = newestReportAtMs;
+        refreshServerEconomy(true);
+      }
     },
     onError: error => {
       onlineLastError = error?.message || String(error);
@@ -19583,6 +19769,14 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
     return false;
   }
 
+  // A verified reconnect may restore authorization; ordinary snapshots retain backoff.
+  for (const [id, retry] of scoutResolutionRetries) {
+    if (retry.retryAtMs === Infinity) {
+      scoutResolutionRetries.delete(id);
+      const mission = state.attacks.find(army => getOnlineArmyResolutionId(army) === id);
+      if (mission) mission.resolveRetryAtMs = 0;
+    }
+  }
   onlineRealtimeRecoveryNeeded = false;
   const targetRegionId = getActiveOnlineRegionId();
   const islandId = getOnlineIslandId(targetRegionId);
@@ -19733,6 +19927,10 @@ async function loadOnlineRegionCitiesForResolution(regionId) {
 }
 
 function resolveOverdueOnlineArmy(army) {
+  if (usesServerArmyAuthority()) {
+    void resolveServerArmyMission(army);
+    return;
+  }
   const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvingOnlineArmyIds.has(onlineId) || resolvedOnlineArmyIds.has(onlineId)) return;
   resolvingOnlineArmyIds.add(onlineId);
@@ -19767,15 +19965,19 @@ function createScoutResolutionQueue(limit = 2) {
 
 // Two independent workers bound transaction contention on the same player's
 // economy without making other reports wait for one slow or failed target.
-const queueScoutResolution = createScoutResolutionQueue();
+let queueScoutResolution = createScoutResolutionQueue();
 
 async function resolveServerArmyMission(mission) {
   if (!usesServerArmyAuthority()) return false;
   const onlineId = getOnlineArmyResolutionId(mission);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
   const api = getOnlineApi();
-  const requestedUid = getCurrentOnlineUid();
-  const requestedGeneration = RESET_GENERATION;
+  const requestScope = getOnlineSessionRequestScope();
+  const scout = mission.kind === "scout";
+  const requestToken = { scope: requestScope };
+  const retry = scoutResolutionRetries.get(onlineId);
+  if (scout && (scoutResolutionRequests.has(onlineId)
+    || (retry?.scope === requestScope && retry.retryAtMs > Date.now()))) return false;
   const routeRegionIds = mission.onlineRegionIds?.length
     ? mission.onlineRegionIds
     : getMissionRegionIds(mission);
@@ -19783,14 +19985,18 @@ async function resolveServerArmyMission(mission) {
 
   if (resolvingOnlineArmyIds.has(onlineId)) return false;
   resolvingOnlineArmyIds.add(onlineId);
+  if (scout) scoutResolutionRequests.set(onlineId, requestToken);
+  const startedAt = performance.now();
   try {
     const resolveArrival = () => {
-      if (requestedUid !== getCurrentOnlineUid() || requestedGeneration !== RESET_GENERATION) return null;
+      if (requestScope !== getOnlineSessionRequestScope()) return null;
       return api.resolveArmyOrder({ armyId: onlineId, routeRegionIds });
     };
     const result = await (mission.kind === "scout" ? queueScoutResolution(resolveArrival) : resolveArrival());
-    if (!result || requestedUid !== getCurrentOnlineUid() || requestedGeneration !== RESET_GENERATION) return false;
-    const shouldBackfillScoutReports = mission?.kind === "scout"
+    if (!result || requestScope !== getOnlineSessionRequestScope()) return false;
+    if (scout) recordMarchInteractionTiming("scout-arrival-resolution", startedAt);
+    const shouldBackfillScoutReports = scout
+      && ["resolved", "missing", "already-resolved"].includes(result.status)
       && (!Array.isArray(result?.reports) || result.reports.length === 0);
     const resolutionComplete = result?.status === "resolved"
       || result?.status === "missing"
@@ -19802,26 +20008,42 @@ async function resolveServerArmyMission(mission) {
     if (resolutionComplete) purgeResolvedOnlineArmy(onlineId);
     if (result?.movement) adoptServerArmyMovement(result.movement);
     if (shouldBackfillScoutReports) {
-      await loadServerReportsOnce();
+      void loadServerReportsOnce();
     }
+    if (scout) scoutResolutionRetries.delete(onlineId);
     mission.resolveRetryAtMs = 0;
     onlineLastError = "";
     saveGame();
-    flushOnlineSave(true);
-    renderAll();
-    updateIncomingAttackUi();
-    updateOutgoingAttackUi();
+    if (scout) scheduleScoutPresentation([mission.toId]);
+    else {
+      flushOnlineSave(true);
+      renderAll();
+      updateIncomingAttackUi();
+      updateOutgoingAttackUi();
+    }
     return true;
   } catch (error) {
+    if (requestScope !== getOnlineSessionRequestScope()) return false;
     if (isServerArmyNotArrivedError(error)) {
       deferServerArmyResolutionRetry(mission);
+      if (scout) scoutResolutionRetries.set(onlineId, { scope: requestScope, attempts: 0, retryAtMs: mission.resolveRetryAtMs });
       return false;
+    }
+    if (scout) {
+      const attempts = Math.min(4, (retry?.attempts || 0) + 1);
+      const code = String(error?.code || "").replace(/^functions\//, "");
+      const permanent = ["permission-denied", "unauthenticated", "invalid-argument", "failed-precondition", "not-found"].includes(code);
+      const delay = Math.min(8000, 1000 * 2 ** (attempts - 1)) * (0.8 + Math.random() * 0.4);
+      const retryAtMs = permanent ? Infinity : Date.now() + Math.round(delay);
+      scoutResolutionRetries.set(onlineId, { scope: requestScope, attempts, retryAtMs });
+      mission.resolveRetryAtMs = retryAtMs;
     }
     onlineLastError = error?.message || String(error);
     console.warn("Could not resolve server army", error);
     return false;
   } finally {
-    resolvingOnlineArmyIds.delete(onlineId);
+    if (scoutResolutionRequests.get(onlineId) === requestToken) scoutResolutionRequests.delete(onlineId);
+    if (!scout || requestScope === getOnlineSessionRequestScope()) resolvingOnlineArmyIds.delete(onlineId);
   }
 }
 
@@ -19830,7 +20052,6 @@ async function resolveOverdueOnlineArmyAsync(army) {
   const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
   if (usesServerArmyAuthority()) {
-    resolvingOnlineArmyIds.delete(onlineId);
     return resolveServerArmyMission(army);
   }
   onlineLastError = "Online army resolution requires the Crownlands server.";
@@ -20033,7 +20254,8 @@ function getIncomingAttacks() {
 function getOutgoingAttacks() {
   if (!state) return [];
   const seen = new Set();
-  return getRenderableArmies()
+  const receivingScouts = state.attacks.filter(army => army.owner === "player" && isArrivedScoutMission(army));
+  return [...getRenderableArmies(), ...receivingScouts]
     .map(attack => {
       if (!attack || !["attack", "scout", "transfer", "reinforce", "rally_join"].includes(attack.kind) || attack.owner !== "player") return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
@@ -27992,7 +28214,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
   ].join(";");
 }
 
-function updateVisibleCityDynamicText() {
+function updateVisibleCityDynamicText(targetIds = null) {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
   const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
@@ -28012,6 +28234,7 @@ function updateVisibleCityDynamicText() {
     score.textContent = formatDuration(Math.floor((totalHeldMs + liveHeldMs) / 1000));
   });
   cityLayer.querySelectorAll(".camp-node[data-camp-id]").forEach(node => {
+    if (targetIds && !targetIds.has(node.dataset.campId)) return;
     const camp = getCampTargetById(node.dataset.campId);
     if (!camp) return;
     const statusText = getRewardCampStatusText(camp);
@@ -28034,6 +28257,7 @@ function updateVisibleCityDynamicText() {
     if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
   });
   cityLayer.querySelectorAll(".city-node").forEach(node => {
+    if (targetIds && !targetIds.has(node.dataset.cityId)) return;
     const city = cityById(node.dataset.cityId);
     if (!city) return;
     const troops = Math.floor(Number(city.troops) || 0);
@@ -28420,7 +28644,7 @@ function renderSelectedCityWheel(city) {
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("information")}</span>
     </button>
     ${bulkOrdersSupported ? `
-      <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || (bulkOrderBusy && !scoutNearbyBusy) ? "disabled" : ""}>
+      <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || bulkOrderBusy ? "disabled" : ""}>
         <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
         <span class="wheel-action-name">${scoutNearbyBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : scoutNearbyActive ? "Send All" : "Nearby"}</span>
         <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
@@ -28514,6 +28738,7 @@ function renderSelectedForeignWheel(city) {
     event.stopPropagation();
     showScoutReportModal(city.id);
   });
+  wheel.dataset.scoutTarget = city.id;
   cityLayer.appendChild(wheel);
 }
 
@@ -28591,6 +28816,7 @@ function renderSelectedStrongholdWheel(stronghold) {
     event.stopPropagation();
     showScoutReportModal(stronghold.id);
   });
+  if (stronghold.owner !== "player") wheel.dataset.scoutTarget = stronghold.id;
   cityLayer.appendChild(wheel);
 }
 
@@ -28715,7 +28941,9 @@ function renderSelectedClanTowerWheel(towerId) {
       updateHoldingTowerOrderAvailability();
     }
   }));
+  wheel.dataset.scoutTarget = towerId;
   cityLayer.appendChild(wheel);
+  if (pendingDirectScoutTargets.has(towerId) || getPendingScoutMission(towerId)) renderScoutRequestFeedback(towerId);
 }
 
 function renderSelectedRewardCampWheel(camp) {
@@ -28776,6 +29004,7 @@ function renderSelectedRewardCampWheel(camp) {
     event.stopPropagation();
     showScoutReportModal(camp.id);
   });
+  if (camp.owner !== "player") wheel.dataset.scoutTarget = camp.id;
   cityLayer.appendChild(wheel);
 }
 
@@ -30698,6 +30927,9 @@ function showTroopSliderModal(source, target) {
 function recordMarchInteractionTiming(name, startedAt) {
   if (!Number.isFinite(startedAt) || typeof performance === "undefined" || typeof performance.measure !== "function") return;
   try {
+    if (name.startsWith("scout-") && performance.getEntriesByName?.(`crownlands:${name}`).length >= 128) {
+      performance.clearMeasures(`crownlands:${name}`);
+    }
     performance.measure(`crownlands:${name}`, { start: startedAt, end: performance.now() });
   } catch {
     // Performance entries are diagnostic only and must never affect gameplay.
@@ -36889,7 +37121,8 @@ function updateOutgoingAttackUi() {
   const travelingArmies = [...operations.marches, ...operations.reinforcements.filter(entry => !entry.stationed)]
     .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
   const status = travelingArmies.length
-    ? travelingArmies[0].serverPending ? travelingArmies[0].serverRetrying ? "Checking" : "Sending" : formatDuration(travelingArmies[0].remaining)
+    ? travelingArmies[0].serverPending ? travelingArmies[0].serverRetrying ? "Checking" : "Sending"
+      : travelingArmies[0].kind === "scout" && travelingArmies[0].isResolving ? "Receiving report…" : formatDuration(travelingArmies[0].remaining)
     : operations.rallies.length
       ? "Rallies"
     : soonestCamp
@@ -37269,8 +37502,8 @@ function formatMarchesNumber(value) {
 
 function renderMarchesOperationPanel(marches) {
   const first = marches[0];
-  const pendingLabel = first?.serverPending ? first.serverRetrying ? "Checking the same order with the server" : "Sending order to server" : first?.isResolving ? "Resolving arrived order" : "Soonest arrival";
-  const timing = first?.serverPending ? first.serverRetrying ? "Checking" : "Sending" : first?.isResolving ? "Resolving" : first ? formatDuration(first.remaining) : "";
+  const pendingLabel = first?.serverPending ? first.serverRetrying ? "Checking the same order with the server" : "Sending order to server" : first?.isResolving ? first.kind === "scout" ? "Receiving report…" : "Resolving arrived order" : "Soonest arrival";
+  const timing = first?.serverPending ? first.serverRetrying ? "Checking" : "Sending" : first?.isResolving ? first.kind === "scout" ? "Receiving report…" : "Resolving" : first ? formatDuration(first.remaining) : "";
   return `<div class="marches-panel"><section class="march-summary" aria-label="March summary"><div class="summary-copy"><h3>${marches.length ? `${formatMarchesNumber(marches.length)} ${marches.length === 1 ? "march" : "marches"} underway` : "Your armies are at rest"}</h3><p>${escapeHtml(marches.length ? formatOutgoingMissionSummary(marches) : "No active troop marches")}</p></div>${first ? `<div class="summary-next"><span>${pendingLabel}</span><strong>${timing}</strong></div>` : ""}</section>
     <div class="column-labels" aria-hidden="true"><span>Order</span><span>Origin &amp; destination</span><span>Force</span><span>Arrival</span><span>Commands</span></div>
     <div class="march-list" tabindex="0" aria-label="Active marches">${marches.length ? marches.map(renderOutgoingAttackCard).join("") : '<div class="empty-state"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active troop marches</h3><p>Armies, scouts, transfers and returning troops will appear here when they are on the move.</p><button data-close-marches type="button">Return to map</button></div>'}</div></div>`;
@@ -37424,7 +37657,7 @@ function renderOutgoingAttackCard(mission) {
   const mapButton = `<button class="command locate" ${marchId ? `data-outgoing-march="${escapeHtml(marchId)}"` : "disabled"} type="button" title="Go to current march location" aria-label="Go to current march location">${renderBattleReportLedgerIcon("map")}<span>Map</span></button>`;
   const commandNote = swiftBusy ? "Applying Swift Order..." : recallBusy ? "Sounding Recall..." : !swiftCount && !recallCount && (swiftEligible || recallEligible) ? "No march items in your bag" : "";
   const pending = mission.serverPending || mission.isResolving;
-  const timing = mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining);
+  const timing = mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? mission.kind === "scout" ? "Receiving report…" : "Resolving" : formatDuration(mission.remaining);
   const timingNote = mission.serverPending ? mission.serverRetrying ? "Checking the same order" : "Order being sent" : mission.isResolving ? "Arrived · awaiting result" : isReturning || isCampReturn ? "Until return" : "Until arrival";
   const emblem = isReturning || isCampReturn ? renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))
     : isTransfer && !isReinforcement ? '<img src="assets/icons/skills/marchOrders.svg" alt="">'

@@ -1,10 +1,28 @@
 "use strict";
 const PHASES = ["realmContext", "worldValidation", "documentReads", "routePlanning", "transaction"];
+function scoutTiming(entry) {
+  const payload = entry.jsonPayload || {};
+  const text = String(entry.textPayload || payload.message || "");
+  const result = {};
+  for (const [key, values] of Object.entries({
+    scoutStage: ["launch", "arrival"], scoutSourceType: ["city", "tower"], scoutTargetType: ["city", "camp", "tower"],
+  })) {
+    const value = payload[key] || text.match(new RegExp("\\b" + key + "\\s*:\\s*['\"]([^'\"]+)['\"]"))?.[1];
+    if (values.includes(value)) result[key] = value;
+  }
+  for (const key of ["scoutBatchSize", "scoutOriginCandidates", "routeCacheHits", "routeCacheMisses"]) {
+    const value = typeof payload[key] === "number" ? payload[key]
+      : Number(text.match(new RegExp("\\b" + key + "\\s*:\\s*(\\d+)"))?.[1] ?? NaN);
+    if (Number.isFinite(value) && value >= 0) result[key] = Math.min(100000, Math.floor(value));
+  }
+  return result;
+}
 // Node console.log(message, object) can arrive as text rather than structured JSON.
 // Extract only the allowlisted numeric fields; never evaluate or export the payload.
 function operationTiming(entry) {
   const payload = entry.jsonPayload || {};
   if (typeof payload.requestDurationMs === "number") return {
+    ...scoutTiming(entry),
     requestDurationMs: payload.requestDurationMs,
     transactionAttempts: Number(payload.transactionAttempts) || 0,
     phaseDurationMs: Object.fromEntries(PHASES.filter(key => typeof payload.phaseDurationMs?.[key] === "number")
@@ -18,7 +36,7 @@ function operationTiming(entry) {
   };
   const requestDurationMs = number("requestDurationMs");
   if (requestDurationMs === null) return null;
-  return { requestDurationMs, transactionAttempts: number("transactionAttempts") || 0,
+  return { ...scoutTiming(entry), requestDurationMs, transactionAttempts: number("transactionAttempts") || 0,
     phaseDurationMs: Object.fromEntries(PHASES.map(key => [key, number(key)]).filter(([, value]) => value !== null)) };
 }
 // Console output may be DEFAULT severity. Only known outcome/code values leave this parser.

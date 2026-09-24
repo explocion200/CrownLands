@@ -1,74 +1,107 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "46ecdd47d828170adee92b4457f1946756e02728",
+  "baseCommit": "cc3567f39119174bac28dcd9c39df56b141eefff",
   "coverage": [
-    {
-      "paths": [
-        "functions/index.js"
-      ],
-      "reason": "March realm scope and pending Camp state must conserve troops during dispatch, arrival and capture. Transactional repairs share economy, identity, ownership, rally, protection, public-estimate and shard dependencies. Preserve all shipped Tower guards and exercise the affected authoritative transitions in the four selected emulator suites.",
-      "tests": [
-        "tools/validate-king-power.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-clan-tower-king-power.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-city-relinquishment-limit.js",
-        "tools/validate-player-flags.js",
-        "tools/test-player-identity-safety.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-realm-sharding.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-economy-concurrency.js"
-      ]
-    },
     {
       "paths": [
         "game.js"
       ],
-      "reason": "Only the accepted stats authority version advances to 12. Verify server/client agreement, existing numeric summary normalization, attack protection and displayed troop/King Power values at desktop and landscape mobile sizes.",
+      "reason": "Scout action feedback, accepted movement adoption, arrival dedup/backoff, report read/paint batching, Tower refresh and foreground recovery share existing report, movement, account and troop UI dependencies. Exercise real desktop and mobile fixtures plus existing lifecycle/receipt guards.",
       "tests": [
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-report-system.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-interaction-health.js",
+        "tools/validate-coordinated-release.js",
+        "tools/validate-clan-tower-king-power.js",
         "tools/validate-king-power.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-clan-tower-king-power-browser.js",
-        "tools/validate-weaker-kingdom-protection.js"
+        "functions/test/emulator-report-read-state.js",
+        "functions/test/emulator-report-delivery-rules.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-king-power.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-weaker-kingdom-protection.js"
+        "functions/index.js",
+        "functions/authoritative-route-planner.js"
       ],
-      "reason": "Execute the changed regressions, including six troop categories, realm guards, duplicate and rally exclusions, pending Camp transitions, client/public totals and repairs that must retry troop reads before publishing. Register the new regression through the existing King Power gate.",
+      "reason": "Cache exact immutable Core terrain legs without changing authoritative routes, closest origin, ownership/cost checks or transactions. Add scout-only operational dimensions; cover shared movement geometry, Tower/Veil permissions, report privacy/lifecycle, atomic batches, concurrent economy and unchanged King Power.",
       "tests": [
-        "tools/validate-king-power.js",
+        "tools/validate-scout-route-cache.js",
+        "tools/validate-world-travel-network.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-march-path-alignment.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-transaction-retries.js",
+        "tools/validate-operation-timing.js",
         "tools/validate-troop-accounting.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-weaker-kingdom-protection.js"
+        "tools/validate-clan-tower-king-power.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-scouting-veil.js",
+        "functions/test/emulator-scout-report-lifecycle.js",
+        "functions/test/emulator-report-delivery-rules.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-report-read-state.js"
       ]
     },
     {
       "paths": [
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "functions/operation-timing.js"
       ],
-      "reason": "Assert immediately persisted stats against canonical city, Camp, march and personal Tower records across dispatch, withdrawal, reinforcement, identity repair, stale-version rebuild, canceled return and Camp capture/transfer. Retain all prior Tower assertions.",
+      "reason": "Async-local allowlisted scout dimensions and route-cache counters must remain isolated across simultaneous requests without logging identifiers or intelligence.",
       "tests": [
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-operation-timing.js",
+        "tools/validate-stability-log-summary.js",
+        "functions/test/emulator-world-travel.js"
       ]
     },
     {
       "paths": [
-        "docs/TROOP_ACCOUNTING_CONSISTENCY.md"
+        "tools/read-stability-production.js",
+        "tools/stability-log-summary.js",
+        "tools/validate-operation-timing.js",
+        "tools/validate-stability-log-summary.js"
       ],
-      "reason": "Describe the existing accounting rule, remaining fixes carried from PR350, unchanged safeguards, test coverage and backend-first release sequence. No new gameplay design decision or claimed live status.",
+      "reason": "Keep diagnostic parsing privacy-safe for structured and text logs and separate scout stages/outcomes/source/target from unclassified traffic. Preserve missing evidence and existing aggregate fields.",
+      "tests": [
+        "tools/validate-operation-timing.js",
+        "tools/validate-stability-log-summary.js",
+        "tools/validate-stability-audit.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-scout-route-cache.js"
+      ],
+      "reason": "Run new executable regression coverage and matched before/after route/client benchmarks: independent engine caches, cache bounds/parity, 24-target batch retry IDs, two-worker backoff, stale sessions, report batching, real DOM focus/scroll and controlled desktop/mobile timings.",
+      "tests": [
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-scout-route-cache.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/SCOUTING_RESPONSIVENESS.md"
+      ],
+      "reason": "Record implementation boundaries, reproducible controlled measurements and a separately authorized backend-first release/verification procedure; no changed game balance or claimed production improvements.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/validate-connection-recovery.js"
+      ],
+      "reason": "Update the real recovery regression to load the extracted single-flight reader and retain unchanged-snapshot success plus stale-account rejection; assert overlapping reads share one promise.",
+      "tests": [
+        "tools/validate-connection-recovery.js"
+      ]
     }
   ]
 }

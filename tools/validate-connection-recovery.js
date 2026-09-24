@@ -169,13 +169,15 @@ async function previews() {
 
 async function reports() {
   const ctx={state:{},scope:"alice",getOnlineSessionRequestScope:()=>ctx.scope,onlineLastError:"",audioServerReportsHydrated:false,
-    onlineReportRequestGeneration:0,onlineReportSyncState:"loading",setOnlineReportSyncState:value=>{ctx.onlineReportSyncState=value;},
+    scoutReportRead:null,onlineReportRequestGeneration:0,onlineReportSyncState:"loading",setOnlineReportSyncState:value=>{ctx.onlineReportSyncState=value;},
     getOnlineApi:()=>ctx.api,api:{isSignedIn:()=>true},withTimeout:p=>p,merged:[],mergeServerReports:rows=>{ctx.merged.push(rows);return false;},console:{warn:()=>{}}};
-  load(ctx,["loadServerReportsOnce"]);
+  load(ctx,["loadServerReportsOnce","performServerReportRead"]);
   ctx.api.loadServerReports=async()=>[];
   assert.equal(await ctx.loadServerReportsOnce(),true,"An unchanged valid report snapshot was treated as a failed read.");
   let finish;ctx.api.loadServerReports=()=>new Promise(resolve=>{finish=resolve;});
-  const task=ctx.loadServerReportsOnce();ctx.scope="bob";finish([{id:"private-old-report"}]);
+  const task=ctx.loadServerReportsOnce();
+  assert.equal(ctx.loadServerReportsOnce(),task,"Overlapping report recovery did not share the in-flight read.");
+  ctx.scope="bob";finish([{id:"private-old-report"}]);
   assert.equal(await task,false);assert.equal(ctx.merged.length,1,"An old account's one-time reports were merged.");
 }
 

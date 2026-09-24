@@ -87,9 +87,15 @@ async function main() {
         for (const entry of response.entries) {
           const service = entry.resource?.labels?.service_name || "unknown";
           const revision = entry.resource?.labels?.revision_name || "unknown";
-          const key = `${service}/${revision}`;
+          const timing = kind === "timings" ? operationTiming(entry) || {} : {};
+          const scouting = timing.scoutStage ? {
+            stage: timing.scoutStage, sourceType: timing.scoutSourceType || "unknown",
+            targetType: timing.scoutTargetType || "unknown", batchSize: timing.scoutBatchSize ?? null,
+            outcome: operationOutcome(entry)?.outcome || "unknown",
+          } : null;
+          const key = `${service}/${revision}${scouting ? "/" + JSON.stringify(scouting) : ""}`;
           const g = groups[key] ||= { service, revision, currentRevision: currentRevisions.has(revision), count:0,
-            durations: [], httpStatuses: {}, errorCategories: {}, phases: {}, maxTransactionAttempts: 0 };
+            scouting, durations: [], httpStatuses: {}, errorCategories: {}, phases: {}, scoutMetrics: {}, maxTransactionAttempts: 0 };
           g.count++;
           if (kind === "http") {
             const latency = Number(String(entry.httpRequest?.latency).replace(/s$/, ""))*1000;
@@ -97,9 +103,12 @@ async function main() {
             const status = String(entry.httpRequest?.status ?? "unknown");
             g.httpStatuses[status] = (g.httpStatuses[status] || 0)+1;
           } else if (kind === "timings") {
-            const data = operationTiming(entry) || {};
+            const data = timing;
             if (typeof data.requestDurationMs === "number") g.durations.push(data.requestDurationMs);
             g.maxTransactionAttempts = Math.max(g.maxTransactionAttempts, Number(data.transactionAttempts) || 0);
+            for (const metric of ["scoutOriginCandidates", "routeCacheHits", "routeCacheMisses"]) {
+              if (typeof data[metric] === "number") (g.scoutMetrics[metric] ||= []).push(data[metric]);
+            }
             for (const phase of ["realmContext", "worldValidation", "documentReads", "routePlanning", "transaction"]) {
               const value = data.phaseDurationMs?.[phase];
               if (typeof value === "number") (g.phases[phase] ||= []).push(value);
@@ -118,6 +127,7 @@ async function main() {
       } while (token && pages < PAGE_LIMIT);
       window.queries[kind] = { status: failure ? (pages ? "partial" : "unverified") : token ? "partial" : "complete", failure, count, pages, truncated: Boolean(token), groups: Object.values(groups).map(g => ({...g,
         durations: stats(g.durations), phases: Object.fromEntries(Object.entries(g.phases).map(([name, values]) => [name, stats(values)])),
+        scoutMetrics: Object.fromEntries(Object.entries(g.scoutMetrics).map(([name, values]) => [name, stats(values)])),
       })) };
       console.log(`${days}d ${kind}: ${count} entries; truncated=${Boolean(token)}; unavailable=${Boolean(failure)}`);
     }
