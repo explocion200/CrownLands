@@ -1,50 +1,50 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b2b96c2ebb9ed53fda2d03214706b19af359d406",
+  "baseCommit": "42a77d058c1d88e8fac22c93ada4f0ea33b084d0",
   "coverage": [
     {
       "paths": [
         "game.js"
       ],
-      "reason": "Preserve Tower targets in accepted marches and scout reports, merge authoritative Tower arrival intelligence and recover private reports during the return leg, update an existing authoritative march while its resolution finishes, and expose only fresh same-ownership Tower reports. Cover city/Camp scouts, retry/session isolation, return lifecycle, troop privacy and unchanged King Power dependencies. No server rules, formulas, schema or callable contract changes, so emulator changes are not required.",
+      "reason": "Show map controls immediately, refresh map permissions without requesting unrelated Shop data, share same-session selection reads, retain a follow-up for changes during a read, and invalidate across ownership/clan/session changes. Cover map mouse/touch selection, Scout/Info/Rally entry, city-to-Tower and personal outgoing orders, Shop loading, report delivery and reconnect guards. Client-only presentation/read scheduling; server authority, gameplay rules, troop accounting and contracts are unchanged, so no emulator suites are required.",
       "tests": [
         "tools/validate-clan-tower-scouting-browser.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-scout-report-ui.js",
-        "tools/validate-connection-recovery.js",
         "tools/validate-holding-towers.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-allied-target-return.js",
-        "tools/validate-king-power.js"
+        "tools/validate-holding-details-ui.js",
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-connection-recovery.js"
       ]
     },
     {
       "paths": [
-        "scout-report-ui.js"
+        "clan-tower-details-ui.js",
+        "tools/validate-holding-details-ui.js"
       ],
-      "reason": "Render the saved Tower troop count, clan and wall snapshot without synthesizing city levels, skills or total defense. Use the established report layout and validate desktop, touch landscape, expiry, replacement, scroll/focus and existing city/Camp report rendering.",
+      "reason": "Cold or public-only Tower snapshots display disabled Scout and Rally placeholders with an explanation. Info stays available, known denials and inactive-world rules remain authoritative, and own-clan Store/Send controls are preserved.",
       "tests": [
+        "tools/validate-holding-details-ui.js",
         "tools/validate-clan-tower-scouting-browser.js",
-        "tools/validate-scout-report-ui.js"
+        "tools/validate-clan-tower-orders-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-holding-tower-client-lifecycle.js"
+      ],
+      "reason": "Exercise shared pending selection reads, notification follow-up, failure/retry, capture/account/clan invalidation, late-session Shop rejection, and existing dialog/order lifecycle guards.",
+      "tests": [
+        "tools/validate-holding-towers.js"
       ]
     },
     {
       "paths": [
         "tools/validate-clan-tower-scouting-browser.js"
       ],
-      "reason": "Regression uses the real map Scout/Report controls and actual client handlers with production endpoints blocked; matches the existing Tower returning response, delays report subscription, preserves Tower type, tests duplicate taps, immediate intelligence, returning army updates, private-report replacement, expiry and changed ownership on desktop and two touch landscape sizes.",
+      "reason": "Reproduce first-selection delay through real mouse/touch Tower taps with a held server reply, then assert immediate safe controls, no duplicate read, warm selection, actual Info and Rally contribution entry, and existing scout/report delivery. Cover desktop and two landscape-mobile sizes with production endpoints blocked.",
       "tests": [
         "tools/validate-clan-tower-scouting-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/validate-scout-responsiveness.js"
-      ],
-      "reason": "Add a returning Tower scout without usable intelligence to verify private report recovery (including Veil outcomes), no premature return completion and release of per-scout resolution locks. Preserve all existing concurrency, retry, stale-session and economy debounce checks.",
-      "tests": [
-        "tools/validate-scout-responsiveness.js"
       ]
     }
   ]
