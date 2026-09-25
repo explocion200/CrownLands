@@ -255,7 +255,7 @@
   animation: clActionBusyPulse .85s ease-in-out infinite alternate;
 }
 
-.cl-action-button:is(.busy, [aria-busy="true"]) > :is(.wheel-icon, span:first-child) {
+.cl-action-button:is(.busy, [aria-busy="true"]):not(.cl-action-scout):not([data-clan-tower-map-action="scout"]) > :is(.wheel-icon, span:first-child) {
   animation: bulkOrderBusySpin .85s linear infinite;
 }
 

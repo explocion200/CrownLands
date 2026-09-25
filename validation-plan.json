@@ -1,52 +1,16 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0e5a10b9667314bee5ee3fad2a95975ef56a0f58",
+  "baseCommit": "c55de0dbee4190e8b8579f4b7c8623ac52af88f9",
   "coverage": [
     {
-      "paths": [
-        "game.js",
-        "clan-tower-details-ui.css"
-      ],
-      "reason": "Move only Clan Tower action rows outside the scaled map world while preserving their approved 56px size, 4px gaps and 8px clearance. Reproduce a report-driven row refresh before a queued camera frame, retain painted geometry at creation and cached projection during camera movement, and avoid scaling the controls at any time. Cover shared scout feedback/focus lookup, selection cleanup, transition blocking, building/Store entry, Scout/Info/Rally and troop-order actions, touch gestures and bounded per-frame layout work. Client presentation only: server authority, realm data, troop accounting and contracts do not change, so no emulator suites apply.",
-      "tests": [
-        "tools/validate-clan-tower-action-size-browser.js",
-        "tools/validate-clan-tower-gestures-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-clan-tower-scouting-browser.js",
-        "tools/validate-map-ui-responsiveness-browser.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-interaction-health.js"
-      ]
+      "paths": ["action-buttons.css"],
+      "reason": "Exclude Scout eye icons, including the Tower's shared Send-colored Scout action, from the generic busy rotation. Verify the shared action-button styles, active scout feedback and duplicate prevention, and Tower sizing on desktop and landscape mobile. Manual browser checks compare computed icon animations before/after across City, Camp, Stronghold, Tower and Nearby controls while retaining Regroup rotation. CSS-only presentation: no server authority, contracts, travel or accounting changes; no emulator suites apply.",
+      "tests": ["tools/validate-objective-action-buttons.js", "tools/validate-scout-responsiveness-browser.js", "tools/validate-clan-tower-action-size-browser.js"]
     },
     {
-      "paths": [
-        "docs/visual-qa/clan-tower-action-size/action-size-fixture.js"
-      ],
-      "reason": "The existing native-size review must locate the Tower row in its unscaled parent while continuing to measure actual production sizing, spacing and art at desktop and two landscape-mobile viewports.",
-      "tests": [
-        "tools/validate-clan-tower-action-size-browser.js",
-        "tools/validate-map-ui-responsiveness-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/validate-clan-tower-gestures-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-map-ui-responsiveness-browser.js",
-        "tools/validate-scout-responsiveness.js"
-      ],
-      "reason": "Keep existing interaction, building and scout assertions pointed at the moved row. Add a regression that measures the intermediate frame before camera paint, high-DPI mobile input, transition blocking and selection cleanup. Verify camera movement only translates the row, performs no repeated Tower geometry reads, and does not rewrite unchanged styles.",
-      "tests": [
-        "tools/validate-clan-tower-gestures-browser.js",
-        "tools/validate-clan-tower-map-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-map-ui-responsiveness-browser.js",
-        "tools/validate-scout-responsiveness.js"
-      ]
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "reason": "Record the user's requested stationary Scout action eye as presentation behavior, without claiming a deployment or changing scouting mechanics. Documentation has no separate runtime tests.",
+      "tests": []
     }
   ]
 }
