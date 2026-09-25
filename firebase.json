@@ -19,6 +19,9 @@
   ],
   "hosting": {
     "public": "firebase-hosting-redirect",
+    "postdeploy": [
+      "node tools/check-email-action-hosting.js"
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

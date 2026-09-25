@@ -1,20 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0605d97874091abf7d504c954885823404f85384",
+  "baseCommit": "d7a3a9f88fceb9d502d32f2cbdfa5697b643e188",
   "coverage": [
     {
-      "paths": ["email-auth-ui.js", "index.html", "styles.css", "tools/validate-email-auth-browser.js"],
-      "reason": "Repair signup validation and verification-delivery feedback, guide existing Google players to same-account password linking, expose safe support codes for unhandled failures, and match the shared parchment/burgundy theme. Exercise real client/UI integration, existing-email and unavailable/internal/uncoded failures, redaction, signup retries, duplicate submissions, recovery, verification and linking at desktop and landscape-mobile sizes; retain auth lifecycle and global theme coverage. No authority, SDK, server, or rule changes require emulator suites.",
-      "tests": ["tools/validate-email-auth.js", "tools/validate-email-auth-browser.js", "tools/validate-profile-theme.js"]
+      "paths": [
+        "firebase.json",
+        "tools/check-email-action-hosting.js",
+        "tools/validate-email-action-hosting.js"
+      ],
+      "reason": "Add a read-only Firebase Hosting postdeploy check for the missing initialization JSON that prevents managed email action pages from starting. Cover redirect/HTML fallbacks, mismatched config, missing assets, bounded retries and safe GET-only failures. Existing email-auth client and Auth/Firestore/callable emulator coverage preserves verification gating; deployment config also receives the standard production artifact gate. No gameplay, client visual styling or server authority changes. Real hosted browser probes are separate release evidence, never a claim of live email delivery.",
+      "tests": [
+        "tools/validate-email-action-hosting.js",
+        "tools/validate-email-auth.js",
+        "functions/test/emulator-email-auth.js"
+      ]
     },
     {
-      "paths": ["tools/build-production-client.js", "tools/validate-production-artifact.js"],
-      "reason": "The required local release gate found CRLF checkout bytes exceeding the unchanged artifact budget. Normalize copied text only in build output and validate portable line endings, entry resources, binary asset inventory, release metadata and payload limits through the existing production artifact checks.",
-      "tests": ["tools/validate-production-artifact.js"]
-    },
-    {
-      "paths": ["docs/email-password-auth.md"],
-      "reason": "Document the confirmed form feedback/theme defects, completed release context, local evidence and unresolved exact player signup failure; no separate runtime tests apply.",
+      "paths": [
+        "docs/email-password-auth.md"
+      ],
+      "reason": "Document the reproduced hosting bootstrap failure, isolated-browser proof, exact pending production association/Hosting-only repair, release acceptance and limits. Correct the prior follow-up release status from verified merge/deploy evidence. No separate runtime tests apply to this runbook.",
       "tests": []
     }
   ]
