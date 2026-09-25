@@ -4275,12 +4275,6 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   if (!includeShop && previous?.clanId === snapshot.clanId && previous?.ownershipRevision === snapshot.ownershipRevision) {
     snapshot.clanShop = previous.clanShop;
   }
-  holdingTowerSnapshots.set(towerId, snapshot);
-  if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
-  syncHoldingTowerSelectionSubscription();
-  updateHoldingTowerOrderAvailability();
-  if (selectedTowerMapId === towerId) renderSelectionChangeNow();
-  // Tower permissions and details must not wait for the optional Shop request.
   if (includeShop && snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
     try {
       const shop = await api.getClanTowerShop({ towerId });
@@ -4288,15 +4282,13 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
       snapshot.clanShop = shop.clanShop;
       applyServerEconomyResult(shop, { renderCities: false });
     } catch (error) { snapshot.clanShopError = error?.message || "Clan Shop unavailable."; }
-    if (!isCurrentRequest()) return null;
-    // A public snapshot may have updated the Tower while its Shop was loading.
-    const current = holdingTowerSnapshots.get(towerId);
-    if (current) {
-      current.clanShop = snapshot.clanShop;
-      current.clanShopError = snapshot.clanShopError;
-      if (isCurrentDetails()) renderHoldingTowerModal(current);
-    }
   }
+  if (!isCurrentRequest()) return null;
+  holdingTowerSnapshots.set(towerId, snapshot);
+  if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
+  syncHoldingTowerSelectionSubscription();
+  updateHoldingTowerOrderAvailability();
+  if (selectedTowerMapId === towerId) renderSelectionChangeNow();
   if (isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
     const garrisonClanId = snapshot.ownerMember ? String(snapshot.clanId || "") : "";
     if (subscribe || session.garrisonClanId !== garrisonClanId) {

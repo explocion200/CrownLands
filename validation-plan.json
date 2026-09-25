@@ -6,7 +6,7 @@
       "paths": [
         "game.js"
       ],
-      "reason": "Show Tower state and map permissions as soon as the authoritative read completes, before optional Shop data; share same-session selection reads, retain a follow-up for changes during a read, and invalidate across ownership/clan/session changes. Cover map mouse/touch selection, Scout/Info/Rally entry, city-to-Tower and personal outgoing orders, Shop loading, report delivery and reconnect guards. Client-only presentation/read scheduling; server authority, gameplay rules, troop accounting and contracts are unchanged, so no emulator suites are required.",
+      "reason": "Show map controls immediately, refresh map permissions without requesting unrelated Shop data, share same-session selection reads, retain a follow-up for changes during a read, and invalidate across ownership/clan/session changes. Cover map mouse/touch selection, Scout/Info/Rally entry, city-to-Tower and personal outgoing orders, Shop loading, report delivery and reconnect guards. Client-only presentation/read scheduling; server authority, gameplay rules, troop accounting and contracts are unchanged, so no emulator suites are required.",
       "tests": [
         "tools/validate-clan-tower-scouting-browser.js",
         "tools/validate-holding-towers.js",
@@ -33,7 +33,7 @@
       "paths": [
         "tools/validate-holding-tower-client-lifecycle.js"
       ],
-      "reason": "Exercise shared pending selection reads, notification follow-up, failure/retry, capture/account/clan invalidation, early Info presentation during a stalled Shop read, late-session Shop rejection, and existing dialog/order lifecycle guards.",
+      "reason": "Exercise shared pending selection reads, notification follow-up, failure/retry, capture/account/clan invalidation, late-session Shop rejection, and existing dialog/order lifecycle guards.",
       "tests": [
         "tools/validate-holding-towers.js"
       ]

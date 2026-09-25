@@ -330,10 +330,7 @@ async function main() {
     h.context.applyServerEconomyResult = () => { applied++; };
     const opening = h.open("tower-a");
     h.finish(h.reads[0], 1, { ownerMember: true }); await flush();
-    assert.match(h.modalBody.innerHTML, /revision 1$/, "Tower Info waited for an unrelated Shop response");
     h.context.onlineSessionGeneration++; h.replace();
-    vm.runInContext("holdingTowerMapSubscriptionsKey='previous-account'", h.context);
-    h.context.ensureHoldingTowerMapSubscriptions();
     shop.resolve({ clanShop: { level: 10 } }); await opening;
     assert.equal(applied, 0, "A late Shop response changed another account's economy.");
     assert.equal(h.modalBody.innerHTML, "Unrelated dialog");
