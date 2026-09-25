@@ -146,7 +146,9 @@ async function main(){
       assert(row.departure.moved);assert(row.departure.pending);
       const departureShot=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(artifacts,`scout-departure-${viewport.name}.png`),Buffer.from(departureShot.data,"base64"));
-      row.departure.reconciled=await evaluate(`(async()=>{const qa=scoutQa;adoptServerArmyMovement(qa.movement(qa.pendingId));
+      row.departure.reconciled=await evaluate(`(async()=>{const qa=scoutQa;const before=qa.pendingToken.style.transform;
+        adoptServerArmyMovement(qa.movement(qa.pendingId));
+        if(qa.pendingToken.style.transform!==before)throw Error("Acceptance flashed the new position before blending");
         await qa.nextFrame();return !pendingOutgoingMissions.has(qa.pendingId)&&armyTokenCache.get(qa.pendingId)===qa.pendingToken
           &&!qa.pendingToken.classList.contains("pending-order");})()`);
       assert(row.departure.reconciled,"Accepted departure replaced or duplicated its token");

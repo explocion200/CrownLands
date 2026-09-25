@@ -30868,6 +30868,9 @@ function renderArmiesUncached(force = false) {
     selectedArmyTokenId = "";
   }
   if (clearedEndpointSelection) updateArmyTokenNavigationSelection();
+  // Immediate adoption can run after the main animation callback. Apply the
+  // same blend here so the accepted endpoint never flashes for a single frame.
+  renderVisibleArmyMotion(now);
   updateMapDensityMode(null, visibleArmyTokenIds.size);
 }
 
