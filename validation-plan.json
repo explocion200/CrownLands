@@ -1,25 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6f18a4d2d93aeaedf2bd371361a6d3089d248ff8",
+  "baseCommit": "e0b53142450a1089a3ca2bfe4abe8a92a30cddf9",
   "coverage": [
     {
       "paths": [
-        "firebase.json",
-        "tools/validate-email-action-hosting.js"
+        "skills-ledger-ui.css"
       ],
-      "reason": "Exclude reserved Firebase paths from the game redirect, after the live postdeploy check proved the association change alone insufficient. Exercise actual Hosting matcher for initialization/auth paths and retained ordinary redirects; keep the read-only hosted-config regression coverage and auth gating emulator suite. A real Firebase preview additionally confirms HTTP 200 configuration/action assets and HTTP 301 normal routes. Build validation covers shared deployment configuration.",
+      "reason": "Apply the existing Skills ledger theme to the Apply confirmation and unsaved-preset exit dialogs outside the profile container. The preset validator guards their existing controls, lifecycle, pricing, and allocation rules; production build validation covers the eagerly loaded stylesheet. Actual-game local browser QA checks desktop 1440x900, landscape 844x390 and 568x320, and portrait 390x844: readable palette, all eight skills, long names, scroll reachability, 44px controls, no horizontal overflow, Cancel/Escape/close/Apply outcomes, and native Save/Discard/Cancel return values. Styling is scoped to the two preset dialogs; no server or authority behavior changes, so no emulator suite is needed.",
       "tests": [
-        "tools/validate-email-action-hosting.js",
-        "tools/validate-email-auth.js",
-        "functions/test/emulator-email-auth.js"
+        "tools/validate-skill-presets.js"
       ]
-    },
-    {
-      "paths": [
-        "docs/email-password-auth.md"
-      ],
-      "reason": "Record the initial authorized Hosting association/release and failed acceptance, the tested redirect repair, and corrected release steps and verification limits.",
-      "tests": []
     }
   ]
 }
