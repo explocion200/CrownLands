@@ -11187,15 +11187,15 @@ async function preparePendingScoutDeparture(mission, target, source, scope) {
     && pendingOutgoingMissions.get(mission.onlineId) === mission && mission.serverPending;
   if (!current()) return;
   if (!source) {
-    const candidates = getOwnedSourceCandidates(target, 1).map(row => row.city);
+    const candidates = getOwnedSourceCandidates(target, 1);
     for (const tower of holdingTowerSnapshots.values()) {
       if (tower.ownerMember && tower.worldActive !== false && tower.clanId === state.clanId && tower.ownStationedTroops > 0) {
         const visual = getHoldingTowerVisual(tower.id);
-        if (visual) candidates.push(visual);
+        if (visual) candidates.push({ city: visual, estimate: getRouteHeuristicDistance(visual, target) });
       }
     }
-    candidates.sort((left, right) => getRouteHeuristicDistance(left, target) - getRouteHeuristicDistance(right, target));
-    source = candidates[0];
+    candidates.sort((left, right) => left.estimate - right.estimate);
+    source = candidates[0]?.city;
   }
   if (!source) return;
   const route = await findRouteAsync(source, target);
