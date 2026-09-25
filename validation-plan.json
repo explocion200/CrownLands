@@ -4,7 +4,7 @@
   "coverage": [
     {
       "paths": ["email-auth-ui.js", "index.html", "styles.css", "tools/validate-email-auth-browser.js"],
-      "reason": "Repair signup validation feedback and verification-delivery error handling, and match the shared parchment/burgundy theme. Exercise real client/UI integration, signup failure/retry, duplicate submissions, recovery, verification and Google linking at desktop and landscape-mobile sizes; retain auth lifecycle and global theme coverage. No authority, SDK, server, or rule changes require emulator suites.",
+      "reason": "Repair signup validation and verification-delivery feedback, guide existing Google players to same-account password linking, expose safe support codes for unhandled failures, and match the shared parchment/burgundy theme. Exercise real client/UI integration, existing-email and unavailable/internal/uncoded failures, redaction, signup retries, duplicate submissions, recovery, verification and linking at desktop and landscape-mobile sizes; retain auth lifecycle and global theme coverage. No authority, SDK, server, or rule changes require emulator suites.",
       "tests": ["tools/validate-email-auth.js", "tools/validate-email-auth-browser.js", "tools/validate-profile-theme.js"]
     },
     {

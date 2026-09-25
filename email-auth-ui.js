@@ -22,12 +22,16 @@
     if (code === "auth/user-mismatch") return "Your account changed. Please try again with your current account.";
     if (code === "auth/popup-closed-by-user") return "Google confirmation was cancelled. Your account has not changed.";
     if (code === "auth/operation-not-allowed") return "Email sign-in is not available yet. Please use Google for now.";
+    if (code === "auth/unavailable") return "Sign-in could not load. Reload Crownlands and try again.";
     if (code === "auth/already-signed-in") return "You are already signed in. Use Sign out before creating a different account.";
     if (code === "auth/operation-pending") return "Please wait for the current sign-in to finish.";
     if (["auth/invalid-continue-uri", "auth/unauthorized-continue-uri", "auth/missing-continue-uri"].includes(code)) return "The verification return link is unavailable. Please contact support.";
     if (code === "auth/quota-exceeded") return "Email delivery is temporarily limited. Please try again later.";
     if (code.startsWith("functions/")) return "Your account connected, but the game is temporarily busy. Try again shortly.";
-    return "Could not finish. Please try again.";
+    // Firebase codes are safe support references; never display raw messages,
+    // customData, credentials, or arbitrary error text.
+    const supportCode = /^auth\/[a-z-]{1,60}$/.test(code) ? code : "email/client-error";
+    return `Could not finish. Reload Crownlands and try again. If it continues, contact support with code ${supportCode}.`;
   }
 
   function clearPasswords() {
@@ -57,7 +61,7 @@
     clearPasswords(); status.textContent = "";
     element("emailAuthTitle").textContent = titles[mode];
     element("emailAuthHint").textContent = mode === "link" ? "Use either Google or this password to reach the same kingdom. Use at least 12 characters."
-      : mode === "create" ? "Use at least 12 characters. Verify your email before entering your kingdom."
+      : mode === "create" ? "Use at least 12 characters. Verify your email before entering your kingdom. Already play with Google? Sign in with Google, then choose Settings → Account → Add a password."
         : mode === "reset" ? "We’ll send recovery instructions if this email can receive them." : "Continue to your kingdom.";
     submit.textContent = mode === "reset" ? "Send reset email" : mode === "signIn" ? "Sign in" : titles[mode];
     element("emailPasswordFields").hidden = mode === "reset";

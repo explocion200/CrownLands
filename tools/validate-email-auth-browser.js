@@ -7,10 +7,10 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const root = path.resolve(__dirname, "..");
 const fixture = `(() => {
-  let observer, failure = '';
+  let observer, failure = '', failureCode = '';
   const calls = [], serverCalls = [], auth = {currentUser:null};
   const user = (uid,email,provider,verified=false) => ({uid,email,emailVerified:verified,providerData:[{providerId:provider}],provider});
-  const operation = async (name,work) => { calls.push(name); await new Promise(r=>setTimeout(r,120)); if(failure===name){failure='';throw Object.assign(Error('Fixture network failure'),{code:'auth/network-request-failed'});} return work(); };
+  const operation = async (name,work) => { calls.push(name); await new Promise(r=>setTimeout(r,120)); if(failure===name){failure='';throw Object.assign(Error('PRIVATE_FIXTURE_DETAIL'),{code:failureCode,customData:{email:'PRIVATE_FIXTURE_DETAIL'}});} return work(); };
   window.CROWNLANDS_FIREBASE_CONFIG = {apiKey:'fixture',projectId:'fixture',authDomain:'fixture',appId:'fixture'};
   window.CROWNLANDS_REALM_CONFIG = {resetGeneration:'fixture',worldId:'fixture-world'};
   const modules = {
@@ -27,7 +27,7 @@ const fixture = `(() => {
     firestore:{getFirestore:()=>({}),doc:(...parts)=>parts.slice(1).join('/'),onSnapshot:()=>()=>{}},
     functions:{getFunctions:()=>({}),httpsCallable:(_f,name)=>async payload=>{serverCalls.push(name);return {data:name==='getRealmInfo'?{resetGeneration:'fixture',worldId:'fixture-world'}:name==='joinGameServer'?{status:'active',activeSession:{id:payload.sessionId,version:2,revision:1}}:{ok:true}};}}
   };
-  window.emailQa = {calls,serverCalls,modules,failNext:name=>{failure=name;},reset:()=>CrownlandsOnline.signOut(),google:async()=>{auth.currentUser=user('google-user','google@example.test','google.com',true);observer(auth.currentUser);await new Promise(r=>setTimeout(r,0));}};
+  window.emailQa = {calls,serverCalls,modules,failNext:(name,code='auth/network-request-failed')=>{failure=name;failureCode=code;},reset:()=>CrownlandsOnline.signOut(),google:async()=>{auth.currentUser=user('google-user','google@example.test','google.com',true);observer(auth.currentUser);await new Promise(r=>setTimeout(r,0));}};
 })();`;
 async function main() {
   const server = http.createServer((request, response) => {
@@ -86,6 +86,7 @@ async function main() {
       await click("emailSignInBtn");
       assert(await evaluate('document.getElementById("emailAuthDialog").open'));
       await click("emailAuthModeBtn");
+      assert.match(await evaluate('document.getElementById("emailAuthHint").textContent'), /Settings → Account → Add a password/);
       assert.equal(await evaluate('document.getElementById("emailAuthPassword").autocomplete'), "new-password");
       await click("emailAuthSubmit");
       assert.match(await evaluate('document.getElementById("emailAuthStatus").textContent'), /valid email/);
@@ -142,6 +143,22 @@ async function main() {
       await fill("emailAuthPassword", "another password"); await click("emailAuthSubmit");
       await waitFor('document.getElementById("emailAuthStatus").textContent.includes("Email or password was not accepted")');
       await click("emailAuthModeBtn");
+      for (const [code, explanation] of [
+        ["auth/email-already-in-use", "add a password in Settings"],
+        ["auth/already-signed-in", "already signed in"],
+        ["auth/unavailable", "Sign-in could not load"],
+        ["auth/internal-error", "support with code auth/internal-error"],
+        ["PRIVATE_FIXTURE_DETAIL@example.test", "support with code email/client-error"],
+        ["", "support with code email/client-error"],
+      ]) {
+        await fill("emailAuthPassword", "a long password"); await fill("emailAuthConfirm", "a long password");
+        await evaluate(`emailQa.failNext("signup", ${JSON.stringify(code)})`); await click("emailAuthSubmit");
+        await waitFor(`document.getElementById("emailAuthStatus").textContent.includes(${JSON.stringify(explanation)})`);
+        assert(await evaluate('document.getElementById("emailAuthDialog").open'));
+        assert.equal(await evaluate('CrownlandsOnline.getAuthUser()'), null);
+        assert(!(await evaluate('document.getElementById("emailAuthStatus").textContent')).includes("PRIVATE_FIXTURE_DETAIL"), "Private error data reached the UI.");
+        assert.equal(await evaluate('document.getElementById("emailAuthPassword").value'), "");
+      }
       await fill("emailAuthAddress", "delivery@example.test");
       await fill("emailAuthPassword", "delivery password"); await fill("emailAuthConfirm", "delivery password");
       await evaluate('emailQa.failNext("delivery")'); await click("emailAuthSubmit");
