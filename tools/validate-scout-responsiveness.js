@@ -130,7 +130,7 @@ async function nearbyChecks() {
 function ownershipChecks() {
   let renders=0,removed=0,owner="player";
   const wheel={dataset:{scoutTarget:"target"},remove:()=>removed++};
-  const scope=load({Set,cityLayer:{querySelectorAll:()=>[wheel]},holdingTowerSnapshots:new Map(),
+  const scope=load({Set,mapFrame:{querySelectorAll:()=>[wheel]},holdingTowerSnapshots:new Map(),
     cityById:()=>({id:"target",owner}),getCampTargetById:()=>null,isStronghold:()=>false,
     preserveScoutViewInteraction:(_root,render)=>render(),renderSelectedForeignWheel:()=>renders++,
     renderSelectedClanTowerWheel:noop,renderSelectedRewardCampWheel:noop,
