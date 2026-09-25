@@ -120,7 +120,10 @@
         status.textContent = "If this email can receive recovery instructions, they are on their way. Check your inbox and spam folder.";
       } else if (mode === "link") {
         await api().addEmailPassword(secret);
-        if (api().getAuthUser()?.uid === submittedUid) element("emailAccountStatus").textContent = "Password added. Google and email sign-in both open this kingdom.";
+        if (api().getAuthUser()?.uid === submittedUid) {
+          if (api().isSignedIn()) element("emailAccountStatus").textContent = "Password added. Google and email sign-in both open this kingdom.";
+          else element("emailVerificationStatus").textContent = "Password added. Verify your email to return to this kingdom.";
+        }
         dialog.close();
       } else {
         await api().signInWithEmail(email, secret, { create: mode === "create" });

@@ -132,7 +132,7 @@
     }
     // Same-account provider/verification refreshes are UI updates, not a new
     // gameplay login (which would restart watchers and flush old local saves).
-    if (uid !== previousUid || source === "auth-state") dispatch("auth", { user: client.user, source });
+    if (uid !== previousUid || (serialized?.uid || "") !== previousAuthUid || source === "auth-state") dispatch("auth", { user: client.user, source });
     dispatch("auth-ui", { user: client.authUser });
     return client.authUser;
   }
@@ -2048,7 +2048,7 @@
 
   async function signInWithEmail(email, password, { create = false } = {}) {
     await requireAuthClient();
-    if (client.auth.currentUser && client.authUser) throw emailAuthError("already-signed-in", "Sign out before using another account.");
+    if (client.auth.currentUser && client.auth.currentUser.uid !== client.sessionReplacedUid) throw emailAuthError("already-signed-in", "Sign out before using another account.");
     if (create) validateNewPassword(password);
     await prepareExplicitSessionLogin();
     const method = create ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
@@ -2121,6 +2121,7 @@
     await client.modules.auth.getIdToken(user, true);
     assertCurrentAuthUser(user);
     await acceptAuthUser(user, "password-linked");
+    if (!client.user) await sendVerificationEmail();
     return client.authUser;
   }
 

@@ -41125,6 +41125,17 @@ window.addEventListener("crownlands:auth", async () => {
     if (dailyLoginRewardUtcTimer) window.clearTimeout(dailyLoginRewardUtcTimer);
     dailyLoginRewardUtcTimer = 0;
     renderDailyLoginRewardButton();
+    if (state && getOnlineApi()?.getAuthUser?.()) {
+      // Firebase can require verification again after a credential change.
+      // Retire only the local game view; retain the authoritative kingdom.
+      disconnectOnlineWorld();
+      clearSelection(false);
+      if (modal?.open) modal.close();
+      closeProfileScreen({ force: true });
+      setSetupLoading(false);
+      state = null;
+      if (setupScreen) setupScreen.classList.add("visible");
+    }
   }
   updateOnlineUi();
   refreshPushAlertRegistration(true);

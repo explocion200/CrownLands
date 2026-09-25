@@ -114,6 +114,21 @@ async function main() {
   await assert.rejects(popupAttempt, { code: "auth/operation-superseded" });
   assert.equal(f.api.getUser(), null, "A superseded popup restored an obsolete user.");
 
+  f.modules.auth.reload = async () => {};
+  const verifyAgain = f.user("verify-again", "google.com", true);
+  await f.login(verifyAgain);
+  const existingLinks = f.modules.auth.linkWithCredential;
+  f.modules.auth.linkWithCredential = async (...args) => {
+    const result = await existingLinks(...args);
+    result.user.emailVerified = false; result.user.provider = "password";
+    return result;
+  };
+  await f.api.addEmailPassword("another long password");
+  assert.equal(f.api.getUser(), null, "A newly unverified linked session remained eligible.");
+  assert.equal(f.api.getAuthUser().uid, verifyAgain.uid);
+  assert.equal(f.events.filter(event => event.type === "crownlands:auth").at(-1).detail.user, null);
+  assert.equal(f.sent.at(-1), "https://playcrownlands.com/play/");
+
   // Both wrappers must reject before the realm lookup, including handlers that
   // inspect request.auth directly rather than calling requireAuth.
   const backend = fs.readFileSync(path.join(root, "functions/index.js"), "utf8");
