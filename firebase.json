@@ -29,7 +29,7 @@
     ],
     "redirects": [
       {
-        "source": "**",
+        "regex": "^/(?:[^_].*|_[^_].*|_|__[^/].*)?$",
         "destination": "https://crownland.netlify.app",
         "type": 301
       }
