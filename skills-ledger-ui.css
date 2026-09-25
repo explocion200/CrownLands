@@ -200,3 +200,192 @@
 #profileScreen.skills-active .skill-preset-identity{order:1 !important}
 
 #profileScreen.skills-active .skill-current-build-tab{grid-column:auto !important}
+
+/* Preset dialogs live outside #profileScreen, so carry the Skills ledger theme with them. */
+#modal.skill-preset-confirmation-modal,
+#skillPresetExitDialog {
+  --preset-paper: #f2e8cd;
+  --preset-ink: #352f23;
+  --preset-muted: #716247;
+  --preset-line: #b8a684;
+  --preset-burgundy: #703e3d;
+  width: min(700px, calc(100vw - 24px)) !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 24px) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 2px !important;
+  color: var(--preset-ink) !important;
+  background: transparent !important;
+  font: 14px/1.45 "Segoe UI", Arial, sans-serif !important;
+}
+#modal.skill-preset-confirmation-modal::backdrop,
+#skillPresetExitDialog::backdrop { background: #20261f99 !important; }
+#modal.skill-preset-confirmation-modal *,
+#skillPresetExitDialog * { box-sizing: border-box !important; }
+#modal.skill-preset-confirmation-modal .modal-card,
+#skillPresetExitDialog .skill-preset-exit-dialog__card {
+  max-height: calc(100dvh - 24px) !important;
+  min-height: 0 !important;
+  padding: 5px !important;
+  border: 1px solid #766346 !important;
+  border-radius: 2px !important;
+  color: var(--preset-ink) !important;
+  background: var(--preset-paper) !important;
+  box-shadow: inset 0 0 0 3px #d6c49e, inset 0 0 0 4px #a99876, 0 10px 45px #171b1b88 !important;
+  overflow: hidden !important;
+}
+#modal.skill-preset-confirmation-modal .modal-card::before { display: none !important; }
+#modal.skill-preset-confirmation-modal :is(h2, h3, h4, p, small, strong, button),
+#skillPresetExitDialog :is(h2, p, button) {
+  text-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  font-weight: 400 !important;
+  color: var(--preset-ink) !important;
+}
+#modal.skill-preset-confirmation-modal #modalTitle,
+#skillPresetExitDialog h2 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 66px !important;
+  margin: 0 !important;
+  padding: 10px 58px 10px 16px !important;
+  border: 1px solid var(--preset-line) !important;
+  border-radius: 0 !important;
+  background: #e9dcb483 !important;
+  box-shadow: none !important;
+  font: 25px/1.15 Georgia, serif !important;
+  overflow-wrap: anywhere;
+}
+#modal.skill-preset-confirmation-modal #modalTitle::before,
+#skillPresetExitDialog h2::before {
+  content: "";
+  flex: 0 0 36px;
+  height: 42px;
+  background: url("assets/icons/skills/guildCharters.svg") center/contain no-repeat;
+}
+#modal.skill-preset-confirmation-modal #closeModalBtn {
+  top: 15px !important;
+  right: 14px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#modal.skill-preset-confirmation-modal #closeModalBtn svg { width: 22px; height: 22px; fill: currentColor; }
+#modal.skill-preset-confirmation-modal #modalBody {
+  display: grid !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation {
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 0;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > div:first-child {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 14px 18px 6px;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > div:first-child small {
+  color: var(--preset-muted) !important;
+  font: 11px "Segoe UI", Arial, sans-serif !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation h3 { margin: 0; font: 21px/1.2 Georgia, serif !important; overflow-wrap: anywhere; }
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > p {
+  padding: 0 18px 14px;
+  font: 14px/1.45 "Segoe UI", Arial, sans-serif !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > p strong { font-weight: 700 !important; color: var(--preset-burgundy) !important; }
+#modal.skill-preset-confirmation-modal .skill-preset-allocation {
+  min-height: 0;
+  gap: 10px;
+  padding: 0 18px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #a18a5d #e5d5ad;
+  scrollbar-gutter: stable;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-allocation-group {
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--preset-line) !important;
+  border-radius: 0 !important;
+  background: #f9efd6 !important;
+  box-shadow: none !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-allocation-group h4 {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--preset-line);
+  font: 18px/1.2 Georgia, serif !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-allocation-group > div { gap: 8px; }
+#modal.skill-preset-confirmation-modal .skill-preset-allocation small { font: 12px/1.3 "Segoe UI", Arial, sans-serif !important; white-space: normal; overflow-wrap: anywhere; }
+#modal.skill-preset-confirmation-modal .skill-preset-allocation strong { font: 14px/1.3 Georgia, serif !important; }
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > footer,
+#skillPresetExitDialog .skill-preset-exit-dialog__actions {
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--preset-line);
+  background: #e9dcb483;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > footer button,
+#skillPresetExitDialog button {
+  min-height: 44px !important;
+  padding: 8px 14px !important;
+  border: 1px solid #ad956b !important;
+  border-radius: 0 !important;
+  background: #e4d3ae !important;
+  box-shadow: inset 0 0 0 2px #f8ecd377 !important;
+  font: 14px/1.2 "Segoe UI", Arial, sans-serif !important;
+}
+#modal.skill-preset-confirmation-modal .skill-preset-confirmation > footer button[data-skill-preset-confirm="accept"],
+#skillPresetExitDialog button[value="save"] {
+  color: #fff1d3 !important;
+  border-color: #643938 !important;
+  background: var(--preset-burgundy) !important;
+  box-shadow: inset 0 0 0 2px #ab8d6966 !important;
+}
+#modal.skill-preset-confirmation-modal button:focus-visible,
+#skillPresetExitDialog button:focus-visible { outline: 2px solid #436f77 !important; outline-offset: 2px !important; }
+#modal.skill-preset-confirmation-modal button:hover:not(:disabled),
+#skillPresetExitDialog button:hover:not(:disabled) { filter: brightness(1.06); }
+#skillPresetExitDialog { width: min(560px, calc(100vw - 24px)) !important; }
+#skillPresetExitDialog .skill-preset-exit-dialog__card { gap: 0; }
+#skillPresetExitDialog h2 { padding-right: 16px !important; font-size: 23px !important; }
+#skillPresetExitDialog p { padding: 18px; font: 14px/1.45 "Segoe UI", Arial, sans-serif !important; }
+
+@media (max-height: 500px) and (min-width: 540px) {
+  #modal.skill-preset-confirmation-modal { width: min(760px, calc(100vw - 24px)) !important; }
+  #modal.skill-preset-confirmation-modal #modalTitle { min-height: 52px !important; padding-block: 5px !important; font-size: 21px !important; }
+  #modal.skill-preset-confirmation-modal #modalTitle::before { flex-basis: 28px; height: 36px; }
+  #modal.skill-preset-confirmation-modal #closeModalBtn { top: 10px !important; }
+  #modal.skill-preset-confirmation-modal .skill-preset-confirmation > div:first-child { padding: 8px 14px 4px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-confirmation h3 { font-size: 18px !important; }
+  #modal.skill-preset-confirmation-modal .skill-preset-confirmation > p { padding: 0 14px 8px; font-size: 13px !important; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; padding: 0 14px 8px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation-group { padding: 7px; gap: 5px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation-group h4 { font-size: 16px !important; padding-bottom: 4px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation-group > div { gap: 5px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation small { font-size: 11px !important; }
+  #modal.skill-preset-confirmation-modal .skill-preset-confirmation > footer { padding: 8px 14px; }
+}
+@media (max-width: 539px) {
+  #modal.skill-preset-confirmation-modal #modalTitle { font-size: 21px !important; }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation { grid-template-columns: minmax(0, 1fr); }
+  #modal.skill-preset-confirmation-modal .skill-preset-allocation-group > div { gap: 5px; }
+  #modal.skill-preset-confirmation-modal .skill-preset-confirmation > footer { grid-template-columns: 1fr 1fr; padding-inline: 12px; }
+  #skillPresetExitDialog .skill-preset-exit-dialog__actions { grid-template-columns: minmax(0, 1fr); }
+}
