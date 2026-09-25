@@ -1,51 +1,32 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "42a77d058c1d88e8fac22c93ada4f0ea33b084d0",
+  "baseCommit": "54b2a39ca224422769e0ddd5180e3789b15b7785",
   "coverage": [
     {
-      "paths": [
-        "game.js"
-      ],
-      "reason": "Show map controls immediately, refresh map permissions without requesting unrelated Shop data, share same-session selection reads, retain a follow-up for changes during a read, and invalidate across ownership/clan/session changes. Cover map mouse/touch selection, Scout/Info/Rally entry, city-to-Tower and personal outgoing orders, Shop loading, report delivery and reconnect guards. Client-only presentation/read scheduling; server authority, gameplay rules, troop accounting and contracts are unchanged, so no emulator suites are required.",
+      "paths": ["game.js"],
+      "reason": "Track touch starts on Tower buildings and map actions without stealing ordinary taps; capture both fingers once pinching and suppress accidental commands after dragging. Keep mounted Tower controls at the approved screen size even when selection rendering is deferred. Cover shared camera scheduling/cancellation, pinch-to-drag, city and Tower selection, Scout/Info/Rally entry, and incoming/outgoing Tower troop-order controls. This changes only client gestures and layout; server authority, troop totals, contracts and realm data remain unchanged, so emulator suites are not applicable.",
       "tests": [
-        "tools/validate-clan-tower-scouting-browser.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-holding-details-ui.js",
+        "tools/validate-clan-tower-gestures-browser.js",
+        "tools/validate-clan-tower-action-size-browser.js",
+        "tools/validate-clan-tower-map-browser.js",
         "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-connection-recovery.js"
-      ]
-    },
-    {
-      "paths": [
-        "clan-tower-details-ui.js",
-        "tools/validate-holding-details-ui.js"
-      ],
-      "reason": "Cold or public-only Tower snapshots display disabled Scout and Rally placeholders with an explanation. Info stays available, known denials and inactive-world rules remain authoritative, and own-clan Store/Send controls are preserved.",
-      "tests": [
-        "tools/validate-holding-details-ui.js",
         "tools/validate-clan-tower-scouting-browser.js",
-        "tools/validate-clan-tower-orders-browser.js"
+        "tools/validate-map-interactions.js",
+        "tools/validate-interaction-health.js"
       ]
     },
     {
-      "paths": [
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "reason": "Exercise shared pending selection reads, notification follow-up, failure/retry, capture/account/clan invalidation, late-session Shop rejection, and existing dialog/order lifecycle guards.",
+      "paths": ["holding-tower-ui.css"],
+      "reason": "Keep native touch handling on Tower artwork and action controls assigned to the game's map gesture handler. Check fixed 56px controls, 4px gaps, 8px clearance and unchanged zooming artwork on desktop and landscape mobile, including genuine pinch input and ordinary taps.",
       "tests": [
-        "tools/validate-holding-towers.js"
+        "tools/validate-clan-tower-gestures-browser.js",
+        "tools/validate-clan-tower-action-size-browser.js"
       ]
     },
     {
-      "paths": [
-        "tools/validate-clan-tower-scouting-browser.js"
-      ],
-      "reason": "Reproduce first-selection delay through real mouse/touch Tower taps with a held server reply, then assert immediate safe controls, no duplicate read, warm selection, actual Info and Rally contribution entry, and existing scout/report delivery. Cover desktop and two landscape-mobile sizes with production endpoints blocked.",
-      "tests": [
-        "tools/validate-clan-tower-scouting-browser.js"
-      ]
+      "paths": ["tools/validate-clan-tower-gestures-browser.js"],
+      "reason": "Exercise real Chromium touch events over the Tower, buildings and action row, mixed map/control finger order, pinch-to-single-finger drag, cancellation, single building/Info taps and keyboard activation. Measure controls during pinches and deferred selection updates at 1440x900, 844x390 and 568x320 with production endpoints blocked; save measurements and screenshots.",
+      "tests": ["tools/validate-clan-tower-gestures-browser.js"]
     }
   ]
 }
