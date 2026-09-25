@@ -490,9 +490,11 @@
                 return client.user;
               }
               await acceptAuthUser(result.user, "google-redirect");
+              assertCurrentAuthUser(result.user);
               client.redirectError = null;
               dispatch("auth", { user: client.user, source: "google-redirect" });
               window.setTimeout(() => {
+                if (client.auth.currentUser && client.auth.currentUser.uid !== result.user.uid) return;
                 rememberLogin("google-redirect").catch(error => {
                   console.warn("Could not finish redirected login session", error);
                 });
@@ -1933,6 +1935,7 @@
       if (operationGeneration !== client.authOperationGeneration) throw emailAuthError("operation-superseded", "Sign-in continued in this tab.");
       assertCurrentAuthUser(result.user);
       await acceptAuthUser(result.user, "google-sign-in");
+      assertCurrentAuthUser(result.user);
       await rememberLogin("google-sign-in");
       return client.user;
     } catch (error) {
@@ -2070,6 +2073,7 @@
     await client.modules.auth.getIdToken(user, true);
     assertCurrentAuthUser(user);
     await acceptAuthUser(user, "email-verified");
+    assertCurrentAuthUser(user);
     return Boolean(client.user);
   }
 
@@ -2121,6 +2125,7 @@
     await client.modules.auth.getIdToken(user, true);
     assertCurrentAuthUser(user);
     await acceptAuthUser(user, "password-linked");
+    assertCurrentAuthUser(user);
     if (!client.user) await sendVerificationEmail();
     return client.authUser;
   }
