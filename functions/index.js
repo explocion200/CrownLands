@@ -88,7 +88,7 @@ const {
   reconcileSeasonalAchievementState,
   applySeasonalAchievementEvent,
 } = require("./seasonalAchievements.js");
-const { createAuthoritativeRoutePlanner } = require("./authoritative-route-planner.js");
+const { createAuthoritativeRoutePlanner, createScoutRouteSearch } = require("./authoritative-route-planner.js");
 const WORLD_TRAVEL = require("./world-travel-network.js");
 const {
   AUTHORITATIVE_ROUTES_VERSION,
@@ -7532,15 +7532,30 @@ function getCanonicalArmyRouteEndpoint(endpoint = {}, regionId = "") {
     : { ...endpoint, regionId: canonicalRegionId };
 }
 
-function buildServerGeneratedArmyRoute(source = {}, target = {}) {
+function getServerScoutRouteSearch(source, target, searches) {
+  const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
+  const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
+  const planner = getAuthoritativeRoutePlannerForRegions([sourceRegionId, targetRegionId]);
+  if (!searches.has(planner)) searches.set(planner, createScoutRouteSearch(planner));
+  return {
+    search: searches.get(planner),
+    source: getCanonicalArmyRouteEndpoint(source, sourceRegionId),
+    target: getCanonicalArmyRouteEndpoint(target, targetRegionId),
+  };
+}
+
+function buildServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
   const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
   const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
   const canonicalSource = getCanonicalArmyRouteEndpoint(source, sourceRegionId);
   const canonicalTarget = getCanonicalArmyRouteEndpoint(target, targetRegionId);
-  const route = OPERATION_TIMING.measure("routePlanning", () => getAuthoritativeRoutePlannerForRegions([sourceRegionId, targetRegionId]).calculate(
-    canonicalSource,
-    canonicalTarget
-  ));
+  const route = OPERATION_TIMING.measure("routePlanning", () => {
+    if (options.searches) {
+      const scoped = getServerScoutRouteSearch(source, target, options.searches);
+      return scoped.search.calculate(scoped.source, scoped.target, options.maxDistance);
+    }
+    return getAuthoritativeRoutePlannerForRegions([sourceRegionId, targetRegionId]).calculate(canonicalSource, canonicalTarget);
+  });
   if (!route?.pathSegments?.length || !(route.pathLength > 0)) {
     throw new HttpsError("failed-precondition", "No safe route through the Crownlands terrain could be found.");
   }
@@ -25023,7 +25038,7 @@ function getArmyBulkAudioReportContext(army = {}) {
 
 exports.sendNearbyScouts = timedCallable(
   "sendNearbyScouts",
-  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" },
   async request => {
     OPERATION_TIMING.scout({ scoutStage: "launch", scoutSourceType: "city", scoutTargetType: "city" });
     const uid = requireAuth(request);
@@ -25531,6 +25546,7 @@ exports.sendRegroupOrders = timedCallable(
 );
 
 async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()) {
+  const scoutRouteSearches = new WeakMap();
   const targetType = order.targetType === "tower" ? "tower" : order.targetType === "camp" ? "camp" : "city";
   OPERATION_TIMING.scout({ scoutStage: "launch", scoutTargetType: targetType, scoutBatchSize: 1 });
   if (!order.id || !order.toId || !order.targetRegionId) {
@@ -25600,10 +25616,10 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
         : { id: targetSnap.id, regionId: order.targetRegionId, ...targetSnap.data() };
     if (!target) throw new HttpsError("failed-precondition", "That target is not currently active.");
 
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+    const economy = await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
-    });
+    }));
     const profile = economy.profileAfter || (playerSnap.exists ? playerSnap.data() || {} : {});
     const clanId = safeString(profile.clanId, 128);
     const [clanSnap, memberSnap] = isHoldingTowerWorldActive() && clanId
@@ -25695,7 +25711,14 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
     const source = HOLDING_TOWERS.selectClosestScoutOrigin(
       [...cityCandidates, ...towerCandidates],
       { ...target, regionId: order.targetRegionId },
-      buildServerGeneratedArmyRoute
+      (from, to, maxDistance) => buildServerGeneratedArmyRoute(from, to, { searches: scoutRouteSearches, maxDistance }),
+      {
+        lowerBound: (from, to) => {
+          const scoped = getServerScoutRouteSearch(from, to, scoutRouteSearches);
+          return scoped.search.lowerBound(scoped.source, scoped.target);
+        },
+        onComplete: ({ evaluated, pruned }) => OPERATION_TIMING.scout({ scoutOriginRoutes: evaluated, scoutOriginsPruned: pruned }),
+      }
     );
     if (!source) {
       throw new HttpsError(
@@ -27867,12 +27890,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
         };
       }
-      const economy = await prepareEconomyCollection(transaction, attackerUid, nowMs, {
+      const economy = await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, attackerUid, nowMs, {
         profileRef: db.doc(`players/${attackerUid}`),
         profileSnap: attackerProfileSnap,
         checkpointWriteBudget: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
         checkpointPriorityRefs: [sourceRef, targetRef],
-      });
+      }));
       const currentProfile = economy.profileAfter || attackerProfile;
       const committedRallyTroops = getProfileCommittedRallyTroops(currentProfile) + participant.troops;
       const participants = activeRallyParticipants(rally).map(entry => (
@@ -27963,17 +27986,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const rallyParticipantUids = rallyAttack
       ? assembledRallyParticipants(rallyAttack).map(participant => participant.uid)
       : [];
-    const participantProfiles = await getProfileSnapshots(transaction, [
-      attackerUid,
-      defenderUid,
-      ...rallyParticipantUids,
-      ...targetReinforcements.map(entry => entry.ownerUid),
-    ]);
-    const participantGlobalStats = await getGlobalStatsSnapshots(transaction, [
-      attackerUid,
-      defenderUid,
-      ...targetReinforcements.map(entry => entry.ownerUid),
-    ]);
+    const [participantProfiles, participantGlobalStats] = await OPERATION_TIMING.measure("documentReads", () => Promise.all([
+      getProfileSnapshots(transaction, [attackerUid, defenderUid, ...rallyParticipantUids,
+        ...targetReinforcements.map(entry => entry.ownerUid)]),
+      getGlobalStatsSnapshots(transaction, [attackerUid, defenderUid,
+        ...targetReinforcements.map(entry => entry.ownerUid)]),
+    ]));
     const attackerProfileEntry = participantProfiles.get(attackerUid) || {};
     const defenderProfileEntry = defenderUid ? participantProfiles.get(defenderUid) || {} : null;
     const attackerProfileSnap = participantProfiles.get(attackerUid)?.snap || null;
@@ -27986,7 +28004,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ? Math.floor(ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET / 2)
       : ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET;
     const attackerEconomy = attackerUid
-      ? await prepareEconomyCollection(transaction, attackerUid, nowMs, {
+      ? await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, attackerUid, nowMs, {
         profileRef: attackerProfileEntry.ref,
         profileSnap: attackerProfileEntry.snap,
         checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
@@ -27994,18 +28012,18 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         checkpointPriorityRefs: defenderUid === attackerUid
           ? [sourceRef, targetRef]
           : [sourceRef],
-      })
+      }))
       : null;
     const defenderEconomy = defenderUid
       ? defenderUid === attackerUid
         ? attackerEconomy
-        : await prepareEconomyCollection(transaction, defenderUid, nowMs, {
+        : await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, defenderUid, nowMs, {
           profileRef: defenderProfileEntry.ref,
           profileSnap: defenderProfileEntry.snap,
           checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
           sharedCheckpointWriteBudget: settlementCheckpointWriteBudget,
           checkpointPriorityRefs: [targetRef],
-        })
+        }))
       : null;
     const producedSourceEntry = towerSource ? null : getEconomyCityByRef(attackerEconomy, sourceRef);
     const producedTargetEntry = getEconomyCityByRef(defenderEconomy, targetRef);
@@ -31375,6 +31393,7 @@ exports.resolveArmyOrder = timedCallable("resolveArmyOrder", {
   region: "us-central1",
   timeoutSeconds: 180,
   memory: "512MiB",
+  minInstances: 1,
   maxInstances: 30,
   invoker: "public",
 }, async request => {

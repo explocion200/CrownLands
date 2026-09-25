@@ -113,6 +113,7 @@ async function nearbyChecks() {
     renderAll:()=>rendered++,renderScoutNearbyFeedback:()=>feedback++,recordMarchInteractionTiming:noop,
     showToast:noop,rejectGameAction:noop,formatNumber:String,playGameSound:noop,addLog:noop,
     rememberScoutVeilBlocksFromError:()=>false,
+    beginPendingScoutDeparture:noop,finishPendingScoutDeparture:noop,
     applyServerBulkOrderResult:(result,options)=>{assert.equal(options.render,false);applied++;return result.armies;},
     getOnlineApi:()=>({sendNearbyScouts:request=>{calls++;sent.push(request);return new Promise((resolve,fail)=>{release=resolve;reject=fail;});}}),
   },["getBulkOrderKey","getBulkOrderRequestId","beginBulkOrderAction","isBulkOrderActionCurrent","finishBulkOrderAction","cancelBulkOrderPreview","toggleScoutNearby"]);

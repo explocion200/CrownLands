@@ -816,7 +816,7 @@
     writePendingOnlineArmyMovements(readPendingOnlineArmyMovements().filter(entry => entry.key !== key));
   }
 
-  function submitRecoverableArmyOrder(payload) {
+  function submitRecoverableArmyOrder(payload, options = {}) {
     const scope = getOnlineRequestScope();
     const uid = client.user?.uid || "";
     const api = { sendArmyOrder, loadArmyOrder };
@@ -840,6 +840,10 @@
       }
     }
     const promiseKey = `${scope}:${entry.movement.id}`;
+    // Presentation must use the persisted ID, including retries of an earlier
+    // uncertain submission. A display callback cannot prevent an order send.
+    try { options.onPending?.({ id: entry.movement.id, createdAtMs: entry.updatedAtMs }); }
+    catch { console.warn("Could not present the pending army order."); }
     if (armySubmissionPromises.has(promiseKey)) return armySubmissionPromises.get(promiseKey);
     const isCurrent = () => scope === getOnlineRequestScope();
     const send = () => {

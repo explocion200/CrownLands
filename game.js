@@ -2061,6 +2061,9 @@ const renderablePendingArmyCache = new WeakMap();
 let onlineReinforcements = [];
 const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
 let pendingOutgoingMissions = new Map();
+let armyDepartureFrame = 0;
+const armyDepartureTargetIds = new Set();
+const visibleArmyMotion = new Map();
 let onlineCampStates = new Map();
 let onlineHeldCampStates = new Map();
 let resolvingRewardCampPayoutIds = new Set();
@@ -11133,6 +11136,112 @@ function clearScoutResponsivenessState() {
   scoutEconomyRefreshRevisionMs = 0;
 }
 
+function getArmyClockNowMs() {
+  return getOnlineApi()?.getServerNowMs?.() || Date.now();
+}
+
+function scheduleArmyDeparturePresentation(targetIds = []) {
+  targetIds.forEach(id => { if (id) armyDepartureTargetIds.add(id); });
+  if (armyDepartureFrame) return;
+  const scope = getOnlineSessionRequestScope();
+  armyDepartureFrame = requestAnimationFrame(() => {
+    armyDepartureFrame = 0;
+    const ids = new Set(armyDepartureTargetIds);
+    armyDepartureTargetIds.clear();
+    if (!state || scope !== getOnlineSessionRequestScope()) return;
+    renderPaths();
+    renderArmies(true);
+    updateVisibleCityDynamicText(ids);
+    refreshScoutActionWheels([...ids]);
+    renderHud();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+  });
+}
+
+function beginPendingScoutDeparture(id, target, source = null, bulkRequestId = "") {
+  if (!id || !target?.id) return null;
+  if (pendingOutgoingMissions.has(id)) return pendingOutgoingMissions.get(id);
+  const nowMs = getArmyClockNowMs();
+  const mission = {
+    id, onlineId: id, owner: "player", ownerUid: getCurrentOnlineUid(), kind: "scout",
+    targetType: getHoldingTowerTargetType(target), fromId: source?.id || "", toId: target.id,
+    fromName: source?.name || "Nearest eligible holding", toName: target.name,
+    targetRegionId: getCityRegionId(target), sourceRegionId: source ? getCityRegionId(source) : "",
+    troops: 1, total: 60, remaining: 60, launchedAtMs: nowMs, arrivesAtMs: nowMs + 60000,
+    path: [], pathSegments: [], pathLength: 0, serverPending: true, bulkRequestId,
+  };
+  pendingOutgoingMissions.set(id, mission);
+  const scope = getOnlineSessionRequestScope();
+  scheduleArmyDeparturePresentation([target.id]);
+  // Let the button/ledger paint and the server request leave before preview
+  // routing. This geometry is presentation only and is never sent as authority.
+  requestAnimationFrame(() => {
+    void preparePendingScoutDeparture(mission, target, source, scope).catch(() => {});
+  });
+  return mission;
+}
+
+async function preparePendingScoutDeparture(mission, target, source, scope) {
+  const current = () => scope === getOnlineSessionRequestScope()
+    && pendingOutgoingMissions.get(mission.onlineId) === mission && mission.serverPending;
+  if (!current()) return;
+  if (!source) {
+    const candidates = getOwnedSourceCandidates(target, 1).map(row => row.city);
+    for (const tower of holdingTowerSnapshots.values()) {
+      if (tower.ownerMember && tower.worldActive !== false && tower.clanId === state.clanId && tower.ownStationedTroops > 0) {
+        const visual = getHoldingTowerVisual(tower.id);
+        if (visual) candidates.push(visual);
+      }
+    }
+    candidates.sort((left, right) => getRouteHeuristicDistance(left, target) - getRouteHeuristicDistance(right, target));
+    source = candidates[0];
+  }
+  if (!source) return;
+  const route = await findRouteAsync(source, target);
+  if (!current() || !route?.points?.length) return;
+  const duration = travelTime(source, target, "player", route.length, 1, "scout");
+  const previewStartMs = getArmyClockNowMs();
+  Object.assign(mission, {
+    fromId: source.id, fromName: source.name, sourceRegionId: getCityRegionId(source),
+    total: duration, remaining: duration, launchedAtMs: previewStartMs, arrivesAtMs: previewStartMs + duration * 1000,
+    path: route.points, pathSegments: getRouteSegments(route, getCityRegionId(source)), pathLength: route.length,
+  });
+  scheduleArmyDeparturePresentation([source.id, target.id]);
+}
+
+function finishPendingScoutDeparture(id, error = null) {
+  const mission = pendingOutgoingMissions.get(id);
+  if (!mission) return;
+  if (error && (getOnlineApi().isRetryableArmySubmissionError(error) || String(error?.code || "").includes("already-exists"))) {
+    mission.serverRetrying = true;
+  } else pendingOutgoingMissions.delete(id);
+  scheduleArmyDeparturePresentation([mission.fromId, mission.toId]);
+}
+
+function reconcilePendingArmyDeparture(army) {
+  if (!army || army.ownerUid !== getCurrentOnlineUid()) return;
+  for (const [id, mission] of pendingOutgoingMissions) {
+    if (id !== army.id && !(mission.bulkRequestId && mission.bulkRequestId === army.bulkRequestId && mission.toId === army.toId)) continue;
+    pendingOutgoingMissions.delete(id);
+    // Bulk response IDs are server-generated. Reuse the provisional token when
+    // a snapshot beats its response so there is one continuous visual departure.
+    const oldId = getArmyTokenId(mission);
+    const newId = getArmyTokenId(army);
+    if (oldId !== newId && armyTokenCache.has(oldId) && !armyTokenCache.has(newId)) {
+      const token = armyTokenCache.get(oldId);
+      token.dataset.armyTokenId = newId;
+      armyTokenCache.set(newId, token);
+      armyTokenCache.delete(oldId);
+      if (visibleArmyMotion.has(oldId)) {
+        visibleArmyMotion.set(newId, visibleArmyMotion.get(oldId));
+        visibleArmyMotion.delete(oldId);
+      }
+      if (selectedArmyTokenId === oldId) selectedArmyTokenId = newId;
+    }
+  }
+}
+
 async function launchAutomaticServerScout(target) {
   const api = getOnlineApi();
   if (!api?.sendArmyOrder || !target?.id) return false;
@@ -11140,6 +11249,7 @@ async function launchAutomaticServerScout(target) {
   const targetType = getHoldingTowerTargetType(target);
   const targetRegionId = getCityRegionId(target);
   const armyId = createOnlineArmyId("scout");
+  let pendingId = armyId;
   const startedAt = performance.now();
   const result = await api.submitRecoverableArmyOrder({
     worldId: ONLINE_WORLD_ID,
@@ -11157,8 +11267,15 @@ async function launchAutomaticServerScout(target) {
       troops: 1,
       requestedTroops: 1,
     },
+  }, { onPending: ({ id }) => {
+    pendingId = id;
+    beginPendingScoutDeparture(id, target);
+  } }).catch(error => {
+    if (requestScope === getOnlineSessionRequestScope()) finishPendingScoutDeparture(pendingId, error);
+    throw error;
   });
-  if (requestScope !== getOnlineSessionRequestScope() || !result?.movement) return false;
+  if (requestScope !== getOnlineSessionRequestScope()) return false;
+  finishPendingScoutDeparture(pendingId);
   recordMarchInteractionTiming("scout-launch-accepted", startedAt);
   if (result.alreadyResolved) {
     void loadServerReportsOnce();
@@ -11166,6 +11283,7 @@ async function launchAutomaticServerScout(target) {
     showToast("Your earlier scout order is already complete. Check Reports.");
     return true;
   }
+  if (!result?.movement) return false;
   applyServerArmyResult(result);
   adoptServerArmyMovement(result.movement);
   const sourceName = result.movement.fromName || "the nearest eligible holding";
@@ -11515,6 +11633,11 @@ async function toggleScoutNearby(cityId) {
     }
     action.phase = "sending";
     renderScoutNearbyFeedback();
+    const previewIds = options.map(({ city }) => {
+      const id = `${action.requestId}:${city.id}`;
+      beginPendingScoutDeparture(id, city, source, action.requestId);
+      return id;
+    });
     try {
       const result = await api.sendNearbyScouts({
         worldId: ONLINE_WORLD_ID,
@@ -11527,6 +11650,7 @@ async function toggleScoutNearby(cityId) {
       if (requestScope !== getOnlineSessionRequestScope()) return;
       recordMarchInteractionTiming("scout-nearby-launch-accepted", startedAt);
       const armies = applyServerBulkOrderResult(result, { render: false });
+      previewIds.forEach(id => finishPendingScoutDeparture(id));
       finishBulkOrderAction(action, { completed: true });
       scoutNearbySourceId = null;
       if (armies.length) {
@@ -11541,6 +11665,7 @@ async function toggleScoutNearby(cityId) {
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
     } catch (error) {
       if (requestScope !== getOnlineSessionRequestScope()) return;
+      previewIds.forEach(id => finishPendingScoutDeparture(id, error));
       const rememberedVeilBlocks = rememberScoutVeilBlocksFromError(error);
       onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       finishBulkOrderAction(action);
@@ -18651,7 +18776,7 @@ function restoreRejectedArmyOrderSelection(mission) {
 function publishOnlineArmyMovement(mission, options = {}) {
   if (!isOnlineWorldActive() || mission?.owner !== "player") return Promise.resolve(false);
   const api = getOnlineApi();
-  const requestScope = getOnlineRequestScope();
+  const requestScope = getOnlineSessionRequestScope();
   if (!usesServerArmyAuthority() || !api?.sendArmyOrder) {
     onlineLastError = "Online army orders require the Crownlands server.";
     showToast("Online army orders need the server connection. Try again after reconnecting.");
@@ -18681,7 +18806,8 @@ function publishOnlineArmyMovement(mission, options = {}) {
   mission.serverPending = true;
   mission.clientSubmitStartedAt = performance.now();
   pendingOutgoingMissions.set(movement.id, mission);
-  updateOutgoingAttackUi();
+  let pendingId = movement.id;
+  scheduleArmyDeparturePresentation([mission.fromId, mission.toId]);
 
   const orderPayload = {
     worldId: ONLINE_WORLD_ID,
@@ -18696,9 +18822,15 @@ function publishOnlineArmyMovement(mission, options = {}) {
     targetRegionId,
     routeRegionIds: regionIds,
   };
-  const savePromise = api.submitRecoverableArmyOrder(orderPayload)
+  const savePromise = api.submitRecoverableArmyOrder(orderPayload, { onPending: ({ id }) => {
+    pendingOutgoingMissions.delete(pendingId);
+    pendingId = id;
+    mission.onlineId = id;
+    pendingOutgoingMissions.set(id, mission);
+  } })
     .then(result => {
-      if (requestScope !== getOnlineRequestScope()) return false;
+      if (requestScope !== getOnlineSessionRequestScope()) return false;
+      pendingOutgoingMissions.delete(pendingId);
       if (result.alreadyResolved) {
         mission.serverPending = false;
         mission.serverRetrying = false;
@@ -18720,26 +18852,24 @@ function publishOnlineArmyMovement(mission, options = {}) {
           : result?.sourceCity ? [result.sourceCity] : [],
       });
       if (options.addLocalMissionOnAccept) addServerAcceptedMission(mission);
-      pendingOutgoingMissions.delete(movement.id);
       onlineLastError = "";
       saveGame();
-      renderAll();
-      updateIncomingAttackUi();
-      updateOutgoingAttackUi();
+      scheduleArmyDeparturePresentation([mission.fromId, mission.toId]);
       return true;
     })
     .catch(error => {
-      if (requestScope !== getOnlineRequestScope()) return false;
-      pendingOutgoingMissions.delete(movement.id);
-      mission.serverPending = false;
-      mission.serverRetrying = false;
+      if (requestScope !== getOnlineSessionRequestScope()) return false;
       if (api.isRetryableArmySubmissionError(error) || String(error?.code || "").includes("already-exists")) {
+        mission.serverRetrying = true;
         onlineLastError = "Order confirmation pending. Reconnect and retry the same order.";
         showToast(onlineLastError);
         void recoverPendingOnlineArmyMovements();
         restoreRejectedArmyOrderSelection(mission);
         return false;
       }
+      pendingOutgoingMissions.delete(pendingId);
+      mission.serverPending = false;
+      mission.serverRetrying = false;
       recordMarchInteractionTiming("server-order-rejected", mission.clientSubmitStartedAt);
       const rememberedVeilBlocks = mission.kind === "scout"
         ? rememberScoutVeilBlocksFromError(error, target)
@@ -18761,9 +18891,8 @@ function publishOnlineArmyMovement(mission, options = {}) {
       return false;
     })
     .finally(() => {
-      pendingOutgoingMissions.delete(movement.id);
       onlineArmySavePromises.delete(savePromise);
-      if (requestScope === getOnlineRequestScope()) updateOutgoingAttackUi();
+      if (requestScope === getOnlineSessionRequestScope()) scheduleArmyDeparturePresentation([mission.fromId, mission.toId]);
     });
   onlineArmySavePromises.add(savePromise);
   return savePromise;
@@ -18784,13 +18913,13 @@ function isOnlineArmyResolutionBlocked(mission) {
 function getOnlineArmyRemainingSeconds(army) {
   if (!army) return 0;
   if (Number.isFinite(army.arrivesAtMs) && army.arrivesAtMs > 0) {
-    return (army.arrivesAtMs - Date.now()) / 1000;
+    return (army.arrivesAtMs - getArmyClockNowMs()) / 1000;
   }
   return Number(army.remaining) || 0;
 }
 
-function isArrivedScoutMission(army, nowMs = Date.now()) {
-  if (!army || army.kind !== "scout") return false;
+function isArrivedScoutMission(army, nowMs = getArmyClockNowMs()) {
+  if (!army || army.serverPending || army.kind !== "scout") return false;
   const arrivesAtMs = normalizeTimestampMs(army.arrivesAtMs);
   if (arrivesAtMs > 0) return arrivesAtMs <= nowMs;
   const remaining = Number(army.remaining);
@@ -18971,6 +19100,7 @@ function rebuildOnlineArmies() {
       if (!current || nextPriority > currentPriority) armiesById.set(key, army);
     });
   onlineArmies = annotateClientBulkArrivalAudio([...armiesById.values()]);
+  onlineArmies.forEach(reconcilePendingArmyDeparture);
 }
 
 function clearOnlineArmyWatchers({ clear = true } = {}) {
@@ -18984,6 +19114,10 @@ function clearOnlineArmyWatchers({ clear = true } = {}) {
     onlineArmiesByIsland = new Map();
     onlineArmies = [];
     pendingOutgoingMissions = new Map();
+    if (armyDepartureFrame) cancelAnimationFrame(armyDepartureFrame);
+    armyDepartureFrame = 0;
+    armyDepartureTargetIds.clear();
+    visibleArmyMotion.clear();
   }
 }
 
@@ -20283,6 +20417,9 @@ function getRenderableArmies() {
   const pendingArmies = Array.from(pendingOutgoingMissions.values())
     .filter(mission => !isArrivedScoutMission(mission))
     .filter(mission => !knownOnlineIds.has(getOnlineArmyResolutionId(mission)))
+    .filter(mission => !mission.bulkRequestId || ![...state.attacks, ...onlineArmies].some(army =>
+      !army.serverPending && army.ownerUid === currentUid
+      && army.bulkRequestId === mission.bulkRequestId && army.toId === mission.toId))
     .map(getRenderablePendingArmy);
   const renderableArmies = [...localArmies, ...remoteArmies, ...pendingArmies];
   if (renderableArmiesFrameCacheActive) renderableArmiesFrameCache = renderableArmies;
@@ -20369,8 +20506,8 @@ function getOutgoingAttacks() {
       if (seen.has(key)) return null;
       seen.add(key);
       const remaining = Math.max(0, Number(attack.remaining) || 0);
-      const isResolving = remaining <= 0 && Boolean(attack.onlineId) && !resolvedOnlineArmyIds.has(key);
-      if (remaining <= 0 && !isResolving) return null;
+      const isResolving = !attack.serverPending && remaining <= 0 && Boolean(attack.onlineId) && !resolvedOnlineArmyIds.has(key);
+      if (remaining <= 0 && !isResolving && !attack.serverPending) return null;
       return {
         ...attack,
         key,
@@ -21958,6 +22095,7 @@ function frame(now) {
       if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
         renderArmies();
       }
+      renderVisibleArmyMotion(now);
       if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
         lastCityDynamicTextTime = now;
         updateVisibleCityDynamicText();
@@ -23126,6 +23264,7 @@ function updateAttacks(dt) {
   const completedOnlineIds = new Set();
   const nowMs = Date.now();
   for (const attack of state.attacks) {
+    if (attack.serverPending) continue;
     const onlineId = getOnlineArmyResolutionId(attack);
     if (onlineId && usesServerArmyAuthority()) {
       const authoritativeRemaining = getOnlineArmyRemainingSeconds(attack);
@@ -28059,8 +28198,7 @@ function getArmyRouteRelationshipClass(mission) {
   return isHostileClanMarch(mission) ? "clan-hostile-route" : "clan-support-route";
 }
 
-function getMissionPointAtProgress(mission, progress) {
-  const segments = getMissionDisplayRouteSegments(mission);
+function getMissionPointAtProgress(mission, progress, segments = getMissionDisplayRouteSegments(mission)) {
   if (!segments.length) {
     const path = normalizeArmyPath(mission?.path);
     return path.length >= 2
@@ -30433,7 +30571,7 @@ function getArmyTroopDisplayText(attack) {
 }
 
 function getArmyTokenId(attack) {
-  return String(attack?.id || attack?.onlineId || `${attack?.fromId || "from"}-${attack?.toId || "to"}-${attack?.launchedAtMs || attack?.total || ""}`);
+  return String(attack?.onlineId || attack?.id || `${attack?.fromId || "from"}-${attack?.toId || "to"}-${attack?.launchedAtMs || attack?.total || ""}`);
 }
 
 function getArmyByTokenId(tokenId) {
@@ -30579,7 +30717,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   const showTroops = canViewArmyTroopAmount(attack);
   const selected = !endpointInteractionDisabled && getArmyTokenId(attack) === selectedArmyTokenId;
   const marchClass = clanAlly && isHostileClanMarch(attack) ? " clan-attack" : "";
-  const className = `army-token ${ownerClass}${marchClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
+  const className = `army-token ${ownerClass}${marchClass}${attack.serverPending ? " pending-order" : ""}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
   if (token.className !== className) token.className = className;
   const disabledText = String(endpointInteractionDisabled);
   if (token.dataset.endpointInteractionDisabled !== disabledText) token.dataset.endpointInteractionDisabled = disabledText;
@@ -30616,7 +30754,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     }
   }
   if (timeElement) {
-    const timeText = formatDuration(attack.remaining);
+    const timeText = attack.serverPending ? (attack.serverRetrying ? "Confirming" : "Pending") : formatDuration(attack.remaining);
     if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
   }
   if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
@@ -30662,7 +30800,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
 }
 
 function hasRenderableArmyWork() {
-  return Boolean((state?.attacks?.length || 0) || onlineArmies.length || armyTokenCache.size);
+  return Boolean((state?.attacks?.length || 0) || onlineArmies.length || pendingOutgoingMissions.size || armyTokenCache.size);
 }
 
 function renderArmies(force = false) {
@@ -30709,12 +30847,22 @@ function renderArmiesUncached(force = false) {
       fragment.appendChild(token);
     }
     updateArmyTokenElement(token, attack, mapPoint, to, endpointInteractionDisabled);
+    const previous = visibleArmyMotion.get(tokenId);
+    visibleArmyMotion.set(tokenId, {
+      token, army: attack, point: previous?.point || mapPoint,
+      segments: getMissionDisplayRouteSegments(attack),
+      pending: Boolean(attack.serverPending),
+      correction: previous?.pending && !attack.serverPending
+        ? { from: previous.point, startedAt: now }
+        : previous?.correction || null,
+    });
   }
   if (fragment.childNodes.length) armyLayer.appendChild(fragment);
   for (const [tokenId, token] of armyTokenCache) {
     if (visibleArmyTokenIds.has(tokenId)) continue;
     token.remove();
     armyTokenCache.delete(tokenId);
+    visibleArmyMotion.delete(tokenId);
   }
   if (selectedArmyTokenId && !visibleArmyTokenIds.has(selectedArmyTokenId)) {
     selectedArmyTokenId = "";
@@ -30723,7 +30871,32 @@ function renderArmiesUncached(force = false) {
   updateMapDensityMode(null, visibleArmyTokenIds.size);
 }
 
-function getArmyTravelProgress(army, nowMs = Date.now()) {
+// Only transforms run at display cadence. Identity, labels and visibility discovery
+// retain their slower cadence; route segment distances are already cached.
+function renderVisibleArmyMotion(now = performance.now()) {
+  if (!visibleArmyMotion.size) return;
+  const nowMs = getArmyClockNowMs();
+  const regionId = getActiveMapRegionId();
+  for (const motion of visibleArmyMotion.values()) {
+    const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments);
+    motion.token.hidden = !segment || segment.regionId !== regionId;
+    if (motion.token.hidden) continue;
+    let point = worldToMapPoint(segment.point);
+    if (motion.correction) {
+      const blend = clamp((now - motion.correction.startedAt) / 150, 0, 1);
+      point = { x: motion.correction.from.x + (point.x - motion.correction.from.x) * blend,
+        y: motion.correction.from.y + (point.y - motion.correction.from.y) * blend };
+      if (blend === 1) motion.correction = null;
+    }
+    motion.point = point;
+    motion.token.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
+  }
+}
+
+function getArmyTravelProgress(army, nowMs = getArmyClockNowMs()) {
+  if (army?.serverPending) {
+    return clamp((nowMs - army.launchedAtMs) / Math.max(5000, army.arrivesAtMs - army.launchedAtMs), 0, 0.08);
+  }
   const recalledAtMs = normalizeTimestampMs(army?.recalledAtMs);
   const returnArrivesAtMs = normalizeTimestampMs(army?.arrivesAtMs);
   if (army?.returning && recalledAtMs > 0 && returnArrivesAtMs > recalledAtMs) {

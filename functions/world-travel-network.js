@@ -93,7 +93,7 @@
 
   // Dijkstra over arrival entrances, using the actual terrain route in each
   // map as the edge cost. No recursion or map-hop budget is involved.
-  function findShortestRoute(regionIds, getPortals, source, target, calculateLeg) {
+  function findShortestRoute(regionIds, getPortals, source, target, calculateLeg, options = {}) {
     const known = new Set(regionIds);
     if (!known.has(source.regionId) || !known.has(target.regionId)) return null;
     if (![source.x, source.y, target.x, target.y].every(Number.isFinite)) return null;
@@ -132,15 +132,18 @@
     };
     push(start);
     let winner = null;
+    const maximum = Number.isFinite(options.maxDistance) ? options.maxDistance : Infinity;
+    const beyondMaximum = cost => cost > maximum + Math.max(1, maximum) * 1e-9;
     while (pending.length) {
       const current = pop();
       if (best.get(current.key) !== current) continue;
+      if (beyondMaximum(current.cost)) break;
       if (winner && current.cost >= winner.cost) break;
       if (current.regionId === target.regionId) {
         const leg = calculateLeg(current.regionId, current.point, target);
         if (leg && Number.isFinite(leg.length) && leg.length >= 0) {
           const cost = current.cost + leg.length;
-          if (!winner || cost < winner.cost) winner = { previous: current, leg, cost };
+          if (!beyondMaximum(cost) && (!winner || cost < winner.cost)) winner = { previous: current, leg, cost };
         }
       }
       for (const exit of getPortals(current.regionId) || []) {
@@ -153,6 +156,7 @@
         if (prior) continue;
         const arrival = getArrivalPortal(getPortals, current.regionId, exit);
         if (!arrival) continue;
+        if (beyondMaximum(current.cost + Math.hypot(current.point.x - exit.x, current.point.y - exit.y))) continue;
         const key = `${destinationId}:${arrival.id}`;
         // A positive-distance cycle cannot improve an already finalized state.
         const leg = calculateLeg(current.regionId, current.point, { ...exit, id: `portal:${current.regionId}:${exit.id}` });
@@ -172,5 +176,47 @@
     return { segments: legs, points: legs.flatMap((leg, index) => index ? leg.points.slice(1) : leg.points), length: winner.cost };
   }
 
-  return Object.freeze({ buildEdgeConnections, getArrivalPortal, findRegionChain, findShortestRoute, validateConnections });
+  // Removing obstacles and allowing revisits makes this graph a relaxation of
+  // actual terrain travel. Reverse directed edges preserve asymmetric roads.
+  function createTargetDistanceBound(regionIds, getPortals, target) {
+    const known = new Set(regionIds);
+    if (!known.has(target.regionId) || ![target.x, target.y].every(Number.isFinite)) return () => 0;
+    const nodes = new Map();
+    const byRegion = new Map();
+    const key = (regionId, portal) => JSON.stringify([regionId, portal.id]);
+    for (const regionId of known) {
+      const rows = (getPortals(regionId) || []).filter(p => [p.x, p.y].every(Number.isFinite))
+        .map(point => ({ key: key(regionId, point), regionId, point, incoming: [], distance: Infinity }));
+      byRegion.set(regionId, rows);
+      rows.forEach(row => nodes.set(row.key, row));
+    }
+    for (const row of nodes.values()) {
+      for (const next of byRegion.get(row.regionId)) {
+        if (next !== row) next.incoming.push({ row, cost: Math.hypot(row.point.x - next.point.x, row.point.y - next.point.y) });
+      }
+      const destinationId = targetId(row.point);
+      const arrival = known.has(destinationId) && getArrivalPortal(getPortals, row.regionId, row.point);
+      const next = arrival && nodes.get(key(destinationId, arrival));
+      if (next) next.incoming.push({ row, cost: 0 });
+      if (row.regionId === target.regionId) row.distance = Math.hypot(row.point.x - target.x, row.point.y - target.y);
+    }
+    const pending = new Set(nodes.values());
+    while (pending.size) {
+      let closest = null;
+      for (const row of pending) if (!closest || row.distance < closest.distance) closest = row;
+      if (!Number.isFinite(closest.distance)) break;
+      pending.delete(closest);
+      for (const edge of closest.incoming) edge.row.distance = Math.min(edge.row.distance, closest.distance + edge.cost);
+    }
+    return source => {
+      if (!known.has(source.regionId) || ![source.x, source.y].every(Number.isFinite)) return 0;
+      let distance = source.regionId === target.regionId ? Math.hypot(source.x - target.x, source.y - target.y) : Infinity;
+      for (const row of byRegion.get(source.regionId) || []) {
+        distance = Math.min(distance, Math.hypot(source.x - row.point.x, source.y - row.point.y) + row.distance);
+      }
+      return Number.isFinite(distance) ? Math.max(0, distance - Math.max(1, distance) * 1e-9) : distance;
+    };
+  }
+
+  return Object.freeze({ buildEdgeConnections, getArrivalPortal, findRegionChain, findShortestRoute, createTargetDistanceBound, validateConnections });
 });
