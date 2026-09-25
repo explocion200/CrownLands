@@ -40188,7 +40188,9 @@ function applyCameraTransform() {
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
-  if (selectedTowerMapId) updateClanTowerActionWheelLayout();
+  // A mounted Tower row still needs zoom correction while selection rendering
+  // is deferred, even after the selection ID has been cleared.
+  updateClanTowerActionWheelLayout();
   updateMainCityReturnButtonForCamera(rect);
   scheduleOnboardingPointer();
 }
@@ -40533,6 +40535,7 @@ function beginPinch() {
   const pair = getPointerPair();
   if (!pair) return;
   const [a, b] = pair;
+  for (const id of activePointers.keys()) mapFrame.setPointerCapture?.(id);
   const mid = midpointBetween(a, b);
   cityTapState = null;
   campTapState = null;
@@ -40745,9 +40748,9 @@ function trackArmyTap(event, token = resolveArmyTapToken(event)) {
   return token;
 }
 
-function beginTrackedPan(event, startedOnMapNode = false) {
+function beginTrackedPan(event, startedOnMapNode = false, capture = true) {
   activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  mapFrame.setPointerCapture?.(event.pointerId);
+  if (capture) mapFrame.setPointerCapture?.(event.pointerId);
 
   if (activePointers.size >= 2) {
     beginPinch();
@@ -40762,6 +40765,7 @@ function beginTrackedPan(event, startedOnMapNode = false) {
     cameraY: camera.y,
     moved: false,
     startedOnMapNode,
+    startedOnCommand: !capture,
     pointerType: event.pointerType || "",
     zoom,
   };
@@ -40787,6 +40791,12 @@ function startPan(event) {
   if (isTouch && !startedOnCommand) event.preventDefault();
 
   if (startedOnCommand) {
+    // Preserve a single button tap, but let either finger start a Tower pinch.
+    if (isTouch && (activePointers.size || event.target.closest(".holding-tower-building-node, .clan-tower-action-wheel"))) {
+      if (activePointers.size) event.preventDefault();
+      beginTrackedPan(event, true, false);
+      return;
+    }
     suppressMapClick = false;
     return;
   }
@@ -40817,6 +40827,10 @@ function movePan(event) {
     : 5;
   if (distance > movementThreshold) {
     panState.moved = true;
+    if (panState.startedOnCommand) {
+      mapFrame.setPointerCapture?.(event.pointerId);
+      suppressMapClick = true;
+    }
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
     if (campTapState?.pointerId === event.pointerId) campTapState = null;
     if (holdingTowerTapState?.pointerId === event.pointerId) holdingTowerTapState = null;
@@ -41315,6 +41329,13 @@ cityLayer.addEventListener("click", event => {
   selectCity(cityButton.dataset.cityId);
 });
 const mapPointerEventOptions = { passive: false };
+mapFrame.addEventListener("click", event => {
+  if (suppressMapClick && event.detail !== 0
+      && event.target.closest(".holding-tower-building-node, .clan-tower-action-wheel")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, true);
 mapFrame.addEventListener("pointerdown", startPan, mapPointerEventOptions);
 mapFrame.addEventListener("pointermove", movePan, mapPointerEventOptions);
 mapFrame.addEventListener("pointerup", endPan, mapPointerEventOptions);
