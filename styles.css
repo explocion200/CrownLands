@@ -3248,9 +3248,9 @@ input {
   pointer-events: auto;
   cursor: pointer;
   touch-action: none;
-  transition: transform .12s linear;
   contain: layout;
 }
+.army-token.pending-order { border-style: dashed; opacity: .8; }
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }
 .army-token.player2 { background: linear-gradient(#bd9bff, #5d35a8); }
 .army-token.player3 { background: linear-gradient(#73e49a, #237d4b); }

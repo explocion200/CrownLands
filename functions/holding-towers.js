@@ -350,16 +350,29 @@ function compareStableText(left = "", right = "") {
   return first === second ? 0 : first < second ? -1 : 1;
 }
 
-function selectClosestScoutOrigin(candidates = [], target = {}, buildRoute) {
+function selectClosestScoutOrigin(candidates = [], target = {}, buildRoute, options = {}) {
   if (typeof buildRoute !== "function") throw new TypeError("An authoritative scout route builder is required.");
   const routed = [];
-  for (const candidate of Array.isArray(candidates) ? candidates : []) {
+  const ordered = (Array.isArray(candidates) ? candidates : []).map(candidate => {
+    let bound = 0;
+    try {
+      if (candidate?.id && candidate?.regionId && clampInteger(candidate?.troops) > 0 && options.lowerBound) bound = options.lowerBound(candidate, target);
+    } catch (_error) { /* Unavailable bounds fall back to the exact route search. */ }
+    return { candidate, bound: typeof bound === "number" && !Number.isNaN(bound) ? Math.max(0, bound) : 0 };
+  }).sort((left, right) => left.bound - right.bound);
+  let bestDistance = Infinity;
+  let evaluated = 0;
+  let pruned = 0;
+  for (const { candidate, bound } of ordered) {
     const sourceType = candidate?.sourceType === "tower" ? "tower" : "city";
     if (!candidate?.id || !candidate?.regionId || clampInteger(candidate?.troops) < 1) continue;
+    if (bound > bestDistance || bound === Infinity) { pruned += 1; continue; }
     try {
-      const route = buildRoute(candidate, target);
+      evaluated += 1;
+      const route = buildRoute(candidate, target, bestDistance);
       if (!route || !(finiteNumber(route.pathLength) > 0)) continue;
       routed.push({ ...candidate, sourceType, route });
+      bestDistance = Math.min(bestDistance, route.pathLength);
     } catch (_error) {
       // An unreachable origin is not eligible; other authoritative routes may still succeed.
     }
@@ -372,6 +385,7 @@ function selectClosestScoutOrigin(candidates = [], target = {}, buildRoute) {
     || compareStableText(left.regionId, right.regionId)
     || compareStableText(left.id, right.id)
   ));
+  options.onComplete?.({ evaluated, pruned });
   return routed[0] || null;
 }
 

@@ -1,0 +1,29 @@
+# Responsive marches and scouts
+
+Status: implementation for review; not deployed. Approved scope keeps travel duration, costs, troop availability, permissions, scout intelligence, and the one-minute offline arrival fallback unchanged.
+
+## Evidence and limits
+
+Million Lords' publicly available material supports studying its interaction design, but no public production game source or networking implementation was found. This implementation recreates responsive interaction using Crownlands' own code; it does not claim to reproduce Million Lords' private architecture.
+
+Read-only production diagnostics on September 25, 2026 found a concrete Crownlands bottleneck. A complete, revision-scoped last-day query returned 48 successful city-to-city automatic scout launches: request p50 5,137 ms, p95 21,981 ms; route-planning p50 3,525 ms, p95 19,194 ms; median 63 candidate origins and p95 101. The 68 successful city scout arrivals had request p50 2,116 ms, p95 13,077 ms and transaction p95 12,993 ms. Both paths reached 11 transaction attempts. These are server operation samples from that revision's deployment window, not end-to-end latency or travel time. Raw diagnostics remain ignored local artifacts; no player records or identifiers are committed.
+
+## Implementation
+
+- Pending departures share the existing pending-mission map. Regular orders and automatic scouts use the durable ID supplied by the submission journal, including uncertain retries. Nearby previews use the existing batch receipt ID plus target, then reconcile against the server-generated movement ID. Snapshots may arrive before responses. A delayed response cannot recreate a cleared preview.
+- Feedback is coalesced onto the next animation frame. Scout preview routing runs asynchronously after that feedback; unavailable geometry leaves the pending ledger visible. Preview movement is capped at 8% and never enters authoritative simulation or generates a report. Definitive failure removes the preview; uncertain confirmation retains its status. Session/realm cleanup also cancels scheduled presentation.
+- Visible tokens update transforms each display frame using cached route segments and the existing server-adjusted clock. Visibility discovery and labels keep their existing 140 ms cadence. Accepted geometry blends over 150 ms on the same token. Normal accepted orders refresh affected surfaces instead of redrawing the complete map.
+- Automatic origin selection orders every eligible origin by a conservative terrain-free portal-graph distance. Exact routing stops only when a candidate cannot beat the best exact distance. No candidate cap, guessed closest source, changed tie rule, or changed travel duration is introduced. Directed reciprocal road links and terrain remain authoritative.
+- A per-request cache reuses immutable route geometry across transaction retries, bounded to 128 routes and 32,768 points. Troops, permissions, ownership and economic state are reread. A bounded miss is never cached as proof of unreachability; topology changes select a distinct planner/cache.
+- Independent participant profile/global-stat reads overlap during arrival. Attacker and defender economy preparation stays sequential because it consumes a shared checkpoint-write budget. Added operational dimensions count evaluated/pruned origins and economy-preparation time without recording private payloads.
+- The update uses the existing Firebase scaling settings and adds no always-warm capacity. `resolveArmyOrder` and `sendNearbyScouts` retain their original scale-to-zero configuration. Existing minimum-instance settings on other functions are unchanged. The gameplay and routing improvements do not require extra idle-server reservations; no cloud configuration was changed by this work.
+
+## Validation and rollout
+
+`tools/validate-responsive-scout-routing.js` compares complete winners, paths and distances against exhaustive selection with 1/25/65/101 origins, cross-map-only candidates, City/Tower ties, unreachable origins, retries, immutable cache results and expansion. Separate canonical-engine instances prevent the baseline from warming the candidate's cache. A representative 101-origin run reduced first-use local CPU time from 6,635 ms to 40 ms and warm p95 from 108 ms to 1.9 ms (98%); it calculated one full route and pruned 100. The test requires at least 50% warm p95 improvement. This favorable fixed fixture is not a production latency promise: competing nearby origins can require more exact routes.
+
+`tools/validate-pending-army-departures.js` covers next-frame presentation, bounded provisional movement, rejection and response loss, snapshot-before-response, 24-target batch reconciliation, retired sessions/realms, cached per-frame motion and portal visibility. Durable submission/recovery and report lifecycle tests remain part of the affected test plan.
+
+The actual-game browser harness blocks production endpoints and supplies fixture responses. Desktop 1440x900 and 4x CPU-throttled landscape 844x390 / 568x320 are checked for pending feedback within 100 ms and report receipt-to-paint within 200 ms, duplicate taps, live report bursts, retained scroll/focus, pending token movement and same-token acceptance. These timings exclude real network latency and intended travel. JSON measurements and screenshots are written under ignored `release-artifacts/scouting-responsiveness/`.
+
+Selected emulator suites verify authoritative world routes, Tower origins, bulk idempotency, scouting/Veil, report delivery, combat settlement and economy concurrency before merge. After an authorized deployment, repeat revision-scoped production measurements and test real authenticated launches/report delivery on both desktop and phones. Check cold-start latency, contention, rejection rates and arrival p95 separately; routing improvements do not remove Firestore contention or guarantee instant report generation.

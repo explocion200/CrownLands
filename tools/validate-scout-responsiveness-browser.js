@@ -36,13 +36,17 @@ async function main(){
       for(let i=0;i<120;i++) {const status=await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus()");if(status?.status==="error")throw Error(status.error);if(status?.status==="ready")break;await wait(250);}
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"),"ready");
       await evaluate(`(() => {
+        // The fixture page is under /__benchmark__, while the real route worker
+        // and its imports are served from the application root.
+        cancelPendingRouteWorkerRequests();routeWorker?.terminate();routeWorker=null;routeWorkerUnavailable=false;
+        history.replaceState(null,"","/");
         window.scoutQa={ originalApi:window.CrownlandsOnline, calls:0, seq:0, merges:0, resolveCalls:0 };
         const qa=scoutQa;
-        qa.target=state.cities.find(c=>c.owner!=="player"&&!isStronghold(c)&&!getMainCityScoutBlockReason(c,"player")&&!getClanFriendlyBlockReason(c));
-        qa.source=playerCities().find(c=>c.troops>0);
+        qa.source=playerCities().find(c=>c.troops>0&&getCityRegionId(c)===getActiveMapRegionId());
+        qa.target=state.cities.find(c=>c.owner!=="player"&&getCityRegionId(c)===getCityRegionId(qa.source)&&!isStronghold(c)&&!getMainCityScoutBlockReason(c,"player")&&!getClanFriendlyBlockReason(c));
         if(!qa.target||!qa.source)throw Error("Scouting fixture needs source and target");
         qa.nextFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>resolve(performance.now())));
-        qa.reset=()=>{modal.close();state.attacks=[];onlineArmiesByIsland.clear();rebuildOnlineArmies();pendingDirectScoutTargets.clear();
+        qa.reset=()=>{modal.close();state.attacks=[];pendingOutgoingMissions.clear();onlineArmiesByIsland.clear();rebuildOnlineArmies();pendingDirectScoutTargets.clear();
           resolvedOnlineArmyIds.clear();resolvingOnlineArmyIds.clear();scoutResolutionRequests.clear();scoutResolutionRetries.clear();
           state.scoutReports={};state.battleReports=[];appliedServerReportRevisions.clear();
           selectedTargetId=qa.target.id;selectedSourceId=null;selectedTowerMapId="";sendMode=false;cityLayer.querySelectorAll(".city-action-wheel,.gold-camp-action-wheel").forEach(n=>n.remove());
@@ -58,7 +62,7 @@ async function main(){
           cityId:target.id,cityName:target.name,regionId:getCityRegionId(target),targetType:"city",occurredAtMs:at,createdAtMs:at,
           scoutReport:{cityId:target.id,scoutedAtMs:at,expiresAtMs:at+600000,troops:4321,ownerTroops:4321,totalDefense:5617,cityLevel:target.level||1}};};
         window.CrownlandsOnline={...qa.originalApi,
-          submitRecoverableArmyOrder:async request=>{qa.calls++;await new Promise(r=>setTimeout(r,80));return {movement:qa.movement(request.armyId),
+          submitRecoverableArmyOrder:async (request,options)=>{qa.calls++;const id=request.armyId||request.army.id;options?.onPending?.({id});await new Promise(r=>setTimeout(r,80));return {movement:{...qa.movement(id),kind:request.army.kind},
             ...(qa.tower?{sourceTower:{id:qa.tower.id,ownTroops:99}}:{})};},
           getHoldingTowerState:async()=>{qa.towerRefreshFinished=false;await new Promise(r=>setTimeout(r,300));qa.towerRefreshFinished=true;throw Error("Fixture Tower refresh unavailable");},
           isRetryableArmySubmissionError:()=>true,
@@ -108,7 +112,7 @@ async function main(){
         return {elapsed,own,roster,refreshFinished:qa.towerRefreshFinished,active:state.attacks.some(a=>a.toId===qa.target.id)};})()`);
       assert.equal(tower.own,99);assert.equal(tower.roster,99);assert(tower.active);assert.equal(tower.refreshFinished,false,"Accepted scout waited for optional Tower fetch");
       row.tower=tower;
-      const burst=await evaluate(`(async()=>{const qa=scoutQa;qa.reset();const targets=state.cities.filter(c=>c.owner!=="player").slice(0,24);
+      const burst=await evaluate(`(async()=>{const qa=scoutQa;qa.reset();const targets=[qa.target,...state.cities.filter(c=>c.owner!=="player"&&c.id!==qa.target.id)].slice(0,24);
         const node=cityLayer.querySelector(".city-node");const reports=targets.map((target,i)=>qa.report(target,i));
         reports.forEach(report=>mergeServerReports([report],{notify:false}));
         const merged=reports.every(report=>state.scoutReports[report.cityId]);await qa.nextFrame();
@@ -126,9 +130,37 @@ async function main(){
         const receiving=outgoingAttackTime.textContent;await pending;await qa.nextFrame();
         return {elapsed:performance.now()-start,receiving,report:Boolean(getScoutReport(qa.target.id))};})()`);
       assert.equal(arrival.receiving,"Receiving report…");assert(arrival.report);row.arrival=arrival;
-      const limits=viewport.rate===1?100:200;
-      if (!process.env.CI) assert(row.versions.after.pendingMs.p95<=limits,`${viewport.name}: pending feedback exceeded ${limits}ms`);
-      if (!process.env.CI) assert(row.versions.after.reportMs.p95<=limits,`${viewport.name}: report presentation exceeded ${limits}ms`);
+      row.departure=await evaluate(`(async()=>{const qa=scoutQa;qa.reset();centerOnCity(qa.source.id);
+        const id="visible-pending-"+ ++qa.seq, troops=qa.source.troops, gold=state.gold;
+        const mission=beginPendingScoutDeparture(id,qa.target,qa.source);
+        if(qa.source.troops!==troops||state.gold!==gold)throw Error("Preview spent resources");
+        for(let i=0;i<180&&!mission.path.length;i++)await qa.nextFrame();
+        if(!mission.path.length)throw Error("Preview route never became available: "+JSON.stringify({workerUnavailable:routeWorkerUnavailable,requests:routeWorkerRequests.size,job:Boolean(buildRouteWorkerJob(qa.source,qa.target))}));
+        renderArmies(true);await qa.nextFrame();const token=armyTokenCache.get(id);
+        if(!token||!token.textContent.includes("Pending"))throw Error("Pending token missing");
+        const first=token.style.transform;for(let i=0;i<5;i++)await qa.nextFrame();
+        const moved=token.style.transform!==first;
+        if(getArmyTravelProgress(mission,getArmyClockNowMs()+600000)>.08)throw Error("Preview reached target");
+        qa.pendingToken=token;qa.pendingId=id;
+        return {moved,pending:token.classList.contains("pending-order"),routePoints:mission.path.length};})()`);
+      assert(row.departure.moved);assert(row.departure.pending);
+      const departureShot=await client.send("Page.captureScreenshot",{format:"png"});
+      fs.writeFileSync(path.join(artifacts,`scout-departure-${viewport.name}.png`),Buffer.from(departureShot.data,"base64"));
+      row.departure.reconciled=await evaluate(`(async()=>{const qa=scoutQa;const before=qa.pendingToken.style.transform;
+        adoptServerArmyMovement(qa.movement(qa.pendingId));
+        if(qa.pendingToken.style.transform!==before)throw Error("Acceptance flashed the new position before blending");
+        await qa.nextFrame();return !pendingOutgoingMissions.has(qa.pendingId)&&armyTokenCache.get(qa.pendingId)===qa.pendingToken
+          &&!qa.pendingToken.classList.contains("pending-order");})()`);
+      assert(row.departure.reconciled,"Accepted departure replaced or duplicated its token");
+      row.regularMarch=await evaluate(`(async()=>{const qa=scoutQa;qa.reset();centerOnCity(qa.source.id);
+        const mission={...qa.movement("regular-"+ ++qa.seq),owner:"player",kind:"attack",remaining:60};
+        const node=cityLayer.querySelector(".city-node");
+        const promise=publishOnlineArmyMovement(mission,{addLocalMissionOnAccept:true});
+        const pending=pendingOutgoingMissions.size===1;await qa.nextFrame();await promise;await qa.nextFrame();
+        return {pending,accepted:state.attacks.some(a=>a.onlineId===mission.onlineId),pendingCleared:!pendingOutgoingMissions.size,mapNodeKept:node.isConnected};})()`);
+      assert(row.regularMarch.pending&&row.regularMarch.accepted&&row.regularMarch.pendingCleared&&row.regularMarch.mapNodeKept);
+      if (!process.env.CI) assert(row.versions.after.pendingMs.p95<=100,`${viewport.name}: pending feedback exceeded 100ms`);
+      if (!process.env.CI) assert(row.versions.after.reportMs.p95<=200,`${viewport.name}: report presentation exceeded 200ms`);
       evidence.viewports.push(row);
       fs.writeFileSync(path.join(artifacts,"browser-benchmark.json"),JSON.stringify(evidence,null,2));
       console.log(JSON.stringify(row));

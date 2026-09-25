@@ -103,6 +103,7 @@ async function validate() {
   const statusText = {}, retry = {}, empty = {};
   const panel = { hidden: true, querySelector: selector => selector === "button" ? retry : statusText };
   const reportScope = {
+    scoutReportRead: null,
     state: {}, onlineReportRequestGeneration: 0, onlineReportSyncState: "loading", onlineServerReportsUnsubscribe: null,
     audioServerReportsHydrated: false, battleReportFilter: "all", console: { warn() {} },
     modalBody: { querySelector: selector => selector === "[data-report-sync]" ? panel : empty },
@@ -115,7 +116,7 @@ async function validate() {
     markOnlineRealtimeRecoveryNeeded() {},
   };
   vm.createContext(reportScope);
-  for (const name of ["setOnlineReportSyncState", "clearOnlineServerReportWatcher", "loadServerReportsOnce", "subscribeOnlineServerReports"]) {
+  for (const name of ["setOnlineReportSyncState", "clearOnlineServerReportWatcher", "loadServerReportsOnce", "performServerReportRead", "subscribeOnlineServerReports"]) {
     vm.runInContext(extract(game, name), reportScope);
   }
   reportScope.subscribeOnlineServerReports();

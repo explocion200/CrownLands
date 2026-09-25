@@ -420,6 +420,46 @@ function normalizeRouteResult(route) {
   };
 }
 
+// One scout request owns this bounded cache, including its transaction retries.
+// It stores geometry only; troop availability and permissions are never cached.
+function createScoutRouteSearch(planner) {
+  const routes = new Map();
+  let pointCount = 0;
+  let boundKey = "";
+  let bound = null;
+  const endpointKey = point => JSON.stringify([point.regionId, point.id || "", point.x, point.y]);
+  return {
+    lowerBound(source, target) {
+      const key = endpointKey(target);
+      if (key !== boundKey) {
+        boundKey = key;
+        bound = worldTravel.createTargetDistanceBound(planner.routeData.models.keys(),
+          regionId => planner.getModel(regionId)?.portals || [], target);
+      }
+      return bound(source);
+    },
+    calculate(source, target, maxDistance = Infinity) {
+      const key = JSON.stringify([endpointKey(source), endpointKey(target)]);
+      if (routes.has(key)) return structuredClone(routes.get(key));
+      const route = planner.calculate(source, target, { maxDistance });
+      if (!route) return null; // A bounded miss does not prove unreachability.
+      const points = route.path.length + route.pathSegments.reduce((sum, leg) => sum + leg.points.length, 0);
+      if (points <= 32768) {
+        while (routes.size >= 128 || pointCount + points > 32768) {
+          const oldest = routes.keys().next().value;
+          const old = routes.get(oldest);
+          pointCount -= old.path.length + old.pathSegments.reduce((sum, leg) => sum + leg.points.length, 0);
+          routes.delete(oldest);
+        }
+        routes.set(key, structuredClone(route));
+        pointCount += points;
+      }
+      return route;
+    },
+    snapshot: () => ({ entries: routes.size, points: pointCount }),
+  };
+}
+
 function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
   const routeData = createAuthoritativeRouteModels(layout, options);
   // Geometry is immutable within a planner. Expansion creates another planner.
@@ -450,12 +490,12 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
     ),
     buildLegs: (source, target) => buildAuthoritativeRouteLegs(routeData.models, source, target),
     buildJob: (source, target) => buildAuthoritativeRouteJob(routeData, source, target),
-    calculate(source, target) {
+    calculate(source, target, searchOptions = {}) {
       if (options.shortestTravelTime) {
         return normalizeRouteResult(worldTravel.findShortestRoute(
           routeData.models.keys(), regionId => routeData.models.get(regionId)?.portals || [],
           { ...source, regionId: getTargetRegionId(source) },
-          { ...target, regionId: getTargetRegionId(target) }, calculateLeg
+          { ...target, regionId: getTargetRegionId(target) }, calculateLeg, searchOptions
         ));
       }
       const job = buildAuthoritativeRouteJob(routeData, source, target);
@@ -465,6 +505,7 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
 }
 
 module.exports = Object.freeze({
+  createScoutRouteSearch,
   createTerrainLegCache,
   CITY_CLEARANCE,
   STRUCTURE_CLEARANCE,

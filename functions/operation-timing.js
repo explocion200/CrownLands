@@ -2,7 +2,7 @@
 const { AsyncLocalStorage } = require("node:async_hooks");
 const { performance } = require("node:perf_hooks");
 const context = new AsyncLocalStorage();
-const phases = new Set(["realmContext", "worldValidation", "documentReads", "routePlanning", "transaction"]);
+const phases = new Set(["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction"]);
 
 function run(operation) {
   return context.run({ startedAt: performance.now(), phases: {}, transactionAttempts: 0 }, operation);
@@ -40,7 +40,7 @@ function scout(details = {}) {
   })) {
     if (values.includes(details[key])) dimensions[key] = details[key];
   }
-  for (const key of ["scoutBatchSize", "scoutOriginCandidates"]) {
+  for (const key of ["scoutBatchSize", "scoutOriginCandidates", "scoutOriginRoutes", "scoutOriginsPruned"]) {
     if (Number.isFinite(details[key])) dimensions[key] = Math.min(100000, Math.max(0, Math.floor(details[key])));
   }
 }

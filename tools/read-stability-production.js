@@ -106,10 +106,10 @@ async function main() {
             const data = timing;
             if (typeof data.requestDurationMs === "number") g.durations.push(data.requestDurationMs);
             g.maxTransactionAttempts = Math.max(g.maxTransactionAttempts, Number(data.transactionAttempts) || 0);
-            for (const metric of ["scoutOriginCandidates", "routeCacheHits", "routeCacheMisses"]) {
+            for (const metric of ["scoutOriginCandidates", "scoutOriginRoutes", "scoutOriginsPruned", "routeCacheHits", "routeCacheMisses"]) {
               if (typeof data[metric] === "number") (g.scoutMetrics[metric] ||= []).push(data[metric]);
             }
-            for (const phase of ["realmContext", "worldValidation", "documentReads", "routePlanning", "transaction"]) {
+            for (const phase of ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction"]) {
               const value = data.phaseDurationMs?.[phase];
               if (typeof value === "number") (g.phases[phase] ||= []).push(value);
             }

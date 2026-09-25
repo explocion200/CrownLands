@@ -11,11 +11,12 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   const [first, second] = await Promise.all([
     timing.run(async () => {
       timing.scout({ scoutStage: "launch", scoutSourceType: "tower", scoutTargetType: "city", scoutBatchSize: 1,
-        scoutOriginCandidates: 7, ownerUid: "private-player", scoutReport: { troops: 999 } });
+        scoutOriginCandidates: 7, scoutOriginRoutes: 2, scoutOriginsPruned: 5, ownerUid: "private-player", scoutReport: { troops: 999 } });
       timing.routeCache(true); timing.routeCache(false);
       await timing.measure("realmContext", () => wait(12));
       timing.transactionAttempt();
       assert.equal(timing.measure("routePlanning", () => 7), 7);
+      assert.equal(timing.measure("economyPreparation", () => 9), 9);
       await assert.rejects(timing.measure("documentReads", async () => {throw failure;}), error => error === failure);
       return timing.snapshot();
     }),
@@ -29,6 +30,9 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.equal(first.scoutStage, "launch");
   assert.equal(first.scoutSourceType, "tower");
   assert.equal(first.scoutOriginCandidates, 7);
+  assert.equal(first.scoutOriginRoutes, 2);
+  assert.equal(first.scoutOriginsPruned, 5);
+  assert.equal(typeof first.phaseDurationMs.economyPreparation, "number");
   assert.equal(first.routeCacheHits, 1);
   assert.equal(first.routeCacheMisses, 1);
   assert(!("scoutStage" in second), "Concurrent requests shared scout dimensions");

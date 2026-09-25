@@ -66,7 +66,9 @@ async function submissions() {
   assert.equal(ctx.readPendingOnlineArmyMovements().length,1,"An uncertain submission was discarded.");
   await assert.rejects(ctx.submitRecoverableArmyOrder(payload("changed","target",2)),/earlier order/);
   drop=false;ctx.navigator.onLine=true;
-  const retry=await ctx.submitRecoverableArmyOrder(payload("new-client-id"));
+  let previewId;
+  const retry=await ctx.submitRecoverableArmyOrder(payload("new-client-id"), { onPending: ({ id }) => { previewId = id; } });
+  assert.equal(previewId, "first", "The preview used a new ID instead of the durable uncertain order ID");
   assert.equal(retry.movement.id,"first","A manual retry changed the uncertain order ID.");
   assert.deepEqual(ids,["first","first"]);
   assert.equal(charges,1,"Response loss charged twice.");
