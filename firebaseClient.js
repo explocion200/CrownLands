@@ -21,6 +21,12 @@
     configured: false,
     ready: false,
     user: null,
+    authUser: null,
+    authOperationPending: false,
+    authOperationTag: "",
+    authOperationGeneration: 0,
+    authRevision: 0,
+    verificationSentAtMs: 0,
     error: null,
     app: null,
     auth: null,
@@ -81,7 +87,70 @@
       displayName: user.displayName || "",
       email: user.email || "",
       photoURL: user.photoURL || "",
+      emailVerified: user.emailVerified === true,
+      providerIds: (user.providerData || []).map(provider => provider.providerId),
     };
+  }
+
+  function emailAuthError(code, message) {
+    return Object.assign(new Error(message), { code: `auth/${code}` });
+  }
+
+  // Keep raw authentication separate from game eligibility. All existing game
+  // entry points see no player until a password session has verified its email.
+  async function acceptAuthUser(user, source = "auth-state") {
+    const revision = ++client.authRevision;
+    if (client.user?.uid && client.user.uid !== user?.uid) {
+      client.user = null;
+      stopActiveSessionWatcher();
+      resetActiveSessionActivation("");
+      dispatch("auth", { user: null, source: "account-changed" });
+    }
+    const serialized = serializeUser(user);
+    let provider = serialized?.providerIds.includes("password") ? "password" : "";
+    if (provider && client.modules.auth.getIdTokenResult) {
+      const token = await client.modules.auth.getIdTokenResult(user);
+      provider = token.signInProvider || token.claims?.firebase?.sign_in_provider || provider;
+      serialized.emailVerified = token.claims?.email_verified === true;
+    }
+    if (revision !== client.authRevision || (user?.uid && user.uid === client.sessionReplacedUid)) return null;
+    const previousUid = client.user?.uid || "";
+    const previousAuthUid = client.authUser?.uid || "";
+    client.authUser = serialized;
+    if (previousAuthUid !== (serialized?.uid || "")) client.verificationSentAtMs = 0;
+    client.user = provider === "password" && !serialized.emailVerified ? null : serialized;
+    const uid = client.user?.uid || "";
+    resetActiveSessionActivation(uid);
+    if (uid && !client.sessionReplacementInFlight) {
+      if (uid !== previousUid || client.activeSessionActivatedUid !== uid) {
+        activateCurrentSession(source).catch(() => {});
+        registerGameInstallation({ force: true }).catch(() => {});
+      }
+    } else {
+      stopActiveSessionWatcher();
+      client.installationRegisteredAtMs = 0;
+    }
+    // Same-account provider/verification refreshes are UI updates, not a new
+    // gameplay login (which would restart watchers and flush old local saves).
+    if (uid !== previousUid || (serialized?.uid || "") !== previousAuthUid || source === "auth-state") dispatch("auth", { user: client.user, source });
+    dispatch("auth-ui", { user: client.authUser });
+    return client.authUser;
+  }
+
+  async function runAuthOperation(operation, tag = "email", replacePopup = false) {
+    if (client.authOperationPending && !(replacePopup && client.authOperationTag === "google-popup")) throw emailAuthError("operation-pending", "Finish the current sign-in first.");
+    const generation = ++client.authOperationGeneration;
+    client.authOperationTag = tag;
+    client.authOperationPending = true;
+    dispatch("auth-ui");
+    try { return await operation(); }
+    finally {
+      if (generation === client.authOperationGeneration) {
+        client.authOperationPending = false;
+        client.authOperationTag = "";
+        dispatch("auth-ui");
+      }
+    }
   }
 
   function dispatch(name, detail = {}) {
@@ -222,6 +291,8 @@
     const sameInstallation = remoteSession.installationId
       && remoteSession.installationId === getGameInstallationId();
     client.user = null;
+    client.authUser = null;
+    client.authRevision += 1;
     dispatch("auth", { user: null, reason: "session-replaced" });
     const replacementPromise = (async () => {
       try {
@@ -395,31 +466,35 @@
 
         client.modules.auth.onAuthStateChanged(client.auth, user => {
           if (user?.uid && user.uid === client.sessionReplacedUid) return;
-          client.user = serializeUser(user);
-          resetActiveSessionActivation(client.user?.uid || "");
-          if (client.user?.uid && !client.sessionReplacementInFlight) {
-            activateCurrentSession("auth-state").catch(error => {
-              console.warn("Could not activate current session", error);
-            });
-            registerGameInstallation({ force: true }).catch(error => {
-              console.warn("Could not register this Crownlands installation", error);
-            });
-          } else if (!client.user?.uid) {
+          const update = acceptAuthUser(user);
+          const revision = client.authRevision;
+          update.catch(() => {
+            if (revision !== client.authRevision) return;
+            client.user = null;
+            client.authUser = serializeUser(user);
             stopActiveSessionWatcher();
             resetActiveSessionActivation("");
-            client.installationRegisteredAtMs = 0;
-          }
-          dispatch("auth", { user: client.user });
+            dispatch("auth", { user: client.user });
+            dispatch("auth-ui");
+          });
         });
 
         if (client.modules.auth.getRedirectResult) {
           client.redirectResultPromise = client.modules.auth.getRedirectResult(client.auth)
-            .then(result => {
+            .then(async result => {
               if (!result?.user) return null;
-              client.user = serializeUser(result.user);
+              assertCurrentAuthUser(result.user);
+              if (result.operationType === "reauthenticate") {
+                await acceptAuthUser(result.user, "reauthenticate");
+                dispatch("auth-ui", { reauthenticated: true });
+                return client.user;
+              }
+              await acceptAuthUser(result.user, "google-redirect");
+              assertCurrentAuthUser(result.user);
               client.redirectError = null;
               dispatch("auth", { user: client.user, source: "google-redirect" });
               window.setTimeout(() => {
+                if (client.auth.currentUser && client.auth.currentUser.uid !== result.user.uid) return;
                 rememberLogin("google-redirect").catch(error => {
                   console.warn("Could not finish redirected login session", error);
                 });
@@ -1848,6 +1923,7 @@
   }
 
   async function signInWithGoogle() {
+    const operationGeneration = client.authOperationGeneration;
     await init();
     if (!client.configured) {
       throw new Error("Firebase config is still using placeholder values.");
@@ -1856,10 +1932,14 @@
     await prepareExplicitSessionLogin();
     try {
       const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
-      client.user = serializeUser(result.user);
+      if (operationGeneration !== client.authOperationGeneration) throw emailAuthError("operation-superseded", "Sign-in continued in this tab.");
+      assertCurrentAuthUser(result.user);
+      await acceptAuthUser(result.user, "google-sign-in");
+      assertCurrentAuthUser(result.user);
       await rememberLogin("google-sign-in");
       return client.user;
     } catch (error) {
+      if (operationGeneration !== client.authOperationGeneration) throw emailAuthError("operation-superseded", "Sign-in continued in this tab.");
       if (shouldUseRedirectFallback(error) && client.modules.auth.signInWithRedirect) {
         await signInWithGoogleRedirect();
         return client.user;
@@ -1920,6 +2000,8 @@
   async function signOut() {
     await init();
     if (!client.auth) return;
+    if (client.authOperationPending) throw emailAuthError("operation-pending", "Finish the current sign-in first.");
+    client.authRevision += 1;
     await clearActivePresence().catch(error => {
       console.warn("Could not clear online presence during sign-out", error);
     });
@@ -1929,7 +2011,123 @@
     stopActiveSessionWatcher();
     await client.modules.auth.signOut(client.auth);
     client.user = null;
+    client.authUser = null;
+    resetActiveSessionActivation("");
     dispatch("auth", { user: null });
+    dispatch("auth-ui");
+  }
+
+  const EMAIL_ACTION_SETTINGS = { url: "https://playcrownlands.com/play/", handleCodeInApp: false };
+
+  async function requireAuthClient() {
+    await init();
+    if (!client.configured || !client.auth || client.error) throw emailAuthError("unavailable", "Sign-in is unavailable. Try again shortly.");
+  }
+
+  function assertCurrentAuthUser(user) {
+    if (!user || ("currentUser" in client.auth && client.auth.currentUser !== user)) {
+      throw emailAuthError("user-mismatch", "Your account changed. Please try again.");
+    }
+  }
+
+  function validateNewPassword(password) {
+    if (typeof password !== "string" || password.length < 12) {
+      throw emailAuthError("weak-password", "Use a password with at least 12 characters.");
+    }
+  }
+
+  async function sendVerificationEmail() {
+    await requireAuthClient();
+    const user = client.auth.currentUser;
+    assertCurrentAuthUser(user);
+    if (user.emailVerified) return false;
+    if (Date.now() < client.verificationSentAtMs + 60000) throw emailAuthError("resend-cooldown", "Wait a minute before requesting another email.");
+    await client.modules.auth.sendEmailVerification(user, EMAIL_ACTION_SETTINGS);
+    assertCurrentAuthUser(user);
+    client.verificationSentAtMs = Date.now();
+    dispatch("auth-ui");
+    return true;
+  }
+
+  async function signInWithEmail(email, password, { create = false } = {}) {
+    await requireAuthClient();
+    if (client.auth.currentUser && client.authUser) throw emailAuthError("already-signed-in", "Sign out before using another account.");
+    if (create) validateNewPassword(password);
+    await prepareExplicitSessionLogin();
+    const method = create ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
+    const result = await client.modules.auth[method](client.auth, String(email || "").trim(), password);
+    assertCurrentAuthUser(result.user);
+    await acceptAuthUser(result.user, "email-sign-in");
+    assertCurrentAuthUser(result.user);
+    if (client.user) await rememberLogin("email-sign-in");
+    else if (create) await sendVerificationEmail();
+    return client.authUser;
+  }
+
+  async function refreshEmailVerification() {
+    await requireAuthClient();
+    const user = client.auth.currentUser;
+    assertCurrentAuthUser(user);
+    await client.modules.auth.reload(user);
+    assertCurrentAuthUser(user);
+    await client.modules.auth.getIdToken(user, true);
+    assertCurrentAuthUser(user);
+    await acceptAuthUser(user, "email-verified");
+    assertCurrentAuthUser(user);
+    return Boolean(client.user);
+  }
+
+  async function sendPasswordRecovery(email) {
+    await requireAuthClient();
+    await client.modules.auth.sendPasswordResetEmail(client.auth, String(email || "").trim(), EMAIL_ACTION_SETTINGS);
+    return true;
+  }
+
+  async function reauthenticateGoogleForPassword() {
+    await requireAuthClient();
+    const user = client.auth.currentUser;
+    assertCurrentAuthUser(user);
+    if (!user.providerData?.some(provider => provider.providerId === "google.com")) throw emailAuthError("user-mismatch", "Sign in with Google to add a password.");
+    try {
+      await client.modules.auth.reauthenticateWithPopup(user, client.provider);
+      assertCurrentAuthUser(user);
+      return true;
+    } catch (error) {
+      if (shouldUseRedirectFallback(error)) {
+        await client.modules.auth.reauthenticateWithRedirect(user, client.provider);
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  async function addEmailPassword(password) {
+    await requireAuthClient();
+    validateNewPassword(password);
+    const user = client.auth.currentUser;
+    assertCurrentAuthUser(user);
+    if (!client.user || !user.email || !user.emailVerified || !user.providerData?.some(provider => provider.providerId === "google.com")) {
+      throw emailAuthError("user-mismatch", "Use your verified Google account to add a password.");
+    }
+    const token = await client.modules.auth.getIdTokenResult(user);
+    assertCurrentAuthUser(user);
+    if (Date.now() - Number(token.claims?.auth_time || 0) * 1000 > 5 * 60 * 1000) {
+      throw emailAuthError("requires-recent-login", "Confirm your Google account again before adding a password.");
+    }
+    // SDK 10.12.5 links email credentials through accounts:signUp with the
+    // current ID token, retaining enumeration protection and the existing UID.
+    const credential = client.modules.auth.EmailAuthProvider.credential(user.email, password);
+    const result = await client.modules.auth.linkWithCredential(user, credential);
+    assertCurrentAuthUser(user);
+    if (result.user.uid !== user.uid) throw emailAuthError("user-mismatch", "Your account changed. Please sign in again.");
+    await client.modules.auth.reload(user);
+    assertCurrentAuthUser(user);
+    await client.modules.auth.getIdToken(user, true);
+    assertCurrentAuthUser(user);
+    await acceptAuthUser(user, "password-linked");
+    assertCurrentAuthUser(user);
+    if (!client.user) await sendVerificationEmail();
+    return client.authUser;
   }
 
   async function savePlayerProfile(profile = {}) {
@@ -3345,8 +3543,18 @@
 
   window.CrownlandsOnline = {
     init,
-    signInWithGoogle,
-    signInWithGoogleRedirect,
+    signInWithGoogle: () => runAuthOperation(signInWithGoogle, "google-popup"),
+    signInWithGoogleRedirect: () => runAuthOperation(signInWithGoogleRedirect, "google-redirect", true),
+    canResumeGoogleRedirect: () => client.authOperationTag === "google-popup",
+    signInWithEmail: (email, password, options) => runAuthOperation(() => signInWithEmail(email, password, options)),
+    sendVerificationEmail: () => runAuthOperation(sendVerificationEmail),
+    refreshEmailVerification: () => runAuthOperation(refreshEmailVerification),
+    sendPasswordRecovery: email => runAuthOperation(() => sendPasswordRecovery(email)),
+    reauthenticateGoogleForPassword: () => runAuthOperation(reauthenticateGoogleForPassword),
+    addEmailPassword: password => runAuthOperation(() => addEmailPassword(password)),
+    isAuthBusy: () => client.authOperationPending,
+    getAuthUser: () => client.authUser,
+    getVerificationResendAtMs: () => client.verificationSentAtMs + 60000,
     signOut,
     registerGameInstallation,
     joinGameServer,

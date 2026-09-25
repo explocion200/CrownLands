@@ -1,0 +1,38 @@
+# Email accounts
+
+Status: implemented for review, not deployed. Feature branch: `codex/email-password-auth`.
+
+## Behavior
+
+Google and email/password share the existing Firebase identity and kingdom storage. The login page opens a native dialog for email sign-in, account creation, or password recovery. Password creation uses a minimum of 12 characters, supports passphrases/autofill, and never stores credentials in game data or diagnostics.
+
+Raw Firebase authentication is exposed separately as `getAuthUser()`. `getUser()` and `isSignedIn()` represent gameplay eligibility. Unverified password sessions cannot activate gameplay, read/write protected Firestore data, register installations, claim a city, or call either server wrapper. Callables reject with `permission-denied` and `details.reason = email-verification-required` before realm lookup. Verified password sessions, existing Google sessions, and trusted custom-token sessions retain their normal authority checks.
+
+Verification refresh reloads the user and forces an ID-token refresh before admission. Resending has a 60-second client cooldown in addition to Firebase throttling. Recovery returns the same neutral message for unknown and registered addresses. Hosting handles expired/used action links; players can request a new message from the game.
+
+Profile Settings → Account → Add a password reauthenticates the same Google identity before presenting the password form. Blocked popups fall back to reauthentication by redirect; only the UID identifying the intended flow is stored in session storage, never a password or credential. The SDK links the same email and UID. No separate-account merging, provider removal, or email changes are implemented.
+
+## Release configuration and order
+
+Implementation authorization does not authorize production changes. After explicit merge/deploy authorization:
+
+1. Hold web auto-publication for the coordinated release. Record the current web deploy and backend/rules versions. Merge only with all required checks green and a clean current branch; synchronize local main using the documented fast-forward workflow.
+2. Deploy the merged Functions and Firestore rules first. The shared callable wrappers change, so deploy all affected callable functions rather than only login functions. Verify verification-required errors and normal Google access before exposing the feature.
+3. In Firebase Authentication for `crown-land-b15e0`, enable **Email/Password**, keeping passwordless email-link sign-in disabled. Configure the password policy in **Require** mode with minimum length **12**, no additional character-class requirements, and the existing provider maximum. Keep duplicate emails disabled and email-enumeration protection enabled.
+4. Review the verification and password-reset templates with Crown Lands branding. Retain Firebase-hosted action handlers, the authorized `playcrownlands.com` domain, and the fixed continuation URL `https://playcrownlands.com/play/`. No custom SMTP or password backend is required.
+5. Publish the matching web artifact and restore the prior auto-publication setting. Verify exact frontend/backend versions and the service worker asset inventory. Check alternate hosts resolve to the canonical game. itch.io publication remains a separate channel.
+6. With controlled test accounts, check delivery/verification/reset, Google popup and redirect login, same-UID Google-to-password linking, email-to-Google access, sign-out/reload, and two-device takeover. Verify the linked account's name, complete flag, cities, troops, Gold and King Power remain intact. Confirm action links opened in another browser/device require that browser to sign in normally. Include Android and iOS installed/browser flows with the keyboard visible.
+7. Compare authentication error categories and verification denials without recording emails, passwords, tokens, action codes, or player data. Never log the complete Firebase Auth project configuration; select only non-sensitive leaf settings.
+
+Rollback must preserve email login and recovery once password players exist. Do not disable Email/Password or revert to a Google-only frontend that strands those players. Retain verification gates; prefer a forward fix or a compatible client rollback.
+
+## Validation evidence and limits
+
+The new UI and integration add approximately 27 KiB of uncompressed client source relative to the base. The production artifact assigns this feature a bounded 32 KiB allowance and separately caps `email-auth-ui.js` at 14 KiB. Existing total-artifact, world, and installation-cache budgets are otherwise unchanged.
+
+- `tools/validate-email-auth.js` exercises real client methods with SDK fixtures: no game work before verification, one activation afterward, duplicate-operation rejection, same-UID password linking without session takeover, recovery, and stale account callbacks. It also executes both real callable wrappers to prove verification is checked before realm reads.
+- `tools/validate-email-auth-browser.js` exercises the actual email UI with fixture responses at 1440×900, 844×390, and 568×320. Screenshots are written to ignored `release-artifacts/email-auth/`. These are local browser tests, not physical-device or live-email evidence.
+- `functions/test/emulator-email-auth.js` verifies real Auth tokens, Firestore reads/writes, and callable authorization. Existing gameplay signup factories now explicitly use verified players with refreshed tokens through the emulator-only helper.
+- Firebase Tools 15.22.4's Auth emulator rejects same-email `accounts:signUp` linking before resolving the provided ID token. The integration fixture therefore adds a password through emulator Admin and checks subsequent password authentication, UID/provider retention, and unchanged kingdom data. It does **not** prove live linking or email delivery. The production SDK remains on 10.12.5 and calls the supported token-bearing signup endpoint through `linkWithCredential`; complete that controlled-account release check before claiming the feature live.
+
+References: [Firebase password authentication](https://firebase.google.com/docs/auth/web/password-auth), [account management](https://firebase.google.com/docs/auth/web/manage-users), [SDK linking implementation](https://github.com/firebase/firebase-js-sdk/blob/firebase%4010.12.5/packages/auth/src/api/account_management/email_and_password.ts).

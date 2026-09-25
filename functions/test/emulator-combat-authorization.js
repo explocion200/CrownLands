@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app");
@@ -13,7 +14,7 @@ const db = getFirestore();
 let identity = { ...release, realmShardId: "legacy" }, functionsHost;
 const restRoot = `http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents`;
 async function user(label) {
-  const response = await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
+  const response = await signUpVerifiedPlayer(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: `combat-${randomUUID()}@example.test`, password: "Emulator-Combat-Only-123!", returnSecureToken: true }),
   });

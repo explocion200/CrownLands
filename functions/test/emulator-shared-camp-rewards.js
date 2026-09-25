@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -19,7 +20,7 @@ let identity = { ...release, realmShardId: "legacy" };
 let functionsHost;
 
 async function user(label) {
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: `camp-${randomUUID()}@example.test`, password: "Camp-Emulator-Only-123!", returnSecureToken: true }),
   });

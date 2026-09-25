@@ -155,7 +155,7 @@
       </aside>
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
-        <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
+        <p class="sr-only">Sign in with Google or email, then enter your kingdom.</p>
         <div id="menuLoadingWheel" class="loading-wheel menu-loading-wheel" hidden aria-hidden="true">
           <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" width="256" height="256" alt="" draggable="false" />
           <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-2038de353a91.webp" width="256" height="256" alt="" draggable="false" />
@@ -163,7 +163,7 @@
         <div class="online-login" aria-label="Online account status">
           <div>
             <strong id="onlineStatusText">Online loading</strong>
-            <small id="onlineStatusDetail">Sign in with Google to load your kingdom.</small>
+            <small id="onlineStatusDetail">Sign in with Google or email to load your kingdom.</small>
           </div>
           <section id="serverRealmList" class="server-realm-list" aria-label="Crownlands realms" hidden>
             <span class="server-realm-heading">Choose Realm</span>
@@ -178,10 +178,17 @@
           </section>
           <div class="online-login-actions">
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
+            <button id="emailSignInBtn" class="ghost-btn" type="button" disabled>Continue with email</button>
             <button id="enterKingdomBtn" class="primary-btn" type="button" hidden>Enter Kingdom</button>
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
             <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden><span class="install-app-icon" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-install"></use></svg></span><span>Install Crownlands</span></button>
           </div>
+          <section id="emailVerificationPanel" class="email-verification" aria-label="Email verification" hidden>
+            <p id="emailVerificationDetail"></p>
+            <button id="emailVerifiedBtn" class="primary-btn" type="button">I’ve verified my email</button>
+            <button id="emailResendBtn" class="ghost-btn" type="button">Resend email</button>
+            <p id="emailVerificationStatus" role="status" aria-live="polite"></p>
+          </section>
           <nav class="public-site-links" aria-label="Crownlands information">
             <a href="home.html">Home</a>
             <a href="guides.html">Guides</a>
@@ -432,6 +439,13 @@
             <p id="pushAlertsStatus" hidden class="setting-status" role="status" aria-live="polite">Notifications Off</p>
           </article>
           <div data-analytics-settings></div>
+          <article id="emailAccountCard" class="preference-card email-account-card" aria-labelledby="emailAccountTitle">
+            <h3 id="emailAccountTitle">Account</h3>
+            <p id="emailAccountDetail" class="description"></p>
+            <button id="emailAddPasswordBtn" type="button" hidden>Add a password</button>
+            <button id="emailAccountResetBtn" type="button" hidden>Reset password</button>
+            <p id="emailAccountStatus" class="setting-status" role="status" aria-live="polite"></p>
+          </article>
           <a class="resource-card privacy-card" id="privacyLink" href="privacy.html" target="_blank" rel="noopener"><svg class="resource-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#key"></use></svg><span><span class="eyebrow">Privacy</span><strong>View Privacy Policy</strong><small>Review how account and gameplay information is handled.</small></span><span class="resource-arrow" aria-hidden="true">›</span></a>
         </section>
       </div>
@@ -564,7 +578,32 @@
   <script src="functions/clanHeraldryAssets.js?v=20260823-clan-heraldry-live-ui-r1"></script>
   <script src="functions/clanHeraldryLegacyV1.js?v=20260823-clan-heraldry-live-ui-r1"></script>
   <script src="functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1"></script>
+  <dialog id="emailAuthDialog" aria-labelledby="emailAuthTitle" aria-describedby="emailAuthHint">
+    <form id="emailAuthForm">
+      <h2 id="emailAuthTitle">Sign in with email</h2>
+      <p id="emailAuthHint">Continue to your kingdom.</p>
+      <label for="emailAuthAddress">Email address</label>
+      <input id="emailAuthAddress" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required />
+      <div id="emailPasswordFields">
+        <label for="emailAuthPassword">Password</label>
+        <input id="emailAuthPassword" name="password" type="password" autocomplete="current-password" required />
+        <div id="emailConfirmField" hidden>
+          <label for="emailAuthConfirm">Confirm password</label>
+          <input id="emailAuthConfirm" name="confirm-password" type="password" autocomplete="new-password" />
+        </div>
+        <button id="emailShowPasswordBtn" class="ghost-btn" type="button" aria-pressed="false">Show password</button>
+      </div>
+      <p id="emailAuthStatus" role="status" aria-live="polite"></p>
+      <button id="emailAuthSubmit" class="primary-btn" type="submit">Sign in</button>
+      <div class="email-auth-links">
+        <button id="emailAuthModeBtn" class="ghost-btn" type="button">Create account</button>
+        <button id="emailForgotBtn" class="ghost-btn" type="button">Forgot password?</button>
+        <button id="emailAuthBackBtn" class="ghost-btn" type="button">Back</button>
+      </div>
+    </form>
+  </dialog>
   <script src="firebaseClient.js?v=20260902-march-sync-realm-scope-r1"></script>
+  <script src="email-auth-ui.js?v=20260925-email-auth-r1"></script>
   <script src="camp-details-ui.js?v=20260917-camps-r1"></script>
   <script src="clan-tower-buildings.js?v=20260921-clan-buildings-r1"></script>
   <script src="clan-shop-ui.js?v=20260922-clan-shop-r1"></script>

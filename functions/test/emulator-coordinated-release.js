@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app");
@@ -15,7 +16,7 @@ let identity = { releaseId: realm.releaseId, resetGeneration: realm.resetGenerat
 const fixture = createTravelFixture(26);
 
 async function user(label) {
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: `travel-${label}-${randomUUID()}@example.test`, password: "Travel-Emulator-Only-123!", returnSecureToken: true }),
   });

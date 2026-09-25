@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 
 const { randomInt } = require("node:crypto");
 const { getApps, initializeApp } = require("firebase-admin/app");
@@ -56,7 +57,7 @@ async function mapWithConcurrency(items, concurrency, operation) {
 }
 
 async function createAuthUser(index) {
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({

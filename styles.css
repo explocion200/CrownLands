@@ -770,6 +770,48 @@ input {
   font-weight: 1000;
 }
 
+/* Email forms use the native top layer so the keyboard and focus stay local. */
+#emailAuthDialog {
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
+  overflow: auto;
+  margin: auto;
+  padding: 20px;
+  color: #fff8e8;
+  background: #123044;
+  border: 2px solid #c9a768;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px #0009;
+}
+#emailAuthDialog::backdrop { background: #061926c9; }
+#emailAuthForm { display: grid; gap: 8px; text-align: left; }
+#emailAuthForm h2, #emailAuthForm p { margin: 0; }
+#emailAuthForm input {
+  display: block; width: 100%; min-height: 44px; padding: 8px 10px;
+  box-sizing: border-box; font: 16px var(--font-system); color: #102033;
+  background: #fff8e8; border: 1px solid #c9a768; border-radius: 6px;
+}
+#emailAuthForm label { display: block; font-size: 14px; margin: 6px 0 4px; }
+#emailAuthForm button { min-height: 44px; margin: 0; }
+#emailAuthForm [hidden], .email-verification[hidden] { display: none !important; }
+#emailAuthHint, #emailAuthStatus { font-size: 14px; line-height: 1.4; }
+#emailAuthDialog #emailAuthHint { color: #d6e6ef; font-family: var(--font-system); }
+#emailAuthDialog .ghost-btn { color: #fff8e8; background: #23465b; border: 1px solid #bda477; }
+#emailAuthDialog .primary-btn { color: #fff8e8; background: #743334; border: 1px solid #c9a768; }
+#emailAuthStatus { color: #ffe29a; }
+.email-auth-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.email-auth-links button { flex: 1 1 auto; }
+.email-verification { text-align: center; overflow-wrap: anywhere; font-size: 14px; }
+.email-verification p { margin: 8px 0; }
+.email-account-card { overflow-wrap: anywhere; }
+.email-account-card button { min-height: 44px; padding: 8px 12px; }
+.email-account-card h3 { margin-top: 0; }
+@media (max-height: 440px) {
+  #emailAuthDialog { padding: 12px 16px; }
+  #emailAuthForm { gap: 4px; }
+}
+
 .game-view { position: absolute; inset: 0; }
 .top-hud {
   position: absolute;

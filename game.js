@@ -15997,13 +15997,23 @@ function updateOnlineUi() {
   if (!configured) {
     setRealmMenuState(false);
     onlineStatusText.textContent = "Firebase needed";
-    onlineStatusDetail.textContent = "Paste your Firebase web config into firebase-config.js to enable Google login.";
+    onlineStatusDetail.textContent = "Paste your Firebase web config into firebase-config.js to enable sign-in.";
     if (googleSignInBtn) {
       googleSignInBtn.hidden = false;
       googleSignInBtn.disabled = true;
     }
     if (enterKingdomBtn) enterKingdomBtn.hidden = true;
     if (googleSignOutBtn) googleSignOutBtn.hidden = true;
+    return;
+  }
+
+  if (api.getAuthUser?.() && !signedIn) {
+    setRealmMenuState(false);
+    onlineStatusText.textContent = "Verify your email";
+    onlineStatusDetail.textContent = "Open the verification link before entering your kingdom.";
+    if (googleSignInBtn) googleSignInBtn.hidden = true;
+    if (enterKingdomBtn) enterKingdomBtn.hidden = true;
+    if (googleSignOutBtn) { googleSignOutBtn.hidden = false; googleSignOutBtn.disabled = Boolean(api.isAuthBusy?.()); }
     return;
   }
 
@@ -16058,10 +16068,10 @@ function updateOnlineUi() {
 
   setRealmMenuState(false);
   onlineStatusText.textContent = "Sign in to play";
-  onlineStatusDetail.textContent = "Use Google to load your kingdom.";
+  onlineStatusDetail.textContent = "Use Google or email to load your kingdom.";
   if (googleSignInBtn) {
     googleSignInBtn.hidden = false;
-    googleSignInBtn.disabled = false;
+    googleSignInBtn.disabled = Boolean(api.isAuthBusy?.());
     googleSignInBtn.textContent = googleSignInRedirectReady
       ? "Continue sign-in in this tab"
       : "Sign in with Google";
@@ -16077,6 +16087,9 @@ function clearGoogleSignInFallbackTimer() {
 
 function getGoogleSignInErrorDetail(error) {
   const code = String(error?.code || "");
+  if (code === "auth/account-exists-with-different-credential") {
+    return "Use your existing email sign-in or password recovery to open this kingdom.";
+  }
   if (["functions/unavailable", "functions/internal", "functions/deadline-exceeded"].includes(code)) {
     return "Google connected. Crownlands is temporarily busy. Try again in a moment.";
   }
@@ -16114,6 +16127,7 @@ function armGoogleSignInRedirectFallback(api) {
 
 async function handleGoogleSignIn() {
   const api = getOnlineApi();
+  if (api?.isAuthBusy?.() && !(googleSignInRedirectReady && api.canResumeGoogleRedirect?.())) return;
   if (!api?.signInWithGoogle) {
     showToast("Firebase login is not ready yet.");
     return;
@@ -16149,6 +16163,7 @@ async function handleGoogleSignIn() {
     showToast(`Google connected. ${GAME_SERVER_NAME} is ready to join.`);
   } catch (error) {
     clearGoogleSignInFallbackTimer();
+    if (error?.code === "auth/operation-superseded") return;
     onlineLastError = getGoogleSignInErrorDetail(error);
     const errorCode = String(error?.code || "");
     googleSignInRedirectReady = Boolean(api.signInWithGoogleRedirect)
@@ -16158,9 +16173,9 @@ async function handleGoogleSignIn() {
     updateOnlineUi();
     if (onlineStatusDetail) onlineStatusDetail.textContent = onlineLastError;
     showToast(onlineLastError);
-    console.warn("Google sign-in failed", error);
+    console.warn("Google sign-in failed", String(error?.code || "unknown"));
   } finally {
-    if (googleSignInBtn && !api.isSignedIn?.()) {
+    if (googleSignInBtn && !api.isSignedIn?.() && !api.isAuthBusy?.()) {
       googleSignInBtn.disabled = false;
       googleSignInBtn.textContent = googleSignInRedirectReady
         ? "Continue sign-in in this tab"
@@ -16172,6 +16187,7 @@ async function handleGoogleSignIn() {
 async function handleGoogleSignOut() {
   const api = getOnlineApi();
   if (!api?.signOut) return;
+  if (api.isAuthBusy?.()) return;
   try {
     onlineSessionReplaced = false;
     if (onlineArmySavePromises.size || onlineCityStateSavePromises.size) {
@@ -20433,7 +20449,7 @@ async function startFromInput(forceFresh = false) {
 
     shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
     if (!shouldConnectOnline) {
-      throw new Error("Sign in with Google to play online.");
+      throw new Error("Sign in with Google or email to play online.");
     }
     const realmIsReady = await joinSelectedGameServer();
     if (!realmIsReady) {
@@ -20502,7 +20518,7 @@ async function startFromInput(forceFresh = false) {
     }
     updateOnlineUi();
     if (onlineStatusDetail) onlineStatusDetail.textContent = statusOverride;
-    showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Sign in with Google to play.");
+    showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Sign in with Google or email to play.");
     console.warn("Could not start Crown Lands", error);
   } finally {
     gameServerLaunchInFlight = false;
@@ -41095,6 +41111,7 @@ window.addEventListener("crownlands:online-ready", () => {
 window.addEventListener("crownlands:auth", async () => {
   resetOnlineSaveCircuitForAuth(getOnlineApi()?.getUser?.()?.uid || "");
   if (getOnlineApi()?.isSignedIn?.()) {
+    onlineSessionReplaced = false;
     watchGameServerMembership();
     if (state) startOnlineChat();
   } else {
@@ -41108,6 +41125,17 @@ window.addEventListener("crownlands:auth", async () => {
     if (dailyLoginRewardUtcTimer) window.clearTimeout(dailyLoginRewardUtcTimer);
     dailyLoginRewardUtcTimer = 0;
     renderDailyLoginRewardButton();
+    if (state && getOnlineApi()?.getAuthUser?.()) {
+      // Firebase can require verification again after a credential change.
+      // Retire only the local game view; retain the authoritative kingdom.
+      disconnectOnlineWorld();
+      clearSelection(false);
+      if (modal?.open) modal.close();
+      closeProfileScreen({ force: true });
+      setSetupLoading(false);
+      state = null;
+      if (setupScreen) setupScreen.classList.add("visible");
+    }
   }
   updateOnlineUi();
   refreshPushAlertRegistration(true);

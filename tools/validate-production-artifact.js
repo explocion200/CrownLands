@@ -52,7 +52,7 @@ const required = [
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
-  "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
+  "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
   "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
   "assets/map-editor-data.js", "assets/flag-symbols/runtime.svg", "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg", "assets/worlds/world_01/map-manifest.json", "assets/worlds/core-expansion-v1/region-catalog.js", "assets/worlds/core-expansion-v1/build-receipt.json", "audio/manifest.json", "functions/world-travel-network.js", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js", "functions/flagRenderer.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
@@ -219,7 +219,10 @@ const illustratedHudArt = files.filter(file => /^assets\/optimized\/hud-[a-z-]+-
 if (illustratedHudArt.length !== 7 || illustratedHudArt.some(file => fs.statSync(file).size > 60 * 1024)) throw new Error("Illustrated HUD must ship seven WebP images, each under 60 KiB.");
 const illustratedHudBytes = [...illustratedHudArt,path.join(dist,"main-screen-art-ui.css")].reduce((sum,file) => sum+fs.statSync(file).size,0);
 if (illustratedHudBytes > 336 * 1024) throw new Error("Approved HUD artwork and styling exceed their 336 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340) * 1024;
+// Email accounts add the compact form, client verification/linking, and styles.
+// Bound this feature to 32 KiB, with the UI independently capped at 14 KiB.
+if (fs.statSync(path.join(dist, "email-auth-ui.js")).size > 14 * 1024) throw new Error("Email account UI exceeds its 14 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
@@ -306,7 +309,7 @@ function validateEntryResources(html, documentUrl, directoryUrl, baseHref) {
     }
   }
 
-  for (const coreFile of ["styles.css", "firebaseClient.js", "game.js", "assets/map-editor-data.js"]) {
+  for (const coreFile of ["styles.css", "firebaseClient.js", "email-auth-ui.js", "game.js", "assets/map-editor-data.js"]) {
     if (!indexedRuntimeFiles.has(coreFile)) {
       throw new Error(`${documentUrl.href} did not expose required runtime file ${coreFile}.`);
     }
