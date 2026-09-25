@@ -55,7 +55,13 @@
   }
   function mapActions(t) {
     const actions=[{action:"info",label:"Info",icon:"information"}];
-    if(!t || t.worldActive===false)return actions;
+    if(t?.worldActive===false)return actions;
+    if(!t?.ownerMember && !t?.permissions) {
+      const reason="Tower permissions are syncing. Try again shortly.";
+      actions.push({action:"scout",label:"Scout",icon:"scout",disabled:true,reason},
+        {action:"rally-attack",label:"Rally Attack",icon:"attack",disabled:true,reason});
+      return actions;
+    }
     const p=t.permissions||{};
     const add=(allowed,action,label,icon)=>{if(allowed)actions.push({action,label,icon});};
     add(!t.ownerMember&&p.scout,"scout","Scout","scout");

@@ -98,6 +98,44 @@ function harness() {
 }
 
 async function main() {
+  {
+    const h = harness(); let shopReads = 0;
+    h.api.getClanTowerShop = () => { shopReads++; return Promise.resolve({clanShop:{}}); };
+    const first = h.context.selectClanTowerOnMap('tower-a');
+    const second = h.context.selectClanTowerOnMap('tower-a');
+    assert.equal(h.reads.length, 1, 'Repeated selection duplicated a pending Tower read');
+    h.finish(h.reads[0], 1, {ownerMember:true,clanId:'clan-a',ownershipRevision:1,permissions:{inspect:true}});
+    await Promise.all([first, second]);
+    assert.equal(shopReads, 0, 'Map selection waited for unrelated Shop data');
+    const subscription = h.subscriptions[0];
+    subscription.callbacks.onGarrison(); subscription.callbacks.onGarrison();
+    assert.equal(h.reads.length, 2, 'Garrison notifications duplicated a pending map read');
+    h.finish(h.reads[1], 2, {ownerMember:true,clanId:'clan-a',ownershipRevision:1}); await flush();
+    assert.equal(h.context.cachedTower('tower-a').revision, 2);
+    assert.equal(h.reads.length, 3, 'A garrison change during a read was dropped');
+    h.finish(h.reads[2], 3, {ownerMember:true,clanId:'clan-a',ownershipRevision:1}); await flush();
+    assert.equal(h.context.cachedTower('tower-a').revision, 3);
+    assert.equal(h.reads.length, 3, 'Garrison notifications caused an unbounded refresh loop');
+    assert.equal(shopReads, 0);
+    const failed = h.context.selectClanTowerOnMap('tower-b');
+    h.reads[3].reject(new Error('Offline')); await failed;
+    const retry = h.context.selectClanTowerOnMap('tower-b');
+    assert.equal(h.reads.length, 5, 'Failed selection could not be retried');
+    h.finish(h.reads[4]); await retry;
+  }
+  for (const change of ['account','clan','ownership']) {
+    const h = harness(), old = h.context.selectClanTowerOnMap('tower-a');
+    if (change === 'account') h.context.onlineSessionGeneration++;
+    if (change === 'clan') h.context.state.clanId = 'new-clan';
+    if (change === 'ownership') {
+      h.context.applyHoldingTowerMapSnapshot({id:'tower-a'}, {ownerKind:'clan',clanId:'rivals',ownershipRevision:2});
+    }
+    const current = h.context.selectClanTowerOnMap('tower-a');
+    assert.equal(h.reads.length, 2, `A changed ${change} reused an obsolete map read`);
+    h.finish(h.reads[1], 2, {ownerKind:'clan',clanId:'rivals',ownershipRevision:2,permissions:{scout:true}}); await current;
+    h.finish(h.reads[0], 1, {ownerMember:true,permissions:{withdrawOwn:true}}); await old;
+    assert.equal(h.context.cachedTower('tower-a').revision, 2, `Late ${change} response restored stale permissions`);
+  }
   for (const patch of [{ownerMember:false}, {clanId:'other'}, {ownershipRevision:2}]) {
     const h=harness();h.order();h.modal.close();
     const own=h.context.cachedTower('tower-a');
@@ -292,7 +330,10 @@ async function main() {
     h.context.applyServerEconomyResult = () => { applied++; };
     const opening = h.open("tower-a");
     h.finish(h.reads[0], 1, { ownerMember: true }); await flush();
+    assert.match(h.modalBody.innerHTML, /revision 1$/, "Tower Info waited for an unrelated Shop response");
     h.context.onlineSessionGeneration++; h.replace();
+    vm.runInContext("holdingTowerMapSubscriptionsKey='previous-account'", h.context);
+    h.context.ensureHoldingTowerMapSubscriptions();
     shop.resolve({ clanShop: { level: 10 } }); await opening;
     assert.equal(applied, 0, "A late Shop response changed another account's economy.");
     assert.equal(h.modalBody.innerHTML, "Unrelated dialog");

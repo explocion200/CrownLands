@@ -2348,6 +2348,7 @@ let selectedTowerMapId = "";
 let holdingTowerSendContext = null;
 let holdingTowerRealtimeUnsubscribe = null;
 const holdingTowerRequestTokens = new Map();
+const holdingTowerSelectionRequests = new Map();
 let holdingTowerModalSession = null;
 let holdingTowerBuildingSelection = "shop";
 const clanBuildingRequestIds = new Map();
@@ -4274,6 +4275,12 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
   if (!includeShop && previous?.clanId === snapshot.clanId && previous?.ownershipRevision === snapshot.ownershipRevision) {
     snapshot.clanShop = previous.clanShop;
   }
+  holdingTowerSnapshots.set(towerId, snapshot);
+  if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
+  syncHoldingTowerSelectionSubscription();
+  updateHoldingTowerOrderAvailability();
+  if (selectedTowerMapId === towerId) renderSelectionChangeNow();
+  // Tower permissions and details must not wait for the optional Shop request.
   if (includeShop && snapshot.ownerMember && result?.worldActive && api.getClanTowerShop) {
     try {
       const shop = await api.getClanTowerShop({ towerId });
@@ -4281,12 +4288,15 @@ async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe
       snapshot.clanShop = shop.clanShop;
       applyServerEconomyResult(shop, { renderCities: false });
     } catch (error) { snapshot.clanShopError = error?.message || "Clan Shop unavailable."; }
+    if (!isCurrentRequest()) return null;
+    // A public snapshot may have updated the Tower while its Shop was loading.
+    const current = holdingTowerSnapshots.get(towerId);
+    if (current) {
+      current.clanShop = snapshot.clanShop;
+      current.clanShopError = snapshot.clanShopError;
+      if (isCurrentDetails()) renderHoldingTowerModal(current);
+    }
   }
-  if (!isCurrentRequest()) return null;
-  holdingTowerSnapshots.set(towerId, snapshot);
-  if (isCurrentDetails()) renderHoldingTowerModal(snapshot);
-  syncHoldingTowerSelectionSubscription();
-  updateHoldingTowerOrderAvailability();
   if (isCurrentDetails() && result?.worldActive && api.subscribeHoldingTowerState) {
     const garrisonClanId = snapshot.ownerMember ? String(snapshot.clanId || "") : "";
     if (subscribe || session.garrisonClanId !== garrisonClanId) {
@@ -4753,6 +4763,29 @@ function applyHoldingTowerClanSnapshot(towerId, clanId, clan) {
   if (selectedHoldingTowerId === towerId) renderHoldingTowerModal(tower);
 }
 
+function refreshHoldingTowerMapSelection(towerId, { updated = false } = {}) {
+  const existing = holdingTowerSelectionRequests.get(towerId);
+  const session = onlineSessionGeneration, clanId = state?.clanId || "";
+  if (existing && existing.session === session && existing.clanId === clanId
+      && existing.token === holdingTowerRequestTokens.get(towerId)) {
+    existing.refreshAfter ||= updated;
+    return existing.promise;
+  }
+  const request = { session, clanId };
+  request.promise = refreshHoldingTower(towerId, { includeShop: false }).finally(() => {
+    if (holdingTowerSelectionRequests.get(towerId) !== request) return;
+    holdingTowerSelectionRequests.delete(towerId);
+    // A notification during a read may describe a change after that read began.
+    if (request.refreshAfter && selectedTowerMapId === towerId && session === onlineSessionGeneration
+        && clanId === (state?.clanId || "") && request.token === holdingTowerRequestTokens.get(towerId)) {
+      void refreshHoldingTowerMapSelection(towerId).catch(error => console.warn("Tower selection refresh failed", error));
+    }
+  });
+  request.token = holdingTowerRequestTokens.get(towerId);
+  holdingTowerSelectionRequests.set(towerId, request);
+  return request.promise;
+}
+
 function syncHoldingTowerSelectionSubscription() {
   const tower = holdingTowerSnapshots.get(selectedTowerMapId);
   const api = getOnlineApi();
@@ -4765,9 +4798,8 @@ function syncHoldingTowerSelectionSubscription() {
   if (!key) return;
   const refresh = () => {
     if (key !== holdingTowerSelectionKey) return;
-    void refreshHoldingTower(tower.id).then(() => {
-      if (key === holdingTowerSelectionKey) renderSelectionChangeNow();
-    }).catch(error => console.warn("Tower garrison refresh failed", error));
+    void refreshHoldingTowerMapSelection(tower.id, { updated: true })
+      .catch(error => console.warn("Tower garrison refresh failed", error));
   };
   holdingTowerSelectionUnsubscribe = api.subscribeHoldingTowerState(tower.id, {
     garrisonClanId: tower.clanId,
@@ -4796,8 +4828,9 @@ function applyHoldingTowerMapSnapshot(visual, raw) {
   renderCities();
   rerenderIslandSwitcherModalIfOpen();
   if (selectedTowerMapId === visual.id || selectedHoldingTowerId === visual.id) {
-    void refreshHoldingTower(visual.id).then(() => renderSelectionChangeNow())
-      .catch(error => console.warn("Tower map refresh failed", error));
+    const refresh = selectedHoldingTowerId === visual.id
+      ? refreshHoldingTower(visual.id) : refreshHoldingTowerMapSelection(visual.id, { updated: true });
+    void refresh.catch(error => console.warn("Tower map refresh failed", error));
   }
 }
 
@@ -4811,6 +4844,7 @@ function ensureHoldingTowerMapSubscriptions() {
   holdingTowerMapSubscriptionsKey = key;
   holdingTowerSnapshots.clear();
   holdingTowerClanIdentities.clear();
+  holdingTowerSelectionRequests.clear();
   rerenderIslandSwitcherModalIfOpen();
   for (const [id, token] of holdingTowerRequestTokens) holdingTowerRequestTokens.set(id, token + 1);
   syncHoldingTowerSelectionSubscription();
@@ -28263,7 +28297,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
     selectedTargetId || "",
     selectedTowerMapId,
     selectedTowerMapId ? JSON.stringify(holdingTowerSnapshots.get(selectedTowerMapId)?.permissions || {}) : "",
-    selectedTowerMapId ? `${holdingTowerSnapshots.get(selectedTowerMapId)?.ownerMember}:${holdingTowerSnapshots.get(selectedTowerMapId)?.ownStationedTroops}` : "",
+    selectedTowerMapId ? `${holdingTowerSnapshots.get(selectedTowerMapId)?.worldActive}:${holdingTowerSnapshots.get(selectedTowerMapId)?.ownerMember}:${holdingTowerSnapshots.get(selectedTowerMapId)?.ownStationedTroops}` : "",
     selectedTowerMapId ? `${zoom}:${mapViewportWidth}:${mapViewportHeight}` : "",
     sendMode ? 1 : 0,
     scoutNearbySourceId || "",
@@ -28913,7 +28947,7 @@ async function selectClanTowerOnMap(towerId) {
     }
     selectedTargetId = towerId;
     try {
-      const tower = await refreshHoldingTower(towerId);
+      const tower = await refreshHoldingTowerMapSelection(towerId);
       if (!sendMode || selectedSourceId !== sourceId || selectedTargetId !== towerId || onlineSessionGeneration !== requestSession) return;
       const source = cityById(sourceId);
       if (!tower || !source || source.owner !== "player") return;
@@ -28933,12 +28967,12 @@ async function selectClanTowerOnMap(towerId) {
   }
   clearSelection(false);
   selectedTowerMapId = towerId;
+  const requestSession = onlineSessionGeneration;
   renderSelectionChangeNow();
   try {
-    await refreshHoldingTower(towerId);
-    if (selectedTowerMapId === towerId) renderSelectionChangeNow();
+    await refreshHoldingTowerMapSelection(towerId);
   } catch (error) {
-    if (selectedTowerMapId === towerId) showToast(error?.message || "Tower orders unavailable. Open Info to reconnect.");
+    if (onlineSessionGeneration === requestSession && selectedTowerMapId === towerId) showToast(error?.message || "Tower orders unavailable. Open Info to reconnect.");
   }
 }
 

@@ -25,7 +25,7 @@ async function main() {
   const click = async (selector, touch) => {
     await ready(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
     const point = await evaluate(`(() => {const node=document.querySelector(${JSON.stringify(selector)}), r=node.getBoundingClientRect();
-      const x=r.left+r.width/2, y=r.top+r.height/2; return {x,y,hit:node.contains(document.elementFromPoint(x,y)),hitElement:document.elementFromPoint(x,y)?.tagName,hitClass:document.elementFromPoint(x,y)?.className,hitParent:document.elementFromPoint(x,y)?.parentElement?.outerHTML.slice(0,600)};})()`);
+      const x=r.left+r.width/2, y=node.matches('[data-holding-tower-id]') ? Math.max(40,Math.min(innerHeight-40,r.top+r.height/2)) : r.top+r.height/2; return {x,y,hit:node.contains(document.elementFromPoint(x,y)),hitElement:document.elementFromPoint(x,y)?.tagName,hitClass:document.elementFromPoint(x,y)?.className,hitParent:document.elementFromPoint(x,y)?.parentElement?.outerHTML.slice(0,600)};})()`);
     if (!point.hit) {
       const shot = await client.send("Page.captureScreenshot", {format:"png"});
       fs.writeFileSync(path.join(dir,"blocked-control.png"),Buffer.from(shot.data,"base64"));
@@ -60,6 +60,7 @@ async function main() {
         const qa = towerScoutQa;
         qa.tower = getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id);
         qa.source = playerCities().find(city => city.troops > 0);
+        state.clanId = "fixture-clan"; state.clanRole = "leader";
         state.attacks = []; state.scoutReports = {}; state.battleReports = [];
         clearScoutResponsivenessState(); onlineArmiesByIsland.clear(); rebuildOnlineArmies();
         pendingDirectScoutTargets.clear(); resolvedOnlineArmyIds.clear();
@@ -70,8 +71,16 @@ async function main() {
           towerOwnershipKey: "fixture-rivals:7", clanId: "fixture-rivals", clanName: "Fixture Rivals",
           troops: 123456, wallLevel: 8, wallIntegrityBps: 6500, fullWallPower: 10000, currentWallPower: 6500,
           scoutedAtMs: Date.now(), expiresAtMs: Date.now() + 600000 });
-        getOnlineApi = () => ({ ...original, getHoldingTowerState: async () => ({ worldActive: true, towers: [qa.snapshot] }),
+        qa.towerReads = 0; qa.delayTower = true;
+        getOnlineApi = () => ({ ...original, getHoldingTowerState: () => {
+          qa.towerReads++;
+          return qa.delayTower ? new Promise(resolve => { qa.finishTowerRead = resolve; })
+            : Promise.resolve({ worldActive: true, towers: [qa.snapshot] });
+        },
           subscribeHoldingTowerState: () => () => {}, getClanTowerShop: undefined,
+          getClanTreasuryStatus: async () => ({treasury:{balance:0}}),
+          createClanRally: async () => { throw Error("Selection regression must not create a Rally"); },
+          previewArmyRoute: async request => ({ points:[{x:qa.source.x,y:qa.source.y},{x:qa.tower.x,y:qa.tower.y}], durationMs:60000, requestedTroops:request.requestedTroops }),
           submitRecoverableArmyOrder: request => { qa.calls++; qa.request = request; return new Promise(resolve => { qa.accept = resolve; }); },
           resolveArmyOrder: async () => ({ ok: true, status: "returning", kind: "scout", targetType: "tower",
             scoutReport: qa.intel(), movement: { ...qa.movement, kind: "transfer", returning: true, arrivesAtMs: Date.now() + 60000 } }),
@@ -79,11 +88,48 @@ async function main() {
         });
         await ensureRegionDefinitionLoaded(qa.tower.regionId);
         zoom = 1; centerOnRegion(qa.tower.regionId); clearSelection(false);
-        selectedTowerMapId = qa.tower.id; holdingTowerSnapshots.set(qa.tower.id, qa.snapshot);
+        holdingTowerSnapshots.delete(qa.tower.id);
         releaseSelectionRenderDelay(); renderAll();
-        await selectClanTowerOnMap(qa.tower.id);
         // Position the selected controls above the bottom HUD on short landscape screens.
         if (innerHeight < 360) centerOnWorldPoint({ x:qa.tower.x, y:qa.tower.y + 100 }, qa.tower.regionId);
+      });
+      const towerSelector = await evaluate(() => `[data-holding-tower-id="${towerScoutQa.tower.id}"]`);
+      await click(towerSelector, viewport.height < 600);
+      const cold = await evaluate(() => ({ reads: towerScoutQa.towerReads,
+        actions: [...document.querySelectorAll('[data-clan-tower-map-action]')].map(b => ({ action:b.dataset.clanTowerMapAction, disabled:b.getAttribute('aria-disabled') === 'true' })) }));
+      assert.deepEqual(cold.actions, [{action:'scout',disabled:true},{action:'info',disabled:false},{action:'rally-attack',disabled:true}], 'Cold selection hid Tower controls until the network responded');
+      assert.equal(cold.reads, 1);
+      await click('[data-clan-tower-map-action="scout"]', viewport.height < 600);
+      assert.equal(await evaluate(() => towerScoutQa.calls), 0, 'Pending permissions dispatched a scout');
+      await click('[data-clan-tower-map-action="rally-attack"]', viewport.height < 600);
+      assert.equal(await evaluate(() => modal.open), false, 'Pending permissions opened Rally orders');
+      await evaluate(() => { void selectClanTowerOnMap(towerScoutQa.tower.id); });
+      assert.equal(await evaluate(() => towerScoutQa.towerReads), 1, 'Repeated selection duplicated the pending Tower read');
+      await evaluate(async () => {
+        const qa = towerScoutQa;
+        qa.delayTower = false; qa.finishTowerRead({worldActive:true,towers:[qa.snapshot]});
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      });
+      await ready(() => document.querySelector('[data-clan-tower-map-action="rally-attack"]')?.getAttribute('aria-disabled') === 'false');
+      const controlsShot = await client.send("Page.captureScreenshot", {format:"png"});
+      fs.writeFileSync(path.join(dir,`selection-${viewport.width}.png`),Buffer.from(controlsShot.data,"base64"));
+      await click('[data-clan-tower-map-action="info"]', viewport.height < 600);
+      await ready(() => modal.open && !!modalBody.querySelector('#clanTower-overviewPanel'));
+      await evaluate(() => { modal.close(); rememberOwnedAttackSource(towerScoutQa.source); });
+      await click('[data-clan-tower-map-action="rally-attack"]', viewport.height < 600);
+      await ready(() => modal.open && !!modalBody.querySelector('[data-order-kind="rally_create"]'));
+      assert.equal(await evaluate(() => selectedSourceId), await evaluate(() => towerScoutQa.source.id));
+      await evaluate(async () => {
+        modal.close(); clearSelection(false);
+        const qa=towerScoutQa; qa.delayTower=true;
+        void selectClanTowerOnMap(qa.tower.id);
+        // A warm selection keeps the already-authorized row usable during refresh.
+      });
+      assert.equal(await evaluate(() => document.querySelector('[data-clan-tower-map-action="rally-attack"]')?.getAttribute('aria-disabled')), 'false');
+      await evaluate(async () => {
+        const qa=towerScoutQa; qa.delayTower=false;
+        qa.finishTowerRead({worldActive:true,towers:[qa.snapshot]});
+        await new Promise(resolve => requestAnimationFrame(resolve));
       });
       await click('[data-clan-tower-map-action="scout"]', viewport.height < 600);
       assert.equal(await evaluate(() => towerScoutQa.calls), 1);
@@ -152,7 +198,7 @@ async function main() {
       assert.equal(expired.obsolete, null, "Tower ownership change retained usable stale intelligence");
       assert.equal(expired.expired, null);
       assert.deepEqual(errors, []);
-      evidence.push({ viewport, launched, received: { type: received.report.targetType, troops: received.report.troops, returning: received.returning }, errors });
+      evidence.push({ viewport, coldSelection:cold, infoAndRallyOpened:true, warmSelectionImmediate:true, launched, received: { type: received.report.targetType, troops: received.report.troops, returning: received.returning }, errors });
       console.log(`Tower scout launch, arrival, report and expiry passed: ${viewport.width}x${viewport.height}`);
       await client.send("Browser.close");
       await waitForProcessExit(session.browserProcess);

@@ -35,6 +35,11 @@ const outsider = {...owner, ownerMember:false, exactDefenders:null, garrison:[{o
 assert(!towerUi.render(outsider,money).includes("PRIVATE GARRISON"), "Private contributions never render for outsiders.");
 assert(towerUi.render(outsider,money).includes("Hidden"));
 assert.deepEqual(Array.from(towerUi.mapActions(outsider), a=>a.action), ["info","scout","rally-attack"]);
+for (const pending of [undefined, {...outsider,permissions:undefined}]) {
+  assert.deepEqual(Array.from(towerUi.mapActions(pending), a=>[a.action,Boolean(a.disabled)]),
+    [["info",false],["scout",true],["rally-attack",true]], "Cold selection must show safe pending controls immediately");
+}
+assert.deepEqual(Array.from(towerUi.mapActions({...outsider,permissions:{scout:true,createRallyAttack:false}}), a=>a.action), ["info","scout"], "A known denial must not offer Rally");
 assert(!towerUi.render({...owner,name:'<script>bad()</script>'},money).includes("<script>"));
 assert(/data-tower-action="veil" disabled/.test(towerUi.render({...owner,veilUsesRemaining:0},money)));
 assert(/data-tower-action="upgrade" disabled/.test(towerUi.render({...owner,attackBlocked:true},money)));
