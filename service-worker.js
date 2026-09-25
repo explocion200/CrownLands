@@ -86,6 +86,7 @@ const STATIC_CACHE_URLS = [
   "/functions/clanHeraldryLegacyV1.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1",
   "/firebaseClient.js?v=20260902-march-sync-realm-scope-r1",
+  "/email-auth-ui.js?v=20260925-email-auth-r1",
   "/holding-tower-ui.js?v=20260902-holding-towers-r1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
   "/instant-economy-actions.js?v=20260909-city-details-r1",

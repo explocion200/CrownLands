@@ -1,3 +1,4 @@
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
@@ -67,7 +68,7 @@ async function createAuthUser() {
   const nonce = crypto.randomBytes(6).toString("hex");
   const email = `skill-reset-${nonce}@example.test`;
   const password = `Skill-Reset-${nonce}-Pass!`;
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({

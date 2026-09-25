@@ -1,3 +1,4 @@
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
 const crypto = require("node:crypto");
 const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
@@ -75,7 +76,7 @@ function assertRandomStarterFlag(flag, label) {
 
 async function createAuthUser(index) {
   const email = `reset-player-${index}@example.test`;
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password: `ResetGate-${index}-Pass!`, returnSecureToken: true }),

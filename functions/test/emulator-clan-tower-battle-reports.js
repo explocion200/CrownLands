@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
@@ -14,7 +15,7 @@ const db = getFirestore();
 let identity = {}, functionsHost;
 
 async function createActor(label) {
-  const response = await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
+  const response = await signUpVerifiedPlayer(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: `tower-${randomUUID()}@example.test`, password: "Emulator-Tower-Only-123!", returnSecureToken: true }),
   });

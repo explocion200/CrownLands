@@ -1,3 +1,4 @@
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
@@ -54,7 +55,7 @@ async function resolveFunctionsHost() {
 
 async function createAuthUser() {
   const nonce = crypto.randomBytes(6).toString("hex");
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({

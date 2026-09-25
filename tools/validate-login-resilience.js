@@ -14,7 +14,7 @@ function requireMatch(source, pattern, message) {
 
 requireMatch(client, /getRedirectResult\(client\.auth\)/, "Redirected Google login results are not completed on startup.");
 requireMatch(client, /async function signInWithGoogleRedirect[\s\S]*signInWithRedirect\(client\.auth, client\.provider\)/, "Explicit redirect sign-in is missing.");
-requireMatch(client, /signInWithGoogleRedirect,[\s\S]*getLastError:\s*\(\)\s*=>\s*client\.redirectError\s*\|\|\s*client\.error/, "Redirect login recovery is not exposed to the game client.");
+requireMatch(client, /signInWithGoogleRedirect:\s*\(\) => runAuthOperation\(signInWithGoogleRedirect, "google-redirect", true\),[\s\S]*getLastError:\s*\(\)\s*=>\s*client\.redirectError\s*\|\|\s*client\.error/, "Redirect login recovery is not exposed through the shared authentication-operation guard.");
 requireMatch(game, /GOOGLE_SIGN_IN_POPUP_GRACE_MS\s*=\s*12_000/, "Popup recovery is not bounded.");
 requireMatch(game, /armGoogleSignInRedirectFallback[\s\S]*Continue sign-in in this tab/, "A stalled popup does not expose redirect recovery.");
 requireMatch(game, /getGoogleSignInErrorDetail[\s\S]*auth\/unauthorized-domain[\s\S]*auth\/network-request-failed[\s\S]*auth\/web-storage-unsupported/, "Player-facing authentication diagnostics are incomplete.");

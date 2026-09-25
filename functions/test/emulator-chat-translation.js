@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app");
@@ -14,7 +15,7 @@ let functionsHost, identity = {releaseId:realm.releaseId,resetGeneration:realm.r
 const id = () => crypto.randomBytes(20).toString("hex");
 const fail = (code,message,details) => Object.assign(new Error(message),{code,details});
 async function user() {
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`,{
+  const response = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`,{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:`translation-${id()}@example.test`,password:"Translation-test-only-123!",returnSecureToken:true})});
   const body=await response.json();assert(response.ok);
   return {uid:body.localId,token:body.idToken};

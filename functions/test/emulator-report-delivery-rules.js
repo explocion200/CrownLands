@@ -1,4 +1,5 @@
 "use strict";
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -27,7 +28,7 @@ function extractFunction(name) {
 
 async function main() {
   const nonce = crypto.randomBytes(6).toString("hex");
-  const signup = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+  const signup = await signUpVerifiedPlayer(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: `report-delivery-${nonce}@example.test`, password: `Reports-${nonce}!`, returnSecureToken: true }),
   });

@@ -1019,6 +1019,7 @@ async function resolveCallableRealmContext(request = {}) {
 
 function onCall(options, handler) {
   return firebaseOnCall(options, async request => {
+    requireVerifiedEmailSession(request);
     const context = await resolveCallableRealmContext(request);
     return REALM_REQUEST_CONTEXT.run(context, () => handler(request));
   });
@@ -1062,7 +1063,15 @@ function getRealmInfoResponseContract(data = {}) {
   };
 }
 
+function requireVerifiedEmailSession(request) {
+  const token = request.auth?.token;
+  if (token?.firebase?.sign_in_provider === "password" && token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "Verify your email before entering Crownlands.", { reason: "email-verification-required" });
+  }
+}
+
 function requireAuth(request, { allowRealmMismatch = false } = {}) {
+  requireVerifiedEmailSession(request);
   refreshActiveRealmIdentity(Date.now());
   const uid = request.auth?.uid || "";
   if (!uid) throw new HttpsError("unauthenticated", "Sign in before sending troops.");
@@ -1155,6 +1164,7 @@ function logOperation(operation, startedAtMs, request = null, outcome = "ok", de
 
 function timedCallable(operation, options, handler) {
   return firebaseOnCall(options, request => OPERATION_TIMING.run(async () => {
+    requireVerifiedEmailSession(request);
     const context = await OPERATION_TIMING.measure("realmContext", () => resolveCallableRealmContext(request));
     return REALM_REQUEST_CONTEXT.run(context, async () => {
       const startedAtMs = Date.now();
