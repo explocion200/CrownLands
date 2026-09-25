@@ -62,7 +62,11 @@ function copy(relativeSource, relativeDestination = relativeSource) {
   const source = path.join(root, relativeSource);
   const destination = path.join(output, relativeDestination);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.copyFileSync(source, destination);
+  // Ship the same text bytes from Windows and Linux checkouts. Normalize only
+  // the output; keep source files and binary assets untouched.
+  if (/\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(source)) {
+    fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n"), "utf8");
+  } else fs.copyFileSync(source, destination);
 }
 
 function copyDirectoryFiles(relativeDirectory, predicate = () => true) {

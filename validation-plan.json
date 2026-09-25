@@ -8,6 +8,11 @@
       "tests": ["tools/validate-email-auth.js", "tools/validate-email-auth-browser.js", "tools/validate-profile-theme.js"]
     },
     {
+      "paths": ["tools/build-production-client.js", "tools/validate-production-artifact.js"],
+      "reason": "The required local release gate found CRLF checkout bytes exceeding the unchanged artifact budget. Normalize copied text only in build output and validate portable line endings, entry resources, binary asset inventory, release metadata and payload limits through the existing production artifact checks.",
+      "tests": ["tools/validate-production-artifact.js"]
+    },
+    {
       "paths": ["docs/email-password-auth.md"],
       "reason": "Document the confirmed form feedback/theme defects, completed release context, local evidence and unresolved exact player signup failure; no separate runtime tests apply.",
       "tests": []

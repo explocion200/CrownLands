@@ -43,4 +43,6 @@ The original form relied on native constraint-validation popups. Invalid entries
 
 The dialog uses the game's existing parchment, burgundy, brass, typography, and compact corners instead of hard-coded navy colors. Authentication rules and Firebase settings are unchanged.
 
+The local release gate also exposed checkout-dependent artifact sizes: Windows CRLF text copies exceeded the base payload budget while Linux LF copies did not. The builder now normalizes copied text in the output to LF; source files, binary assets, and payload limits are unchanged. Artifact validation rejects CRLF output.
+
 Investigation confirmed production Email/Password is enabled with the expected minimum length and canonical return domain. A full local browser run using the actual Firebase SDK and Auth emulator successfully created an unverified account and presented verification. The player's exact reported failure has not been reproduced; their error text and a real mailbox delivery check remain outstanding. This follow-up fixes confirmed feedback/theme defects and must not be represented as proof that all production signup failures are resolved.
