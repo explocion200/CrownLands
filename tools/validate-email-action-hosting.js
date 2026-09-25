@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { createRequire } = require("node:module");
 const { checkHosting, readClientConfig } = require("./check-email-action-hosting");
 const config = { projectId: "fixture-project", appId: "fixture-app", authDomain: "fixture-project.firebaseapp.com", apiKey: "fixture-key-do-not-log" };
 const json = value => new Response(JSON.stringify(value), { headers: { "content-type": "application/json; charset=utf-8" } });
@@ -61,6 +62,20 @@ async function main() {
   const hosting = JSON.parse(fs.readFileSync(path.join(root, "firebase.json"), "utf8")).hosting;
   assert(hosting.postdeploy.includes("node tools/check-email-action-hosting.js"));
   assert.equal(hosting.public, "firebase-hosting-redirect", "Keep the canonical game on its existing web host.");
+  // Use the matcher used by the locked Firebase CLI's Hosting server.
+  const firebaseRequire = createRequire(require.resolve("../functions/node_modules/firebase-tools/package.json"));
+  const { configMatcher } = firebaseRequire("superstatic/lib/utils/patterns");
+  const redirects = route => hosting.redirects.filter(rule => configMatcher(route, rule));
+  for (const route of ["/__", "/__/", "/__/firebase/init.json", "/__/firebase/init.js",
+    "/__/firebase/init.js?useEmulator=true", "/__/auth/action", "/__/auth/action.js", "/__/auth/handler", "/__/auth/iframe"]) {
+    assert.equal(redirects(route.split("?")[0]).length, 0, `Reserved endpoint ${route} is captured by a game redirect.`);
+  }
+  for (const route of ["/", "/play/", "/index.html", "/old/path", "/.well-known/other", "/__other/path", "/a/__/b"]) {
+    const rules = redirects(route);
+    assert(rules.length > 0, `Normal game URL ${route} lost its redirect.`);
+    assert.equal(rules[0].destination, "https://crownland.netlify.app");
+    assert.equal(rules[0].type, 301);
+  }
   const client = readClientConfig();
   assert.equal(client.authDomain, `${client.projectId}.firebaseapp.com`);
   console.log("Email action hosting checks passed: bootstrap redirects, missing/wrong config, action assets, retry bounds, read-only requests, private-data redaction, and deployment hook.");
