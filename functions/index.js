@@ -25038,7 +25038,7 @@ function getArmyBulkAudioReportContext(army = {}) {
 
 exports.sendNearbyScouts = timedCallable(
   "sendNearbyScouts",
-  { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" },
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
   async request => {
     OPERATION_TIMING.scout({ scoutStage: "launch", scoutSourceType: "city", scoutTargetType: "city" });
     const uid = requireAuth(request);
@@ -31393,7 +31393,6 @@ exports.resolveArmyOrder = timedCallable("resolveArmyOrder", {
   region: "us-central1",
   timeoutSeconds: 180,
   memory: "512MiB",
-  minInstances: 1,
   maxInstances: 30,
   invoker: "public",
 }, async request => {

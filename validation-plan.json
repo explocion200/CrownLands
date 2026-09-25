@@ -38,7 +38,7 @@
         "functions/index.js",
         "tools/validate-responsive-scout-routing.js"
       ],
-      "reason": "Exact admissible origin pruning and bounded immutable request-local route reuse affect automatic scout launch and shared route geometry. Validate exhaustive parity, topology/terrain, all eligible origins, ties, cold/warm behavior, retries and cache bounds. Arrival overlaps independent reads while retaining sequential shared economy checkpoint budgets; cover combat, rallies, Towers, bulk launch, scouting protections, report lifecycle and economy contention. Warm-instance configuration changes only source, pending separately authorized deployment.",
+      "reason": "Exact admissible origin pruning and bounded immutable request-local route reuse affect automatic scout launch and shared route geometry. Validate exhaustive parity, topology/terrain, all eligible origins, ties, cold/warm behavior, retries and cache bounds. Arrival overlaps independent reads while retaining sequential shared economy checkpoint budgets; cover combat, rallies, Towers, bulk launch, scouting protections, report lifecycle and economy contention. Existing Firebase scaling settings are preserved; no additional warm instances are configured.",
       "tests": [
         "tools/validate-responsive-scout-routing.js",
         "tools/validate-scout-route-cache.js",
@@ -73,7 +73,7 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/RESPONSIVE_MARCHES_AND_SCOUTS.md"
       ],
-      "reason": "Record the explicitly approved provisional presentation contract, production diagnosis, measured fixture scope, exact-route preservation, selected validation and pre-deployment cost/authorization requirements. No additional runtime dependency beyond the covered implementation.",
+      "reason": "Record the explicitly approved provisional presentation contract, production diagnosis, measured fixture scope, exact-route preservation, selected validation and deployment authorization requirements. Document that the improvements use existing scaling without additional warm instances. No additional runtime dependency beyond the covered implementation.",
       "tests": []
     }
   ]
