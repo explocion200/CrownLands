@@ -93,6 +93,21 @@ async function main() {
   await f.api.sendPasswordRecovery(google.email);
   assert.equal(f.sent.at(-1), "https://playcrownlands.com/play/");
 
+  const retired = fixture(); await retired.api.init();
+  const sharedAuth = retired.user("shared-tab", "password", true);
+  await retired.login(sharedAuth);
+  // Shared-tab replacement retires only the game client, retaining Firebase
+  // auth for the winning tab. A failed explicit login must still be retryable.
+  retired.client.user = null; retired.client.authUser = null; retired.client.sessionReplacedUid = sharedAuth.uid;
+  let attempts = 0;
+  retired.modules.auth.signInWithEmailAndPassword = async () => {
+    if (++attempts === 1) throw Object.assign(new Error("Invalid credentials"), { code: "auth/invalid-credential" });
+    return { user: sharedAuth };
+  };
+  await assert.rejects(retired.api.signInWithEmail(sharedAuth.email, "wrong password"), { code: "auth/invalid-credential" });
+  await retired.api.signInWithEmail(sharedAuth.email, "the correct password");
+  assert.equal(retired.api.getUser().uid, sharedAuth.uid);
+
   const reload = deferred(); f.modules.auth.reload = () => reload.promise;
   const oldRefresh = f.api.refreshEmailVerification(); await tick();
   const replacement = f.user("another-account", "google.com", true); await f.login(replacement);

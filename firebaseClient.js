@@ -2051,7 +2051,7 @@
 
   async function signInWithEmail(email, password, { create = false } = {}) {
     await requireAuthClient();
-    if (client.auth.currentUser && client.auth.currentUser.uid !== client.sessionReplacedUid) throw emailAuthError("already-signed-in", "Sign out before using another account.");
+    if (client.auth.currentUser && client.authUser) throw emailAuthError("already-signed-in", "Sign out before using another account.");
     if (create) validateNewPassword(password);
     await prepareExplicitSessionLogin();
     const method = create ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
