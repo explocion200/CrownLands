@@ -1,6 +1,6 @@
 # Email accounts
 
-Status: implemented for review, not deployed. Feature branch: `codex/email-password-auth`.
+Initial release: PR #365 was deployed to the canonical web game on September 25, 2026. The signup feedback and theme follow-up on `codex/email-signup-and-theme` is pending review and deployment.
 
 ## Behavior
 
@@ -31,8 +31,20 @@ Rollback must preserve email login and recovery once password players exist. Do 
 The new UI and integration add approximately 27 KiB of uncompressed client source relative to the base. The production artifact assigns this feature a bounded 32 KiB allowance and separately caps `email-auth-ui.js` at 14 KiB. Existing total-artifact, world, and installation-cache budgets are otherwise unchanged.
 
 - `tools/validate-email-auth.js` exercises real client methods with SDK fixtures: no game work before verification, one activation afterward, duplicate-operation rejection, same-UID password linking without session takeover, recovery, and stale account callbacks. It also executes both real callable wrappers to prove verification is checked before realm reads.
-- `tools/validate-email-auth-browser.js` exercises the actual email UI with fixture responses at 1440×900, 844×390, and 568×320. Screenshots are written to ignored `release-artifacts/email-auth/`. These are local browser tests, not physical-device or live-email evidence.
+- `tools/validate-email-auth-browser.js` runs the actual email UI and Firebase client together with SDK fixture responses at 1440×900, 844×390, and 568×320. Native browser typing covers inline invalid-email, short-password and mismatch explanations, failed signup/retry, duplicate submission, delivery failure/resend, verification, recovery, and same-UID linking. It checks the shared parchment/burgundy palette and viewport bounds. Screenshots are written to ignored `release-artifacts/email-auth/`. These are local browser tests, not physical-device or live-email evidence.
 - `functions/test/emulator-email-auth.js` verifies real Auth tokens, Firestore reads/writes, and callable authorization. Existing gameplay signup factories now explicitly use verified players with refreshed tokens through the emulator-only helper.
 - Firebase Tools 15.22.4's Auth emulator rejects same-email `accounts:signUp` linking before resolving the provided ID token. The integration fixture therefore adds a password through emulator Admin and checks subsequent password authentication, UID/provider retention, and unchanged kingdom data. It does **not** prove live linking or email delivery. The production SDK remains on 10.12.5 and calls the supported token-bearing signup endpoint through `linkWithCredential`; complete that controlled-account release check before claiming the feature live.
 
 References: [Firebase password authentication](https://firebase.google.com/docs/auth/web/password-auth), [account management](https://firebase.google.com/docs/auth/web/manage-users), [SDK linking implementation](https://github.com/firebase/firebase-js-sdk/blob/firebase%4010.12.5/packages/auth/src/api/account_management/email_and_password.ts).
+
+## Signup feedback and theme follow-up
+
+The original form relied on native constraint-validation popups. Invalid entries could prevent the submit handler from running without an inline explanation. The form now validates email, required password, the existing 12-character minimum, and confirmation itself, focusing the affected field and scrolling the explanation into view. Account creation can succeed before verification delivery fails; the verification panel now retains that failure's specific explanation and the resend action. Passwords still clear after an authentication attempt.
+
+The dialog uses the game's existing parchment, burgundy, brass, typography, and compact corners instead of hard-coded navy colors. Authentication rules and Firebase settings are unchanged.
+
+The local release gate also exposed checkout-dependent artifact sizes: Windows CRLF text copies exceeded the base payload budget while Linux LF copies did not. The builder now normalizes copied text in the output to LF; source files, binary assets, and payload limits are unchanged. Artifact validation rejects CRLF output.
+
+Investigation confirmed production Email/Password is enabled with the expected minimum length and canonical return domain. A full local browser run using the actual Firebase SDK and Auth emulator successfully created an unverified account and presented verification. A subsequent screenshot confirmed the generic fallback error, but did not expose its underlying code. The live page's SDK mapped an intercepted `EMAIL_EXISTS` response to the existing-account guidance correctly; interception prevented account creation and email delivery. The exact device failure and real mailbox delivery remain unverified. This follow-up fixes confirmed feedback/theme defects and must not be represented as proof that all production signup failures are resolved.
+
+The creation hint explains that existing Google players should use Settings → Account → Add a password after Google sign-in. Unavailable authentication now asks players to reload. Other unhandled errors include only a bounded Firebase code or the fixed `email/client-error` reference for support; raw error messages, custom data, credentials and account information are excluded. Browser coverage exercises existing-email, already-signed-in, unavailable, internal and uncoded failures, including private-data redaction and password clearing.

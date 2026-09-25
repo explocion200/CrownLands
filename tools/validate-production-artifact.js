@@ -108,6 +108,9 @@ function collect(directory) {
   }
 }
 collect(dist);
+for (const file of files.filter(file => /\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(file))) {
+  if (fs.readFileSync(file, "utf8").includes("\r\n")) throw new Error(`Production text has checkout-dependent line endings: ${path.relative(dist, file)}`);
+}
 const expectedInnerCastleArt = JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8"))
   .assets.filter(asset => asset.category === "inner-castle").map(asset => asset.output).sort();
 const shippedInnerCastleArt = files.map(file => path.relative(dist, file).replace(/\\/g, "/"))
