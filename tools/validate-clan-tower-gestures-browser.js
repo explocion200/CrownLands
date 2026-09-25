@@ -5,7 +5,7 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-const dir = path.resolve(__dirname, "../release-artifacts/tower-mobile-zoom");
+const dir = path.resolve(__dirname, "../release-artifacts/tower-action-screen-layer");
 
 async function main() {
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
@@ -36,7 +36,7 @@ async function main() {
       await Promise.all(['Page.enable','Runtime.enable','Network.enable'].map(method=>client.send(method)));
       client.on('Runtime.exceptionThrown', e=>errors.push(e.exceptionDetails.exception?.description || e.exceptionDetails.text));
       await client.send('Network.setBlockedURLs',{urls:['*googleapis.com*','*cloudfunctions.net*','*firebaseio.com*','*playcrownlands.com*']});
-      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:height<600});
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:height<600?2.625:1,mobile:height<600});
       await client.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
       await client.send('Page.navigate',{url:address.url+'/__benchmark__/?scenario=A&visualMarches=0'});
       await ready(()=>window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready');
@@ -69,6 +69,29 @@ async function main() {
           return {x,y,hit:node.contains(document.elementFromPoint(x-12,y))&&node.contains(document.elementFromPoint(x+12,y))};
         };
       });
+      // A report-driven row refresh can run in a frame before a queued camera
+      // transform. Check that frame itself, not just the settled zoom afterward.
+      const redrawFrames=await ev(async()=>{
+        const frames=[];
+        const measure=()=>{
+          const buttons=[...document.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect());
+          const bottom=Math.max(...[...cityLayer.querySelectorAll('.holding-tower-map-label,.ctb-map-label')].map(b=>b.getBoundingClientRect().bottom));
+          return {zoom,widths:buttons.map(b=>b.width),heights:buttons.map(b=>b.height),clearance:buttons[0].top-bottom};
+        };
+        for(const nextZoom of [1,.4,.7,1]) {
+          await new Promise(resolve=>requestAnimationFrame(()=>{
+            setZoomAroundPoint(nextZoom,innerWidth/2,innerHeight/2);
+            refreshScoutActionWheels([towerGestureQa.tower.id]);
+            frames.push(measure());
+            resolve();
+          }));
+        }
+        await new Promise(resolve=>requestAnimationFrame(resolve));
+        frames.push(measure());
+        return frames;
+      });
+      records.push({width,height,redrawFrames});
+      assert(redrawFrames.every(frame=>frame.widths.length===3&&[...frame.widths,...frame.heights].every(w=>Math.abs(w-56)<.15)&&Math.abs(frame.clearance-8)<.2),`Tower controls resized or drifted before the camera frame: ${JSON.stringify(redrawFrames)}`);
       for (const selector of ['.holding-tower-node','[data-clan-building-id="shop"]','[data-clan-tower-map-action="info"]']) {
         const point=await ev(`resetTowerGesture(${JSON.stringify(selector)})`);
         assert(point.hit, `Pinch fixture is obscured: ${width} ${selector}`);
@@ -137,7 +160,7 @@ async function main() {
         selectedTowerMapId='';
         const widths=[.4,.7,1].map(value=>{
           zoom=value;updateCameraTransform();
-          return [...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().width);
+          return [...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().width);
         });
         selectedTowerMapId=selected;
         return widths;
@@ -160,6 +183,20 @@ async function main() {
       await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
       await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       await ready(()=>modal.open&&!!modalBody.querySelector('#clanTower-overviewPanel'));
+      await ev('resetTowerGesture(\'[data-clan-tower-map-action="info"]\')');
+      const transition=await ev(()=>{
+        const row=mapFrame.querySelector('.clan-tower-action-wheel');
+        const outsideZoomLayer=!mapWorld.contains(row);
+        mapTransitionStage.classList.add('is-transitioning');
+        const hidden=getComputedStyle(row).visibility==='hidden';
+        row.querySelector('[data-clan-tower-map-action="info"]').click();
+        const blocked=!modal.open;
+        mapTransitionStage.classList.remove('is-transitioning');
+        clearSelection(false);renderSelectionChangeNow();
+        return {outsideZoomLayer,hidden,blocked,removed:!mapFrame.querySelector('.clan-tower-action-wheel')};
+      });
+      assert(Object.values(transition).every(Boolean),`Tower screen-layer cleanup failed: ${JSON.stringify(transition)}`);
+      records.push({width,height,transition});
       assert.deepEqual(errors,[]);
       console.log(`Tower pinch, fixed controls and single tap passed: ${width}x${height}`);
       await client.send('Browser.close');client.close();client=null;

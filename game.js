@@ -11020,7 +11020,7 @@ async function scoutTarget(target) {
 }
 
 function renderScoutRequestFeedback(targetId = "") {
-  for (const wheel of cityLayer.querySelectorAll("[data-scout-target]")) {
+  for (const wheel of mapFrame.querySelectorAll("[data-scout-target]")) {
     const id = wheel.dataset.scoutTarget;
     if (targetId && id !== targetId) continue;
     const pending = pendingDirectScoutTargets.has(id) || getPendingScoutMission(id);
@@ -11058,13 +11058,13 @@ function preserveScoutViewInteraction(root, render) {
 
 function refreshScoutActionWheels(targetIds) {
   const ids = new Set(targetIds);
-  for (const wheel of cityLayer.querySelectorAll("[data-scout-target]")) {
+  for (const wheel of mapFrame.querySelectorAll("[data-scout-target]")) {
     const id = wheel.dataset.scoutTarget;
     if (!ids.has(id)) continue;
     const tower = holdingTowerSnapshots.get(id);
     const city = cityById(id);
     const camp = getCampTargetById(id);
-    preserveScoutViewInteraction(cityLayer, () => {
+    preserveScoutViewInteraction(mapFrame, () => {
       wheel.remove();
       if (tower) renderSelectedClanTowerWheel(id);
       else if (city && (city.owner !== "player" || isStronghold(city))) renderSelectedForeignWheel(city);
@@ -28424,7 +28424,7 @@ function renderCitiesUncached(force = false) {
   }
   cityRenderSignature = signature;
 
-  cityLayer.querySelectorAll(".scout-nearby-radius, .regroup-radius, .city-action-wheel, .gold-camp-action-wheel")
+  mapFrame.querySelectorAll(".scout-nearby-radius, .regroup-radius, .city-action-wheel, .gold-camp-action-wheel")
     .forEach(node => node.remove());
   const existingCampNodes = new Map([...cityLayer.querySelectorAll(".camp-node[data-render-camp-id]")]
     .map(node => [node.dataset.renderCampId, node]));
@@ -28968,35 +28968,46 @@ async function selectClanTowerOnMap(towerId) {
   }
 }
 
-function updateClanTowerActionWheelLayout(wheel = cityLayer?.querySelector(".clan-tower-action-wheel")) {
+function updateClanTowerActionWheelLayout(wheel = mapFrame?.querySelector(".clan-tower-action-wheel"), cameraFrame = null) {
   if (!wheel) return;
-  const scale = Math.max(0.1, zoom);
   let layout = wheel._clanTowerLayout;
-  if (!layout) {
+  let screenX, screenY;
+  if (!layout || !cameraFrame) {
     const visual = getHoldingTowerVisual(wheel.dataset.towerId);
     const node = cityLayer?.querySelector(`[data-holding-tower-id="${wheel.dataset.towerId}"]`);
     if (!visual || !node) return;
     const rect = node.getBoundingClientRect();
+    const frame = mapFrame.getBoundingClientRect();
+    const renderedScale = rect.width / visual.width;
+    if (!(renderedScale > 0)) return;
     const anchorY = rect.top + visual.anchorY * rect.height;
     const name = node.querySelector(".holding-tower-map-label");
     const buildings = [...cityLayer.querySelectorAll(".holding-tower-building-node")]
       .filter(building => building.dataset.clanBuildingTower === visual.id);
     const bottom = Math.max(name?.getBoundingClientRect().bottom || rect.bottom, ...buildings.map(building =>
       Math.max(building.getBoundingClientRect().bottom, building.querySelector(".ctb-map-label")?.getBoundingClientRect().bottom || 0)));
-    // Measure once per rendered selection in world units. Camera translation
-    // cancels out; zoom only scales this offset. A city/selection refresh creates
-    // a new wheel, so building, ownership and viewport changes are remeasured.
-    layout = wheel._clanTowerLayout = { bottomOffset: (bottom - anchorY) / scale, scale: null };
+    // Read the painted scale, not a zoom value waiting for its camera frame.
+    // Subsequent camera frames project this cached world anchor without layout reads.
+    layout = wheel._clanTowerLayout = {
+      point: worldToMapPoint({ x: visual.visualX, y: visual.visualY }),
+      bottomOffset: (bottom - anchorY) / renderedScale,
+    };
+    screenX = rect.left + visual.anchorX * rect.width - frame.left;
+    screenY = bottom - frame.top + 36;
     const buttons = wheel.querySelectorAll("[data-clan-tower-map-action]");
     buttons.forEach((button, index) => {
       button.style.setProperty("--tower-action-x", `${(index - (buttons.length - 1) / 2) * 60}px`);
     });
+    wheel.style.setProperty("--tower-action-y", "0px");
   }
-  if (layout.scale === scale) return;
-  // Counter the world zoom: every action remains 56 screen pixels, with 4px gaps.
-  wheel.style.transform = `scale(${1 / scale})`;
-  wheel.style.setProperty("--tower-action-y", `${layout.bottomOffset * scale + 36}px`);
-  layout.scale = scale;
+  if (cameraFrame) {
+    const { x, y, scale, offset } = cameraFrame;
+    screenX = offset.x + (layout.point.x - x) * scale;
+    screenY = offset.y + (layout.point.y - y + layout.bottomOffset) * scale + 36;
+  }
+  // This row lives outside mapWorld: only its position follows the camera.
+  const transform = `translate3d(${screenX}px, ${screenY}px, 0)`;
+  if (wheel.style.transform !== transform) wheel.style.transform = transform;
 }
 
 function renderSelectedClanTowerWheel(towerId) {
@@ -29008,16 +29019,16 @@ function renderSelectedClanTowerWheel(towerId) {
   const others = available.filter(entry => entry !== info);
   const actions = [...others.slice(0, 1), ...(info ? [info] : []), ...others.slice(1)];
   if (!snapshot?.ownerMember && getScoutReport(towerId)) actions.push({ action: "report", label: "Report", icon: "reports" });
-  const point = worldToMapPoint({x:visual.visualX,y:visual.visualY});
+  mapFrame.querySelector(".clan-tower-action-wheel")?.remove();
   const wheel = document.createElement("div");
   wheel.className = "gold-camp-action-wheel clan-tower-action-wheel";
   wheel.dataset.towerId = towerId;
-  wheel.style.left = `${point.x}px`;
-  wheel.style.top = `${point.y}px`;
   wheel.innerHTML = actions.map(entry => `<button type="button" class="gold-camp-wheel-action cl-action-button cl-action-${entry.icon === "attack" ? "attack" : ["information", "reports"].includes(entry.icon) ? "info" : "send"}" data-clan-tower-map-action="${entry.action}" aria-disabled="${Boolean(entry.disabled)}" title="${escapeHtml(entry.reason || entry.label)}" aria-label="${escapeHtml(entry.label)} · ${escapeHtml(visual.name)}${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ""}"><span aria-hidden="true">${renderCrownlandsIcon(entry.icon)}</span><strong>${entry.label}</strong></button>`).join("");
   updateClanTowerActionWheelLayout(wheel);
+  wheel.addEventListener("pointerdown", () => { interactionRenderLockUntil = performance.now() + 600; });
   wheel.querySelectorAll("[data-clan-tower-map-action]").forEach(button => button.addEventListener("click",event => {
     event.stopPropagation();
+    if (isMapInteractionBlocked()) return;
     const action = button.dataset.clanTowerMapAction;
     if (action === "info") { void openHoldingTower(towerId); return; }
     if (action === "report") { showScoutReportModal(towerId); return; }
@@ -29035,7 +29046,7 @@ function renderSelectedClanTowerWheel(towerId) {
     }
   }));
   wheel.dataset.scoutTarget = towerId;
-  cityLayer.appendChild(wheel);
+  mapTransitionStage.appendChild(wheel);
   if (pendingDirectScoutTargets.has(towerId) || getPendingScoutMission(towerId)) renderScoutRequestFeedback(towerId);
 }
 
@@ -40188,9 +40199,7 @@ function applyCameraTransform() {
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
-  // A mounted Tower row still needs zoom correction while selection rendering
-  // is deferred, even after the selection ID has been cleared.
-  updateClanTowerActionWheelLayout();
+  updateClanTowerActionWheelLayout(undefined, { x: camera.x, y: camera.y, scale: zoom, offset });
   updateMainCityReturnButtonForCamera(rect);
   scheduleOnboardingPointer();
 }

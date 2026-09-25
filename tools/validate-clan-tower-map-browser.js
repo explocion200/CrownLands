@@ -98,7 +98,7 @@ async function main() {
     const select = async tower => {
       const before = await evaluate("towerMapReads.length");
       await click(await elementPoint(`[data-holding-tower-id="${tower.id}"]`));
-      await ready(`selectedTowerMapId===${JSON.stringify(tower.id)} && cityLayer.querySelector('.clan-tower-action-wheel')`);
+      await ready(`selectedTowerMapId===${JSON.stringify(tower.id)} && mapFrame.querySelector('.clan-tower-action-wheel')`);
       await delay(100);
       assert.equal(await evaluate("towerMapReads.length"), before + 1, "A single pointer tap dispatched duplicate Tower reads.");
       assert.equal(await evaluate(`cityLayer.querySelector('[data-holding-tower-id="${tower.id}"]').getAttribute('aria-pressed')`), "true");
@@ -174,11 +174,11 @@ async function main() {
     };
     const verifyZoom = async () => {
       const measurements = await evaluate(`(() => {
-        const originalZoom=zoom, originalCamera={...camera}, wheel=cityLayer.querySelector('.clan-tower-action-wheel');
+        const originalZoom=zoom, originalCamera={...camera}, wheel=mapFrame.querySelector('.clan-tower-action-wheel');
         const sizes=[];
         for(const level of [0.4,0.6,0.8,1,0.5]) {
           zoom=level;updateCameraTransform();
-          if(wheel!==cityLayer.querySelector('.clan-tower-action-wheel'))throw Error('Zoom rebuilt the controls');
+          if(wheel!==mapFrame.querySelector('.clan-tower-action-wheel'))throw Error('Zoom rebuilt the controls');
           const rects=[...wheel.querySelectorAll('button')].map(button=>button.getBoundingClientRect().toJSON());
           sizes.push({zoom,rects});
         }
@@ -219,7 +219,7 @@ async function main() {
           const tower=await prepare(index,level);
           await select(tower);
           await verifyZoom();
-          const actions=await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)");
+          const actions=await evaluate("[...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)");
           assert.deepEqual(actions,["scout","info","rally-attack"]);
           await click(await elementPoint('[data-clan-tower-map-action="info"]'));
           await ready("modal.open && !!modalBody.querySelector('.clan-tower-details')");
@@ -233,7 +233,7 @@ async function main() {
       }
       const tower=await prepare(0,1,"owner");
       await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['store','info','send']);
+      assert.deepEqual(await evaluate("[...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['store','info','send']);
       assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
       await verifyZoom();
       for (const level of [0.6, 1]) {
@@ -273,15 +273,15 @@ async function main() {
       fs.writeFileSync(require('node:path').join(capDirectory,`npc-limit-${viewport.width}.png`),Buffer.from(capShot.data,'base64'));
       await evaluate('getOwnedRegularCityCountForDisplay=towerCityCountGetter;delete window.towerCityCountGetter;modal.close()');
       await prepare(0,1,"ineligible");await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['store','true'],['info','false'],['send','true']]);
+      assert.deepEqual(await evaluate("[...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>[b.dataset.clanTowerMapAction,b.getAttribute('aria-disabled')])"),[['store','true'],['info','false'],['send','true']]);
       await click(await elementPoint('[data-clan-tower-map-action="send"]'));
       assert.equal(await evaluate('modal.open'),false,'A probation member opened troop orders.');
       await prepare(0,1,"empty");await select(tower);
-      assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),'true');
-      assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=send]').getAttribute('aria-disabled')"),'true');
+      assert.equal(await evaluate("mapFrame.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),'true');
+      assert.equal(await evaluate("mapFrame.querySelector('[data-clan-tower-map-action=send]').getAttribute('aria-disabled')"),'true');
       for(const scenario of ['store-building','store','store-probation']) {
         await prepare(0,.4,scenario);await select(tower);
-        assert.equal(await evaluate("cityLayer.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),scenario==='store-building'?'true':'false');
+        assert.equal(await evaluate("mapFrame.querySelector('[data-clan-tower-map-action=store]').getAttribute('aria-disabled')"),scenario==='store-building'?'true':'false');
         await click(await elementPoint('[data-clan-tower-map-action="store"]'));
         if(scenario==='store-building')assert.equal(await evaluate('modal.open'),false,'An unfinished Store opened.');
         else {
@@ -345,7 +345,7 @@ async function main() {
         assert.equal(await evaluate("cityLayer.querySelectorAll('.holding-tower-clan-banner').length"),0);
       }
       await prepare(0,.6,'enemy');await select(tower);
-      assert.deepEqual(await evaluate("[...cityLayer.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['scout','info','rally-attack']);
+      assert.deepEqual(await evaluate("[...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.dataset.clanTowerMapAction)"),['scout','info','rally-attack']);
       assert.equal(await evaluate("cityLayer.querySelector('.holding-tower-clan-banner strong')?.textContent"),'The Crimson Watch');
       await prepare(0,viewport.height<560?.4:1,'owner');await select(tower);
       await evaluate('toast.classList.remove("visible")');

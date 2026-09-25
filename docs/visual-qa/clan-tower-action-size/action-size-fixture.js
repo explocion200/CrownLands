@@ -26,7 +26,7 @@
     zoom = requestedZoom;
     centerOnWorldPoint({ x: tower.visualX, y: tower.visualY }, tower.regionId);
     updateCameraTransform();
-    const row = cityLayer.querySelector(".clan-tower-action-wheel"), info = row?.querySelector('[data-clan-tower-map-action="info"]');
+    const row = mapFrame.querySelector(".clan-tower-action-wheel"), info = row?.querySelector('[data-clan-tower-map-action="info"]');
     if (!info) return;
     const rect = info.getBoundingClientRect(), frame = mapFrame.getBoundingClientRect();
     // Keep the controls in view while zooming; the map art still scales normally.

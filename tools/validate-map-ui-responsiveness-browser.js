@@ -38,19 +38,23 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const geometry = await run(`(() => {
         const original = Element.prototype.getBoundingClientRect;
         let reads = 0;
-        const wheel = cityLayer.querySelector('.clan-tower-action-wheel');
+        const wheel = mapFrame.querySelector('.clan-tower-action-wheel');
         const observer = new MutationObserver(() => {});
         observer.observe(wheel, {attributes:true,subtree:true});
         Element.prototype.getBoundingClientRect = function () {
           if (this.matches('.holding-tower-node,.holding-tower-map-label,.holding-tower-building-node,.ctb-map-label')) reads++;
           return original.call(this);
         };
-        let panWrites;
+        let panWrites, panOnlyMovedRow, stationaryWrites;
         const started = performance.now();
         try {
           markCameraInteraction({settleMs:60000});
           for (let i=0;i<120;i++) {camera.x += i%2 ? 1 : -1; applyCameraTransform();}
-          panWrites = observer.takeRecords().length;
+          const panChanges = observer.takeRecords();
+          panWrites = panChanges.length;
+          panOnlyMovedRow = panChanges.every(change=>change.target===wheel&&change.attributeName==='style');
+          for (let i=0;i<120;i++) applyCameraTransform();
+          stationaryWrites = observer.takeRecords().length;
           for (let i=0;i<120;i++) {zoom=.4+(i%40)*.01; applyCameraTransform();}
         } finally {
           Element.prototype.getBoundingClientRect = original;
@@ -60,10 +64,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         }
         const buttons = [...wheel.querySelectorAll('[data-clan-tower-map-action]')].map(n=>n.getBoundingClientRect());
         const bottom = Math.max(...[...cityLayer.querySelectorAll('.holding-tower-building-node')].map(n=>n.querySelector('.ctb-map-label').getBoundingClientRect().bottom));
-        return {reads,panWrites,durationMs:performance.now()-started,sizes:buttons.map(r=>r.width),gap:buttons[1].left-buttons[0].right,clearance:buttons[0].top-bottom};
+        return {reads,panWrites,panOnlyMovedRow,stationaryWrites,durationMs:performance.now()-started,sizes:buttons.map(r=>r.width),gap:buttons[1].left-buttons[0].right,clearance:buttons[0].top-bottom};
       })()`);
       assert.equal(geometry.reads, 0, "Camera movement remeasured Tower geometry.");
-      assert.equal(geometry.panWrites, 0, "Panning rewrote unchanged action styles.");
+      assert(geometry.panWrites > 0 && geometry.panWrites <= 120 && geometry.panOnlyMovedRow, "Panning must only translate the unscaled row once per frame.");
+      assert.equal(geometry.stationaryWrites, 0, "An unchanged camera rewrote action styles.");
       geometry.sizes.forEach(size => assert(Math.abs(size - 56) < .1, "Zoom changed the action size."));
       assert(Math.abs(geometry.gap - 4) < .1, "Action spacing changed.");
       assert(Math.abs(geometry.clearance - 8) < .2, "Actions drifted from the building labels while zooming.");
@@ -98,7 +103,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const output = path.resolve(__dirname, "../release-artifacts/map-ui-responsiveness");
     fs.mkdirSync(output, {recursive:true});
     fs.writeFileSync(path.join(output, "regressions.json"), JSON.stringify({results,errors}, null, 2));
-    console.log("Validated map responsiveness: no repeated Tower geometry reads or pan style writes; fixed 56px actions; stable buildings, focus, upgrades, construction and ownership cleanup at three viewport sizes.");
+    console.log("Validated map responsiveness: cached Tower geometry, translation-only row movement and no stationary style writes; fixed 56px actions; stable buildings, focus, upgrades, construction and ownership cleanup at three viewport sizes.");
   } finally {
     if (client) {await client.send("Browser.close").catch(() => {}); client.close();}
     if (browser) {
