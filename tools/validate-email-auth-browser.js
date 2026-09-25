@@ -7,20 +7,27 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const root = path.resolve(__dirname, "..");
 const fixture = `(() => {
-  let user = null, signedIn = false, busy = false;
-  const calls = [];
-  const emit = () => window.dispatchEvent(new CustomEvent('crownlands:auth-ui', {detail:{}}));
-  const operation = async (name, work) => { if(busy) throw Error('duplicate'); busy=true; emit(); calls.push(name); await new Promise(r=>setTimeout(r,120)); try{return work();}finally{busy=false;emit();} };
-  window.CrownlandsOnline = {
-    isConfigured:()=>true,isReady:()=>true,isSignedIn:()=>signedIn,isAuthBusy:()=>busy,getAuthUser:()=>user,getUser:()=>signedIn?user:null,
-    getVerificationResendAtMs:()=>0,
-    signInWithEmail:()=>operation('signup',()=>{user={uid:'email-user',email:'qa@example.test',emailVerified:false,providerIds:['password']};signedIn=false;}),
-    refreshEmailVerification:()=>operation('verify',()=>{user.emailVerified=true;signedIn=true;return true;}),
-    sendVerificationEmail:()=>operation('resend',()=>true),sendPasswordRecovery:()=>operation('reset',()=>true),
-    reauthenticateGoogleForPassword:()=>operation('reauthenticate',()=>true),
-    addEmailPassword:()=>operation('link',()=>{user.providerIds.push('password');return user;})
+  let observer, failure = '';
+  const calls = [], serverCalls = [], auth = {currentUser:null};
+  const user = (uid,email,provider,verified=false) => ({uid,email,emailVerified:verified,providerData:[{providerId:provider}],provider});
+  const operation = async (name,work) => { calls.push(name); await new Promise(r=>setTimeout(r,120)); if(failure===name){failure='';throw Object.assign(Error('Fixture network failure'),{code:'auth/network-request-failed'});} return work(); };
+  window.CROWNLANDS_FIREBASE_CONFIG = {apiKey:'fixture',projectId:'fixture',authDomain:'fixture',appId:'fixture'};
+  window.CROWNLANDS_REALM_CONFIG = {resetGeneration:'fixture',worldId:'fixture-world'};
+  const modules = {
+    app:{initializeApp:()=>({})},
+    auth:{getAuth:()=>auth,GoogleAuthProvider:class {},onAuthStateChanged:(_auth,fn)=>{observer=fn;},getRedirectResult:async()=>null,
+      getIdTokenResult:async u=>({signInProvider:u.provider,claims:{email_verified:u.emailVerified,auth_time:Date.now()/1000}}),getIdToken:async()=> 'fixture-token',
+      createUserWithEmailAndPassword:(_auth,email)=>operation('signup',()=>{auth.currentUser=user('email-user',email,'password');observer(auth.currentUser);return {user:auth.currentUser};}),
+      signInWithEmailAndPassword:()=>operation('signin',()=>{throw Object.assign(Error('Fixture credentials'),{code:'auth/invalid-credential'});}),
+      sendEmailVerification:()=>operation('delivery',()=>true),reload:async u=>{u.emailVerified=true;},
+      sendPasswordResetEmail:()=>operation('reset',()=>true),signOut:async()=>{auth.currentUser=null;observer(null);},
+      reauthenticateWithPopup:async u=>({user:u}),EmailAuthProvider:{credential:(email,password)=>({email,password})},
+      linkWithCredential:async u=>{u.providerData.push({providerId:'password'});return {user:u};}
+    },
+    firestore:{getFirestore:()=>({}),doc:(...parts)=>parts.slice(1).join('/'),onSnapshot:()=>()=>{}},
+    functions:{getFunctions:()=>({}),httpsCallable:(_f,name)=>async payload=>{serverCalls.push(name);return {data:name==='getRealmInfo'?{resetGeneration:'fixture',worldId:'fixture-world'}:name==='joinGameServer'?{status:'active',activeSession:{id:payload.sessionId,version:2,revision:1}}:{ok:true}};}}
   };
-  window.emailQa = {calls, reset:()=>{user=null;signedIn=false;emit();}, google:()=>{user={uid:'google-user',email:'google@example.test',emailVerified:true,providerIds:['google.com']};signedIn=true;emit();}};
+  window.emailQa = {calls,serverCalls,modules,failNext:name=>{failure=name;},reset:()=>CrownlandsOnline.signOut(),google:async()=>{auth.currentUser=user('google-user','google@example.test','google.com',true);observer(auth.currentUser);await new Promise(r=>setTimeout(r,0));}};
 })();`;
 async function main() {
   const server = http.createServer((request, response) => {
@@ -31,10 +38,12 @@ async function main() {
     response.writeHead(200, { "content-type": type });
     if (target === path.join(root, "index.html")) {
       const html = fs.readFileSync(target, "utf8").replace(/<script\b[^>]*src="([^"]+)"[^>]*><\/script>/g, (tag, src) => {
-        if (src.startsWith("firebaseClient.js")) return `<script>${fixture}</script>`;
+        if (src.startsWith("firebaseClient.js")) return `<script>${fixture}</script>${tag}`;
         return src.startsWith("email-auth-ui.js") ? tag : "";
       });
       response.end(html);
+    } else if (target === path.join(root, "firebaseClient.js")) {
+      response.end(fs.readFileSync(target, "utf8").replace(/\r\n/g, "\n").replace(/\n  init\(\);\n\}\)\(\);\s*$/, "\n  loadModules = async () => window.emailQa.modules;\n  init();\n})();"));
     } else fs.createReadStream(target).pipe(response);
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -64,7 +73,10 @@ async function main() {
       await client.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point, button: "left", clickCount: 1 });
       await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point, button: "left", clickCount: 1 });
     };
-    const fill = (id, value) => evaluate(`(() => {const el=document.getElementById(${JSON.stringify(id)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    const fill = async (id, value) => {
+      await evaluate(`(() => {const el=document.getElementById(${JSON.stringify(id)});el.focus();el.select();})()`);
+      await client.send("Input.insertText", { text: value });
+    };
     const capture = async name => { const result = await client.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(output, name), Buffer.from(result.data, "base64")); };
     for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
@@ -75,7 +87,17 @@ async function main() {
       assert(await evaluate('document.getElementById("emailAuthDialog").open'));
       await click("emailAuthModeBtn");
       assert.equal(await evaluate('document.getElementById("emailAuthPassword").autocomplete'), "new-password");
+      await click("emailAuthSubmit");
+      assert.match(await evaluate('document.getElementById("emailAuthStatus").textContent'), /valid email/);
+      await fill("emailAuthAddress", "not-an-email"); await click("emailAuthSubmit");
+      assert.match(await evaluate('document.getElementById("emailAuthStatus").textContent'), /valid email/);
       await fill("emailAuthAddress", "qa@example.test");
+      await fill("emailAuthPassword", "elevenchars"); await fill("emailAuthConfirm", "elevenchars");
+      await click("emailAuthSubmit");
+      assert.match(await evaluate('document.getElementById("emailAuthStatus").textContent'), /at least 12 characters/);
+      assert.equal(await evaluate('emailQa.calls.length'), 0, "Invalid form attempted authentication.");
+      const errorBox = await evaluate('document.getElementById("emailAuthStatus").getBoundingClientRect().toJSON()');
+      assert(errorBox.y >= 0 && errorBox.bottom <= viewport.height + 1, "Validation explanation is outside the viewport.");
       await fill("emailAuthPassword", "a long password");
       await fill("emailAuthConfirm", "a different password");
       await click("emailAuthSubmit");
@@ -85,12 +107,25 @@ async function main() {
       await capture(`create-${viewport.width}x${viewport.height}.png`);
       const box = await evaluate('document.getElementById("emailAuthDialog").getBoundingClientRect().toJSON()');
       assert(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, "Email dialog leaves the viewport.");
+      const theme = await evaluate('({paper:getComputedStyle(document.getElementById("emailAuthDialog")).backgroundImage,ink:getComputedStyle(document.getElementById("emailAuthHint")).color,button:getComputedStyle(document.getElementById("emailAuthSubmit")).backgroundImage,radius:getComputedStyle(document.getElementById("emailAuthDialog")).borderRadius})');
+      assert.match(theme.paper, /rgb\(238, 222, 190\)/, "Email form does not use the game parchment.");
+      assert.equal(theme.ink, "rgb(90, 70, 50)"); assert.match(theme.button, /rgb\(114, 54, 58\)/); assert.equal(theme.radius, "2px");
+      await evaluate('emailQa.failNext("signup")'); await click("emailAuthSubmit");
+      await waitFor('document.getElementById("emailAuthStatus").textContent.includes("Could not connect")');
+      assert(await evaluate('document.getElementById("emailAuthDialog").open'));
+      assert.equal(await evaluate('CrownlandsOnline.getAuthUser()'), null);
+      assert.equal(await evaluate('document.getElementById("emailAuthAddress").value'), "qa@example.test");
+      assert.equal(await evaluate('document.getElementById("emailAuthPassword").value'), "");
+      await fill("emailAuthPassword", "a long password"); await fill("emailAuthConfirm", "a long password");
       await click("emailAuthSubmit");
+      assert(await evaluate('document.getElementById("emailAuthSubmit").disabled'));
+      await evaluate('document.getElementById("emailAuthForm").requestSubmit()');
       await waitFor('!document.getElementById("emailAuthDialog").open');
       assert.equal(await evaluate('document.getElementById("emailVerificationPanel").hidden'), false);
       await capture(`verify-${viewport.width}x${viewport.height}.png`);
       assert.equal(await evaluate('document.getElementById("emailAuthPassword").value'), "");
-      assert.equal(await evaluate('emailQa.calls.filter(c => c === "signup").length'), 1);
+      assert.equal(await evaluate('emailQa.calls.filter(c => c === "signup").length'), 2, "Expected one failed signup and one successful retry; duplicate submission escaped the pending guard.");
+      assert.equal(await evaluate('emailQa.serverCalls.length'), 0, "Unverified UI signup started gameplay.");
       await click("emailVerifiedBtn");
       await waitFor('document.getElementById("emailVerificationPanel").hidden');
 
@@ -100,7 +135,23 @@ async function main() {
       await fill("emailAuthAddress", "unknown@example.test"); await click("emailAuthSubmit");
       await waitFor('document.getElementById("emailAuthStatus").textContent.includes("If this email")');
       await click("emailAuthBackBtn");
-      await evaluate('emailQa.google(); document.getElementById("emailAddPasswordBtn").click();');
+      await click("emailSignInBtn");
+      await fill("emailAuthPassword", "some password"); await evaluate('emailQa.failNext("signin")'); await click("emailAuthSubmit");
+      await waitFor('document.getElementById("emailAuthStatus").textContent.includes("Could not connect")');
+      assert.equal(await evaluate('document.getElementById("emailAuthPassword").value'), "");
+      await fill("emailAuthPassword", "another password"); await click("emailAuthSubmit");
+      await waitFor('document.getElementById("emailAuthStatus").textContent.includes("Email or password was not accepted")');
+      await click("emailAuthModeBtn");
+      await fill("emailAuthAddress", "delivery@example.test");
+      await fill("emailAuthPassword", "delivery password"); await fill("emailAuthConfirm", "delivery password");
+      await evaluate('emailQa.failNext("delivery")'); await click("emailAuthSubmit");
+      await waitFor('document.getElementById("emailVerificationStatus").textContent.includes("could not be sent")');
+      assert.match(await evaluate('document.getElementById("emailVerificationStatus").textContent'), /Could not connect/);
+      assert.equal(await evaluate('CrownlandsOnline.isSignedIn()'), false);
+      await click("emailResendBtn");
+      await waitFor('document.getElementById("emailVerificationStatus").textContent.includes("Verification email sent")');
+      await evaluate('emailQa.reset()');
+      await evaluate('(async()=>{await emailQa.google(); document.getElementById("emailAddPasswordBtn").click();})()');
       await waitFor('document.getElementById("emailAuthDialog").open');
       assert(await evaluate('document.getElementById("emailAuthAddress").readOnly'));
       assert.equal(await evaluate('document.getElementById("emailAuthAddress").value'), "google@example.test");
@@ -110,7 +161,7 @@ async function main() {
       assert.match(await evaluate('document.getElementById("emailAccountStatus").textContent'), /Password added/);
       assert.equal(await evaluate('CrownlandsOnline.getAuthUser().uid'), "google-user");
     }
-    console.log("Email browser checks passed at 1440×900, 844×390 and 568×320: signup, mismatch, verification, recovery, same-account linking, bounded dialogs.");
+    console.log("Email browser checks passed at 1440×900, 844×390 and 568×320: real client/UI integration, visible validation, signup, delivery failure/resend, sign-in retry, verification, recovery, linking, parchment theme.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) {

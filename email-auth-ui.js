@@ -22,6 +22,10 @@
     if (code === "auth/user-mismatch") return "Your account changed. Please try again with your current account.";
     if (code === "auth/popup-closed-by-user") return "Google confirmation was cancelled. Your account has not changed.";
     if (code === "auth/operation-not-allowed") return "Email sign-in is not available yet. Please use Google for now.";
+    if (code === "auth/already-signed-in") return "You are already signed in. Use Sign out before creating a different account.";
+    if (code === "auth/operation-pending") return "Please wait for the current sign-in to finish.";
+    if (["auth/invalid-continue-uri", "auth/unauthorized-continue-uri", "auth/missing-continue-uri"].includes(code)) return "The verification return link is unavailable. Please contact support.";
+    if (code === "auth/quota-exceeded") return "Email delivery is temporarily limited. Please try again later.";
     if (code.startsWith("functions/")) return "Your account connected, but the game is temporarily busy. Try again shortly.";
     return "Could not finish. Please try again.";
   }
@@ -31,6 +35,19 @@
     password.type = "password"; confirm.type = "password";
     element("emailShowPasswordBtn").textContent = "Show password";
     element("emailShowPasswordBtn").setAttribute("aria-pressed", "false");
+  }
+
+  function validateForm() {
+    address.value = address.value.trim();
+    const invalid = !address.value || !address.validity.valid ? [address, "Enter a valid email address."]
+      : mode !== "reset" && !password.value ? [password, "Enter your password."]
+        : ["create", "link"].includes(mode) && password.value.length < 12 ? [password, "Use a password with at least 12 characters."]
+          : ["create", "link"].includes(mode) && password.value !== confirm.value ? [confirm, "The passwords do not match."] : null;
+    if (!invalid) return true;
+    status.textContent = invalid[1];
+    invalid[0].focus();
+    status.scrollIntoView({ block: "nearest" });
+    return false;
   }
 
   function open(nextMode) {
@@ -109,8 +126,7 @@
 
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    if (pending || api()?.isAuthBusy?.() || !form.reportValidity()) return;
-    if (["create", "link"].includes(mode) && password.value !== confirm.value) { status.textContent = "The passwords do not match."; return; }
+    if (pending || api()?.isAuthBusy?.() || !validateForm()) return;
     const submittedMode = mode, submittedUid = dialogUid;
     const secret = password.value, email = address.value;
     clearPasswords(); pending = true; status.textContent = "Connecting…"; render();
@@ -131,10 +147,13 @@
       }
     } catch (error) {
       // Account creation can succeed even if delivery of its verification email fails.
-      if (["signIn", "create"].includes(submittedMode) && api()?.getAuthUser?.() && !api().isSignedIn()) {
-        dialog.close(); element("emailVerificationStatus").textContent = "Your account is created. Use Resend email if verification has not arrived.";
+      if (submittedMode === "create" && api()?.getAuthUser?.()?.email?.toLowerCase() === email.trim().toLowerCase() && !api().isSignedIn()) {
+        dialog.close(); element("emailVerificationStatus").textContent = `Your account exists, but the verification email could not be sent. ${message(error)} Use Resend email to try again.`;
       } else if (submittedMode !== "link" || api()?.getAuthUser?.()?.uid === submittedUid) status.textContent = message(error);
-    } finally { pending = false; clearPasswords(); render(); }
+    } finally {
+      pending = false; clearPasswords(); render();
+      if (dialog.open) status.scrollIntoView({ block: "nearest" });
+    }
   });
 
   element("emailSignInBtn").addEventListener("click", () => open("signIn"));
