@@ -1,49 +1,50 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9fa00c932916e426779cb2ae2585e01ff4d6313c",
+  "baseCommit": "b2b96c2ebb9ed53fda2d03214706b19af359d406",
   "coverage": [
     {
       "paths": [
         "game.js"
       ],
-      "reason": "Correct map King Power bands when authoritative strength is missing or on an obsolete version; use existing identity repair with two workers, retry cooldown and session guards, and repaint after profile reads. Exercise exact protection thresholds, stabilization, real map rendering, public-profile navigation and identity/flag dependencies. No server formula, callable contract, authorization, schema or database rule changes; existing server protection logic is executed by the focused validator.",
+      "reason": "Preserve Tower targets in accepted marches and scout reports, merge authoritative Tower arrival intelligence and recover private reports during the return leg, update an existing authoritative march while its resolution finishes, and expose only fresh same-ownership Tower reports. Cover city/Camp scouts, retry/session isolation, return lifecycle, troop privacy and unchanged King Power dependencies. No server rules, formulas, schema or callable contract changes, so emulator changes are not required.",
       "tests": [
-        "tools/validate-king-power-colors.js",
-        "tools/validate-king-power-colors-browser.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-king-power.js",
-        "tools/validate-combat-authorization.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-public-profile-troop-estimate.js",
-        "tools/validate-public-player-profile-browser.js"
+        "tools/validate-clan-tower-scouting-browser.js",
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-scout-report-ui.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-allied-target-return.js",
+        "tools/validate-king-power.js"
       ]
     },
     {
       "paths": [
-        "styles.css"
+        "scout-report-ui.js"
       ],
-      "reason": "Style only the newly explicit unknown enemy strength state; browser checks use the complete production stylesheet cascade on desktop and two landscape mobile sizes and preserve the three established strength colors.",
+      "reason": "Render the saved Tower troop count, clan and wall snapshot without synthesizing city levels, skills or total defense. Use the established report layout and validate desktop, touch landscape, expiry, replacement, scroll/focus and existing city/Camp report rendering.",
       "tests": [
-        "tools/validate-king-power-colors-browser.js",
-        "tools/validate-weaker-kingdom-protection.js"
+        "tools/validate-clan-tower-scouting-browser.js",
+        "tools/validate-scout-report-ui.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-king-power-colors.js"
+        "tools/validate-clan-tower-scouting-browser.js"
       ],
-      "reason": "Behavioral regression coverage executes production identity/color functions for missing and legacy data, exact 2x/2.5x boundaries, stale timestamps, two-worker fallback, stalled requests, retry cooldown and session changes.",
+      "reason": "Regression uses the real map Scout/Report controls and actual client handlers with production endpoints blocked; matches the existing Tower returning response, delays report subscription, preserves Tower type, tests duplicate taps, immediate intelligence, returning army updates, private-report replacement, expiry and changed ownership on desktop and two touch landscape sizes.",
       "tests": [
-        "tools/validate-king-power-colors.js"
+        "tools/validate-clan-tower-scouting-browser.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-king-power-colors-browser.js"
+        "tools/validate-scout-responsiveness.js"
       ],
-      "reason": "Exercise actual map classes, computed shield colors and accessible labels at 1440x900, 844x390 and 568x320, including delayed authoritative repairs and timed band changes. Production endpoints are blocked.",
+      "reason": "Add a returning Tower scout without usable intelligence to verify private report recovery (including Veil outcomes), no premature return completion and release of per-scout resolution locks. Preserve all existing concurrency, retry, stale-session and economy debounce checks.",
       "tests": [
-        "tools/validate-king-power-colors-browser.js"
+        "tools/validate-scout-responsiveness.js"
       ]
     }
   ]

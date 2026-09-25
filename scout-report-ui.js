@@ -69,7 +69,19 @@
     const repair = m.siegeRepair.replace("data-fortification-repair-at-ms", "data-scout-repair-mirror");
     return section("walls", "Walls", art("stoneworks", "section-art"), `<div class="wall-ledger"><div class="wall-summary">${art("stoneworks")}<div><span class="eyebrow">Integrity at scout time</span><strong>${esc(formatWallIntegrity(siege.startingIntegrityBps))} intact</strong><div class="integrity-track" aria-hidden="true"><span style="width:${integrity}%"></span></div>${repair}${siege.repairWindowMinutes > 0 ? `<small>${number(siege.repairWindowMinutes)}-minute full-breach window; hits add proportional time and handoffs preserve it.</small>` : ""}</div></div><dl class="wall-breakdown">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join("")}</dl></div>`);
   }
+  function renderTowerIntel(m) {
+    const { city, report } = m;
+    const route = { cityId: city.id, cityName: report.towerName || city.name, regionId: report.regionId || getCityRegionId(city) };
+    const recorded = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+    const value = raw => recorded(raw) ? number(raw) : "Not recorded";
+    const integrity = recorded(report.wallIntegrityBps) ? esc(formatWallIntegrity(report.wallIntegrityBps)) : "Not recorded";
+    const overview = `<section id="scoutDetail-overview" data-scout-section="overview" data-scout-label="Overview">${heading({ name: route.cityName, meta: `Clan Tower · ${getRegionLabel(route.regionId)}` })}<p class="snapshot-note">Controlling clan at scout time: <strong>${esc(report.clanName || (report.ownerKind === "neutral" ? "Neutral" : "Not recorded"))}</strong></p><div class="intel-metrics two">${metric(art("troops"), "Stationed defenders", value(report.troops), "Combined Tower garrison at scout time")}${metric(art("stoneworks"), "Wall integrity at scout time", integrity, `Wall level ${value(report.wallLevel)}`)}</div><p class="snapshot-note">This is a snapshot at scout time. Defenders and walls may change before an army arrives.</p></section>`;
+    const fortification = section("walls", "Tower walls", art("stoneworks", "section-art"), `<dl class="wall-breakdown"><div><dt>Wall level</dt><dd>${value(report.wallLevel)}</dd></div><div><dt>Full wall power</dt><dd>${value(report.fullWallPower)}</dd></div><div><dt>Current wall power</dt><dd>${value(report.currentWallPower)}</dd></div><div><dt>Integrity</dt><dd>${integrity}</dd></div></dl><p class="disclosure-note">Total defense power: Not recorded in this snapshot. Individual garrisons, ruler skills and repair timing are not disclosed.</p>`);
+    const timing = `<div><small>Report age</small><strong data-scout-report-age>${esc(formatDuration(m.age))}</strong></div><div class="expiry"><small data-scout-expiry-label>Expires in</small><strong data-scout-report-expires>${esc(formatDuration(m.remaining))}</strong></div>`;
+    return shell(route, overview + fortification, timing);
+  }
   function renderIntel(m) {
+    if (m.report.targetType === "tower" || m.city.targetType === "tower") return renderTowerIntel(m);
     const { city, report, rewardCampTarget: camp, siege } = m;
     const route = { cityId: city.id, cityName: city.name, regionId: report.regionId || getCityRegionId(city) };
     const meta = [camp ? "Reward camp · No level · No walls" : `${getBattleTargetTypeLabel({ ...city, targetType: report.targetType || "city" })} · Level ${formatNumber(m.cityLevel)}`, getRegionLabel(route.regionId)].join(" · ");
