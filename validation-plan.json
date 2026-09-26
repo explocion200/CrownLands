@@ -1,79 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7256e70ac8f663f2e051079932953d9b392947d0",
+  "baseCommit": "c66fd0f4b9e49d1be5399c3277f28e94edb95c3a",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "styles.css",
-        "firebaseClient.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-multiplayer-sync.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-pending-army-departures.js"
+        "docs/visual-qa/troop-selection/index.html",
+        "docs/visual-qa/troop-selection/preview.html",
+        "docs/visual-qa/troop-selection/selection.css",
+        "docs/visual-qa/troop-selection/selection.js",
+        "tools/validate-troop-selection-draft-browser.js"
       ],
-      "reason": "Immediate provisional marches and scouts share canonical request IDs without spending or resolving locally. Cover response loss, duplicate/retried submissions, snapshot ordering, account/realm isolation, cleanup, cached frame motion, existing arrival/report delivery, Tower scouting, path alignment and actual desktop/landscape-mobile gameplay. The browser suite also checks ordinary accepted marches avoid map reconstruction; emulator launch and report suites guard authoritative idempotency and privacy.",
+      "reason": "Isolated synthetic troop-selection design review reuses existing troop-order draft presentation and pure power helpers. Validate exact input, percentage selection, protected limits, invalid-entry recovery, keyboard behavior, route blockers, fixture actions, desktop and landscape layout, assets, review controls and absence of external requests. No production runtime, authority or backend files change, so emulator suites do not apply.",
       "tests": [
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-multiplayer-sync.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-swift-march-order.js",
-        "tools/validate-army-token-rollback.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js"
+        "tools/validate-troop-selection-draft-browser.js"
       ]
     },
     {
       "paths": [
-        "functions/authoritative-route-planner.js",
-        "functions/holding-towers.js",
-        "functions/world-travel-network.js",
-        "functions/index.js",
-        "tools/validate-responsive-scout-routing.js"
+        "docs/visual-qa/troop-selection/README.md"
       ],
-      "reason": "Exact admissible origin pruning and bounded immutable request-local route reuse affect automatic scout launch and shared route geometry. Validate exhaustive parity, topology/terrain, all eligible origins, ties, cold/warm behavior, retries and cache bounds. Arrival overlaps independent reads while retaining sequential shared economy checkpoint budgets; cover combat, rallies, Towers, bulk launch, scouting protections, report lifecycle and economy contention. Existing Firebase scaling settings are preserved; no additional warm instances are configured.",
-      "tests": [
-        "tools/validate-responsive-scout-routing.js",
-        "tools/validate-scout-route-cache.js",
-        "tools/validate-world-travel-network.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-authoritative-army-orders.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-rally-lifecycle.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/operation-timing.js",
-        "tools/read-stability-production.js",
-        "tools/validate-operation-timing.js"
-      ],
-      "reason": "Add bounded non-private route-evaluation/pruning dimensions and economy phase duration to request timing and read-only production aggregates. Validate concurrent isolation, results/errors, allowed dimensions and diagnostic tooling; affected authority emulators exercise instrumented launch and settlement.",
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-stability-audit.js",
-        "functions/test/emulator-scout-report-lifecycle.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/RESPONSIVE_MARCHES_AND_SCOUTS.md"
-      ],
-      "reason": "Record the explicitly approved provisional presentation contract, production diagnosis, measured fixture scope, exact-route preservation, selected validation and deployment authorization requirements. Document that the improvements use existing scaling without additional warm instances. No additional runtime dependency beyond the covered implementation.",
+      "reason": "Document draft review controls, synthetic data boundaries, dependencies, validation evidence and future integration requirements. No production design decision or behavior changes.",
       "tests": []
     }
   ]
