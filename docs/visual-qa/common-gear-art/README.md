@@ -9,9 +9,12 @@ The approved Common set replaces all 32 gear item illustrations in the current g
 - The source PNGs are copied unchanged from the selected generated masters. Source checksums and derivative checksums are recorded in `assets/optimized/manifest.json`.
 - The complete source canvas, including its alpha, is retained in the delivery encoding with safety padding. The shared viewport fits the visible bounds to 84% of a square; extremely faint exterior alpha can lie outside the viewport. This keeps framing consistent in rectangular equipment controls as well as square cards.
 - Production ships exactly 64 current gear derivatives. Older comparison derivatives remain in the repository but are excluded from the production build. Higher-rarity artwork remains in the external review collection.
+- Battle-report gear emblems and the unequipped troop-order fallback reference the new icons too; the release validator checks every packaged asset reference.
 - Existing bonuses, costs, upgrade behavior and authority logic are unchanged. `functions/common-gear.js` receives only the same artwork-path replacements as the browser's shared definitions.
 
 The refreshed icons and details add 1,232,808 bytes to the optimized-art manifest compared with `c66fd0f`. This is an increase in available artwork, with detail images loaded on selection; it is not a claimed loading-speed or FPS improvement. PNG source masters are not deployed.
+
+The release budget allows 1216 KiB for that image increment and 16 KiB for framing/metadata, with a separate 1376 KiB ceiling on the complete set of 64 gear images.
 
 ## Visual review
 

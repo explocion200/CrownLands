@@ -100,7 +100,7 @@ function updateTroopOrderPower(amount = selectedTroopAmount, forecastPreview = a
   const rows = [
     ["assets/icons/daily-login-troops-r1.svg", "Base troop power", `${BASE_TROOP_ATTACK_POWER} power per troop`, base, false],
     ["assets/icons/skills/swordmastery.svg", "Swordmastery", `Level ${skillLevel} · +${troopOrderNumber(skillPercent)}% attack`, base * skillPercent / 100, true],
-    [definition?.art || "assets/optimized/gear-barracks-weapon-192x192-b7b87ac61ab5.webp", weaponName, weaponNote, base * gearPercent / 100, true],
+    [definition?.art || "assets/optimized/gear-barracks-weapon-192x192-204241e66c5f.webp", weaponName, weaponNote, base * gearPercent / 100, true],
   ];
   element.innerHTML = `<header><div><span>YOUR ATTACK POWER${localOnly ? " · ESTIMATE" : ""}</span><strong>${formatMarchesNumber(Math.floor(amount * perTroop))}</strong></div><img src="assets/icons/skills/swordmastery.svg" alt=""></header>${rows.map(([art, name, note, value, signed], index) => `<div class="power-source"><img class="${index === 2 ? "common-item" : ""}" src="${escapeHtml(art)}" alt=""><div><strong>${escapeHtml(name)}</strong><small>${escapeHtml(note)}</small></div><b>${troopOrderContribution(value, signed)}</b></div>`).join("")}<p class="power-equation"><span>${troopOrderNumber(perTroop)} power / troop</span><strong>+${troopOrderNumber(skillPercent + gearPercent)}% total bonus</strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.${localOnly ? " Based on your current local profile; the server confirms at launch." : ""}</p>`;
 }

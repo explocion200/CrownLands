@@ -46,4 +46,9 @@ for (const prefix of ["treasury", "barracks", "gatehouse", "royal-stables"]) {
   assert(text.includes('GearArt(def.art,"",true)'), `${prefix} selected details need the larger derivative`);
 }
 assert(read("common-gear-box-ui.js").includes("renderCommonGearArtwork(d.art)"));
+for (const file of ["battle-report-detail-ui.js", "troop-orders-ui.js"]) {
+  for (const [output] of read(file).matchAll(/assets\/optimized\/gear-[a-z0-9-]+\.webp/g)) {
+    assert(assets.some(asset => asset.output === output), `${file} references retired gear art ${output}`);
+  }
+}
 console.log("PASS: 32 Common designs, 64 hashed/alpha derivatives, source identity, 84% framing, icon/detail separation, escaped labels, graceful missing-art fallback and unchanged rarity/definition parity.");

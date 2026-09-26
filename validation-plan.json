@@ -210,6 +210,19 @@
         "tools/validate-common-gear-box-browser.js"
       ],
       "reason": "Committed screenshots are synthetic-data evidence generated from the five focused browser suites at desktop and shortest supported landscape dimensions; production packaging excludes documentation fixtures."
+    },
+    {
+      "paths": [
+        "battle-report-detail-ui.js",
+        "troop-orders-ui.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Replace only three retired gear bitmap references used as battle-report emblems and the unequipped troop-order fallback. Check render output and authoritative power vectors; all release asset references must resolve to the current delivery."
     }
   ]
 }

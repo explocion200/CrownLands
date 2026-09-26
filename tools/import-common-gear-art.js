@@ -53,6 +53,11 @@ for (const file of ["common-gear.js", "functions/common-gear.js"]) {
   for (const [before, after] of replacements) { assert(text.includes(before)); text = text.replaceAll(before, after); }
   fs.writeFileSync(path.join(root, file), text);
 }
+for (const file of ["battle-report-detail-ui.js", "troop-orders-ui.js"]) {
+  let text = fs.readFileSync(path.join(root, file), "utf8");
+  for (const [before, after] of replacements) text = text.replaceAll(before, after);
+  fs.writeFileSync(path.join(root, file), text);
+}
 const byId = new Map(records.map(record => [record.id, record]));
 const existingIds = new Set(manifest.assets.map(asset => asset.id));
 manifest.assets = manifest.assets.map(asset => byId.get(asset.id) || asset)
