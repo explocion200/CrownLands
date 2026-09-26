@@ -600,353 +600,641 @@
       "id": "gear-barracks-head",
       "category": "gear-item",
       "source": "assets/gear/barracks/head.png",
-      "output": "assets/optimized/gear-barracks-head-192x192-ddfca042092e.webp",
+      "output": "assets/optimized/gear-barracks-head-192x192-313e5e656540.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4280,
-      "sha256": "ddfca042092e0663a78300899afbb6379b4a0bf16ca7ee9033864fd4681e7abb",
-      "hasAlpha": true
+      "bytes": 11806,
+      "sha256": "313e5e656540bf35ceedd887a022b1dcf1784d6abb4c5833650c739a8c024511",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "5828ecde1ff024acf561d9912c44618e5c28547258645eb97b851d0366a36af5",
+      "sourceBounds": {
+        "left": 90,
+        "top": 48,
+        "width": 1039,
+        "height": 1178
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-chest",
       "category": "gear-item",
       "source": "assets/gear/barracks/chest.png",
-      "output": "assets/optimized/gear-barracks-chest-192x192-5bf7f2f81d43.webp",
+      "output": "assets/optimized/gear-barracks-chest-192x192-3c118f02d53d.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5106,
-      "sha256": "5bf7f2f81d43cf69a7b3d99c910f722e9d2ab6dd49362e187f7efc72b0217728",
-      "hasAlpha": true
+      "bytes": 11288,
+      "sha256": "3c118f02d53d1f287dd58ab3b66e12c65b12a3ccd7c69811fefb817334950b87",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "90a62bca1f4a8a9811da156f63a7f455db0ade554c7ee67b28ab0efcfcd9ba4f",
+      "sourceBounds": {
+        "left": 254,
+        "top": 74,
+        "width": 771,
+        "height": 1118
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-pants",
       "category": "gear-item",
       "source": "assets/gear/barracks/pants.png",
-      "output": "assets/optimized/gear-barracks-pants-192x192-aa7681a0d218.webp",
+      "output": "assets/optimized/gear-barracks-pants-192x192-cc003c18ee38.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4980,
-      "sha256": "aa7681a0d21869ae619c7524b773887a4b2a8f50fc211c77d074e6bf098829f4",
-      "hasAlpha": true
+      "bytes": 9748,
+      "sha256": "cc003c18ee38ce3d47bec47bf3239ed3940991db8d35dca660188790151a21ab",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "f4d8fc56827c9aee471c2d49888b0e1244032300f6fdbe3137cfdfc081a3646e",
+      "sourceBounds": {
+        "left": 304,
+        "top": 61,
+        "width": 630,
+        "height": 1154
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-boots",
       "category": "gear-item",
       "source": "assets/gear/barracks/boots.png",
-      "output": "assets/optimized/gear-barracks-boots-192x192-31f6f4acf5a8.webp",
+      "output": "assets/optimized/gear-barracks-boots-192x192-edf8a1babad2.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4958,
-      "sha256": "31f6f4acf5a855a2d3d1d9b1066f657f52f2a544f4221bd809675ec4b8d0cc91",
-      "hasAlpha": true
+      "bytes": 11826,
+      "sha256": "edf8a1babad25ba946fd040f0e0d4b416037a27675cdf926f4df02255ad21d39",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "a96041effc8797c951e9a1dc1a3a97d7415225244d96768581e870d62d3629ef",
+      "sourceBounds": {
+        "left": 187,
+        "top": 76,
+        "width": 850,
+        "height": 1156
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-gloves",
       "category": "gear-item",
       "source": "assets/gear/barracks/gloves.png",
-      "output": "assets/optimized/gear-barracks-gloves-192x192-3650d294bb20.webp",
+      "output": "assets/optimized/gear-barracks-gloves-192x192-c9d001327abd.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5380,
-      "sha256": "3650d294bb200e6cc4fcec322a2d3b494c43713c5d6e20629972efb141a3eba6",
-      "hasAlpha": true
+      "bytes": 13174,
+      "sha256": "c9d001327abd32a38af212dfd2e1b50323c28761cd65eca28b9563f8ee6b528e",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "9c1dddfb46b2d561beec7049d6daa12afdb138e89bfeabcd2f8098966c71b65a",
+      "sourceBounds": {
+        "left": 153,
+        "top": 81,
+        "width": 986,
+        "height": 1147
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-belt",
       "category": "gear-item",
       "source": "assets/gear/barracks/belt.png",
-      "output": "assets/optimized/gear-barracks-belt-192x192-22c149def2a2.webp",
+      "output": "assets/optimized/gear-barracks-belt-192x192-89fcd0993176.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5582,
-      "sha256": "22c149def2a265f01dd193c09a22219c2c3c0fde1237776df2aed73b4bc10ac8",
-      "hasAlpha": true
+      "bytes": 13616,
+      "sha256": "89fcd0993176b5722de7673f3b4075c78a5ba32154faedf127840192130d1660",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "fd96229954ab862258d2ce8634cbbcbad74d21bba14365022c075f7137993deb",
+      "sourceBounds": {
+        "left": 90,
+        "top": 199,
+        "width": 1088,
+        "height": 926
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-weapon",
       "category": "gear-item",
       "source": "assets/gear/barracks/weapon.png",
-      "output": "assets/optimized/gear-barracks-weapon-192x192-b7b87ac61ab5.webp",
+      "output": "assets/optimized/gear-barracks-weapon-192x192-204241e66c5f.webp",
       "width": 192,
       "height": 192,
-      "bytes": 3548,
-      "sha256": "b7b87ac61ab58b09f7a029a91ddc98f21a5368aa64f176fa389d50ef746ec921",
-      "hasAlpha": true
+      "bytes": 5322,
+      "sha256": "204241e66c5ff9b8ece70df27ba9858a6697999d56be382f396e4508888a1f4c",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "271453d68e68c8d250c73d72c8bc2be676df50814ba2f42a4db403db70c9338e",
+      "sourceBounds": {
+        "left": 310,
+        "top": 53,
+        "width": 749,
+        "height": 1165
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-barracks-necklace",
       "category": "gear-item",
       "source": "assets/gear/barracks/necklace.png",
-      "output": "assets/optimized/gear-barracks-necklace-192x192-cb826e33fc7c.webp",
+      "output": "assets/optimized/gear-barracks-necklace-192x192-6d44b03273e9.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6070,
-      "sha256": "cb826e33fc7c98db3976c3225f99b6fcbf6732335c3bffc32cd1d9909a6f2407",
-      "hasAlpha": true
+      "bytes": 10484,
+      "sha256": "6d44b03273e9dd5de07180054d41f9dd38b2d7fe7666a74d9d9bd9b5d280370d",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "dfb28617bcc32f9283e761f5e9509a09bdb39e7b24472d635ca7394d24f5195b",
+      "sourceBounds": {
+        "left": 295,
+        "top": 50,
+        "width": 716,
+        "height": 1166
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-head",
       "category": "gear-item",
       "source": "assets/gear/treasury/head.png",
-      "output": "assets/optimized/gear-treasury-head-192x192-59a799630050.webp",
+      "output": "assets/optimized/gear-treasury-head-192x192-99b76757361b.webp",
       "width": 192,
       "height": 192,
-      "bytes": 3646,
-      "sha256": "59a799630050cb40d88e128a36ae55caa6ff8488ea3f6eeec492812e06cb1858",
-      "hasAlpha": true
+      "bytes": 7044,
+      "sha256": "99b76757361bb9e72592621a09c92d5058e26e1fb243917aa7a89bd995498d60",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "66b83673f4561d9447166fa43c3d4a7d7fa3391d1a8ee4f21ba4dafc9bd4a330",
+      "sourceBounds": {
+        "left": 231,
+        "top": 239,
+        "width": 845,
+        "height": 854
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-chest",
       "category": "gear-item",
       "source": "assets/gear/treasury/chest.png",
-      "output": "assets/optimized/gear-treasury-chest-192x192-8282ca8e8c95.webp",
+      "output": "assets/optimized/gear-treasury-chest-192x192-e09d99d13b52.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6186,
-      "sha256": "8282ca8e8c95c82b82a8824594abd614b96a7f6c47fe5f81019f85374327bcca",
-      "hasAlpha": true
+      "bytes": 8852,
+      "sha256": "e09d99d13b52f8521d6b7a7eb20477db5c760eb51d21c132e87d6671de32ae95",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "b2b45d3a5ed1e10a5410e5cdb37b73418638be4ea6e97c487896b99490c3eb1d",
+      "sourceBounds": {
+        "left": 266,
+        "top": 154,
+        "width": 722,
+        "height": 955
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-pants",
       "category": "gear-item",
       "source": "assets/gear/treasury/pants.png",
-      "output": "assets/optimized/gear-treasury-pants-192x192-815cef42162e.webp",
+      "output": "assets/optimized/gear-treasury-pants-192x192-b449daa6a170.webp",
       "width": 192,
       "height": 192,
-      "bytes": 3456,
-      "sha256": "815cef42162eedd541140c7982ff97bcbc29bd952cf13ddff4f50088234a8a8d",
-      "hasAlpha": true
+      "bytes": 5132,
+      "sha256": "b449daa6a1702d3472ae6421a2398d350eb3590288a2f1ec29c7ddd6004f8232",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "09357a5deeefbd548938a7501f46ba5e4668bceeb5292514778896440427fa80",
+      "sourceBounds": {
+        "left": 424,
+        "top": 134,
+        "width": 435,
+        "height": 1030
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-boots",
       "category": "gear-item",
       "source": "assets/gear/treasury/boots.png",
-      "output": "assets/optimized/gear-treasury-boots-192x192-48fc893bf662.webp",
+      "output": "assets/optimized/gear-treasury-boots-192x192-3ae2ba9aca41.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4102,
-      "sha256": "48fc893bf662b2d3e838b0c5dcf28ceba0c51f47b02bf0967c5566da8688f963",
-      "hasAlpha": true
+      "bytes": 8988,
+      "sha256": "3ae2ba9aca4119759f4b7e17c412124fd2556436173640b837741ff68ada08d1",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "3840c70f06ef13e450709889f041dfcb2d674210becd1a58aab37a353e7d6ca2",
+      "sourceBounds": {
+        "left": 155,
+        "top": 231,
+        "width": 947,
+        "height": 873
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-gloves",
       "category": "gear-item",
       "source": "assets/gear/treasury/gloves.png",
-      "output": "assets/optimized/gear-treasury-gloves-192x192-29229880978c.webp",
+      "output": "assets/optimized/gear-treasury-gloves-192x192-e79032fce3be.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4360,
-      "sha256": "29229880978ce73235cafe6bb6c28057382b9c880d28858bad0f2d2d884076db",
-      "hasAlpha": true
+      "bytes": 8172,
+      "sha256": "e79032fce3bef2fd1c078436c6f524a07a53e01bf69365058ca9de3bc1cbd410",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "81d0a0a2b62fec0c986bba86c93080d680c9672ba348c53705373529ad7b9960",
+      "sourceBounds": {
+        "left": 262,
+        "top": 193,
+        "width": 735,
+        "height": 902
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-belt",
       "category": "gear-item",
       "source": "assets/gear/treasury/belt.png",
-      "output": "assets/optimized/gear-treasury-belt-192x192-320ede3cd1c6.webp",
+      "output": "assets/optimized/gear-treasury-belt-192x192-9cc72c01d629.webp",
       "width": 192,
       "height": 192,
-      "bytes": 7452,
-      "sha256": "320ede3cd1c68c3bfcc19adec143c2fd871965d4cbec90b1c185ec4dc331e6fb",
-      "hasAlpha": true
+      "bytes": 12128,
+      "sha256": "9cc72c01d6299b01d2a7bacd9c0d4b529bfa40773f48bdefbb7144c8d487e7d0",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "eebe0d20497a0f5f674c97f9796ed37195944b6a9d66b42db47613a2a5a1cb51",
+      "sourceBounds": {
+        "left": 174,
+        "top": 237,
+        "width": 870,
+        "height": 832
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-weapon",
       "category": "gear-item",
       "source": "assets/gear/treasury/weapon.png",
-      "output": "assets/optimized/gear-treasury-weapon-192x192-a0b3ce1bda06.webp",
+      "output": "assets/optimized/gear-treasury-weapon-192x192-4d99f0d7a990.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6812,
-      "sha256": "a0b3ce1bda0651fdd32381d185205b164359116031a9b4799468e383ff76a8cf",
-      "hasAlpha": true
+      "bytes": 12668,
+      "sha256": "4d99f0d7a990d47f602c56bf3d9cf2e9117e85630dc74421faa60eb5a11562e3",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "2d94186ccdac80a5f68633acbf82cddecbe5e2da07f312f23cc1cb08c0c4f803",
+      "sourceBounds": {
+        "left": 195,
+        "top": 144,
+        "width": 914,
+        "height": 1053
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-treasury-necklace",
       "category": "gear-item",
       "source": "assets/gear/treasury/necklace.png",
-      "output": "assets/optimized/gear-treasury-necklace-192x192-3b8ab65f56c8.webp",
+      "output": "assets/optimized/gear-treasury-necklace-192x192-7542effaafd5.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6288,
-      "sha256": "3b8ab65f56c8aa3165b3c047dc349ad37814b673658409d04103590e5e127074",
-      "hasAlpha": true
+      "bytes": 9246,
+      "sha256": "7542effaafd54ebc1d4bfed71333de614d893a26b73318e09e55df2438048e9e",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "9fb3221ee0aff448d692cd5c881959e34eed23c1cbdff43d1cb4668c549f8969",
+      "sourceBounds": {
+        "left": 317,
+        "top": 101,
+        "width": 604,
+        "height": 1040
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-head",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/head.png",
-      "output": "assets/optimized/gear-royal-stables-head-192x192-f1b0833a9acc.webp",
+      "output": "assets/optimized/gear-royal-stables-head-192x192-c87ab2695304.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5302,
-      "sha256": "f1b0833a9accb4cb0c6547f77eed1dd03ffe17f432ee7a1e551577e269dc4304",
-      "hasAlpha": true
+      "bytes": 12344,
+      "sha256": "c87ab2695304ad83d697263619e96f5d22e388b60fcbd765b16c6c91e76be391",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "dcc2bad3e54eedea67bb89b115e8169d70b4c21d7683855080d1d7a00a0ac84e",
+      "sourceBounds": {
+        "left": 130,
+        "top": 46,
+        "width": 968,
+        "height": 1177
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-chest",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/chest.png",
-      "output": "assets/optimized/gear-royal-stables-chest-192x192-776cca04e358.webp",
+      "output": "assets/optimized/gear-royal-stables-chest-192x192-28625e1529a1.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6684,
-      "sha256": "776cca04e3582d313cf20467554c9aaaf81abdb90fe7331428929b9dd5240664",
-      "hasAlpha": true
+      "bytes": 12564,
+      "sha256": "28625e1529a15080b67c83a0d47a7fd2849921cb48ca581694b7be27b530f1d1",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "c36b335f07cffcbb1450233a5a6b813a37193aafe057f1d76f36f2f83360c044",
+      "sourceBounds": {
+        "left": 141,
+        "top": 85,
+        "width": 972,
+        "height": 1100
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-pants",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/pants.png",
-      "output": "assets/optimized/gear-royal-stables-pants-192x192-c51b1877bfbb.webp",
+      "output": "assets/optimized/gear-royal-stables-pants-192x192-7c23a0e5bba4.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4536,
-      "sha256": "c51b1877bfbb2e2f4fcf86b153e88d9c110b6d0bc897b1543e9487ec7e28281a",
-      "hasAlpha": true
+      "bytes": 8626,
+      "sha256": "7c23a0e5bba4cf6db346ab6313b29bfdb24f7e941f4f7f5ee3739287b7435e14",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "79a0ac3d9b3e077f606d1e949fa15bd1c0a7c310f72aa5c4c35b53943bcf7b70",
+      "sourceBounds": {
+        "left": 374,
+        "top": 64,
+        "width": 539,
+        "height": 1159
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-boots",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/boots.png",
-      "output": "assets/optimized/gear-royal-stables-boots-192x192-4878bf5c812e.webp",
+      "output": "assets/optimized/gear-royal-stables-boots-192x192-68ed5c227b42.webp",
       "width": 192,
       "height": 192,
-      "bytes": 6870,
-      "sha256": "4878bf5c812ebb8979e410125973c5d1f152ab9c2c0565df5e98867fd9358ab7",
-      "hasAlpha": true
+      "bytes": 13698,
+      "sha256": "68ed5c227b42ee8b43f23ec1dc93cb739a6ded3142ec23bde725d3f3e75bc11b",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "1d6a28a2a12fe26417c9bff7f040f171a667424acf88fbc27d79f9a296f7c9fc",
+      "sourceBounds": {
+        "left": 153,
+        "top": 83,
+        "width": 939,
+        "height": 1124
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-gloves",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/gloves.png",
-      "output": "assets/optimized/gear-royal-stables-gloves-192x192-be3b5af1f591.webp",
+      "output": "assets/optimized/gear-royal-stables-gloves-192x192-07bab48ef44c.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5206,
-      "sha256": "be3b5af1f59173d42ee597a2292b28d6197b69da1887275d5dc520aa74398636",
-      "hasAlpha": true
+      "bytes": 11476,
+      "sha256": "07bab48ef44c5ca376820fbcb428d431d9a2b42b7f5194bc9d68b548bd719e9b",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "fb3e7a21b0cf578e4bcfe53755436f6f3982f710f160674aec8553a4807dec31",
+      "sourceBounds": {
+        "left": 238,
+        "top": 99,
+        "width": 794,
+        "height": 1097
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-belt",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/belt.png",
-      "output": "assets/optimized/gear-royal-stables-belt-192x192-9c96454e7d12.webp",
+      "output": "assets/optimized/gear-royal-stables-belt-192x192-d251726672f7.webp",
       "width": 192,
       "height": 192,
-      "bytes": 7010,
-      "sha256": "9c96454e7d12edd576159b93160e55f65dfcca9de3f1657cba650ce68cb2bf6f",
-      "hasAlpha": true
+      "bytes": 15234,
+      "sha256": "d251726672f77617e2508097da161d266f33a9a264c194d35d1d7a7ebbc25bba",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "12f7be65f51bfba1be8e94cdef5880812d11932a55177feae7abccc848357649",
+      "sourceBounds": {
+        "left": 88,
+        "top": 80,
+        "width": 1076,
+        "height": 1113
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-weapon",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/weapon.png",
-      "output": "assets/optimized/gear-royal-stables-weapon-192x192-41b2b4d9099a.webp",
+      "output": "assets/optimized/gear-royal-stables-weapon-192x192-dccfc5c662d6.webp",
       "width": 192,
       "height": 192,
-      "bytes": 3604,
-      "sha256": "41b2b4d9099adaec5e14aa0b00c97399a78b3e58b5e062aa81a84f7d3edb44ae",
-      "hasAlpha": true
+      "bytes": 3714,
+      "sha256": "dccfc5c662d68bf06fc2efc5b8723fa238e12db21279c1adc1af674d0ba72218",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "7fe623a2599cd401dee72af946ed991803045c081b338fdb0c58ab798cb17299",
+      "sourceBounds": {
+        "left": 297,
+        "top": 47,
+        "width": 771,
+        "height": 1149
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-royal-stables-necklace",
       "category": "gear-item",
       "source": "assets/gear/royal-stables/necklace.png",
-      "output": "assets/optimized/gear-royal-stables-necklace-192x192-7e68b4ce42ec.webp",
+      "output": "assets/optimized/gear-royal-stables-necklace-192x192-913484e0967b.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5424,
-      "sha256": "7e68b4ce42ecc3309ee92ef6fc4f324ccbaeb5557e88e12ed4b98a601eb3abfe",
-      "hasAlpha": true
+      "bytes": 11570,
+      "sha256": "913484e0967bc0c1f61ddf8bbe1afb3344e1bae27997ce85becb6af11f13e2a6",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "36fd5e0ab7ee160e184a10ca612769114bf6a5fa94931c6a6aee6384d902a324",
+      "sourceBounds": {
+        "left": 251,
+        "top": 74,
+        "width": 755,
+        "height": 1091
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-head",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/head.png",
-      "output": "assets/optimized/gear-gatehouse-head-192x192-9b6a2150f2a2.webp",
+      "output": "assets/optimized/gear-gatehouse-head-192x192-b5a59680fd65.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5314,
-      "sha256": "9b6a2150f2a2e1dbd45edc78a63fc058a87a20a5644847e07789becb37b7dca5",
-      "hasAlpha": true
+      "bytes": 11544,
+      "sha256": "b5a59680fd65a16e0784dfd9e8c7e2f15269a67e32ba07bfb43ecc40dfb7fa26",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "0099dbcedbcab0cf950593c9a3a1ef45c6ace4fb847cec53b704d5031117d3b8",
+      "sourceBounds": {
+        "left": 260,
+        "top": 75,
+        "width": 760,
+        "height": 1137
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-chest",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/chest.png",
-      "output": "assets/optimized/gear-gatehouse-chest-192x192-11e03cd6c3d7.webp",
+      "output": "assets/optimized/gear-gatehouse-chest-192x192-1e72532be259.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5394,
-      "sha256": "11e03cd6c3d78d83bf5d1609a75fab1681b542186b6b69a7477f788a1f5da2b3",
-      "hasAlpha": true
+      "bytes": 14254,
+      "sha256": "1e72532be25921ce0ca718f1399945364d13da04e6319b4c17fafc5d4087fd60",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "cc1962bc03815a1b2bdd0a9da7afebd5bf94dd051cc9da7941bf2ed0a4565b8e",
+      "sourceBounds": {
+        "left": 195,
+        "top": 85,
+        "width": 852,
+        "height": 1094
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-pants",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/pants.png",
-      "output": "assets/optimized/gear-gatehouse-pants-192x192-8c7aa54422f0.webp",
+      "output": "assets/optimized/gear-gatehouse-pants-192x192-6ebd3a25d081.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4756,
-      "sha256": "8c7aa54422f05a0872d711d34730e0a2ae8d94cacd8bfb9668ee152cbe07d396",
-      "hasAlpha": true
+      "bytes": 10060,
+      "sha256": "6ebd3a25d0818aeda4f5cb8dca7940f241e12fa3b5cc4cc4eac72866116d218b",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "c6d200acbd156b2cc46457023288ea73adc92623c29eb5d499502cdde903f455",
+      "sourceBounds": {
+        "left": 310,
+        "top": 71,
+        "width": 641,
+        "height": 1106
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-boots",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/boots.png",
-      "output": "assets/optimized/gear-gatehouse-boots-192x192-219020eda9de.webp",
+      "output": "assets/optimized/gear-gatehouse-boots-192x192-6de5454174c7.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5222,
-      "sha256": "219020eda9deb82b686fbccb894703ab33b9793d447a15d1bdeff30e62da00b8",
-      "hasAlpha": true
+      "bytes": 12172,
+      "sha256": "6de5454174c706bde7141505383152c6de4f710c9a7d8f83c10dcabbc548b873",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "44b3c352050fe7b5230aae144dff6c78fcd150cc0ad70b7210d17ca8c671a32e",
+      "sourceBounds": {
+        "left": 198,
+        "top": 138,
+        "width": 883,
+        "height": 1010
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-gloves",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/gloves.png",
-      "output": "assets/optimized/gear-gatehouse-gloves-192x192-1f3d86bddd0e.webp",
+      "output": "assets/optimized/gear-gatehouse-gloves-192x192-5f16827310cb.webp",
       "width": 192,
       "height": 192,
-      "bytes": 5606,
-      "sha256": "1f3d86bddd0eca9c0b09bc4992bbc66b8260e5aeb442976463d341da36b200ba",
-      "hasAlpha": true
+      "bytes": 14682,
+      "sha256": "5f16827310cb4676c641245756411b41ae463734b8fc8effd62dd5afbebb202f",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "044a489f0a7d920f626827a8f94db9045296587322a5f8fe236cbe055df202d0",
+      "sourceBounds": {
+        "left": 140,
+        "top": 112,
+        "width": 972,
+        "height": 1047
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-belt",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/belt.png",
-      "output": "assets/optimized/gear-gatehouse-belt-192x192-e86b7289c8d4.webp",
+      "output": "assets/optimized/gear-gatehouse-belt-192x192-918a7dd7576c.webp",
       "width": 192,
       "height": 192,
-      "bytes": 8128,
-      "sha256": "e86b7289c8d4d2826dc241a3b66d725cbdf84a7bb129b5e1ae2c1659d6fe457e",
-      "hasAlpha": true
+      "bytes": 17284,
+      "sha256": "918a7dd7576c3bc46650f9da741528e232c3c4aa05bc498afd1b9fd7e5a42c5c",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "87edd742650b190419f44a4bc3c6234a14ebe51d8bccb82b7b54e4fbdf1a6631",
+      "sourceBounds": {
+        "left": 73,
+        "top": 124,
+        "width": 1122,
+        "height": 1034
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-weapon",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/weapon.png",
-      "output": "assets/optimized/gear-gatehouse-weapon-192x192-13df55207b92.webp",
+      "output": "assets/optimized/gear-gatehouse-weapon-192x192-c0eee067f541.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4216,
-      "sha256": "13df55207b92436935dc19e9db672396263d1bc35be827b426f542a3fd38dd43",
-      "hasAlpha": true
+      "bytes": 9414,
+      "sha256": "c0eee067f541c3d3b502ec8597e4116eef8fc599902f532dfdc35a4ade25f8cf",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "5eefeb34bbb12ca0c62e8d15d5faecc6b4cecdc110f3ab5cad6a5fde98fbd5a1",
+      "sourceBounds": {
+        "left": 270,
+        "top": 105,
+        "width": 715,
+        "height": 1046
+      },
+      "safetyPadding": 8
     },
     {
       "id": "gear-gatehouse-necklace",
       "category": "gear-item",
       "source": "assets/gear/gatehouse/necklace.png",
-      "output": "assets/optimized/gear-gatehouse-necklace-192x192-3218af1d5559.webp",
+      "output": "assets/optimized/gear-gatehouse-necklace-192x192-837482be4074.webp",
       "width": 192,
       "height": 192,
-      "bytes": 4716,
-      "sha256": "3218af1d5559bc192e4105985a7bbd03835d95daa0ce3e61204c3e3897e43f6b",
-      "hasAlpha": true
+      "bytes": 9702,
+      "sha256": "837482be40746e2d8df67e6df94c725f555dd89e246e59457592f86e3ad79713",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "11de6decc2b4480fcca8220e1d89b8d784ff9b6888b8084a91f796f373a793a0",
+      "sourceBounds": {
+        "left": 301,
+        "top": 66,
+        "width": 653,
+        "height": 1131
+      },
+      "safetyPadding": 8
     },
     {
       "id": "treasury-master-of-coin-still",
@@ -1002,6 +1290,646 @@
       "bytes": 88862,
       "sha256": "9cdb6657d969500c3d170e075ee7efc991e15d433263f30d72e22b7bf23b76ae",
       "hasAlpha": true
+    },
+    {
+      "id": "gear-barracks-head-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/head.png",
+      "output": "assets/optimized/gear-barracks-head-detail-384x384-6edc789b831d.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 38716,
+      "sha256": "6edc789b831ddfdec5a94e3eef9a1d2d89c539f14e8820696568a1849229835a",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "5828ecde1ff024acf561d9912c44618e5c28547258645eb97b851d0366a36af5",
+      "sourceBounds": {
+        "left": 90,
+        "top": 48,
+        "width": 1039,
+        "height": 1178
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-chest-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/chest.png",
+      "output": "assets/optimized/gear-barracks-chest-detail-384x384-eb83dc007d50.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 35308,
+      "sha256": "eb83dc007d50f1114c91814cdd1007799b68f693d8026e57b6eab749142906ad",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "90a62bca1f4a8a9811da156f63a7f455db0ade554c7ee67b28ab0efcfcd9ba4f",
+      "sourceBounds": {
+        "left": 254,
+        "top": 74,
+        "width": 771,
+        "height": 1118
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-pants-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/pants.png",
+      "output": "assets/optimized/gear-barracks-pants-detail-384x384-de994e988ef3.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 27574,
+      "sha256": "de994e988ef39a6ff00a3731549e5088a9dbcee56dd2f41eb9bef0bb11e7cb0e",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "f4d8fc56827c9aee471c2d49888b0e1244032300f6fdbe3137cfdfc081a3646e",
+      "sourceBounds": {
+        "left": 304,
+        "top": 61,
+        "width": 630,
+        "height": 1154
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-boots-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/boots.png",
+      "output": "assets/optimized/gear-barracks-boots-detail-384x384-6847ffd3c896.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 37966,
+      "sha256": "6847ffd3c8969014bfdb4e4f66c99799cddf2740249b97e001db48b0e2b367ad",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "a96041effc8797c951e9a1dc1a3a97d7415225244d96768581e870d62d3629ef",
+      "sourceBounds": {
+        "left": 187,
+        "top": 76,
+        "width": 850,
+        "height": 1156
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-gloves-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/gloves.png",
+      "output": "assets/optimized/gear-barracks-gloves-detail-384x384-bb51f244250a.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 42034,
+      "sha256": "bb51f244250aacb720415772588fcebfb849518edd57d34b93e763825b9728f3",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "9c1dddfb46b2d561beec7049d6daa12afdb138e89bfeabcd2f8098966c71b65a",
+      "sourceBounds": {
+        "left": 153,
+        "top": 81,
+        "width": 986,
+        "height": 1147
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-belt-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/belt.png",
+      "output": "assets/optimized/gear-barracks-belt-detail-384x384-482d19b4c4e0.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 39816,
+      "sha256": "482d19b4c4e00f88b1f38b1ed4e8e8648486743ede1df729ef737506e86c0d2a",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "fd96229954ab862258d2ce8634cbbcbad74d21bba14365022c075f7137993deb",
+      "sourceBounds": {
+        "left": 90,
+        "top": 199,
+        "width": 1088,
+        "height": 926
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-weapon-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/weapon.png",
+      "output": "assets/optimized/gear-barracks-weapon-detail-384x384-7c872773372f.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 14948,
+      "sha256": "7c872773372f073d0cceda3ffb62493ecabd85000252042efe7f12a05e113e27",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "271453d68e68c8d250c73d72c8bc2be676df50814ba2f42a4db403db70c9338e",
+      "sourceBounds": {
+        "left": 310,
+        "top": 53,
+        "width": 749,
+        "height": 1165
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-barracks-necklace-detail",
+      "category": "gear-item",
+      "source": "assets/gear/barracks/necklace.png",
+      "output": "assets/optimized/gear-barracks-necklace-detail-384x384-c5feff9fb05e.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 28322,
+      "sha256": "c5feff9fb05e2838f93f6b0c26479356f0921d14bcd03290ece92c8947a0021a",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "dfb28617bcc32f9283e761f5e9509a09bdb39e7b24472d635ca7394d24f5195b",
+      "sourceBounds": {
+        "left": 295,
+        "top": 50,
+        "width": 716,
+        "height": 1166
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-head-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/head.png",
+      "output": "assets/optimized/gear-treasury-head-detail-384x384-037632d2f357.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 23344,
+      "sha256": "037632d2f357ab4c6e1b9853a7a407f185aeaf98d668bd913fa2e7c05dae5763",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "66b83673f4561d9447166fa43c3d4a7d7fa3391d1a8ee4f21ba4dafc9bd4a330",
+      "sourceBounds": {
+        "left": 231,
+        "top": 239,
+        "width": 845,
+        "height": 854
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-chest-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/chest.png",
+      "output": "assets/optimized/gear-treasury-chest-detail-384x384-f2f27e1d997e.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 27784,
+      "sha256": "f2f27e1d997e8ecabecf020cfc0a5125c54d0d14791c7d018763ee75ba3b2ab1",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "b2b45d3a5ed1e10a5410e5cdb37b73418638be4ea6e97c487896b99490c3eb1d",
+      "sourceBounds": {
+        "left": 266,
+        "top": 154,
+        "width": 722,
+        "height": 955
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-pants-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/pants.png",
+      "output": "assets/optimized/gear-treasury-pants-detail-384x384-338746fcfe25.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 15374,
+      "sha256": "338746fcfe25f0c872b12874fb7e4150b49685ffb3c5147d0a86bbdc34f2a41a",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "09357a5deeefbd548938a7501f46ba5e4668bceeb5292514778896440427fa80",
+      "sourceBounds": {
+        "left": 424,
+        "top": 134,
+        "width": 435,
+        "height": 1030
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-boots-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/boots.png",
+      "output": "assets/optimized/gear-treasury-boots-detail-384x384-075835dc5687.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 27180,
+      "sha256": "075835dc56870f4130c3358084aacdf2392bf0f130eaa11b7cf8b9dbb853468d",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "3840c70f06ef13e450709889f041dfcb2d674210becd1a58aab37a353e7d6ca2",
+      "sourceBounds": {
+        "left": 155,
+        "top": 231,
+        "width": 947,
+        "height": 873
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-gloves-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/gloves.png",
+      "output": "assets/optimized/gear-treasury-gloves-detail-384x384-1a046d587fa1.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 24990,
+      "sha256": "1a046d587fa12d888f8900fcdae3d3d100c9d34717668878b43f878790f4c53e",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "81d0a0a2b62fec0c986bba86c93080d680c9672ba348c53705373529ad7b9960",
+      "sourceBounds": {
+        "left": 262,
+        "top": 193,
+        "width": 735,
+        "height": 902
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-belt-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/belt.png",
+      "output": "assets/optimized/gear-treasury-belt-detail-384x384-f9eeac4b7ccd.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 36244,
+      "sha256": "f9eeac4b7ccd05d90cdaebb8ac244977b4f1773314c15065b368056fdbd86de4",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "eebe0d20497a0f5f674c97f9796ed37195944b6a9d66b42db47613a2a5a1cb51",
+      "sourceBounds": {
+        "left": 174,
+        "top": 237,
+        "width": 870,
+        "height": 832
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-weapon-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/weapon.png",
+      "output": "assets/optimized/gear-treasury-weapon-detail-384x384-1b6c9504c2a5.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 40078,
+      "sha256": "1b6c9504c2a5f6b0170b0a4bf4b198c9cf93ea5d9581b3579d56d259b175713a",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "2d94186ccdac80a5f68633acbf82cddecbe5e2da07f312f23cc1cb08c0c4f803",
+      "sourceBounds": {
+        "left": 195,
+        "top": 144,
+        "width": 914,
+        "height": 1053
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-treasury-necklace-detail",
+      "category": "gear-item",
+      "source": "assets/gear/treasury/necklace.png",
+      "output": "assets/optimized/gear-treasury-necklace-detail-384x384-f2d32251b97b.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 23428,
+      "sha256": "f2d32251b97bd8d54be98311c1cfd69770376080f597732579cb38b05558caca",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "9fb3221ee0aff448d692cd5c881959e34eed23c1cbdff43d1cb4668c549f8969",
+      "sourceBounds": {
+        "left": 317,
+        "top": 101,
+        "width": 604,
+        "height": 1040
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-head-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/head.png",
+      "output": "assets/optimized/gear-royal-stables-head-detail-384x384-5191a0c51bb6.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 39748,
+      "sha256": "5191a0c51bb6e8744e87c755096dd73e39cc4607f4814e4ee2d6fa58a2abfe35",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "dcc2bad3e54eedea67bb89b115e8169d70b4c21d7683855080d1d7a00a0ac84e",
+      "sourceBounds": {
+        "left": 130,
+        "top": 46,
+        "width": 968,
+        "height": 1177
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-chest-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/chest.png",
+      "output": "assets/optimized/gear-royal-stables-chest-detail-384x384-ec1836f815a8.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 39960,
+      "sha256": "ec1836f815a89fcff8ac835257fab6a7f131e7814820d3a60e207e4cd0f50fa0",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "c36b335f07cffcbb1450233a5a6b813a37193aafe057f1d76f36f2f83360c044",
+      "sourceBounds": {
+        "left": 141,
+        "top": 85,
+        "width": 972,
+        "height": 1100
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-pants-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/pants.png",
+      "output": "assets/optimized/gear-royal-stables-pants-detail-384x384-9f754fc8fc5a.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 22982,
+      "sha256": "9f754fc8fc5a99de43789baa51522ae435b1db44380d0754d7f37f81b5ec3cec",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "79a0ac3d9b3e077f606d1e949fa15bd1c0a7c310f72aa5c4c35b53943bcf7b70",
+      "sourceBounds": {
+        "left": 374,
+        "top": 64,
+        "width": 539,
+        "height": 1159
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-boots-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/boots.png",
+      "output": "assets/optimized/gear-royal-stables-boots-detail-384x384-ef2ab01f460a.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 38422,
+      "sha256": "ef2ab01f460a380c45a798a69ed864d7c23a3ff1bbdab90096cc43adc2c57074",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "1d6a28a2a12fe26417c9bff7f040f171a667424acf88fbc27d79f9a296f7c9fc",
+      "sourceBounds": {
+        "left": 153,
+        "top": 83,
+        "width": 939,
+        "height": 1124
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-gloves-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/gloves.png",
+      "output": "assets/optimized/gear-royal-stables-gloves-detail-384x384-f03f01cb57a8.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 36194,
+      "sha256": "f03f01cb57a884f5a7e66c216e3279728150e01ee1c4c96e5e09b251c01d194d",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "fb3e7a21b0cf578e4bcfe53755436f6f3982f710f160674aec8553a4807dec31",
+      "sourceBounds": {
+        "left": 238,
+        "top": 99,
+        "width": 794,
+        "height": 1097
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-belt-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/belt.png",
+      "output": "assets/optimized/gear-royal-stables-belt-detail-384x384-9d55f5c61f84.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 45722,
+      "sha256": "9d55f5c61f84139dabb9bf2ce014324c5843c3881f9baf7f61018ee90e52d16f",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "12f7be65f51bfba1be8e94cdef5880812d11932a55177feae7abccc848357649",
+      "sourceBounds": {
+        "left": 88,
+        "top": 80,
+        "width": 1076,
+        "height": 1113
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-weapon-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/weapon.png",
+      "output": "assets/optimized/gear-royal-stables-weapon-detail-384x384-c7625ea06fcc.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 8640,
+      "sha256": "c7625ea06fcca5716620cf8ae92d663112aea3b8e51c576623b45e537438f016",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "7fe623a2599cd401dee72af946ed991803045c081b338fdb0c58ab798cb17299",
+      "sourceBounds": {
+        "left": 297,
+        "top": 47,
+        "width": 771,
+        "height": 1149
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-royal-stables-necklace-detail",
+      "category": "gear-item",
+      "source": "assets/gear/royal-stables/necklace.png",
+      "output": "assets/optimized/gear-royal-stables-necklace-detail-384x384-6c3ed7feaed4.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 31094,
+      "sha256": "6c3ed7feaed49d2581c1f8adf579e1050a7b667f667b55fb55fe2d5a1de45d84",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "36fd5e0ab7ee160e184a10ca612769114bf6a5fa94931c6a6aee6384d902a324",
+      "sourceBounds": {
+        "left": 251,
+        "top": 74,
+        "width": 755,
+        "height": 1091
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-head-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/head.png",
+      "output": "assets/optimized/gear-gatehouse-head-detail-384x384-fc231c552f79.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 36380,
+      "sha256": "fc231c552f797e29cc33af129e24834046d69ceae4523220f6a5ac3143e3d3d0",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "0099dbcedbcab0cf950593c9a3a1ef45c6ace4fb847cec53b704d5031117d3b8",
+      "sourceBounds": {
+        "left": 260,
+        "top": 75,
+        "width": 760,
+        "height": 1137
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-chest-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/chest.png",
+      "output": "assets/optimized/gear-gatehouse-chest-detail-384x384-5f1779955e20.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 47600,
+      "sha256": "5f1779955e20e512e77e88e7538ff58df8c2fa0d1d25a3fe787cfbb952541ab7",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "cc1962bc03815a1b2bdd0a9da7afebd5bf94dd051cc9da7941bf2ed0a4565b8e",
+      "sourceBounds": {
+        "left": 195,
+        "top": 85,
+        "width": 852,
+        "height": 1094
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-pants-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/pants.png",
+      "output": "assets/optimized/gear-gatehouse-pants-detail-384x384-58016a376f54.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 30102,
+      "sha256": "58016a376f54a04d54cc57ed957f546e1e7b6d61479efced15542797ff2aa08b",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "c6d200acbd156b2cc46457023288ea73adc92623c29eb5d499502cdde903f455",
+      "sourceBounds": {
+        "left": 310,
+        "top": 71,
+        "width": 641,
+        "height": 1106
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-boots-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/boots.png",
+      "output": "assets/optimized/gear-gatehouse-boots-detail-384x384-75ae49192ea7.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 36354,
+      "sha256": "75ae49192ea72c60eb6e1c4a4380eb9c7d08aa84a16c95269df8e1f10910a0df",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "44b3c352050fe7b5230aae144dff6c78fcd150cc0ad70b7210d17ca8c671a32e",
+      "sourceBounds": {
+        "left": 198,
+        "top": 138,
+        "width": 883,
+        "height": 1010
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-gloves-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/gloves.png",
+      "output": "assets/optimized/gear-gatehouse-gloves-detail-384x384-c795f34f21a6.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 47166,
+      "sha256": "c795f34f21a63e7d5f9b583e08f1ade4dd92a979325dd3e3533f2681e2b2b94c",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "044a489f0a7d920f626827a8f94db9045296587322a5f8fe236cbe055df202d0",
+      "sourceBounds": {
+        "left": 140,
+        "top": 112,
+        "width": 972,
+        "height": 1047
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-belt-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/belt.png",
+      "output": "assets/optimized/gear-gatehouse-belt-detail-384x384-419abc9b1b2e.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 53718,
+      "sha256": "419abc9b1b2e2a80a689a1d8954c164764b774066cb1145b1a8e6af4c9f831f7",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "87edd742650b190419f44a4bc3c6234a14ebe51d8bccb82b7b54e4fbdf1a6631",
+      "sourceBounds": {
+        "left": 73,
+        "top": 124,
+        "width": 1122,
+        "height": 1034
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-weapon-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/weapon.png",
+      "output": "assets/optimized/gear-gatehouse-weapon-detail-384x384-00202b63b8f3.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 31844,
+      "sha256": "00202b63b8f30acd63847e29a8903b201eef7b4f8d8e1b1725fc68fe3c275d84",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "5eefeb34bbb12ca0c62e8d15d5faecc6b4cecdc110f3ab5cad6a5fde98fbd5a1",
+      "sourceBounds": {
+        "left": 270,
+        "top": 105,
+        "width": 715,
+        "height": 1046
+      },
+      "safetyPadding": 16
+    },
+    {
+      "id": "gear-gatehouse-necklace-detail",
+      "category": "gear-item",
+      "source": "assets/gear/gatehouse/necklace.png",
+      "output": "assets/optimized/gear-gatehouse-necklace-detail-384x384-128a99603319.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 26138,
+      "sha256": "128a996033192bfea7499e2e9d26c665736e9d39c0f648f062f00261f14adc44",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "11de6decc2b4480fcca8220e1d89b8d784ff9b6888b8084a91f796f373a793a0",
+      "sourceBounds": {
+        "left": 301,
+        "top": 66,
+        "width": 653,
+        "height": 1131
+      },
+      "safetyPadding": 16
     }
   ]
 }

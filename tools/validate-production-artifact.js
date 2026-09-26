@@ -121,6 +121,13 @@ if (expectedInnerCastleArt.length !== 7 || JSON.stringify(shippedInnerCastleArt)
 const textInventory = files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))
   .map(filePath => fs.readFileSync(filePath, "utf8"))
   .join("\n");
+const expectedGearArt = JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8"))
+  .assets.filter(asset => asset.category === "gear-item").map(asset => asset.output).sort();
+const shippedGearArt = files.map(file => path.relative(dist, file).replace(/\\/g, "/"))
+  .filter(file => /^assets\/optimized\/gear-(barracks|treasury|royal-stables|gatehouse)-(head|chest|pants|boots|gloves|belt|weapon|necklace)-/.test(file)).sort();
+if (expectedGearArt.length !== 64 || JSON.stringify(shippedGearArt) !== JSON.stringify(expectedGearArt)) {
+  throw new Error("Production must ship only the 32 current Common icons and their 32 selected-item detail images.");
+}
 for (const fixtureMarker of ["core_fixture_", "layer_1_fixture_", "region_26_fixture", "fixture_clan", "AchievementReviewSamples"]) {
   if (textInventory.includes(fixtureMarker)) throw new Error(`Development fixture ${fixtureMarker} leaked into production.`);
 }

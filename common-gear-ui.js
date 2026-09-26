@@ -1,4 +1,212 @@
+// BEGIN PREPARED COMMON GEAR ART
+const COMMON_GEAR_ART_LAYOUT = Object.freeze({
+  "assets/optimized/gear-barracks-head-192x192-313e5e656540.webp": [
+    "assets/optimized/gear-barracks-head-detail-384x384-6edc789b831d.webp",
+    97.548387,
+    2.473684,
+    0.512733
+  ],
+  "assets/optimized/gear-barracks-chest-192x192-3c118f02d53d.webp": [
+    "assets/optimized/gear-barracks-chest-detail-384x384-eb83dc007d50.webp",
+    102.783542,
+    -2.330948,
+    -1.842576
+  ],
+  "assets/optimized/gear-barracks-pants-192x192-cc003c18ee38.webp": [
+    "assets/optimized/gear-barracks-pants-detail-384x384-de994e988ef3.webp",
+    99.577123,
+    0.793761,
+    -0.589255
+  ],
+  "assets/optimized/gear-barracks-boots-192x192-edf8a1babad2.webp": [
+    "assets/optimized/gear-barracks-boots-detail-384x384-6847ffd3c896.webp",
+    99.404844,
+    1.387543,
+    -1.66436
+  ],
+  "assets/optimized/gear-barracks-gloves-192x192-c9d001327abd.webp": [
+    "assets/optimized/gear-barracks-gloves-detail-384x384-bb51f244250a.webp",
+    100.18483,
+    -1.483871,
+    -2.106364
+  ],
+  "assets/optimized/gear-barracks-belt-192x192-89fcd0993176.webp": [
+    "assets/optimized/gear-barracks-belt-detail-384x384-482d19b4c4e0.webp",
+    105.617647,
+    -3.349265,
+    -5.511029
+  ],
+  "assets/optimized/gear-barracks-weapon-192x192-204241e66c5f.webp": [
+    "assets/optimized/gear-barracks-weapon-detail-384x384-7c872773372f.webp",
+    98.63691,
+    -3.464378,
+    0.06867
+  ],
+  "assets/optimized/gear-barracks-necklace-192x192-6d44b03273e9.webp": [
+    "assets/optimized/gear-barracks-necklace-detail-384x384-c5feff9fb05e.webp",
+    98.552316,
+    -1.149228,
+    0.291595
+  ],
+  "assets/optimized/gear-treasury-head-192x192-99b76757361b.webp": [
+    "assets/optimized/gear-treasury-head-detail-384x384-037632d2f357.webp",
+    134.557377,
+    -19.885246,
+    -21.114754
+  ],
+  "assets/optimized/gear-treasury-chest-192x192-e09d99d13b52.webp": [
+    "assets/optimized/gear-treasury-chest-detail-384x384-f2f27e1d997e.webp",
+    120.326702,
+    -10.163351,
+    -10.559162
+  ],
+  "assets/optimized/gear-treasury-pants-192x192-b449daa6a170.webp": [
+    "assets/optimized/gear-treasury-pants-detail-384x384-338746fcfe25.webp",
+    111.565049,
+    -6.965049,
+    -7.576699
+  ],
+  "assets/optimized/gear-treasury-boots-192x192-3ae2ba9aca41.webp": [
+    "assets/optimized/gear-treasury-boots-detail-384x384-075835dc5687.webp",
+    121.343189,
+    -10.804646,
+    -14.263992
+  ],
+  "assets/optimized/gear-treasury-gloves-192x192-e79032fce3be.webp": [
+    "assets/optimized/gear-treasury-gloves-detail-384x384-1a046d587fa1.webp",
+    127.396896,
+    -13.931264,
+    -15.281596
+  ],
+  "assets/optimized/gear-treasury-belt-192x192-9cc72c01d629.webp": [
+    "assets/optimized/gear-treasury-belt-detail-384x384-f9eeac4b7ccd.webp",
+    132.082759,
+    -14.303448,
+    -18.551724
+  ],
+  "assets/optimized/gear-treasury-weapon-192x192-4d99f0d7a990.webp": [
+    "assets/optimized/gear-treasury-weapon-detail-384x384-1b6c9504c2a5.webp",
+    109.128205,
+    -6.558405,
+    -8.034188
+  ],
+  "assets/optimized/gear-treasury-necklace-192x192-7542effaafd5.webp": [
+    "assets/optimized/gear-treasury-necklace-detail-384x384-f2d32251b97b.webp",
+    110.492308,
+    -4.6,
+    -4.761538
+  ],
+  "assets/optimized/gear-royal-stables-head-192x192-c87ab2695304.webp": [
+    "assets/optimized/gear-royal-stables-head-detail-384x384-5191a0c51bb6.webp",
+    97.631266,
+    2.11215,
+    0.649108
+  ],
+  "assets/optimized/gear-royal-stables-chest-192x192-28625e1529a1.webp": [
+    "assets/optimized/gear-royal-stables-chest-detail-384x384-ec1836f815a8.webp",
+    104.465455,
+    -2.232727,
+    -2.843636
+  ],
+  "assets/optimized/gear-royal-stables-pants-192x192-7c23a0e5bba4.webp": [
+    "assets/optimized/gear-royal-stables-pants-detail-384x384-9f754fc8fc5a.webp",
+    99.147541,
+    -0.769629,
+    -0.769629
+  ],
+  "assets/optimized/gear-royal-stables-boots-192x192-68ed5c227b42.webp": [
+    "assets/optimized/gear-royal-stables-boots-detail-384x384-ef2ab01f460a.webp",
+    102.234875,
+    -0.781139,
+    -2.462633
+  ],
+  "assets/optimized/gear-royal-stables-gloves-192x192-07bab48ef44c.webp": [
+    "assets/optimized/gear-royal-stables-gloves-detail-384x384-f03f01cb57a8.webp",
+    104.751139,
+    -2.988149,
+    -3.945305
+  ],
+  "assets/optimized/gear-royal-stables-belt-192x192-d251726672f7.webp": [
+    "assets/optimized/gear-royal-stables-belt-detail-384x384-9d55f5c61f84.webp",
+    103.245283,
+    -1.54717,
+    -2.339623
+  ],
+  "assets/optimized/gear-royal-stables-weapon-192x192-dccfc5c662d6.webp": [
+    "assets/optimized/gear-royal-stables-weapon-detail-384x384-c7625ea06fcc.webp",
+    100.010444,
+    -4.062663,
+    0.396867
+  ],
+  "assets/optimized/gear-royal-stables-necklace-192x192-913484e0967b.webp": [
+    "assets/optimized/gear-royal-stables-necklace-detail-384x384-6c3ed7feaed4.webp",
+    105.327223,
+    -2.779102,
+    -2.086159
+  ],
+  "assets/optimized/gear-gatehouse-head-192x192-b5a59680fd65.webp": [
+    "assets/optimized/gear-gatehouse-head-detail-384x384-fc231c552f79.webp",
+    101.065963,
+    -1.493404,
+    -1.751979
+  ],
+  "assets/optimized/gear-gatehouse-chest-192x192-1e72532be259.webp": [
+    "assets/optimized/gear-gatehouse-chest-detail-384x384-5f1779955e20.webp",
+    105.038391,
+    -2.058501,
+    -2.903108
+  ],
+  "assets/optimized/gear-gatehouse-pants-192x192-6ebd3a25d081.webp": [
+    "assets/optimized/gear-gatehouse-pants-detail-384x384-58016a376f54.webp",
+    103.898734,
+    -2.21519,
+    -1.721519
+  ],
+  "assets/optimized/gear-gatehouse-boots-192x192-6de5454174c7.webp": [
+    "assets/optimized/gear-gatehouse-boots-detail-384x384-75ae49192ea7.webp",
+    113.774257,
+    -7.926733,
+    -8.217822
+  ],
+  "assets/optimized/gear-gatehouse-gloves-192x192-5f16827310cb.webp": [
+    "assets/optimized/gear-gatehouse-gloves-detail-384x384-c795f34f21a6.webp",
+    109.753582,
+    -4.796562,
+    -5.558739
+  ],
+  "assets/optimized/gear-gatehouse-belt-192x192-918a7dd7576c.webp": [
+    "assets/optimized/gear-gatehouse-belt-detail-384x384-419abc9b1b2e.webp",
+    102.417112,
+    -1.73262,
+    -2.256684
+  ],
+  "assets/optimized/gear-gatehouse-weapon-192x192-c0eee067f541.webp": [
+    "assets/optimized/gear-gatehouse-weapon-detail-384x384-00202b63b8f3.webp",
+    109.858509,
+    -4.969407,
+    -5.00956
+  ],
+  "assets/optimized/gear-gatehouse-necklace-192x192-837482be4074.webp": [
+    "assets/optimized/gear-gatehouse-necklace-detail-384x384-128a99603319.webp",
+    101.602122,
+    -0.838196,
+    -1.135279
+  ]
+});
+// END PREPARED COMMON GEAR ART
+
 /* Crownlands officer equipment view model, renderer, and interaction flow. */
+// A square SVG viewport frames the original bitmap consistently inside rectangular
+// slots too. Its image remains the reviewed WebP; no runtime pixel processing.
+function renderCommonGearArtwork(src, { detail = false, alt = "", className = "" } = {}) {
+  const layout = COMMON_GEAR_ART_LAYOUT[src];
+  const classes = escapeHtml(`gear-item-art ${className}`.trim());
+  if (!layout) return `<img class="${classes}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" decoding="async" draggable="false" onerror="this.hidden=true" />`;
+  const [detailSrc, size, left, top] = layout;
+  const label = alt ? `role="img" aria-label="${escapeHtml(alt)}"` : 'aria-hidden="true"';
+  return `<svg class="${classes}" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" focusable="false" ${label} data-gear-art="${detail ? "detail" : "icon"}"><image href="${escapeHtml(detail ? detailSrc : src)}" x="${left}" y="${top}" width="${size}" height="${size}" onerror="this.style.visibility='hidden'" /></svg>`;
+}
+
 let commonGearBagFilterOpen = false;
 
 function normalizeBattleCasualtyRecovery(value = null) {
@@ -418,7 +626,7 @@ function renderCommonGearSlot(slotModel) {
   const { slot, label, equipped, equippedDefinition, isSelected, isUpgradeReady } = slotModel;
   const accessibleLabel = `${label}${equipped ? `, ${equippedDefinition.gearName}, Level ${equipped.level}` : ", empty"}${isUpgradeReady ? ", upgrade material ready" : ""}`;
   return `<button class="common-gear-slot${isSelected ? " selected" : ""}${equipped ? " filled" : " empty"}${isUpgradeReady ? " upgrade-ready" : ""}" type="button" data-gear-slot="${escapeHtml(slot)}" aria-pressed="${isSelected ? "true" : "false"}" aria-label="${escapeHtml(accessibleLabel)}">
-    <span class="common-gear-slot-art" aria-hidden="true">${equippedDefinition ? `<img src="${escapeHtml(equippedDefinition.art)}" alt="" draggable="false" onerror="this.hidden=true" />` : "+"}</span>
+    <span class="common-gear-slot-art" aria-hidden="true">${equippedDefinition ? renderCommonGearArtwork(equippedDefinition.art) : "+"}</span>
     <span class="common-gear-slot-copy"><b>${escapeHtml(label)}</b><small>${equipped ? `Level ${equipped.level}` : "Empty"}</small></span>
     ${isUpgradeReady ? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
   </button>`;
@@ -434,7 +642,7 @@ function renderCommonGearBagTile(group) {
     ${group.isNew ? `<span class="common-gear-bag-new">New</span>` : ""}
     ${group.isEquipped ? `<span class="common-gear-bag-equipped" aria-label="Equipped">E</span>` : ""}
     ${group.isUpgradeReady && !group.isEquipped ? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
-    <img src="${escapeHtml(def.art)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.hidden=true" />
+    ${renderCommonGearArtwork(def.art)}
     <span class="common-gear-bag-level">L${item.level}</span>
     ${group.count > 1 ? `<span class="common-gear-bag-count">×${group.count}</span>` : ""}
     <span class="common-gear-bag-name">${escapeHtml(def.gearName)}</span>
@@ -495,7 +703,7 @@ function renderCommonGearSelectedPanel(viewModel) {
     <span class="common-gear-detail-eyebrow">${escapeHtml(viewModel.officerName)}'s</span>
     <strong class="common-gear-detail-name">${escapeHtml(definition.gearName)}</strong>
     <span class="common-gear-rarity rarity-${escapeHtml(definition.rarity)}">${escapeHtml(definition.rarity)} · L${selected.level}/${COMMON_GEAR.MAX_LEVEL} · ${escapeHtml(selected.slot)}</span>
-    <img class="common-gear-detail-art" src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
+    ${renderCommonGearArtwork(definition.art, { detail: true, className: "common-gear-detail-art" })}
     <div class="common-gear-level-progress" role="progressbar" aria-label="Item level" aria-valuemin="1" aria-valuemax="${COMMON_GEAR.MAX_LEVEL}" aria-valuenow="${selected.level}">
       <span aria-hidden="true">★</span><i><b style="width:${progressPercent.toFixed(0)}%"></b></i><em>${selected.level}/${COMMON_GEAR.MAX_LEVEL}</em>
     </div>
@@ -524,7 +732,7 @@ function renderCommonGearBottomInfo(viewModel) {
     ? `Next +${viewModel.nextBonus.toFixed(2)}% (+${viewModel.nextBonusIncrease.toFixed(2)}%) · Requires ${viewModel.requirement.duplicates} matching Level ${selected.level} cop${viewModel.requirement.duplicates === 1 ? "y" : "ies"}`
     : "Maximum level";
   return `<section class="common-gear-bottom-info">
-    <img src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
+    ${renderCommonGearArtwork(definition.art)}
     <div class="common-gear-bottom-copy">
       <strong>${escapeHtml(definition.gearName)}</strong>
       <p>${escapeHtml(viewModel.description)}</p>

@@ -61,7 +61,7 @@
 #modal.cgb-modal .cgb-reward-record{min-height:0;overflow-y:auto;padding:12px 20px 20px;scrollbar-width:thin;scrollbar-color:#a1a58f transparent!important}
 #modal.cgb-modal .cgb-reward-hero{text-align:center}
 #modal.cgb-modal .cgb-reward-art{display:grid;place-items:center;height:145px;margin-bottom:12px}
-#modal.cgb-modal .cgb-reward-art img{max-height:135px;max-width:135px;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px #43493322)}
+#modal.cgb-modal .cgb-reward-art .gear-item-art{max-height:135px;max-width:135px;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px #43493322)}
 #modal.cgb-modal .cgb-officer-name{font-size:10px!important;color:#757562!important;letter-spacing:1px!important;text-transform:uppercase!important;margin:0 0 7px}
 #modal.cgb-modal .cgb-reward-hero h3{font:26px/1.14 Georgia!important;margin:0 0 9px}
 #modal.cgb-modal .cgb-item-meta{font-size:11px!important;color:#656958!important;margin:0}
@@ -120,7 +120,7 @@
 #modal.cgb-modal .cgb-reward-record{padding:7px 9px 9px}
 #modal.cgb-modal .cgb-reward-hero{display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:8px;text-align:left;min-height:63px}
 #modal.cgb-modal .cgb-reward-art{height:58px;margin:0}
-#modal.cgb-modal .cgb-reward-art img{max-width:54px;max-height:58px}
+#modal.cgb-modal .cgb-reward-art .gear-item-art{max-width:54px;max-height:58px}
 #modal.cgb-modal .cgb-officer-name{font-size:8px!important;letter-spacing:.3px!important;line-height:1.3;margin-bottom:3px}
 #modal.cgb-modal .cgb-reward-hero h3{font-size:17px!important;line-height:1.1;margin-bottom:4px}
 #modal.cgb-modal .cgb-item-meta{font-size:9px!important;line-height:1.3}
@@ -159,7 +159,7 @@
 #modal.cgb-modal .cgb-reward-record{padding:6px}
 #modal.cgb-modal .cgb-reward-hero{grid-template-columns:37px minmax(0,1fr);gap:5px;min-height:60px}
 #modal.cgb-modal .cgb-reward-art{height:43px}
-#modal.cgb-modal .cgb-reward-art img{max-height:43px;max-width:37px}
+#modal.cgb-modal .cgb-reward-art .gear-item-art{max-height:43px;max-width:37px}
 #modal.cgb-modal .cgb-reward-hero h3{font-size:14px!important}
 #modal.cgb-modal .cgb-officer-name{font-size:7px!important}
 #modal.cgb-modal .cgb-item-meta{font-size:8px!important}

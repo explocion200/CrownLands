@@ -311,7 +311,7 @@ assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span clas
 assert.match(gearUi, /isUpgradeReady \? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready"/, "Upgradeable equipped items must render the alert on their equipment slot.");
 
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
-assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/, "Selected gear and its upgrade view must render item artwork.");
+assert.match(gearUi, /renderCommonGearArtwork\(definition\.art, \{ detail: true, className: "common-gear-detail-art" \}\)/, "Selected gear must use its authoritative definition with framed detail artwork.");
 assert.match(game, /function renderCommonGearBagTile[\s\S]{0,1800}def\.art/, "Building inventory cards must render item artwork.");
 assert.match(read("common-gear-box-ui.js"), /class="cgb-reward-art"[\s\S]{0,100}d\.art/, "Box reveals must render the authoritative item's artwork.");
 assert.match(game, /onerror="this\.hidden=true"/, "Gear art must fail gracefully without obscuring labels.");

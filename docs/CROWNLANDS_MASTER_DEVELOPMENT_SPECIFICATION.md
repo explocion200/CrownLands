@@ -892,6 +892,12 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 - Higher Gear rarities and deeper progression are `PLANNED` after the Common foundation is stable.
 - Exact rarity names, power curves, sources, duplicate requirements, and protection against unchecked power growth are **NEEDS VERIFICATION**.
 
+### Common equipment artwork refresh
+
+**Approved 26 September 2026.** The selected Common designs from the gear artwork collection replace the 32 current item illustrations across all four officers. Equipment slots, bag tiles, upgrade confirmation and chest rewards share consistent framing and transparent 192px icons. Selected-item details use the matching 384px image. The PNG masters remain outside the production client. Existing Common levels, bonuses, costs, rarity surfaces, selection borders and server authority are retained; the other four artwork tiers do not enable higher-rarity progression.
+
+Status: `IMPLEMENTED — NOT DEPLOYED`. Desktop and landscape evidence: [Common equipment artwork](./visual-qa/common-gear-art/README.md). Publication requires separate authorization and release verification.
+
 ### Needs verification
 
 - Complete Common Gear definition table, upgrade material quantities, Gold costs, bonus values, rounding, slot restrictions, duplicate handling, and reset field allowlist.

@@ -1,80 +1,215 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7256e70ac8f663f2e051079932953d9b392947d0",
+  "baseCommit": "c66fd0f4b9e49d1be5399c3277f28e94edb95c3a",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "styles.css",
-        "firebaseClient.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-multiplayer-sync.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-pending-army-departures.js"
+        "common-gear.js",
+        "functions/common-gear.js"
       ],
-      "reason": "Immediate provisional marches and scouts share canonical request IDs without spending or resolving locally. Cover response loss, duplicate/retried submissions, snapshot ordering, account/realm isolation, cleanup, cached frame motion, existing arrival/report delivery, Tower scouting, path alignment and actual desktop/landscape-mobile gameplay. The browser suite also checks ordinary accepted marches avoid map reconstruction; emulator launch and report suites guard authoritative idempotency and privacy.",
       "tests": [
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-multiplayer-sync.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-swift-march-order.js",
-        "tools/validate-army-token-rollback.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js"
-      ]
+        "tools/validate-common-gear.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "reason": "Only the 32 artwork paths change in shared definitions. Preserve identical client/server definitions, Common levels, bonuses, troop and economy effects, upgrades and report attribution; the focused gear-report emulator protects the authoritative consumer."
     },
     {
       "paths": [
-        "functions/authoritative-route-planner.js",
-        "functions/holding-towers.js",
-        "functions/world-travel-network.js",
-        "functions/index.js",
-        "tools/validate-responsive-scout-routing.js"
+        "barracks-gear-ui.css",
+        "barracks-gear-ui.js",
+        "common-gear-box-ui.css",
+        "common-gear-box-ui.js",
+        "common-gear-ui.css",
+        "common-gear-ui.js",
+        "gatehouse-gear-ui.css",
+        "gatehouse-gear-ui.js",
+        "royal-stables-gear-ui.css",
+        "royal-stables-gear-ui.js",
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-common-gear.js",
+        "treasury-gear-ui.css",
+        "treasury-gear-ui.js"
       ],
-      "reason": "Exact admissible origin pruning and bounded immutable request-local route reuse affect automatic scout launch and shared route geometry. Validate exhaustive parity, topology/terrain, all eligible origins, ties, cold/warm behavior, retries and cache bounds. Arrival overlaps independent reads while retaining sequential shared economy checkpoint budgets; cover combat, rallies, Towers, bulk launch, scouting protections, report lifecycle and economy contention. Existing Firebase scaling settings are preserved; no additional warm instances are configured.",
       "tests": [
-        "tools/validate-responsive-scout-routing.js",
-        "tools/validate-scout-route-cache.js",
-        "tools/validate-world-travel-network.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-authoritative-army-orders.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-rally-lifecycle.js"
-      ]
+        "tools/validate-common-gear.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-treasury-gear-browser.js",
+        "tools/validate-gatehouse-gear-browser.js",
+        "tools/validate-royal-stables-gear-browser.js",
+        "tools/validate-common-gear-box-browser.js"
+      ],
+      "reason": "Shared bitmap viewport and officer/chest renderers change gear framing and selected-detail resolution. Cover every officer, equipment/bag/details/confirmation/rewards, narrow landscape layouts, labels, transparency, decode paths, selection/focus/scroll, empty/pending/error and action isolation. The stale Barracks recovery text expectation is aligned with the already-existing shared cap."
     },
     {
       "paths": [
-        "functions/operation-timing.js",
-        "tools/read-stability-production.js",
-        "tools/validate-operation-timing.js"
+        "assets/gear/barracks/belt.png",
+        "assets/gear/barracks/boots.png",
+        "assets/gear/barracks/chest.png",
+        "assets/gear/barracks/gloves.png",
+        "assets/gear/barracks/head.png",
+        "assets/gear/barracks/necklace.png",
+        "assets/gear/barracks/pants.png",
+        "assets/gear/barracks/weapon.png",
+        "assets/gear/gatehouse/belt.png",
+        "assets/gear/gatehouse/boots.png",
+        "assets/gear/gatehouse/chest.png",
+        "assets/gear/gatehouse/gloves.png",
+        "assets/gear/gatehouse/head.png",
+        "assets/gear/gatehouse/necklace.png",
+        "assets/gear/gatehouse/pants.png",
+        "assets/gear/gatehouse/weapon.png",
+        "assets/gear/royal-stables/belt.png",
+        "assets/gear/royal-stables/boots.png",
+        "assets/gear/royal-stables/chest.png",
+        "assets/gear/royal-stables/gloves.png",
+        "assets/gear/royal-stables/head.png",
+        "assets/gear/royal-stables/necklace.png",
+        "assets/gear/royal-stables/pants.png",
+        "assets/gear/royal-stables/weapon.png",
+        "assets/gear/treasury/belt.png",
+        "assets/gear/treasury/boots.png",
+        "assets/gear/treasury/chest.png",
+        "assets/gear/treasury/gloves.png",
+        "assets/gear/treasury/head.png",
+        "assets/gear/treasury/necklace.png",
+        "assets/gear/treasury/pants.png",
+        "assets/gear/treasury/weapon.png",
+        "assets/optimized/gear-barracks-belt-192x192-89fcd0993176.webp",
+        "assets/optimized/gear-barracks-belt-detail-384x384-482d19b4c4e0.webp",
+        "assets/optimized/gear-barracks-boots-192x192-edf8a1babad2.webp",
+        "assets/optimized/gear-barracks-boots-detail-384x384-6847ffd3c896.webp",
+        "assets/optimized/gear-barracks-chest-192x192-3c118f02d53d.webp",
+        "assets/optimized/gear-barracks-chest-detail-384x384-eb83dc007d50.webp",
+        "assets/optimized/gear-barracks-gloves-192x192-c9d001327abd.webp",
+        "assets/optimized/gear-barracks-gloves-detail-384x384-bb51f244250a.webp",
+        "assets/optimized/gear-barracks-head-192x192-313e5e656540.webp",
+        "assets/optimized/gear-barracks-head-detail-384x384-6edc789b831d.webp",
+        "assets/optimized/gear-barracks-necklace-192x192-6d44b03273e9.webp",
+        "assets/optimized/gear-barracks-necklace-detail-384x384-c5feff9fb05e.webp",
+        "assets/optimized/gear-barracks-pants-192x192-cc003c18ee38.webp",
+        "assets/optimized/gear-barracks-pants-detail-384x384-de994e988ef3.webp",
+        "assets/optimized/gear-barracks-weapon-192x192-204241e66c5f.webp",
+        "assets/optimized/gear-barracks-weapon-detail-384x384-7c872773372f.webp",
+        "assets/optimized/gear-gatehouse-belt-192x192-918a7dd7576c.webp",
+        "assets/optimized/gear-gatehouse-belt-detail-384x384-419abc9b1b2e.webp",
+        "assets/optimized/gear-gatehouse-boots-192x192-6de5454174c7.webp",
+        "assets/optimized/gear-gatehouse-boots-detail-384x384-75ae49192ea7.webp",
+        "assets/optimized/gear-gatehouse-chest-192x192-1e72532be259.webp",
+        "assets/optimized/gear-gatehouse-chest-detail-384x384-5f1779955e20.webp",
+        "assets/optimized/gear-gatehouse-gloves-192x192-5f16827310cb.webp",
+        "assets/optimized/gear-gatehouse-gloves-detail-384x384-c795f34f21a6.webp",
+        "assets/optimized/gear-gatehouse-head-192x192-b5a59680fd65.webp",
+        "assets/optimized/gear-gatehouse-head-detail-384x384-fc231c552f79.webp",
+        "assets/optimized/gear-gatehouse-necklace-192x192-837482be4074.webp",
+        "assets/optimized/gear-gatehouse-necklace-detail-384x384-128a99603319.webp",
+        "assets/optimized/gear-gatehouse-pants-192x192-6ebd3a25d081.webp",
+        "assets/optimized/gear-gatehouse-pants-detail-384x384-58016a376f54.webp",
+        "assets/optimized/gear-gatehouse-weapon-192x192-c0eee067f541.webp",
+        "assets/optimized/gear-gatehouse-weapon-detail-384x384-00202b63b8f3.webp",
+        "assets/optimized/gear-royal-stables-belt-192x192-d251726672f7.webp",
+        "assets/optimized/gear-royal-stables-belt-detail-384x384-9d55f5c61f84.webp",
+        "assets/optimized/gear-royal-stables-boots-192x192-68ed5c227b42.webp",
+        "assets/optimized/gear-royal-stables-boots-detail-384x384-ef2ab01f460a.webp",
+        "assets/optimized/gear-royal-stables-chest-192x192-28625e1529a1.webp",
+        "assets/optimized/gear-royal-stables-chest-detail-384x384-ec1836f815a8.webp",
+        "assets/optimized/gear-royal-stables-gloves-192x192-07bab48ef44c.webp",
+        "assets/optimized/gear-royal-stables-gloves-detail-384x384-f03f01cb57a8.webp",
+        "assets/optimized/gear-royal-stables-head-192x192-c87ab2695304.webp",
+        "assets/optimized/gear-royal-stables-head-detail-384x384-5191a0c51bb6.webp",
+        "assets/optimized/gear-royal-stables-necklace-192x192-913484e0967b.webp",
+        "assets/optimized/gear-royal-stables-necklace-detail-384x384-6c3ed7feaed4.webp",
+        "assets/optimized/gear-royal-stables-pants-192x192-7c23a0e5bba4.webp",
+        "assets/optimized/gear-royal-stables-pants-detail-384x384-9f754fc8fc5a.webp",
+        "assets/optimized/gear-royal-stables-weapon-192x192-dccfc5c662d6.webp",
+        "assets/optimized/gear-royal-stables-weapon-detail-384x384-c7625ea06fcc.webp",
+        "assets/optimized/gear-treasury-belt-192x192-9cc72c01d629.webp",
+        "assets/optimized/gear-treasury-belt-detail-384x384-f9eeac4b7ccd.webp",
+        "assets/optimized/gear-treasury-boots-192x192-3ae2ba9aca41.webp",
+        "assets/optimized/gear-treasury-boots-detail-384x384-075835dc5687.webp",
+        "assets/optimized/gear-treasury-chest-192x192-e09d99d13b52.webp",
+        "assets/optimized/gear-treasury-chest-detail-384x384-f2f27e1d997e.webp",
+        "assets/optimized/gear-treasury-gloves-192x192-e79032fce3be.webp",
+        "assets/optimized/gear-treasury-gloves-detail-384x384-1a046d587fa1.webp",
+        "assets/optimized/gear-treasury-head-192x192-99b76757361b.webp",
+        "assets/optimized/gear-treasury-head-detail-384x384-037632d2f357.webp",
+        "assets/optimized/gear-treasury-necklace-192x192-7542effaafd5.webp",
+        "assets/optimized/gear-treasury-necklace-detail-384x384-f2d32251b97b.webp",
+        "assets/optimized/gear-treasury-pants-192x192-b449daa6a170.webp",
+        "assets/optimized/gear-treasury-pants-detail-384x384-338746fcfe25.webp",
+        "assets/optimized/gear-treasury-weapon-192x192-4d99f0d7a990.webp",
+        "assets/optimized/gear-treasury-weapon-detail-384x384-1b6c9504c2a5.webp",
+        "assets/optimized/manifest.json",
+        "tools/import-common-gear-art.js",
+        "tools/optimize-game-art.py"
       ],
-      "reason": "Add bounded non-private route-evaluation/pruning dimensions and economy phase duration to request timing and read-only production aggregates. Validate concurrent isolation, results/errors, allowed dimensions and diagnostic tooling; affected authority emulators exercise instrumented launch and settlement.",
       "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-stability-audit.js",
-        "functions/test/emulator-scout-report-lifecycle.js"
-      ]
+        "tools/validate-common-gear.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-treasury-gear-browser.js",
+        "tools/validate-gatehouse-gear-browser.js",
+        "tools/validate-royal-stables-gear-browser.js",
+        "tools/validate-common-gear-box-browser.js"
+      ],
+      "reason": "Validate all selected source and delivery checksums, dimensions, alpha, one-to-one Common mappings, 84% safe framing, import output, preserved curated encodings and production image budgets. Every consumer is exercised by the officer and chest browser suites; no higher rarity or level behavior is added."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-common-gear-art.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Production must include exactly the current 32 icons and 32 detail variants while excluding retired gear derivatives and PNG source masters. Verify packaging, content references and aggregate delivery budgets after the production build."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Bound the added icon/detail payload and the deferred framing code. Reconcile pre-existing main cache/entrypoint overages, public-page references and already-replaced HUD references without changing those runtime files or startup downloads. Retain strict hashes, per-file limits and production checks."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/RESPONSIVE_MARCHES_AND_SCOUTS.md"
+        "docs/visual-qa/common-gear-art/README.md"
       ],
-      "reason": "Record the explicitly approved provisional presentation contract, production diagnosis, measured fixture scope, exact-route preservation, selected validation and deployment authorization requirements. Document that the improvements use existing scaling without additional warm instances. No additional runtime dependency beyond the covered implementation.",
-      "tests": []
+      "tests": [],
+      "reason": "Record the approved Common artwork presentation, measured file sizes, scope, validation evidence, baseline assertion maintenance and pending deployment status. No additional executable behavior is introduced by these documents."
+    },
+    {
+      "paths": [
+        "docs/visual-qa/common-gear-art/barracks-desktop.png",
+        "docs/visual-qa/common-gear-art/barracks-mobile.png",
+        "docs/visual-qa/common-gear-art/gatehouse-desktop.png",
+        "docs/visual-qa/common-gear-art/gatehouse-mobile.png",
+        "docs/visual-qa/common-gear-art/rewards-desktop.png",
+        "docs/visual-qa/common-gear-art/rewards-mobile.png",
+        "docs/visual-qa/common-gear-art/royal-stables-desktop.png",
+        "docs/visual-qa/common-gear-art/royal-stables-mobile.png",
+        "docs/visual-qa/common-gear-art/treasury-desktop.png",
+        "docs/visual-qa/common-gear-art/treasury-mobile.png"
+      ],
+      "tests": [
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-treasury-gear-browser.js",
+        "tools/validate-gatehouse-gear-browser.js",
+        "tools/validate-royal-stables-gear-browser.js",
+        "tools/validate-common-gear-box-browser.js"
+      ],
+      "reason": "Committed screenshots are synthetic-data evidence generated from the five focused browser suites at desktop and shortest supported landscape dimensions; production packaging excludes documentation fixtures."
     }
   ]
 }

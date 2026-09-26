@@ -87,7 +87,7 @@ async function main() {
           assert(await evaluate("[...modal.querySelectorAll('[data-rarity=common][aria-pressed=true]')].every(e=>getComputedStyle(e).borderTopColor==='rgb(111, 61, 60)')"), 'Selected Common gear needs its burgundy border.');
         }
         if (['missing','max','gold'].includes(example)) assert.equal(data.upgradeDisabled, true);
-        if (example === 'max') assert(data.text.includes('Field Medics')&&data.text.includes('75% combined cap')&&data.text.includes('main city'));
+        if (example === 'max') assert(data.text.includes('Field Medics')&&data.text.includes(`${G.CASUALTY_RECOVERY_CAP_PERCENT}% combined cap`)&&data.text.includes('main city'));
         if (example === 'gold') assert(data.text.includes('Insufficient gold'));
       }
     }
