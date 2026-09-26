@@ -127,8 +127,8 @@ Reuse affected existing suites such as `tools/validate-common-gear.js`, `tools/v
 
 ## 8. Reproduce and review
 
-- `node tools/audit-gear-progression.js` checks the review against the unchanged current Common definitions and source production functions.
-- `node tools/audit-gear-progression.js --write` regenerates the calculated tables after editing the proposal/model.
+- `node tools/validate-gear-progression-proposal.js` checks the review against the unchanged current Common definitions and source production functions.
+- `node tools/validate-gear-progression-proposal.js --write` regenerates the calculated tables after editing the proposal/model.
 - [Proposal data](proposal.json), [calculator](model.js), [all numbers](CALCULATED_REVIEW.md).
 - Source basis: [`common-gear.js`](../../common-gear.js), [`functions/economy-config.json`](../../functions/economy-config.json), [`functions/index.js`](../../functions/index.js) (`getCityProductionStats`, `calculateDefenderArmyPackages`, `createHoldingTowerDefensePackages`, `combinePlayerObjectiveBonuses`, `addCommonGearMarchSpeed`, `createAttackCombatSnapshot`, `prepareEconomyCollection`, `upgradeCommonGear`), [`clan-tower-buildings.js`](../../clan-tower-buildings.js), [Master Specification](../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md), [PR #372](https://github.com/explocion200/CrownLands/pull/372).
 

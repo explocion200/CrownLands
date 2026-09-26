@@ -6,10 +6,10 @@
       "paths": [
         "docs/gear-rarity-progression/proposal.json",
         "docs/gear-rarity-progression/model.js",
-        "tools/audit-gear-progression.js"
+        "tools/validate-gear-progression-proposal.js"
       ],
       "tests": [
-        "tools/audit-gear-progression.js"
+        "tools/validate-gear-progression-proposal.js"
       ],
       "reason": "Review-only balance calculator, not imported by runtime. Validate all 32 source definition mappings, unchanged Common bonuses, increasing rarity curves, 1650 cap scenarios, duplicate and Gold growth, actual baseline rate functions and offline cap counterexample. No backend, schema, reward or gameplay writes; emulator gates are not affected."
     },
@@ -19,7 +19,7 @@
         "docs/gear-rarity-progression/CALCULATED_REVIEW.md"
       ],
       "tests": [
-        "tools/audit-gear-progression.js"
+        "tools/validate-gear-progression-proposal.js"
       ],
       "reason": "Draft rules, source audit, source-linked implementation plan, decision inventory and generated tables. Confirm calculated review matches model, label all unapproved balance values, preserve the Master Specification, and distinguish prospective validation from checks actually run."
     }
