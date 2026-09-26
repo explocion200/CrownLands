@@ -1,13 +1,14 @@
 # Gear rarity progression — working proposal
 
-**26 September 2026 · DRAFT · Gameplay is unchanged.** This branch contains a review model and implementation plan, not enabled rarities. PR #372 remains unmerged. The Master Specification is unchanged because the new numeric balance and reward rules still need confirmation.
+**26 September 2026 · DRAFT · Gameplay is unchanged.** This branch contains a review model and implementation plan, not enabled rarities. PR #372 remains unmerged. The Master Specification records the confirmed upgrade-only acquisition path as planned; the numeric tables remain a balance draft.
 
-The user confirmed the five colors/rarities and wants upward crafting, better artwork at each tier, bounded recovery, and attack bonuses that can reach 100%. This review uses **100% total attack** and **75% total recovery** as proposed defaults. Whether 100% meant gear alone, the final recovery ceiling, and the acquisition approach are pending answers.
+The user confirmed the five colors/rarities, upward crafting from existing gear, and better artwork at each tier. The accepted working direction uses **100% total attack** and **75% total recovery**. Higher rarities come only from upgrading the current Common gear upward; separate higher-rarity drops, rewards and purchases are outside this update. The full balance and pacing still require implementation review.
 
 ## 1. Crafting proposal
 
 - Common (gray/white) → Uncommon (green) → Rare (blue) → Epic (purple) → Legendary (orange/gold). Poor and Unique are alternate labels, not extra tiers.
 - Five levels per rarity. Two identical items of the same officer, slot, rarity and level produce one next-level item. At Level 5 they produce Level 1 of the next rarity. Legendary Level 5 is the endpoint.
+- Continue from each player's existing items and levels. Two Common Level 5 copies become one Uncommon Level 1; two Uncommon Level 5 copies become one Rare Level 1, continuing through Epic to Legendary. Keep existing Common Box sources and their three Level 1 Common pieces. Higher rarity is earned through crafting, never rolled directly from a box or awarded by a new reward source in this update.
 - Preserve all Common Level 1–5 bonuses and existing Common crafting prices. Existing item IDs, acquired gear, equipment selection, boxes and persistence survive the update.
 - Consume the selected target and one unequipped matching copy atomically. If the target was equipped, equip the new result automatically. Never consume a second equipped item as material.
 - Intrinsic bonuses increase at every step, including promotions. A player's final output can remain unchanged at a category cap; the preview must show both the intrinsic improvement and the amount actually applied.
@@ -72,19 +73,19 @@ Gold is charged as hours of the player's **current raw regular-city Gold product
 
 These are proposed prices, not timers. Crafting completes atomically after acceptance. The full cost includes crafting both inputs at every earlier step; it is not the sum of one column of prices.
 
-**Common-only drops cannot support a reasonable full five-tier progression:** Legendary Level 1 requires 1,048,576 matching Common Level 1 copies; Legendary Level 5 requires 16,777,216. With uniformly random selection among 32 families, obtaining enough of one chosen family takes approximately 536,870,912 total Common item draws in expectation, before considering Gold. This is mathematical supply demand, not a forecast of player engagement or a measured drop rate.
+**Acquisition is confirmed: upgrade existing gear upward.** Keep two matching inputs for every upgrade and promotion. The earlier recommendation to add higher-rarity rewards is withdrawn. Preserve existing boxes and their explicit Common-only pool when expanding the catalog; do not introduce new reward types, currencies, drop odds or shop stock.
 
-The recommended direction preserves two-item crafting and adds separately named higher-rarity rewards. Existing unopened Common Boxes must remain Common and keep their three-item promise. Do not silently add all 160 definitions to their existing random pool. Higher-rarity reward frequency, eligibility and choice are a required design step before release.
-
-| Illustrative chosen Legendary Level 1 rewards per week | One chosen Legendary Level 5 | All 32 slots at Legendary Level 5 |
+| Target | Matching Common Level 1 equivalents | Matching Common Level 5 equivalents |
 |---|---:|---:|
-| 1 | 16 weeks | 512 weeks |
-| 3 | 5⅓ weeks | 170⅔ weeks |
-| 7 | 2²⁄₇ weeks | 73¹⁄₇ weeks |
+| Uncommon Level 1 | 32 | 2 |
+| Rare Level 1 | 1,024 | 64 |
+| Epic Level 1 | 32,768 | 2,048 |
+| Legendary Level 1 | 1,048,576 | 65,536 |
+| Legendary Level 5 | 16,777,216 | 1,048,576 |
 
-The table assumes rewards can be selected by exact family, no previous inventory, and sufficient Gold. Random-slot rewards take longer for a chosen target. A Level 5 Legendary from matching Legendary Level 1 rewards also costs 256 fixed-rate raw-production hours to craft. These examples show why a reward cadence must be agreed; they do **not** authorize new daily/weekly rewards, shop stock, monetization, eligibility gates or random drop odds.
+These are total material equivalents for one exact family, not additional items demanded from a player who already owns part of the crafting tree. Existing crafted levels retain their full progress. Gold remains additional.
 
-Alternatives awaiting the user's choice: spend Gold/materials for levels within a rarity and use duplicates only for promotions (changes the established mechanic and needs fair treatment of existing crafted items), or deliberately accept the full Common-only grind. Do not enable an incomplete acquisition design just because promotion code works.
+**Pacing remains a material concern, not permission to change acquisition.** With uniformly random selection among 32 families, obtaining enough of one chosen family for Legendary Level 5 takes approximately 536,870,912 total Common item draws in expectation, before Gold. This is mathematical supply demand, not a forecast of player engagement or a measured drop rate. Review the time to reach each tier under existing Common supply before release. Any change to duplicate quantities, levels per tier, Common supply or prices requires a concrete proposal and confirmation; do not silently substitute higher-rarity rewards or Gold-only leveling.
 
 ## 5. Current implementation findings that affect the design
 
@@ -105,13 +106,13 @@ Adding a final cap can reduce current players' output where enough objectives st
 
 ## 6. Implementation sequence after balance decisions
 
-1. **Confirm the rules.** Resolve the three pending direction choices, approve the curves/prices/caps, settle reward cadence and Tower shield scope. Add only confirmed rules to the Master Specification in the implementation PR.
+1. **Finish the balance review.** Acquisition is settled: upgrade current gear through all five rarities with matching duplicates. Review its pacing under existing Common supply, finalize the remaining curves/prices/caps and settle Tower shield scope. Only explicitly confirmed decisions belong in the Master Specification; do not reopen acquisition by adding higher-rarity rewards.
 2. **Shared catalog and compatibility.** Add five rarity definitions for each of the 32 item families, rarity-aware bonuses, next-result calculation, matching-material checks and bounded cap helpers. Keep callable names compatible where possible. Introduce an additive schema revision and minimum client/contract support so older clients cannot overwrite or hide newly promoted inventory. Existing unknown/future records must never be silently deleted.
-3. **Authoritative crafting and rewards.** Inside the existing economy transaction, settle old production, validate ownership/materials, quote current raw-production Gold, consume exactly two items and Gold once, persist the result and replay receipt, and transfer an equipped slot. Insufficient Gold, wrong family/rarity/level, busy/concurrent/replayed requests and maximum-tier cases must preserve state. Persist new reward counters/unopened reward types across season resets according to the confirmed gear policy.
+3. **Authoritative crafting and existing Common rewards.** Inside the existing economy transaction, settle old production, validate ownership/materials, quote current raw-production Gold, consume exactly two items and Gold once, persist the result and replay receipt, and transfer an equipped slot. Insufficient Gold, wrong family/rarity/level, busy/concurrent/replayed requests and maximum-tier cases must preserve state. Preserve promoted inventory and existing Common Boxes across season resets; add no higher-rarity reward counters or unopened reward types.
 4. **All effect consumers.** Wire one reviewed rule set into solo/rally attack snapshots, army defense packages, wall strength/repair, recovery credit/report attribution, every production/accrual path, and every movement order including Tower, Nearby scouts, returns and reinforcements. Keep launch snapshots and existing timers immutable. Do not introduce separate UI-only caps.
 5. **Offline economy correctness.** Current scalar shared-objective integrals cannot reconstruct capped intervals. Choose and validate a bounded durable representation before adding caps: for example, capped threshold integrals for the discrete objective percentages, or an interval ledger with compaction that preserves clipped sums. Benchmark its write/read size and transaction contention. Do not silently approximate or cap only online production. Activation settles the old-policy interval before starting new-policy accrual.
 6. **UI and artwork.** Integrate the reviewed Common work from PR #372 and the remaining 128 artwork variants after validating the combined diff. Show rarity/level, both consumed items, exact price, next rarity/level/bonus, cap headroom and applied improvement. Use “Promote to Uncommon” at Common 5 and equivalent later transitions. Preserve selection, filter, focus, scroll, pending state and session guards. Defer larger images; no all-rarity preload.
-7. **Staging and release.** Test current-realm fixtures and old-client behavior. Reconcile this branch with PR #372 through the safe workflow before release; neither PR is authorized for merge/deploy by this proposal. Require all three GitHub checks on the final implementation, then obtain release authorization. Deploy compatibility support before enabling new drops/promotions, verify frontend/backend versions, and compare errors, retries, transaction duration and inventory size. Rollback must disable new crafting safely without downgrading or deleting earned higher-rarity gear.
+7. **Staging and release.** Test current-realm fixtures and old-client behavior. Reconcile this branch with PR #372 through the safe workflow before release; neither PR is authorized for merge/deploy by this proposal. Require all three GitHub checks on the final implementation, then obtain release authorization. Deploy compatibility support before enabling promotions, verify frontend/backend versions, and compare errors, retries, transaction duration and inventory size. Rollback must disable new crafting safely without downgrading or deleting earned higher-rarity gear.
 
 ## 7. Affected validation for the eventual implementation
 
@@ -132,4 +133,4 @@ Reuse affected existing suites such as `tools/validate-common-gear.js`, `tools/v
 - [Proposal data](proposal.json), [calculator](model.js), [all numbers](CALCULATED_REVIEW.md).
 - Source basis: [`common-gear.js`](../../common-gear.js), [`functions/economy-config.json`](../../functions/economy-config.json), [`functions/index.js`](../../functions/index.js) (`getCityProductionStats`, `calculateDefenderArmyPackages`, `createHoldingTowerDefensePackages`, `combinePlayerObjectiveBonuses`, `addCommonGearMarchSpeed`, `createAttackCombatSnapshot`, `prepareEconomyCollection`, `upgradeCommonGear`), [`clan-tower-buildings.js`](../../clan-tower-buildings.js), [Master Specification](../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md), [PR #372](https://github.com/explocion200/CrownLands/pull/372).
 
-Branch: `codex/gear-rarity-progression`. No merge, production deployment, source-of-truth rule change or player-data mutation is part of this draft.
+Branch: `codex/gear-rarity-progression`. The only Master Specification change records confirmed planned progression. No runtime rule change, merge, production deployment or player-data mutation is part of this draft.

@@ -130,7 +130,7 @@ Values assume one exact matching item family. Gold-hours use one fixed raw produ
 | legendary 1 | 1,048,576 | 1,398,080 | 8 |
 | legendary 5 | 16,777,216 | 22,369,536 | Maximum |
 
-Starting with Legendary Level 1 drops instead requires 16 matching Legendary drops and 256 fixed-rate raw Gold-hours for Legendary Level 5. Drop frequency and item choice determine whether that is attainable.
+Confirmed acquisition: higher rarities come only from upgrading existing Common gear. Two matching Common Level 5 pieces produce one Uncommon Level 1. A Legendary Level 1 represents 65,536 matching Common Level 5 pieces; Legendary Level 5 represents 1,048,576. Existing crafted items retain their progress. These equivalents expose a pacing concern; they do not authorize higher-rarity drops or different duplicate mechanics.
 
 ## Baseline and cap edge cases
 

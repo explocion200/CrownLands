@@ -15,13 +15,14 @@
     },
     {
       "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/gear-rarity-progression/README.md",
         "docs/gear-rarity-progression/CALCULATED_REVIEW.md"
       ],
       "tests": [
         "tools/validate-gear-progression-proposal.js"
       ],
-      "reason": "Draft rules, source audit, source-linked implementation plan, decision inventory and generated tables. Confirm calculated review matches model, label all unapproved balance values, preserve the Master Specification, and distinguish prospective validation from checks actually run."
+      "reason": "Draft balance, source audit, implementation plan and generated tables; Master Specification records only the user-confirmed planned upgrade-only path, preserving current live Common rules. Verify duplicate totals match the model, remove higher-rarity reward recommendations, retain unresolved pacing, and distinguish prospective validation from checks actually run. No runtime or emulator behavior changes."
     }
   ]
 }

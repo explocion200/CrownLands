@@ -144,11 +144,18 @@
       null
     ]
   },
+  "acquisition": {
+    "status": "CONFIRMED DIRECTION — NOT IMPLEMENTED",
+    "source": "Upgrade existing Common gear through successive rarities",
+    "inputsPerUpgrade": 2,
+    "levelsPerRarity": 5,
+    "directHigherRarityRewards": false,
+    "preserveExistingItemsAndLevels": true,
+    "commonBoxItems": 3
+  },
   "decisionsPending": [
-    "100% attack: total bonus or gear-only",
-    "75%, 70%, or existing 90% total casualty recovery",
-    "Higher-rarity rewards versus different duplicate mechanics",
-    "Approve the remaining per-item curves, total caps, promotion prices and reward cadence",
+    "Review exponential duplicate requirements and pacing under existing Common supply without substituting higher-rarity rewards",
+    "Finalize the remaining per-item curves, total caps and promotion prices",
     "Confirm Gatehouse shield scope for Clan Tower defenders"
   ],
   "sources": {
