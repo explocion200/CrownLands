@@ -27,4 +27,6 @@ Visual review includes desktop Attack/Reinforce and landscape layouts. Native mo
 
 Additional baseline check: the broader `validate-rally-assembly-browser.js` passes its shared Rally order checks but fails its unrelated War Room navigation fixture (hidden assembly button at line 126). The identical failure was reproduced with all three modified runtime files served from `origin/main` (`3570d46`). This change selects the Rally logic validator and focused actual-game Rally control checks; it does not change War Room navigation or its fixture.
 
+Payload: the controls add about 11 KiB to the military presentation source, approximately 2.3 KiB gzipped, with no new artwork, dependencies or server capacity. Its module-specific artifact allowance increases from 128 to 140 KiB; overall offline-shell and asset performance limits remain unchanged and are validated.
+
 September 27 reconciliation: refreshed the validation base after the Gear and stability updates. The shared troop-order preview now supplies the equipped weapon's `gearKey` to the revised Gear helper. Fixed arithmetic examples cover equipped, unequipped, stored, maximum-level and unknown-intelligence cases so the draft cannot silently lose its weapon bonus.

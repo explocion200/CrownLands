@@ -37,6 +37,11 @@
       ]
     },
     {
+      "paths": ["tools/validate-production-artifact.js"],
+      "reason": "The approved controls add about 11 KiB of military presentation source (2.3 KiB gzipped) without new art or dependencies. Increase that module-specific allowance by one bounded 12 KiB step while retaining global offline-shell and asset performance budgets. Validate the produced artifact and overall asset budgets.",
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"]
+    },
+    {
       "paths": [
         "docs/visual-qa/troop-selection/README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
