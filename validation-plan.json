@@ -22,7 +22,7 @@
       "tests": [
         "tools/validate-gear-progression-proposal.js"
       ],
-      "reason": "Draft balance, source audit, implementation plan and generated tables; Master Specification records only the user-confirmed planned upgrade-only path, preserving current live Common rules. Verify duplicate totals match the model, remove higher-rarity reward recommendations, retain unresolved pacing, and distinguish prospective validation from checks actually run. No runtime or emulator behavior changes."
+      "reason": "Draft balance, source audit, implementation plan and generated tables; Master Specification records the user-confirmed upgrade-only path and two matching inputs for every level and promotion, preserving current live Common rules. Verify duplicate totals match the model, retain material-growth figures without reopening the settled requirement, and distinguish prospective validation from checks actually run. No runtime or emulator behavior changes."
     }
   ]
 }
