@@ -84,6 +84,7 @@ if (!previewSource.includes("scoutReport?.totalDefense")
 }
 
 const sandbox = {
+  COMMON_GEAR: require("../common-gear.js"),
   BASE_TROOP_ATTACK_POWER: 1.25,
   SIEGE_COMBAT_VERSION: 1,
   SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT: 5,
@@ -107,6 +108,9 @@ const sandbox = {
   skillMultiplier() {
     return 1;
   },
+  getSkillPercent() {
+    return 0;
+  },
   getCommonGearBonuses() {
     return { attackStrength: 0, wallRepairSpeed: 0 };
   },
@@ -125,6 +129,7 @@ vm.runInContext(
 );
 
 const attackSnapshotSandbox = {
+  COMMON_GEAR: require("../common-gear.js"),
   ATTACK_COMBAT_SNAPSHOT_VERSION: 1,
   BASE_TROOP_ATTACK_POWER: 1.25,
   Math,

@@ -173,7 +173,7 @@ requireMatch(
   "Report hydration relies on metadata-only cache-to-server snapshot updates."
 );
 requireMatch(firebaseClientSource, /fromCache:\s*Boolean\(snapshot\.metadata\?\.fromCache\)/, "Report snapshots must expose cache provenance.");
-const oneShotReportLoadStart = gameSource.indexOf("async function loadServerReportsOnce");
+const oneShotReportLoadStart = gameSource.indexOf("function loadServerReportsOnce(");
 const oneShotReportLoadEnd = gameSource.indexOf("function subscribeOnlineServerReports", oneShotReportLoadStart);
 assert(oneShotReportLoadStart >= 0 && oneShotReportLoadEnd > oneShotReportLoadStart, "Could not isolate one-shot report loading.");
 assert.doesNotMatch(

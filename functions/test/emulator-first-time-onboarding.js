@@ -8,6 +8,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const releaseConfig = require("../release-config.json");
 const topology = require("../coreExpansionTopology.js");
 const catalog = require("../core-expansion-region-catalog.json");
+const { signUpVerifiedPlayer } = require("./auth-fixtures");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -40,7 +41,10 @@ async function resolveFunctionsHost() {
 }
 
 async function authRequest(action, payload) {
-  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:${action}?key=fake-api-key`, {
+  // This gameplay fixture starts after verification; emulator-email-auth.js
+  // separately proves that unverified signups cannot enter or create a kingdom.
+  const request = action === "signUp" ? signUpVerifiedPlayer : fetch;
+  const response = await request(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:${action}?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ ...payload, returnSecureToken: true }),

@@ -81,7 +81,7 @@ assert.ok(
 assert.match(troopSliderOpen, /void loadAttackProtectionPreview/, "Attack protection must hydrate without blocking the troop panel.");
 assert.doesNotMatch(game, /function showTroopRouteLoadingModal/, "The blocking route-loading modal must stay removed.");
 assert.match(publishOrder, /path:\s*\[\][\s\S]*pathSegments:\s*\[\][\s\S]*pathLength:\s*0/, "Online confirmation must support a route-free intent.");
-assert.match(publishOrder, /api\.submitRecoverableArmyOrder\(orderPayload\)/, "Uncertain launches must use the durable confirmation adapter.");
+assert.match(publishOrder, /api\.submitRecoverableArmyOrder\(orderPayload,\s*\{\s*onPending:/, "Uncertain launches must use the durable confirmation adapter.");
 assert.match(fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8"), /api\.sendArmyOrder\(entry\.payload\)[\s\S]*isRetryableArmySubmissionError[\s\S]*window\.setTimeout[\s\S]*return send\(\)/,
   "Transport retries must preserve the journaled payload and order ID.");
 assert.match(routeRefresh, /AUTHORITATIVE_ROUTE_PREVIEW_DEBOUNCE_MS/, "Troop-band route refreshes must be debounced.");

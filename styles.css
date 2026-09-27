@@ -3249,6 +3249,8 @@ input {
   cursor: pointer;
   touch-action: none;
   contain: layout;
+  /* Only viewport-resident tokens exist; keep their per-frame motion composited. */
+  will-change: transform;
 }
 .army-token.pending-order { border-style: dashed; opacity: .8; }
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }

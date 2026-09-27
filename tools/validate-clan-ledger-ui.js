@@ -88,7 +88,11 @@ async function main() {
   assert.match(notice,/unmapped legacy charges/);
   const css=fs.readFileSync(path.join(root,"clan-ledger-ui.css"),"utf8");
   assert(css.includes('#profileScreen #clanContent .clan-section-panel.active'));
-  for(const file of ['index.html','service-worker.js','tools/build-production-client.js','tools/generate-release-manifest.js','tools/validate-production-artifact.js']) assert(fs.readFileSync(path.join(root,file),'utf8').includes('clan-ledger-ui.css'),file);
+  for(const file of ['index.html','tools/build-production-client.js','tools/generate-release-manifest.js','tools/validate-production-artifact.js']) assert(fs.readFileSync(path.join(root,file),'utf8').includes('clan-ledger-ui.css'),file);
+  const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  assert.match(index, /rel="crownlands-optional-stylesheet"[^>]*href="clan-ledger-ui\.css/);
+  // Shared loader checks also verify that optional styles stay out of install precaching.
+  require("./validate-deferred-ui-styles");
   console.log("Validated Clan reward routing, roster permissions, rally readiness, escaped targets, confirmation cancellation, changed-clan safety, and release wiring.");
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

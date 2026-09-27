@@ -127,6 +127,7 @@ assert.equal(citadelClanmate.cityDefenseBonusPercent, 5);
 assert.equal(citadelClanmate.upgradeCostReductionPercent, 5);
 
 const defenseContext = {
+  COMMON_GEAR: require("../common-gear.js"),
   Map,
   Date,
   SIEGE_COMBAT_VERSION: 1,

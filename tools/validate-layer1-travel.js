@@ -136,6 +136,7 @@ vm.runInContext([
 ].join("\n"), serverTravelContext);
 
 const clientTravelContext = {
+  COMMON_GEAR: require("../common-gear.js"),
   ...travelConstants,
   getCommonGearBonuses: () => ({ scoutSpeed: 0, enemyMarchSpeed: 0, ownedMarchSpeed: 0 }),
   skillMultiplier: () => 1,
