@@ -11,4 +11,8 @@ The two images show Common 5 → Uncommon 1 on the smallest landscape fixture an
 
 ## Large inventory check
 
-`node tools/validate-gear-inventory-browser.js` uses 2,000 synthetic items, an 844×390 viewport and 4× CPU throttling. The first implementation took 16,053 / 14,725 / 14,663 ms to build and lay out the officer screen. The pricing preview unnecessarily recalculated city production for every bag group, even when authoritative pricing was present. One per-render material index and shared price now avoid that repeated work. The same local fixture measured 131 / 123 / 143 ms after the fix. These are synthetic render/layout timings, not production latency or network measurements. The automated check enforces the pricing read bound and records timings without a hardware-dependent timing threshold.
+`node tools/validate-gear-inventory-browser.js` uses 2,000 synthetic items, a visible 844×390 dialog and 4× CPU throttling. It also scrolls to the final card and selects it using pointer input.
+
+The first pricing implementation repeatedly recalculated city production even when authoritative pricing was present. Isolated dialog-content construction (dialog closed, not visible rendering) measured 16,053 / 14,725 / 14,663 ms. A per-render material index and shared price reduced that isolated work to 131 / 123 / 143 ms.
+
+A separate visible-dialog measurement then exposed offscreen card layout: 2,281 / 2,223 / 2,015 ms despite the pricing fix. Deferring offscreen card layout reduced the same visible fixture to 657 / 695 / 747 ms in the final local run. Scrolling and selecting the final item passed. These are synthetic CPU-throttled build/layout timings; they exclude network completion and do not establish production or device-wide latency. The automated check enforces correct prices, bounded production reads, a visible dialog and reachable offscreen items, and records timings without a hardware-dependent threshold.

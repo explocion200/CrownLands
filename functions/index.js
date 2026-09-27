@@ -14830,7 +14830,9 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
     const rawBaseGoldPerHour = getShopPricingContext(economy).rawBaseGoldPerHour;
     const cost = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance);
     if (request.data?.cost !== undefined && Number(request.data.cost) !== cost) {
-      throw new HttpsError("failed-precondition", "Equipment Gold cost changed. Review the updated price and try again.");
+      throw new HttpsError("failed-precondition", "Equipment Gold cost changed. Review the updated price and try again.", {
+        reason: "gear-price-changed", cost, rawBaseGoldPerHour,
+      });
     }
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
     const resultInstanceId = `cg_up_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;

@@ -912,6 +912,7 @@ async function main() {
     await seedUpgradeState(protectedGear);
     const denied = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: `reject-${label}`, ...args });
     assert(!denied.ok && denied.error?.status === "FAILED_PRECONDITION", `${label} was accepted`);
+    if (label === "changed quote") assert(denied.error.details?.reason === "gear-price-changed" && denied.error.details.cost > 1 && denied.error.details.rawBaseGoldPerHour > 0, "Price rejection must supply a fresh quote for review");
     const saved = (await profileRef.get()).data();
     assert(Object.keys(saved.gear.instances).length === 2 && saved.goldFloat === upgradeGoldReserve, `${label} consumed items or Gold`);
   }

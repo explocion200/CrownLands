@@ -781,3 +781,7 @@
 #modal.common-gear-building-modal [data-rarity="legendary"]{background:#e3c484!important;border-color:#a67935!important;box-shadow:inset 0 0 0 3px #f4dfad!important}
 
 #modal.common-gear-building-modal [data-rarity][aria-pressed="true"]{border-color:#6f3d3c!important}
+
+/* Defer off-screen bag card layout while retaining their scroll positions and accessible controls. */
+#modal.common-gear-building-modal .tg-item{content-visibility:auto;contain-intrinsic-block-size:auto 102px}
+@media(orientation:landscape) and (max-height:550px){#modal.common-gear-building-modal .tg-item{contain-intrinsic-block-size:auto 68px}}

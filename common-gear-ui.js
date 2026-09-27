@@ -1613,7 +1613,7 @@ function getCommonGearActionScope() {
   return typeof getOnlineSessionRequestScope === "function" ? getOnlineSessionRequestScope() : "local";
 }
 
-async function runCommonGearAction(buildingId, action, instanceId) {
+async function runCommonGearAction(buildingId, action, instanceId, quotedCost = undefined) {
   const scope = getCommonGearActionScope();
   if ((commonGearActionInFlight && commonGearActiveAction?.scope === scope) || !instanceId) return;
   const instance = state?.gear?.instances?.[instanceId];
@@ -1642,7 +1642,7 @@ async function runCommonGearAction(buildingId, action, instanceId) {
       let pending = commonGearUpgradeRequests.get(retryKey);
       if (!pending) {
         pending = { instanceId, requestId: createDailyMissionRequestId("gear-upgrade"),
-          cost: getCommonGearUpgradePreview(instance).upgradeGold };
+          cost: Number.isFinite(quotedCost) ? quotedCost : getCommonGearUpgradePreview(instance).upgradeGold };
         commonGearUpgradeRequests.set(retryKey, pending);
         if (commonGearUpgradeRequests.size > 24) commonGearUpgradeRequests.delete(commonGearUpgradeRequests.keys().next().value);
       }
@@ -1674,6 +1674,10 @@ async function runCommonGearAction(buildingId, action, instanceId) {
     const code = String(error?.code || "");
     if (/(invalid-argument|failed-precondition|not-found|permission-denied|resource-exhausted)$/.test(code)) {
       commonGearUpgradeRequests.delete(retryKey);
+    }
+    if (isCurrent() && error?.details?.reason === "gear-price-changed"
+      && Number.isFinite(Number(error.details.rawBaseGoldPerHour)) && Number(error.details.rawBaseGoldPerHour) >= 0) {
+      authoritativeShopPricing = { ...authoritativeShopPricing, rawBaseGoldPerHour: Number(error.details.rawBaseGoldPerHour) };
     }
     if (isCurrent()) showToast(error?.message || (action === "merge" ? "The gear upgrade could not be completed." : "The gear loadout could not be changed."));
   } finally {
@@ -1826,7 +1830,7 @@ function bindCommonGearScreen(viewModel) {
     }
     if (event.target.closest?.("[data-gear-merge-confirm]")) {
       commonGearPendingFocusSelector = "[data-gear-merge]";
-      void runCommonGearAction(viewModel.buildingId, "merge", selectedCommonGearInstanceId);
+      void runCommonGearAction(viewModel.buildingId, "merge", selectedCommonGearInstanceId, viewModel.upgradeGold);
     }
   });
 }

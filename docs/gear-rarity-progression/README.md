@@ -114,4 +114,4 @@ Deploy the compatible backend and matching frontend together after release autho
 - `node tools/validate-gear-rarities.js` checks runtime/catalog parity with those curves and costs.
 - [Proposal data](proposal.json), [calculator](model.js), [all numbers](CALCULATED_REVIEW.md), [Master Specification](../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md).
 
-Branch: `codex/gear-rarity-progression`. Pull request: [#373](https://github.com/explocion200/CrownLands/pull/373). Status: implemented locally, validation in progress; not merged or deployed.
+Branch: `codex/gear-rarity-progression`. Pull request: [#373](https://github.com/explocion200/CrownLands/pull/373). Status: implementation complete; release gated by the required PR checks; not merged or deployed.
