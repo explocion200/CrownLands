@@ -104,6 +104,8 @@ async function main() {
       assert.equal(await page.getByRole("tab", { name: "Items", exact: true }).getAttribute("aria-selected"), "true");
       await page.getByRole("tab", { name: "Items", exact: true }).focus(); await page.keyboard.press("Home");
       assert.equal(await page.getByRole("tab", { name: "Overview", exact: true }).getAttribute("aria-selected"), "true");
+      await page.evaluate(() => modal.close());
+      await page.waitForFunction(() => !modal.classList.contains("clan-building-modal"));
       assert.deepEqual(errors, []);
       await page.close();
       console.log(`Shared Clan Tower layout ${width}x${height}: all four frames, costs, navigation, preserved tabs, construction restrictions/retries and server-only completion passed.`);

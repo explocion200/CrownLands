@@ -4104,7 +4104,7 @@ function beginHoldingTowerModalSession(towerId, view) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal", "infirmary-modal", "training-grounds-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal", "infirmary-modal", "training-grounds-modal", "clan-building-modal");
     if (session.mapOrder) {
       modal.classList.remove("troop-slider-modal");
       clearSelection(false);
@@ -4139,6 +4139,7 @@ function renderHoldingTowerModal(tower) {
   modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
   modal.classList.toggle("infirmary-modal", Boolean(infirmaryOpen));
   modal.classList.toggle("training-grounds-modal", Boolean(trainingOpen));
+  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || infirmaryOpen || trainingOpen));
   const frameSession = holdingTowerModalSession;
   if ((shopOpen || workshopOpen || infirmaryOpen || trainingOpen) && !ensureModalUiStyle("workshop", () => {
     if (isHoldingTowerModalSessionCurrent(frameSession)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
