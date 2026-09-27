@@ -208,7 +208,8 @@ const entrypointBudgets = {
   "camp-details-ui.css": 16 * 1024,
   "clan-tower-details-ui.js": 20 * 1024,
   "clan-tower-details-ui.css": 52 * 1024,
-  "common-gear-ui.css": 41 * 1024,
+  // Shared five-tier colors and offscreen card containment add a bounded 1 KiB.
+  "common-gear-ui.css": 42 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
