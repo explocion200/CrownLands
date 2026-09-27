@@ -14,9 +14,10 @@
         "tools/validate-weaker-kingdom-protection.js",
         "tools/validate-city-wall-shields.js",
         "tools/validate-city-wall-shields-browser.js",
-        "tools/validate-combat-timers-browser.js"
+        "tools/validate-combat-timers-browser.js",
+        "functions/test/run-emulator-gates.js"
       ],
-      "reason": "Separate 30-minute qualifying retaliation and capturer abandonment locks from the unchanged 15-minute offensive Shield cooldown. Gate city shield protection on authoritative full wall integrity across city/Tower dispatch, arrival, mission targets, activation reversal, local previews and map rendering. Cover exact repair/expiry boundaries, offline repair, former-owner isolation, elapsed grant compatibility, minute-20 launch, concurrent activation/launch, failed launch preservation and mixed incoming targets. Exercise shared return and fortification dependencies and supported desktop/landscape layouts.",
+      "reason": "Separate 30-minute qualifying retaliation and capturer abandonment locks from the unchanged 15-minute offensive Shield cooldown. Gate city shield protection on authoritative full wall integrity across city/Tower dispatch, arrival, mission targets, activation reversal, local previews and map rendering. Cover exact repair/expiry boundaries, offline repair, former-owner isolation, elapsed grant compatibility, minute-20 launch, concurrent activation/launch, failed launch preservation and mixed incoming targets. Exercise shared return and fortification dependencies and supported desktop/landscape layouts. Run the shield-return emulator on the current core topology with canonical city IDs and current realm/shard identity, so the fixture participates in authoritative owned-city queries.",
       "tests": [
         "tools/validate-combat-authorization.js",
         "tools/validate-city-wall-shields.js",

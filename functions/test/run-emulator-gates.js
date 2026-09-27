@@ -36,6 +36,7 @@ const coreExpansionGates = new Set([
   "emulator-shared-camp-rewards.js",
   "emulator-chat-translation.js",
   "emulator-combat-authorization.js",
+  "emulator-peace-shield-returns.js",
   "emulator-holding-tower-lifecycle.js",
   "emulator-clan-tower-battle-reports.js",
 ]);

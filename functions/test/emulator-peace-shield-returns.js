@@ -2,7 +2,9 @@ const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
-const realm = require("../release-config.json");
+const release = require("../release-config.json");
+const layout = require("../core-expansion-world-layout.json");
+let realm = { ...release };
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -81,6 +83,7 @@ async function invokeFunction(name, token, data = {}) {
         clientReleaseId: realm.releaseId,
         clientResetGeneration: realm.resetGeneration,
         clientWorldId: realm.worldId,
+        clientRealmShardId: realm.realmShardId,
       },
     }),
   });
@@ -107,7 +110,7 @@ function getRegionId(claim) {
 }
 
 function islandIdForRegion(regionId) {
-  return `${realm.worldId}-${regionId}`;
+  return `${realm.worldId}--${realm.realmShardId}--${regionId}`;
 }
 
 function regionalArmyRefs(movement) {
@@ -164,6 +167,10 @@ async function main() {
     createAuthUser("owner"),
     createAuthUser("rival"),
   ]);
+  const info = await callFunction("getRealmInfo", shieldOwner.token);
+  assert(info.worldTopology === "core-expansion-v1", "Shield tests must use the current core topology.");
+  realm = { ...release, releaseId: info.currentReleaseId, resetGeneration: info.resetGeneration,
+    worldId: info.worldId, realmShardId: info.sharedRealmId };
   const [ownerClaim, rivalClaim] = await Promise.all([
     callFunction("claimStartingCity", shieldOwner.token, { playerName: `Shield Owner ${nonce}` }),
     callFunction("claimStartingCity", rival.token, { playerName: `Shield Rival ${nonce}` }),
@@ -175,7 +182,10 @@ async function main() {
   const rivalProfileRef = db.doc(`players/${rival.uid}`);
   const ownerMainRef = db.doc(`islands/${ownerClaim.islandId}/cities/${ownerClaim.cityId}`);
   const rivalMainRef = db.doc(`islands/${rivalClaim.islandId}/cities/${rivalClaim.cityId}`);
-  const fallbackSourceId = `peace_source_${nonce}`;
+  const fallbackSeed = layout.maps.find(map => map.id === ownerRegionId)?.cities.find(city =>
+    city.kind !== "stronghold" && ![ownerClaim.cityId, rivalClaim.cityId].includes(city.id));
+  assert(fallbackSeed, "Need a canonical regular city for the damaged-city fixture.");
+  const fallbackSourceId = fallbackSeed.id;
   const fallbackSourceRef = db.doc(`islands/${ownerClaim.islandId}/cities/${fallbackSourceId}`);
   const seedNowMs = Date.now();
 
@@ -190,10 +200,12 @@ async function main() {
     ownerMainRef.set({ productionUpdatedAtMs: seedNowMs, ownerShieldExpiresAtMs: 0 }, { merge: true }),
     rivalMainRef.set({ productionUpdatedAtMs: seedNowMs, ownerShieldExpiresAtMs: 0 }, { merge: true }),
     fallbackSourceRef.set({
+      ...fallbackSeed,
       id: fallbackSourceId,
       name: "Fallback Source",
       worldId: realm.worldId,
       resetGeneration: realm.resetGeneration,
+      realmShardId: realm.realmShardId,
       regionId: ownerRegionId,
       ownerKind: "player",
       ownerUid: shieldOwner.uid,
@@ -213,6 +225,7 @@ async function main() {
   const movementBase = {
     worldId: realm.worldId,
     resetGeneration: realm.resetGeneration,
+    realmShardId: realm.realmShardId,
     ownerKind: "player",
     kind: "attack",
     launchKind: "attack",
