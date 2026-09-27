@@ -59,13 +59,13 @@ async function main() {
     };
     await client.send('Page.navigate', { url: address.url + '/__benchmark__/?scenario=A&visualMarches=0' });
     await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
-    await evaluate(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,50));state.gear=normalizeCommonGearState(${JSON.stringify(gear)});state.gold=128400;authoritativeShopPricing={rawBaseGoldPerHour:48000};openInnerCastle(getMainCityReference().id);})()`);
+    await evaluate(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,50));state.gear=normalizeCommonGearState(${JSON.stringify(gear)});state.gold=1284000;authoritativeShopPricing={rawBaseGoldPerHour:48000};openInnerCastle(getMainCityReference().id);})()`);
     await evaluate("Promise.all(modal.getAnimations().map(a=>a.finished.catch(()=>{})))");
     await evaluate("setAnimationModePreference('full')");
     for (const [width, height] of [[1440,900],[1024,768],[844,390],[667,375],[568,320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const [example, id] of [['ready',ready],['missing',missing],['max',max],['empty',''],['gold',ready]]) {
-        await evaluate(`state.gold=${example === 'gold' ? 12000 : 128400};selectedCommonGearInstanceId=${JSON.stringify(id)};selectedCommonGearSlot=${JSON.stringify(id ? gear.instances[id].slot : 'gloves')};selectedCommonGearBagFilter='all';commonGearMergeConfirmOpen=false;renderCommonGearBuilding('barracks');`);
+        await evaluate(`state.gold=${example === 'gold' ? 12000 : 1284000};selectedCommonGearInstanceId=${JSON.stringify(id)};selectedCommonGearSlot=${JSON.stringify(id ? gear.instances[id].slot : 'gloves')};selectedCommonGearBagFilter='all';commonGearMergeConfirmOpen=false;renderCommonGearBuilding('barracks');`);
         await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))"); await paint();
         assert(await evaluate(`(()=>{const image=modal.querySelector('[data-barracks-officer]'),bounds=image.getBoundingClientRect(),frame=image.parentElement.getBoundingClientRect();return image.complete&&image.naturalWidth===400&&image.naturalHeight===800&&image.getAnimations().length===0&&image.currentSrc.includes('barracks-war-captain-still-')&&bounds.x>=frame.x&&bounds.y>=frame.y&&bounds.right<=frame.right&&bounds.bottom<=frame.bottom;})()`), `Static character must decode and fit its frame at ${width}x${height}.`);
         const data = await evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return{modal:rect(modal),slots:[...modal.querySelectorAll('[data-gear-slot]')].map(rect),actions:[...modal.querySelectorAll('.tg-actions button')].map(rect),back:rect(modal.querySelector('[data-gear-back]')),close:rect(closeModalBtn),bodyOverflow:modalBody.scrollHeight-modalBody.clientHeight,upgradeDisabled:modal.querySelector('[data-gear-merge]')?.disabled,gray:[...modal.querySelectorAll('[data-rarity=common]')].every(e=>getComputedStyle(e).backgroundColor==='rgb(217, 218, 214)'),emptyColor:getComputedStyle(modal.querySelector('.tg-slot.is-empty')).backgroundColor,text:modal.querySelector('.tg-details').innerText};})()`);
@@ -91,7 +91,7 @@ async function main() {
         if (example === 'gold') assert(data.text.includes('Insufficient gold'));
       }
     }
-    await evaluate(`state.gold=128400;selectedCommonGearInstanceId=${JSON.stringify(ready)};renderCommonGearBuilding('barracks')`); await paint();
+    await evaluate(`state.gold=1284000;selectedCommonGearInstanceId=${JSON.stringify(ready)};renderCommonGearBuilding('barracks')`); await paint();
     await click('[data-gear-merge]');
     assert(await evaluate("modal.querySelector('[data-barracks-officer]').getAttribute('src')===BARRACKS_OFFICER_ART"), 'The Captain must remain static during confirmation.');
     assert.equal(await evaluate('document.activeElement.hasAttribute("data-gear-merge-cancel")'), true);
@@ -190,15 +190,53 @@ async function main() {
     assert(await evaluate(`state.gold===__retryGold&&!!state.gear.instances['retry-target']`));
     await evaluate(`__retryScopeValue='original';runCommonGearAction('barracks','merge','retry-target',192000);void 0`);
     await wait('__retryCalls.length===3');
-    await evaluate(`__retryReject(Object.assign(Error('Review updated price'),{code:'functions/failed-precondition',details:{reason:'gear-price-changed',rawBaseGoldPerHour:96000,cost:384000}}))`);
+    await evaluate(`__retryReject(Object.assign(Error('Review updated price'),{code:'functions/failed-precondition',details:{reason:'gear-price-changed',rawBaseGoldPerHour:96000,cost:850000}}))`);
     await wait('!commonGearActionInFlight');
-    assert.equal(await evaluate(`getCommonGearUpgradePreview(state.gear.instances['retry-target']).upgradeGold`),384000);
-    await evaluate(`runCommonGearAction('barracks','merge','retry-target',384000);void 0`);
+    assert.equal(await evaluate(`getCommonGearUpgradePreview(state.gear.instances['retry-target']).upgradeGold`),850000);
+    await evaluate(`runCommonGearAction('barracks','merge','retry-target',850000);void 0`);
     await wait('__retryCalls.length===4');
-    assert(await evaluate('__retryCalls[3].cost===384000&&__retryCalls[3].requestId!==__retryCalls[2].requestId'));
+    assert(await evaluate('__retryCalls[3].cost===850000&&__retryCalls[3].requestId!==__retryCalls[2].requestId'));
     await evaluate(`__retryScopeValue='obsolete';__retryResolve({gear:COMMON_GEAR.createDefaultState()})`);
     await wait('!commonGearActionInFlight');
     await evaluate('getOnlineApi=__retryApi;getOnlineSessionRequestScope=__retryScope');
+    // Inspect exact fixed prices and confirmation layouts for every officer, rarity and level.
+    for (const [width, height] of [[1440,900],[568,320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+      for (const building of Object.keys(G.BUILDINGS)) {
+        const inspected = await evaluate(`(async()=>{
+          const results=[];
+          for(const rarity of COMMON_GEAR.RARITIES) for(let level=1;level<=5;level++){
+            const g=COMMON_GEAR.createDefaultState(),key=${JSON.stringify(building.replace(/-/g,'_'))}+'_weapon_'+rarity+'_01';
+            for(const id of ['price-target','price-material'])g.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:key,level});
+            state.gear=normalizeCommonGearState(g);state.gold=50000000000;authoritativeShopPricing=null;
+            selectedCommonGearInstanceId='price-target';selectedCommonGearSlot='weapon';commonGearMergeConfirmOpen=false;
+            renderCommonGearBuilding(${JSON.stringify(building)});
+            const model=createCommonGearViewModel(${JSON.stringify(building)}),text=modal.querySelector('.tg-details').innerText;
+            commonGearMergeConfirmOpen=Boolean(model.requirement);renderCommonGearBuilding(${JSON.stringify(building)});
+            const confirmation=modal.querySelector('.tg-confirm'),button=modal.querySelector('[data-gear-merge-confirm]'),rect=button?.getBoundingClientRect();
+            results.push({rarity,level,cost:model.upgradeGold,canMerge:model.canMerge,text,
+              quote:confirmation?.querySelector('dl dd')?.textContent||null,
+              bounds:rect?{x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom}:null});
+          }
+          return results;
+        })()`);
+        for(const item of inspected){
+          const expected=G.getUpgradeGoldCost(item.level,item.rarity);
+          assert.equal(item.cost,expected);
+          assert.equal(item.canMerge,expected>0);
+          assert(!/raw production|production hours|Gold-hours/i.test(item.text));
+          if(expected){
+            assert(item.text.includes(expected.toLocaleString('en-US')), 'Details must show the exact Gold price');
+            assert.equal(item.quote,expected.toLocaleString('en-US'));
+            assert(item.bounds.x>=0&&item.bounds.y>=0&&item.bounds.right<=width&&item.bounds.bottom<=height, 'Price confirmation controls clipped');
+          }
+        }
+        await evaluate(`Object.values(state.gear.instances).forEach(item=>item.level=4);commonGearMergeConfirmOpen=true;renderCommonGearBuilding(${JSON.stringify(building)});void 0`);
+        await paint();
+        const shot=await client.send('Page.captureScreenshot',{format:'png'});
+        fs.writeFileSync(path.join(out,`fixed-gold-${building}-${width}.png`),Buffer.from(shot.data,'base64'));
+      }
+    }
     assert.equal(errors.length,0,JSON.stringify(errors));
     fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));
     console.log('PASS: Barracks runtime, 25 desktop/landscape states, static character decoding/containment across motion settings, Sword and Medallion scope, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close other-officer isolation, all 40 rarity/viewport promotion states, decoded result art, same-ID lost-response retries and obsolete-session rejection.');

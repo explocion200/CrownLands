@@ -12,25 +12,17 @@ assert.equal(G.COMMON_DEFINITIONS.length, 32);
 assert(G.COMMON_DEFINITIONS.every(d => d.rarity === "common"));
 assert.equal(fs.readFileSync(path.join(__dirname, "../common-gear.js"), "utf8").replace(/\r\n/g, "\n"),
   fs.readFileSync(path.join(__dirname, "../functions/common-gear.js"), "utf8").replace(/\r\n/g, "\n"));
-// Independent balance fixtures include promotions and odd-rate rounding.
-const expectedGoldHours = [
-  [.25, .5, 1, 2, 4],
-  [.5, 1, 2, 4, 8],
-  [1, 2, 4, 8, 12],
-  [1.5, 3, 6, 12, 16],
-  [2, 4, 8, 16, null],
-];
+// Independent approved prices cover every step and all 32 item families below.
+const expectedGold = [[100000,170000,300000,500000,850000],[1500000,2500000,4000000,7000000,50000000],[100000000,200000000,350000000,600000000,1000000000],[1500000000,2500000000,4000000000,6000000000,9000000000],[14000000000,22000000000,34000000000,50000000000,null]];
 for (const [rarityIndex, rarity] of G.RARITIES.entries()) {
   for (let level = 1; level <= G.MAX_LEVEL; level++) {
-    const item = { gearKey: `barracks_weapon_${rarity}_01`, level };
-    const hours = expectedGoldHours[rarityIndex][level - 1];
-    assert.equal(G.getUpgradeRequirement(item)?.baseGoldHours ?? null, hours);
-    for (const rate of [0, 1, 101.99, 48000]) {
-      assert.equal(G.getUpgradeGoldCost(rate, item), Math.floor(Math.floor(rate) * (hours || 0)),
-        `${rarity} ${level}: charge must use the approved hours and floor raw production`);
-    }
-    if (hours !== null) {
-      assert(hours <= 16, "No direct crafting charge may exceed 16 base-production hours");
+    const item = { gearKey: "barracks_weapon_" + rarity + "_01", level, goldCost: 1, rawBaseGoldPerHour: 0 };
+    const cost = expectedGold[rarityIndex][level - 1];
+    assert.equal(G.getUpgradeRequirement(item)?.goldCost ?? null, cost);
+    assert.equal(G.getUpgradeGoldCost(item), cost || 0);
+    assert.equal(G.getUpgradeGoldCost(level, rarity), cost || 0);
+    if (cost !== null) {
+      assert(Number.isSafeInteger(cost) && cost >= 100000 && cost <= 50000000000);
       assert.equal(G.getUpgradeRequirement(item).duplicates, 1);
     }
   }
@@ -60,7 +52,7 @@ for (const family of G.COMMON_DEFINITIONS) {
         assert.equal(next, null);
         assert.equal(result, null);
         assert.equal(JSON.stringify(state), before);
-        assert.equal(G.getUpgradeGoldCost(100, target), 0);
+        assert.equal(G.getUpgradeGoldCost(target), 0);
         continue;
       }
       assert(result);
@@ -72,10 +64,10 @@ for (const family of G.COMMON_DEFINITIONS) {
       assert.equal(state.instances.result.isEquipped, true);
       assert.equal(result.previousRarity, rarity);
       assert.equal(result.newRarity, next.rarity);
-      assert.equal(G.getUpgradeGoldCost(100, target), 100 * M.upgradeHours(P, rarityIndex, level));
+      assert.equal(G.getUpgradeGoldCost(target), expectedGold[rarityIndex][level - 1]);
       assert.equal(G.getBonuses(state)[family.statType], G.getBonusPercent(next));
       assert.equal(G.getBaseCopyCountForLevel(level, rarity), M.copiesFromCommon(rarityIndex, level));
-      assert.equal(G.getCumulativeGoldHoursForLevel(level, rarity), M.cumulativeHours(P, rarityIndex, level));
+      assert.equal(G.getCumulativeGoldCostForLevel(level, rarity), M.cumulativeGold(P, rarityIndex, level));
       assert.equal(G.consumeUpgradeInputs(state, "target", "another-result", 11), null, "Consumed inputs cannot replay");
       upgrades++;
       if (level === 5) promotions++;

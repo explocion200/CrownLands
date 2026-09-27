@@ -31,14 +31,14 @@
     defenderStrength: [1.5, 5, 12, 20, 30],
     wallRepairSpeed: [1.5, 5, 12, 20, 30],
   });
-  const UPGRADE_BY_LEVEL = Object.freeze({
-    1: Object.freeze({ duplicates: 1, baseGoldHours: 0.25 }),
-    2: Object.freeze({ duplicates: 1, baseGoldHours: 0.5 }),
-    3: Object.freeze({ duplicates: 1, baseGoldHours: 1 }),
-    4: Object.freeze({ duplicates: 1, baseGoldHours: 2 }),
+  // Each row contains Levels 1→2, 2→3, 3→4, 4→5 and promotion to the next rarity.
+  const UPGRADE_GOLD_COSTS = Object.freeze({
+    common: Object.freeze([100_000, 170_000, 300_000, 500_000, 850_000]),
+    uncommon: Object.freeze([1_500_000, 2_500_000, 4_000_000, 7_000_000, 50_000_000]),
+    rare: Object.freeze([100_000_000, 200_000_000, 350_000_000, 600_000_000, 1_000_000_000]),
+    epic: Object.freeze([1_500_000_000, 2_500_000_000, 4_000_000_000, 6_000_000_000, 9_000_000_000]),
+    legendary: Object.freeze([14_000_000_000, 22_000_000_000, 34_000_000_000, 50_000_000_000, null]),
   });
-  const UPGRADE_RARITY_FACTORS = Object.freeze([1, 2, 4, 6, 8]);
-  const PROMOTION_GOLD_HOURS = Object.freeze([4, 8, 12, 16]);
   const SLOTS = Object.freeze(["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"]);
   const ARMOR_SLOTS = new Set(["head", "chest", "pants", "boots", "gloves", "belt"]);
   const BUILDINGS = Object.freeze({
@@ -495,8 +495,7 @@
     const promotion = normalizedLevel === MAX_LEVEL;
     return {
       duplicates: 1,
-      baseGoldHours: promotion ? PROMOTION_GOLD_HOURS[rarityIndex]
-        : UPGRADE_BY_LEVEL[normalizedLevel].baseGoldHours * UPGRADE_RARITY_FACTORS[rarityIndex],
+      goldCost: UPGRADE_GOLD_COSTS[rarity][normalizedLevel - 1],
       promotion,
       nextLevel: promotion ? 1 : normalizedLevel + 1,
       nextRarity: RARITIES[rarityIndex + (promotion ? 1 : 0)],
@@ -517,11 +516,8 @@
       rarity: requirement.nextRarity, level: requirement.nextLevel };
   }
 
-  function getUpgradeGoldCost(baseGoldPerHour = 0, level = 1) {
-    const requirement = getUpgradeRequirement(level);
-    if (!requirement) return 0;
-    const rawProductionRate = Math.max(0, Math.floor(Number(baseGoldPerHour) || 0));
-    return Math.max(0, Math.floor(rawProductionRate * requirement.baseGoldHours));
+  function getUpgradeGoldCost(level = 1, rarity = RARITY) {
+    return getUpgradeRequirement(level, rarity)?.goldCost || 0;
   }
 
   function getBaseCopyCountForLevel(level = 1, rarity = RARITY) {
@@ -533,16 +529,16 @@
     return copies;
   }
 
-  function getCumulativeGoldHoursForLevel(level = 1, rarity = RARITY) {
+  function getCumulativeGoldCostForLevel(level = 1, rarity = RARITY) {
     const targetLevel = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
-    let hours = 0;
+    let gold = 0;
     const rank = Math.max(0, RARITIES.indexOf(rarity)) * MAX_LEVEL + targetLevel - 1;
     for (let step = 0; step < rank; step += 1) {
       const requirement = getUpgradeRequirement(step % MAX_LEVEL + 1, RARITIES[Math.floor(step / MAX_LEVEL)]);
       if (!requirement) break;
-      hours = hours * (1 + requirement.duplicates) + requirement.baseGoldHours;
+      gold = gold * (1 + requirement.duplicates) + requirement.goldCost;
     }
-    return hours;
+    return gold;
   }
 
   function getUpgradeMaterialInstances(target, instances = []) {
@@ -616,7 +612,7 @@
     CASUALTY_RECOVERY_CAP_PERCENT,
     UPGRADE_RECEIPT_LIMIT,
     BONUS_BY_LEVEL,
-    UPGRADE_BY_LEVEL,
+    UPGRADE_GOLD_COSTS,
     SLOTS,
     BUILDINGS,
     DEFINITIONS,
@@ -631,7 +627,7 @@
     getUpgradeResult,
     getUpgradeGoldCost,
     getBaseCopyCountForLevel,
-    getCumulativeGoldHoursForLevel,
+    getCumulativeGoldCostForLevel,
     getUpgradeMaterialInstances,
     consumeUpgradeInputs,
   });

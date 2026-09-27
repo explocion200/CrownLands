@@ -59,13 +59,13 @@ async function main() {
     };
     await client.send('Page.navigate', { url: address.url + '/__benchmark__/?scenario=A&visualMarches=0' });
     await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
-    await evaluate(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,50));state.gear=normalizeCommonGearState(${JSON.stringify(gear)});state.gold=128400;authoritativeShopPricing={rawBaseGoldPerHour:48000};openInnerCastle(getMainCityReference().id);})()`);
+    await evaluate(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,50));state.gear=normalizeCommonGearState(${JSON.stringify(gear)});state.gold=1284000;authoritativeShopPricing={rawBaseGoldPerHour:48000};openInnerCastle(getMainCityReference().id);})()`);
     await evaluate("Promise.all(modal.getAnimations().map(a=>a.finished.catch(()=>{})))");
     await evaluate("setAnimationModePreference('full')");
     for (const [width, height] of [[1440,900],[1024,768],[844,390],[667,375],[568,320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const [example, id] of [['ready',ready],['missing',missing],['max',max],['empty',''],['gold',ready]]) {
-        await evaluate(`state.gold=${example === 'gold' ? 12000 : 128400};selectedCommonGearInstanceId=${JSON.stringify(id)};selectedCommonGearSlot=${JSON.stringify(id ? gear.instances[id].slot : 'gloves')};selectedCommonGearBagFilter='all';commonGearMergeConfirmOpen=false;renderCommonGearBuilding('royal-stables');`);
+        await evaluate(`state.gold=${example === 'gold' ? 12000 : 1284000};selectedCommonGearInstanceId=${JSON.stringify(id)};selectedCommonGearSlot=${JSON.stringify(id ? gear.instances[id].slot : 'gloves')};selectedCommonGearBagFilter='all';commonGearMergeConfirmOpen=false;renderCommonGearBuilding('royal-stables');`);
         await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))"); await paint();
         assert(await evaluate(`(()=>{const image=modal.querySelector('[data-royal-stables-officer]'),bounds=image.getBoundingClientRect(),frame=image.parentElement.getBoundingClientRect();return image.complete&&image.naturalWidth===400&&image.naturalHeight===800&&image.getAnimations().length===0&&image.currentSrc.includes('royal-stables-cavalry-master-still-')&&bounds.x>=frame.x&&bounds.y>=frame.y&&bounds.right<=frame.right&&bounds.bottom<=frame.bottom;})()`), `Static character must decode and fit its frame at ${width}x${height}.`);
         const data = await evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return{modal:rect(modal),slots:[...modal.querySelectorAll('[data-gear-slot]')].map(rect),actions:[...modal.querySelectorAll('.tg-actions button')].map(rect),back:rect(modal.querySelector('[data-gear-back]')),close:rect(closeModalBtn),bodyOverflow:modalBody.scrollHeight-modalBody.clientHeight,upgradeDisabled:modal.querySelector('[data-gear-merge]')?.disabled,gray:[...modal.querySelectorAll('[data-rarity=common]')].every(e=>getComputedStyle(e).backgroundColor==='rgb(217, 218, 214)'),emptyColor:getComputedStyle(modal.querySelector('.tg-slot.is-empty')).backgroundColor,text:modal.querySelector('.tg-details').innerText};})()`);
@@ -92,7 +92,7 @@ async function main() {
         if (example === 'gold') assert(data.text.includes('Insufficient gold'));
       }
     }
-    await evaluate(`state.gold=128400;selectedCommonGearInstanceId=${JSON.stringify(ready)};renderCommonGearBuilding('royal-stables')`); await paint();
+    await evaluate(`state.gold=1284000;selectedCommonGearInstanceId=${JSON.stringify(ready)};renderCommonGearBuilding('royal-stables')`); await paint();
     await click('[data-gear-merge]');
     assert(await evaluate("modal.querySelector('[data-royal-stables-officer]').getAttribute('src')===ROYAL_STABLES_OFFICER_ART"), 'The Cavalry Master must remain static during confirmation.');
     assert.equal(await evaluate('document.activeElement.hasAttribute("data-gear-merge-cancel")'), true);

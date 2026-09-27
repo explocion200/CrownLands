@@ -115,20 +115,20 @@ Main-city Gold receives both Treasury groups: 70% + 20% = 90% from gear. Other c
 
 ## Cost of preserving two-item crafting at every step
 
-Values assume one exact matching item family. Gold-hours use one fixed raw production rate throughout the example; real transactions use the current rate.
+Values assume one exact matching item family. Gold totals include both inputs at each step and exclude acquiring Common Level 1 pieces. Every transaction uses the fixed price table.
 
-| Target | Matching Common Level 1 copies | Total crafting Gold-hours from Common | Direct next upgrade Gold-hours |
+| Target | Matching Common Level 1 copies | Total crafting Gold from Common | Direct next upgrade Gold |
 |---|---:|---:|---:|
-| common 1 | 1 | 0 | 0.25 |
-| common 5 | 16 | 8 | 4 |
-| uncommon 1 | 32 | 20 | 0.5 |
-| uncommon 5 | 512 | 336 | 8 |
-| rare 1 | 1,024 | 680 | 1 |
-| rare 5 | 16,384 | 10,912 | 12 |
-| epic 1 | 32,768 | 21,836 | 1.5 |
-| epic 5 | 524,288 | 349,424 | 16 |
-| legendary 1 | 1,048,576 | 698,864 | 2 |
-| legendary 5 | 16,777,216 | 11,181,888 | Maximum |
+| common 1 | 1 | 0 | 100,000 |
+| common 5 | 16 | 2,580,000 | 850,000 |
+| uncommon 1 | 32 | 6,010,000 | 1,500,000 |
+| uncommon 5 | 512 | 133,160,000 | 50,000,000 |
+| rare 1 | 1,024 | 316,320,000 | 100,000,000 |
+| rare 5 | 16,384 | 7,961,120,000 | 1,000,000,000 |
+| epic 1 | 32,768 | 16,922,240,000 | 1,500,000,000 |
+| epic 5 | 524,288 | 306,755,840,000 | 9,000,000,000 |
+| legendary 1 | 1,048,576 | 622,511,680,000 | 14,000,000,000 |
+| legendary 5 | 16,777,216 | 10,278,186,880,000 | Maximum |
 
 Confirmed acquisition: higher rarities come only from upgrading existing Common gear. Two matching Common Level 5 pieces produce one Uncommon Level 1. A Legendary Level 1 represents 65,536 matching Common Level 5 pieces; Legendary Level 5 represents 1,048,576. Existing crafted items retain their progress. These equivalents expose a pacing concern; they do not authorize higher-rarity drops or different duplicate mechanics.
 

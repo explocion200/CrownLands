@@ -20,7 +20,7 @@ const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require('../
  const g=G.createDefaultState();for(let i=0;i<count;i++){const id='perf-'+i,d=G.DEFINITIONS[i%G.DEFINITIONS.length];g.instances[id]=G.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:Math.floor(i/G.DEFINITIONS.length)%5+1});}
  await ev(`state.gear=normalizeCommonGearState(${JSON.stringify(g)});selectedCommonGearInstanceId='perf-0';selectedCommonGearSlot='head';void 0`);
  assert(await ev('modal.open'),'Inventory must be measured in a visible dialog');
- const times=[];for(let i=0;i<3;i++)times.push(await ev("(()=>{const start=performance.now();renderCommonGearBuilding('barracks');modal.getBoundingClientRect();return performance.now()-start})()"));results.push({count,cpuThrottle:4,viewport:'844x390',renderAndLayoutMs:times});assert.equal(await ev('__gearRateCalls'),0,'Authoritative pricing must not rescan city production');assert.equal(await ev("createCommonGearViewModel('barracks').upgradeGold"),12000);}
+ const times=[];for(let i=0;i<3;i++)times.push(await ev("(()=>{const start=performance.now();renderCommonGearBuilding('barracks');modal.getBoundingClientRect();return performance.now()-start})()"));results.push({count,cpuThrottle:4,viewport:'844x390',renderAndLayoutMs:times});assert.equal(await ev('__gearRateCalls'),0,'Authoritative pricing must not rescan city production');assert.equal(await ev("createCommonGearViewModel('barracks').upgradeGold"),100000);}
  await ev("modal.querySelector('.tg-item:last-child').scrollIntoView({block:'end'});void 0");
  await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
  const last=await ev("(()=>{const b=modal.querySelector('.tg-item:last-child'),r=b.getBoundingClientRect();return {id:b.dataset.gearInstance,x:r.x+r.width/2,y:r.y+r.height/2,visible:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})()");
@@ -28,6 +28,6 @@ const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require('../
  await client.send('Input.dispatchMouseEvent',{type:'mousePressed',x:last.x,y:last.y,button:'left',clickCount:1});
  await client.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:last.x,y:last.y,button:'left',clickCount:1});
  assert.equal(await ev('selectedCommonGearInstanceId'),last.id,'Offscreen items must remain selectable after scrolling');
- await ev("authoritativeShopPricing=null;__gearRateCalls=0;renderCommonGearBuilding('barracks');void 0");assert.equal(await ev('__gearRateCalls'),1,'Fallback production must be calculated once for the whole inventory');
+ await ev("authoritativeShopPricing=null;__gearRateCalls=0;renderCommonGearBuilding('barracks');void 0");assert.equal(await ev('__gearRateCalls'),0,'Fixed gear prices must never calculate city production');
  fs.mkdirSync(path.join(root,'release-artifacts'),{recursive:true});fs.writeFileSync(path.join(root,'release-artifacts/gear-inventory-perf.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
  }finally{if(client)await client.send('Browser.close').catch(()=>{});if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}await server.close();}})().catch(e=>{console.error(e.stack);process.exitCode=1});

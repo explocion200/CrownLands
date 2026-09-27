@@ -1322,6 +1322,7 @@ async function main() {
   const postclaimUpgrade = await callReplaySafeFunction("upgradeCommonGear", returningClanOfficer.token, {
     instanceId: "preclaim_upgrade_target",
     requestId: "postclaim_upgrade_gear",
+    cost: 100000,
   });
   const postclaimUpgradeId = String(postclaimUpgrade?.upgradedInstanceId || "");
   const postclaimUpgradeStored = (await db.doc(`players/${returningClanOfficer.uid}`).get()).data()?.gear || {};

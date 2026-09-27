@@ -766,7 +766,8 @@ async function main() {
     const expected = commonGear.getUpgradeResult(gear.instances.upgrade_target);
     await seedUpgradeState(gear);
     const requestId = `gear-level-${level}-${crypto.randomBytes(6).toString("hex")}`;
-    const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId });
+    const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId,
+      cost: commonGear.getUpgradeGoldCost(gear.instances.upgrade_target) });
     const upgradedState = upgraded.currentUser?.gear || {};
     const storedProfile = (await profileRef.get()).data() || {};
     const storedGear = commonGear.normalizeState(storedProfile.gear);
@@ -800,15 +801,16 @@ async function main() {
       );
     }
     assert(upgradedState.instances[resultInstanceId].gearKey === expected.gearKey, "Upgrade returned the wrong rarity/family.");
-    const expectedHoursByRarity = {
-      common: [.25, .5, 1, 2, 4], uncommon: [.5, 1, 2, 4, 8], rare: [1, 2, 4, 8, 12],
-      epic: [1.5, 3, 6, 12, 16], legendary: [2, 4, 8, 16],
+    const expectedGoldByRarity = {
+      common: [100000, 170000, 300000, 500000, 850000],
+      uncommon: [1500000, 2500000, 4000000, 7000000, 50000000],
+      rare: [100000000, 200000000, 350000000, 600000000, 1000000000],
+      epic: [1500000000, 2500000000, 4000000000, 6000000000, 9000000000],
+      legendary: [14000000000, 22000000000, 34000000000, 50000000000],
     };
-    const expectedHours = expectedHoursByRarity[gear.instances.upgrade_target.rarity][level - 1];
-    const upgradeRawRate = Math.floor(Number(upgraded.shopPricing?.rawBaseGoldPerHour || 0));
-    assert(upgradeRawRate > 0, "Upgrade must return authoritative raw Gold pricing.");
-    assert(upgraded.spentGold === Math.floor(upgradeRawRate * expectedHours),
-      `${gear.instances.upgrade_target.rarity} Level ${level} charged the wrong revised Gold cost.`);
+    const expectedGold = expectedGoldByRarity[gear.instances.upgrade_target.rarity][level - 1];
+    assert(upgraded.spentGold === expectedGold, "Upgrade charged a different fixed Gold price.");
+    assert(upgraded.upgradeReceipt.spentGold === expectedGold, "Receipt lost the exact Gold charge.");
     assert(
       Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - Number(upgraded.spentGold || 0) - 1
         && Number(storedProfile.goldFloat || 0) <= upgradeGoldReserve - Number(upgraded.spentGold || 0) + 10,
@@ -874,7 +876,9 @@ async function main() {
 
   for (const rarity of commonGear.RARITIES) {
     const definition = commonGear.DEFINITIONS.find(d => d.statType === "attackStrength" && d.rarity === rarity);
-    await assertSuccessfulUpgrade(4, { definition, targetEquipped: true, includeSpare: false });
+    for (let level = 1; level <= 4; level++) {
+      await assertSuccessfulUpgrade(level, { definition, targetEquipped: true, includeSpare: false });
+    }
     if (rarity !== "legendary") await assertSuccessfulUpgrade(5, { definition, targetEquipped: true, includeSpare: false });
   }
 
@@ -882,8 +886,8 @@ async function main() {
   await seedUpgradeState(concurrentUpgradeGear);
   const concurrentUpgradeRequestId = `gear-concurrent-${crypto.randomBytes(6).toString("hex")}`;
   const concurrentUpgrades = await Promise.all([
-    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId }),
-    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId }),
+    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId, cost: 850000 }),
+    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId, cost: 850000 }),
   ]);
   assert(concurrentUpgrades.every(response => response.ok), `A duplicate Common Gear request failed instead of replaying safely: ${JSON.stringify(concurrentUpgrades)}`);
   assert(concurrentUpgrades.filter(response => response.result?.replayed === false).length === 1, "A duplicate Common Gear request crafted more than once.");
@@ -916,14 +920,35 @@ async function main() {
   assert(!rebound.ok && rebound.error?.status === "INVALID_ARGUMENT", "A receipt was rebound to another target.");
 
   const protectedGear = createSuccessUpgradeState(5, { includeSpare: false });
-  for (const [label, args] of [["outdated client", { gearSchemaVersion: 2 }], ["changed quote", { cost: 1 }]]) {
+  for (const [label, args] of [["outdated client", { gearSchemaVersion: 2, cost: 850000 }], ["changed quote", { cost: 1 }], ["old hourly quote", { cost: 192000 }], ["missing quote", {}], ["invalid quote", { cost: "850000" }]]) {
     await seedUpgradeState(protectedGear);
     const denied = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: `reject-${label}`, ...args });
     assert(!denied.ok && denied.error?.status === "FAILED_PRECONDITION", `${label} was accepted`);
-    if (label === "changed quote") assert(denied.error.details?.reason === "gear-price-changed" && denied.error.details.cost > 1 && denied.error.details.rawBaseGoldPerHour > 0, "Price rejection must supply a fresh quote for review");
+    if (label !== "outdated client") assert(denied.error.details?.reason === "gear-price-changed" && denied.error.details.cost === 850000, "Price rejection must supply the exact fixed quote for review");
     const saved = (await profileRef.get()).data();
     assert(Object.keys(saved.gear.instances).length === 2 && saved.goldFloat === upgradeGoldReserve, `${label} consumed items or Gold`);
   }
+  // A pre-release receipt remains replayable without repricing or consuming inputs again.
+  await seedUpgradeState({ ...protectedGear, recentUpgradeReceipts: [{ requestId: "historical-gear-price", targetInstanceId: "old-target", upgradedInstanceId: "old-result", consumedInstanceIds: ["old-target", "old-material"], previousLevel: 1, newLevel: 2, previousRarity: "common", newRarity: "common", spentGold: 12000 }] });
+  const historical = await callFunction("upgradeCommonGear", user.token, { instanceId: "old-target", requestId: "historical-gear-price" });
+  assert(historical.replayed && historical.spentGold === 0 && historical.upgradeReceipt.spentGold === 12000, "Historical receipt was repriced.");
+  assert(Object.keys((await profileRef.get()).data().gear.instances).length === 2, "Historical replay consumed current inventory.");
+
+  const legendaryGear = createSuccessUpgradeState(4, { definition: commonGear.getDefinition("barracks_weapon_legendary_01"), includeSpare: false });
+  for (const balance of [49999999999, 50000000000]) {
+    await seedUpgradeState(legendaryGear);
+    await profileRef.update({ gold: balance, goldFloat: balance, economyUpdatedAtMs: Date.now() + 60000 });
+    const response = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: "legendary-boundary-" + balance, cost: 50000000000 });
+    const saved = (await profileRef.get()).data();
+    if (balance < 50000000000) {
+      assert(!response.ok && response.error?.message.includes("Not enough gold"), "One Gold short must reject the maximum upgrade.");
+      assert(saved.goldFloat === balance && Object.keys(saved.gear.instances).length === 2, "Rejected maximum upgrade changed Gold or inputs.");
+    } else {
+      assert(response.ok && response.result.spentGold === 50000000000 && saved.goldFloat === 0, "Exact 50B balance must settle without rounding or overflow.");
+      assert(Object.values(saved.gear.instances).length === 1 && Object.values(saved.gear.instances)[0].level === 5, "Maximum upgrade lost its result.");
+    }
+  }
+
   const fullBag = commonGear.createDefaultState();
   fullBag.commonGearBoxes = 1;
   for (let i = 0; i < commonGear.INVENTORY_LIMIT; i++) fullBag.instances[`full-${i}`] = createUpgradeInstance(`full-${i}`, upgradeDefinition, 1, i);
@@ -949,6 +974,7 @@ async function main() {
   const unaffordableResponse = await invokeFunction("upgradeCommonGear", user.token, {
     instanceId: "upgrade_target",
     requestId: `gear-unaffordable-${crypto.randomBytes(6).toString("hex")}`,
+    cost: 170000,
   });
   assert(
     !unaffordableResponse.ok && unaffordableResponse.error?.status === "FAILED_PRECONDITION",

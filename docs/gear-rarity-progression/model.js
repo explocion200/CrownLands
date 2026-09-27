@@ -13,16 +13,15 @@
     return round(maximums[rarityIndex - 1] + (maximums[rarityIndex] - maximums[rarityIndex - 1]) * level / 5);
   }
   function copiesFromCommon(rarityIndex, level) { return 2 ** (rarityIndex * 5 + level - 1); }
-  function upgradeHours(proposal, rarityIndex, level) {
-    return level === 5 ? proposal.costs.promotionHours[rarityIndex]
-      : proposal.costs.withinCommonHours[level - 1] * proposal.costs.rarityFactors[rarityIndex];
+  function upgradeGold(proposal, rarityIndex, level) {
+    return proposal.costs.goldByRarity[proposal.rarities[rarityIndex].toLowerCase()][level - 1];
   }
-  function cumulativeHours(proposal, rarityIndex, level, startRarity = 0) {
-    let hours = 0;
+  function cumulativeGold(proposal, rarityIndex, level, startRarity = 0) {
+    let gold = 0;
     for (let rank = startRarity * 5; rank < rarityIndex * 5 + level - 1; rank++) {
-      hours = 2 * hours + upgradeHours(proposal, Math.floor(rank / 5), rank % 5 + 1);
+      gold = 2 * gold + upgradeGold(proposal, Math.floor(rank / 5), rank % 5 + 1);
     }
-    return hours;
+    return gold;
   }
   function clampBonus(raw, cap) {
     const normalized = Math.max(0, Number(raw) || 0);
@@ -50,8 +49,8 @@
     sources.interaction=config.movement?sources.skill*sources.objectives/100:0;
     const result=clampBonus(Object.values(sources).reduce((a,b)=>a+b,0),proposal.caps[config.cap]);
     return {...result,cap:proposal.caps[config.cap],sources,perItem:bonus(proposal,config.effect,rarityIndex,level),
-      copies:copiesFromCommon(rarityIndex,level),directHours:upgradeHours(proposal,rarityIndex,level),
+      copies:copiesFromCommon(rarityIndex,level),directGold:upgradeGold(proposal,rarityIndex,level),
       multiplier:kind==="recovery"?null:kind==="repair"?1-result.applied/100:1+result.applied/100};
   }
-  return Object.freeze({bonus,copiesFromCommon,upgradeHours,cumulativeHours,clampBonus,scenario});
+  return Object.freeze({bonus,copiesFromCommon,upgradeGold,cumulativeGold,clampBonus,scenario});
 });

@@ -10,7 +10,7 @@ The user confirmed the five colors/rarities, upward crafting from existing gear,
 - Five levels per rarity. Two identical items of the same officer, slot, rarity and level produce one next-level item. At Level 5 they produce Level 1 of the next rarity. Legendary Level 5 is the endpoint.
 - Confirmed September 26: the two-item requirement applies at every rarity, including Levels 1→2 through 4→5. Gold is an additional cost, never a replacement for the matching copy. The proposed Gold-only leveling alternative was declined.
 - Continue from each player's existing items and levels. Two Common Level 5 copies become one Uncommon Level 1; two Uncommon Level 5 copies become one Rare Level 1, continuing through Epic to Legendary. Keep existing Common Box sources and their three Level 1 Common pieces. Higher rarity is earned through crafting, never rolled directly from a box or awarded by a new reward source in this update.
-- Preserve all Common Level 1–5 bonuses. The September 26 cost revision lowers crafting prices, beginning at 0.25 raw-production hours and ending at 16 hours for Legendary Level 4→5. Existing item IDs, acquired gear, equipment selection, boxes and persistence survive the update.
+- Preserve all Common Level 1–5 bonuses. The September 27 fixed-Gold revision starts at 100,000 Gold and ends at 50 billion Gold for Legendary Level 4→5. Existing item IDs, acquired gear, equipment selection, boxes and persistence survive the update.
 - Consume the selected target and one unequipped matching copy atomically. If the target was equipped, equip the new result automatically. Never consume a second equipped item as material.
 - Intrinsic bonuses increase at every step, including promotions. A player's final output can remain unchanged at a category cap; the preview must show both the intrinsic improvement and the amount actually applied.
 - Keep the current roles and stat scopes. A rarity adds no new stat or set bonus. Gear is still personal and not tradable.
@@ -62,19 +62,19 @@ Swift March Order is an existing one-use exception that halves an eligible trans
 
 ## 4. Costs and attainability
 
-Gold is charged as hours of the player's **current raw regular-city Gold production**, using the existing economy collection and pricing basis. Gear, skills, temporary boosts and objective bonuses do not increase the price or create a discount.
+**September 27, 2026: confirmed fixed Gold prices, implemented pending release.** This replaces the September 26 production-hour pricing. All amounts below are Gold per action and apply equally to all gear families, slots and officers. Production, city count, skills, gear, temporary boosts and objectives do not affect the fee.
 
 | Rarity being upgraded | 1→2 | 2→3 | 3→4 | 4→5 | 5→next rarity 1 |
 |---|---:|---:|---:|---:|---:|
-| Common | 0.25 h | 0.5 h | 1 h | 2 h | 4 h |
-| Uncommon | 0.5 h | 1 h | 2 h | 4 h | 8 h |
-| Rare | 1 h | 2 h | 4 h | 8 h | 12 h |
-| Epic | 1.5 h | 3 h | 6 h | 12 h | 16 h |
-| Legendary | 2 h | 4 h | 8 h | 16 h | Maximum |
+| Common | 100,000 | 170,000 | 300,000 | 500,000 | 850,000 |
+| Uncommon | 1,500,000 | 2,500,000 | 4,000,000 | 7,000,000 | 50,000,000 |
+| Rare | 100,000,000 | 200,000,000 | 350,000,000 | 600,000,000 | 1,000,000,000 |
+| Epic | 1,500,000,000 | 2,500,000,000 | 4,000,000,000 | 6,000,000,000 | 9,000,000,000 |
+| Legendary | 14,000,000,000 | 22,000,000,000 | 34,000,000,000 | 50,000,000,000 | Maximum |
 
-The user requested the 0.25-hour starting cost and 16-hour Legendary Level 4→5 cost. The intermediate curve uses rarity factors 1/2/4/6/8 and promotions of 4/8/12/16 hours, keeping every direct charge at or below 16 hours. Duplicate requirements are unchanged.
+Every action still consumes two matching pieces of the same family, rarity and level. Legendary Level 5 is terminal. Common Level 1 acquisition and Gear Box pricing are separate. Crafting completes atomically after acceptance. Full-path Gold totals include crafting both inputs at every earlier step and exclude acquiring the starting pieces. Existing items and historical receipts retain their progress and charges; no refunds or migration occur.
 
-These are Gold prices, not timers. Crafting completes atomically after acceptance. The full cost includes crafting both inputs at every earlier step; it is not the sum of one column of prices.
+The server requires the exact quoted price before a new upgrade can spend Gold. Missing, malformed or outdated quotes reject without changing items or Gold and ask the player to refresh. Committed request IDs replay their original receipt with no new charge, including receipts from before this price revision. Release the client and upgrade Function together; a price mismatch during rollout fails before mutation.
 
 **Acquisition is confirmed: upgrade existing gear upward.** Keep two matching inputs for every upgrade and promotion. The earlier recommendation to add higher-rarity rewards is withdrawn. Preserve existing boxes and their explicit Common-only pool when expanding the catalog; do not introduce new reward types, currencies, drop odds or shop stock.
 

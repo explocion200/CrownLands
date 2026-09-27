@@ -122,27 +122,44 @@
     "regularWallRepairReduction": 50
   },
   "costs": {
-    "basis": "Current raw regular-city Gold/hour; excludes all boosts and objective production. Fixed-rate cumulative figures are illustrations, not waiting times.",
-    "withinCommonHours": [
-      0.25,
-      0.5,
-      1,
-      2
-    ],
-    "rarityFactors": [
-      1,
-      2,
-      4,
-      6,
-      8
-    ],
-    "promotionHours": [
-      4,
-      8,
-      12,
-      16,
-      null
-    ]
+    "basis": "Fixed Gold per upgrade or promotion, independent of production, city count and bonuses. Cumulative totals include crafting both inputs at every step; item acquisition is excluded.",
+    "goldByRarity": {
+      "common": [
+        100000,
+        170000,
+        300000,
+        500000,
+        850000
+      ],
+      "uncommon": [
+        1500000,
+        2500000,
+        4000000,
+        7000000,
+        50000000
+      ],
+      "rare": [
+        100000000,
+        200000000,
+        350000000,
+        600000000,
+        1000000000
+      ],
+      "epic": [
+        1500000000,
+        2500000000,
+        4000000000,
+        6000000000,
+        9000000000
+      ],
+      "legendary": [
+        14000000000,
+        22000000000,
+        34000000000,
+        50000000000,
+        null
+      ]
+    }
   },
   "acquisition": {
     "status": "IMPLEMENTED — PENDING RELEASE",
