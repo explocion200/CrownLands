@@ -84,7 +84,12 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // 51,292-byte increase at 52 KiB; retain every offline dependency and all runtime
 // image, request, heap and FPS limits. This is source growth, not a speed gain.
 // After the Rally merge, badges/heraldry add 3,574 bytes to the complete shell.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4) * 1024;
+// Main c66fd0f already exceeds the last budget revision (eb6c5ac) by ~57 KiB,
+// from merged client updates through PR #370. Bound that existing growth at
+// 64 KiB. This gear-art update adds no installation-cache assets or scripts.
+// Five-tier definition/layout metadata and cap previews add at most 48 KiB.
+// All 320 gear bitmaps remain outside the startup cache.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48) * 1024;
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 116 * 1024,
@@ -106,7 +111,10 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // Gatehouse adds one approved static Commander, bounded separately at 90 KiB.
 // Royal Stables adds one static officer and horse, bounded separately at 90 KiB.
 // Six approved 384px Shop illustrations add less than 180 KiB over their old 160px versions.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180) * 1024;
+// 32 refreshed Common icons and selected-only 384px details add 1,232,808 bytes.
+// The remaining four tiers add 5,923,710 bytes, bounded at 5824 KiB.
+// Retired gear derivatives stay outside the production artifact.
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -159,16 +167,18 @@ const entrypointBudgets = {
   // Of the measured shell growth above, game.js accounts for 41,972 bytes
   // (40,705 already on main; 1,267 in this audit), bounded at 41 KiB.
   // Pending-application badges and saved-heraldry revision guards add 3,496 bytes.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4) * 1024,
+  // Existing main's growth since eb6c5ac: game ~41 KiB, Skills ~6.1 KiB,
+  // styles ~2.5 KiB and Firebase client ~6.2 KiB; gear contract additions fit these bounds.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44) * 1024,
   "kingdom-ledgers-ui.js": 10 * 1024,
   "kingdom-ledgers-ui.css": 18 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
   "stronghold-details-ui.css": 30 * 1024,
   "modal-ui.js": 4 * 1024,
-  "skills-ledger-ui.css": 30 * 1024,
+  "skills-ledger-ui.css": 37 * 1024,
   "clan-ledger-ui.css": 84 * 1024,
   "settings-ledger-ui.css": 32 * 1024,
-  "common-gear-ui.js": 64 * 1024,
+  "common-gear-ui.js": (72 + 28) * 1024,
   "treasury-gear-ui.js": 16 * 1024,
   "treasury-gear-ui.css": 40 * 1024,
   "barracks-gear-ui.js": 16 * 1024,
@@ -191,14 +201,15 @@ const entrypointBudgets = {
   // Map markers and the complete responsive Tower/Treasury panel add under one
   // bounded 16 KiB shared-style step.
   // Onboarding arrows and compact Profile guidance add under 2 KiB.
-  "styles.css": 422 * 1024,
+  "styles.css": 425 * 1024,
   "holding-tower-ui.css": 24 * 1024,
   "holding-tower-ui.js": 24 * 1024,
   "camp-details-ui.js": 8 * 1024,
   "camp-details-ui.css": 16 * 1024,
   "clan-tower-details-ui.js": 20 * 1024,
   "clan-tower-details-ui.css": 52 * 1024,
-  "common-gear-ui.css": 40 * 1024,
+  // Shared five-tier colors and offscreen card containment add a bounded 1 KiB.
+  "common-gear-ui.css": 42 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
@@ -209,7 +220,7 @@ const entrypointBudgets = {
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
-  "firebaseClient.js": 150 * 1024,
+  "firebaseClient.js": 157 * 1024,
   "animation-manager.js": 80 * 1024,
   "audio-manager.js": 80 * 1024,
   "route-worker.js": 40 * 1024,
@@ -384,9 +395,16 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), read("royal-stables-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+const appReferenceSource = [read("home.html"), read("guides.html"), read("world.html"), indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), read("royal-stables-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+// These retained comparison masters were superseded by the already-shipped HUD art.
+const replacedHudArt = {
+  "hud-leaderboard": "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
+  "hud-shop": "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
+  "hud-bag": "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
+};
 let optimizedBytes = 0;
 let sourceBytes = 0;
+const countedSourceMasters = new Set();
 for (const asset of manifest.assets) {
   const sourcePath = path.join(root, asset.source);
   const outputPath = path.join(root, asset.output);
@@ -418,12 +436,17 @@ for (const asset of manifest.assets) {
       ? gameSource.includes('icon: "assets/icons/common-gear-chest-r1.svg"')
       : asset.id === "hud-achievements"
         ? gameSource.includes('icon: "assets/icons/reward-achievements-r1.svg"')
+      : replacedHudArt[asset.id]
+        ? indexSource.includes(replacedHudArt[asset.id]) && fs.existsSync(path.join(root, replacedHudArt[asset.id]))
       : appReferenceSource.includes(asset.output),
     `${asset.id} was generated but the shipped client does not reference ${asset.output}.`
   );
 
   optimizedBytes += payload.length;
-  sourceBytes += fs.statSync(sourcePath).size;
+  if (!countedSourceMasters.has(asset.source)) {
+    sourceBytes += fs.statSync(sourcePath).size;
+    countedSourceMasters.add(asset.source);
+  }
 }
 assert(optimizedBytes <= MAX_OPTIMIZED_ART_BYTES, `Optimized art totals ${mib(optimizedBytes)}; budget is ${mib(MAX_OPTIMIZED_ART_BYTES)}.`);
 assert(optimizedBytes <= sourceBytes * 0.1, "Optimized derivatives must remain at least 90% smaller than their source masters.");

@@ -5,7 +5,7 @@
   const assets = {
     troops:"assets/icons/daily-login-troops-r1.svg", gold:"assets/icons/royal-shop-gold-r1.svg", xp:"assets/icons/reward-achievements-r1.svg",
     sword:"assets/icons/skills/swordmastery.svg", shield:"assets/icons/skills/shieldwallDiscipline.svg", wall:"assets/icons/skills/stoneworks.svg",
-    attackGear:"assets/optimized/gear-barracks-chest-192x192-5bf7f2f81d43.webp", defenseGear:"assets/optimized/gear-gatehouse-chest-192x192-11e03cd6c3d7.webp",
+    attackGear:"assets/optimized/gear-barracks-chest-192x192-3c118f02d53d.webp", defenseGear:"assets/optimized/gear-gatehouse-chest-192x192-1e72532be259.webp",
     chest:"assets/optimized/item-common-gear-box-192x192-d31500be5747.webp"
   };
   const esc = value => escapeHtml(String(value ?? ""));

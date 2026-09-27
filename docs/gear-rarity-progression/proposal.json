@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "status": "IMPLEMENTED — PENDING RELEASE; PRODUCTION CAPS DEFERRED",
+  "baselineCommit": "c66fd0f4b9e49d1be5399c3277f28e94edb95c3a",
+  "rarities": [
+    "common",
+    "uncommon",
+    "rare",
+    "epic",
+    "legendary"
+  ],
+  "commonLevels": [
+    0.25,
+    0.5,
+    0.8,
+    1.15,
+    1.5
+  ],
+  "curves": {
+    "modest": [
+      1.5,
+      3,
+      5,
+      7.5,
+      10
+    ],
+    "medium": [
+      1.5,
+      4,
+      8,
+      13,
+      20
+    ],
+    "strong": [
+      1.5,
+      5,
+      12,
+      20,
+      30
+    ],
+    "walls": [
+      1.5,
+      3,
+      5.5,
+      8.5,
+      12.5
+    ],
+    "scouts": [
+      1.5,
+      6,
+      15,
+      30,
+      50
+    ]
+  },
+  "effects": {
+    "troopProductionAllCities": {
+      "curve": "modest",
+      "slots": 6,
+      "building": "barracks"
+    },
+    "attackStrength": {
+      "curve": "strong",
+      "slots": 1,
+      "building": "barracks"
+    },
+    "casualtyEfficiency": {
+      "curve": "modest",
+      "slots": 1,
+      "building": "barracks"
+    },
+    "goldProductionMainCity": {
+      "curve": "modest",
+      "slots": 7,
+      "building": "treasury"
+    },
+    "goldProductionAllCities": {
+      "curve": "medium",
+      "slots": 1,
+      "building": "treasury"
+    },
+    "ownedMarchSpeed": {
+      "curve": "modest",
+      "slots": 6,
+      "building": "royal-stables"
+    },
+    "enemyMarchSpeed": {
+      "curve": "strong",
+      "slots": 1,
+      "building": "royal-stables"
+    },
+    "scoutSpeed": {
+      "curve": "scouts",
+      "slots": 1,
+      "building": "royal-stables"
+    },
+    "wallStrength": {
+      "curve": "walls",
+      "slots": 6,
+      "building": "gatehouse"
+    },
+    "defenderStrength": {
+      "curve": "strong",
+      "slots": 1,
+      "building": "gatehouse"
+    },
+    "wallRepairSpeed": {
+      "curve": "strong",
+      "slots": 1,
+      "building": "gatehouse"
+    }
+  },
+  "caps": {
+    "attackBonus": 100,
+    "defendingSoldierBonus": 100,
+    "wallStrengthBonus": 150,
+    "troopProductionBonus": 200,
+    "mainCityGoldBonus": 250,
+    "otherCityGoldBonus": 200,
+    "marchSpeedBonus": 150,
+    "casualtyRecovery": 75,
+    "regularWallRepairReduction": 50
+  },
+  "costs": {
+    "basis": "Current raw regular-city Gold/hour; excludes all boosts and objective production. Fixed-rate cumulative figures are illustrations, not waiting times.",
+    "withinCommonHours": [
+      0.25,
+      0.5,
+      1,
+      2
+    ],
+    "rarityFactors": [
+      1,
+      2,
+      4,
+      6,
+      8
+    ],
+    "promotionHours": [
+      4,
+      8,
+      12,
+      16,
+      null
+    ]
+  },
+  "acquisition": {
+    "status": "IMPLEMENTED — PENDING RELEASE",
+    "source": "Upgrade existing Common gear through successive rarities",
+    "inputsPerUpgrade": 2,
+    "duplicateRequirementStatus": "CONFIRMED FOR EVERY LEVEL AND PROMOTION",
+    "goldReplacesDuplicate": false,
+    "levelsPerRarity": 5,
+    "directHigherRarityRewards": false,
+    "preserveExistingItemsAndLevels": true,
+    "commonBoxItems": 3
+  },
+  "decisionsPending": [
+    "Production total caps and exact offline interval accounting are deferred to a separate update"
+  ],
+  "sources": {
+    "gear": "common-gear.js",
+    "economy": "functions/economy-config.json",
+    "authoritative": "functions/index.js",
+    "clanBuildings": "clan-tower-buildings.js",
+    "specification": "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+  },
+  "deferredProductionCaps": [
+    "troops",
+    "mainGold",
+    "otherGold"
+  ]
+}

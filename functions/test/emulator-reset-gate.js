@@ -489,10 +489,10 @@ async function main() {
       },
       persistent_ledger: {
         instanceId: "persistent_ledger",
-        gearKey: "treasury_weapon_common_01",
+        gearKey: "treasury_weapon_legendary_01",
         buildingId: "treasury",
         slot: "weapon",
-        rarity: "common",
+        rarity: "legendary",
         level: 5,
         isEquipped: true,
         isNew: true,
@@ -806,7 +806,7 @@ async function main() {
     ["openCommonGearBox", { requestId: "preclaim_open_box" }],
     ["equipCommonGear", { instanceId: "preclaim_upgrade_material" }],
     ["unequipCommonGear", { instanceId: "preclaim_upgrade_target" }],
-    ["upgradeCommonGear", { instanceId: "preclaim_upgrade_target" }],
+    ["upgradeCommonGear", { instanceId: "preclaim_upgrade_target", requestId: "preclaim-upgrade" }],
     ["viewCommonGearBuilding", { buildingId: "barracks" }],
     ["reserveHarvestBonusSpawn", {
       type: "gold",
@@ -987,6 +987,8 @@ async function main() {
       && Object.keys(profile.gear?.instances || {}).length === 2
       && profile.gear?.instances?.persistent_helm?.level === 4
       && profile.gear?.instances?.persistent_ledger?.level === 5
+      && profile.gear?.instances?.persistent_ledger?.gearKey === "treasury_weapon_legendary_01"
+      && profile.gear?.instances?.persistent_ledger?.gearKey === "treasury_weapon_legendary_01"
       && profile.gear?.instances?.persistent_helm?.acquiredAtMs === 1_700_000_000_000
       && profile.gear?.instances?.persistent_ledger?.upgradedAtMs === 1_730_000_000_000
       && profile.gear?.equipped?.barracks?.head === "persistent_helm"
