@@ -9627,7 +9627,7 @@ function getCityStats(city, options = {}) {
     : Math.max(0, Number(gearBonuses.goldProductionMainCity) || 0);
   const gearGoldProductionPercent = gearGoldProductionAllCitiesPercent + gearGoldProductionMainCityPercent;
   const cityWalls = Math.floor(
-    baseCityWalls + baseCityWalls * (stoneworksPercent + gearWallStrengthPercent) / 100
+    baseCityWalls + baseCityWalls * COMMON_GEAR.capBonus("walls", stoneworksPercent + gearWallStrengthPercent) / 100
   );
   const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
@@ -9688,11 +9688,12 @@ function getCityStats(city, options = {}) {
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
+        1 + COMMON_GEAR.capBonus("defense", shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
       ))
       : troopDefenseBeforeObjective;
   const gearDefenderStrengthBonusPower = soldierDefenseEnabled
-    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * gearDefenderStrengthPercent / 100)
+    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * Math.min(gearDefenderStrengthPercent,
+      Math.max(0, COMMON_GEAR.BONUS_CAPS.defense - shieldwallDisciplinePercent - objectiveTroopDefenseBonusPercent)) / 100)
     : 0;
   const troopDefense = troopDefenseBeforeGear + gearDefenderStrengthBonusPower;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
@@ -9864,7 +9865,7 @@ function getBattleDefensePower(city) {
 
 function getAttackPower(troops, owner) {
   const ownerBoost = owner === "player"
-    ? skillMultiplier("swordmastery") + Math.max(0, Number(getCommonGearBonuses().attackStrength) || 0) / 100
+    ? 1 + COMMON_GEAR.capBonus("attack", getSkillPercent("swordmastery") + Math.max(0, Number(getCommonGearBonuses().attackStrength) || 0)) / 100
     : 1.04;
   return troops * BASE_TROOP_ATTACK_POWER * ownerBoost;
 }
@@ -9949,7 +9950,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
       fullWallPower,
       options.fortification?.repairAtMs,
       Math.max(0, Math.floor(Number(options.nowMs) || Date.now())),
-        Math.min(95, Math.max(0, Number(options.repairReductionPercent) || 0)
+        Math.min(COMMON_GEAR.BONUS_CAPS.wallRepair, Math.max(0, Number(options.repairReductionPercent) || 0)
           + (target?.owner === "player" ? Math.max(0, Number(getCommonGearBonuses().wallRepairSpeed) || 0) : 0))
     )
     : null;
@@ -9960,7 +9961,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     ?? clamp(Number(options.fortification?.repairReductionPercent) || 0, 0, 100);
   const repairAddedMs = repairTiming?.repairAddedMs || 0;
   const attackerBoost = attackOwner === "player"
-    ? skillMultiplier("swordmastery") + Math.max(0, Number(getCommonGearBonuses().attackStrength) || 0) / 100
+    ? 1 + COMMON_GEAR.capBonus("attack", getSkillPercent("swordmastery") + Math.max(0, Number(getCommonGearBonuses().attackStrength) || 0)) / 100
     : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -23604,7 +23605,7 @@ function getTravelSpeedMultiplier(owner, kind) {
         : getCommonGearBonuses().ownedMarchSpeed
     : 0;
   return owner === "player"
-    ? skillMultiplier("marchOrders") * getStrongholdMarchSpeedMultiplier(owner) + Math.max(0, Number(gearSpeedPercent) || 0) / 100
+    ? Math.min(1 + COMMON_GEAR.BONUS_CAPS.marchSpeed / 100, skillMultiplier("marchOrders") * getStrongholdMarchSpeedMultiplier(owner) + Math.max(0, Number(gearSpeedPercent) || 0) / 100)
     : 1;
 }
 
@@ -39267,7 +39268,7 @@ function renderBattleRewards(report = null) {
         ? renderBattleMetric(
             "Casualty recovery",
             `+${formatNumber(report.fieldMedicsRecovered)}`,
-            "Field Medics + Barracks gear · 90% combined cap · returned to the main city"
+            "Field Medics + Barracks gear · returned to the main city"
           )
         : "",
       report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",

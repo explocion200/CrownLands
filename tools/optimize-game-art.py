@@ -174,11 +174,24 @@ def build_asset(asset_id: str, source_name: str, max_width: int, max_height: int
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     previous_outputs = set()
+    prepared = {}
     if MANIFEST_PATH.exists():
         previous = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         previous_outputs = {ROOT / entry["output"] for entry in previous.get("assets", [])}
+        # Reviewed gear delivery files include safety padding and matching runtime
+        # framing. Keep their checked-in encodings rather than silently replacing
+        # them with the legacy full-canvas thumbnail path.
+        prepared = {entry["id"]: entry for entry in previous.get("assets", [])
+                    if entry.get("preparedDelivery")}
+        for entry in prepared.values():
+            source_hash = hashlib.sha256((ROOT / entry["source"]).read_bytes()).hexdigest()
+            output_hash = hashlib.sha256((ROOT / entry["output"]).read_bytes()).hexdigest()
+            if source_hash != entry["sourceSha256"] or output_hash != entry["sha256"]:
+                raise ValueError(f"Prepared gear changed: {entry['id']}; reimport its reviewed package.")
 
-    entries = [build_asset(*spec) for spec in ASSETS]
+    entries = [prepared[spec[0]] if spec[0] in prepared else build_asset(*spec) for spec in ASSETS]
+    built_ids = {entry["id"] for entry in entries}
+    entries.extend(entry for asset_id, entry in prepared.items() if asset_id not in built_ids)
     current_outputs = {ROOT / entry["output"] for entry in entries}
     for stale_path in previous_outputs - current_outputs:
         if stale_path.parent == OUTPUT_DIR and stale_path.exists():

@@ -123,7 +123,11 @@ const db = getFirestore();
 const messaging = getMessaging();
 
 function normalizeCommonGear(profileOrGear = {}) {
-  return COMMON_GEAR.normalizeState(profileOrGear?.gear || profileOrGear);
+  const source = profileOrGear?.gear || profileOrGear;
+  if (Number(source?.schemaVersion || 0) > COMMON_GEAR.SCHEMA_VERSION) {
+    throw new HttpsError("failed-precondition", "This equipment requires a newer Crownlands server. Please try again after the update.");
+  }
+  return COMMON_GEAR.normalizeState(source);
 }
 
 function createPersistentCommonGearForSeasonReset(previous = {}) {
@@ -155,7 +159,8 @@ function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultipli
     : ["attack", "rally", "rally_join"].includes(normalizedKind)
       ? bonuses.enemyMarchSpeed
       : bonuses.ownedMarchSpeed;
-  return Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100);
+  return Math.min(1 + COMMON_GEAR.BONUS_CAPS.marchSpeed / 100,
+    Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100));
 }
 
 function economyNumber(path, fallback) {
@@ -4267,7 +4272,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
   const stoneworksPercent = !rewardCamp && defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, safeNumber(gearBonuses.wallStrength, 0));
   const cityWalls = Math.floor(
-    baseCityWalls + baseCityWalls * (stoneworksPercent + gearWallStrengthPercent) / 100
+    baseCityWalls + baseCityWalls * COMMON_GEAR.capBonus("walls", stoneworksPercent + gearWallStrengthPercent) / 100
   );
   const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const shieldwallDisciplinePercent = soldierDefenseEnabled && defenderProfile
@@ -4289,11 +4294,12 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
+        1 + COMMON_GEAR.capBonus("defense", shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
       ))
       : troopDefenseBeforeObjective;
   const gearDefenderStrengthBonusPower = soldierDefenseEnabled
-    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * gearDefenderStrengthPercent / 100)
+    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * Math.min(gearDefenderStrengthPercent,
+      Math.max(0, COMMON_GEAR.BONUS_CAPS.defense - shieldwallDisciplinePercent - objectiveTroopDefenseBonusPercent)) / 100)
     : 0;
   const troopDefense = troopDefenseBeforeGear + gearDefenderStrengthBonusPower;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
@@ -5214,7 +5220,7 @@ function normalizeDemoAttackSnapshot(demo = null) {
 
 function getAttackPower(troops, attackerProfile = null) {
   const boost = attackerProfile
-    ? skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+    ? 1 + COMMON_GEAR.capBonus("attack", getSkillPercent(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength) / 100
     : 1;
   return troops * BASE_TROOP_ATTACK_POWER * boost;
 }
@@ -5294,7 +5300,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       options.fortification?.repairAtMs,
       Math.max(0, Math.floor(safeNumber(options.nowMs, Date.now()))),
       Math.min(
-        95,
+        COMMON_GEAR.BONUS_CAPS.wallRepair,
         Math.max(0, safeNumber(options.repairReductionPercent, 0))
           + getCommonGearBonuses(defenderProfile || {}).wallRepairSpeed
       )
@@ -5308,7 +5314,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     ?? clamp(safeNumber(options.fortification?.repairReductionPercent, 0), 0, 100);
   const repairAddedMs = repairTiming?.repairAddedMs || 0;
   const attackerBoost = attackerProfile
-    ? skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+    ? 1 + COMMON_GEAR.capBonus("attack", getSkillPercent(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength) / 100
     : 1;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -6704,7 +6710,7 @@ function createRallyParticipantSnapshot({
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
     attackGearPercent: getCommonGearBonuses(profile).attackStrength,
     attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
-      skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100 + Math.max(0, Math.min(10, clanTrainingPercent)) / 100
+      1 + COMMON_GEAR.capBonus("attack", getSkillPercent(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength + Math.max(0, Math.min(10, clanTrainingPercent))) / 100
     ),
     objectiveMarchSpeedBonusPercent,
     marchSpeedMultiplier,
@@ -11435,9 +11441,12 @@ function calculateDefenderArmyPackages({
     const bonusPower = index === defenderRows.length - 1
       ? remainingGearDefenderStrengthBonusPower
       : Math.floor(totalGearDefenderStrengthBonusPower * row.troops / totalDefenderTroops);
-    row.gearDefenderStrengthBonusPower = Math.max(0, bonusPower);
+    const maximumPower = Math.floor(row.troops * BASE_TROOP_DEFENSE_POWER * (1 + COMMON_GEAR.BONUS_CAPS.defense / 100));
+    if (soldierDefenseEnabled) row.effectivePower = Math.min(row.effectivePower, maximumPower);
+    row.gearDefenderStrengthBonusPower = Math.max(0, soldierDefenseEnabled
+      ? Math.min(bonusPower, maximumPower - row.effectivePower) : bonusPower);
     row.effectivePower += row.gearDefenderStrengthBonusPower;
-    remainingGearDefenderStrengthBonusPower -= row.gearDefenderStrengthBonusPower;
+    remainingGearDefenderStrengthBonusPower -= bonusPower;
   });
   const totalGarrisonDefense = Math.max(
     0,
@@ -14610,7 +14619,22 @@ function requireCommonGearInstance(gear, instanceId) {
   const id = safeString(instanceId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
   const instance = gear.instances[id];
   if (!instance) throw new HttpsError("not-found", "That gear piece is no longer available.");
+  if (!COMMON_GEAR.getDefinition(instance.gearKey)) throw new HttpsError("failed-precondition", "This equipment needs a newer game version.");
   return instance;
+}
+
+function requireGearCapacity(gear, profile = {}) {
+  if (Object.keys(gear.instances).length > COMMON_GEAR.INVENTORY_LIMIT
+    || Buffer.byteLength(JSON.stringify({ ...profile, gear }), "utf8") > 900000) {
+    throw new HttpsError("resource-exhausted", "Your equipment bag is full. Upgrade matching pieces before opening another box. Your box has been kept.");
+  }
+}
+
+function requireGearProgressionClient(request, instance, promotion = false) {
+  if ((instance.rarity !== "common" || (promotion && instance.level === COMMON_GEAR.MAX_LEVEL))
+    && Number(request.data?.gearSchemaVersion || 0) < COMMON_GEAR.SCHEMA_VERSION) {
+    throw new HttpsError("failed-precondition", "Crownlands equipment was updated. Refresh before continuing.");
+  }
 }
 
 function getCommonGearBoxPriceForEconomy(economy = null) {
@@ -14693,7 +14717,7 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
     gear.commonGearBoxes -= 1;
     const instanceIds = [];
     for (let index = 0; index < COMMON_GEAR.BOX_REVEAL_COUNT; index += 1) {
-      const definition = COMMON_GEAR.DEFINITIONS[crypto.randomInt(0, COMMON_GEAR.DEFINITIONS.length)];
+      const definition = COMMON_GEAR.COMMON_DEFINITIONS[crypto.randomInt(0, COMMON_GEAR.COMMON_DEFINITIONS.length)];
       const instanceId = `cg_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
       gear.instances[instanceId] = COMMON_GEAR.normalizeInstance({
         instanceId, gearKey: definition.gearKey, level: 1, isNew: true, acquiredAtMs: nowMs,
@@ -14704,6 +14728,7 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
     gear.lastOpenRequestId = requestId;
     gear.lastOpenReceipt = { requestId, openedAtMs: nowMs, instanceIds };
     gear.updatedAtMs = nowMs;
+    requireGearCapacity(gear, participation.profile);
     transaction.set(profileRef, { gear, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     return { ok: true, replayed: false, gear, receipt: gear.lastOpenReceipt };
   });
@@ -14737,6 +14762,7 @@ async function mutateCommonGearLoadout(uid, request, mode) {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const gear = normalizeCommonGear(economy.profileAfter);
     const instance = requireCommonGearInstance(gear, request.data?.instanceId);
+    requireGearProgressionClient(request, instance);
     if (mode === "equip") {
       const currentId = gear.equipped[instance.buildingId][instance.slot];
       if (currentId && gear.instances[currentId]) gear.instances[currentId].isEquipped = false;
@@ -14767,6 +14793,7 @@ exports.unequipCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
 exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const requestId = safeString(request.data?.requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!requestId) throw new HttpsError("invalid-argument", "An equipment upgrade request id is required.");
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
@@ -14775,6 +14802,10 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       ? gear.recentUpgradeReceipts.find(receipt => receipt.requestId === requestId)
       : null;
     if (replayReceipt) {
+      const targetId = safeString(request.data?.instanceId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+      if (targetId !== replayReceipt.targetInstanceId) {
+        throw new HttpsError("invalid-argument", "That upgrade request belongs to a different gear piece.");
+      }
       writePreparedEconomy(transaction, economy, { gear });
       return createEconomyResponse(economy, {
         gear,
@@ -14786,7 +14817,8 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       });
     }
     const instance = requireCommonGearInstance(gear, request.data?.instanceId);
-    const requirement = COMMON_GEAR.getUpgradeRequirement(instance.level);
+    requireGearProgressionClient(request, instance, true);
+    const requirement = COMMON_GEAR.getUpgradeRequirement(instance);
     if (!requirement) throw new HttpsError("failed-precondition", "Max Level Reached.");
     const materials = COMMON_GEAR.getUpgradeMaterialInstances(instance, gear.instances);
     if (materials.length < requirement.duplicates) {
@@ -14796,7 +14828,10 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       );
     }
     const rawBaseGoldPerHour = getShopPricingContext(economy).rawBaseGoldPerHour;
-    const cost = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance.level);
+    const cost = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance);
+    if (request.data?.cost !== undefined && Number(request.data.cost) !== cost) {
+      throw new HttpsError("failed-precondition", "Equipment Gold cost changed. Review the updated price and try again.");
+    }
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
     const resultInstanceId = `cg_up_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
     const upgrade = COMMON_GEAR.consumeUpgradeInputs(gear, instance.instanceId, resultInstanceId, nowMs);
@@ -14810,6 +14845,10 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       consumedInstanceIds: upgrade.consumedInstanceIds,
       previousLevel: upgrade.previousLevel,
       newLevel: upgrade.newLevel,
+      targetInstanceId: instance.instanceId,
+      previousRarity: upgrade.previousRarity,
+      newRarity: upgrade.newRarity,
+      resultGearKey: upgrade.upgradedInstance.gearKey,
       spentGold: cost,
     };
     if (requestId) {
@@ -23919,7 +23958,7 @@ function createAttackCombatSnapshot(troops = 1, attackerProfile = {}) {
   const swordmasteryPercent = Math.max(0, getSkillPercent(attackerProfile, "swordmastery"));
   const attackStrengthPercent = Math.max(0, getCommonGearBonuses(attackerProfile).attackStrength);
   const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * (
-    skillMultiplier(attackerProfile, "swordmastery") + attackStrengthPercent / 100
+    1 + COMMON_GEAR.capBonus("attack", swordmasteryPercent + attackStrengthPercent) / 100
   );
   return normalizeAttackCombatSnapshot({
     version: ATTACK_COMBAT_SNAPSHOT_VERSION,

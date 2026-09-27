@@ -109,13 +109,14 @@ copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crown
 // Ship the current manifest entries without duplicating retired art in the client.
 const currentUiRuntimeArt = new Set(
   JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8")).assets
-    .filter(asset => asset.category === "inner-castle" || asset.category === "item")
+    .filter(asset => asset.category === "inner-castle" || asset.category === "item" || asset.category === "gear-item")
     .map(asset => asset.output),
 );
 copyDirectoryFiles("assets/optimized", relativePath => {
   const normalized = relativePath.replace(/\\/g, "/");
   return !normalized.endsWith("manifest.json")
     && (!normalized.startsWith("assets/optimized/inner-castle-") || currentUiRuntimeArt.has(normalized))
+    && (!/^assets\/optimized\/gear-(barracks|treasury|royal-stables|gatehouse)-(head|chest|pants|boots|gloves|belt|weapon|necklace)-/.test(normalized) || currentUiRuntimeArt.has(normalized))
     && (!/^assets\/optimized\/item-(peace-shield|war-drums|royal-tax-decree|veil-of-silence|swift-march|recall-horn)-/.test(normalized) || currentUiRuntimeArt.has(normalized));
 });
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));

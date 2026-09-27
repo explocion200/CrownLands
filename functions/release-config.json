@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-09-monthly-sharded-realms-v1",
+  "releaseId": "crownlands-2026-09-gear-rarities-v3",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd",
+  "apiContractHash": "b1863f4c6cc48401da4d7f8cc9210b8acce0b577ddd24b20abfa261f8e589e38",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

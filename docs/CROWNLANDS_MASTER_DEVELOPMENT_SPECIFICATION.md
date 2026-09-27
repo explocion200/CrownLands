@@ -676,7 +676,7 @@ The four buildings each have ten levels:
 
 Training Grounds stacks additively with each participant’s Swordmastery and equipped attack gear; skill caps are unchanged. The completed level is locked when the Rally launches, including all participants, and persists through later building upgrades, Tower capture or ownership changes. It does not affect solo attacks, Tower defense, city-origin Rallies or troop production.
 
-Combined casualty recovery is capped at **90%**. Ordinary attacking and defending troops use Field Medics plus equipped casualty gear. Tower defenders additionally use that Tower’s completed Infirmary bonus at battle resolution. Each owner’s recovered troops return through the existing recovery system to that owner’s Main City, with no wounded storage. Reports distinguish skill, gear and clan contributions, including the applied share when capped.
+Combined casualty recovery is capped at **75%** under the confirmed September 26 gear progression revision (`IMPLEMENTED — PENDING RELEASE`; supersedes the prior 90% ceiling). Ordinary attacking and defending troops use Field Medics plus equipped casualty gear. Tower defenders additionally use that Tower’s completed Infirmary bonus at battle resolution. Each owner’s recovered troops return through the existing recovery system to that owner’s Main City, with no wounded storage. Reports distinguish skill, gear and clan contributions, including the applied share when capped.
 
 | Target building level | Treasury Gold paid upfront | Construction time |
 | --- | ---: | ---: |
@@ -721,7 +721,7 @@ Use the approved parchment layout with the existing staged building illustration
 
 #### Infirmary presentation (confirmed September 23, 2026)
 
-Use the approved Workshop-style parchment layout: staged Infirmary artwork and completed level on the left, Overview / All levels on the right, Clan Treasury in the header, and a fixed upgrade footer on desktop and landscape mobile. Compare current and next-level additional casualty recovery and label the amounts as percentage points. Explain that each player defending this Tower benefits separately, recovered troops return through the existing recovery system to that player's Main City, and the building stores no wounded troops. Show the 90% combined cap for Field Medics, equipped casualty gear and the Infirmary. The expandable recovery example is explicitly illustrative, using 1,000 casualties and either 30% or 88% skill/gear recovery; it is not a forecast for the player's army. Preserve the open tab, example and scroll positions through live refreshes. Use existing server-authoritative construction actions, balances, permissions, pauses and completion. This changes presentation only.
+Use the approved Workshop-style parchment layout: staged Infirmary artwork and completed level on the left, Overview / All levels on the right, Clan Treasury in the header, and a fixed upgrade footer on desktop and landscape mobile. Compare current and next-level additional casualty recovery and label the amounts as percentage points. Explain that each player defending this Tower benefits separately, recovered troops return through the existing recovery system to that player's Main City, and the building stores no wounded troops. Show the 75% combined cap for Field Medics, equipped casualty gear and the Infirmary. The expandable recovery example is explicitly illustrative, using 1,000 casualties and either 30% or 73% illustrative skill/gear recovery; it is not a forecast for the player's army. Preserve the open tab, example and scroll positions through live refreshes. Use existing server-authoritative construction actions, balances, permissions, pauses and completion. This changes presentation only.
 
 #### Training Grounds presentation (confirmed September 23, 2026)
 
@@ -887,13 +887,18 @@ The following Common Gear data persists across seasons/resets:
 
 The reset initializer now applies an explicit Common Gear persistence allowlist covering unopened Boxes, instances, equipped slots, levels/upgrades, and new-item markers. Normal Bag consumables, timed item effects, and purchase cooldowns still reset. Emulator coverage verifies the preserved Gear can be viewed, equipped, unequipped, upgraded, and opened after the new-generation starting-city claim. **Status:** `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
 
-### Planned progression
+### Confirmed rarity progression — implemented, pending release
 
-- Higher Gear rarities and deeper progression are `PLANNED` after the Common foundation is stable.
+- Five-tier Gear progression is `IMPLEMENTED — PENDING RELEASE` on `codex/gear-rarity-progression`; no deployment is claimed.
 - Confirmed progression direction (September 26, 2026): Common (gray/white) → Uncommon (green) → Rare (blue) → Epic (purple) → Legendary (orange/gold), with five levels per rarity. Two matching pieces of the same family, rarity and level combine into one next-level piece; two Level 5 pieces become Level 1 of the next rarity. Legendary Level 5 is the endpoint. Poor and Unique are alternate labels, not additional tiers.
-- Higher rarities are earned by upgrading the current gear upward. Continue from players' existing items and levels. Keep Common Boxes at three Level 1 Common pieces; this update introduces no direct higher-rarity drops, rewards or purchases. This confirms the planned acquisition route and does not enable promotions in the current Common-only implementation.
+- Higher rarities are earned by upgrading the current gear upward. Continue from players' existing items and levels. Keep Common Boxes at three Level 1 Common pieces; this update introduces no direct higher-rarity drops, rewards or purchases. Existing Common items retain their levels, IDs and equipped state until the player upgrades them. The resulting item receives a new identity and inherits the target’s equipped slot.
 - The user explicitly confirmed retaining two matching inputs for every level and promotion after reviewing the material requirements and declining Gold-only leveling at higher rarities. Gold remains an additional cost. Duplicate requirements are settled, not an outstanding balance choice.
-- Power curves, total bonus caps and higher-rarity Gold prices remain under balance review. Requiring two matching copies at every step implies 1,048,576 Common Level 1 equivalents for one Legendary Level 1 and 16,777,216 for Legendary Level 5. Retain these figures for transparency without replacing the confirmed rule. See the [working progression review](gear-rarity-progression/README.md). **Status:** `PLANNED — NOT IMPLEMENTED`.
+- The accepted per-item curves and Gold prices are detailed in the [gear progression tables](gear-rarity-progression/README.md). Non-production caps are implemented; total production caps remain deferred. Requiring two matching copies at every step implies 1,048,576 Common Level 1 equivalents for one Legendary Level 1 and 16,777,216 for Legendary Level 5. Retain these figures for transparency without replacing the confirmed rule. See the [working progression review](gear-rarity-progression/README.md). **Status:** `IMPLEMENTED — PENDING RELEASE`.
+
+- Gold costs retain 0.5/1/2/4 raw regular-city production hours within Common, multiplied by 2/4/8/16 for successive rarities. Promotions cost 8/16/32/64 raw-production hours. Every step still needs one unequipped matching copy in addition to the selected item; Legendary Level 5 has no upgrade.
+- Final bonus caps: attack +100%, city soldier defense +100% per army, city walls +150%, new march speed +150%, total casualty recovery 75%, new regular-city wall repair reduction 50%. Maximum current sources give ordinary recovery 60% and Tower-defender recovery 75%. Existing march snapshots and repair deadlines remain intact. City shield scope and troop/King Power accounting remain unchanged.
+- Higher-rarity production bonuses use existing additive production and offline accounting. Proposed troop/Main City Gold/other-city Gold total caps (200/250/200%) are deferred, not active rules.
+- All earned rarity levels and equipped gear remain permanent through season changes, along with unopened Common Boxes. Inventory normalization must never truncate owned items; full inventory rejects opening before spending the box. Old clients must refresh for the new gear contract; future schemas fail closed without destructive writes.
 
 ### Needs verification
 
@@ -1143,7 +1148,7 @@ Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction an
 - The approved Treasury Manage Gear screen uses parchment, muted moss, dark ink, and engraved medieval symbols. It supports desktop and mobile landscape, with a desktop cap of 1200 × 790 pixels and viewport-fitting dimensions on smaller screens.
 - The Master of Coin portrait sits between the existing eight equipment slots. The equipment bag occupies the middle pane, with the selected item's information on the right. Bag and item information scroll independently; Equip/Unequip and Upgrade remain visible at the bottom of the selected pane.
 - The approved Master of Coin illustration uses the map's medieval ink-and-wash direction, with a transparent background and a subtle breathing/blinking idle loop. It animates in Full mode while the Treasury is visible; Reduced/Off mode, background visibility, and upgrade confirmation use the still illustration. The existing animation preference and automatic performance rules remain authoritative. This artwork affects only the Treasury officer, not the equipment items or other officers.
-- Common is the current lowest rarity and uses a light gray item background (`#d9dad6`) in filled slots, bag tiles, selected-item artwork, and upgrade confirmation. Burgundy borders identify selected items while retaining the gray background. Empty slots retain parchment. The higher-rarity colors and upgrade path are confirmed as planned in Section 11; their gameplay implementation remains pending.
+- Common is the current lowest rarity and uses a light gray item background (`#d9dad6`) in filled slots, bag tiles, selected-item artwork, and upgrade confirmation. Burgundy borders identify selected items while retaining the gray background. Empty slots retain parchment. The higher-rarity colors and upgrade path are confirmed as planned in Section 11; their implementation is pending release.
 - Existing levels, exact Gold amounts, production scope, matching-copy requirements, next bonuses, descriptions, binding, stack counts, equipped/new indicators, and progression-path information are retained. The Treasury Chain retains its all-owned-cities scope. No equipment rule, cost, bonus, API, or server-authority change is introduced.
 - Upgrade confirmation retains the two-to-one consumption and irreversible-action wording, confines keyboard focus, and returns focus to Upgrade on Cancel or Escape. Pending requests disable equipment actions; Back returns to the Inner Castle. Other officers retain their existing presentation.
 
@@ -1154,7 +1159,7 @@ Status: `IN DEVELOPMENT` on `codex/treasury-gear-draft`, with user-approved desi
 - The approved Barracks Manage Gear screen follows the Treasury parchment layout and matching dimensions: up to 1200 × 790 pixels on desktop, fitting the viewport on mobile landscape. Portrait is not a design target.
 - The War Captain is a static, transparent full-body illustration in the approved medieval ink-and-wash style, centered between the eight equipped slots. It has no animation in any motion setting. The equipment bag occupies the middle pane; selected-item details occupy the right, with Equip/Unequip and Upgrade kept visible.
 - Common items retain the light gray `#d9dad6` background and burgundy selected borders. The Gold icon reuses the approved crown-stamped coin. All existing information, quantities, levels, costs, matching-copy requirements, and upgrade confirmation behavior are retained.
-- Armor retains troop production in all owned cities; the Officer Sword retains attack strength for all attacks; the Valor Medallion retains casualty recovery with Field Medics, the combined recovery cap (raised to 90% by the confirmed Clan Tower buildings revision), and recovery to the Main City. Shared server-authoritative equipment actions remain unchanged. Gatehouse and Royal Stables retain their existing presentation.
+- Armor retains troop production in all owned cities; the Officer Sword retains attack strength for all attacks; the Valor Medallion retains casualty recovery with Field Medics, the combined recovery cap (75% under the September 26 gear progression revision, pending release), and recovery to the Main City. Shared server-authoritative equipment actions remain unchanged. Gatehouse and Royal Stables retain their existing presentation.
 
 Status: `IN DEVELOPMENT` on `codex/barracks-gear-draft`; the user approved the layout, static character, merge, and deployment on 11 September 2026. Runtime integration is complete; release status requires separate channel verification. Review details: [Barracks equipment](./visual-qa/barracks-gear/README.md).
 
@@ -1496,7 +1501,7 @@ Status verified through August 31, 2026.
 | Production reset/persistence enforcement | `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION` | Explicit identity, clan, and Common Gear persistence is covered by emulator tests; a READY managed backup and pointer rollback path are verified. |
 | Dynamic map expansion | `DEPLOYED — SCHEDULED ACTIVATION` | Held production build includes deterministic Layer 3+ growth and live client discovery; post-boundary production verification remains. |
 | Seasons | `PLANNED` | Cadence and reward policy unresolved. |
-| More Gear rarities | `PLANNED` | Detailed rules unresolved. |
+| More Gear rarities | `IMPLEMENTED — PENDING RELEASE` | Five rarities, matching duplicates plus Gold; total production caps deferred. |
 | Clan Wars / regional control / more world events | `PROPOSED` or roadmap-level `PLANNED` only | No authoritative detailed rules. |
 
 ## 24. Known Issues / Technical Debt
@@ -1539,7 +1544,7 @@ These source-level items are **NEEDS VERIFICATION** against current `main` befor
 - Develop scalable outward map expansion. Current status: `IN DEVELOPMENT`.
 - Define and deliver Seasons using the persistence policy in Section 15. Current status: `PLANNED`.
 - Implement final-season locking and read-only archives for the Kingdom Top 100 and final Clan leaderboard. Current status: `PLANNED`.
-- Expand Gear beyond the Common foundation after the base system is stable. Current status: `PLANNED`.
+- Expand Gear through five confirmed rarities using matching duplicates and Gold. Current status: `IMPLEMENTED — PENDING RELEASE`.
 - Replace placeholder region identifiers with confirmed medieval-authentic names. Naming decision: `NEEDS VERIFICATION`.
 - Maintain itch.io compatibility and restore channel parity after web releases. This is a release-policy requirement, not a gameplay feature.
 

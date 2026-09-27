@@ -61,7 +61,7 @@ function renderCommonGearBoxReward(instance, index) {
   return `<article class="cgb-reward-card" aria-label="${escapeHtml(d.gearName)}" style="--order:${index}">
     <div class="cgb-rarity-line"><span><i aria-hidden="true"></i> Common</span><span>Level ${instance.level}</span></div>
     <div class="cgb-reward-record" tabindex="0" aria-label="${escapeHtml(d.gearName)} details">
-      <div class="cgb-reward-hero"><div class="cgb-reward-art"><img src="${escapeHtml(d.art)}" alt="" draggable="false" onerror="this.hidden=true"></div>
+      <div class="cgb-reward-hero"><div class="cgb-reward-art">${renderCommonGearArtwork(d.art)}</div>
         <div><p class="cgb-officer-name">${escapeHtml(d.characterRole)}</p><h3>${escapeHtml(name)}</h3><p class="cgb-item-meta">${escapeHtml(d.buildingName)} · ${escapeHtml(d.slot)}</p></div></div>
       <div class="cgb-item-effect"><strong>+${COMMON_GEAR.getBonusPercent(instance).toFixed(2)}<span>%</span></strong><p>${escapeHtml(d.statLabel)}</p></div>
     </div></article>`;

@@ -1,6 +1,6 @@
 const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const economyConfig = require("../economy-config.json");
 const realm = require("../release-config.json");
@@ -117,6 +117,7 @@ async function invokeFunction(name, token, data = {}) {
     },
     body: JSON.stringify({
       data: {
+        gearSchemaVersion: commonGear.SCHEMA_VERSION,
         ...data,
         clientReleaseId: realm.releaseId,
         clientResetGeneration: realm.resetGeneration,
@@ -697,6 +698,7 @@ async function main() {
   assert(openedGear.receipt?.instanceIds?.length === 3, "A Common Gear Box did not reveal exactly three pieces.");
   assert(Object.keys(openedGear.gear?.instances || {}).length === 3, "The three revealed pieces were not stored in gear inventory.");
   assert(Number(openedGear.gear?.commonGearBoxes || 0) === 0, "Opening a Common Gear Box did not consume exactly one box.");
+  assert(Object.values(openedGear.gear.instances).every(item => item.rarity === "common"), "Boxes must only award Common gear.");
   const revealedBuildingIds = new Set(openedGear.receipt.instanceIds.map(instanceId => openedGear.gear.instances[instanceId].buildingId));
   assert(
     [...revealedBuildingIds].every(buildingId => openedGear.gear?.newMarkers?.[buildingId] === true),
@@ -738,29 +740,30 @@ async function main() {
       economyUpdatedAtMs: now,
     });
   };
-  const createSuccessUpgradeState = (level, { targetEquipped = false, includeEquippedMatch = false, includeSpare = true } = {}) => {
+  const createSuccessUpgradeState = (level, { targetEquipped = false, includeEquippedMatch = false, includeSpare = true, definition = upgradeDefinition } = {}) => {
     const gear = commonGear.createDefaultState();
     const acquiredAtMs = Date.now() - 10_000;
-    gear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, level, acquiredAtMs);
-    gear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, level, acquiredAtMs + 1000);
+    gear.instances.upgrade_target = createUpgradeInstance("upgrade_target", definition, level, acquiredAtMs);
+    gear.instances.upgrade_material = createUpgradeInstance("upgrade_material", definition, level, acquiredAtMs + 1000);
     if (includeSpare) {
-      gear.instances.upgrade_spare = createUpgradeInstance("upgrade_spare", upgradeDefinition, level, acquiredAtMs + 2000);
+      gear.instances.upgrade_spare = createUpgradeInstance("upgrade_spare", definition, level, acquiredAtMs + 2000);
     }
     if (targetEquipped) {
-      gear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
+      gear.equipped[definition.buildingId][definition.slot] = "upgrade_target";
     } else if (includeEquippedMatch) {
       gear.instances.upgrade_equipped_material = createUpgradeInstance(
         "upgrade_equipped_material",
-        upgradeDefinition,
+        definition,
         level,
         acquiredAtMs + 3000
       );
-      gear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_equipped_material";
+      gear.equipped[definition.buildingId][definition.slot] = "upgrade_equipped_material";
     }
     return gear;
   };
   const assertSuccessfulUpgrade = async (level, options = {}) => {
     const gear = createSuccessUpgradeState(level, options);
+    const expected = commonGear.getUpgradeResult(gear.instances.upgrade_target);
     await seedUpgradeState(gear);
     const requestId = `gear-level-${level}-${crypto.randomBytes(6).toString("hex")}`;
     const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId });
@@ -769,7 +772,7 @@ async function main() {
     const storedGear = commonGear.normalizeState(storedProfile.gear);
     const resultInstanceId = upgraded.upgradedInstanceId;
     assert(
-      Number(upgradedState.instances?.[resultInstanceId]?.level || 0) === level + 1,
+      Number(upgradedState.instances?.[resultInstanceId]?.level || 0) === expected.level,
       `Common Gear did not upgrade from Level ${level} to Level ${level + 1}.`
     );
     assert(resultInstanceId && !["upgrade_target", "upgrade_material"].includes(resultInstanceId), `The Level ${level} upgrade reused an input instanceId.`);
@@ -777,7 +780,7 @@ async function main() {
     assert(
       !storedGear.instances?.upgrade_target
         && !storedGear.instances?.upgrade_material
-        && Number(storedGear.instances?.[resultInstanceId]?.level || 0) === level + 1,
+        && Number(storedGear.instances?.[resultInstanceId]?.level || 0) === expected.level,
       `The persisted Level ${level} upgrade retained an input or lost its Level ${level + 1} result.`
     );
     assert(
@@ -796,6 +799,7 @@ async function main() {
         `The Level ${level} upgrade changed the unconsumed matching material.`
       );
     }
+    assert(upgradedState.instances[resultInstanceId].gearKey === expected.gearKey, "Upgrade returned the wrong rarity/family.");
     assert(Number(upgraded.spentGold || 0) > 0, `The Level ${level} upgrade did not report its existing gold cost.`);
     assert(
       Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - Number(upgraded.spentGold || 0) - 1
@@ -809,7 +813,7 @@ async function main() {
       );
       assert(upgradedState.instances?.[resultInstanceId]?.isEquipped === true, `The upgraded Level ${level} result lost equipped state.`);
       assert(
-        Number(upgraded.bonuses?.attackStrength || 0) === commonGear.BONUS_BY_LEVEL[level + 1],
+        Number(upgraded.bonuses?.attackStrength || 0) === commonGear.getBonusPercent(expected),
         `The equipped Level ${level} upgrade did not recalculate its active bonus.`
       );
     } else {
@@ -860,7 +864,13 @@ async function main() {
   await assertSuccessfulUpgrade(3, { targetEquipped: true });
   await assertSuccessfulUpgrade(4);
 
-  const concurrentUpgradeGear = createSuccessUpgradeState(2, { includeSpare: false });
+  for (const rarity of commonGear.RARITIES) {
+    const definition = commonGear.DEFINITIONS.find(d => d.statType === "attackStrength" && d.rarity === rarity);
+    await assertSuccessfulUpgrade(4, { definition, targetEquipped: true, includeSpare: false });
+    if (rarity !== "legendary") await assertSuccessfulUpgrade(5, { definition, targetEquipped: true, includeSpare: false });
+  }
+
+  const concurrentUpgradeGear = createSuccessUpgradeState(5, { includeSpare: false });
   await seedUpgradeState(concurrentUpgradeGear);
   const concurrentUpgradeRequestId = `gear-concurrent-${crypto.randomBytes(6).toString("hex")}`;
   const concurrentUpgrades = await Promise.all([
@@ -877,8 +887,9 @@ async function main() {
   const [concurrentResultId] = concurrentResultIds;
   assert(
     Object.keys(concurrentStoredGear.instances).length === 1
-      && Number(concurrentStoredGear.instances?.[concurrentResultId]?.level || 0) === 3,
-    `Concurrent Level 2 upgrades did not settle to exactly one Level 3 item: ${JSON.stringify({
+      && Number(concurrentStoredGear.instances?.[concurrentResultId]?.level || 0) === 1
+      && concurrentStoredGear.instances[concurrentResultId].rarity === "uncommon",
+    `Concurrent promotions did not settle to exactly one Uncommon Level 1 item: ${JSON.stringify({
       concurrentResultId,
       instances: concurrentStoredGear.instances,
       responses: concurrentUpgrades.map(response => response.result),
@@ -890,6 +901,38 @@ async function main() {
       && concurrentUpgrades.filter(response => Number(response.result?.spentGold || 0) > 0).length === 1,
     "A replayed Common Gear request charged the upgrade price more than once."
   );
+
+  const lostAckReplay = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId });
+  assert(lostAckReplay.replayed && lostAckReplay.upgradedInstanceId === concurrentResultId && lostAckReplay.spentGold === 0, "Lost acknowledgment charged a promotion twice.");
+  const rebound = await invokeFunction("upgradeCommonGear", user.token, { instanceId: concurrentResultId, requestId: concurrentUpgradeRequestId });
+  assert(!rebound.ok && rebound.error?.status === "INVALID_ARGUMENT", "A receipt was rebound to another target.");
+
+  const protectedGear = createSuccessUpgradeState(5, { includeSpare: false });
+  for (const [label, args] of [["outdated client", { gearSchemaVersion: 2 }], ["changed quote", { cost: 1 }]]) {
+    await seedUpgradeState(protectedGear);
+    const denied = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: `reject-${label}`, ...args });
+    assert(!denied.ok && denied.error?.status === "FAILED_PRECONDITION", `${label} was accepted`);
+    const saved = (await profileRef.get()).data();
+    assert(Object.keys(saved.gear.instances).length === 2 && saved.goldFloat === upgradeGoldReserve, `${label} consumed items or Gold`);
+  }
+  const fullBag = commonGear.createDefaultState();
+  fullBag.commonGearBoxes = 1;
+  for (let i = 0; i < commonGear.INVENTORY_LIMIT; i++) fullBag.instances[`full-${i}`] = createUpgradeInstance(`full-${i}`, upgradeDefinition, 1, i);
+  await seedUpgradeState(fullBag);
+  const fullOpen = await invokeFunction("openCommonGearBox", user.token, { requestId: "full-bag-open" });
+  assert(!fullOpen.ok && fullOpen.error?.status === "RESOURCE_EXHAUSTED", "Full inventory must reject box opening");
+  const fullSaved = (await profileRef.get()).data().gear;
+  assert(fullSaved.commonGearBoxes === 1 && Object.keys(fullSaved.instances).length === commonGear.INVENTORY_LIMIT, "Full bag lost a box or inventory");
+  await seedUpgradeState({ ...protectedGear, commonGearBoxes: 1 });
+  await profileRef.update({ gearCapacityFixture: "x".repeat(900000) });
+  const largeOpen = await invokeFunction("openCommonGearBox", user.token, { requestId: "byte-limit-open" });
+  assert(!largeOpen.ok && largeOpen.error?.status === "RESOURCE_EXHAUSTED", "Near-limit profile must keep unopened box");
+  assert((await profileRef.get()).data().gear.commonGearBoxes === 1, "Byte-limit rejection consumed a box");
+  await profileRef.update({ gearCapacityFixture: FieldValue.delete() });
+  await seedUpgradeState({ ...protectedGear, schemaVersion: 99 });
+  const future = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: "future-gear" });
+  assert(!future.ok && future.error?.status === "FAILED_PRECONDITION", "Future gear schema was overwritten");
+  assert((await profileRef.get()).data().gear.schemaVersion === 99, "Future schema was downgraded");
 
   const unaffordableGear = createSuccessUpgradeState(2, { includeSpare: false });
   await seedUpgradeState(unaffordableGear);
@@ -910,9 +953,13 @@ async function main() {
   assert(Number(unaffordableStored.goldFloat || 0) === 0, "An unaffordable Common Gear upgrade changed gold.");
 
   const maxLevelGear = commonGear.createDefaultState();
-  maxLevelGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 5, Date.now() - 2000);
-  maxLevelGear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, 5, Date.now() - 1000);
-  await assertRejectedUpgrade("A Level 5 upgrade", maxLevelGear, 5);
+  maxLevelGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", commonGear.getDefinition("barracks_weapon_legendary_01"), 5, Date.now() - 2000);
+  maxLevelGear.instances.upgrade_material = createUpgradeInstance("upgrade_material", commonGear.getDefinition("barracks_weapon_legendary_01"), 5, Date.now() - 1000);
+  await assertRejectedUpgrade("A Legendary Level 5 upgrade", maxLevelGear, 5);
+
+  const wrongRarity = createSuccessUpgradeState(5, { includeSpare: false });
+  wrongRarity.instances.upgrade_material = createUpgradeInstance("upgrade_material", commonGear.getDefinition("barracks_weapon_uncommon_01"), 5, Date.now());
+  await assertRejectedUpgrade("A different rarity material", wrongRarity, 5);
 
   for (const level of [2, 3, 4]) {
     const wrongLevelGear = commonGear.createDefaultState();

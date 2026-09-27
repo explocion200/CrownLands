@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "DRAFT — NOT APPROVED FOR GAMEPLAY",
+  "status": "IMPLEMENTED — PENDING RELEASE; PRODUCTION CAPS DEFERRED",
   "baselineCommit": "c66fd0f4b9e49d1be5399c3277f28e94edb95c3a",
   "rarities": [
     "common",
@@ -145,7 +145,7 @@
     ]
   },
   "acquisition": {
-    "status": "CONFIRMED DIRECTION — NOT IMPLEMENTED",
+    "status": "IMPLEMENTED — PENDING RELEASE",
     "source": "Upgrade existing Common gear through successive rarities",
     "inputsPerUpgrade": 2,
     "duplicateRequirementStatus": "CONFIRMED FOR EVERY LEVEL AND PROMOTION",
@@ -156,8 +156,7 @@
     "commonBoxItems": 3
   },
   "decisionsPending": [
-    "Finalize the remaining per-item curves, total caps and promotion prices",
-    "Confirm Gatehouse shield scope for Clan Tower defenders"
+    "Production total caps and exact offline interval accounting are deferred to a separate update"
   ],
   "sources": {
     "gear": "common-gear.js",
@@ -165,5 +164,10 @@
     "authoritative": "functions/index.js",
     "clanBuildings": "clan-tower-buildings.js",
     "specification": "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-  }
+  },
+  "deferredProductionCaps": [
+    "troops",
+    "mainGold",
+    "otherGold"
+  ]
 }

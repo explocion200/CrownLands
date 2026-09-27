@@ -7,8 +7,8 @@ const { createMapBenchmarkServer } = require('./map-benchmark/server');
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require('./validate-focused-browser-smoke');
 const gear = G.createDefaultState();
 let sequence = 0;
-function add(slot, level, equipped = false, isNew = false) {
-  const definition = G.DEFINITIONS.find(d => d.buildingId === 'barracks' && d.slot === slot);
+function add(slot, level, equipped = false, isNew = false, rarity = "common") {
+  const definition = G.DEFINITIONS.find(d => d.buildingId === 'barracks' && d.slot === slot && d.rarity === rarity);
   const instanceId = `barracks-qa-${++sequence}`;
   gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: definition.gearKey, level, isNew, acquiredAtMs: sequence });
   if (equipped) gear.equipped.barracks[slot] = instanceId;
@@ -19,7 +19,7 @@ add('head', 1, false, true); add('head', 1, false, true); add('head', 1, false, 
 add('chest', 2, true); add('chest', 1);
 const missing = add('pants', 3, true); add('boots', 1, true);
 add('belt', 2, true); add('belt', 2); add('weapon', 3, true); add('weapon', 3);
-const max = add('necklace', 5, true), stored = add('necklace', 1, false, true);
+const max = add('necklace', 5, true, false, 'legendary'), stored = add('necklace', 1, false, true);
 
 async function main() {
   const browser = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(p => p && fs.existsSync(p));
@@ -87,7 +87,7 @@ async function main() {
           assert(await evaluate("[...modal.querySelectorAll('[data-rarity=common][aria-pressed=true]')].every(e=>getComputedStyle(e).borderTopColor==='rgb(111, 61, 60)')"), 'Selected Common gear needs its burgundy border.');
         }
         if (['missing','max','gold'].includes(example)) assert.equal(data.upgradeDisabled, true);
-        if (example === 'max') assert(data.text.includes('Field Medics')&&data.text.includes('75% combined cap')&&data.text.includes('main city'));
+        if (example === 'max') assert(data.text.includes('Field Medics')&&data.text.includes(`${G.CASUALTY_RECOVERY_CAP_PERCENT}% combined cap`)&&data.text.includes('main city'));
         if (example === 'gold') assert(data.text.includes('Insufficient gold'));
       }
     }
@@ -146,9 +146,45 @@ async function main() {
     }
     await evaluate("renderCommonGearBuilding('barracks')"); await paint(); await click('#closeModalBtn');
     await wait('!modal.open');
+    await evaluate("modal.showModal();Promise.all(modal.getAnimations().map(a=>a.finished.catch(()=>{})))");
+    // Exercise every officer/rarity with genuine promotion previews and decoded result art.
+    for (const [width, height] of [[1440,900],[568,320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+      for (const building of Object.keys(G.BUILDINGS)) for (const rarity of G.RARITIES) {
+        await evaluate(`(()=>{const d=COMMON_GEAR.DEFINITIONS.find(d=>d.buildingId===${JSON.stringify(building)}&&d.rarity===${JSON.stringify(rarity)}&&d.slot==='weapon');const g=COMMON_GEAR.createDefaultState();for(const id of ['tier-target','tier-material'])g.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:5});g.equipped[d.buildingId][d.slot]='tier-target';state.gear=normalizeCommonGearState(g);state.gold=1e15;selectedCommonGearInstanceId='tier-target';selectedCommonGearSlot='weapon';commonGearMergeConfirmOpen=false;renderCommonGearBuilding(d.buildingId);})()`);
+        await paint();
+        const expected = rarity === 'legendary' ? 'Max Level' : 'Promote to '+G.RARITIES[G.RARITIES.indexOf(rarity)+1].replace(/^./,c=>c.toUpperCase());
+        assert.equal(await evaluate(`modal.querySelector('[data-gear-merge]').textContent.trim()`), expected);
+        assert(await evaluate(`modal.querySelector('.tg-cap-preview').textContent.includes('if equipped')`));
+        if (rarity !== 'legendary') {
+          await click('[data-gear-merge]');
+          assert(await evaluate(`modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Confirm') || modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Upgrade') || modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Promote')`));
+          await evaluate(`Promise.all([...modal.querySelectorAll('svg image')].map(el=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>im.decode().then(resolve,reject);im.onerror=reject;im.src=el.getAttribute('href');})))`);
+          const bounds = await evaluate(`(()=>{const b=modal.querySelector('[data-gear-merge-confirm]').getBoundingClientRect();return {x:b.x,y:b.y,right:b.right,bottom:b.bottom};})()`);
+          assert(bounds.x>=0&&bounds.y>=0&&bounds.right<=width&&bounds.bottom<=height, `${building}/${rarity} confirmation clipped`);
+          if (building==='barracks' && ['common','epic'].includes(rarity)) {
+            const shot = await client.send('Page.captureScreenshot', { format:'png' });
+            fs.writeFileSync(path.join(out,`promotion-${rarity}-${width}.png`),Buffer.from(shot.data,'base64'));
+          }
+          await click('[data-gear-merge-cancel]');
+        }
+      }
+    }
+    // A lost response retries the same intent; a response from an obsolete session must not touch the next one.
+    await evaluate(`(()=>{const g=COMMON_GEAR.createDefaultState();for(const id of ['retry-target','retry-material'])g.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:'barracks_weapon_common_01',level:5});state.gear=normalizeCommonGearState(g);window.__retryApi=getOnlineApi;window.__retryScope=getOnlineSessionRequestScope;window.__retryScopeValue='original';getOnlineSessionRequestScope=()=>__retryScopeValue;window.__retryCalls=[];getOnlineApi=()=>({upgradeCommonGear:args=>new Promise((resolve,reject)=>{__retryCalls.push(args);window.__retryResolve=resolve;window.__retryReject=reject;})});runCommonGearAction('barracks','merge','retry-target');})()`);
+    await wait('__retryCalls.length===1');
+    await evaluate(`runCommonGearAction('barracks','merge','retry-target');__retryReject(Object.assign(Error('Lost acknowledgment'),{code:'functions/unavailable'}))`);
+    await wait('!commonGearActionInFlight');
+    assert.equal(await evaluate('__retryCalls.length'),1);
+    await evaluate(`runCommonGearAction('barracks','merge','retry-target');void 0`);await wait('__retryCalls.length===2');
+    assert(await evaluate('__retryCalls[0].requestId===__retryCalls[1].requestId && __retryCalls[0].cost===__retryCalls[1].cost'));
+    await evaluate(`window.__retryGold=state.gold;__retryScopeValue='next-session';__retryResolve({gold:0,gear:COMMON_GEAR.createDefaultState()})`);
+    await wait('!commonGearActionInFlight');
+    assert(await evaluate(`state.gold===__retryGold&&!!state.gear.instances['retry-target']`));
+    await evaluate('getOnlineApi=__retryApi;getOnlineSessionRequestScope=__retryScope');
     assert.equal(errors.length,0,JSON.stringify(errors));
     fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));
-    console.log('PASS: Barracks runtime, 25 desktop/landscape states, static character decoding/containment across motion settings, Sword and Medallion scope, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close and other-officer isolation.');
+    console.log('PASS: Barracks runtime, 25 desktop/landscape states, static character decoding/containment across motion settings, Sword and Medallion scope, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close other-officer isolation, all 40 rarity/viewport promotion states, decoded result art, same-ID lost-response retries and obsolete-session rejection.');
   } finally {
     if (client) await client.send('Browser.close').catch(()=>{});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

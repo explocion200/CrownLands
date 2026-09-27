@@ -7,8 +7,8 @@ const { createMapBenchmarkServer } = require('./map-benchmark/server');
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require('./validate-focused-browser-smoke');
 const gear = G.createDefaultState();
 let sequence = 0;
-function add(slot, level, equipped = false, isNew = false) {
-  const definition = G.DEFINITIONS.find(d => d.buildingId === 'treasury' && d.slot === slot);
+function add(slot, level, equipped = false, isNew = false, rarity = "common") {
+  const definition = G.DEFINITIONS.find(d => d.buildingId === 'treasury' && d.slot === slot && d.rarity === rarity);
   const instanceId = `treasury-qa-${++sequence}`;
   gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: definition.gearKey, level, isNew, acquiredAtMs: sequence });
   if (equipped) gear.equipped.treasury[slot] = instanceId;
@@ -19,7 +19,7 @@ add('head', 1, false, true); add('head', 1, false, true); add('head', 1, false, 
 add('chest', 2, true); add('chest', 1);
 const missing = add('pants', 3, true); add('boots', 1, true);
 add('belt', 2, true); add('belt', 2); add('weapon', 3, true); add('weapon', 3);
-const max = add('necklace', 5, true), stored = add('necklace', 1, false, true);
+const max = add('necklace', 5, true, false, 'legendary'), stored = add('necklace', 1, false, true);
 
 async function main() {
   const browser = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium'].find(p => p && fs.existsSync(p));

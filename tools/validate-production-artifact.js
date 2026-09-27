@@ -121,6 +121,15 @@ if (expectedInnerCastleArt.length !== 7 || JSON.stringify(shippedInnerCastleArt)
 const textInventory = files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))
   .map(filePath => fs.readFileSync(filePath, "utf8"))
   .join("\n");
+const expectedGearArt = JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8"))
+  .assets.filter(asset => asset.category === "gear-item").map(asset => asset.output).sort();
+const shippedGearArt = files.map(file => path.relative(dist, file).replace(/\\/g, "/"))
+  .filter(file => /^assets\/optimized\/gear-(barracks|treasury|royal-stables|gatehouse)-(head|chest|pants|boots|gloves|belt|weapon|necklace)-/.test(file)).sort();
+if (expectedGearArt.length !== 320 || JSON.stringify(shippedGearArt) !== JSON.stringify(expectedGearArt)) {
+  throw new Error("Production must ship only the 160 current gear icons and their 160 selected-item detail images.");
+}
+const gearArtBytes = shippedGearArt.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (gearArtBytes > 7200 * 1024) throw new Error("All 160 gear icons and details exceed their 7200 KiB on-demand payload budget.");
 for (const fixtureMarker of ["core_fixture_", "layer_1_fixture_", "region_26_fixture", "fixture_clan", "AchievementReviewSamples"]) {
   if (textInventory.includes(fixtureMarker)) throw new Error(`Development fixture ${fixtureMarker} leaked into production.`);
 }
@@ -225,7 +234,11 @@ if (illustratedHudBytes > 336 * 1024) throw new Error("Approved HUD artwork and 
 // Email accounts add the compact form, client verification/linking, and styles.
 // Bound this feature to 32 KiB, with the UI independently capped at 14 KiB.
 if (fs.statSync(path.join(dist, "email-auth-ui.js")).size > 14 * 1024) throw new Error("Email account UI exceeds its 14 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32) * 1024;
+// Rarity gear adds 5,923,710 on-demand bytes over Common (bounded to 5824 KiB).
+// Common gear replaces the old derivatives with 1,403,002 bytes of icons/details:
+// a 1,232,808-byte image increment, bounded to 1216 KiB plus 16 KiB for framing
+// and artifact metadata. The startup cache does not include these images.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

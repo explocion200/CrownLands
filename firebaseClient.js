@@ -2591,15 +2591,16 @@
   }
 
   async function equipCommonGear({ instanceId = "" } = {}) {
-    return callServerFunction("equipCommonGear", { instanceId });
+    return callServerFunction("equipCommonGear", { instanceId, gearSchemaVersion: 3 });
   }
 
   async function unequipCommonGear({ instanceId = "" } = {}) {
-    return callServerFunction("unequipCommonGear", { instanceId });
+    return callServerFunction("unequipCommonGear", { instanceId, gearSchemaVersion: 3 });
   }
 
-  async function upgradeCommonGear({ instanceId = "", requestId = "" } = {}) {
-    return callServerFunction("upgradeCommonGear", { instanceId, requestId });
+  async function upgradeCommonGear({ instanceId = "", requestId = "", cost } = {}) {
+    return callServerFunction("upgradeCommonGear", { instanceId, requestId, gearSchemaVersion: 3,
+      ...(cost === undefined ? {} : { cost }) });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {

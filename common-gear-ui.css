@@ -281,7 +281,7 @@
 .common-gear-slot.selected { border-color: #f1c96f; box-shadow: inset 0 0 0 2px rgba(255,242,180,.72), 0 0 0 2px #6d401d, 0 0 13px rgba(240,190,85,.62); }
 .common-gear-slot.empty { color: #78664d; background: linear-gradient(180deg, #d7c59c, #bda574); }
 .common-gear-slot-art { display: grid; place-items: center; width: 34px; height: 34px; color: #7b613b; font-size: 1.25rem; }
-.common-gear-slot-art img { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
+.common-gear-slot-art .gear-item-art { display: block; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)); }
 .common-gear-slot-copy { min-width: 0; color: inherit; }
 .common-gear-slot-copy b,
 .common-gear-slot-copy small { display: block; overflow: hidden; color: inherit; text-overflow: ellipsis; white-space: nowrap; }
@@ -491,7 +491,7 @@
 }
 .common-gear-bag-tile.compatible { border-color: #c5a052; box-shadow: inset 0 0 0 2px rgba(255,238,170,.18), 0 0 8px var(--gear-rarity-glow); }
 .common-gear-bag-tile.selected { z-index: 1; border-color: #f4cf78; outline: 2px solid #7b4c20; outline-offset: -5px; box-shadow: inset 0 0 0 3px rgba(255,247,197,.48), 0 0 0 2px #d1a64d, 0 0 18px rgba(244,195,87,.88); }
-.common-gear-bag-tile > img { display: block; width: 76%; height: 70%; margin: 5% auto 0; object-fit: contain; filter: drop-shadow(0 5px 4px rgba(0,0,0,.65)); }
+.common-gear-bag-tile > .gear-item-art { display: block; width: 76%; height: 70%; margin: 5% auto 0; object-fit: contain; filter: drop-shadow(0 5px 4px rgba(0,0,0,.65)); }
 .common-gear-bag-slot,
 .common-gear-bag-new,
 .common-gear-bag-equipped,
@@ -615,7 +615,7 @@
 .common-gear-back span { color: inherit; font-size: 1.4rem; line-height: .7; }
 
 .common-gear-bottom-info { display: grid; grid-template-columns: 82px minmax(220px, 1.35fr) minmax(260px, 1fr); align-items: center; gap: 12px; min-width: 0; min-height: 0; padding: 9px 13px; overflow: hidden; border: 1px solid #9b7740; border-radius: 4px; color: var(--gear-ink); background: linear-gradient(180deg, #efe1bb, #d9c18c); box-shadow: inset 0 0 0 2px rgba(255,249,218,.45), 0 3px 8px rgba(54,31,11,.3); }
-.common-gear-bottom-info > img { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 5px 4px rgba(50,28,8,.35)); }
+.common-gear-bottom-info > .gear-item-art { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 5px 4px rgba(50,28,8,.35)); }
 .common-gear-bottom-copy { min-width: 0; }
 .common-gear-bottom-copy > strong { display: block; overflow: hidden; color: #3d2b1b; font-family: var(--font-display); font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
 .common-gear-bottom-copy p { display: -webkit-box; margin: 4px 0; overflow: hidden; color: #5a4936; font: italic .7rem/1.32 var(--font-body, serif); -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -646,7 +646,7 @@
   .common-gear-slot-art { width: 29px; height: 29px; }
   .common-gear-bag-grid { gap: 6px; padding: 7px; }
   .common-gear-bottom-info { grid-template-columns: 66px minmax(180px, 1.2fr) minmax(230px, 1fr); gap: 8px; }
-  .common-gear-bottom-info > img { width: 58px; height: 58px; }
+  .common-gear-bottom-info > .gear-item-art { width: 58px; height: 58px; }
 }
 
 @media (max-width: 980px) {
@@ -680,7 +680,7 @@
   .common-gear-footer { grid-template-columns: 116px minmax(0, 1fr); gap: 6px; }
   .common-gear-back { padding: 5px; font-size: .62rem; }
   .common-gear-bottom-info { grid-template-columns: 48px minmax(0, 1fr) minmax(170px, .8fr); gap: 7px; padding: 6px 8px; }
-  .common-gear-bottom-info > img { width: 44px; height: 44px; }
+  .common-gear-bottom-info > .gear-item-art { width: 44px; height: 44px; }
   .common-gear-bottom-copy p { -webkit-line-clamp: 2; font-size: .58rem; }
   .common-gear-info-meta { gap: 2px 8px; padding-left: 8px; }
 }
@@ -751,7 +751,7 @@
   .common-gear-footer { grid-template-columns: 104px minmax(0, 1fr); gap: 4px; }
   .common-gear-back { font-size: .54rem; }
   .common-gear-bottom-info { grid-template-columns: 34px minmax(0, 1fr) minmax(195px, .8fr); gap: 5px; padding: 3px 6px; }
-  .common-gear-bottom-info > img { width: 32px; height: 32px; }
+  .common-gear-bottom-info > .gear-item-art { width: 32px; height: 32px; }
   .common-gear-bottom-copy > strong { font-size: .61rem; }
   .common-gear-bottom-copy p { display: none; }
   .common-gear-bottom-tags span { padding: 1px 3px; font-size: .4rem; }
@@ -766,3 +766,18 @@
   .common-gear-bag-filter-menu { width: max(100%, 108px); }
   .common-gear-detail-name { font-size: .66rem; }
 }
+
+/* Shared viewport for the reviewed transparent gear bitmaps. */
+.gear-item-art { display: block; overflow: hidden; flex-shrink: 0; }
+
+/* Shared muted rarity surfaces for all four officers. */
+
+#modal.common-gear-building-modal [data-rarity="uncommon"]{background:#c7d2b4!important;border-color:#6f8753!important;box-shadow:inset 0 0 0 3px #e0e7d2!important}
+
+#modal.common-gear-building-modal [data-rarity="rare"]{background:#bfced8!important;border-color:#56778f!important;box-shadow:inset 0 0 0 3px #dce7ed!important}
+
+#modal.common-gear-building-modal [data-rarity="epic"]{background:#d3c4da!important;border-color:#82618e!important;box-shadow:inset 0 0 0 3px #e7dded!important}
+
+#modal.common-gear-building-modal [data-rarity="legendary"]{background:#e3c484!important;border-color:#a67935!important;box-shadow:inset 0 0 0 3px #f4dfad!important}
+
+#modal.common-gear-building-modal [data-rarity][aria-pressed="true"]{border-color:#6f3d3c!important}
