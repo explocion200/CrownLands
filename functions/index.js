@@ -20177,13 +20177,15 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
   const requestRef = chatSendRequestRef(uid, messageId);
 
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [profileSnap, restrictionSnap, rateSnap, requestSnap] = await Promise.all([
-      transaction.get(profileRef),
+    const [participation, restrictionSnap, rateSnap, requestSnap] = await Promise.all([
+      // Start the dependent Main City read as soon as the profile arrives;
+      // unrelated restriction/rate/receipt reads may still be waiting on locks.
+      transaction.get(profileRef).then(profileSnap =>
+        requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap })),
       transaction.get(restrictionRef),
       transaction.get(rateRef),
       transaction.get(requestRef),
     ]);
-    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
     const profile = participation.profile;
     assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
 
@@ -20245,19 +20247,22 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
     const senderDisplayName = normalizePlayerName(profile.playerName || profile.displayName || "Ruler");
     const expiresAtMs = nowMs + CHAT.CHAT_RETENTION_MS;
     const requestExpiresAtMs = nowMs + CHAT.CHAT_REQUEST_RETENTION_MS;
-    transaction.create(messageRef, {
+    const message = {
       id: messageId,
-      chatSchemaVersion: CHAT.CHAT_SCHEMA_VERSION,
       channel,
       channelId: channel === "clan" ? clanId : "global",
       senderUid: uid,
       senderDisplayName,
       text: validatedText.text,
       status: "visible",
+      createdAtMs: nowMs,
+    };
+    transaction.create(messageRef, {
+      ...message,
+      chatSchemaVersion: CHAT.CHAT_SCHEMA_VERSION,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
       realmShardId: getCurrentRealmShardId(),
-      createdAtMs: nowMs,
       createdAt: FieldValue.serverTimestamp(),
       ...(channel === "global" ? {
         expiresAtMs,
@@ -20292,6 +20297,9 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       ok: true,
       replayed: false,
       messageId,
+      // Returned only after the transaction commits. Replayed receipts omit
+      // message content so they cannot restore an expired or moderated message.
+      message,
       channel,
       clanId,
       createdAtMs: nowMs,
