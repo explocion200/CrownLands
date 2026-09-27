@@ -18,7 +18,8 @@ async function main() {
   try {
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(target => target.type === "page").webSocketDebuggerUrl);
-    await Promise.all(["Page.enable", "Runtime.enable"].map(method => client.send(method)));
+    await Promise.all(["Page.enable", "Runtime.enable", "Network.enable"].map(method => client.send(method)));
+    await client.send("Network.setBlockedURLs", { urls: ["https://*", "http://*.googleapis.com/*"] });
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const evaluate = async expression => {
       const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
@@ -125,6 +126,26 @@ async function main() {
         } else assert(snapshot.preview.includes(snapshot.expectedArrival), "Arrival must use personal troops at the destination.");
         assert.match(snapshot.preview, /Travel bonus[\s\S]*Travel time[\s\S]*Estimated/);
         assert.equal(snapshot.swift, false, "Tower dispatch does not support a Swift March launch item.");
+        for (const fraction of [.25, .5, 1]) {
+          await evaluate(`modalBody.querySelector('[data-troop-fraction="${fraction}"]').click()`);
+          assert.equal(await evaluate("Number(modalBody.querySelector('[data-tower-order-troops]').value)"), Math.max(1, Math.floor(snapshot.expectedMax * fraction)));
+        }
+        await evaluate(`(() => {
+          const exact=modalBody.querySelector('#troopExactAmount');
+          exact.focus();exact.value='1,003';exact.dispatchEvent(new Event('input',{bubbles:true}));
+        })()`);
+        await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", windowsVirtualKeyCode: 13 });
+        await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", windowsVirtualKeyCode: 13 });
+        assert.equal(await evaluate("towerOrderQa.orders.length"), 0, "Enter must edit the Tower count without submitting its form.");
+        assert.equal(await evaluate("Number(modalBody.querySelector('[data-tower-order-troops]').value)"),1003);
+        await evaluate(`(() => {
+          const exact=modalBody.querySelector('#troopExactAmount');
+          exact.value='1.5';exact.dispatchEvent(new Event('input',{bubbles:true}));
+          modalBody.querySelector('[data-tower-order-form]').requestSubmit();
+        })()`);
+        assert.equal(await evaluate("towerOrderQa.orders.length"),0,"Direct submission must reject invalid Tower input.");
+        assert(await evaluate("modalBody.querySelector('#troopSliderConfirm').disabled"));
+        await evaluate("towerOrderQa.setAmount(1003)");
         if (snapshot.overflow) {
           const shot=await client.send("Page.captureScreenshot",{format:"png"});
           fs.writeFileSync(path.join(artifacts,`overflow-${mode}-${width}.png`),Buffer.from(shot.data,"base64"));
@@ -188,9 +209,17 @@ async function main() {
     await evaluate("towerOrderQa.open('withdraw');towerOrderQa.setAmount(1003)");
     for (const patch of [{ ownStationedTroops: 37 }, { ownerMember: false }, { ownershipRevision: 999 }, { permissions: {} }]) {
       await evaluate(`holdingTowerSnapshots.set(towerOrderQa.tower.id,{...towerOrderQa.tower,...${JSON.stringify(patch)}});updateHoldingTowerOrderAvailability()`);
-      if (patch.ownStationedTroops) assert.equal(await evaluate("Number(modalBody.querySelector('input[type=range]').max)"),37);
-      else assert.equal(await evaluate("modalBody.querySelector('#troopSliderConfirm').disabled"),true);
+      if (patch.ownStationedTroops) {
+        assert.equal(await evaluate("Number(modalBody.querySelector('input[type=range]').max)"),37);
+        assert.equal(await evaluate("modalBody.querySelector('#troopExactAmount').value"),"1,003","A smaller personal garrison must preserve the player's typed intent.");
+      }
+      assert.equal(await evaluate("modalBody.querySelector('#troopSliderConfirm').disabled"),true);
+      await evaluate("modalBody.querySelector('[data-tower-order-form]').requestSubmit()");
+      assert.equal(await evaluate("towerOrderQa.orders.length"),0,"Realtime garrison/permission changes must block dispatch.");
     }
+    await evaluate("holdingTowerSnapshots.set(towerOrderQa.tower.id,{...towerOrderQa.tower});updateHoldingTowerOrderAvailability()");
+    assert.equal(await evaluate("Number(modalBody.querySelector('[data-tower-order-troops]').value)"),1003,"Recovered Tower availability must restore the typed count.");
+    assert.equal(await evaluate("modalBody.querySelector('#troopSliderConfirm').disabled"),false);
     await close();
     await evaluate("towerOrderQa.open('withdraw');towerOrderQa.setAmount(1003);towerOrderQa.fail=true;modalBody.querySelector('[data-tower-order-form]').requestSubmit()");
     await ready("!holdingTowerActionsInFlight.size");

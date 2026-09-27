@@ -6,6 +6,9 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Transformed DOMRects can report 44 CSS pixels as 43.999996 on Linux Chromium.
+// Tolerate floating-point noise only, not a materially undersized touch target.
+const minimumMeasuredTargetHeight = 44 - 0.001;
 const artifacts = path.resolve(__dirname, "../release-artifacts/rally-assembly");
 async function main() {
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
@@ -17,7 +20,8 @@ async function main() {
   try {
     session = await startBrowserSession(executable);
     client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
-    await Promise.all(["Page.enable", "Runtime.enable"].map(method => client.send(method)));
+    await Promise.all(["Page.enable", "Runtime.enable", "Network.enable"].map(method => client.send(method)));
+    await client.send("Network.setBlockedURLs", { urls: ["https://*", "http://*.googleapis.com/*"] });
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const evaluate = async expression => {
       const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
@@ -27,6 +31,16 @@ async function main() {
     const ready = async expression => {
       for (let attempt = 0; attempt < 240; attempt++) { if (await evaluate(expression)) return; await delay(100); }
       throw Error(`Timed out: ${expression}; ${JSON.stringify(await evaluate('({toast:toast.textContent,modal:modalBody.textContent.slice(0,600),source:selectedSourceId,last:lastSelectedOwnedCityId,errors:window.__rallyQaErrors})'))}`);
+    };
+    const click = async expression => {
+      const point = await evaluate(`(() => {
+        const button=${expression},r=button.getBoundingClientRect();
+        const x=r.left+r.width/2,y=r.top+r.height/2;
+        return {x,y,height:r.height,hit:button.contains(document.elementFromPoint(x,y))};
+      })()`);
+      assert(point.height >= minimumMeasuredTargetHeight && point.hit, `${expression}: ${JSON.stringify(point)}`);
+      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1 });
+      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1 });
     };
     const screenshot = async name => {
       await evaluate('toast.classList.remove("visible")');
@@ -112,26 +126,32 @@ async function main() {
         await screenshot(`assembly-${target.citadel ? "citadel" : "stronghold"}-info-${width}`);
       }
       await evaluate('assemblyRally.assemblyCityId=assemblyCity.id');
-      await evaluate(`(() => {
-        modal.close();clanSnapshot={id:state.clanId,name:'Assembly Test Clan',tag:'ATC',memberCount:3,status:'active',leaderUid:getCurrentOnlineUid()};
-        activeProfileTab='clan';activeClanMobileSection='warroom';
-        profileView.hidden=true;skillsView.hidden=true;settingsView.hidden=true;flagEditorView.hidden=true;clanView.hidden=false;
-        profileScreen.classList.add('open','clan-active');profileScreen.setAttribute('aria-hidden','false');
-        renderClanView();setClanMobileSection('warroom');
-      })()`);
-      await ready('!!clanContent.querySelector("[data-rally-action=assembly]")');
-      await evaluate('clanContent.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
-      await screenshot(`war-room-${width}`);
-      const point = await evaluate(`(() => {const button=clanContent.querySelector('[data-rally-action=assembly]'),r=button.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height/2;return {x,y,height:r.height,hit:button.contains(document.elementFromPoint(x,y))};})()`);
-      assert(point.height >= 44 && point.hit, JSON.stringify(point));
-      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1 });
-      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1 });
-      await ready(`!profileScreen.classList.contains('open') && selectedSourceId===${JSON.stringify(fixture.cityId)}`);
+      for (const visit of ["cold", "warm"]) {
+        assert.equal(await evaluate('document.querySelector("link[data-optional-ui-style=clan]").dataset.ready === "true"'), visit === "warm", "Exercise both first-load and already-loaded Clan styles.");
+        await evaluate(`(() => {
+          modal.close();clanSnapshot={id:state.clanId,name:'Assembly Test Clan',tag:'ATC',memberCount:3,status:'active',leaderUid:getCurrentOnlineUid()};
+          activeProfileTab='clan';
+          profileView.hidden=true;skillsView.hidden=true;settingsView.hidden=true;flagEditorView.hidden=true;clanView.hidden=false;
+          profileScreen.classList.add('open','clan-active');profileScreen.setAttribute('aria-hidden','false');
+          updateProfileTabHeader();renderClanView();
+        })()`);
+        // The first render waits for optional Clan styles, then initializes clan
+        // navigation. Choose a tab only after that real navigation is available.
+        await ready(`clanContent.querySelector("#clanSectionTabWarroom")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
+        await click('clanContent.querySelector("#clanSectionTabOverview")');
+        await ready('clanContent.querySelector("#clanSectionTabOverview")?.getAttribute("aria-selected") === "true"');
+        await click('clanContent.querySelector("#clanSectionTabWarroom")');
+        await ready(`clanContent.querySelector("#clanSectionTabWarroom")?.getAttribute("aria-selected") === "true" && clanContent.querySelector("[data-rally-action=assembly]")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
+        await evaluate('clanContent.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
+        await screenshot(`war-room-${visit}-${width}`);
+        await click('clanContent.querySelector("[data-rally-action=assembly]")');
+        await ready(`!profileScreen.classList.contains('open') && selectedSourceId===${JSON.stringify(fixture.cityId)}`);
+      }
       await evaluate('activeOperationsTab="rallies";showOutgoingAttacksModal()');
       await ready('modal.open && !!modalBody.querySelector("[data-rally-action=assembly]")');
       await evaluate('modalBody.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
       await screenshot(`activity-rally-${width}`);
-      assert(await evaluate('(() => {const r=modalBody.querySelector("[data-rally-action=assembly]").getBoundingClientRect();return r.height>=44&&r.left>=0&&r.right<=innerWidth;})()'));
+      assert(await evaluate(`(() => {const r=modalBody.querySelector("[data-rally-action=assembly]").getBoundingClientRect();return r.height>=${minimumMeasuredTargetHeight}&&r.left>=0&&r.right<=innerWidth;})()`));
       await evaluate('modalBody.querySelector("[data-rally-action=assembly]").click()');
       await ready('!modal.open');
       // A failed/stale reservation must never grant extra sendable troops.

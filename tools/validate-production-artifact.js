@@ -193,10 +193,12 @@ const reinforcementUiBytes = ["reinforcements-activity-ui.js", "reinforcements-a
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (reinforcementUiBytes > 60 * 1024) throw new Error("Reinforcements presentation exceeds its 60 KiB payload budget.");
 // Camps, Strongholds and Troop Orders share existing illustrations. Bound the
-// two scoped presentation modules/styles and two small slider SVGs to 128 KiB.
+// Approved exact counts and percentage shortcuts add about 11 KiB of source
+// (2.3 KiB gzipped), with no new art or dependencies. Allow one bounded 12 KiB
+// step above the existing 128 KiB limit; global shell budgets remain unchanged.
 const militaryUiBytes = ["objectives-activity-ui.js", "objectives-activity-ui.css", "troop-orders-ui.js", "troop-orders-ui.css", "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (militaryUiBytes > 128 * 1024) throw new Error("Combined military presentation exceeds its 128 KiB payload budget.");
+if (militaryUiBytes > 140 * 1024) throw new Error("Combined military presentation exceeds its 140 KiB payload budget.");
 // Approved Leaderboards, Map Atlas, and royal holding views reuse packaged art.
 // Bound the four presentation files to 64 KiB and runtime/entry wiring to 20 KiB.
 const kingdomLedgersBytes = ["kingdom-ledgers-ui.js", "kingdom-ledgers-ui.css", "stronghold-details-ui.js", "stronghold-details-ui.css"]

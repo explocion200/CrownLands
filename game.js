@@ -4473,8 +4473,11 @@ function updateHoldingTowerOrderAvailability() {
   const selectedId = modalBody.querySelector("[data-tower-order-target]")?.value;
   const target = tower && getHoldingTowerComposerTargets(session.mode, tower).find(candidate => candidate.id === selectedId);
   if (input) input.max = String(Math.max(0, Number(fromTower ? tower?.ownStationedTroops : target?.troops) || 0));
+  const selection = refreshTroopOrderSelection(Number(input?.max) || 0);
+  const selectionError = selection?.error || "";
+  if (selection && !selectionError) input.value = String(selection.amount);
   const amount = Number(input?.value);
-  const validAmount = Number.isSafeInteger(amount) && amount > 0 && amount <= Number(input?.max);
+  const validAmount = !selectionError && Number.isSafeInteger(amount) && amount > 0 && amount <= Number(input?.max);
   input?.style?.setProperty("--slider-progress", `${Number(input.max) <= 1 ? 100 : 100 * (amount - 1) / (Number(input.max) - 1)}%`);
   const hasDestination = Boolean(target);
   const neutralBlockReason = session.mode === "attack-from" && target && getHoldingTowerTargetType(target) === "city"
@@ -4489,7 +4492,7 @@ function updateHoldingTowerOrderAvailability() {
   if (status) status.textContent = !allowed ? "Tower access changed or is syncing. Reopen the order from the map."
     : !hasDestination ? "No eligible destination is available on this map."
       : neutralBlockReason ? neutralBlockReason
-        : !validAmount ? "Choose a troop count within your available troops."
+        : !validAmount ? selectionError || "Choose a troop count within your available troops."
           : fromTower ? `${formatNumber(tower.ownStationedTroops)} of your troops stationed here.` : "Choose your city and the troops to send.";
   if (status) status.hidden = Boolean(session.mapOrder && allowed && hasDestination && !neutralBlockReason && validAmount);
   if (session.mapOrder && status && !status.hidden) {
@@ -4604,7 +4607,6 @@ async function submitHoldingTowerOrder(tower, mode) {
   const api = getOnlineApi();
   const selectedId = String(modalBody.querySelector("[data-tower-order-target]")?.value || "");
   const candidate = getHoldingTowerComposerTargets(mode, tower).find(entry => entry.id === selectedId);
-  const troops = Number(modalBody.querySelector("[data-tower-order-troops]")?.value);
   if (!candidate || !api) return;
   const neutralBlockReason = mode === "attack-from" && getHoldingTowerTargetType(candidate) === "city"
     ? getNeutralCaptureBlockReason(candidate, "player") : "";
@@ -4615,6 +4617,14 @@ async function submitHoldingTowerOrder(tower, mode) {
   }
   const sourceModes = new Set(["reinforce", "rally-attack"]);
   const availableTroops = Number(sourceModes.has(mode) ? candidate.troops : tower.ownStationedTroops) || 0;
+  const selection = getTroopOrderSelection(availableTroops);
+  const selectionError = selection?.error || "";
+  if (selectionError) {
+    rejectGameAction(selectionError);
+    updateHoldingTowerOrderAvailability();
+    return;
+  }
+  const troops = selection?.amount ?? Number(modalBody.querySelector("[data-tower-order-troops]")?.value);
   if (!Number.isSafeInteger(troops) || troops < 1 || troops > availableTroops) {
     rejectGameAction("Choose a troop count within your available troops.");
     updateHoldingTowerOrderAvailability();
@@ -31693,10 +31703,24 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
 
   decorateTroopOrderView(source, target, orderKind, commandLabel);
 
+  const currentSelection = () => ({
+    source: cityById(source.id) || source,
+    target: getArmyTargetById(target.id) || target,
+    route: activeTroopSliderRoute?.route || route,
+  });
+  const refreshSelection = () => {
+    const current = currentSelection();
+    updateTroopSliderModal(current.source, current.target, current.route);
+  };
+  if (!rallyOrder) mountTroopOrderSelection(() => {
+    const current = currentSelection();
+    return getTroopSliderSendLimit(current.source, current.target);
+  }, refreshSelection);
   const slider = modalBody.querySelector("#troopAmountSlider");
   slider.addEventListener("input", () => {
-    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
-    updateTroopSliderModal(source, target, route);
+    const current = currentSelection();
+    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(current.source, current.target));
+    refreshSelection();
   });
   const rallyTroopNumber = modalBody.querySelector("#rallyTroopNumber");
   rallyTroopNumber?.addEventListener("input", event => {
@@ -31736,7 +31760,9 @@ function updateTroopSliderModal(source, target, route) {
   const sliderSendLimit = legalSendLimit;
   const sliderMinimum = 1;
   const demoLimited = sliderSendLimit < source.troops;
-  selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
+  const selection = refreshTroopOrderSelection(sliderSendLimit);
+  const selectionError = selection?.error || "";
+  selectedTroopAmount = clamp(selection && !selectionError ? selection.amount : selectedTroopAmount, sliderMinimum, sliderSendLimit);
   slider.min = String(sliderMinimum);
   slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
@@ -31758,10 +31784,14 @@ function updateTroopSliderModal(source, target, route) {
     actionNotice.textContent = "Sending removes your Royal Peace Shield. Your ally’s shield is not affected.";
     actionNotice.hidden = false;
   }
+  if (actionNotice && selectionError) {
+    actionNotice.textContent = `${selectionError} ${actionNotice.textContent}`.trim();
+    actionNotice.hidden = false;
+  }
   const routeIsEstimated = route?.previewStatus === "estimated";
   const confirmButton = modalBody.querySelector("#troopSliderConfirm");
   if (confirmButton) {
-    const waitingForRoute = !isOrderRouteReady(route);
+    const waitingForRoute = !isOrderRouteReady(route) || Boolean(selectionError) || sliderSendLimit < 1;
     confirmButton.disabled = waitingForRoute;
     confirmButton.setAttribute("aria-disabled", waitingForRoute ? "true" : "false");
   }
@@ -32095,7 +32125,14 @@ async function confirmTroopSliderOrder() {
     return;
   }
 
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target));
+  const selection = getTroopOrderSelection(getTroopSliderSendLimit(source, target));
+  const selectionError = selection?.error || "";
+  if (selectionError) {
+    rejectGameAction(selectionError);
+    refreshTroopOrderSelection(getTroopSliderSendLimit(source, target));
+    return;
+  }
+  selectedTroopAmount = clamp(selection?.amount ?? selectedTroopAmount, 1, getTroopSliderSendLimit(source, target));
   const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
     ? activeTroopSliderRoute.route
     : null;
