@@ -37,6 +37,11 @@
       ]
     },
     {
+      "paths": ["tools/validate-rally-assembly-browser.js"],
+      "reason": "Resolve the failing pre-merge War Room check: the fixture selected a tab before deferred Clan styles finished, so first-render clan initialization restored Overview. Wait for rendered navigation and use real pointer clicks, preserving visible 44px targets and assembly-map assertions. Cover first-load and already-loaded styles at desktop and both landscape sizes. Validate the shared deferred-style loader's readiness, retries and stale-view protection. No runtime or Rally rule change is required for this fixture correction.",
+      "tests": ["tools/validate-rally-assembly-browser.js", "tools/validate-deferred-ui-styles.js"]
+    },
+    {
       "paths": ["tools/validate-production-artifact.js"],
       "reason": "The approved controls add about 11 KiB of military presentation source (2.3 KiB gzipped) without new art or dependencies. Increase that module-specific allowance by one bounded 12 KiB step while retaining global offline-shell and asset performance budgets. Validate the produced artifact and overall asset budgets.",
       "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"]

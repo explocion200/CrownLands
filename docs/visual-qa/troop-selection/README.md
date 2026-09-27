@@ -25,7 +25,7 @@ The integration uses the actual order's permitted send limit, refreshes routes f
 
 Visual review includes desktop Attack/Reinforce and landscape layouts. Native mobile keyboard behavior still requires physical-device review. Integration and passing checks do not establish a merge or live release; deployment remains a separate authorized step.
 
-Additional baseline check: the broader `validate-rally-assembly-browser.js` passes its shared Rally order checks but fails its unrelated War Room navigation fixture (hidden assembly button at line 126). The identical failure was reproduced with all three modified runtime files served from `origin/main` (`3570d46`). This change selects the Rally logic validator and focused actual-game Rally control checks; it does not change War Room navigation or its fixture.
+The broader `validate-rally-assembly-browser.js` is included in the pre-merge checks. Its previous hidden-button failure came from selecting War Room before optional Clan styles finished loading; first-render clan initialization then restored Overview. The fixture now waits for rendered navigation and clicks the visible tabs and assembly shortcut. It checks both first-load and already-loaded styles at all three sizes, retaining 44px hit-target and assembly-map assertions. The shared deferred-style loader is also validated. No runtime navigation or Rally rule change was needed.
 
 Payload: the controls add about 11 KiB to the military presentation source, approximately 2.3 KiB gzipped, with no new artwork, dependencies or server capacity. Its module-specific artifact allowance increases from 128 to 140 KiB; overall offline-shell and asset performance limits remain unchanged and are validated.
 
