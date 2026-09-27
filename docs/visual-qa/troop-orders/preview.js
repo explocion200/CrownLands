@@ -55,7 +55,7 @@ function renderPowerBreakdown() {
   return `<section class="attack-power-sheet" aria-label="Your attack power breakdown"><header><div><span>YOUR ATTACK POWER</span><strong id="ownAttackTotal"></strong></div><img src="${art.attack}" alt=""></header>
     <div class="power-source"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><strong>Base troop power</strong><small>1.25 power per troop</small></div><b id="basePowerValue"></b></div>
     <div class="power-source"><img src="${art.attack}" alt=""><div><strong>Swordmastery</strong><small>Level ${current.swordmastery / 2} · +${precise(current.swordmastery)}% attack</small></div><b id="skillPowerValue"></b></div>
-    <div class="power-source"><img class="common-item" src="${weaponDefinition.art}" alt=""><div><strong>${equipped ? escape(weaponDefinition.gearName) : "War Captain weapon"}</strong><small>${equipped ? `Equipped · Level ${current.weaponLevel} · +${precise(gearData.getBonusPercent({ level: current.weaponLevel }))}%` : "No attack weapon equipped"}</small></div><b id="weaponPowerValue"></b></div>
+    <div class="power-source"><img class="common-item" src="${weaponDefinition.art}" alt=""><div><strong>${equipped ? escape(weaponDefinition.gearName) : "War Captain weapon"}</strong><small>${equipped ? `Equipped · Level ${current.weaponLevel} · +${precise(gearData.getBonusPercent({ gearKey: weaponDefinition.gearKey, level: current.weaponLevel }))}%` : "No attack weapon equipped"}</small></div><b id="weaponPowerValue"></b></div>
     <p class="power-equation"><span id="perTroopValue"></span><strong id="combinedAttackBonus"></strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.</p></section>`;
 }
 function renderTransferDetails() {
@@ -120,7 +120,7 @@ function update() {
   document.getElementById("amountValue").textContent = num(amount);
   document.getElementById("remainingValue").textContent = num(current.troops - amount);
   if (current.kind === "attack") {
-    const gearPercent = current.weaponLevel ? gearData.getBonusPercent({ level: current.weaponLevel }) : 0;
+    const gearPercent = current.weaponLevel ? gearData.getBonusPercent({ gearKey: weaponDefinition.gearKey, level: current.weaponLevel }) : 0;
     const power = ORDER_POWER_REVIEW.calculate(amount, current.swordmastery, gearPercent);
     document.getElementById("ownAttackTotal").textContent = num(power.totalPower);
     document.getElementById("basePowerValue").textContent = contributionValue(power.basePower);

@@ -1,90 +1,27 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "639b31dbe6b1ff7e35916e1514af493225d4a406",
+  "baseCommit": "3570d462e231328c4e7d0162575bb5b977c46d43",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "styles.css",
-        "tools/validate-army-resolution-retries.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-interaction-health.js",
-        "tools/validate-animation-system.js",
-        "tools/validate-responsive-browser.js"
+        "docs/visual-qa/troop-selection/index.html",
+        "docs/visual-qa/troop-selection/preview.html",
+        "docs/visual-qa/troop-selection/selection.css",
+        "docs/visual-qa/troop-selection/selection.js",
+        "tools/validate-troop-selection-draft-browser.js",
+        "docs/visual-qa/troop-orders/preview.js"
       ],
+      "reason": "Isolated synthetic troop-selection design review reuses existing troop-order draft presentation and pure power helpers. Validate exact input, percentage selection, protected limits, invalid-entry recovery, keyboard behavior, route blockers, fixture actions, desktop and landscape layout, assets, review controls and absence of external requests. Reconciled with current main, including its revised Gear helper/art and production asset packaging; rerun the browser fixture and build against those shared dependencies. No production runtime, authority or backend files change in this PR, so emulator suites do not apply. The shared synthetic troop-order preview now supplies its known weapon gearKey to the revised helper. Fixed attack-power examples cover equipped, stored, unequipped and maximum-level Common gear, including unknown enemy intelligence; production Gear logic is unchanged.",
       "tests": [
-        "tools/validate-army-resolution-retries.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-responsive-runtime.js",
-        "tools/validate-responsive-browser.js",
-        "tools/validate-animation-system.js",
-        "tools/validate-interaction-health.js",
-        "tools/validate-multiplayer-sync.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-clan-tower-king-power.js",
-        "tools/validate-king-power.js",
-        "functions/test/emulator-scout-report-lifecycle.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-economy-concurrency.js"
-      ],
-      "reason": "Shared arrival request ownership, jittered retries, early arrivals, permanent errors, reconnect and session replacement across all five kinds. Existing report/scout queue behavior, troop and King Power accounting and settlement remain authoritative. Desktop and landscape browser checks cover movement, acceptance, stable map nodes, touch recovery and report focus/scroll. Compositing preserves geometry and viewport eviction."
+        "tools/validate-troop-selection-draft-browser.js"
+      ]
     },
     {
       "paths": [
-        "tools/validate-soldier-defense.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-objective-battles.js",
-        "tools/validate-layer1-travel.js",
-        "tools/validate-skills.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js",
-        "tools/asset-performance-budgets.js"
+        "docs/visual-qa/troop-selection/README.md"
       ],
-      "tests": [
-        "tools/validate-soldier-defense.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-objective-battles.js",
-        "tools/validate-layer1-travel.js",
-        "tools/validate-skills.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-gear-rarities.js",
-        "tools/validate-deferred-ui-styles.js",
-        "tools/validate-coordinated-release.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Repair broad-audit test drift against approved gear caps, actual release IDs, shared unchanged installation byte limit and deferred Clan stylesheet loading. Execute every edited validator plus gameplay cap and runtime/build parity dependencies; no gameplay balance, release contract or performance budget changes."
-    },
-    {
-      "paths": [
-        "functions/test/emulator-first-time-onboarding.js"
-      ],
-      "tests": [
-        "functions/test/emulator-first-time-onboarding.js",
-        "functions/test/emulator-email-auth.js"
-      ],
-      "reason": "Verified-email onboarding fixture uses the existing emulator-only helper. Paired email-auth suite must still prove unverified players cannot enter the realm; no production auth bypass."
-    },
-    {
-      "paths": [
-        "docs/GAME_STABILITY_AUDIT_2026_09_27.md"
-      ],
-      "tests": [],
-      "reason": "Record findings, bounded synthetic and production evidence, unchanged rules, remaining budget failures and deployment acceptance; documentation adds no runtime behavior."
+      "reason": "Document draft review controls, synthetic data boundaries, dependencies, validation evidence and future integration requirements. No production design decision or behavior changes.",
+      "tests": []
     }
   ]
 }
