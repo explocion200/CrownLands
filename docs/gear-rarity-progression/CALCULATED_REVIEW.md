@@ -140,4 +140,4 @@ Confirmed acquisition: higher rarities come only from upgrading existing Common 
 - Offline cap counterexample: two equal intervals with +100% non-objective bonuses and objective bonuses of 0% then 200% produce an average +150% after a +200% cap. Capping their average incorrectly gives +200%.
 - Intrinsic gear bonuses always increase. Effective power/output may stay unchanged when a total cap already binds; the UI must disclose unused bonus.
 
-No live data, drop rates, player inventory, balance configuration or production state was modified.
+Generating this review does not modify live data or production. The branch implements the item curves and non-production caps; deployment remains pending.

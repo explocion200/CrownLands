@@ -194,7 +194,7 @@ assert.match(gearUi, /Both Level \$\{selected\.level\} inputs disappear/, "Upgra
 assert.match(gearUi, /Next \+\$\{viewModel\.nextBonus\.toFixed\(2\)\}% \(\+\$\{viewModel\.nextBonusIncrease\.toFixed\(2\)\}%\) · Requires \$\{viewModel\.requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Bottom metadata must show the marginal bonus and same-level upgrade material.");
 assert.match(gearUi, /No matching material\. Requires \$\{requirement\.duplicates\} matching Level \$\{instance\.level\}/, "A missing material must have a player-readable reason.");
 assert.match(gearUi, /Insufficient gold\. Requires \$\{formatNumber\(upgradeGold\)\} gold/, "Missing gold must be identified separately from missing material.");
-assert.match(gearUi, /authoritativeShopPricing[\s\S]{0,700}COMMON_GEAR\.getUpgradeGoldCost\(rawBaseGoldPerHour, instance\)/, "The equipment UI must preview the shared cost from authoritative regular-city pricing.");
+assert.match(gearUi, /authoritativeShopPricing[\s\S]*?COMMON_GEAR\.getUpgradeGoldCost\(rawBaseGoldPerHour, instance\)/, "The equipment UI must preview the shared cost from authoritative regular-city pricing.");
 assert.match(gearUi, /viewModel\.progressionLabel\)\} full path:[\s\S]{0,180}progressionBaseCopies[\s\S]{0,180}progressionGoldHours/, "The equipment UI must explain the complete same-level merge path.");
 assert.match(gearUi, /Next level:[\s\S]{0,120}nextBonusIncrease/, "The equipment UI must show the marginal bonus gained by an upgrade.");
 assert.match(gearUi, /requestId: createDailyMissionRequestId\("gear-upgrade"\)/, "The equipment UI must send an idempotency key for every upgrade.");
@@ -247,7 +247,7 @@ const stableOrderAfter = groupingContext.groupGear(stableOrderInstances, stableO
 assert.equal(stableOrderAfter, stableOrderBefore, "Selecting a bag item or changing compatibility must not reorder equipment tiles.");
 assert.match(game, /const preservedBagScrollTop = bagScroll\?\.scrollTop \?\? commonGearBagScrollTop;[\s\S]{0,180}bagScroll\.scrollTop = preservedBagScrollTop;/, "Bag selection focus must restore the exact prior scroll position.");
 
-const previewStart = game.indexOf("function getCommonGearUpgradePreview");
+const previewStart = game.indexOf("function createCommonGearUpgradeContext");
 const previewEnd = game.indexOf("function createCommonGearViewModel", previewStart);
 assert(previewStart >= 0 && previewEnd > previewStart, "Could not isolate the upgrade-ready preview helper.");
 const previewTarget = { ...groupedInstances[0], instanceId: "preview_target", isEquipped: true };
@@ -305,8 +305,8 @@ assert.equal(insufficientGoldPreview.hasMatchingMaterial, true, "Insufficient go
 assert.equal(insufficientGoldPreview.hasEnoughGold, false);
 assert.match(insufficientGoldPreview.reason, /^Insufficient gold\. Requires 50 gold; 49 available\.$/);
 assert.equal(insufficientGoldPreview.upgradeGold, 50, "The UI used Stronghold-inclusive global production instead of authoritative regular-city pricing.");
-assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
-assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
+assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances, upgradeContext\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
+assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances, upgradeContext\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
 assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");
 assert.match(gearUi, /isUpgradeReady \? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready"/, "Upgradeable equipped items must render the alert on their equipment slot.");
 

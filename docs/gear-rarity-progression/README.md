@@ -104,7 +104,7 @@ Implemented on `codex/gear-rarity-progression`, pending review and authorized re
 
 The exact affected test selection is in [`validation-plan.json`](../../validation-plan.json). Focused validation covers all 800 item values, 768 upgrades, 128 promotions, material eligibility, equipment transfer, cap edge cases, lossless inventories and Common-only rewards. Browser coverage includes all five rarity previews for each officer on desktop and small landscape mobile, 44px actions, confirmation focus, lost-response retries and stale sessions. Selected emulator suites cover authoritative economy/concurrency, season persistence, gear battle reports, Tower battles, rallies and travel.
 
-The three required GitHub checks must pass on the final commit before this PR is ready. No merge, deployment or production player-data mutation is authorized by this implementation request.
+The three required GitHub checks must pass on the final commit before this PR is ready. No merge, deployment or production player-data mutation is authorized by this implementation request. Large-inventory measurements and the reproducible fixture are recorded in [visual QA](../visual-qa/gear-rarities/README.md).
 
 Deploy the compatible backend and matching frontend together after release authorization; verify backend/frontend manifests and the active realm pointer. Check promotion errors, retry rates, transaction duration, profile size and inventory conservation. Do not roll back to code that cannot read schema v3. To stop new promotions safely, use a reviewed server guard while retaining v3 reads/equipment support and earned inventory; never downgrade or discard player gear.
 

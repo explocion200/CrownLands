@@ -1571,7 +1571,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 3. Leaderboard tie-breaking, eligibility, season rewards, finalization trigger, archive fields, and archive retention.
 4. Formal monetization principles, rewarded-ad frequency/limits, and whether premium products or currency are permitted.
 5. Chat moderation, player reporting, announcements, sanctions, and administrator policy.
-6. Design rules for higher Gear rarities and protection against unchecked power growth.
+6. Release the implemented rarity progression after validation; total production caps and exact capped offline accounting remain a separate design decision.
 7. Final triggers and player-facing behavior for dynamic world expansion.
 8. Whether roadmap concepts such as Clan Wars and regional control should become committed features.
 
@@ -1593,9 +1593,9 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | `LIVE — ALL PUBLISHED CHANNELS` | Build `fdf326a...`: unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and updated Skills tab/card readability. The separately hosted primary-domain public pages remain outside this client statement. |
 | `LIVE — ITCH.IO` | No feature is known to be uniquely newer on itch.io |
 | `IMPLEMENTED BUT NOT LIVE` | Uniform two-minute pickup cadence and center-biased pickup placement |
-| `IMPLEMENTED BUT NOT LIVE` | Armed 5×5 Core reset, clan/Common Gear persistence enforcement, deterministic dynamic map expansion pending the September 2 UTC boundary and post-reset verification, and Holding Towers/Clan Treasury pending merge and authorized deployment |
+| `IMPLEMENTED BUT NOT LIVE` | Armed 5×5 Core reset, clan/Common Gear persistence enforcement, deterministic dynamic map expansion pending the September 2 UTC boundary and post-reset verification, Holding Towers/Clan Treasury, and five-tier Gear progression pending merge and authorized deployment |
 | `IN DEVELOPMENT` | Continuing UI/performance/onboarding work |
-| `PLANNED` | Seasons, final-season Kingdom/Clan leaderboard archives, higher Gear rarities |
+| `PLANNED` | Seasons, final-season Kingdom/Clan leaderboard archives, total production caps |
 | `PROPOSED` | Detailed Clan Wars, regional-control scoring, unconfirmed world-event concepts, unconfirmed expanded sound/animation mechanics |
 | `NEEDS VERIFICATION` | Exact production runtime parity for repository-verified starting resources/formulas/reset behavior, ranking policy, monetization policy, moderation, SLOs, security posture, device matrix, and channel parity target |
 

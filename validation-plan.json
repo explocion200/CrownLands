@@ -575,7 +575,8 @@
         "tools/validate-treasury-gear-browser.js",
         "treasury-gear-ui.css",
         "treasury-gear-ui.js",
-        "troop-orders-ui.js"
+        "troop-orders-ui.js",
+        "tools/validate-gear-inventory-browser.js"
       ],
       "tests": [
         "tools/validate-barracks-gear-browser.js",
@@ -587,9 +588,10 @@
         "tools/validate-common-gear.js",
         "tools/validate-gear-rarities.js",
         "tools/validate-ui-readability.js",
-        "tools/validate-mobile-ui-viewport.js"
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-gear-inventory-browser.js"
       ],
-      "reason": "Four officer screens share rarity art, promotion requirements, result previews, applied cap disclosure, focus/scroll/filter preservation and duplicate/retry/session guards. Real desktop and landscape fixtures cover all rarity previews, result image loading and touch controls; Infirmary verifies the new recovery cap and live refresh; shared reward and order/report image references are checked by catalog/art validation."
+      "reason": "Four officer screens share rarity art, promotion requirements, result previews, applied cap disclosure, focus/scroll/filter preservation and duplicate/retry/session guards. Real desktop and landscape fixtures cover all rarity previews, result image loading and touch controls; Infirmary verifies the new recovery cap and live refresh; shared reward and order/report image references are checked by catalog/art validation. A 2,000-item fixture measures throttled render/layout time and requires zero production rescans when authoritative pricing exists, or one shared fallback calculation otherwise."
     },
     {
       "paths": [

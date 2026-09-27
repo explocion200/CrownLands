@@ -1247,7 +1247,26 @@ function createCommonGearBagGroups(instances = [], selectedSlot = "head", select
     || a.key.localeCompare(b.key));
 }
 
-function getCommonGearUpgradePreview(instance, instances = Object.values(state?.gear?.instances || {})) {
+function createCommonGearUpgradeContext(instances) {
+  const counts = new Map(), ids = new Set();
+  for (const item of instances) {
+    const key = `${item.gearKey}:${item.level}`;
+    const row = counts.get(key) || { stored: 0, equipped: 0 };
+    row[item.isEquipped ? "equipped" : "stored"] += 1;
+    counts.set(key, row); ids.add(item.instanceId);
+  }
+  const authoritativeRate = Number(typeof authoritativeShopPricing === "object" && authoritativeShopPricing
+    ? authoritativeShopPricing.rawBaseGoldPerHour : Number.NaN);
+  let rawBaseGoldPerHour = authoritativeRate;
+  if (!Number.isFinite(rawBaseGoldPerHour)) {
+    const local = typeof getHarvestBonusBaseRates === "function" ? getHarvestBonusBaseRates() : null;
+    const localRate = Number(local?.goldPerHour);
+    rawBaseGoldPerHour = Number.isFinite(localRate) ? localRate : Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0);
+  }
+  return { counts, ids, rawBaseGoldPerHour };
+}
+
+function getCommonGearUpgradePreview(instance, instances = Object.values(state?.gear?.instances || {}), context = null) {
   if (!instance) {
     return {
       requirement: null,
@@ -1271,23 +1290,11 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
       reason: "Max level.",
     };
   }
-  const materials = COMMON_GEAR.getUpgradeMaterialInstances(instance, instances);
-  const duplicateCount = materials.length;
-  const matchingEquippedCount = instances.filter(candidate => candidate.instanceId !== instance.instanceId
-    && candidate.gearKey === instance.gearKey
-    && candidate.level === instance.level
-    && candidate.isEquipped).length;
-  const authoritativeRawRate = typeof authoritativeShopPricing === "object" && authoritativeShopPricing
-    ? Number(authoritativeShopPricing.rawBaseGoldPerHour)
-    : Number.NaN;
-  const localBaseRates = typeof getHarvestBonusBaseRates === "function"
-    ? getHarvestBonusBaseRates()
-    : null;
-  const localRawRate = Number(localBaseRates?.goldPerHour);
-  const fallbackRawRate = Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0);
-  const rawBaseGoldPerHour = Number.isFinite(authoritativeRawRate)
-    ? authoritativeRawRate
-    : Number.isFinite(localRawRate) ? localRawRate : fallbackRawRate;
+  const shared = context || createCommonGearUpgradeContext(instances);
+  const counts = shared.counts.get(`${instance.gearKey}:${instance.level}`) || { stored: 0, equipped: 0 };
+  const duplicateCount = Math.max(0, counts.stored - (!instance.isEquipped && shared.ids.has(instance.instanceId) ? 1 : 0));
+  const matchingEquippedCount = Math.max(0, counts.equipped - (instance.isEquipped && shared.ids.has(instance.instanceId) ? 1 : 0));
+  const rawBaseGoldPerHour = shared.rawBaseGoldPerHour;
   const upgradeGold = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance);
   const hasMatchingMaterial = duplicateCount >= requirement.duplicates;
   const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= upgradeGold;
@@ -1363,7 +1370,8 @@ function createCommonGearViewModel(buildingId) {
   selectedCommonGearInstanceId = selected?.instanceId || "";
 
   const definition = selected ? COMMON_GEAR.getDefinition(selected.gearKey) : null;
-  const upgradePreview = getCommonGearUpgradePreview(selected, instances);
+  const upgradeContext = createCommonGearUpgradeContext(instances);
+  const upgradePreview = getCommonGearUpgradePreview(selected, instances, upgradeContext);
   const { requirement, duplicateCount, upgradeGold } = upgradePreview;
   const nextItem = selected ? COMMON_GEAR.getUpgradeResult(selected) : null;
   const progressionItem = nextItem || selected;
@@ -1371,7 +1379,7 @@ function createCommonGearViewModel(buildingId) {
   const bagGroups = createCommonGearBagGroups(instances, selectedCommonGearSlot, selectedCommonGearInstanceId);
   bagGroups.forEach(group => {
     group.isUpgradeReady = !group.isEquipped
-      && getCommonGearUpgradePreview(group.representative, instances).hasMatchingMaterial;
+      && getCommonGearUpgradePreview(group.representative, instances, upgradeContext).hasMatchingMaterial;
   });
   const filteredBagGroups = selectedCommonGearBagFilter === "all"
     ? bagGroups
@@ -1385,7 +1393,7 @@ function createCommonGearViewModel(buildingId) {
       equipped,
       equippedDefinition: equipped ? COMMON_GEAR.getDefinition(equipped.gearKey) : null,
       isSelected: slot === selectedCommonGearSlot,
-      isUpgradeReady: Boolean(equipped && getCommonGearUpgradePreview(equipped, instances).hasMatchingMaterial),
+      isUpgradeReady: Boolean(equipped && getCommonGearUpgradePreview(equipped, instances, upgradeContext).hasMatchingMaterial),
     };
   });
   return {
