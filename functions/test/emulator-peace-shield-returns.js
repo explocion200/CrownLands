@@ -102,11 +102,9 @@ async function callFunction(name, token, data = {}) {
 }
 
 function getRegionId(claim) {
-  if (claim.regionId) return String(claim.regionId);
-  const islandId = String(claim.islandId || "");
-  const prefix = `${realm.worldId}-`;
-  if (!islandId.startsWith(prefix)) throw new Error(`Cannot determine claim region from ${islandId}.`);
-  return islandId.slice(prefix.length);
+  const regionId = claim.mainRegionId || claim.regionId;
+  assert(regionId, "Starting city response must include its map identity.");
+  return String(regionId);
 }
 
 function islandIdForRegion(regionId) {
