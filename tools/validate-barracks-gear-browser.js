@@ -157,6 +157,9 @@ async function main() {
       for (const building of Object.keys(G.BUILDINGS)) for (const rarity of G.RARITIES) {
         await evaluate(`(()=>{const d=COMMON_GEAR.DEFINITIONS.find(d=>d.buildingId===${JSON.stringify(building)}&&d.rarity===${JSON.stringify(rarity)}&&d.slot==='weapon');const g=COMMON_GEAR.createDefaultState();for(const id of ['tier-target','tier-material'])g.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:5});g.equipped[d.buildingId][d.slot]='tier-target';state.gear=normalizeCommonGearState(g);state.gold=1e15;selectedCommonGearInstanceId='tier-target';selectedCommonGearSlot='weapon';commonGearMergeConfirmOpen=false;renderCommonGearBuilding(d.buildingId);})()`);
         await paint();
+        const colors={common:'rgb(217, 218, 214)',uncommon:'rgb(199, 210, 180)',rare:'rgb(191, 206, 216)',epic:'rgb(211, 196, 218)',legendary:'rgb(227, 196, 132)'};
+        assert(await evaluate(`[...modal.querySelectorAll('[data-rarity="${rarity}"]')].every(e=>getComputedStyle(e).backgroundColor===${JSON.stringify(colors[rarity])})`), `${building}/${rarity} must retain its rarity color in every gear surface`);
+        assert(await evaluate(`[...modal.querySelectorAll('[data-rarity="${rarity}"][aria-pressed="true"]')].every(e=>getComputedStyle(e).borderTopColor==='rgb(111, 61, 60)')`), `${building}/${rarity} selected gear needs its burgundy border`);
         const expected = rarity === 'legendary' ? 'Max Level' : 'Promote to '+G.RARITIES[G.RARITIES.indexOf(rarity)+1].replace(/^./,c=>c.toUpperCase());
         assert.equal(await evaluate(`modal.querySelector('[data-gear-merge]').textContent.trim()`), expected);
         assert(await evaluate(`modal.querySelector('.tg-cap-preview').textContent.includes('if equipped')`));

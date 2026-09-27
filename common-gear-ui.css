@@ -771,16 +771,12 @@
 .gear-item-art { display: block; overflow: hidden; flex-shrink: 0; }
 
 /* Shared muted rarity surfaces for all four officers. */
-
-#modal.common-gear-building-modal [data-rarity="uncommon"]{background:#c7d2b4!important;border-color:#6f8753!important;box-shadow:inset 0 0 0 3px #e0e7d2!important}
-
-#modal.common-gear-building-modal [data-rarity="rare"]{background:#bfced8!important;border-color:#56778f!important;box-shadow:inset 0 0 0 3px #dce7ed!important}
-
-#modal.common-gear-building-modal [data-rarity="epic"]{background:#d3c4da!important;border-color:#82618e!important;box-shadow:inset 0 0 0 3px #e7dded!important}
-
-#modal.common-gear-building-modal [data-rarity="legendary"]{background:#e3c484!important;border-color:#a67935!important;box-shadow:inset 0 0 0 3px #f4dfad!important}
-
-#modal.common-gear-building-modal [data-rarity][aria-pressed="true"]{border-color:#6f3d3c!important}
+#modal.common-gear-building-modal [data-rarity="uncommon"]{--rarity-surface:#c7d2b4;--rarity-border:#6f8753;--rarity-highlight:#e0e7d2}
+#modal.common-gear-building-modal [data-rarity="rare"]{--rarity-surface:#bfced8;--rarity-border:#56778f;--rarity-highlight:#dce7ed}
+#modal.common-gear-building-modal [data-rarity="epic"]{--rarity-surface:#d3c4da;--rarity-border:#82618e;--rarity-highlight:#e7dded}
+#modal.common-gear-building-modal [data-rarity="legendary"]{--rarity-surface:#e3c484;--rarity-border:#a67935;--rarity-highlight:#f4dfad}
+#modal.common-gear-building-modal[data-common-gear-building-id] .tg-shell [data-rarity]:not([data-rarity="common"]):not([data-rarity=""]){background:var(--rarity-surface)!important;border-color:var(--rarity-border)!important;box-shadow:inset 0 0 0 3px var(--rarity-highlight)!important}
+#modal.common-gear-building-modal[data-common-gear-building-id] .tg-shell [data-rarity]:not([data-rarity=""])[aria-pressed="true"]{border-color:#6f3d3c!important}
 
 /* Defer off-screen bag card layout while retaining their scroll positions and accessible controls. */
 #modal.common-gear-building-modal .tg-item{content-visibility:auto;contain-intrinsic-block-size:auto 102px}
