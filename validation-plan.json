@@ -552,7 +552,7 @@
         "functions/test/emulator-main-city-recovery.js",
         "functions/test/emulator-realm-shard-isolation.js"
       ],
-      "reason": "Authoritative five-rarity two-item crafting, idempotent receipts, Gold/gear concurrency, full/near-byte-limit inventories, old/future clients, lossless season persistence and Common-only loot. Shared bonus changes affect per-army defense, attack snapshots, recovery/King Power, city production, Tower recovery and new travel/rally snapshots; selected emulators cover these dependencies and release realm compatibility. Stale price quotes are rejected atomically and return the current rate for renewed confirmation."
+      "reason": "Authoritative five-rarity two-item crafting, idempotent receipts, Gold/gear concurrency, full/near-byte-limit inventories, old/future clients, lossless season persistence and Common-only loot. Shared bonus changes affect per-army defense, attack snapshots, recovery/King Power, city production, Tower recovery and new travel/rally snapshots; selected emulators cover these dependencies and release realm compatibility. Stale price quotes are rejected atomically and return the current rate for renewed confirmation. Revised price coverage checks the independent 0.25-to-16-hour matrix, rounding, all rarity promotions, authoritative charges and unchanged duplicate counts."
     },
     {
       "paths": [
@@ -591,7 +591,7 @@
         "tools/validate-mobile-ui-viewport.js",
         "tools/validate-gear-inventory-browser.js"
       ],
-      "reason": "Four officer screens share rarity art, promotion requirements, result previews, applied cap disclosure, focus/scroll/filter preservation and duplicate/retry/session guards. Real desktop and landscape fixtures cover all rarity previews, result image loading and touch controls; Infirmary verifies the new recovery cap and live refresh; shared reward and order/report image references are checked by catalog/art validation. A 2,000-item fixture measures throttled render/layout time and requires zero production rescans when authoritative pricing exists, or one shared fallback calculation otherwise. Submitted prices are bound to the displayed confirmation; offscreen card layout is deferred without losing scroll reachability or selection. Infirmary examples use attainable 60% skill-plus-gear recovery."
+      "reason": "Four officer screens share rarity art, promotion requirements, result previews, applied cap disclosure, focus/scroll/filter preservation and duplicate/retry/session guards. Real desktop and landscape fixtures cover all rarity previews, result image loading and touch controls; Infirmary verifies the new recovery cap and live refresh; shared reward and order/report image references are checked by catalog/art validation. A 2,000-item fixture measures throttled render/layout time and requires zero production rescans when authoritative pricing exists, or one shared fallback calculation otherwise. Submitted prices are bound to the displayed confirmation; offscreen card layout is deferred without losing scroll reachability or selection. Infirmary examples use attainable 60% skill-plus-gear recovery. Price fixtures verify the revised costs, insufficient Gold, confirmation quotes and stale-price recovery at desktop/mobile sizes."
     },
     {
       "paths": [
@@ -606,7 +606,7 @@
         "tools/validate-gear-progression-proposal.js",
         "tools/validate-gear-rarities.js"
       ],
-      "reason": "Confirmed duplicate and Gold progression, executable numeric model and all 800 runtime item values; explicitly deferred total production caps remain design scenarios only. Master Specification and review distinguish implementation from release and preserve Common supply, Tower shield scope, existing timers and King Power accounting."
+      "reason": "Confirmed duplicate and Gold progression, executable numeric model and all 800 runtime item values; explicitly deferred total production caps remain design scenarios only. Master Specification and review distinguish implementation from release and preserve Common supply, Tower shield scope, existing timers and King Power accounting. The cost model and cumulative review reflect the requested lower endpoints and documented intermediate curve."
     }
   ]
 }

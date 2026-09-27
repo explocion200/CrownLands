@@ -32,7 +32,7 @@ assert.equal(M.copiesFromCommon(4,1),1048576);
 assert.equal(M.copiesFromCommon(4,5),16777216);
 assert.equal(M.cumulativeHours(P,0,5),G.getCumulativeGoldHoursForLevel(5));
 assert.equal(M.upgradeHours(P,4,5),null);
-assert.equal(M.cumulativeHours(P,4,5,4),256);
+assert.equal(M.cumulativeHours(P,4,5,4),64);
 assert.equal(C.bonus("infirmary",10),15); assert.equal(C.bonus("training",10),10);
 assert.equal(E.skills.fieldMedics.maxPercent,50); assert.equal(E.skills.swordmastery.maxPercent,60);
 assert.equal(E.skills.marchOrders.maxPercent,60); assert.equal(E.shopItems.war_drums_30m.bonusPercent,30);

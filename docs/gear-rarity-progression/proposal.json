@@ -124,23 +124,23 @@
   "costs": {
     "basis": "Current raw regular-city Gold/hour; excludes all boosts and objective production. Fixed-rate cumulative figures are illustrations, not waiting times.",
     "withinCommonHours": [
+      0.25,
       0.5,
       1,
-      2,
-      4
+      2
     ],
     "rarityFactors": [
       1,
       2,
       4,
-      8,
-      16
+      6,
+      8
     ],
     "promotionHours": [
+      4,
       8,
+      12,
       16,
-      32,
-      64,
       null
     ]
   },

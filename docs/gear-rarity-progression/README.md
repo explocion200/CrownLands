@@ -10,7 +10,7 @@ The user confirmed the five colors/rarities, upward crafting from existing gear,
 - Five levels per rarity. Two identical items of the same officer, slot, rarity and level produce one next-level item. At Level 5 they produce Level 1 of the next rarity. Legendary Level 5 is the endpoint.
 - Confirmed September 26: the two-item requirement applies at every rarity, including Levels 1→2 through 4→5. Gold is an additional cost, never a replacement for the matching copy. The proposed Gold-only leveling alternative was declined.
 - Continue from each player's existing items and levels. Two Common Level 5 copies become one Uncommon Level 1; two Uncommon Level 5 copies become one Rare Level 1, continuing through Epic to Legendary. Keep existing Common Box sources and their three Level 1 Common pieces. Higher rarity is earned through crafting, never rolled directly from a box or awarded by a new reward source in this update.
-- Preserve all Common Level 1–5 bonuses and existing Common crafting prices. Existing item IDs, acquired gear, equipment selection, boxes and persistence survive the update.
+- Preserve all Common Level 1–5 bonuses. The September 26 cost revision lowers crafting prices, beginning at 0.25 raw-production hours and ending at 16 hours for Legendary Level 4→5. Existing item IDs, acquired gear, equipment selection, boxes and persistence survive the update.
 - Consume the selected target and one unequipped matching copy atomically. If the target was equipped, equip the new result automatically. Never consume a second equipped item as material.
 - Intrinsic bonuses increase at every step, including promotions. A player's final output can remain unchanged at a category cap; the preview must show both the intrinsic improvement and the amount actually applied.
 - Keep the current roles and stat scopes. A rarity adds no new stat or set bonus. Gear is still personal and not tradable.
@@ -66,11 +66,13 @@ Gold is charged as hours of the player's **current raw regular-city Gold product
 
 | Rarity being upgraded | 1→2 | 2→3 | 3→4 | 4→5 | 5→next rarity 1 |
 |---|---:|---:|---:|---:|---:|
-| Common | 0.5 h | 1 h | 2 h | 4 h | 8 h |
-| Uncommon | 1 h | 2 h | 4 h | 8 h | 16 h |
-| Rare | 2 h | 4 h | 8 h | 16 h | 32 h |
-| Epic | 4 h | 8 h | 16 h | 32 h | 64 h |
-| Legendary | 8 h | 16 h | 32 h | 64 h | Maximum |
+| Common | 0.25 h | 0.5 h | 1 h | 2 h | 4 h |
+| Uncommon | 0.5 h | 1 h | 2 h | 4 h | 8 h |
+| Rare | 1 h | 2 h | 4 h | 8 h | 12 h |
+| Epic | 1.5 h | 3 h | 6 h | 12 h | 16 h |
+| Legendary | 2 h | 4 h | 8 h | 16 h | Maximum |
+
+The user requested the 0.25-hour starting cost and 16-hour Legendary Level 4→5 cost. The intermediate curve uses rarity factors 1/2/4/6/8 and promotions of 4/8/12/16 hours, keeping every direct charge at or below 16 hours. Duplicate requirements are unchanged.
 
 These are Gold prices, not timers. Crafting completes atomically after acceptance. The full cost includes crafting both inputs at every earlier step; it is not the sum of one column of prices.
 

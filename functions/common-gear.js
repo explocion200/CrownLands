@@ -32,11 +32,13 @@
     wallRepairSpeed: [1.5, 5, 12, 20, 30],
   });
   const UPGRADE_BY_LEVEL = Object.freeze({
-    1: Object.freeze({ duplicates: 1, baseGoldHours: 0.5 }),
-    2: Object.freeze({ duplicates: 1, baseGoldHours: 1 }),
-    3: Object.freeze({ duplicates: 1, baseGoldHours: 2 }),
-    4: Object.freeze({ duplicates: 1, baseGoldHours: 4 }),
+    1: Object.freeze({ duplicates: 1, baseGoldHours: 0.25 }),
+    2: Object.freeze({ duplicates: 1, baseGoldHours: 0.5 }),
+    3: Object.freeze({ duplicates: 1, baseGoldHours: 1 }),
+    4: Object.freeze({ duplicates: 1, baseGoldHours: 2 }),
   });
+  const UPGRADE_RARITY_FACTORS = Object.freeze([1, 2, 4, 6, 8]);
+  const PROMOTION_GOLD_HOURS = Object.freeze([4, 8, 12, 16]);
   const SLOTS = Object.freeze(["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"]);
   const ARMOR_SLOTS = new Set(["head", "chest", "pants", "boots", "gloves", "belt"]);
   const BUILDINGS = Object.freeze({
@@ -493,7 +495,8 @@
     const promotion = normalizedLevel === MAX_LEVEL;
     return {
       duplicates: 1,
-      baseGoldHours: (promotion ? 8 : UPGRADE_BY_LEVEL[normalizedLevel].baseGoldHours) * 2 ** rarityIndex,
+      baseGoldHours: promotion ? PROMOTION_GOLD_HOURS[rarityIndex]
+        : UPGRADE_BY_LEVEL[normalizedLevel].baseGoldHours * UPGRADE_RARITY_FACTORS[rarityIndex],
       promotion,
       nextLevel: promotion ? 1 : normalizedLevel + 1,
       nextRarity: RARITIES[rarityIndex + (promotion ? 1 : 0)],

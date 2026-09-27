@@ -119,16 +119,16 @@ Values assume one exact matching item family. Gold-hours use one fixed raw produ
 
 | Target | Matching Common Level 1 copies | Total crafting Gold-hours from Common | Direct next upgrade Gold-hours |
 |---|---:|---:|---:|
-| common 1 | 1 | 0 | 0.5 |
-| common 5 | 16 | 16 | 8 |
-| uncommon 1 | 32 | 40 | 1 |
-| uncommon 5 | 512 | 672 | 16 |
-| rare 1 | 1,024 | 1,360 | 2 |
-| rare 5 | 16,384 | 21,824 | 32 |
-| epic 1 | 32,768 | 43,680 | 4 |
-| epic 5 | 524,288 | 699,008 | 64 |
-| legendary 1 | 1,048,576 | 1,398,080 | 8 |
-| legendary 5 | 16,777,216 | 22,369,536 | Maximum |
+| common 1 | 1 | 0 | 0.25 |
+| common 5 | 16 | 8 | 4 |
+| uncommon 1 | 32 | 20 | 0.5 |
+| uncommon 5 | 512 | 336 | 8 |
+| rare 1 | 1,024 | 680 | 1 |
+| rare 5 | 16,384 | 10,912 | 12 |
+| epic 1 | 32,768 | 21,836 | 1.5 |
+| epic 5 | 524,288 | 349,424 | 16 |
+| legendary 1 | 1,048,576 | 698,864 | 2 |
+| legendary 5 | 16,777,216 | 11,181,888 | Maximum |
 
 Confirmed acquisition: higher rarities come only from upgrading existing Common gear. Two matching Common Level 5 pieces produce one Uncommon Level 1. A Legendary Level 1 represents 65,536 matching Common Level 5 pieces; Legendary Level 5 represents 1,048,576. Existing crafted items retain their progress. These equivalents expose a pacing concern; they do not authorize higher-rarity drops or different duplicate mechanics.
 

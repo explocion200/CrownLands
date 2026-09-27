@@ -12,6 +12,29 @@ assert.equal(G.COMMON_DEFINITIONS.length, 32);
 assert(G.COMMON_DEFINITIONS.every(d => d.rarity === "common"));
 assert.equal(fs.readFileSync(path.join(__dirname, "../common-gear.js"), "utf8").replace(/\r\n/g, "\n"),
   fs.readFileSync(path.join(__dirname, "../functions/common-gear.js"), "utf8").replace(/\r\n/g, "\n"));
+// Independent balance fixtures include promotions and odd-rate rounding.
+const expectedGoldHours = [
+  [.25, .5, 1, 2, 4],
+  [.5, 1, 2, 4, 8],
+  [1, 2, 4, 8, 12],
+  [1.5, 3, 6, 12, 16],
+  [2, 4, 8, 16, null],
+];
+for (const [rarityIndex, rarity] of G.RARITIES.entries()) {
+  for (let level = 1; level <= G.MAX_LEVEL; level++) {
+    const item = { gearKey: `barracks_weapon_${rarity}_01`, level };
+    const hours = expectedGoldHours[rarityIndex][level - 1];
+    assert.equal(G.getUpgradeRequirement(item)?.baseGoldHours ?? null, hours);
+    for (const rate of [0, 1, 101.99, 48000]) {
+      assert.equal(G.getUpgradeGoldCost(rate, item), Math.floor(Math.floor(rate) * (hours || 0)),
+        `${rarity} ${level}: charge must use the approved hours and floor raw production`);
+    }
+    if (hours !== null) {
+      assert(hours <= 16, "No direct crafting charge may exceed 16 base-production hours");
+      assert.equal(G.getUpgradeRequirement(item).duplicates, 1);
+    }
+  }
+}
 let upgrades = 0, promotions = 0, values = 0;
 for (const family of G.COMMON_DEFINITIONS) {
   let previousBonus = 0;

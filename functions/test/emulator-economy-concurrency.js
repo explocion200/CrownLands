@@ -800,7 +800,15 @@ async function main() {
       );
     }
     assert(upgradedState.instances[resultInstanceId].gearKey === expected.gearKey, "Upgrade returned the wrong rarity/family.");
-    assert(Number(upgraded.spentGold || 0) > 0, `The Level ${level} upgrade did not report its existing gold cost.`);
+    const expectedHoursByRarity = {
+      common: [.25, .5, 1, 2, 4], uncommon: [.5, 1, 2, 4, 8], rare: [1, 2, 4, 8, 12],
+      epic: [1.5, 3, 6, 12, 16], legendary: [2, 4, 8, 16],
+    };
+    const expectedHours = expectedHoursByRarity[gear.instances.upgrade_target.rarity][level - 1];
+    const upgradeRawRate = Math.floor(Number(upgraded.shopPricing?.rawBaseGoldPerHour || 0));
+    assert(upgradeRawRate > 0, "Upgrade must return authoritative raw Gold pricing.");
+    assert(upgraded.spentGold === Math.floor(upgradeRawRate * expectedHours),
+      `${gear.instances.upgrade_target.rarity} Level ${level} charged the wrong revised Gold cost.`);
     assert(
       Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - Number(upgraded.spentGold || 0) - 1
         && Number(storedProfile.goldFloat || 0) <= upgradeGoldReserve - Number(upgraded.spentGold || 0) + 10,

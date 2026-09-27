@@ -54,21 +54,21 @@ assert.equal(gear.RELIC_BONUS_CHANCE_PERCENT, 1);
 assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 75);
 assert.deepEqual(gear.BONUS_BY_LEVEL, { 1: .25, 2: .5, 3: .8, 4: 1.15, 5: 1.5 });
 assert.deepEqual(gear.UPGRADE_BY_LEVEL, {
-  1: { duplicates: 1, baseGoldHours: .5 },
-  2: { duplicates: 1, baseGoldHours: 1 },
-  3: { duplicates: 1, baseGoldHours: 2 },
-  4: { duplicates: 1, baseGoldHours: 4 },
+  1: { duplicates: 1, baseGoldHours: .25 },
+  2: { duplicates: 1, baseGoldHours: .5 },
+  3: { duplicates: 1, baseGoldHours: 1 },
+  4: { duplicates: 1, baseGoldHours: 2 },
 });
 assert.deepEqual(serverGear.UPGRADE_BY_LEVEL, gear.UPGRADE_BY_LEVEL, "Client and server upgrade requirements must stay synchronized.");
 assert.equal(typeof gear.getUpgradeMaterialInstances, "function", "Client Common Gear must expose the shared upgrade-material rule.");
 assert.equal(typeof serverGear.getUpgradeMaterialInstances, "function", "Server Common Gear must expose the shared upgrade-material rule.");
-assert.equal(gear.getUpgradeGoldCost(101, 1), 50, "Level 1 upgrade Gold must be half of the floored raw hourly rate.");
-assert.equal(gear.getUpgradeGoldCost(101, 2), 101, "Level 2 upgrade Gold must be one raw-production hour.");
-assert.equal(gear.getUpgradeGoldCost(101, 3), 202, "Level 3 upgrade Gold must be two raw-production hours.");
-assert.equal(gear.getUpgradeGoldCost(101, 4), 404, "Level 4 upgrade Gold must be four raw-production hours.");
-assert.equal(gear.getUpgradeGoldCost(101, 5), 808, "Common Level 5 must quote the eight-hour promotion cost.");
+assert.equal(gear.getUpgradeGoldCost(101, 1), 25, "Level 1 upgrade Gold must be a quarter of the floored raw hourly rate.");
+assert.equal(gear.getUpgradeGoldCost(101, 2), 50, "Level 2 upgrade Gold must be half a raw-production hour.");
+assert.equal(gear.getUpgradeGoldCost(101, 3), 101, "Level 3 upgrade Gold must be one raw-production hour.");
+assert.equal(gear.getUpgradeGoldCost(101, 4), 202, "Level 4 upgrade Gold must be two raw-production hours.");
+assert.equal(gear.getUpgradeGoldCost(101, 5), 404, "Common Level 5 must quote the four-hour promotion cost.");
 assert.deepEqual([1, 2, 3, 4, 5].map(gear.getBaseCopyCountForLevel), [1, 2, 4, 8, 16], "Same-level merging must double the underlying Level 1 copy count each level.");
-assert.deepEqual([1, 2, 3, 4, 5].map(gear.getCumulativeGoldHoursForLevel), [0, .5, 2, 6, 16], "Gear's cumulative Gold-hour progression is incorrect.");
+assert.deepEqual([1, 2, 3, 4, 5].map(gear.getCumulativeGoldHoursForLevel), [0, .25, 1, 3, 8], "Gear's cumulative Gold-hour progression is incorrect.");
 for (const helper of ["getUpgradeGoldCost", "getBaseCopyCountForLevel", "getCumulativeGoldHoursForLevel", "consumeUpgradeInputs"]) {
   assert.equal(serverGear[helper].toString(), gear[helper].toString(), `Client and server ${helper} must stay synchronized.`);
 }
@@ -298,13 +298,16 @@ const wrongGear = { ...previewDuplicate, gearKey: otherDefinition.gearKey, build
 assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, wrongGear]).canUpgrade, false, "Different gear must not count as upgrade material.");
 const maxTarget = { ...previewTarget, gearKey: previewTarget.gearKey.replace("_common_", "_legendary_"), level: gear.MAX_LEVEL };
 assert.equal(previewContext.previewUpgrade(maxTarget, [maxTarget, { ...previewDuplicate, level: gear.MAX_LEVEL }]).canUpgrade, false, "Legendary Level 5 gear must never be upgrade-ready.");
-previewContext.state.gold = 49;
+previewContext.state.gold = 24;
 const insufficientGoldPreview = previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]);
 assert.equal(insufficientGoldPreview.canUpgrade, false, "An item without enough gold must not be upgrade-ready.");
 assert.equal(insufficientGoldPreview.hasMatchingMaterial, true, "Insufficient gold must not hide a valid same-level material.");
 assert.equal(insufficientGoldPreview.hasEnoughGold, false);
-assert.match(insufficientGoldPreview.reason, /^Insufficient gold\. Requires 50 gold; 49 available\.$/);
-assert.equal(insufficientGoldPreview.upgradeGold, 50, "The UI used Stronghold-inclusive global production instead of authoritative regular-city pricing.");
+assert.match(insufficientGoldPreview.reason, /^Insufficient gold\. Requires 25 gold; 24 available\.$/);
+assert.equal(insufficientGoldPreview.upgradeGold, 25, "The UI used Stronghold-inclusive global production instead of authoritative regular-city pricing.");
+previewContext.state.gold = 25;
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, true,
+  "Exactly the revised Gold price and a matching copy must allow the upgrade.");
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances, upgradeContext\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
 assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances, upgradeContext\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
 assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");
