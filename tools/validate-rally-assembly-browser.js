@@ -6,6 +6,9 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+// Transformed DOMRects can report 44 CSS pixels as 43.999996 on Linux Chromium.
+// Tolerate floating-point noise only, not a materially undersized touch target.
+const minimumMeasuredTargetHeight = 44 - 0.001;
 const artifacts = path.resolve(__dirname, "../release-artifacts/rally-assembly");
 async function main() {
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
@@ -35,7 +38,7 @@ async function main() {
         const x=r.left+r.width/2,y=r.top+r.height/2;
         return {x,y,height:r.height,hit:button.contains(document.elementFromPoint(x,y))};
       })()`);
-      assert(point.height >= 44 && point.hit, `${expression}: ${JSON.stringify(point)}`);
+      assert(point.height >= minimumMeasuredTargetHeight && point.hit, `${expression}: ${JSON.stringify(point)}`);
       await client.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1 });
       await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1 });
     };
@@ -134,11 +137,11 @@ async function main() {
         })()`);
         // The first render waits for optional Clan styles, then initializes clan
         // navigation. Choose a tab only after that real navigation is available.
-        await ready('clanContent.querySelector("#clanSectionTabWarroom")?.getBoundingClientRect().height >= 44');
+        await ready(`clanContent.querySelector("#clanSectionTabWarroom")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
         await click('clanContent.querySelector("#clanSectionTabOverview")');
         await ready('clanContent.querySelector("#clanSectionTabOverview")?.getAttribute("aria-selected") === "true"');
         await click('clanContent.querySelector("#clanSectionTabWarroom")');
-        await ready('clanContent.querySelector("#clanSectionTabWarroom")?.getAttribute("aria-selected") === "true" && clanContent.querySelector("[data-rally-action=assembly]")?.getBoundingClientRect().height >= 44');
+        await ready(`clanContent.querySelector("#clanSectionTabWarroom")?.getAttribute("aria-selected") === "true" && clanContent.querySelector("[data-rally-action=assembly]")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
         await evaluate('clanContent.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
         await screenshot(`war-room-${visit}-${width}`);
         await click('clanContent.querySelector("[data-rally-action=assembly]")');
@@ -148,7 +151,7 @@ async function main() {
       await ready('modal.open && !!modalBody.querySelector("[data-rally-action=assembly]")');
       await evaluate('modalBody.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
       await screenshot(`activity-rally-${width}`);
-      assert(await evaluate('(() => {const r=modalBody.querySelector("[data-rally-action=assembly]").getBoundingClientRect();return r.height>=44&&r.left>=0&&r.right<=innerWidth;})()'));
+      assert(await evaluate(`(() => {const r=modalBody.querySelector("[data-rally-action=assembly]").getBoundingClientRect();return r.height>=${minimumMeasuredTargetHeight}&&r.left>=0&&r.right<=innerWidth;})()`));
       await evaluate('modalBody.querySelector("[data-rally-action=assembly]").click()');
       await ready('!modal.open');
       // A failed/stale reservation must never grant extra sendable troops.
