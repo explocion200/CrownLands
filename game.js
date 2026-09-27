@@ -14848,8 +14848,7 @@ function getIslandMapGridLayout() {
   return { entries, minX, minY, stepX, stepY, stageWidth, stageHeight };
 }
 
-function getIslandMapPosition(region) {
-  const layout = getIslandMapGridLayout();
+function getIslandMapPosition(region, layout = getIslandMapGridLayout()) {
   const { gridX, gridY } = getIslandMapGridCoordinate(region);
   return {
     x: ISLAND_PICKER_STAGE_PADDING + (gridX - layout.minX) * layout.stepX + ISLAND_PICKER_TILE_WIDTH / 2,
@@ -14857,8 +14856,8 @@ function getIslandMapPosition(region) {
   };
 }
 
-function getIslandMapIconStyle(region) {
-  const position = getIslandMapPosition(region);
+function getIslandMapIconStyle(region, layout) {
+  const position = getIslandMapPosition(region, layout);
   return [
     `--island-x:${formatPathNumber(position.x)}px`,
     `--island-y:${formatPathNumber(position.y)}px`,
@@ -14867,8 +14866,7 @@ function getIslandMapIconStyle(region) {
   ].join(";");
 }
 
-function getIslandMapPickerStyle() {
-  const layout = getIslandMapGridLayout();
+function getIslandMapPickerStyle(layout = getIslandMapGridLayout()) {
   const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
   return [
     `--island-grid-base-w:${Math.round(layout.stageWidth)}px`,
@@ -14909,15 +14907,14 @@ function getIslandMapConnectionEdges() {
   return Array.from(edges.values());
 }
 
-function renderIslandMapConnections() {
-  const layout = getIslandMapGridLayout();
+function renderIslandMapConnections(layout = getIslandMapGridLayout()) {
   const regionById = new Map(WORLD_REGIONS.map(region => [normalizeRegionId(region.id), region]));
   const lines = getIslandMapConnectionEdges().map(edge => {
     const source = regionById.get(edge.source);
     const target = regionById.get(edge.target);
     if (!source || !target) return "";
-    const start = getIslandMapPosition(source);
-    const end = getIslandMapPosition(target);
+    const start = getIslandMapPosition(source, layout);
+    const end = getIslandMapPosition(target, layout);
     return `<line class="island-map-connection" x1="${formatPathNumber(start.x)}" y1="${formatPathNumber(start.y)}" x2="${formatPathNumber(end.x)}" y2="${formatPathNumber(end.y)}"></line>`;
   }).filter(Boolean).join("");
   return `<svg class="island-map-connections" viewBox="0 0 ${Math.round(layout.stageWidth)} ${Math.round(layout.stageHeight)}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
@@ -14943,7 +14940,7 @@ function renderIslandMapTowerFrame(regionId) {
 }
 
 
-function renderIslandMapTile(region, activeRegionId, homeRegionId) {
+function renderIslandMapTile(region, activeRegionId, homeRegionId, layout) {
   const regionId = normalizeRegionId(region.id);
   const label = region.label || regionId;
   const summaryText = getIslandTileSummaryText(regionId);
@@ -14965,7 +14962,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
     <button
       class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${hasRedTrim ? "red-trim" : ""} ${feature.classNames} ${escapeHtml(region.palette || "heartland")}"
       data-island-region="${escapeHtml(regionId)}"
-      style="${getIslandMapIconStyle(region)}"
+      style="${getIslandMapIconStyle(region, layout)}"
       type="button"
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
@@ -14985,6 +14982,9 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
 }
 
 function renderIslandSwitcherModalContent() {
+  // Share one geometry snapshot for this opening; the next opening picks up
+  // newly available regions without retaining stale world data globally.
+  const layout = getIslandMapGridLayout();
   const activeRegionId = getActiveOnlineRegionId();
   const homeRegionId = getMainCityRegionId();
   const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
@@ -14997,12 +14997,12 @@ function renderIslandSwitcherModalContent() {
         <div class="zoom-controls"><button type="button" data-atlas-zoom="-1" aria-label="Zoom out">−</button><output data-atlas-zoom-value aria-label="Map zoom"></output><button type="button" data-atlas-zoom="1" aria-label="Zoom in">+</button></div>
       </div>
       ${HOLDING_TOWER_UI.mapFeatureLegend.replace("</div>", '<span><strong class="atlas-royal-legend" aria-hidden="true">♛</strong> Stronghold / Citadel</span></div>')}
-      <div class="island-map-picker" style="${getIslandMapPickerStyle()}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
+      <div class="island-map-picker" style="${getIslandMapPickerStyle(layout)}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
         <div class="island-map-stage">
           <div class="island-map-canvas-frame">
             <div class="island-map-canvas">
-              ${renderIslandMapConnections()}
-              ${WORLD_REGIONS.filter(region => isWorldRegionRuntimeActive(region.id)).map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+              ${renderIslandMapConnections(layout)}
+              ${layout.entries.map(({ region }) => renderIslandMapTile(region, activeRegionId, homeRegionId, layout)).join("")}
             </div>
           </div>
         </div>
@@ -15011,6 +15011,8 @@ function renderIslandSwitcherModalContent() {
   `;
   if (!modal.open) modal.showModal();
   const picker = modalBody.querySelector(".island-map-picker");
+  picker._islandMapLayout = layout;
+  picker._islandMapContentBounds = getIslandMapContentBounds(layout.entries.map(entry => entry.region), layout);
   attachIslandMapPickerPan(picker);
   attachIslandMapPickerZoom(picker);
   setIslandMapPickerOpeningView(picker, activeRegionId || homeRegionId);
@@ -15033,14 +15035,14 @@ function bindIslandAtlasControls(picker) {
   const focusRegion = (regionId, zoom = getIslandMapPickerZoom(picker)) => {
     const region = WORLD_REGIONS.find(entry => normalizeRegionId(entry.id) === normalizeRegionId(regionId));
     if (!region || !isWorldRegionRuntimeActive(region.id)) return;
-    const position = getIslandMapPosition(region);
+    const position = getIslandMapPosition(region, picker._islandMapLayout);
     controller.moveTo({ x: picker.clientWidth / 2 - position.x * zoom, y: picker.clientHeight / 2 - position.y * zoom, zoom });
   };
   modalBody.querySelectorAll('[data-atlas-focus]').forEach(button => button.addEventListener('click', () => {
     focusRegion(button.dataset.atlasFocus, getIslandMapPickerOpeningZoom(picker));
   }));
   modalBody.querySelector('[data-atlas-fit]')?.addEventListener('click', () => {
-    const bounds = getIslandMapContentBounds();
+    const bounds = picker._islandMapContentBounds;
     const zoom = getIslandMapPickerFitZoom(picker);
     controller.moveTo({ x: picker.clientWidth / 2 - (bounds.left + bounds.right) / 2 * zoom, y: picker.clientHeight / 2 - (bounds.top + bounds.bottom) / 2 * zoom, zoom });
   });
@@ -15083,7 +15085,7 @@ function clampIslandMapPickerZoom(value, minimumZoom = ISLAND_PICKER_MIN_ZOOM) {
 
 function getIslandMapPickerFitZoom(picker) {
   if (!picker?.clientWidth || !picker?.clientHeight) return ISLAND_PICKER_MIN_ZOOM;
-  const bounds = getIslandMapContentBounds();
+  const bounds = picker._islandMapContentBounds || getIslandMapContentBounds();
   const margin = getIslandMapPickerViewportMargin(picker);
   return clampIslandMapPickerZoom(Math.min(
     ISLAND_PICKER_MAX_ZOOM,
@@ -15092,12 +15094,11 @@ function getIslandMapPickerFitZoom(picker) {
   ));
 }
 
-function getIslandMapContentBounds(regions = WORLD_REGIONS.filter(region => isWorldRegionRuntimeActive(region.id))) {
+function getIslandMapContentBounds(regions = WORLD_REGIONS.filter(region => isWorldRegionRuntimeActive(region.id)), layout = getIslandMapGridLayout()) {
   const positions = (Array.isArray(regions) ? regions : [])
-    .map(region => getIslandMapPosition(region))
+    .map(region => getIslandMapPosition(region, layout))
     .filter(position => Number.isFinite(position?.x) && Number.isFinite(position?.y));
   if (!positions.length) {
-    const layout = getIslandMapGridLayout();
     return { left: 0, top: 0, right: layout.stageWidth, bottom: layout.stageHeight, width: layout.stageWidth, height: layout.stageHeight };
   }
   const left = Math.min(...positions.map(position => position.x - ISLAND_PICKER_TILE_WIDTH / 2));
@@ -15114,7 +15115,7 @@ function getIslandMapPickerViewportMargin(picker) {
 
 function getIslandMapPickerOpeningZoom(picker) {
   if (!picker?.clientWidth || !picker?.clientHeight) return getIslandMapPickerMinimumZoom(picker);
-  const layout = getIslandMapGridLayout();
+  const layout = picker._islandMapLayout || getIslandMapGridLayout();
   const margin = getIslandMapPickerViewportMargin(picker);
   const neighborhoodWidth = ISLAND_PICKER_TILE_WIDTH + layout.stepX * 2;
   const neighborhoodHeight = ISLAND_PICKER_TILE_HEIGHT + layout.stepY * (picker.clientHeight < 400 ? 0.55 : 1.5);
@@ -15191,7 +15192,11 @@ function getIslandMapPickerAnchoredCamera(anchor, nextZoom, targetViewportX = an
 
 function createIslandMapPickerCameraController(picker) {
   const frame = picker?.querySelector?.(".island-map-canvas-frame");
-  const bounds = getIslandMapContentBounds();
+  const bounds = picker._islandMapContentBounds || getIslandMapContentBounds();
+  const zoomOutput = modalBody.querySelector("[data-atlas-zoom-value]");
+  const featureTrims = picker.querySelectorAll(".island-map-feature-trim");
+  let renderedZoom = null;
+  let renderedTransform = "";
   let current = { x: islandMapPickerViewState.x, y: islandMapPickerViewState.y, zoom: getIslandMapPickerZoom(picker) };
   let target = { ...current };
   let animationFrame = 0;
@@ -15212,12 +15217,23 @@ function createIslandMapPickerCameraController(picker) {
     islandMapPickerViewState.y = current.y;
     islandMapPickerViewState.zoom = current.zoom;
     islandMapPickerViewState.hasView = true;
-    picker.dataset.islandMapZoom = String(current.zoom);
-    picker.classList.toggle("atlas-overview", current.zoom < 0.26);
-    const zoomOutput = modalBody.querySelector("[data-atlas-zoom-value]");
-    if (zoomOutput) zoomOutput.textContent = `${Math.round(current.zoom * 100)}%`;
-    picker.style.setProperty("--island-map-indicator-scale", formatIslandCameraNumber(1 / current.zoom));
-    if (frame) frame.style.transform = `translate3d(${formatIslandCameraNumber(current.x)}px, ${formatIslandCameraNumber(current.y)}px, 0) scale(${formatIslandCameraNumber(current.zoom)})`;
+    // Panning changes only the composited transform. Rewriting inherited zoom
+    // styles here forces every card (and its SVG artwork) to restyle each frame.
+    if (renderedZoom !== current.zoom) {
+      renderedZoom = current.zoom;
+      picker.dataset.islandMapZoom = String(current.zoom);
+      const overview = current.zoom < 0.26;
+      if (picker.classList.contains("atlas-overview") !== overview) picker.classList.toggle("atlas-overview", overview);
+      const label = `${Math.round(current.zoom * 100)}%`;
+      if (zoomOutput && zoomOutput.textContent !== label) zoomOutput.textContent = label;
+      const indicatorScale = formatIslandCameraNumber(1 / current.zoom);
+      for (const trim of featureTrims) trim.style.setProperty("--island-map-indicator-scale", indicatorScale);
+    }
+    const transform = `translate3d(${formatIslandCameraNumber(current.x)}px, ${formatIslandCameraNumber(current.y)}px, 0) scale(${formatIslandCameraNumber(current.zoom)})`;
+    if (frame && renderedTransform !== transform) {
+      renderedTransform = transform;
+      frame.style.transform = transform;
+    }
   };
 
   const tick = timestamp => {
@@ -15245,7 +15261,7 @@ function createIslandMapPickerCameraController(picker) {
     } else {
       lastFrameAt = 0;
       zoomAnchor = null;
-      picker.classList.remove("zooming");
+      if (picker.classList.contains("zooming")) picker.classList.remove("zooming");
     }
   };
 
@@ -15266,7 +15282,7 @@ function createIslandMapPickerCameraController(picker) {
     zoomAnchor = getIslandMapPickerZoomAnchor(current, focalX, focalY);
     target = clampCamera(getIslandMapPickerAnchoredCamera(zoomAnchor, zoom));
     immediate = options.immediate === true;
-    picker.classList.add("zooming");
+    if (!picker.classList.contains("zooming")) picker.classList.add("zooming");
     schedule();
     return { ...target };
   };
@@ -15277,7 +15293,7 @@ function createIslandMapPickerCameraController(picker) {
     lastFrameAt = 0;
     render(target);
     zoomAnchor = null;
-    picker.classList.remove("zooming");
+    if (picker.classList.contains("zooming")) picker.classList.remove("zooming");
   };
 
   const cancel = () => {
@@ -15286,7 +15302,7 @@ function createIslandMapPickerCameraController(picker) {
     lastFrameAt = 0;
     target = { ...current };
     zoomAnchor = null;
-    picker.classList.remove("zooming");
+    if (picker.classList.contains("zooming")) picker.classList.remove("zooming");
   };
 
   const renderNow = camera => {
@@ -15296,7 +15312,7 @@ function createIslandMapPickerCameraController(picker) {
     zoomAnchor = null;
     target = clampCamera({ ...current, ...camera });
     render(target);
-    picker.classList.remove("zooming");
+    if (picker.classList.contains("zooming")) picker.classList.remove("zooming");
     return { ...current };
   };
 
@@ -15408,9 +15424,9 @@ async function refreshIslandMapHomeRegionOnceForOpen() {
 function setIslandMapPickerOpeningView(picker, regionId) {
   if (!picker) return false;
   const region = WORLD_REGIONS.find(entry => normalizeRegionId(entry.id) === normalizeRegionId(regionId)) || WORLD_REGIONS[0];
-  const bounds = getIslandMapContentBounds();
+  const bounds = picker._islandMapContentBounds || getIslandMapContentBounds();
   const position = region
-    ? getIslandMapPosition(region)
+    ? getIslandMapPosition(region, picker._islandMapLayout)
     : { x: (bounds.left + bounds.right) / 2, y: (bounds.top + bounds.bottom) / 2 };
   const apply = () => {
     if (!picker.clientWidth || !picker.clientHeight) return false;

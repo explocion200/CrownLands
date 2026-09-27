@@ -318,6 +318,9 @@ async function main() {
   assert(globalData.senderUid === outsider.uid, "Global message sender was not assigned from auth.");
   assert(globalData.senderDisplayName === "Outer Ruler", "Global message display name was not assigned from the profile.");
   assert(globalData.text === "Hail, Crownlands!", "Global message text changed unexpectedly.");
+  for (const key of ["id", "channel", "channelId", "senderUid", "senderDisplayName", "text", "status", "createdAtMs"]) {
+    assert(globalSend.result.message?.[key] === globalData[key], `Confirmed Global response differs from stored ${key}.`);
+  }
   assert(globalData.expiresAtMs > Date.now() + 23 * 60 * 60 * 1000, "Global message retention is shorter than expected.");
   assert(globalData.expiresAtMs < Date.now() + 25 * 60 * 60 * 1000, "Global message retention is longer than expected.");
 
@@ -344,6 +347,10 @@ async function main() {
     channel: "clan", text: "Immediate Clan retry", requestId: `chat_${suffix}_clan_clan_fast`,
   }), "resource-exhausted", "Clan to Clan cooldown");
   const clanAPath = `clans/${clanA}/messages/${clanSend.result.messageId}`;
+  const clanData = (await db.doc(clanAPath).get()).data();
+  for (const key of ["id", "channel", "channelId", "senderUid", "senderDisplayName", "text", "status", "createdAtMs"]) {
+    assert(clanSend.result.message?.[key] === clanData[key], `Confirmed Clan response differs from stored ${key}.`);
+  }
   assert((await clientDocument(author, clanAPath)).status === 200, "Clan author could not read Clan Chat.");
   assert((await clientDocument(switcher, clanAPath)).status === 200, "Active clan member could not read Clan Chat.");
   assert((await runChatQuery(switcher, `clans/${clanA}`)).status === 200, "Active clan member could not subscribe to Clan Chat.");
@@ -383,6 +390,7 @@ async function main() {
   const replayedUnsafe = await callChat(unsafeSender, unsafePayload);
   assert(firstUnsafe.result?.ok === true && !firstUnsafe.result.replayed, `Unsafe-text send failed: ${JSON.stringify(firstUnsafe.body)}`);
   assert(replayedUnsafe.result?.ok === true && replayedUnsafe.result.replayed, "Idempotent retry was not replayed.");
+  assert(!replayedUnsafe.result.message, "Receipt replay must not restore message contents that may have been moderated or expired.");
   assert(firstUnsafe.result.messageId === replayedUnsafe.result.messageId, "Idempotent retry created a different message ID.");
   assert(replayedUnsafe.result.retryAfterMs > 0 && replayedUnsafe.result.retryAfterMs <= CHAT.CHAT_SEND_COOLDOWN_MS,
     "Idempotent retry did not preserve the original cooldown receipt.");

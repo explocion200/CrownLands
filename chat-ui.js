@@ -380,6 +380,7 @@
     let sessionUid = "";
     let channel = "global";
     let sending = false;
+    let activeSend = null;
     let loadingOlder = false;
     let dialogCloseTarget = "";
     let messages = { global: [], clan: [] };
@@ -557,6 +558,13 @@
     }
 
     function handleMessages(targetChannel, incoming, metadata = {}) {
+      // A newer realtime edit/removal wins over an in-flight send response.
+      if (activeSend?.channel === targetChannel) {
+        for (const message of incoming) activeSend.observedIds.add(message.id);
+        for (const change of metadata.changes || []) {
+          if (change?.message?.id) activeSend.observedIds.add(change.message.id);
+        }
+      }
       const wasAtBottom = targetChannel === channel && isMessageListNearBottom(elements.list);
       messages[targetChannel] = mergeMessages(messages[targetChannel], incoming);
       pruneGlobalMessages();
@@ -752,7 +760,7 @@
       const text = String(elements.input?.value || "");
       const length = Array.from(text).length;
       const cooldownRemainingMs = cooldown.remainingMs();
-      elements.input.disabled = noClan || sending;
+      elements.input.disabled = noClan;
       elements.input.placeholder = noClan ? "Join a clan to use Clan Chat" : "Enter your message...";
       elements.send.disabled = noClan || sending || cooldownRemainingMs > 0 || !text.trim() || length > CHAT_MESSAGE_MAX_LENGTH;
       elements.send.textContent = sending
@@ -781,32 +789,56 @@
         return false;
       }
       if (channel === "clan" && !clanId) return false;
+      const draft = elements.input.value;
+      const request = { channel, clanId, generation: sessionGeneration, observedIds: new Set() };
+      const isCurrentComposer = () => channel === request.channel
+        && (request.channel !== "clan" || clanId === request.clanId);
+      activeSend = request;
       sending = true;
       setStatus("");
       renderComposer();
       try {
-        const result = await api.sendChatMessage({ channel, text, requestId: createRequestId() });
-        elements.input.value = "";
+        const result = await api.sendChatMessage({ channel: request.channel, text, requestId: createRequestId() });
+        if (activeSend !== request || request.generation !== sessionGeneration) return false;
+        if (isCurrentComposer() && elements.input.value === draft) elements.input.value = "";
         cooldown.start(chatCooldownRemainingMs(result) || CHAT_SEND_COOLDOWN_MS);
+        const message = result?.message;
+        if (result?.ok && !result.replayed && message?.id === result.messageId
+          && message.senderUid === uid && message.channel === request.channel
+          && (request.channel !== "clan" || request.clanId === clanId && message.channelId === clanId)
+          && !errors[request.channel] && !request.observedIds.has(message.id)) {
+          try {
+            handleMessages(request.channel, [message]);
+          } catch (error) {
+            // Delivery succeeded; a presentation failure must not invite a resend.
+            console.warn("Could not display the confirmed chat message.", error);
+          }
+        }
         renderComposer();
         return true;
       } catch (error) {
+        if (activeSend !== request || request.generation !== sessionGeneration) return false;
         const retryAfterMs = chatCooldownRemainingMs(error);
         if (retryAfterMs > 0) {
           cooldown.start(retryAfterMs);
-          setStatus(`Wait ${Math.max(1, Math.ceil(retryAfterMs / 1000))}s`, "cooldown");
+          if (isCurrentComposer()) setStatus(`Wait ${Math.max(1, Math.ceil(retryAfterMs / 1000))}s`, "cooldown");
           return false;
         }
         const message = String(error?.message || "Chat message could not be sent.")
           .replace(/^Firebase:\s*/i, "")
           .replace(/^\[[^\]]+\]\s*/, "");
-        setStatus(message, "error");
-        options.onToast?.(message);
+        if (isCurrentComposer()) {
+          setStatus(message, "error");
+          options.onToast?.(message);
+        }
         return false;
       } finally {
-        sending = false;
-        renderComposer();
-        elements.input.focus();
+        if (activeSend === request) {
+          activeSend = null;
+          sending = false;
+          renderComposer();
+          if (mode === "full" && isCurrentComposer() && !elements.input.disabled) elements.input.focus();
+        }
       }
     }
 
@@ -916,6 +948,10 @@
       uid = nextUid;
       clanId = nextClanId;
       if (accountChanged) {
+        activeSend = null;
+        sending = false;
+        if (nextUid !== sessionUid) elements.input.value = "";
+        setStatus("");
         translation?.setAccount(uid);
         sessionGeneration += 1;
         cooldown.stop();
@@ -962,6 +998,8 @@
 
     function dispose(options = {}) {
       sessionGeneration += 1;
+      activeSend = null;
+      sending = false;
       translation?.dispose();
       if (expiryTimer !== null) cancelTimer?.(expiryTimer);
       expiryTimer = null;
@@ -981,6 +1019,8 @@
       unread = { global: false, clan: false };
       lastReadAtMs = { global: null, clan: null };
       if (resetSession) {
+        elements.input.value = "";
+        setStatus("");
         sessionStarted = false;
         sessionUid = "";
         setMode("closed");
