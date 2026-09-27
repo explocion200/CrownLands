@@ -43,7 +43,7 @@ for (const skill of expectedSkillIds) {
 
 requireMatch(serverSource, /function normalizeSkillUpgrades[\s\S]*?normalizeSkillLevelForSkill/, "Server skill levels are not capped during normalization.");
 requireMatch(clientSource, /function normalizeUpgrades[\s\S]*?normalizeSkillUpgradeLevel/, "Client skill levels are not capped during normalization.");
-requireMatch(serverSource, /function getAttackPower[\s\S]*?skillMultiplier\(attackerProfile, "swordmastery"\)/, "Swordmastery is missing from server attack power.");
+requireMatch(serverSource, /function getAttackPower[\s\S]*?COMMON_GEAR\.capBonus\("attack", getSkillPercent\(attackerProfile, "swordmastery"\) \+ getCommonGearBonuses\(attackerProfile\)\.attackStrength\)/, "Swordmastery is missing from server attack power.");
 requireMatch(serverSource, /function getCityStats[\s\S]*?getSkillPercent\(defenderProfile, "shieldwallDiscipline"\)[\s\S]*?BASE_TROOP_DEFENSE_POWER/, "Shieldwall Discipline is missing from server soldier defense.");
 requireMatch(serverSource, /function getCityStats[\s\S]*?getSkillPercent\(defenderProfile, "stoneworks"\)/, "Stoneworks is missing from server wall defense.");
 requireMatch(serverSource, /function getCityProductionStats[\s\S]*?getSkillPercent\(profile, "taxStewardship"\)/, "Tax Stewardship is missing from server city production.");

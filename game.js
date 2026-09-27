@@ -1973,8 +1973,8 @@ let bulkOrderActionRequestId = 0;
 let pendingBulkOrderAction = null;
 const bulkOrderRequestIds = new Map();
 const pendingDirectScoutTargets = new Set();
-const scoutResolutionRequests = new Map();
-const scoutResolutionRetries = new Map();
+const armyResolutionRequests = new Map();
+const armyResolutionRetries = new Map();
 let scoutPresentationFrame = 0;
 const scoutPresentationTargetIds = new Set();
 let scoutReportRead = null;
@@ -11127,9 +11127,9 @@ function clearScoutResponsivenessState() {
   scoutPresentationFrame = 0;
   scoutPresentationTargetIds.clear();
   scoutReportRead = null;
-  for (const id of scoutResolutionRequests.keys()) resolvingOnlineArmyIds.delete(id);
-  scoutResolutionRequests.clear();
-  scoutResolutionRetries.clear();
+  for (const id of armyResolutionRequests.keys()) resolvingOnlineArmyIds.delete(id);
+  armyResolutionRequests.clear();
+  armyResolutionRetries.clear();
   queueScoutResolution = createScoutResolutionQueue();
   clearTimeout(scoutEconomyRefreshTimer);
   scoutEconomyRefreshTimer = 0;
@@ -19138,7 +19138,7 @@ function clearOnlineHeldCampWatcher({ clear = true } = {}) {
 }
 
 function purgeResolvedOnlineArmy(onlineId, { removeLocal = true } = {}) {
-  scoutResolutionRetries.delete(String(onlineId));
+  armyResolutionRetries.delete(String(onlineId));
   const id = String(onlineId || "").trim();
   if (!id) return false;
   let changed = false;
@@ -20010,9 +20010,9 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   }
 
   // A verified reconnect may restore authorization; ordinary snapshots retain backoff.
-  for (const [id, retry] of scoutResolutionRetries) {
+  for (const [id, retry] of armyResolutionRetries) {
     if (retry.retryAtMs === Infinity) {
-      scoutResolutionRetries.delete(id);
+      armyResolutionRetries.delete(id);
       const mission = state.attacks.find(army => getOnlineArmyResolutionId(army) === id);
       if (mission) mission.resolveRetryAtMs = 0;
     }
@@ -20215,9 +20215,11 @@ async function resolveServerArmyMission(mission) {
   const requestScope = getOnlineSessionRequestScope();
   const scout = mission.kind === "scout";
   const requestToken = { scope: requestScope };
-  const retry = scoutResolutionRetries.get(onlineId);
-  if (scout && (scoutResolutionRequests.has(onlineId)
-    || (retry?.scope === requestScope && retry.retryAtMs > Date.now()))) return false;
+  const retry = armyResolutionRetries.get(onlineId);
+  // Every arrival entry point shares the canonical ID, including replacement
+  // snapshots that do not carry the local mission's retry timestamp.
+  if (armyResolutionRequests.has(onlineId)
+    || (retry?.scope === requestScope && retry.retryAtMs > Date.now())) return false;
   const routeRegionIds = mission.onlineRegionIds?.length
     ? mission.onlineRegionIds
     : getMissionRegionIds(mission);
@@ -20225,7 +20227,7 @@ async function resolveServerArmyMission(mission) {
 
   if (resolvingOnlineArmyIds.has(onlineId)) return false;
   resolvingOnlineArmyIds.add(onlineId);
-  if (scout) scoutResolutionRequests.set(onlineId, requestToken);
+  armyResolutionRequests.set(onlineId, requestToken);
   const startedAt = performance.now();
   try {
     const resolveArrival = () => {
@@ -20250,7 +20252,7 @@ async function resolveServerArmyMission(mission) {
     if (shouldBackfillScoutReports) {
       void loadServerReportsOnce();
     }
-    if (scout) scoutResolutionRetries.delete(onlineId);
+    armyResolutionRetries.delete(onlineId);
     mission.resolveRetryAtMs = 0;
     onlineLastError = "";
     saveGame();
@@ -20266,24 +20268,24 @@ async function resolveServerArmyMission(mission) {
     if (requestScope !== getOnlineSessionRequestScope()) return false;
     if (isServerArmyNotArrivedError(error)) {
       deferServerArmyResolutionRetry(mission);
-      if (scout) scoutResolutionRetries.set(onlineId, { scope: requestScope, attempts: 0, retryAtMs: mission.resolveRetryAtMs });
+      armyResolutionRetries.set(onlineId, { scope: requestScope, attempts: 0, retryAtMs: mission.resolveRetryAtMs });
       return false;
     }
-    if (scout) {
-      const attempts = Math.min(4, (retry?.attempts || 0) + 1);
-      const code = String(error?.code || "").replace(/^functions\//, "");
-      const permanent = ["permission-denied", "unauthenticated", "invalid-argument", "failed-precondition", "not-found"].includes(code);
-      const delay = Math.min(8000, 1000 * 2 ** (attempts - 1)) * (0.8 + Math.random() * 0.4);
-      const retryAtMs = permanent ? Infinity : Date.now() + Math.round(delay);
-      scoutResolutionRetries.set(onlineId, { scope: requestScope, attempts, retryAtMs });
-      mission.resolveRetryAtMs = retryAtMs;
-    }
+    const attempts = Math.min(4, (retry?.attempts || 0) + 1);
+    const code = String(error?.code || "").replace(/^functions\//, "");
+    const permanent = ["permission-denied", "unauthenticated", "invalid-argument", "failed-precondition", "not-found"].includes(code);
+    const delay = Math.min(8000, 1000 * 2 ** (attempts - 1)) * (0.8 + Math.random() * 0.4);
+    const retryAtMs = permanent ? Infinity : Date.now() + Math.round(delay);
+    armyResolutionRetries.set(onlineId, { scope: requestScope, attempts, retryAtMs });
+    mission.resolveRetryAtMs = retryAtMs;
     onlineLastError = error?.message || String(error);
     console.warn("Could not resolve server army", error);
     return false;
   } finally {
-    if (scoutResolutionRequests.get(onlineId) === requestToken) scoutResolutionRequests.delete(onlineId);
-    if (!scout || requestScope === getOnlineSessionRequestScope()) resolvingOnlineArmyIds.delete(onlineId);
+    if (armyResolutionRequests.get(onlineId) === requestToken) {
+      armyResolutionRequests.delete(onlineId);
+      resolvingOnlineArmyIds.delete(onlineId);
+    }
   }
 }
 

@@ -20,7 +20,9 @@ async function main(){
   const base=execFileSync("git",["merge-base","HEAD","origin/main"],{cwd:root,encoding:"utf8"}).trim();
   const baseline=execFileSync("git",["show",`${base}:game.js`],{cwd:root,encoding:"utf8",maxBuffer:8*1024*1024});
   const replacements=["scoutTarget","renderScoutRequestFeedback","launchAutomaticServerScout","mergeServerReports","resolveServerArmyMission"];
-  const functions=source=>replacements.map(name=>(source.includes(`async function ${name}(`)?"async ":"")+extractFunction(source,name)).join("\n");
+  // Older baselines used scout-only names for the shared arrival state.
+  const functions=source=>replacements.map(name=>(source.includes(`async function ${name}(`)?"async ":"")+extractFunction(source,name)).join("\n")
+    .replaceAll("scoutResolutionRequests", "armyResolutionRequests").replaceAll("scoutResolutionRetries", "armyResolutionRetries");
   const evidence={base,scope:"Local browser with fixture server responses; no production traffic. Includes 80ms simulated acknowledgement; excludes travel.",viewports:[]};
   let session,client;
   try {
@@ -47,7 +49,7 @@ async function main(){
         if(!qa.target||!qa.source)throw Error("Scouting fixture needs source and target");
         qa.nextFrame=()=>new Promise(resolve=>requestAnimationFrame(()=>resolve(performance.now())));
         qa.reset=()=>{modal.close();state.attacks=[];pendingOutgoingMissions.clear();onlineArmiesByIsland.clear();rebuildOnlineArmies();pendingDirectScoutTargets.clear();
-          resolvedOnlineArmyIds.clear();resolvingOnlineArmyIds.clear();scoutResolutionRequests.clear();scoutResolutionRetries.clear();
+          resolvedOnlineArmyIds.clear();resolvingOnlineArmyIds.clear();armyResolutionRequests.clear();armyResolutionRetries.clear();
           state.scoutReports={};state.battleReports=[];appliedServerReportRevisions.clear();
           selectedTargetId=qa.target.id;selectedSourceId=null;selectedTowerMapId="";sendMode=false;cityLayer.querySelectorAll(".city-action-wheel,.gold-camp-action-wheel").forEach(n=>n.remove());
           renderSelectedForeignWheel(qa.target);};

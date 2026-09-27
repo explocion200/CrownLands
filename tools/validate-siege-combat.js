@@ -47,6 +47,7 @@ assert.deepEqual(economy.siegeCombat, {
 });
 
 const context = {
+  COMMON_GEAR: require("../common-gear.js"),
   BASE_TROOP_ATTACK_POWER: 1.25,
   SIEGE_COMBAT_VERSION: 1,
   FORTIFICATION_STATE_VERSION: 1,
@@ -103,6 +104,9 @@ const context = {
   },
   skillMultiplier() {
     return 1;
+  },
+  getSkillPercent() {
+    return 0;
   },
   activeCommonGearBonuses: { attackStrength: 0, wallRepairSpeed: 0 },
   getCommonGearBonuses() {
@@ -183,6 +187,7 @@ for (const integrityContext of integrityContexts) {
 
 const repairContexts = [server, client].map((source, index) => {
   const repairContext = {
+  COMMON_GEAR: require("../common-gear.js"),
     SIEGE_REPAIR_BASE_MINUTES: 15,
     SIEGE_REPAIR_MINUTES_PER_LEVEL: 0.3,
     Number,
@@ -344,8 +349,8 @@ const cappedRepairReduction = siegeResult({
   garrison: 200,
   repairReductionPercent: 90,
 });
-assert.equal(cappedRepairReduction.fortification.repairReductionPercent, 95, "Wall repair gear exceeded the 95% combined cap.");
-assert.equal(cappedRepairReduction.fortification.repairAddedMs, 4_500, "The 95% repair cap changed the new-damage increment incorrectly.");
+assert.equal(cappedRepairReduction.fortification.repairReductionPercent, 50, "Wall repair gear exceeded the approved 50% combined cap.");
+assert.equal(cappedRepairReduction.fortification.repairAddedMs, 45_000, "The 50% repair cap changed the new-damage increment incorrectly.");
 context.activeCommonGearBonuses = { attackStrength: 0, wallRepairSpeed: 0 };
 const belowThreshold = siegeResult({ attackPower: 49, troops: 49, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(belowThreshold.fortification.meaningfulWallDamage, false);

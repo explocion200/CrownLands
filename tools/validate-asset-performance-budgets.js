@@ -89,7 +89,7 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // 64 KiB. This gear-art update adds no installation-cache assets or scripts.
 // Five-tier definition/layout metadata and cap previews add at most 48 KiB.
 // All 320 gear bitmaps remain outside the startup cache.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48) * 1024;
+const { MAX_INSTALL_PRECACHE_BYTES } = require("./asset-performance-budgets");
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 116 * 1024,

@@ -19,7 +19,7 @@ async function resolutionChecks() {
   const scope=load({
     console:{warn:noop},Date:{now:()=>now},performance:{now:()=>now},Math:Object.assign(Object.create(Math),{random:()=>.5}),
     state:{attacks:[]},RESET_GENERATION:"test",resolvingOnlineArmyIds:new Set(),resolvedOnlineArmyIds:new Set(),
-    scoutResolutionRequests:new Map(),scoutResolutionRetries:new Map(),
+    armyResolutionRequests:new Map(),armyResolutionRetries:new Map(),
     usesServerArmyAuthority:()=>true,getOnlineArmyResolutionId:m=>m.onlineId||m.id,
     getOnlineSessionRequestScope:()=>scopeKey,getMissionRegionIds:()=>["map"],
     getOnlineApi:()=>({resolveArmyOrder:()=>{calls++;return new Promise((resolve,reject)=>requests.push({resolve,reject}));}}),
@@ -41,7 +41,7 @@ async function resolutionChecks() {
   assert.equal(apply,4);assert.equal(present,4);assert.equal(calls,5);
   requests[0].resolve({status:"already-resolved"});await first;await Promise.all(rest);
   assert.equal(backfill,1,"Resolved receipt did not request missing reports");
-  assert.equal(scope.scoutResolutionRequests.size,0,"A missing-report read held the resolution lock");
+  assert.equal(scope.armyResolutionRequests.size,0,"A missing-report read held the resolution lock");
   const tower = scope.resolveServerArmyMission({ ...mission("tower-return"), targetType:"tower" });
   await drain();
   requests.at(-1).resolve({status:"returning",kind:"scout",targetType:"tower",scoutReport:null,
@@ -49,12 +49,12 @@ async function resolutionChecks() {
   await tower;
   assert.equal(backfill,2,"A returning/Veil-blocked Tower scout did not recover its private report entry");
   assert(!scope.resolvedOnlineArmyIds.has("tower-return"),"The scout's return leg was prematurely marked resolved");
-  assert.equal(scope.scoutResolutionRequests.size,0);
+  assert.equal(scope.armyResolutionRequests.size,0);
   // Retries must be keyed to the canonical army, not a transient snapshot object.
   for(let attempt=1;attempt<=5;attempt++) {
     const p=scope.resolveServerArmyMission(mission("retry"));await drain();
     requests.at(-1).reject({code:"functions/unavailable",message:"network"});await p;
-    const retry=scope.scoutResolutionRetries.get("retry");
+    const retry=scope.armyResolutionRetries.get("retry");
     assert.equal(retry.retryAtMs-now,Math.min(8000,1000*2**(attempt-1)));
     const before=calls;await scope.resolveServerArmyMission(mission("retry"));
     scope.resolveOverdueOnlineArmy(mission("retry"));await drain();assert.equal(calls,before);
@@ -62,10 +62,10 @@ async function resolutionChecks() {
   }
   const early=scope.resolveServerArmyMission(mission("clock"));await drain();
   requests.at(-1).reject({code:"functions/failed-precondition",message:"Army has not arrived yet."});await early;
-  assert.equal(scope.scoutResolutionRetries.get("clock").retryAtMs-now,1000);
+  assert.equal(scope.armyResolutionRetries.get("clock").retryAtMs-now,1000);
   const forbidden=scope.resolveServerArmyMission(mission("forbidden"));await drain();
   requests.at(-1).reject({code:"functions/permission-denied"});await forbidden;
-  assert.equal(scope.scoutResolutionRetries.get("forbidden").retryAtMs,Infinity);
+  assert.equal(scope.armyResolutionRetries.get("forbidden").retryAtMs,Infinity);
   const stale=scope.resolveServerArmyMission(mission("stale"));await drain();
   const before=apply;scopeKey="other:realm:session2";requests.at(-1).resolve({status:"resolved",reports:[]});await stale;
   assert.equal(apply,before,"Old-session arrival changed the new account");

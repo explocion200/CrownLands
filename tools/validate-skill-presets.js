@@ -306,7 +306,10 @@ assert.match(stylesSource, /skill-preset-tabs button\.active:not\(\.locked\)[\s\
 assert.match(howToSource, /Current Build[\s\S]*?minus, cost, and plus[\s\S]*?freely refunds[\s\S]*?Reset Skills[\s\S]*?free clear-all[\s\S]*?one hour of base gold production/i);
 assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?minus, cost, and plus[\s\S]*?minus is free[\s\S]*?Reset Skills is also free[\s\S]*?one hour of base gold production/i);
 const expectedBuild = "20260827-instant-cross-map-city-upgrades-r1";
-const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
+const releaseContext = { window: {} };
+vm.runInNewContext(releaseSource, releaseContext);
+const expectedRelease = releaseContext.window.CROWNLANDS_REALM_CONFIG.releaseId;
+assert.ok(expectedRelease, "Client release ID is missing.");
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 0, "Reset Skills is not configured as free.");
