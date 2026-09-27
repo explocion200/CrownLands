@@ -38,6 +38,8 @@ async function main(){
    })()`);
    await ev(`openClanTowerBuilding(shopTower.id,'shop')`);
    await ready('modalBody.dataset.clanShopReady === "true"');
+   assert.equal(await ev('modalBody.querySelector("#tab-overview").getAttribute("aria-selected")'),'true');
+   await ev('modalBody.querySelector("#tab-wares").click()');
    await delay(150);
    assert.equal(await ev('modalBody.querySelectorAll("[data-item]").length'),7);
    const checkLayout=async()=>{
@@ -77,7 +79,7 @@ async function main(){
    assert.equal(await ev(`modalBody.querySelector('#purchase').textContent`),'Not enough Gold');
    await ev(`shopQa.gold=5000000;shopTower.buildings.shop=9;shopQa.level=9;refreshHoldingTower(shopTower.id)`);
    await ev(`modalBody.querySelector('[data-item="shield_12h"]').click();modalBody.querySelector('#purchase').click()`);
-   assert.equal(await ev(`modalBody.querySelector('#tab-upgrades').getAttribute('aria-selected')`),'true');
+   assert.equal(await ev(`modalBody.querySelector('#tab-levels').getAttribute('aria-selected')`),'true');
    assert.equal(await ev(`modalBody.querySelectorAll('.unlock-table tbody tr').length`),10);
    await screenshot(width+'-upgrades');
    await ev(`shopTower.attackBlocked=true;refreshHoldingTower(shopTower.id)`);

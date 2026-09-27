@@ -40,5 +40,22 @@
     }
     return `<div class="ctb-layout"><nav class="ctb-building-list" aria-label="Tower buildings">${cards}</nav><section class="ctb-building-detail" tabindex="0" aria-label="${esc(def.name)} details">${info}${construction}${shop}</section></div>`;
   }
-  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render });
+  // One frame keeps navigation, Treasury, benefits and construction in the same place.
+  function frame(tower, id, { icon, closeId, upgradeId = "upgrade", items = "" } = {}) {
+    const def = B.definition(id), level = B.level(tower.buildings?.[id]);
+    return `<div class="${id}-shell clan-building-shell">
+      <header class="window-header"><img class="header-emblem" src="${esc(icon)}" alt=""><div class="heading"><p>${esc(tower.name)} · Clan Tower</p><h1 id="${id}Title">${esc(def.name)}</h1></div><div class="treasury"><span>Clan Treasury</span><strong><img src="assets/icons/royal-shop-gold-r1.svg" alt="Gold"><span id="balance"></span></strong></div><button id="${closeId}" type="button" class="close" aria-label="Close ${esc(def.name)}">×</button></header>
+      <div class="${id}-body clan-building-body">
+        <aside class="building-panel" tabindex="0" aria-label="${esc(def.name)} building and level"><p class="overline">${esc(tower.clanName || "Your clan")}</p><div class="building-art"><img id="buildingArt" src="${B.art(id, level)}" alt="${esc(def.name)} building"></div><h2 id="buildingLevel"></h2><div id="levelTrack" class="level-track"></div><p id="buildingCaption" class="building-caption"></p><label class="building-navigation"><span class="sr-only">Tower building</span><select data-${id}-building aria-label="Tower building">${B.DEFINITIONS.map(d => `<option value="${d.id}" ${d.id === id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label><div class="building-seal" aria-hidden="true">◆</div><p class="building-note">Completed benefits stay active while this building upgrades.</p></aside>
+        <section class="detail-panel" aria-label="${esc(def.name)} improvements">
+          <nav class="${id}-tabs clan-building-tabs" aria-label="${esc(def.name)} sections"><div role="tablist"><button id="tab-overview" type="button" role="tab" aria-controls="overviewPanel" aria-selected="true" data-section="overview">Overview</button><button id="tab-levels" type="button" role="tab" aria-controls="levelsPanel" aria-selected="false" data-section="levels">All levels</button>${items ? '<button id="tab-wares" type="button" role="tab" aria-controls="waresPanel" aria-selected="false" data-section="wares">Items</button>' : ""}</div><button type="button" class="tower-back" data-${id}-back>← Tower Info</button></nav>
+          <div id="overviewPanel" class="detail-scroll" tabindex="0" role="tabpanel" aria-labelledby="tab-overview"></div>
+          <div id="levelsPanel" class="detail-scroll" tabindex="0" role="tabpanel" aria-labelledby="tab-levels" hidden></div>
+          ${items}
+        </section>
+      </div>
+      <footer class="upgrade-footer"><dl id="upgradeFacts"></dl><button id="${upgradeId}" class="primary" type="button" aria-describedby="upgradeNote"></button><p id="upgradeNote" role="status"></p></footer>
+    </div>`;
+  }
+  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render, frame });
 })(window);
