@@ -329,6 +329,32 @@
   background: rgba(241, 204, 114, .08);
 }
 
+.special-rule-grid .protection-rule {
+  background: #ead8ae;
+  color: #35220e;
+}
+
+.protection-rule h3,
+.protection-rule p,
+.protection-rule table,
+.protection-rule caption,
+.protection-rule th {
+  color: inherit;
+}
+
+.protection-ranges-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.protection-ranges-table th,
+.protection-ranges-table td {
+  padding: .5rem .35rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  border-bottom-color: rgba(53, 34, 14, .25);
+}
+
 .guide-math {
   margin-top: 1rem;
   border: 1px solid rgba(143, 202, 234, .2);

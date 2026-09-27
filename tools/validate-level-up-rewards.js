@@ -791,22 +791,22 @@ function levelUpTroopReward(level) {
 }
 
 const rewardAnchors = new Map([
-  [2, { gold: 1095, troops: 936 }],
-  [10, { gold: 3711, troops: 7416 }],
-  [25, { gold: 8986, troops: 37492 }],
-  [50, { gold: 158013, troops: 148056 }],
-  [51, { gold: 179389, troops: 155299 }],
-  [75, { gold: 7392228, troops: 395655 }],
-  [100, { gold: 179607384, troops: 783108 }],
-  [101, { gold: 205444728, troops: 798428 }],
-  [114, { gold: 966770293, troops: 1017789 }],
-  [115, { gold: 1095759123, troops: 1035720 }],
-  [116, { gold: 1241160091, troops: 1053859 }],
-  [117, { gold: 1403010207, troops: 1072694 }],
-  [120, { gold: 1762483914, troops: 1129020 }],
-  [125, { gold: 2577700098, troops: 1226112 }],
-  [150, { gold: 17249182092, troops: 1781994 }],
-  [200, { gold: 772397290215, troops: 3254092 }],
+  [2, { gold: 1095, troops: 984 }],
+  [10, { gold: 3711, troops: 7784 }],
+  [25, { gold: 8986, troops: 39354 }],
+  [50, { gold: 158013, troops: 155472 }],
+  [51, { gold: 179389, troops: 163073 }],
+  [75, { gold: 7392228, troops: 415428 }],
+  [100, { gold: 179607384, troops: 822258 }],
+  [101, { gold: 205444728, troops: 838358 }],
+  [114, { gold: 966770293, troops: 1068687 }],
+  [115, { gold: 1095759123, troops: 1087500 }],
+  [116, { gold: 1241160091, troops: 1106528 }],
+  [117, { gold: 1403010207, troops: 1126380 }],
+  [120, { gold: 1762483914, troops: 1185440 }],
+  [125, { gold: 2577700098, troops: 1287360 }],
+  [150, { gold: 17249182092, troops: 1871090 }],
+  [200, { gold: 772397290215, troops: 3416806 }],
 ]);
 for (const [level, expected] of rewardAnchors) {
   assert.equal(levelUpGoldReward(level), expected.gold, `Hero level ${level} gold reward changed.`);
@@ -872,7 +872,7 @@ assert.equal(
 );
 assert.equal(
   cumulativeTroopRewardThrough150,
-  86585401,
+  90914284,
   "Cumulative Hero troop rewards through Level 150 changed."
 );
 const threeLevelGoldReward = levelUpGoldReward(50) + levelUpGoldReward(51) + levelUpGoldReward(52);

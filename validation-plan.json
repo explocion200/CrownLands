@@ -1,68 +1,86 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "63570102cdb2202b8220c4bad27a340c48d033c2",
+  "baseCommit": "659b7d072cd1834197953f221cdb5cc17b5507b5",
   "coverage": [
     {
       "paths": [
-        "common-gear.js",
-        "functions/common-gear.js",
         "functions/index.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-reset-gate.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js"
-      ],
-      "reason": "Replace production-scaled fees with all 24 approved fixed Gold prices. Validate every item family, cumulative crafting, 50B integer and balance boundaries, exact quotes, no mutation on failure, historical and concurrent replay, unchanged bonuses and persistent gear after reset claim.",
-      "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js",
+        "game.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-king-power-colors.js",
+        "tools/validate-king-power-colors-browser.js",
+        "tools/validate-layer1-travel.js",
         "tools/validate-gear-bonus-gameplay.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-world-travel.js"
+      ],
+      "reason": "Change attacker-power protection across previews, dispatch, retaliation, mission peer selection, local forecasts and map colors; retain saved schema-v2 marches and combat/XP rules. Verify anchor boundaries, logarithmic continuity, cap scaling and client/server parity. Reduce shared march duration by 10% across order kinds and troop bands, retaining minimums, skill/Gear/Swift modifiers, authoritative routing and idempotent arrival commitments. Cover city/Tower dispatch, converted returns, rallies and bulk orders in selected emulators; check map colors and exact troop controls at desktop and landscape-mobile sizes.",
+      "tests": [
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-king-power-colors.js",
+        "tools/validate-king-power-colors-browser.js",
+        "tools/validate-layer1-travel.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-king-power.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-combat-authorization.js",
+        "tools/validate-swift-march-order.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-daily-missions.js",
+        "tools/validate-troop-selection-browser.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-daily-missions.js"
+      ]
+    },
+    {
+      "paths": [
+        "economy-config.js",
+        "functions/economy-config.json",
+        "battle-guide-calculations.js",
+        "tools/validate-economy-balance.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/audit-season-balance.js"
+      ],
+      "reason": "Apply the approved 10.815 production factor to every regular-city level. Validate config parity, exact production/Hero reward anchors, cumulative rewards, production bonuses, unchanged Gold, King Power replacement, walls through and above Level 150, and siege pacing. Exercise authoritative accrual, concurrent economy actions, raw-production Camp/pickup rewards, missions and achievements through their affected emulator suites.",
+      "tests": [
+        "tools/validate-economy-balance.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/audit-season-balance.js",
+        "tools/validate-king-power.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-battle-economy-guide.js",
         "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-reset-gate.js"
+        "functions/test/emulator-reward-camp-base-production.js",
+        "functions/test/emulator-harvest-pickup-rewards.js",
+        "functions/test/emulator-daily-missions.js",
+        "functions/test/emulator-seasonal-achievements.js"
       ]
     },
     {
       "paths": [
-        "barracks-gear-ui.js",
-        "common-gear-ui.js",
-        "gatehouse-gear-ui.js",
-        "royal-stables-gear-ui.js",
-        "tools/validate-barracks-gear-browser.js",
-        "tools/validate-gatehouse-gear-browser.js",
-        "tools/validate-gear-inventory-browser.js",
-        "tools/validate-royal-stables-gear-browser.js",
-        "tools/validate-treasury-gear-browser.js",
-        "treasury-gear-ui.js"
+        "battle-economy-guide.html",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-balance-guide-browser.js",
+        "battle-economy-guide.css"
       ],
-      "reason": "Remove gear pricing production reads and hour labels, show exact Gold in details, confirmations and full paths, and preserve retries and session guards. Check all officers and prices at desktop and small landscape sizes, 50B confirmation visibility, affordability, pointer/keyboard actions and large inventories without city scans.",
+      "reason": "Explain the four attacker-power milestones and smooth interpolation in the public guide and show the new troop factor. Check guide formula parity, exact production inputs at Levels 1/100/150/200, readable protection rows and contained desktop/landscape-mobile layout.",
       "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-barracks-gear-browser.js",
-        "tools/validate-treasury-gear-browser.js",
-        "tools/validate-gatehouse-gear-browser.js",
-        "tools/validate-royal-stables-gear-browser.js",
-        "tools/validate-gear-inventory-browser.js"
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-balance-guide-browser.js"
       ]
     },
     {
       "paths": [
-        "docs/gear-rarity-progression/CALCULATED_REVIEW.md",
-        "docs/gear-rarity-progression/model.js",
-        "docs/gear-rarity-progression/proposal.json",
-        "tools/validate-gear-progression-proposal.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Update the review calculator to fixed Gold and regenerate its affected cost table. Cross-check direct and cumulative costs while preserving bonuses and deferred-cap scenarios.",
-      "tests": [
-        "tools/validate-gear-progression-proposal.js",
-        "tools/validate-gear-rarities.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/gear-rarity-progression/README.md"
-      ],
-      "reason": "Record the explicitly approved 100K-to-50B Gold table, supersede hourly prices and explain exact quote compatibility. Retain duplicate rules and mark this revision pending release.",
+      "reason": "Record the explicitly approved protection, +5% production and -10% travel revision, derived reward/wall/siege values, snapshot compatibility and pending deployment status. Documentation is supported by the runtime and balance tests above.",
       "tests": []
     }
   ]

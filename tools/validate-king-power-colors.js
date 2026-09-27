@@ -9,7 +9,7 @@ function fixture() {
   const s = {
     Date: { now: () => now }, console: { warn: noop }, window: { setTimeout: noop },
     state: {}, KING_POWER_AUTHORITY_VERSION: 12, ENEMY_POWER_BAND_STABILIZE_MS: 3000,
-    ATTACK_PROTECTION_ASSAULT_MIN_RATIO: 2, ATTACK_PROTECTION_RAID_MIN_RATIO: 2.5,
+    ATTACK_PROTECTION_POWER_ANCHORS: vm.runInNewContext(/const ATTACK_PROTECTION_POWER_ANCHORS = ([\s\S]*?);/.exec(clientSource)[1]),
     PLAYER_IDENTITY_CACHE_STALE_MS: 300000, PLAYER_IDENTITY_LOOKUP_BATCH_SIZE: 30,
     playerIdentityCache: new Map(), enemyPowerBandCache: new Map(), playerIdentityLookupMisses: new Map(),
     playerIdentityLookupQueue: new Set(), playerIdentityLookupInFlight: false,
@@ -25,10 +25,10 @@ function fixture() {
     renderCities: () => renders++, renderPaths: noop, renderArmies: noop,
     updateIncomingAttackUi: noop, updateOutgoingAttackUi: noop,
     withTimeout: promise => promise,
-    stats: { kingPower: 200000, version: 12, updatedAtMs: now },
+    stats: { kingPower: 300000, version: 12, updatedAtMs: now },
   };
   vm.createContext(s);
-  for (const name of ["getEnemyCityPowerBand", "getAuthoritativePlayerPowerBandSnapshot", "getAuthoritativeEnemyPowerBandSnapshot", "clearEnemyPowerBandPending", "getStableEnemyCityPowerBand", "getEnemyCityPowerBandLabel", "normalizePlayerIdentity", "getPlayerIdentitySignature", "shouldReplacePlayerIdentity", "rememberPlayerIdentity", "rememberPlayerIdentities", "refreshMissingPlayerPowerIdentities", "refreshQueuedPlayerIdentities"]) {
+  for (const name of ["getAttackProtectionThresholds", "getAttackProtectionMode", "getEnemyCityPowerBand", "getAuthoritativePlayerPowerBandSnapshot", "getAuthoritativeEnemyPowerBandSnapshot", "clearEnemyPowerBandPending", "getStableEnemyCityPowerBand", "getEnemyCityPowerBandLabel", "normalizePlayerIdentity", "getPlayerIdentitySignature", "shouldReplacePlayerIdentity", "rememberPlayerIdentity", "rememberPlayerIdentities", "refreshMissingPlayerPowerIdentities", "refreshQueuedPlayerIdentities"]) {
     vm.runInContext((clientSource.includes(`async function ${name}(`) ? "async " : "") + extractFunction(clientSource, name), s);
   }
   return { s, advance: ms => now += ms, changeSession: () => scope += ":new", renders: () => renders };
@@ -38,7 +38,7 @@ async function main() {
   const f = fixture(), { s } = f, city = { owner: "enemy", ownerUid: "weak" };
   assert.equal(s.getStableEnemyCityPowerBand(city), "unknown", "Missing power was falsely advertised as in range");
   assert.match(s.getEnemyCityPowerBandLabel("unknown"), /not yet verified/);
-  for (const [own, enemy, band] of [[199999,100000,"in-range"],[200000,100000,"protected"],[249999,100000,"protected"],[250000,100000,"protected"],[100000,100000,"in-range"],[100000,100001,"overpowering"],[0,100000,"unknown"],[100000,0,"unknown"]]) {
+  for (const [own, enemy, band] of [[299999,100000,"in-range"],[300000,100000,"protected"],[399999,100000,"protected"],[400000,100000,"protected"],[100000,100000,"in-range"],[100000,100001,"overpowering"],[0,100000,"unknown"],[100000,0,"unknown"]]) {
     assert.equal(s.getEnemyCityPowerBand(city, own, enemy), band);
   }
   s.rememberPlayerIdentity(row("weak", 900000, 11), { force: true });
@@ -46,7 +46,7 @@ async function main() {
   s.rememberPlayerIdentity(row("weak", 100000), { force: true });
   assert.equal(s.getStableEnemyCityPowerBand(city), "protected");
   assert.match(s.getEnemyCityPowerBandLabel("protected", city), /two-stage/);
-  s.stats.kingPower = 250000;
+  s.stats.kingPower = 400000;
   s.getStableEnemyCityPowerBand(city);
   assert.match(s.getEnemyCityPowerBandLabel("protected", city), /raid only/);
   s.stats = { kingPower: 50000, version: 12, updatedAtMs: 1000100 };

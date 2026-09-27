@@ -184,6 +184,7 @@ async function main() {
   for (const seed of seeds.slice(3, 7)) targets.push(await seedCity({ ...seed, regionId: region }, high, 1));
   const unrelated = await seedCity({ ...seeds[7], regionId: region }, low, 1);
   await Promise.all([high, low, third].map(actor => call("collectEconomy", actor)));
+  await verifySmoothProtectionRanges(high, low, hSource, lSource);
   assert((await profile(high)).kingPower > (await profile(low)).kingPower * 2.5);
 
   const first = await call("sendArmyOrder", low, order(lSource, targets[0], 1500));
@@ -280,5 +281,41 @@ async function main() {
   assert.deepEqual(read1.fields.peaceShieldCooldownExpiresAtMs, read2.fields.peaceShieldCooldownExpiresAtMs);
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
+}
+async function verifySmoothProtectionRanges(attacker, defender, source, target) {
+  const cases = [
+    [100_000, 40_000, "normal"], [160_000, 40_000, "assault"], [250_000, 40_000, "raid"],
+    [5_000_000, 2_000_000, "normal"], [5_000_000, 1_700_000, "assault"], [5_000_000, 1_000_000, "raid"],
+    [50_000_000, 21_000_000, "normal"], [50_000_000, 18_000_000, "assault"], [50_000_000, 10_000_000, "raid"],
+    [500_000_000, 260_000_000, "normal"], [500_000_000, 225_000_000, "assault"], [500_000_000, 175_000_000, "raid"],
+  ];
+  async function setTroops(city, troops) {
+    await cityRef(city).update({ troops, troopFloat: troops, productionUpdatedAtMs: Date.now() + 3_600_000 });
+  }
+  for (const [attackingTroops, defendingTroops, mode] of cases) {
+    await setTroops(source, attackingTroops);
+    await setTroops(target, defendingTroops);
+    await Promise.all([attacker, defender].map(actor => call("collectEconomy", actor)));
+    const preview = await call("previewArmyProtection", attacker, {
+      fromId: source.id, toId: target.id, sourceRegionId: source.regionId,
+      targetRegionId: target.regionId, requestedTroops: 1,
+    });
+    assert.equal(preview.attackProtection.mode, mode, `Incorrect protection at ${attackingTroops}/${defendingTroops} troops`);
+    const request = order(source, target, 1, { acceptedAttackProtection: preview.attackProtection });
+    const launched = await call("sendArmyOrder", attacker, request);
+    assert.equal(launched.movement.attackProtection?.mode || "normal", mode);
+    const saved = (await db.doc(`armies/${launched.movement.id}`).get()).data();
+    assert.equal(saved.attackProtection?.mode || "normal", mode);
+    const replay = await call("sendArmyOrder", attacker, request);
+    assert.equal(replay.movement.id, launched.movement.id);
+    assert.equal(replay.movement.arrivesAtMs, launched.movement.arrivesAtMs);
+    await resolve(attacker, launched.movement);
+    assert.equal((await cityRef(target).get()).data().ownerUid, defender.uid, "One troop captured a defended city");
+  }
+  await setTroops(source, 10_000_000);
+  await setTroops(target, 100_000);
+  await profileRef(attacker).set({ peaceShieldCooldownExpiresAtMs: 0 }, { merge: true });
+  await Promise.all([attacker, defender].map(actor => call("collectEconomy", actor)));
+  console.log("Smooth protection passed: normal/assault/raid across early, 10M, 100M and billion-power kingdoms, authoritative previews, launches, persisted snapshots, retries and arrivals.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

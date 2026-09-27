@@ -61,7 +61,7 @@
         </div>
       </div>
       <div class="guide-callout">
-        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10.3 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; each troop starts at 1.25 attack power and Swordmastery can raise that to 2.
+        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10.815 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; each troop starts at 1.25 attack power and Swordmastery can raise that to 2.
       </div>
     </section>
 
@@ -114,7 +114,7 @@
         <summary>Show the city math</summary>
         <div class="formula-list">
           <p><strong>Victory points:</strong> floor(6 + 4L + 2L<sup>1.35</sup>).</p>
-          <p><strong>Troops/hour:</strong> floor(victory points &times; 10.3), then Royal Granaries and the applicable objective package add percentages of that base.</p>
+          <p><strong>Troops/hour:</strong> floor(victory points &times; 10.815), then Royal Granaries and the applicable objective package add percentages of that base.</p>
           <p><strong>Gold/hour:</strong> floor(19 &times; 1.1155<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 7.9% per additional level.</p>
           <p><strong>Owner garrison:</strong> floor(stationed troops &times; 1.30 &times; (1 + Shieldwall Discipline% + personal objective% + shared clan objective%)). City level is never part of soldier defense.</p>
           <p><strong>Wall:</strong> smooth staged growth from 200 at Level 1 to 1,456,669 at Level 50, 3,000,000 at Level 100, and 6,200,000 at Level 150. Above 150 it transitions to a base troop-production replacement ratio that reaches 240 hours at Level 200. Stoneworks alone strengthens that one wall.</p>
@@ -302,7 +302,7 @@
         <article><h3>Reward camp</h3><p>Every neutral camp starts with 20,000 troops. Camps have no level, wall, Stoneworks, Shieldwall, or objective-defense bonus: each stationed troop and reinforcement contributes exactly 1.00 defense power. Camps cannot be shielded, do not count as cities, and may require a hold timer before rewards settle.</p></article>
         <article><h3>Clan reinforcement</h3><p>Each contributor adds troops with that contributor&rsquo;s applicable objective-defense package. Reinforcements never copy the city&rsquo;s level defense, wall, or Stoneworks.</p></article>
         <article><h3>Clan rally</h3><p>Each participant keeps snapshotted attack strength. The combined force attacks under the rally lifecycle and still passes every ownership, protection, route, and anti-farming check.</p></article>
-        <article><h3>Weaker-kingdom protection</h3><p>At 2&times; King Power, attacks become capped protected assaults: first breach, then a possible capture assault. At 2.5&times; and above, they become capped, non-capturing raids with defender losses limited to 10% and no persistent wall damage.</p></article>
+        <article class="protection-rule"><h3>Weaker-kingdom protection</h3><p>Your King Power sets the ratio at which attacks become capped assaults or raids. Assaults require a breach before a possible capture. Raids cannot capture, limit defender losses to 10%, and cause no persistent wall damage.</p><div class="table-responsive guide-table-wrap"><table class="guide-table protection-ranges-table"><caption>Attacker power divided by defender power</caption><thead><tr><th>Attacker King Power</th><th>Assault begins</th><th>Raid begins</th></tr></thead><tbody><tr><th>1M or less</th><td>3&times;</td><td>4&times;</td></tr><tr><th>10M</th><td>2.75&times;</td><td>3.5&times;</td></tr><tr><th>100M</th><td>2.5&times;</td><td>3&times;</td></tr><tr><th>1B and above</th><td>2&times;</td><td>2.5&times;</td></tr></tbody></table></div><p>Thresholds tighten continuously between these milestones on a logarithmic power scale. Attacks below the assault threshold use normal combat rules.</p></article>
         <article><h3>Scouting</h3><p>A successful scout is an exact ten-minute snapshot. Attack strength is locked at launch, but defense remains live until arrival, so a forecast is evidence rather than a guarantee.</p></article>
         <article><h3>Rapid neutral-city handoffs</h3><p>If one ruler takes a regular neutral city and another ruler captures it from that claimant within 20 minutes, the server records one directional handoff across all maps. The fourth event in a rolling 24 hours warns both rulers, the seventh gives a final warning, and an eighth qualifying capture is canceled until a slot opens. Failed attacks, duplicate claim events, established cities, and objectives do not count; normal combat remains available. Each notice shows the trigger and next slot, with questions or appeals directed to <a href="/support.html">Support</a>.</p></article>
       </div>

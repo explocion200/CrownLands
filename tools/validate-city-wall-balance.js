@@ -57,7 +57,7 @@ const wallStats = {
 };
 
 assert.equal(wallStats.wallCurveModelVersion, 2);
-assert.equal(cityEconomy.troopsPerVictoryPoint, 10.3);
+assert.equal(cityEconomy.troopsPerVictoryPoint, 10.815);
 assert.equal(wallStats.cityWallsBase, 200);
 assert.equal(wallStats.wallBridgeDefense, 1_456_669);
 assert.equal(wallStats.wallMidDefense, 3_000_000);
@@ -115,11 +115,11 @@ const expectedWalls = new Map([
   [101, 3_030_867],
   [125, 4_090_593],
   [150, 6_200_000],
-  [151, 6_279_528],
-  [175, 8_325_854],
-  [200, 10_800_816],
-  [250, 14_329_224],
-  [500, 34_735_584],
+  [151, 6_287_031],
+  [175, 8_553_927],
+  [200, 11_340_888],
+  [250, 15_045_888],
+  [500, 36_472_488],
 ]);
 for (const [level, expected] of expectedWalls) {
   assert.equal(calculator.getBaseWall(level), expected, `Shared wall curve is wrong at Level ${level}.`);

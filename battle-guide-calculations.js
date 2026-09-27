@@ -12,8 +12,6 @@
     victoryPointsExponentScale: 2,
     baseAttackPowerPerTroop: 1.25,
     baseDefensePowerPerTroop: 1.30,
-    strongerKingdomAssaultRatio: 2,
-    strongerKingdomRaidRatio: 2.5,
     scoutIntelMinutes: 10,
     strongholdEffectiveLevel: 50,
     citadelEffectiveLevel: 100,
@@ -82,7 +80,7 @@
     }
 
     function getTroopsPerHour(level) {
-      const raw = getVictoryPoints(level) * read(economy, "cityEconomy.troopsPerVictoryPoint", 10.3);
+      const raw = getVictoryPoints(level) * read(economy, "cityEconomy.troopsPerVictoryPoint", 10.815);
       return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
     }
 
