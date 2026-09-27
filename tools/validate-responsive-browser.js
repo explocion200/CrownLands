@@ -157,14 +157,21 @@ async function main() {
       await wait(400);
       const interruptedTouch = baselineRoot ? null : await verifyInterruptedTouch(client,evaluate);
       const pickups = baselineRoot ? null : await verifyPickupInteractions(client,evaluate);
-      const pinch = await evaluate(`new Promise(resolve => {
+      // Pointer capture requires real browser pointers, not invented IDs.
+      await client.send("Emulation.setTouchEmulationEnabled", {enabled:true, maxTouchPoints:2});
+      const pinchPoints = await evaluate(`(() => {
         const bounds = mapFrame.getBoundingClientRect();
         zoom = .6; updateCameraTransform();
-        activePointers.set(91, {x: bounds.left + 200, y: bounds.top + 100});
-        activePointers.set(92, {x: bounds.left + 400, y: bounds.top + 100});
-        beginPinch();
+        return [.35,.65].map((fraction,index)=>({id:index+1,x:Math.round(bounds.left+bounds.width*fraction),y:Math.round(bounds.top+bounds.height*.55)}));
+      })()`);
+      await client.send("Input.dispatchTouchEvent", {type:"touchStart",touchPoints:pinchPoints});
+      assert.equal(await evaluate("activePointers.size"), 2, "Real pinch pointers did not reach the map.");
+      const pinch = await evaluate(`new Promise(resolve => {
+        const [firstId, secondId] = [...activePointers.keys()];
+        window.pinchRemainingPointer = firstId;
         const before = mapWorld.style.transform;
-        activePointers.set(92, {x: bounds.left + 500, y: bounds.top + 100});
+        const second = activePointers.get(secondId);
+        activePointers.set(secondId, {...second, x: second.x + 100});
         const start = performance.now();
         scheduleMainMapPinchUpdate();
         requestAnimationFrame(() => {
@@ -172,14 +179,14 @@ async function main() {
           const firstFrameMs = performance.now() - start;
           requestAnimationFrame(() => {
             const secondFrameChanged = before !== mapWorld.style.transform;
-            finishTrackedMapPointer({pointerId:92,type:'pointerup'}, {renderPanelAfter:false});
-            const resumedDrag = panState?.pointerId === 91 && panState.moved === true;
-            activePointers.clear(); pinchState = null; panState = null;
-            mapFrame.classList.remove('dragging'); finishCameraInteraction();
-            resolve({ firstFrameChanged, secondFrameChanged, firstFrameMs, resumedDrag });
+            resolve({ firstFrameChanged, secondFrameChanged, firstFrameMs });
           });
         });
       })`);
+      await client.send("Input.dispatchTouchEvent", {type:"touchEnd",touchPoints:[pinchPoints[1]]});
+      pinch.resumedDrag = await evaluate("activePointers.size === 1 && panState?.pointerId === window.pinchRemainingPointer && panState.moved === true");
+      await client.send("Input.dispatchTouchEvent", {type:"touchEnd",touchPoints:[]});
+      await client.send("Emulation.setTouchEmulationEnabled", {enabled:false});
       if (!baselineRoot) {
         assert(pinch.firstFrameChanged, "Pinch camera did not paint in its first scheduled frame.");
         assert(pinch.resumedDrag, "Lifting one pinch finger did not resume dragging with the remaining finger.");

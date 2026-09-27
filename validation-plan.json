@@ -10,7 +10,8 @@
         "tools/validate-scout-responsiveness.js",
         "tools/validate-scout-responsiveness-browser.js",
         "tools/validate-interaction-health.js",
-        "tools/validate-animation-system.js"
+        "tools/validate-animation-system.js",
+        "tools/validate-responsive-browser.js"
       ],
       "tests": [
         "tools/validate-army-resolution-retries.js",
