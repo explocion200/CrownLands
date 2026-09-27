@@ -1,5 +1,11 @@
-/* Approved Clan Tower presentation, scoped to the runtime details modal. */
-.clan-tower-details { color-scheme: light; --paper:#f0e5c9; --ink:#3a3024; --muted:#715e44; --line:#beab85; --olive:#53633f; font-family:"Segoe UI",Arial,sans-serif; color:var(--ink);  }
+/* Shared window dimensions and theme for Tower tabs and building details. */
+.holding-tower-modal {
+  --tower-width:min(1040px,calc(100vw - 24px)); --tower-height:min(790px,calc(100dvh - 24px)); --tower-padding:7px;
+  --tower-header-height:79px; --tower-header-padding:10px 19px; --tower-title-size:32px;
+  --tower-paper:#f0e5c9; --tower-ink:#3a3024; --tower-muted:#715e44; --tower-line:#beab85;
+  --tower-header:linear-gradient(100deg,#e1cca1,#f2e7ca 62%,#e8d7b4); --tower-footer:linear-gradient(#eadcba,#dfcca5);
+}
+.clan-tower-details { color-scheme: light; --paper:var(--tower-paper); --ink:var(--tower-ink); --muted:var(--tower-muted); --line:var(--tower-line); --olive:#53633f; font-family:"Segoe UI",Arial,sans-serif; color:var(--ink);  }
 .holding-tower-modal .clan-tower-details *{ box-sizing:border-box; }
 .holding-tower-modal .clan-tower-details h1, .holding-tower-modal .clan-tower-details h2, .holding-tower-modal .clan-tower-details h3, .holding-tower-modal .clan-tower-details p, .holding-tower-modal .clan-tower-details figure{ margin:0; }
 .holding-tower-modal .clan-tower-details button, .holding-tower-modal .clan-tower-details select{ color:inherit; font:inherit; min-height:44px; cursor:pointer; }
@@ -9,11 +15,11 @@
 .holding-tower-modal .clan-tower-details [hidden]{ display:none!important; }
 .holding-tower-modal .clan-tower-details small{ display:block; }
 .holding-tower-modal .clan-tower-details.tower-shell{ height:100%; display:flex; flex-direction:column; border:2px solid #cfb17c; background:var(--paper); }
-.holding-tower-modal .clan-tower-details .window-header{ display:flex; flex:none; align-items:center; min-height:79px; gap:13px; padding:10px 19px; border-bottom:1px solid #c6ad7d; background:linear-gradient(100deg,#e1cca1,#f2e7ca 62%,#e8d7b4); }
+.holding-tower-modal .clan-tower-details .window-header{ display:flex; flex:none; align-items:center; min-height:var(--tower-header-height); gap:13px; padding:var(--tower-header-padding); border-bottom:1px solid #c6ad7d; background:var(--tower-header); }
 .holding-tower-modal .clan-tower-details .window-header>img{ width:47px; height:47px; object-fit:contain; }
 .holding-tower-modal .clan-tower-details .heading{ min-width:0; }
 .holding-tower-modal .clan-tower-details .heading p, .holding-tower-modal .clan-tower-details .eyebrow{ font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#7b5731; }
-.holding-tower-modal .clan-tower-details .heading h1{ font:32px Georgia,serif; margin-top:3px; }
+.holding-tower-modal .clan-tower-details .heading h1{ font:var(--tower-title-size) Georgia,serif; margin-top:3px; }
 .holding-tower-modal .clan-tower-details .ownership{ margin-left:auto; padding:7px 10px; border:1px solid #a3a67d; background:#e1e3c1; color:#455032; font:13px Georgia,serif; text-align:center; }
 .holding-tower-modal .clan-tower-details .ownership.enemy{ background:#ecd5be; border-color:#b1886b; color:#793d31; }
 .holding-tower-modal .clan-tower-details .ownership.neutral{ background:#e5ddc7; border-color:#ac9e80; color:#6c604b; }
@@ -109,7 +115,7 @@
 .holding-tower-modal .clan-tower-details .rules-grid article{ border-top:1px solid var(--line); padding:17px 0; }
 .holding-tower-modal .clan-tower-details .rules-grid h3{ font:20px Georgia,serif; margin-bottom:8px; color:#655332; }
 .holding-tower-modal .clan-tower-details .rules-grid p{ color:var(--muted); font-size:13px; line-height:1.65; }
-.holding-tower-modal .clan-tower-details .tower-footer{ display:flex; align-items:center; gap:10px; flex:none; min-height:68px; padding:10px 18px; border-top:1px solid #b8a179; background:linear-gradient(#eadcba,#dfcca5); }
+.holding-tower-modal .clan-tower-details .tower-footer{ display:flex; align-items:center; gap:10px; flex:none; min-height:68px; padding:10px 18px; border-top:1px solid #b8a179; background:var(--tower-footer); }
 .holding-tower-modal .clan-tower-details .tower-footer>div{ min-width:0; margin-right:auto; }
 .holding-tower-modal .clan-tower-details .tower-footer strong{ display:block; font:16px Georgia,serif; margin-bottom:4px; }
 .holding-tower-modal .clan-tower-details .tower-footer div>span{ display:block; color:var(--muted); font-size:11px; }
@@ -410,11 +416,12 @@
 .holding-tower-modal .clan-tower-details .public-services>strong{ font-size:15px; }
 }
 
-.modal.holding-tower-modal.clan-tower-details-modal{width:min(1040px,calc(100vw - 24px))!important;height:min(790px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;padding:7px!important;border:2px solid #60402b!important;background:#783e31!important;overflow:hidden!important;}
+.modal.holding-tower-modal.clan-tower-details-modal{width:var(--tower-width)!important;height:var(--tower-height)!important;max-width:none!important;max-height:none!important;padding:var(--tower-padding)!important;border:2px solid #60402b!important;background:#783e31!important;overflow:hidden!important;}
 .modal.holding-tower-modal.clan-tower-details-modal>.modal-card{height:100%!important;max-height:none!important;padding:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;background:#f0e5c9!important;border:0!important;border-radius:0!important;}
 .holding-tower-modal.clan-tower-details-modal>.modal-card>#modalTitle,.holding-tower-modal.clan-tower-details-modal>.modal-card>#closeModalBtn,.holding-tower-modal.clan-tower-details-modal>.modal-card>#modalHeaderNav{display:none!important}.holding-tower-modal.clan-tower-details-modal #modalBody{padding:0!important;margin:0!important;min-height:0!important;flex:1!important;overflow:hidden!important;display:flex!important;}
 .holding-tower-modal .clan-tower-details{width:100%;min-height:0;height:100%;color:#3a3024!important;font:14px "Segoe UI",Arial,sans-serif;text-shadow:none!important;}.holding-tower-modal .clan-tower-details :is(h1,h2,h3,strong,b,p,small,span,label){color:inherit;text-shadow:none!important;}.holding-tower-modal .clan-tower-details .primary-button{color:#fff5dc!important}.holding-tower-modal .clan-tower-details .paper-button{color:#514027!important}.holding-tower-modal .clan-tower-details .clan-flag{display:inline-flex;flex:none;}.holding-tower-modal .clan-tower-details .clan-flag>span{width:100%;height:100%;}.holding-tower-modal .clan-tower-details .controller>img{width:36px;height:36px}.holding-tower-modal .clan-tower-details [hidden]{display:none!important;}
-@media(max-height:600px),(max-width:1000px){.modal.holding-tower-modal.clan-tower-details-modal{width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;padding:4px!important;}}
+@media(max-height:600px),(max-width:1000px){.holding-tower-modal{--tower-width:calc(100vw - 16px);--tower-height:calc(100dvh - 16px);--tower-padding:4px;--tower-header-height:48px;--tower-header-padding:0 10px;--tower-title-size:23px;}}
+@media(max-width:650px){.holding-tower-modal{--tower-title-size:20px;}}
 
 /* Personal troop commands stay on the map, outside tower details. */
 .clan-tower-action-wheel.gold-camp-action-wheel{left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
