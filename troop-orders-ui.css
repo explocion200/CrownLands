@@ -424,3 +424,42 @@
 #modal.troop-slider-modal .swift-march-launch-copy strong img{width:23px !important;height:24px !important}
 #modal.troop-slider-modal .order-actions .order-action-notice{font-size:10px !important}
 }
+
+/* Approved precise selection: shares the existing slider and order handlers. */
+#modal.troop-slider-modal.precise-troop-selection #troopSliderAmount[hidden]{display:none!important}
+#modal.troop-slider-modal.precise-troop-selection .force-summary>div{flex-wrap:wrap!important}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount{display:flex!important;align-items:center!important;gap:8px!important;min-width:0!important;border-bottom:1px dashed #78805d!important;cursor:text}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount input{width:10.5ch!important;max-width:100%!important;min-width:0!important;min-height:48px!important;padding:2px 5px!important;border:1px solid transparent!important;border-radius:2px!important;background:#fff8e730!important;color:#49563a!important;font:34px/1.15 Georgia,serif!important;font-variant-numeric:tabular-nums!important;outline-offset:2px;box-shadow:none!important}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount input:hover{background:#fff8e799!important;border-color:#b7a77e!important}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount input:focus{background:#fff8e7!important;border-color:#707b52!important;outline:2px solid #707b5266!important}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount svg{width:16px!important;height:16px!important;flex:none;color:#77684c}
+#modal.troop-slider-modal.precise-troop-selection .exact-amount input[aria-invalid="true"]{border-color:#913e32!important;background:#f5e0d7!important}
+#modal.troop-slider-modal.precise-troop-selection .selection-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px}
+#modal.troop-slider-modal.precise-troop-selection .quick-amounts{display:flex;gap:8px;flex:none}
+#modal.troop-slider-modal.precise-troop-selection .quick-amounts button{min-height:44px!important;min-width:72px!important;padding:6px 15px!important;border:1px solid #a99469!important;border-radius:0!important;box-shadow:inset 0 0 0 2px #f9edcf77!important;background:linear-gradient(#f4e8cb,#e6d6af)!important;font:16px Georgia,serif!important;color:#514831!important;cursor:pointer}
+#modal.troop-slider-modal.precise-troop-selection .quick-amounts button:hover{background:#f7ecd0!important;border-color:#687647!important}
+#modal.troop-slider-modal.precise-troop-selection .quick-amounts button[aria-pressed="true"]{background:#e0e5c7!important;border-color:#667546!important;color:#3f4f2b!important;box-shadow:inset 0 0 0 2px #77865833!important}
+#modal.troop-slider-modal.precise-troop-selection .quick-amounts button:focus-visible{outline:2px solid #51623b!important;outline-offset:2px}
+#modal.troop-slider-modal.precise-troop-selection .selection-hint{font-size:11px;color:#796a4e;text-align:right;line-height:1.5}
+#modal.troop-slider-modal.precise-troop-selection .amount-error{font-size:12px;color:#843d31;line-height:1.4;margin-top:7px}
+#modal.troop-slider-modal.precise-troop-selection .amount-error[hidden]{display:none!important}
+@media(max-height:600px),(max-width:1000px){
+ #modal.troop-slider-modal.precise-troop-selection .force-column{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"summary tools" "slider slider" "labels labels" "error error";gap:0 8px!important}
+ #modal.troop-slider-modal.precise-troop-selection .force-summary{grid-area:summary;display:block!important}
+ #modal.troop-slider-modal.precise-troop-selection .remaining{max-width:none!important;text-align:left!important}
+ #modal.troop-slider-modal.precise-troop-selection .selection-tools{grid-area:tools;align-self:center;margin-top:4px;gap:8px}
+ #modal.troop-slider-modal.precise-troop-selection .selection-hint{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ #modal.troop-slider-modal.precise-troop-selection .troop-range{grid-area:slider;min-height:44px!important;height:44px!important}
+ #modal.troop-slider-modal.precise-troop-selection .range-labels{grid-area:labels}
+ #modal.troop-slider-modal.precise-troop-selection .amount-error{grid-area:error;font-size:10px;margin-top:4px}
+ #modal.troop-slider-modal.precise-troop-selection .exact-amount input{font-size:27px!important;min-height:44px!important}
+ #modal.troop-slider-modal.precise-troop-selection .quick-amounts{gap:6px}
+ #modal.troop-slider-modal.precise-troop-selection .quick-amounts button{min-width:64px!important;font-size:14px!important;padding-inline:12px!important}
+}
+@media(max-width:650px){
+ #modal.troop-slider-modal.precise-troop-selection .force-summary>div{gap:4px 8px!important}
+ #modal.troop-slider-modal.precise-troop-selection .force-label{max-width:72px!important;font-size:8px!important}
+ #modal.troop-slider-modal.precise-troop-selection .exact-amount input{font-size:23px!important;padding-inline:2px!important}
+ #modal.troop-slider-modal.precise-troop-selection .exact-amount{gap:3px!important}
+ #modal.troop-slider-modal.precise-troop-selection .quick-amounts button{min-width:58px!important;padding-inline:10px!important}
+}

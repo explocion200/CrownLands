@@ -11,16 +11,37 @@
         "tools/validate-troop-selection-draft-browser.js",
         "docs/visual-qa/troop-orders/preview.js"
       ],
-      "reason": "Isolated synthetic troop-selection design review reuses existing troop-order draft presentation and pure power helpers. Validate exact input, percentage selection, protected limits, invalid-entry recovery, keyboard behavior, route blockers, fixture actions, desktop and landscape layout, assets, review controls and absence of external requests. Reconciled with current main, including its revised Gear helper/art and production asset packaging; rerun the browser fixture and build against those shared dependencies. No production runtime, authority or backend files change in this PR, so emulator suites do not apply. The shared synthetic troop-order preview now supplies its known weapon gearKey to the revised helper. Fixed attack-power examples cover equipped, stored, unequipped and maximum-level Common gear, including unknown enemy intelligence; production Gear logic is unchanged.",
+      "reason": "Retained synthetic design review exercises exact input, presets, protected limits, keyboard behavior, desktop/mobile layout, assets and absence of external requests. Its shared troop-order preview supplies gearKey to the current Gear helper. Fixed attack-power examples cover equipped, stored, unequipped and maximum-level Common gear and unknown enemy intelligence; production Gear logic is unchanged.",
       "tests": [
         "tools/validate-troop-selection-draft-browser.js"
       ]
     },
     {
       "paths": [
-        "docs/visual-qa/troop-selection/README.md"
+        "game.js",
+        "troop-orders-ui.js",
+        "troop-orders-ui.css",
+        "tools/validate-troop-selection-browser.js",
+        "tools/validate-clan-tower-orders-browser.js"
       ],
-      "reason": "Document draft review controls, synthetic data boundaries, dependencies, validation evidence and future integration requirements. No production design decision or behavior changes.",
+      "reason": "Integrate approved exact counts and 25/50/Max controls through existing Attack/Transfer/Reinforce and Tower range/dispatch handlers. Actual-game browser fixtures cover all three viewports, intent preservation through shrinking/recovering live limits, malformed values, Enter/Escape, direct-submit guards, personal Tower garrisons and permissions, and authoritative route-band refresh. Exercise affected power/forecast rendering, Swift eligibility, reinforcement rules, route request deduplication and Rally compatibility. Server authority, Firebase adapters, schemas and backend rules are unchanged; no emulator suite is needed for these client selection and presentation changes. Existing server validation remains authoritative at dispatch.",
+      "tests": [
+        "tools/validate-troop-selection-browser.js",
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-swift-march-order.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-rally-assembly.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/visual-qa/troop-selection/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "reason": "Record the user's approved exact-count and preset behavior, unchanged gameplay rules, integration/fixture boundaries, validation evidence and physical mobile-keyboard follow-up. Runtime behavior is covered by the selected browser and shared-dependency checks above; documentation needs no independent executable test.",
       "tests": []
     }
   ]

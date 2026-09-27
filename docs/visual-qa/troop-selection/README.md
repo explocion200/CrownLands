@@ -1,6 +1,6 @@
-# Faster troop selection — interactive draft
+# Faster troop selection — review and integration
 
-Status: **DRAFT FOR REVIEW**. Requested September 25, 2026. This is an isolated design proposal; no production entry point imports it and no game behavior or approved design rule is changed.
+Status: **APPROVED AND INTEGRATED; NOT DEPLOYED**. The September 25 design draft was approved for implementation on September 27, 2026. This folder remains an isolated synthetic review; the actual game implements the controls in `troop-orders-ui.js`, `troop-orders-ui.css` and the existing `game.js` order handlers. The confirmed rule is recorded in the Master Development Specification under Movement.
 
 Open `docs/visual-qa/troop-selection/index.html` through a local HTTP server. The review offers desktop (1440 × 900), landscape (844 × 390), and small landscape (568 × 320), with Attack, Transfer, Reinforce, protected force limits, large armies, unknown intelligence, one troop, blocked targets, and unavailable routes.
 
@@ -15,12 +15,16 @@ Open `docs/visual-qa/troop-selection/index.html` through a local HTTP server. Th
 
 The preview reuses `../troop-orders/preview.js`, its draft CSS, the pure Common Gear/attack-power helpers and approved asset files. `selection.js` extends their synthetic examples only. Sample routes and enemy forecasts remain fixed, as disclosed in the review. No Firebase, accounts, player data, troop dispatch, report generation or item consumption occurs. Native mobile keyboard behavior still needs physical-device review.
 
-If approved for integration, use the actual order's authoritative send limit, refresh routes for changed troop bands, preserve current warnings and source state, and route all controls through the existing production selection/confirmation handlers. The draft does not establish new combat, travel, visibility, default-force or resource rules. Do not promote the sample protected limit, destinations, counts, forecasts or timings to production.
+The integration uses the actual order's permitted send limit, refreshes routes for changed troop bands, preserves current warnings and source state, and routes controls through the existing selection/confirmation handlers. Shared Tower orders use the player's own stationed troops and existing permission checks. Live availability changes preserve the typed count and focus; an invalid count blocks dispatch, and recovery restores the intended count. Combat, travel, visibility, default-force, Rally and resource rules remain unchanged. The sample protected limit, destinations, counts, forecasts and timings are never used by the actual game.
 
 ## Verification
 
 `node tools/validate-troop-selection-draft-browser.js` checks all three viewports, ten scenarios, exact/pasted input, Enter/Escape, invalid entry recovery, permitted-limit presets, slider synchronization, route retry, the non-submitting action and review controls. It verifies fixed action visibility, minimum hit-target sizes, horizontal fit, asset loads and zero external HTTP requests. Screenshots and JSON results are generated under ignored `release-artifacts/troop-selection/`.
 
-Visual review includes desktop Attack/Reinforce and landscape Attack/large counts. No Master Specification change, production integration, merge, or release is included in this draft.
+`node tools/validate-troop-selection-browser.js` exercises the actual game with isolated benchmark data at the same three sizes: all three modes, exact input, presets, live limits and recovery, direct-submit guards, route-band refreshes and Rally compatibility. `node tools/validate-clan-tower-orders-browser.js` covers shared Tower controls, form Enter behavior, personal-garrison changes, permissions, dispatch payloads and retry protection. Browser tests use fixtures and block external HTTP requests. Actual-game screenshots are generated under ignored `release-artifacts/troop-selection-live/` and `release-artifacts/clan-tower-orders/`.
+
+Visual review includes desktop Attack/Reinforce and landscape layouts. Native mobile keyboard behavior still requires physical-device review. Integration and passing checks do not establish a merge or live release; deployment remains a separate authorized step.
+
+Additional baseline check: the broader `validate-rally-assembly-browser.js` passes its shared Rally order checks but fails its unrelated War Room navigation fixture (hidden assembly button at line 126). The identical failure was reproduced with all three modified runtime files served from `origin/main` (`3570d46`). This change selects the Rally logic validator and focused actual-game Rally control checks; it does not change War Room navigation or its fixture.
 
 September 27 reconciliation: refreshed the validation base after the Gear and stability updates. The shared troop-order preview now supplies the equipped weapon's `gearKey` to the revised Gear helper. Fixed arithmetic examples cover equipped, unequipped, stored, maximum-level and unknown-intelligence cases so the draft cannot silently lose its weapon bonus.

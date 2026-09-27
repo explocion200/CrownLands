@@ -1,5 +1,90 @@
 /* Approved order presentation. The existing slider, route and send handlers own all actions. */
-/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower, mountHoldingTowerTroopOrderView, updateHoldingTowerTroopOrderView */
+/* exported renderTroopOrderLocation, decorateTroopOrderView, updateTroopOrderPower, mountHoldingTowerTroopOrderView, updateHoldingTowerTroopOrderView, mountTroopOrderSelection, refreshTroopOrderSelection, getTroopOrderSelection */
+function parseTroopOrderCount(text, maximum) {
+  const raw = String(text).trim();
+  const amount = Number(raw.replaceAll(",", ""));
+  let error = "";
+  if (maximum < 1) error = "No troops are available to send.";
+  else if (!raw) error = "Enter the number of troops to send.";
+  else if ((!/^\d+$/.test(raw) && !/^\d{1,3}(,\d{3})+$/.test(raw)) || !Number.isSafeInteger(amount)) error = "Use a whole troop count, such as 125,000.";
+  else if (amount < 1 || amount > maximum) error = `Choose between 1 and ${formatMarchesNumber(maximum)} troops.`;
+  return { amount, error };
+}
+function getTroopOrderSelection(maximum) {
+  const input = modalBody.querySelector("#troopExactAmount");
+  return input ? parseTroopOrderCount(input.value, maximum) : null;
+}
+function refreshTroopOrderSelection(maximum) {
+  const input = modalBody.querySelector("#troopExactAmount");
+  if (!input) return null;
+  const { amount, error } = parseTroopOrderCount(input.value, maximum);
+  input.setAttribute("aria-invalid", String(Boolean(error)));
+  const message = modalBody.querySelector("#troopAmountError");
+  message.textContent = error;
+  message.hidden = !error;
+  modalBody.querySelectorAll("[data-troop-fraction]").forEach(button => {
+    const fraction = Number(button.dataset.troopFraction);
+    button.disabled = maximum < 1;
+    button.setAttribute("aria-pressed", String(!error && amount === Math.max(1, Math.floor(maximum * fraction)) && (maximum > 1 || fraction === 1)));
+  });
+  return { amount, error };
+}
+function mountTroopOrderSelection(getMaximum, onRefresh) {
+  const panel = modalBody.querySelector(".troop-slider-panel");
+  const slider = panel?.querySelector("#troopAmountSlider");
+  if (!slider || panel.querySelector("#troopExactAmount")) return;
+  panel.classList.add("precise-troop-selection");
+  modal.classList.add("precise-troop-selection");
+  panel.querySelector(".order-columns").classList.add("selection-layout");
+  panel.querySelector("#troopSliderAmount").hidden = true;
+  panel.querySelector(".force-readout").insertAdjacentHTML("beforeend", `<label class="exact-amount"><span class="sr-only">Exact troop count</span><input id="troopExactAmount" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-describedby="troopSelectionHint troopAmountError" value="${formatMarchesNumber(Number(slider.value))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 15Z"/></svg></label>`);
+  panel.querySelector(".force-summary").insertAdjacentHTML("afterend", `<div class="selection-tools"><div class="quick-amounts" role="group" aria-label="Quick troop selection"><button type="button" data-troop-fraction="0.25">25%</button><button type="button" data-troop-fraction="0.5">50%</button><button type="button" data-troop-fraction="1">Max</button></div><p id="troopSelectionHint" class="selection-hint">Tap the count to edit.<br>Shortcuts use the permitted maximum.</p></div><p id="troopAmountError" class="amount-error" role="alert" hidden></p>`);
+  const input = panel.querySelector("#troopExactAmount");
+  let exactInput = false, originalAmount = slider.value;
+  const applyInput = () => {
+    if (!panel.isConnected) return;
+    const maximum = getMaximum();
+    const { amount, error } = parseTroopOrderCount(input.value, maximum);
+    if (error) { onRefresh(); return; }
+    slider.max = String(maximum);
+    slider.value = String(amount);
+    exactInput = true;
+    try { slider.dispatchEvent(new Event("input", { bubbles: true })); }
+    finally { exactInput = false; }
+  };
+  // Installed before the existing range handler so every explicit slider choice
+  // replaces a stale/invalid typed intent before the host refreshes its guards.
+  slider.addEventListener("input", () => {
+    if (!exactInput) input.value = formatMarchesNumber(Number(slider.value));
+  });
+  input.addEventListener("focus", () => {
+    originalAmount = slider.value;
+    if (!getTroopOrderSelection(getMaximum()).error) input.value = input.value.replaceAll(",", "");
+    input.select();
+  });
+  input.addEventListener("input", applyInput);
+  input.addEventListener("blur", () => {
+    if (!panel.isConnected) return;
+    const result = parseTroopOrderCount(input.value, getMaximum());
+    if (!result.error) input.value = formatMarchesNumber(result.amount);
+    onRefresh();
+  });
+  input.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== "Escape") return;
+    event.preventDefault(); event.stopPropagation();
+    if (event.key === "Escape") input.value = originalAmount;
+    applyInput();
+    if (!getTroopOrderSelection(getMaximum()).error) input.blur();
+  });
+  panel.querySelectorAll("[data-troop-fraction]").forEach(button => button.addEventListener("click", () => {
+    const maximum = getMaximum();
+    if (maximum < 1) { onRefresh(); return; }
+    input.value = String(Math.max(1, Math.floor(maximum * Number(button.dataset.troopFraction))));
+    applyInput();
+    if (document.activeElement !== input) input.value = formatMarchesNumber(Number(slider.value));
+  }));
+  refreshTroopOrderSelection(getMaximum());
+}
 function troopOrderNumber(value) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 });
 }
@@ -114,6 +199,7 @@ function mountHoldingTowerTroopOrderView(tower, mode, candidate, maxTroops, sess
   const { source, target } = getHoldingTowerTroopOrderLocations(tower, mode, candidate);
   const attack = mode === "attack-from";
   decorateTroopOrderView(source, target, attack ? "attack" : "transfer", attack ? "Attack" : mode === "reinforce" ? "Send" : "Transfer", Math.max(1, Math.floor(maxTroops / 2)));
+  mountTroopOrderSelection(() => Number(modalBody.querySelector("[data-tower-order-troops]")?.max) || 0, updateHoldingTowerOrderAvailability);
   // Tower launch uses its own authoritative callable. Its city-only preview endpoints
   // cannot verify a Tower origin; show clearly labelled local estimates instead.
   session.route = createInstantOrderRoute(source, target);
