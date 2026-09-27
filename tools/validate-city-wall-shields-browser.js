@@ -29,6 +29,7 @@ async function main() {
       const before = await evaluate(`(() => {
         modal.close(); selectedTargetId=null; selectedSourceId=null; sendMode=false;
         window.wallQa={now:Date.now()}; const qa=wallQa;
+        if(formatWallIntegrity(9999)!=='99.9%'||formatWallIntegrity(10000)!=='100%')throw Error('Wall labels must distinguish partial and full repair');
         qa.cities=[...cityLayer.querySelectorAll('.city-node.enemy')].map(n=>cityById(n.dataset.cityId)).filter(c=>!isStronghold(c)).slice(0,4);
         if(qa.cities.length!==4)throw Error('Need four visible regular cities');
         zoom=1; applyCameraTransform();

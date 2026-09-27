@@ -33182,7 +33182,8 @@ function showCrownCitadelInfoModal(city) {
 /* Inner Castle navigation and rendering lives in common-gear-ui.js. */
 
 function formatWallIntegrity(integrityBps = 10_000) {
-  const percent = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000) / 100;
+  const integrity = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000);
+  const percent = integrity < 10_000 ? Math.min(99.9, integrity / 100) : 100;
   return `${Number.isInteger(percent) ? formatNumber(percent) : percent.toFixed(1)}%`;
 }
 

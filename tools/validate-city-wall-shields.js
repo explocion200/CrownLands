@@ -32,10 +32,11 @@ function policy(file, client) {
     isStronghold: city => city?.kind === "stronghold",
     getOwnerUid: city => city.ownerKind === "player" ? city.ownerUid || "" : "",
     getActivePeaceShieldExpiresAtMs: () => now + 120_000,
+    formatNumber: value => String(value),
   };
   vm.createContext(scope);
   const names = ["normalizeFortificationState", "getFortificationIntegrityBpsAt",
-    ...(client ? ["getCityPeaceShieldExpiresAtMs", "isCityProtectedByPeaceShield"] : ["getShieldExpiresAtMs", "isCityShielded"])];
+    ...(client ? ["getCityPeaceShieldExpiresAtMs", "isCityProtectedByPeaceShield", "formatWallIntegrity"] : ["getShieldExpiresAtMs", "isCityShielded"])];
   vm.runInContext(names.map(name => extract(source, name)).join("\n"), scope);
   return { scope, shielded: client
     ? (city, time) => scope.isCityProtectedByPeaceShield(city, time)
@@ -43,6 +44,8 @@ function policy(file, client) {
 }
 
 const server = policy("functions/index.js", false), client = policy("game.js", true);
+assert.equal(client.scope.formatWallIntegrity(9999), "99.9%", "Partial repair must never display 100%");
+assert.equal(client.scope.formatWallIntegrity(10_000), "100%");
 const city = { id: "target", owner: "enemy", ownerKind: "player", ownerUid: "defender", ownerShieldExpiresAtMs: now + 120_000 };
 const damaged = { ...city, fortificationState: {
   version: 1, integrityBps: 5000, lastDamagedAtMs: now - 60_000, repairAtMs: now + 60_000,
