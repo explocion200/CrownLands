@@ -142,6 +142,7 @@ async function main() {
         await click(await elementPoint(selector));
       };
       const before=await evaluate('buildingCalls.length');
+      await reachable('#tab-wares');
       await reachable('[data-item="recall_horn"]');
       await reachable('[data-clan-shop-buy="recall_horn"]');
       await ready(`buildingCalls.length===${before+1} && !holdingTowerActionsInFlight.size`);

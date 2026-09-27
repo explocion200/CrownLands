@@ -4104,7 +4104,7 @@ function beginHoldingTowerModalSession(towerId, view) {
     if (typeof holdingTowerRealtimeUnsubscribe === "function") holdingTowerRealtimeUnsubscribe();
     holdingTowerRealtimeUnsubscribe = null;
     modalBody._clanTowerClockCleanup?.();
-    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal", "infirmary-modal", "training-grounds-modal");
+    modal.classList.remove("holding-tower-modal", "clan-tower-details-modal", "holding-tower-treasury-qa-modal", "clan-shop-modal", "engineers-workshop-modal", "infirmary-modal", "training-grounds-modal", "clan-building-modal");
     if (session.mapOrder) {
       modal.classList.remove("troop-slider-modal");
       clearSelection(false);
@@ -4139,6 +4139,11 @@ function renderHoldingTowerModal(tower) {
   modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
   modal.classList.toggle("infirmary-modal", Boolean(infirmaryOpen));
   modal.classList.toggle("training-grounds-modal", Boolean(trainingOpen));
+  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || infirmaryOpen || trainingOpen));
+  const frameSession = holdingTowerModalSession;
+  if ((shopOpen || workshopOpen || infirmaryOpen || trainingOpen) && !ensureModalUiStyle("workshop", () => {
+    if (isHoldingTowerModalSessionCurrent(frameSession)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+  })) return;
   if (!workshopOpen) delete modalBody.dataset.workshopReady;
   if (!infirmaryOpen) delete modalBody.dataset.infirmaryReady;
   if (!trainingOpen) delete modalBody.dataset.trainingReady;
@@ -4207,7 +4212,13 @@ function renderHoldingTowerModal(tower) {
         if (shopView.refreshing || !isHoldingTowerModalSessionCurrent(session)) return;
         shopView.refreshing = true;
         renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
-        try { await refreshHoldingTower(tower.id); }
+        try {
+          await loadClanTreasuryStatus({ force: true });
+          if (!isHoldingTowerModalSessionCurrent(session)) return;
+          await refreshHoldingTower(tower.id);
+          shopView.failed = false;
+          shopView.feedback = "";
+        }
         catch (error) {
           if (!isHoldingTowerModalSessionCurrent(session)) return;
           shopView.feedback = error?.message || "Shop unavailable. Please retry.";
@@ -4929,11 +4940,12 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
   for (const node of existing.values()) node.remove();
 }
 
-async function openClanTowerBuilding(towerId, buildingId) {
+async function openClanTowerBuilding(towerId, buildingId, { section } = {}) {
   holdingTowerBuildingSelection = buildingId;
   await openHoldingTower(towerId);
   if (selectedHoldingTowerId !== towerId || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
   holdingTowerDetailsTab = "buildings";
+  if (buildingId === "shop" && section === "wares") holdingTowerModalSession.shopView = { section };
   renderHoldingTowerModal(holdingTowerSnapshots.get(towerId));
 }
 
@@ -29248,7 +29260,7 @@ function renderSelectedClanTowerWheel(towerId) {
     const currentAction = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot).find(entry => entry.action === action);
     if (!currentAction || currentAction.disabled) { showToast(currentAction?.reason || "Tower permissions are syncing. Try again shortly."); return; }
     if (action === "scout") { void scoutTarget(snapshot); return; }
-    if (action === "store") { void openClanTowerBuilding(towerId, "shop"); return; }
+    if (action === "store") { void openClanTowerBuilding(towerId, "shop", { section: "wares" }); return; }
     if (action === "send") { beginHoldingTowerSendMode(snapshot); return; }
     showHoldingTowerOrderComposer(snapshot,action);
     if (modalBody.querySelector("[data-tower-order-form]")) {

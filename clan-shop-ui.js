@@ -7,34 +7,31 @@
  function mount(host,tower,options={}){
   host._clanTowerClockCleanup?.();
   const view=options.view||{},itemDetails=options.itemDetails||{},now=Date.now();
-  const current=B.level(tower.buildings?.shop),next=Math.min(10,current+1),status=tower.clanShop;
-  const project=tower.buildingProject,active=project?.buildingId==='shop';
-  const paused=active&&(!project.progressStartedAtMs||tower.attackBlocked||tower.wallIntegrityBps<10000);
-  const model=Object.assign(view,{level:current,gold:options.personalGold||0,treasury:options.treasuryBalance??null,
-    eligible:Boolean(status?.eligible),eligibleAt:status?.eligibleAtMs,manager:Boolean(tower.ownerMember&&tower.permissions?.manage),
-    pending:Boolean(options.actionBusy),sample:!status?(tower.clanShopError?'unavailable':'loading'):'ready',
-    owned:options.inventory||{},project:active?{end:project.progressStartedAtMs+project.remainingMs,remaining:project.remainingMs,paused}:null});
-  model.section=model.section||'wares';
+  const current=B.level(tower.buildings?.shop),status=tower.clanShop,project=tower.buildingProject;
+  const treasury=options.treasuryBalance;
+  const model=Object.assign(view,{level:current,gold:options.personalGold||0,
+    treasury:treasury==null||!Number.isFinite(Number(treasury))?null:Number(treasury),
+    eligible:Boolean(status?.eligible),eligibleAt:status?.eligibleAtMs,
+    manager:Boolean(tower.ownerMember&&tower.permissions?.manage&&tower.worldActive!==false),
+    attack:Boolean(tower.attackBlocked),integrity:Math.max(0,Math.min(10000,Number(tower.wallIntegrityBps)||0)/100),
+    repairActive:Boolean(tower.repairActive),pending:Boolean(options.actionBusy),
+    sample:!status?(tower.clanShopError?'unavailable':'loading'):'ready',owned:options.inventory||{},
+    project:project?{building:project.buildingId,target:project.targetLevel,total:B.duration(project.targetLevel),
+      remaining:Math.max(0,Number(project.remainingMs)||0),end:Number(project.progressStartedAtMs)+Number(project.remainingMs),
+      paused:!project.progressStartedAtMs||Boolean(tower.attackBlocked)||tower.wallIntegrityBps<10000}:null});
+  model.section=['overview','levels','wares'].includes(model.section)?model.section:'overview';
   if(!B.SHOP_ITEMS.some(i=>i.id===model.selected))model.selected=current>=9?'common_gear_box':current>=2?'royal_tax_decree_30m':'recall_horn';
-  const constructionReason=!tower.ownerMember?'Only the controlling clan can manage these buildings.':!model.manager?'The Clan Leader and Officers manage construction.':current>=10?'Maximum level reached.':project?active?paused?'Construction paused until the walls are fully repaired and no attack is incoming.':'Construction in progress.':'Another building project is already underway.':tower.attackBlocked?'Wait until the incoming attack has ended.':tower.wallIntegrityBps<10000||tower.repairActive?'Fully repair the walls before construction.':model.treasury===null||!Number.isFinite(Number(model.treasury))?'Clan Treasury balance is unavailable.':model.treasury<B.cost(next)?'The Clan Treasury needs more Gold.':'';
   const rows=()=>B.SHOP_ITEMS.map(def=>{const row=status?.items?.find(i=>i.id===def.id),details=itemDetails[def.id]||{};return{...def,...row,art:details.icon,description:details.description||'',category:details.category||'Kingdom provisions',price:row?.price,unlocked:Boolean(row?.unlocked),remaining:row?.remaining||0,limit:row?.limit||0};});
   const chosen=()=>rows().find(i=>i.id===model.selected);
-  function time(ms){const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}h ${m}m`:`${m}m ${String(s%60).padStart(2,'0')}s`;}
+  function time(ms){const seconds=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60),s=seconds%60;return h?`${h}h${m?` ${m}m`:''}`:m?`${m}m${s?` ${s}s`:''}`:`${s}s`;}
   const timer=at=>Number.isFinite(Number(at))?`<span data-clan-tower-countdown="${at}">${time(at-Date.now())}</span>`:'—';
-  const scrollSelectors=['#catalogueScroll','.selection-scroll','.upgrade-scroll','.building-summary'];
+  const scrollSelectors=['#catalogueScroll','.selection-scroll','#overviewPanel','#levelsPanel','.building-panel'];
   const savedScroll=Object.fromEntries(scrollSelectors.map(selector=>[selector,host.querySelector(selector)?.scrollTop||0]));
   const focused=host.contains(document.activeElement)?document.activeElement?.id:'';
-  host.innerHTML=`<div class="shop-shell">
-  <header class="window-header"><img id="shopSign" src="assets/clan-buildings/shop-3.webp" alt=""><div class="heading"><p>${esc(tower.name)} · Clan Tower</p><h1 id="shopTitle">Clan Shop <span id="shopLevel"></span></h1></div><div class="wallet"><span>Your Gold</span><strong><img src="assets/icons/royal-shop-gold-r1.svg" alt="Gold"><span id="goldBalance"></span></strong></div><button id="closeShop" type="button" class="close" aria-label="Close Clan Shop">×</button></header>
-  <nav class="shop-tabs" aria-label="Clan Shop sections"><div role="tablist"><button id="tab-wares" role="tab" data-section="wares" aria-controls="waresPanel" aria-selected="true">Provisions</button><button id="tab-upgrades" role="tab" data-section="upgrades" aria-controls="upgradesPanel" aria-selected="false">Shop upgrades</button></div><div class="shop-navigation"><button type="button" data-shop-back>← Tower Info</button><label><span class="sr-only">Tower building</span><select data-shop-building aria-label="Tower building">${B.DEFINITIONS.map(d=>`<option value="${d.id}" ${d.id==="shop"?"selected":""}>${esc(d.name)}</option>`).join("")}</select></label></div></nav>
-  <div id="waresPanel" class="wares-panel" role="tabpanel" aria-labelledby="tab-wares">
-   <section class="catalogue" aria-label="Clan provisions"><header class="catalogue-header"><div><h2>The tower stores</h2><p>Extra purchases for clan members</p></div><span id="unlockedCount"></span></header><p id="catalogueAlert" class="notice" hidden></p><div id="catalogueScroll" class="scroll-region" tabindex="0" aria-label="All Clan Shop items"><div id="itemGrid" role="listbox" aria-label="Choose a provision"></div></div><footer class="catalogue-footer"><span>Daily allowance renews at <b>00:00 UTC</b></span><span>Peace Shield: <b>every 72 hours</b></span></footer></section>
-   <section id="selection" class="selection" aria-label="Selected item"></section>
-  </div>
-  <div id="upgradesPanel" class="upgrades-panel" role="tabpanel" aria-labelledby="tab-upgrades" hidden></div>
- </div>
-
-<p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>`;
+  const items='<div id="waresPanel" class="wares-panel" role="tabpanel" aria-labelledby="tab-wares" hidden><section class="catalogue" aria-label="Clan items"><header class="catalogue-header"><div><h2>Items for your kingdom</h2><p id="unlockedCount"></p></div><div class="item-wallet"><small>Your Gold</small><strong id="goldBalance"></strong></div></header><p id="catalogueAlert" class="notice" hidden></p><div id="catalogueScroll" class="scroll-region" tabindex="0" aria-label="All Clan Shop items"><div id="itemGrid" role="listbox" aria-label="Choose an item"></div></div><footer class="catalogue-footer"><span>Daily allowance renews at <b>00:00 UTC</b></span><span>Peace Shield: <b>every 72 hours</b></span></footer></section><section id="selection" class="selection" aria-label="Selected item"></section></div>';
+  host.innerHTML=global.CrownlandsClanTowerBuildingsUi.frame(tower,'shop',{
+    icon:B.art('shop',current),closeId:'closeShop',upgradeId:'upgradeShop',items,
+  })+'<p id="liveStatus" class="sr-only" role="status" aria-live="polite"></p>';
   const $=selector=>host.querySelector(selector);
   function notify(message){$('#liveStatus').textContent=message;}
 function getAvailability(item){
@@ -50,10 +47,24 @@ function getAvailability(item){
  return{label:'Available',button:'Purchase one',action:'buy'};
 }
 function select(id,focus=false){if(!itemDetails[id])return;model.selected=id;model.feedback='';renderCatalogue();renderSelection();if(focus){const card=$(`[data-item="${id}"]`);card.focus({preventScroll:true});card.scrollIntoView({block:'nearest'});}notify(chosen().name+' selected.');}
-function section(id){model.section=id;renderTabs();if(id==='upgrades')renderUpgrades();else{renderCatalogue();renderSelection();}}
-function renderTabs(){host.querySelectorAll('[data-section]').forEach(b=>{const active=b.dataset.section===model.section;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});$('#waresPanel').hidden=model.section!=='wares';$('#upgradesPanel').hidden=model.section!=='upgrades';}
+function section(id){model.section=['overview','levels','wares'].includes(id)?id:'overview';renderTabs();}
+function renderTabs(){
+ host.querySelectorAll('[data-section]').forEach(b=>{const active=b.dataset.section===model.section;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});
+ for(const id of ['overview','levels','wares'])$('#'+id+'Panel').hidden=model.section!==id;
+ const items=model.section==='wares';
+ $('.clan-building-body').classList.toggle('show-items',items);
+ $('.building-panel').hidden=items;$('.upgrade-footer').hidden=items;
+}
 function render(){
- $('#shopLevel').textContent=model.level?`Level ${model.level}`:'Unbuilt';$('#shopSign').src=B.art('shop',model.level);$('#goldBalance').textContent=number(model.gold);$('#goldBalance').title=number(model.gold)+' Gold';renderTabs();renderCatalogue();renderSelection();renderUpgrades();
+ $('#balance').textContent=model.treasury===null?'Unavailable':number(model.treasury);
+ $('#balance').title=model.treasury===null?'Unavailable':number(model.treasury)+' Gold';
+ $('#buildingArt').src=B.art('shop',model.level);
+ $('#buildingLevel').textContent=model.level?'Shop Level '+model.level:'Shop unbuilt';
+ $('#levelTrack').innerHTML=Array.from({length:10},(_,i)=>'<span class="'+(i<model.level?'reached':'')+'"></span>').join('');
+ $('#levelTrack').setAttribute('aria-label','Level '+model.level+' of 10');
+ $('#buildingCaption').textContent=model.level?model.level+' of 10 levels completed':'Build to unlock extra personal item purchases.';
+ $('#goldBalance').textContent=number(model.gold);$('#goldBalance').title=number(model.gold)+' Gold';
+ renderOverview();renderLevels();renderFooter();renderCatalogue();renderSelection();renderTabs();tick();
 }
 function renderCatalogue(){
  const items=rows(),unknown=['loading','unavailable'].includes(model.sample);
@@ -75,23 +86,71 @@ const levelChange=level=>{
  const before=B.shopStatus(Math.max(0,level-1)),after=B.shopStatus(level);
  return after.flatMap((i,index)=>!before[index].unlocked&&i.unlocked?[`${i.name} · ${i.id==='shield_12h'?'1 every 72 hours':'1 per day'}`]:i.limit>before[index].limit?[`${i.name} · ${i.limit} per day`]:[]).join(' + ');
 };
-function renderUpgrades(){
- const current=model.level,next=Math.min(10,current+1),project=model.project,paused=project?.paused;
- const reason=constructionReason || 'Paid from Clan Treasury. One building project at a time. Projects cannot be canceled.';
- $('#upgradesPanel').innerHTML=`<section class="building-summary" tabindex="0" aria-label="Shop level and benefits"><img class="building-art" src="${B.art('shop',current)}" alt="Clan Shop building"><p>${esc(tower.name)} · TOWER STORES</p><h2>${current?`Shop Level ${current}`:'Build your Clan Shop'}</h2><div class="level-track" aria-label="Level ${current} of 10">${Array.from({length:10},(_,i)=>`<span class="${i<current?'reached':''}"></span>`).join('')}</div><p>Extra personal purchases for your clan. Items are paid for with each member's own Gold.</p><div class="benefit-box"><small>Current benefit</small><strong>${current?`${rows().filter(i=>i.unlocked).length} provisions unlocked`:'No purchases yet'}</strong><p>${current?'Daily quantities follow your completed Shop level.':'Members may browse the catalogue before construction is complete.'}</p></div>${current<10?`<div class="benefit-box"><small>Next · Level ${next}</small><strong>${next===10?'Royal Peace Shield':next===9?'Common Gear Box':'More supplies'}</strong><p>${esc(levelChange(next))}</p></div>`:''}</section><section class="upgrades-main"><div class="upgrade-scroll" tabindex="0" aria-label="All ten Shop levels"><h2>The growing catalogue</h2><p>New provisions and larger personal allowances with each level.</p><table class="unlock-table"><thead><tr><th>Level</th><th>Unlock or improvement</th><th>Progress</th></tr></thead><tbody>${Array.from({length:10},(_,i)=>{const lv=i+1;return`<tr class="${lv===current?'current':lv===current+1?'next':''}"><td>${lv}</td><td>${esc(levelChange(lv))}</td><td>${lv===current?'Current':lv<current?'Unlocked':lv===current+1?'Next':'Locked'}</td></tr>`;}).join('')}</tbody></table></div><footer class="upgrade-footer"><dl><div><dt>Clan Treasury</dt><dd>${model.treasury===null?'Unavailable':number(model.treasury)+' Gold'}</dd></div>${current<10?`<div><dt>${project?'Gold paid':`Level ${next} cost`}</dt><dd>${number(B.cost(next))} Gold</dd></div><div><dt>${project?paused?'Work remaining':'Time remaining':'Construction time'}</dt><dd>${project?paused?time(project.remaining):timer(project.end):time(B.duration(next))}</dd></div>`:''}</dl><button id="upgradeShop" data-clan-building-start="shop" type="button" class="primary" ${constructionReason||model.pending?'disabled':''}>${current===10?'Maximum level':paused?'Construction paused':project?'Upgrading…':current?`Upgrade to Level ${next}`:'Build Level 1'}</button><p role="status">${esc(reason)}</p></footer></section>`;
+function renderOverview(){
+ const next=Math.min(10,model.level+1),maximum=model.level===10;
+ const count=level=>B.shopStatus(level).filter(i=>i.unlocked).length;
+ const statusFirst=Boolean(model.project||model.pending||model.failed||(!maximum&&reason()));
+ $('#overviewPanel').innerHTML=(statusFirst?projectCard():'')+
+ '<h2 class="section-heading">Extra item purchases</h2><p class="section-intro">Every completed Shop level unlocks an item or increases a personal allowance.</p><div class="benefit-comparison"><article class="benefit-card"><small>Current · '+(model.level?'Level '+model.level:'Unbuilt')+'</small><strong id="currentBenefit">'+count(model.level)+'</strong><p>items unlocked</p><span class="gain">'+(model.level?'Available through this Shop':'Build Level 1 to buy here')+'</span></article><span class="comparison-arrow" aria-hidden="true">'+(maximum?'◆':'→')+'</span><article class="benefit-card next"><small>'+(maximum?'Maximum benefit':'Next · Level '+next)+'</small><strong id="nextBenefit">'+count(next)+'</strong><p>items unlocked</p><span class="gain">'+(maximum?'All allowances unlocked':esc(levelChange(next)))+'</span></article></div>'+
+ '<div class="benefit-explanation"><article><div><h3>Items use your Gold</h3><p>Each member buys for their own Bag after 24 hours in the clan.</p></div></article><article><div><h3>Upgrades use Clan Treasury</h3><p>Leaders and Officers build one level at a time for the whole clan.</p></div></article></div><p class="rules-note">Clan Shop allowances are separate from the regular Shop. Daily limits reset at 00:00 UTC. A Peace Shield can be bought once every 72 hours.</p><button class="retry" type="button" data-browse-items>Browse items →</button>'+(statusFirst?'':projectCard());
+}
+function renderLevels(){
+ $('#levelsPanel').innerHTML='<h2 class="section-heading">The ten Shop levels</h2><p class="section-intro">Each level adds these items or personal allowances. Gold and time are for that level only.</p><table class="levels-table unlock-table"><thead><tr><th scope="col">Level</th><th scope="col">Unlock or allowance</th><th scope="col">Treasury Gold</th><th scope="col">Build time</th></tr></thead><tbody>'+Array.from({length:10},(_,i)=>{
+ const level=i+1;return '<tr class="'+(level===model.level?'current':level===model.level+1?'next':'')+'"><td>'+level+'<span class="row-state">'+(level===model.level?'Current':level===model.level+1?'Next':'')+'</span></td><td>'+esc(levelChange(level))+'</td><td>'+number(B.cost(level))+'</td><td>'+time(B.duration(level))+'</td></tr>';
+ }).join('')+'</tbody></table><p class="level-footnote">Each member has their own allowance, shared across Clan Shops. Purchases and upgrades are paid separately.</p>';
+}
+function reason(){
+    if(model.level===10)return "Maximum level reached. All items and personal allowances are unlocked.";
+    if(!model.manager)return "The Clan Leader and Officers can start building upgrades.";
+    if(model.project)return model.project.building!=="shop"?`${B.definition(model.project.building)?.name||"Another building"} is being upgraded. Only one building project can run at a time.`:model.project.paused?"Construction resumes automatically once the walls are fully repaired and incoming attacks end.":"Construction is underway. The completed Shop level remains active.";
+    if(model.attack)return "Wait for the incoming attack to end before starting construction.";
+    if(model.integrity<100||model.repairActive)return "Fully repair the Tower walls before starting construction.";
+    if(model.treasury===null)return "Clan Treasury balance is unavailable. Retry before upgrading.";
+    if(model.treasury<B.cost(model.level+1))return `The Clan Treasury needs ${number(B.cost(model.level+1)-model.treasury)} more Gold.`;
+    return "";
+  }
+function progress(){const project=model.project;if(!project)return 0;const remaining=project.paused?project.remaining:Math.max(0,project.end-Date.now());return Math.min(100,Math.max(0,(1-remaining/project.total)*100));}
+function projectCard(){
+ const project=model.project,active=project?.building==="shop",paused=Boolean(project?.paused);
+ const blocked=Boolean(reason())&&model.level!==10;
+ let title="Ready to upgrade",badge="Ready",copy="Walls must be fully repaired, with no incoming attack and no other building project.";
+ if(model.level===0)title="Ready to build";
+ if(model.level===10){title="Shop complete";badge="Maximum level";copy="All ten Shop levels are complete. All items and personal allowances are unlocked.";}
+ else if(project){title=active?(paused?`Level ${project.target} upgrade paused`:`Building Level ${project.target}`):"Another building is underway";badge=project.paused?"Paused":active?"In progress":esc(B.definition(project.building)?.name || "Construction");copy=reason();}
+ else if(model.pending){title="Starting construction…";badge="Pending";copy="Waiting for the server to confirm construction. The completed level stays active.";}
+ else if(blocked){title=!model.manager?"Officer approval required":model.attack?"Incoming attack":(model.integrity<100||model.repairActive)?"Walls need repair":model.treasury===null?"Treasury unavailable":"More Gold needed";badge="Unavailable";copy=reason();}
+ if(model.failed){title="Upgrade could not start";badge="Try again";copy=model.feedback;}
+ const conditions=!project&&model.level<10?`<div class="conditions"><span class="${(model.integrity<100||model.repairActive)?"unmet":""}">Walls ${model.integrity}%</span><span class="${model.attack?"unmet":""}">${model.attack?"Attack incoming":"No incoming attack"}</span></div>`:"";
+ return `<section class="project-card ${model.failed?"error":paused?"paused":blocked?"blocked":""}" aria-label="Construction status"><div class="project-heading"><h3>${title}</h3><span class="state-badge">${badge}</span></div><p>${esc(copy)}</p>${project?`<div class="progress" role="progressbar" aria-label="${esc(B.definition(project.building)?.name || "Building")} construction" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(progress())}"><span style="--progress:${progress()}%"></span></div><div class="project-stats"><span>${paused?"Work preserved":"Work completed"} · <b id="progressPercent">${Math.floor(progress())}%</b></span><span>${paused?"Paused · ":""}<b data-project-time></b> remaining</span></div>`:""}${conditions}${model.treasury===null||model.failed?`<button class="retry" type="button" data-retry ${model.refreshing?"disabled":""}>${model.refreshing?"Refreshing…":"Refresh status"}</button>`:""}</section>`;
+}
+function renderFooter(){
+ const next=Math.min(10,model.level+1),active=model.project?.building==="shop",maximum=model.level===10,paused=active&&model.project.paused;
+ $("#upgradeFacts").innerHTML=maximum?'<div><dt>Shop completed</dt><dd>Level 10 / 10</dd></div><div><dt>Catalogue unlocked</dt><dd>7 items</dd></div>':`<div><dt>${active?"Gold paid":model.level?`Level ${next} cost`:"Level 1 cost"}</dt><dd id="upgradeCost">${money(B.cost(next))}</dd></div><div><dt>${active?paused?"Work remaining":"Time remaining":"Construction time"}</dt><dd ${active?"data-project-time":""}>${active?"":time(B.duration(next))}</dd></div>`;
+ const button=$("#upgradeShop"),blocked=Boolean(reason());button.disabled=blocked||model.pending;
+ button.textContent=maximum?"Maximum level":model.pending?"Starting…":active?paused?"Upgrade paused":"Upgrade in progress":model.project?"Building project active":!model.manager?"Leader / Officer only":model.attack?"Attack incoming":(model.integrity<100||model.repairActive)?"Repair walls first":model.treasury===null?"Balance unavailable":blocked?"Not enough Gold":model.level?`Upgrade to Level ${next}`:"Build Level 1";
+ $("#upgradeNote").textContent=model.failed?model.feedback:reason()||"Paid upfront from Clan Treasury. One building project per Tower. Construction cannot be canceled.";$("#upgradeNote").className=model.failed?"error":"";
 }
 
+ const projectKey=model.project?[model.project.building,model.project.target,model.project.end].join(':'):'';
+ function tick(){
+   const project=model.project;if(!project)return;
+   const remaining=project.paused?project.remaining:Math.max(0,project.end-Date.now());
+   host.querySelectorAll('[data-project-time]').forEach(node=>node.textContent=time(remaining));
+   const bar=$('.progress');if(bar){bar.setAttribute('aria-valuenow',String(Math.floor(progress())));bar.firstElementChild.style.setProperty('--progress',progress()+'%');$('#progressPercent').textContent=Math.floor(progress())+'%';}
+   if(!project.paused&&remaining===0&&model.countdownRefreshKey!==projectKey){model.countdownRefreshKey=projectKey;options.onRefresh?.();}
+ }
   $('#itemGrid').addEventListener('click',e=>{const card=e.target.closest('[data-item]');if(card)select(card.dataset.item);});
   $('#itemGrid').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;e.preventDefault();const ids=B.SHOP_ITEMS.map(i=>i.id),index=ids.indexOf(model.selected),cols=getComputedStyle($('#itemGrid')).gridTemplateColumns.split(' ').length,delta=e.key==='ArrowDown'?cols:e.key==='ArrowUp'?-cols:e.key==='ArrowLeft'?-1:1;select(ids[e.key==='Home'?0:e.key==='End'?ids.length-1:Math.max(0,Math.min(ids.length-1,index+delta))],true);});
   $('#selection').addEventListener('click',e=>{
     const action=e.target.closest('[data-action]')?.dataset.action;
     if(action==='buy'&&getAvailability(chosen()).action==='buy')options.onBuy?.(model.selected);
-    if(action==='upgrade'){section('upgrades');$('#tab-upgrades').focus();}
+    if(action==='upgrade'){section('levels');$('#tab-levels').focus();}
     if(action==='retry'&&!model.refreshing)options.onRefresh?.();
   });
   host.querySelectorAll('[data-section]').forEach(b=>b.addEventListener('click',()=>section(b.dataset.section)));
-  $('.shop-tabs').addEventListener('keydown',e=>{if(!e.target.matches('[role="tab"]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?'wares':e.key==='End'?'upgrades':model.section==='wares'?'upgrades':'wares';section(next);$('#tab-'+next).focus();});
-  $('#upgradesPanel').addEventListener('click',e=>{if(e.target.closest('#upgradeShop')&&!constructionReason&&!model.pending)options.onBuild?.();});
+  $('.shop-tabs').addEventListener('keydown',e=>{if(!e.target.matches('[role="tab"]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const sections=['overview','levels','wares'],index=sections.indexOf(model.section),next=e.key==='Home'?0:e.key==='End'?2:(index+(e.key==='ArrowRight'?1:-1)+3)%3;section(sections[next]);$('#tab-'+sections[next]).focus();});
+  $('#upgradeShop').addEventListener('click',()=>{if(reason()||model.pending)return;model.pending=true;model.failed=false;renderOverview();renderFooter();options.onBuild?.();});
+  $('#overviewPanel').addEventListener('click',event=>{if(event.target.closest('[data-retry]')&&!model.refreshing)options.onRefresh?.();if(event.target.closest('[data-browse-items]')){section('wares');$('#tab-wares').focus();}});
   $('#closeShop').addEventListener('click',()=>options.onClose?.());
   $('[data-shop-back]').addEventListener('click',()=>options.onBack?.());
   $('[data-shop-building]').addEventListener('change',e=>options.onBuilding?.(e.target.value));
@@ -99,7 +158,7 @@ function renderUpgrades(){
   for(const [selector,top] of Object.entries(savedScroll)){const el=host.querySelector(selector);if(el)el.scrollTop=top;}
   if(focused)host.querySelector('#'+CSS.escape(focused))?.focus({preventScroll:true});
   let refreshed=false;
-  const clock=global.setInterval(()=>host.querySelectorAll('[data-clan-tower-countdown]').forEach(el=>{const end=Number(el.dataset.clanTowerCountdown);el.textContent=time(end-Date.now());if(!refreshed&&end>now&&end<=Date.now()){refreshed=true;options.onRefresh?.();}}),1000);
+  const clock=global.setInterval(()=>{tick();host.querySelectorAll('[data-clan-tower-countdown]').forEach(el=>{const end=Number(el.dataset.clanTowerCountdown);el.textContent=time(end-Date.now());if(!refreshed&&end>now&&end<=Date.now()){refreshed=true;options.onRefresh?.();}});},1000);
   const dialog=host.closest('dialog');
   const cleanup=()=>{global.clearInterval(clock);dialog?.removeEventListener('close',cleanup);};
   host._clanTowerClockCleanup=cleanup;dialog?.addEventListener('close',cleanup,{once:true});

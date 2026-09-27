@@ -1,63 +1,36 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c7efb2498e0bc81de77690265601d8323d4e2369",
+  "baseCommit": "b0d2bd26e8678e7127e18bb32a823eed48ad2ba9",
   "coverage": [
     {
       "paths": [
-        "functions/combat-authorization.js",
-        "functions/index.js",
+        "clan-tower-buildings-ui.js",
+        "engineers-workshop-ui.css",
+        "engineers-workshop-ui.js",
+        "infirmary-ui.js",
+        "training-grounds-ui.js",
+        "clan-shop-ui.js",
         "game.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-peace-shield-returns.js",
-        "tools/validate-combat-authorization.js",
-        "tools/validate-peace-shield-returns.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-city-wall-shields.js",
-        "tools/validate-city-wall-shields-browser.js",
-        "tools/validate-combat-timers-browser.js",
-        "functions/test/run-emulator-gates.js"
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
       ],
-      "reason": "Separate 30-minute qualifying retaliation and capturer abandonment locks from the unchanged 15-minute offensive Shield cooldown. Gate city shield protection on authoritative full wall integrity across city/Tower dispatch, arrival, mission targets, activation reversal, local previews and map rendering. Cover exact repair/expiry boundaries, offline repair, former-owner isolation, elapsed grant compatibility, minute-20 launch, concurrent activation/launch, failed launch preservation and mixed incoming targets. Exercise shared return and fortification dependencies and supported desktop/landscape layouts. Run the shield-return emulator on the current core topology with canonical city IDs and current realm/shard identity, so the fixture participates in authoritative owned-city queries. Keep the displayed wall percentage below 100% until repair is truly complete.",
+      "reason": "Share the building frame and Workshop presentation across all four Clan Tower buildings. Give the Shop Overview, All levels and Items, clear Treasury versus personal Gold, a fixed construction footer, progress/restrictions/retries and authoritative timer completion. Cover identical frame geometry and reachable actions at desktop and both landscape sizes, current/next benefits, all ten levels, preserved tabs/scroll, purchase and construction idempotency, permissions, missing funds, paused projects and navigation. Existing recovery/rally examples and map Store/building entry points remain covered. Client session and Treasury tests cover the shared style loader callback and explicit balance refresh. No server, rules, schema, economics or combat behavior changes; emulator suites are not required for this presentation update.",
       "tests": [
-        "tools/validate-combat-authorization.js",
-        "tools/validate-city-wall-shields.js",
-        "tools/validate-city-wall-shields-browser.js",
-        "tools/validate-combat-timers-browser.js",
-        "tools/validate-peace-shield-returns.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-city-wall-balance.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-allied-target-return.js",
-        "tools/validate-reinforcement-retargeting.js",
-        "tools/validate-city-relinquishment-limit.js",
-        "tools/validate-daily-missions.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-peace-shield-returns.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-city-relinquishment-limit.js",
-        "functions/test/emulator-daily-missions.js",
-        "functions/test/emulator-rally-lifecycle.js"
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-engineers-workshop-browser.js",
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-training-grounds-browser.js",
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
       ]
     },
     {
-      "paths": [
-        "help-handbook-content.js",
-        "battle-economy-guide.html"
-      ],
-      "reason": "Explain 30-minute retaliation, full-wall city eligibility and automatic protection for the remaining item duration. Verify help and shop description layout plus the embedded guide without changing other balance rules.",
-      "tests": [
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-shop-browser.js",
-        "tools/validate-battle-economy-guide.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
-      ],
-      "reason": "Record the explicitly confirmed rules, compatibility of saved timers, arrival behavior after repair and pending release status. Documentation only; runtime behavior is covered by the selected tests above.",
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "reason": "Document the user's confirmed consistent building presentation, separate Shop Items tab, existing Store shortcut and pending release status. The shared browser tests above validate this presentation; no independent runtime change in this document.",
       "tests": []
     }
   ]

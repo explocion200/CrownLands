@@ -65,6 +65,9 @@ function harness() {
     getHoldingTowerQaScenario: () => "", getOnlineApi: () => api,
     escapeHtml: String, formatNumber: String, formatMarchesNumber: String, renderClanShield: () => "", loadClanTreasuryStatus: async () => null,
     mountHoldingTowerTroopOrderView() {}, updateHoldingTowerTroopOrderView() {}, getPeaceShieldAttackWarning: () => "",
+    // This lifecycle harness uses bare inputs, without a mounted troop selection widget.
+    refreshTroopOrderSelection: () => null,
+    getTroopOrderSelection: () => null,
     getClanTreasuryScope: () => String(context.onlineSessionGeneration), clanTreasuryClanId: "",
     renderClanHeraldry: () => "", getCachedClanPublicSnapshot: () => null, renderTroopOrderLocation: () => "", clearSelection() {},
     showToast() {}, rejectGameAction: message => errors.push(message),
