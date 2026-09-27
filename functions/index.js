@@ -14827,11 +14827,10 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
         `You need ${requirement.duplicates} unequipped matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}.`
       );
     }
-    const rawBaseGoldPerHour = getShopPricingContext(economy).rawBaseGoldPerHour;
-    const cost = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance);
-    if (request.data?.cost !== undefined && Number(request.data.cost) !== cost) {
-      throw new HttpsError("failed-precondition", "Equipment Gold cost changed. Review the updated price and try again.", {
-        reason: "gear-price-changed", cost, rawBaseGoldPerHour,
+    const cost = COMMON_GEAR.getUpgradeGoldCost(instance);
+    if (!Number.isSafeInteger(request.data?.cost) || request.data.cost !== cost) {
+      throw new HttpsError("failed-precondition", "Equipment Gold cost changed. Refresh the game to review the updated price and try again.", {
+        reason: "gear-price-changed", cost,
       });
     }
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
