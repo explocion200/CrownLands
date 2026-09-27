@@ -475,7 +475,7 @@ assert.deepEqual(Array.from(sandbox.selectDailyMissionPeerCandidates(peers, 900_
 sandbox.crypto = require("node:crypto");
 sandbox.db = { doc: value => value };
 sandbox.combatAuthorizationRealm = () => ({ worldId: "test", resetGeneration: "test" });
-sandbox.COMBAT_AUTHORIZATION = { COMBAT_WINDOW_MS: 900_000, captureAbandonLocks: () => ({ capturer: true }) };
+sandbox.COMBAT_AUTHORIZATION = { RETALIATION_WINDOW_MS: 1_800_000, captureAbandonLocks: () => ({ capturer: true }) };
 vm.runInContext(readFunction(source, "recordCaptureRetaliation"), sandbox);
 for (const [highPower, lowPower, expected] of [[900_000, 400_000, false], [900_000, 300_000, true],
   [100_000_000, 45_000_000, false], [100_000_000, 40_000_000, true], [1e9, 5e8, true]]) {

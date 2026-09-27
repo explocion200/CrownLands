@@ -47,3 +47,15 @@ Focused checks passed before PR preparation: full repository lint; combat policy
 - Release packaging and source fingerprint: `tools/build-production-client.js`, `tools/validate-production-artifact.js`, `tools/generate-release-manifest.js`.
 - Validation: `functions/package.json`, `functions/test/run-emulator-gates.js`, `functions/test/emulator-combat-authorization.js`, `functions/test/emulator-rally-lifecycle.js`, `tools/validate-combat-authorization.js`, `tools/validate-combat-timers-browser.js`.
 - Confirmed design and release notes: the Master Development Specification and this document.
+
+## September 27 revision: 30-minute retaliation and city wall shields
+
+Branch: `codex/city-wall-shields-retaliation`. Status: in development; not merged or deployed.
+
+New qualifying captures grant 30 minutes to launch retaliation and lock abandonment by that capturer for the same 30 minutes. The offensive Shield activation cooldown remains 15 minutes. The constants are separate; already saved grants/locks retain their saved deadlines.
+
+Peace Shield eligibility now requires full wall integrity on the particular owned regular city. Damaged cities retain the owner's item expiration as metadata so elapsed repair activates protection without an online owner, another item, or a database write at the repair deadline. Both dispatch paths, combat arrival, mission target eligibility, local previews and map visuals use this wall check. Ownership transfer clears the former owner's timer. Existing active Shields follow this rule after release.
+
+Activating a Shield reverses incoming attacks only for fully repaired targets still owned by the activating player. Other incoming attacks continue; the arrival shield check blocks combat if repair completes in time. Eligible outgoing attacks retain their existing reversal behavior. There is no new repair-completion scheduler or automatic mid-route reversal at repair time.
+
+Focused validation adds client/server exact-boundary and expiry cases, automatic map refresh at desktop and landscape-mobile sizes, 30:00 timer rendering, actual minute-20 retaliation, failed full-wall dispatch, repair before arrival, damaged-city capture, former-owner isolation and mixed incoming-march eligibility. Required GitHub checks provide the authoritative emulator results. No production records or archived realms are changed.

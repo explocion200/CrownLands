@@ -265,7 +265,7 @@ const SHOP_ITEMS = [
   {
     id: "shield_12h",
     label: "Royal Peace Shield",
-    description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
+    description: "Lasts 12 hours. Protects owned regular cities only at 100% wall integrity; damaged cities gain protection when fully repaired while the Shield remains active. Activation turns back your outgoing rival attacks and incoming attacks on protected cities. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
     icon: "assets/optimized/item-peace-shield-384x384-c74d2eb2f8ac.webp",
     bagCategory: "defense",
@@ -6697,17 +6697,19 @@ function getPeaceShieldRemainingSeconds(expiresAtMs = getActivePeaceShieldExpire
   return Math.max(0, Math.ceil((normalizeTimestampMs(expiresAtMs) - Date.now()) / 1000));
 }
 
-function getCityPeaceShieldExpiresAtMs(city) {
+function getCityPeaceShieldExpiresAtMs(city, nowMs = Date.now()) {
   if (!city || isStronghold(city)) return 0;
   const expiresAtMs = city.owner === "player"
     ? getActivePeaceShieldExpiresAtMs()
     : normalizeTimestampMs(city.ownerShieldExpiresAtMs);
-  return expiresAtMs > Date.now() ? expiresAtMs : 0;
+  return expiresAtMs > nowMs
+    && getFortificationIntegrityBpsAt(normalizeFortificationState(city, nowMs), nowMs) === 10_000
+    ? expiresAtMs : 0;
 }
 
-function isCityProtectedByPeaceShield(city) {
+function isCityProtectedByPeaceShield(city, nowMs = Date.now()) {
   if (!city || city.owner === "neutral" || isStronghold(city)) return false;
-  return getCityPeaceShieldExpiresAtMs(city) > Date.now();
+  return getCityPeaceShieldExpiresAtMs(city, nowMs) > nowMs;
 }
 
 function isAnotherPlayerOwnedCity(city) {
@@ -33180,7 +33182,8 @@ function showCrownCitadelInfoModal(city) {
 /* Inner Castle navigation and rendering lives in common-gear-ui.js. */
 
 function formatWallIntegrity(integrityBps = 10_000) {
-  const percent = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000) / 100;
+  const integrity = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000);
+  const percent = integrity < 10_000 ? Math.min(99.9, integrity / 100) : 100;
   return `${Number.isInteger(percent) ? formatNumber(percent) : percent.toFixed(1)}%`;
 }
 
@@ -36422,12 +36425,12 @@ function getPeaceShieldRivalMarchDirection(march, nowMs = Date.now()) {
   if (!target || isRewardCampTarget(target) || isStronghold(target) || target.owner === "neutral") return "";
   const currentUid = getCurrentOnlineUid();
   const ownerUid = String(march.ownerUid || "").trim();
-  const targetOwnerUid = String(march.targetOwnerUid || target.ownerUid || "").trim();
+  const targetOwnerUid = String(target.ownerUid || "").trim();
   if (ownerUid && targetOwnerUid && ownerUid === targetOwnerUid) return "";
   const outgoing = march.owner === "player" || Boolean(currentUid && ownerUid === currentUid);
   const incoming = target.owner === "player" || Boolean(currentUid && targetOwnerUid === currentUid);
   if (outgoing && !incoming && !isSameAttackOwner(target, march.owner, ownerUid)) return "outgoing";
-  if (incoming && !outgoing && march.owner !== "neutral") return "incoming";
+  if (incoming && !outgoing && march.owner !== "neutral" && isCityProtectedByPeaceShield(target, nowMs)) return "incoming";
   return "";
 }
 
@@ -36555,7 +36558,7 @@ function settleConfirmedInventoryItem(item, result, quantity = 1) {
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
     const returnSummary = normalizeShieldReturnSummary(result?.shieldReturnSummary);
     const returnText = formatShieldReturnSummary(returnSummary);
-    addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.${returnText ? ` ${returnText}` : ""}`);
+    addLog(`${item.label} activated. Your cities with fully repaired walls are protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}. Damaged cities gain protection at full repair while the Shield is active.${returnText ? ` ${returnText}` : ""}`);
     playGameSound("royal_shield_activate");
     updateShieldStatusBadge();
     renderCities(true);
@@ -36602,7 +36605,7 @@ async function useRoyalPeaceShield(item) {
   refreshOwnedCityItemEffectMetadata(true);
   const returnSummary = reverseLocalPeaceShieldMarches(nowMs);
   const returnText = formatShieldReturnSummary(returnSummary);
-  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.${returnText ? ` ${returnText}` : ""}`);
+  addLog(`${item.label} activated. Your cities with fully repaired walls are protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}. Damaged cities gain protection at full repair while the Shield is active.${returnText ? ` ${returnText}` : ""}`);
   saveGame();
   renderHud();
   updateShieldStatusBadge();

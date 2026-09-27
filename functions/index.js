@@ -7751,7 +7751,8 @@ function getShieldExpiresAtMs(city = {}) {
 function isCityShielded(city = {}, attackerUid = "", nowMs = Date.now()) {
   const ownerUid = getOwnerUid(city);
   if (!ownerUid || ownerUid === attackerUid || isStronghold(city)) return false;
-  return getShieldExpiresAtMs(city) > nowMs;
+  return getShieldExpiresAtMs(city) > nowMs
+    && getFortificationIntegrityBpsAt(normalizeFortificationState(city, nowMs), nowMs) === 10_000;
 }
 
 function shouldDeactivatePeaceShieldForAttack(target = {}, targetType = "city", attackerUid = "", resolvedKind = "attack") {
@@ -7794,7 +7795,7 @@ async function readRetaliationAuthorization(transaction, { uid, recordId, target
 function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
   if (!authorization) return;
   if (Date.now() >= authorization.record.expiresAtMs) {
-    throw new HttpsError("failed-precondition", "Retaliation Expired: the 15-minute launch window for this city has ended.");
+    throw new HttpsError("failed-precondition", "Retaliation Expired: the launch window for this city has ended.");
   }
   const used = { status: "used", usedArmyId: movement.id, usedAtMs: nowMs };
   // Both writes belong to the launch transaction: a failed dispatch consumes nothing.
@@ -7810,7 +7811,7 @@ function recordCaptureRetaliation(transaction, { armyId, target, targetRef, orig
     id, ...combatAuthorizationRealm(), originalOwnerUid, capturerUid,
     cityId: target.id, regionId: target.regionId, cityPath: targetRef.path,
     cityName: safeString(target.name || target.id, 80),
-    capturedAtMs: nowMs, expiresAtMs: nowMs + COMBAT_AUTHORIZATION.COMBAT_WINDOW_MS,
+    capturedAtMs: nowMs, expiresAtMs: nowMs + COMBAT_AUTHORIZATION.RETALIATION_WINDOW_MS,
     status: "available", usedAtMs: 0, usedArmyId: "", sourceArmyId: armyId,
   };
   transaction.set(db.doc(`players/${originalOwnerUid}/retaliationWindows/${id}`), record);
@@ -19401,9 +19402,15 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       }
       expiresAtMs = nowMs + ROYAL_PEACE_SHIELD_DURATION_MS;
       itemEffects.shieldExpiresAtMs = expiresAtMs;
+      const shieldedCityKeys = new Set();
       economy.cityEntries.forEach(entry => {
         const shieldValue = isStronghold(entry.city) ? 0 : expiresAtMs;
+        // Retain the owner's timer on damaged cities. Wall integrity gates
+        // protection at read time, including when repair completes offline.
         const patch = { ownerShieldExpiresAtMs: shieldValue };
+        if (isCityShielded({ ...entry.city, ...patch }, "", nowMs)) {
+          shieldedCityKeys.add(`${entry.city.regionId}:${entry.city.id}`);
+        }
         extraCityPatches.push({ ref: entry.ref, city: entry.city, patch });
         extraCityUpdates.push({
           id: entry.city.id,
@@ -19423,6 +19430,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       armiesById.forEach(army => {
         const direction = getPeaceShieldReturnDirection(army, uid, nowMs);
         if (!direction) return;
+        if (direction === "incoming" && !shieldedCityKeys.has(`${army.targetRegionId}:${army.toId}`)) return;
         const movement = createMidRouteReturnMovement(army, nowMs, PEACE_SHIELD_RETURN_REASON);
         writeArmyMovementCopies(transaction, movement, {
           previousTargetOwnerUid: army.targetOwnerUid,

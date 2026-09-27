@@ -1,86 +1,63 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "659b7d072cd1834197953f221cdb5cc17b5507b5",
+  "baseCommit": "c7efb2498e0bc81de77690265601d8323d4e2369",
   "coverage": [
     {
       "paths": [
+        "functions/combat-authorization.js",
         "functions/index.js",
         "game.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-king-power-colors.js",
-        "tools/validate-king-power-colors-browser.js",
-        "tools/validate-layer1-travel.js",
-        "tools/validate-gear-bonus-gameplay.js",
         "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-world-travel.js"
-      ],
-      "reason": "Change attacker-power protection across previews, dispatch, retaliation, mission peer selection, local forecasts and map colors; retain saved schema-v2 marches and combat/XP rules. Verify anchor boundaries, logarithmic continuity, cap scaling and client/server parity. Reduce shared march duration by 10% across order kinds and troop bands, retaining minimums, skill/Gear/Swift modifiers, authoritative routing and idempotent arrival commitments. Cover city/Tower dispatch, converted returns, rallies and bulk orders in selected emulators; check map colors and exact troop controls at desktop and landscape-mobile sizes.",
-      "tests": [
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-king-power-colors.js",
-        "tools/validate-king-power-colors-browser.js",
-        "tools/validate-layer1-travel.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-king-power.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-combat-forecast.js",
+        "functions/test/emulator-peace-shield-returns.js",
         "tools/validate-combat-authorization.js",
-        "tools/validate-swift-march-order.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-city-wall-shields.js",
+        "tools/validate-city-wall-shields-browser.js",
+        "tools/validate-combat-timers-browser.js",
+        "functions/test/run-emulator-gates.js"
+      ],
+      "reason": "Separate 30-minute qualifying retaliation and capturer abandonment locks from the unchanged 15-minute offensive Shield cooldown. Gate city shield protection on authoritative full wall integrity across city/Tower dispatch, arrival, mission targets, activation reversal, local previews and map rendering. Cover exact repair/expiry boundaries, offline repair, former-owner isolation, elapsed grant compatibility, minute-20 launch, concurrent activation/launch, failed launch preservation and mixed incoming targets. Exercise shared return and fortification dependencies and supported desktop/landscape layouts. Run the shield-return emulator on the current core topology with canonical city IDs and current realm/shard identity, so the fixture participates in authoritative owned-city queries. Keep the displayed wall percentage below 100% until repair is truly complete.",
+      "tests": [
+        "tools/validate-combat-authorization.js",
+        "tools/validate-city-wall-shields.js",
+        "tools/validate-city-wall-shields-browser.js",
+        "tools/validate-combat-timers-browser.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-siege-combat.js",
         "tools/validate-authoritative-army-orders.js",
+        "tools/validate-allied-target-return.js",
+        "tools/validate-reinforcement-retargeting.js",
+        "tools/validate-city-relinquishment-limit.js",
         "tools/validate-daily-missions.js",
-        "tools/validate-troop-selection-browser.js",
         "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-peace-shield-returns.js",
         "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-daily-missions.js"
-      ]
-    },
-    {
-      "paths": [
-        "economy-config.js",
-        "functions/economy-config.json",
-        "battle-guide-calculations.js",
-        "tools/validate-economy-balance.js",
-        "tools/validate-city-wall-balance.js",
-        "tools/validate-level-up-rewards.js",
-        "tools/audit-season-balance.js"
-      ],
-      "reason": "Apply the approved 10.815 production factor to every regular-city level. Validate config parity, exact production/Hero reward anchors, cumulative rewards, production bonuses, unchanged Gold, King Power replacement, walls through and above Level 150, and siege pacing. Exercise authoritative accrual, concurrent economy actions, raw-production Camp/pickup rewards, missions and achievements through their affected emulator suites.",
-      "tests": [
-        "tools/validate-economy-balance.js",
-        "tools/validate-city-wall-balance.js",
-        "tools/validate-level-up-rewards.js",
-        "tools/audit-season-balance.js",
-        "tools/validate-king-power.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-battle-economy-guide.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-reward-camp-base-production.js",
-        "functions/test/emulator-harvest-pickup-rewards.js",
+        "functions/test/emulator-city-relinquishment-limit.js",
         "functions/test/emulator-daily-missions.js",
-        "functions/test/emulator-seasonal-achievements.js"
+        "functions/test/emulator-rally-lifecycle.js"
       ]
     },
     {
       "paths": [
-        "battle-economy-guide.html",
-        "tools/validate-battle-economy-guide.js",
-        "tools/validate-balance-guide-browser.js",
-        "battle-economy-guide.css"
+        "help-handbook-content.js",
+        "battle-economy-guide.html"
       ],
-      "reason": "Explain the four attacker-power milestones and smooth interpolation in the public guide and show the new troop factor. Check guide formula parity, exact production inputs at Levels 1/100/150/200, readable protection rows and contained desktop/landscape-mobile layout.",
+      "reason": "Explain 30-minute retaliation, full-wall city eligibility and automatic protection for the remaining item duration. Verify help and shop description layout plus the embedded guide without changing other balance rules.",
       "tests": [
-        "tools/validate-battle-economy-guide.js",
-        "tools/validate-balance-guide-browser.js"
+        "tools/validate-help-handbook-browser.js",
+        "tools/validate-shop-browser.js",
+        "tools/validate-battle-economy-guide.js"
       ]
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
       ],
-      "reason": "Record the explicitly approved protection, +5% production and -10% travel revision, derived reward/wall/siege values, snapshot compatibility and pending deployment status. Documentation is supported by the runtime and balance tests above.",
+      "reason": "Record the explicitly confirmed rules, compatibility of saved timers, arrival behavior after repair and pending release status. Documentation only; runtime behavior is covered by the selected tests above.",
       "tests": []
     }
   ]

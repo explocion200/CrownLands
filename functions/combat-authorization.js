@@ -1,6 +1,7 @@
 "use strict";
 
-const COMBAT_WINDOW_MS = 15 * 60 * 1000;
+const SHIELD_COOLDOWN_MS = 15 * 60 * 1000;
+const RETALIATION_WINDOW_MS = 30 * 60 * 1000;
 const timestamp = value => Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
 
 function isOffensivePvp({ kind, attackerUid, attackerClanId = "", targetOwnerUid = "", targetClanId = "" }) {
@@ -18,7 +19,7 @@ function shieldCooldownExpiresAt(profile, resetGeneration) {
 function shieldCooldownPatch(profile, resetGeneration, nowMs) {
   return {
     peaceShieldCooldownResetGeneration: resetGeneration,
-    peaceShieldCooldownExpiresAtMs: Math.max(shieldCooldownExpiresAt(profile, resetGeneration), nowMs + COMBAT_WINDOW_MS),
+    peaceShieldCooldownExpiresAtMs: Math.max(shieldCooldownExpiresAt(profile, resetGeneration), nowMs + SHIELD_COOLDOWN_MS),
   };
 }
 
@@ -30,7 +31,7 @@ function retaliationError(record, { uid, cityId, regionId, worldId, resetGenerat
   }
   if (record.status !== "available" || record.usedArmyId || timestamp(record.usedAtMs)) return "This retaliation opportunity has already been used.";
   if (timestamp(record.expiresAtMs) <= nowMs || timestamp(record.capturedAtMs) > nowMs) {
-    return "Retaliation Expired: the 15-minute launch window for this city has ended.";
+    return "Retaliation Expired: the launch window for this city has ended.";
   }
   return "";
 }
@@ -44,7 +45,7 @@ function captureAbandonLocks(city, capturerUid, nowMs) {
   const locks = Object.fromEntries(Object.entries(city?.retaliationAbandonLocks || {})
     .filter(([, expiry]) => timestamp(expiry) > nowMs)
     .map(([uid, expiry]) => [uid, timestamp(expiry)]));
-  locks[capturerUid] = Math.max(locks[capturerUid] || 0, nowMs + COMBAT_WINDOW_MS);
+  locks[capturerUid] = Math.max(locks[capturerUid] || 0, nowMs + RETALIATION_WINDOW_MS);
   return locks;
 }
 
@@ -62,6 +63,6 @@ function hasCommittedRetaliation(army, { cityId, regionId, worldId, resetGenerat
 }
 
 module.exports = {
-  COMBAT_WINDOW_MS, isOffensivePvp, shieldCooldownExpiresAt, shieldCooldownPatch,
+  SHIELD_COOLDOWN_MS, RETALIATION_WINDOW_MS, isOffensivePvp, shieldCooldownExpiresAt, shieldCooldownPatch,
   retaliationError, abandonLockExpiresAt, captureAbandonLocks, hasCommittedRetaliation,
 };

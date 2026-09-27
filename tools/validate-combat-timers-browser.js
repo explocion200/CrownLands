@@ -114,6 +114,8 @@ async function main() {
     const states = await evaluate(() => {
       const element = document.getElementById("combatTimers"), ui = CrownlandsCombatTimersUI;
       const single = { ...combatFixture, retaliation: [combatFixture.retaliation[0]] };
+      ui.render(element, { ...single, retaliation: [{ ...single.retaliation[0], expiresAtMs: combatFixtureNow + 1_800_000 }] }, combatFixtureNow);
+      const extended = element.querySelector("summary").textContent;
       ui.render(element, single, combatFixtureNow);
       const one = element.querySelector("summary").textContent;
       const title = element.querySelector("summary").title;
@@ -127,9 +129,10 @@ async function main() {
       ui.render(element, JSON.parse(JSON.stringify(combatFixture)), combatFixtureNow + 30_000);
       const reconstructed = element.querySelector("[data-shield-cooldown] strong").textContent;
       const reboundCount = element.querySelectorAll("li").length;
-      return { one, title, retaliationExpired, allExpired, signedOut, reconstructed, reboundCount };
+      return { extended, one, title, retaliationExpired, allExpired, signedOut, reconstructed, reboundCount };
     });
     assert.match(states.one, /05:00/);
+    assert.match(states.extended, /30:00/);
     assert.match(states.title, /Stoneward Keep/);
     assert(states.retaliationExpired && states.allExpired && states.signedOut);
     assert.equal(states.reconstructed, "14:30");
