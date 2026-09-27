@@ -206,6 +206,7 @@ async function main() {
       troopFloat: 1000,
       productionUpdatedAtMs: seedNowMs,
       ownerShieldExpiresAtMs: 0,
+      fortificationState: { version: 1, integrityBps: 5000, lastDamagedAtMs: seedNowMs, repairAtMs: seedNowMs + 900_000 },
     }),
   ]);
 
@@ -307,6 +308,11 @@ async function main() {
     arrivesAtMs: seedNowMs + 100_000,
     ...patch,
   }));
+  // These are incoming records for the shield user, but neither target qualifies.
+  excludedMovements.push(
+    { ...incoming, id: `shield_damaged_${nonce}`, toId: fallbackSourceId },
+    { ...incoming, id: `shield_changed_owner_${nonce}`, toId: rivalClaim.cityId, targetRegionId: rivalRegionId }
+  );
   const npcIncoming = {
     ...movementBase,
     id: `shield_npc_${nonce}`,
@@ -363,6 +369,8 @@ async function main() {
   ]);
   const shieldExpiresAtMs = Number(ownerAfterActivation.data()?.itemEffects?.shieldExpiresAtMs || 0);
   assert(shieldExpiresAtMs > Date.now(), "The shield timer was not activated.");
+  assert(Number(sourceAfterActivation.data()?.ownerShieldExpiresAtMs) === shieldExpiresAtMs,
+    "Damaged cities need the active timer so protection can start automatically after repair.");
   assert(Number(ownerAfterActivation.data()?.shopItems?.shield_12h || 0) === 0, "Exactly one shield was not consumed.");
   assert(
     Number(ownerMainAfterActivation.data()?.ownerShieldExpiresAtMs || 0) === shieldExpiresAtMs,

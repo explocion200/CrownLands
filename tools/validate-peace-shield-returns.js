@@ -182,6 +182,7 @@ const localSandbox = {
     return Boolean(ownerUid && target?.ownerUid === ownerUid) || (!ownerUid && target?.owner === owner);
   },
   isStronghold: sandbox.isStronghold,
+  isCityProtectedByPeaceShield: city => Boolean(city.wallShieldEligible),
   markOwnedCityChanged() {},
   normalizeRegionId: sandbox.normalizeRegionId,
   normalizeTimestampMs(value) {
@@ -226,6 +227,15 @@ const localMarch = {
   status: "active",
 };
 assert.equal(localSandbox.getPeaceShieldRivalMarchDirection(localMarch, nowMs), "outgoing");
+const localIncoming = { ...localMarch, owner: "enemy", ownerUid: "rival", targetOwnerUid: "shield-owner", fromId: "local-rival", toId: "local-source" };
+localCities[1].wallShieldEligible = false;
+assert.equal(localSandbox.getPeaceShieldRivalMarchDirection(localIncoming, nowMs), "", "Damaged incoming target must keep its march");
+localCities[1].wallShieldEligible = true;
+assert.equal(localSandbox.getPeaceShieldRivalMarchDirection(localIncoming, nowMs), "incoming");
+const savedOwner = { owner: localCities[1].owner, ownerUid: localCities[1].ownerUid };
+Object.assign(localCities[1], { owner: "enemy", ownerUid: "new-ruler" });
+assert.equal(localSandbox.getPeaceShieldRivalMarchDirection(localIncoming, nowMs), "", "Stale targetOwnerUid must not reverse another owner's march");
+Object.assign(localCities[1], savedOwner);
 localSandbox.createLocalMidRouteReturn(localMarch, nowMs, "peace_shield");
 assert.equal(localMarch.returning, true);
 assert.equal(localMarch.returnStartProgress, 0.25);
@@ -268,6 +278,6 @@ assert.match(clientSource, /if \(attack\?\.returning\) \{\s*resolveLocalReturnin
 assert.match(clientSource, /function getLocalMarchReturnDestination[\s\S]*?getMainRewardCity\(\)/);
 assert.match(clientSource, /result\?\.shieldReturnSummary/);
 assert.match(clientSource, /outgoing and \$\{formatNumber\(normalized\.incoming\)\} incoming rival/);
-assert.match(clientSource, /turns back active rival attacks traveling to or from them/);
+assert.match(clientSource, /incoming attacks on protected cities/);
 
 console.log("Peace Shield march-return validation passed.");

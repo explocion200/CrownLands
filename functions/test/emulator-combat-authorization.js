@@ -118,14 +118,14 @@ async function objectiveDispatchCases(actors, source, spareCity) {
       const launched = await call("launchClanRally", leader, { clanId, rallyId });
       for (const actor of contributors) {
         const p = await profile(actor);
-        assert.equal(p.peaceShieldCooldownExpiresAtMs, neutral ? 0 : launched.movement.launchedAtMs + policy.COMBAT_WINDOW_MS, `${target.name} contributor cooldown mismatch`);
+        assert.equal(p.peaceShieldCooldownExpiresAtMs, neutral ? 0 : launched.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS, `${target.name} contributor cooldown mismatch`);
         assert.equal(p.itemEffects.shieldExpiresAtMs, activeShield, "Rally changed existing shield retention");
       }
       assert.equal(policy.shieldCooldownExpiresAt(await profile(opponent), identity.resetGeneration), 0);
       if (!isTower) {
         await profileRef(leader).update({ peaceShieldCooldownExpiresAtMs: 0 });
         const direct = await call("sendArmyOrder", leader, order(source, target, 100));
-        assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, neutral ? 0 : direct.movement.launchedAtMs + policy.COMBAT_WINDOW_MS);
+        assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, neutral ? 0 : direct.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
         await profileRef(leader).update({ "itemEffects.shieldExpiresAtMs": activeShield });
       }
     }
@@ -139,7 +139,7 @@ async function objectiveDispatchCases(actors, source, spareCity) {
       payoutAtMs: now + 3_600_000, payoutPending: !neutral, activeArmyIds: [] });
     await profileRef(leader).update({ peaceShieldCooldownExpiresAtMs: 0 });
     const attack = await call("sendArmyOrder", leader, order(source, camp, 100, { targetType: "camp" }));
-    assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, neutral ? 0 : attack.movement.launchedAtMs + policy.COMBAT_WINDOW_MS);
+    assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, neutral ? 0 : attack.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
     assert.equal(policy.shieldCooldownExpiresAt(await profile(opponent), identity.resetGeneration), 0);
   }
   const tower = towers.TOWERS[1];
@@ -159,7 +159,7 @@ async function objectiveDispatchCases(actors, source, spareCity) {
   const launched = await call("sendHoldingTowerArmyOrder", leader, towerOrder);
   assert.equal(launched.movement.attackProtection, null);
   assert.equal((await grants(leader).doc(recordId).get()).data().usedArmyId, launched.movement.id);
-  assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, launched.movement.launchedAtMs + policy.COMBAT_WINDOW_MS);
+  assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, launched.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
   console.log("Current-realm objectives passed: neutral vs player-held Camps/Gold/Citadel solo orders, five-player Gold/Citadel/Tower Rallies, every contributor, scouting/defender isolation, shield retention and Tower-origin retaliation.");
 }
 async function main() {
@@ -189,7 +189,7 @@ async function main() {
 
   const first = await call("sendArmyOrder", low, order(lSource, targets[0], 1500));
   const cooldown = (await profile(low)).peaceShieldCooldownExpiresAtMs;
-  assert.equal(cooldown, first.movement.launchedAtMs + policy.COMBAT_WINDOW_MS);
+  assert.equal(cooldown, first.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
   assert.equal(policy.shieldCooldownExpiresAt(await profile(high), identity.resetGeneration), 0, "Incoming attack started a defender cooldown");
   await deny("activateInventoryItem", low, { itemId: "shield_12h" }, /Peace Shield unavailable/);
   assert.equal((await profile(low)).shopItems.shield_12h, 5, "Rejected activation consumed an item");
@@ -199,7 +199,7 @@ async function main() {
   assert(capture, "Qualifying capture created no retaliation");
   const a = { id: capture.id, ...capture.data() };
   assert.equal(a.cityId, targets[0].id);
-  assert.equal(a.expiresAtMs - a.capturedAtMs, policy.COMBAT_WINDOW_MS);
+  assert.equal(a.expiresAtMs - a.capturedAtMs, policy.RETALIATION_WINDOW_MS);
   assert.equal(policy.shieldCooldownExpiresAt(await profile(high), identity.resetGeneration), 0, "Losing a city started a cooldown");
   const abandonRequest = { cityId: targets[0].id, regionId: region };
   await deny("relinquishCity", low, abandonRequest, /City Cannot Be Abandoned/);
@@ -214,7 +214,7 @@ async function main() {
   await deny("sendArmyOrder", high, order(hSource, unrelated, 5000, { retaliationId: a.id }), /exact city/);
   await deny("sendArmyOrder", high, order(hSource, targets[0], 20_000_000, { retaliationId: a.id }), /Not enough troops/);
   assert.equal((await capture.ref.get()).data().status, "available");
-  await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: Date.now() + 60_000 }, { merge: true });
+  await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: Date.now() + 60_000, fortificationState: null }, { merge: true });
   await deny("sendArmyOrder", high, order(hSource, targets[0], 5000, { retaliationId: a.id }), /Peace Shield/);
   await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: 0, isMainCity: true }, { merge: true });
   const lowMain = await profile(low);
@@ -240,7 +240,7 @@ async function main() {
   assert.equal(winner.attackProtection, null);
   assert.equal((await capture.ref.get()).data().usedArmyId, winner.id);
   const highCooldown = (await profile(high)).peaceShieldCooldownExpiresAtMs;
-  assert.equal(highCooldown, winner.launchedAtMs + policy.COMBAT_WINDOW_MS);
+  assert.equal(highCooldown, winner.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
   const duplicate = await call("sendArmyOrder", high, attempts.find(data => data.army.id === winner.id));
   assert(duplicate.duplicate, "Same request was not idempotent");
   assert.equal((await profile(high)).peaceShieldCooldownExpiresAtMs, highCooldown);
@@ -252,7 +252,7 @@ async function main() {
   // Multiple successful captures create independent records and reset only the attacker's cooldown.
   for (const target of targets.slice(1, 3)) {
     const attack = await call("sendArmyOrder", low, order(lSource, target, 1500));
-    assert.equal((await profile(low)).peaceShieldCooldownExpiresAtMs, attack.movement.launchedAtMs + policy.COMBAT_WINDOW_MS);
+    assert.equal((await profile(low)).peaceShieldCooldownExpiresAtMs, attack.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
     assert.equal((await resolve(low, attack.movement)).outcome, "victory");
   }
   const remaining = (await grants(high).get()).docs.filter(doc => doc.data().status === "available");
@@ -275,12 +275,41 @@ async function main() {
   await call("activateInventoryItem", low, { itemId: "shield_12h" });
   assert((await profile(low)).itemEffects.shieldExpiresAtMs > Date.now());
   assert.equal((await profile(low)).shopItems.shield_12h, 4);
+  await verifyWallShieldLifecycle(high, low, hSource, targets, remaining[1]);
   // Authoritative profile / record reads remain identical across separate client requests.
   const read1 = await (await clientRead(high, profileRef(high).path)).json();
   const read2 = await (await clientRead(high, profileRef(high).path)).json();
   assert.deepEqual(read1.fields.peaceShieldCooldownExpiresAtMs, read2.fields.peaceShieldCooldownExpiresAtMs);
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
+}
+async function verifyWallShieldLifecycle(attacker, defender, source, targets, grant) {
+  const target = targets.find(city => city.id === grant.data().cityId);
+  const now = Date.now();
+  const damaged = { version: 1, integrityBps: 5000, lastDamagedAtMs: now, repairAtMs: now + 900_000 };
+  // Simulate a qualifying capture twenty minutes ago, with ten minutes still available.
+  await grant.ref.update({ capturedAtMs: now - 1_200_000, expiresAtMs: now + 600_000 });
+  await cityRef(target).update({ fortificationState: damaged, [`retaliationAbandonLocks.${defender.uid}`]: now + 600_000 });
+  assert((await cityRef(target).get()).data().ownerShieldExpiresAtMs > now);
+  await deny("relinquishCity", defender, { cityId: target.id, regionId: target.regionId }, /City Cannot Be Abandoned/);
+  const pending = await call("sendArmyOrder", attacker, order(source, target, 1));
+  // No profile update or second item activation: elapsed wall repair alone protects the city.
+  await cityRef(target).update({ fortificationState: { ...damaged, lastDamagedAtMs: now - 900_000, repairAtMs: now - 1 } });
+  await deny("sendArmyOrder", attacker, order(source, target, 8000, { retaliationId: grant.id }), /Peace Shield/);
+  assert.equal((await grant.ref.get()).data().status, "available");
+  const blocked = await resolve(attacker, pending.movement);
+  assert(blocked.reports.some(report => /Peace Shield blocked/.test(report.summary)), "Repair before arrival did not block combat");
+  assert.equal((await cityRef(target).get()).data().ownerUid, defender.uid);
+  // The same active item does not protect this damaged target. Retaliation works after minute 15.
+  await cityRef(target).update({ fortificationState: damaged });
+  const revenge = await call("sendArmyOrder", attacker, order(source, target, 8000, { retaliationId: grant.id }));
+  assert.equal(revenge.movement.attackProtection, null);
+  assert.equal((await resolve(attacker, revenge.movement)).outcome, "victory");
+  const captured = (await cityRef(target).get()).data();
+  assert.equal(captured.ownerUid, attacker.uid);
+  assert.equal(captured.ownerShieldExpiresAtMs, 0, "The previous owner's shield survived capture");
+  assert((await profile(defender)).itemEffects.shieldExpiresAtMs > Date.now(), "Losing a damaged city removed the owner's active item");
+  console.log("Wall shields passed: damaged-city dispatch and conquest, repair before arrival, full-wall denial, preserved failed grant, minute-20 retaliation and ownership isolation.");
 }
 async function verifySmoothProtectionRanges(attacker, defender, source, target) {
   const cases = [

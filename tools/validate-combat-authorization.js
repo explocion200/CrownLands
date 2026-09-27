@@ -31,11 +31,11 @@ assert.match(policy.retaliationError(null, identity), /not found/);
 // Ownership is intentionally not an input to the grant check.
 assert.equal(policy.retaliationError({ ...record, currentOwnerUid: "third" }, identity), "");
 const city = { retaliationAbandonLocks: policy.captureAbandonLocks({}, "low", now) };
-assert.equal(policy.abandonLockExpiresAt(city, "low", now + 899_999), now + 900_000);
-assert.equal(policy.abandonLockExpiresAt(city, "low", now + 900_000), 0);
+assert.equal(policy.abandonLockExpiresAt(city, "low", now + 1_799_999), now + 1_800_000);
+assert.equal(policy.abandonLockExpiresAt(city, "low", now + 1_800_000), 0);
 assert.equal(policy.abandonLockExpiresAt(city, "third", now), 0);
-assert.equal(policy.captureAbandonLocks(city, "third", now + 1000).low, now + 900_000);
-assert.equal(policy.captureAbandonLocks(city, "low", now + 1000).low, now + 901_000);
+assert.equal(policy.captureAbandonLocks(city, "third", now + 1000).low, now + 1_800_000);
+assert.equal(policy.captureAbandonLocks(city, "low", now + 1000).low, now + 1_801_000);
 const army = { id: "attack", ownerUid: "high", kind: "attack", launchKind: "attack", createdByServer: true,
   toId: "city-a", targetRegionId: "map-a", launchedAtMs: record.expiresAtMs - 1,
   retaliationAuthorization: { ...record, usedAtMs: record.expiresAtMs - 1, usedArmyId: "attack" } };
@@ -43,6 +43,10 @@ assert(policy.hasCommittedRetaliation(army, { ...identity, nowMs: now + 20_000_0
 for (const patch of [{ toId: "other" }, { targetRegionId: "other" }, { ownerUid: "other" }, { id: "other" }, { kind: "transfer" }, { createdByServer: false }]) {
   assert.equal(policy.hasCommittedRetaliation({ ...army, ...patch }, identity), false);
 }
+assert.equal(policy.SHIELD_COOLDOWN_MS, 900_000);
+assert.equal(policy.RETALIATION_WINDOW_MS, 1_800_000);
+assert.equal(ui.remaining(now + 1_800_000, now), "30:00");
+assert.equal(policy.retaliationError({ ...record, capturedAtMs: now - 1_200_000, expiresAtMs: now + 600_000 }, identity), "", "Retaliation is usable after the old 15-minute boundary");
 assert.equal(ui.remaining(now + 900_000, now), "15:00");
 assert.equal(ui.remaining(now + 1000, now), "00:01");
 assert.equal(ui.remaining(now - 1, now), "00:00");
