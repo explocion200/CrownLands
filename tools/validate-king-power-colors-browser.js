@@ -32,7 +32,7 @@ async function main() {
       }
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"), "ready");
       const before = await evaluate(`(() => {
-        window.powerQa = { now:Date.now(), stats:{kingPower:200000,version:12,updatedAtMs:Date.now()}, calls:0 };
+        window.powerQa = { now:Date.now(), stats:{kingPower:300000,version:12,updatedAtMs:Date.now()}, calls:0 };
         const qa=powerQa; getGlobalStatsSnapshot=()=>qa.stats;
         modal.close(); selectedTargetId=null; selectedSourceId=null; sendMode=false;
         qa.cities=[...cityLayer.querySelectorAll('.city-node.enemy')].map(n=>cityById(n.dataset.cityId)).filter(c=>!isStronghold(c)&&!isClanAllyCity(c)).slice(0,5);
@@ -40,7 +40,7 @@ async function main() {
         clearEnemyPowerBandCache(); playerIdentityLookupQueue.clear();
         zoom=1; applyCameraTransform();
         qa.cities.forEach((c,i)=>Object.assign(c,screenToWorld(innerWidth*(.14+i*.18),innerHeight*.58)));
-        qa.powers=[25000,150000,250001,200000,100000];
+        qa.powers=[25000,150000,350001,300000,100000];
         qa.cities.forEach((c,i)=>{c.ownerUid='power-fixture-'+i;c.ownerClanId='';c.ownerName=['Unknown','In range','Stronger','Equal','Protected'][i];
           playerIdentityCache.delete(c.ownerUid);
           rememberPlayerIdentity({uid:c.ownerUid,displayName:c.ownerName,kingPower:qa.powers[i],kingPowerVersion:i===0?11:12,updatedAtMs:qa.now},{force:true});});
@@ -61,7 +61,7 @@ async function main() {
       const after = await evaluate(`(async()=>{const qa=powerQa;qa.release({uid:qa.cities[0].ownerUid,displayName:'Protected after refresh',kingPower:25000,kingPowerVersion:12,updatedAtMs:qa.now+100});await qa.task;return {rows:qa.read(),calls:qa.calls,sameNode:qa.firstNode===cityLayer.querySelector('[data-city-id="'+qa.cities[0].id+'"]')};})()`);
       assert.equal(after.rows[0].band, "protected"); assert.equal(after.rows[0].color, "rgb(201, 120, 111)");
       assert.equal(after.calls, 1); assert(after.sameNode); assert.match(after.rows[0].aria, /raid only/);
-      await evaluate("powerQa.stats={kingPower:400000,version:12,updatedAtMs:powerQa.now+200}; renderCities(true)");
+      await evaluate("powerQa.stats={kingPower:500000,version:12,updatedAtMs:powerQa.now+200}; renderCities(true)");
       assert.equal((await evaluate("powerQa.read()"))[1].band, "in-range", "Three-second stabilization was removed");
       await wait(3300);
       const stabilized = await evaluate("powerQa.read()");

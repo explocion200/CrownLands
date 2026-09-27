@@ -111,7 +111,7 @@ function extractFunction(source, name) {
 }
 
 const travelConstants = {
-  ARMY_TRAVEL_SECONDS_PER_MAP_UNIT: 0.13,
+  ARMY_TRAVEL_SECONDS_PER_MAP_UNIT: 0.117,
   ARMY_TRAVEL_MIN_SECONDS: 30,
   ARMY_TRAVEL_SCOUT_MIN_SECONDS: 10,
   ARMY_TRAVEL_KIND_MULTIPLIERS: { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 },
@@ -120,6 +120,9 @@ const travelConstants = {
   Math,
   Number,
 };
+for (const source of [serverSource, clientSource]) {
+  assert.equal(Number(/const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = ([0-9.]+);/.exec(source)[1]), 0.117);
+}
 const commonTravelFunctions = ["getTroopTravelBandIndex", "getTroopTravelMultiplier"];
 const serverTravelContext = {
   ...travelConstants,
@@ -151,6 +154,21 @@ vm.runInContext([
 ].join("\n"), clientTravelContext);
 
 assert.doesNotMatch(serverSource, /ARMY_TRAVEL_MAX_SECONDS/, "The backend still contains a maximum travel-time cap.");
+for (const kind of ["attack", "transfer", "reinforce", "rally_join", "scout", "return"]) {
+  for (const [troops, multiplier] of [[1, 1], [10, 1], [11, 1.18], [1000, 1.38],
+    [1001, 1.62], [1e6, 2.24], [1e8, 3.06], [1e9, 3.5]]) {
+    for (const distance of [1, 1000, 10000]) {
+      const kindMultiplier = travelConstants.ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || 1;
+      const min = kind === "scout" ? 10 : 30;
+      const previousUnclampedSeconds = distance * 0.13 * kindMultiplier * multiplier;
+      const expected = Math.max(min, previousUnclampedSeconds * 0.9);
+      const serverSeconds = serverTravelContext.calculateTravelTime({ pathLength: distance, troopCount: troops, kind });
+      const clientSeconds = clientTravelContext.travelTime({}, {}, "player", distance, troops, kind);
+      assert(Math.abs(serverSeconds - expected) < 1e-8, `${kind}/${troops}: expected 10% shorter base duration`);
+      assert.equal(clientSeconds, serverSeconds);
+    }
+  }
+}
 assert.doesNotMatch(clientSource, /ARMY_TRAVEL_MAX_SECONDS/, "The UI still contains a maximum travel-time cap.");
 const troopCount = 100_000_000;
 const serverLongestSeconds = serverTravelContext.calculateTravelTime({

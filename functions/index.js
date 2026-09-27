@@ -303,7 +303,7 @@ const REWARDED_AD_MUTATION_CALLABLE_OPTIONS = Object.freeze({
 const SCOUT_REPORT_SECONDS = 600;
 const LEGACY_PROFILE_SCOUT_REPORT_LIMIT = 120;
 const BATTLE_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
-const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
+const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.117;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
@@ -358,7 +358,12 @@ const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
 const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
-const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
+const ATTACK_PROTECTION_POWER_ANCHORS = Object.freeze([
+  { power: 1_000_000, assault: 3, raid: 4 },
+  { power: 10_000_000, assault: 2.75, raid: 3.5 },
+  { power: 100_000_000, assault: 2.5, raid: 3 },
+  { power: 1_000_000_000, assault: 2, raid: 2.5 },
+]);
 const ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER = 2;
 const ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER = 1;
 const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
@@ -656,7 +661,7 @@ const CITY_LEVEL_STATS = {
   wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.3),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
 };
 const SKILL_CONFIG = {
   swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60) },
@@ -5008,19 +5013,40 @@ function roundUpToTwoSignificantDigits(value) {
   return Math.ceil(integer / magnitude) * magnitude;
 }
 
-function getAttackProtectionMode(powerRatio) {
+function getAttackProtectionThresholds(attackerKingPower) {
+  const value = Number(attackerKingPower);
+  const power = Math.max(1, Number.isFinite(value) ? value : 1);
+  const anchors = ATTACK_PROTECTION_POWER_ANCHORS;
+  let assault = anchors[0].assault;
+  let raid = anchors[0].raid;
+  for (let index = 1; index < anchors.length; index += 1) {
+    const lower = anchors[index - 1];
+    const upper = anchors[index];
+    const progress = Math.max(0, Math.min(1,
+      Math.log10(power / lower.power) / Math.log10(upper.power / lower.power)
+    ));
+    assault = lower.assault + (upper.assault - lower.assault) * progress;
+    raid = lower.raid + (upper.raid - lower.raid) * progress;
+    if (power <= upper.power) break;
+  }
+  return { assaultMinRatio: assault, raidMinRatio: raid, raidMaxScaleRatio: raid * 2 };
+}
+
+function getAttackProtectionMode(powerRatio, attackerKingPower) {
   const ratio = Math.max(0, safeNumber(powerRatio, 0));
-  if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
-  if (ratio >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "assault";
+  const thresholds = getAttackProtectionThresholds(attackerKingPower);
+  if (ratio >= thresholds.raidMinRatio) return "raid";
+  if (ratio >= thresholds.assaultMinRatio) return "assault";
   return "normal";
 }
 
-function getAttackProtectionBreakEvenScale(mode, powerRatio) {
+function getAttackProtectionBreakEvenScale(mode, powerRatio, attackerKingPower) {
+  const thresholds = getAttackProtectionThresholds(attackerKingPower);
   const ratio = Math.max(0, safeNumber(powerRatio, 0));
   if (mode === "assault") {
     const progress = clamp(
-      (ratio - ATTACK_PROTECTION_ASSAULT_MIN_RATIO)
-        / (ATTACK_PROTECTION_RAID_MIN_RATIO - ATTACK_PROTECTION_ASSAULT_MIN_RATIO),
+      (ratio - thresholds.assaultMinRatio)
+        / (thresholds.raidMinRatio - thresholds.assaultMinRatio),
       0,
       1
     );
@@ -5028,8 +5054,8 @@ function getAttackProtectionBreakEvenScale(mode, powerRatio) {
   }
   if (mode === "raid") {
     const progress = clamp(
-      (ratio - ATTACK_PROTECTION_RAID_MIN_RATIO)
-        / (ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO - ATTACK_PROTECTION_RAID_MIN_RATIO),
+      (ratio - thresholds.raidMinRatio)
+        / (thresholds.raidMaxScaleRatio - thresholds.raidMinRatio),
       0,
       1
     );
@@ -5106,7 +5132,7 @@ function createServerAttackProtectionSnapshot({
   const attackerPower = Math.max(0, Math.floor(safeNumber(attackerKingPower, 0)));
   const defenderPower = Math.max(1, Math.floor(safeNumber(defenderKingPower, 1)));
   const powerRatio = attackerPower / defenderPower;
-  const mode = getAttackProtectionMode(powerRatio);
+  const mode = getAttackProtectionMode(powerRatio, attackerPower);
   if (mode === "normal") return null;
 
   const availableTroops = Math.max(1, Math.floor(safeNumber(sourceTroops, 1)));
@@ -5122,7 +5148,7 @@ function createServerAttackProtectionSnapshot({
   const normalizedAssaultStage = mode === "assault" && assaultStage === "capture" ? "capture" : "breach";
   const captureSafeCap = Math.max(1, roundUpToTwoSignificantDigits(breakEvenTroops));
   const scaledCap = Math.max(1, Math.floor(
-    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
+    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio, attackerPower)
   ));
   const exposedCap = mode === "assault"
     ? normalizedAssaultStage === "breach"
@@ -7778,7 +7804,7 @@ function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
 
 function recordCaptureRetaliation(transaction, { armyId, target, targetRef, originalOwnerUid, capturerUid, highPower, lowPower, nowMs }) {
   if (!originalOwnerUid || originalOwnerUid === capturerUid || isStronghold(target)
-    || getAttackProtectionMode(Math.max(0, highPower) / Math.max(1, lowPower)) === "normal") return null;
+    || getAttackProtectionMode(Math.max(0, highPower) / Math.max(1, lowPower), highPower) === "normal") return null;
   const id = crypto.createHash("sha256").update(`${RESET_GENERATION}:${armyId}:${targetRef.path}`).digest("hex");
   const record = {
     id, ...combatAuthorizationRealm(), originalOwnerUid, capturerUid,
@@ -10574,7 +10600,9 @@ function createDailyMissionSafeBattleTarget({
 function selectDailyMissionPeerCandidates(opponents = [], attackerKingPower = 0) {
   const attackerPower = Math.max(1, Math.floor(safeNumber(attackerKingPower, 1)));
   return (Array.isArray(opponents) ? opponents : [])
-    .filter(entry => Math.max(1, Math.floor(safeNumber(entry.kingPower, 1))) * ATTACK_PROTECTION_ASSAULT_MIN_RATIO > attackerPower)
+    .filter(entry => getAttackProtectionMode(
+      attackerPower / Math.max(1, Math.floor(safeNumber(entry.kingPower, 1))), attackerPower
+    ) === "normal")
     .sort((left, right) => {
       const leftDifference = Math.abs(Math.log(attackerPower / Math.max(1, safeNumber(left.kingPower, 1))));
       const rightDifference = Math.abs(Math.log(attackerPower / Math.max(1, safeNumber(right.kingPower, 1))));

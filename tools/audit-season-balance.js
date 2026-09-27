@@ -215,17 +215,19 @@ assert.equal(profile.version, 1);
 assert.equal(cityCount, 30, "The apex portfolio must contain exactly 30 cities.");
 assert.equal(Math.max(...Object.keys(profile.apexPortfolio).map(Number)), 150, "The apex capital must be Level 150.");
 assert.equal(baseGoldPerHour, 706_112_926, "Apex base gold production drifted; review the season benchmark.");
-assert.equal(baseTroopsPerHour, 276_074, "Apex base troop production drifted; review the season benchmark.");
+assert.equal(baseTroopsPerHour, 289_883, "Apex base troop production drifted; review the season benchmark.");
 assert.equal(levelRewards.gold, 228_530_487_042, "Cumulative Hero Gold rewards through Level 150 drifted.");
-assert.equal(levelRewards.troops, 86_585_401, "Cumulative Hero troop rewards through Level 150 drifted.");
+assert.equal(levelRewards.troops, 90_914_284, "Cumulative Hero troop rewards through Level 150 drifted.");
 assert.ok(
   minimumCaptureTroops >= siege.minimumCaptureTroops && minimumCaptureTroops <= siege.maximumCaptureTroops,
   `Level-150 capture threshold ${minimumCaptureTroops} left the ${siege.minimumCaptureTroops}-${siege.maximumCaptureTroops} guardrail.`
 );
 assert.equal(pickupGoldHours, 15, "The pickup rebalance must provide at most 15 raw Gold-production hours per UTC day.");
 assert.equal(pickupTroopHours, 15, "The pickup rebalance must provide at most 15 raw troop-production hours per UTC day.");
-const adjustedMinimumProductionDays = siege.minimumProductionDays * pickupBalanceProductionDayAdjustment;
-const adjustedMaximumProductionDays = siege.maximumProductionDays * pickupBalanceProductionDayAdjustment;
+// The approved +5% troop-production revision shortens the existing replacement-time budget.
+const approvedTroopProductionIncrease = 1.05;
+const adjustedMinimumProductionDays = siege.minimumProductionDays * pickupBalanceProductionDayAdjustment / approvedTroopProductionIncrease;
+const adjustedMaximumProductionDays = siege.maximumProductionDays * pickupBalanceProductionDayAdjustment / approvedTroopProductionIncrease;
 assert.ok(
   productionDays >= adjustedMinimumProductionDays && productionDays <= adjustedMaximumProductionDays,
   `Level-150 siege replacement time ${productionDays.toFixed(2)} days left the rebalanced-pickup ${adjustedMinimumProductionDays.toFixed(2)}-${adjustedMaximumProductionDays.toFixed(2)}-day guardrail.`

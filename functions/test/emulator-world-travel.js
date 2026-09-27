@@ -93,6 +93,11 @@ async function march(actor, source, target, kind, minimumMaps) {
   const marchOrders = economy.skills.marchOrders;
   const expectedSpeedMultiplier = 1 + Math.min(5 * marchOrders.percentPerLevel, marchOrders.maxPercent) / 100;
   assert.equal(preview.speedMultiplier, expectedSpeedMultiplier, "Travel bonus must expose the configured five-level March Orders multiplier.");
+  const kindMultiplier = kind === "scout" ? 0.35 : kind === "attack" ? 1 : 0.95;
+  const minimumSeconds = kind === "scout" ? 10 : 30;
+  const distance = preview.segments.reduce((total, segment) => total + segment.length, 0);
+  const expectedSeconds = Math.max(minimumSeconds, distance * 0.117 * kindMultiplier / expectedSpeedMultiplier);
+  assert.equal(preview.durationMs, Math.ceil(expectedSeconds * 1000), "Authoritative preview must use the 10% shorter travel base.");
   const id = `travel_${kind}_${randomUUID().replaceAll("-", "")}`;
   const request = payload(id, source, target, kind, troops);
   const launched = await call("sendArmyOrder", actor, request);
@@ -103,6 +108,7 @@ async function march(actor, source, target, kind, minimumMaps) {
   assert.deepEqual(movement.pathSegments, preview.segments, `${kind} preview geometry disagrees with launch.`);
   const replay = await call("sendArmyOrder", actor, request);
   assert.equal(replay.movement.id, movement.id, "Retry duplicated a march.");
+  assert.equal(replay.movement.arrivesAtMs, movement.arrivesAtMs, "Retry changed the committed arrival time.");
   const result = await settle(actor, movement);
   console.log(`${kind}: ${movement.routeRegionIds.length} maps, ${preview.durationMs}ms, arrival ${result.outcome || result.status}.`);
   return { movement, result };

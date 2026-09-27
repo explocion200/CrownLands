@@ -327,7 +327,7 @@ The following Hero-progression Gold reward curve is confirmed design. The 27-hou
 
 The following Hero-progression reward curve is confirmed design and is `LIVE — ALL PUBLISHED CHANNELS`, beginning with verified cross-channel baseline build `a561374b...`:
 
-- For the new Hero level `L`, reference victory points are `floor(6 + 4L + 2 × L^1.35)` and reference troop production is `floor(referenceVictoryPoints × 10.3)` troops per hour.
+- For the new Hero level `L`, reference victory points are `floor(6 + 4L + 2 × L^1.35)` and reference troop production is `floor(referenceVictoryPoints × 10.815)` troops per hour under the approved September 27 balance revision below. The increase from 10.3 is pending coordinated deployment.
 - The troop reward is `floor(max(50, referenceTroopsPerHour × rewardHours))`.
 - Reward hours are `4 + 0.40L` through Level 50, `24 + 0.60(L - 50)` from Levels 51 through 100, and `min(108, 54 + 0.40(L - 100))` from Level 101 onward. The 108-hour maximum first binds at Level 235.
 - This is standardized reference production, not the player's actual raw city or kingdom production. The calculation does not inspect owned cities, the receiving city, buildings, city count, skills, Gear, objectives, production bonuses, timed items, or casualty recovery. Every player reaching the same Hero level receives the same calculated base reward.
@@ -447,7 +447,32 @@ The following balance is confirmed for the next coordinated client and Functions
 - Levels 101-150 add wall power according to the relative Gold upgrade cost raised to exponent `0.22881653173769995`, normalized at Level 100. This re-anchors the Gold-linked segment to the exact 6,200,000 Level 150 wall after the Gold-curve change without changing the post-Level-150 troop-production rule.
 - Above Level 150, base wall power transitions to a base troop-production replacement ratio. That ratio begins at the Level 150 anchor, reaches 240 production hours at Level 200, and remains at 240 hours thereafter so the wall continues increasing with troop production without a fixed level cap.
 - Stoneworks remains the only skill that strengthens the wall. Soldier defense, wall repair, objective support, reward-camp behavior, and the two-stage siege model do not change.
-- The Level 150 maximum-activity siege benchmark must remain within 59-62 million maximum-Swordmastery attackers and 2.34-2.59 maximum-activity troop-production days for the existing apex portfolio.
+- The Level 150 siege benchmark retains 59-62 million maximum-Swordmastery attackers. Under the September 27 production revision and current pickup caps, the existing apex portfolio requires 61,975,001 attackers against 50 million supported defenders, or approximately 2.625 maximum-activity production days (previously 2.756). The production-time regression budget scales down by 1 / 1.05 with the approved production increase.
+
+### Approved smooth protection, production and travel revision — September 27, 2026
+
+**Status: IN DEVELOPMENT — NOT DEPLOYED.** The user approved implementation, testing and pull-request preparation. Merge and deployment require separate authorization. This revision supersedes the fixed 2×/2.5× protection thresholds and the 10.3 troop-production factor above.
+
+- All regular cities, including Main Cities at every level, produce `floor(floor(6 + 4L + 2 × L^1.35) × 10.815)` base troops per hour: a further 5% increase before whole-troop rounding. Production bonuses retain their existing stacking. Strongholds and the Citadel continue to have zero base production.
+- Per-city base troop anchors are 129/hour at Level 1, 973 at Level 10, 2,811 at Level 25, 6,478 at Level 50, 10,652 at Level 75, 15,227 at Level 100, 25,285 at Level 150 and 36,349 at Level 200, continuing above Level 200 without a new cap.
+- Existing raw-production-scaled troop rewards and standardized Hero troop rewards follow the higher factor. Fixed minimums still apply. Hero Level 100 awards 822,258 troops and Level 150 awards 1,871,090. Previously claimed rewards are not recalculated.
+- King Power replacement production follows the higher base. Wall anchors through Level 150 remain fixed; the existing production-linked formula above Level 150 yields 8,553,927 base wall power at Level 175 and 11,340,888 at Level 200, retaining the 240-hour ratio from Level 200 onward.
+- Base travel duration decreases by 10%: 0.13 becomes 0.117 seconds per map unit. Apply this to newly calculated routes, including attacks, transfers, reinforcements, scouts, rally movement and new returns. Preserve order-kind and troop-band multipliers, skills, Gear, objectives, Swift eligibility/reductions, the 30-second army and 10-second scout minimums, and uncapped long-distance travel. Accepted arrival timestamps and idempotent launch replays retain their committed duration.
+
+The **attacker's** authoritative King Power selects regular-city protection thresholds. Compare attacker power divided by defender power with these anchors:
+
+| Attacker King Power | Capped assault begins | Raid-only begins |
+| --- | --- | --- |
+| 1M or less | 3× | 4× |
+| 10M | 2.75× | 3.5× |
+| 100M | 2.5× | 3× |
+| 1B and above | 2× | 2.5× |
+
+- Between adjacent anchors, interpolate each threshold independently using `t = log10(power / lowerPower) / log10(upperPower / lowerPower)`. Clamp at the first and last anchors. Classification uses full precision; equality enters the more protected mode.
+- Below the assault threshold, use normal combat. From the assault threshold up to the raid threshold, use capped two-stage assaults. At or above the raid threshold, use capped non-capturing raids with at most 10% defender losses and no persistent wall damage.
+- First-breach force remains rounded up to the capture-safe break-even force. Follow-up assault allowance tapers from 125% to 105% of break-even across the current assault band, retaining capture-safe rounding. Raid allowance tapers from 50% of break-even at the current raid threshold to 25% at twice that threshold, then holds its floor.
+- Apply the same thresholds to server previews and dispatch, city and Tower origins, converted hostile returns/reinforcements, local forecasts, map power colors/labels, daily safe-target eligibility and exact-city retaliation qualification. Retaliation qualification uses the displaced stronger ruler's power as the prospective attacker.
+- Saved attack-protection schema-v2 marches retain their committed mode and troop cap; the current breach stage is still checked at arrival. Normal launched attacks retain their normal commitment. Existing protected XP, ordinary battle XP anti-farming, Main City, shield, clan, route and objective rules remain in force.
 
 Permanent/untimed and temporary production additions are calculated separately against base production:
 
@@ -511,7 +536,7 @@ Confirmed September 19, 2026. **Status:** `IN DEVELOPMENT` until the authorized 
 
 - A successful player-initiated PvP attack dispatch starts a 15-minute Peace Shield activation cooldown. Each later qualifying dispatch restarts it. This includes player-held Camps, Strongholds, the Crown Citadel, and clan-held Towers. Every contributing ruler receives the cooldown when a combined PvP Rally actually launches; forming/joining a Rally does not start it. Existing active-shield removal/retention rules remain unchanged.
 - Incoming attacks, defending, casualties, losing cities, scouting, friendly transfers/reinforcements, automatic return combat, and attacks on neutral/NPC objectives do not start the cooldown. The server persists the expiration and rejects activation without consuming an item while it is active.
-- Existing regular-city King Power protection uses Protected Assault from a 2× power ratio and Protected Raid from 2.5×. If a ruler protected by those rules captures a stronger ruler's regular city, the displaced ruler receives one independent 15-minute launch authorization for that exact immutable city and map. This lifts only that city's King Power attack limits for the authorized march. It does not remove anyone's global protection, enable ordinary-city Rallies, grant scouting rights, or bypass Main City, Peace Shield, clan, route, troop, or anti-farming rules.
+- Regular-city King Power protection uses the attacker-power thresholds in the approved September 27 revision (previously fixed at 2× for Protected Assault and 2.5× for Protected Raid). If a ruler protected by those rules captures a stronger ruler's regular city, the displaced ruler receives one independent 15-minute launch authorization for that exact immutable city and map. This lifts only that city's King Power attack limits for the authorized march. It does not remove anyone's global protection, enable ordinary-city Rallies, grant scouting rights, or bypass Main City, Peace Shield, clan, route, troop, or anti-farming rules.
 - The right survives changes of ownership. A launch before expiration remains authorized throughout travel and arrival, even after the window ends. Successful march creation and consumption of that capture's right are atomic; failed or concurrent duplicate attempts cannot consume an additional right.
 - The capturing ruler cannot relinquish that city until the original capture window ends, even if retaliation has already launched. The lock applies only while that capturer owns the city. Another owner does not inherit it; their own qualifying capture may create a separate lock.
 - Server records restore the timers across refresh, login, reconnect, device, and map changes. Directly beneath Gold, a compact Shield Cooldown row precedes Retaliation. One opportunity shows its countdown; several show an expandable count with every city, map/ID, and independent countdown. Expired/used opportunities disappear. Desktop and mobile landscape are supported. Attack, Bag, and relinquishment provide contextual feedback.

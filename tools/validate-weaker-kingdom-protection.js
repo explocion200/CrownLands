@@ -1,3 +1,4 @@
+const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -39,7 +40,6 @@ const numericConstants = [
   "ATTACK_PROTECTION_VERSION",
   "ATTACK_PROTECTION_ASSAULT_MIN_RATIO",
   "ATTACK_PROTECTION_RAID_MIN_RATIO",
-  "ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO",
   "ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER",
   "ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER",
   "PROTECTED_ASSAULT_BREACH_VERSION",
@@ -51,6 +51,7 @@ const sandbox = { console };
 numericConstants.forEach(name => {
   sandbox[name] = Number(readConstant(source, name));
 });
+sandbox.ATTACK_PROTECTION_POWER_ANCHORS = vm.runInNewContext(readConstant(source, "ATTACK_PROTECTION_POWER_ANCHORS"));
 sandbox.BASE_TROOP_ATTACK_POWER = Number(economyConfig.troopCombat.baseAttackPowerPerTroop);
 sandbox.ATTACK_PROTECTION_DEFENDER_XP_POLICY = vm.runInNewContext(
   readConstant(source, "ATTACK_PROTECTION_DEFENDER_XP_POLICY")
@@ -113,6 +114,7 @@ vm.runInContext([
   readFunction(source, "normalizeDemoAttackSnapshot"),
   readFunction(source, "roundDownToTwoSignificantDigits"),
   readFunction(source, "roundUpToTwoSignificantDigits"),
+  readFunction(source, "getAttackProtectionThresholds"),
   readFunction(source, "getAttackProtectionMode"),
   readFunction(source, "getAttackProtectionBreakEvenScale"),
   readFunction(source, "normalizeAttackProtectionSnapshot"),
@@ -130,9 +132,8 @@ if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 12 || sandbox.ATTACK_PROTECTION_VERS
   throw new Error("Protection is not using King Power v12 and attack-protection schema v2.");
 }
 if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
-  || sandbox.ATTACK_PROTECTION_RAID_MIN_RATIO !== 2.5
-  || sandbox.ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO !== 5) {
-  throw new Error("The v2 protection ratio boundaries changed unexpectedly.");
+  || sandbox.ATTACK_PROTECTION_RAID_MIN_RATIO !== 2.5) {
+  throw new Error("The legacy snapshot minimum ratios changed unexpectedly.");
 }
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
@@ -150,8 +151,8 @@ function protectionAt(ratio, overrides = {}) {
     sourceTroops: 1_000_000,
     target,
     requestedTroops: 1_000_000,
-    attackerKingPower: Math.round(100_000 * ratio),
-    defenderKingPower: 100_000,
+    attackerKingPower: Math.round(1_000_000_000 * ratio),
+    defenderKingPower: 1_000_000_000,
     attackerUid: "attacker",
     ...overrides,
   });
@@ -364,6 +365,7 @@ if (!sandbox.isCurrentProtectedDefenseXpClaim({
 }
 
 const clientSandbox = {
+  ATTACK_PROTECTION_POWER_ANCHORS: vm.runInNewContext(readConstant(clientSource, "ATTACK_PROTECTION_POWER_ANCHORS")),
   ATTACK_PROTECTION_ASSAULT_MIN_RATIO: 2,
   ATTACK_PROTECTION_RAID_MIN_RATIO: 2.5,
   DEMO_ATTACK_TIERS: sandbox.DEMO_ATTACK_TIERS,
@@ -380,16 +382,116 @@ const clientSandbox = {
 };
 vm.createContext(clientSandbox);
 vm.runInContext([
+  readFunction(clientSource, "getAttackProtectionThresholds"),
+  readFunction(clientSource, "getAttackProtectionMode"),
   readFunction(clientSource, "getDemoAttackTier"),
   readFunction(clientSource, "getEnemyCityPowerBand"),
 ].join("\n\n"), clientSandbox);
 const enemyCity = { owner: "enemy" };
-if (clientSandbox.getEnemyCityPowerBand(enemyCity, 199_000, 100_000) !== "in-range"
-  || clientSandbox.getEnemyCityPowerBand(enemyCity, 200_000, 100_000) !== "protected") {
-  throw new Error("Light red does not begin exactly at the 2× boundary.");
+Object.assign(clientSandbox, {
+  ATTACK_PROTECTION_VERSION: sandbox.ATTACK_PROTECTION_VERSION,
+  ATTACK_PROTECTION_DEFENDER_XP_POLICY: sandbox.ATTACK_PROTECTION_DEFENDER_XP_POLICY,
+  clamp: sandbox.clamp,
+  getAttackPower: troops => sandbox.getAttackPower(troops),
+  getCityStats: sandbox.getCityStats,
+  getCurrentOnlineUid: () => "attacker",
+  isRewardCampTarget: () => false,
+  normalizeDemoAttackSnapshot: () => null,
+});
+vm.runInContext(["roundDownToTwoSignificantDigits", "roundUpToTwoSignificantDigits",
+  "getAttackProtectionBreakEvenScale", "normalizeAttackProtectionSnapshot", "createAttackProtectionSnapshot"]
+  .map(name => readFunction(clientSource, name)).join("\n"), clientSandbox);
+assert.deepEqual(JSON.parse(JSON.stringify(clientSandbox.ATTACK_PROTECTION_POWER_ANCHORS)),
+  JSON.parse(JSON.stringify(sandbox.ATTACK_PROTECTION_POWER_ANCHORS)));
+const anchors = [[1, 3, 4], [1_000_000, 3, 4], [10_000_000, 2.75, 3.5],
+  [100_000_000, 2.5, 3], [1_000_000_000, 2, 2.5], [10_000_000_000, 2, 2.5]];
+for (const [power, assault, raid] of anchors) {
+  for (const runtime of [sandbox, clientSandbox]) {
+    const thresholds = runtime.getAttackProtectionThresholds(power);
+    assert.equal(thresholds.assaultMinRatio, assault);
+    assert.equal(thresholds.raidMinRatio, raid);
+    assert.equal(thresholds.raidMaxScaleRatio, raid * 2);
+    assert.equal(runtime.getAttackProtectionMode(assault - 1e-9, power), "normal");
+    assert.equal(runtime.getAttackProtectionMode(assault, power), "assault");
+    assert.equal(runtime.getAttackProtectionMode(raid - 1e-9, power), "assault");
+    assert.equal(runtime.getAttackProtectionMode(raid, power), "raid");
+  }
+  assert.equal(sandbox.getAttackProtectionBreakEvenScale("assault", assault, power), 1.25);
+  assert.equal(sandbox.getAttackProtectionBreakEvenScale("assault", raid, power), 1.05);
+  assert.equal(sandbox.getAttackProtectionBreakEvenScale("raid", raid, power), 0.5);
+  assert.equal(sandbox.getAttackProtectionBreakEvenScale("raid", raid * 2, power), 0.25);
+  assert.equal(sandbox.getAttackProtectionBreakEvenScale("raid", raid * 20, power), 0.25);
 }
-if (clientSandbox.getEnemyCityPowerBand(enemyCity, 249_000, 100_000) !== "protected"
-  || clientSandbox.getEnemyCityPowerBand(enemyCity, 250_000, 100_000) !== "protected") {
+assert.equal(sandbox.getAttackProtectionThresholds(Math.sqrt(1e6 * 1e7)).assaultMinRatio, 2.875);
+assert.equal(sandbox.getAttackProtectionThresholds(Math.sqrt(1e6 * 1e7)).raidMinRatio, 3.75);
+let previous = null;
+for (let exponent = 0; exponent <= 12; exponent += 0.01) {
+  const power = 10 ** exponent;
+  const thresholds = sandbox.getAttackProtectionThresholds(power);
+  assert.deepEqual(JSON.parse(JSON.stringify(thresholds)),
+    JSON.parse(JSON.stringify(clientSandbox.getAttackProtectionThresholds(power))));
+  if (previous) {
+    assert(thresholds.assaultMinRatio <= previous.assaultMinRatio);
+    assert(thresholds.raidMinRatio <= previous.raidMinRatio);
+    assert(power / thresholds.assaultMinRatio > previous.power / previous.assaultMinRatio,
+      "Increasing attacker power must never unlock weaker normal targets");
+  }
+  previous = { ...thresholds, power };
+}
+for (const power of [1e6, 1e7, 1e8, 1e9]) {
+  const below = sandbox.getAttackProtectionThresholds(power - 1);
+  const above = sandbox.getAttackProtectionThresholds(power + 1);
+  assert(Math.abs(below.assaultMinRatio - above.assaultMinRatio) < 1e-6);
+  assert(Math.abs(below.raidMinRatio - above.raidMinRatio) < 1e-6);
+}
+for (const [attackerKingPower, defenderKingPower, mode] of [
+  [900_000, 300_001, "normal"], [900_000, 300_000, "assault"],
+  [900_000, 225_001, "assault"], [900_000, 225_000, "raid"],
+  [10_000_000, 3_700_000, "normal"], [10_000_000, 3_000_000, "assault"],
+  [10_000_000, 2_800_000, "raid"], [100_000_000, 40_000_001, "normal"],
+  [100_000_000, 40_000_000, "assault"], [100_000_000, 33_333_333, "raid"],
+]) {
+  const result = protectionAt(1, { attackerKingPower, defenderKingPower });
+  assert.equal(result?.mode || "normal", mode);
+  for (const assaultStage of ["breach", "capture"]) {
+    const serverProtection = protectionAt(1, { attackerKingPower, defenderKingPower, assaultStage });
+    const clientProtection = clientSandbox.createAttackProtectionSnapshot({ troops: 1_000_000 },
+      { ...target, owner: "enemy" }, 1_000_000, "player", { attackerKingPower, defenderKingPower, assaultStage });
+    for (const field of ["mode", "maxTroops", "effectiveTroops", "captureAllowed", "assaultStage", "maxDefenderLossPercent"]) {
+      assert.equal(clientProtection?.[field], serverProtection?.[field], `${attackerKingPower}/${defenderKingPower}: ${field} differs`);
+    }
+  }
+  assert.equal(clientSandbox.getEnemyCityPowerBand(enemyCity, attackerKingPower, defenderKingPower),
+    mode === "normal" ? "in-range" : "protected");
+}
+// Saved schema-v2 marches retain their committed mode and cap after the policy update.
+assert.equal(sandbox.normalizeAttackProtectionSnapshot({ ...atTwo, powerRatio: 2 }).mode, "assault");
+assert.equal(sandbox.normalizeAttackProtectionSnapshot({ ...atTwoFive, powerRatio: 2.5 }).maxTroops, 400);
+sandbox.DAILY_MISSION_SAFE_PEER_LIMIT = 20;
+vm.runInContext(readFunction(source, "selectDailyMissionPeerCandidates"), sandbox);
+const peers = [299_999, 300_000, 300_001, 900_000].map(kingPower => ({ uid: String(kingPower), kingPower }));
+assert.deepEqual(Array.from(sandbox.selectDailyMissionPeerCandidates(peers, 900_000), row => row.kingPower),
+  [900_000, 300_001]);
+sandbox.crypto = require("node:crypto");
+sandbox.db = { doc: value => value };
+sandbox.combatAuthorizationRealm = () => ({ worldId: "test", resetGeneration: "test" });
+sandbox.COMBAT_AUTHORIZATION = { COMBAT_WINDOW_MS: 900_000, captureAbandonLocks: () => ({ capturer: true }) };
+vm.runInContext(readFunction(source, "recordCaptureRetaliation"), sandbox);
+for (const [highPower, lowPower, expected] of [[900_000, 400_000, false], [900_000, 300_000, true],
+  [100_000_000, 45_000_000, false], [100_000_000, 40_000_000, true], [1e9, 5e8, true]]) {
+  const writes = [];
+  sandbox.recordCaptureRetaliation({ set: (...args) => writes.push(args) }, {
+    armyId: "capture", target: { id: "city", regionId: "map" }, targetRef: { path: "test/city" },
+    originalOwnerUid: "strong", capturerUid: "weak", highPower, lowPower, nowMs: 1000,
+  });
+  assert.equal(writes.length > 0, expected, "Retaliation must use the displaced ruler's attack threshold");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 299_000, 100_000) !== "in-range"
+  || clientSandbox.getEnemyCityPowerBand(enemyCity, 300_000, 100_000) !== "protected") {
+  throw new Error("Light red does not begin exactly at the early 3× boundary.");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 399_000, 100_000) !== "protected"
+  || clientSandbox.getEnemyCityPowerBand(enemyCity, 400_000, 100_000) !== "protected") {
   throw new Error("Protected assaults and raids do not share the stable light-red tier.");
 }
 if (clientSandbox.getEnemyCityPowerBand(enemyCity, 100_000, 900_000) !== "overpowering") {
@@ -525,7 +627,7 @@ if (!readFunction(clientSource, "normalizeBattleReports").includes("\"breach\", 
   throw new Error("Protected breach previews or battle reports are not represented in the client UI.");
 }
 if (!clientSource.includes("slider.max = String(sliderSendLimit)")
-  || !clientSource.includes("selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))")) {
+  || !clientSource.includes("selectedTroopAmount = clamp(selection?.amount ?? selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))")) {
   throw new Error("The visible slider and final confirmation do not reapply the legal troop cap.");
 }
 const reopenProtectionSource = readFunction(clientSource, "reopenAttackProtectionConfirmation");
@@ -549,4 +651,4 @@ if (!confirmTroopSliderSource.includes("const launched = launchAttack")
   throw new Error("Confirmed troop orders must close the attack screen immediately after dispatch.");
 }
 
-console.log("Validated weaker-player protection v2 boundaries, two-stage breaches, caps, raids, XP claims, previews, and stable colors.");
+console.log("Validated smooth attacker-power thresholds, saved v2 snapshots, two-stage breaches, caps, raids, XP claims, previews, and stable colors.");

@@ -13,28 +13,22 @@ const page = read("battle-economy-guide.html");
 const runtime = read("battle-economy-guide.js");
 const styles = read("battle-economy-guide.css");
 
-function readNumericConstant(source, name) {
-  const match = new RegExp(`const\\s+${name}\\s*=\\s*([0-9_.]+);`).exec(source);
-  assert.ok(match, `Missing ${name}.`);
-  return Number(match[1].replaceAll("_", ""));
-}
-
 assert.equal(guide.RULES.baseAttackPowerPerTroop, Number(config.troopCombat?.baseAttackPowerPerTroop));
 assert.equal(guide.RULES.baseDefensePowerPerTroop, Number(config.troopCombat?.baseDefensePowerPerTroop));
 assert.match(server, /BASE_TROOP_ATTACK_POWER\s*=\s*economyNumber\("troopCombat\.baseAttackPowerPerTroop", 1\.25\)/);
 assert.match(client, /BASE_TROOP_DEFENSE_POWER\s*=\s*economyNumber\("troopCombat\.baseDefensePowerPerTroop", 1\.3\)/);
-assert.equal(guide.RULES.strongerKingdomAssaultRatio, readNumericConstant(server, "ATTACK_PROTECTION_ASSAULT_MIN_RATIO"));
-assert.equal(guide.RULES.strongerKingdomRaidRatio, readNumericConstant(server, "ATTACK_PROTECTION_RAID_MIN_RATIO"));
+assert.match(page, /Attacker King Power/);
+for (const row of ["1M or less</th><td>3&times;</td><td>4&times;", "10M</th><td>2.75&times;</td><td>3.5&times;", "100M</th><td>2.5&times;</td><td>3&times;", "1B and above</th><td>2&times;</td><td>2.5&times;"]) assert.ok(page.includes(row));
 assert.equal(guide.RULES.strongholdEffectiveLevel, 50);
 assert.equal(guide.RULES.citadelEffectiveLevel, 100);
 
 const expectedMilestones = {
-  1: { vp: 12, gold: 285, troops: 123, wall: 200, repair: 15 },
-  25: { vp: 260, gold: 3915, troops: 2678, wall: 145557, repair: 23 },
-  50: { vp: 599, gold: 60360, troops: 6169, wall: 1456669, repair: 30 },
-  75: { vp: 985, gold: 928095, troops: 10145, wall: 2228335, repair: 38 },
-  100: { vp: 1408, gold: 14266995, troops: 14502, wall: 3000000, repair: 45 },
-  150: { vp: 2338, gold: 638858596, troops: 24081, wall: 6200000, repair: 60 },
+  1: { vp: 12, gold: 285, troops: 129, wall: 200, repair: 15 },
+  25: { vp: 260, gold: 3915, troops: 2811, wall: 145557, repair: 23 },
+  50: { vp: 599, gold: 60360, troops: 6478, wall: 1456669, repair: 30 },
+  75: { vp: 985, gold: 928095, troops: 10652, wall: 2228335, repair: 38 },
+  100: { vp: 1408, gold: 14266995, troops: 15227, wall: 3000000, repair: 45 },
+  150: { vp: 2338, gold: 638858596, troops: 25285, wall: 6200000, repair: 60 },
 };
 
 for (const [levelText, expected] of Object.entries(expectedMilestones)) {

@@ -216,7 +216,7 @@
     "goldPerProductionVp": 15,
     "goldEndgameStartLevel": 100,
     "goldEndgameGrowth": 1.079,
-    "troopsPerVictoryPoint": 10.3,
+    "troopsPerVictoryPoint": 10.815,
     "wallDefenseBase": 200,
     "wallDefensePerLevel": 28858,
     "wallCurveModelVersion": 2,

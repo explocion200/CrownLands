@@ -1117,7 +1117,7 @@ const REGROUP_RADIUS = 680;
 const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
 const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
 const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
-const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
+const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.117;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
@@ -1179,7 +1179,12 @@ const SIEGE_REPAIR_MINUTES_PER_LEVEL = Math.max(0, economyNumber("siegeCombat.re
 const SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT = Math.min(100, Math.max(0, economyNumber("siegeCombat.meaningfulWallDamagePercent", 5)));
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
 const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
-const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
+const ATTACK_PROTECTION_POWER_ANCHORS = Object.freeze([
+  { power: 1_000_000, assault: 3, raid: 4 },
+  { power: 10_000_000, assault: 2.75, raid: 3.5 },
+  { power: 100_000_000, assault: 2.5, raid: 3 },
+  { power: 1_000_000_000, assault: 2, raid: 2.5 },
+]);
 const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
@@ -1208,7 +1213,7 @@ const CITY_LEVEL_STATS = {
   wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.3),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
@@ -8615,7 +8620,7 @@ function getEnemyCityPowerBand(
   const attackerPower = normalizePowerValue(playerKingPower);
   const defenderPower = normalizePowerValue(defenderKingPower);
   if (attackerPower <= 0 || defenderPower <= 0) return "unknown";
-  if (attackerPower / defenderPower >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "protected";
+  if (getAttackProtectionMode(attackerPower / defenderPower, attackerPower) !== "normal") return "protected";
   if (defenderPower > attackerPower) return "overpowering";
   return "in-range";
 }
@@ -8813,7 +8818,7 @@ function getEnemyCityPowerBandLabel(powerBand, city = null) {
     const attackerPower = Math.max(1, normalizePowerValue(stableRecord?.attackerPower) || normalizePowerValue(getKingPower()));
     const defenderPower = normalizePowerValue(stableRecord?.defenderPower)
       || normalizePowerValue(getAuthoritativeCityOwnerKingPowerSnapshot(city));
-    return defenderPower > 0 && attackerPower / defenderPower >= ATTACK_PROTECTION_RAID_MIN_RATIO
+    return defenderPower > 0 && getAttackProtectionMode(attackerPower / defenderPower, attackerPower) === "raid"
       ? "Weaker kingdom protection: raid only, no capture"
       : "Weaker kingdom protection: two-stage assault required";
   }
@@ -8870,19 +8875,40 @@ function roundUpToTwoSignificantDigits(value) {
   return Math.ceil(integer / magnitude) * magnitude;
 }
 
-function getAttackProtectionMode(powerRatio) {
+function getAttackProtectionThresholds(attackerKingPower) {
+  const value = Number(attackerKingPower);
+  const power = Math.max(1, Number.isFinite(value) ? value : 1);
+  const anchors = ATTACK_PROTECTION_POWER_ANCHORS;
+  let assault = anchors[0].assault;
+  let raid = anchors[0].raid;
+  for (let index = 1; index < anchors.length; index += 1) {
+    const lower = anchors[index - 1];
+    const upper = anchors[index];
+    const progress = Math.max(0, Math.min(1,
+      Math.log10(power / lower.power) / Math.log10(upper.power / lower.power)
+    ));
+    assault = lower.assault + (upper.assault - lower.assault) * progress;
+    raid = lower.raid + (upper.raid - lower.raid) * progress;
+    if (power <= upper.power) break;
+  }
+  return { assaultMinRatio: assault, raidMinRatio: raid, raidMaxScaleRatio: raid * 2 };
+}
+
+function getAttackProtectionMode(powerRatio, attackerKingPower) {
   const ratio = Math.max(0, Number(powerRatio) || 0);
-  if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
-  if (ratio >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "assault";
+  const thresholds = getAttackProtectionThresholds(attackerKingPower);
+  if (ratio >= thresholds.raidMinRatio) return "raid";
+  if (ratio >= thresholds.assaultMinRatio) return "assault";
   return "normal";
 }
 
-function getAttackProtectionBreakEvenScale(mode, powerRatio) {
+function getAttackProtectionBreakEvenScale(mode, powerRatio, attackerKingPower) {
+  const thresholds = getAttackProtectionThresholds(attackerKingPower);
   const ratio = Math.max(0, Number(powerRatio) || 0);
   if (mode === "assault") {
     const progress = clamp(
-      (ratio - ATTACK_PROTECTION_ASSAULT_MIN_RATIO)
-        / (ATTACK_PROTECTION_RAID_MIN_RATIO - ATTACK_PROTECTION_ASSAULT_MIN_RATIO),
+      (ratio - thresholds.assaultMinRatio)
+        / (thresholds.raidMinRatio - thresholds.assaultMinRatio),
       0,
       1
     );
@@ -8890,8 +8916,8 @@ function getAttackProtectionBreakEvenScale(mode, powerRatio) {
   }
   if (mode === "raid") {
     const progress = clamp(
-      (ratio - ATTACK_PROTECTION_RAID_MIN_RATIO)
-        / (ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO - ATTACK_PROTECTION_RAID_MIN_RATIO),
+      (ratio - thresholds.raidMinRatio)
+        / (thresholds.raidMaxScaleRatio - thresholds.raidMinRatio),
       0,
       1
     );
@@ -9056,7 +9082,7 @@ function createAttackProtectionSnapshot(source, target, requestedTroops, owner =
   );
   if (defenderKingPower <= 0) return null;
   const powerRatio = attackerKingPower / defenderKingPower;
-  const mode = getAttackProtectionMode(powerRatio);
+  const mode = getAttackProtectionMode(powerRatio, attackerKingPower);
   if (mode === "normal") return null;
   const sourceTroops = Math.max(1, Math.floor(Number(source.troops) || 1));
   const requested = clamp(Math.floor(Number(requestedTroops) || 1), 1, sourceTroops);
@@ -9072,7 +9098,7 @@ function createAttackProtectionSnapshot(source, target, requestedTroops, owner =
     : "breach";
   const captureSafeCap = Math.max(1, roundUpToTwoSignificantDigits(breakEvenTroops));
   const scaledCap = Math.max(1, Math.floor(
-    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
+    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio, attackerKingPower)
   ));
   const exposedCap = mode === "assault"
     ? assaultStage === "breach"

@@ -43,7 +43,7 @@ function extractFunction(source, name) {
 }
 
 assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy configurations differ.");
-assert.equal(serverConfig.cityEconomy.troopsPerVictoryPoint, 10.3, "Base troop production must use the confirmed 3% increase.");
+assert.equal(serverConfig.cityEconomy.troopsPerVictoryPoint, 10.815, "Base troop production must use the approved further 5% increase.");
 assert.equal(serverConfig.cityEconomy.wallCurveModelVersion, 2, "The staged wall curve must be active.");
 assert.equal(serverConfig.cityEconomy.wallBridgeDefense, 1_456_669);
 assert.equal(serverConfig.cityEconomy.wallMidDefense, 3_000_000);
