@@ -3,7 +3,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { chromium } = require("playwright");
+const { CdpClient } = require("./map-benchmark/cdp-client");
+const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 
 async function main() {
@@ -12,16 +14,30 @@ async function main() {
   const server = createMapBenchmarkServer(), address = await server.listen();
   const artifacts = path.resolve(__dirname, "../release-artifacts/clan-building-layout");
   fs.mkdirSync(artifacts, { recursive: true });
-  const browser = await chromium.launch({ executablePath, headless: true });
+  const browser = await startBrowserSession(executablePath);
+  const client = await CdpClient.connect(browser.targets.find(target => target.type === "page").webSocketDebuggerUrl);
+  await Promise.all(["Page.enable", "Runtime.enable"].map(method => client.send(method)));
+  const errors = [];
+  client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
+  const ev = async (fn, ...args) => {
+    const result = await client.send("Runtime.evaluate", { expression: '(' + fn.toString() + ')(' + args.map(arg => JSON.stringify(arg)).join(',') + ')', awaitPromise: true, returnByValue: true });
+    if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+    return result.result.value;
+  };
+  const ready = async (fn, ...args) => { for (let i = 0; i < 400; i++) { if (await ev(fn, ...args)) return; await delay(100); } throw Error("Timed out: " + fn); };
+  const click = async selector => {
+    const point = await ev(selector => { const node = modalBody.querySelector(selector), r = node.getBoundingClientRect(); const x = r.x + r.width / 2, y = r.y + r.height / 2; return { x, y, reachable: r.width > 0 && r.height > 0 && node.contains(document.elementFromPoint(x, y)) }; }, selector);
+    assert(point.reachable, "Unreachable control: " + selector);
+    for (const type of ["mousePressed", "mouseReleased"]) await client.send("Input.dispatchMouseEvent", { type, x: point.x, y: point.y, button: "left", buttons: type === "mousePressed" ? 1 : 0, clickCount: 1 });
+  };
+  const screenshot = async name => fs.writeFileSync(path.join(artifacts, name), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
   const evidence = [];
   try {
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
-      const page = await browser.newPage({ viewport: { width, height }, hasTouch: height < 600 });
-      const errors = [];
-      page.on("pageerror", error => errors.push(error.message));
-      await page.goto(address.url + "/__benchmark__/?scenario=A&visualMarches=0");
-      await page.waitForFunction(() => document.documentElement.dataset.crownlandsBenchmarkReady === "true");
-      await page.evaluate(() => {
+      await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: height < 600 });
+      await client.send("Page.navigate", { url: address.url + "/__benchmark__/?scenario=A&visualMarches=0" });
+      await ready(() => document.documentElement?.dataset.crownlandsBenchmarkReady === "true");
+      await ev(() => {
         window.__CROWNLANDS_BENCHMARK__.closeModal();
         const api = getOnlineApi();
         window.layoutQa = { calls: [], reads: 0, balance: 4260000000, fail: false };
@@ -38,11 +54,11 @@ async function main() {
       });
       let reference;
       for (const id of ["workshop", "infirmary", "training", "shop"]) {
-        await page.evaluate(id => openClanTowerBuilding(layoutTower.id, id), id);
-        await page.waitForFunction(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
-        await page.locator(".clan-building-shell #buildingArt").evaluate(img => img.decode());
-        await page.evaluate(() => Promise.all(document.getAnimations().filter(animation => !animation.effect?.getTiming().iterations || Number.isFinite(animation.effect.getTiming().iterations)).map(animation => animation.finished.catch(() => {}))));
-        const result = await page.evaluate(() => {
+        await ev(id => openClanTowerBuilding(layoutTower.id, id), id);
+        await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
+        await ev(() => modalBody.querySelector("#buildingArt").decode());
+        await ev(() => Promise.all(document.getAnimations().filter(animation => !animation.effect?.getTiming().iterations || Number.isFinite(animation.effect.getTiming().iterations)).map(animation => animation.finished.catch(() => {}))));
+        const result = await ev(() => {
           const shell = modalBody.querySelector(".clan-building-shell"), footer = shell.querySelector(".upgrade-footer"), button = footer.querySelector("button");
           const box = node => { const r = node.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(n => Math.round(n)); };
           const r = button.getBoundingClientRect();
@@ -59,20 +75,20 @@ async function main() {
         assert.equal(result.cost, "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
         if (!reference) reference = result;
         else for (const key of ["header", "sidebar", "footer", "goldFont"]) assert.deepEqual(result[key], reference[key], id + ": inconsistent " + key + " at " + width);
-        await page.screenshot({ path: path.join(artifacts, `${width}-${id}-overview.png`) });
-        await page.getByRole("tab", { name: "All levels", exact: true }).click();
-        assert.equal(await page.locator(".levels-table tbody tr").count(), 10);
-        await page.locator("#levelsPanel").evaluate(panel => { panel.scrollTop = panel.scrollHeight; });
-        await page.evaluate(() => refreshHoldingTower(layoutTower.id));
-        assert.equal(await page.getByRole("tab", { name: "All levels", exact: true }).getAttribute("aria-selected"), "true");
-        assert(await page.locator("#levelsPanel").evaluate(panel => panel.scrollTop > 0));
-        await page.screenshot({ path: path.join(artifacts, `${width}-${id}-levels.png`) });
+        await screenshot(`${width}-${id}-overview.png`);
+        await click("#tab-levels");
+        assert.equal(await ev(() => modalBody.querySelectorAll(".levels-table tbody tr").length), 10);
+        await ev(() => { const panel = modalBody.querySelector("#levelsPanel"); panel.scrollTop = panel.scrollHeight; });
+        await ev(() => refreshHoldingTower(layoutTower.id));
+        assert.equal(await ev(() => modalBody.querySelector("#tab-levels").getAttribute("aria-selected")), "true");
+        assert(await ev(() => modalBody.querySelector("#levelsPanel").scrollTop > 0));
+        await screenshot(`${width}-${id}-levels.png`);
         evidence.push({ building: id, viewport: [width, height], ...result });
       }
       // Shop construction follows the same restrictions, retry identity and authoritative completion as the other buildings.
-      await page.getByRole("tab", { name: "Overview", exact: true }).click();
+      await click("#tab-overview");
       for (const scenario of ["funds", "balance", "walls", "attack", "member", "other", "maximum", "unbuilt"]) {
-        await page.evaluate(scenario => {
+        await ev(scenario => {
           layoutTower.permissions.manage = scenario !== "member";
           layoutTower.attackBlocked = scenario === "attack";
           layoutTower.wallIntegrityBps = scenario === "walls" ? 9999 : 10000;
@@ -81,36 +97,41 @@ async function main() {
           clanTreasuryStatus = scenario === "balance" ? null : { treasury: { balance: scenario === "funds" ? 0 : layoutQa.balance } };
           renderHoldingTowerModal({ ...layoutTower, clanShop: holdingTowerSnapshots.get(layoutTower.id).clanShop });
         }, scenario);
-        assert.equal(await page.locator("#upgradeShop").isDisabled(), scenario !== "unbuilt", scenario);
-        assert(await page.locator("#upgradeNote").innerText());
-        if (scenario === "unbuilt") assert.equal(await page.locator("#upgradeShop").innerText(), "Build Level 1");
+        assert.equal(await ev(() => modalBody.querySelector("#upgradeShop").disabled), scenario !== "unbuilt", scenario);
+        assert(await ev(() => modalBody.querySelector("#upgradeNote").textContent));
+        if (scenario === "unbuilt") assert.equal(await ev(() => modalBody.querySelector("#upgradeShop").textContent), "Build Level 1");
       }
-      await page.evaluate(() => { layoutTower.buildings.shop = 4; layoutQa.fail = true; renderHoldingTowerModal({ ...layoutTower, clanShop: holdingTowerSnapshots.get(layoutTower.id).clanShop }); });
-      await page.locator("#upgradeShop").click();
-      await page.waitForFunction(() => !holdingTowerActionsInFlight.size);
-      assert.match(await page.locator(".project-card.error").innerText(), /retry/i);
-      await page.evaluate(() => { layoutQa.fail = false; });
-      await page.locator("#upgradeShop").click();
-      await page.waitForFunction(() => !holdingTowerActionsInFlight.size);
-      assert(await page.evaluate(() => layoutQa.calls.length === 2 && layoutQa.calls[0].operationId === layoutQa.calls[1].operationId));
-      await page.evaluate(() => { layoutTower.buildingProject.progressStartedAtMs = 0; layoutTower.attackBlocked = true; renderHoldingTowerModal(layoutTower); });
-      assert.equal(await page.locator("#upgradeShop").innerText(), "Upgrade paused");
-      await page.evaluate(() => { layoutTower.attackBlocked = false; layoutTower.buildingProject.progressStartedAtMs = Date.now() - 21600000; window.readsBefore = layoutQa.reads; renderHoldingTowerModal(layoutTower); });
-      await page.waitForFunction(() => layoutQa.reads > readsBefore);
-      assert.equal(await page.locator("#buildingLevel").innerText(), "Shop Level 4", "A client timer must not complete construction locally.");
+      await ev(() => { layoutTower.buildings.shop = 4; layoutQa.fail = true; renderHoldingTowerModal({ ...layoutTower, clanShop: holdingTowerSnapshots.get(layoutTower.id).clanShop }); });
+      await click("#upgradeShop");
+      await ready(() => !holdingTowerActionsInFlight.size);
+      assert.match(await ev(() => modalBody.querySelector(".project-card.error").textContent), /retry/i);
+      await ev(() => { layoutQa.fail = false; });
+      await click("#upgradeShop");
+      await ready(() => !holdingTowerActionsInFlight.size);
+      assert(await ev(() => layoutQa.calls.length === 2 && layoutQa.calls[0].operationId === layoutQa.calls[1].operationId));
+      await ev(() => { layoutTower.buildingProject.progressStartedAtMs = 0; layoutTower.attackBlocked = true; renderHoldingTowerModal(layoutTower); });
+      assert.equal(await ev(() => modalBody.querySelector("#upgradeShop").textContent), "Upgrade paused");
+      await ev(() => { layoutTower.attackBlocked = false; layoutTower.buildingProject.progressStartedAtMs = Date.now() - 21600000; window.readsBefore = layoutQa.reads; renderHoldingTowerModal(layoutTower); });
+      await ready(() => layoutQa.reads > readsBefore);
+      assert.equal(await ev(() => modalBody.querySelector("#buildingLevel").textContent), "Shop Level 4", "A client timer must not complete construction locally.");
       // Store entry still goes straight to purchases, while the building entry above opens Overview.
-      await page.evaluate(() => { layoutTower.buildingProject = null; return openClanTowerBuilding(layoutTower.id, "shop", { section: "wares" }); });
-      await page.waitForFunction(() => modalBody.dataset.clanShopReady === "true");
-      assert.equal(await page.getByRole("tab", { name: "Items", exact: true }).getAttribute("aria-selected"), "true");
-      await page.getByRole("tab", { name: "Items", exact: true }).focus(); await page.keyboard.press("Home");
-      assert.equal(await page.getByRole("tab", { name: "Overview", exact: true }).getAttribute("aria-selected"), "true");
-      await page.evaluate(() => modal.close());
-      await page.waitForFunction(() => !modal.classList.contains("clan-building-modal"));
+      await ev(() => { layoutTower.buildingProject = null; return openClanTowerBuilding(layoutTower.id, "shop", { section: "wares" }); });
+      await ready(() => modalBody.dataset.clanShopReady === "true");
+      assert.equal(await ev(() => modalBody.querySelector("#tab-wares").getAttribute("aria-selected")), "true");
+      await ev(() => modalBody.querySelector("#tab-wares").focus());
+      await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Home", code: "Home", windowsVirtualKeyCode: 36 });
+      await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Home", code: "Home", windowsVirtualKeyCode: 36 });
+      assert.equal(await ev(() => modalBody.querySelector("#tab-overview").getAttribute("aria-selected")), "true");
+      await ev(() => modal.close());
+      await ready(() => !modal.classList.contains("clan-building-modal"));
       assert.deepEqual(errors, []);
-      await page.close();
       console.log(`Shared Clan Tower layout ${width}x${height}: all four frames, costs, navigation, preserved tabs, construction restrictions/retries and server-only completion passed.`);
     }
     fs.writeFileSync(path.join(artifacts, "verification.json"), JSON.stringify(evidence, null, 2) + "\n");
-  } finally { await browser.close(); await server.close(); }
+  } finally {
+    await client.send("Browser.close").catch(() => {}); client.close();
+    if (!await waitForProcessExit(browser.browserProcess)) { browser.browserProcess.kill(); await waitForProcessExit(browser.browserProcess); }
+    await removeBrowserProfile(browser.profilePath); await server.close();
+  }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
