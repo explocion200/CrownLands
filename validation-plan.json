@@ -1,36 +1,22 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b0d2bd26e8678e7127e18bb32a823eed48ad2ba9",
+  "baseCommit": "d80f415331a5127b28524283fa2fca328c9b1b7c",
   "coverage": [
     {
-      "paths": [
-        "clan-tower-buildings-ui.js",
-        "engineers-workshop-ui.css",
-        "engineers-workshop-ui.js",
-        "infirmary-ui.js",
-        "training-grounds-ui.js",
-        "clan-shop-ui.js",
-        "game.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "reason": "Share the building frame and Workshop presentation across all four Clan Tower buildings. Give the Shop Overview, All levels and Items, clear Treasury versus personal Gold, a fixed construction footer, progress/restrictions/retries and authoritative timer completion. Cover identical frame geometry and reachable actions at desktop and both landscape sizes, current/next benefits, all ten levels, preserved tabs/scroll, purchase and construction idempotency, permissions, missing funds, paused projects and navigation. Existing recovery/rally examples and map Store/building entry points remain covered. Client session and Treasury tests cover the shared style loader callback and explicit balance refresh. No server, rules, schema, economics or combat behavior changes; emulator suites are not required for this presentation update.",
+      "paths": ["clan-tower-details-ui.css", "engineers-workshop-ui.css", "tools/validate-clan-building-layout-browser.js"],
+      "reason": "Share the existing Tower window dimensions, responsive breakpoints, parchment surfaces, header/footer styles and raised controls with all four building screens. Check equal geometry and computed theme across Overview, Garrison, Walls & Veil, Tower Rules and every building, including returning to Tower Info. Cover desktop, both responsive boundaries and landscape phones, reachable upgrades, all ten levels, preserved tabs/scroll, Shop Items, building examples, construction restrictions and map entry points. Only CSS presentation and its regression coverage change; no gameplay, server, rules, schema or API changes require emulator suites.",
       "tests": [
         "tools/validate-clan-building-layout-browser.js",
         "tools/validate-engineers-workshop-browser.js",
         "tools/validate-infirmary-browser.js",
         "tools/validate-training-grounds-browser.js",
         "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-holding-tower-client-lifecycle.js"
+        "tools/validate-clan-tower-buildings-browser.js"
       ]
     },
     {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "reason": "Document the user's confirmed consistent building presentation, separate Shop Items tab, existing Store shortcut and pending release status. The shared browser tests above validate this presentation; no independent runtime change in this document.",
+      "reason": "Record the user's confirmed requirement that Buildings match the other Tower tabs in window size and theme. Runtime presentation is covered by the focused browser validators above; this document adds no independent runtime behavior.",
       "tests": []
     }
   ]

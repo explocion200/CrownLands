@@ -31,9 +31,28 @@ async function main() {
     for (const type of ["mousePressed", "mouseReleased"]) await client.send("Input.dispatchMouseEvent", { type, x: point.x, y: point.y, button: "left", buttons: type === "mousePressed" ? 1 : 0, clickCount: 1 });
   };
   const screenshot = async name => fs.writeFileSync(path.join(artifacts, name), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+  const frameStyle = () => ev(() => {
+    const shell = modalBody.querySelector(".tower-shell, .clan-building-shell");
+    const rect = node => { const r = node.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); };
+    const style = (node, properties) => { const css = getComputedStyle(node); return Object.fromEntries(properties.map(key => [key, css[key]])); };
+    return {
+      window: rect(modal),
+      backdrop: getComputedStyle(modal, "::backdrop").backgroundColor,
+      frame: style(modal, ["backgroundColor", "border", "padding", "borderRadius", "boxShadow"]),
+      shell: style(shell, ["backgroundColor", "border", "color"]),
+      header: rect(shell.querySelector(".window-header")),
+      headerStyle: style(shell.querySelector(".window-header"), ["backgroundImage", "padding"]),
+      title: style(shell.querySelector(".heading h1"), ["fontSize", "fontFamily", "color"]),
+      tabs: style(shell.querySelector(".tabs-bar, .clan-building-tabs"), ["backgroundColor"]),
+      selectedTab: style(shell.querySelector('[role="tab"][aria-selected="true"]'), ["backgroundImage", "fontSize", "color", "borderBottomColor", "boxShadow"]),
+      otherTab: style(shell.querySelector('[role="tab"][aria-selected="false"]'), ["backgroundImage", "fontSize", "color", "borderBottomColor", "boxShadow"]),
+      close: style(shell.querySelector(".close-button, .close"), ["backgroundImage", "fontSize", "color", "boxShadow"]),
+      footer: style(shell.querySelector(".tower-footer, .upgrade-footer"), ["backgroundImage", "borderTop"]),
+    };
+  });
   const evidence = [];
   try {
-    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+    for (const [width, height] of [[1440, 900], [1024, 600], [1000, 700], [844, 390], [568, 320]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: height < 600 });
       await client.send("Page.navigate", { url: address.url + "/__benchmark__/?scenario=A&visualMarches=0" });
       await ready(() => document.documentElement?.dataset.crownlandsBenchmarkReady === "true");
@@ -52,12 +71,26 @@ async function main() {
           startClanTowerBuilding: async payload => { layoutQa.calls.push(payload); if (layoutQa.fail) throw Error("Construction not confirmed. Please retry."); layoutTower.buildingProject = { buildingId: payload.buildingId, targetLevel: 5, remainingMs: 21600000, progressStartedAtMs: Date.now() }; return { tower: layoutTower }; },
         });
       });
+      await ev(() => openHoldingTower(layoutTower.id));
+      await ready(() => Boolean(modalBody.querySelector(".tower-shell")));
+      await ev(() => Promise.all(document.getAnimations().filter(a => Number.isFinite(a.effect?.getTiming().iterations)).map(a => a.finished.catch(() => {}))));
+      const towerFrame = await frameStyle();
+      for (const tab of ["overview", "garrison", "walls", "rules"]) {
+        await click(`[data-tower-tab="${tab}"]`);
+        assert.deepEqual(await frameStyle(), towerFrame, "Tower frame changed on " + tab);
+      }
+      await click('[data-tower-tab="overview"]');
+      await screenshot(`${width}-tower-overview.png`);
+      await click('[data-tower-tab="buildings"]');
+      await ready(() => modalBody.dataset.clanShopReady === "true");
+      assert.deepEqual(await frameStyle(), towerFrame, "Buildings tab must keep the Tower size and theme");
       let reference;
       for (const id of ["workshop", "infirmary", "training", "shop"]) {
         await ev(id => openClanTowerBuilding(layoutTower.id, id), id);
         await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
         await ev(() => modalBody.querySelector("#buildingArt").decode());
         await ev(() => Promise.all(document.getAnimations().filter(animation => !animation.effect?.getTiming().iterations || Number.isFinite(animation.effect.getTiming().iterations)).map(animation => animation.finished.catch(() => {}))));
+        assert.deepEqual(await frameStyle(), towerFrame, id + " must match the other Tower tabs at " + width);
         const result = await ev(() => {
           const shell = modalBody.querySelector(".clan-building-shell"), footer = shell.querySelector(".upgrade-footer"), button = footer.querySelector("button");
           const box = node => { const r = node.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(n => Math.round(n)); };
@@ -78,12 +111,21 @@ async function main() {
         await screenshot(`${width}-${id}-overview.png`);
         await click("#tab-levels");
         assert.equal(await ev(() => modalBody.querySelectorAll(".levels-table tbody tr").length), 10);
-        await ev(() => { const panel = modalBody.querySelector("#levelsPanel"); panel.scrollTop = panel.scrollHeight; });
+        const levelScroll = await ev(() => { const panel = modalBody.querySelector("#levelsPanel"); panel.scrollTop = panel.scrollHeight; return panel.scrollTop; });
         await ev(() => refreshHoldingTower(layoutTower.id));
         assert.equal(await ev(() => modalBody.querySelector("#tab-levels").getAttribute("aria-selected")), "true");
-        assert(await ev(() => modalBody.querySelector("#levelsPanel").scrollTop > 0));
+        assert.equal(await ev(() => modalBody.querySelector("#levelsPanel").scrollTop), levelScroll, "Refresh moved the level table");
+        assert(await ev(() => {
+          const panel = modalBody.querySelector("#levelsPanel").getBoundingClientRect();
+          const last = modalBody.querySelector(".levels-table tbody tr:last-child").getBoundingClientRect();
+          return last.top >= panel.top && last.bottom <= panel.bottom;
+        }), "Level 10 must be reachable, including when the full table fits without scrolling");
         await screenshot(`${width}-${id}-levels.png`);
-        evidence.push({ building: id, viewport: [width, height], ...result });
+        evidence.push({ building: id, viewport: [width, height], towerFrame, ...result });
+        await click(`[data-${id}-back]`);
+        assert.deepEqual(await frameStyle(), towerFrame, "Returning from " + id + " changed the Tower frame");
+        await click('[data-tower-tab="buildings"]');
+        await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
       }
       // Shop construction follows the same restrictions, retry identity and authoritative completion as the other buildings.
       await click("#tab-overview");
@@ -125,7 +167,7 @@ async function main() {
       await ev(() => modal.close());
       await ready(() => !modal.classList.contains("clan-building-modal"));
       assert.deepEqual(errors, []);
-      console.log(`Shared Clan Tower layout ${width}x${height}: all four frames, costs, navigation, preserved tabs, construction restrictions/retries and server-only completion passed.`);
+      console.log(`Shared Clan Tower layout ${width}x${height}: all Tower tabs and building frames match; costs, navigation, preserved tabs, construction restrictions/retries and server-only completion passed.`);
     }
     fs.writeFileSync(path.join(artifacts, "verification.json"), JSON.stringify(evidence, null, 2) + "\n");
   } finally {
