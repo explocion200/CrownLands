@@ -35,8 +35,11 @@ async function main() {
     const shell = modalBody.querySelector(".tower-shell, .clan-building-shell");
     const rect = node => { const r = node.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); };
     const style = (node, properties) => { const css = getComputedStyle(node); return Object.fromEntries(properties.map(key => [key, css[key]])); };
+    const outer = modal.getBoundingClientRect(), inner = shell.getBoundingClientRect(), css = getComputedStyle(modal);
     return {
       window: rect(modal),
+      insets: [inner.left - outer.left, outer.right - inner.right, inner.top - outer.top, outer.bottom - inner.bottom].map(Math.round),
+      expectedInsets: ["Left", "Right", "Top", "Bottom"].map(side => Math.round(parseFloat(css["padding" + side]) + parseFloat(css["border" + side + "Width"]))),
       backdrop: getComputedStyle(modal, "::backdrop").backgroundColor,
       frame: style(modal, ["backgroundColor", "border", "padding", "borderRadius", "boxShadow"]),
       shell: style(shell, ["backgroundColor", "border", "color"]),
@@ -49,6 +52,9 @@ async function main() {
       close: style(shell.querySelector(".close-button, .close"), ["backgroundImage", "fontSize", "color", "boxShadow"]),
       footer: style(shell.querySelector(".tower-footer, .upgrade-footer"), ["backgroundImage", "borderTop"]),
     };
+  }).then(frame => {
+    assert.deepEqual(frame.insets, frame.expectedInsets, "The Tower parchment must fill the frame without a reserved outer scrollbar gutter");
+    return frame;
   });
   const evidence = [];
   try {
@@ -160,6 +166,7 @@ async function main() {
       await ev(() => { layoutTower.buildingProject = null; return openClanTowerBuilding(layoutTower.id, "shop", { section: "wares" }); });
       await ready(() => modalBody.dataset.clanShopReady === "true");
       assert.equal(await ev(() => modalBody.querySelector("#tab-wares").getAttribute("aria-selected")), "true");
+      assert.deepEqual(await frameStyle(), towerFrame, "Shop Items must keep the same full-width parchment frame");
       await ev(() => modalBody.querySelector("#tab-wares").focus());
       await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Home", code: "Home", windowsVirtualKeyCode: 36 });
       await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Home", code: "Home", windowsVirtualKeyCode: 36 });
