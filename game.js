@@ -2914,6 +2914,18 @@ function playRewardSoundAfter(rewardType, delayMs, options = {}) {
   });
 }
 
+function playGoldSpendSound(amount, result = null, requestScope = undefined) {
+  if (!Number.isFinite(Number(amount)) || Number(amount) <= 0
+      || result?.ok === false || result?.replayed || result?.duplicate
+      || (requestScope !== undefined && requestScope !== getOnlineSessionRequestScope())) return false;
+  try {
+    return playGameSound("gold_spend", { allowCrossMap: true });
+  } catch (error) {
+    console.warn("Could not play confirmed Gold spending sound", error);
+    return false;
+  }
+}
+
 function rejectGameAction(message, options = {}) {
   playGameSound("invalid_action", { cooldownMs: 140, ...options });
   if (message) showToast(message);
@@ -4425,6 +4437,7 @@ async function runHoldingTowerSpendAction(tower, action) {
       operationId: createHoldingTowerOperationId(action),
     });
     if (!isCurrent()) return;
+    playGoldSpendSound(result?.cost, result);
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
     if (result?.treasury) applyClanTreasuryStatus(clanId, { clanId: result.clanId, treasury: result.treasury }, scope);
     showToast(action === "upgrade" ? "Wall upgrade added to the Tower queue." : action === "repair" ? "Paid Wall repair started." : "Veil of Silence activated for 10 minutes.");
@@ -4729,6 +4742,7 @@ async function runClanTowerBuildingAction(tower, kind, id) {
     });
     if (!isCurrent()) return;
     clanBuildingRequestIds.delete(key);
+    playGoldSpendSound(kind === "build" ? result?.cost : result?.spentGold, result);
     if (kind === "buy") applyServerEconomyResult(result, { renderCities: false });
     if (result?.tower) holdingTowerSnapshots.set(tower.id, { ...tower, ...result.tower });
     if (result?.treasury) applyClanTreasuryStatus(clanId, { clanId: result.clanId, treasury: result.treasury }, scope);
@@ -11700,6 +11714,7 @@ async function toggleScoutNearby(cityId) {
       });
       if (requestScope !== getOnlineSessionRequestScope()) return;
       recordMarchInteractionTiming("scout-nearby-launch-accepted", startedAt);
+      playGoldSpendSound(result?.cost, result);
       const armies = applyServerBulkOrderResult(result, { render: false });
       previewIds.forEach(id => finishPendingScoutDeparture(id));
       finishBulkOrderAction(action, { completed: true });
@@ -11748,6 +11763,7 @@ async function toggleScoutNearby(cityId) {
     })) launched += 1;
   }
   if (!launched) state.gold += SCOUT_NEARBY_COST;
+  else playGoldSpendSound(SCOUT_NEARBY_COST);
   finishBulkOrderAction(action, { completed: launched > 0 });
   scoutNearbySourceId = null;
   if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
@@ -11853,6 +11869,7 @@ async function toggleRegroup(cityId) {
     }
     action.phase = "sending";
     renderAll();
+    const soundScope = getOnlineSessionRequestScope();
     try {
       const result = await api.sendRegroupOrders({
         worldId: ONLINE_WORLD_ID,
@@ -11862,6 +11879,7 @@ async function toggleRegroup(cityId) {
         sourceCityIds: options.map(option => option.city.id),
         requestId: action.requestId,
       });
+      playGoldSpendSound(result?.cost, result, soundScope);
       const armies = applyServerBulkOrderResult(result);
       const troopsSent = armies.reduce((total, army) => total + Math.max(0, Math.floor(Number(army?.troops) || 0)), 0);
       finishBulkOrderAction(action, { completed: true });
@@ -11946,6 +11964,7 @@ async function toggleRegroup(cityId) {
   }
 
   if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
+  playGoldSpendSound(REGROUP_COST);
   addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
   saveGame();
   renderAll();
@@ -26435,7 +26454,7 @@ async function donateClanTreasuryFromPanel() {
     clanTreasuryView.feedback = `${amount.toLocaleString("en-US")} Gold donated. Thank you for supporting your clan.`;
     clanTreasuryView.success = true;
     showToast(`${formatNumber(amount)} Gold donated to the Clan Treasury.`);
-    playRewardSound("gold");
+    playGoldSpendSound(result?.donated, result);
     // Donation receipts carry Treasury totals; refresh personal Gold from the server.
     // A failed read must never turn an accepted donation into a failed payment.
     try {
@@ -27140,6 +27159,7 @@ async function handleClanSubmit(event) {
   const data = Object.fromEntries(new FormData(form).entries());
   const kind = form.dataset.clanForm;
   const api = getOnlineApi();
+  const soundScope = getOnlineSessionRequestScope();
   if (kind === "rename") {
     if (clanRenameSaving || state?.clanRole !== "leader" || !api?.updateClanProfile) return;
     const requestedName = String(data.name || "").replace(/\s+/g, " ").trim();
@@ -27155,6 +27175,7 @@ async function handleClanSubmit(event) {
         throw new Error("The server did not confirm the new clan name.");
       }
       if (Number.isFinite(Number(result.gold))) state.gold = Number(result.gold);
+      playGoldSpendSound(CLAN_NAME_CHANGE_GOLD_COST, result, soundScope);
       clanSnapshot = { ...(clanSnapshot || {}), ...result.clan };
       state.clanName = result.clan.name;
       clanRenameEditorOpen = false;
@@ -27172,6 +27193,7 @@ async function handleClanSubmit(event) {
     if (kind === "create") {
       const result = await api.createClan(data);
       if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
+      playGoldSpendSound(100_000, result, soundScope);
       showToast(`Clan [${result?.clan?.tag || data.tag}] founded.`);
       await refreshClanState({ silent: true });
     } else if (kind === "search") {
@@ -36847,6 +36869,7 @@ function recruit(cityId) {
   city.troopFloat += amount;
   city.troops = Math.floor(city.troopFloat);
   markOwnedCityChanged(city);
+  playGoldSpendSound(cost);
   addLog(`Recruited ${formatNumber(amount)} troops at ${city.name}.`);
   showToast(`Recruited at ${city.name}`);
   saveGame();
@@ -37365,6 +37388,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast(`Applying a skill preset costs ${formatNumber(getSkillPresetApplyCost())} gold.`);
     return false;
   }
+  const soundScope = getOnlineSessionRequestScope();
   const api = getOnlineApi();
   skillActionInFlight = true;
   renderProfileSkills();
@@ -37375,6 +37399,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
       const result = await api.applySkillPreset({ slot: slot.slot });
       applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
       goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
+      playGoldSpendSound(goldCharged, result, soundScope);
     } else {
       state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
       state.upgrades = normalizeUpgrades(slot.upgrades, state.version);
@@ -37382,6 +37407,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
       reconcileSkillPoints(state.character, state.upgrades);
       state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, slot.slot);
       saveGame();
+      playGoldSpendSound(goldCharged);
     }
     const remaining = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0));
     addLog(`${slot.name} applied for ${formatNumber(goldCharged)} gold. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);

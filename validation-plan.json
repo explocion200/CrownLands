@@ -25,6 +25,7 @@
         "tools/validate-audio-browser.js",
         "tools/validate-audio-contract.js",
         "tools/validate-audio-unlock.js",
+        "tools/validate-audio-levels.js",
         "tools/validate-production-artifact.js",
         "audio/music/medieval_vol_2_01.mp3",
         "audio/music/medieval_vol_2_02.mp3",
@@ -52,7 +53,7 @@
         "docs/audio-sources/retired-starter-music/world_map_loop.ogg",
         "docs/audio-sources/retired-starter-music/world_map_loop.wav"
       ],
-      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 26 effects including the supplied map Gold cue, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests.",
+      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 27 effects including the supplied Gold pickup and spending cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests.",
       "tests": [
         "tools/validate-music-playlist.js",
         "tools/validate-audio-unlock.js",
@@ -72,9 +73,39 @@
         "audio/rewards/map_gold_pickup.ogg",
         "tools/validate-pickup-runtime.js"
       ],
-      "reason": "Use the supplied money recording only for confirmed map Gold pickups in online and local play. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before audio. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites.",
+      "reason": "Use the supplied money recording for confirmed map Gold pickups and the separate coin recording for confirmed Gold spending. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before pickup audio. Cover the spending helper, clan donations and Tower actions, paid scouting and regrouping, recruitment, clan creation/renaming and skill presets. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites.",
       "tests": [
         "tools/validate-harvest-pickups.js",
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-skill-presets.js",
+        "tools/validate-audio-levels.js",
+        "tools/validate-audio-contract.js",
+        "tools/validate-audio-browser.js",
+        "tools/validate-production-artifact.js"
+      ]
+    },
+    {
+      "paths": [
+        "instant-economy-actions.js",
+        "common-gear-ui.js",
+        "audio/rewards/gold_spend.wav",
+        "audio/rewards/gold_spend.mp3",
+        "audio/rewards/gold_spend.ogg",
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-scout-responsiveness.js"
+      ],
+      "reason": "Add confirmed payment audio to Shop batches, city upgrades, Gear upgrades and Gear Box purchases without changing accounting or queue authority. Test one cue per settled batch, rejected/free/replayed/duplicate payments, stale sessions, unchanged free Gear equip actions, and audio failures that cannot reject a payment. Existing queue, cross-map city, Treasury and scouting tests use the actual shared sound helper to cover affected dependencies, including all five Tower spend categories and donations. The media pipeline is covered by the shared audio group.",
+      "tests": [
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-scout-responsiveness.js",
         "tools/validate-audio-levels.js",
         "tools/validate-audio-contract.js",
         "tools/validate-audio-browser.js",

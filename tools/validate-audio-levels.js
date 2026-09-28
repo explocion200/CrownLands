@@ -214,7 +214,7 @@ function getSequencedMixPeak(sequence, analyzedEffects) {
         const sourceFrame = frame - entry.offsetFrames;
         if (sourceFrame < 0 || sourceFrame >= entry.wav.frameCount) continue;
         mixedSample += entry.wav.samples[sourceFrame * channelCount + channel]
-          * entry.asset.recommended_volume;
+          * entry.asset.recommended_volume * (entry.volumeScale || 1);
       }
       peak = Math.max(peak, Math.abs(mixedSample));
     }
@@ -257,6 +257,16 @@ function createRewardSequences() {
       { id, offsetSeconds: 0.9 },
     ],
   }));
+}
+
+function createGoldSpendSequences() {
+  return ["level_up", "troop_dispatch"].flatMap(id => [0, 0.05, 0.1, 0.2].map(offsetSeconds => ({
+    label: `gold_spend with ${id} after ${offsetSeconds}s`,
+    entries: [
+      { id: "gold_spend", offsetSeconds: 0 },
+      { id, offsetSeconds, volumeScale: MAX_RUNTIME_SCALE_BY_ID[id] || 1 },
+    ],
+  })));
 }
 
 function validateRuntimeScales(effectIds) {
@@ -358,7 +368,7 @@ function run() {
   }
 
   let worstMix = { label: "none", peakDbfs: -Infinity };
-  for (const sequence of [...createCombatSequences(), ...createRewardSequences()]) {
+  for (const sequence of [...createCombatSequences(), ...createRewardSequences(), ...createGoldSpendSequences()]) {
     try {
       const peakDbfs = toDbfs(getSequencedMixPeak(sequence, analyzedEffects));
       if (peakDbfs > worstMix.peakDbfs) worstMix = { label: sequence.label, peakDbfs };

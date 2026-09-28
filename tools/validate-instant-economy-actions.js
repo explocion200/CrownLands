@@ -253,7 +253,8 @@ const cityUpgradeDelayValidation = (async () => {
     rejectGameAction() {},
     addLog() {},
     showToast() {},
-    playGameSound() {},
+    goldSpendCues: 0,
+    playGameSound(id) { if (id === "gold_spend") delayedSandbox.goldSpendCues++; },
     playCityUpgradeAnimation() {},
     saveGame() {},
     refreshServerEconomy: async () => { refreshCount += 1; return economyRefreshSucceeds; },
@@ -288,6 +289,7 @@ const cityUpgradeDelayValidation = (async () => {
     }),
   };
   vm.createContext(delayedSandbox);
+  vm.runInContext(require("./validate-gold-spend-audio").spendSoundSource, delayedSandbox);
   vm.runInContext(controller, delayedSandbox, { filename: "instant-economy-actions.js" });
 
   const runNext = () => {
@@ -303,6 +305,7 @@ const cityUpgradeDelayValidation = (async () => {
 
   const compactedFlush = runNext();
   await Promise.resolve();
+  assert.equal(delayedSandbox.goldSpendCues, 0, "Projected city upgrades played a payment cue before confirmation.");
   assert.equal(delayedCalls.length, 1, "Three undispatched presses made more than one server request.");
   assert.equal(delayedCalls[0].levels, 3, "The compacted server request did not contain all three levels.");
   throwAfterAuthoritativeSettlement = true;
@@ -315,6 +318,7 @@ const cityUpgradeDelayValidation = (async () => {
     cityUpgradeXp: { awardedXp: 3, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
   });
   assert.equal(await compactedFlush, true, "The compacted three-level confirmation did not settle.");
+  assert.equal(delayedSandbox.goldSpendCues, 1, "A confirmed three-level batch must play one Gold spending cue.");
   assert.equal(authoritativeSettlementPresentationFailures, 1, "The post-settlement presentation exception was not injected.");
   assert.equal(delayedCities[0].level, 4, "Ordered confirmations did not reconcile the authoritative city level.");
   assert.equal(delayedSandbox.state.gold, 700, "Ordered confirmations did not reconcile authoritative Gold.");
@@ -683,11 +687,13 @@ const sandbox = {
   formatNumber: value => String(value),
   rejectGameAction(message) { throw new Error(message); },
   applyServerEconomyResult(result) { sandbox.state.gold = result.currentUser.gold; sandbox.state.shopItems = result.currentUser.shopItems; },
+  playGameSound() {},
   addLog() {},
   showToast() {},
   saveGame() {},
 };
 vm.createContext(sandbox);
+vm.runInContext(require("./validate-gold-spend-audio").spendSoundSource, sandbox);
 vm.runInContext(controller, sandbox, { filename: "instant-economy-actions.js" });
 
 assert.equal(vm.runInContext('buyShopItem("test_item")', sandbox), true);

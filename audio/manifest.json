@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav and coin.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -237,6 +237,16 @@
       "recommended_volume": 0.58,
       "description": "User-supplied RPG Sound Pack money.wav for successful map Gold pickups.",
       "source_sha256": "4147e7fbe404d2cd97ba7b5af61e88ebe4f652626589c4ee9d570595262b8802"
+    },
+    {
+      "id": "gold_spend",
+      "category": "rewards",
+      "wav": "rewards/gold_spend.wav",
+      "ogg": "rewards/gold_spend.ogg",
+      "loop": false,
+      "recommended_volume": 0.42,
+      "description": "User-supplied RPG Sound Pack coin.wav for confirmed Gold purchases, spending and donations.",
+      "source_sha256": "ee72adacc8630cb590f22130a9c7c855f6eeb698d9fce6461667255ec45ed184"
     },
     {
       "id": "troop_reward",
