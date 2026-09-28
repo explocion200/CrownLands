@@ -1,74 +1,59 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5fa1b5e040a445147c4d3310a49de28e09748200",
+  "baseCommit": "e2baf3306659e33b4474d47b1fd1992d3d4e4997",
   "coverage": [
     {
       "paths": [
-        "index.html",
-        "styles.css",
-        "interface-theme.css",
-        "login-screen.css"
+        "assets/worlds/core-expansion-v1/regions/core-v2-north-west-holding-tower-m1-m1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-north-east-holding-tower-p1-m1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-south-west-holding-tower-m1-p1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-south-east-holding-tower-p1-p1.json",
+        "functions/core-expansion-world-layout.json",
+        "assets/worlds/core-expansion-v1/build-receipt.json",
+        "tools/map-art/clearance.json",
+        "tools/map-art/clan-tower-clearance.json"
       ],
       "tests": [
-        "tools/validate-login-assets.js",
-        "tools/validate-login-layout-browser.js",
-        "tools/validate-email-auth.js",
-        "tools/validate-email-auth-browser.js",
-        "tools/validate-audio-unlock.js",
-        "tools/validate-focused-ui-correction.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-mobile-ui-viewport.js",
-        "tools/validate-ui-readability.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-clan-tower-city-clearance.js",
+        "tools/validate-clan-tower-city-clearance-browser.js",
+        "tools/validate-illustrated-map-art.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-march-path-alignment.js",
+        "tools/validate-production-artifact.js",
+        "functions/test/emulator-illustrated-map-coordinates.js"
       ],
-      "reason": "Responsive login structure and scoped styles affect account controls, public links, utilities, short-screen hit targets and the final shared theme cascade. Browser fixtures cover all visible states; existing auth and audio interaction checks cover the retained controls. Gameplay and Firebase behavior are unchanged."
+      "reason": "Only canonical city coordinates on the four active Core Tower maps change. Check all building stages, labels and action controls at desktop/mobile zooms, identity/state preservation, maximum city art and road/scenery clearances, client/server parity, canonical route endpoints, existing march timing, bundle hashes and coordinate-only persistence. Shared world data requires matching server/client deployment and the scoped emulator migration check."
     },
     {
       "paths": [
-        "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp",
-        "assets/optimized/login-kingdom-960-6646f1d404b1.webp",
-        "docs/art-sources/login/kingdom-master.png",
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
+        "tools/admin-align-illustrated-map-cities.js",
+        "tools/illustrated-map-coordinate-plan.js"
       ],
       "tests": [
-        "tools/validate-login-assets.js",
-        "tools/validate-login-layout-browser.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-clan-tower-city-clearance.js",
+        "tools/validate-illustrated-map-art.js",
+        "functions/test/emulator-illustrated-map-coordinates.js"
       ],
-      "reason": "Generated art must retain verified source/export hashes, choose only one responsive request, remain within download/cache limits and ship with its stylesheet. The production artifact validates referenced URLs, stamped release assets and the complete offline shell. No backend deployment or emulator changes are involved."
+      "reason": "The release migration accepts an explicit current-active map subset and binds the reviewed plan hash to that subset. Test inactive/unknown/duplicate scope rejection, canonical coordinate planning, x/y-only masks, owner/Main City/progression preservation, stale-document preconditions and transactional realm rollover guards."
     },
     {
       "paths": [
-        "tools/validate-login-assets.js",
-        "tools/validate-login-layout-browser.js",
-        "tools/validate-login-title-position.py",
-        "tools/validate-focused-ui-correction.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-clan-tower-city-clearance.js",
+        "tools/validate-clan-tower-city-clearance-browser.js"
       ],
       "tests": [
-        "tools/validate-login-assets.js",
-        "tools/validate-login-layout-browser.js",
-        "tools/validate-focused-ui-correction.js",
-        "tools/validate-public-site-content.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-clan-tower-city-clearance.js",
+        "tools/validate-clan-tower-city-clearance-browser.js"
       ],
-      "reason": "Run the new responsive artwork/layout tests and updated legacy assertions for the removed promo panel and fixed frame. The broad budget audit records two measured pre-existing main overages in individual limits while preserving the global cache cap; no chat or game runtime file changes."
+      "reason": "Run both added regressions against packaged map definitions and the actual game renderer, including canonical city points, owned level-100 city banners, four building art stages and the wider rival report controls."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/illustrated-login/README.md"
+        "docs/clan-tower-city-clearance.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed visual direction, generation prompt, preserved source, export sizes, validation evidence and remaining physical-device verification. Documentation adds no executable behavior."
+      "reason": "Record the explicitly requested four-map clearance, unchanged city identities and buildings, reviewed positions, evidence and coordinated client/server plus scoped coordinate migration procedure. Documentation adds no runtime behavior."
     }
   ]
 }

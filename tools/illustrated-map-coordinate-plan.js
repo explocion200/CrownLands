@@ -3,6 +3,17 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { getWorldSize, getMapBounds, getImageDimensions, imagePointToWorld } = require("../functions/authoritative-route-planner");
 
+function selectActiveRegions(layout, activeRegionIds, requestedRegionIds = []) {
+  const active = new Set([...layout.maps.filter(map => map.permanentCore).map(map => map.id), ...activeRegionIds]);
+  const selected = requestedRegionIds.length ? requestedRegionIds : [...active];
+  assert.equal(new Set(selected).size, selected.length, "Duplicate requested region");
+  for (const id of selected) {
+    assert(active.has(id), `Requested region is not active: ${id}`);
+    assert(layout.maps.some(map => map.id === id), `No reviewed layout for active map ${id}`);
+  }
+  return selected;
+}
+
 function canonicalCityPositions(layout, regionId) {
   const map = layout.maps.find(entry => entry.id === regionId);
   assert(map, `No reviewed layout for active map ${regionId}`);
@@ -47,4 +58,4 @@ async function commitCoordinateBatch(client, documentRoot, guards, targets) {
     throw error;
   }
 }
-module.exports = { canonicalCityPositions, coordinateWrite, planHash, commitCoordinateBatch };
+module.exports = { selectActiveRegions, canonicalCityPositions, coordinateWrite, planHash, commitCoordinateBatch };
