@@ -13937,6 +13937,8 @@ function renderPublicPlayerProfile(profile) {
       <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId && !publicPlayerLocationPending ? "" : "disabled"}>${renderCrownlandsIcon("locate")}<span>${publicPlayerLocationPending ? "Locating…" : "View Main City"}</span></button>
     </footer><p class="public-profile-location-status" role="status"></p>`;
   FlagRenderer.render(modalBody.querySelector("#publicPlayerFlag"), profile.flag, { stableKey: profile.uid, context: "public-profile" });
+  const honorsRequest = publicPlayerProfileRequestId;
+  void attachSeasonHonors("player", profile.uid, ".public-profile-flag", () => modal.open && modal.classList.contains("public-player-profile-modal") && publicPlayerProfileRequestId === honorsRequest);
 }
 
 async function showPublicPlayerProfile(uid = "") {
@@ -14108,6 +14110,7 @@ async function showPublicClanDetails(clanId = "") {
         size: "small",
       });
     });
+    void attachSeasonHonors("clan", id, ".public-clan-identity > :first-child", () => modal.open && modal.classList.contains("public-player-profile-modal") && publicClanProfileRequestId === requestId);
   } catch (error) {
     if (requestId === publicClanProfileRequestId && modal.open) {
       modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan profile.")}</p><button type="button" data-public-clan-id="${escapeHtml(id)}">Try again</button></div>`;
@@ -19290,6 +19293,7 @@ function isLoginPresentationModalOpen() {
     modal?.open
     && (
       modal.classList.contains("daily-login-reward-modal")
+      || modal.classList.contains("season-login-rewards")
       || modal.classList.contains("offline-reward-modal")
     )
   );
@@ -19350,6 +19354,10 @@ function beginLoginPresentationSequence({ kind = "login", baselineAtMs = 0, welc
     kind,
     baselineAtMs: normalizeTimestampMs(baselineAtMs) || Date.now(),
     mapReady: false,
+    seasonResolved: false,
+    seasonFinished: false,
+    seasonOpen: false,
+    seasonStatus: null,
     dailyResolved: false,
     dailyRequired: false,
     dailyOpen: false,
@@ -19419,7 +19427,10 @@ function completeLoginPresentationModal(kind = "") {
     showNextRealmAnnouncement();
     return false;
   }
-  if (kind === "daily") {
+  if (kind === "season") {
+    sequence.seasonOpen = false;
+    sequence.seasonFinished = true;
+  } else if (kind === "daily") {
     sequence.dailyOpen = false;
     sequence.dailyFinished = true;
   } else if (kind === "welcome") {
@@ -19485,6 +19496,17 @@ async function finalizeLoginPresentationRealmCatchUp(sequence) {
 
 function advanceLoginPresentationSequence(sequence = loginPresentationSequence) {
   if (!isLoginPresentationSequenceActive(sequence) || sequence.finalizing || !sequence.mapReady) return false;
+  if (!sequence.seasonResolved) return false;
+  if (!sequence.seasonFinished) {
+    if (sequence.seasonOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
+    const season = sequence.seasonStatus;
+    if (season && ((season.participated && season.status !== "ready") || (season.award && !season.award.claimed) || season.pendingSeasons?.length)) {
+      sequence.seasonOpen = true;
+      showSeasonRewardsPanel({ view: "results", seasonId: season.award && !season.award.claimed ? season.seasonId : season.pendingSeasons?.[0] || season.seasonId, login: true });
+      return true;
+    }
+    sequence.seasonFinished = true;
+  }
   if (!sequence.dailyResolved) return false;
   if (!sequence.dailyFinished) {
     if (sequence.dailyOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
@@ -19512,6 +19534,14 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
 }
 
 function startLoginPresentationDailyRefresh(generation = loginPresentationGeneration) {
+  const rewardsApi = getOnlineApi();
+  Promise.resolve(rewardsApi?.getSeasonRewardStatus?.({})).catch(() => null).then(status => {
+    const sequence = loginPresentationSequence;
+    if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return;
+    sequence.seasonStatus = status;
+    sequence.seasonResolved = true;
+    advanceLoginPresentationSequence(sequence);
+  });
   void refreshDailyMissionStatus({ silent: true });
   void refreshSeasonalAchievementStatus({ silent: true });
   Promise.resolve(refreshDailyLoginRewardStatus({ silent: true }))
@@ -38201,7 +38231,7 @@ function mergeLeaderboardEntries(rows = []) {
   });
 
   return Array.from(byUid.values())
-    .sort((a, b) => (b.kingPower - a.kingPower) || (b.updatedAtMs - a.updatedAtMs) || a.displayName.localeCompare(b.displayName))
+    .sort((a, b) => (b.kingPower - a.kingPower) || (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0))
     .slice(0, KING_POWER_LEADERBOARD_LIMIT);
 }
 
@@ -38232,6 +38262,68 @@ function updateLeaderboardStanding(category, entries = []) {
     modalBody.querySelector(`[data-leaderboard-panel="${category}"]`), category, entries,
     getCurrentOnlineUid(), state?.clanId, KING_POWER_LEADERBOARD_LIMIT,
   );
+  void refreshLeaderboardSeasonDecorations();
+}
+
+let leaderboardSeasonStatusPromise = null;
+async function refreshLeaderboardSeasonDecorations() {
+  const panel = modalBody.querySelector(".leaderboard-panel"), api = getOnlineApi(), uid = getCurrentOnlineUid(), world = ONLINE_WORLD_ID;
+  if (!panel || !api?.getSeasonRewardStatus || !window.CrownlandsSeasonRewards) return;
+  leaderboardSeasonStatusPromise ||= api.getSeasonRewardStatus({ seasonId: RESET_GENERATION });
+  try {
+    const result = await leaderboardSeasonStatusPromise;
+    if (!panel.isConnected || uid !== getCurrentOnlineUid() || world !== ONLINE_WORLD_ID) return;
+    for (const [board, honors] of Object.entries(result.decorations || {})) {
+      const section = panel.querySelector(`[data-leaderboard-panel="${board}"]`);
+      if (!section) continue;
+      for (const honor of honors) {
+        if (board === "clans") section.querySelectorAll("[data-public-clan-id]").forEach(element => {
+          if (element.dataset.publicClanId === honor.id && element.querySelector("svg,img")) window.CrownlandsSeasonRewards.decorate(element, honor, result.serverTimeMs);
+        });
+        else section.querySelectorAll("[data-flag-stable-key]").forEach(element => {
+          if (element.dataset.flagStableKey === honor.id) window.CrownlandsSeasonRewards.decorate(element.closest(".player-banner") || element, honor, result.serverTimeMs);
+        });
+      }
+    }
+  } catch (_error) { leaderboardSeasonStatusPromise = null; }
+}
+
+function showSeasonRewardsPanel({ view = "info", seasonId = RESET_GENERATION, board = leaderboardActiveTab, login = false } = {}) {
+  const api = getOnlineApi(), uid = getCurrentOnlineUid(), world = ONLINE_WORLD_ID;
+  if (!api?.getSeasonRewardStatus || !window.CrownlandsSeasonRewards) return;
+  modal.className = "modal season-rewards-modal" + (login ? " season-login-rewards" : "");
+  modalTitle.textContent = view === "info" ? "Season Rewards" : "Last Season Rewards";
+  const owner = {};
+  modalBody.seasonRewardsOwner = owner;
+  const isCurrent = () => modal.open && modalBody.seasonRewardsOwner === owner && modal.classList.contains("season-rewards-modal") && uid === getCurrentOnlineUid() && world === ONLINE_WORLD_ID;
+  if (!modal.open) modal.showModal();
+  const controller = window.CrownlandsSeasonRewards.open({ host: modalBody, api, currentSeason: RESET_GENERATION, seasonId, board, view, login, isCurrent,
+    onBack: () => { showLeaderboardModal(); modalBody.querySelector(`[data-leaderboard-tab="${board}"]`)?.click(); },
+    onLater: () => modal.close(),
+    onClaim: async result => {
+      const gear = result.gear || (await api.getCommonGearStatus?.())?.gear;
+      if (isCurrent() && gear) state.gear = normalizeCommonGearState(gear);
+    },
+  });
+  const disposeWhenClosed = () => {
+    // A queued close from the previous dialog can arrive after this one opens.
+    if (modal.open && isCurrent()) return;
+    controller.dispose();
+    modal.removeEventListener("close", disposeWhenClosed);
+  };
+  modal.addEventListener("close", disposeWhenClosed);
+}
+
+async function attachSeasonHonors(kind, id, anchor, current) {
+  const api = getOnlineApi(), uid = getCurrentOnlineUid(), world = ONLINE_WORLD_ID;
+  if (!api?.getSeasonHonors || !window.CrownlandsSeasonRewards) return;
+  try {
+    const result = await api.getSeasonHonors({ kind, id });
+    if (!current() || uid !== getCurrentOnlineUid() || world !== ONLINE_WORLD_ID) return;
+    modalBody.querySelector(".season-honors")?.remove();
+    modalBody.insertAdjacentHTML("beforeend", window.CrownlandsSeasonRewards.honorsMarkup(result.honors, result.serverTimeMs));
+    window.CrownlandsSeasonRewards.decorate(modalBody.querySelector(anchor), window.CrownlandsSeasonRewards.bestDecoration(result.honors, kind, result.serverTimeMs), result.serverTimeMs);
+  } catch (_error) { /* Public identity remains available when honors cannot load. */ }
 }
 
 function renderLeaderboardRows(rows) {
@@ -38410,6 +38502,7 @@ async function refreshPvpLeaderboardRows() {
 
 function showLeaderboardModal() {
   if (!state) return;
+  leaderboardSeasonStatusPromise = null;
   modal.className = "modal leaderboard-modal";
   modalTitle.textContent = "Leaderboards";
   leaderboardActiveTab = "players";
@@ -38421,6 +38514,7 @@ function showLeaderboardModal() {
           <button id="leaderboardClansTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardClansPanel" data-leaderboard-tab="clans" tabindex="-1">Top Clans</button>
           <button id="leaderboardGloryTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardGloryPanel" data-leaderboard-tab="glory" tabindex="-1">Field of Glory</button>
         </div>
+        <button id="seasonRewardsInfoBtn" class="leaderboard-refresh-btn season-info-btn" type="button" aria-label="Season rewards and leaderboard rules">ⓘ Season rewards</button>
         <button id="leaderboardRefreshBtn" class="leaderboard-refresh-btn" type="button">Refresh</button>
       </div>
       <section id="leaderboardPlayersPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardPlayersTab" data-leaderboard-panel="players">
@@ -38465,10 +38559,12 @@ function showLeaderboardModal() {
     });
   });
   modalBody.querySelector("#leaderboardRefreshBtn")?.addEventListener("click", () => {
+    leaderboardSeasonStatusPromise = null;
     if (leaderboardActiveTab === "clans") refreshClanLeaderboardRows();
     else if (leaderboardActiveTab === "glory") refreshPvpLeaderboardRows();
     else refreshLeaderboardRows({ forcePublish: true });
   });
+  modalBody.querySelector("#seasonRewardsInfoBtn")?.addEventListener("click", () => showSeasonRewardsPanel());
   if (!modal.open) modal.showModal();
   setLeaderboardTab("players");
   refreshLeaderboardRows({ forcePublish: true });
@@ -41903,8 +41999,9 @@ function handleGameModalClose() {
   reinforcementActivityErrors.clear();
   modal.classList.remove("battle-reports-ledger", "battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger", "reinforcements-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
-  const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
-    ? "daily"
+  const closedLoginPresentationKind = modal.classList.contains("season-login-rewards")
+    ? "season"
+    : modal.classList.contains("daily-login-reward-modal") ? "daily"
     : modal.classList.contains("offline-reward-modal")
       ? "welcome"
       : "";

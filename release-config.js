@@ -1,9 +1,9 @@
 (function () {
   window.CROWNLANDS_REALM_CONFIG = Object.freeze({
-  "releaseId": "crownlands-2026-09-gear-rarities-v3",
+  "releaseId": "crownlands-2026-09-season-rewards-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "b1863f4c6cc48401da4d7f8cc9210b8acce0b577ddd24b20abfa261f8e589e38",
+  "apiContractHash": "8ac2c299db33b5fe10a4f68ba17ad42c2e36801476e5452f053d67b49ba305b7",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

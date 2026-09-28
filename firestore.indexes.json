@@ -4,6 +4,41 @@
       "collectionGroup": "entries",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "kingPower", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "totalKingPower", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pvpKills", "order": "DESCENDING" },
+        { "fieldPath": "reachedAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "kingPower", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "resetGeneration", "order": "ASCENDING" },
         { "fieldPath": "worldId", "order": "ASCENDING" },
         { "fieldPath": "realmShardId", "order": "ASCENDING" }

@@ -9,6 +9,7 @@ const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
 const PVP_LEADERBOARD = require("./pvp-leaderboard");
+const SEASON_REWARDS = require("./season-rewards");
 const { deliverNotificationOutbox } = require("./notification-delivery");
 const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
@@ -917,6 +918,7 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
 
 async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
   const identity = refreshActiveRealmIdentity(nowMs);
+  await SEASON_REWARDS.prepareTransition(db, identity.resetGeneration, nowMs);
   const sharedRealmId = identity.mode === "legacy" ? LEGACY_REALM_SHARD_ID : SHARED_REALM_ID;
   const startingCityCapacity = getCurrentRealmStartingCityCapacity(nowMs);
   const resetReadiness = isCoreExpansionTopologyActive(nowMs)
@@ -1197,9 +1199,10 @@ function timedCallable(operation, options, handler) {
 }
 
 function measuredTransaction(operation, transactionOptions) {
+  const scope = { resetGeneration: REALM_REQUEST_CONTEXT.getStore()?.resetGeneration || RESET_GENERATION };
   return OPERATION_TIMING.measure("transaction", () => db.runTransaction(transaction => {
     OPERATION_TIMING.transactionAttempt();
-    return operation(transaction);
+    return SEASON_REWARDS.guardTransaction(db, transaction, operation, scope);
   }, transactionOptions));
 }
 
@@ -2413,9 +2416,9 @@ async function deleteDocumentsInBatches(docRefs = []) {
     docRefs.filter(Boolean).map(ref => [ref.path, ref])
   ).values()];
   for (let index = 0; index < uniqueRefs.length; index += 400) {
-    const batch = db.batch();
-    uniqueRefs.slice(index, index + 400).forEach(ref => batch.delete(ref));
-    await batch.commit();
+    await measuredTransaction(transaction => {
+      uniqueRefs.slice(index, index + 400).forEach(ref => transaction.delete(ref));
+    });
   }
   return uniqueRefs.length;
 }
@@ -2445,7 +2448,7 @@ async function clearInactivePlayerWorldDocuments(uid = "") {
   const collections = await profileRef.listCollections();
   const deletions = [];
   for (const collectionRef of collections) {
-    if (collectionRef.id === "serverMembership") continue;
+    if (["serverMembership", "seasonRewards"].includes(collectionRef.id)) continue;
     const snapshot = await collectionRef.get();
     snapshot.docs.forEach(doc => {
       const data = doc.data() || {};
@@ -18663,7 +18666,7 @@ async function claimFreshStartingCityInAssignedShard(request) {
     }
 
     try {
-      const result = await db.runTransaction(
+      const result = await measuredTransaction(
         transaction => runClaimTransaction(transaction, placement),
         { maxAttempts: 1 }
       );
@@ -34657,6 +34660,48 @@ async function cleanupLegacyRewardCampPublicMetadata() {
   await batch.commit();
   return { status: "complete", campsCleaned: leakingCampSnaps.length };
 }
+
+exports.getSeasonRewardStatus = timedCallable("getSeasonRewardStatus", {
+  region: "us-central1", maxInstances: 20, invoker: "public",
+}, async request => {
+  const uid = requireAuth(request);
+  return SEASON_REWARDS.status(db, uid, safeString(request.data?.seasonId, 40), RESET_GENERATION);
+});
+
+exports.getSeasonLeaderboard = timedCallable("getSeasonLeaderboard", {
+  region: "us-central1", maxInstances: 20, invoker: "public",
+}, async request => {
+  requireAuth(request);
+  return SEASON_REWARDS.history(db, safeString(request.data?.seasonId, 40), safeString(request.data?.board, 16));
+});
+
+exports.claimSeasonRewards = timedCallable("claimSeasonRewards", {
+  region: "us-central1", maxInstances: 20, invoker: "public",
+}, async request => {
+  const uid = requireAuth(request);
+  return SEASON_REWARDS.claim(db, uid, safeString(request.data?.seasonId, 40), safeString(request.data?.requestId, 96));
+});
+
+exports.getSeasonHonors = timedCallable("getSeasonHonors", {
+  region: "us-central1", maxInstances: 20, invoker: "public",
+}, async request => {
+  requireAuth(request);
+  return SEASON_REWARDS.honors(db, safeString(request.data?.kind, 12), safeString(request.data?.id, 128));
+});
+
+exports.finalizeSeasonRewards = onSchedule({
+  region: "us-central1", schedule: "every 1 minutes", timeZone: "Etc/UTC",
+  maxInstances: 1, timeoutSeconds: 300, memory: "512MiB",
+}, async () => {
+  const nowMs = Date.now(), identity = refreshActiveRealmIdentity(nowMs);
+  if (!SEASON_REWARDS.supported(identity.resetGeneration)) return;
+  await SEASON_REWARDS.prepareTransition(db, identity.resetGeneration, nowMs);
+  const seasons = await db.collection("seasonResults").where("endsAtMs", "<=", nowMs).get();
+  for (const season of seasons.docs) {
+    if (!["captured", "finalizing"].includes(season.data().status)) continue;
+    await SEASON_REWARDS.finalize(db, season.id, Date.now());
+  }
+});
 
 exports.activateMonthlyRealm = onSchedule({
   region: "us-central1",
