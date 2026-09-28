@@ -1,15 +1,61 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "06ce89d9251e543518814e6527a2fddaf6001f34",
+  "baseCommit": "f6ea5a9d83c1b0b68ffd0a656ce2cda320706901",
   "coverage": [
     {
-      "paths": ["clan-tower-details-ui.css", "tools/validate-clan-building-layout-browser.js"],
-      "reason": "Remove the generic modal's reserved scrollbar gutter only from the non-scrolling Clan Tower wrapper. Existing Tower and building panels keep their independent scrollbars. The regression test compares each parchment edge with the actual dialog border plus padding, catches the reproduced 9px-left/24px-right gap, and checks every Tower tab, all four building screens, Shop Items, return navigation, level-table scrolling and reachable controls at five desktop/mobile sizes. Shop and Tower integration validators cover the wider purchase workspace and map/tab entry points. No gameplay, backend, API, data or rules changes require emulator tests.",
+      "paths": [
+        "audio-manager.js",
+        "audio/manifest.json",
+        "audio/music/battle_loop.mp3",
+        "audio/music/battle_loop.ogg",
+        "audio/music/battle_loop.wav",
+        "audio/music/danger_contested_loop.mp3",
+        "audio/music/danger_contested_loop.ogg",
+        "audio/music/danger_contested_loop.wav",
+        "audio/music/main_menu_loop.mp3",
+        "audio/music/main_menu_loop.ogg",
+        "audio/music/main_menu_loop.wav",
+        "audio/music/victory_fanfare.mp3",
+        "audio/music/victory_fanfare.ogg",
+        "audio/music/victory_fanfare.wav",
+        "audio/music/world_map_loop.mp3",
+        "audio/music/world_map_loop.ogg",
+        "audio/music/world_map_loop.wav",
+        "tools/audio-browser-test-server.js",
+        "tools/validate-audio-browser.js",
+        "tools/validate-audio-contract.js",
+        "tools/validate-audio-unlock.js",
+        "tools/validate-production-artifact.js",
+        "audio/music/medieval_vol_2_01.mp3",
+        "audio/music/medieval_vol_2_02.mp3",
+        "audio/music/medieval_vol_2_03.mp3",
+        "audio/music/medieval_vol_2_04.mp3",
+        "audio/music/medieval_vol_2_05.mp3",
+        "audio/music/medieval_vol_2_06.mp3",
+        "audio/music/medieval_vol_2_07.mp3",
+        "audio/music/medieval_vol_2_08.mp3",
+        "tools/music-playlist-browser.js",
+        "tools/validate-music-playlist.js"
+      ],
+      "reason": "Replace only the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Retire the old music files and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests.",
       "tests": [
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
+        "tools/validate-music-playlist.js",
+        "tools/validate-audio-unlock.js",
+        "tools/validate-audio-contract.js",
+        "tools/validate-audio-delivery.js",
+        "tools/validate-audio-levels.js",
+        "tools/validate-audio-browser.js",
+        "tools/audio-browser-test-server.js",
+        "tools/validate-production-artifact.js"
       ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "audio/music/README.md"
+      ],
+      "reason": "Record the confirmed continuous soundtrack behavior and supplied recording provenance. The implementation and media integrity are exercised by the audio suites.",
+      "tests": []
     }
   ]
 }

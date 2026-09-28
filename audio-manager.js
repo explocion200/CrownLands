@@ -11,7 +11,7 @@
     danger_contested_loop: "danger",
     victory_fanfare: "victory",
   });
-  const MUSIC_STATES = Object.freeze(["main_menu", "world_map", "battle", "danger", "victory"]);
+  const MUSIC_STATES = Object.freeze(["soundtrack", "main_menu", "world_map", "battle", "danger", "victory"]);
   const SWORD_CLASHES = Object.freeze(["sword_clash_01", "sword_clash_02", "sword_clash_03"]);
   const AUDIO_CONTROL_SELECTOR = [
     "#loginMusicMuteBtn",
@@ -78,6 +78,7 @@
       this.assets = new Map();
       this.musicPlaylists = new Map(MUSIC_STATES.map(state => [state, []]));
       this.lastMusicAssetByState = new Map();
+      this.musicShuffleBags = new Map();
       this.unlocked = false;
       this.musicUnlocked = false;
       this.effectsUnlocked = false;
@@ -95,6 +96,8 @@
       this.lastPlaybackError = "";
       this.preferredAudioExtension = "mp3";
       this.musicTransitionId = 0;
+      this.musicSourceId = 0;
+      this.pendingMusicPlay = null;
       this.playlistTransitionTimer = 0;
       this.temporaryMusicId = 0;
       this.lifecyclePaused = false;
@@ -153,7 +156,7 @@
         if (!response.ok) throw new Error(`Audio manifest request failed (${response.status})`);
         const manifest = await response.json();
         for (const asset of Array.isArray(manifest.assets) ? manifest.assets : []) {
-          if (!asset?.id || !asset?.ogg) continue;
+          if (!asset?.id || !(asset.mp3 || asset.ogg)) continue;
           const browserAudioPath = asset.mp3
             || (asset.wav ? String(asset.wav).replace(/\.wav$/i, ".mp3") : asset.ogg);
           const urls = [
@@ -277,8 +280,7 @@
         this.ready
         && this.musicUnlocked
         && !this.preferences.musicMuted
-        && this.currentMusic
-        && !this.currentMusic.ended
+        && (this.currentMusic || this.persistentMusic.src)
       );
       this.resumeEffectsAfterLifecycle = Boolean(
         this.effectsAuthorized
@@ -537,6 +539,8 @@
     }
 
     normalizeMusicState(state, fallbackState = "world_map") {
+      // One soundtrack spans menus, maps and combat without restarting the song.
+      if (this.musicPlaylists.get("soundtrack")?.length) return "soundtrack";
       const requestedState = state === "contested" ? "danger" : String(state || "");
       if (this.musicPlaylists.get(requestedState)?.length) return requestedState;
       if (this.musicPlaylists.get(fallbackState)?.length) return fallbackState;
@@ -544,9 +548,28 @@
       return requestedState || fallbackState;
     }
 
-    chooseMusicAsset(state) {
+    chooseMusicAsset(state, excludedIds = []) {
       const playlist = this.musicPlaylists.get(state) || [];
       if (!playlist.length) return null;
+      if (state === "soundtrack") {
+        let bag = this.musicShuffleBags.get(state) || [];
+        if (!bag.length) {
+          bag = [...playlist];
+          for (let index = bag.length - 1; index > 0; index -= 1) {
+            const other = Math.floor(Math.random() * (index + 1));
+            [bag[index], bag[other]] = [bag[other], bag[index]];
+          }
+          // Avoid repeating the last song when a new shuffled round begins.
+          if (bag.length > 1 && bag[0].id === this.lastMusicAssetByState.get(state)) {
+            [bag[0], bag[1]] = [bag[1], bag[0]];
+          }
+          this.musicShuffleBags.set(state, bag);
+        }
+        const asset = bag.find(candidate => !excludedIds.includes(candidate.id));
+        if (asset) return asset;
+        this.musicShuffleBags.delete(state);
+        return excludedIds.length < playlist.length ? this.chooseMusicAsset(state, excludedIds) : null;
+      }
       const lastId = this.lastMusicAssetByState.get(state);
       const candidates = playlist.length > 1
         ? playlist.filter(asset => asset.id !== lastId)
@@ -562,7 +585,8 @@
 
     schedulePlaylistTransition(audio, state, playlistSize, fadeMs) {
       this.clearPlaylistTransition();
-      if (this.lifecyclePaused || state === "victory" || playlistSize <= 1) return;
+      // The continuous playlist advances on ended, never cutting off the tail.
+      if (this.lifecyclePaused || state === "soundtrack" || state === "victory" || playlistSize <= 1) return;
       const schedule = () => {
         if (this.lifecyclePaused || this.currentMusic !== audio || !Number.isFinite(audio.duration)) return;
         const remainingSeconds = Math.max(0, audio.duration - (Number(audio.currentTime) || 0));
@@ -586,7 +610,7 @@
       if (!options.preserveTemporary) this.temporaryMusicId += 1;
       const normalizedState = this.normalizeMusicState(state);
       const hasReturnState = Object.prototype.hasOwnProperty.call(options, "returnState");
-      const returnState = hasReturnState && options.returnState
+      const returnState = normalizedState !== "soundtrack" && hasReturnState && options.returnState
         ? this.normalizeMusicState(options.returnState)
         : "";
       this.requestedMusicState = normalizedState;
@@ -599,6 +623,10 @@
       ) return false;
       const playlist = this.musicPlaylists.get(normalizedState) || [];
       if (!playlist.length) return false;
+      if (normalizedState === "soundtrack" && !options.forceNext
+        && this.pendingMusicPlay?.transitionId === this.musicTransitionId) {
+        return this.pendingMusicPlay.promise.then(() => Boolean(this.currentMusic && !this.currentMusic.paused), () => false);
+      }
       if (
         !options.forceNext
         && this.currentMusicState === normalizedState
@@ -613,7 +641,7 @@
           try {
             await Promise.resolve(this.currentMusic.play());
             if (resumeTransitionId !== this.musicTransitionId) {
-              if (this.lifecyclePaused) this.currentMusic.pause();
+              if (this.lifecyclePaused || this.preferences.musicMuted) this.persistentMusic.pause();
               return false;
             }
             this.lastPlaybackError = "";
@@ -637,6 +665,9 @@
                 });
               }
               console.warn(`Could not resume music: ${currentAsset?.id || normalizedState}`, error);
+              if (normalizedState === "soundtrack" && currentAsset) {
+                return this.skipFailedMusicAsset(normalizedState, currentAsset, options);
+              }
             }
             this.musicUnlocked = false;
             this.unlocked = false;
@@ -645,12 +676,15 @@
         }
         return true;
       }
-      const asset = options._asset || this.chooseMusicAsset(normalizedState);
+      const asset = options._asset || this.chooseMusicAsset(normalizedState, options._failedAssetIds);
       if (!asset) return false;
 
       this.clearPlaylistTransition();
       const transitionId = ++this.musicTransitionId;
+      const sourceId = ++this.musicSourceId;
       const previous = this.currentMusic;
+      // A rejected replacement must not resume under the previous song's identity.
+      this.currentMusic = null;
       const fadeMs = Math.max(800, Number(options.fadeMs) || 1000);
       let next = null;
       let playbackError = null;
@@ -669,9 +703,11 @@
         candidate.loop = playlist.length === 1 && asset.loop === true;
         candidate.volume = this.getMusicVolumeFor(asset);
         try {
-          await Promise.resolve(candidate.play());
+          const promise = Promise.resolve(candidate.play());
+          this.pendingMusicPlay = { transitionId, promise };
+          await promise;
           if (transitionId !== this.musicTransitionId) {
-            if (this.lifecyclePaused) candidate.pause();
+            if (this.lifecyclePaused || this.preferences.musicMuted) candidate.pause();
             return false;
           }
           next = candidate;
@@ -683,6 +719,8 @@
           playbackError = error;
           if (transitionId !== this.musicTransitionId) return false;
           if (error?.name === "NotAllowedError" || error?.name === "AbortError") break;
+        } finally {
+          if (this.pendingMusicPlay?.transitionId === transitionId) this.pendingMusicPlay = null;
         }
       }
       if (!next) {
@@ -692,6 +730,7 @@
         this.unlocked = false;
         if (playbackError?.name !== "NotAllowedError" && playbackError?.name !== "AbortError") {
           console.warn(`Could not play music: ${asset.id}`, playbackError);
+          if (normalizedState === "soundtrack") return this.skipFailedMusicAsset(normalizedState, asset, options);
         }
         return false;
       }
@@ -711,8 +750,13 @@
       this.currentMusicReturnState = returnState;
       this.currentMusicSourceIndex = selectedSourceIndex;
       this.lastMusicAssetByState.set(normalizedState, asset.id);
+      if (normalizedState === "soundtrack") {
+        this.musicShuffleBags.set(normalizedState, (this.musicShuffleBags.get(normalizedState) || [])
+          .filter(candidate => candidate.id !== asset.id && !options._failedAssetIds?.includes(candidate.id)));
+      }
       const handleEnded = () => {
-        if (next.loop || this.currentMusic !== next || this.musicTransitionId !== transitionId) return;
+        // Pausing for mute/background invalidates pending play promises, not this source's end handler.
+        if (next.loop || this.currentMusic !== next || this.musicSourceId !== sourceId) return;
         const nextState = this.currentMusicReturnState
           || (normalizedState === "victory" ? "world_map" : "");
         if (nextState) {
@@ -731,7 +775,7 @@
         if (
           mediaErrorHandled
           || this.currentMusic !== next
-          || this.musicTransitionId !== transitionId
+          || this.musicSourceId !== sourceId
         ) return;
         mediaErrorHandled = true;
         const mediaErrorCode = Number(next.error?.code) || 0;
@@ -751,6 +795,9 @@
         }
         this.musicUnlocked = false;
         this.unlocked = false;
+        if (normalizedState === "soundtrack" && mediaErrorCode !== 1) {
+          this.skipFailedMusicAsset(normalizedState, asset, options);
+        }
       };
       this.schedulePlaylistTransition(next, normalizedState, playlist.length, fadeMs);
       next.volume = this.getMusicVolumeFor(asset);
@@ -761,7 +808,21 @@
       return true;
     }
 
+    skipFailedMusicAsset(state, asset, options = {}) {
+      const failed = [...new Set([...(options._failedAssetIds || []), asset.id])];
+      this.musicUnlocked = false;
+      this.unlocked = false;
+      if (failed.length >= (this.musicPlaylists.get(state)?.length || 0)) return Promise.resolve(false);
+      return this.setMusicState(state, {
+        allowLocked: true,
+        forceNext: true,
+        preserveTemporary: true,
+        _failedAssetIds: failed,
+      });
+    }
+
     pulseMusic(state, durationMs = 3500, fallbackState = "world_map") {
+      if (this.musicPlaylists.get("soundtrack")?.length) return this.setMusicState("soundtrack");
       const pulseId = ++this.temporaryMusicId;
       this.setMusicState(state, {
         preserveTemporary: true,

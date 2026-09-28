@@ -320,7 +320,10 @@ function validateManifestAndFiles(manifest, runtimeSource) {
     );
     const mediaByExtension = { mp3: mp3Path, ogg: oggPath, wav: wavPath };
 
-    for (const extension of MEDIA_EXTENSIONS) {
+    const extensions = asset.category === "music"
+      ? ["mp3", ...["ogg", "wav"].filter(extension => mediaByExtension[extension])]
+      : MEDIA_EXTENSIONS;
+    for (const extension of extensions) {
       const mediaPath = mediaByExtension[extension];
       check(Boolean(mediaPath), `${id || label} has no ${extension.toUpperCase()} source`);
       if (!mediaPath) continue;
@@ -353,12 +356,11 @@ function validateManifestAndFiles(manifest, runtimeSource) {
     const runtimeIdPattern = new RegExp(
       `(?:["'\`]${escapeRegex(id)}["'\`]|\\b${escapeRegex(id)}\\s*:)`
     );
-    check(runtimeIdPattern.test(runtimeSource), `manifest id "${id}" has no runtime coverage`);
+    if (asset.category !== "music") check(runtimeIdPattern.test(runtimeSource), `manifest id "${id}" has no runtime coverage`);
 
     if (asset.category === "music") {
       const state = String(asset.music_state || "");
       check(Boolean(state), `music asset "${id}" must declare music_state`);
-      check(!musicStates.has(state), `music_state "${state}" is assigned more than once`);
       musicStates.add(state);
       check(containsStringLiteral(runtimeSource, state), `music_state "${state}" has no runtime coverage`);
     } else {
@@ -405,8 +407,8 @@ function validateManifestAndFiles(manifest, runtimeSource) {
     check(uploadedKeys.has(expected), `manifest-derived audio source was not uploaded: audio/${expected}`);
   }
   check(
-    uploadedMedia.length === assets.length * MEDIA_EXTENSIONS.length,
-    `expected exactly ${assets.length * MEDIA_EXTENSIONS.length} uploaded media files, found ${uploadedMedia.length}`
+    uploadedMedia.length === expectedMedia.size,
+    `expected exactly ${expectedMedia.size} declared media files, found ${uploadedMedia.length}`
   );
 
   return {
