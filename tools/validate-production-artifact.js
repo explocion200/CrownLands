@@ -63,7 +63,6 @@ const required = [
 ];
 const forbidden = [
   "docs/art-sources/login",
-  "assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
   "assets/castles", "assets/inner-castle", "assets/optimized/manifest.json",
   "assets/worlds/world_01/world-layout.json",
@@ -254,11 +253,11 @@ if (fs.statSync(path.join(dist, "email-auth-ui.js")).size > 14 * 1024) throw new
 // a 1,232,808-byte image increment, bounded to 1216 KiB plus 16 KiB for framing
 // and artifact metadata. The startup cache does not include these images.
 const soundtrackIncrementBudget = 22 * 1024 * 1024;
-// Two responsive login WebPs and their CSS total under 600 KiB, replacing
-// 207,278 bytes of retired art. Bound the net feature growth at 400 KiB.
+// Two responsive login WebPs and their CSS total under 600 KiB. Keep the old
+// background available for roadmap.css/site-info.css; it is no longer a login dependency.
 const loginFiles = ["login-screen.css", "assets/optimized/login-kingdom-960-6646f1d404b1.webp", "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp"];
 if (loginFiles.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > 600 * 1024) throw new Error("Responsive login artwork and styling exceed 600 KiB.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 400) * 1024 + soundtrackIncrementBudget;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600) * 1024 + soundtrackIncrementBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
