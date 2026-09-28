@@ -19,7 +19,7 @@ Runtime exports use Sharp WebP quality 76, effort 6, proportional resizing witho
 | `assets/optimized/login-kingdom-960-6646f1d404b1.webp` | 960 × 540 | 166,370 | Landscape screens up to 900 CSS pixels wide |
 | `assets/optimized/login-kingdom-1672-05a4bd4eda17.webp` | 1672 × 941 | 440,412 | Desktop and portrait; preserves detail when cropped to a tall screen |
 
-The preloads and `<picture>` use matching media conditions. A fresh login requests one background variant. The small variant is precached; the large variant is cached on demand. The source PNG stays out of the production package. Historical login artwork remains in the repository, with no active login references.
+The preloads and `<picture>` use matching media conditions. A fresh login requests one background variant. The small variant is precached; the large variant is cached on demand. The source PNG stays out of the production package. Historical login artwork remains in the repository and is excluded from the production package. Both new images plus CSS have a combined 600 KiB limit; a bounded 400 KiB net allowance covers the new artwork after retiring the old image from delivery. The total release-package ceiling is unchanged.
 
 ### Generation prompt
 

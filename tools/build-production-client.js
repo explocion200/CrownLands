@@ -115,6 +115,8 @@ const currentUiRuntimeArt = new Set(
 copyDirectoryFiles("assets/optimized", relativePath => {
   const normalized = relativePath.replace(/\\/g, "/");
   return !normalized.endsWith("manifest.json")
+    // Preserve the previous login illustration in source history only.
+    && normalized !== "assets/optimized/login-background-1448x1086-c8507d1988d6.webp"
     && (!normalized.startsWith("assets/optimized/inner-castle-") || currentUiRuntimeArt.has(normalized))
     && (!/^assets\/optimized\/gear-(barracks|treasury|royal-stables|gatehouse)-(head|chest|pants|boots|gloves|belt|weapon|necklace)-/.test(normalized) || currentUiRuntimeArt.has(normalized))
     && (!/^assets\/optimized\/item-(peace-shield|war-drums|royal-tax-decree|veil-of-silence|swift-march|recall-horn)-/.test(normalized) || currentUiRuntimeArt.has(normalized));

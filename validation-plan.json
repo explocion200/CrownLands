@@ -31,7 +31,8 @@
         "assets/optimized/login-kingdom-960-6646f1d404b1.webp",
         "docs/art-sources/login/kingdom-master.png",
         "service-worker.js",
-        "tools/build-production-client.js"
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
         "tools/validate-login-assets.js",
