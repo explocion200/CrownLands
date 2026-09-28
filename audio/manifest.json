@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav, interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
