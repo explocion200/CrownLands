@@ -10,7 +10,7 @@ const game = read("game.js");
 const layoutRuntime = read("ui-layout-runtime.js");
 const benchmarkRuntime = read("tools/map-benchmark/injected-runtime.js");
 const benchmarkFirebase = read("tools/map-benchmark/mock-firebase.js");
-const manifest = JSON.parse(read("assets/optimized/manifest.json"));
+const loginStyles = read("login-screen.css");
 
 assert.match(
   index,
@@ -161,12 +161,8 @@ assert.match(
   /\.main-city-return \.main-city-return-arrow\s*\{\s*color:\s*var\(--cl-ivory\);\s*\}/,
   "The Home City direction arrow must use the fullscreen control's ivory icon color.",
 );
-assert.doesNotMatch(index, /login-brand-title/, "The login screen still renders a typed-over title layer.");
-assert.match(
-  styles,
-  /\.setup-screen::before\s*\{[\s\S]*?width:\s*var\(--login-art-width\);[\s\S]*?height:\s*var\(--login-art-height\);[\s\S]*?border:\s*1px solid/,
-  "The login artwork is missing its contained-image frame.",
-);
+assert.match(index, /<h1>Crownlands<\/h1>/, "The login title must remain accessible HTML text.");
+assert.match(loginStyles, /object-fit:\s*cover/, "The new scene must fill the viewport without letterboxing.");
 assert.match(
   styles,
   /\.top-hud::before\s*\{[\s\S]*?left:\s*calc\(0px - max\(\.75rem, env\(safe-area-inset-left\)\)\);[\s\S]*?right:\s*calc\(0px - max\(\.75rem, env\(safe-area-inset-right\)\)\);[\s\S]*?background:\s*var\(--top-hud-shade\);/,
@@ -193,13 +189,9 @@ assert.match(
   "City Send and Attack actions must use the approved faded-blue and attack-red variants.",
 );
 
-const loginAsset = manifest.assets.find(asset => asset.id === "login-background");
-assert.ok(loginAsset, "The optimized login background is missing from the manifest.");
-assert.equal(loginAsset.source, "assets/game-menu-background.jpg");
-assert.equal(loginAsset.width, 1448);
-assert.equal(loginAsset.height, 1086);
-assert.ok(fs.existsSync(path.join(root, loginAsset.output)), "The optimized login background does not exist.");
-assert.ok(index.includes(loginAsset.output), "The login preload does not reference the manifest output.");
-assert.ok(styles.includes(loginAsset.output), "The login screen does not reference the manifest output.");
+for (const asset of ["assets/optimized/login-kingdom-960-6646f1d404b1.webp", "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp"]) {
+  assert.ok(fs.existsSync(path.join(root, asset)), "The responsive login image must exist.");
+  assert.ok(index.includes(asset), "The login screen must reference the responsive image.");
+}
 
 console.log("Validated the focused login, HUD, Home City, and city-action-wheel corrections.");

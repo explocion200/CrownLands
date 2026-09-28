@@ -362,19 +362,13 @@ html:fullscreen::backdrop {
 }
 
 .setup-screen {
-  --login-art-width: min(100vw, calc(100dvh * 4 / 3));
-  --login-art-height: min(100dvh, calc(100vw * 3 / 4));
   position: absolute;
   inset: 0;
   z-index: 100;
   display: none;
   place-items: end center;
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-  background:
-    linear-gradient(180deg, rgba(3, 8, 16, .02) 0%, rgba(3, 8, 16, .18) 42%, rgba(3, 8, 16, .72) 100%),
-    radial-gradient(circle at 50% 82%, rgba(10, 32, 54, .2), transparent 38%),
-    url("assets/optimized/login-background-1448x1086-c8507d1988d6.webp") center / contain no-repeat,
-    #17110d;
+  background: #696447;
 }
 .setup-screen.visible { display: grid; }
 .setup-fullscreen-btn {
@@ -393,8 +387,8 @@ html:fullscreen::backdrop {
 .discord-home-link {
   position: absolute;
   z-index: 3;
-  left: calc((100vw - var(--login-art-width)) / 2 + max(.75rem, env(safe-area-inset-left)) + 54px);
-  bottom: calc((100dvh - var(--login-art-height)) / 2 + max(.75rem, env(safe-area-inset-bottom)));
+  left: calc(max(.75rem, env(safe-area-inset-left)) + 54px);
+  bottom: max(.75rem, env(safe-area-inset-bottom));
   display: grid;
   width: 46px;
   min-width: 46px;
@@ -431,8 +425,8 @@ html:fullscreen::backdrop {
 .login-music-mute-btn {
   position: absolute;
   z-index: 3;
-  left: calc((100vw - var(--login-art-width)) / 2 + max(.75rem, env(safe-area-inset-left)));
-  bottom: calc((100dvh - var(--login-art-height)) / 2 + max(.75rem, env(safe-area-inset-bottom)));
+  left: max(.75rem, env(safe-area-inset-left));
+  bottom: max(.75rem, env(safe-area-inset-bottom));
   display: grid;
   width: 46px;
   min-width: 46px;
@@ -467,77 +461,6 @@ html:fullscreen::backdrop {
   background: linear-gradient(180deg, rgba(8, 18, 31, .74), rgba(5, 10, 18, .9));
   box-shadow: 0 18px 46px rgba(0,0,0,.48), inset 0 0 0 1px rgba(255,255,255,.08);
   backdrop-filter: blur(8px);
-}
-.login-game-info {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  right: max(1rem, env(safe-area-inset-right));
-  width: min(320px, 26vw);
-  min-width: 250px;
-  padding: 1rem;
-  border: 1px solid rgba(255, 226, 147, .32);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(8, 23, 39, .88), rgba(4, 11, 20, .94));
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .46), inset 0 0 0 1px rgba(255,255,255,.05);
-  transform: translateY(-50%);
-  backdrop-filter: blur(9px);
-}
-.login-game-info-eyebrow {
-  display: block;
-  color: #f2ca72;
-  font-size: .65rem;
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-.login-game-info h2 {
-  margin: .4rem 0 .55rem;
-  color: #fff0b4;
-  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
-  line-height: 1.2;
-}
-.login-game-info p {
-  margin: 0;
-  color: #d9e7ef;
-  font-size: .84rem;
-  line-height: 1.45;
-}
-.login-game-info ul {
-  display: grid;
-  gap: .48rem;
-  margin: .75rem 0;
-  padding: 0;
-  list-style: none;
-}
-.login-game-info li {
-  padding-left: .8rem;
-  color: #b9cddd;
-  font-family: var(--font-lore);
-  font-size: .76rem;
-  line-height: 1.38;
-  border-left: 2px solid rgba(242, 202, 114, .48);
-}
-.login-game-info li strong {
-  color: #f3e2bd;
-}
-.login-game-info > a {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  padding: .5rem .72rem;
-  color: #261704;
-  border-radius: 9px;
-  background: linear-gradient(#ffe19a, #dc9a2d);
-  font-size: .72rem;
-  font-weight: 950;
-  text-decoration: none;
-}
-@media (max-width: 1199px), (max-height: 699px), (max-aspect-ratio: 5/3) {
-  .login-game-info {
-    display: none !important;
-  }
 }
 .loading-wheel {
   --loading-wheel-size: 104px;

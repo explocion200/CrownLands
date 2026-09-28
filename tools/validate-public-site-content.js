@@ -77,8 +77,8 @@ const supportSource = read("support.html");
 
 assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-6031755025291372"/);
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
-assert.match(indexSource, /class="login-game-info"/);
-assert.match(indexSource, /Build a kingdom across 20 connected regions/);
+assert.doesNotMatch(indexSource, /class="login-game-info"/);
+assert.match(indexSource, /class="login-branding"/);
 assert.match(indexSource, /href="roadmap\.html"/);
 assert.match(indexSource, /name="robots" content="noindex, nofollow"/);
 assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/play\/"/);
