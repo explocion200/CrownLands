@@ -1646,7 +1646,20 @@ async function runCommonGearAction(buildingId, action, instanceId, quotedCost = 
     }
     if (!isCurrent()) return;
     applyServerEconomyResult(result);
+    if (action === "merge") playGoldSpendSound(result?.spentGold, result);
     if (action === "merge") {
+      if (definition.category === "armor"
+          && result?.upgradedInstanceId && result?.ok !== false && !result?.replayed && !result?.duplicate) {
+        try {
+          if (definition.buildingId === "treasury") {
+            playGameSound("treasury_armor_upgrade", { allowCrossMap: true, delayMs: 150 });
+          } else {
+            playGameSound("chainmail_armor_upgrade", { allowCrossMap: true, delayMs: 150 });
+          }
+        } catch (error) {
+          console.warn("Could not play confirmed armor upgrade sound", error);
+        }
+      }
       const responseGear = result?.currentUser?.gear || result?.gear;
       if (responseGear && Number(responseGear.updatedAtMs || 0) >= Number(state?.gear?.updatedAtMs || 0)) {
         state.gear = normalizeCommonGearState(responseGear);
@@ -2075,6 +2088,7 @@ function renderCommonGearShopItem(selectedItemId = "") {
 
 async function buyCommonGearBox() {
   const api = getOnlineApi();
+  const soundScope = getOnlineSessionRequestScope();
   if (!api?.purchaseCommonGearBox) return showToast("Connect to the realm to purchase server-secured Gear Boxes.");
   const quotedPrice = getCommonGearBoxShopPrice();
   const button = modalBody.querySelector('[data-shop-purchase-selected="common_gear_box"]');
@@ -2082,6 +2096,7 @@ async function buyCommonGearBox() {
   try {
     const result = await api.purchaseCommonGearBox({ cost: quotedPrice });
     applyServerEconomyResult(result);
+    playGoldSpendSound(result?.spentGold, result, soundScope);
     showToast("Common Gear Box added to your Bag.");
   } catch (error) {
     showToast(error?.message || "The Common Gear Box could not be purchased.");

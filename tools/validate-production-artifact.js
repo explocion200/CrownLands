@@ -142,6 +142,14 @@ const preparedWorldBytes = files
   .filter(filePath => filePath.startsWith(preparedWorldRoot))
   .reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
 const baseClientBytes = totalBytes - preparedWorldBytes;
+// Eight supplied 128 kbps tracks stream on demand, replacing 2.49 MiB of old music.
+// Preserve their source quality; cap the full playlist separately at 24 MiB.
+const musicRoot = `${path.join(dist, "audio", "music")}${path.sep}`;
+const musicFiles = files.filter(filePath => filePath.startsWith(musicRoot));
+const musicBytes = musicFiles.reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
+if (musicFiles.length !== 8 || musicFiles.some(filePath => !filePath.endsWith(".mp3")) || musicBytes > 24 * 1024 * 1024) {
+  throw new Error("The eight streamed soundtrack MP3s exceed their 24 MiB budget or include unexpected media.");
+}
 // The approved Treasury idle animation and still add 353,384 bytes on demand.
 // Bound their packaged payload by one 352 KiB step; source sheets stay excluded
 // and the service-worker installation budget is checked separately.
@@ -240,15 +248,16 @@ if (fs.statSync(path.join(dist, "email-auth-ui.js")).size > 14 * 1024) throw new
 // Common gear replaces the old derivatives with 1,403,002 bytes of icons/details:
 // a 1,232,808-byte image increment, bounded to 1216 KiB plus 16 KiB for framing
 // and artifact metadata. The startup cache does not include these images.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824) * 1024;
+const soundtrackIncrementBudget = 22 * 1024 * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824) * 1024 + soundtrackIncrementBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 if (preparedWorldBytes > 35 * 1024 * 1024) {
   throw new Error(`Prepared Core-expansion world exceeds 35 MiB (${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
-if (totalBytes > 60 * 1024 * 1024) {
-  throw new Error(`Combined production artifact exceeds 60 MiB (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
+if (totalBytes > 60 * 1024 * 1024 + soundtrackIncrementBudget) {
+  throw new Error(`Combined production artifact exceeds 82 MiB (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 
 for (const absolutePath of files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))) {

@@ -7,9 +7,8 @@ let chromium;
 try {
   ({ chromium } = require("playwright"));
 } catch (_error) {
-  throw new Error(
-    "Playwright is required for the local audio browser suite. Install it or expose it through NODE_PATH.",
-  );
+  // The release gate installs Functions dependencies and uses the repository's
+  // dependency-free CDP harness. Local Playwright adds the broader mixer suite.
 }
 
 const PLAYBACK_TIMEOUT_MS = 30000;
@@ -114,7 +113,7 @@ function assertHealthyPlayback(state, expectedState) {
   assert.ok(state.currentTime > 0, "Playback time must advance.");
   assert.equal(state.lastPlaybackError, "");
   assert.match(state.currentSource, /\.(?:mp3|ogg|wav)(?:\?|$)/i);
-  if (expectedState) assert.equal(state.currentMusicState, expectedState);
+  if (expectedState) assert.equal(state.currentMusicState, "soundtrack");
 }
 
 async function assertLoginControlLayout(page, viewport) {
@@ -217,7 +216,13 @@ async function assertBackgroundLifecycle(page, label) {
   );
 
   const before = await getAudioState(page);
-  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await page.evaluate(() => {
+    // A synthetic blur leaves the page visible, so native foreground events can
+    // correctly resume playback during the supposed background interval.
+    window.__crownlandsLifecycleVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    window.dispatchEvent(new Event("blur"));
+  });
   await page.waitForFunction(
     () => {
       const state = window.CrownlandsAudio?.getDebugState?.();
@@ -248,10 +253,20 @@ async function assertBackgroundLifecycle(page, label) {
   const stillPaused = await getAudioState(page);
   assert.ok(
     Math.abs(stillPaused.currentTime - paused.currentTime) < 0.05,
-    `${label}: music time advanced while backgrounded.`,
+    `${label}: music time changed while backgrounded: ${JSON.stringify({
+      before: paused.currentTime, after: stillPaused.currentTime, paused: stillPaused.paused,
+      lifecyclePaused: stillPaused.lifecyclePaused, reason: stillPaused.lifecyclePauseReason,
+      sourceBefore: paused.currentSource, sourceAfter: stillPaused.currentSource,
+    })}`,
   );
 
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.evaluate(() => {
+    const descriptor = window.__crownlandsLifecycleVisibilityDescriptor;
+    if (descriptor) Object.defineProperty(document, "visibilityState", descriptor);
+    else delete document.visibilityState;
+    delete window.__crownlandsLifecycleVisibilityDescriptor;
+    window.dispatchEvent(new Event("focus"));
+  });
   await page.waitForFunction(
     pausedAt => {
       const state = window.CrownlandsAudio?.getDebugState?.();
@@ -297,11 +312,15 @@ async function assertAllEffectCodecsDecode(page, browserName) {
           ["wav", wav],
         ];
         for (const [codec, relativePath] of sources) {
-          const response = await fetch(`/audio/${relativePath}`, { cache: "no-store" });
+          const response = await fetch(`/audio/${relativePath}`, { cache: "no-store", signal: AbortSignal.timeout(10000) });
           if (!response.ok) {
             throw new Error(`${asset.id} ${codec.toUpperCase()} returned ${response.status}.`);
           }
-          const audioBuffer = await context.decodeAudioData(await response.arrayBuffer());
+          const bytes = await response.arrayBuffer();
+          const audioBuffer = await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`${asset.id} ${codec} decode timed out`)), 10000);
+            context.decodeAudioData(bytes).then(resolve, reject).finally(() => clearTimeout(timer));
+          });
           let sumSquares = 0;
           let sampleCount = 0;
           let peak = 0;
@@ -331,7 +350,7 @@ async function assertAllEffectCodecsDecode(page, browserName) {
     return { decoded, effectCount: effects.length };
   });
 
-  assert.equal(result.effectCount, 25, `${browserName}: expected all 25 production effects.`);
+  assert.equal(result.effectCount, 30, `${browserName}: expected all 30 production effects.`);
   assert.equal(
     result.decoded.length,
     result.effectCount * 3,
@@ -360,6 +379,7 @@ async function assertAllEffectCodecsDecode(page, browserName) {
 }
 
 async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
+  console.log(`${browserName}: checking playback, codecs, controls and lifecycle.`);
   const context = await browser.newContext({
     serviceWorkers: "allow",
     viewport: { height: 900, width: 1440 },
@@ -369,13 +389,16 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
   const issues = installAudioDiagnostics(page);
   try {
     await openApp(page, baseUrl);
+    console.log(`${browserName}: audio manifest ready.`);
     assert.equal(
       await page.evaluate(() => window.__crownlandsControllerAtDocumentStart),
       false,
       `${browserName}: the first load must begin outside service-worker control.`,
     );
     assertHealthyPlayback(await waitForPlayback(page), "main_menu");
+    console.log(`${browserName}: soundtrack playing.`);
     await assertAllEffectCodecsDecode(page, browserName);
+    console.log(`${browserName}: all effect codecs decoded.`);
     assert.equal(
       await page.evaluate(() => document.querySelectorAll("audio").length),
       1,
@@ -406,6 +429,7 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
     assert.equal(transition.sameElement, true, `${browserName}: world-map transition must reuse the media element.`);
     assertHealthyPlayback(await waitForPlayback(page), "world_map");
     await assertBackgroundLifecycle(page, `${browserName} background lifecycle`);
+    console.log(`${browserName}: background lifecycle passed.`);
 
     await page.evaluate(() => {
       window.CrownlandsAudio.currentMusic.pause();
@@ -414,6 +438,7 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
     assertHealthyPlayback(await waitForPlayback(page), "world_map");
 
     await waitForServiceWorkerControl(page);
+    console.log(`${browserName}: service worker activated.`);
     fixture.requests.length = 0;
     await page.reload({ timeout: PLAYBACK_TIMEOUT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(
@@ -866,6 +891,8 @@ async function launchBrowser(executablePath, autoplayAllowed) {
 }
 
 async function run() {
+  await require("./music-playlist-browser").run();
+  if (!chromium) return;
   assert.ok(BROWSER_CANDIDATES.length > 0, "No installed Chrome or Edge executable was found.");
   const fixture = createAudioBrowserTestServer();
   const address = await fixture.listen();

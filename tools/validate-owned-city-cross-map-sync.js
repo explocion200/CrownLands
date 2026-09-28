@@ -169,6 +169,7 @@ Object.assign(context, {
     };
   } }),
 });
+vm.runInContext(require("./validate-gold-spend-audio").spendSoundSource, context);
 vm.runInContext(controller, context, { filename: "instant-economy-actions.js" });
 const queueValidation = (async () => {
   armies = [];

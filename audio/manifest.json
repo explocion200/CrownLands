@@ -1,58 +1,88 @@
 {
-  "pack": "Crownlands Starter Sound Pack",
-  "version": "1.0.0",
+  "pack": "Crownlands Sound Pack",
+  "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Original procedural audio generated specifically for the Crownlands project. The Crownlands project owner may use and modify these files in the game and its marketing.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav, interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
   "assets": [
     {
-      "id": "main_menu_loop",
+      "id": "medieval_vol_2_01",
       "category": "music",
-      "music_state": "main_menu",
-      "wav": "music/main_menu_loop.wav",
-      "ogg": "music/main_menu_loop.ogg",
-      "loop": true,
-      "recommended_volume": 0.42,
-      "description": "Regal Crownlands title and main-menu loop with lute, flute, strings, horns and war drums."
-    },
-    {
-      "id": "world_map_loop",
-      "category": "music",
-      "music_state": "world_map",
-      "wav": "music/world_map_loop.wav",
-      "ogg": "music/world_map_loop.ogg",
-      "loop": true,
-      "recommended_volume": 0.36,
-      "description": "Calm exploration loop for the strategic world map."
-    },
-    {
-      "id": "battle_loop",
-      "category": "music",
-      "music_state": "battle",
-      "wav": "music/battle_loop.wav",
-      "ogg": "music/battle_loop.ogg",
-      "loop": true,
-      "recommended_volume": 0.47,
-      "description": "Driving medieval battle loop with war drums, low strings, lute ostinato and horns."
-    },
-    {
-      "id": "danger_contested_loop",
-      "category": "music",
-      "music_state": "danger",
-      "wav": "music/danger_contested_loop.wav",
-      "ogg": "music/danger_contested_loop.ogg",
-      "loop": true,
-      "recommended_volume": 0.4,
-      "description": "Dark restrained loop for contested camps, incoming attacks or dangerous objectives."
-    },
-    {
-      "id": "victory_fanfare",
-      "category": "music",
-      "music_state": "victory",
-      "wav": "music/victory_fanfare.wav",
-      "ogg": "music/victory_fanfare.ogg",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_01.mp3",
       "loop": false,
-      "recommended_volume": 0.58,
-      "description": "Royal short fanfare for major victories or seasonal accomplishments."
+      "recommended_volume": 0.85,
+      "description": "Medieval Vol. 2 1 (Loop).mp3",
+      "source_sha256": "8069233be5596eaf930e25a3dd2da6bd0512b0fa02d7490f46191600dc10655d"
+    },
+    {
+      "id": "medieval_vol_2_02",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_02.mp3",
+      "loop": false,
+      "recommended_volume": 0.668,
+      "description": "Medieval Vol. 2 2 (Loop).mp3",
+      "source_sha256": "a02e364e4d8f20b8a0174a1b354a6d73063ba59321f49d8caa89abf4b0dfee27"
+    },
+    {
+      "id": "medieval_vol_2_03",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_03.mp3",
+      "loop": false,
+      "recommended_volume": 0.668,
+      "description": "Medieval Vol. 2 3 (Loop).mp3",
+      "source_sha256": "3c0d3fc154ab6495abc34bb862937190a5daf531d22e84079ab113d01de95cff"
+    },
+    {
+      "id": "medieval_vol_2_04",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_04.mp3",
+      "loop": false,
+      "recommended_volume": 0.531,
+      "description": "Medieval Vol. 2 4 (Loop).mp3",
+      "source_sha256": "66b32d361df7c69b19bf148aee3730f4bea569a9638dc2df268e1b6f6242f64d"
+    },
+    {
+      "id": "medieval_vol_2_05",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_05.mp3",
+      "loop": false,
+      "recommended_volume": 0.513,
+      "description": "Medieval Vol. 2 5 (Loop).mp3",
+      "source_sha256": "3a6c27b2339c6039aca944b50c7ff0c7aef76596dee44bb924c0c9b17db7157c"
+    },
+    {
+      "id": "medieval_vol_2_06",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_06.mp3",
+      "loop": false,
+      "recommended_volume": 0.653,
+      "description": "Medieval Vol. 2 6 (Loop).mp3",
+      "source_sha256": "b9d09f99e3f288a79038e4f131800dd749d340b28ade28b63d6bb48d7d953e07"
+    },
+    {
+      "id": "medieval_vol_2_07",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_07.mp3",
+      "loop": false,
+      "recommended_volume": 0.813,
+      "description": "Medieval Vol. 2 7 (Loop).mp3",
+      "source_sha256": "f93a91194844e47cd9db9778929bbbeada32f1060e905ad4579ff74f082e457c"
+    },
+    {
+      "id": "medieval_vol_2_08",
+      "category": "music",
+      "music_state": "soundtrack",
+      "mp3": "music/medieval_vol_2_08.mp3",
+      "loop": false,
+      "recommended_volume": 0.75,
+      "description": "Medieval Vol. 2 8 (Loop).mp3",
+      "source_sha256": "5d0b3c8ec8baeef8dc2c16ac21f7cf05e1d3419a84dc98e123455d99e036c523"
     },
     {
       "id": "button_click",
@@ -70,7 +100,8 @@
       "ogg": "ui/menu_open.ogg",
       "loop": false,
       "recommended_volume": 0.6,
-      "description": "Parchment and soft air movement for opening panels."
+      "description": "User-supplied RPG Sound Pack interface2.wav for opening UI panels.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "menu_close",
@@ -78,8 +109,9 @@
       "wav": "ui/menu_close.wav",
       "ogg": "ui/menu_close.ogg",
       "loop": false,
-      "recommended_volume": 0.55,
-      "description": "Short parchment fold for closing panels."
+      "recommended_volume": 0.6,
+      "description": "User-supplied RPG Sound Pack interface2.wav for closing UI panels.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "parchment_open",
@@ -88,7 +120,8 @@
       "ogg": "ui/parchment_open.ogg",
       "loop": false,
       "recommended_volume": 0.6,
-      "description": "Longer scroll or report-opening sound."
+      "description": "User-supplied RPG Sound Pack interface2.wav for opening reports and city details.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "invalid_action",
@@ -141,8 +174,9 @@
       "wav": "combat/sword_clash_01.wav",
       "ogg": "combat/sword_clash_01.ogg",
       "loop": false,
-      "recommended_volume": 0.75,
-      "description": "Metal sword impact variation 1."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "sword_clash_02",
@@ -150,8 +184,9 @@
       "wav": "combat/sword_clash_02.wav",
       "ogg": "combat/sword_clash_02.ogg",
       "loop": false,
-      "recommended_volume": 0.65,
-      "description": "Metal sword impact variation 2."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "sword_clash_03",
@@ -159,8 +194,9 @@
       "wav": "combat/sword_clash_03.wav",
       "ogg": "combat/sword_clash_03.ogg",
       "loop": false,
-      "recommended_volume": 0.73,
-      "description": "Metal sword impact variation 3."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "siege_impact",
@@ -168,8 +204,9 @@
       "wav": "combat/siege_impact.wav",
       "ogg": "combat/siege_impact.ogg",
       "loop": false,
-      "recommended_volume": 0.65,
-      "description": "Heavy timber-and-stone impact for siege attacks."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "battle_defeat",
@@ -197,6 +234,56 @@
       "loop": false,
       "recommended_volume": 0.58,
       "description": "Bright bronze coin cascade for collecting gold."
+    },
+    {
+      "id": "map_gold_pickup",
+      "category": "rewards",
+      "wav": "rewards/map_gold_pickup.wav",
+      "ogg": "rewards/map_gold_pickup.ogg",
+      "loop": false,
+      "recommended_volume": 0.58,
+      "description": "User-supplied RPG Sound Pack money.wav for successful map Gold pickups.",
+      "source_sha256": "4147e7fbe404d2cd97ba7b5af61e88ebe4f652626589c4ee9d570595262b8802"
+    },
+    {
+      "id": "map_troop_pickup",
+      "category": "rewards",
+      "wav": "rewards/map_troop_pickup.wav",
+      "ogg": "rewards/map_troop_pickup.ogg",
+      "loop": false,
+      "recommended_volume": 0.55,
+      "description": "User-supplied RPG Sound Pack sword-unsheathe.wav for successful map soldier pickups.",
+      "source_sha256": "2cc0518b65d3a11b4f7cf22a5be6700d36fa1e681491dfb71b87ae5bce2296f6"
+    },
+    {
+      "id": "gold_spend",
+      "category": "rewards",
+      "wav": "rewards/gold_spend.wav",
+      "ogg": "rewards/gold_spend.ogg",
+      "loop": false,
+      "recommended_volume": 0.42,
+      "description": "User-supplied RPG Sound Pack coin.wav for confirmed Gold purchases, spending and donations.",
+      "source_sha256": "ee72adacc8630cb590f22130a9c7c855f6eeb698d9fce6461667255ec45ed184"
+    },
+    {
+      "id": "treasury_armor_upgrade",
+      "category": "rewards",
+      "wav": "rewards/treasury_armor_upgrade.wav",
+      "ogg": "rewards/treasury_armor_upgrade.ogg",
+      "loop": false,
+      "recommended_volume": 0.55,
+      "description": "User-supplied RPG Sound Pack cloth-heavy.wav for confirmed Master of Coin armor upgrades.",
+      "source_sha256": "73bbbd383b5bbc8b8313f6fee84040aecc1de09714afbe51ba4e5162cbac3528"
+    },
+    {
+      "id": "chainmail_armor_upgrade",
+      "category": "rewards",
+      "wav": "rewards/chainmail_armor_upgrade.wav",
+      "ogg": "rewards/chainmail_armor_upgrade.ogg",
+      "loop": false,
+      "recommended_volume": 0.55,
+      "description": "User-supplied RPG Sound Pack chainmail1.wav for confirmed armor upgrades on officers other than the Master of Coin.",
+      "source_sha256": "44d4d6b0cda8138c9d5545ba4f434f53b7817ba32d98ddfdf5bff6ae7acdefdf"
     },
     {
       "id": "troop_reward",

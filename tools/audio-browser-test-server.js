@@ -81,6 +81,8 @@ function parseByteRange(rangeHeader, size) {
 function createAudioBrowserTestServer(options = {}) {
   const requests = [];
   let audioDelayMs = Math.max(0, Number(options.audioDelayMs) || 0);
+  const documentBuild = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8")
+    .match(/name="crownlands-build" content="([^"]+)"/)?.[1];
 
   function recordRequest(entry) {
     requests.push({
@@ -138,6 +140,17 @@ function createAudioBrowserTestServer(options = {}) {
         "content-type": "text/plain; charset=utf-8",
       });
       response.end("Not found");
+      return;
+    }
+
+    // Source files have historical stamps; production stamps both at build time.
+    // Match that contract in this fixture so worker activation cannot reload a codec test.
+    if (requestUrl.pathname === "/service-worker.js" && documentBuild) {
+      const body = Buffer.from((await fsp.readFile(filePath, "utf8"))
+        .replace(/const CACHE_VERSION = "[^"]+";/, `const CACHE_VERSION = ${JSON.stringify(documentBuild)};`));
+      response.writeHead(200, { "cache-control": "no-store", "content-type": "text/javascript; charset=utf-8",
+        "content-length": body.length, "service-worker-allowed": "/" });
+      response.end(request.method === "HEAD" ? undefined : body);
       return;
     }
 
@@ -240,6 +253,7 @@ function createAudioBrowserTestServer(options = {}) {
     close() {
       return new Promise((resolve, reject) => {
         server.close(error => (error ? reject(error) : resolve()));
+        server.closeAllConnections();
       });
     },
   };
@@ -255,7 +269,13 @@ async function runSelfTest() {
       throw new Error("Manifest MIME type is invalid");
     }
 
-    const rangeResponse = await fetch(`${address.url}/audio/music/main_menu_loop.mp3`, {
+    const manifest = await manifestResponse.json();
+    const index = await (await fetch(address.url)).text();
+    const worker = await (await fetch(`${address.url}/service-worker.js`)).text();
+    const build = index.match(/name="crownlands-build" content="([^"]+)"/)[1];
+    if (!worker.includes(`const CACHE_VERSION = ${JSON.stringify(build)};`)) throw new Error("Audio fixture build stamps differ");
+    const music = manifest.assets.find(asset => asset.category === "music");
+    const rangeResponse = await fetch(`${address.url}/audio/${music.mp3}`, {
       headers: { Range: "bytes=0-1023" },
     });
     if (rangeResponse.status !== 206) throw new Error(`Range request returned ${rangeResponse.status}`);

@@ -817,6 +817,7 @@ async function executeInstantShopPurchase(action) {
   action.reservedGold = Math.max(0, action.reservedGold - confirmedUnitPrice * confirmed);
   applyServerEconomyResult(result);
   selectedInventoryItemId = item.id;
+  playGoldSpendSound(result?.spentGold ?? confirmedUnitPrice * confirmed, result);
   selectedInventoryEntryKey = "";
   addLog(`Bought ${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} for ${formatNumber(Number(result?.spentGold) || confirmedUnitPrice * confirmed)} gold.`);
   showToast(`${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} added to Bag.`);
@@ -869,6 +870,7 @@ async function executeInstantCityUpgrade(action) {
   const reportedUpgraded = toWhole(result?.upgraded);
   const upgraded = authoritativeMode ? reportedUpgraded : Math.min(chunkLevels, reportedUpgraded);
   if (upgraded < 1) throw new Error("The city upgrade was not confirmed by the server.");
+  playGoldSpendSound(result?.spentGold, result);
   if (!result?.replayed) {
     try { window.CrownlandsJourney?.track("first_action", "city_upgrade"); } catch { /* Optional analytics cannot affect a confirmed upgrade. */ }
   }
@@ -1034,6 +1036,7 @@ function buyShopItem(itemId) {
   state.gold = getProjectedGold() - price;
   inventory[item.id] = toWhole(inventory[item.id]) + 1;
   recordItemPurchase(item.id);
+  playGoldSpendSound(price);
   selectedInventoryItemId = item.id;
   selectedInventoryEntryKey = "";
   addLog(`Bought ${item.label} for ${formatNumber(price)} gold.`);
@@ -1087,13 +1090,16 @@ function upgradeCity(cityId, levels = 1, options) {
   const vfxBefore = getCityVfxSnapshot(city);
   const localLevels = requestedMode === "exact" ? requested : affordable;
   const startingLevel = clampCityLevel(city.level);
+  let spentGold = 0;
   for (let offset = 0; offset < localLevels; offset += 1) {
     const cost = getLevelCost(city);
     state.gold -= cost;
+    spentGold += cost;
     city.investedGold = toWhole(city.investedGold) + cost;
     city.level = clampCityLevel(city.level + 1);
   }
   addLog(`${city.name} upgraded to level ${city.level}.`);
+  playGoldSpendSound(spentGold);
   showToast(`${city.name} upgraded`);
   playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
   markOwnedCityChanged(city);

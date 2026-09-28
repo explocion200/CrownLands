@@ -1148,7 +1148,7 @@ async function run() {
   assert.equal(manager.effectsUnlocked, true, "The next ordinary gesture must recover a suspended effects context.");
   assert.equal(manager.getDebugState().lastEffectsError, "");
 
-  assert.equal(productionEffectAssets.length, 25, "The runtime fixture must exercise all production effects.");
+  assert.equal(productionEffectAssets.length, 30, "The runtime fixture must exercise all production effects.");
   for (const asset of productionEffectAssets) {
     now += 100;
     const productionEffectStart = effectSourceStarts.length;
@@ -1208,15 +1208,15 @@ async function run() {
   const musicAssets = manifestSource.assets.filter(asset => asset.category === "music");
   assert.ok(musicAssets.length > 0, "The production manifest must contain music.");
   assert.ok(
-    musicAssets.every(asset => ["main_menu", "world_map", "battle", "danger", "victory"].includes(asset.music_state)),
+    musicAssets.every(asset => ["soundtrack", "main_menu", "world_map", "battle", "danger", "victory"].includes(asset.music_state)),
     "Every production music asset must declare a supported music_state.",
   );
   for (const asset of manifestSource.assets) {
     for (const relativePath of [
-      String(asset.wav).replace(/\.wav$/i, ".mp3"),
+      asset.mp3 || String(asset.wav).replace(/\.wav$/i, ".mp3"),
       asset.ogg,
       asset.wav,
-    ]) {
+    ].filter(Boolean)) {
       assert.ok(
         fs.existsSync(path.join(projectRoot, "audio", relativePath)),
         `${asset.id} is missing ${relativePath}.`,

@@ -17,7 +17,7 @@ const deferred = () => {
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 function harness() {
-  const reads = [], subscriptions = [], renders = [], donations = [], economy = [];
+  const reads = [], subscriptions = [], renders = [], donations = [], economy = [], sounds = [];
   const input = { value: "20000000", reportValidity: () => true, focus() {} };
   const api = {
     isSignedIn: () => true,
@@ -41,9 +41,10 @@ function harness() {
     renderHoldingTowerModal: () => renders.push("tower"),
     markOnlineRealtimeRecoveryNeeded() {}, formatNumber: String,
     confirmClanLedgerAction: async () => true, rejectGameAction: message => { throw Error(message); },
-    applyServerEconomyResult: result => economy.push(result), showToast() {}, playRewardSound() {},
+    applyServerEconomyResult: result => economy.push(result), showToast() {}, playGameSound: id => sounds.push(id),
     refreshServerEconomy: async () => {},
   });
+  vm.runInContext(require("./validate-gold-spend-audio").spendSoundSource, context);
   vm.runInContext(declarations + treasuryFunctions + `
     this.status = () => clanTreasuryStatus;
     this.loading = () => clanTreasuryLoading;
@@ -54,7 +55,7 @@ function harness() {
     clanId: context.state.clanId, treasury: { balance, revision, totalDonated: balance, totalSpent: 0 },
     allowance: { remaining }, utcDate: "2026-09-22",
   });
-  return { context, api, input, reads, subscriptions, renders, donations, economy, status };
+  return { context, api, input, reads, subscriptions, renders, donations, economy, sounds, status };
 }
 
 async function main() {
@@ -103,23 +104,25 @@ async function main() {
     await h.context.loadClanTreasuryStatus();
     assert(!h.context.loading()); assert(h.context.attempted(), "A failed load can trigger an endless render/retry loop.");
   }
-  for (const abandon of [false, true]) {
+  for (const duplicate of [false, true]) for (const abandon of [false, true]) {
     const h = harness();
     h.context.applyClanTreasuryStatus("clan-a", h.status(0, 0));
     h.input.value = "20000000";
     const donation = h.context.donateClanTreasuryFromPanel(); await flush();
+    assert.deepEqual(h.sounds, [], "Pending donation played a payment sound");
     assert.equal(h.donations[0].payload.amount, 20_000_000);
     assert(h.context.busy());
     if (abandon) { h.context.uid = "member-b"; h.context.resetClanTreasuryState(); }
     else h.context.applyClanTreasuryStatus("clan-a", h.status(15_000_000, 2));
-    h.donations[0].resolve({ clanId: "clan-a", balance: 20_000_000, revision: 1,
+    h.donations[0].resolve({ clanId: "clan-a", balance: 20_000_000, revision: 1, donated: 20_000_000, duplicate,
       totalDonated: 20_000_000, totalSpent: 0, allowance: { remaining: 30_000_000 } });
     await donation;
     assert(!h.context.busy());
     assert.equal(h.economy.length, abandon ? 0 : 1);
+    assert.deepEqual(h.sounds, abandon || duplicate ? [] : ["gold_spend"], "Donation must sound only for a newly confirmed payment in the current session");
     assert.equal(h.context.status()?.treasury.balance ?? null, abandon ? null : 15_000_000);
   }
-  for (const kind of ["building", "wall"]) for (const abandon of [false, true]) {
+  for (const kind of ["building", "wall", "shop", "repair", "veil"]) for (const duplicate of [false, true]) for (const abandon of [false, true]) {
     const h = harness(), pending = deferred();
     Object.assign(h.context, {
       holdingTowerActionsInFlight: new Set(), clanBuildingRequestIds: new Map(),
@@ -130,17 +133,21 @@ async function main() {
     vm.runInContext(between(source, "async function runHoldingTowerSpendAction(", "function getHoldingTowerComposerTargets(")
       + between(source, "async function runClanTowerBuildingAction(", "function getHoldingTowerClanIdentity("), h.context);
     h.context.applyClanTreasuryStatus("clan-a", h.status(20_000_000, 1));
-    h.api.startClanTowerBuilding = h.api.queueHoldingTowerWallUpgrades = () => pending.promise;
+    h.api.startClanTowerBuilding = h.api.queueHoldingTowerWallUpgrades = h.api.purchaseClanTowerShopItem
+      = h.api.startHoldingTowerRepair = h.api.activateHoldingTowerVeil = () => pending.promise;
     const tower = h.context.holdingTowerSnapshots.get("tower-a");
     const spending = kind === "building"
       ? h.context.runClanTowerBuildingAction(tower, "build", "shop")
-      : h.context.runHoldingTowerSpendAction(tower, "upgrade");
+      : kind === "shop" ? h.context.runClanTowerBuildingAction(tower, "buy", "war_drums")
+        : h.context.runHoldingTowerSpendAction(tower, kind === "wall" ? "upgrade" : kind);
+    assert.deepEqual(h.sounds, [], "Pending Tower action played a payment sound");
     if (abandon) { h.context.state.clanId = "clan-b"; h.context.resetClanTreasuryState(); }
-    pending.resolve({ clanId: "clan-a", treasury: h.status(15_000_000, 2).treasury });
+    pending.resolve({ clanId: "clan-a", treasury: h.status(15_000_000, 2).treasury, cost: 5_000_000, spentGold: 100, duplicate });
     await spending;
     assert.equal(h.context.status()?.treasury.balance ?? null, abandon ? null : 15_000_000,
       kind + " spending did not apply only to the current clan.");
     assert.equal(h.context.holdingTowerActionsInFlight.size, 0, "A completed spend left the Tower busy.");
+    assert.deepEqual(h.sounds, abandon || duplicate ? [] : ["gold_spend"], `${kind}: only newly confirmed spending may sound`);
   }
   // Exercise the actual Firebase listener's path, empty state, realm filters and teardown.
   const firebase = read("firebaseClient.js");
