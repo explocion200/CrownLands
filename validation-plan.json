@@ -1,34 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "beaf8a6d2fd2fd21f77a76e89e94f2b074a9b9e7",
+  "baseCommit": "d736d0d3e52be6d67d893c4c895cfb8ef36a78e9",
   "coverage": [
     {
       "paths": [
-        "index.html",
-        "manifest.webmanifest",
-        "tools/validate-pwa-entry-routing.js",
-        "assets/icons/atlas-v1/crownlands-icon-192.png",
-        "assets/icons/atlas-v1/crownlands-icon-512.png",
-        "assets/icons/atlas-v1/crownlands-maskable-192.png",
-        "assets/icons/atlas-v1/crownlands-maskable-512.png",
-        "assets/icons/atlas-v1/crownlands-apple-touch-180.png",
-        "assets/icons/atlas-v1/crownlands-favicon-32.png",
-        "docs/art-prompts/installed-icon-atlas/master.png",
-        "docs/art-prompts/installed-icon-atlas/maskable-master.png"
+        "docs/visual-qa/leaderboard-podium/index.html",
+        "docs/visual-qa/leaderboard-podium/preview.html",
+        "docs/visual-qa/leaderboard-podium/draft.css",
+        "docs/visual-qa/leaderboard-podium/preview.js",
+        "docs/visual-qa/leaderboard-podium/review.css",
+        "docs/visual-qa/leaderboard-podium/review.js"
       ],
       "tests": [
-        "tools/validate-pwa-entry-routing.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Changes only installed-game artwork and its HTML/manifest links. Validate PNG size, opacity, encoded format and install metadata, new immutable icon URLs, preserved app identity/start route/landscape mode, web and itch relative URLs, and existing offline-entry recovery. Production packaging checks prove linked files ship, source artwork stays outside runtime, and the unchanged aggregate download and install-cache budgets remain satisfied. Local Chromium checks also decode all six exports and review square, rounded, circular and 40%-radius masks on desktop 1200x820 and landscape mobile 844x390. No backend, rules, player data or gameplay logic changed, so emulator suites are not relevant."
+      "reason": "Isolated docs-only leaderboard design prototype using existing packaged artwork and pure heraldry rendering. Production-artifact validation checks shipping assets and build budgets remain valid; docs are excluded from the client build. Local JavaScript syntax checks and Chromium review cover 33 viewport/category/state combinations at 1366x820, 844x390 and 568x320, tab keyboard behavior, profile preview, ranking notes, scroll/focus, unique podium/list ranks, long totals, fewer entries, unranked and load/error states. No runtime game code, authoritative scoring, schema, rules or backend is modified, so emulator suites are not relevant."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-prompts/installed-icon-atlas/README.md"
+        "docs/visual-qa/leaderboard-podium/README.md",
+        "docs/visual-qa/leaderboard-podium/visual-checks.md"
       ],
       "tests": [],
-      "reason": "Records the user's confirmed installed-icon art choice, technical export process, platform update expectations, sources and review evidence. These documentation paths do not execute."
+      "reason": "Records the requested podium and seasonal PvP ranking draft, inspected source contracts, proposed accounting rules that need confirmation, and local visual review. No Master Specification rule is changed or production implementation claimed. Markdown does not execute."
     }
   ]
 }
