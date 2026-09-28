@@ -163,10 +163,12 @@ if (coreResetArmed) {
     || newLands.some(region => Number(region.cityCapacity) !== coreTopology.NEW_LANDS_CITY_CAPACITY)) {
     throw new Error("Prepared New Lands maps do not expose 40 neutral-city templates.");
   }
-  const initialExpansion = coreTopology.createInitialExpansionState("realm-reset-validation");
-  if (JSON.stringify(initialExpansion.activeRegionIds) !== JSON.stringify(["new-lands-l01-p001"])
+  const initialExpansion = coreTopology.createResetExpansionState("realm-reset-validation");
+  if (JSON.stringify(initialExpansion.activeRegionIds) !== JSON.stringify(coreTopology.getResetNewLandsRegionIds())
+    || initialExpansion.activeRegionIds.length !== 56
+    || initialExpansion.nextAdmissionOrdinal !== 1
     || JSON.stringify(initialExpansion.admittingRegionIds) !== JSON.stringify(["new-lands-l01-p001"])) {
-    throw new Error("The reset must begin at the north-center cardinal New Lands entrance.");
+    throw new Error("Reset must open both New Lands layers while admission starts only at the north-center entrance.");
   }
   const firstNewLandsMap = coreWorldLayout.maps.find(map => map.id === initialExpansion.activeRegionIds[0]);
   if (!firstNewLandsMap || firstNewLandsMap.cities?.length !== coreTopology.NEW_LANDS_CITY_CAPACITY) {

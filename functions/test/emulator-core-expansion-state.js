@@ -5,6 +5,7 @@ const { randomInt } = require("node:crypto");
 const { getApps, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const topology = require("../coreExpansionTopology.js");
+const worldLayout = require("../core-expansion-world-layout.json");
 
 // Real claims only attempt a threshold transition when a placement reaches the
 // 20-city floor. Keep several transactions genuinely concurrent here without
@@ -114,7 +115,7 @@ async function runRetriableTransaction(operation, maxAttempts = 12) {
 async function main() {
   const resetGeneration = "emulator-core-expansion-generation";
   const stateRef = db.doc(`realmGenerations/${resetGeneration}/expansion/current`);
-  const initial = topology.createInitialExpansionState(resetGeneration);
+  const initial = topology.createResetExpansionState(resetGeneration);
   await stateRef.set(initial);
 
   async function applyThreshold(sourceRegionId, thresholdRevision, {
@@ -169,14 +170,18 @@ async function main() {
 
   const preparingFirst = topology.normalizeExpansionState((await stateRef.get()).data() || {});
   assert(preparingFirst.revision === 2, "The first threshold did not reserve exactly one activation revision.");
-  assert(preparingFirst.activeRegionIds.length === 1, "Unverified maps became active before preparation completed.");
+  assert(preparingFirst.activeRegionIds.length === 56, "Admission changed the two pre-opened layers.");
+  assert(preparingFirst.admittingRegionIds.length === 0, "Unverified successors admitted players early.");
   assert(preparingFirst.pendingActivation?.regionIds.length === 2, "The first threshold did not reserve two maps.");
   const firstFinalization = await finalizeNextPending();
   assert(firstFinalization.changed && firstFinalization.activatedRegionIds.length === 2,
     "The prepared first pair did not activate together.");
   const afterFirst = topology.normalizeExpansionState((await stateRef.get()).data() || {});
   assert(afterFirst.revision === 3, "The first threshold did not finish its prepare-and-activate lifecycle.");
-  assert(afterFirst.activeRegionIds.length === 3, "The first threshold did not activate exactly two maps.");
+  assert(afterFirst.activeRegionIds.length === 56 && afterFirst.nextAdmissionOrdinal === 3,
+    "The first threshold skipped pre-opened maps or changed the playable footprint.");
+  assert(afterFirst.admittingRegionIds.join(",") === "new-lands-l01-p002,new-lands-l01-p003",
+    "First threshold skipped the normal clockwise admission order.");
   assert(new Set(afterFirst.activeRegionIds).size === afterFirst.activeRegionIds.length,
     "The first threshold created duplicate active maps.");
   assert(!afterFirst.admittingRegionIds.includes(firstSource),
@@ -217,7 +222,8 @@ async function main() {
 
   const finalState = topology.normalizeExpansionState((await stateRef.get()).data() || {});
   assert(finalState.revision === 7, "Concurrent source thresholds produced the wrong revision count.");
-  assert(finalState.activeRegionIds.length === 7, "Three thresholds did not activate six successor maps.");
+  assert(finalState.activeRegionIds.length === 56 && finalState.nextAdmissionOrdinal === 7,
+    "Concurrent thresholds did not advance admission by exactly six maps within the initial layers.");
   assert(new Set(finalState.activeRegionIds).size === finalState.activeRegionIds.length,
     "Concurrent source thresholds produced duplicate map IDs.");
   assert(Object.keys(finalState.activationReceipts).length === 3,
@@ -242,7 +248,25 @@ async function main() {
   assert(realmInfo.realmMode === "monthly-shared" && realmInfo.sharedRealmId === "shard_0001",
     "The Core-expansion reset split players across realms.");
   assert(realmInfo.resetReadinessStatus === "ready",
-    "The reset pointer became visible before Core and first-New-Lands preparation completed.");
+    "The reset pointer became visible before Core and both New Lands layers were prepared.");
+  const readinessRef = db.doc(`realmGenerations/${realmInfo.resetGeneration}/resetActivation/current`);
+  const readiness = (await readinessRef.get()).data() || {};
+  assert(readiness.regionCount === 81 && readiness.cityCount === 3720,
+    "Cold reset must prepare and verify all 81 maps and 3,720 cities.");
+  assert(realmInfo.coreExpansion.activeRegionIds.length === 56
+    && realmInfo.coreExpansion.admittingRegionIds.join(",") === "new-lands-l01-p001",
+    "Opening both layers must keep initial placement on the first north-center map.");
+  for (const map of worldLayout.maps) {
+    const island = db.doc(`islands/${realmInfo.worldId}--shard_0001--${map.id}`);
+    const [islandSnap, cities] = await Promise.all([island.get(), island.collection("cities").get()]);
+    assert(islandSnap.exists && cities.size === map.cities.length, `${map.id} was not completely seeded at reset.`);
+    assert(cities.docs.every(city => city.data().resetGeneration === realmInfo.resetGeneration),
+      `${map.id} contains cities from the wrong generation.`);
+    if (topology.parseNewLandsRegionId(map.id)) {
+      assert(cities.docs.every(city => !city.data().ownerUid && city.data().level === 1),
+        `${map.id} did not begin with 40 neutral Level 1 cities.`);
+    }
+  }
   assert(Number(realmInfo.startingCityCapacity) === (
     topology.MAX_NEW_LANDS_REGIONS * topology.EXPANSION_THRESHOLD_NPC_CITIES
   ), "The dynamic New Lands realm reported a fixed legacy capacity.");
@@ -308,8 +332,8 @@ async function main() {
 
   const liveExpansionRef = db.doc(`realmGenerations/${realmInfo.resetGeneration}/expansion/current`);
   const liveExpansion = topology.normalizeExpansionState((await liveExpansionRef.get()).data() || {});
-  assert(liveExpansion.activeRegionIds.length === 3,
-    "Fifty joins did not open exactly the next two New Lands maps at the 20-NPC threshold.");
+  assert(liveExpansion.activeRegionIds.length === 56 && liveExpansion.nextAdmissionOrdinal === 3,
+    "Fifty joins did not preserve both layers and admit only the next two maps.");
   assert(liveExpansion.admittingRegionIds.length === 2,
     "The filled first New Lands map remained open for new-player admission.");
   const activeIslandSnapshots = await Promise.all(liveExpansion.activeRegionIds.map(regionId => (
@@ -317,10 +341,12 @@ async function main() {
   )));
   const populations = activeIslandSnapshots.map(snapshot => Number(snapshot.data()?.playerCount || 0));
   assert(populations[0] === 20, `The first New Lands map closed at ${populations[0]} players instead of 20.`);
-  assert(populations.slice(1).reduce((sum, count) => sum + count, 0) === 30,
+  assert(populations.slice(1, 3).reduce((sum, count) => sum + count, 0) === 30,
     "The successor maps did not receive all remaining players.");
-  assert(Math.max(...populations.slice(1)) - Math.min(...populations.slice(1)) <= 1,
+  assert(Math.max(...populations.slice(1, 3)) - Math.min(...populations.slice(1, 3)) <= 1,
     `Successor-map placement was not balanced: ${populations.join("/")}.`);
+  assert(populations.slice(3).every(count => count === 0),
+    "Players were placed in pre-opened maps before their admission turn.");
 
   const depletedRegionId = liveExpansion.admittingRegionIds[0];
   const depletedIslandRef = db.doc(
@@ -361,8 +387,8 @@ async function main() {
   assert(recoveryClaim?.ok && recoveryClaim.mainRegionId !== depletedRegionId,
     "An overdue gameplay-driven threshold still blocked the next starter-city claim.");
   const recoveredExpansion = topology.normalizeExpansionState((await liveExpansionRef.get()).data() || {});
-  assert(recoveredExpansion.activeRegionIds.length === 5,
-    "An overdue threshold did not activate exactly two successor maps.");
+  assert(recoveredExpansion.activeRegionIds.length === 56 && recoveredExpansion.nextAdmissionOrdinal === 5,
+    "An overdue threshold did not admit exactly two successor maps within the pre-opened layers.");
   assert(!recoveredExpansion.admittingRegionIds.includes(depletedRegionId),
     "The overdue source map remained open for starter admission.");
   assert(recoveredExpansion.admittingRegionIds.length === 3,
@@ -379,7 +405,19 @@ async function main() {
     "Active-realm admission recovery changed an archived generation.",
   );
 
-  console.log("Core-expansion emulator gate passed: reset readiness, 50 shared-realm claims, idempotent replays, balanced placement, overdue gameplay-threshold recovery, current-generation isolation, and retry-safe two-map activation all held.");
+  // A resumed readiness run must be idempotent after a city has been claimed.
+  const claimedCityRef = db.doc(`islands/${realmInfo.worldId}--shard_0001--${claims[0].mainRegionId}/cities/${claims[0].cityId}`);
+  const claimedCityBefore = (await claimedCityRef.get()).data();
+  const expansionBefore = JSON.stringify((await liveExpansionRef.get()).data());
+  await readinessRef.delete();
+  await callFunction("getRealmInfo", users[0].token, {}, identity);
+  assert(JSON.stringify((await claimedCityRef.get()).data()) === JSON.stringify(claimedCityBefore),
+    "Reset readiness replay overwrote an already claimed city.");
+  assert(JSON.stringify((await liveExpansionRef.get()).data()) === expansionBefore,
+    "Reset readiness replay rewound the admission order.");
+  assert((await readinessRef.get()).data().regionCount === 81, "Reset readiness replay lost one of the initial maps.");
+
+  console.log("Core-expansion emulator gate passed: 81-map cold reset and replay, 50 shared-realm claims, balanced clockwise admission within pre-opened layers, concurrent thresholds, overdue recovery, and generation isolation.");
 }
 
 main().catch(error => {
