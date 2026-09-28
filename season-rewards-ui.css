@@ -64,6 +64,9 @@
 .season-decorated.season-bronze { outline-color:#a36a3a; }
 .season-heraldry-frame { display:inline-flex; flex:none; }
 .season-decoration-mark { position:absolute; right:-7px; bottom:-5px; z-index:3; min-width:20px; height:22px; display:grid; place-items:center; color:#e6c567; background:#382b1b; border:1px solid currentColor; border-radius:50%; font-size:15px; line-height:1; }
+#modal .season-decoration-mark { color:#e6c567 !important; text-shadow:none; }
+#modal .season-silver > .season-decoration-mark { color:#d9e0e3 !important; }
+#modal .season-bronze > .season-decoration-mark { color:#dba378 !important; }
 .public-player-profile-modal .season-honors { padding:12px 16px; }
 .leaderboard-tabs-header .season-info-btn { flex:none; white-space:nowrap; }
 @media(max-height:500px) { .season-rewards-modal { height:96dvh; max-height:96dvh; } .season-heading { padding:8px 14px; gap:10px; } .season-heading>img { width:35px; height:35px; } .season-heading h2 { font-size:19px; } .season-heading p { font-size:9px; } .season-navigation { padding:5px 10px; gap:5px; } .season-panel button,.season-panel select { padding:6px 8px; font-size:12px; } .season-scroll { padding:10px 15px; } .season-footer { padding:6px 10px; } }

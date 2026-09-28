@@ -49,6 +49,7 @@ const required = [
   "troop-orders-ui.css", "troop-orders-ui.js",
   "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg",
   "modal-ui.js",
+  "season-rewards-ui.js", "season-rewards-ui.css",
   "kingdom-ledgers-ui.js", "kingdom-ledgers-ui.css", "stronghold-details-ui.js", "stronghold-details-ui.css",
   "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
   "assets/icons/battle-reports-ledger-r1.svg",
@@ -260,7 +261,12 @@ const loginFiles = ["login-screen.css", "assets/optimized/login-kingdom-960-6646
 if (loginFiles.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > 600 * 1024) throw new Error("Responsive login artwork and styling exceed 600 KiB.");
 // Approved podium/Field of Glory adds bounded presentation and query code only.
 // Reserve 24 KiB; no additional artwork, fonts, libraries or startup requests.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24) * 1024 + soundtrackIncrementBudget;
+// Season rewards reuse existing box/crown artwork. Bound their UI to 28 KiB,
+// plus 12 KiB for login, public honors, API and artifact metadata integration.
+const seasonRewardBytes = ["season-rewards-ui.js", "season-rewards-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (seasonRewardBytes > 28 * 1024) throw new Error("Season rewards presentation exceeds its 28 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

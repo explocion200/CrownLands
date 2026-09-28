@@ -49,11 +49,13 @@
         "functions/release-config.json",
         "release-config.js",
         "tools/build-production-client.js",
-        "tools/generate-release-manifest.js"
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
         "tools/validate-reset-release.js",
         "tools/test-season-rewards.js",
+        "tools/validate-production-artifact.js",
         "functions/test/emulator-reset-gate.js"
       ],
       "reason": "Coordinate client/server release contract, callable manifest and production asset allowlist. Mandatory build validation checks generated output; reset-gate covers compatible clients and preserved progression. No deployment is performed."
