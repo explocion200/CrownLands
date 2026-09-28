@@ -30,3 +30,14 @@ The owner supplied `RPG Sound Pack/inventory/cloth-heavy.wav` on September 27, 2
 - The full recording is converted to 16-bit PCM WAV plus MP3 (128 kbps) and OGG Vorbis (quality 4), without trimming or volume processing. Metadata is removed.
 
 Play the cloth cue 150 ms after a confirmed Treasury armor upgrade, alongside the existing Gold payment cue. It applies to head, chest, pants, boots, gloves and belt items at every rarity, including rarity promotions. It does not play for tools, necklaces, other officers, Equip/Unequip, rejected requests, duplicate/replayed receipts or stale sessions. Playback respects Effects mute/volume, leaves music running, and cannot reject an accepted upgrade if audio fails.
+
+## Other officers' armor upgrade sound
+
+The owner supplied `RPG Sound Pack/inventory/chainmail1.wav` on September 27, 2026 for armor upgrades on every character other than the Treasury's Master of Coin. Original source rights apply to this recording.
+
+- Source SHA-256: `44d4d6b0cda8138c9d5545ba4f434f53b7817ba32d98ddfdf5bff6ae7acdefdf`.
+- Source: approximately 0.58 seconds, stereo, 44.1 kHz, 24-bit PCM WAV.
+- Runtime cue: `chainmail_armor_upgrade`, with recommended gain 0.55 before the player's Effects setting.
+- The full recording uses the same PCM16 WAV, MP3 and OGG conversions described above, without trimming or volume processing. Metadata is removed.
+
+The War Captain, Cavalry Master and Defensive Commander use this cue for all six armor slots at every rarity, including rarity promotions. It follows the Gold payment cue by 150 ms and uses the same confirmation, session, duplicate/replay, Effects and audio-failure safeguards as the Treasury cloth cue. Weapons, tools, necklaces and Equip/Unequip do not trigger armor sounds. The gear item's officer determines the sound; switching panels while a request is pending cannot select the wrong cue.

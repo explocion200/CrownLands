@@ -87,7 +87,11 @@ async function run() {
   }
 
   const gearDefinitions = require("../common-gear");
-  for (const definition of gearDefinitions.DEFINITIONS) for (const scenario of ["success", "rejected", "stale", "replayed", "duplicate", "equip", "unequip", "audio-failed", "missing-receipt"]) {
+  const armorCueByOfficer = {
+    treasury: "treasury_armor_upgrade", barracks: "chainmail_armor_upgrade",
+    "royal-stables": "chainmail_armor_upgrade", gatehouse: "chainmail_armor_upgrade",
+  };
+  for (const definition of gearDefinitions.DEFINITIONS) for (const scenario of ["success", "wrong-panel", "rejected", "not-ok", "stale", "replayed", "duplicate", "equip", "unequip", "audio-failed", "missing-receipt"]) {
     const f = fixture(), response = deferred();
     const toasts = [];
     f.context.state.gear = { instances: { target: { gearKey: definition.gearKey, level: 1 } } };
@@ -105,25 +109,28 @@ async function run() {
     if (scenario === "audio-failed") {
       const play = f.context.playGameSound;
       f.context.playGameSound = (id, options) => {
-        if (id === "treasury_armor_upgrade") throw Error("Cloth audio failed");
+        if (["treasury_armor_upgrade", "chainmail_armor_upgrade"].includes(id)) throw Error("Armor audio failed");
         return play(id, options);
       };
     }
     vm.runInContext(extract(gear, "runCommonGearAction"), f.context);
     const action = ["equip", "unequip"].includes(scenario) ? scenario : "merge";
-    const pending = f.context.runCommonGearAction(definition.buildingId, action, "target");
+    const panel = scenario === "wrong-panel" ? (definition.buildingId === "treasury" ? "barracks" : "treasury") : definition.buildingId;
+    const pending = f.context.runCommonGearAction(panel, action, "target");
     assert.equal(f.sounds.length, 0);
     if (scenario === "stale") f.context.scope = "session-two";
     if (scenario === "rejected") response.reject(Error("Upgrade denied"));
-    else response.resolve({ spentGold: 100, upgradedInstanceId: scenario === "missing-receipt" ? "" : "upgraded", [scenario]: true });
+    else response.resolve({ ok: scenario !== "not-ok", spentGold: 100, upgradedInstanceId: scenario === "missing-receipt" ? "" : "upgraded", [scenario]: true });
     await pending;
-    const hasPayment = ["success", "audio-failed", "missing-receipt"].includes(scenario);
-    const hasCloth = scenario === "success" && definition.buildingId === "treasury" && definition.category === "armor";
+    const hasPayment = ["success", "wrong-panel", "audio-failed", "missing-receipt"].includes(scenario);
+    const hasArmorSound = ["success", "wrong-panel"].includes(scenario) && definition.category === "armor";
+    const armorCue = armorCueByOfficer[definition.buildingId];
+    assert(armorCue, `Missing audio expectation for ${definition.buildingId}`);
     assert.deepEqual(f.sounds.map(sound => sound.id), [
-      ...(hasPayment ? ["gold_spend"] : []), ...(hasCloth ? ["treasury_armor_upgrade"] : []),
+      ...(hasPayment ? ["gold_spend"] : []), ...(hasArmorSound ? [armorCue] : []),
     ], `${definition.gearKey} ${scenario}: wrong upgrade cues`);
-    if (hasCloth) {
-      assert.equal(f.sounds[1].options.delayMs, 150, "The cloth cue must follow the payment sound");
+    if (hasArmorSound) {
+      assert.equal(f.sounds[1].options.delayMs, 150, "The armor cue must follow the payment sound");
       assert.equal(f.sounds[1].options.allowCrossMap, true);
     }
     if (scenario === "audio-failed") assert(toasts.some(message => message.includes("upgraded")), "Audio failure rejected a confirmed upgrade");
@@ -172,6 +179,6 @@ async function run() {
   for (const [source, name] of [[economy, "buyShopItem"], [economy, "upgradeCity"], [game, "recruit"], [game, "applySavedSkillPreset"], [game, "handleClanSubmit"]]) {
     assert(extract(source, name).includes("playGoldSpendSound("), `${name} is missing its confirmed spending cue`);
   }
-  console.log("Validated Gold spending and Treasury armor audio: confirmed batches, every Gear definition, retries, stale sessions, free actions, independent controls and payment-safe audio failures.");
+  console.log("Validated Gold spending and officer armor audio: confirmed batches, every Gear definition, cloth/chainmail routing, retries, stale sessions, free actions, independent controls and payment-safe audio failures.");
 }
 if (require.main === module) run().catch(error => { console.error(error); process.exitCode = 1; });

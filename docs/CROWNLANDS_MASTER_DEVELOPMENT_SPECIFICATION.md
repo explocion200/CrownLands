@@ -911,6 +911,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 - Common Gear is the live persistent equipment foundation. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Gear is organized around War Captain, Master of Coin, Cavalry Master, and Defensive Commander roles.
+- **Officer armor upgrade audio — confirmed September 27, 2026:** Successful armor upgrades and rarity promotions for the War Captain, Cavalry Master and Defensive Commander use the owner-supplied `RPG Sound Pack/inventory/chainmail1.wav`. The Master of Coin retains `cloth-heavy.wav`. Apply the appropriate cue to all six armor slots at every rarity, 150 ms after the Gold payment cue, using the gear item's officer. Play only after a newly confirmed upgrade in the current session; rejected, duplicate/replayed and missing-receipt results stay silent. Weapons, tools, necklaces and Equip/Unequip do not trigger armor sounds. Existing Effects mute/volume and music remain independent, and audio failure cannot reject an accepted upgrade. This changes no upgrade rules or costs. Production deployment requires verification.
 - Each role has eight equipment slots, for 32 Common Gear definitions in the current foundation.
 - Common Gear progresses from Level 1 through Level 5.
 - A Common Gear Box reveals exactly three server-rolled Level 1 Common pieces.
@@ -1204,7 +1205,7 @@ Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction an
 
 ### Confirmed Treasury equipment presentation
 
-- **Armor upgrade audio — confirmed September 27, 2026:** Successful Master of Coin armor upgrades and rarity promotions use the owner-supplied `RPG Sound Pack/inventory/cloth-heavy.wav`, following the existing Gold payment cue. Apply it to the six armor slots at all rarities, with existing Effects mute/volume controls. Tools, necklaces, other officers and Equip/Unequip actions retain their existing audio. Play only for a newly confirmed upgrade in the current session; no change to upgrade rules or costs. Production deployment requires verification.
+- **Armor upgrade audio — confirmed September 27, 2026:** Successful Master of Coin armor upgrades and rarity promotions use the owner-supplied `RPG Sound Pack/inventory/cloth-heavy.wav`, following the existing Gold payment cue. Apply it to the six armor slots at all rarities, with existing Effects mute/volume controls. Other officers use the chainmail cue described in Section 11. Tools, necklaces and Equip/Unequip actions retain their existing audio. Play only for a newly confirmed upgrade in the current session; no change to upgrade rules or costs. Production deployment requires verification.
 
 - The approved Treasury Manage Gear screen uses parchment, muted moss, dark ink, and engraved medieval symbols. It supports desktop and mobile landscape, with a desktop cap of 1200 × 790 pixels and viewport-fitting dimensions on smaller screens.
 - The Master of Coin portrait sits between the existing eight equipment slots. The equipment bag occupies the middle pane, with the selected item's information on the right. Bag and item information scroll independently; Equip/Unequip and Upgrade remain visible at the bottom of the selected pane.

@@ -1648,12 +1648,16 @@ async function runCommonGearAction(buildingId, action, instanceId, quotedCost = 
     applyServerEconomyResult(result);
     if (action === "merge") playGoldSpendSound(result?.spentGold, result);
     if (action === "merge") {
-      if (definition.buildingId === "treasury" && definition.category === "armor"
+      if (definition.category === "armor"
           && result?.upgradedInstanceId && result?.ok !== false && !result?.replayed && !result?.duplicate) {
         try {
-          playGameSound("treasury_armor_upgrade", { allowCrossMap: true, delayMs: 150 });
+          if (definition.buildingId === "treasury") {
+            playGameSound("treasury_armor_upgrade", { allowCrossMap: true, delayMs: 150 });
+          } else {
+            playGameSound("chainmail_armor_upgrade", { allowCrossMap: true, delayMs: 150 });
+          }
         } catch (error) {
-          console.warn("Could not play confirmed Treasury armor upgrade sound", error);
+          console.warn("Could not play confirmed armor upgrade sound", error);
         }
       }
       const responseGear = result?.currentUser?.gear || result?.gear;
