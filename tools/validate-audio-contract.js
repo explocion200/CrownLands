@@ -1489,7 +1489,7 @@ function main() {
   const indexSource = readSource("index.html");
   const stylesSource = `${readSource("styles.css")}\n${readSource("interface-theme.css")}`;
   const serviceWorkerSource = readSource("service-worker.js");
-  const runtimeSource = `${audioManagerSource}\n${gameSource}\n${readSource("common-gear-ui.js")}\n${indexSource}`;
+  const runtimeSource = `${audioManagerSource}\n${gameSource}\n${readSource("common-gear-ui.js")}\n${readSource("common-gear-box-ui.js")}\n${indexSource}`;
 
   const counts = validateManifestAndFiles(manifest, runtimeSource);
   validateMuteAndUnlockContracts(audioManagerSource, indexSource);

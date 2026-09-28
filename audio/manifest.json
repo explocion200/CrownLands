@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav, interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav, interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording and chest.mp3 wooden creak; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -284,6 +284,16 @@
       "recommended_volume": 0.55,
       "description": "User-supplied RPG Sound Pack chainmail1.wav for confirmed armor upgrades on officers other than the Master of Coin.",
       "source_sha256": "44d4d6b0cda8138c9d5545ba4f434f53b7817ba32d98ddfdf5bff6ae7acdefdf"
+    },
+    {
+      "id": "gear_box_open",
+      "category": "rewards",
+      "wav": "rewards/gear_box_open.wav",
+      "ogg": "rewards/gear_box_open.ogg",
+      "loop": false,
+      "recommended_volume": 1,
+      "description": "Owner-supplied chest.mp3 wooden creak, timed to the confirmed Gear Box lid opening.",
+      "source_sha256": "46493945ec68ab6dcfcecbf308d715592a4d72ebbb50fdd8110340a01a36e750"
     },
     {
       "id": "troop_reward",

@@ -1,59 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e2baf3306659e33b4474d47b1fd1992d3d4e4997",
+  "baseCommit": "d6c3e3a9fc4fdbcf26a19d431596e1f65abbc6b0",
   "coverage": [
     {
-      "paths": [
-        "assets/worlds/core-expansion-v1/regions/core-v2-north-west-holding-tower-m1-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-north-east-holding-tower-p1-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-south-west-holding-tower-m1-p1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-south-east-holding-tower-p1-p1.json",
-        "functions/core-expansion-world-layout.json",
-        "assets/worlds/core-expansion-v1/build-receipt.json",
-        "tools/map-art/clearance.json",
-        "tools/map-art/clan-tower-clearance.json"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-city-clearance.js",
-        "tools/validate-clan-tower-city-clearance-browser.js",
-        "tools/validate-illustrated-map-art.js",
-        "tools/validate-core-expansion-release.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-production-artifact.js",
-        "functions/test/emulator-illustrated-map-coordinates.js"
-      ],
-      "reason": "Only canonical city coordinates on the four active Core Tower maps change. Check all building stages, labels and action controls at desktop/mobile zooms, identity/state preservation, maximum city art and road/scenery clearances, client/server parity, canonical route endpoints, existing march timing, bundle hashes and coordinate-only persistence. Shared world data requires matching server/client deployment and the scoped emulator migration check."
+      "paths": ["common-gear-box-ui.js", "audio/manifest.json", "audio/rewards/gear_box_open.wav", "audio/rewards/gear_box_open.mp3", "audio/rewards/gear_box_open.ogg"],
+      "tests": ["tools/validate-common-gear-box-browser.js", "tools/validate-audio-contract.js", "tools/validate-audio-levels.js", "tools/validate-audio-delivery.js", "tools/validate-audio-unlock.js", "tools/validate-production-artifact.js"],
+      "reason": "Add one presentation-only cue to the confirmed Gear Box opening. Verify desktop and landscape controls, real codec decoding and onset timing, independent music, Effects mute, reduced/off motion, failed and pending requests, repeat input, dismissed/replaced/hidden views, owner changes, lost-response recovery and audio-error isolation. Shared audio checks cover gain, codec inventory, unlock and delivery; production build validation covers packaging. Server rewards, box counts and authority are unchanged, so no emulator suite is affected."
     },
     {
-      "paths": [
-        "tools/admin-align-illustrated-map-cities.js",
-        "tools/illustrated-map-coordinate-plan.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-city-clearance.js",
-        "tools/validate-illustrated-map-art.js",
-        "functions/test/emulator-illustrated-map-coordinates.js"
-      ],
-      "reason": "The release migration accepts an explicit current-active map subset and binds the reviewed plan hash to that subset. Test inactive/unknown/duplicate scope rejection, canonical coordinate planning, x/y-only masks, owner/Main City/progression preservation, stale-document preconditions and transactional realm rollover guards."
+      "paths": ["tools/validate-audio-contract.js", "tools/validate-common-gear-box-browser.js", "tools/validate-audio-unlock.js"],
+      "tests": ["tools/validate-audio-contract.js", "tools/validate-common-gear-box-browser.js", "tools/validate-audio-unlock.js"],
+      "reason": "Include the existing Gear Box module in audio cue coverage, exercise the added cue in the complete effects unlock fixture and execute the expanded Gear Box real-browser regression with synthetic server receipts and no production writes."
     },
     {
-      "paths": [
-        "tools/validate-clan-tower-city-clearance.js",
-        "tools/validate-clan-tower-city-clearance-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-city-clearance.js",
-        "tools/validate-clan-tower-city-clearance-browser.js"
-      ],
-      "reason": "Run both added regressions against packaged map definitions and the actual game renderer, including canonical city points, owned level-100 city banners, four building art stages and the wider rival report controls."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/clan-tower-city-clearance.md"
-      ],
+      "paths": ["audio/rewards/README.md", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Record the explicitly requested four-map clearance, unchanged city identities and buildings, reviewed positions, evidence and coordinated client/server plus scoped coordinate migration procedure. Documentation adds no runtime behavior."
+      "reason": "Record the explicitly requested sound, source license and checksum, reproducible level adjustment and presentation behavior. No independent runtime behavior is introduced by these documents."
     }
   ]
 }

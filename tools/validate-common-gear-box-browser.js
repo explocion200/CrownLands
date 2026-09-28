@@ -68,8 +68,85 @@ async function main() {
     await client.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await evaluate('setAnimationModePreference("full");__boxQA.reset();void openOneCommonGearBox()');await settled();assert.equal(await evaluate('modal.dataset.motion'),'reduced');await client.send('Emulation.setEmulatedMedia',{features:[]});
     await evaluate('__boxQA.reset();setAnimationModePreference("off");document.querySelector("#cgbChestArt").focus()');for(const type of ['keyDown','keyUp'])await client.send('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13,...(type==='keyDown'?{text:'\r'}:{})});await wait('__boxQA.calls.length===1');await settled();assert.equal(await evaluate('state.gear.commonGearBoxes'),4);
     await click('[data-cgb-action=castle]');assert(await evaluate("modal.classList.contains('bailey-modal')"));await evaluate('__boxQA.reset()');await click('[data-cgb-action=bag]');assert(await evaluate("modal.classList.contains('inventory-modal')"));
-    await evaluate('getOnlineApi=window.__boxOriginalApi');assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));
-    console.log('PASS: Gear Box 20 desktop/landscape states; chest/button/keyboard opening, 5-to-0 repeat, server counts and 3 rewards, duplicate-click guard, idempotent lost-response recovery, close/navigation/owner/freshness guards, motion preferences and visible controls.');
+    // Exercise the real mixer and the confirmed opening boundary, including delayed responses.
+    await wait('window.CrownlandsAudio?.ready');
+    await evaluate(`(()=>{
+      window.__boxOriginalSound=playGameSound;
+      __boxQA.soundCalls=[];__boxQA.soundStarts=[];
+      playGameSound=(id,options)=>{
+        if(id==='gear_box_open'){
+          if(__boxQA.soundError)throw Error('Synthetic audio failure');
+          __boxQA.soundCalls.push({open:Number(commonGearBoxView.chest.svg.dataset.open),at:performance.now()});
+        }
+        return __boxOriginalSound(id,options);
+      };
+      __boxQA.originalRecord=crownlandsAudio.recordEffectStart;
+      crownlandsAudio.recordEffectStart=function(asset,gain){
+        if(asset.id==='gear_box_open')__boxQA.soundStarts.push(performance.now());
+        return __boxQA.originalRecord.call(this,asset,gain);
+      };
+    })()`);
+    for (const [width,height] of [[1440,900],[844,390]]) {
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await evaluate('__boxQA.reset();setAnimationModePreference("full");__boxQA.mode="slow";__boxQA.soundCalls=[];__boxQA.soundStarts=[]');
+      await click('#cgbChestArt');
+      assert.equal(await evaluate('__boxQA.soundCalls.length'),0,'No chest cue before confirmation');
+      await evaluate('crownlandsAudio.prepareEffect("gear_box_open")');
+      await evaluate('__boxQA.resolve()');
+      await wait('__boxQA.soundStarts.length===1');
+      await wait('Number(commonGearBoxView.chest.svg.dataset.open)>.2 && Number(commonGearBoxView.chest.svg.dataset.open)<1');
+      const timing=await evaluate('({call:__boxQA.soundCalls[0],started:__boxQA.soundStarts[0],gain:crownlandsAudio.lastEffectBaseGain,musicPaused:crownlandsAudio.currentMusic?.paused})');
+      assert.equal(timing.call.open,0,'Sound starts with the closed lid');
+      assert(timing.started-timing.call.at<200,'Prepared sound must start promptly with the lid');
+      assert.equal(timing.gain,1);
+      assert.equal(timing.musicPaused,false,'Music continues through the chest sound');
+      await settled();assert.equal(await evaluate('__boxQA.soundCalls.length'),1);
+      results.push({width,height,audio:'passed',latencyMs:timing.started-timing.call.at});
+    }
+    for (const scenario of ['closed','replaced','owner','hidden','muted','audio-failed','preload-failed','reduced','off']) {
+      await evaluate(`__boxQA.reset();__boxQA.soundCalls=[];__boxQA.soundStarts=[];__boxQA.mode='slow';setAnimationModePreference(${JSON.stringify(['reduced','off'].includes(scenario)?scenario:'full')})`);
+      if(scenario==='muted')await evaluate('crownlandsAudio.setEffectsMuted(true)');
+      if(scenario==='audio-failed')await evaluate('__boxQA.soundError=true');
+      if(scenario==='preload-failed')await evaluate('__boxQA.originalPrepare=crownlandsAudio.prepareEffect;crownlandsAudio.prepareEffect=()=>{throw Error("Synthetic preload failure")}');
+      await evaluate('void openOneCommonGearBox();void openOneCommonGearBox()');
+      assert.equal(await evaluate('__boxQA.calls.length'),1,'Repeated input sends one request');
+      if(scenario==='closed')await evaluate('modal.close()');
+      if(scenario==='replaced')await evaluate('renderCommonGearBuilding("royal-stables")');
+      if(scenario==='owner')await evaluate('__boxQA.uid="another-user"');
+      if(scenario==='hidden')await evaluate('Object.defineProperty(document,"hidden",{configurable:true,value:true})');
+      await evaluate('__boxQA.resolve()');
+      await settled();
+      if(scenario==='hidden')await evaluate('delete document.hidden');
+      const expectedSilent=['closed','replaced','owner','hidden','audio-failed'].includes(scenario);
+      assert.equal(await evaluate('__boxQA.soundCalls.length'),expectedSilent?0:1,scenario);
+      if(scenario==='muted'){
+        assert.equal(await evaluate('__boxQA.soundStarts.length'),0,'Muted opening creates no audio source');
+        await evaluate('crownlandsAudio.setEffectsMuted(false)');
+      }
+      if(scenario==='audio-failed')await evaluate('__boxQA.soundError=false');
+      if(scenario==='preload-failed')await evaluate('crownlandsAudio.prepareEffect=__boxQA.originalPrepare');
+      if(['audio-failed','preload-failed','reduced','off'].includes(scenario)){
+        assert.equal(await evaluate('state.gear.commonGearBoxes'),4,scenario);
+        assert.equal(await evaluate('commonGearBoxSession.error'),'',scenario);
+        assert.equal(await evaluate("modal.querySelectorAll('.cgb-reward-card').length"),3,scenario);
+      }
+    }
+    for(const mode of ['fail','lost']){
+      await evaluate(`__boxQA.reset();__boxQA.soundCalls=[];__boxQA.mode=${JSON.stringify(mode)};void openOneCommonGearBox()`);await settled();
+      assert.equal(await evaluate('__boxQA.soundCalls.length'),0,mode+' response stays silent');
+      assert(await evaluate('!!commonGearBoxSession.error'));
+      if(mode==='lost'){
+        await evaluate('void openOneCommonGearBox()');await settled();
+        assert.equal(await evaluate('__boxQA.soundCalls.length'),1,'Recovered opening is presented once');
+        await evaluate('showCommonGearBoxReveal()');assert.equal(await evaluate('__boxQA.soundCalls.length'),1,'Reopening revealed rewards is silent');
+      }
+    }
+    for(const extension of ['mp3','ogg','wav']){
+      const duration=await evaluate(`fetch('audio/rewards/gear_box_open.${extension}').then(r=>{if(!r.ok)throw Error('Missing codec');return r.arrayBuffer()}).then(b=>crownlandsAudio.effectContext.decodeAudioData(b)).then(b=>b.duration)`);
+      assert(duration>.9&&duration<1.05,extension+' retains the short opening');
+    }
+    await evaluate('getOnlineApi=window.__boxOriginalApi;playGameSound=window.__boxOriginalSound;crownlandsAudio.recordEffectStart=__boxQA.originalRecord');assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed',audio:'passed'},null,2));
+    console.log('PASS: Gear Box 20 desktop/landscape states; opening sound timing and codecs, Effects mute, independent music, audio/preload failures, chest/button/keyboard opening, repeat input, three rewards, lost-response recovery, close/navigation/owner/visibility guards and motion preferences.');
   } finally { if(client){await client.send('Browser.close').catch(()=>{});client.close();}if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}await server.close(); }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
