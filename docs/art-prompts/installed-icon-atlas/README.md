@@ -7,7 +7,7 @@ The September 28, 2026 user-approved atlas artwork supersedes the older Pass 3G 
 - master.png: approved installed-icon atlas v4, copied without pixel changes.
 - maskable-master.png: built-in imagegen framing adaptation; crown and castle fit within the central Android safe circle. Scenery may be cropped by launchers.
 - Runtime PNGs: assets/icons/atlas-v1/, normal 192/512, maskable 192/512, Apple 180 and favicon 32.
-- Technical exports: Lanczos3 downsampling with Sharp 0.35.4, opaque RGB, adaptive PNG palette (quality target 55, effort 10), dithering 0.2, compression level 9. No runtime dependency was added.
+- Technical exports: Lanczos3 downsampling with Sharp 0.35.4, opaque RGB, adaptive PNG palette (quality target 50, effort 10), dithering 0.2, compression level 9. No runtime dependency was added.
 - Both source masters stay under docs and are excluded from the production artifact. The six derivatives are requested only as needed, outside the gameplay service-worker precache.
 - Existing unversioned icons remain available for public-page branding and older clients. No public-page redesign or notification badge change is included.
 
@@ -30,8 +30,8 @@ No merge, deployment, production icon update or physical-device upgrade has been
 
 ## Validation evidence
 
-- Production artifact validation passed: 58.11 MiB base plus 16.59 MiB lazy world, within unchanged budgets.
-- All six runtime PNGs total 309,370 bytes, with no transparent pixels when decoded in Chromium.
+- Production artifact validation passed using a full 40-character deployment commit ID: 58.11 MiB base plus 16.59 MiB lazy world, within unchanged budgets. This also covers the longer deployed cache-busting URLs rather than relying on the shorter local build ID.
+- All six runtime PNGs total 300,720 bytes, with no transparent pixels when decoded in Chromium.
 - Existing PWA routing/offline checks passed with the new manifest URLs.
 - Browser checks passed at desktop 1200x820 and landscape mobile 844x390. The built /play/ HTML resolves its manifest and icon links correctly; the served icon bytes match the source exports. Square, rounded, circular and 40%-radius safe-circle previews preserve the crown and castle. Small-size previews were checked at 64/48/32/16 CSS pixels.
 - Physical installed-device update/review behavior remains a post-deployment check.
