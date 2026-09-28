@@ -3,6 +3,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
+const inspectPlayerBanners=require("./player-banner-browser-checks");
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{
  const server=createMapBenchmarkServer(),address=await server.listen();
@@ -33,6 +34,17 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   for(const [tab,id] of [["players","leaderboardRows"],["clans","clanLeaderboardRows"],["glory","pvpLeaderboardRows"]]){
    await evaluate(`document.querySelector('[data-leaderboard-tab="${tab}"]').click()`);
    await ready(`document.querySelectorAll('#${id} .leaderboard-row').length===100`);
+   if(tab!=="clans"){
+    const banners=await evaluate(`(${inspectPlayerBanners})(document.querySelector('[data-leaderboard-panel="${tab}"]'))`);
+    assert(banners.length>=100&&banners.every(result=>result==="ok"),`Banner rendering at ${width}: ${JSON.stringify(banners)}`);
+    const refreshed=await evaluate(`(() => {
+     const uid=getCurrentOnlineUid(),flag={version:2,primary:'#C69A45',secondary:'#202426',symbolColor:'#F2E2BF',pattern:'cross',symbol:'wolf'};
+     FlagRenderer.refresh(uid,flag);
+     const copies=[...document.querySelectorAll('[data-leaderboard-panel="${tab}"] [data-flag-stable-key]')].filter(n=>n.dataset.flagStableKey===uid);
+     return copies.length===2&&copies.every(n=>n.classList.contains('pattern-cross')&&n.querySelector('[data-flag-symbol="wolf"]')&&n.style.getPropertyValue('--flag-primary')==='#C69A45');
+    })()`);
+    assert(refreshed,"Saved flag refresh missed the player row or personal standing");
+   }
    const layout=await evaluate(`(() => {
     const l=document.getElementById('${id}'),p=l.closest('[data-leaderboard-panel]'),m=document.querySelector('#modal');
     const champions=[...l.querySelectorAll('.leaderboard-champion')],box=l.getBoundingClientRect();

@@ -3,6 +3,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
+const inspectPlayerBanners=require("./player-banner-browser-checks");
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   const server=createMapBenchmarkServer(),address=await server.listen();
@@ -26,6 +27,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:height<600});
       for(const sample of ["standard","large","independent","unavailable"]){
         await run(`PublicProfileReview.show(${JSON.stringify(sample)})`);await delay(160);
+        assert.deepEqual(await run(`(${inspectPlayerBanners})(modalBody)`),["ok"],`Public banner at ${width}/${sample}`);
         const layout=await run(`(()=>{const r=modal.getBoundingClientRect(),body=modalBody,button=body.querySelector('[data-public-main-city]'),b=button.getBoundingClientRect(),cols=[...body.querySelectorAll('.public-profile-section')].map(n=>n.getBoundingClientRect()),flag=body.querySelector('#publicPlayerFlag');return {open:modal.open,width:r.width,height:r.height,left:r.left,top:r.top,bottom:r.bottom,viewportHeight:innerHeight,viewportWidth:innerWidth,overflow:body.scrollWidth>body.clientWidth+1,columns:cols.every(c=>Math.abs(c.top-cols[0].top)<2),buttonVisible:b.bottom<=innerHeight&&b.top>=0,disabled:button.disabled,flag:!!flag.querySelector('svg'),text:body.textContent,brokenImages:[...body.querySelectorAll('img')].filter(n=>!n.complete||!n.naturalWidth).length}})()`);
         assert(layout.open&&!layout.overflow&&layout.columns,JSON.stringify({width,height,sample,layout}));
         assert(layout.left>=0&&layout.top>=0&&layout.bottom<=height+1,"Profile leaves viewport");

@@ -18,7 +18,10 @@
       uid: i === 26 ? uid : `ledger-qa-${i}`, displayName: `Ruler ${i + 1} of Wyvernmarket`,
       kingPower: (100 - i) * 12845577, cityCount: 42 - i % 23, mainRegionId: getActiveOnlineRegionId(),
       updatedAtMs: Date.now() - 180000, kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
-      flag: state.flag, clanId: 'ledger-qa-clan', clanName: 'The Amber Wardens', clanTag: 'AMBR',
+      flag: { version:2, primary:PLAYER_FLAG_CONFIG.COLORS[i % PLAYER_FLAG_CONFIG.COLORS.length].value,
+        secondary:'#202426', symbolColor:'#F2E2BF', pattern:PLAYER_FLAG_CONFIG.PATTERNS[i % PLAYER_FLAG_CONFIG.PATTERNS.length].key,
+        symbol:PLAYER_FLAG_CONFIG.SELECTABLE_SYMBOLS[i % PLAYER_FLAG_CONFIG.SELECTABLE_SYMBOLS.length].key },
+      clanId: 'ledger-qa-clan', clanName: 'The Amber Wardens', clanTag: 'AMBR',
       worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION,
     }));
     const clans = entries.map((entry, i) => ({ id: i === 26 ? 'ledger-qa-clan' : `ledger-clan-${i}`, name: `The Wardens of Greyfen ${i + 1}`, tag: 'WARD', memberCount: 18, totalKingPower: entry.kingPower * 3 }));
