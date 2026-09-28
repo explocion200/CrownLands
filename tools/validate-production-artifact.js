@@ -142,7 +142,7 @@ const preparedWorldBytes = files
   .filter(filePath => filePath.startsWith(preparedWorldRoot))
   .reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
 const baseClientBytes = totalBytes - preparedWorldBytes;
-// Eight supplied 128 kbps tracks stream on demand, replacing 2.46 MiB of old music.
+// Eight supplied 128 kbps tracks stream on demand, replacing 2.49 MiB of old music.
 // Preserve their source quality; cap the full playlist separately at 24 MiB.
 const musicRoot = `${path.join(dist, "audio", "music")}${path.sep}`;
 const musicFiles = files.filter(filePath => filePath.startsWith(musicRoot));

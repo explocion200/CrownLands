@@ -6,6 +6,8 @@ All eight tracks share one shuffled playlist. Each finishes before the next begi
 
 Tracks stream on demand through native media requests and stay outside the offline startup cache. No WAV or OGG duplicates are shipped for music; effects retain their existing codec fallbacks. Per-track playback gains bring source mean levels toward -26 dBFS before the player’s volume setting, without amplifying or re-encoding any recording.
 
+The previous procedural soundtrack is retained under `docs/audio-sources/retired-starter-music/` for recovery. That source archive is excluded from the production build and active audio manifest.
+
 | Game file | Supplied file | Duration | SHA-256 |
 |---|---|---|---|
 | medieval_vol_2_01.mp3 | Medieval Vol. 2 1 (Loop).mp3 | 00:03:01.76 | 8069233be5596eaf930e25a3dd2da6bd0512b0fa02d7490f46191600dc10655d |
