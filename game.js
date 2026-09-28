@@ -22812,8 +22812,9 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       } else {
         showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
       }
-      playRewardSound(type, { regionId: bonus.regionId });
       if (reward > 0) {
+        if (type === "gold") playGameSound("map_gold_pickup", { regionId: bonus.regionId });
+        else playRewardSound(type, { regionId: bonus.regionId });
         playRewardAnimation(type, {
           id: `harvest:${bonus.id}:${type}`,
           sourceAnchor: rewardSourceAnchor,
@@ -22884,7 +22885,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
   renderHud();
   renderHarvestBonuses();
   showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})${getHarvestBonusRespawnToastSuffix(daily)}`);
-  playRewardSound("gold", { regionId: bonus.regionId });
+  playGameSound("map_gold_pickup", { regionId: bonus.regionId });
   playRewardAnimation("gold", {
     id: `harvest:${bonus.id}:gold`,
     sourceAnchor: rewardSourceAnchor,

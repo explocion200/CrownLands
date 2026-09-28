@@ -601,6 +601,8 @@ Confirmed September 27, 2026. **Status:** `IN DEVELOPMENT`; merge and deployment
 
 - **Pickup placement clarification — September 21, 2026:** Gold and troop pickups must occupy empty space toward the active map's center. Their full image and click area must clear cities, Camps, Strongholds, the Citadel, Clan Towers and separate scenery images, including trees, bushes and rocks. If the central search has no clear position, retry after five seconds instead of placing a pickup behind artwork. Reward amounts, timing, caps and collection authority remain unchanged. Deployment of this placement correction requires verification.
 
+- **Map Gold pickup audio — September 27, 2026:** Successful map Gold collections use the owner-supplied `RPG Sound Pack/inventory/money.wav` recording. The cue follows the existing active-map, Effects volume and mute controls. Troop pickups and other reward sources retain their existing sounds. Production deployment of this audio change requires verification.
+
 These are verified repository facts for commit `27105ae...`; exact deployed backend parity remains **NEEDS VERIFICATION**.
 
 ### Needs verification

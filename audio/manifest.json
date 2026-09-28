@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Sound effects: original procedural audio generated for Crownlands; the project owner may use and modify them in the game and marketing. Music: user-supplied Medieval Vol. 2 tracks; original source rights apply. See music/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -227,6 +227,16 @@
       "loop": false,
       "recommended_volume": 0.58,
       "description": "Bright bronze coin cascade for collecting gold."
+    },
+    {
+      "id": "map_gold_pickup",
+      "category": "rewards",
+      "wav": "rewards/map_gold_pickup.wav",
+      "ogg": "rewards/map_gold_pickup.ogg",
+      "loop": false,
+      "recommended_volume": 0.58,
+      "description": "User-supplied RPG Sound Pack money.wav for successful map Gold pickups.",
+      "source_sha256": "4147e7fbe404d2cd97ba7b5af61e88ebe4f652626589c4ee9d570595262b8802"
     },
     {
       "id": "troop_reward",
