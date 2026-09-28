@@ -334,7 +334,7 @@ async function assertAllEffectCodecsDecode(page, browserName) {
     return { decoded, effectCount: effects.length };
   });
 
-  assert.equal(result.effectCount, 27, `${browserName}: expected all 27 production effects.`);
+  assert.equal(result.effectCount, 28, `${browserName}: expected all 28 production effects.`);
   assert.equal(
     result.decoded.length,
     result.effectCount * 3,

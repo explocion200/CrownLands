@@ -1204,6 +1204,8 @@ Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction an
 
 ### Confirmed Treasury equipment presentation
 
+- **Armor upgrade audio — confirmed September 27, 2026:** Successful Master of Coin armor upgrades and rarity promotions use the owner-supplied `RPG Sound Pack/inventory/cloth-heavy.wav`, following the existing Gold payment cue. Apply it to the six armor slots at all rarities, with existing Effects mute/volume controls. Tools, necklaces, other officers and Equip/Unequip actions retain their existing audio. Play only for a newly confirmed upgrade in the current session; no change to upgrade rules or costs. Production deployment requires verification.
+
 - The approved Treasury Manage Gear screen uses parchment, muted moss, dark ink, and engraved medieval symbols. It supports desktop and mobile landscape, with a desktop cap of 1200 × 790 pixels and viewport-fitting dimensions on smaller screens.
 - The Master of Coin portrait sits between the existing eight equipment slots. The equipment bag occupies the middle pane, with the selected item's information on the right. Bag and item information scroll independently; Equip/Unequip and Upgrade remain visible at the bottom of the selected pane.
 - The approved Master of Coin illustration uses the map's medieval ink-and-wash direction, with a transparent background and a subtle breathing/blinking idle loop. It animates in Full mode while the Treasury is visible; Reduced/Off mode, background visibility, and upgrade confirmation use the still illustration. The existing animation preference and automatic performance rules remain authoritative. This artwork affects only the Treasury officer, not the equipment items or other officers.

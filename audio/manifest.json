@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav and coin.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav and cloth-heavy.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -247,6 +247,16 @@
       "recommended_volume": 0.42,
       "description": "User-supplied RPG Sound Pack coin.wav for confirmed Gold purchases, spending and donations.",
       "source_sha256": "ee72adacc8630cb590f22130a9c7c855f6eeb698d9fce6461667255ec45ed184"
+    },
+    {
+      "id": "treasury_armor_upgrade",
+      "category": "rewards",
+      "wav": "rewards/treasury_armor_upgrade.wav",
+      "ogg": "rewards/treasury_armor_upgrade.ogg",
+      "loop": false,
+      "recommended_volume": 0.55,
+      "description": "User-supplied RPG Sound Pack cloth-heavy.wav for confirmed Master of Coin armor upgrades.",
+      "source_sha256": "73bbbd383b5bbc8b8313f6fee84040aecc1de09714afbe51ba4e5162cbac3528"
     },
     {
       "id": "troop_reward",

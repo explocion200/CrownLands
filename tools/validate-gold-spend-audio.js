@@ -86,11 +86,14 @@ async function run() {
     assert.equal(f.sounds.length, scenario === "success" ? 1 : 0, `Gear Box ${scenario}: wrong number of payment cues`);
   }
 
-  for (const scenario of ["success", "rejected", "stale", "replayed", "equip", "unequip"]) {
+  const gearDefinitions = require("../common-gear");
+  for (const definition of gearDefinitions.DEFINITIONS) for (const scenario of ["success", "rejected", "stale", "replayed", "duplicate", "equip", "unequip", "audio-failed", "missing-receipt"]) {
     const f = fixture(), response = deferred();
-    f.context.state.gear = { instances: { target: { gearKey: "sword", level: 1 } } };
+    const toasts = [];
+    f.context.state.gear = { instances: { target: { gearKey: definition.gearKey, level: 1 } } };
     Object.assign(f.context, {
-      COMMON_GEAR: { getDefinition: () => ({ gearName: "Sword", rarity: "common" }) },
+      COMMON_GEAR: gearDefinitions,
+      showToast: message => toasts.push(message),
       commonGearActionInFlight: false, commonGearActiveAction: null,
       commonGearMergeConfirmOpen: false, commonGearViewRequestId: 0,
       commonGearUpgradeRequests: new Map(), getCommonGearActionScope: () => f.context.scope,
@@ -99,15 +102,31 @@ async function run() {
       getCommonGearUpgradePreview: () => ({ upgradeGold: 100 }),
       getOnlineApi: () => ({ upgradeCommonGear: () => response.promise, equipCommonGear: () => response.promise, unequipCommonGear: () => response.promise }),
     });
+    if (scenario === "audio-failed") {
+      const play = f.context.playGameSound;
+      f.context.playGameSound = (id, options) => {
+        if (id === "treasury_armor_upgrade") throw Error("Cloth audio failed");
+        return play(id, options);
+      };
+    }
     vm.runInContext(extract(gear, "runCommonGearAction"), f.context);
     const action = ["equip", "unequip"].includes(scenario) ? scenario : "merge";
-    const pending = f.context.runCommonGearAction("barracks", action, "target");
+    const pending = f.context.runCommonGearAction(definition.buildingId, action, "target");
     assert.equal(f.sounds.length, 0);
     if (scenario === "stale") f.context.scope = "session-two";
     if (scenario === "rejected") response.reject(Error("Upgrade denied"));
-    else response.resolve({ spentGold: 100, [scenario]: true });
+    else response.resolve({ spentGold: 100, upgradedInstanceId: scenario === "missing-receipt" ? "" : "upgraded", [scenario]: true });
     await pending;
-    assert.equal(f.sounds.length, scenario === "success" ? 1 : 0, `Gear ${scenario}: wrong number of payment cues`);
+    const hasPayment = ["success", "audio-failed", "missing-receipt"].includes(scenario);
+    const hasCloth = scenario === "success" && definition.buildingId === "treasury" && definition.category === "armor";
+    assert.deepEqual(f.sounds.map(sound => sound.id), [
+      ...(hasPayment ? ["gold_spend"] : []), ...(hasCloth ? ["treasury_armor_upgrade"] : []),
+    ], `${definition.gearKey} ${scenario}: wrong upgrade cues`);
+    if (hasCloth) {
+      assert.equal(f.sounds[1].options.delayMs, 150, "The cloth cue must follow the payment sound");
+      assert.equal(f.sounds[1].options.allowCrossMap, true);
+    }
+    if (scenario === "audio-failed") assert(toasts.some(message => message.includes("upgraded")), "Audio failure rejected a confirmed upgrade");
     assert.equal(f.context.commonGearActionInFlight, false);
   }
 
@@ -153,6 +172,6 @@ async function run() {
   for (const [source, name] of [[economy, "buyShopItem"], [economy, "upgradeCity"], [game, "recruit"], [game, "applySavedSkillPreset"], [game, "handleClanSubmit"]]) {
     assert(extract(source, name).includes("playGoldSpendSound("), `${name} is missing its confirmed spending cue`);
   }
-  console.log("Validated Gold spending audio: confirmed batches, Gear purchases, retries, stale sessions, free actions, independent controls and payment-safe audio failures.");
+  console.log("Validated Gold spending and Treasury armor audio: confirmed batches, every Gear definition, retries, stale sessions, free actions, independent controls and payment-safe audio failures.");
 }
 if (require.main === module) run().catch(error => { console.error(error); process.exitCode = 1; });

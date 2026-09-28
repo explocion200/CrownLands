@@ -260,7 +260,7 @@ function createRewardSequences() {
 }
 
 function createGoldSpendSequences() {
-  return ["level_up", "troop_dispatch"].flatMap(id => [0, 0.05, 0.1, 0.2].map(offsetSeconds => ({
+  return ["level_up", "troop_dispatch", "treasury_armor_upgrade"].flatMap(id => [0, 0.05, 0.1, 0.15, 0.2].map(offsetSeconds => ({
     label: `gold_spend with ${id} after ${offsetSeconds}s`,
     entries: [
       { id: "gold_spend", offsetSeconds: 0 },

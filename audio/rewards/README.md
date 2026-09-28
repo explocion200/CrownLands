@@ -19,3 +19,14 @@ The owner also supplied `RPG Sound Pack/inventory/coin.wav` on September 27, 202
 - `gold_spend.wav`, `.mp3` and `.ogg` use the same conversion settings described above, retaining the full recording without volume processing.
 
 The cue plays once per confirmed paid action or settled purchase/upgrade batch. It covers Shop and Gear Box purchases, city and gear upgrades, personal Gold donations, Clan Tower Shop purchases and Treasury spending, clan creation and renaming, paid skill presets, nearby scouting, Regroup and local recruitment. Successful outgoing Gold Gifts also use the donation sound when recipients receive production minutes, without deducting personal Gold. It never infers spending from a balance update. Rejected, duplicate, replayed and stale-session responses stay silent, as do free equipment changes, skill resets and zero-cost purchases. Effects volume/mute and the existing short anti-overlap cooldown apply; music continues independently.
+
+## Treasury armor upgrade sound
+
+The owner supplied `RPG Sound Pack/inventory/cloth-heavy.wav` on September 27, 2026 for armor upgrades belonging to the Treasury's Master of Coin. Original source rights apply to this recording.
+
+- Source SHA-256: `73bbbd383b5bbc8b8313f6fee84040aecc1de09714afbe51ba4e5162cbac3528`.
+- Source: approximately 0.41 seconds, stereo, 44.1 kHz, 24-bit PCM WAV.
+- Runtime cue: `treasury_armor_upgrade`, with recommended gain 0.55 before the player's Effects setting.
+- The full recording is converted to 16-bit PCM WAV plus MP3 (128 kbps) and OGG Vorbis (quality 4), without trimming or volume processing. Metadata is removed.
+
+Play the cloth cue 150 ms after a confirmed Treasury armor upgrade, alongside the existing Gold payment cue. It applies to head, chest, pants, boots, gloves and belt items at every rarity, including rarity promotions. It does not play for tools, necklaces, other officers, Equip/Unequip, rejected requests, duplicate/replayed receipts or stale sessions. Playback respects Effects mute/volume, leaves music running, and cannot reject an accepted upgrade if audio fails.

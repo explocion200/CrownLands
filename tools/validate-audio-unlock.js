@@ -1148,7 +1148,7 @@ async function run() {
   assert.equal(manager.effectsUnlocked, true, "The next ordinary gesture must recover a suspended effects context.");
   assert.equal(manager.getDebugState().lastEffectsError, "");
 
-  assert.equal(productionEffectAssets.length, 27, "The runtime fixture must exercise all production effects.");
+  assert.equal(productionEffectAssets.length, 28, "The runtime fixture must exercise all production effects.");
   for (const asset of productionEffectAssets) {
     now += 100;
     const productionEffectStart = effectSourceStarts.length;
