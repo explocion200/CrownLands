@@ -12,7 +12,7 @@ function extract(source, name) {
   assert(start >= 0, `Missing ${name}`);
   return (source.slice(start - 6, start) === "async " ? "async " : "") + source.slice(start, source.indexOf("\n}", start) + 2);
 }
-const spendSoundSource = extract(game, "playGoldSpendSound");
+const spendSoundSource = extract(game, "playGoldSpendSound") + "\n" + extract(game, "playGoldTransactionSound");
 module.exports = { spendSoundSource };
 
 function fixture() {
@@ -111,6 +111,24 @@ async function run() {
     assert.equal(f.context.commonGearActionInFlight, false);
   }
 
+  for (const scenario of ["success", "rejected", "stale", "duplicate", "empty"]) {
+    const f = fixture(), response = deferred();
+    Object.assign(f.context, {
+      getOnlineApi: () => ({ sendClanGift: () => response.promise }),
+      clanGiftActionInFlight: false, clanQuestClaimInFlightId: "",
+      captureAnimationAnchor: () => null, renderClanView() {}, rejectGameAction() {},
+    });
+    vm.runInContext(extract(game, "runClanSocialAction"), f.context);
+    const pending = f.context.runClanSocialAction("send-gift");
+    assert.equal(f.sounds.length, 0, "Pending Gold Gift donation played a success sound");
+    if (scenario === "stale") f.context.scope = "session-two";
+    if (scenario === "rejected") response.reject(Error("Gift denied"));
+    else response.resolve({ recipientCount: scenario === "empty" ? 0 : 2, productionMinutes: 30, [scenario]: true });
+    await pending;
+    assert.equal(f.sounds.length, scenario === "success" ? 1 : 0, `Gold Gift ${scenario}: wrong donation sound`);
+    assert.equal(f.context.state.gold, 1000, "Gold Gift audio must not deduct personal Gold");
+  }
+
   // Guard the remaining integration points: receipt amounts, success boundaries,
   // and free actions must not drift into balance-difference or click-based audio.
   for (const [source, name, receipt] of [
@@ -126,8 +144,8 @@ async function run() {
     assert(body.includes(`playGoldSpendSound(${receipt}, result`), `${name} must use the confirmed payment amount`);
     assert(body.indexOf("playGoldSpendSound(") > body.indexOf("await "), `${name} played payment audio before confirmation`);
   }
-  for (const name of ["resetSkills", "runClanSocialAction", "applyServerEconomyResult"]) {
-    assert(!extract(game, name).includes("playGoldSpendSound("), `${name} must not infer spending from free gifts, refunds or balance synchronization`);
+  for (const name of ["resetSkills", "applyServerEconomyResult"]) {
+    assert(!extract(game, name).includes("playGoldSpendSound("), `${name} must not infer spending from refunds or balance synchronization`);
   }
   assert(extract(game, "toggleScoutNearby").includes("else playGoldSpendSound(SCOUT_NEARBY_COST)"), "Refunded local scouting must remain silent");
   const regroup = extract(game, "toggleRegroup");

@@ -73,7 +73,7 @@
         "audio/rewards/map_gold_pickup.ogg",
         "tools/validate-pickup-runtime.js"
       ],
-      "reason": "Use the supplied money recording for confirmed map Gold pickups and the separate coin recording for confirmed Gold spending. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before pickup audio. Cover the spending helper, clan donations and Tower actions, paid scouting and regrouping, recruitment, clan creation/renaming and skill presets. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites.",
+      "reason": "Use the supplied money recording for confirmed map Gold pickups and the separate coin recording for confirmed Gold spending. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before pickup audio. Cover the spending helper, clan Treasury and outgoing Gold Gift donations, Tower actions, paid scouting and regrouping, recruitment, clan creation/renaming and skill presets. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites.",
       "tests": [
         "tools/validate-harvest-pickups.js",
         "tools/validate-gold-spend-audio.js",

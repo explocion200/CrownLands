@@ -116,7 +116,7 @@ async function nearbyChecks() {
     beginPendingScoutDeparture:noop,finishPendingScoutDeparture:noop,
     applyServerBulkOrderResult:(result,options)=>{assert.equal(options.render,false);applied++;return result.armies;},
     getOnlineApi:()=>({sendNearbyScouts:request=>{calls++;sent.push(request);return new Promise((resolve,fail)=>{release=resolve;reject=fail;});}}),
-  },["getBulkOrderKey","getBulkOrderRequestId","beginBulkOrderAction","isBulkOrderActionCurrent","finishBulkOrderAction","cancelBulkOrderPreview","playGoldSpendSound","toggleScoutNearby"]);
+  },["getBulkOrderKey","getBulkOrderRequestId","beginBulkOrderAction","isBulkOrderActionCurrent","finishBulkOrderAction","cancelBulkOrderPreview","playGoldSpendSound","playGoldTransactionSound","toggleScoutNearby"]);
   await scope.toggleScoutNearby(source.id);assert.equal(calls,0);
   const before=rendered;const first=scope.toggleScoutNearby(source.id);
   await scope.toggleScoutNearby(source.id);assert.equal(calls,1);assert.equal(rendered,before,"Pending batch forced a full redraw");

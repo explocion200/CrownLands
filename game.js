@@ -2915,8 +2915,12 @@ function playRewardSoundAfter(rewardType, delayMs, options = {}) {
 }
 
 function playGoldSpendSound(amount, result = null, requestScope = undefined) {
-  if (!Number.isFinite(Number(amount)) || Number(amount) <= 0
-      || result?.ok === false || result?.replayed || result?.duplicate
+  if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) return false;
+  return playGoldTransactionSound(result, requestScope);
+}
+
+function playGoldTransactionSound(result = null, requestScope = undefined) {
+  if (result?.ok === false || result?.replayed || result?.duplicate
       || (requestScope !== undefined && requestScope !== getOnlineSessionRequestScope())) return false;
   try {
     return playGameSound("gold_spend", { allowCrossMap: true });
@@ -27090,6 +27094,7 @@ async function runClanAction(action, payload = {}) {
 async function runClanSocialAction(action, rewardId = "", sourceElement = null) {
   const api = getOnlineApi();
   if (!api || clanGiftActionInFlight || clanQuestClaimInFlightId) return;
+  const soundScope = getOnlineSessionRequestScope();
   const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
   if (action === "send-gift" || action === "collect-gifts") clanGiftActionInFlight = true;
   if (action === "claim-quest") clanQuestClaimInFlightId = rewardId;
@@ -27107,6 +27112,7 @@ async function runClanSocialAction(action, rewardId = "", sourceElement = null) 
     if (result.giftActivity) clanGiftActivity = result.giftActivity;
     applyServerEconomyResult(result);
     if (action === "send-gift") {
+      if (Number(result.recipientCount) > 0 && Number(result.productionMinutes) > 0) playGoldTransactionSound(result, soundScope);
       showToast(`Gift sent to ${formatNumber(result.recipientCount || 0)} clan members.`);
     } else if (action === "collect-gifts") {
       if (result.claimed) {
