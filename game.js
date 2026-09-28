@@ -38167,6 +38167,7 @@ function normalizeLeaderboardEntry(raw) {
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
     flag: raw.flag || null,
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
+    pvpKills: Math.max(0, Math.floor(Number(raw.pvpKills) || 0)),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount ?? raw.totalCities) || 0)),
     totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
@@ -38210,7 +38211,7 @@ function formatLeaderboardAge(updatedAtMs) {
   return `${formatDuration(ageSeconds)} ago`;
 }
 
-function renderLeaderboardRow(entry, index, currentUid) {
+function renderLeaderboardRow(entry, index, currentUid, glory = false) {
   const isCurrent = entry.uid === currentUid;
   return `
     <article class="leaderboard-row ${isCurrent ? "current" : ""}" tabindex="-1">
@@ -38222,7 +38223,7 @@ function renderLeaderboardRow(entry, index, currentUid) {
       </div>
       <span class="leaderboard-map">${escapeHtml(getRegionLabel(entry.mainRegionId))}</span>
       <span class="leaderboard-cities">${formatLedgerNumber(entry.cityCount)}</span>
-      <div class="leaderboard-power"><strong>${formatLedgerNumber(entry.kingPower)}</strong><small>${escapeHtml(formatLeaderboardAge(entry.updatedAtMs))}</small></div>
+      <div class="leaderboard-power"><strong>${formatLedgerNumber(glory ? entry.pvpKills : entry.kingPower)}</strong><small>${glory ? "PvP kills · this season" : escapeHtml(formatLeaderboardAge(entry.updatedAtMs))}</small></div>
     </article>`;
 }
 
@@ -38241,7 +38242,6 @@ function renderLeaderboardRows(rows) {
   list.innerHTML = entries.length
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
-  updateLeaderboardStanding("players", entries);
   entries.forEach((entry, index) => {
     FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag, {
       stableKey: entry.uid,
@@ -38249,6 +38249,7 @@ function renderLeaderboardRows(rows) {
       size: "small",
     });
   });
+  updateLeaderboardStanding("players", entries);
 }
 
 function setLeaderboardStatus(message) {
@@ -38262,7 +38263,7 @@ function setClanLeaderboardStatus(message) {
 }
 
 function setLeaderboardTab(tabName = "players", { focus = false } = {}) {
-  leaderboardActiveTab = tabName === "clans" ? "clans" : "players";
+  leaderboardActiveTab = ["clans", "glory"].includes(tabName) ? tabName : "players";
   modalBody?.querySelectorAll("[data-leaderboard-tab]").forEach(button => {
     const selected = button.dataset.leaderboardTab === leaderboardActiveTab;
     button.classList.toggle("active", selected);
@@ -38284,6 +38285,10 @@ async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = 
     return;
   }
   if (refreshBtn) refreshBtn.disabled = true;
+  if (list.dataset.loading === "true") return;
+  list.dataset.loading = "true";
+  const scopeUid = getCurrentOnlineUid(), scopeWorld = ONLINE_WORLD_ID;
+  list.closest("[data-leaderboard-panel]").querySelector(".leaderboard-standing").textContent = "Loading your standing…";
   list.innerHTML = `<div class="leaderboard-empty">Loading King Power ranks...</div>`;
   setLeaderboardStatus("Loading global ranks...");
   try {
@@ -38310,7 +38315,7 @@ async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = 
       }
     }
 
-    if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
+    if (!list.isConnected || getCurrentOnlineUid() !== scopeUid || ONLINE_WORLD_ID !== scopeWorld || !modal.open || !modal.classList.contains("leaderboard-modal")) return;
 
     renderLeaderboardRows(rows);
     const panel = modalBody?.querySelector("#leaderboardPlayersPanel");
@@ -38324,6 +38329,7 @@ async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = 
       list.innerHTML = `<div class="leaderboard-empty">Could not load King Power ranks right now.</div>`;
     }
   } finally {
+    list.dataset.loading = "false";
     if (refreshBtn) refreshBtn.disabled = false;
   }
 }
@@ -38337,11 +38343,15 @@ async function refreshClanLeaderboardRows() {
     return;
   }
   if (refreshBtn) refreshBtn.disabled = true;
+  if (list.dataset.loading === "true") return;
+  list.dataset.loading = "true";
+  const scopeUid = getCurrentOnlineUid(), scopeWorld = ONLINE_WORLD_ID;
+  list.closest("[data-leaderboard-panel]").querySelector(".leaderboard-standing").textContent = "Loading your clan’s standing…";
   list.innerHTML = `<div class="leaderboard-empty">Loading clan ranks...</div>`;
   setClanLeaderboardStatus("Loading combined clan power...");
   try {
     const rows = await api.loadClanLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
-    if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
+    if (!list.isConnected || getCurrentOnlineUid() !== scopeUid || ONLINE_WORLD_ID !== scopeWorld || !modal.open || !modal.classList.contains("leaderboard-modal")) return;
     list.innerHTML = rows.length ? rows.map((entry, index) => `
       <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}" tabindex="-1">
         <span class="leaderboard-rank">${formatLedgerNumber(index + 1)}</span>
@@ -38354,11 +38364,48 @@ async function refreshClanLeaderboardRows() {
     if (panel) panel.dataset.loaded = "true";
     setClanLeaderboardStatus("Combined member King Power.");
   } catch (_error) {
+    if (!list.isConnected || getCurrentOnlineUid() !== scopeUid || ONLINE_WORLD_ID !== scopeWorld) return;
     list.innerHTML = `<div class="leaderboard-empty">Could not load clan ranks right now.</div>`;
+    list.closest("[data-leaderboard-panel]").querySelector(".leaderboard-standing").textContent = "Standing unavailable.";
     setClanLeaderboardStatus("Clan ranks are temporarily unavailable.");
   } finally {
+    list.dataset.loading = "false";
     if (refreshBtn) refreshBtn.disabled = false;
   }
+}
+
+async function refreshPvpLeaderboardRows() {
+  const api = getOnlineApi(), list = modalBody?.querySelector("#pvpLeaderboardRows");
+  const panel = list?.closest("[data-leaderboard-panel]"), status = panel?.querySelector("[role=status]");
+  if (!list || list.dataset.loading === "true") return;
+  panel.querySelector(".leaderboard-standing").textContent = "Loading your standing…";
+  if (!api?.loadPvpLeaderboard || !api.isSignedIn?.()) {
+    panel.querySelector(".leaderboard-standing").textContent = "Sign in to see your standing.";
+    list.innerHTML = '<div class="leaderboard-empty">Sign in online to view Field of Glory.</div>'; return;
+  }
+  const uid = getCurrentOnlineUid(), world = ONLINE_WORLD_ID;
+  const current = () => list.isConnected && modal.open && getCurrentOnlineUid() === uid && ONLINE_WORLD_ID === world;
+  list.dataset.loading = "true";
+  list.innerHTML = '<div class="leaderboard-empty">Reading the Field of Glory…</div>';
+  try {
+    const result = await api.loadPvpLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
+    if (!current()) return;
+    // Preserve the server's score/time/document-ID ordering. Never rerank by power.
+    const entries = result.entries.map(normalizeLeaderboardEntry).filter(Boolean);
+    list.innerHTML = entries.length ? entries.map((entry,index)=>renderLeaderboardRow(entry,index,uid,true)).join("")
+      : '<div class="leaderboard-empty">No PvP kills recorded yet. New battles will write the first names on the roll.</div>';
+    entries.forEach((entry,index)=>FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`),entry.flag,{stableKey:entry.uid,context:"leaderboard",size:"small"}));
+    updateLeaderboardStanding("glory", entries);
+    panel.dataset.loaded = "true";
+    status.textContent = result.trackingStartedAtMs
+      ? "Enemy troops defeated · tracked since " + new Date(result.trackingStartedAtMs).toLocaleDateString() + " · earlier battles excluded"
+      : "Enemy troops defeated · tracking new battles this season";
+  } catch (_error) {
+    if (!current()) return;
+    list.innerHTML = '<div class="leaderboard-empty">Field of Glory is temporarily unavailable. Use Refresh to try again.</div>';
+    panel.querySelector(".leaderboard-standing").textContent = "Standing unavailable.";
+    status.textContent = "Rankings could not be refreshed.";
+  } finally { list.dataset.loading = "false"; }
 }
 
 function showLeaderboardModal() {
@@ -38372,6 +38419,7 @@ function showLeaderboardModal() {
         <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard category">
           <button id="leaderboardPlayersTab" class="leaderboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="leaderboardPlayersPanel" data-leaderboard-tab="players">Top ${formatLedgerNumber(KING_POWER_LEADERBOARD_LIMIT)} Kingdoms</button>
           <button id="leaderboardClansTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardClansPanel" data-leaderboard-tab="clans" tabindex="-1">Top Clans</button>
+          <button id="leaderboardGloryTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardGloryPanel" data-leaderboard-tab="glory" tabindex="-1">Field of Glory</button>
         </div>
         <button id="leaderboardRefreshBtn" class="leaderboard-refresh-btn" type="button">Refresh</button>
       </div>
@@ -38380,6 +38428,12 @@ function showLeaderboardModal() {
         <div class="leaderboard-columns "><span>Rank</span><span>Ruler &amp; clan</span><span class="leaderboard-map">Home map</span><span class="leaderboard-cities">Cities</span><span>King Power</span></div>
         <div id="leaderboardRows" class="leaderboard-list" tabindex="0" aria-label="Kingdom rankings"><div class="leaderboard-empty">Loading King Power ranks...</div></div>
         <div class="leaderboard-toolbar"><small id="leaderboardStatus" role="status">Loading global ranks...</small><small>Scroll to view all</small></div>
+      </section>
+      <section id="leaderboardGloryPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardGloryTab" data-leaderboard-panel="glory" hidden>
+        <div class="leaderboard-standing"><span>Your standing</span></div>
+        <div class="leaderboard-columns"><span>Rank</span><span>Ruler &amp; clan</span><span class="leaderboard-map">Home map</span><span class="leaderboard-cities">Cities</span><span>PvP kills</span></div>
+        <div id="pvpLeaderboardRows" class="leaderboard-list" tabindex="0" aria-label="Seasonal PvP rankings"><div class="leaderboard-empty">Select Field of Glory to load ranks.</div></div>
+        <div class="leaderboard-toolbar"><small role="status">Enemy troops defeated · this season</small><small>Scroll to view all</small></div>
       </section>
       <section id="leaderboardClansPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardClansTab" data-leaderboard-panel="clans" hidden>
         <div class="leaderboard-standing"><span>Combined member King Power</span></div>
@@ -38392,11 +38446,12 @@ function showLeaderboardModal() {
   const tabButtons = Array.from(modalBody.querySelectorAll("[data-leaderboard-tab]"));
   tabButtons.forEach((button, index) => {
     button.addEventListener("click", () => {
-      const tabName = button.dataset.leaderboardTab === "clans" ? "clans" : "players";
+      const tabName = button.dataset.leaderboardTab;
       setLeaderboardTab(tabName);
       const panel = modalBody.querySelector(`[data-leaderboard-panel="${tabName}"]`);
       if (panel?.dataset.loaded !== "true") {
         if (tabName === "clans") refreshClanLeaderboardRows();
+        else if (tabName === "glory") refreshPvpLeaderboardRows();
         else refreshLeaderboardRows({ forcePublish: true });
       }
     });
@@ -38411,6 +38466,7 @@ function showLeaderboardModal() {
   });
   modalBody.querySelector("#leaderboardRefreshBtn")?.addEventListener("click", () => {
     if (leaderboardActiveTab === "clans") refreshClanLeaderboardRows();
+    else if (leaderboardActiveTab === "glory") refreshPvpLeaderboardRows();
     else refreshLeaderboardRows({ forcePublish: true });
   });
   if (!modal.open) modal.showModal();

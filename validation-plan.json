@@ -14,15 +14,76 @@
       "tests": [
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Isolated docs-only leaderboard design prototype using existing packaged artwork and pure heraldry rendering. Production-artifact validation checks shipping assets and build budgets remain valid; docs are excluded from the client build. Local JavaScript syntax checks and Chromium review cover 33 viewport/category/state combinations at 1366x820, 844x390 and 568x320, tab keyboard behavior, profile preview, ranking notes, scroll/focus, unique podium/list ranks, long totals, fewer entries, unranked and load/error states. No runtime game code, authoritative scoring, schema, rules or backend is modified, so emulator suites are not relevant."
+      "reason": "Approved original visual prototype remains isolated under docs; artifact validation excludes the sample review from production. Local prior prototype review covered 33 viewport/state combinations. Runtime presentation is now independently verified by the live game browser suite."
     },
     {
       "paths": [
         "docs/visual-qa/leaderboard-podium/README.md",
-        "docs/visual-qa/leaderboard-podium/visual-checks.md"
+        "docs/visual-qa/leaderboard-podium/visual-checks.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the requested podium and seasonal PvP ranking draft, inspected source contracts, proposed accounting rules that need confirmation, and local visual review. No Master Specification rule is changed or production implementation claimed. Markdown does not execute."
+      "reason": "Records the explicitly approved podium and Field of Glory rules, implementation boundaries, release order and validation evidence. Markdown does not execute and deployment status is verified separately."
+    },
+    {
+      "paths": [
+        "functions/index.js",
+        "functions/pvp-leaderboard.js",
+        "tools/test-pvp-leaderboard.js",
+        "functions/test/emulator-pvp-leaderboard.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "tests": [
+        "tools/test-pvp-leaderboard.js",
+        "functions/test/emulator-pvp-leaderboard.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-reward-camp-lifecycle.js"
+      ],
+      "reason": "The shared detailed battle writer adds a private transactional outbox. Pure allocation checks conserve player casualties and exclude neutral/friendly credit; actual city/Tower/royal-holding/rally/Camp settlement paths exercise combat, wall-only damage, recovery, simultaneous captures and unchanged accounting. New event/rules emulator covers real trigger delivery, duplicates, concurrent increments, old-season delivery and protected totals."
+    },
+    {
+      "paths": [
+        "firestore.rules",
+        "firestore.indexes.json",
+        "firebaseClient.js",
+        "tools/test-pvp-leaderboard-client.js"
+      ],
+      "tests": [
+        "tools/test-pvp-leaderboard-client.js",
+        "tools/validate-leaderboard-tabs.js",
+        "functions/test/emulator-pvp-leaderboard.js"
+      ],
+      "reason": "The client queries the current scoped PvP board and joins current public identity in bounded chunks. Exact loader tests cover limits, ordering, canonical score preservation and stale account/session/realm results. Emulator queries enforce read/write and season rules; production index readiness and read-only query verification are required before frontend publication."
+    },
+    {
+      "paths": [
+        "game.js",
+        "kingdom-ledgers-ui.js",
+        "kingdom-ledgers-ui.css",
+        "tools/map-benchmark/ledgers-qa-runtime.js",
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "tests": [
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Actual game modal verifies all three tabs at desktop and two landscape-mobile sizes, podium order, no duplicate ranks, full totals, personal navigation, scoped styles, refresh/keyboard, empty/error/few-entry states and late detached-modal responses. The fixture uses synthetic saved identity and scores; shared ledger number/render helpers and existing King/Clan rows remain covered."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Bound the approved code-only feature increment at 24 KiB and ledger presentation growth at 12 KiB, with individual entry-point limits. Production build and asset validators verify shipped content, cache/payload budgets and excluded prototype sources. No additional art, dependencies or startup requests are introduced."
     }
   ]
 }

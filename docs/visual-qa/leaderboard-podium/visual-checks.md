@@ -14,4 +14,10 @@ Reviewed September 28, 2026 with bundled Chromium/Playwright. All displayed iden
 
 Evidence (ignored local files): `release-artifacts/leaderboard-podium/checks.json`, `desktop-players.png`, `desktop-clans.png`, `desktop-glory.png`, and matching `landscape-*` / `small-*` screenshots.
 
-These are local browser fixtures, not physical-device, production-load, live scoring, migration or server performance validation. Seasonal credit and final archives are not implemented by this draft.
+These original review checks apply to the isolated prototype. They are not physical-device or production-load validation.
+
+## Live game integration
+
+The approved layout and seasonal scoring are now implemented; release verification is separate. `tools/validate-leaderboard-podium-browser.js` exercises the actual game using the repository's CDP browser harness at the same three sizes. It checks initial podium and Find my rank visibility, full scores, 100 unique entries, 2/1/3 order, all tabs, scrolling/focus, keyboard, refresh, empty/failure/retry/two-entry results and detached-modal responses. Screenshots are saved to `release-artifacts/leaderboard-live/`. The smaller layout keeps Refresh beside the tabs and reserves space for standing actions.
+
+Pure accounting/client-loader tests and three local emulator suites passed: city combat/recovery, Clan Tower reports, and the new PvP ledger trigger/concurrency/season/rules suite. The affected CI plan additionally exercises rally/royal-holding and Camp lifecycle dependencies. No synthetic production battles, player changes or historical backfill are part of validation. Final-season archives remain planned.

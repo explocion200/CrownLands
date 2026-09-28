@@ -147,6 +147,15 @@ async function main() {
     assert.equal(sum(defendingRows, "effectivePower") + snapshot.siege.startingWallPower, snapshot.totals.defensePower);
     assert.equal(sum(attackingRows, "losses"), snapshot.totals.attackerLosses);
     assert.equal(sum(defendingRows, "losses"), snapshot.totals.defenderLosses);
+    const pvp = require("../pvp-leaderboard");
+    const expectedCredits = pvp.creditForBattle(snapshot);
+    const creditRef = db.doc(`pvpKillEvents/${storageId}/events/${battleId}`);
+    const credit = (await creditRef.get()).data();
+    if (expectedCredits.length) {
+      assert.deepEqual(credit.credits, expectedCredits, "Tower battle missed or duplicated participant kill credit.");
+      assert.equal(expectedCredits.filter(row=>attackers.some(actor=>actor.uid===row.uid)).reduce((total,row)=>total+row.kills,0),
+        snapshot.totals.defenderLosses, "Player Tower casualties must be divided, not multiplied across rally members.");
+    } else assert.equal(credit,undefined,"Neutral Tower troops must not award PvP kills.");
     if (scenario === "wall-held") assert.equal(snapshot.totals.defenderLosses, 0);
     // Defenders make no callable requests after battle: server triggers must deliver offline.
     let reports = [];

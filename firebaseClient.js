@@ -2926,6 +2926,40 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async function loadPvpLeaderboard(limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return { entries: [], trackingStartedAtMs: 0 };
+    const {collection,doc,getDoc,getDocs,query,where,orderBy,documentId,limit} = client.modules.firestore;
+    const scope = {uid,worldId:ONLINE_WORLD_ID,resetGeneration:RESET_GENERATION,board:getRealmStorageId(),
+      session:client.activeSessionId,activation:client.activeSessionActivationGeneration};
+    const constraints = [where("resetGeneration","==",scope.resetGeneration),
+      where("worldId","==",scope.worldId), ...getRealmShardQueryConstraints(where)];
+    const [scores, board] = await Promise.all([
+      getDocs(query(collection(client.db,"pvpLeaderboards",scope.board,"entries"), ...constraints,
+        orderBy("pvpKills","desc"),orderBy("reachedAtMs","asc"),
+        limit(Math.max(1,Math.min(100,Math.floor(Number(limitCount)||100)))))),
+      getDoc(doc(client.db,"pvpLeaderboards",scope.board)),
+    ]);
+    // Fetch current public identities in at most four bounded queries. Renaming,
+    // heraldry changes, clan changes and reclaiming a city never reset the score.
+    const ids=scores.docs.map(row=>row.id), identities=new Map();
+    await Promise.all(Array.from({length:Math.ceil(ids.length/30)},async (_,index)=>{
+      const result=await getDocs(query(collection(client.db,"leaderboards",scope.board,"entries"),
+        ...constraints,where(documentId(),"in",ids.slice(index*30,index*30+30))));
+      result.docs.forEach(row=>identities.set(row.id,row.data()));
+    }));
+    if (client.user?.uid !== scope.uid || ONLINE_WORLD_ID !== scope.worldId
+      || RESET_GENERATION !== scope.resetGeneration || getRealmStorageId() !== scope.board
+      || client.activeSessionId !== scope.session || client.activeSessionActivationGeneration !== scope.activation) {
+      throw new Error("The leaderboard session changed. Please refresh.");
+    }
+    return {
+      entries:scores.docs.map(row=>({...(identities.get(row.id)||{}),...row.data(),uid:row.id})),
+      trackingStartedAtMs:Number(board.data()?.trackingStartedAtMs)||0,
+    };
+  }
+
   async function loadPlayerIdentities(uids = []) {
     await init();
     const uid = requireSignedIn();
@@ -3701,6 +3735,7 @@
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
+    loadPvpLeaderboard,
     loadPlayerIdentities,
     loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,

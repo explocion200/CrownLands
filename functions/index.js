@@ -8,6 +8,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
+const PVP_LEADERBOARD = require("./pvp-leaderboard");
 const { deliverNotificationOutbox } = require("./notification-delivery");
 const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
@@ -9797,6 +9798,12 @@ function writeDetailedBattleSnapshot(transaction, snapshot = null) {
     ...snapshot,
     realmShardId: getCurrentRealmShardId(),
   }, { merge: false });
+  const credit = PVP_LEADERBOARD.eventForBattle(snapshot, getCurrentRealmShardId());
+  if (credit) {
+    // Battle resolution already guards duplicate army settlement. create also
+    // prevents a later replay from replacing a processed season receipt.
+    transaction.create(db.doc(`pvpKillEvents/${getRealmStorageId()}/events/${ref.id}`), credit);
+  }
   return ref;
 }
 
@@ -24788,6 +24795,21 @@ exports.claimDailyMissionReward = timedCallable(
     });
   }
 );
+
+exports.applyPvpKillEvent = onDocumentCreated({
+  region: "us-central1",
+  document: "pvpKillEvents/{realmStorageId}/events/{battleId}",
+  memory: "512MiB",
+  concurrency: 8,
+  maxInstances: 20,
+  retry: true,
+}, async event => {
+  // Resolve using the immutable event's season, never the trigger's wall clock.
+  if (!event.data?.ref) return null;
+  const result = await PVP_LEADERBOARD.processEvent(db, event.data.ref);
+  console.info("crownlands_pvp_credit", { replayed: result.replayed, recipients: result.recipients || 0 });
+  return result;
+});
 
 exports.applyDailyMissionEvent = onDocumentCreated({
   region: "us-central1",
