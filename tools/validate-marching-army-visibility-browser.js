@@ -3,8 +3,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { chromium } = require("playwright");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
+const { CdpClient } = require("./map-benchmark/cdp-client");
+const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
   const executablePath = [process.env.CHROME_PATH, process.env.CROWNLANDS_CHROME_PATH,
@@ -16,19 +18,46 @@ async function main() {
   const address = await server.listen();
   const artifacts = path.resolve(__dirname, "../release-artifacts/marching-army-visibility");
   fs.mkdirSync(artifacts, { recursive: true });
-  let browser;
+  let session, client;
+  const closeBrowser = async () => {
+    if (client) await client.send("Browser.close").catch(() => {});
+    if (session) {
+      await waitForProcessExit(session.browserProcess);
+      await removeBrowserProfile(session.profilePath);
+    }
+    client = null;
+    session = null;
+  };
   try {
-    browser = await chromium.launch({ executablePath, headless: true });
     for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 568, height: 320 }]) {
-      const context = await browser.newContext({ viewport, serviceWorkers: "block" });
-      await context.route("**/*", route => new URL(route.request().url()).hostname === "127.0.0.1"
-        ? route.continue() : route.abort());
-      const page = await context.newPage();
+      session = await startBrowserSession(executablePath);
+      client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
+      await Promise.all(["Page.enable", "Runtime.enable", "Network.enable"].map(method => client.send(method)));
+      await client.send("Network.setBypassServiceWorker", { bypass: true });
       const errors = [];
-      page.on("pageerror", error => errors.push(error.message));
-      await page.goto(`${address.url}/__benchmark__/?scenario=A&visualMarches=0`);
-      await page.waitForFunction(() => window.__CROWNLANDS_BENCHMARK__?.getStatus().status === "ready", null, { timeout: 60000 });
-      const result = await page.evaluate(() => {
+      client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
+      client.on("Fetch.requestPaused", event => {
+        const local = new URL(event.request.url).origin === address.url;
+        void client.send(local ? "Fetch.continueRequest" : "Fetch.failRequest", {
+          requestId: event.requestId, ...(local ? {} : { errorReason: "BlockedByClient" }),
+        }).catch(error => errors.push(error.message));
+      });
+      await client.send("Fetch.enable", { patterns: [{ urlPattern: "*" }] });
+      const evaluate = async expression => {
+        const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+        if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+        return result.result.value;
+      };
+      await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
+      for (let attempt = 0; attempt < 240; attempt++) {
+        const status = await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus()");
+        if (status?.status === "error") throw Error(status.error);
+        if (status?.status === "ready") break;
+        await delay(250);
+      }
+      assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status"), "ready");
+      const runCases = () => {
         const check = (value, message) => { if (!value) throw Error(message); };
         const fixture = window.__CROWNLANDS_BENCHMARK__.fixture;
         const region = getActiveMapRegionId();
@@ -140,14 +169,16 @@ async function main() {
         const style = getComputedStyle(visible);
         check(style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) > 0, "CSS hid the marker");
         return { checked, intermediateMap: true, motion: true, portalCrossing: true, snapshot: true, navigation: true };
-      });
+      };
+      const result = await evaluate(`(${runCases.toString()})()`);
       assert.equal(errors.length, 0, errors.join("\n"));
-      await page.screenshot({ path: path.join(artifacts, `marches-${viewport.width}.png`) });
+      const screenshot = await client.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(artifacts, `marches-${viewport.width}.png`), Buffer.from(screenshot.data, "base64"));
       console.log(JSON.stringify({ viewport, ...result }));
-      await context.close();
+      await closeBrowser();
     }
   } finally {
-    await browser?.close();
+    await closeBrowser();
     await server.close();
   }
   console.log("March visibility passed: unloaded endpoints, own/clan/rival movement, hidden counts, cross-region motion and destination controls. Production requests blocked.");
