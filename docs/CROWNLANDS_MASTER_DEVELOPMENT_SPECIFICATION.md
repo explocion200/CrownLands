@@ -47,6 +47,10 @@ This document records confirmed rules, verified deployment status, unresolved co
 - Keep the current public website and its guides. Route game resources to the independently validated game publication without bundling game logic into public pages. A game worker must not substitute the game shell for ordinary public-page navigation.
 - The historical production snapshots below predate this domain decision. Verify the named website and game deployments, installed launch, worker update, offline shell, and sign-in domain configuration before reporting the new routing as deployed.
 
+### Confirmed installed-game icon artwork — September 28, 2026
+
+The installed-game icon uses the approved hand-painted atlas illustration: a floating antique-gold crown above a pale stone castle with three slate roofs, burgundy flags and banners, olive terrain, and a muted blue river. This branding illustration does not change playable-map terrain rules. Keep the approved social-media artwork separate. Deliver opaque square launcher PNGs, a companion with extra space for Android masks, an Apple touch icon, and a small game favicon. Keep the manifest URL, application identity, entry route and landscape behavior unchanged. Artwork and preparation details are in [the installed-icon notes](art-prompts/installed-icon-atlas/README.md); this decision is not deployment evidence.
+
 ### Evidence precedence
 
 When sources disagree, use the following evidence order for the specific question being answered:

@@ -57,13 +57,36 @@ assert.equal(manifest.orientation, "landscape", "The game PWA must retain landsc
 assert.deepEqual(
   manifest.icons.map(icon => icon.src),
   [
-    "assets/icons/crownlands-icon-192.png",
-    "assets/icons/crownlands-icon-512.png",
-    "assets/icons/crownlands-maskable-192.png",
-    "assets/icons/crownlands-maskable-512.png",
+    "assets/icons/atlas-v1/crownlands-icon-192.png",
+    "assets/icons/atlas-v1/crownlands-icon-512.png",
+    "assets/icons/atlas-v1/crownlands-maskable-192.png",
+    "assets/icons/atlas-v1/crownlands-maskable-512.png",
   ],
   "The manifest must keep the approved Crownlands icon family.",
 );
+// Install identity uses new immutable URLs; decoding/metadata must agree with
+// what the browser selects for regular launchers, Android masks and Apple.
+assert.deepEqual(manifest.icons.map(icon => icon.purpose || "any"), ["any", "any", "maskable", "maskable"]);
+const installIcons = [
+  ...manifest.icons,
+  { src: "assets/icons/atlas-v1/crownlands-apple-touch-180.png", sizes: "180x180", type: "image/png" },
+  { src: "assets/icons/atlas-v1/crownlands-favicon-32.png", sizes: "32x32", type: "image/png" },
+];
+for (const icon of installIcons) {
+  assert.equal(icon.type, "image/png");
+  const bytes = fs.readFileSync(path.join(root, icon.src));
+  assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", `Invalid PNG: ${icon.src}`);
+  assert.equal(`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`, icon.sizes, `Wrong dimensions: ${icon.src}`);
+  assert(![4, 6].includes(bytes[25]), `Launcher artwork must be opaque: ${icon.src}`);
+  for (let offset = 8; offset + 12 <= bytes.length;) {
+    const length = bytes.readUInt32BE(offset);
+    assert.notEqual(bytes.toString("ascii", offset + 4, offset + 8), "tRNS", `Transparent palette: ${icon.src}`);
+    offset += 12 + length;
+  }
+  assert(bytes.length < 256 * 1024, `Install icon exceeds 256 KiB: ${icon.src}`);
+  assert(!serviceWorker.includes('"/' + icon.src + '"'), "Launcher images must stay out of the game's install precache.");
+}
+for (const icon of installIcons.slice(-2)) assert(index.includes(`href="${icon.src}"`), `Missing HTML icon link: ${icon.src}`);
 for (const base of ["https://playcrownlands.com/", "https://html-classic.itch.zone/html/test-upload/"]) {
   for (const icon of manifest.icons) assert.ok(new URL(icon.src, `${base}manifest.webmanifest`).href.startsWith(`${base}assets/icons/`), "Install icons must remain within the current published game directory.");
 }

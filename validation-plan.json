@@ -1,33 +1,34 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "46f052981d916b49bab651800a59a33d6d80a41a",
+  "baseCommit": "beaf8a6d2fd2fd21f77a76e89e94f2b074a9b9e7",
   "coverage": [
     {
       "paths": [
-        "game.js"
+        "index.html",
+        "manifest.webmanifest",
+        "tools/validate-pwa-entry-routing.js",
+        "assets/icons/atlas-v1/crownlands-icon-192.png",
+        "assets/icons/atlas-v1/crownlands-icon-512.png",
+        "assets/icons/atlas-v1/crownlands-maskable-192.png",
+        "assets/icons/atlas-v1/crownlands-maskable-512.png",
+        "assets/icons/atlas-v1/crownlands-apple-touch-180.png",
+        "assets/icons/atlas-v1/crownlands-favicon-32.png",
+        "docs/art-prompts/installed-icon-atlas/master.png",
+        "docs/art-prompts/installed-icon-atlas/maskable-master.png"
       ],
       "tests": [
-        "tools/validate-marching-army-visibility-browser.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-live-subscription-scope.js",
-        "tools/validate-clans.js",
-        "tools/validate-army-token-rollback.js",
-        "tools/validate-production-artifact.js",
-        "functions/test/emulator-army-listener-rules.js"
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "March markers now use saved route geometry without requiring both endpoint entities in the local map cache. Exercise own, clan and rival attacks, transfers, scouts, reinforcements, rallies and returns with missing endpoints on desktop and landscape screens. Check route alignment, movement, portal isolation, fresh snapshots, endpoint controls, title fallback, preserved hidden/estimated troop counts, clan colors and pending departures. Existing subscription and emulator checks verify current-realm outgoing/incoming access and retain generation/shard privacy. Production artifact validation covers the shipped client. No server authority or rules are changed."
+      "reason": "Changes only installed-game artwork and its HTML/manifest links. Validate PNG size, opacity, encoded format and install metadata, new immutable icon URLs, preserved app identity/start route/landscape mode, web and itch relative URLs, and existing offline-entry recovery. Production packaging checks prove linked files ship, source artwork stays outside runtime, and the unchanged aggregate download and install-cache budgets remain satisfied. Local Chromium checks also decode all six exports and review square, rounded, circular and 40%-radius masks on desktop 1200x820 and landscape mobile 844x390. No backend, rules, player data or gameplay logic changed, so emulator suites are not relevant."
     },
     {
       "paths": [
-        "tools/validate-marching-army-visibility-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/art-prompts/installed-icon-atlas/README.md"
       ],
-      "tests": [
-        "tools/validate-marching-army-visibility-browser.js"
-      ],
-      "reason": "Run the new regression against the full client with the existing Core map fixture and production requests blocked. It reproduces the pre-fix visible-route/missing-marker failure when an endpoint is unloaded, and verifies the repaired behavior at three viewport sizes."
+      "tests": [],
+      "reason": "Records the user's confirmed installed-icon art choice, technical export process, platform update expectations, sources and review evidence. These documentation paths do not execute."
     }
   ]
 }
