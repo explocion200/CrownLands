@@ -22837,7 +22837,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       }
       if (reward > 0) {
         if (type === "gold") playGameSound("map_gold_pickup", { regionId: bonus.regionId });
-        else playRewardSound(type, { regionId: bonus.regionId });
+        else playGameSound("map_troop_pickup", { regionId: bonus.regionId });
         playRewardAnimation(type, {
           id: `harvest:${bonus.id}:${type}`,
           sourceAnchor: rewardSourceAnchor,
@@ -22889,7 +22889,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
     renderPanel();
     renderHarvestBonuses();
     showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})${getHarvestBonusRespawnToastSuffix(daily)}`);
-    playRewardSound("troops", { regionId: bonus.regionId });
+    playGameSound("map_troop_pickup", { regionId: bonus.regionId });
     playRewardAnimation("troops", {
       id: `harvest:${bonus.id}:troops`,
       sourceAnchor: rewardSourceAnchor,

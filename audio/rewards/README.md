@@ -7,7 +7,18 @@ The owner supplied `RPG Sound Pack/inventory/money.wav` on September 27, 2026 fo
 - Runtime cue: `map_gold_pickup`, with recommended gain 0.58 before the player's Effects setting.
 - `map_gold_pickup.wav` is resampled to 44.1 kHz, stereo, 16-bit PCM for the existing effects pipeline, with metadata removed. MP3 (128 kbps) and OGG Vorbis (quality 4) are encoded from that WAV. The full recording is retained without trimming, looping, or volume processing.
 
-The cue plays on successful map Gold collection in both online and local play. Troop pickups and Gold from Camps, missions, achievements, and other rewards retain their existing cues. Playback uses the shared active-map, Effects mute, and volume controls.
+The cue plays on successful map Gold collection in both online and local play. Gold from Camps, missions, achievements, and other rewards retains its existing cue. Playback uses the shared active-map, Effects mute, and volume controls.
+
+## Map soldier pickup sound
+
+The owner supplied `RPG Sound Pack/battle/sword-unsheathe.wav` on September 27, 2026 for soldier pickups on the map. Original source rights apply to this recording.
+
+- Source SHA-256: `2cc0518b65d3a11b4f7cf22a5be6700d36fa1e681491dfb71b87ae5bce2296f6`.
+- Source: approximately 0.54 seconds, stereo, 48 kHz, 24-bit PCM WAV.
+- Runtime cue: `map_troop_pickup`, with recommended gain 0.55 before the player's Effects setting.
+- The full recording is resampled to stereo 44.1 kHz PCM16 WAV with metadata removed, then encoded to MP3 (128 kbps) and OGG Vorbis (quality 4), without trimming or volume processing.
+
+The cue plays after a positive confirmed online soldier pickup or after local troop credit. Pending, repeated, rejected, stale-session and off-map collections stay silent; a local pickup without an eligible city also stays silent. Camp, mission, achievement and other troop rewards retain `troop_reward`. Existing Effects controls and independent music playback apply.
 
 ## Gold spending sound
 

@@ -75,7 +75,7 @@
         "audio/combat/siege_impact.mp3",
         "audio/combat/siege_impact.ogg"
       ],
-      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 29 effects including the supplied Gold pickup, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests. Replace all three existing UI transition recordings with interface2.wav. Real desktop and landscape browser tests cover dialog/Profile opens and closes, Escape and backdrop dismissal, repeated calls, content refreshes, contextual-cue precedence, shared transition cooldowns, Effects mute and uninterrupted music. Observe only the fixed dialog/Profile attributes, avoiding map-tree observation. The shared browser lifecycle fixture explicitly models hidden-page visibility during blur so native foreground events cannot invalidate the background interval; retain the existing pause/resume and stopped-effects assertions. Replace the four ordinary/siege impact assets with the full supplied battle clip, attenuated before PCM conversion to prevent clipping. Existing contract tests retain active-map, scout/transfer, duplicate and 150 ms impact routing. All codecs, Effects controls and background/music independence are exercised; mixed levels cover arrival plus city/camp/stronghold capture or defeat, including the longer overlap with camp rewards. No runtime or combat rules change.",
+      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 30 effects including the supplied Gold and soldier pickups, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests. Replace all three existing UI transition recordings with interface2.wav. Real desktop and landscape browser tests cover dialog/Profile opens and closes, Escape and backdrop dismissal, repeated calls, content refreshes, contextual-cue precedence, shared transition cooldowns, Effects mute and uninterrupted music. Observe only the fixed dialog/Profile attributes, avoiding map-tree observation. The shared browser lifecycle fixture explicitly models hidden-page visibility during blur so native foreground events cannot invalidate the background interval; retain the existing pause/resume and stopped-effects assertions. Replace the four ordinary/siege impact assets with the full supplied battle clip, attenuated before PCM conversion to prevent clipping. Existing contract tests retain active-map, scout/transfer, duplicate and 150 ms impact routing. All codecs, Effects controls and background/music independence are exercised; mixed levels cover arrival plus city/camp/stronghold capture or defeat, including the longer overlap with camp rewards. No runtime or combat rules change.",
       "tests": [
         "tools/validate-music-playlist.js",
         "tools/validate-audio-unlock.js",
@@ -93,9 +93,12 @@
         "audio/rewards/map_gold_pickup.wav",
         "audio/rewards/map_gold_pickup.mp3",
         "audio/rewards/map_gold_pickup.ogg",
-        "tools/validate-pickup-runtime.js"
+        "tools/validate-pickup-runtime.js",
+        "audio/rewards/map_troop_pickup.wav",
+        "audio/rewards/map_troop_pickup.mp3",
+        "audio/rewards/map_troop_pickup.ogg"
       ],
-      "reason": "Use the supplied money recording for confirmed map Gold pickups and the separate coin recording for confirmed Gold spending. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before pickup audio. Cover the spending helper, clan Treasury and outgoing Gold Gift donations, Tower actions, paid scouting and regrouping, recruitment, clan creation/renaming and skill presets. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites.",
+      "reason": "Use the supplied money recording for confirmed map Gold pickups and the separate coin recording for confirmed Gold spending. Exercise pending, duplicate, rejected, zero-reward, stale-session and cross-map responses, preserve other reward cues, and verify local Gold is credited before pickup audio. Cover the spending helper, clan Treasury and outgoing Gold Gift donations, Tower actions, paid scouting and regrouping, recruitment, clan creation/renaming and skill presets. Existing harvest validation covers pickup rules and collection dependencies. Shared audio checks validate source levels, every codec, Effects controls and production packaging. No server changes or visual layout changes require emulator or new screenshot suites. Add sword-unsheathe.wav specifically for map soldier pickups, preserving other troop reward sounds. Run actual collection helpers for positive online receipt, pending/repeated clicks, rejection, zero rewards, map/session changes, presentation failure and local troop credit, including a missing local target city.",
       "tests": [
         "tools/validate-harvest-pickups.js",
         "tools/validate-gold-spend-audio.js",
@@ -105,7 +108,8 @@
         "tools/validate-audio-levels.js",
         "tools/validate-audio-contract.js",
         "tools/validate-audio-browser.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-pickup-runtime.js"
       ]
     },
     {
@@ -148,7 +152,7 @@
         "audio/ui/README.md",
         "audio/combat/README.md"
       ],
-      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites. Document the confirmed UI opening/closing clip, conversion and quiet refresh behavior. Record the confirmed battle clip replacement, full duration, source hash and clipping-safe conversion.",
+      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites. Document the confirmed UI opening/closing clip, conversion and quiet refresh behavior. Record the confirmed battle clip replacement, full duration, source hash and clipping-safe conversion. Record the confirmed soldier-pickup cue and source conversion.",
       "tests": []
     }
   ]

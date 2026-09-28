@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav and interface2.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav interface2.wav and sword-unsheathe.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -244,6 +244,16 @@
       "recommended_volume": 0.58,
       "description": "User-supplied RPG Sound Pack money.wav for successful map Gold pickups.",
       "source_sha256": "4147e7fbe404d2cd97ba7b5af61e88ebe4f652626589c4ee9d570595262b8802"
+    },
+    {
+      "id": "map_troop_pickup",
+      "category": "rewards",
+      "wav": "rewards/map_troop_pickup.wav",
+      "ogg": "rewards/map_troop_pickup.ogg",
+      "loop": false,
+      "recommended_volume": 0.55,
+      "description": "User-supplied RPG Sound Pack sword-unsheathe.wav for successful map soldier pickups.",
+      "source_sha256": "2cc0518b65d3a11b4f7cf22a5be6700d36fa1e681491dfb71b87ae5bce2296f6"
     },
     {
       "id": "gold_spend",

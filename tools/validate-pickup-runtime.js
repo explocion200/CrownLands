@@ -12,10 +12,10 @@ function extract(name) {
   return `${source.slice(start - 6, start) === "async " ? "async " : ""}${source.slice(start, end)}`;
 }
 
-function fixture() {
+function fixture(type = "gold") {
   let resolveClaim, rejectClaim;
   const claim = new Promise((resolve, reject) => { resolveClaim = resolve; rejectClaim = reject; });
-  const bonus = { id: "pickup-one", type: "gold", regionId: "region-0001", x: 500, y: 400 };
+  const bonus = { id: "pickup-one", type, regionId: "region-0001", x: 500, y: 400 };
   const stats = { claims: 0, reservations: 0, applied: 0, sounds: [] };
   const context = {
     state: { harvestBonuses: [bonus], daily: { harvestedBonuses: 0 }, harvestNextSpawnAtMs: 1 },
@@ -51,6 +51,7 @@ function fixture() {
     },
     crownlandsAudio: { playEffect: (id, options) => { stats.sounds.push({ id, options }); return true; } },
     renderHarvestBonuses() {}, renderPanel() {}, showToast() {}, playRewardAnimation() {},
+    addLog() {}, getHarvestBonusTroopTargetCity: () => ({ name: "Main City" }),
     formatNumber: String, getHarvestBonusRespawnToastSuffix: () => "",
     onlineLastError: "",
   };
@@ -101,11 +102,11 @@ async function run() {
     assert(!context.editorMapCache.has("map-a"),"Eviction retained the derived city definitions");
     assert.match(extract("registerCoreExpansionRegions"),/REGION_DEFINITION_LOADER\.register\(descriptors\);\s*editorMapCache\.clear\(\);/);
   });
-  await check("pending claims cannot race a spawn or duplicate collection", async () => {
-    const f = fixture();
+  for (const type of ["gold", "troops"]) await check(`${type} pending claims cannot race a spawn or duplicate collection`, async () => {
+    const f = fixture(type);
     const pending = f.context.collectHarvestBonus(f.bonus.id);
     await f.context.collectHarvestBonus(f.bonus.id);
-    assert.equal(f.stats.sounds.length, 0, "Pending Gold collection played a success cue");
+    assert.equal(f.stats.sounds.length, 0, "Pending collection played a success cue");
     f.context.updateServerHarvestBonuses();
     await Promise.resolve();
     const reserved = f.stats.reservations;
@@ -113,11 +114,14 @@ async function run() {
     assert.equal(f.stats.claims, 1);
     assert.equal(reserved, 0, "Collection launched a competing spawn request");
     assert.equal(f.context.pendingHarvestBonusIds.size, 0);
-    assert.deepEqual(f.stats.sounds.map(sound => sound.id), ["map_gold_pickup"], "Confirmed Gold collection must play the supplied cue exactly once");
+    await f.context.collectHarvestBonus(f.bonus.id);
+    assert.deepEqual(f.stats.sounds.map(sound => sound.id), [type === "gold" ? "map_gold_pickup" : "map_troop_pickup"], "Confirmed collection must play the supplied cue exactly once");
   });
   await check("map pickup sound stays scoped to positive rewards on the active map", async () => {
     for (const scenario of [
-      { type: "troops", reward: 125, sound: "troop_reward" },
+      { type: "troops", reward: 125, sound: "map_troop_pickup" },
+      { type: "troops", reward: 0 },
+      { type: "troops", reward: 125, switchedMap: true },
       { type: "gold", reward: 0 },
       { type: "gold", reward: 125, switchedMap: true },
     ]) {
@@ -150,6 +154,29 @@ async function run() {
     assert.deepEqual(f.stats.sounds.map(sound => sound.id), ["map_gold_pickup"]);
     assert.equal(f.context.state.harvestBonuses.length, 0);
   });
+  for (const hasCity of [true, false]) await check(`local soldier pickup ${hasCity ? "credits troops before sound" : "without a city stays silent"}`, async () => {
+    const f = fixture("troops");
+    const city = { id: "main-city", name: "Main City", troopFloat: 10, troops: 10 };
+    let credited = 0;
+    Object.assign(f.context, {
+      usesServerEconomyAuthority: () => false,
+      getHarvestBonusTroopReward: () => 125,
+      getHarvestBonusTroopTargetCity: () => hasCity ? city : null,
+      getCityRegionId: () => "region-0001", getActiveOnlineRegionId: () => "region-0001",
+      markOwnedCityChanged: () => { credited++; },
+      incrementHarvestBonusDailyCount() {}, resetHarvestRespawnTimer() {}, saveGame() {}, renderHud() {}, renderCities() {},
+    });
+    f.context.crownlandsAudio.playEffect = id => {
+      assert.equal(city.troops, 135, "Sound preceded the troop credit");
+      assert.equal(credited, 1);
+      f.stats.sounds.push({ id });
+      return true;
+    };
+    await f.context.collectHarvestBonus(f.bonus.id);
+    assert.deepEqual(f.stats.sounds.map(sound => sound.id), hasCity ? ["map_troop_pickup"] : []);
+    assert.equal(f.context.state.harvestBonuses.length, hasCity ? 0 : 1);
+    assert.equal(city.troops, hasCity ? 135 : 10);
+  });
   await check("a stale spawn response cannot replace another session or release its lock", async () => {
     const f = fixture();
     let resolveSpawn;
@@ -176,8 +203,8 @@ async function run() {
     assert.equal(f.context.harvestSpawnRequestInFlight, false);
     assert.equal(retries, 1);
   });
-  await check("rejection preserves pickup and its deadline", async () => {
-    const f = fixture();
+  for (const type of ["gold", "troops"]) await check(`${type} rejection preserves pickup and its deadline`, async () => {
+    const f = fixture(type);
     const pending = f.context.collectHarvestBonus(f.bonus.id);
     f.rejectClaim(new Error("temporarily unavailable")); await pending;
     assert.equal(f.stats.sounds.length, 0, "Rejected collection played a success cue");
@@ -193,16 +220,16 @@ async function run() {
     assert.equal(f.stats.claims, 1, "Presentation prevented the server request");
     assert.equal(f.context.pendingHarvestBonusIds.size, 0, "Presentation stranded the claim lock");
   });
-  await check("reward presentation failure cannot resurrect a confirmed pickup", async () => {
-    const f = fixture();
+  for (const type of ["gold", "troops"]) await check(`${type} reward presentation failure cannot resurrect a confirmed pickup`, async () => {
+    const f = fixture(type);
     f.context.crownlandsAudio.playEffect = () => { throw new Error("audio failed"); };
     const pending = f.context.collectHarvestBonus(f.bonus.id);
     f.resolveClaim(success); await pending;
     assert.equal(f.context.state.harvestBonuses.length, 0);
     assert.equal(f.context.state.harvestNextSpawnAtMs, 120_000);
   });
-  for (const reject of [false, true]) await check(`late ${reject ? "failure" : "success"} cannot alter another session`, async () => {
-    const f = fixture();
+  for (const type of ["gold", "troops"]) for (const reject of [false, true]) await check(`late ${type} ${reject ? "failure" : "success"} cannot alter another session`, async () => {
+    const f = fixture(type);
     const pending = f.context.collectHarvestBonus(f.bonus.id);
     f.context.onlineSessionGeneration++;
     f.context.state = { harvestBonuses: [], daily: {}, harvestNextSpawnAtMs: 900_000 };
