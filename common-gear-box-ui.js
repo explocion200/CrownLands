@@ -117,6 +117,11 @@ function renderCommonGearBoxState(focus = false) {
 
 function animateCommonGearBoxOpening(view) {
   if (!view || !isCommonGearBoxViewActive(view)) return Promise.resolve();
+  if (!document.hidden) {
+    try {
+      playGameSound("gear_box_open", { maxSameEffect: 1 });
+    } catch (_error) { /* Audio cannot interrupt an accepted opening. */ }
+  }
   return new Promise(resolve => {
     let frameId = 0;
     const start = performance.now();
@@ -158,6 +163,9 @@ async function openOneCommonGearBox() {
   if (commonGearBoxView?.session === session) commonGearBoxView.chest.setOpen(0);
   renderCommonGearBoxState();
   try {
+    try {
+      crownlandsAudio?.prepareEffect?.("gear_box_open")?.catch(() => {});
+    } catch (_error) { /* Preloading is optional; the server action must continue. */ }
     const result = await api.openCommonGearBox({ requestId: session.requestId });
     if (!commonGearBoxOwnerMatches(session)) return;
     if (!result?.gear || result.receipt?.requestId !== session.requestId || result.receipt?.instanceIds?.length !== COMMON_GEAR.BOX_REVEAL_COUNT) throw new Error("The opening could not be confirmed. Try again.");

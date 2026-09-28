@@ -52,3 +52,15 @@ The owner supplied `RPG Sound Pack/inventory/chainmail1.wav` on September 27, 20
 - The full recording uses the same PCM16 WAV, MP3 and OGG conversions described above, without trimming or volume processing. Metadata is removed.
 
 The War Captain, Cavalry Master and Defensive Commander use this cue for all six armor slots at every rarity, including rarity promotions. It follows the Gold payment cue by 150 ms and uses the same confirmation, session, duplicate/replay, Effects and audio-failure safeguards as the Treasury cloth cue. Weapons, tools, necklaces and Equip/Unequip do not trigger armor sounds. The gear item's officer determines the sound; switching panels while a request is pending cannot select the wrong cue.
+
+## Gear Box opening sound
+
+The owner supplied `chest.mp3` on September 28, 2026: [Wooden Creak by Mafon2](https://freesound.org/people/Mafon2/sounds/377552/), licensed under [CC0](https://creativecommons.org/publicdomain/zero/1.0/). Commercial use and modification are permitted without attribution.
+
+- Source SHA-256: `46493945ec68ab6dcfcecbf308d715592a4d72ebbb50fdd8110340a01a36e750`.
+- The approximately 0.92-second recording accompanies the 0.9-second lid animation. It is not trimmed, looped or sped up.
+- Runtime cue: `gear_box_open`, recommended gain 1 before the player's Effects setting.
+- Conversion: stereo 44.1 kHz PCM16 WAV, MP3 at 128 kbps and OGG Vorbis quality 4, with metadata removed. The quiet source receives 14 dB gain and a limiter ceiling of 0.7 (approximately -3.1 dBFS), with latency compensation. This keeps the creak audible within the existing effects level checks without clipping its short transients.
+- Reproduce the WAV with FFmpeg: `-i chest.mp3 -map_metadata -1 -af "volume=14dB,alimiter=limit=0.7:level=false:latency=true" -ar 44100 -ac 2 -c:a pcm_s16le gear_box_open.wav`. Encode the MP3 and OGG from that WAV.
+
+The sound is prepared while the opening request is pending and plays once when the confirmed opening is presented. Failed requests and hidden, dismissed or replaced panels stay silent. A recovered lost response can play when its opening is first shown. Reduced/Off motion retains sound, controlled independently by Effects mute/volume. Audio errors cannot reject accepted gear, and background music continues.
