@@ -4,7 +4,7 @@
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const assert = require("node:assert/strict");
-const { canonicalCityPositions, planHash, commitCoordinateBatch } = require("./illustrated-map-coordinate-plan");
+const { selectActiveRegions, canonicalCityPositions, planHash, commitCoordinateBatch } = require("./illustrated-map-coordinate-plan");
 const root = path.resolve(__dirname, "..");
 const requireFunctions = createRequire(path.join(root, "functions/package.json"));
 const firebaseRoot = path.dirname(requireFunctions.resolve("firebase-tools/package.json"));
@@ -17,6 +17,8 @@ const identity = { project: arg("project"), worldId: arg("world"), resetGenerati
 for (const [key, value] of Object.entries(identity)) assert(value, `Explicit ${key} required`);
 assert.equal(release.worldTopology, "core-expansion-v1");
 const apply = process.argv.includes("--apply"), confirmedHash = arg("confirm-plan-hash");
+if (process.argv.includes("--regions")) assert(arg("regions") && !arg("regions").startsWith("--"), "--regions requires a comma-separated map list");
+const requestedRegionIds = arg("regions") ? arg("regions").split(",").map(id => id.trim()) : [];
 if (apply) assert(confirmedHash, "--apply requires the reviewed dry-run --confirm-plan-hash");
 const documentRoot = `/v1/projects/${identity.project}/databases/(default)/documents`;
 const decode = value => value.stringValue ?? (value.integerValue !== undefined ? Number(value.integerValue) : value.doubleValue ?? value.booleanValue ?? (value.arrayValue ? (value.arrayValue.values || []).map(decode) : value.mapValue ? fields(value.mapValue.fields) : null));
@@ -38,7 +40,7 @@ async function buildPlan(client) {
   const expansion = await get(client, `realmGenerations/${identity.resetGeneration}/expansion/current`);
   const active = fields(expansion.fields);
   assert.equal(active.topologyVersion, "core-expansion-v1");
-  const regionIds = [...new Set([...layout.maps.filter(m => m.permanentCore).map(m => m.id), ...(active.activeRegionIds || [])])];
+  const regionIds = selectActiveRegions(layout, active.activeRegionIds || [], requestedRegionIds);
   const targets = []; let cityCount = 0;
   for (const regionId of regionIds) {
     const expected = canonicalCityPositions(layout, regionId);
@@ -55,13 +57,13 @@ async function buildPlan(client) {
     }
     assert.equal(seen.size, expected.size, `Missing cities on ${regionId}`); cityCount += seen.size;
   }
-  return { targets, pointer, expansion, mapCount: regionIds.length, cityCount, planHash: planHash(identity, targets) };
+  return { targets, pointer, expansion, regionIds, mapCount: regionIds.length, cityCount, planHash: planHash({ ...identity, regionIds }, targets) };
 }
 async function main() {
   const account = auth.getProjectDefaultAccount(root); assert(account, "Firebase CLI account required");
   auth.setActiveAccount({}, account); const client = new Client({ urlPrefix: "https://firestore.googleapis.com", auth: true });
   const plan = await buildPlan(client);
-  console.log(JSON.stringify({ ...identity, maps: plan.mapCount, cities: plan.cityCount, coordinateChanges: plan.targets.length, planHash: plan.planHash, apply }, null, 2));
+  console.log(JSON.stringify({ ...identity, regionIds: plan.regionIds, maps: plan.mapCount, cities: plan.cityCount, coordinateChanges: plan.targets.length, planHash: plan.planHash, apply }, null, 2));
   if (!apply) return;
   assert.equal(plan.planHash, confirmedHash, "Coordinates or realm changed since the reviewed plan; run a fresh dry run");
   let committed = 0;
