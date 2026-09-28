@@ -216,7 +216,13 @@ async function assertBackgroundLifecycle(page, label) {
   );
 
   const before = await getAudioState(page);
-  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await page.evaluate(() => {
+    // A synthetic blur leaves the page visible, so native foreground events can
+    // correctly resume playback during the supposed background interval.
+    window.__crownlandsLifecycleVisibilityDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    window.dispatchEvent(new Event("blur"));
+  });
   await page.waitForFunction(
     () => {
       const state = window.CrownlandsAudio?.getDebugState?.();
@@ -247,10 +253,20 @@ async function assertBackgroundLifecycle(page, label) {
   const stillPaused = await getAudioState(page);
   assert.ok(
     Math.abs(stillPaused.currentTime - paused.currentTime) < 0.05,
-    `${label}: music time advanced while backgrounded.`,
+    `${label}: music time changed while backgrounded: ${JSON.stringify({
+      before: paused.currentTime, after: stillPaused.currentTime, paused: stillPaused.paused,
+      lifecyclePaused: stillPaused.lifecyclePaused, reason: stillPaused.lifecyclePauseReason,
+      sourceBefore: paused.currentSource, sourceAfter: stillPaused.currentSource,
+    })}`,
   );
 
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.evaluate(() => {
+    const descriptor = window.__crownlandsLifecycleVisibilityDescriptor;
+    if (descriptor) Object.defineProperty(document, "visibilityState", descriptor);
+    else delete document.visibilityState;
+    delete window.__crownlandsLifecycleVisibilityDescriptor;
+    window.dispatchEvent(new Event("focus"));
+  });
   await page.waitForFunction(
     pausedAt => {
       const state = window.CrownlandsAudio?.getDebugState?.();
