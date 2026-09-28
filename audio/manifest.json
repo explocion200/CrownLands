@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav and interface2.wav; original source rights apply. See music/README.md, rewards/README.md and ui/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav and interface2.wav, plus the supplied 504979_10868231-hq.mp3 battle recording; original source rights apply. See music/README.md, rewards/README.md, ui/README.md and combat/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -174,8 +174,9 @@
       "wav": "combat/sword_clash_01.wav",
       "ogg": "combat/sword_clash_01.ogg",
       "loop": false,
-      "recommended_volume": 0.75,
-      "description": "Metal sword impact variation 1."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "sword_clash_02",
@@ -183,8 +184,9 @@
       "wav": "combat/sword_clash_02.wav",
       "ogg": "combat/sword_clash_02.ogg",
       "loop": false,
-      "recommended_volume": 0.65,
-      "description": "Metal sword impact variation 2."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "sword_clash_03",
@@ -192,8 +194,9 @@
       "wav": "combat/sword_clash_03.wav",
       "ogg": "combat/sword_clash_03.ogg",
       "loop": false,
-      "recommended_volume": 0.73,
-      "description": "Metal sword impact variation 3."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "siege_impact",
@@ -201,8 +204,9 @@
       "wav": "combat/siege_impact.wav",
       "ogg": "combat/siege_impact.ogg",
       "loop": false,
-      "recommended_volume": 0.65,
-      "description": "Heavy timber-and-stone impact for siege attacks."
+      "recommended_volume": 0.321,
+      "description": "User-supplied 504979_10868231-hq.mp3 for confirmed battle impacts, with 3 dB attenuation to prevent decode clipping.",
+      "source_sha256": "b3016ddff468cf412aed44c9f30af221755e897686ee69e92afa76fef1910180"
     },
     {
       "id": "battle_defeat",

@@ -225,7 +225,7 @@ function getSequencedMixPeak(sequence, analyzedEffects) {
 function createCombatSequences() {
   const sequences = [];
   for (const clashId of ["sword_clash_01", "sword_clash_02", "sword_clash_03"]) {
-    for (const outcomeId of ["city_captured", "battle_defeat"]) {
+    for (const outcomeId of ["city_captured", "camp_captured", "battle_defeat"]) {
       sequences.push({
         label: `${clashId} with ${outcomeId}`,
         entries: [

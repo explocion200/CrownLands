@@ -61,9 +61,21 @@
         "audio/ui/menu_close.wav",
         "audio/ui/parchment_open.mp3",
         "audio/ui/parchment_open.ogg",
-        "audio/ui/parchment_open.wav"
+        "audio/ui/parchment_open.wav",
+        "audio/combat/sword_clash_01.wav",
+        "audio/combat/sword_clash_01.mp3",
+        "audio/combat/sword_clash_01.ogg",
+        "audio/combat/sword_clash_02.wav",
+        "audio/combat/sword_clash_02.mp3",
+        "audio/combat/sword_clash_02.ogg",
+        "audio/combat/sword_clash_03.wav",
+        "audio/combat/sword_clash_03.mp3",
+        "audio/combat/sword_clash_03.ogg",
+        "audio/combat/siege_impact.wav",
+        "audio/combat/siege_impact.mp3",
+        "audio/combat/siege_impact.ogg"
       ],
-      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 29 effects including the supplied Gold pickup, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests. Replace all three existing UI transition recordings with interface2.wav. Real desktop and landscape browser tests cover dialog/Profile opens and closes, Escape and backdrop dismissal, repeated calls, content refreshes, contextual-cue precedence, shared transition cooldowns, Effects mute and uninterrupted music. Observe only the fixed dialog/Profile attributes, avoiding map-tree observation. The shared browser lifecycle fixture explicitly models hidden-page visibility during blur so native foreground events cannot invalidate the background interval; retain the existing pause/resume and stopped-effects assertions.",
+      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 29 effects including the supplied Gold pickup, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests. Replace all three existing UI transition recordings with interface2.wav. Real desktop and landscape browser tests cover dialog/Profile opens and closes, Escape and backdrop dismissal, repeated calls, content refreshes, contextual-cue precedence, shared transition cooldowns, Effects mute and uninterrupted music. Observe only the fixed dialog/Profile attributes, avoiding map-tree observation. The shared browser lifecycle fixture explicitly models hidden-page visibility during blur so native foreground events cannot invalidate the background interval; retain the existing pause/resume and stopped-effects assertions. Replace the four ordinary/siege impact assets with the full supplied battle clip, attenuated before PCM conversion to prevent clipping. Existing contract tests retain active-map, scout/transfer, duplicate and 150 ms impact routing. All codecs, Effects controls and background/music independence are exercised; mixed levels cover arrival plus city/camp/stronghold capture or defeat, including the longer overlap with camp rewards. No runtime or combat rules change.",
       "tests": [
         "tools/validate-music-playlist.js",
         "tools/validate-audio-unlock.js",
@@ -133,9 +145,10 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "audio/music/README.md",
         "audio/rewards/README.md",
-        "audio/ui/README.md"
+        "audio/ui/README.md",
+        "audio/combat/README.md"
       ],
-      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites. Document the confirmed UI opening/closing clip, conversion and quiet refresh behavior.",
+      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites. Document the confirmed UI opening/closing clip, conversion and quiet refresh behavior. Record the confirmed battle clip replacement, full duration, source hash and clipping-safe conversion.",
       "tests": []
     }
   ]
