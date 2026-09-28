@@ -457,7 +457,16 @@ async function main() {
   const finalOwner = nextBattle.outcome === "victory" ? nextBattle.attacker.ownerUid : nextBattle.defender.ownerUid;
   assert((await captureDoc.ref.get()).data()?.ownerUid === finalOwner, "The final owner disagrees with the last serialized battle.");
 
-  console.log("Emulator battle report gear effects passed: authoritative gear and wall-only settlement, concurrent wall hits, recall/combat conservation, Field Medics, and idempotent concurrent captures.");
+  const pvp = require("../pvp-leaderboard");
+  for (const snapshot of [...captureSnapshots, ...competingBattles]) {
+    const credits=pvp.creditForBattle(snapshot);
+    const key=(snapshot.battleId||"").replace(/[^a-zA-Z0-9_-]/g,"_");
+    const realmBoard=current.realmShardId&&current.realmShardId!=="legacy"
+      ? current.resetGeneration+"--"+current.realmShardId : current.resetGeneration;
+    const event=(await db.doc(`pvpKillEvents/${realmBoard}/events/${key}`).get()).data();
+    assert(JSON.stringify(event?.credits)===JSON.stringify(credits),"Serialized city battles must write exactly one authoritative PvP credit event.");
+  }
+  console.log("Emulator battle report gear effects passed: authoritative gear and wall-only settlement, concurrent wall hits, recall/combat conservation, Field Medics, idempotent concurrent captures and PvP credits.");
 }
 
 main()

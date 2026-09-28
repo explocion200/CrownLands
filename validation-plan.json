@@ -1,34 +1,89 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "beaf8a6d2fd2fd21f77a76e89e94f2b074a9b9e7",
+  "baseCommit": "d736d0d3e52be6d67d893c4c895cfb8ef36a78e9",
   "coverage": [
     {
       "paths": [
-        "index.html",
-        "manifest.webmanifest",
-        "tools/validate-pwa-entry-routing.js",
-        "assets/icons/atlas-v1/crownlands-icon-192.png",
-        "assets/icons/atlas-v1/crownlands-icon-512.png",
-        "assets/icons/atlas-v1/crownlands-maskable-192.png",
-        "assets/icons/atlas-v1/crownlands-maskable-512.png",
-        "assets/icons/atlas-v1/crownlands-apple-touch-180.png",
-        "assets/icons/atlas-v1/crownlands-favicon-32.png",
-        "docs/art-prompts/installed-icon-atlas/master.png",
-        "docs/art-prompts/installed-icon-atlas/maskable-master.png"
+        "docs/visual-qa/leaderboard-podium/index.html",
+        "docs/visual-qa/leaderboard-podium/preview.html",
+        "docs/visual-qa/leaderboard-podium/draft.css",
+        "docs/visual-qa/leaderboard-podium/preview.js",
+        "docs/visual-qa/leaderboard-podium/review.css",
+        "docs/visual-qa/leaderboard-podium/review.js"
       ],
       "tests": [
-        "tools/validate-pwa-entry-routing.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Changes only installed-game artwork and its HTML/manifest links. Validate PNG size, opacity, encoded format and install metadata, new immutable icon URLs, preserved app identity/start route/landscape mode, web and itch relative URLs, and existing offline-entry recovery. Production packaging checks prove linked files ship, source artwork stays outside runtime, and the unchanged aggregate download and install-cache budgets remain satisfied. Local Chromium checks also decode all six exports and review square, rounded, circular and 40%-radius masks on desktop 1200x820 and landscape mobile 844x390. No backend, rules, player data or gameplay logic changed, so emulator suites are not relevant."
+      "reason": "Approved original visual prototype remains isolated under docs; artifact validation excludes the sample review from production. Local prior prototype review covered 33 viewport/state combinations. Runtime presentation is now independently verified by the live game browser suite."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-prompts/installed-icon-atlas/README.md"
+        "docs/visual-qa/leaderboard-podium/README.md",
+        "docs/visual-qa/leaderboard-podium/visual-checks.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user's confirmed installed-icon art choice, technical export process, platform update expectations, sources and review evidence. These documentation paths do not execute."
+      "reason": "Records the explicitly approved podium and Field of Glory rules, implementation boundaries, release order and validation evidence. Markdown does not execute and deployment status is verified separately."
+    },
+    {
+      "paths": [
+        "functions/index.js",
+        "functions/pvp-leaderboard.js",
+        "tools/test-pvp-leaderboard.js",
+        "functions/test/emulator-pvp-leaderboard.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "tests": [
+        "tools/test-pvp-leaderboard.js",
+        "functions/test/emulator-pvp-leaderboard.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-reward-camp-lifecycle.js"
+      ],
+      "reason": "The shared detailed battle writer adds a private transactional outbox. Pure allocation checks conserve player casualties and exclude neutral/friendly credit; actual city/Tower/royal-holding/rally/Camp settlement paths exercise combat, wall-only damage, recovery, simultaneous captures and unchanged accounting. New event/rules emulator covers real trigger delivery, duplicates, concurrent increments, old-season delivery and protected totals."
+    },
+    {
+      "paths": [
+        "firestore.rules",
+        "firestore.indexes.json",
+        "firebaseClient.js",
+        "tools/test-pvp-leaderboard-client.js"
+      ],
+      "tests": [
+        "tools/test-pvp-leaderboard-client.js",
+        "tools/validate-leaderboard-tabs.js",
+        "functions/test/emulator-pvp-leaderboard.js"
+      ],
+      "reason": "The client queries the current scoped PvP board and joins current public identity in bounded chunks. Exact loader tests cover limits, ordering, canonical score preservation and stale account/session/realm results. Emulator queries enforce read/write and season rules; production index readiness and read-only query verification are required before frontend publication."
+    },
+    {
+      "paths": [
+        "game.js",
+        "kingdom-ledgers-ui.js",
+        "kingdom-ledgers-ui.css",
+        "tools/map-benchmark/ledgers-qa-runtime.js",
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "tests": [
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Actual game modal verifies all three tabs at desktop and two landscape-mobile sizes, podium order, no duplicate ranks, full totals, personal navigation, scoped styles, refresh/keyboard, empty/error/few-entry states and late detached-modal responses. The fixture uses synthetic saved identity and scores; shared ledger number/render helpers and existing King/Clan rows remain covered."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Bound the approved code-only feature increment at 24 KiB and ledger presentation growth at 12 KiB, with individual entry-point limits. Production build and asset validators verify shipped content, cache/payload budgets and excluded prototype sources. No additional art, dependencies or startup requests are introduced."
     }
   ]
 }

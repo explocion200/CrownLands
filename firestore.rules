@@ -400,6 +400,20 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /pvpLeaderboards/{boardId} {
+      // The metadata document may not exist until the season's first PvP kill.
+      allow get: if signedIn() && boardId == currentRealmStorageId();
+      allow write: if false;
+      match /entries/{uid} {
+        allow read: if signedIn() && boardId == currentRealmStorageId() && isCurrentGeneration(resource.data);
+        allow write: if false;
+      }
+    }
+
+    match /pvpKillEvents/{boardId}/events/{battleId} {
+      allow read, write: if false;
+    }
+
     function currentPlayerAccount() {
       return signedIn()
         && exists(/databases/$(database)/documents/players/$(request.auth.uid))

@@ -27,13 +27,15 @@
       loadKingPowerLeaderboard: async () => mode === 'empty' ? [] : entries,
       loadKingPowerPresenceLeaderboard: async () => [],
       loadClanLeaderboard: async () => mode === 'empty' ? [] : clans,
+      loadPvpLeaderboard: async () => ({entries:mode === 'empty' ? [] : entries.map((row,index)=>({...row,pvpKills:(100-index)*234567})),trackingStartedAtMs:Date.now()}),
       loadStrongholdLegacyLeaderboard: async strongholdId => mode === 'legacy-error' ? Promise.reject(Error('Synthetic ledger error')) : mode === 'legacy-empty' ? [] : history.map(row => ({ ...row, strongholdId })),
       loadCrownCitadelReignLeaderboard: async () => mode === 'legacy-error' ? Promise.reject(Error('Synthetic ledger error')) : mode === 'legacy-empty' ? [] : history,
     };
-    if (surface === 'players' || surface === 'clans') {
+    if (surface === 'players' || surface === 'clans' || surface === 'glory') {
       state.clanId = 'ledger-qa-clan';
       showLeaderboardModal();
       if (surface === 'clans') modalBody.querySelector('[data-leaderboard-tab="clans"]').click();
+      if (surface === 'glory') modalBody.querySelector('[data-leaderboard-tab="glory"]').click();
     } else if (surface === 'maps') {
       if (query.get('towerFlags') === '1') {
         // Synthetic published owners; the actual map renderer and update hooks run.

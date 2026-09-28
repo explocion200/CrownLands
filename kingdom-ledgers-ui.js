@@ -90,11 +90,48 @@ function updateLeaderboardStanding(panel, category, entries, currentUid, clanId,
   const clans = category === "clans";
   const standing = panel?.querySelector('.leaderboard-standing');
   if (!standing) return;
+  const list = panel.querySelector(".leaderboard-list");
+  const rows = [...list.querySelectorAll(".leaderboard-row")];
+  const columns = panel.rankingColumns || panel.querySelector(".leaderboard-columns");
+  panel.rankingColumns = columns;
+  const label = clans ? "Clan Power" : category === "glory" ? "PvP kills" : "King Power";
+  const title = clans ? "The great noble houses" : category === "glory" ? "Champions of the battlefield" : "The foremost kingdoms";
+  const heading = document.createElement("div");
+  heading.className = "leaderboard-roll-heading";
+  const headingText = document.createElement("h3");
+  headingText.textContent = title;
+  heading.append(headingText);
+  if (category === "glory") {
+    const notes = document.createElement("details");
+    notes.className = "leaderboard-scoring";
+    notes.innerHTML = '<summary>Scoring rules</summary><p>One point per enemy player troop defeated, on attack or defense, before recovery. Neutral troops do not count. Shared battles divide credit by combat contribution. Ties favour the earliest battle time reaching the total. Scores reset each season. Earlier battles before tracking began are excluded.</p>';
+    heading.append(notes);
+  }
+  list.prepend(heading);
+  if (rows.length) {
+    const podium = document.createElement("div");
+    podium.className = "leaderboard-podium";
+    podium.setAttribute("aria-label","Top three");
+    rows.slice(0,3).forEach((row,index) => {
+      row.classList.add("leaderboard-champion",["first","second","third"][index]);
+      podium.append(row);
+    });
+    heading.after(podium);
+    if (columns) { columns.hidden=rows.length<=3; podium.after(columns); }
+  } else if (columns) columns.remove();
   const index = entries.findIndex(entry => clans ? entry.id === clanId : entry.uid === currentUid);
   const entry = entries[index];
+  const value = entry ? (clans ? entry.totalKingPower || 0 : category === "glory" ? entry.pvpKills : entry.kingPower) : 0;
   standing.innerHTML = entry
-    ? `<span>${clans ? "Your clan" : "Your standing"}</span><strong>#${index + 1}</strong><b>${formatLedgerNumber(clans ? entry.totalKingPower || 0 : entry.kingPower)} <small>${clans ? "Clan" : "King"} Power</small></b><button type="button" data-find-rank>Find my ${clans ? "clan" : "rank"} ↓</button>`
+    ? `<span>${clans ? "Your clan" : "Your standing"}</span><strong>#${index + 1}</strong><div class="leaderboard-standing-identity"></div><b>${formatLedgerNumber(value)} <small>${label}</small></b><button type="button" data-find-rank>Find my ${clans ? "clan" : "rank"} ↓</button>`
     : `<span>Your ${clans ? "clan" : "kingdom"} is not in this Top ${formatLedgerNumber(limit)}.</span>`;
+  if (entry && rows[index]) {
+    const identity = standing.querySelector(".leaderboard-standing-identity");
+    for (const selector of [".leaderboard-flag,.clan-leaderboard-shield-link",".leaderboard-ruler"]) {
+      const node = rows[index].querySelector(selector);
+      if (node) identity.append(node.cloneNode(true));
+    }
+  }
   standing.querySelector('[data-find-rank]')?.addEventListener('click', () => {
     const row = panel.querySelector('.leaderboard-row.current');
     row?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });

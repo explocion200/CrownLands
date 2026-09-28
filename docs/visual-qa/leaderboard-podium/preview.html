@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <base href="../../../">
+  <title>Crownlands · The Royal Roll</title>
+  <link rel="icon" href="assets/icons/atlas-v1/crownlands-favicon-32.png">
+  <link rel="stylesheet" href="clan-heraldry-v2.css">
+  <link rel="stylesheet" href="docs/visual-qa/leaderboard-podium/draft.css">
+  <script src="functions/clanHeraldryConfig.js" defer></script>
+  <script src="functions/clanHeraldryAssets.js" defer></script>
+  <script src="functions/clanHeraldryLegacyV1.js" defer></script>
+  <script src="functions/clanHeraldryRenderer.js" defer></script>
+  <script src="docs/visual-qa/leaderboard-podium/preview.js" defer></script>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <button id="reopen" class="reopen">Open Leaderboards</button>
+  <dialog id="leaderboardDialog" aria-labelledby="title">
+    <div class="ledger-shell">
+      <header class="window-header">
+        <img src="assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp" alt="" class="heading-art">
+        <div><p class="eyebrow">THE ROYAL ROLL</p><h1 id="title">Leaderboards</h1></div>
+        <span class="season"><span class="season-dot"></span> This season</span>
+        <button id="close" class="close" aria-label="Close Leaderboards">×</button>
+      </header>
+      <nav class="tabs-bar" aria-label="Ranking categories">
+        <div class="tabs" role="tablist" aria-label="Leaderboard category">
+          <button id="playersTab" role="tab" aria-selected="true" aria-controls="rankPanel" data-tab="players"><img src="assets/flag-symbols/selected/svg/crown.svg" alt="">Top 100 Kingdoms</button>
+          <button id="clansTab" role="tab" aria-selected="false" aria-controls="rankPanel" data-tab="clans" tabindex="-1"><img src="assets/flag-symbols/selected/svg/lion.svg" alt="">Top Clans</button>
+          <button id="gloryTab" role="tab" aria-selected="false" aria-controls="rankPanel" data-tab="glory" tabindex="-1"><img src="assets/flag-symbols/selected/svg/crossed-swords.svg" alt="">Field of Glory</button>
+        </div>
+        <button id="refresh" class="refresh" aria-label="Refresh sample rankings">↻ <span>Refresh</span></button>
+      </nav>
+      <section id="rankPanel" class="rank-panel" role="tabpanel" aria-labelledby="playersTab">
+        <aside id="standing" class="standing" aria-label="Your standing"></aside>
+        <main class="roll">
+          <div class="roll-intro"><div><p class="eyebrow" id="categoryLabel"></p><h2 id="rollTitle"></h2></div><button id="rules" class="rules" aria-label="How this ranking works">Ranking rules <span>ⓘ</span></button></div>
+          <div id="rankScroll" class="rank-scroll" tabindex="0" aria-label="Rankings"></div>
+        </main>
+      </section>
+      <footer class="ledger-footer"><span id="status" role="status">Illustrative rankings</span><span>DESIGN DRAFT · SAMPLE DATA</span></footer>
+    </div>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section id="rulesPanel" class="rules-panel" role="region" aria-labelledby="rulesTitle" hidden>
+      <div><p class="eyebrow">THE SCRIBE'S NOTES</p><h2 id="rulesTitle">How the roll is ranked</h2><p id="rulesText"></p><button id="closeRules">Return to the roll</button></div>
+    </section>
+  </dialog>
+</body>
+</html>

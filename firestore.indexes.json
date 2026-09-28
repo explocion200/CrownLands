@@ -1,6 +1,26 @@
 {
   "indexes": [
     {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "pvpKills", "order": "DESCENDING" },
+        { "fieldPath": "reachedAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "retaliationWindows",
       "queryScope": "COLLECTION",
       "fields": [

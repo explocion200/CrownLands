@@ -213,10 +213,10 @@ const militaryUiBytes = ["objectives-activity-ui.js", "objectives-activity-ui.cs
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (militaryUiBytes > 140 * 1024) throw new Error("Combined military presentation exceeds its 140 KiB payload budget.");
 // Approved Leaderboards, Map Atlas, and royal holding views reuse packaged art.
-// Bound the four presentation files to 64 KiB and runtime/entry wiring to 20 KiB.
+// Podium styling adds ~12 KiB to the original 64 KiB presentation allowance.
 const kingdomLedgersBytes = ["kingdom-ledgers-ui.js", "kingdom-ledgers-ui.css", "stronghold-details-ui.js", "stronghold-details-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (kingdomLedgersBytes > 64 * 1024) throw new Error("Kingdom ledgers presentation exceeds its 64 KiB payload budget.");
+if (kingdomLedgersBytes > 76 * 1024) throw new Error("Kingdom ledgers presentation exceeds its 76 KiB payload budget.");
 const holdingDetailsFiles = ["camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css"];
 const holdingDetailsBytes = holdingDetailsFiles.reduce((total, file) => total + fs.statSync(path.join(dist, file)).size, 0);
 if (holdingDetailsBytes > 100 * 1024) throw new Error("Camp and Clan Tower presentation exceeds its 100 KiB budget.");
@@ -258,7 +258,9 @@ const soundtrackIncrementBudget = 22 * 1024 * 1024;
 // background available for roadmap.css/site-info.css; it is no longer a login dependency.
 const loginFiles = ["login-screen.css", "assets/optimized/login-kingdom-960-6646f1d404b1.webp", "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp"];
 if (loginFiles.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > 600 * 1024) throw new Error("Responsive login artwork and styling exceed 600 KiB.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600) * 1024 + soundtrackIncrementBudget;
+// Approved podium/Field of Glory adds bounded presentation and query code only.
+// Reserve 24 KiB; no additional artwork, fonts, libraries or startup requests.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24) * 1024 + soundtrackIncrementBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

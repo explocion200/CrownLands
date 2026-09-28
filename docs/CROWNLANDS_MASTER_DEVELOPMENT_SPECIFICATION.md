@@ -1028,6 +1028,20 @@ The verified `origin/main` production-reward hours are 0.5 for Easy, 1 for Mediu
 - Crownlands provides a Top Clans leaderboard based on combined clan strength. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Public ruler and clan identity are part of ranking presentation.
 
+### Approved podium and Field of Glory — September 28, 2026
+
+**Status: implemented pending deployment verification.** The user approved the draft and requested implementation, merge and deployment. Release evidence determines which channel is live.
+
+- All three boards use a parchment podium for the first three entries (visual order 2 / 1 / 3), saved flags or clan heraldry, full score totals, a personal standing card and a list beginning at fourth place. Tabs are Top 100 Kingdoms, Top Clans, then **Field of Glory**. Existing Kingdom and Clan scoring is unchanged.
+- Field of Glory ranks up to 100 players by enemy player-owned troops defeated during the current season. Credit attack and defense, win or loss, using authoritative casualties **before recovery**. Neutral troops, self/friendly battles, wall damage, travel, donations and production do not award kills. Recovery never subtracts or adds kills.
+- Eligible battles use the existing city/royal-holding, occupied Camp and Clan Tower resolution snapshots. Shared attack and defense divide the opposing player-casualty pool by effective combat contribution, with deterministic largest-remainder integer rounding. City owners receive their wall contribution; clan Tower walls are not assigned to one member. Never award the entire shared pool to every participant.
+- Order by kills descending, then earliest battle time reaching the total, then stable player key. Late deliveries use the original battle time. Keep each battle's world, reset generation and shard; delayed or repeated delivery cannot move or duplicate credit across seasons.
+- A separate server-only seasonal ledger accumulates these totals. It does not change Gold, troop counts, King Power, attack eligibility, XP or rewards. Totals follow player IDs; the UI reads current public names, flags and clan identity. Inactive/missing public identity uses a generic ruler label without deleting the score.
+- Each new season starts at zero. The first partial season includes only battles resolved after scoring deployment and explicitly labels the first recorded battle date; earlier battles are excluded. No historical backfill or hidden per-opponent scoring cap is introduced. Final-season locking and archives remain planned.
+- Loading, unavailable and empty standings are distinct from published ranks. Find my rank navigates an actual Top 100 entry and never inserts an unpublished local estimate. Rankings refresh on demand; scoring is asynchronous after the battle transaction.
+
+See [implementation and verification notes](visual-qa/leaderboard-podium/README.md).
+
 ### Confirmed season history policy
 
 - Active Kingdom and Clan leaderboard entries reset each season.

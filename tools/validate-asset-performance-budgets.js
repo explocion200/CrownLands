@@ -174,10 +174,11 @@ const entrypointBudgets = {
   // styles ~2.5 KiB and Firebase client ~6.2 KiB; gear contract additions fit these bounds.
   // Main 5fa1b5e already contains 1,930,758 bytes, 4,614 over this cap.
   // Bound the existing release at a 5 KiB increment; this login update adds no JS.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5) * 1024,
+  // Podium/Glory wiring adds ~5 KiB; the previous base was already 444 bytes over.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7) * 1024,
   "login-screen.css": 8 * 1024,
-  "kingdom-ledgers-ui.js": 10 * 1024,
-  "kingdom-ledgers-ui.css": 18 * 1024,
+  "kingdom-ledgers-ui.js": 11 * 1024,
+  "kingdom-ledgers-ui.css": 31 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
   "stronghold-details-ui.css": 30 * 1024,
   "modal-ui.js": 4 * 1024,
@@ -226,7 +227,7 @@ const entrypointBudgets = {
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
-  "firebaseClient.js": 157 * 1024,
+  "firebaseClient.js": 160 * 1024,
   "animation-manager.js": 80 * 1024,
   "audio-manager.js": 80 * 1024,
   "route-worker.js": 40 * 1024,
