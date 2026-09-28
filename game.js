@@ -13909,7 +13909,7 @@ function renderPublicPlayerProfile(profile) {
       <section class="public-profile-section public-profile-player" tabindex="0" aria-label="Ruler identity">
         <div class="public-profile-heading"><span>Ruler</span></div>
         <div class="public-profile-identity">
-          <span id="publicPlayerFlag" class="kingdom-flag public-profile-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
+          <span class="player-banner public-profile-flag" aria-hidden="true"><span class="player-banner-art"><span class="banner-rod"></span><span id="publicPlayerFlag" class="kingdom-flag"><span class="flag-symbol"></span></span></span></span>
           <strong>${escapeHtml(profile.displayName)}</strong>
         </div>
         <div class="public-profile-power">${renderCrownlandsIcon("crown")}<span><small>King Power</small><strong>${formatNumber(profile.kingPower)}</strong></span></div>
@@ -38216,7 +38216,7 @@ function renderLeaderboardRow(entry, index, currentUid, glory = false) {
   return `
     <article class="leaderboard-row ${isCurrent ? "current" : ""}" tabindex="-1">
       <span class="leaderboard-rank">${formatLedgerNumber(index + 1)}</span>
-      <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
+      <span class="player-banner leaderboard-flag" aria-hidden="true"><span class="player-banner-art"><span class="banner-rod"></span><span class="kingdom-flag" data-leaderboard-flag="${index}"><span class="flag-symbol"></span></span></span></span>
       <div class="leaderboard-ruler">
         <div>${renderPlayerNameLink(entry.uid, entry.displayName)}${isCurrent ? '<span class="leaderboard-you">YOU</span>' : ""}</div>
         <small>${entry.clanId && entry.clanTag ? renderClanIdentityLink({ clanId: entry.clanId, clanName: entry.clanName, clanTag: entry.clanTag, className: "city-clan-tag leaderboard-clan-link", display: "tag" }) : "No clan"}<span class="leaderboard-mobile-meta"> · ${escapeHtml(getRegionLabel(entry.mainRegionId))} · ${formatLedgerNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}</span></small>
