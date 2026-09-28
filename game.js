@@ -170,10 +170,20 @@ const COMMON_GEAR_BOX_ITEM = Object.freeze({
   icon: "assets/icons/common-gear-chest-r1.svg",
   bagCategory: "utility",
 });
+const UNCOMMON_GEAR_BOX_ITEM = Object.freeze({
+  id: "uncommon_gear_box",
+  label: "Uncommon Gear Box",
+  description: "Open to receive 1 random Uncommon and 2 random Common gear pieces, all Level 1, for your Inner Castle officers.",
+  icon: "assets/icons/uncommon-gear-chest-r1.svg",
+  bagCategory: "utility",
+});
+function isGearBoxItem(itemId) {
+  return itemId === COMMON_GEAR_BOX_ITEM.id || itemId === UNCOMMON_GEAR_BOX_ITEM.id;
+}
 const COMMON_GEAR_BOX_OPEN_ART = "assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp";
 
 function normalizeCommonGearState(raw = null) {
-  return COMMON_GEAR?.normalizeState(raw) || { commonGearBoxes: 0, instances: {}, equipped: {}, newMarkers: {} };
+  return COMMON_GEAR?.normalizeState(raw) || { commonGearBoxes: 0, uncommonGearBoxes: 0, instances: {}, equipped: {}, newMarkers: {} };
 }
 
 function getCommonGearBonuses() {
@@ -348,7 +358,7 @@ const SHOP_PRICE_HOURS = Object.freeze({
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 4;
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 5;
 const LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS = 30;
 const DAILY_LOGIN_REWARD_MONTH_LENGTHS = Object.freeze([28, 29, 30, 31]);
 const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
@@ -34484,6 +34494,7 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
     gold: Math.max(0, Math.floor(Number(raw.gold) || 0)),
     troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
     commonGearBoxes: Math.max(0, Math.floor(Number(raw.commonGearBoxes) || 0)),
+    uncommonGearBoxes: Math.max(0, Math.floor(Number(raw.uncommonGearBoxes) || 0)),
     items: Object.fromEntries(
       Object.entries(raw.items || {})
         .filter(([itemId, quantity]) => SHOP_ITEMS.some(item => item.id === itemId) && Number(quantity) > 0)
@@ -34573,6 +34584,7 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
       day: Number(reward.day), goldHours: Math.max(0, Number(reward.goldHours) || 0),
       troopHours: Math.max(0, Number(reward.troopHours) || 0), items: { ...reward.items },
       commonGearBoxes: Math.max(0, Number(reward.commonGearBoxes) || 0),
+      uncommonGearBoxes: Math.max(0, Number(reward.uncommonGearBoxes) || 0),
     })) : [],
     monthKey,
     monthLengthDays,
@@ -35652,6 +35664,7 @@ async function claimDailyLoginReward(sourceElement = null) {
       const parts = [];
       if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
       if (receipt.troops > 0) parts.push(`${formatNumber(receipt.troops)} troops`);
+      if (receipt.uncommonGearBoxes > 0) parts.push(`${formatNumber(receipt.uncommonGearBoxes)} Uncommon Gear Box`);
       if (receipt.commonGearBoxes > 0) parts.push(`${formatNumber(receipt.commonGearBoxes)} Common Gear Box`);
       const itemCount = receiptItemCount;
       if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
@@ -36391,7 +36404,7 @@ function showInventoryModal() {
   }
   const selectedEntryProjectedExpiresAtMs = selectedEntry ? getProjectedItemEffectExpiresAtMs(selectedEntry) : 0;
   const selectedEntryActiveRemaining = Math.max(0, Math.ceil((selectedEntryProjectedExpiresAtMs - Date.now()) / 1000));
-  const selectedEntryIsGearBox = selectedEntry?.id === COMMON_GEAR_BOX_ITEM.id;
+  const selectedEntryIsGearBox = isGearBoxItem(selectedEntry?.id);
   const selectedEntryActionLabel = selectedEntryIsGearBox ? "OPEN" : "USE";
   const effectLabel = getInventoryEffectLabel(selectedEntry);
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
@@ -36419,7 +36432,7 @@ function showInventoryModal() {
   });
   modalBody.querySelectorAll("[data-inventory-use]").forEach(button => {
     button.addEventListener("click", () => {
-      if (button.dataset.inventoryUse === COMMON_GEAR_BOX_ITEM.id) showCommonGearBoxReveal();
+      if (isGearBoxItem(button.dataset.inventoryUse)) showCommonGearBoxReveal(null, button.dataset.inventoryUse === UNCOMMON_GEAR_BOX_ITEM.id ? "uncommon" : "common");
       else useInventoryItem(button.dataset.inventoryUse);
     });
   });

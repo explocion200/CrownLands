@@ -734,6 +734,7 @@ setImmediate(() => {
     selectedInventoryPage: 0,
     COMMON_GEAR: null,
     COMMON_GEAR_BOX_ITEM: { id: "common_gear_box", bagCategory: "utility" },
+    UNCOMMON_GEAR_BOX_ITEM: { id: "uncommon_gear_box", bagCategory: "utility" },
     INVENTORY_SLOT_COUNT: 8,
     verifiedRealmInfo: { capabilities: { instantEconomyActionsVersion: 1 } },
     skillPresetMarkupSignature: "",

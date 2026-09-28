@@ -18,7 +18,7 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
 <header class="daily-header"><span id="headerSeal" class="header-seal" aria-hidden="true"></span><div><p>A gift for your return</p><h1 id="dailyTitle">Daily Login</h1></div><div class="cycle-status"><span id="cycleLabel"></span><strong id="dayLabel"></strong></div></header>
 
-<div class="daily-body"><section class="reward-ledger" aria-label="Daily reward cycle"><div class="ledger-heading"><div><h2>Your royal rewards</h2><p>Four weeks. Yours to finish.</p></div><span id="progressLabel"></span></div><nav id="weekNav" aria-label="Reward weeks"></nav><div id="weeks"></div><footer class="ledger-footer"><span><i class="legend-ready"></i> Ready</span><span><i class="legend-claimed"></i> Collected</span><span class="carry-note">Progress carries across seasons</span></footer></section><section class="reward-detail" aria-label="Selected reward"><div class="detail-heading"><span id="selectedDayLabel"></span><span id="selectedStatus"></span></div><div id="detailScroll" class="detail-scroll"></div><footer class="claim-footer"><p id="claimNote"></p><button id="claimButton" class="claim-button"></button></footer></section></div>
+<div class="daily-body"><section class="reward-ledger" aria-label="Daily reward cycle"><div class="ledger-heading"><div><h2>Your royal rewards</h2><p>${status.schedule.length} days. Yours to finish.</p></div><span id="progressLabel"></span></div><nav id="weekNav" aria-label="Reward weeks"></nav><div id="weeks"></div><footer class="ledger-footer"><span><i class="legend-ready"></i> Ready</span><span><i class="legend-claimed"></i> Collected</span><span class="carry-note">Progress carries across seasons</span></footer></section><section class="reward-detail" aria-label="Selected reward"><div class="detail-heading"><span id="selectedDayLabel"></span><span id="selectedStatus"></span></div><div id="detailScroll" class="detail-scroll"></div><footer class="claim-footer"><p id="claimNote"></p><button id="claimButton" class="claim-button"></button></footer></section></div>
 
 </section>`;
 
@@ -28,7 +28,7 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
     hasCity: options.hasCity, schedule: status.schedule.map(r => ({ ...r, week: Math.ceil(r.day/7), weekday: (r.day-1)%7+1,
 
-      resource: r.goldHours > 0 ? "gold" : "troops", hours: r.goldHours || r.troopHours, itemId: Object.keys(r.items || {})[0] })) };
+      resource: r.goldHours > 0 ? "gold" : "troops", hours: r.goldHours || r.troopHours, itemId: Object.keys(r.items || {})[0], itemEntries: Object.entries(r.items || {}) })) };
 
   const model = { pending: () => status.pendingCount };
 
@@ -36,7 +36,7 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
   let week = Math.ceil(selected/7);
 
-const art={gold:"assets/icons/royal-shop-gold-r1.svg",troops:"assets/icons/daily-login-troops-r1.svg",chest:"assets/icons/common-gear-chest-r1.svg"};
+const art={gold:"assets/icons/royal-shop-gold-r1.svg",troops:"assets/icons/daily-login-troops-r1.svg",chest:"assets/icons/common-gear-chest-r1.svg",uncommonChest:"assets/icons/uncommon-gear-chest-r1.svg"};
 
 
 
@@ -46,9 +46,9 @@ const kindName=r=>r.resource==="gold"?"Gold":"troops";
 
 const stateName=day=>day<state.nextDay?"Collected":day===state.nextDay&&model.pending(state)?"Ready to collect":day<=state.earnedThrough?"Queued":day===state.nextDay?"Next login":"Upcoming";
 
-const heroArt=r=>r.commonGearBoxes?art.chest:r.itemId?items[r.itemId].art:art[r.resource];
+const heroArt=r=>r.uncommonGearBoxes?art.uncommonChest:r.commonGearBoxes?art.chest:r.itemId?items[r.itemId].art:art[r.resource];
 
-const bundleLabel=r=>`${r.hours ? `${r.hours} hours of ${kindName(r)}` : "Item reward"}${r.itemId?`, one ${items[r.itemId].label}`:""}${r.commonGearBoxes?", one Common Gear Box":""}`;
+const bundleLabel=r=>`${r.hours ? `${r.hours} hours of ${kindName(r)}` : "Item reward"}${r.itemEntries.map(([id,count])=>`, ${count} ${items[id].label}`).join("")}${r.commonGearBoxes?", one Common Gear Box":""}${r.uncommonGearBoxes?", one Uncommon Gear Box":""}`;
 
 function select(day,focus=false){selected=Math.max(1,Math.min(state.schedule.length,day));week=Math.ceil(selected/7);render();$("#detailScroll").scrollTop=0;if(focus)$(`[data-day="${selected}"]`)?.focus();}
 
@@ -66,17 +66,17 @@ function render(){
 
     const status=stateName(r.day),classes=[r.day<state.nextDay?"claimed":r.day<=state.earnedThrough?"ready":"upcoming",r.weekday===7?"week-end":r.weekday>=5?"late":"resource"];
 
-    return `<button type="button" class="day-tile ${classes.join(" ")}" data-day="${r.day}" aria-pressed="${r.day===selected}" aria-label="Day ${r.day}, ${bundleLabel(r)}, ${status}"><span class="day-number">Day ${r.day}</span><span class="day-art">${img(heroArt(r))}${r.itemId&&r.hours?`<span class="mini-bonus">${img(art[r.resource])}</span>`:""}</span><strong class="day-reward">${r.hours ? `${r.hours}h ${kindName(r)}` : "1 × Item"}</strong><span class="day-extra">${r.commonGearBoxes?"+ Gear Box":r.itemId?"+ Item":status==="Ready to collect"?"Ready":r.day<state.nextDay?"Collected":"Production"}</span></button>`;
+    return `<button type="button" class="day-tile ${classes.join(" ")}" data-day="${r.day}" aria-pressed="${r.day===selected}" aria-label="Day ${r.day}, ${bundleLabel(r)}, ${status}"><span class="day-number">Day ${r.day}</span><span class="day-art">${img(heroArt(r))}${r.itemEntries.length>1?`<span class="mini-bonus">${img(items[r.itemEntries[1][0]].art)}</span>`:r.itemId&&r.hours?`<span class="mini-bonus">${img(art[r.resource])}</span>`:""}</span><strong class="day-reward">${r.hours ? `${r.hours}h ${kindName(r)}` : r.uncommonGearBoxes ? "Uncommon" : `${r.itemEntries.length} × Item${r.itemEntries.length===1?"":"s"}`}</strong><span class="day-extra">${r.uncommonGearBoxes?"Cycle chest":r.commonGearBoxes?"+ Gear Box":r.itemEntries.length>1?"Cloak + Shield":r.itemId?"For your Bag":status==="Ready to collect"?"Ready":r.day<state.nextDay?"Collected":"Production"}</span></button>`;
 
   }).join("")}</div></section>`).join("");
 
-  const reward=state.schedule[selected-1],item=items[reward.itemId],isMilestone=!!reward.commonGearBoxes,resource=kindName(reward),amount=Math.floor(reward.hours*(reward.resource==="gold"?state.goldRate:state.troopRate));
+  const reward=state.schedule[selected-1],item=items[reward.itemId],isMilestone=!!(reward.commonGearBoxes || reward.uncommonGearBoxes),resource=kindName(reward),amount=Math.floor(reward.hours*(reward.resource==="gold"?state.goldRate:state.troopRate));
 
   $("#selectedDayLabel").textContent=`Day ${selected} · Week ${reward.week}`;$("#selectedStatus").textContent=stateName(selected);
 
   const row=(src,title,detail)=>`<div class="bundle-row">${img(src)}<div><strong>${title}</strong><small>${detail}</small></div></div>`;
 
-  $("#detailScroll").innerHTML=`<div class="reward-hero"><div class="hero-art ${!isMilestone&&!item?"resource":""}">${img(heroArt(reward))}</div><h2>${isMilestone?"The week's bounty":item?"A royal provision":"The royal gift"}</h2><p class="hero-kicker">${isMilestone?"Weekly chest milestone":reward.weekday>=5?"End-of-week reward":"Daily reward"}</p></div><div class="ornament" aria-hidden="true">◆</div><div class="bundle">${reward.hours ? row(art[reward.resource],state.hasCity?`${amount.toLocaleString("en-US")} ${resource}`:`${reward.hours} hours of ${resource}`,`${reward.hours}h of base ${resource} production`) : ""}${item?row(item.art,`1 × ${item.label}`,"Added to your Bag"):""}${isMilestone?row(art.chest,"1 × Common Gear Box","Three Level 1 Common gear pieces"):""}</div><p class="reward-note">${!state.hasCity?"Your progress is safe. Establish your new main city to collect rewards. ":""}${isMilestone?"The seventh day of each week includes a Gear Box. Unopened boxes carry across seasons. ":""}Resource amounts use your base production when collected.</p>`;
+  $("#detailScroll").innerHTML=`<div class="reward-hero"><div class="hero-art ${!isMilestone&&!item?"resource":""}">${img(heroArt(reward))}</div><h2>${reward.uncommonGearBoxes?"Your Uncommon chest":isMilestone?"The week's bounty":item?"A royal provision":"The royal gift"}</h2><p class="hero-kicker">${reward.uncommonGearBoxes?"30-day cycle reward":isMilestone?"Weekly chest milestone":reward.weekday>=5?"End-of-week reward":"Daily reward"}</p></div><div class="ornament" aria-hidden="true">◆</div><div class="bundle">${reward.hours ? row(art[reward.resource],state.hasCity?`${amount.toLocaleString("en-US")} ${resource}`:`${reward.hours} hours of ${resource}`,`${reward.hours}h of base ${resource} production`) : ""}${reward.itemEntries.map(([id,count])=>row(items[id].art,`${count} × ${items[id].label}`,"Added to your Bag")).join("")}${reward.commonGearBoxes?row(art.chest,"1 × Common Gear Box","Three Level 1 Common gear pieces"):""}${reward.uncommonGearBoxes?row(art.uncommonChest,"1 × Uncommon Gear Box","One Uncommon + two Common pieces · All Level 1"):""}</div><p class="reward-note">${!state.hasCity?"Your progress is safe. Establish your new main city to collect rewards. ":""}${isMilestone?"Open your Gear Box from your Bag. Unopened boxes carry across seasons. ":""}Resource amounts use your base production when collected.</p>`;
 
   const count=model.pending(state),button=$("#claimButton"),note=$("#claimNote");button.classList.remove("is-link");
 
@@ -108,7 +108,7 @@ $("#weeks").addEventListener("keydown",e=>{const b=e.target.closest("[data-day]"
 
   $("#headerSeal").innerHTML='<svg viewBox="0 0 32 36"><path d="M6 4h20v29H6ZM6 11h20M11 2v5m10-5v5M10 16h3m6 0h3M10 21h3m6 0h3M10 27l3 2 7-6"/></svg>';
 
-  if(status.transition) $(".ledger-heading p").textContent="Finish your saved rewards, then begin four new weeks.";
+  if(status.transition) $(".ledger-heading p").textContent="Finish your saved rewards, then begin the new 30-day cycle.";
 
   $("#weeks").style.setProperty("--daily-weeks",weekNumbers.length);
 

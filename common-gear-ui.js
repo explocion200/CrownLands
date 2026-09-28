@@ -2104,6 +2104,6 @@ async function buyCommonGearBox() {
   if (modal.open && modal.classList.contains("shop-modal") && !modal.classList.contains("rewarded-ad-confirmation-modal")) renderShopModal();
 }
 
-function showCommonGearBoxReveal(receipt = null) {
-  showCommonGearBoxScreen(receipt);
+function showCommonGearBoxReveal(receipt = null, boxType = "common") {
+  showCommonGearBoxScreen(receipt, boxType);
 }

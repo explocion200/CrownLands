@@ -395,13 +395,16 @@ function patchInventoryProjectedUi() {
 function getProjectedBagItemCount(itemId) {
   return itemId === COMMON_GEAR_BOX_ITEM.id
     ? toWhole(state?.gear?.commonGearBoxes)
+    : itemId === UNCOMMON_GEAR_BOX_ITEM.id ? toWhole(state?.gear?.uncommonGearBoxes)
     : getProjectedInventoryCount(itemId);
 }
 
 function getInventoryGroups(category = selectedInventoryCategory) {
   const gearBoxCount = getProjectedBagItemCount(COMMON_GEAR_BOX_ITEM.id);
+  const uncommonBoxCount = getProjectedBagItemCount(UNCOMMON_GEAR_BOX_ITEM.id);
   return [
     ...(gearBoxCount ? [{ ...COMMON_GEAR_BOX_ITEM, count: gearBoxCount }] : []),
+    ...(uncommonBoxCount ? [{ ...UNCOMMON_GEAR_BOX_ITEM, count: uncommonBoxCount }] : []),
     ...SHOP_ITEMS.map(item => ({ ...item, count: getProjectedBagItemCount(item.id) })),
   ].filter(item => item.count > 0 && (category === "all" || item.bagCategory === category));
 }
@@ -428,7 +431,7 @@ function reconcileInventorySelectionAfterCountChange(itemId = selectedInventoryI
     return false;
   }
   const orderedDefinitions = [
-    ...(COMMON_GEAR ? [COMMON_GEAR_BOX_ITEM] : []),
+    ...(COMMON_GEAR ? [COMMON_GEAR_BOX_ITEM, UNCOMMON_GEAR_BOX_ITEM] : []),
     ...SHOP_ITEMS,
   ].filter(item => selectedInventoryCategory === "all" || item.bagCategory === selectedInventoryCategory);
   const removedIndex = orderedDefinitions.findIndex(item => item.id === normalizedItemId);
@@ -488,6 +491,7 @@ function getInventoryEffectLabel(item) {
   if (item?.id === VEIL_OF_SILENCE_ITEM_ID) return `Duration: ${formatDuration(VEIL_OF_SILENCE_DURATION_MS / 1000)}`;
   if (item?.id === SWIFT_MARCH_ORDER_ITEM_ID) return "Effect: one eligible march";
   if (item?.id === RECALL_HORN_ITEM_ID) return "Effect: one active march";
+  if (item?.id === UNCOMMON_GEAR_BOX_ITEM.id) return "Contains: 1 Uncommon + 2 Common · Level 1";
   if (item?.id === COMMON_GEAR_BOX_ITEM.id) return "Contains: 3 Common gear pieces";
   return "";
 }

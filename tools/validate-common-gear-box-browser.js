@@ -22,16 +22,16 @@ async function main() {
     await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
     await evaluate(`(()=>{
       window.__boxOriginalApi=getOnlineApi;window.__boxQA={calls:[],mode:'ok',uid:'box-qa',gear:null};
-      __boxQA.reset=(count=5)=>{commonGearBoxView?.dispose();commonGearBoxSession=null;__boxQA.calls=[];__boxQA.mode='ok';__boxQA.uid='box-qa';__boxQA.gear=COMMON_GEAR.createDefaultState();__boxQA.gear.commonGearBoxes=count;__boxQA.gear.updatedAtMs=100;state.gear=normalizeCommonGearState(__boxQA.gear);showCommonGearBoxReveal();};
-      getOnlineApi=()=>({getUser:()=>({uid:__boxQA.uid}),openCommonGearBox:async({requestId})=>{
-        const q=__boxQA;q.calls.push(requestId);if(q.mode==='slow'){await new Promise(r=>q.resolve=r);q.mode='ok';}
+      __boxQA.reset=(count=5,boxType="common")=>{commonGearBoxView?.dispose();commonGearBoxSession=null;__boxQA.calls=[];__boxQA.mode='ok';__boxQA.uid='box-qa';__boxQA.gear=COMMON_GEAR.createDefaultState();__boxQA.gear.commonGearBoxes=count;__boxQA.gear.uncommonGearBoxes=count;__boxQA.gear.updatedAtMs=100;state.gear=normalizeCommonGearState(__boxQA.gear);showCommonGearBoxReveal(null,boxType);};
+      getOnlineApi=()=>({getUser:()=>({uid:__boxQA.uid}),openCommonGearBox:async({requestId,boxType="common"})=>{
+        const q=__boxQA,countField=boxType==="uncommon"?"uncommonGearBoxes":"commonGearBoxes",requestField=boxType==="uncommon"?"lastUncommonOpenRequestId":"lastOpenRequestId",receiptField=boxType==="uncommon"?"lastUncommonOpenReceipt":"lastOpenReceipt";q.calls.push(requestId);if(q.mode==='slow'){await new Promise(r=>q.resolve=r);q.mode='ok';}
         if(q.mode==='fail'){q.mode='ok';throw Error('Synthetic rejection');}
-        if(q.gear.lastOpenRequestId===requestId)return{gear:structuredClone(q.gear),receipt:q.gear.lastOpenReceipt,replayed:true};
-        if(!q.gear.commonGearBoxes)throw Error('No boxes');q.gear.commonGearBoxes--;const ids=[];
-        for(let i=0;i<3;i++){const d=COMMON_GEAR.DEFINITIONS[(q.gear.updatedAtMs+i)%32],id='box-qa-'+q.gear.updatedAtMs+'-'+i;ids.push(id);q.gear.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:1,acquiredAtMs:q.gear.updatedAtMs});}
-        q.gear.updatedAtMs++;q.gear.lastOpenRequestId=requestId;q.gear.lastOpenReceipt={requestId,instanceIds:ids,openedAtMs:q.gear.updatedAtMs};
+        if(q.gear[requestField]===requestId)return{gear:structuredClone(q.gear),receipt:q.gear[receiptField],replayed:true};
+        if(!q.gear[countField])throw Error('No boxes');q.gear[countField]--;const ids=[];
+        for(let i=0;i<3;i++){const pool=COMMON_GEAR.DEFINITIONS.filter(d=>d.rarity===(boxType==="uncommon"&&i===0?"uncommon":"common")),d=pool[(q.gear.updatedAtMs+i)%32],id='box-qa-'+q.gear.updatedAtMs+'-'+i;ids.push(id);q.gear.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:1,acquiredAtMs:q.gear.updatedAtMs});}
+        q.gear.updatedAtMs++;q.gear[requestField]=requestId;q.gear[receiptField]={requestId,boxType,instanceIds:ids,openedAtMs:q.gear.updatedAtMs};
         if(q.mode==='lost'){q.mode='ok';throw Error('Lost response after commit');}
-        return{gear:structuredClone(q.gear),receipt:q.gear.lastOpenReceipt};
+        return{gear:structuredClone(q.gear),receipt:q.gear[receiptField]};
       }});setAnimationModePreference('off');__boxQA.reset();
     })()`);
     const settled = () => wait('!commonGearBoxSession.busy');
@@ -141,12 +141,60 @@ async function main() {
         await evaluate('showCommonGearBoxReveal()');assert.equal(await evaluate('__boxQA.soundCalls.length'),1,'Reopening revealed rewards is silent');
       }
     }
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await evaluate('__boxQA.reset(2,"uncommon");setAnimationModePreference("full");__boxQA.soundCalls=[];__boxQA.soundStarts=[]');
+      await paint(); await shot(`uncommon-${width}x${height}-ready`);
+      assert.equal(await evaluate('commonGearBoxView.chest.svg.querySelector("polygon").getAttribute("fill")'),'#6f8753');
+      await click('#cgbChestArt');await settled();
+      assert.equal(await evaluate('__boxQA.soundCalls.length'),1);
+      assert.deepEqual(await evaluate('commonGearBoxSession.items.map(i=>i.rarity).sort()'),['common','common','uncommon']);
+      assert.equal(await evaluate('state.gear.uncommonGearBoxes'),1);
+      assert.equal(await evaluate('state.gear.commonGearBoxes'),2);
+      assert.equal(await evaluate(`getComputedStyle(modal.querySelector('[data-rarity="uncommon"].cgb-reward-card')).backgroundColor`),'rgb(199, 210, 180)');
+      assert(await evaluate('modalBody.scrollHeight<=modalBody.clientHeight+1'));
+      await evaluate('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+      await shot(`uncommon-${width}x${height}-rewards`);
+      await evaluate('showInventoryModal()');
+      await wait(`!!modal.querySelector('[data-inventory-select="uncommon_gear_box"]')`);
+      await click('[data-inventory-select="uncommon_gear_box"]');
+      assert(await evaluate(`modal.querySelector('[data-inventory-use="uncommon_gear_box"]').textContent.includes("Open")`));
+      await shot(`uncommon-${width}x${height}-bag`);
+      await click('[data-inventory-use="uncommon_gear_box"]');
+      assert.equal(await evaluate('commonGearBoxSession.boxType'),'uncommon');
+    }
+    await evaluate('__boxQA.reset(2,"uncommon");__boxQA.mode="lost";void openOneCommonGearBox()');await settled();
+    const lostGreenId=await evaluate('commonGearBoxSession.requestId');
+    await evaluate('showCommonGearBoxReveal();void openOneCommonGearBox()');await settled();
+    await evaluate('showCommonGearBoxReveal(null,"uncommon");void openOneCommonGearBox()');await settled();
+    assert.equal(await evaluate('__boxQA.calls.at(-1)'),lostGreenId);
+    assert.equal(await evaluate('state.gear.uncommonGearBoxes'),1);
+    assert.equal(await evaluate('Object.keys(state.gear.instances).length'),6);
+
+    // Real Daily Login and Bag rendering against the new server schedule.
+    const dailyModel=require('../functions/dailyLoginRewards');
+    const dailySample=dailyModel.status(dailyModel.sync({}).state);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      for(const day of [10,30]) {
+        const sample={...dailySample,nextDay:day,earnedThroughDay:day,nextClaimOrdinal:day,totalClaims:day-1,pendingCount:1,eligible:true};
+        await evaluate(`commonGearBoxView?.dispose();modal.className="modal";dailyLoginRewardStatus=normalizeDailyLoginRewardStatus(${JSON.stringify(sample)});dailyLoginRewardStatusLoading=false;dailyLoginRewardClaimInFlight=false;showDailyLoginRewardsModal({skipRefresh:true})`);
+        await paint();
+        await evaluate('Promise.all([...modal.querySelectorAll("img")].map(i=>i.decode()))');
+        const text=await evaluate('modal.querySelector(".bundle").textContent');
+        if(day===10)assert(text.includes('Veil of Silence')&&text.includes('Royal Peace Shield'),text);
+        else assert(text.includes('Uncommon Gear Box')&&text.includes('One Uncommon + two Common'),text);
+        assert.equal(await evaluate('modal.querySelectorAll("#weekNav button").length'),5);
+        assert(await evaluate('(()=>{const r=modal.getBoundingClientRect(),b=modal.querySelector("#claimButton").getBoundingClientRect();return r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&b.bottom<=r.bottom&&b.height>=44&&modalBody.scrollHeight<=modalBody.clientHeight+1})()'));
+        await shot(`daily-${width}x${height}-day${day}`);
+      }
+    }
     for(const extension of ['mp3','ogg','wav']){
       const duration=await evaluate(`fetch('audio/rewards/gear_box_open.${extension}').then(r=>{if(!r.ok)throw Error('Missing codec');return r.arrayBuffer()}).then(b=>crownlandsAudio.effectContext.decodeAudioData(b)).then(b=>b.duration)`);
       assert(duration>.9&&duration<1.05,extension+' retains the short opening');
     }
     await evaluate('getOnlineApi=window.__boxOriginalApi;playGameSound=window.__boxOriginalSound;crownlandsAudio.recordEffectStart=__boxQA.originalRecord');assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed',audio:'passed'},null,2));
-    console.log('PASS: Gear Box 20 desktop/landscape states; opening sound timing and codecs, Effects mute, independent music, audio/preload failures, chest/button/keyboard opening, repeat input, three rewards, lost-response recovery, close/navigation/owner/visibility guards and motion preferences.');
+    console.log('PASS: Common and Uncommon Gear Boxes on desktop/landscape; exact mixed rarity reveal, separate Bag counts, cross-type retry recovery, opening audio and motion guards; day 10 and day 30 in the five-week Daily Login ledger.');
   } finally { if(client){await client.send('Browser.close').catch(()=>{});client.close();}if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}await server.close(); }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

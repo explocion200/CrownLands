@@ -474,6 +474,7 @@ async function main() {
   const persistentGear = {
     schemaVersion: 1,
     commonGearBoxes: 7,
+    uncommonGearBoxes: 2,
     instances: {
       persistent_helm: {
         instanceId: "persistent_helm",
@@ -984,6 +985,7 @@ async function main() {
   assert(profile.activeSession?.id === "preserved-session", "Technical session state was not preserved.");
   assert(
     profile.gear?.commonGearBoxes === 7
+      && profile.gear?.uncommonGearBoxes === 2
       && Object.keys(profile.gear?.instances || {}).length === 2
       && profile.gear?.instances?.persistent_helm?.level === 4
       && profile.gear?.instances?.persistent_ledger?.level === 5
@@ -1008,6 +1010,7 @@ async function main() {
   );
   assert(
     firstClaim.currentUser?.gear?.commonGearBoxes === 7
+      && firstClaim.currentUser?.gear?.uncommonGearBoxes === 2
       && firstClaim.currentUser?.gear?.equipped?.barracks?.head === "persistent_helm",
     "The reset claim response omitted preserved Common Gear."
   );
@@ -1230,6 +1233,7 @@ async function main() {
   );
   assert(
     retriedPersistentUser.gear?.commonGearBoxes === 7
+      && retriedPersistentUser.gear?.uncommonGearBoxes === 2
       && retriedPersistentUser.gear?.equipped?.barracks?.head === "persistent_helm"
       && retriedPersistentUser.clanId === archivedClanId
       && retriedPersistentUser.clanRole === "leader"
@@ -1593,7 +1597,7 @@ async function main() {
       && finalDayClaim.receipt.items?.shield_12h === 1
       && finalDayClaim.dailyLoginRewardStatus?.nextDay === 1
       && finalDayClaim.dailyLoginRewardStatus?.cycle === 2
-      && finalDayClaim.dailyLoginRewardStatus?.cycleLengthDays === 28
+      && finalDayClaim.dailyLoginRewardStatus?.cycleLengthDays === 30
       && finalDayClaim.dailyLoginRewardStatus?.eligible === false,
     "The current month's final reward did not complete the calendar track."
   );
@@ -1604,17 +1608,68 @@ async function main() {
   );
 
   const bundledCycle = require("../dailyLoginRewards.js").normalize({});
-  const firstBundleDay = bundledCycle.schedule.find((reward, index, track) => Object.keys(reward.items).length && Object.keys(track[index + 1]?.items || {}).length).day;
+  // Preserve coverage for consecutive item receipts using a saved, pre-update schedule.
+  bundledCycle.schedule[8].items = { war_drums_30m: 1 };
+  const firstBundleDay = 9;
   Object.assign(bundledCycle, { nextDay: firstBundleDay, earnedThroughDay: firstBundleDay + 1,
     nextClaimOrdinal: firstBundleDay, totalClaims: firstBundleDay - 1, lastAttendanceDayKey: currentUtcDayKey });
   await db.doc(`players/${users[0].uid}`).update({ dailyLoginReward: bundledCycle });
   const firstBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-first", firstBundleDay);
   await callReplaySafeFunction("claimDailyLoginReward", users[0].token, firstBundleRequest);
+  const day10ItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data().shopItems;
   const secondBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-second", firstBundleDay + 1);
   const secondBundle = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
   const bundleReplay = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
   require("node:assert/strict").deepEqual(bundleReplay.receipt, secondBundle.receipt, "Consecutive item receipts must not retain an earlier day's item.");
-  assert(Object.keys(bundleReplay.receipt.items).length === 1 && bundleReplay.replayed, "Bundle retry returned an incorrect receipt.");
+  assert(Object.keys(bundleReplay.receipt.items).length === 2 && bundleReplay.receipt.items.shield_12h === 1 && bundleReplay.receipt.items.veil_of_silence_30m === 1 && bundleReplay.replayed, "Bundle retry returned an incorrect receipt.");
+  const day10ItemsAfter = (await db.doc(`players/${users[0].uid}`).get()).data().shopItems;
+  for (const id of ["shield_12h", "veil_of_silence_30m"]) {
+    assert(day10ItemsAfter[id] === (day10ItemsBefore[id] || 0) + 1, "Day 10 must grant both items exactly once.");
+  }
+
+  // Day 30 grants an unopened green chest; opening atomically produces the exact rarity mix.
+  const gearRules = require("../common-gear.js");
+  const day30Cycle = require("../dailyLoginRewards.js").normalize({});
+  Object.assign(day30Cycle, {nextDay:30, earnedThroughDay:30, nextClaimOrdinal:30, totalClaims:29, lastAttendanceDayKey:currentUtcDayKey});
+  const greenProfile = db.doc(`players/${users[0].uid}`);
+  await greenProfile.update({dailyLoginReward:day30Cycle});
+  const gearBeforeGreen = (await greenProfile.get()).data().gear;
+  const day30Request = await prepareDailyRewardClaim(users[0], "green-day30", 30);
+  const greenClaims = await Promise.all([1,2].map(() => callReplaySafeFunction("claimDailyLoginReward", users[0].token, day30Request)));
+  assert(greenClaims.filter(r => !r.replayed).length === 1, "Day 30 must pay once.");
+  const afterGreenClaim = (await greenProfile.get()).data().gear;
+  assert(afterGreenClaim.uncommonGearBoxes === (gearBeforeGreen.uncommonGearBoxes || 0) + 1, "Day 30 must credit the green chest to inventory.");
+  assert(Object.keys(afterGreenClaim.instances).length === Object.keys(gearBeforeGreen.instances).length, "Claiming must not auto-open the chest.");
+  const greenOpenRequest = {requestId:"green-open",boxType:"uncommon",gearSchemaVersion:gearRules.SCHEMA_VERSION};
+  for (const args of [{...greenOpenRequest,boxType:"rare"},{...greenOpenRequest,gearSchemaVersion:3}]) {
+    let rejected=false;
+    try {await callReplaySafeFunction("openCommonGearBox",users[0].token,args);} catch {rejected=true;}
+    assert(rejected,"Invalid chest type or outdated green-chest client must be rejected.");
+  }
+  const greenOpens = await Promise.all([1,2].map(() => callReplaySafeFunction("openCommonGearBox",users[0].token,greenOpenRequest)));
+  assert(greenOpens.filter(r => !r.replayed).length === 1,"Concurrent green openings must consume one box.");
+  const greenOpen=greenOpens[0];
+  const greenPieces=greenOpen.receipt.instanceIds.map(id=>greenOpen.gear.instances[id]);
+  require("node:assert/strict").deepEqual(greenPieces.map(i=>i.rarity).sort(),["common","common","uncommon"]);
+  assert(greenPieces.every(i=>i.level===1),"Every green chest piece starts at Level 1.");
+  assert(greenOpen.gear.commonGearBoxes===afterGreenClaim.commonGearBoxes,"Green opening must not spend Common boxes.");
+  assert(greenOpen.gear.uncommonGearBoxes===afterGreenClaim.uncommonGearBoxes-1,"Green opening must spend exactly one green chest.");
+  let wrongTypeRejected=false;
+  try {await callReplaySafeFunction("openCommonGearBox",users[0].token,{...greenOpenRequest,boxType:"common"});} catch {wrongTypeRejected=true;}
+  assert(wrongTypeRejected,"A request cannot be reused for a different chest type.");
+  const commonBetween=await callReplaySafeFunction("openCommonGearBox",users[0].token,{requestId:"common-between-green-retries"});
+  const recoveredGreen=await callReplaySafeFunction("openCommonGearBox",users[0].token,greenOpenRequest);
+  assert(recoveredGreen.replayed && recoveredGreen.gear.commonGearBoxes===commonBetween.gear.commonGearBoxes,"Opening another chest type must retain the green receipt.");
+  require("node:assert/strict").deepEqual(recoveredGreen.receipt,greenOpen.receipt);
+  const savedAfterGreen=(await greenProfile.get()).data().gear;
+  const fullGear=gearRules.normalizeState(savedAfterGreen);
+  fullGear.uncommonGearBoxes=1;
+  for(let i=0;i<gearRules.INVENTORY_LIMIT;i++) fullGear.instances[`full-green-${i}`]=gearRules.normalizeInstance({instanceId:`full-green-${i}`,gearKey:gearRules.COMMON_DEFINITIONS[0].gearKey,level:1});
+  await greenProfile.update({gear:fullGear});
+  let fullRejected=false;
+  try {await callReplaySafeFunction("openCommonGearBox",users[0].token,{...greenOpenRequest,requestId:"green-full"});} catch {fullRejected=true;}
+  assert(fullRejected && (await greenProfile.get()).data().gear.uncommonGearBoxes===1,"Full inventory must reject without spending the chest.");
+  await greenProfile.update({gear:savedAfterGreen});
 
   await db.doc(`players/${users[1].uid}`).update({
     dailyLoginReward: {

@@ -108,17 +108,28 @@ assert.equal(G.getBonuses(migrated).attackStrength, .25);
 assert.equal(G.getBonusPercent(migrated.instances.future), 0);
 const future = G.normalizeState({ ...old, schemaVersion: 99 });
 assert.equal(future.schemaVersion, 99, "Future version must remain detectable by the server");
+const boxes = G.normalizeState({commonGearBoxes:2, uncommonGearBoxes:3,
+  lastOpenRequestId:"common-request",lastOpenReceipt:{requestId:"common-request",instanceIds:[]},
+  lastUncommonOpenRequestId:"green-request",lastUncommonOpenReceipt:{requestId:"green-request",boxType:"uncommon",instanceIds:[]}});
+assert.equal(boxes.schemaVersion,4);
+assert.equal(boxes.commonGearBoxes,2); assert.equal(boxes.uncommonGearBoxes,3);
+assert.equal(boxes.lastOpenReceipt.boxType,"common");
+assert.equal(boxes.lastUncommonOpenReceipt.boxType,"uncommon");
+assert.deepEqual(G.normalizeState(boxes),boxes,"Profile round trips must preserve both counts and retry receipts.");
+assert.equal(G.normalizeState({schemaVersion:3,commonGearBoxes:7}).uncommonGearBoxes,0);
+assert.equal(G.normalizeState({uncommonGearBoxes:-3}).uncommonGearBoxes,0);
 for (const [category, cap] of Object.entries(G.BONUS_CAPS)) {
   assert.equal(G.capBonus(category, cap + 1000), cap);
   assert.equal(G.capBonus(category, -1), 0);
   assert.equal(G.capBonus(category, 1.5), 1.5);
 }
 const server = fs.readFileSync(path.join(__dirname, "../functions/index.js"), "utf8");
-assert(server.includes("COMMON_GEAR.COMMON_DEFINITIONS[crypto.randomInt(0, COMMON_GEAR.COMMON_DEFINITIONS.length)]"));
+assert(server.includes('const rarity = uncommon && index === 0 ? "uncommon" : "common";'));
+assert(server.includes("pool[crypto.randomInt(0, pool.length)]"));
 assert(server.includes("requireGearCapacity(gear, participation.profile)"));
 assert(server.includes("targetId !== replayReceipt.targetInstanceId"));
 assert(server.includes("requireGearProgressionClient(request, instance)"));
-console.log(`PASS: ${values} values, ${upgrades} two-item upgrades, ${promotions} rarity promotions, terminal level, wrong materials, equipment transfer, Common-only pool, caps and lossless inventory migration.`);
+console.log(`PASS: ${values} values, ${upgrades} two-item upgrades, ${promotions} rarity promotions, terminal level, wrong materials, equipment transfer, rarity-specific box pools, caps and lossless inventory migration.`);
 
 const vm = require("node:vm");
 const ui = fs.readFileSync(path.join(__dirname, "../common-gear-ui.js"), "utf8");

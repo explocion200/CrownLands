@@ -115,7 +115,7 @@ const index = read("functions/index.js");
 for (const callable of ["getCommonGearStatus", "purchaseCommonGearBox", "openCommonGearBox", "viewCommonGearBuilding", "equipCommonGear", "unequipCommonGear", "upgradeCommonGear"]) {
   assert.match(index, new RegExp(`exports\\.${callable}\\s*=`), `Missing ${callable} callable.`);
 }
-assert.match(index, /crypto\.randomInt\(0, COMMON_GEAR\.COMMON_DEFINITIONS\.length\)/, "Box rolls must use server cryptographic randomness.");
+assert.match(index, /pool\[crypto\.randomInt\(0, pool\.length\)\]/, "Box rolls must use server cryptographic randomness.");
 assert.match(
   index,
   /COMMON_GEAR\.consumeUpgradeInputs\(gear, instance\.instanceId, resultInstanceId, nowMs\)/,

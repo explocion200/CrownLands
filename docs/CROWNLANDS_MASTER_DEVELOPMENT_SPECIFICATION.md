@@ -919,6 +919,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Each role has eight equipment slots, for 32 Common Gear definitions in the current foundation.
 - Common Gear progresses from Level 1 through Level 5.
 - A Common Gear Box reveals exactly three server-rolled Level 1 Common pieces.
+- **Confirmed September 28, 2026 — Uncommon Gear Box:** Day 30 of each new Daily Login cycle grants an unopened green chest to the Bag. It uses the Common chest's shape, the existing Uncommon gear greens, and the same opening animation and `gear_box_open` sound. Opening grants exactly one random Level 1 Uncommon piece and two random Level 1 Common pieces. The count is separate from Common Boxes and persists across seasons. Claims and openings are server-authoritative, replay-safe and subject to the existing inventory capacity guard. This chest is a Daily Login reward; Common Box purchasing remains unchanged. Status: `IMPLEMENTED — PENDING RELEASE` on `codex/uncommon-login-gear-chest`.
 - Each upgrade combines two matching items at the target's current level into one newly identified next-level item. Both input identities are consumed, inventory count falls by exactly one, and an equipped target transfers its slot to the result. Upgrade request IDs are replay-safe. The pre-rarity release charges 0.5, 1, 2, or 4 hours of current raw regular-city Gold production for Levels 1→2 through 4→5. Its complete Level 5 path represents 16 Level 1 copies and 16 cumulative raw-production hours. The confirmed September 27 fixed-Gold revision below supersedes production-hour pricing upon deployment.
 - Common Gear bonuses by level are 0.25%, 0.50%, 0.80%, 1.15%, and 1.50%.
 - Current Box sources include weekly daily-login milestones, completion of all three Daily Missions, the configured Relic Camp bonus chance, and one 1-billion-Gold purchase per UTC day.
@@ -937,6 +938,7 @@ The following Common Gear data persists across seasons/resets:
 - Common Gear upgrades
 - Associated Common Gear progression that belongs to the Gear system
 - Unopened Common Gear Boxes
+- Unopened Uncommon Gear Boxes (September 28 confirmed addition; pending release)
 
 The reset initializer now applies an explicit Common Gear persistence allowlist covering unopened Boxes, instances, equipped slots, levels/upgrades, and new-item markers. Normal Bag consumables, timed item effects, and purchase cooldowns still reset. Emulator coverage verifies the preserved Gear can be viewed, equipped, unequipped, upgraded, and opened after the new-generation starting-city claim. **Status:** `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
 
@@ -944,7 +946,7 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 
 - Five-tier Gear progression is `IMPLEMENTED — PENDING RELEASE` on `codex/gear-rarity-progression`; no deployment is claimed.
 - Confirmed progression direction (September 26, 2026): Common (gray/white) → Uncommon (green) → Rare (blue) → Epic (purple) → Legendary (orange/gold), with five levels per rarity. Two matching pieces of the same family, rarity and level combine into one next-level piece; two Level 5 pieces become Level 1 of the next rarity. Legendary Level 5 is the endpoint. Poor and Unique are alternate labels, not additional tiers.
-- Higher rarities are earned by upgrading the current gear upward. Continue from players' existing items and levels. Keep Common Boxes at three Level 1 Common pieces; this update introduces no direct higher-rarity drops, rewards or purchases. Existing Common items retain their levels, IDs and equipped state until the player upgrades them. The resulting item receives a new identity and inherits the target’s equipped slot.
+- Higher rarities are earned by upgrading the current gear upward, with the September 28 confirmed exception of one Level 1 Uncommon piece in the day-30 Uncommon Gear Box. Continue from players' existing items and levels. Keep Common Boxes at three Level 1 Common pieces. Existing Common items retain their levels, IDs and equipped state until the player upgrades them. The resulting item receives a new identity and inherits the target’s equipped slot.
 - The user explicitly confirmed retaining two matching inputs for every level and promotion after reviewing the material requirements and declining Gold-only leveling at higher rarities. Gold remains an additional cost. Duplicate requirements are settled, not an outstanding balance choice.
 - The accepted per-item curves and Gold prices are detailed in the [gear progression tables](gear-rarity-progression/README.md). Non-production caps are implemented; total production caps remain deferred. Requiring two matching copies at every step implies 1,048,576 Common Level 1 equivalents for one Legendary Level 1 and 16,777,216 for Legendary Level 5. Retain these figures for transparency without replacing the confirmed rule. See the [working progression review](gear-rarity-progression/README.md). **Status:** `IMPLEMENTED — PENDING RELEASE`.
 
@@ -973,15 +975,15 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 
 ### Daily Login
 
-**Approved 12 September 2026.** Deployment is verified separately in release evidence. This replaces the calendar-month reset and expiry rule.
+**Approved 12 September 2026; revised September 28, 2026.** Deployment is verified separately in release evidence. The September 28 fixed 30-day cycle is implemented pending release and supersedes the randomized 28-day schedule for new cycles. Existing saved cycles finish without changing their rewards.
 
-- A personal cycle lasts 28 login days in four weeks. Missed days pause progress. Up to two earned rewards and their arrangement carry across months and server/season resets.
-- Each cycle grants 111 hours of base Gold production, 111 hours of base troop production, one of each of the six existing items, and four Common Gear Boxes. A Box gives three Level 1 Common gear pieces.
-- Days 1-4 of each week give 2-6 production hours. Days 5-6 give 8-13 hours; all four Day 6 slots and two random Day 5 slots also include an item. Days 7, 14, 21 and 28 give 16 or 20 production hours plus one Box.
-- The server randomly arranges each new cycle within these bands and stores the complete schedule on the global player account. Every cycle has the same total budget. Reopening, realm selection and season reset cannot reroll it.
+- A personal cycle lasts 30 login days. Missed days pause progress. Up to two earned rewards and their arrangement carry across months and server/season resets.
+- Each cycle grants 111 hours of base Gold production, 111 hours of base troop production, one of each of the six existing items, four Common Gear Boxes and one Uncommon Gear Box. Common Boxes give three Level 1 Common pieces. The Uncommon Box gives one Level 1 Uncommon and two Level 1 Common pieces.
+- Use the existing 30-day production track: alternating Gold and troop rewards on non-item days, each with the hours sequence 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24. Days 5, 15, 20 and 25 give War Drums, Royal Tax Decree, Swift March Order and Recall Horn respectively. Day 10 gives both Veil of Silence (cloak) and Royal Peace Shield. Days 7, 14, 21 and 28 also give one Common Gear Box. Day 30 gives one Uncommon Gear Box.
+- The server stores the complete fixed schedule on the global player account. Reopening, realm selection and season reset cannot change it or repeat an already collected reward.
 - Attendance is credited once per UTC date, without retroactive credit for missed dates. Preserve attendance, deferred attendance, claim ordinal and receipt guards across resets. Claims collect the oldest earned reward atomically. A same-day deferred visit can fill a slot freed by a claim, including at cycle rollover; rollover itself grants no additional attendance.
 - Claims require an owned current-world main city. Resource amounts use current base production at claim time. Unopened Boxes retain their existing season persistence.
-- Migration freezes the currently saved 28-31-day monthly track, including queued Days 29-31, until it is finished. Then a randomized 28-day cycle begins. Read saved progress before any old month-reset normalization; do not restore rewards already expired before this release.
+- Migration freezes existing randomized 28-day cycles and saved 28-31-day monthly tracks, including queued Days 29-31, until finished. The next cycle uses the fixed 30-day schedule. Read saved progress before any old month-reset normalization; do not restore rewards already expired before this release. Fresh accounts start with the new schedule immediately.
 - The approved parchment UI shows weekly milestones and the complete selected bundle with the shared updated chest illustration. Desktop and mobile landscape are supported. Quests and Achievements retain their existing presentation and rules.
 - Older clients must refresh before claiming. Requests must identify the current cycle and expected claim ordinal. See [Daily Login implementation notes](./visual-qa/daily-login-cycle/README.md).
 

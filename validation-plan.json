@@ -1,21 +1,88 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d6c3e3a9fc4fdbcf26a19d431596e1f65abbc6b0",
+  "baseCommit": "aff38890738052b02eb93c2d7de83ede49096e62",
   "coverage": [
     {
-      "paths": ["common-gear-box-ui.js", "audio/manifest.json", "audio/rewards/gear_box_open.wav", "audio/rewards/gear_box_open.mp3", "audio/rewards/gear_box_open.ogg"],
-      "tests": ["tools/validate-common-gear-box-browser.js", "tools/validate-audio-contract.js", "tools/validate-audio-levels.js", "tools/validate-audio-delivery.js", "tools/validate-audio-unlock.js", "tools/validate-production-artifact.js"],
-      "reason": "Add one presentation-only cue to the confirmed Gear Box opening. Verify desktop and landscape controls, real codec decoding and onset timing, independent music, Effects mute, reduced/off motion, failed and pending requests, repeat input, dismissed/replaced/hidden views, owner changes, lost-response recovery and audio-error isolation. Shared audio checks cover gain, codec inventory, unlock and delivery; production build validation covers packaging. Server rewards, box counts and authority are unchanged, so no emulator suite is affected."
+      "paths": [
+        "common-gear.js",
+        "functions/common-gear.js",
+        "functions/index.js",
+        "firebaseClient.js",
+        "functions/test/emulator-reset-gate.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js",
+        "tools/validate-daily-login-rewards.js",
+        "functions/test/emulator-reset-gate.js",
+        "functions/test/emulator-economy-concurrency.js"
+      ],
+      "reason": "Gear schema 4 preserves a separate green chest count and per-type retry receipt. Verify exact server contents, authentication/season participation, atomic concurrent claims and openings, capacity rejection before spending, reset persistence and unchanged shared upgrade/economy authority. Daily claims credit both day-10 items and the unopened day-30 chest. Existing rarity bonuses and two-item upgrades remain covered."
     },
     {
-      "paths": ["tools/validate-audio-contract.js", "tools/validate-common-gear-box-browser.js", "tools/validate-audio-unlock.js"],
-      "tests": ["tools/validate-audio-contract.js", "tools/validate-common-gear-box-browser.js", "tools/validate-audio-unlock.js"],
-      "reason": "Include the existing Gear Box module in audio cue coverage, exercise the added cue in the complete effects unlock fixture and execute the expanded Gear Box real-browser regression with synthetic server receipts and no production writes."
+      "paths": [
+        "functions/dailyLoginRewards.js",
+        "tools/validate-daily-login-rewards.js"
+      ],
+      "tests": [
+        "tools/validate-daily-login-rewards.js",
+        "functions/test/emulator-reset-gate.js"
+      ],
+      "reason": "Validate fixed 30-day budgets and milestones, unchanged saved schedules and guards during schema 4 migration, deferred attendance, missed dates, queue limits and cycle rollover without duplicate rewards. Emulator claims exercise retained monthly migration and the new schedule."
     },
     {
-      "paths": ["audio/rewards/README.md", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "paths": [
+        "game.js",
+        "instant-economy-actions.js",
+        "item-bag-ui.js",
+        "common-gear-ui.js",
+        "common-gear-box-ui.js",
+        "common-gear-box-ui.css",
+        "daily-login-ui.js",
+        "assets/icons/uncommon-gear-chest-r1.svg",
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-instant-economy-actions.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-audio-contract.js",
+        "tools/validate-pass-3f-items.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Check the new Bag item, shared inventory selection/counts, green opening art and mixed rarity cards, both day-10 items and day-30 details across desktop and landscape. Browser coverage exercises separate counts, cross-type lost-response recovery, sound timing/mute/failure isolation, motion and existing Common chest/Bag controls. Packaging and audio contracts cover reused assets."
+    },
+    {
+      "paths": [
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js"
+      ],
+      "reason": "Update pool assertions for server cryptographic rolls by chest type and test count/receipt migration while retaining progression coverage."
+    },
+    {
+      "paths": [
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The production build must include and fingerprint the green SVG so release identity changes with the item art. Required build and artifact checks verify distribution."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/daily-login-cycle/uncommon-chest.md"
+      ],
       "tests": [],
-      "reason": "Record the explicitly requested sound, source license and checksum, reproducible level adjustment and presentation behavior. No independent runtime behavior is introduced by these documents."
+      "reason": "Document confirmed rewards, exception to upgrade-only Uncommon acquisition, saved-cycle migration, visual evidence and coordinated backend/client release requirements. No independent runtime behavior."
     }
   ]
 }

@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SCHEMA_VERSION = 3;
+  const SCHEMA_VERSION = 4;
   const RARITY = "common";
   const RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"]);
   const INVENTORY_LIMIT = 2000;
@@ -354,12 +354,15 @@
     return {
       schemaVersion: SCHEMA_VERSION,
       commonGearBoxes: 0,
+      uncommonGearBoxes: 0,
       instances: {},
       equipped: createEmptyEquipped(),
       newMarkers: Object.fromEntries(Object.keys(BUILDINGS).map(buildingId => [buildingId, false])),
       shopPurchase: { utcDate: "", purchaseCount: 0 },
       lastOpenRequestId: "",
       lastOpenReceipt: null,
+      lastUncommonOpenRequestId: "",
+      lastUncommonOpenReceipt: null,
       recentUpgradeReceipts: [],
       updatedAtMs: 0,
     };
@@ -391,6 +394,7 @@
     const state = createDefaultState();
     state.schemaVersion = Math.max(SCHEMA_VERSION, Math.floor(Number(source.schemaVersion) || 0));
     state.commonGearBoxes = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(source.commonGearBoxes) || 0)));
+    state.uncommonGearBoxes = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(source.uncommonGearBoxes) || 0)));
     Object.entries(source.instances && typeof source.instances === "object" ? source.instances : {})
       .forEach(([instanceId, value]) => {
         const instance = normalizeInstance(value, instanceId);
@@ -418,12 +422,16 @@
       purchaseCount: Math.max(0, Math.min(SHOP_DAILY_LIMIT, Math.floor(Number(source.shopPurchase?.purchaseCount) || 0))),
     };
     state.lastOpenRequestId = cleanId(source.lastOpenRequestId, 96);
-    const receipt = source.lastOpenReceipt && typeof source.lastOpenReceipt === "object" ? source.lastOpenReceipt : null;
-    state.lastOpenReceipt = receipt ? {
+    const normalizeOpenReceipt = receipt => receipt && typeof receipt === "object" ? {
       requestId: cleanId(receipt.requestId, 96),
+      boxType: receipt.boxType === "uncommon" ? "uncommon" : "common",
       openedAtMs: timestampToMs(receipt.openedAtMs),
       instanceIds: (Array.isArray(receipt.instanceIds) ? receipt.instanceIds : []).map(id => cleanId(id, 128)).filter(id => state.instances[id]).slice(0, BOX_REVEAL_COUNT),
     } : null;
+    state.lastUncommonOpenRequestId = cleanId(source.lastUncommonOpenRequestId, 96);
+    state.lastUncommonOpenReceipt = normalizeOpenReceipt(source.lastUncommonOpenReceipt);
+    const receipt = source.lastOpenReceipt && typeof source.lastOpenReceipt === "object" ? source.lastOpenReceipt : null;
+    state.lastOpenReceipt = normalizeOpenReceipt(receipt);
     state.recentUpgradeReceipts = (Array.isArray(source.recentUpgradeReceipts) ? source.recentUpgradeReceipts : [])
       .map(rawReceipt => ({
         requestId: cleanId(rawReceipt?.requestId, 96),

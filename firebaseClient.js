@@ -2582,8 +2582,8 @@
     return callServerFunction("purchaseCommonGearBox", { cost });
   }
 
-  async function openCommonGearBox({ requestId = "" } = {}) {
-    return callServerFunction("openCommonGearBox", { requestId });
+  async function openCommonGearBox({ requestId = "", boxType = "common" } = {}) {
+    return callServerFunction("openCommonGearBox", { requestId, boxType, gearSchemaVersion: 4 });
   }
 
   async function viewCommonGearBuilding({ buildingId = "" } = {}) {
@@ -2591,15 +2591,15 @@
   }
 
   async function equipCommonGear({ instanceId = "" } = {}) {
-    return callServerFunction("equipCommonGear", { instanceId, gearSchemaVersion: 3 });
+    return callServerFunction("equipCommonGear", { instanceId, gearSchemaVersion: 4 });
   }
 
   async function unequipCommonGear({ instanceId = "" } = {}) {
-    return callServerFunction("unequipCommonGear", { instanceId, gearSchemaVersion: 3 });
+    return callServerFunction("unequipCommonGear", { instanceId, gearSchemaVersion: 4 });
   }
 
   async function upgradeCommonGear({ instanceId = "", requestId = "", cost } = {}) {
-    return callServerFunction("upgradeCommonGear", { instanceId, requestId, gearSchemaVersion: 3,
+    return callServerFunction("upgradeCommonGear", { instanceId, requestId, gearSchemaVersion: 4,
       ...(cost === undefined ? {} : { cost }) });
   }
 

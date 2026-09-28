@@ -88,21 +88,29 @@ const tracks = Object.fromEntries([28, 29, 30, 31].map(monthLength => {
 
 const model = require(path.join(root, "functions/dailyLoginRewards.js"));
 const utc = value => Date.parse(`${value}T12:00:00.000Z`);
-for (let i = 0; i < 200; i++) {
-  const rewards = model.createSchedule();
-  assert.equal(rewards.length, 28);
-  assert.equal(rewards.reduce((sum, r) => sum + r.goldHours, 0), 111);
-  assert.equal(rewards.reduce((sum, r) => sum + r.troopHours, 0), 111);
-  assert.equal(rewards.reduce((sum, r) => sum + r.commonGearBoxes, 0), 4);
-  assert.deepEqual(rewards.flatMap(r => Object.keys(r.items)).sort(), [...schedule.itemOrder].sort());
-  for (const r of rewards) {
-    const weekday = (r.day - 1) % 7 + 1;
-    const hours = r.goldHours + r.troopHours;
-    assert.equal(r.commonGearBoxes, weekday === 7 ? 1 : 0);
-    assert.ok(weekday < 5 ? hours >= 2 && hours <= 6 : weekday < 7 ? hours >= 8 && hours <= 13 : hours === 16 || hours === 20);
-    if (weekday === 6) assert.equal(Object.keys(r.items).length, 1);
-  }
-}
+const rewards = model.createSchedule();
+assert.equal(rewards.length, 30);
+assert.equal(rewards.reduce((sum, r) => sum + r.goldHours, 0), 111);
+assert.equal(rewards.reduce((sum, r) => sum + r.troopHours, 0), 111);
+assert.deepEqual(rewards.filter(r => r.commonGearBoxes).map(r => r.day), [7,14,21,28]);
+assert.deepEqual(rewards.filter(r => r.uncommonGearBoxes).map(r => r.day), [30]);
+assert.deepEqual(rewards[9].items, {veil_of_silence_30m:1, shield_12h:1});
+assert.deepEqual(rewards[29].items, {});
+assert.deepEqual(rewards.flatMap(r => Object.keys(r.items)).sort(), [...schedule.itemOrder].sort());
+assert.deepEqual(model.createSchedule(), rewards, "Every new cycle has the fixed rewards.");
+const savedV4 = {schemaVersion:4, cycleId:"saved-v4", schedule:model.legacySchedule(28), cycle:3,
+  nextDay:27, earnedThroughDay:28, nextClaimOrdinal:83, totalClaims:82, lastAttendanceDayKey:"2026-09-09"};
+const preserved = model.normalize({activeCycle:savedV4});
+assert.deepEqual(preserved.schedule, savedV4.schedule);
+assert.equal(preserved.cycleId, savedV4.cycleId);
+assert.equal(preserved.nextDay,27); assert.equal(model.pending(preserved),2);
+assert.equal(preserved.transition,true);
+assert.deepEqual(model.normalize(preserved),preserved);
+const rolledV4=model.normalize({...preserved,nextDay:29,totalClaims:84,nextClaimOrdinal:85});
+assert.deepEqual(rolledV4.schedule,rewards); assert.equal(rolledV4.nextDay,1);
+assert.equal(rolledV4.transition,false);
+assert.throws(()=>model.normalize({activeCycle:{schemaVersion:99}}),/Unsupported/);
+assert.throws(()=>model.normalize({schemaVersion:99}),/Unsupported/);
 let attendance = model.sync({}, utc("2026-09-01"));
 assert.equal(attendance.state.earnedThroughDay, 1);
 assert.deepEqual(model.sync(attendance.state, utc("2026-09-01")).state, attendance.state);
@@ -115,16 +123,16 @@ assert.equal(attendance.state.earnedThroughDay, 3);
 assert.equal(attendance.state.deferredAttendanceDayKey, "");
 const afterMonth = model.normalize(attendance.state, utc("2028-02-29"));
 assert.deepEqual(afterMonth, attendance.state, "A calendar or season change must preserve the entire cycle and guards.");
-const beforeEnd = { ...attendance.state, nextDay: 28, earnedThroughDay: 28, nextClaimOrdinal: 28, totalClaims: 27 };
-const finished = { ...beforeEnd, nextDay: 29, nextClaimOrdinal: 29, totalClaims: 28, lastReceipt: { claimId: "final" } };
+const beforeEnd = { ...attendance.state, nextDay: 30, earnedThroughDay: 30, nextClaimOrdinal: 30, totalClaims: 29 };
+const finished = { ...beforeEnd, nextDay: 31, nextClaimOrdinal: 31, totalClaims: 30, lastReceipt: { claimId: "final" } };
 let next = model.sync(finished, utc("2026-09-09")).state;
 assert.equal(next.cycle, 2); assert.equal(next.nextDay, 1); assert.equal(model.pending(next), 0);
 assert.equal(next.lastReceipt.claimId, "final");
 assert.notEqual(next.cycleId, beforeEnd.cycleId);
-assert.notDeepEqual(next.schedule, beforeEnd.schedule);
+assert.deepEqual(next.schedule, beforeEnd.schedule);
 const deferredEnd = model.sync(beforeEnd, utc("2026-09-10")).state;
 assert.equal(deferredEnd.deferredAttendanceDayKey, "2026-09-10");
-next = model.sync({ ...deferredEnd, nextDay: 29, nextClaimOrdinal: 29, totalClaims: 28 }, utc("2026-09-10")).state;
+next = model.sync({ ...deferredEnd, nextDay: 31, nextClaimOrdinal: 31, totalClaims: 30 }, utc("2026-09-10")).state;
 assert.equal(model.pending(next), 1, "Only a genuinely deferred visit can fill the next cycle on rollover.");
 assert.equal(model.pending(model.sync(next, utc("2026-09-10")).state), 1);
 for (const [month, length] of [["2027-02",28],["2028-02",29],["2026-09",30],["2026-01",31]]) {
@@ -225,7 +233,7 @@ requireMatch(
   "Deployment callable-access gate must include daily reward endpoints."
 );
 
-console.log("Validated persistent 28-day cycles, saved-track migration, attendance and replay guards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");
+console.log("Validated fixed 30-day cycles, saved-track migration, attendance and replay guards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");
 
 const protectedCycle = model.store(attendance.state);
 const staleHandlerWrite = { ...protectedCycle, schemaVersion: 3, cycle: 1, nextDay: 1, earnedThroughDay: 0, lastAttendanceDayKey: "" };
