@@ -134,6 +134,7 @@ function createPersistentCommonGearForSeasonReset(previous = {}) {
   const gear = normalizeCommonGear(previous);
   return COMMON_GEAR.normalizeState({
     commonGearBoxes: gear.commonGearBoxes,
+    uncommonGearBoxes: gear.uncommonGearBoxes,
     instances: gear.instances,
     equipped: gear.equipped,
     newMarkers: gear.newMarkers,
@@ -14733,20 +14734,33 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
   const uid = requireAuth(request);
   const requestId = safeString(request.data?.requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!requestId) throw new HttpsError("invalid-argument", "A gear box request id is required.");
+  const boxType = request.data?.boxType ?? "common";
+  if (!["common", "uncommon"].includes(boxType)) throw new HttpsError("invalid-argument", "Unknown Gear Box type.");
+  const uncommon = boxType === "uncommon";
+  if (uncommon && Number(request.data?.gearSchemaVersion || 0) < COMMON_GEAR.SCHEMA_VERSION) {
+    throw new HttpsError("failed-precondition", "Refresh Crownlands before opening an Uncommon Gear Box.");
+  }
+  const countField = uncommon ? "uncommonGearBoxes" : "commonGearBoxes";
+  const requestField = uncommon ? "lastUncommonOpenRequestId" : "lastOpenRequestId";
+  const receiptField = uncommon ? "lastUncommonOpenReceipt" : "lastOpenReceipt";
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
     const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
     const gear = normalizeCommonGear(participation.profile);
-    if (gear.lastOpenRequestId === requestId && gear.lastOpenReceipt) {
-      return { ok: true, replayed: true, gear, receipt: gear.lastOpenReceipt };
+    if (gear[requestField] === requestId && gear[receiptField]) {
+      return { ok: true, replayed: true, gear, receipt: gear[receiptField] };
     }
-    if (gear.commonGearBoxes < 1) throw new HttpsError("failed-precondition", "You do not have a Common Gear Box.");
-    gear.commonGearBoxes -= 1;
+    const otherRequest = uncommon ? gear.lastOpenRequestId : gear.lastUncommonOpenRequestId;
+    if (otherRequest === requestId) throw new HttpsError("invalid-argument", "This request belongs to a different Gear Box type.");
+    if (gear[countField] < 1) throw new HttpsError("failed-precondition", "You do not have this Gear Box.");
+    gear[countField] -= 1;
     const instanceIds = [];
     for (let index = 0; index < COMMON_GEAR.BOX_REVEAL_COUNT; index += 1) {
-      const definition = COMMON_GEAR.COMMON_DEFINITIONS[crypto.randomInt(0, COMMON_GEAR.COMMON_DEFINITIONS.length)];
+      const rarity = uncommon && index === 0 ? "uncommon" : "common";
+      const pool = COMMON_GEAR.DEFINITIONS.filter(definition => definition.rarity === rarity);
+      const definition = pool[crypto.randomInt(0, pool.length)];
       const instanceId = `cg_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
       gear.instances[instanceId] = COMMON_GEAR.normalizeInstance({
         instanceId, gearKey: definition.gearKey, level: 1, isNew: true, acquiredAtMs: nowMs,
@@ -14754,12 +14768,12 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
       gear.newMarkers[definition.buildingId] = true;
       instanceIds.push(instanceId);
     }
-    gear.lastOpenRequestId = requestId;
-    gear.lastOpenReceipt = { requestId, openedAtMs: nowMs, instanceIds };
+    gear[requestField] = requestId;
+    gear[receiptField] = { requestId, boxType, openedAtMs: nowMs, instanceIds };
     gear.updatedAtMs = nowMs;
     requireGearCapacity(gear, participation.profile);
     transaction.set(profileRef, { gear, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    return { ok: true, replayed: false, gear, receipt: gear.lastOpenReceipt };
+    return { ok: true, replayed: false, gear, receipt: gear[receiptField] };
   });
 });
 
@@ -15349,7 +15363,9 @@ exports.claimDailyLoginReward = timedCallable(
       const shopItems = { ...economy.shopItems };
       const gear = normalizeCommonGear(economy.profileAfter);
       const commonGearBoxes = reward.commonGearBoxes;
+      const uncommonGearBoxes = reward.uncommonGearBoxes || 0;
       gear.commonGearBoxes += commonGearBoxes;
+      gear.uncommonGearBoxes += uncommonGearBoxes;
       gear.updatedAtMs = nowMs;
       Object.entries(reward.items || {}).forEach(([itemId, quantity]) => {
         shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)))
@@ -15378,6 +15394,7 @@ exports.claimDailyLoginReward = timedCallable(
         gold: goldReward,
         troops: troopReward,
         commonGearBoxes,
+        uncommonGearBoxes,
         items: { ...reward.items },
         targetCityId: troopCredit?.cityId || "",
       };

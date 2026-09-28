@@ -27,10 +27,10 @@ function renderItemBagPanel(model, selectedEntry, activeRemaining, actionLabel, 
       <div class="ib-selected-hero"><div class="ib-selected-art">${renderItemIcon(selectedEntry, "ib-selected-image")}</div><h2>${escapeHtml(selectedEntry.label)}</h2><p class="ib-selected-category">${escapeHtml(selectedCategory)}</p></div>
       <div class="ib-decorative-rule" aria-hidden="true">◆</div>
       <p class="ib-description">${escapeHtml(selectedEntry.description)}</p>
-      ${effectLabel ? `<div class="ib-effect">${itemBagIcon(selectedEntry.id === COMMON_GEAR_BOX_ITEM.id ? "box" : "time")}<span>${escapeHtml(effectLabel)}</span></div>` : ""}
+      ${effectLabel ? `<div class="ib-effect">${itemBagIcon(isGearBoxItem(selectedEntry.id) ? "box" : "time")}<span>${escapeHtml(effectLabel)}</span></div>` : ""}
       <p class="ib-active-status" data-inventory-active ${activeText ? "" : "hidden"}>${activeText}</p>
     </div>
-    <footer class="ib-selection-actions"><div class="ib-owned">Owned<strong data-inventory-owned class="${selectedEntry.ownedCount >= 100000 ? "ib-large-owned" : ""}">${exactCount}</strong></div><button class="ib-use-button inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${disabled ? "disabled" : ""}>${itemBagIcon(selectedEntry.id === COMMON_GEAR_BOX_ITEM.id ? "box" : "check")}<span>${actionLabel.charAt(0) + actionLabel.slice(1).toLowerCase()}</span></button></footer>`
+    <footer class="ib-selection-actions"><div class="ib-owned">Owned<strong data-inventory-owned class="${selectedEntry.ownedCount >= 100000 ? "ib-large-owned" : ""}">${exactCount}</strong></div><button class="ib-use-button inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${disabled ? "disabled" : ""}>${itemBagIcon(isGearBoxItem(selectedEntry.id) ? "box" : "check")}<span>${actionLabel.charAt(0) + actionLabel.slice(1).toLowerCase()}</span></button></footer>`
     : `<div class="ib-selection-empty">${itemBagIcon("utility")}<h2>Select an item</h2><p>Choose an item from your Bag to review its effect.</p></div>`;
   return `<div class="ib-bag-shell">
     <header class="ib-bag-header"><span class="ib-bag-seal" aria-hidden="true">${itemBagIcon("bag")}</span><div class="ib-bag-heading"><p>The royal stores</p><h1>Item Bag</h1></div><div class="ib-header-note">Provisions for your realm</div><span class="ib-close-space" aria-hidden="true"></span></header>

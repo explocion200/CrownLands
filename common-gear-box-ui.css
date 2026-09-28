@@ -201,3 +201,7 @@
 #modal.cgb-modal .cgb-primary{color:#fff4d7!important;background:var(--moss)!important;border-color:var(--moss)!important;box-shadow:inset 0 0 0 1px #61714e!important}
 #modal.cgb-modal .cgb-secondary{color:#504832!important;background:#ecddb340!important;border-color:#b3a078!important;box-shadow:none!important}
 @media(orientation:landscape) and (max-height:550px){#modal.cgb-modal #closeModalBtn{top:10px;right:16px}#modal.cgb-modal .cgb-close-space{margin-left:4px}}
+
+/* Match the existing Uncommon gear palette on mixed chest results. */
+#modal.cgb-modal .cgb-reward-card[data-rarity="uncommon"]{background:#c7d2b4!important;border-color:#6f8753!important;box-shadow:inset 0 0 0 3px #e0e7d2!important}
+#modal.cgb-modal .cgb-reward-card[data-rarity="uncommon"] .cgb-rarity-line i{background:#6f8753!important}

@@ -3,14 +3,16 @@
 
 // Original, code-native oak-and-iron illustration. The lid rotates about its actual back hinge.
 function createCommonGearChest(host){
+  const uncommon=host.dataset.rarity === "uncommon";
+  const palette=uncommon ? {"#aa8349":"#6f8753","#786442":"#52683b","#c0a06a":"#a9bc90","#332d22":"#2f3925","#65573b":"#4d5d39","#695232":"#4d6139","#d3b17a":"#c7d2b4","#d1ad73":"#b6c79d","#775932":"#526b3e","#5b5038":"#425433","#9b7948":"#708858","#c19a5e":"#9fb785","#705734":"#536b3e","#dbc08a":"#e0e7d2","#795c35":"#607848","#997441":"#657e49","#7e6947":"#52693f"} : {};
   const ns="http://www.w3.org/2000/svg";
-  const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 500 390");svg.setAttribute("role","img");svg.setAttribute("aria-label","Oak equipment chest with iron bands and a hinged wooden lid");
+  const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox","0 0 500 390");svg.setAttribute("role","img");svg.setAttribute("aria-label",uncommon ? "Green Uncommon equipment chest with iron bands and a hinged wooden lid" : "Oak equipment chest with iron bands and a hinged wooden lid");
   svg.innerHTML='<defs><radialGradient id="cgbChestShadow"><stop stop-color="#40351f" stop-opacity=".22"/><stop offset="1" stop-color="#40351f" stop-opacity="0"/></radialGradient></defs><ellipse cx="252" cy="337" rx="215" ry="42" fill="url(#cgbChestShadow)"/>';
   const body=document.createElementNS(ns,"g"),lid=document.createElementNS(ns,"g");lid.setAttribute("class","chest-lid");svg.append(body,lid);host.append(svg);
   const project=([x,y,z])=>[244+x*140+y*80,312+x*22-y*44-z*105];
   const point=p=>project(p).map(v=>v.toFixed(2)).join(",");
-  function poly(group,points,fill,stroke="#3b3426",width=1.6){const e=document.createElementNS(ns,"polygon");e.setAttribute("points",points.map(point).join(" "));e.setAttribute("fill",fill);e.setAttribute("stroke",stroke);e.setAttribute("stroke-width",width);e.setAttribute("stroke-linejoin","round");group.append(e);return e;}
-  function line(group,points,color="#55432b",width=1){const e=document.createElementNS(ns,"polyline");e.setAttribute("points",points.map(point).join(" "));e.setAttribute("fill","none");e.setAttribute("stroke",color);e.setAttribute("stroke-width",width);e.setAttribute("stroke-linecap","round");e.setAttribute("stroke-linejoin","round");group.append(e);return e;}
+  function poly(group,points,fill,stroke="#3b3426",width=1.6){const e=document.createElementNS(ns,"polygon");e.setAttribute("points",points.map(point).join(" "));e.setAttribute("fill",palette[fill] || fill);e.setAttribute("stroke",stroke);e.setAttribute("stroke-width",width);e.setAttribute("stroke-linejoin","round");group.append(e);return e;}
+  function line(group,points,color="#55432b",width=1){const e=document.createElementNS(ns,"polyline");e.setAttribute("points",points.map(point).join(" "));e.setAttribute("fill","none");e.setAttribute("stroke",palette[color] || color);e.setAttribute("stroke-width",width);e.setAttribute("stroke-linecap","round");e.setAttribute("stroke-linejoin","round");group.append(e);return e;}
   function rivet(group,p,r=2.1){const[x,y]=project(p),e=document.createElementNS(ns,"circle");e.setAttribute("cx",x);e.setAttribute("cy",y);e.setAttribute("r",r);e.setAttribute("fill","#b1a280");e.setAttribute("stroke","#3d3c2e");e.setAttribute("stroke-width","1");group.append(e);}
   poly(body,[[-1,-.5,.07],[1,-.5,.07],[1,-.5,1.03],[-1,-.5,1.03]],"#aa8349");
   poly(body,[[1,-.5,.07],[1,.5,.07],[1,.5,1.03],[1,-.5,1.03]],"#786442");
@@ -43,6 +45,7 @@ function createCommonGearChest(host){
 
 const COMMON_GEAR_BOX_MARKUP = "<div class=\"cgb-box-shell\">\n  <header class=\"cgb-box-header\"><span class=\"cgb-box-seal\" aria-hidden=\"true\"></span><div class=\"cgb-box-heading\"><p>Inner Castle · Equipment</p><h1 id=\"cgbBoxTitle\">Common Gear Box</h1></div><div class=\"cgb-box-count\" aria-label=\"Unopened boxes\"><span class=\"cgb-count-icon\" aria-hidden=\"true\"></span><span><strong id=\"cgbRemaining\">5</strong><small>boxes remaining</small></span></div><span class=\"cgb-close-space\" aria-hidden=\"true\"></span></header>\n  <div class=\"cgb-box-content\">\n    <section class=\"cgb-chest-view\" aria-labelledby=\"cgbChestTitle\"><div class=\"cgb-chest-stage\"><div class=\"cgb-chest-halo\" aria-hidden=\"true\"></div><button id=\"cgbChestArt\" type=\"button\" aria-label=\"Open Common Gear Box\"></button><span class=\"cgb-stage-caption\">THE ROYAL STORES</span></div><div class=\"cgb-chest-copy\"><p class=\"cgb-eyebrow\">Equipment for your officers</p><h2 id=\"cgbChestTitle\">Break the seal.<br>Equip your realm.</h2><span class=\"cgb-ink-rule\" aria-hidden=\"true\">◆</span><p class=\"cgb-chest-description\">An oak chest, bound in iron.<br> Three pieces of Common equipment inside.</p><div class=\"cgb-contents-promise\"><span class=\"cgb-piece-seal\">3</span><span><strong>Common pieces</strong><small>Level 1 · +0.25% each</small></span></div><p id=\"cgbOpeningStatus\" class=\"cgb-opening-status\" role=\"status\" aria-live=\"polite\"></p></div></section>\n    <section class=\"cgb-reward-view\" aria-labelledby=\"cgbRewardTitle\" hidden><div class=\"cgb-reward-intro\"><div><p class=\"cgb-eyebrow\">The chest is open</p><h2 id=\"cgbRewardTitle\">Three pieces for your officers</h2></div><span class=\"cgb-stored-mark\" role=\"status\"><span aria-hidden=\"true\">✓</span> Added to your equipment</span></div><div class=\"cgb-reward-cards\"></div></section>\n  </div>\n  <footer class=\"cgb-box-footer\"><span class=\"cgb-footer-note\">One box · Three pieces</span><div class=\"cgb-footer-actions\"></div></footer>\n</div>";
 let commonGearBoxSession = null;
+let commonGearBoxSessions = {};
 let commonGearBoxView = null;
 
 function commonGearBoxOwnerMatches(session) {
@@ -58,8 +61,8 @@ function renderCommonGearBoxReward(instance, index) {
   const d = COMMON_GEAR.getDefinition(instance.gearKey);
   if (!d) return "";
   const name = d.gearName.replace(d.characterRole + "'s ", "");
-  return `<article class="cgb-reward-card" aria-label="${escapeHtml(d.gearName)}" style="--order:${index}">
-    <div class="cgb-rarity-line"><span><i aria-hidden="true"></i> Common</span><span>Level ${instance.level}</span></div>
+  return `<article class="cgb-reward-card" data-rarity="${d.rarity}" aria-label="${escapeHtml(d.gearName)}" style="--order:${index}">
+    <div class="cgb-rarity-line"><span><i aria-hidden="true"></i> ${d.rarity === "uncommon" ? "Uncommon" : "Common"}</span><span>Level ${instance.level}</span></div>
     <div class="cgb-reward-record" tabindex="0" aria-label="${escapeHtml(d.gearName)} details">
       <div class="cgb-reward-hero"><div class="cgb-reward-art">${renderCommonGearArtwork(d.art)}</div>
         <div><p class="cgb-officer-name">${escapeHtml(d.characterRole)}</p><h3>${escapeHtml(name)}</h3><p class="cgb-item-meta">${escapeHtml(d.buildingName)} · ${escapeHtml(d.slot)}</p></div></div>
@@ -75,12 +78,13 @@ function renderCommonGearBoxState(focus = false) {
   const view = commonGearBoxView;
   if (!view || !isCommonGearBoxViewActive(view)) return;
   const session = view.session;
-  const count = Math.max(0, Math.floor(Number(state.gear?.commonGearBoxes) || 0));
+  const count = Math.max(0, Math.floor(Number(state.gear?.[session.countField]) || 0));
+  const uncommon = session.boxType === "uncommon";
   const revealed = !session.busy && !!session.receipt;
   const empty = count === 0 && !session.receipt && !session.requestId;
   const canOpen = count > 0 || !!session.requestId;
   const find = selector => view.root.querySelector(selector);
-  const title = revealed ? "Common Gear Found" : "Common Gear Box";
+  const title = revealed ? (uncommon ? "Gear Found" : "Common Gear Found") : uncommon ? "Uncommon Gear Box" : "Common Gear Box";
   modalTitle.textContent = title;
   find("#cgbBoxTitle").textContent = title;
   modal.dataset.motion = getCommonGearBoxMotion();
@@ -95,7 +99,10 @@ function renderCommonGearBoxState(focus = false) {
   find(".cgb-contents-promise").hidden = empty;
   find("#cgbChestArt").disabled = session.busy || !canOpen;
   find("#cgbChestTitle").innerHTML = empty ? "No unopened boxes" : "Break the seal.<br>Equip your realm.";
-  find(".cgb-chest-description").innerHTML = empty ? "Your equipment is waiting<br> in the Inner Castle." : "An oak chest, bound in iron.<br> Three pieces of Common equipment inside.";
+  find(".cgb-chest-description").innerHTML = empty ? "Your equipment is waiting<br> in the Inner Castle." : uncommon ? "A green chest, bound in iron.<br> One Uncommon and two Common pieces inside." : "An oak chest, bound in iron.<br> Three pieces of Common equipment inside.";
+  find(".cgb-contents-promise strong").textContent = uncommon ? "1 Uncommon + 2 Common" : "Common pieces";
+  find(".cgb-contents-promise small").textContent = uncommon ? "All Level 1" : "Level 1 · +0.25% each";
+  find("#cgbChestArt").setAttribute("aria-label", `Open ${uncommon ? "Uncommon" : "Common"} Gear Box`);
   const status = find("#cgbOpeningStatus");
   status.textContent = session.error || (session.busy ? "Opening your box…" : count === 1 ? "Your last unopened box." : "");
   status.classList.toggle("cgb-error", !!session.error);
@@ -148,7 +155,7 @@ function animateCommonGearBoxOpening(view) {
 
 async function openOneCommonGearBox() {
   const session = commonGearBoxSession;
-  if (!session || !commonGearBoxOwnerMatches(session) || session.busy || (!session.requestId && !(state.gear?.commonGearBoxes > 0))) return;
+  if (!session || !commonGearBoxOwnerMatches(session) || session.busy || (!session.requestId && !(state.gear?.[session.countField] > 0))) return;
   const api = getOnlineApi();
   if (!api?.openCommonGearBox) {
     session.error = "Connect to the realm to open this Gear Box.";
@@ -166,12 +173,14 @@ async function openOneCommonGearBox() {
     try {
       crownlandsAudio?.prepareEffect?.("gear_box_open")?.catch(() => {});
     } catch (_error) { /* Preloading is optional; the server action must continue. */ }
-    const result = await api.openCommonGearBox({ requestId: session.requestId });
+    const result = await api.openCommonGearBox({ requestId: session.requestId, boxType: session.boxType });
     if (!commonGearBoxOwnerMatches(session)) return;
-    if (!result?.gear || result.receipt?.requestId !== session.requestId || result.receipt?.instanceIds?.length !== COMMON_GEAR.BOX_REVEAL_COUNT) throw new Error("The opening could not be confirmed. Try again.");
+    if (!result?.gear || (result.receipt?.boxType || "common") !== session.boxType || result.receipt?.requestId !== session.requestId || result.receipt?.instanceIds?.length !== COMMON_GEAR.BOX_REVEAL_COUNT) throw new Error("The opening could not be confirmed. Try again.");
     const gear = normalizeCommonGearState(result.gear);
     const items = result.receipt.instanceIds.map(id => gear.instances[id]);
     if (items.some(item => !item || !COMMON_GEAR.getDefinition(item.gearKey))) throw new Error("The equipment could not be confirmed. Try again.");
+    const uncommonCount = items.filter(item => item.rarity === "uncommon").length;
+    if (items.some(item => item.level !== 1 || !["common", "uncommon"].includes(item.rarity)) || uncommonCount !== (session.boxType === "uncommon" ? 1 : 0)) throw new Error("Unexpected Gear Box contents.");
     // Never overwrite a newer authoritative profile snapshot with an older response.
     if (Number(gear.updatedAtMs || 0) >= Number(state.gear?.updatedAtMs || 0)) state.gear = gear;
     session.receipt = result.receipt;
@@ -188,12 +197,13 @@ async function openOneCommonGearBox() {
   }
 }
 
-function showCommonGearBoxScreen(receipt = null) {
-  if (!state || !COMMON_GEAR) return;
+function showCommonGearBoxScreen(receipt = null, boxType = "common") {
+  if (!state || !COMMON_GEAR || !["common", "uncommon"].includes(boxType)) return;
   commonGearBoxView?.dispose();
   if (!commonGearBoxSession || !commonGearBoxOwnerMatches(commonGearBoxSession)) {
-    commonGearBoxSession = { state, uid: getCurrentOnlineUid(), busy: false, error: "", requestId: "", receipt: null, items: [] };
+    commonGearBoxSessions = {};
   }
+  commonGearBoxSession = commonGearBoxSessions[boxType] ||= { state, uid: getCurrentOnlineUid(), boxType, countField: boxType === "uncommon" ? "uncommonGearBoxes" : "commonGearBoxes", busy: false, error: "", requestId: "", receipt: null, items: [] };
   const session = commonGearBoxSession;
   if (receipt && !session.busy) {
     session.receipt = receipt;
@@ -205,6 +215,7 @@ function showCommonGearBoxScreen(receipt = null) {
   modalTitle.textContent = "Common Gear Box";
   modalBody.innerHTML = COMMON_GEAR_BOX_MARKUP;
   const root = modalBody.querySelector(".cgb-box-shell");
+  root.querySelector("#cgbChestArt").dataset.rarity = boxType;
   const chest = createCommonGearChest(root.querySelector("#cgbChestArt"));
   const view = { session, root, chest, receipt: null, stopAnimation: null, dispose };
   commonGearBoxView = view;

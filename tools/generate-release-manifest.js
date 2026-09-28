@@ -97,6 +97,7 @@ function createManifest() {
   "item-bag-ui.js", "item-bag-ui.css",
   "combat-timers-ui.js", "combat-timers-ui.css",
   "assets/icons/common-gear-chest-r1.svg",
+  "assets/icons/uncommon-gear-chest-r1.svg",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
     "region-catalog.js", "functions/world-travel-network.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",

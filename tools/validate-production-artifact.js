@@ -54,6 +54,7 @@ const required = [
   "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
+  "assets/icons/uncommon-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",

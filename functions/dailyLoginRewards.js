@@ -3,42 +3,18 @@
 const crypto = require("node:crypto");
 const { isDeepStrictEqual } = require("node:util");
 const config = require("./economy-config.json").dailyLoginRewards;
-const VERSION = 4;
+const VERSION = 5;
 const LIMIT = 2;
 const int = (value, fallback = 0) => Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : fallback;
 const dayKey = now => new Date(now).toISOString().slice(0, 10);
 const key = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? value : "";
 
-function shuffled(values, randomInt = crypto.randomInt) {
-  const result = [...values];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-function createSchedule(randomInt = crypto.randomInt) {
-  const early = { gold: shuffled([2, 3, 3, 4, 4, 5, 5, 6], randomInt), troops: shuffled([2, 3, 3, 4, 4, 5, 5, 6], randomInt) };
-  const late = { gold: shuffled([8, 10, 12, 13], randomInt), troops: shuffled([8, 10, 12, 13], randomInt) };
-  const finals = shuffled([{ goldHours: 16 }, { goldHours: 20 }, { troopHours: 16 }, { troopHours: 20 }], randomInt);
-  const extraItemWeeks = new Set(shuffled([0, 1, 2, 3], randomInt).slice(0, 2));
-  const items = shuffled(config.itemOrder, randomInt);
-  return Array.from({ length: 4 }, (_, week) => {
-    const resources = [...shuffled(["gold", "gold", "troops", "troops"], randomInt), ...shuffled(["gold", "troops"], randomInt)];
-    return Array.from({ length: 7 }, (_, offset) => {
-      const resource = resources[offset];
-      const hours = offset < 4 ? early[resource].pop() : offset < 6 ? late[resource].pop() : 0;
-      return {
-        day: week * 7 + offset + 1,
-        goldHours: resource === "gold" ? hours : 0,
-        troopHours: resource === "troops" ? hours : 0,
-        ...(offset === 6 ? finals[week] : {}),
-        items: offset === 5 || (offset === 4 && extraItemWeeks.has(week)) ? { [items.pop()]: 1 } : {},
-        commonGearBoxes: offset === 6 ? 1 : 0,
-      };
-    });
-  }).flat();
+function createSchedule() {
+  const schedule = legacySchedule(30).map(reward => ({ ...reward, uncommonGearBoxes: 0 }));
+  schedule[9].items.shield_12h = 1;
+  delete schedule[29].items.shield_12h;
+  schedule[29].uncommonGearBoxes = 1;
+  return schedule;
 }
 
 function legacySchedule(length) {
@@ -65,23 +41,24 @@ function normalize(raw = {}, _nowMs = Date.now()) {
   // Old in-flight status handlers merge only the former flat fields. Keep the
   // authoritative cycle beneath a field those handlers never write.
   if (raw.activeCycle) {
-    if (raw.activeCycle.schemaVersion !== VERSION) throw new Error("Unsupported saved daily reward cycle.");
+    if (![4, VERSION].includes(raw.activeCycle.schemaVersion)) throw new Error("Unsupported saved daily reward cycle.");
     raw = raw.activeCycle;
   }
   const version = int(raw.schemaVersion);
+  if (version > VERSION) throw new Error("Unsupported saved daily reward cycle.");
   const oldProgress = version > 0 && (int(raw.nextDay) > 1 || int(raw.earnedThroughDay) > 0
     || int(raw.earnedThroughOrdinal) > 0 || int(raw.totalClaims) > 0 || key(raw.lastAttendanceDayKey));
   const cycle = Math.max(1, int(raw.cycle, 1));
   const totalClaims = int(raw.totalClaims);
   const nextClaimOrdinal = Math.max(1, totalClaims + 1, int(raw.nextClaimOrdinal, 1));
   let schedule, cycleId, transition, nextDay, earnedThroughDay;
-  if (version >= VERSION) {
+  if (version >= 4) {
     if (!Array.isArray(raw.schedule) || raw.schedule.length < 28 || raw.schedule.length > 31 || !raw.cycleId) {
       throw new Error("Saved daily reward cycle is invalid; refusing to reroll it.");
     }
     schedule = raw.schedule;
     cycleId = raw.cycleId;
-    transition = raw.transition === true;
+    transition = raw.transition === true || version < VERSION;
     nextDay = Math.min(schedule.length + 1, Math.max(1, int(raw.nextDay, 1)));
     earnedThroughDay = Math.max(nextDay - 1, Math.min(schedule.length, nextDay + LIMIT - 1, int(raw.earnedThroughDay)));
   } else if (oldProgress) {
@@ -119,7 +96,7 @@ function normalize(raw = {}, _nowMs = Date.now()) {
     state.cycleId = crypto.randomUUID();
     state.schedule = createSchedule();
     state.transition = false;
-    state.cycleLengthDays = state.monthLengthDays = 28;
+    state.cycleLengthDays = state.monthLengthDays = state.schedule.length;
     state.monthKey = "";
     state.nextDay = 1;
     state.earnedThroughDay = 0;
