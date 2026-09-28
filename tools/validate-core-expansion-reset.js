@@ -102,7 +102,8 @@ async function validateResetGate() {
     },
     verifyPreparedExpansionRegion: async regionId => ({ regionId,
       ready: seeds.has(regionId) && !(failVerification && regionId === lastMap),
-      verifiedCityCount: maps.get(regionId).cities.length, verifiedCampCount: maps.get(regionId).camps?.length || 0 }),
+      verifiedCityCount: maps.get(regionId).cities.length + (maps.get(regionId).objectives?.length || 0),
+      verifiedCampCount: maps.get(regionId).camps?.length || 0 }),
   };
   vm.createContext(scope);
   for (const name of ["coreExpansionStateRef", "ensureCoreExpansionState", "coreExpansionResetReadinessRef",
@@ -123,7 +124,8 @@ async function validateResetGate() {
   failVerification = false;
   const result = await scope.ensureCurrentRealmConfiguration();
   assert.equal(result.resetReadiness.regionCount, 81);
-  assert.equal(result.resetReadiness.cityCount, 3720);
+  assert.equal(result.resetReadiness.cityCount, 3725); // Includes the five stronghold documents.
+  assert.equal(result.resetReadiness.campCount, 12);
   assert.deepEqual(result.resetReadiness.initialNewLandsRegionIds, topology.getResetNewLandsRegionIds());
   assert.equal(documents.get("realmConfig/current").worldId, worldId);
   assert.equal(documents.get(statePath).nextAdmissionOrdinal, 1);
@@ -132,7 +134,7 @@ async function validateResetGate() {
   const savedReadiness = plain(documents.get(readyPath));
   // A completed current season's readiness receipt remains authoritative, even
   // if that season used the old 26-map initialization policy.
-  documents.set(readyPath, { ...savedReadiness, regionCount: 26, cityCount: 1520 });
+  documents.set(readyPath, { ...savedReadiness, regionCount: 26, cityCount: 1525 });
   reads.length = 0;
   await scope.ensureCurrentRealmConfiguration();
   assert(!reads.includes(statePath), "Existing ready realms must not be reinitialized");

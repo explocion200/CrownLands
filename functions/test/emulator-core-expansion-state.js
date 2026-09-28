@@ -251,15 +251,21 @@ async function main() {
     "The reset pointer became visible before Core and both New Lands layers were prepared.");
   const readinessRef = db.doc(`realmGenerations/${realmInfo.resetGeneration}/resetActivation/current`);
   const readiness = (await readinessRef.get()).data() || {};
-  assert(readiness.regionCount === 81 && readiness.cityCount === 3720,
-    "Cold reset must prepare and verify all 81 maps and 3,720 cities.");
+  assert(readiness.regionCount === 81 && readiness.cityCount === 3725 && readiness.campCount === 12,
+    "Cold reset must prepare all 81 maps, 3,720 regular cities, five strongholds, and 12 camps.");
   assert(realmInfo.coreExpansion.activeRegionIds.length === 56
     && realmInfo.coreExpansion.admittingRegionIds.join(",") === "new-lands-l01-p001",
     "Opening both layers must keep initial placement on the first north-center map.");
   for (const map of worldLayout.maps) {
     const island = db.doc(`islands/${realmInfo.worldId}--shard_0001--${map.id}`);
-    const [islandSnap, cities] = await Promise.all([island.get(), island.collection("cities").get()]);
-    assert(islandSnap.exists && cities.size === map.cities.length, `${map.id} was not completely seeded at reset.`);
+    const [islandSnap, cities, camps] = await Promise.all([
+      island.get(), island.collection("cities").get(), island.collection("camps").get(),
+    ]);
+    const expectedCityIds = [...map.cities, ...(map.objectives || [])].map(city => city.id).sort();
+    assert(islandSnap.exists && cities.docs.map(city => city.id).sort().join(",") === expectedCityIds.join(","),
+      `${map.id} is missing a city or stronghold after reset.`);
+    assert(camps.docs.map(camp => camp.id).sort().join(",") === (map.camps || []).map(camp => camp.id).sort().join(","),
+      `${map.id} is missing a reward camp after reset.`);
     assert(cities.docs.every(city => city.data().resetGeneration === realmInfo.resetGeneration),
       `${map.id} contains cities from the wrong generation.`);
     if (topology.parseNewLandsRegionId(map.id)) {

@@ -32,7 +32,7 @@
         "tools/validate-reset-release.js",
         "functions/test/emulator-core-expansion-state.js"
       ],
-      "reason": "Execute new behavioral regressions: interruption and verification failure must retain the previous pointer, retries preserve city data and admission state, actual emulator reset seeds all 3,720 cities, and 50 simultaneous joins enter only the first three maps. Existing legacy topology tests remain selected separately so compatibility expectations are not replaced by the new policy."
+      "reason": "Execute new behavioral regressions: interruption and verification failure must retain the previous pointer, retries preserve city data and admission state, actual emulator reset seeds all 3,720 regular cities, and 50 simultaneous joins enter only the first three maps. Existing legacy topology tests remain selected separately so compatibility expectations are not replaced by the new policy."
     },
     {
       "paths": [
