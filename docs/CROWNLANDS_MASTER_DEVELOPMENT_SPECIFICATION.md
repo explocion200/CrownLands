@@ -1185,6 +1185,7 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 
 ### Confirmed standards
 
+- **Login presentation — confirmed September 27, 2026:** Replace the photographic, framed login background with an original medieval ink-and-watercolor kingdom illustration based on the owner's map-art reference. Remove the right-hand promotional panel. Fill the viewport with responsive artwork and present a readable Crownlands title above one parchment account panel. Support desktop and mobile login layouts, retaining existing account, realm, audio, fullscreen, community, and information controls. Gameplay rules are unchanged. Implementation and artwork provenance: [Illustrated login](./visual-qa/illustrated-login/README.md). Production deployment requires verification.
 - **UI transition audio — confirmed September 27, 2026:** Use the owner-supplied `RPG Sound Pack/interface/interface2.wav` for UI opening and closing, including menus, reports, city details, dialogs and Profile. Keyboard and backdrop closes use the same cue. Retain ordinary button-click audio and Effects controls; music continues independently. Emit one interface sound per transition, suppress duplicates and content-refresh noise, and preserve contextual action feedback. Production deployment requires verification.
 - The game must remain readable and operable in landscape mobile layouts and on PC.
 - Critical actions, timers, troop counts, resource values, reports, warnings, and state changes must have sufficient contrast and must not depend on decorative texture alone.

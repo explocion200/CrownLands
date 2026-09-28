@@ -105,7 +105,8 @@ const STATIC_CACHE_URLS = [
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
   "/assets/clan-heraldry/art-set-v1/charges-full.svg",
   "/assets/clan-heraldry/art-set-v1/charges-micro.svg",
-  "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
+  "/login-screen.css?v=illustrated-login-r1",
+  "/assets/optimized/login-kingdom-960-6646f1d404b1.webp",
   "/assets/optimized/loading-ring-256x256-38fb3df7217c.webp"
 ];
 

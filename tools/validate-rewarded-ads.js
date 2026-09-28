@@ -221,7 +221,7 @@ assert.match(adsConfigSource, /testAdUnitPath:\s*"\/22639388115\/rewarded_web_ex
 assert.match(adsConfigSource, /approvedProductionHosts:\s*Object\.freeze/);
 assert.doesNotMatch(adsConfigSource, /loginDisplayAd|publisherId|slotId/);
 assert.doesNotMatch(stylesSource, /\.login-display-ad|\.adsbygoogle/);
-assert.match(stylesSource, /\.login-game-info[\s\S]*?position:\s*absolute/);
+assert.doesNotMatch(indexSource, /class="login-game-info"/);
 assert.match(gameSource, /productionHostApproved\s*=\s*approvedProductionHosts\.has\(hostname\)/);
 assert.match(gameSource, /productionHostApproved\s*\?\s*productionAdUnitPath\s*:\s*""/);
 assert.match(adsConfigSource, /productionAdUnitPath:\s*""/);

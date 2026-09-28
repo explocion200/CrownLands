@@ -1,0 +1,219 @@
+/* Illustrated login. Keep account state and controls owned by the existing runtime. */
+#setupScreen {
+  isolation: isolate;
+  place-items: stretch;
+  grid-template-rows: minmax(min-content, 1fr);
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #696447;
+  scrollbar-width: thin;
+}
+
+#setupScreen .login-background,
+#setupScreen .login-background img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#setupScreen .login-background img {
+  object-fit: cover;
+  object-position: center;
+}
+#setupScreen .login-background { position: fixed; }
+
+#setupScreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: auto;
+  height: auto;
+  border: 0;
+  box-shadow: none;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(28, 31, 20, .26), rgba(28, 31, 20, .08) 45%, rgba(28, 26, 17, .38));
+}
+
+#setupScreen .login-layout {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: clamp(1rem, 3.5vh, 2.6rem);
+  min-width: 0;
+  min-height: 100%;
+  padding: max(2rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(4.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+#setupScreen .login-branding {
+  flex: 0 0 auto;
+  max-width: 100%;
+  color: #faedc9;
+  text-align: center;
+  text-shadow: 0 2px 3px #292718, 0 0 18px rgba(35, 31, 17, .4);
+}
+
+#setupScreen .login-branding h1 {
+  margin: .1em 0 .12em;
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 7.8vw, 7.5rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -.035em;
+}
+
+#setupScreen .login-branding p {
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-ui);
+  font-size: clamp(.65rem, 1vw, .85rem);
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.login-brand-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .8rem;
+}
+.login-brand-ornament::before,
+.login-brand-ornament::after {
+  content: "";
+  width: clamp(40px, 6vw, 90px);
+  height: 1px;
+  background: currentColor;
+  opacity: .75;
+}
+.login-brand-ornament .cl-icon { width: 28px; height: 28px; }
+
+#setupScreen .setup-card {
+  flex: 0 0 auto;
+  width: min(420px, 100%);
+  max-height: none;
+  margin: 0;
+  padding: clamp(1.2rem, 2vw, 1.75rem);
+  overflow: visible;
+  border: 1px solid #a3854f !important;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f5e9ca, #e9d7af) !important;
+  box-shadow: 0 12px 38px rgba(24, 24, 14, .3), inset 0 0 0 4px #eddfbd, inset 0 0 0 5px #b49a67 !important;
+  backdrop-filter: none;
+}
+
+#setupScreen .online-login {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#setupScreen #onlineStatusText {
+  font-size: 1.05rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+#setupScreen #onlineStatusDetail {
+  margin: .4rem 0 1rem;
+  font-size: .86rem;
+  line-height: 1.5;
+}
+#setupScreen .online-login-actions { gap: .6rem; }
+#setupScreen .online-login-actions > button {
+  min-height: 46px;
+  margin: 0;
+  border-radius: 3px;
+  font-size: .8rem;
+}
+#setupScreen .email-verification button { min-height: 44px; }
+#setupScreen .server-realm-list {
+  gap: .5rem;
+  margin: 0 0 .85rem;
+  padding-top: .85rem;
+  border-color: #c2ac80;
+}
+#setupScreen .server-realm-card {
+  min-height: 54px;
+  background: #ddd1aa !important;
+  border: 1px solid #a28f60 !important;
+  box-shadow: inset 0 0 0 2px #efe4c8 !important;
+}
+#setupScreen .server-realm-card strong { font-size: .87rem; }
+#setupScreen .server-realm-crest { width: 34px; height: 34px; }
+#setupScreen .public-site-links {
+  gap: .05rem .75rem;
+  margin-top: 1rem;
+  padding-top: .65rem;
+  border-top: 1px solid #c2ac80;
+}
+#setupScreen .public-site-links a {
+  min-height: 28px;
+  color: #59442b;
+  font-size: .64rem;
+}
+#setupScreen .menu-loading-wheel { --loading-wheel-size: 54px; margin-bottom: .75rem; }
+#setupScreen :is(.setup-fullscreen-btn, .login-music-mute-btn, .discord-home-link) {
+  z-index: 3;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 3px;
+  backdrop-filter: none;
+}
+#setupScreen .login-utilities {
+  position: absolute;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 10px;
+  left: max(1rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+}
+#setupScreen .login-utilities > * { position: static; }
+
+/* Sign-in supports portrait. The existing landscape requirement resumes in game. */
+body:has(#setupScreen.visible) .rotate-warning { display: none; }
+
+@media (orientation: portrait) {
+  #setupScreen .login-background img { object-position: 27% center; }
+  #setupScreen .login-layout { gap: 1.5rem; }
+  #setupScreen .login-branding h1 { font-size: clamp(2rem, 10vw, 5.5rem); }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  #setupScreen .login-layout {
+    gap: .75rem;
+    padding-top: max(.75rem, env(safe-area-inset-top));
+    padding-bottom: max(.75rem, env(safe-area-inset-bottom));
+  }
+  #setupScreen .login-brand-ornament { display: none; }
+  #setupScreen .login-branding h1 { margin: 0; font-size: clamp(2rem, 6vh, 3rem); }
+  #setupScreen .login-branding p { font-size: .55rem; letter-spacing: .16em; }
+  #setupScreen .setup-card { width: min(420px, calc(100% - 112px)); padding: .85rem 1.1rem; }
+  #setupScreen #onlineStatusText { font-size: .85rem; }
+  #setupScreen #onlineStatusDetail { margin: .2rem 0 .6rem; font-size: .76rem; }
+  #setupScreen .online-login-actions { gap: .4rem; }
+  #setupScreen .online-login-actions > button { min-height: 44px; }
+  #setupScreen .server-realm-list { margin-bottom: .55rem; padding-top: .5rem; gap: .3rem; }
+  #setupScreen .server-realm-card { min-height: 44px; }
+  #setupScreen .public-site-links { margin-top: .55rem; padding-top: .35rem; gap: 0 .65rem; }
+  #setupScreen .public-site-links a { min-height: 24px; }
+  #setupScreen .menu-loading-wheel { --loading-wheel-size: 36px; margin-bottom: .4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #setupScreen .loading-wheel img,
+  #setupScreen .server-queue-spinner { animation: none; }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  #setupScreen .login-utilities { flex-direction: column; }
+}
