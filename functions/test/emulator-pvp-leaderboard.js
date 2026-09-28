@@ -29,6 +29,7 @@ async function main(){
  // Prove the deployed event trigger performs the initial credit without a player request.
  for(let i=0;i<100&&!(await first.get()).data().processedAtMs;i++)await new Promise(resolve=>setTimeout(resolve,200));
  assert((await first.get()).data().processedAtMs,"PvP trigger did not settle the event.");
+ const metadataRevision=(await db.doc("pvpLeaderboards/"+boardId).get()).updateTime;
  const events=Array.from({length:5},(_,i)=>db.doc("pvpKillEvents/"+boardId+"/events/"+nonce+"-"+i));
  await Promise.all(events.map((ref,i)=>ref.create(record(ref.id,11,2000+i))));
  // Competing consumers and repeated deliveries must conserve every increment.
@@ -38,6 +39,7 @@ async function main(){
  assert.equal((await scoreRef.get()).data().pvpKills,62);
  assert.equal((await scoreRef.get()).data().reachedAtMs,2004);
  assert.equal((await db.doc("pvpLeaderboards/"+boardId).get()).data().trackingStartedAtMs,1000);
+ assert((await db.doc("pvpLeaderboards/"+boardId).get()).updateTime.isEqual(metadataRevision),"Every battle rewrote shared metadata.");
  assert.deepEqual((await db.doc("players/"+a).get()).data(),oldProfile,"Scoring touched troops, Gold, King Power or profile state.");
  // Old delayed work is applied only to the old season, even after the pointer advances.
  const next={...scope,resetGeneration:"realm-2026-10",worldId:"main-realm-2026-10"};

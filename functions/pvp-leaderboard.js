@@ -98,7 +98,10 @@ async function processEvent(db, eventRef, nowMs = Date.now()) {
         reachedAtMs:Math.max(integer(previous.reachedAtMs), event.occurredAtMs),
       }, {merge:true});
     }
-    transaction.set(board, {...identity,version:VERSION,trackingStartedAtMs}, {merge:true});
+    // Avoid rewriting one shared document for every battle in a busy realm.
+    if (!snapshots[0].exists || snapshots[0].data().trackingStartedAtMs !== trackingStartedAtMs) {
+      transaction.set(board, {...identity,version:VERSION,trackingStartedAtMs}, {merge:true});
+    }
     // This durable event is also the receipt; do not TTL or rewrite it.
     transaction.update(eventRef, {processedAtMs:nowMs});
     return {replayed:false, recipients:refs.length};
