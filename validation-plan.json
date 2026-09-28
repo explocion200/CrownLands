@@ -1,41 +1,54 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d058d2d37bbc62c9017ed7a1786f44ff1edcafac",
+  "baseCommit": "74b25ea09e0cabca4fa241d258255764bc5395cf",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "player-profile-ui.css"
+        "functions/coreExpansionTopology.js",
+        "functions/index.js"
       ],
       "tests": [
-        "tools/validate-player-flags.js",
-        "tools/validate-leaderboard-tabs.js",
-        "tools/validate-profile-theme.js",
-        "tools/validate-leaderboard-podium-browser.js",
-        "tools/validate-public-player-profile-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-core-expansion-topology.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-core-expansion-reset.js",
+        "tools/validate-reset-release.js",
+        "tools/validate-world-travel-network.js",
+        "tools/validate-map-picker-input.js",
+        "functions/test/emulator-core-expansion-state.js",
+        "functions/test/emulator-first-time-onboarding.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Presentation-only wrappers reuse the existing FlagRenderer and saved designs. Actual-game desktop and two landscape-mobile fixtures verify player podiums, rows, cloned personal standing, public dossiers, SVG crest bounds, profile-shape parity, flag refresh, scrolling and identity navigation. Shared renderer/palette checks preserve legacy designs and unaffected editor/map/clan presentation. No server, schema, scoring or persistence changes."
+      "reason": "New monthly generations must seed and verify 81 maps before publishing the realm pointer while admitting only the first north-center map. Compare the independent admission cursor against unchanged legacy transitions across both layer boundaries; cover incomplete preparation, retries, old readiness receipts, existing realm compatibility, concurrent claims and thresholds, least-populated placement, captured-city capacity recovery, and isolation. Reset persistence and first-time onboarding depend on the same claim path. World travel and desktop/landscape-mobile map picker checks verify that the pre-opened rings are connected and available, while Layer 3 stays closed until its normal turn. No balance, player accounting, scheduler cadence or resource-setting changes."
     },
     {
       "paths": [
-        "tools/player-banner-browser-checks.js",
-        "tools/validate-leaderboard-podium-browser.js",
-        "tools/validate-public-player-profile-browser.js",
-        "tools/map-benchmark/ledgers-qa-runtime.js"
+        "tools/validate-core-expansion-reset.js",
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-core-expansion-state.js"
       ],
       "tests": [
-        "tools/validate-leaderboard-podium-browser.js",
-        "tools/validate-public-player-profile-browser.js"
+        "tools/validate-core-expansion-reset.js",
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-core-expansion-state.js"
       ],
-      "reason": "Existing actual-game browser suites now detect clipped or undersized crests and mounts, including intrinsic SVG overflow. Synthetic rankings exercise every flag pattern and selectable symbol; saved identity refresh must update both current player copies. Public profile fixture compares against the active editable-profile banner. Existing clan, totals, navigation and responsive checks remain in the same runs."
+      "reason": "Execute new behavioral regressions: interruption and verification failure must retain the previous pointer, retries preserve city data and admission state, actual emulator reset seeds all 3,720 regular cities, and 50 simultaneous joins enter only the first three maps. Existing legacy topology tests remain selected separately so compatibility expectations are not replaced by the new policy."
+    },
+    {
+      "paths": [
+        "tools/validate-map-picker-input.js"
+      ],
+      "tests": [
+        "tools/validate-map-picker-input.js"
+      ],
+      "reason": "Use the actual 81-map reset state and server descriptors in existing desktop and landscape-mobile picker fixtures. Require all 81 maps selectable and Layer 3 absent, retaining mouse, keyboard, touch, pan, pinch, ghost-click and console-error checks."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the user's explicitly requested hanging-banner presentation and saved-design preservation; no gameplay rule changes or deployment claims."
+      "reason": "Records the explicitly confirmed next-reset rule, separate map availability and admission order, fail-closed preparation, and preservation of existing generations. Rewards remain a separate unimplemented discussion; this document makes no deployment claim."
     }
   ]
 }

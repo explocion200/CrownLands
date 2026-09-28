@@ -10,6 +10,10 @@ const path = require("node:path");
 
 const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client.js");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
+const topology = require("../functions/coreExpansionTopology.js");
+const { createTravelFixture } = require("./world-travel-test-fixtures.js");
+const resetExpansion = topology.createResetExpansionState("realm-picker-test");
+const resetRegions = createTravelFixture(resetExpansion.activeRegionIds.length).descriptors;
 
 const DESKTOP_VIEWPORT = { width: 1200, height: 800 };
 const TOUCH_VIEWPORT = { width: 844, height: 390 };
@@ -129,6 +133,11 @@ async function loadFixture(client, serverUrl, viewport, touch = false) {
     `Map picker fixture did not become ready within ${READY_TIMEOUT_MS} ms.`,
     READY_TIMEOUT_MS
   );
+  await evaluate(client, `applyCoreExpansionRealmState(${JSON.stringify({
+    coreExpansion: { ...resetExpansion, regions: resetRegions.filter(region => !region.permanentCore) },
+  })})`);
+  assert.equal(await evaluate(client, "getRegionIds().length"), 81,
+    "Desktop and mobile must discover the complete two-layer reset world.");
   await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.resetMapPickerInputTelemetry()");
   return evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMapPickerInputTelemetry()");
 }
@@ -296,6 +305,11 @@ async function openPicker(client, touch = false) {
     "window.__CROWNLANDS_BENCHMARK__.getMapPickerInputTelemetry().pickerOpen",
     "The map picker did not open."
   );
+  const mapIds = await evaluate(client, `Array.from(document.querySelectorAll('.island-map-picker [data-island-region]'))
+    .filter(button => !button.disabled).map(button => button.dataset.islandRegion)`);
+  assert.equal(new Set(mapIds).size, 81, "All 81 reset maps must be selectable.");
+  assert(mapIds.includes("new-lands-l02-p032"), "The last Layer 2 map is missing from the picker.");
+  assert(!mapIds.includes("new-lands-l03-p001"), "Unopened Layer 3 map appeared at reset.");
   await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.resetMapPickerInputTelemetry()");
 }
 

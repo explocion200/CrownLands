@@ -263,6 +263,26 @@ function getFirstLayerRegionIds() {
   ));
 }
 
+function getResetNewLandsRegionIds() {
+  return Object.freeze(Array.from(
+    { length: getLayerMapCount(1) + getLayerMapCount(2) },
+    (_, ordinal) => getRegionAtActivationOrdinal(ordinal).id,
+  ));
+}
+
+function createResetExpansionState(resetGeneration = "") {
+  const activeRegionIds = getResetNewLandsRegionIds();
+  return Object.freeze({
+    ...createInitialExpansionState(resetGeneration),
+    schemaVersion: 3,
+    activeRegionIds,
+    nextActivationOrdinal: activeRegionIds.length,
+    // Playable maps and starting-city admission advance independently.
+    // Older realms without this cursor retain their existing activation order.
+    nextAdmissionOrdinal: 1,
+  });
+}
+
 function normalizeExpansionState(state = {}) {
   const activeRegionIds = [...new Set((Array.isArray(state.activeRegionIds) ? state.activeRegionIds : [])
     .map(value => String(value || "").trim())
@@ -301,13 +321,16 @@ function normalizeExpansionState(state = {}) {
       thresholdRevision: Math.max(0, integer(entry?.thresholdRevision)),
       createdAtMs: Math.max(0, integer(entry?.createdAtMs)),
     })).filter(entry => entry.eventId && entry.sourceRegionId);
+  const hasAdmissionCursor = state.nextAdmissionOrdinal != null
+    && Number.isFinite(Number(state.nextAdmissionOrdinal));
   return {
-    schemaVersion: 2,
+    schemaVersion: hasAdmissionCursor ? 3 : 2,
     topologyVersion: TOPOLOGY_VERSION,
     resetGeneration: String(state.resetGeneration || ""),
     activeRegionIds,
     admittingRegionIds,
     nextActivationOrdinal: Math.max(activeRegionIds.length, integer(state.nextActivationOrdinal, activeRegionIds.length)),
+    ...(hasAdmissionCursor ? { nextAdmissionOrdinal: Math.max(1, integer(state.nextAdmissionOrdinal)) } : {}),
     activationReceipts: state.activationReceipts && typeof state.activationReceipts === "object"
       ? { ...state.activationReceipts }
       : {},
@@ -315,6 +338,12 @@ function normalizeExpansionState(state = {}) {
     queuedActivationSources,
     revision: Math.max(0, integer(state.revision)),
   };
+}
+
+function advanceAdmissionCursor(state, ordinal) {
+  return state.nextAdmissionOrdinal == null
+    ? { nextActivationOrdinal: ordinal }
+    : { nextActivationOrdinal: Math.max(state.activeRegionIds.length, ordinal), nextAdmissionOrdinal: ordinal };
 }
 
 function buildActivationEventId(resetGeneration, sourceRegionId, thresholdRevision = 0) {
@@ -390,19 +419,19 @@ function planThresholdActivation({
   }
 
   const preparedRegions = [];
-  const startActivationOrdinal = current.nextActivationOrdinal;
-  let nextActivationOrdinal = current.nextActivationOrdinal;
+  const startActivationOrdinal = current.nextAdmissionOrdinal ?? current.nextActivationOrdinal;
+  let nextActivationOrdinal = startActivationOrdinal;
   while (preparedRegions.length < EXPANSION_ACTIVATION_BATCH_SIZE) {
     const candidate = getRegionAtActivationOrdinal(nextActivationOrdinal);
     nextActivationOrdinal += 1;
-    if (current.activeRegionIds.includes(candidate.id)) continue;
+    if (current.nextAdmissionOrdinal == null && current.activeRegionIds.includes(candidate.id)) continue;
     preparedRegions.push(candidate);
   }
   const preparedIds = preparedRegions.map(region => region.id);
   const next = {
     ...current,
     admittingRegionIds: current.admittingRegionIds.filter(regionId => regionId !== source),
-    nextActivationOrdinal,
+    ...advanceAdmissionCursor(current, nextActivationOrdinal),
     pendingActivation: {
       eventId,
       sourceRegionId: source,
@@ -440,7 +469,7 @@ function finalizePendingActivation({ state, eventId = "", readyRegionIds = [] } 
   ));
   const queuedActivationSources = [...current.queuedActivationSources];
   const queued = queuedActivationSources.shift() || null;
-  let nextActivationOrdinal = current.nextActivationOrdinal;
+  let nextActivationOrdinal = current.nextAdmissionOrdinal ?? current.nextActivationOrdinal;
   let nextPendingActivation = null;
   if (queued) {
     const regionIds = [];
@@ -448,7 +477,8 @@ function finalizePendingActivation({ state, eventId = "", readyRegionIds = [] } 
     while (regionIds.length < EXPANSION_ACTIVATION_BATCH_SIZE) {
       const candidate = getRegionAtActivationOrdinal(nextActivationOrdinal);
       nextActivationOrdinal += 1;
-      if (current.activeRegionIds.includes(candidate.id) || pending.regionIds.includes(candidate.id)) continue;
+      if (current.nextAdmissionOrdinal == null
+        && (current.activeRegionIds.includes(candidate.id) || pending.regionIds.includes(candidate.id))) continue;
       regionIds.push(candidate.id);
     }
     nextPendingActivation = {
@@ -472,7 +502,7 @@ function finalizePendingActivation({ state, eventId = "", readyRegionIds = [] } 
     activeRegionIds: [...new Set([...current.activeRegionIds, ...pending.regionIds])],
     admittingRegionIds: [...new Set([...current.admittingRegionIds, ...pending.regionIds])],
     activationReceipts,
-    nextActivationOrdinal,
+    ...advanceAdmissionCursor(current, nextActivationOrdinal),
     pendingActivation: nextPendingActivation,
     queuedActivationSources,
     revision: current.revision + 1,
@@ -496,7 +526,7 @@ function rollbackPendingActivation({ state, eventId = "" } = {}) {
   const next = {
     ...current,
     admittingRegionIds: [...new Set([...current.admittingRegionIds, pending.sourceRegionId])],
-    nextActivationOrdinal: pending.startActivationOrdinal,
+    ...advanceAdmissionCursor(current, pending.startActivationOrdinal),
     pendingActivation: null,
     queuedActivationSources: [],
     revision: current.revision + 1,
@@ -581,7 +611,9 @@ module.exports = Object.freeze({
   getNewLandsRegionName,
   getRegionAtActivationOrdinal,
   getFirstLayerRegionIds,
+  getResetNewLandsRegionIds,
   createInitialExpansionState,
+  createResetExpansionState,
   normalizeExpansionState,
   buildActivationEventId,
   planThresholdActivation,

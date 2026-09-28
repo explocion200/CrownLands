@@ -792,7 +792,7 @@ async function ensureCoreExpansionState() {
       }
       return state;
     }
-    const state = CORE_EXPANSION.createInitialExpansionState(RESET_GENERATION);
+    const state = CORE_EXPANSION.createResetExpansionState(RESET_GENERATION);
     transaction.set(stateRef, {
       ...state,
       worldId: ONLINE_WORLD_ID,
@@ -17445,7 +17445,12 @@ async function ensureCoreExpansionResetReady(nowMs = Date.now()) {
     const expansionState = await ensureCoreExpansionState();
     const initialNewLandsRegionId = expansionState.activeRegionIds[0]
       || CORE_EXPANSION.getRegionAtActivationOrdinal(0).id;
-    const requiredRegionIds = [...CORE_PERMANENT_REGION_IDS, initialNewLandsRegionId];
+    // Existing realms keep their original readiness policy. New resets open
+    // both prepared rings, while the independent admission cursor starts at 1.
+    const initialNewLandsRegionIds = expansionState.nextAdmissionOrdinal == null
+      ? [initialNewLandsRegionId]
+      : CORE_EXPANSION.getResetNewLandsRegionIds();
+    const requiredRegionIds = [...CORE_PERMANENT_REGION_IDS, ...initialNewLandsRegionIds];
     const seedResults = [];
     await processWithConcurrency(requiredRegionIds, 6, async regionId => {
       seedResults.push(await ensureMainIslandForPlayer(
@@ -17478,6 +17483,7 @@ async function ensureCoreExpansionResetReady(nowMs = Date.now()) {
       cityCount: readiness.reduce((sum, region) => sum + region.verifiedCityCount, 0),
       campCount: readiness.reduce((sum, region) => sum + region.verifiedCampCount, 0),
       initialNewLandsRegionId,
+      initialNewLandsRegionIds,
       completedAtMs,
       updatedAtMs: completedAtMs,
       updatedAt: FieldValue.serverTimestamp(),
