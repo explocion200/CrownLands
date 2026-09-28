@@ -1,88 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "aff38890738052b02eb93c2d7de83ede49096e62",
+  "baseCommit": "46f052981d916b49bab651800a59a33d6d80a41a",
   "coverage": [
     {
       "paths": [
-        "common-gear.js",
-        "functions/common-gear.js",
-        "functions/index.js",
-        "firebaseClient.js",
-        "functions/test/emulator-reset-gate.js"
+        "game.js"
       ],
       "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js",
-        "tools/validate-daily-login-rewards.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-economy-concurrency.js"
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-map-interactions.js",
+        "tools/validate-march-path-alignment.js",
+        "tools/validate-pending-army-departures.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-live-subscription-scope.js",
+        "tools/validate-clans.js",
+        "tools/validate-army-token-rollback.js",
+        "tools/validate-production-artifact.js",
+        "functions/test/emulator-army-listener-rules.js"
       ],
-      "reason": "Gear schema 4 preserves a separate green chest count and per-type retry receipt. Verify exact server contents, authentication/season participation, atomic concurrent claims and openings, capacity rejection before spending, reset persistence and unchanged shared upgrade/economy authority. Daily claims credit both day-10 items and the unopened day-30 chest. Existing rarity bonuses and two-item upgrades remain covered."
+      "reason": "March markers now use saved route geometry without requiring both endpoint entities in the local map cache. Exercise own, clan and rival attacks, transfers, scouts, reinforcements, rallies and returns with missing endpoints on desktop and landscape screens. Check route alignment, movement, portal isolation, fresh snapshots, endpoint controls, title fallback, preserved hidden/estimated troop counts, clan colors and pending departures. Existing subscription and emulator checks verify current-realm outgoing/incoming access and retain generation/shard privacy. Production artifact validation covers the shipped client. No server authority or rules are changed."
     },
     {
       "paths": [
-        "functions/dailyLoginRewards.js",
-        "tools/validate-daily-login-rewards.js"
+        "tools/validate-marching-army-visibility-browser.js"
       ],
       "tests": [
-        "tools/validate-daily-login-rewards.js",
-        "functions/test/emulator-reset-gate.js"
+        "tools/validate-marching-army-visibility-browser.js"
       ],
-      "reason": "Validate fixed 30-day budgets and milestones, unchanged saved schedules and guards during schema 4 migration, deferred attendance, missed dates, queue limits and cycle rollover without duplicate rewards. Emulator claims exercise retained monthly migration and the new schedule."
-    },
-    {
-      "paths": [
-        "game.js",
-        "instant-economy-actions.js",
-        "item-bag-ui.js",
-        "common-gear-ui.js",
-        "common-gear-box-ui.js",
-        "common-gear-box-ui.css",
-        "daily-login-ui.js",
-        "assets/icons/uncommon-gear-chest-r1.svg",
-        "tools/validate-common-gear-box-browser.js",
-        "tools/validate-instant-economy-actions.js"
-      ],
-      "tests": [
-        "tools/validate-common-gear-box-browser.js",
-        "tools/validate-item-bag-browser.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-audio-contract.js",
-        "tools/validate-pass-3f-items.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Check the new Bag item, shared inventory selection/counts, green opening art and mixed rarity cards, both day-10 items and day-30 details across desktop and landscape. Browser coverage exercises separate counts, cross-type lost-response recovery, sound timing/mute/failure isolation, motion and existing Common chest/Bag controls. Packaging and audio contracts cover reused assets."
-    },
-    {
-      "paths": [
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js"
-      ],
-      "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js"
-      ],
-      "reason": "Update pool assertions for server cryptographic rolls by chest type and test count/receipt migration while retaining progression coverage."
-    },
-    {
-      "paths": [
-        "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "The production build must include and fingerprint the green SVG so release identity changes with the item art. Required build and artifact checks verify distribution."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/daily-login-cycle/uncommon-chest.md"
-      ],
-      "tests": [],
-      "reason": "Document confirmed rewards, exception to upgrade-only Uncommon acquisition, saved-cycle migration, visual evidence and coordinated backend/client release requirements. No independent runtime behavior."
+      "reason": "Run the new regression against the full client with the existing Core map fixture and production requests blocked. It reproduces the pre-fix visible-route/missing-marker failure when an endpoint is unloaded, and verifies the repaired behavior at three viewport sizes."
     }
   ]
 }

@@ -30901,7 +30901,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     : `${relationshipLabel}${attack.kind || "Army"} march${troopDescription ? ` with ${troopDescription}` : ""} to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
   if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
-    const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
+    const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || attack.toName || "destination"}`;
     const title = `${titlePrefix}${troopDescription ? ` - ${troopDescription}` : ""} - ${formatDuration(attack.remaining)} remaining`;
     if (token.title !== title) token.title = title;
   }
@@ -30932,7 +30932,8 @@ function renderArmiesUncached(force = false) {
   for (const attack of getRenderableArmies()) {
     const from = getArmyTargetById(attack.fromId);
     const to = getArmyTargetById(attack.toId);
-    if (!from || !to) continue;
+    // Public routes can cross this map while either endpoint is still unloaded.
+    // Route geometry locates the army; cached endpoints only enrich its controls.
     const progress = getArmyTravelProgress(attack);
     const segmentPoint = getMissionPointAtProgress(attack, progress);
     if (!segmentPoint || segmentPoint.regionId !== activeRegionId) continue;
