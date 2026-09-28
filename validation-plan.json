@@ -51,9 +51,19 @@
         "docs/audio-sources/retired-starter-music/victory_fanfare.wav",
         "docs/audio-sources/retired-starter-music/world_map_loop.mp3",
         "docs/audio-sources/retired-starter-music/world_map_loop.ogg",
-        "docs/audio-sources/retired-starter-music/world_map_loop.wav"
+        "docs/audio-sources/retired-starter-music/world_map_loop.wav",
+        "tools/ui-transition-browser.js",
+        "audio/ui/menu_open.mp3",
+        "audio/ui/menu_open.ogg",
+        "audio/ui/menu_open.wav",
+        "audio/ui/menu_close.mp3",
+        "audio/ui/menu_close.ogg",
+        "audio/ui/menu_close.wav",
+        "audio/ui/parchment_open.mp3",
+        "audio/ui/parchment_open.ogg",
+        "audio/ui/parchment_open.wav"
       ],
-      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 29 effects including the supplied Gold pickup, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests.",
+      "reason": "Replace the music assets with eight unchanged supplied MP3s and route existing contexts through one persistent shuffled soundtrack. Cover full rounds, boundary repeats, blocked autoplay, loading races, mute/background resume, natural completion, bounded media failures, effects independence and existing codec fallbacks. Browser coverage decodes all tracks and all 29 effects including the supplied Gold pickup, spending and both officer armor cues, verifies actual region switches and only one startup music request, and exercises desktop/mobile playback. Check spending audio mixed with Treasury and chainmail armor, city upgrade and troop dispatch at their maximum runtime gains. Archive the old music outside the production tree instead of deleting it, and verify exact manifest provenance, range delivery and unchanged offline/runtime budgets. The production package gets a bounded 22 MiB increment for the longer streamed playlist with a separate 24 MiB music cap. No backend, API, rules or player data changes need emulator tests. Replace all three existing UI transition recordings with interface2.wav. Real desktop and landscape browser tests cover dialog/Profile opens and closes, Escape and backdrop dismissal, repeated calls, content refreshes, contextual-cue precedence, shared transition cooldowns, Effects mute and uninterrupted music. Observe only the fixed dialog/Profile attributes, avoiding map-tree observation.",
       "tests": [
         "tools/validate-music-playlist.js",
         "tools/validate-audio-unlock.js",
@@ -122,9 +132,10 @@
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "audio/music/README.md",
-        "audio/rewards/README.md"
+        "audio/rewards/README.md",
+        "audio/ui/README.md"
       ],
-      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites.",
+      "reason": "Record the confirmed soundtrack, Gold pickup/payment and officer armor upgrade audio behavior, plus the supplied recordings' provenance and conversion details. The implementation and media integrity are exercised by the audio and pickup suites. Document the confirmed UI opening/closing clip, conversion and quiet refresh behavior.",
       "tests": []
     }
   ]

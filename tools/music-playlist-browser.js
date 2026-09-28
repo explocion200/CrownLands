@@ -76,6 +76,7 @@ async function run() {
       assert.deepEqual(continuity.maps, [true, true]); assert(continuity.sameElement && continuity.sameTrack);
       assert(continuity.currentTime >= 30, JSON.stringify(continuity)); assert.equal(continuity.resets, 0); assert.equal(continuity.pauses, 0);
       assert.equal(continuity.startupTracks, 1, "Startup and map changes must only request the playing song");
+      const uiTransitions = await require("./ui-transition-browser").validateUiTransitions(client, ev);
 
       const sequence = [];
       for (let i = 0; i < 9; i++) {
@@ -116,7 +117,7 @@ async function run() {
         assert.equal(track.status, 200); assert.equal(track.channels, 2);
         assert(track.duration > 160 && track.duration < 225); assert(track.peak > 0.1 && track.peak < 1); assert(track.rms > 0.01);
       }
-      evidence.push({ viewport: [width, height], continuity, sequence, decoded });
+      evidence.push({ viewport: [width, height], continuity, uiTransitions, sequence, decoded });
       console.log(`Music browser ${width}x${height}: real map switches preserved playback; all eight MP3s decoded and advanced naturally after mute/background.`);
     }
     assert.deepEqual(errors, []);

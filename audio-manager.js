@@ -13,6 +13,7 @@
   });
   const MUSIC_STATES = Object.freeze(["soundtrack", "main_menu", "world_map", "battle", "danger", "victory"]);
   const SWORD_CLASHES = Object.freeze(["sword_clash_01", "sword_clash_02", "sword_clash_03"]);
+  const UI_TRANSITION_CUES = Object.freeze(["menu_open", "menu_close", "parchment_open"]);
   const AUDIO_CONTROL_SELECTOR = [
     "#loginMusicMuteBtn",
     "#musicMute",
@@ -128,6 +129,8 @@
       this.lastEffectBaseGain = 0;
       this.lastSwordIndex = -1;
       this.suppressDelegatedUiSound = false;
+      this.uiSoundSurfaces = [];
+      this.uiActionSoundPending = false;
       this.manifestPromise = this.loadManifest();
       this.installUnlockListeners();
       this.installResumeListeners();
@@ -1163,7 +1166,10 @@
 
       const now = performance.now();
       const cooldownMs = Math.max(0, Number(options.cooldownMs) || (id.startsWith("sword_clash_") ? 80 : 0));
-      if (this.lastEffectAt.has(id) && now - this.lastEffectAt.get(id) < cooldownMs) return false;
+      const lastEffectAt = UI_TRANSITION_CUES.includes(id)
+        ? Math.max(...UI_TRANSITION_CUES.map(cue => this.lastEffectAt.get(cue) ?? -Infinity))
+        : this.lastEffectAt.get(id);
+      if (lastEffectAt !== undefined && now - lastEffectAt < cooldownMs) return false;
 
       const maxActive = Math.max(1, Number(options.maxActive) || 12);
       const pendingEffectCount = [...this.pendingEffectCounts.values()].reduce((total, count) => total + count, 0);
@@ -1173,6 +1179,10 @@
       if (this.activeEffects.size + pendingEffectCount >= maxActive || sameEffectCount >= maxSameEffect) return false;
 
       this.lastEffectAt.set(id, now);
+      if (options.delegated !== true || UI_TRANSITION_CUES.includes(id)) {
+        this.uiActionSoundPending = true;
+        window.setTimeout(() => { this.uiActionSoundPending = false; }, 0);
+      }
       const delayMs = Math.min(60000, Math.max(0, Number(options.delayMs) || 0));
       if (delayMs > 0 && this.effectsEngine === "webaudio") this.prepareEffect(id);
       this.pendingEffectCounts.set(id, (this.pendingEffectCounts.get(id) || 0) + 1);
@@ -1334,6 +1344,29 @@
     }
 
     installUiSounds() {
+      const observePanels = () => {
+        if (typeof window.MutationObserver !== "function") return;
+        this.uiSoundSurfaces = [...document.querySelectorAll("dialog, #profileScreen")].map(element => {
+          const isOpen = () => element.tagName === "DIALOG" ? element.open : element.classList.contains("open");
+          return { element, isOpen, open: isOpen() };
+        });
+        const observer = new window.MutationObserver(() => {
+          let transition = null;
+          for (const surface of this.uiSoundSurfaces) {
+            const open = surface.isOpen();
+            if (open === surface.open) continue;
+            surface.open = open;
+            transition = open;
+          }
+          if (transition === null || this.suppressDelegatedUiSound || this.uiActionSoundPending) return;
+          this.playEffect(transition ? "menu_open" : "menu_close", { cooldownMs: 40 });
+        });
+        for (const { element } of this.uiSoundSurfaces) {
+          observer.observe(element, { attributes: true, attributeFilter: [element.tagName === "DIALOG" ? "open" : "class"] });
+        }
+      };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", observePanels, { once: true });
+      else observePanels();
       document.addEventListener("click", event => {
         if (this.isAudioControlEvent(event)) return;
         const button = event.target.closest?.("button, [role='button']");
@@ -1361,6 +1394,7 @@
         const cooldownMs = effectId === "button_click" ? 25 : 40;
         Promise.resolve().then(() => {
           if (this.suppressDelegatedUiSound) return;
+          if (this.uiSoundSurfaces.some(surface => surface.isOpen() !== surface.open)) return;
           this.playEffect(effectId, { cooldownMs, delegated: true });
         });
       }, { capture: true });

@@ -2,7 +2,7 @@
   "pack": "Crownlands Sound Pack",
   "version": "2.0.0",
   "sample_rate_hz": 44100,
-  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav and chainmail1.wav; original source rights apply. See music/README.md and rewards/README.md for provenance.",
+  "license": "Procedural sound effects: original audio generated for Crownlands; the project owner may use and modify them in the game and marketing. User-supplied recordings: Medieval Vol. 2 music and RPG Sound Pack money.wav, coin.wav, cloth-heavy.wav, chainmail1.wav and interface2.wav; original source rights apply. See music/README.md, rewards/README.md and ui/README.md for provenance.",
   "assets": [
     {
       "id": "medieval_vol_2_01",
@@ -100,7 +100,8 @@
       "ogg": "ui/menu_open.ogg",
       "loop": false,
       "recommended_volume": 0.6,
-      "description": "Parchment and soft air movement for opening panels."
+      "description": "User-supplied RPG Sound Pack interface2.wav for opening UI panels.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "menu_close",
@@ -108,8 +109,9 @@
       "wav": "ui/menu_close.wav",
       "ogg": "ui/menu_close.ogg",
       "loop": false,
-      "recommended_volume": 0.55,
-      "description": "Short parchment fold for closing panels."
+      "recommended_volume": 0.6,
+      "description": "User-supplied RPG Sound Pack interface2.wav for closing UI panels.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "parchment_open",
@@ -118,7 +120,8 @@
       "ogg": "ui/parchment_open.ogg",
       "loop": false,
       "recommended_volume": 0.6,
-      "description": "Longer scroll or report-opening sound."
+      "description": "User-supplied RPG Sound Pack interface2.wav for opening reports and city details.",
+      "source_sha256": "b900ac84cd3d7fa6e07f8accd68fd96c2b9493ea5dea7b6d29fa6ec676f0cb3a"
     },
     {
       "id": "invalid_action",
