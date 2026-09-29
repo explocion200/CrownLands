@@ -1,70 +1,41 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "8d47b57758b19aac6391cef814502a58d7d40e93",
+  "baseCommit": "bda2404e3179d61c20604ed6b5f12ed5ace6addd",
   "coverage": [
     {
       "paths": [
-        "functions/package.json",
-        "functions/pnpm-lock.yaml",
-        "functions/pnpm-workspace.yaml",
-        "tools/test-functions-dependencies.js"
+        "functions/index.js",
+        "functions/public-season-rankings.js",
+        "tools/test-public-season-rankings.js",
+        "functions/test/emulator-public-season-rankings.js"
       ],
       "tests": [
-        "tools/test-functions-dependencies.js",
-        "tools/validate-coordinated-release.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-coordinated-release.js"
+        "tools/test-public-season-rankings.js",
+        "tools/test-season-rewards.js",
+        "functions/test/emulator-public-season-rankings.js",
+        "functions/test/emulator-season-rewards.js"
       ],
-      "reason": "Patch the production fast-uri dependency used by AJV and CloudEvents without upgrading unrelated packages. Exercise both advisory inputs, ordinary URI/schema references, CloudEvent HTTP round trips, runtime startup, release compatibility and callable/reset gates. Preparation also audits the lockfile and builds the production artifact. The dependency regression is included in the full static gate."
+      "reason": "Check the anonymous finalized archive API, bounded real Firestore queries, field privacy, invalid inputs, cache policy, safe errors and unchanged reward claims."
     },
     {
       "paths": [
-        ".github/workflows/crownlands-release-gate.yml",
-        "docs/SAFE_UPDATE_WORKFLOW.md",
-        "functions/test/run-emulator-gates.js",
-        "tools/run-validation-tier.js",
-        "tools/test-targeted-validation.js",
-        "tools/validate-release-gate.js"
+        "season-rewards-ui.js",
+        "season-rewards-ui.css",
+        "tools/validate-season-rewards-browser.js"
       ],
       "tests": [
-        "tools/test-targeted-validation.js",
-        "tools/test-change-risk-classifier.js",
-        "tools/test-safe-update-pipeline.js",
-        "tools/validate-release-gate.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-coordinated-release.js"
+        "tools/validate-season-rewards-browser.js",
+        "tools/test-season-rewards.js"
       ],
-      "reason": "Verify full-suite partition completeness and uniqueness, reset ordering, invalid shard rejection, unchanged targeted selection, full/targeted phase dispatch, CI progress and error propagation, local log retention, all-worker required gates and existing push protections. Selected emulator checks validate the runner and updated dependency together. An explicit manual Full run on this branch will exercise all four CI groups and every full static check before declaring the repair ready; gameplay and production data are unchanged."
+      "reason": "Check current projections, website archive link, personal receipts, honors and reward claims at desktop and landscape sizes, including stale responses and duplicate clicks."
     },
     {
       "paths": [
-        "tools/validate-asset-performance-budgets.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/season-rankings-website.md"
       ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "The full gate exposed stale per-file source caps after already merged PRs #391 and #393-397: game.js is 7899 bytes over its prior cap (9898 bytes growth, 2442 gzip bytes), and Clan CSS is 31 bytes over. Bound those existing baselines by 8 KiB and 1 KiB while preserving the independent aggregate installation, image, request and performance limits. Every affected production build now runs this guard before merge; this branch adds no client payload."
-    },
-    {
-      "paths": [
-        "tools/validate-operation-timing.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js"
-      ],
-      "reason": "Repair the full-gate VM fixture for measuredTransaction's existing realm context and season guard dependencies. Use the real guard and AsyncLocalStorage; verify fallback/request realm identity across internal retries, read-only options, exact results/errors and timing privacy. No server or gameplay code changes."
-    },
-    {
-      "paths": [
-        "tools/validate-common-gear-box-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js"
-      ],
-      "tests": [
-        "tools/validate-common-gear-box-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-leaderboard-podium-browser.js"
-      ],
-      "reason": "Repair full-gate browser fixtures without changing gameplay or weakening assertions: wait for the preceding gear-box cue to finish naturally before asserting a fresh single-source sound start; select a normal leaderboard row for its parchment color and separately require three podium champions plus 97 remaining ranks. Clear prior-page readiness before navigation. Retain audio, receipt, recovery, rarity, privacy, totals, focus and responsive layout checks."
+      "tests": [],
+      "reason": "Record the confirmed presentation decision, public data boundary and coordinated release order; no reward-rule or live-status change."
     }
   ]
 }

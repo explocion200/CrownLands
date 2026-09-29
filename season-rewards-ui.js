@@ -44,25 +44,27 @@
   }
   function open(options) {
     const { host, api, currentSeason, isCurrent = () => host.isConnected, onBack, onClaim = () => {}, onLater = onBack } = options;
-    let view = options.view || "info", board = options.board || "players", selected = options.seasonId || "";
+    let view = options.view === "results" ? "results" : "info", board = options.board || "players";
+    let selected = view === "info" ? currentSeason : options.seasonId || "";
     let state = null, request = 0, claiming = false, claimId = "", pollTimer = 0, timer = 0, disposed = false;
     const current = () => !disposed && isCurrent();
     const dispose = () => { disposed = true; clearTimeout(pollTimer); clearInterval(timer); };
     function seasons() {
-      const end = currentSeason.slice(6), entries = [];
-      for (let date = new Date(end + "-01T00:00:00Z"); date >= new Date("2026-09-01T00:00:00Z"); date.setUTCMonth(date.getUTCMonth() - 1)) {
+      const end = new Date(currentSeason.slice(6) + "-01T00:00:00Z"), entries = [];
+      end.setUTCMonth(end.getUTCMonth() - 1);
+      for (let date = end; date >= new Date("2026-09-01T00:00:00Z"); date.setUTCMonth(date.getUTCMonth() - 1)) {
         const id = "realm-" + date.toISOString().slice(0, 7);
-        entries.push(`<option value="${id}" ${id === (state?.seasonId || selected) ? "selected" : ""}>${esc(seasonName(id))}${id === currentSeason ? " · Current" : ""}</option>`);
+        entries.push(`<option value="${id}" ${id === (state?.seasonId || selected) ? "selected" : ""}>${esc(seasonName(id))}</option>`);
       }
       return entries.join("");
     }
     function shell(content) {
-      host.innerHTML = `<section class="season-panel"><header class="season-heading"><img src="assets/icons/hero-reward-crown.svg" alt=""/><div><p>THE CROWN’S BOUNTY</p><h2>${view === "info" ? esc(names[board]) : "Last Season Rewards"}</h2><span>${esc(seasonName(state?.seasonId || selected || currentSeason))}</span></div></header><nav class="season-navigation"><button type="button" data-season-info>Rewards &amp; rules</button><button type="button" data-season-results>Your rewards</button><button type="button" data-season-history>Final standings</button><label>Season <select data-season-select aria-label="Rewards season">${seasons()}</select></label></nav><div class="season-scroll" tabindex="0">${content}</div><footer class="season-footer"><span role="status" data-season-message></span><button type="button" data-season-back>${options.login ? "Later" : "Back to leaderboards"}</button></footer></section>`;
+      host.innerHTML = `<section class="season-panel"><header class="season-heading"><img src="assets/icons/hero-reward-crown.svg" alt=""/><div><p>THE CROWN’S BOUNTY</p><h2>${view === "info" ? esc(names[board]) : "Last Season Rewards"}</h2><span>${esc(seasonName(state?.seasonId || selected || currentSeason))}</span></div></header><nav class="season-navigation"><button type="button" data-season-info aria-pressed="${view === "info"}">Current season &amp; rewards</button><button type="button" data-season-results aria-pressed="${view === "results"}">Claim earned rewards</button><a class="season-archive-link" href="https://playcrownlands.com/season-rankings.html" target="_blank" rel="noopener noreferrer">Past season rankings ↗</a>${view === "results" && seasons() ? `<label>Reward season <select data-season-select aria-label="Rewards season">${seasons()}</select></label>` : ""}</nav><div class="season-scroll" tabindex="0">${content}</div><footer class="season-footer"><span role="status" data-season-message></span><button type="button" data-season-back>${options.login ? "Later" : "Back to leaderboards"}</button></footer></section>`;
       host.querySelector("[data-season-back]").onclick = () => { dispose(); (options.login ? onLater : onBack)?.(); };
       host.querySelector("[data-season-info]").onclick = () => { view = "info"; selected = currentSeason; load(); };
       host.querySelector("[data-season-results]").onclick = () => { view = "results"; selected = selected === currentSeason ? "" : selected; load(); };
-      host.querySelector("[data-season-history]").onclick = () => { view = "history"; selected = selected === currentSeason ? "" : selected; load(); };
-      host.querySelector("[data-season-select]").onchange = event => { selected = event.target.value; if (selected === currentSeason) view = "info"; load(); };
+      const select = host.querySelector("[data-season-select]");
+      if (select) select.onchange = event => { selected = event.target.value; load(); };
       host.querySelectorAll("[data-pending-season]").forEach(button => { button.onclick = () => { selected = button.dataset.pendingSeason; view = "results"; load(); }; });
     }
     function renderInfo() {
@@ -76,7 +78,7 @@
       let previous = 0;
       const rows = state.tiers.map(tier => { const start = previous + 1; previous = tier.through; const counts = tier[board === "clans" ? "clan" : "personal"]; return `<tr><th scope="row">${start === tier.through ? start : `${start}–${tier.through}`}</th><td>${boxes(...counts)}</td></tr>`; }).join("");
       const projected = !state.projected ? "Projection unavailable" : row ? `Published standing: #${row.rank}` : "Outside the published Top 100";
-      shell(`<p>${esc(explanations[board])}</p><div class="season-deadline"><strong>Season closes ${esc(new Date(state.endsAtMs).toLocaleString())}</strong><span>${esc(new Date(state.endsAtMs).toISOString().replace("T", " ").replace(".000Z", " UTC"))}</span><b data-season-countdown></b></div><section class="season-projection"><span>${esc(projected)}</span><div>${state.projected ? boxes(...projection) : ""}</div><small>Projected rewards are provisional until final standings are verified.</small>${board === "clans" ? `<p>${state.clanEligible ? "Currently on your clan’s roster. You must remain a member when the season closes." : "You are not currently eligible for a Clan reward."}</p>` : ""}</section><table class="season-table"><thead><tr><th>Final rank</th><th>${board === "clans" ? "Per closing-roster member" : "Your reward"}</th></tr></thead><tbody>${rows}</tbody></table><section class="season-rules"><h3>Reward rules</h3><p>Common Box: 3 random Level 1 Common pieces. Uncommon Box: 1 random Level 1 Uncommon and 2 random Level 1 Common pieces.</p><p>Kingdom, Glory and Clan rewards all stack. Maximum: 19 Common + 5 Uncommon Boxes. Personal rewards require a positive score.</p><p>${board === "glory" ? "Ties: earliest battle time reaching the total, then stable player ID. Delayed scoring keeps its original season." : "Ties: stable player or clan ID, in ascending order. Each place has one winner."}</p>${board === "glory" && state.seasonId === "realm-2026-09" ? `<p class="season-notice">September is a partial Glory season. ${state.trackingStartedAtMs ? `The first recorded battle was ${esc(new Date(state.trackingStartedAtMs).toLocaleString())}.` : "Scoring began with the Glory release."} Earlier battles are excluded.</p>` : ""}<p>Claim unopened boxes in Last Season Rewards after reset. Earned boxes never expire, and full equipment inventory does not prevent claiming. Membership changes after closing cannot remove earned Clan rewards.</p><p>Rewarded placements earn permanent dated medals. Top-three decorations and first-place titles last through the following season and grant no combat bonus.</p></section>`);
+      shell(`<section class="season-projection"><h3>Potential reward</h3><span>${esc(projected)}</span><div>${state.projected ? boxes(...projection) : ""}</div><small>Projected rewards are provisional until final standings are verified.</small>${board === "clans" ? `<p>${state.clanEligible ? "Currently on your clan’s roster. You must remain a member when the season closes." : "You are not currently eligible for a Clan reward."}</p>` : ""}</section><p>${esc(explanations[board])}</p><div class="season-deadline"><strong>Season closes ${esc(new Date(state.endsAtMs).toLocaleString())}</strong><span>${esc(new Date(state.endsAtMs).toISOString().replace("T", " ").replace(".000Z", " UTC"))}</span><b data-season-countdown></b></div><table class="season-table"><thead><tr><th>Final rank</th><th>${board === "clans" ? "Per closing-roster member" : "Your reward"}</th></tr></thead><tbody>${rows}</tbody></table><section class="season-rules"><h3>Reward rules</h3><p>Common Box: 3 random Level 1 Common pieces. Uncommon Box: 1 random Level 1 Uncommon and 2 random Level 1 Common pieces.</p><p>Kingdom, Glory and Clan rewards all stack. Maximum: 19 Common + 5 Uncommon Boxes. Personal rewards require a positive score.</p><p>${board === "glory" ? "Ties: earliest battle time reaching the total, then stable player ID. Delayed scoring keeps its original season." : "Ties: stable player or clan ID, in ascending order. Each place has one winner."}</p>${board === "glory" && state.seasonId === "realm-2026-09" ? `<p class="season-notice">September is a partial Glory season. ${state.trackingStartedAtMs ? `The first recorded battle was ${esc(new Date(state.trackingStartedAtMs).toLocaleString())}.` : "Scoring began with the Glory release."} Earlier battles are excluded.</p>` : ""}<p>Claim unopened boxes in Last Season Rewards after reset. Earned boxes never expire, and full equipment inventory does not prevent claiming. Membership changes after closing cannot remove earned Clan rewards.</p><p>Rewarded placements earn permanent dated medals. Top-three decorations and first-place titles last through the following season and grant no combat bonus.</p></section>`);
       const started = performance.now();
       const tick = () => { if (!current()) return dispose(); const element = host.querySelector("[data-season-countdown]"); if (!element) return; const seconds = Math.max(0, Math.floor((state.endsAtMs - state.serverTimeMs - (performance.now() - started)) / 1000)); element.textContent = seconds ? `${Math.floor(seconds / 86400)}d ${Math.floor(seconds / 3600) % 24}h ${Math.floor(seconds / 60) % 60}m ${seconds % 60}s remaining` : "Season closed"; };
       tick(); timer = setInterval(tick, 1000);
@@ -91,7 +93,7 @@
         if (waiting) pollTimer = setTimeout(load, 10000);
         return;
       }
-      if (!award) { shell(`<div class="season-empty"><h3>No box rewards this season</h3><p>Your next campaign awaits. View Final standings to see the season’s winners.</p></div>${pending}`); return; }
+      if (!award) { shell(`<div class="season-empty"><h3>No box rewards this season</h3><p>Your next campaign awaits. Past season rankings are available on the website.</p></div>${pending}`); return; }
       shell(`<div class="season-award-rows">${award.placements.map(row => `<article><div><strong>${esc(names[row.board])}</strong><span>Final placement #${row.rank}${row.clanName ? ` · ${esc(row.clanName)}` : ""}</span></div><div>${boxes(row.commonGearBoxes, row.uncommonGearBoxes)}</div></article>`).join("")}</div><div class="season-total"><span>Your combined reward</span><div>${boxes(award.commonGearBoxes, award.uncommonGearBoxes)}</div><p>${award.claimed ? `Claimed ${esc(new Date(award.receipt.claimedAtMs).toLocaleString())}` : "Unopened boxes go to your Bag. These rewards do not expire."}</p>${award.claimed ? '<strong class="season-claimed">Rewards collected</strong>' : '<button type="button" class="season-claim" data-season-claim>Claim rewards</button>'}</div>${honorsMarkup(award.honors, state.serverTimeMs)}${pending}`);
       const button = host.querySelector("[data-season-claim]");
       if (button) button.onclick = async () => {
@@ -107,14 +109,6 @@
         } finally { claiming = false; }
       };
     }
-    async function renderHistory() {
-      if (state.status !== "ready") return renderResults();
-      const token = request;
-      const result = await api.getSeasonLeaderboard({ seasonId: state.seasonId, board });
-      if (!current() || token !== request) return;
-      shell(`<div class="season-board-choice">${Object.entries(names).map(([id, label]) => `<button type="button" data-history-board="${id}" aria-pressed="${id === board}">${esc(label)}</button>`).join("")}</div><p>Final, verified standings · ${esc(names[board])}</p><table class="season-table"><thead><tr><th>Rank</th><th>${board === "clans" ? "Clan" : "Ruler"}</th><th>Score</th></tr></thead><tbody>${result.entries.map(row => `<tr><th scope="row">${row.rank}</th><td>${esc(row.name || row.playerName || row.displayName || "Ruler")}</td><td>${amount(row[board === "clans" ? "totalKingPower" : board === "glory" ? "pvpKills" : "kingPower"]).toLocaleString()}</td></tr>`).join("") || '<tr><td colspan="3">No published entries.</td></tr>'}</tbody></table>`);
-      host.querySelectorAll("[data-history-board]").forEach(button => { button.onclick = () => { board = button.dataset.historyBoard; load(); }; });
-    }
     async function load() {
       clearTimeout(pollTimer); clearInterval(timer);
       if (!current()) return;
@@ -126,7 +120,6 @@
         if (state?.seasonId !== next.seasonId) claimId = "";
         state = next; selected = next.seasonId;
         if (view === "info" && state.tiers) renderInfo();
-        else if (view === "history") await renderHistory();
         else renderResults();
       } catch (error) {
         if (!current() || token !== request) return;
