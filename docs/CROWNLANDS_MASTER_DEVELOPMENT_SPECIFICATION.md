@@ -1023,6 +1023,32 @@ The verified `origin/main` production-reward hours are 0.5 for Easy, 1 for Mediu
 
 ## 13. Leaderboards & Rankings
 
+### Approved season rewards — September 28, 2026
+
+**Status: implemented; release validation, deployment and the first scheduled payout require separate verification.** This policy supersedes the older unresolved reward, tie and archive questions below. First rewarded season: September 2026, closing October 1 at 00:00 UTC (September 30 at 8:00 PM EDT). September Glory includes only battles recorded since Glory scoring deployment; no historical backfill.
+
+| Final rank | Kingdom reward | Glory reward | Clan reward per closing-roster member |
+|---|---|---|---|
+| 1 | 8 Common + 2 Uncommon Boxes | 8 Common + 2 Uncommon Boxes | 3 Common + 1 Uncommon Boxes |
+| 2 | 6 Common + 1 Uncommon Boxes | 6 Common + 1 Uncommon Boxes | 2 Common + 1 Uncommon Boxes |
+| 3 | 5 Common + 1 Uncommon Boxes | 5 Common + 1 Uncommon Boxes | 2 Common + 1 Uncommon Boxes |
+| 4–10 | 4 Common Boxes | 4 Common Boxes | 1 Common Box |
+| 11–25 | 3 Common Boxes | 3 Common Boxes | 1 Common Box |
+| 26–50 | 2 Common Boxes | 2 Common Boxes | None |
+| 51–100 | 1 Common Box | 1 Common Box | None |
+
+- All three rewards stack: maximum 19 Common and 5 Uncommon Boxes per player. Existing box contents are unchanged. Leaderboards are an approved additional source of Uncommon Boxes.
+- Personal rewards require a positive published score. Every member of a rewarded clan at closing qualifies, with no membership duration or activity requirement. Leaving/removal before closing removes Clan eligibility; later membership changes cannot change an earned reward. Clan rewards go directly to members.
+- Kingdom and Clan scores are the authoritative published leaderboard values at closing; no additional economy settlement is performed. Ties use stable player/clan ID ascending, with unique places. Glory retains its approved kill/time/ID ordering and casualty rules.
+- Fence outgoing score, battle-event and membership changes, preserve closing standings and rosters before reset can replace clan data, and finish every eligible recorded Glory event in its original season. A launched but unresolved march does not itself earn kills. Keep the existing 81-map readiness and normal admission requirements. The new realm waits for durable capture; reward verification may finish afterward.
+- Final Top 100 standings for all three boards persist indefinitely as read-only history. Version the season's reward policy; later balance changes never reprice earned awards. Payouts are server-authoritative and exactly-once under retries and concurrent requests.
+- At the first login after reset, Last Season Rewards appears before Daily Login and Welcome Back, after the kingdom loads. Show final placements, each board's rewards, totals and honors, with Claim rewards and Later. Pending finalization is explicit and refreshable. Claims collect both kinds of unopened boxes atomically; full gear inventory does not prevent collecting boxes. Unclaimed awards never expire and survive all resets. Historical results and receipts remain accessible from Leaderboards.
+- Each board has an info button with scoring, ties, local/UTC deadline, countdown, rewards, provisional standing/payout, eligibility, stacking, box contents and claim rules. Unavailable rankings never become a local reward estimate.
+- Every rewarded placement earns a permanent dated medal with board, season and rank. Clan recipients retain their medal after leaving; the clan also retains its medal. Top-three decorations use gold/silver/bronze crowns (Kingdom), crossed swords (Glory), or laurels (Clan). First-place titles are Sovereign of the Realm, Champion of the Battlefield, and The Crown’s Vanguard respectively.
+- Decorations and first-place titles last through the following season, activate at finalization and do not depend on box claiming. September decorations expire November 1 at 00:00 UTC. Each board shows its own decoration; a public player profile uses the best personal placing, preferring Kingdom for equal placements, while showing all earned titles. Preserve saved flags and heraldry. Honors grant no gameplay benefit.
+- Add permanent season reward entitlements/receipts and player/clan medals to the persistence allowlist. These remain separate from seasonal Achievements, whose reset rules are unchanged. Temporary honors expire on their specified calendar boundary even when claimed late.
+- If pre-deadline capture was not armed, stop and report the missing evidence rather than reconstructing winners from later state. Merging this implementation does not authorize or prove deployment.
+
 ### Current state
 
 - Crownlands provides a Top 100 Kingdoms leaderboard based on King Power. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.

@@ -67,6 +67,7 @@ function createManifest() {
   serverFiles.push(path.join(root, "firestore.rules"), path.join(root, "firestore.indexes.json"));
 
   const clientFiles = [
+    "season-rewards-ui.js", "season-rewards-ui.css",
     "app-entry.js",
     "optional-ui-styles.js",
     "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png",

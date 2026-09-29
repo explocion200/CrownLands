@@ -76,7 +76,7 @@ async function validateResetGate() {
   const reads = [];
   const maps = new Map(layout.maps.map(map => [map.id, map]));
   const lastMap = topology.getResetNewLandsRegionIds().at(-1);
-  let failSeed = true, failVerification = false;
+  let failSeed = true, failVerification = false, failCapture = true;
   const doc = path => ({
     async get() { reads.push(path); return { exists: documents.has(path), data: () => documents.get(path) }; },
     async set(value, options) { documents.set(path, { ...(options?.merge ? documents.get(path) : {}), ...plain(value) }); },
@@ -90,6 +90,7 @@ async function validateResetGate() {
     REALM_REQUEST_CONTEXT: { getStore: () => null },
     safeString: value => String(value || ""), safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
     db: { doc }, getCurrentRealmShardId: () => "shard_0001", isCoreExpansionTopologyActive: () => true,
+    SEASON_REWARDS: { prepareTransition: async () => { if (failCapture) throw Error("injected season capture failure"); } },
     getCurrentRealmStartingCityCapacity: () => 81900, logOperation: () => {},
     refreshActiveRealmIdentity: () => ({ mode: "monthly-shared", worldId, resetGeneration: generation,
       monthKey: "test", startsAtMs: 1, endsAtMs: 2 }),
@@ -110,6 +111,10 @@ async function validateResetGate() {
     "isCurrentCoreExpansionResetReady", "ensureCoreExpansionResetReady", "ensureCurrentRealmConfiguration"]) {
     vm.runInContext((name.startsWith("ensure") ? "async " : "") + extractFunction(serverSource, name), scope);
   }
+  await assert.rejects(scope.ensureCurrentRealmConfiguration(), /injected season capture failure/);
+  assert.deepEqual(documents.get("realmConfig/current"), previousPointer);
+  assert.equal(seeds.size, 0, "Failed closing capture must precede new-world preparation.");
+  failCapture = false;
   await assert.rejects(scope.ensureCurrentRealmConfiguration(), /injected seed interruption/);
   assert.deepEqual(documents.get("realmConfig/current"), previousPointer);
   assert.equal(documents.get(readyPath).status, "failed");

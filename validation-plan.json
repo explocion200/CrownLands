@@ -1,54 +1,88 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "74b25ea09e0cabca4fa241d258255764bc5395cf",
+  "baseCommit": "04de9e346b69b63682b845ded4d1f0c19ab83cc3",
   "coverage": [
     {
       "paths": [
-        "functions/coreExpansionTopology.js",
-        "functions/index.js"
+        "functions/season-rewards.js",
+        "functions/index.js",
+        "firestore.rules",
+        "firestore.indexes.json"
       ],
       "tests": [
-        "tools/validate-core-expansion-topology.js",
-        "tools/validate-core-expansion-release.js",
+        "tools/test-season-rewards.js",
+        "tools/test-pvp-leaderboard.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-clans.js",
         "tools/validate-core-expansion-reset.js",
         "tools/validate-reset-release.js",
-        "tools/validate-world-travel-network.js",
-        "tools/validate-map-picker-input.js",
+        "functions/test/emulator-season-rewards.js",
+        "functions/test/emulator-pvp-leaderboard.js",
         "functions/test/emulator-core-expansion-state.js",
-        "functions/test/emulator-first-time-onboarding.js",
-        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-reset-gate.js",
+        "functions/test/emulator-inactive-city-level-reset.js"
+      ],
+      "reason": "Verify reward boundaries, positive scores, closing membership, stable ID ties, stacking, frozen policy and archives, original-season Glory drain, racing capture/finalization, interrupted publication, exactly-once claims, full inventory, late claims, permanent honors and private records. The shared transaction fence touches starting-city admission, clan writes and inactivity deletion: retain 81-map readiness and placement, reset persistence, clan authority and inactivity behavior. Cover original PvP contribution rules and gear normalization."
+    },
+    {
+      "paths": [
+        "firebaseClient.js",
+        "game.js",
+        "season-rewards-ui.js",
+        "season-rewards-ui.css",
+        "index.html"
+      ],
+      "tests": [
+        "tools/test-season-rewards.js",
+        "tools/test-pvp-leaderboard-client.js",
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js",
+        "tools/validate-season-rewards-browser.js",
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-login-realm-sequence.js",
+        "functions/test/emulator-season-rewards.js"
+      ],
+      "reason": "Check authoritative queries/callables, score/ID ordering, season-first login after map readiness, Claim/Later sequencing, pending/retry, single claims, gear refresh, history and server-time expiry. Exercise desktop and two landscape sizes, player/clan honors, saved banners, personal-frame tie preference, all titles, stale responses and queued close events while retaining existing podium and profile navigation behavior."
+    },
+    {
+      "paths": [
+        "functions/release-config.json",
+        "release-config.js",
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-reset-release.js",
+        "tools/test-season-rewards.js",
+        "tools/validate-production-artifact.js",
         "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "New monthly generations must seed and verify 81 maps before publishing the realm pointer while admitting only the first north-center map. Compare the independent admission cursor against unchanged legacy transitions across both layer boundaries; cover incomplete preparation, retries, old readiness receipts, existing realm compatibility, concurrent claims and thresholds, least-populated placement, captured-city capacity recovery, and isolation. Reset persistence and first-time onboarding depend on the same claim path. World travel and desktop/landscape-mobile map picker checks verify that the pre-opened rings are connected and available, while Layer 3 stays closed until its normal turn. No balance, player accounting, scheduler cadence or resource-setting changes."
+      "reason": "Coordinate client/server release contract, callable manifest and production asset allowlist. Mandatory build validation checks generated output; reset-gate covers compatible clients and preserved progression. No deployment is performed."
     },
     {
       "paths": [
+        "tools/test-season-rewards.js",
+        "tools/validate-season-rewards-browser.js",
+        "functions/test/emulator-season-rewards.js",
         "tools/validate-core-expansion-reset.js",
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-core-expansion-state.js"
+        "tools/validate-login-realm-sequence.js"
       ],
       "tests": [
+        "tools/test-season-rewards.js",
+        "tools/validate-season-rewards-browser.js",
+        "functions/test/emulator-season-rewards.js",
         "tools/validate-core-expansion-reset.js",
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-core-expansion-state.js"
+        "tools/validate-login-realm-sequence.js"
       ],
-      "reason": "Execute new behavioral regressions: interruption and verification failure must retain the previous pointer, retries preserve city data and admission state, actual emulator reset seeds all 3,720 regular cities, and 50 simultaneous joins enter only the first three maps. Existing legacy topology tests remain selected separately so compatibility expectations are not replaced by the new policy."
-    },
-    {
-      "paths": [
-        "tools/validate-map-picker-input.js"
-      ],
-      "tests": [
-        "tools/validate-map-picker-input.js"
-      ],
-      "reason": "Use the actual 81-map reset state and server descriptors in existing desktop and landscape-mobile picker fixtures. Require all 81 maps selectable and Layer 3 absent, retaining mouse, keyboard, touch, pan, pinch, ghost-click and console-error checks."
+      "reason": "Execute all added and modified regressions: missing capture evidence, interrupted closing, racing mutations and claims, full inventory, later-year claims, private raw records, pending login order and capture failure preserving the previous pointer. Browser fixtures exercise the actual game and reward panels at desktop and landscape dimensions."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the explicitly confirmed next-reset rule, separate map availability and admission order, fail-closed preparation, and preservation of existing generations. Rewards remain a separate unimplemented discussion; this document makes no deployment claim."
+      "reason": "Record the user-approved September tiers, eligibility, closing, archives, permanent medals, temporary honors and claims. Preserve historical notes, mark the new policy authoritative and distinguish implementation from deployment."
     }
   ]
 }

@@ -400,6 +400,17 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /seasonResults/{seasonId}/{document=**} {
+      // Archives and private closing rosters are served through scoped callables.
+      allow read, write: if false;
+    }
+    match /playerSeasonHonors/{uid}/seasons/{seasonId} {
+      allow read, write: if false;
+    }
+    match /clanSeasonHonors/{clanId}/seasons/{seasonId} {
+      allow read, write: if false;
+    }
+
     match /pvpLeaderboards/{boardId} {
       // The metadata document may not exist until the season's first PvP kill.
       allow get: if signedIn() && boardId == currentRealmStorageId();

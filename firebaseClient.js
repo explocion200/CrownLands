@@ -1370,10 +1370,11 @@
   async function loadClanLeaderboard(limitCount = 100) {
     await init();
     if (!requireSignedIn()) return [];
-    const { collection, getDocs, query, orderBy, limit } = client.modules.firestore;
+    const { collection, getDocs, query, orderBy, documentId, limit } = client.modules.firestore;
     const snapshot = await getDocs(query(
       collection(client.db, "clanLeaderboards", getRealmStorageId(), "entries"),
       orderBy("totalKingPower", "desc"),
+      orderBy(documentId(), "asc"),
       limit(Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100))))
     ));
     return snapshot.docs.map((item, index) => ({ id: item.id, rank: index + 1, ...item.data() }));
@@ -2908,6 +2909,7 @@
       query: firestoreQuery,
       where,
       orderBy,
+      documentId,
       limit: firestoreLimit,
     } = client.modules.firestore;
     const entriesRef = collection(client.db, "leaderboards", getRealmStorageId(), "entries");
@@ -2919,6 +2921,7 @@
           where("worldId", "==", ONLINE_WORLD_ID),
           ...getRealmShardQueryConstraints(where),
           orderBy("kingPower", "desc"),
+          orderBy(documentId(), "asc"),
           firestoreLimit(safeLimit)
         )
       : entriesRef;
@@ -3735,6 +3738,10 @@
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
+    getSeasonRewardStatus: payload => callServerFunction("getSeasonRewardStatus", payload || {}),
+    getSeasonLeaderboard: payload => callServerFunction("getSeasonLeaderboard", payload || {}),
+    claimSeasonRewards: payload => callServerFunction("claimSeasonRewards", payload || {}),
+    getSeasonHonors: payload => callServerFunction("getSeasonHonors", payload || {}),
     loadPvpLeaderboard,
     loadPlayerIdentities,
     loadKingPowerPresenceLeaderboard,

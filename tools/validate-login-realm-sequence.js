@@ -21,6 +21,9 @@ function createSequence(overrides = {}) {
   return {
     generation: 1,
     mapReady: true,
+    seasonResolved: true,
+    seasonFinished: true,
+    seasonOpen: false,
     dailyResolved: true,
     dailyRequired: false,
     dailyOpen: false,
@@ -56,6 +59,7 @@ assert.match(
 function createAdvanceContext(sequence) {
   const actions = [];
   const context = {
+    showSeasonRewardsPanel: () => { actions.push("season"); return true; },
     loginPresentationGeneration: 1,
     loginPresentationSequence: sequence,
     realmActivityAuthoritativeHydrated: true,
@@ -101,6 +105,22 @@ function createAdvanceContext(sequence) {
   sequence.welcomeFinished = true;
   context.advanceLoginPresentationSequence(sequence);
   assert.deepEqual(actions, ["daily", "welcome", "realm"], "Realm Activity did not follow the completed login sequence.");
+}
+
+{
+  const sequence = createSequence({ seasonResolved: false, seasonFinished: false, dailyRequired: true, dailyFinished: false,
+    seasonStatus: { seasonId: "realm-2026-09", status: "ready", award: { claimed: false } } });
+  const { context, actions } = createAdvanceContext(sequence);
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, [], "Login must await the season reward status.");
+  sequence.seasonResolved = true;
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["season"], "Last Season Rewards must precede Daily Login.");
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["season"], "Repeated callbacks must not reopen season results.");
+  sequence.seasonFinished = true; sequence.seasonOpen = false;
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["season", "daily"]);
 }
 
 for (const scenario of [
