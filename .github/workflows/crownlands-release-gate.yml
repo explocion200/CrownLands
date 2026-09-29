@@ -71,27 +71,24 @@ jobs:
           if [ "$VALIDATION_TIER" = "Full" ]; then args+=(--force-full); fi
           node ../tools/run-validation-tier.js "${args[@]}"
 
-  emulator:
-    name: Multiplayer emulator validation
+  emulator-suites:
+    name: Emulator suites (${{ matrix.shard }})
     needs: classify
+    if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.classify.outputs.tier == 'Full' && '["1/4","2/4","3/4","4/4"]' || '["1/1"]') }}
     steps:
-      - name: Explain safe emulator skip
-        if: ${{ needs.classify.outputs.requires_emulators != 'true' }}
-        env:
-          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
-        run: echo "No emulator suites are required for this reviewed $VALIDATION_TIER change plan."
       - uses: actions/checkout@v6
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - name: Fetch authoritative main ref
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - uses: pnpm/setup@v2
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
           version: "11.9.0"
           runtime: "node@22"
@@ -100,24 +97,46 @@ jobs:
           package-json-file: functions/package.json
           install: false
       - uses: actions/setup-java@v5
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
           distribution: "temurin"
           java-version: "21"
       - name: Install locked dependencies
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         working-directory: functions
         run: pnpm install --frozen-lockfile
       - name: Run multiplayer emulator gate
-        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         working-directory: functions
         env:
           VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
           VALIDATION_BASE: ${{ needs.classify.outputs.base_ref }}
+          EMULATOR_SHARD: ${{ matrix.shard }}
         run: |
           args=(--base "$VALIDATION_BASE" --phase emulators --skip-install --no-cache)
-          if [ "$VALIDATION_TIER" = "Full" ]; then args+=(--force-full); fi
+          if [ "$VALIDATION_TIER" = "Full" ]; then args+=(--force-full --emulator-shard "$EMULATOR_SHARD"); fi
           node ../tools/run-validation-tier.js "${args[@]}"
+
+  emulator:
+    name: Multiplayer emulator validation
+    if: ${{ always() }}
+    needs: [classify, emulator-suites]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm all emulator groups passed or explain safe skip
+        env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          REQUIRES_EMULATORS: ${{ needs.classify.outputs.requires_emulators }}
+          EMULATOR_RESULT: ${{ needs.emulator-suites.result }}
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
+        run: |
+          test "$CLASSIFY_RESULT" = "success"
+          if [ "$REQUIRES_EMULATORS" = "true" ]; then
+            test "$EMULATOR_RESULT" = "success"
+            echo "All emulator groups passed."
+          else
+            test "$REQUIRES_EMULATORS" = "false"
+            test "$EMULATOR_RESULT" = "skipped"
+            echo "No emulator suites are required for this reviewed $VALIDATION_TIER change plan."
+          fi
 
   validate:
     name: Validate

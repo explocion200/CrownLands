@@ -49,6 +49,12 @@ requireMatch(workflow, /--phase static --skip-install --no-cache[\s\S]*run-valid
 requireMatch(workflow, /--phase emulators --skip-install --no-cache[\s\S]*run-validation-tier\.js/, "Emulator CI must execute the reviewed selection.");
 requireMatch(workflow, /No emulator suites are required for this reviewed \$VALIDATION_TIER change plan/, "Safe emulator skips must explain why the required check passes.");
 requireMatch(workflow, /requires_emulators == 'true'/, "Emulator execution is not guarded by the fail-closed classifier output.");
+requireMatch(workflow, /fail-fast:\s*false/, "One failing full shard must not cancel the remaining coverage.");
+requireMatch(workflow, /fromJSON\(needs\.classify\.outputs\.tier == 'Full' && '\["1\/4","2\/4","3\/4","4\/4"\]' \|\| '\["1\/1"\]'\)/, "Full runs must use all four shards and targeted runs a single worker.");
+requireMatch(workflow, /--force-full --emulator-shard "\$EMULATOR_SHARD"/, "Full workers must pass their shard to the shared runner.");
+requireMatch(workflow, /name: Multiplayer emulator validation\s+if: \$\{\{ always\(\) \}\}\s+needs: \[classify, emulator-suites\]/, "The required emulator check must wait for every worker, including failures.");
+requireMatch(workflow, /test "\$EMULATOR_RESULT" = "success"/, "The required emulator check must fail when any worker fails or is cancelled.");
+requireMatch(workflow, /test "\$REQUIRES_EMULATORS" = "false"\s+test "\$EMULATOR_RESULT" = "skipped"/, "Only an explicit classifier skip may pass without emulator workers.");
 assert.doesNotMatch(workflow, /validation_tier[\s\S]*type:\s*choice/i, "Manual tier choices must never downgrade classifier results.");
 assert.doesNotMatch(workflow, /node\s+functions\/test\/emulator-/, "Workflow must not maintain a manual emulator-file list.");
 

@@ -81,11 +81,11 @@ Supported entry points are `tools/test-*.js`, `tools/validate-*.js`, `tools/audi
 
 Local preparation defers expensive selected emulator runs to GitHub. It does not claim they passed locally. For debugging a relevant emulator suite locally, use `node tools/run-validation-tier.js --phase emulators --skip-install` after installing the locked dependencies. This uses the same committed plan.
 
-Successful local static checks may be reused only on a clean tree with identical commit, base, selection, Node version, platform, build environment and lockfile. A changed commit/base/plan invalidates reuse. CI runs independently, and runs requiring disposable build artifacts always rebuild. Use `--no-cache` with the runner to force fresh checks. Routine output is brief; full command logs are saved under the Git state directory at `crownlands-safe-update/validation/logs`, with failure details printed when a command fails.
+Successful local static checks may be reused only on a clean tree with identical commit, base, selection, Node version, platform, build environment and lockfile. A changed commit/base/plan invalidates reuse. CI runs independently, and runs requiring disposable build artifacts always rebuild. Use `--no-cache` with the runner to force fresh checks. Local output is brief; full command logs are saved under the Git state directory at `crownlands-safe-update/validation/logs`, with failure details printed when a command fails. GitHub streams command output as it runs so progress and the last active test remain available after a timeout.
 
 ## Full regression runs
 
-Full regression remains available for the scheduled nightly run, manual GitHub workflow runs and the `validation:full` PR label. It is not automatically repeated on every merge. These runs discover every emulator suite, with reset first. Selected runs execute reset only if it is in the plan.
+Full regression remains available for the scheduled nightly run, manual GitHub workflow runs and the `validation:full` PR label. It is not automatically repeated on every merge. These runs discover every emulator suite, with reset first. GitHub distributes full emulator runs across four workers, each with its own reset check and isolated Firebase lifecycles. Every other discovered suite runs exactly once. A failed worker does not cancel the others; the required multiplayer check passes only when all workers succeed. Local full runs remain serial. Selected runs use one worker and execute reset only if it is in the plan.
 
 ```powershell
 pnpm run validation:full

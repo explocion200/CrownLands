@@ -5,14 +5,30 @@ const { spawnSync } = require("node:child_process");
 
 function selectGates(discovered, args = []) {
   const requested = [];
+  let shard;
   for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === "--shard") {
+      const match = /^(\d+)\/(\d+)$/.exec(args[++index] || "");
+      if (shard || !match || +match[1] < 1 || +match[1] > +match[2] || +match[2] > 16) {
+        throw new Error("Use --shard index/count with 1 <= index <= count <= 16.");
+      }
+      shard = { index: +match[1], count: +match[2] };
+      continue;
+    }
     if (args[index] !== "--file" || !args[index + 1]) throw new Error("Use --file emulator-name.js for each selected emulator suite.");
     const file = args[++index];
     if (!/^emulator-[a-z0-9-]+\.js$/.test(file) || !discovered.includes(file)) throw new Error(`Unknown emulator suite: ${file}`);
     requested.push(file);
   }
-  const selected = [...new Set(args.length ? requested : discovered)].sort((left, right) => left.localeCompare(right));
+  if (shard && requested.length) throw new Error("Sharding is only available for the full discovered suite, not selected files.");
+  let selected = [...new Set(requested.length ? requested : discovered)].sort((left, right) => left.localeCompare(right));
   const reset = "emulator-reset-gate.js";
+  if (shard) {
+    if (!selected.includes(reset)) throw new Error("Full emulator shards require the reset gate.");
+    // Each isolated worker checks reset first; every other suite runs exactly once.
+    selected = [reset, ...selected.filter(file => file !== reset)
+      .filter((file, index) => index % shard.count === shard.index - 1)];
+  }
   return selected.includes(reset) ? [reset, ...selected.filter(file => file !== reset)] : selected;
 }
 
@@ -52,6 +68,7 @@ if (!fs.existsSync(firebaseCli)) {
 }
 
 const orderedGates = selectGates(discoveredGates, process.argv.slice(2));
+console.log(`[Crownlands emulator gate] Selected ${orderedGates.length} files: ${orderedGates.join(", ")}`);
 
 function createIsolatedFirebaseConfig(attemptId) {
   const portBase = randomInt(12000, 52000);
@@ -103,6 +120,7 @@ function createIsolatedFirebaseConfig(attemptId) {
 }
 
 for (const fileName of orderedGates) {
+  const startedAt = Date.now();
   const grouped = process.env.GITHUB_ACTIONS === "true";
   if (grouped) console.log(`::group::${fileName}`);
   const gateCommand = `node test/${fileName}`;
@@ -153,6 +171,7 @@ for (const fileName of orderedGates) {
     console.error(`[Crownlands emulator gate] ${fileName} failed${signalSuffix}.`);
     process.exit(result.status || 1);
   }
+  console.log(`[Crownlands emulator gate] Passed ${fileName} in ${((Date.now() - startedAt) / 1000).toFixed(1)}s.`);
 }
 
 console.log(`\n[Crownlands emulator gate] Passed ${orderedGates.length} emulator files.`);
