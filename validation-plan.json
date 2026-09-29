@@ -1,26 +1,63 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5589c92a09d15562e32fe4699ca99a562460cb8e",
+  "baseCommit": "28e6aa2b62e68951a00548ca13d09df73651e987",
   "coverage": [
     {
       "tests": [
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js"
+        "tools/validate-skills.js",
+        "tools/validate-skill-presets.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "functions/test/emulator-skill-presets.js",
+        "functions/test/emulator-skill-point-system-reset.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
       ],
       "paths": [
-        "clan-treasury-ui.css",
-        "clan-treasury-ui.js",
-        "tools/validate-clan-treasury-browser.js"
+        "game.js",
+        "functions/index.js",
+        "economy-config.js",
+        "functions/economy-config.json",
+        "tools/validate-skills.js",
+        "tools/validate-skill-presets.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "functions/test/emulator-skill-presets.js"
       ],
-      "reason": "Verify Treasury shares the Clan and Rewards navigation at desktop and landscape-mobile sizes, with visible tab selection, reachable donation controls, fixed review action, and preserved drafts through tab switches and live refreshes. Exercise the existing confirmation, retry and authoritative balance handling plus shared clan routing and optional stylesheet loading. Presentation only: no server, permissions, balances or donation rules change, so no emulator suite is required."
+      "reason": "Verify all eight skill rates and caps, client/server config and ledger parity, one-point upgrades/refunds through the cap, point-budget and concurrent-spend enforcement, version-5 preset conversion with preserved metadata, idempotent surplus refunds, existing version-2 build preservation, and the historical reset path. Exercise the changed movement multiplier through authoritative army orders and Shieldwall through additive defense and gear battle reports. Test real skill controls, converted preset drafts, last-point spending and reachable controls at desktop and two landscape-mobile widths."
+    },
+    {
+      "tests": [
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-skill-presets.js"
+      ],
+      "paths": [
+        "release-config.js",
+        "functions/release-config.json"
+      ],
+      "reason": "Verify matching client/server release identity and API contract for the active monthly realm, and reject the prior client before an authoritative skill purchase. World topology, reset generations and inactive compatibility records are unchanged."
+    },
+    {
+      "tests": [
+        "tools/validate-public-site-content.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-skill-presets.js"
+      ],
+      "paths": [
+        "game-rules.html",
+        "how-to-play.html",
+        "skills-presets-guide.html",
+        "tools/validate-battle-economy-guide.js"
+      ],
+      "reason": "Check the updated player-facing point-cost guidance and public guide structure, plus the shared calculator's new Shieldwall and March maximum levels and unchanged bonus caps, production and defense calculations. These pages change explanatory text only."
     },
     {
       "tests": [],
       "paths": [
+        "README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the user-confirmed shared Treasury navigation in place of Back to Rewards, with release verification still pending. No gameplay rule change."
+      "reason": "Document the confirmed per-point rates and uniform costs, retained caps, and safe conversion of existing builds and presets. Mark the release pending deployment verification; these documentation changes introduce no separate runtime behavior."
     }
   ]
 }

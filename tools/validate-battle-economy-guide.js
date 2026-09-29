@@ -49,12 +49,12 @@ for (let level = 2; level <= 500; level += 1) {
 
 const skillExpectations = {
   swordmastery: { level: 30, percent: 60 },
-  shieldwallDiscipline: { level: 30, percent: 60 },
+  shieldwallDiscipline: { level: 20, percent: 60 },
   stoneworks: { level: 25, percent: 75 },
   taxStewardship: { level: 25, percent: 75 },
   royalGranaries: { level: 25, percent: 75 },
   guildCharters: { level: 25, percent: 50 },
-  marchOrders: { level: 20, percent: 60 },
+  marchOrders: { level: 12, percent: 60 },
   fieldMedics: { level: 25, percent: 50 },
 };
 for (const [skill, expectation] of Object.entries(skillExpectations)) {
@@ -69,7 +69,7 @@ const boosted = calculator.getCitySnapshot({
   taxStewardshipLevel: 25,
   royalGranariesLevel: 25,
   stoneworksLevel: 25,
-  shieldwallDisciplineLevel: 30,
+  shieldwallDisciplineLevel: 20,
   guildChartersLevel: 25,
   citadelPackagePercent: 10,
   citadelUpgradeReductionPercent: 10,

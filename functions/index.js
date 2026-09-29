@@ -669,12 +669,12 @@ const CITY_LEVEL_STATS = {
 };
 const SKILL_CONFIG = {
   swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60) },
-  shieldwallDiscipline: { percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 2), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60) },
+  shieldwallDiscipline: { percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 3), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60) },
   stoneworks: { percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75) },
   taxStewardship: { percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75) },
   royalGranaries: { percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75) },
   guildCharters: { percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50) },
-  marchOrders: { percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 3), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60) },
+  marchOrders: { percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 5), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60) },
   fieldMedics: { percentPerLevel: economyNumber("skills.fieldMedics.percentPerLevel", 2), maxPercent: economyNumber("skills.fieldMedics.maxPercent", 50) },
 };
 const SKILL_ORDER = [
@@ -687,15 +687,13 @@ const SKILL_ORDER = [
   "marchOrders",
   "fieldMedics",
 ];
-const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
 const SKILL_STANDARD_POINT_COST = 1;
-const SKILL_FINAL_POINT_COST = 2;
 const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
 const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
 const REGROUP_GOLD_COST = economyNumber("playerCosts.regroupGold", 150_000);
-const SKILL_PRESET_MODEL_VERSION = 5;
+const SKILL_PRESET_MODEL_VERSION = 6;
 const SKILL_POINT_SYSTEM_VERSION = 2;
 const SKILL_POINT_SYSTEM_RESET_ID = "skill-point-system-v2";
 const LEGACY_SKILL_UPGRADE_KEYS = Object.freeze([
@@ -3648,9 +3646,7 @@ function getSkillPointCost(skill = "", currentLevel = 0) {
   const maxLevel = getSkillMaxLevel(skill);
   const level = normalizeSkillLevelForSkill(skill, currentLevel);
   if (level >= maxLevel) return 0;
-  const nextLevel = level + 1;
-  const finalTierStart = Math.max(1, maxLevel - SKILL_FINAL_DOUBLE_COST_LEVELS + 1);
-  return nextLevel >= finalTierStart ? SKILL_FINAL_POINT_COST : SKILL_STANDARD_POINT_COST;
+  return SKILL_STANDARD_POINT_COST;
 }
 
 function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
@@ -3870,6 +3866,15 @@ function normalizeSkillPresets(value = {}) {
     const raw = rawSlots.find(entry => Math.floor(safeNumber(entry?.slot, 0)) === definition.slot) || {};
     const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
     const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
+    // Version 6 reaches the same bonus caps with fewer Shieldwall/March levels.
+    // Convert valid old allocations only; malformed or current drafts still fail validation.
+    if (saved && Math.floor(Number(source.modelVersion) || 0) < 6) {
+      for (const [skill, previousMaxLevel] of [["shieldwallDiscipline", 30], ["marchOrders", 20]]) {
+        if (upgrades[skill] <= previousMaxLevel) {
+          upgrades[skill] = Math.min(upgrades[skill], getSkillMaxLevel(skill));
+        }
+      }
+    }
     return {
       slot: definition.slot,
       unlockLevel: definition.unlockLevel,

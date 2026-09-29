@@ -1,10 +1,26 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const assert = require("node:assert/strict");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
+const browserContext = { window: {} };
+vm.runInNewContext(fs.readFileSync(path.join(root, "economy-config.js"), "utf8"), browserContext);
+assert.deepEqual(JSON.parse(JSON.stringify(browserContext.window.CROWNLANDS_ECONOMY_CONFIG.skills)), economyConfig.skills,
+  "Browser and server skill rates or caps differ.");
+const expectedSkillBonuses = {
+  swordmastery: [2, 60],
+  shieldwallDiscipline: [3, 60],
+  stoneworks: [3, 75],
+  taxStewardship: [3, 75],
+  royalGranaries: [3, 75],
+  guildCharters: [2, 50],
+  marchOrders: [5, 60],
+  fieldMedics: [2, 50],
+};
 const expectedSkillIds = [
   "swordmastery",
   "shieldwallDiscipline",
@@ -25,6 +41,10 @@ for (const skill of expectedSkillIds) {
   if (!config) throw new Error(`Missing ${skill} economy configuration.`);
   const percentPerLevel = Number(config.percentPerLevel);
   const maxPercent = Number(config.maxPercent);
+  const [expectedRate, expectedCap] = expectedSkillBonuses[skill];
+  if (percentPerLevel !== expectedRate || maxPercent !== expectedCap) {
+    throw new Error(`${skill} must grant ${expectedRate}% per point up to ${expectedCap}%.`);
+  }
   if (!Number.isFinite(percentPerLevel) || percentPerLevel <= 0 || !Number.isFinite(maxPercent) || maxPercent < 0) {
     throw new Error(`${skill} has invalid configurable bonus values.`);
   }
@@ -34,6 +54,9 @@ for (const skill of expectedSkillIds) {
       new RegExp(`${skill}:\\s*\\{[^}]*percentPerLevel:\\s*economyNumber\\("skills\\.${skill}\\.percentPerLevel"[^}]*maxPercent:\\s*economyNumber\\("skills\\.${skill}\\.maxPercent"`),
       `${label} ${skill} is not read from the economy configuration.`
     );
+    if (!source.includes(`economyNumber("skills.${skill}.percentPerLevel", ${expectedRate})`)) {
+      throw new Error(`${label} ${skill} fallback disagrees with the confirmed per-point bonus.`);
+    }
   }
   const maxLevel = Math.ceil(maxPercent / percentPerLevel);
   if (!Number.isFinite(maxLevel) || maxLevel < 0 || maxLevel * percentPerLevel < maxPercent) {

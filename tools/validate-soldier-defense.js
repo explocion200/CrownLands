@@ -44,7 +44,7 @@ const stoneworksMaximum = Number(config.skills?.stoneworks?.maxPercent);
 assert.equal(Number(config.troopCombat?.defenseModelVersion), 1);
 assert.equal(attackBase, 1.25);
 assert.equal(defenseBase, 1.30);
-assert.deepEqual(config.skills.shieldwallDiscipline, { percentPerLevel: 2, maxPercent: 60 });
+assert.deepEqual(config.skills.shieldwallDiscipline, { percentPerLevel: 3, maxPercent: 60 });
 assert.equal("defensePercentPerLevel" in config.cityEconomy, false);
 
 const troops = 1_000_000;
@@ -124,7 +124,7 @@ assert.match(server, /baseWallPower[\s\S]*?stoneworksWallBonusPower/);
 assert.match(server, /baseDefenseBonusPower[\s\S]*?shieldwallDisciplineBonusPower/);
 assert.match(server, /personalObjectiveBonusPower[\s\S]*?sharedClanBonusPower/);
 
-assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 5;/);
+assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 6;/);
 assert.match(server, /const SKILL_FREE_RESET_GRANT_VERSION = 2;/);
 assert.match(server, /function normalizeFreeSkillResetState[\s\S]*?createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS/);
 assert.match(server, /goldCharged: applyCost[\s\S]*?freeResetConsumed: false/);

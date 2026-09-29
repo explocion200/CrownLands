@@ -262,7 +262,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "maxPercent": 60
     },
     "shieldwallDiscipline": {
-      "percentPerLevel": 2,
+      "percentPerLevel": 3,
       "maxPercent": 60
     },
     "stoneworks": {
@@ -282,7 +282,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "maxPercent": 50
     },
     "marchOrders": {
-      "percentPerLevel": 3,
+      "percentPerLevel": 5,
       "maxPercent": 60
     },
     "fieldMedics": {

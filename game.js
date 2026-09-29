@@ -1235,26 +1235,24 @@ const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHour
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
-  shieldwallDiscipline: { label: "Shieldwall Discipline", percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 2), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60), description: "Defense power for stationed and reinforcing soldiers." },
+  shieldwallDiscipline: { label: "Shieldwall Discipline", percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 3), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60), description: "Defense power for stationed and reinforcing soldiers." },
   stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall strength." },
   taxStewardship: { label: "Tax Stewardship", percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75), description: "Normal city gold production." },
   royalGranaries: { label: "Royal Granaries", percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75), description: "Normal city troop production." },
   guildCharters: { label: "Guild Charters", percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50), description: "Upgrade cost reduction." },
-  marchOrders: { label: "March Orders", percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 3), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60), description: "Travel speed for attacks, transfers, scouts, and regroups." },
+  marchOrders: { label: "March Orders", percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 5), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60), description: "Travel speed for attacks, transfers, scouts, and regroups." },
   fieldMedics: { label: "Field Medics", percentPerLevel: economyNumber("skills.fieldMedics.percentPerLevel", 2), maxPercent: economyNumber("skills.fieldMedics.maxPercent", 50), description: "Returns a percent of battle losses to your main city." },
 };
 
 const SKILL_ORDER = ["swordmastery", "shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
-const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
 const SKILL_STANDARD_POINT_COST = 1;
-const SKILL_FINAL_POINT_COST = 2;
 const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const SKILL_GROUPS = Object.freeze([
   Object.freeze({ id: "attack", label: "Attack", skills: Object.freeze(["swordmastery", "marchOrders", "fieldMedics"]) }),
   Object.freeze({ id: "defense", label: "Defense", skills: Object.freeze(["shieldwallDiscipline", "stoneworks"]) }),
   Object.freeze({ id: "utility", label: "Utility", skills: Object.freeze(["taxStewardship", "royalGranaries", "guildCharters"]) }),
 ]);
-const SKILL_PRESET_MODEL_VERSION = 5;
+const SKILL_PRESET_MODEL_VERSION = 6;
 const SKILL_POINT_SYSTEM_VERSION = 2;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
@@ -7050,9 +7048,7 @@ function getSkillPointCost(skill = "", currentLevel = 0) {
   const maxLevel = getSkillMaxLevel(skill);
   const level = normalizeSkillUpgradeLevel(skill, currentLevel);
   if (level >= maxLevel) return 0;
-  const nextLevel = level + 1;
-  const finalTierStart = Math.max(1, maxLevel - SKILL_FINAL_DOUBLE_COST_LEVELS + 1);
-  return nextLevel >= finalTierStart ? SKILL_FINAL_POINT_COST : SKILL_STANDARD_POINT_COST;
+  return SKILL_STANDARD_POINT_COST;
 }
 
 function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
@@ -7128,6 +7124,15 @@ function normalizeSkillPresets(value = {}) {
     const raw = rawSlots.find(entry => Math.floor(Number(entry?.slot) || 0) === definition.slot) || {};
     const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
     const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
+    // Version 6 reaches the same bonus caps with fewer Shieldwall/March levels.
+    // Convert valid old allocations only; malformed or current drafts still fail validation.
+    if (saved && Math.floor(Number(source.modelVersion) || 0) < 6) {
+      for (const [skill, previousMaxLevel] of [["shieldwallDiscipline", 30], ["marchOrders", 20]]) {
+        if (upgrades[skill] <= previousMaxLevel) {
+          upgrades[skill] = Math.min(upgrades[skill], getSkillMaxLevel(skill));
+        }
+      }
+    }
     return {
       slot: definition.slot,
       unlockLevel: definition.unlockLevel,

@@ -34,8 +34,7 @@ const getSkillMaxLevel = skill => Math.ceil(
 );
 const getSpentSkillPoints = upgrades => SKILL_ORDER.reduce((total, skill) => {
   const level = Math.max(0, Math.min(getSkillMaxLevel(skill), Math.floor(Number(upgrades[skill]) || 0)));
-  const finalTierLevels = Math.max(0, level - (getSkillMaxLevel(skill) - 5));
-  return total + level + finalTierLevels;
+  return total + level;
 }, 0);
 let functionsHostPromise = null;
 
@@ -89,7 +88,7 @@ async function createAuthUser() {
   return { uid: body.localId, token: body.idToken };
 }
 
-async function invokeFunction(name, token, data = {}) {
+async function invokeFunction(name, token, data = {}, clientReleaseId = realm.releaseId) {
   const functionsHost = await resolveFunctionsHost();
   const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
     method: "POST",
@@ -100,7 +99,7 @@ async function invokeFunction(name, token, data = {}) {
     body: JSON.stringify({
       data: {
         ...data,
-        clientReleaseId: realm.releaseId,
+        clientReleaseId,
         clientResetGeneration: realm.resetGeneration,
         clientWorldId: realm.worldId,
       },
@@ -304,7 +303,7 @@ async function main() {
     adjustments: [{ skillId: "swordmastery", levelDelta: 1 }],
   };
   const firstAdjustment = await callFunction("adjustSkillLevels", user.token, firstAdjustmentRequest);
-  assert(Number(firstAdjustment.spentSkillPoints || 0) === 1 && Number(firstAdjustment.refundedSkillPoints || 0) === 0, "A standard live addition reported the wrong weighted totals.");
+  assert(Number(firstAdjustment.spentSkillPoints || 0) === 1 && Number(firstAdjustment.refundedSkillPoints || 0) === 0, "A standard live addition reported the wrong totals.");
   assert(Number(firstAdjustment.currentUser?.upgrades?.swordmastery || 0) === 1, "A signed live addition did not update its resulting level.");
   assert(Number(firstAdjustment.currentUser?.character?.skillPoints || 0) === 98, "A signed live addition did not reconcile available points.");
   assert(Number(firstAdjustment.currentUser?.skillPresets?.activeSlot || 0) === 0, "A signed live addition did not clear the active preset.");
@@ -330,12 +329,12 @@ async function main() {
     requestId: "skill-adjust-tier-spend-0001",
     adjustments: [{ skillId: "guildCharters", levelDelta: 1 }],
   });
-  assert(Number(signedFinalTierSpend.spentSkillPoints || 0) === 2, "The signed final-tier addition did not cost two points.");
+  assert(Number(signedFinalTierSpend.spentSkillPoints || 0) === 1, "A high-level addition must cost one point.");
   const signedFinalTierRefund = await callFunction("adjustSkillLevels", user.token, {
     requestId: "skill-adjust-tier-refund-0001",
     adjustments: [{ skillId: "guildCharters", levelDelta: -1 }],
   });
-  assert(Number(signedFinalTierRefund.refundedSkillPoints || 0) === 2, "Removing the first final-tier level did not refund two points.");
+  assert(Number(signedFinalTierRefund.refundedSkillPoints || 0) === 1, "Removing a high-level upgrade must refund one point.");
   const signedStandardRefund = await callFunction("adjustSkillLevels", user.token, {
     requestId: "skill-adjust-standard-refund-0001",
     adjustments: [{ skillId: "guildCharters", levelDelta: -1 }],
@@ -352,7 +351,7 @@ async function main() {
       { skillId: "stoneworks", levelDelta: 2 },
     ],
   });
-  assert(Number(mixedAdjustment.spentSkillPoints || 0) === 2 && Number(mixedAdjustment.refundedSkillPoints || 0) === 3, "A mixed refund-and-spend batch reported the wrong weighted totals.");
+  assert(Number(mixedAdjustment.spentSkillPoints || 0) === 2 && Number(mixedAdjustment.refundedSkillPoints || 0) === 2, "A mixed refund-and-spend batch reported the wrong point totals.");
   assert(Number(mixedAdjustment.currentUser?.upgrades?.guildCharters || 0) === 20, "The mixed batch lost its final-tier refund.");
   assert(Number(mixedAdjustment.currentUser?.upgrades?.swordmastery || 0) === 0, "The mixed batch lost its standard refund.");
   assert(Number(mixedAdjustment.currentUser?.upgrades?.stoneworks || 0) === 2, "The mixed batch lost its additions.");
@@ -418,14 +417,16 @@ async function main() {
 
   await setBuild(profileRef, cityRef, { level: 100, upgrades: finalTierBuild, gold: 2_000_000 });
   const finalTierSpend = await callFunction("spendSkillPoint", user.token, { skillId: "guildCharters" });
-  assert(Number(finalTierSpend.spentSkillPoints || 0) === 2, "The first of Guild Charters' final five levels did not cost 2 points.");
+  assert(Number(finalTierSpend.spentSkillPoints || 0) === 1, "Guild Charters Level 21 must cost one point.");
   assert(Number(finalTierSpend.currentUser?.upgrades?.guildCharters || 0) === 21, "The final-tier purchase did not improve Guild Charters by one level.");
-  assert(Number(finalTierSpend.currentUser?.character?.skillPoints || 0) === 77, "The final-tier purchase did not deduct its weighted point cost.");
+  assert(Number(finalTierSpend.currentUser?.character?.skillPoints || 0) === 78, "The high-level purchase did not deduct one point.");
   await setBuild(profileRef, cityRef, { level: 22, upgrades: finalTierBuild, gold: 2_000_000 });
+  const lastPoint = await callFunction("spendSkillPoint", user.token, { skillId: "guildCharters" });
+  assert(lastPoint.currentUser?.character?.skillPoints === 0 && lastPoint.currentUser?.upgrades?.guildCharters === 21, "A high-level upgrade could not use the last available point.");
   assertRejected(
     await invokeFunction("spendSkillPoint", user.token, { skillId: "guildCharters" }),
     "FAILED_PRECONDITION",
-    "A final-tier skill upgrade was accepted with only one available point"
+    "A skill upgrade was accepted with no available points"
   );
 
   await setBuild(profileRef, cityRef, { level: 6, upgrades: zeroBuild(), gold: 2_000_000 });
@@ -487,7 +488,41 @@ async function main() {
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
 
-  console.log("Emulator skill presets passed: signed weighted adjustments, replay safety, free refunds and resets, four presets, concurrency, and atomic rejection safety.");
+  // Reconcile a current player's pre-rebalance build without running the legacy reset.
+  const oldAllocation = { ...zeroBuild(), shieldwallDiscipline: 30, marchOrders: 20, guildCharters: 25 };
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: oldAllocation, gold: 2_000_000 });
+  await profileRef.set({
+    character: { level: 100, xp: 17, skillPoints: 9 },
+    skillPointSystemVersion: 2,
+    skillPointSystemResetAtMs: 123456,
+    skillPresets: {
+      modelVersion: 5,
+      activeSlot: 1,
+      slots: [{ slot: 1, name: "Veteran", saved: true, upgrades: oldAllocation, spentPoints: 90, savedAtMs: 12345 }],
+    },
+  }, { merge: true });
+  assertRejected(await invokeFunction("spendSkillPoint", user.token, { skillId: "swordmastery" }, "crownlands-2026-09-season-rewards-v1"), "FAILED_PRECONDITION", "An old client was allowed to spend under obsolete skill rules");
+  const efficiencySync = await callFunction("syncSkillPointSystem", user.token);
+  assert(efficiencySync.skillPointSystemReset?.applied === false, "The efficiency update cleared an existing build.");
+  profile = (await profileRef.get()).data() || {};
+  assert(profile.character?.skillPoints === 42 && profile.character?.xp === 17, "The update did not refund all 33 surplus points while preserving XP.");
+  assert(profile.upgrades?.shieldwallDiscipline === 20 && profile.upgrades?.marchOrders === 12 && profile.upgrades?.guildCharters === 25, "The update did not preserve skill caps and unrelated levels.");
+  assert(profile.skillPointSystemResetAtMs === 123456 && profile.freeSkillResetCredits === 3, "The update changed reset history or stored credits.");
+  assert(profile.skillPresets?.modelVersion === 6 && profile.skillPresets?.activeSlot === 1, "The saved preset model or active identity was lost.");
+  const migratedSlot = profile.skillPresets.slots[0];
+  assert(migratedSlot.name === "Veteran" && migratedSlot.savedAtMs === 12345 && migratedSlot.spentPoints === 57, "Preset metadata or point totals were lost during conversion.");
+  assert(migratedSlot.upgrades.shieldwallDiscipline === 20 && migratedSlot.upgrades.marchOrders === 12, "An old saved preset still exceeds the new level limits.");
+  await callFunction("syncSkillPointSystem", user.token);
+  const repeatedSync = (await profileRef.get()).data() || {};
+  assert(repeatedSync.character.skillPoints === 42 && JSON.stringify(repeatedSync.skillPresets) === JSON.stringify(profile.skillPresets), "Repeated synchronization changed the refund or presets.");
+  const convertedApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  assert(convertedApply.currentUser?.character?.skillPoints === 42, "A converted preset could not be applied with the refunded points intact.");
+  for (const [skill, cap] of [["shieldwallDiscipline", 20], ["marchOrders", 12]]) {
+    assertRejected(await invokeFunction("spendSkillPoint", user.token, { skillId: skill }), "FAILED_PRECONDITION", `${skill} exceeded its bonus cap`);
+    assertRejected(await invokeFunction("saveSkillPreset", user.token, { slot: 1, upgrades: { ...zeroBuild(), [skill]: cap + 1 } }), "INVALID_ARGUMENT", `A new over-cap ${skill} preset was silently clamped`);
+  }
+
+  console.log("Emulator skill presets passed: uniform point costs, preserved builds and presets, surplus refunds, stale-client rejection, replay safety, and concurrent atomic spending.");
 }
 
 main().then(() => process.exit(0)).catch(error => {
