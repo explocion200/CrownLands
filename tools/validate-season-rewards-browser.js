@@ -26,11 +26,13 @@ async function main() {
       const info=R.seasonInfo("realm-2026-09");
       const award=R.buildAwards(info,{players:[{uid:"winner",rank:1,kingPower:100}],glory:[{uid:"winner",rank:1,pvpKills:99}],clans:[{id:"house",rank:1,name:"House"}]},new Map([["house",["winner"]]]))[0];
       await evaluate(`window.seasonFixture=${JSON.stringify({...info,status:"ready",version:1,tiers:R.TIERS,award,participated:true,pendingSeasons:[],serverTimeMs:info.endsAtMs+1000})};
-        window.seasonClaims=0; window.seasonMode='ready'; RESET_GENERATION='realm-2026-10';
+        window.seasonClaims=0; window.seasonMode='ready'; window.seasonStatusCalls=0; RESET_GENERATION='realm-2026-10';
+        window.seasonProjection={players:{rank:1,kingPower:100},glory:{rank:12,pvpKills:5},clans:{rank:1}}; window.seasonClanEligible=true;
         window.CrownlandsOnline.getSeasonRewardStatus=async payload=>{
+          window.seasonStatusCalls++;
           if(window.seasonMode==='error')throw Error('Synthetic rewards outage');
           if(window.seasonMode==='pending')return {...seasonFixture,status:'finalizing',award:null};
-          if(payload?.seasonId==='realm-2026-10')return {...seasonFixture,seasonId:'realm-2026-10',status:'open',award:null,endsAtMs:Date.now()+3600000,serverTimeMs:Date.now(),projected:{players:{rank:1,kingPower:100},glory:{rank:12,pvpKills:5},clans:{rank:1}},clanEligible:true,decorations:{}};
+          if(payload?.seasonId==='realm-2026-10')return {...seasonFixture,seasonId:'realm-2026-10',status:'open',award:null,endsAtMs:Date.now()+3600000,serverTimeMs:Date.now(),projected:window.seasonProjection,clanEligible:window.seasonClanEligible,decorations:{}};
           return structuredClone(seasonFixture);
         };
         window.CrownlandsOnline.claimSeasonRewards=async payload=>{window.seasonClaims++;await new Promise(resolve=>setTimeout(resolve,150));seasonFixture.award.claimed=true;seasonFixture.award.receipt={claimedAtMs:Date.now(),seasonId:payload.seasonId};return {ok:true,gear:{commonGearBoxes:19,uncommonGearBoxes:5}};};
@@ -40,7 +42,10 @@ async function main() {
       await ready("document.querySelectorAll('.season-table tbody tr').length===7");
       assert(await evaluate("document.querySelector('.season-projection').textContent.includes('2')"));
       assert(await evaluate("document.querySelector('.season-rules').textContent.includes('19 Common + 5 Uncommon')"));
-      assert.equal(await evaluate("document.querySelector('.season-projection h3').textContent"),"Potential reward");
+      assert.equal(await evaluate("document.querySelector('.season-projection h3').textContent"),"Combined potential reward");
+      const overview=()=>evaluate(`(()=>{const counts=e=>Array.from(e.querySelectorAll('.season-box strong')).map(n=>Number(n.textContent));return {boards:Array.from(document.querySelectorAll('[data-season-board]')).map(e=>({board:e.dataset.seasonBoard,standing:e.querySelector('[data-season-standing]').textContent,boxes:counts(e.querySelector('[data-season-payout]'))})),total:counts(document.querySelector('[data-season-total]'))};})()`);
+      assert.deepEqual(await overview(),{boards:[{board:"players",standing:"Rank #1",boxes:[8,2]},{board:"clans",standing:"Rank #1",boxes:[3,1]},{board:"glory",standing:"Rank #12",boxes:[3]}],total:[14,3]});
+      assert.deepEqual(await evaluate("Array.from(document.querySelectorAll('.season-comparison tbody tr:first-child td')).map(cell=>Array.from(cell.querySelectorAll('.season-box strong')).map(n=>Number(n.textContent)))"),[[8,2],[3,1],[8,2]],"All three reward schedules must be visible together");
       assert.equal(await evaluate("document.querySelector('[data-season-select]')===null && document.querySelector('[data-season-history]')===null"),true,"Current season view must not browse prior standings");
       assert.deepEqual(await evaluate("(()=>{const a=document.querySelector('.season-archive-link');return {href:a.href,target:a.target,noopener:a.rel.includes('noopener')};})()"),{href:"https://playcrownlands.com/season-rankings.html",target:"_blank",noopener:true});
       await evaluate("Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))");
@@ -48,6 +53,31 @@ async function main() {
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`info-${width}.png`),Buffer.from(result.data,"base64")));
       assert(fits.horizontal&&fits.scroll&&fits.footer&&fits.table,`${width} layout: ${JSON.stringify(fits)}`);
       assert(await evaluate("document.querySelector('.season-projection .season-box').getBoundingClientRect().bottom <= document.querySelector('.season-scroll').getBoundingClientRect().bottom"),`${width}: potential reward must be visible without scrolling`);
+      assert(await evaluate("Array.from(document.querySelectorAll('[data-season-board]')).every(row=>row.getBoundingClientRect().bottom<=document.querySelector('.season-scroll').getBoundingClientRect().bottom)"),`${width}: all three current reward rows must be visible without scrolling`);
+      await evaluate("document.querySelector('.season-comparison').scrollIntoView({block:'start'})");
+      await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`reward-tiers-${width}.png`),Buffer.from(result.data,"base64")));
+      await evaluate("document.querySelector('.season-scroll').scrollTop=0");
+      if(width===1366){
+        const refresh=async(projection,eligible=true)=>{
+          await evaluate(`window.seasonProjection=${JSON.stringify(projection)};window.seasonClanEligible=${eligible};window.seasonStatusCalls=0;document.querySelector('[data-season-info]').click()`);
+          await ready("document.querySelectorAll('[data-season-board]').length===3");
+          assert.equal(await evaluate("window.seasonStatusCalls"),1,"One status response supplies all three boards");
+          return overview();
+        };
+        assert.deepEqual((await refresh({players:{rank:1,kingPower:1},clans:{rank:1},glory:{rank:1,pvpKills:1}})).total,[19,5],"All three first places stack");
+        assert.deepEqual((await refresh({players:{rank:1,kingPower:0},clans:{rank:1},glory:{rank:1,pvpKills:0}},false)).total,[],"Zero scores and ineligible clan membership grant no reward");
+        assert.equal((await overview()).boards[1].standing,"No eligible clan");
+        const unranked=await refresh({players:null,clans:null,glory:null});assert(unranked.boards.every(row=>row.standing==="Outside Top 100"&&row.boxes.length===0));assert.deepEqual(unranked.total,[]);
+        assert.deepEqual((await refresh({players:{rank:51,kingPower:1},clans:{rank:26},glory:{rank:100,pvpKills:1}})).total,[2],"Clan rewards stop at rank 25 while personal rewards reach 100");
+        const partial=await refresh({players:{rank:1,kingPower:100},glory:{rank:1,pvpKills:10}});assert.equal(partial.boards[1].standing,"Standing unavailable");assert.deepEqual(partial.total,[]);
+        assert(await evaluate("document.querySelector('[data-season-total]').textContent.includes('Total unavailable')"),"Partial data cannot look like a complete total");
+        const unavailable=await refresh(null);assert(unavailable.boards.every(row=>row.standing==="Standing unavailable"));assert.deepEqual(unavailable.total,[]);
+        await refresh({players:{rank:1,kingPower:100},clans:{rank:1},glory:{rank:12,pvpKills:5}});
+        for(const board of ['clans','glory']){
+          await evaluate(`showSeasonRewardsPanel({board:'${board}'})`);await ready("document.querySelectorAll('[data-season-board]').length===3");
+          assert.deepEqual((await overview()).total,[14,3],"Opening from any board shows the same complete overview");
+        }
+      }
       await evaluate("document.querySelector('[data-season-results]').click()");
       await ready("document.querySelectorAll('.season-award-rows article').length===3");
       assert.equal(await evaluate("document.querySelectorAll('.season-medal').length"),3);
@@ -99,7 +129,7 @@ async function main() {
     await evaluate("window.CrownlandsOnline.getSeasonRewardStatus=()=>new Promise(resolve=>window.resolveSeason=resolve);showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'});modal.close();showLeaderboardModal();window.resolveSeason(seasonFixture)");
     await wait(100);assert.equal(await evaluate("modal.classList.contains('leaderboard-modal') && !document.querySelector('.season-panel')"),true);
     assert.deepEqual(errors,[]);
-    console.log("Season reward browser passed desktop/mobile layouts, current projection, website archive link, private reward receipts, single claim, gear refresh, honors, login dismissal, pending/error and stale-response guards.");
+    console.log("Season reward browser passed desktop/mobile three-board overviews, combined totals, all reward tiers, zero/unranked/ineligible/unavailable states, one-request refresh, website archive link, private receipts, single claim, gear refresh, honors, login dismissal, pending/error and stale-response guards.");
   } finally {
     if(client)await client.send("Browser.close").catch(()=>{});
     if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}
