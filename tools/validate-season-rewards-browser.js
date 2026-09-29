@@ -47,6 +47,7 @@ async function main() {
       const fits=await evaluate(`(()=>{const p=document.querySelector('.season-panel'),s=document.querySelector('.season-scroll'),f=document.querySelector('.season-footer'),b=f.getBoundingClientRect();return {horizontal:p.scrollWidth<=p.clientWidth+1,scroll:s.scrollHeight>s.clientHeight,footer:b.bottom<=innerHeight+1,table:s.querySelector('table').scrollWidth<=s.clientWidth};})()`);
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`info-${width}.png`),Buffer.from(result.data,"base64")));
       assert(fits.horizontal&&fits.scroll&&fits.footer&&fits.table,`${width} layout: ${JSON.stringify(fits)}`);
+      assert(await evaluate("document.querySelector('.season-projection .season-box').getBoundingClientRect().bottom <= document.querySelector('.season-scroll').getBoundingClientRect().bottom"),`${width}: potential reward must be visible without scrolling`);
       await evaluate("document.querySelector('[data-season-results]').click()");
       await ready("document.querySelectorAll('.season-award-rows article').length===3");
       assert.equal(await evaluate("document.querySelectorAll('.season-medal').length"),3);

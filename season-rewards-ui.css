@@ -83,4 +83,10 @@
   #modal.season-rewards-modal .season-navigation label { display:flex; align-items:center; width:auto; margin:0; gap:4px; line-height:1.2; }
   #modal.season-rewards-modal .season-panel button,#modal.season-rewards-modal .season-panel select { min-height:27px; padding:4px 6px; font-size:11px; }
   #modal.season-rewards-modal .season-footer { flex:none; padding:5px 8px; }
+  .season-scroll .season-projection { margin:0 0 12px; padding:6px 10px; }
+  .season-projection h3 { font-size:15px; line-height:1.15; margin:0 0 3px; }
+  .season-projection>span { display:block; font-size:12px; line-height:1.2; }
+  .season-projection>div { gap:8px; margin:3px 0; }
+  .season-projection .season-box img { width:23px; height:23px; }
+  .season-projection small { font-size:11px; }
 }
