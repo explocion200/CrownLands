@@ -21,7 +21,18 @@ async function main() {
   await db.doc("realmConfig/current").set(scope);
   await db.doc("players/"+uid).set({...scope,mainCityId:"city",clanId:"house",gear:{commonGearBoxes:2,uncommonGearBoxes:3},playerName:"Winner"});
   await R.arm(db,info.seasonId,info.startsAtMs+1);
+  // A prefetched open header must still reject writes when processing crosses
+  // the deadline, even though no closing scheduler has changed that header yet.
+  let fenceClock = info.endsAtMs - 1;
+  await assert.rejects(db.runTransaction(tx=>R.guardTransaction(db,tx,async buffer=>{
+    R.prefetchTransaction(buffer,info.seasonId);
+    await buffer.get(db.doc("players/"+uid));
+    buffer.set(db.doc(`leaderboards/${info.boardId}/entries/expired-prefetch`),{...scope,kingPower:999});
+    fenceClock = info.endsAtMs;
+  },scope,()=>fenceClock)),/season has closed/i);
+  assert.equal((await db.doc(`leaderboards/${info.boardId}/entries/expired-prefetch`).get()).exists,false);
   await Promise.all(["z-last","a-first",uid].map((id,i)=>db.runTransaction(tx=>R.guardTransaction(db,tx,buffer=>{
+    R.prefetchTransaction(buffer,info.seasonId);
     buffer.set(db.doc(`leaderboards/${info.boardId}/entries/${id}`),{...scope,uid:id,displayName:id,kingPower:i===2?500:100,clanId:"house"});
   },scope,()=>info.startsAtMs+100))));
   await db.doc("clans/house").set({...scope,status:"active",memberCount:2});
@@ -59,6 +70,10 @@ async function main() {
   await db.doc("players/"+uid).update({resetGeneration:next.seasonId,worldId:next.worldId});
   // A new-season clan migration/removal cannot change the old captured roster.
   await db.runTransaction(tx=>R.guardTransaction(db,tx,buffer=>buffer.delete(db.doc("clans/house/members/"+uid)),next,()=>info.endsAtMs+10));
+  await db.runTransaction(tx=>R.guardTransaction(db,tx,buffer=>{
+    R.prefetchTransaction(buffer,next.seasonId);
+    buffer.set(db.doc(`leaderboards/${next.boardId}/entries/${uid}`),{...next,uid,kingPower:100});
+  },next,()=>info.endsAtMs+10));
   await Promise.all([PVP.processEvent(db,eventRef),PVP.processEvent(db,eventRef)]);
   // Resume an interrupted publisher; provisional awards cannot be claimed.
   await R.headerRef(db,info.seasonId).update({status:"finalizing",leaseUntilMs:0});

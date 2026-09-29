@@ -1,38 +1,50 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "54e9e9d5c0cc3ad2e8263f4a7bbd61c3930c3f5e",
+  "baseCommit": "0b3e4739b49e87859891fa0ff14c58b3942d16be",
   "coverage": [
     {
-      "paths": ["game.js", "rallies-activity-ui.js", "clan-ledger-ui.css", "rallies-activity-ui.css"],
-      "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/validate-clan-war-room.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-troop-selection-browser.js"
+      "paths": [
+        "game.js",
+        "tools/validate-lag-recovery.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-season-rewards-browser.js"
       ],
-      "reason": "Verify contribution controls independently of rally management for members, officers and Clan Leaders on both cards, preserving creator, full-rally, committed, launched and pending states. Exercise last-owned-city selection without fallback for missing, lost, empty or unreachable cities, source-name escaping, actual button clicks and confirmed join payloads. Cover the shared troop picker and creation/assembly dependencies. Inspect desktop and both landscape phone sizes. No server, callable or data rule changes; emulator suites are not required."
+      "tests": [
+        "tools/validate-lag-recovery.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-login-realm-sequence.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-login-stability-matrix.js",
+        "tools/validate-season-rewards-browser.js",
+        "tools/validate-realtime-health.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-welcome-back-summary.js"
+      ],
+      "reason": "Exercise mismatched heartbeats through bounded update checks and explicit verified re-entry, including duplicate requests, stale sessions, transient outages and hung checks. Ensure season status resolves after five seconds, rejects late/stale results, and preserves normal reward-before-daily ordering. Reuse session takeover, foreground, synchronization, pending economy and Welcome Back checks for the shared lifecycle cleanup. Inspect the signed-in recovery screen and season UI at desktop, 844x390 and 568x320 using isolated browser fixtures. No player rules or art change."
     },
     {
       "paths": [
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "functions/index.js",
+        "functions/season-rewards.js",
+        "tools/test-season-transaction-latency.js",
+        "functions/test/emulator-season-rewards.js",
+        "tools/validate-transaction-retries.js"
       ],
       "tests": [
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "tools/test-season-transaction-latency.js",
+        "tools/test-season-rewards.js",
+        "tools/validate-transaction-retries.js",
+        "tools/validate-performance-bottlenecks.js",
+        "tools/validate-inactive-player-lifecycle.js",
+        "functions/test/emulator-season-rewards.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-pvp-leaderboard.js",
+        "functions/test/emulator-core-expansion-state.js",
+        "functions/test/emulator-reset-gate.js",
+        "functions/test/emulator-inactive-city-level-reset.js"
       ],
-      "reason": "Run the added role, source and browser regressions. Update the existing Tower target-validation harness with its missing troop-selection dependency so its original invalid-target assertions continue to execute. Browser fixtures use isolated mock services and verify no join request occurs before confirmation."
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": [],
-      "reason": "Record the requested Clan join entry point and remembered-city behavior while retaining confirmed membership, contribution and troop confirmation rules; mark implementation pending merge and deployment."
+      "reason": "Prove fence reads overlap pending economy reads and batch current/prior season checks without a cross-attempt cache or unrelated heartbeat reads. Check failure cleanup, missing-header arming, prior-capture rejection and deadline crossing before any writes flush. Emulator coverage preserves closing races, captured clan rosters, delayed Glory, exactly-once rewards, concurrent economy and army operations, reset/admission, and inactivity maintenance. Economy profile and maintenance reads remain authoritative and fail closed before participation processing. Restore stale transaction-validator expectations left by PR #393 while retaining dedicated starting-city maxAttempts and the sole raw-transaction wrapper. Production latency must be verified after a separately authorized deployment."
     }
   ]
 }

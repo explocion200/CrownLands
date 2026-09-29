@@ -13346,9 +13346,14 @@ function consumePendingAwayCityTroops(economy = null, city = null, losses = 0, {
 }
 
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
+  SEASON_REWARDS.prefetchTransaction(transaction, RESET_GENERATION);
+  const maintenanceRef = !options.allowInactivityMaintenance ? inactivityMaintenanceRef(uid) : null;
+  const profileRef = options.profileRef || db.doc(`players/${uid}`);
+  const [maintenanceSnap, profileSnap] = await Promise.all([
+    maintenanceRef ? transaction.get(maintenanceRef) : null,
+    options.profileSnap || transaction.get(profileRef),
+  ]);
   if (!options.allowInactivityMaintenance) {
-    const maintenanceRef = inactivityMaintenanceRef(uid);
-    const maintenanceSnap = maintenanceRef ? await transaction.get(maintenanceRef) : null;
     const maintenance = maintenanceSnap?.exists ? maintenanceSnap.data() || {} : {};
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError(
@@ -13357,8 +13362,6 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       );
     }
   }
-  const profileRef = options.profileRef || db.doc(`players/${uid}`);
-  const profileSnap = options.profileSnap || await transaction.get(profileRef);
   const participation = options.participation || await requireCurrentSeasonParticipation(transaction, uid, {
     profileRef,
     profileSnap,

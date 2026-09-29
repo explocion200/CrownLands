@@ -69,7 +69,19 @@ async function main() {
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`clan-honors-${width}.png`),Buffer.from(result.data,"base64")));
       assert.equal(await evaluate("CrownlandsSeasonRewards.bestDecoration(seasonFixture.award.honors,'player',seasonFixture.honorsExpireAtMs)===undefined"),true);
       await evaluate("modal.close()");
+      // A deployed contract mismatch must leave an actionable entry screen at
+      // every supported size instead of silently retrying rejected heartbeats.
+      await evaluate(`window.CrownlandsOnline.heartbeatGameServer=async()=>{throw Object.assign(new Error('Synthetic release mismatch'),{code:'functions/failed-precondition'});};
+        fetchDeployedBuildId=async()=>APP_BUILD_ID;
+        heartbeatGameServerMembership();`);
+      assert.equal(await evaluate("setupScreen.classList.contains('visible') && state === null && gameServerHeartbeatIntervalId === 0"),true);
+      assert.equal(await evaluate("onlineStatusDetail.textContent.includes('Enter your kingdom again')"),true);
+      await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`reconnect-${width}.png`),Buffer.from(result.data,"base64")));
     }
+    await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&ledgerUi=players"});
+    await ready('document.documentElement?.dataset.ledgerQa==="ready"');
+    await evaluate(`window.seasonFixture=${JSON.stringify({...R.seasonInfo("realm-2026-09"),status:"ready",pendingSeasons:[]})};
+      window.CrownlandsOnline.getSeasonRewardStatus=async()=>{if(window.seasonMode==='error')throw Error('Synthetic rewards outage');return {...seasonFixture,status:'finalizing',award:null};};`);
     await evaluate("window.seasonMode='pending';showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'})");
     await ready("document.querySelector('.season-empty')?.textContent.includes('being finalized')");
     assert.equal(await evaluate("document.querySelector('[data-season-claim]')===null"),true);

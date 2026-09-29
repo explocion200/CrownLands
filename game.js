@@ -116,6 +116,7 @@ const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
 const GAME_SERVER_HEARTBEAT_SECONDS = 60;
 const GAME_SERVER_HEARTBEAT_TIMEOUT_MS = 15 * 1000;
+const LOGIN_SEASON_STATUS_TIMEOUT_MS = 5000;
 const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
   || WORLD_REGIONS.find(region => region.id === "west")?.id
   || WORLD_REGIONS[0]?.id
@@ -16065,6 +16066,7 @@ async function heartbeatGameServerMembership() {
   const api = getOnlineApi();
   if (!api?.heartbeatGameServer || !api?.isSignedIn?.()) return false;
   const heartbeatGeneration = gameServerHeartbeatGeneration;
+  const sessionScope = getOnlineSessionRequestScope();
   gameServerHeartbeatInFlight = true;
   try {
     const result = await withTimeout(
@@ -16072,15 +16074,56 @@ async function heartbeatGameServerMembership() {
       GAME_SERVER_HEARTBEAT_TIMEOUT_MS,
       "Crownlands realm heartbeat timed out."
     );
-    if (heartbeatGeneration !== gameServerHeartbeatGeneration || !api.isSignedIn?.()) return false;
+    if (heartbeatGeneration !== gameServerHeartbeatGeneration || sessionScope !== getOnlineSessionRequestScope() || !api.isSignedIn?.()) return false;
     applyGameServerMembership(result);
     return true;
   } catch (error) {
+    if (heartbeatGeneration !== gameServerHeartbeatGeneration || sessionScope !== getOnlineSessionRequestScope() || !api.isSignedIn?.()) return false;
     console.warn("Could not refresh Crownlands realm membership", error);
+    if (isRealmAdmissionCompatibilityError(error)) {
+      await recoverGameServerCompatibility(api, heartbeatGeneration, sessionScope);
+    }
     return false;
   } finally {
     if (heartbeatGeneration === gameServerHeartbeatGeneration) gameServerHeartbeatInFlight = false;
   }
+}
+
+async function recoverGameServerCompatibility(api, heartbeatGeneration, sessionScope) {
+  const isCurrent = () => heartbeatGeneration === gameServerHeartbeatGeneration
+    && sessionScope === getOnlineSessionRequestScope() && api.isSignedIn?.();
+  if (!isCurrent()) return false;
+  try {
+    const buildId = await withTimeout(fetchDeployedBuildId(), 10000, "The update check is taking too long.");
+    if (!isCurrent()) return false;
+    if (buildId && buildId !== APP_BUILD_ID) {
+      await handleDeployedUpdate(buildId);
+      return true;
+    }
+  } catch (error) {
+    if (!isCurrent()) return false;
+    console.warn("Could not recover the Crownlands client version", error);
+  }
+  if (!isCurrent()) return false;
+  // Re-entry verifies the realm and restores server state. Do not repeatedly
+  // send a rejected heartbeat or activate a new login from a background retry.
+  gameServerAutoEnter = false;
+  verifiedRealmInfo = null;
+  clearInstantEconomyActions();
+  stopGameServerMembershipWatcher();
+  disconnectOnlineWorld();
+  clearSelection(false);
+  if (modal?.open) modal.close();
+  closeProfileScreen({ force: true });
+  state = null;
+  setSetupLoading(false);
+  if (setupScreen) setupScreen.classList.add("visible");
+  crownlandsAudio?.setMusicState("main_menu");
+  onlineLastError = "The game connection changed. Enter your kingdom again to reconnect.";
+  updateOnlineUi();
+  if (onlineStatusDetail) onlineStatusDetail.textContent = onlineLastError;
+  showToast(onlineLastError);
+  return false;
 }
 
 function startGameServerHeartbeat() {
@@ -19535,7 +19578,11 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
 
 function startLoginPresentationDailyRefresh(generation = loginPresentationGeneration) {
   const rewardsApi = getOnlineApi();
-  Promise.resolve(rewardsApi?.getSeasonRewardStatus?.({})).catch(() => null).then(status => {
+  withTimeout(
+    Promise.resolve().then(() => rewardsApi?.getSeasonRewardStatus?.({})),
+    LOGIN_SEASON_STATUS_TIMEOUT_MS,
+    "Season rewards are taking too long to load. They remain available from Leaderboards."
+  ).catch(() => null).then(status => {
     const sequence = loginPresentationSequence;
     if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return;
     sequence.seasonStatus = status;

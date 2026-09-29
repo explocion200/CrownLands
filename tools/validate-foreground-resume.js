@@ -171,6 +171,8 @@ async function validateAsyncBehavior() {
   const appliedMemberships = [];
   let heartbeatCalls = 0;
   const heartbeatContext = {
+    getOnlineSessionRequestScope: () => "heartbeat-test-session",
+    isRealmAdmissionCompatibilityError: () => false,
     GAME_SERVER_ID: "crown-marches",
     GAME_SERVER_HEARTBEAT_TIMEOUT_MS: 10,
     gameServerHeartbeatGeneration: 0,
@@ -217,6 +219,8 @@ async function validateAsyncBehavior() {
   const lifecycleAppliedMemberships = [];
   let lifecycleHeartbeatCalls = 0;
   const heartbeatLifecycleContext = {
+    getOnlineSessionRequestScope: () => "heartbeat-test-session",
+    isRealmAdmissionCompatibilityError: () => false,
     GAME_SERVER_ID: "crown-marches",
     GAME_SERVER_HEARTBEAT_TIMEOUT_MS: 1000,
     gameServerHeartbeatGeneration: 0,
