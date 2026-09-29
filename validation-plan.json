@@ -1,88 +1,38 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "04de9e346b69b63682b845ded4d1f0c19ab83cc3",
+  "baseCommit": "54e9e9d5c0cc3ad2e8263f4a7bbd61c3930c3f5e",
   "coverage": [
     {
-      "paths": [
-        "functions/season-rewards.js",
-        "functions/index.js",
-        "firestore.rules",
-        "firestore.indexes.json"
-      ],
+      "paths": ["game.js", "rallies-activity-ui.js", "clan-ledger-ui.css"],
       "tests": [
-        "tools/test-season-rewards.js",
-        "tools/test-pvp-leaderboard.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-clans.js",
-        "tools/validate-core-expansion-reset.js",
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-season-rewards.js",
-        "functions/test/emulator-pvp-leaderboard.js",
-        "functions/test/emulator-core-expansion-state.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-inactive-city-level-reset.js"
+        "tools/validate-clan-rallies.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-troop-selection-browser.js"
       ],
-      "reason": "Verify reward boundaries, positive scores, closing membership, stable ID ties, stacking, frozen policy and archives, original-season Glory drain, racing capture/finalization, interrupted publication, exactly-once claims, full inventory, late claims, permanent honors and private records. The shared transaction fence touches starting-city admission, clan writes and inactivity deletion: retain 81-map readiness and placement, reset persistence, clan authority and inactivity behavior. Cover original PvP contribution rules and gear normalization."
+      "reason": "Verify contribution controls independently of rally management for members, officers and Clan Leaders on both cards, preserving creator, full-rally, committed, launched and pending states. Exercise last-owned-city selection without fallback for missing, lost, empty or unreachable cities, source-name escaping, actual button clicks and confirmed join payloads. Cover the shared troop picker and creation/assembly dependencies. Inspect desktop and both landscape phone sizes. No server, callable or data rule changes; emulator suites are not required."
     },
     {
       "paths": [
-        "firebaseClient.js",
-        "game.js",
-        "season-rewards-ui.js",
-        "season-rewards-ui.css",
-        "index.html"
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
       ],
       "tests": [
-        "tools/test-season-rewards.js",
-        "tools/test-pvp-leaderboard-client.js",
-        "tools/validate-leaderboard-tabs.js",
-        "tools/validate-leaderboard-podium-browser.js",
-        "tools/validate-season-rewards-browser.js",
-        "tools/validate-public-player-profile-browser.js",
-        "tools/validate-login-realm-sequence.js",
-        "functions/test/emulator-season-rewards.js"
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
       ],
-      "reason": "Check authoritative queries/callables, score/ID ordering, season-first login after map readiness, Claim/Later sequencing, pending/retry, single claims, gear refresh, history and server-time expiry. Exercise desktop and two landscape sizes, player/clan honors, saved banners, personal-frame tie preference, all titles, stale responses and queued close events while retaining existing podium and profile navigation behavior."
+      "reason": "Run the added role, source and browser regressions. Update the existing Tower target-validation harness with its missing troop-selection dependency so its original invalid-target assertions continue to execute. Browser fixtures use isolated mock services and verify no join request occurs before confirmation."
     },
     {
-      "paths": [
-        "functions/release-config.json",
-        "release-config.js",
-        "tools/build-production-client.js",
-        "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-reset-release.js",
-        "tools/test-season-rewards.js",
-        "tools/validate-production-artifact.js",
-        "functions/test/emulator-reset-gate.js"
-      ],
-      "reason": "Coordinate client/server release contract, callable manifest and production asset allowlist. Mandatory build validation checks generated output; reset-gate covers compatible clients and preserved progression. No deployment is performed."
-    },
-    {
-      "paths": [
-        "tools/test-season-rewards.js",
-        "tools/validate-season-rewards-browser.js",
-        "functions/test/emulator-season-rewards.js",
-        "tools/validate-core-expansion-reset.js",
-        "tools/validate-login-realm-sequence.js"
-      ],
-      "tests": [
-        "tools/test-season-rewards.js",
-        "tools/validate-season-rewards-browser.js",
-        "functions/test/emulator-season-rewards.js",
-        "tools/validate-core-expansion-reset.js",
-        "tools/validate-login-realm-sequence.js"
-      ],
-      "reason": "Execute all added and modified regressions: missing capture evidence, interrupted closing, racing mutations and claims, full inventory, later-year claims, private raw records, pending login order and capture failure preserving the previous pointer. Browser fixtures exercise the actual game and reward panels at desktop and landscape dimensions."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Record the user-approved September tiers, eligibility, closing, archives, permanent medals, temporary honors and claims. Preserve historical notes, mark the new policy authoritative and distinguish implementation from deployment."
+      "reason": "Record the requested Clan join entry point and remembered-city behavior while retaining confirmed membership, contribution and troop confirmation rules; mark implementation pending merge and deployment."
     }
   ]
 }

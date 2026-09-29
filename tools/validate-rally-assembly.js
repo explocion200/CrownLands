@@ -28,7 +28,7 @@ async function main() {
     normalizeRegionId: value => value, isClanAllyCity: city => city.clanId === "clan",
     getHoldingTowerTargetType: target => target.kind === "holdingTower" ? "tower" : "city",
     isRallyObjectiveTarget: target => !!target && ["holdingTower", "stronghold", "citadel"].includes(target.kind),
-    usesServerArmyAuthority: () => true, getOnlineApi: () => ({ isSignedIn: () => true, createClanRally() {} }),
+    usesServerArmyAuthority: () => true, getOnlineApi: () => ({ isSignedIn: () => true, createClanRally() {}, joinClanRally() {} }),
     estimateArmyRouteLength: () => 10, getRouteHeuristicDistance: () => 10,
     rejectGameAction: value => messages.push(value), showToast: value => messages.push(value),
     clamp: (value, min, max) => Math.min(max, Math.max(min, value)),
@@ -48,6 +48,7 @@ async function main() {
     extract("findLastSelectedAttackSource", "findPreferredAttackSource") +
     extract("canCurrentPlayerCreateClanRally", "beginCreateClanRally") +
     extract("beginCreateClanRally", "beginJoinClanRallyContribution") +
+    extract("beginJoinClanRallyContribution", "attackForeignCity") +
     extract("showHoldingTowerOrderComposer", "renderHoldingTowerMapOrder"), context);
   for (const kind of ["holdingTower", "stronghold", "citadel"]) {
     target.kind = kind;
@@ -71,6 +72,27 @@ async function main() {
   target.owner = "neutral"; target.allowed = false;
   context.showHoldingTowerOrderComposer(target, "rally-attack");
   assert.equal(opened.length, 4);
+  const joining = { id: "join", status: "forming", assemblyCityId: target.id, assemblyRegionId: target.regionId, leaderUid: "ally" };
+  context.beginJoinClanRallyContribution(joining);
+  assert.equal(opened.length, 5);
+  assert.equal(opened.at(-1)[0], city);
+  assert.equal(opened.at(-1)[2].orderKind, "rally_join");
+  assert.equal(context.selectedTroopAmount, 300);
+  for (const change of [
+    () => { city.troops = 0; },
+    () => { city.troops = 600; city.owner = "enemy"; },
+    () => { city.owner = "player"; context.lastSelectedOwnedCityId = "missing"; },
+    () => { context.lastSelectedOwnedCityId = null; },
+    () => { context.lastSelectedOwnedCityId = city.id; context.getRouteHeuristicDistance = () => Infinity; },
+  ]) {
+    change(); context.beginJoinClanRallyContribution(joining);
+    assert.equal(opened.length, 5, "Join must never substitute a different city for an invalid remembered source");
+    assert.match(messages.at(-1), /Select an owned city.*Join Rally/);
+  }
+  context.getRouteHeuristicDistance = () => 10;
+  joining.status = "launched";
+  context.beginJoinClanRallyContribution(joining);
+  assert.equal(opened.length, 5, "A launched rally cannot accept troops");
   let previewRequest;
   context.supportsAuthoritativeArmyRoutes = () => true;
   context.getOnlineApi = () => ({ previewArmyRoute: async request => { previewRequest = request; return { points: [city, target] }; } });

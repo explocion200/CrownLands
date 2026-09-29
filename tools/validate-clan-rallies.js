@@ -346,6 +346,7 @@ async function validateRallyTargets() {
     activeRallyOrderContext: { mode: "create" },
     activeTroopOrderKind: "rally_create",
     selectedTroopAmount: 1,
+    getTroopOrderSelection: () => ({ amount: 1, error: "" }),
     isRallyTroopOrderKind: () => true,
     rejectGameAction: message => rejected.push(message),
     createOnlineArmyId: unexpectedSubmission,

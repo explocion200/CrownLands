@@ -25,6 +25,7 @@ const context = vm.createContext({
   runClanSocialAction:(...args)=>actions.push(args),CLAN_RALLY_MIN_PARTICIPANTS:2,CLAN_RALLY_MAX_PARTICIPANTS:20,
   rallyActionRequests:new Set(),getRenderableArmies:()=>[],getOnlineArmyResolutionId:army=>army.id,isRecallHornEligible:()=>true,
   getRegionLabel:()=>"The Crown Marches",formatDuration:String,
+  getLastSelectedOwnedAttackCity:()=>({name:'<Alderwatch>',troops:600}),
 });
 for(const [name,next] of [
   ["isHoldingTowerTarget","getTroopOrderSourceById"],
@@ -72,6 +73,14 @@ async function main() {
   context.state.clanRole="member";rally.leaderUid="other";rally.participants=rally.participants.filter(p=>p.uid!=="self");
   assert.match(context.renderClanRallyCard(rally),/data-rally-action="join"/);
   assert.doesNotMatch(context.renderClanRallyCard(rally),/data-rally-action="launch"/);
+  context.state.clanRole="leader";
+  const leaderCard=context.renderClanRallyCard(rally);
+  for(const action of ["join","launch","cancel"]) assert.match(leaderCard,new RegExp(`data-rally-action="${action}"`));
+  assert.match(leaderCard,/From &lt;Alderwatch>. Choose how many troops to send/);
+  rally.participants.push({uid:"self",status:"inbound",troops:100});
+  const contributedCard=context.renderClanRallyCard(rally);
+  assert.doesNotMatch(contributedCard,/data-rally-action="join"/);
+  for(const action of ["withdraw","launch","cancel"]) assert.match(contributedCard,new RegExp(`data-rally-action="${action}"`));
   await click({...button("send-gift"),disabled:true});assert(!actions.some(a=>a[0]==="send-gift"));
   context.confirmClanLedgerAction=async()=>false;
   await click(button("kick",{memberId:"ally"}));assert(!actions.some(a=>a[0]==="kick"));
