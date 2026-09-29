@@ -35,6 +35,15 @@
         "functions/test/emulator-coordinated-release.js"
       ],
       "reason": "Verify full-suite partition completeness and uniqueness, reset ordering, invalid shard rejection, unchanged targeted selection, full/targeted phase dispatch, CI progress and error propagation, local log retention, all-worker required gates and existing push protections. Selected emulator checks validate the runner and updated dependency together. An explicit manual Full run on this branch will exercise all four CI groups and every full static check before declaring the repair ready; gameplay and production data are unchanged."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "The full gate exposed stale per-file source caps after already merged PRs #391 and #393-397: game.js is 7899 bytes over its prior cap (9898 bytes growth, 2442 gzip bytes), and Clan CSS is 31 bytes over. Bound those existing baselines by 8 KiB and 1 KiB while preserving the independent aggregate installation, image, request and performance limits. Every affected production build now runs this guard before merge; this branch adds no client payload."
     }
   ]
 }

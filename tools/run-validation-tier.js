@@ -111,6 +111,7 @@ function runValidationTier(repoRoot, options = {}) {
         runNode("tools/generate-release-manifest.js");
         runNode("tools/build-production-client.js");
         runNode("tools/validate-production-artifact.js");
+        runNode("tools/validate-asset-performance-budgets.js");
       }
       for (const test of classification.staticTests) {
         const args = testArguments(test);

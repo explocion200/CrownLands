@@ -73,6 +73,7 @@ try {
   assert.ok(calls.some(args => args.some(arg => arg.endsWith("validate-widget.js"))));
   assert.ok(!calls.some(args => args.some(arg => /run-emulator-gates|gate:static|test:emulators/.test(arg))));
   assert.ok(calls.some(args => args.some(arg => arg.endsWith("build-production-client.js"))));
+  assert.ok(calls.some(args => args.some(arg => arg.endsWith("validate-asset-performance-budgets.js"))), "Every affected build must enforce source/asset budgets before merge.");
   calls.length = 0;
   runValidationTier(root, { ...options, phase: "emulators", execute });
   assert.equal(calls.length, 2, "Only manifest generation and the selected emulator runner should run.");
@@ -126,12 +127,12 @@ try {
   }
   const liveSuccess = outputCheck("true", false);
   assert.equal(liveSuccess.status, 0);
-  assert.match(liveSuccess.stdout, /live progress/);
+  assert.match(liveSuccess.stdout, /^live progress\r?$/m);
   assert.match(liveSuccess.stderr, /diagnostic detail/);
   assert.equal(fs.existsSync(path.join(outputRoot, "logs")), false, "GitHub output must not be stranded in a temporary runner file.");
   const liveFailure = outputCheck("true", true);
   assert.notEqual(liveFailure.status, 0);
-  assert.match(liveFailure.stdout, /live progress/);
+  assert.match(liveFailure.stdout, /^live progress\r?$/m);
   assert.match(liveFailure.stderr, /diagnostic detail[\s\S]*failed with status 7/);
   const localSuccess = outputCheck("false", false);
   assert.equal(localSuccess.status, 0);

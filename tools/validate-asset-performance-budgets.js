@@ -175,7 +175,11 @@ const entrypointBudgets = {
   // Main 5fa1b5e already contains 1,930,758 bytes, 4,614 over this cap.
   // Bound the existing release at a 5 KiB increment; this login update adds no JS.
   // Podium/Glory wiring adds ~5 KiB; the previous base was already 444 bytes over.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7) * 1024,
+  // Merged PRs #391 and #393-397 add 9,898 normalized bytes over d058d2d3
+  // (2,442 gzip bytes): flags/rewards, Rally joining, recovery and map reconciliation.
+  // Existing headroom absorbs 1,999 bytes; bound the remaining 7,899 at 8 KiB.
+  // No runtime code changes here, and the aggregate offline-shell cap is unchanged.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
@@ -183,7 +187,8 @@ const entrypointBudgets = {
   "stronghold-details-ui.css": 30 * 1024,
   "modal-ui.js": 4 * 1024,
   "skills-ledger-ui.css": 37 * 1024,
-  "clan-ledger-ui.css": 84 * 1024,
+  // Current main's Clan controls total 86,047 bytes, 31 over the previous cap.
+  "clan-ledger-ui.css": 85 * 1024,
   "settings-ledger-ui.css": 32 * 1024,
   "common-gear-ui.js": (72 + 28) * 1024,
   "treasury-gear-ui.js": 16 * 1024,

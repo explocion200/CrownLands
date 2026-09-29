@@ -73,7 +73,7 @@ Supported entry points are `tools/test-*.js`, `tools/validate-*.js`, `tools/audi
 
 | Stage | What runs |
 | --- | --- |
-| Local preparation | Syntax checks on changed JavaScript, lint on changed files supported by the existing lint configuration, selected validators, dependency audit when manifests/locks change, and production build/artifact checks when runtime or selected browser/artifact tests need them |
+| Local preparation | Syntax checks on changed JavaScript, lint on changed files supported by the existing lint configuration, selected validators, dependency audit when manifests/locks change, and production build/artifact and asset-budget checks when runtime or selected browser/artifact tests need them |
 | GitHub Static validation | The same selected static checks, independently on the PR commit |
 | GitHub Multiplayer emulator validation | Only selected emulator files, each with the existing isolated Firebase lifecycle; an explicit successful explanation when no emulator coverage applies |
 | GitHub Validate | Confirms classification and both required validation jobs succeeded |
