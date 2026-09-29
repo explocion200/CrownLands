@@ -3,7 +3,7 @@
   "baseCommit": "54e9e9d5c0cc3ad2e8263f4a7bbd61c3930c3f5e",
   "coverage": [
     {
-      "paths": ["game.js", "rallies-activity-ui.js", "clan-ledger-ui.css"],
+      "paths": ["game.js", "rallies-activity-ui.js", "clan-ledger-ui.css", "rallies-activity-ui.css"],
       "tests": [
         "tools/validate-clan-rallies.js",
         "tools/validate-clan-war-room.js",

@@ -217,6 +217,11 @@ async function main() {
         assert(await evaluate(`Array.from(${root}.querySelectorAll('.clan-rally-card footer button, .rally-actions button')).every(button=>{
           const r=button.getBoundingClientRect();return r.height>=${minimumMeasuredTargetHeight}&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;
         })`), "Join, Launch and Cancel must stay visible at every viewport");
+        if (entry === "activity") assert(await evaluate(`(() => {
+          const buttons=Array.from(modalBody.querySelectorAll('.rally-actions button'));
+          return buttons.every(button=>Math.abs(button.getBoundingClientRect().top-buttons[0].getBoundingClientRect().top)<1)
+            && modalBody.querySelector('.rally-scroll').clientHeight>=50;
+        })()`), "Leader controls must share a row and leave room for rally details");
         await screenshot(`join-${entry}-${width}`);
         const before = await evaluate('joinRequests.length');
         await click(`${root}.querySelector('[data-rally-action=join]')`);
