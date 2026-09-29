@@ -157,7 +157,87 @@ async function main() {
       // A failed/stale reservation must never grant extra sendable troops.
       await evaluate('beginSendMode(assemblyCity.id)');
       assert.equal(await evaluate('getTroopOrderSourceById(selectedSourceId).troops'), 600);
-      console.log(`Rally source, assembly counts, live arrivals/launch and War Room map navigation passed at ${width}x${height}.`);
+      await evaluate(`(() => {
+        if(modal.open)modal.close();clearSelection(false);
+        window.joinAssembly=state.cities.find(city=>city.owner!=='player' && getCityRegionId(city)===getCityRegionId(assemblyCity));
+        joinAssembly.name='Ally Assembly';joinAssembly.ownerUid='rally-creator';joinAssembly.clanId=state.clanId;
+        window.joinRally={...assemblyRally,id:'join-rally',leaderUid:'rally-creator',leaderName:'Rally Creator',
+          assemblyCityId:joinAssembly.id,assemblyCityName:joinAssembly.name,assemblyRegionId:getCityRegionId(joinAssembly),
+          assemblyX:joinAssembly.x,assemblyY:joinAssembly.y,
+          participants:[{uid:'rally-creator',ownerName:'Rally Creator',troops:300,status:'assembled',role:'leader'}]};
+        onlineClanRallies=[joinRally];window.joinRequests=[];
+        const api=getOnlineApi();getOnlineApi=()=>({...api,joinClanRally:async request=>{
+          joinRequests.push(request);
+          return {ok:true,rally:{...joinRally,participants:[...joinRally.participants,
+            {uid:getCurrentOnlineUid(),ownerName:state.playerName,troops:request.army.troops,status:'inbound'}]}};
+        }});
+      })()`);
+      // The same membership and authority rules must hold on both entry points.
+      assert(await evaluate(`(() => {
+        for(const activity of [false,true]) {
+          const has=action=>renderClanRallyCard(joinRally,activity).includes('data-rally-action="'+action+'"');
+          for(const role of ['member','officer','leader']) {
+            state.clanRole=role;
+            if(!has('join') || has('launch')!==(role==='leader') || has('cancel')!==(role==='leader'))return false;
+          }
+          for(const status of ['inbound','assembled']) {
+            joinRally.participants.push({uid:getCurrentOnlineUid(),troops:100,status});
+            if(has('join') || !has('withdraw') || !has('launch') || !has('cancel'))return false;
+            joinRally.participants.pop();
+          }
+          const creator=joinRally.leaderUid;joinRally.leaderUid=getCurrentOnlineUid();
+          if(has('join') || has('withdraw') || !has('launch') || !has('cancel'))return false;
+          joinRally.leaderUid=creator;
+          const saved=joinRally.participants;
+          joinRally.participants=Array.from({length:CLAN_RALLY_MAX_PARTICIPANTS},(_,i)=>({uid:'other-'+i,status:'assembled',troops:1}));
+          if(has('join'))return false;
+          joinRally.participants=saved;joinRally.status='launched';
+          if(has('join') || has('launch'))return false;
+          joinRally.status='forming';rallyActionRequests.add('join:'+joinRally.id);
+          const root=document.createElement('div');root.innerHTML=renderClanRallyCard(joinRally,activity);
+          if(!root.querySelector('[data-rally-action=join]').disabled)return false;
+          rallyActionRequests.clear();
+        }
+        return true;
+      })()`), "Joining must be independent of leadership, while existing contribution and capacity limits remain enforced");
+      for (const entry of ["clan", "activity"]) {
+        await evaluate(`(() => {
+          if(modal.open)modal.close();clearSelection(false);onlineClanRallies=[joinRally];
+          selectCity(assemblyCity.id);selectCity(joinAssembly.id);
+          state.clanRole='leader';
+          if(${JSON.stringify(entry)}==='clan') {
+            activeProfileTab='clan';clanView.hidden=false;profileScreen.classList.add('open','clan-active');
+            profileScreen.setAttribute('aria-hidden','false');updateProfileTabHeader();renderClanView();
+            setClanMobileSection('warroom');
+          } else {closeProfileScreen({force:true});activeOperationsTab='rallies';showOutgoingAttacksModal();}
+        })()`);
+        const root = entry === "clan" ? "clanContent" : "modalBody";
+        await ready(`${root}.querySelector('[data-rally-action=join]')?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
+        assert.match(await evaluate(`${root}.textContent`), /From Alderwatch. Choose how many troops to send/);
+        assert(await evaluate(`Array.from(${root}.querySelectorAll('.clan-rally-card footer button, .rally-actions button')).every(button=>{
+          const r=button.getBoundingClientRect();return r.height>=${minimumMeasuredTargetHeight}&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;
+        })`), "Join, Launch and Cancel must stay visible at every viewport");
+        if (entry === "activity") assert(await evaluate(`(() => {
+          const buttons=Array.from(modalBody.querySelectorAll('.rally-actions button'));
+          return buttons.every(button=>Math.abs(button.getBoundingClientRect().top-buttons[0].getBoundingClientRect().top)<1)
+            && modalBody.querySelector('.rally-scroll').clientHeight>=50;
+        })()`), "Leader controls must share a row and leave room for rally details");
+        await screenshot(`join-${entry}-${width}`);
+        const before = await evaluate('joinRequests.length');
+        await click(`${root}.querySelector('[data-rally-action=join]')`);
+        await ready('modal.open && !!modalBody.querySelector("[data-order-kind=rally_join]") && !modalBody.querySelector("#troopSliderConfirm").disabled');
+        assert.deepEqual(await evaluate('({source:selectedSourceId,max:Number(modalBody.querySelector("#rallyTroopNumber").max),requests:joinRequests.length})'),
+          {source:fixture.cityId,max:600,requests:before}, "Join chooses the remembered city but waits for troop confirmation");
+        assert(await evaluate('(() => {const r=modal.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1&&modalBody.scrollWidth<=modalBody.clientWidth+1;})()'));
+        await screenshot(`join-picker-${entry}-${width}`);
+        await evaluate('(() => {const input=modalBody.querySelector("#rallyTroopNumber");input.value="137";input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));})()');
+        await ready('!modalBody.querySelector("#troopSliderConfirm").disabled');
+        await click('modalBody.querySelector("#troopSliderConfirm")');
+        await ready(`joinRequests.length === ${before + 1} && !rallyActionRequests.has('join:'+joinRally.id)`);
+        assert.deepEqual(await evaluate('({source:joinRequests.at(-1).army.fromId,target:joinRequests.at(-1).army.toId,troops:joinRequests.at(-1).army.troops,rally:joinRequests.at(-1).rallyId})'),
+          {source:fixture.cityId,target:await evaluate('joinAssembly.id'),troops:137,rally:'join-rally'});
+      }
+      console.log(`Rally creation, assembly, leadership/join controls and confirmed joins from both panels passed at ${width}x${height}.`);
     }
     assert.deepEqual(errors, []);
   } finally {

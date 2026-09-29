@@ -324,8 +324,9 @@
 #profileScreen #clanContent .clan-rally-card li{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important;padding:8px 0 !important;border:0 !important;border-bottom:1px solid #c8b996 !important;background:none !important}
 #profileScreen #clanContent .clan-rally-card li small{display:block !important}
 #profileScreen #clanContent .clan-rally-card li b{font:18px Georgia,serif !important;color:#4b583c !important}
-#profileScreen #clanContent .clan-rally-card footer{flex:none !important;padding:10px 15px !important;border-top:1px solid #b8a684 !important;display:flex !important;gap:8px !important;background:none !important}
+#profileScreen #clanContent .clan-rally-card footer{flex:none !important;padding:10px 15px !important;border-top:1px solid #b8a684 !important;display:flex !important;flex-wrap:wrap !important;gap:8px !important;background:none !important}
 #profileScreen #clanContent .clan-rally-card footer button{flex:1 !important}
+#profileScreen #clanContent .clan-rally-join-hint{flex-basis:100% !important;margin:0 !important;font-size:11px !important;line-height:1.3 !important;overflow-wrap:anywhere !important;color:#716247 !important}
 #profileScreen #clanContent .clan-empty{display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;gap:12px !important;padding:24px !important;margin:auto !important;border:0 !important;background:none !important;overflow:auto !important}
 #profileScreen #clanContent .clan-empty img{width:80px !important;height:80px !important}
 #profileScreen #clanContent .clan-reward-body{flex:1 !important}

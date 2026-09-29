@@ -128,21 +128,23 @@ function renderRalliesActivityCard(rally, context) {
   const actionBusy = busy || recallBusy;
   const command = (action, label, style = "", disabled = false) => `<button class="rally-command ${style}" data-rally-action="${action}" data-rally-id="${escapeHtml(rally.id)}" ${action === "recall" ? `data-rally-army-id="${escapeHtml(rally.armyId || "")}"` : ""} type="button" ${disabled || actionBusy ? "disabled" : ""}>${label}</button>`;
   let note = "", controls = "";
-  if (forming && canManageFormingRally) {
-    note = allReady ? "<strong>All contributions are ready.</strong> Launch when you choose." : activeParticipants.length < minimumParticipants ? `At least ${minimumParticipants} rulers must be ready to launch.` : `${activeParticipants.length - ready} ${activeParticipants.length - ready === 1 ? "contribution is" : "contributions are"} still inbound. Every army must arrive before launch.`;
-    controls = command("cancel", "Cancel", "danger") + command("launch", "Launch", "primary", !allReady);
-  } else if (forming && ownParticipant) {
+  if (forming && ownParticipant && !leader) {
     note = "Your contribution is committed. The creator or Clan Leader gives the launch order.";
     controls = command("withdraw", "Withdraw", "danger");
-  } else if (forming && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
-    note = "Join with troops from one of your cities.";
+  } else if (forming && !ownParticipant && !leader && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
+    note = escapeHtml(getClanRallyJoinHint());
     controls = command("join", "Join Rally", "primary");
-  } else if (forming) note = `This rally is full. All ${CLAN_RALLY_MAX_PARTICIPANTS} participant places are occupied.`;
+  } else if (forming && activeParticipants.length >= CLAN_RALLY_MAX_PARTICIPANTS) note = `This rally is full. All ${CLAN_RALLY_MAX_PARTICIPANTS} participant places are occupied.`;
   else if (launched && leader) {
     note = !horns ? "A Recall Horn is needed to recall this army." : canRecall ? "Recall the combined army for 1 Recall Horn." : "This rally cannot be recalled at its current march state.";
     controls = command("recall", `${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}Recall · 1 Horn`, "danger", !canRecall || horns < 1);
   } else if (launched) note = "The combined army is marching. Only its creator may recall it.";
   else note = "The rally is returning. Contributions remain assigned to their rulers.";
+  if (forming && canManageFormingRally) {
+    const launchNote = allReady ? "<strong>All contributions are ready.</strong> Launch when you choose." : activeParticipants.length < minimumParticipants ? `At least ${minimumParticipants} rulers must be ready to launch.` : `${activeParticipants.length - ready} ${activeParticipants.length - ready === 1 ? "contribution is" : "contributions are"} still inbound. Every army must arrive before launch.`;
+    note = leader ? launchNote : `${note} ${launchNote}`;
+    controls += command("cancel", "Cancel", "danger") + command("launch", "Launch", "primary", !allReady);
+  }
   if (actionBusy) note = recallBusy ? "Sounding the Recall Horn…" : "Sending your order…";
   return `<section class="rally-detail" data-activity-rally-detail="${escapeHtml(rally.id)}" aria-labelledby="activityRallyTitle">
     <header class="rally-title"><div class="target-seal"><img src="${identity.art}" alt=""></div><div class="target-heading"><h3 id="activityRallyTitle">${escapeHtml(rally.targetName || rally.targetId || "Objective")}</h3><p>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${identity.type}</p></div><span class="status-pill ${identity.state}">${identity.label}</span></header>

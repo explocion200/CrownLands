@@ -26708,6 +26708,13 @@ function getClanRallyParticipantStatusLabel(rally, participant, nowMs = Date.now
   return "Settled";
 }
 
+function getClanRallyJoinHint() {
+  const source = getLastSelectedOwnedAttackCity();
+  return source && Math.floor(Number(source.troops) || 0) > 0
+    ? `From ${source.name}. Choose how many troops to send.`
+    : "Select an owned city with available troops on the map, then return to join.";
+}
+
 function renderClanRallyCard(rally, activityLedger = false) {
   const currentUid = getCurrentOnlineUid();
   const participants = Array.isArray(rally?.participants) ? rally.participants : [];
@@ -26728,7 +26735,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
   const forming = rally.status === "forming";
   const launched = rally.status === "launched";
   const recalling = rally.status === "recalling";
-  const busy = rallyActionRequests.has(rally.id);
+  const busy = rallyActionRequests.has(rally.id) || rallyActionRequests.has(`join:${rally.id}`);
   const launchArmy = launched
     ? getRenderableArmies().find(army => getOnlineArmyResolutionId(army) === String(rally.armyId || ""))
     : null;
@@ -26746,14 +26753,17 @@ function renderClanRallyCard(rally, activityLedger = false) {
   const minimumParticipants = getClanRallyMinimumParticipants(rally);
   const allReady = activeParticipants.length >= minimumParticipants
     && activeParticipants.every(participant => participant.status === "assembled");
-  if (forming && canManageFormingRally) {
-    controls = `
-      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy || !allReady ? "disabled" : ""}>${allReady ? "Launch" : `Waiting for ${minimumParticipants}+ Ready`}</button>
-      <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
-  } else if (forming && ownParticipant) {
-    controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
-  } else if (forming && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
+  const canJoin = forming && !ownParticipant && !leader && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS;
+  if (canJoin) {
     controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
+  } else if (forming && ownParticipant && !leader) {
+    controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
+  }
+  // Managing another ruler's rally does not replace the Clan Leader's contribution controls.
+  if (forming && canManageFormingRally) {
+    controls += `
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" title="${allReady ? "Launch Rally" : `Waiting for ${minimumParticipants}+ Ready; every contribution must arrive`}" ${busy || !allReady ? "disabled" : ""}>Launch</button>
+      <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
   } else if (launched && leader) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
   }
@@ -26770,7 +26780,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
       </div>
       <ul>${participantRows}</ul></div>
-      ${controls ? `<footer>${controls}</footer>` : ""}
+      ${controls ? `<footer>${controls}${canJoin ? `<p class="clan-rally-join-hint">${escapeHtml(getClanRallyJoinHint())}</p>` : ""}</footer>` : ""}
     </article>`;
 }
 
@@ -30432,9 +30442,9 @@ function beginJoinClanRallyContribution(rally) {
     ownerUid: rally.leaderUid,
     kind: knownAssembly?.kind || "city",
   };
-  const sourceOption = findPreferredAttackSource(assembly);
+  const sourceOption = findLastSelectedAttackSource(assembly);
   if (!sourceOption) {
-    rejectGameAction("No owned city or Stronghold with troops can reach the rally assembly.");
+    rejectGameAction("Select an owned city with available troops that can reach the rally assembly, then return and choose Join Rally.");
     return;
   }
   activeRallyOrderContext = {
