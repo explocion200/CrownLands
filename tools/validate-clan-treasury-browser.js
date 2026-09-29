@@ -15,7 +15,8 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const ev=async expression=>{const r=await client.send("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
   const wait=async expression=>{for(let i=0;i<700;i++){if(await ev(expression))return;await delay(80);}throw Error("Timeout: "+expression+JSON.stringify(errors));};
   const screenshot=async name=>fs.writeFileSync(path.join(artifacts,name+".png"),Buffer.from((await client.send("Page.captureScreenshot",{format:"png"})).data,"base64"));
-  for(const [width,height]of[[1440,900],[844,390],[568,320]]){
+  const navigationVisible=()=>ev(`(()=>{const buttons=[...document.querySelectorAll('.clan-section-nav button,.rewards-tabs button')];return buttons.length===7&&buttons.every(b=>{const r=b.getBoundingClientRect();return r.height>=44&&r.top>=0&&r.bottom<=innerHeight&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});})()`);
+  for(const [width,height]of[[1440,900],[1280,591],[844,390],[568,320]]){
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:height<600});
    await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&section=rewards&reward=treasury"});
    await wait('document.documentElement?.dataset.crownlandsBenchmarkReady==="true"');
@@ -31,7 +32,12 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    await ev('document.fonts.ready');await delay(150);
    const layout=await ev(`(()=>{const p=document.querySelector('.clan-treasury-ui'),b=p.querySelector('#ct-reviewDonation'),r=b.getBoundingClientRect();return{visible:r.top>=0&&r.bottom<=innerHeight&&r.height>=44,hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overflow:[p,...p.querySelectorAll('.scroll-panel')].some(n=>n.scrollWidth>n.clientWidth+1),art:[...p.querySelectorAll('img')].every(n=>n.complete&&n.naturalWidth)}})()`);
    await screenshot(width+'-overview');assert(layout.visible&&layout.hit&&!layout.overflow&&layout.art,JSON.stringify({width,...layout}));
-   assert(await ev(`(()=>{const input=document.querySelector('#ct-amount'),slider=document.querySelector('#ct-amountSlider');return[input,slider].every(n=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});})()`), 'Amount input and slider must be visible before scrolling.');
+   assert(await navigationVisible(), 'Treasury must keep all Clan and Rewards tabs visible and clickable.');
+   assert.equal(await ev(`document.querySelector('[data-clan-reward=treasury]').getAttribute('aria-pressed')`),'true');
+   for(const id of ['ct-amount','ct-amountSlider']){
+    assert(await ev(`(()=>{const n=document.getElementById('${id}');n.scrollIntoView({block:'nearest'});const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})()`), 'Donation controls must remain reachable in the Treasury scroll panel.');
+   }
+   assert(await navigationVisible(), 'Scrolling Treasury must keep navigation visible.');
    await ev(`document.querySelector('#ct-amount').value='1234567';document.querySelector('#ct-amount').dispatchEvent(new Event('input'));document.querySelector('.donation-panel').scrollTop=9999;document.querySelector('.treasury-rules').open=true;renderClanView()`);
    assert.equal(await ev(`document.querySelector('#ct-amount').value`),'1234567');assert(await ev(`document.querySelector('.treasury-rules').open`));
    assert.equal(await ev(`document.querySelector('#ct-personalAfter').textContent`),'31,165,433');
@@ -66,11 +72,19 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    // Leaving the clan cancels any pending confirmation.
    await ev(`ctReset();document.querySelector('#ct-reviewDonation').click()`);await wait(`!!document.querySelector('.clan-treasury-confirmation[open]')`);
    await ev('resetClanTreasuryState()');await wait('!clanLedgerConfirmationOpen');assert(!await ev(`!!document.querySelector('.clan-treasury-confirmation[open]')`));
-   await ev(`ctReset();document.querySelector('#ct-back').click()`);
-   assert.equal(await ev('activeClanRewardSection'),'gifts');
-   assert(await ev(`getComputedStyle(document.querySelector('.clan-section-nav')).display!=='none'`));
-   await ev(`document.querySelector('[data-clan-reward=treasury]').click()`);
-   assert(await ev(`!!document.querySelector('.clan-treasury-ui')`));
+   await ev(`ctReset();document.querySelector('#ct-amount').value='1234567';document.querySelector('#ct-amount').dispatchEvent(new Event('input'))`);
+   for(const reward of ['gifts','conquest','treasury']){
+    await ev(`document.querySelector('.rewards-tabs [data-clan-reward=${reward}]').click()`);
+    assert.equal(await ev('activeClanRewardSection'),reward);
+    assert(await navigationVisible(), reward+' must keep shared navigation visible.');
+    assert.equal(await ev(`document.querySelector('.rewards-tabs [data-clan-reward=${reward}]').getAttribute('aria-pressed')`),'true');
+    assert.equal(await ev(`!!document.querySelector('.clan-treasury-ui')`),reward==='treasury');
+   }
+   assert.equal(await ev(`document.querySelector('#ct-amount').value`),'1234567', 'Switching reward tabs must preserve the donation draft.');
+   await ev(`document.querySelector('.clan-section-nav [data-clan-section=overview]').click()`);
+   assert(await ev(`document.querySelector('#clanOverviewPanel').classList.contains('active')`));
+   await ev(`document.querySelector('.clan-section-nav [data-clan-section=rewards]').click()`);
+   assert(await navigationVisible());
    records.push({width,height,...layout});
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({records,errors},null,2));console.log(JSON.stringify({passed:true,viewports:records.length,errors}));
