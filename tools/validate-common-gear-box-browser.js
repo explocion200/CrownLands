@@ -88,6 +88,9 @@ async function main() {
     })()`);
     for (const [width,height] of [[1440,900],[844,390]]) {
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      // Earlier fast UI scenarios also play this cue. Let it finish naturally
+      // before testing a new start; the mixer intentionally allows only one copy.
+      await wait('![...crownlandsAudio.activeEffects].some(effect=>effect.audioId==="gear_box_open") && !crownlandsAudio.pendingEffectCounts.get("gear_box_open")');
       await evaluate('__boxQA.reset();setAnimationModePreference("full");__boxQA.mode="slow";__boxQA.soundCalls=[];__boxQA.soundStarts=[]');
       await click('#cgbChestArt');
       assert.equal(await evaluate('__boxQA.soundCalls.length'),0,'No chest cue before confirmation');

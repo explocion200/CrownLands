@@ -33,6 +33,7 @@ async function main() {
       throw Error(`Timed out: ${expression}`);
     };
     const open = async params => {
+      await evaluate('if(document.documentElement)delete document.documentElement.dataset.ledgerQa');
       await client.send('Page.navigate', { url:`${address.url}/__benchmark__/?scenario=A&visualMarches=0&${params}` });
       await ready('document.documentElement?.dataset.ledgerQa === "ready"');
       await wait(180);
@@ -46,11 +47,13 @@ async function main() {
       await open('ledgerUi=players');
       await ready('document.querySelectorAll("#leaderboardRows .leaderboard-row").length === 100');
       const rankLayout = await evaluate(`(() => {
-        const list=document.querySelector('#leaderboardRows'), dialog=document.querySelector('#modal'), row=list.querySelector('.leaderboard-row'), heading=document.querySelector('#modalTitle');
-        return {scroll:list.scrollHeight>list.clientHeight,overflow:dialog.scrollWidth>dialog.clientWidth+1,paper:getComputedStyle(row).backgroundColor,ink:getComputedStyle(heading).color,power:row.querySelector('.leaderboard-power strong').textContent};
+        const list=document.querySelector('#leaderboardRows'), dialog=document.querySelector('#modal'), row=list.querySelector(':scope>.leaderboard-row:nth-child(odd)'), heading=document.querySelector('#modalTitle');
+        return {scroll:list.scrollHeight>list.clientHeight,overflow:dialog.scrollWidth>dialog.clientWidth+1,paper:getComputedStyle(row).backgroundColor,ink:getComputedStyle(heading).color,power:row.querySelector('.leaderboard-power strong').textContent,podium:list.querySelectorAll('.leaderboard-champion').length,rows:list.querySelectorAll(':scope>.leaderboard-row').length};
       })()`);
       assert(rankLayout.scroll && !rankLayout.overflow, JSON.stringify(rankLayout));
       assert.equal(rankLayout.paper, 'rgb(243, 232, 204)');
+      assert.equal(rankLayout.podium,3,'The three champions use the approved transparent podium.');
+      assert.equal(rankLayout.rows,97,'Ranks 4-100 retain the parchment row styling.');
       assert(rankLayout.power.includes(','), 'Power must not be abbreviated.');
       await evaluate(`document.querySelector('[data-find-rank]').click()`);
       await wait(700);

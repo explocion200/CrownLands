@@ -2,7 +2,9 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
+const { AsyncLocalStorage } = require("node:async_hooks");
 const timing = require("../functions/operation-timing");
+const seasonRewards = require("../functions/season-rewards");
 const source = fs.readFileSync(require.resolve("../functions/index.js"), "utf8");
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -49,7 +51,13 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.throws(() => timing.measure("routePlanning", () => {throw failure;}), error => error === failure);
 
   let passedOptions, callbacks = 0;
-  const context = {OPERATION_TIMING:timing,db:{runTransaction:async (callback, options)=>{
+  const realmContext = new AsyncLocalStorage();
+  const scopes = [];
+  const context = {OPERATION_TIMING:timing,REALM_REQUEST_CONTEXT:realmContext,RESET_GENERATION:"realm-2026-09",
+    SEASON_REWARDS:{guardTransaction:(db,tx,operation,scope)=>{
+      scopes.push({...scope});
+      return seasonRewards.guardTransaction(db,tx,operation,scope);
+    }},db:{runTransaction:async (callback, options)=>{
     passedOptions=options;await callback({attempt:1});return callback({attempt:2});
   }}};
   vm.createContext(context);
@@ -63,6 +71,11 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.equal(measured.result,2);assert.equal(callbacks,2);
   assert.equal(measured.transactionAttempts,2,"Firestore's internal retries were not counted.");
   assert.equal(passedOptions.readOnly,true,"The read-only option was dropped by transaction instrumentation.");
+  assert.deepEqual(scopes,[{resetGeneration:"realm-2026-09"},{resetGeneration:"realm-2026-09"}],"Every internal attempt must preserve the fallback season scope.");
+  scopes.length=0;
+  await realmContext.run({resetGeneration:"realm-2026-10"},()=>context.measuredTransaction(tx=>tx.attempt));
+  assert.deepEqual(scopes,[{resetGeneration:"realm-2026-10"},{resetGeneration:"realm-2026-10"}],"Request realm identity must reach the real season guard on every retry.");
+  await assert.rejects(context.measuredTransaction(()=>{throw failure;}),error=>error===failure,"Season/timing instrumentation must preserve operation failures.");
   const preview=source.slice(source.indexOf("exports.previewArmyRoute"),source.indexOf("exports.getSeasonalAchievementStatus"));
   assert.match(preview,/transaction\.getAll\(sourceRef, targetRef, playerRef, globalStatsRef\)/);
   assert.match(preview,/snapshotAnchor = await OPERATION_TIMING.measure\("documentReads", \(\) => playerRef.get\(\)\)/);

@@ -44,6 +44,27 @@
         "tools/validate-asset-performance-budgets.js"
       ],
       "reason": "The full gate exposed stale per-file source caps after already merged PRs #391 and #393-397: game.js is 7899 bytes over its prior cap (9898 bytes growth, 2442 gzip bytes), and Clan CSS is 31 bytes over. Bound those existing baselines by 8 KiB and 1 KiB while preserving the independent aggregate installation, image, request and performance limits. Every affected production build now runs this guard before merge; this branch adds no client payload."
+    },
+    {
+      "paths": [
+        "tools/validate-operation-timing.js"
+      ],
+      "tests": [
+        "tools/validate-operation-timing.js"
+      ],
+      "reason": "Repair the full-gate VM fixture for measuredTransaction's existing realm context and season guard dependencies. Use the real guard and AsyncLocalStorage; verify fallback/request realm identity across internal retries, read-only options, exact results/errors and timing privacy. No server or gameplay code changes."
+    },
+    {
+      "paths": [
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "reason": "Repair full-gate browser fixtures without changing gameplay or weakening assertions: wait for the preceding gear-box cue to finish naturally before asserting a fresh single-source sound start; select a normal leaderboard row for its parchment color and separately require three podium champions plus 97 remaining ranks. Clear prior-page readiness before navigation. Retain audio, receipt, recovery, rarity, privacy, totals, focus and responsive layout checks."
     }
   ]
 }
