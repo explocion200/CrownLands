@@ -480,7 +480,7 @@ async function main() {
     ...currentPresets,
     slots: currentPresets.slots.map(slot => slot.slot === 1 ? { ...slot, saved: true, upgrades } : slot),
   });
-  await profileRef.set({ skillPresets: makeStale({ ...zeroBuild(), swordmastery: 31 }), gold: 2_000_000, goldFloat: 2_000_000 }, { merge: true });
+  await profileRef.set({ skillPresets: makeStale({ ...zeroBuild(), swordmastery: getSkillMaxLevel("swordmastery") + 1 }), gold: 2_000_000, goldFloat: 2_000_000 }, { merge: true });
   assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-cap preset applied");
   await profileRef.set({ skillPresets: makeStale(Object.fromEntries(SKILL_ORDER.map(skill => [skill, 20]))) }, { merge: true });
   assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-budget preset applied");
@@ -505,22 +505,37 @@ async function main() {
   const efficiencySync = await callFunction("syncSkillPointSystem", user.token);
   assert(efficiencySync.skillPointSystemReset?.applied === false, "The efficiency update cleared an existing build.");
   profile = (await profileRef.get()).data() || {};
-  assert(profile.character?.skillPoints === 42 && profile.character?.xp === 17, "The update did not refund all 33 surplus points while preserving XP.");
-  assert(profile.upgrades?.shieldwallDiscipline === 20 && profile.upgrades?.marchOrders === 12 && profile.upgrades?.guildCharters === 25, "The update did not preserve skill caps and unrelated levels.");
+  assert(profile.character?.skillPoints === 24 && profile.character?.xp === 17, "The update did not refund the 15 surcharge points while preserving XP.");
+  assert(profile.upgrades?.shieldwallDiscipline === 30 && profile.upgrades?.marchOrders === 20 && profile.upgrades?.guildCharters === 25, "The update did not preserve purchased skill levels.");
   assert(profile.skillPointSystemResetAtMs === 123456 && profile.freeSkillResetCredits === 3, "The update changed reset history or stored credits.");
   assert(profile.skillPresets?.modelVersion === 6 && profile.skillPresets?.activeSlot === 1, "The saved preset model or active identity was lost.");
   const migratedSlot = profile.skillPresets.slots[0];
-  assert(migratedSlot.name === "Veteran" && migratedSlot.savedAtMs === 12345 && migratedSlot.spentPoints === 57, "Preset metadata or point totals were lost during conversion.");
-  assert(migratedSlot.upgrades.shieldwallDiscipline === 20 && migratedSlot.upgrades.marchOrders === 12, "An old saved preset still exceeds the new level limits.");
+  assert(migratedSlot.name === "Veteran" && migratedSlot.savedAtMs === 12345 && migratedSlot.spentPoints === 75, "Preset metadata or point totals were lost during conversion.");
+  assert(migratedSlot.upgrades.shieldwallDiscipline === 30 && migratedSlot.upgrades.marchOrders === 20, "An old saved preset lost purchased levels.");
   await callFunction("syncSkillPointSystem", user.token);
   const repeatedSync = (await profileRef.get()).data() || {};
-  assert(repeatedSync.character.skillPoints === 42 && JSON.stringify(repeatedSync.skillPresets) === JSON.stringify(profile.skillPresets), "Repeated synchronization changed the refund or presets.");
+  assert(repeatedSync.character.skillPoints === 24 && JSON.stringify(repeatedSync.skillPresets) === JSON.stringify(profile.skillPresets), "Repeated synchronization changed the refund or presets.");
   const convertedApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
-  assert(convertedApply.currentUser?.character?.skillPoints === 42, "A converted preset could not be applied with the refunded points intact.");
-  for (const [skill, cap] of [["shieldwallDiscipline", 20], ["marchOrders", 12]]) {
+  assert(convertedApply.currentUser?.character?.skillPoints === 24, "A converted preset could not be applied with the refunded points intact.");
+  for (const skill of SKILL_ORDER) {
+    const cap = getSkillMaxLevel(skill);
+    await setBuild(profileRef, cityRef, { level: 100, upgrades: { ...zeroBuild(), [skill]: cap - 1 }, gold: 2_000_000 });
+    const finalPoint = await callFunction("spendSkillPoint", user.token, { skillId: skill });
+    assert(finalPoint.currentUser?.upgrades?.[skill] === cap, `${skill} could not reach its new cap`);
+    assert(finalPoint.currentUser?.character?.skillPoints === 99 - cap, `${skill}'s final level did not cost one point`);
     assertRejected(await invokeFunction("spendSkillPoint", user.token, { skillId: skill }), "FAILED_PRECONDITION", `${skill} exceeded its bonus cap`);
+    assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+      requestId: `skill-adjust-over-cap-${skill}`, adjustments: [{ skillId: skill, levelDelta: 1 }],
+    }), "FAILED_PRECONDITION", `A signed ${skill} adjustment exceeded its cap`);
     assertRejected(await invokeFunction("saveSkillPreset", user.token, { slot: 1, upgrades: { ...zeroBuild(), [skill]: cap + 1 } }), "INVALID_ARGUMENT", `A new over-cap ${skill} preset was silently clamped`);
   }
+  const maximumBuild = Object.fromEntries(SKILL_ORDER.map(skill => [skill, getSkillMaxLevel(skill)]));
+  assert(getSpentSkillPoints(maximumBuild) === 256, "The maximum build must cost 256 points.");
+  await setBuild(profileRef, cityRef, { level: 257, upgrades: zeroBuild(), gold: 2_000_000 });
+  await callFunction("saveSkillPreset", user.token, { slot: 1, upgrades: maximumBuild });
+  const maximumApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  assert(maximumApply.currentUser?.character?.skillPoints === 0, "The Level 257 maximum build must spend exactly 256 points.");
+  assert(SKILL_ORDER.every(skill => maximumApply.currentUser?.upgrades?.[skill] === maximumBuild[skill]), "Maximum preset application lost a skill level.");
 
   console.log("Emulator skill presets passed: uniform point costs, preserved builds and presets, surplus refunds, stale-client rejection, replay safety, and concurrent atomic spending.");
 }

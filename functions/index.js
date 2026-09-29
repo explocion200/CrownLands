@@ -668,13 +668,13 @@ const CITY_LEVEL_STATS = {
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
 };
 const SKILL_CONFIG = {
-  swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60) },
-  shieldwallDiscipline: { percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 3), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60) },
-  stoneworks: { percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75) },
-  taxStewardship: { percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75) },
-  royalGranaries: { percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75) },
+  swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 100) },
+  shieldwallDiscipline: { percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 3), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 100) },
+  stoneworks: { percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 100) },
+  taxStewardship: { percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 100) },
+  royalGranaries: { percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 100) },
   guildCharters: { percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50) },
-  marchOrders: { percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 5), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60) },
+  marchOrders: { percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 5), maxPercent: economyNumber("skills.marchOrders.maxPercent", 100) },
   fieldMedics: { percentPerLevel: economyNumber("skills.fieldMedics.percentPerLevel", 2), maxPercent: economyNumber("skills.fieldMedics.maxPercent", 50) },
 };
 const SKILL_ORDER = [
@@ -3866,15 +3866,7 @@ function normalizeSkillPresets(value = {}) {
     const raw = rawSlots.find(entry => Math.floor(safeNumber(entry?.slot, 0)) === definition.slot) || {};
     const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
     const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
-    // Version 6 reaches the same bonus caps with fewer Shieldwall/March levels.
-    // Convert valid old allocations only; malformed or current drafts still fail validation.
-    if (saved && Math.floor(Number(source.modelVersion) || 0) < 6) {
-      for (const [skill, previousMaxLevel] of [["shieldwallDiscipline", 30], ["marchOrders", 20]]) {
-        if (upgrades[skill] <= previousMaxLevel) {
-          upgrades[skill] = Math.min(upgrades[skill], getSkillMaxLevel(skill));
-        }
-      }
-    }
+    // Reprice retained levels at one point each without changing saved allocations.
     return {
       slot: definition.slot,
       unlockLevel: definition.unlockLevel,

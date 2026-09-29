@@ -259,23 +259,23 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   "skills": {
     "swordmastery": {
       "percentPerLevel": 2,
-      "maxPercent": 60
+      "maxPercent": 100
     },
     "shieldwallDiscipline": {
       "percentPerLevel": 3,
-      "maxPercent": 60
+      "maxPercent": 100
     },
     "stoneworks": {
       "percentPerLevel": 3,
-      "maxPercent": 75
+      "maxPercent": 100
     },
     "taxStewardship": {
       "percentPerLevel": 3,
-      "maxPercent": 75
+      "maxPercent": 100
     },
     "royalGranaries": {
       "percentPerLevel": 3,
-      "maxPercent": 75
+      "maxPercent": 100
     },
     "guildCharters": {
       "percentPerLevel": 2,
@@ -283,7 +283,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     },
     "marchOrders": {
       "percentPerLevel": 5,
-      "maxPercent": 60
+      "maxPercent": 100
     },
     "fieldMedics": {
       "percentPerLevel": 2,

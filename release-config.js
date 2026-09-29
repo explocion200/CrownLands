@@ -1,9 +1,9 @@
 (function () {
   window.CROWNLANDS_REALM_CONFIG = Object.freeze({
-  "releaseId": "crownlands-2026-09-29-skill-point-efficiency-v1",
+  "releaseId": "crownlands-2026-09-29-skill-caps-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "4fe26c8a54055b0cc25664cf42625214a742832270a17fe813f2aabbdfe38183",
+  "apiContractHash": "4c7ea93d2ddf97e448576cdb6e89e16c8e8abf3653a11e3752a8f86d114ed7bc",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

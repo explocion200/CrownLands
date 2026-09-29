@@ -44,34 +44,34 @@ const stoneworksMaximum = Number(config.skills?.stoneworks?.maxPercent);
 assert.equal(Number(config.troopCombat?.defenseModelVersion), 1);
 assert.equal(attackBase, 1.25);
 assert.equal(defenseBase, 1.30);
-assert.deepEqual(config.skills.shieldwallDiscipline, { percentPerLevel: 3, maxPercent: 60 });
+assert.deepEqual(config.skills.shieldwallDiscipline, { percentPerLevel: 3, maxPercent: 100 });
 assert.equal("defensePercentPerLevel" in config.cityEconomy, false);
 
 const troops = 1_000_000;
 const attackPower = percent => Math.floor(troops * attackBase * (1 + percent / 100));
-const defensePower = percent => Math.floor(troops * defenseBase * (1 + percent / 100));
+const defensePower = percent => Math.floor(troops * defenseBase * (1 + require("../common-gear.js").capBonus("defense", percent) / 100));
 assert.equal(attackPower(0), 1_250_000);
-assert.equal(attackPower(swordMaximum), 2_000_000);
+assert.equal(attackPower(swordMaximum), 2_500_000);
 assert.equal(defensePower(0), 1_300_000);
-assert.equal(defensePower(shieldwallMaximum), 2_080_000);
-assert.equal(defensePower(shieldwallMaximum + 8), 2_184_000);
-assert.equal(defensePower(shieldwallMaximum + 10), 2_210_000);
-assert.equal(defensePower(shieldwallMaximum + 4), 2_132_000);
-assert.equal(defensePower(shieldwallMaximum + 5), 2_145_000);
+assert.equal(defensePower(shieldwallMaximum), 2_600_000);
+assert.equal(defensePower(shieldwallMaximum + 8), 2_600_000);
+assert.equal(defensePower(shieldwallMaximum + 10), 2_600_000);
+assert.equal(defensePower(shieldwallMaximum + 4), 2_600_000);
+assert.equal(defensePower(shieldwallMaximum + 5), 2_600_000);
 
 const maxAttackPerTroop = attackBase * (1 + swordMaximum / 100);
 const minimumTroops = defense => Math.floor(defense / maxAttackPerTroop) + 1;
 assert.equal(minimumTroops(defensePower(shieldwallMaximum)), 1_040_001);
-assert.equal(minimumTroops(defensePower(shieldwallMaximum + 8)), 1_092_001);
-assert.equal(minimumTroops(defensePower(shieldwallMaximum + 10)), 1_105_001);
+assert.equal(minimumTroops(defensePower(shieldwallMaximum + 8)), 1_040_001);
+assert.equal(minimumTroops(defensePower(shieldwallMaximum + 10)), 1_040_001);
 
 const wallForLevel = level => Math.floor(
   balanceCalculator.getBaseWall(level) * (1 + stoneworksMaximum / 100)
 );
 const benchmarks = new Map([
-  [50, { wall: 2_549_170, normal: 2_314_586, stronghold: 2_366_586, citadel: 2_379_586 }],
-  [100, { wall: 5_250_000, normal: 3_665_001, stronghold: 3_717_001, citadel: 3_730_001 }],
-  [150, { wall: 10_850_000, normal: 6_465_001, stronghold: 6_517_001, citadel: 6_530_001 }],
+  [50, { wall: 2_913_338, normal: 2_205_336, stronghold: 2_205_336, citadel: 2_205_336 }],
+  [100, { wall: 6_000_000, normal: 3_440_001, stronghold: 3_440_001, citadel: 3_440_001 }],
+  [150, { wall: 12_400_000, normal: 6_000_001, stronghold: 6_000_001, citadel: 6_000_001 }],
 ]);
 for (const [level, expected] of benchmarks) {
   const wall = wallForLevel(level);

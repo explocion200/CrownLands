@@ -76,26 +76,25 @@ async function main() {
       })()`);
       await evaluate("document.fonts.ready");
       await delay(350);
-      assert.equal(await evaluate("document.querySelector('[data-skill-points]').textContent"), "42");
-      assert.equal(await evaluate("document.querySelector('[data-skill-spent]').textContent"), "57");
-      assert.equal(await rowText("shieldwallDiscipline", "rank"), "Lv 20 / 20");
-      assert.equal(await rowText("marchOrders", "rank"), "Lv 12 / 12");
-      for (const skill of ["shieldwallDiscipline", "marchOrders"]) {
-        assert.equal(await rowText(skill, "percent"), "+60%");
-        assert.equal(await rowText(skill, "cost"), "MAX");
-        assert(await evaluate(`document.querySelector('[data-skill="${skill}"]').disabled`));
-      }
+      assert.equal(await evaluate("document.querySelector('[data-skill-points]').textContent"), "24");
+      assert.equal(await evaluate("document.querySelector('[data-skill-spent]').textContent"), "75");
+      assert.equal(await rowText("shieldwallDiscipline", "rank"), "Lv 30 / 34");
+      assert.equal(await rowText("marchOrders", "rank"), "Lv 20 / 20");
+      assert.equal(await rowText("shieldwallDiscipline", "percent"), "+90%");
+      assert.equal(await rowText("shieldwallDiscipline", "cost"), "1 PT");
+      assert.equal(await rowText("marchOrders", "percent"), "+100%");
+      assert.equal(await rowText("marchOrders", "cost"), "MAX");
       assert(await evaluate(`!skillsView.querySelectorAll('.skill-row').length ? false : [...skillsView.querySelectorAll('.skill-row')].every(row => row.scrollWidth <= row.clientWidth + 1)`), "Skill cards overflow horizontally.");
       fs.writeFileSync(path.join(artifacts, `${width}-converted.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
 
-      for (const [skill, afterRefund] of [["shieldwallDiscipline", "+57%"], ["marchOrders", "+55%"], ["guildCharters", "+48%"]]) {
+      for (const [skill, afterRefund] of [["shieldwallDiscipline", "+87%"], ["marchOrders", "+95%"], ["guildCharters", "+48%"]]) {
         await click(`[data-skill-decrement="${skill}"]`);
         assert.equal(await rowText(skill, "percent"), afterRefund);
         assert.equal(await rowText(skill, "cost"), "1 PT");
-        assert.equal(await evaluate("state.character.skillPoints"), 43);
+        assert.equal(await evaluate("state.character.skillPoints"), 25);
         await click(`[data-skill="${skill}"]`);
-        assert.equal(await evaluate("state.character.skillPoints"), 42);
-        assert.equal(await rowText(skill, "cost"), "MAX");
+        assert.equal(await evaluate("state.character.skillPoints"), 24);
+        assert.equal(await rowText(skill, "cost"), skill === "shieldwallDiscipline" ? "1 PT" : "MAX");
       }
       assert.equal(await evaluate("state.gold"), 2000000, "Live adjustments spent Gold.");
 
@@ -103,25 +102,63 @@ async function main() {
       assert.equal(await evaluate("document.querySelector('#skillPresetNameInput').value"), "Veteran");
       assert(!await evaluate("document.querySelector('[data-apply-skill-preset]').disabled"), "Converted preset cannot be applied.");
       await click('[data-skill-decrement="marchOrders"]');
-      assert.equal(await rowText("marchOrders", "percent"), "+55%");
-      assert.equal(await evaluate("state.upgrades.marchOrders"), 12, "Draft editing changed live movement.");
-      assert.equal(await evaluate("document.querySelector('[data-skill-points]').textContent"), "43");
+      assert.equal(await rowText("marchOrders", "percent"), "+95%");
+      assert.equal(await evaluate("state.upgrades.marchOrders"), 20, "Draft editing changed live movement.");
+      assert.equal(await evaluate("document.querySelector('[data-skill-points]').textContent"), "25");
       await click('[data-save-skill-preset="1"]');
       await wait("!skillActionInFlight");
-      assert.equal(await evaluate("state.skillPresets.slots[0].upgrades.marchOrders"), 11);
+      assert.equal(await evaluate("state.skillPresets.slots[0].upgrades.marchOrders"), 19);
       assert.equal(await evaluate("state.gold"), 2000000, "Saving a draft spent Gold.");
       await click('[data-skill-preset-slot="0"]');
 
-      // The last point must buy a high-level upgrade, then zero points disables Plus.
-      await evaluate(`state.character.level = 26; state.upgrades = { ...createDefaultSkills(), guildCharters: 24 }; renderProfileSkills()`);
-      assert.equal(await rowText("guildCharters", "cost"), "1 PT");
-      await click('[data-skill="guildCharters"]');
-      assert.equal(await evaluate("state.character.skillPoints"), 0);
-      assert.equal(await rowText("guildCharters", "cost"), "MAX");
-      assert(await evaluate("document.querySelector('[data-skill=shieldwallDiscipline]').disabled"));
-      await click('[data-skill-decrement="guildCharters"]');
-      assert.equal(await evaluate("state.character.skillPoints"), 1);
-      assert(!await evaluate("document.querySelector('[data-skill=shieldwallDiscipline]').disabled"));
+      // Exercise the final point of every skill, including the partial 99% -> 100% step.
+      const caps = { swordmastery: [50, 100, 98], shieldwallDiscipline: [34, 100, 99],
+        stoneworks: [34, 100, 99], taxStewardship: [34, 100, 99], royalGranaries: [34, 100, 99],
+        marchOrders: [20, 100, 95], guildCharters: [25, 50, 48], fieldMedics: [25, 50, 48] };
+      for (const [skill, [level, cap, before]] of Object.entries(caps)) {
+        await evaluate(`state.character.level = ${level + 1}; state.upgrades = { ...createDefaultSkills(), ${skill}: ${level - 1} }; renderProfileSkills()`);
+        assert.equal(await rowText(skill, "percent"), `+${before}%`);
+        assert.equal(await rowText(skill, "next"), `Next +${cap}%`);
+        assert.equal(await rowText(skill, "cost"), "1 PT");
+        await click(`[data-skill="${skill}"]`);
+        assert.equal(await evaluate("state.character.skillPoints"), 0);
+        assert.equal(await evaluate(`getSkillPercent('${skill}')`), cap);
+        assert.equal(await rowText(skill, "percent"), `+${cap}%`);
+        assert.equal(await rowText(skill, "rank"), `Lv ${level} / ${level}`);
+        assert.equal(await rowText(skill, "cost"), "MAX");
+        assert(await evaluate(`document.querySelector('[data-skill="${skill}"]').disabled`));
+        await click(`[data-skill-decrement="${skill}"]`);
+        assert.equal(await evaluate("state.character.skillPoints"), 1);
+        assert.equal(await rowText(skill, "percent"), `+${before}%`);
+      }
+      const maximumBuild = Object.fromEntries(Object.entries(caps).map(([skill, [level]]) => [skill, level]));
+      await evaluate(`state.character.level = 257; state.upgrades = ${JSON.stringify(maximumBuild)}; renderProfileSkills()`);
+      assert.equal(await evaluate("document.querySelector('[data-skill-spent]').textContent"), "256");
+      await evaluate("skillsView.querySelector('.profile-skill-list').scrollTop = 0");
+      fs.writeFileSync(path.join(artifacts, `${width}-maximum.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+      await client.send("Page.navigate", { url: `${address.url}/battle-economy-guide.html` });
+      await wait('document.getElementById("cityVictoryPoints")?.textContent !== "0" && document.getElementById("cityGarrisonHelp")?.textContent.includes("applied")');
+      for (const [id, maximum] of Object.entries({ taxSkillLevel: 34, granarySkillLevel: 34,
+        cityStoneworksLevel: 34, cityShieldwallLevel: 34, battleSwordLevel: 50,
+        battleShieldLevel: 34, battleStoneLevel: 34 })) {
+        assert.equal(await evaluate(`document.getElementById('${id}').max`), String(maximum));
+      }
+      await evaluate(`(() => {
+        for (const [id, value] of Object.entries({ cityLevelNumber: 50, taxSkillLevel: 34,
+          granarySkillLevel: 34, cityStoneworksLevel: 34, cityShieldwallLevel: 34, cityCitadelPackage: '10:10' })) {
+          document.getElementById(id).value = value;
+        }
+        document.getElementById('cityShieldwallLevel').dispatchEvent(new Event('input', { bubbles: true }));
+        document.getElementById('battleSwordLevel').value = 50;
+        document.getElementById('battleSwordLevel').dispatchEvent(new Event('input', { bubbles: true }));
+      })()`);
+      assert.equal(await evaluate("document.getElementById('cityShieldwallOutput').textContent"), "Lv 34 · +100%");
+      assert.equal(await evaluate("document.getElementById('cityGarrisonDefense').textContent"), "2,600,000");
+      assert((await evaluate("document.getElementById('cityGarrisonHelp').textContent")).includes("applied +100%"));
+      assert.equal(await evaluate("document.getElementById('battleSwordOutput').textContent"), "Lv 50 · +100%");
+      await evaluate("document.fonts.ready");
+      await evaluate("document.getElementById('cityGarrisonDefense').scrollIntoView({ block: 'center', behavior: 'instant' })");
+      fs.writeFileSync(path.join(artifacts, `${width}-calculator.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
       console.log(`Skill efficiency UI passed at ${width}x${height}.`);
     }
     assert.deepEqual(errors, []);

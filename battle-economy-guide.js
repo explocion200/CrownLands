@@ -150,7 +150,7 @@
     $("cityWallPower").textContent = format(snapshot.fullWallPower);
     $("cityWallHelp").textContent = `Base ${format(snapshot.baseWall)} · Stoneworks +${snapshot.stoneworksPercent}%`;
     $("cityGarrisonDefense").textContent = format(snapshot.ownerGarrisonPower);
-    $("cityGarrisonHelp").textContent = `${format(values.defenderTroops)} troops · ${snapshot.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${snapshot.shieldwallPercent}% · objective +${snapshot.packagePercent}%`;
+    $("cityGarrisonHelp").textContent = `${format(values.defenderTroops)} troops · ${snapshot.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${snapshot.shieldwallPercent}% · objective +${snapshot.packagePercent}% · applied +${snapshot.soldierDefensePercent}%`;
     $("cityUpgradeCost").textContent = `${format(snapshot.upgradeCost)} gold`;
     $("cityUpgradeHelp").textContent = `${Math.min(85, snapshot.guildPercent + snapshot.upgradePackagePercent)}% total reduction`;
     $("cityRepairTime").textContent = `${format(snapshot.repairMinutes)}m`;

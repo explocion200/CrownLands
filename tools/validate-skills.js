@@ -12,13 +12,13 @@ vm.runInNewContext(fs.readFileSync(path.join(root, "economy-config.js"), "utf8")
 assert.deepEqual(JSON.parse(JSON.stringify(browserContext.window.CROWNLANDS_ECONOMY_CONFIG.skills)), economyConfig.skills,
   "Browser and server skill rates or caps differ.");
 const expectedSkillBonuses = {
-  swordmastery: [2, 60],
-  shieldwallDiscipline: [3, 60],
-  stoneworks: [3, 75],
-  taxStewardship: [3, 75],
-  royalGranaries: [3, 75],
+  swordmastery: [2, 100],
+  shieldwallDiscipline: [3, 100],
+  stoneworks: [3, 100],
+  taxStewardship: [3, 100],
+  royalGranaries: [3, 100],
   guildCharters: [2, 50],
-  marchOrders: [5, 60],
+  marchOrders: [5, 100],
   fieldMedics: [2, 50],
 };
 const expectedSkillIds = [
@@ -57,6 +57,8 @@ for (const skill of expectedSkillIds) {
     if (!source.includes(`economyNumber("skills.${skill}.percentPerLevel", ${expectedRate})`)) {
       throw new Error(`${label} ${skill} fallback disagrees with the confirmed per-point bonus.`);
     }
+    assert(source.includes(`economyNumber("skills.${skill}.maxPercent", ${expectedCap})`),
+      `${label} ${skill} fallback disagrees with the confirmed cap.`);
   }
   const maxLevel = Math.ceil(maxPercent / percentPerLevel);
   if (!Number.isFinite(maxLevel) || maxLevel < 0 || maxLevel * percentPerLevel < maxPercent) {

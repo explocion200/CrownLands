@@ -205,7 +205,7 @@ for (const skill of SKILL_ORDER) {
 
 // This Level 100 build formerly spent 90 points: 35 defense + 25 speed + 30 discount.
 const oldAllocation = { ...context.createDefaultSkills(), shieldwallDiscipline: 30, marchOrders: 20, guildCharters: 25 };
-const convertedAllocation = { ...oldAllocation, shieldwallDiscipline: 20, marchOrders: 12 };
+const convertedAllocation = { ...oldAllocation };
 const oldPresets = {
   modelVersion: 5,
   activeSlot: 1,
@@ -221,21 +221,29 @@ for (const [label, runtime, valid] of [
   assert.equal(converted.slots[0].name, "Veteran");
   assert.equal(converted.slots[0].savedAtMs, 12345);
   assert.deepEqual({ ...converted.slots[0].upgrades }, convertedAllocation);
-  assert.equal(converted.slots[0].spentPoints, 57);
-  assert.equal(runtime.getAvailableSkillPoints({ level: 100 }, oldAllocation), 42, `${label} did not return all 33 surplus points.`);
+  assert.equal(converted.slots[0].spentPoints, 75);
+  assert.equal(runtime.getAvailableSkillPoints({ level: 100 }, oldAllocation), 24, `${label} did not return the 15 old final-tier surcharge points.`);
   assert.equal(valid(converted.slots[0].upgrades, { level: 100 }), true);
   assert.deepEqual(runtime.normalizeSkillPresets(converted), converted, `${label} migration is not idempotent.`);
-  const currentOverCap = runtime.normalizeSkillPresets({ ...oldPresets, modelVersion: 6 });
+  const currentOverCap = runtime.normalizeSkillPresets({ ...oldPresets, modelVersion: 6,
+    slots: [{ ...oldPresets.slots[0], upgrades: { ...oldAllocation, shieldwallDiscipline: 35 } }] });
   assert.equal(valid(currentOverCap.slots[0].upgrades, { level: 100 }), false, `${label} silently accepted an invalid current preset.`);
   const corruptOld = runtime.normalizeSkillPresets({ ...oldPresets, slots: [{ ...oldPresets.slots[0], upgrades: { ...oldAllocation, marchOrders: 999 } }] });
   assert.equal(valid(corruptOld.slots[0].upgrades, { level: 100 }), false, `${label} accepted a corrupt old preset.`);
 }
 const oldCharacter = { level: 100, xp: 17, skillPoints: 9 };
 assert.equal(context.syncCharacterSkillPoints(oldCharacter, oldAllocation), true);
-assert.deepEqual(oldCharacter, { level: 100, xp: 17, skillPoints: 42 });
+assert.deepEqual(oldCharacter, { level: 100, xp: 17, skillPoints: 24 });
 assert.equal(context.syncCharacterSkillPoints(oldCharacter, convertedAllocation), false, "Repeated reconciliation issued another refund.");
 assert.equal(serverContext.getAvailableSkillPoints({ level: 1 }, {}), 0);
 assert.equal(serverContext.getAvailableSkillPoints({ level: 2 }, {}), 1);
+assert.equal(Object.values(maxLevels).reduce((sum, level) => sum + level, 0), 256);
+for (const skill of ["shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries"]) {
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 33 } }, skill), 99);
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 34 } }, skill), 100,
+    `${skill}'s last point must stop at 100%, not 102%.`);
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 999 } }, skill), 100);
+}
 assert.match(serverSource, /const SKILL_POINT_SYSTEM_VERSION = 2;/, "This rebalance must not trigger the legacy clear-all reset.");
 
 const emptyDraft = context.createSkillPresetDraft(defaults.slots[0]);
