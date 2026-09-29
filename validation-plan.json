@@ -1,45 +1,38 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "02b0a4c6fb366602604254c5f0a9ee42af6d9531",
+  "baseCommit": "b2ef97b90db1add398cf70bc6c34e6a7f28e9782",
   "coverage": [
     {
       "paths": [
-        "login-screen.css",
-        "docs/GAME_HEALTH_FIXES_2026_09_29.md"
+        "readability.css",
+        "docs/UI_MAP_SMOOTHNESS_2026_09_29.md"
       ],
       "tests": [
-        "tools/validate-login-assets.js",
-        "tools/validate-login-layout-browser.js",
+        "tools/validate-ui-readability.js",
+        "tools/validate-city-details-browser.js",
+        "tools/validate-responsive-browser.js",
+        "tools/validate-map-picker-input.js"
+      ],
+      "reason": "The shared readability stylesheet affects map labels, dialogs, controls and focus. Preserve cascade/declarations and verify contrast, City Info geometry/actions, map picker input and responsive touch, Shop, Chat, pickup and recovery behavior. Local before/after CSS matching and computed-style comparisons cover Map, City Info, Cities, Bag and Shop at three viewports; the note records measurements and stress-test limits. No gameplay design decisions or backend rules change."
+    },
+    {
+      "paths": [
+        "game.js",
+        "tools/validate-city-map-reconciliation-browser.js",
+        "tools/validate-main-city-change.js",
+        "tools/validate-clans.js"
+      ],
+      "tests": [
+        "tools/validate-city-map-reconciliation-browser.js",
+        "tools/validate-city-wall-shields-browser.js",
+        "tools/validate-map-interactions.js",
+        "tools/validate-map-object-scale.js",
+        "tools/validate-main-city-change.js",
+        "tools/validate-clans.js",
+        "tools/validate-city-details-browser.js",
         "tools/validate-responsive-browser.js"
       ],
-      "reason": "Check portrait sign-in suppression and gameplay rotation warning across 56 real markup/CSS layouts. Exercise desktop, landscape and 4x CPU map switches plus affected touch, HUD, pickup, shop and chat interactions. Before/after Chromium traces identify body subtree style invalidation; the technical note records measured evidence and unresolved production ad prerequisites without changing design rules."
-    },
-    {
-      "paths": [
-        "firebaseClient.js",
-        "tools/validate-login-session-behavior.js",
-        "game.js",
-        "tools/validate-lag-recovery.js"
-      ],
-      "tests": [
-        "tools/validate-login-session-behavior.js",
-        "tools/validate-lag-recovery.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-login-stability-matrix.js",
-        "tools/validate-realm-sharding.js",
-        "functions/test/emulator-reset-gate.js"
-      ],
-      "reason": "Verify accepted realm propagation before heartbeat requests, stale-session disposal and device/tab takeover. Exercise hung update fetches and service-worker lookup/update with controlled timers, proving polling resumes and exactly one reload proceeds. Existing compatibility/re-entry, foreground and login matrix checks protect lifecycle cleanup. The reset-gate emulator covers existing admission, compatibility, session and reset contracts; no server authority or production data is changed."
-    },
-    {
-      "paths": [
-        "ads-config.js",
-        "tools/validate-rewarded-ads.js"
-      ],
-      "tests": [
-        "tools/validate-rewarded-ads.js"
-      ],
-      "reason": "Execute production-host selection for the canonical domain, localhost and an unapproved host. Keep production ads unavailable without a real unit and preserve click-triggered loading, App Check, server-only rewards and replay protection. External Google Ad Manager/App Check configuration and live ad completion remain unverified; no server switch is enabled."
+      "reason": "City DOM reconciliation must avoid redundant writes while preserving selection/order highlights, clan membership, ownership, main-city identity, level, labels, shields and geometry. The new busy-map browser test verifies zero unchanged attributes and real state transitions at desktop and two landscape sizes; existing shield, map, clan and main-city checks protect shared presentation dependencies. No authority, protocol, schema, server calculations or production state changes, so no emulator suite is selected for this client presentation update."
     }
   ]
 }
