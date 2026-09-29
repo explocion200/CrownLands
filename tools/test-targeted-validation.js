@@ -13,6 +13,21 @@ assert.deepEqual(selectGates(gates, ["--file", gates[0], "--file", gates[0]]), [
 for (const args of [["--file"], ["--all"], ["--file", "emulator-missing.js"], ["--file", "../emulator-chat.js"]]) {
   assert.throws(() => selectGates(gates, args), /Use --file|Unknown emulator/);
 }
+const discovered = fs.readdirSync(path.join(__dirname, "../functions/test")).filter(file => /^emulator-.*\.js$/.test(file));
+const reset = "emulator-reset-gate.js";
+const shards = [1, 2, 3, 4].map(index => selectGates(discovered, ["--shard", `${index}/4`]));
+for (const shard of shards) assert.equal(shard[0], reset, "Every worker must run reset before its isolated suites.");
+const partition = shards.flatMap(shard => shard.slice(1));
+assert.equal(new Set(partition).size, partition.length, "Non-reset suites must not be duplicated across workers.");
+assert.deepEqual([...partition].sort(), discovered.filter(file => file !== reset).sort(), "Full sharding must not drop any discovered suite.");
+assert.deepEqual(selectGates(discovered, ["--shard", "1/1"]), selectGates(discovered));
+assert.deepEqual(selectGates([...discovered].reverse(), ["--shard", "2/4"]), shards[1], "Filesystem order must not change the partition.");
+for (const shard of ["", "0/4", "5/4", "1/0", "1/17", "1/4junk", "1.5/4"]) {
+  assert.throws(() => selectGates(discovered, ["--shard", shard]), /Use --shard/);
+}
+assert.throws(() => selectGates(discovered, ["--shard", "1/4", "--shard", "2/4"]), /Use --shard/);
+assert.throws(() => selectGates(discovered, ["--shard", "1/4", "--file", reset]), /not selected files/);
+assert.throws(() => selectGates(["emulator-chat.js"], ["--shard", "1/4"]), /require the reset gate/);
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-targeted-validation-test-"));
 const originalCI = process.env.CI;
 const originalActions = process.env.GITHUB_ACTIONS;
@@ -58,6 +73,7 @@ try {
   assert.ok(calls.some(args => args.some(arg => arg.endsWith("validate-widget.js"))));
   assert.ok(!calls.some(args => args.some(arg => /run-emulator-gates|gate:static|test:emulators/.test(arg))));
   assert.ok(calls.some(args => args.some(arg => arg.endsWith("build-production-client.js"))));
+  assert.ok(calls.some(args => args.some(arg => arg.endsWith("validate-asset-performance-budgets.js"))), "Every affected build must enforce source/asset budgets before merge.");
   calls.length = 0;
   runValidationTier(root, { ...options, phase: "emulators", execute });
   assert.equal(calls.length, 2, "Only manifest generation and the selected emulator runner should run.");
@@ -66,6 +82,13 @@ try {
   runValidationTier(root, { ...options, forceFull: true, execute });
   assert.ok(calls.some(args => args.includes("gate:static")));
   assert.ok(calls.some(args => args.includes("test:emulators")));
+  calls.length = 0;
+  runValidationTier(root, { ...options, forceFull: true, phase: "emulators", emulatorShard: "2/4", execute });
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].some(arg => arg.endsWith("generate-release-manifest.js")));
+  assert.deepEqual(calls[1].slice(-2), ["--shard", "2/4"]);
+  assert.throws(() => runValidationTier(root, { ...options, phase: "emulators", emulatorShard: "2/4", execute }), /Full emulator phase/);
+  assert.throws(() => runValidationTier(root, { ...options, forceFull: true, phase: "static", emulatorShard: "2/4", execute }), /Full emulator phase/);
   assert.throws(() => runValidationTier(root, { ...options, phase: "bad", execute }), /Unknown validation phase/);
   assert.throws(() => runValidationTier(root, { ...options, phase: "static", execute: () => { throw new Error("fixture failure"); } }), /fixture failure/);
   const cacheRoot = fixture("cache");
@@ -93,6 +116,33 @@ try {
   calls.length = 0;
   runValidationTier(cacheRoot, { ...options, phase: "emulators", execute });
   assert.equal(calls.length, 0, "A change without selected emulator coverage never starts Firebase.");
+
+  const outputRoot = path.join(temporaryRoot, "output");
+  fs.mkdirSync(outputRoot);
+  const runPath = path.join(__dirname, "run-validation-tier.js");
+  function outputCheck(actions, failure) {
+    const command = `console.log("live progress"); console.error("diagnostic detail"); process.exit(${failure ? 7 : 0});`;
+    const script = `require(${JSON.stringify(runPath)}).run(process.execPath, ["-e", ${JSON.stringify(command)}], ${JSON.stringify({ cwd: outputRoot, logDirectory: path.join(outputRoot, "logs") })});`;
+    return cp.spawnSync(process.execPath, ["-e", script], { env: { ...process.env, GITHUB_ACTIONS: actions }, encoding: "utf8", windowsHide: true });
+  }
+  const liveSuccess = outputCheck("true", false);
+  assert.equal(liveSuccess.status, 0);
+  assert.match(liveSuccess.stdout, /^live progress\r?$/m);
+  assert.match(liveSuccess.stderr, /diagnostic detail/);
+  assert.equal(fs.existsSync(path.join(outputRoot, "logs")), false, "GitHub output must not be stranded in a temporary runner file.");
+  const liveFailure = outputCheck("true", true);
+  assert.notEqual(liveFailure.status, 0);
+  assert.match(liveFailure.stdout, /^live progress\r?$/m);
+  assert.match(liveFailure.stderr, /diagnostic detail[\s\S]*failed with status 7/);
+  const localSuccess = outputCheck("false", false);
+  assert.equal(localSuccess.status, 0);
+  assert.equal(localSuccess.stderr, "");
+  const logFiles = fs.readdirSync(path.join(outputRoot, "logs"));
+  assert.equal(logFiles.length, 1);
+  assert.match(fs.readFileSync(path.join(outputRoot, "logs", logFiles[0]), "utf8"), /live progress[\s\S]*diagnostic detail/);
+  const localFailure = outputCheck("false", true);
+  assert.notEqual(localFailure.status, 0);
+  assert.match(localFailure.stderr, /diagnostic detail[\s\S]*failed with status 7/);
 } finally {
   if (originalCI === undefined) delete process.env.CI; else process.env.CI = originalCI;
   if (originalActions === undefined) delete process.env.GITHUB_ACTIONS; else process.env.GITHUB_ACTIONS = originalActions;

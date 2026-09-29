@@ -16,6 +16,16 @@ function resolvePnpm(repoRoot) {
 
 function run(command, args, options) {
   const label = args.join(" ");
+  // GitHub retains streamed output even when it cancels a timed-out job. Local
+  // preparation stays quiet and keeps its existing per-command log files.
+  if (process.env.GITHUB_ACTIONS === "true") {
+    console.log(`[Crownlands] Running ${label}`);
+    const result = childProcess.spawnSync(command, args, { cwd: options.cwd, env: process.env, stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error(`${label} failed with status ${result.status}${result.signal ? ` (${result.signal})` : ""}. See the job output above.`);
+    console.log(`[Crownlands] Passed ${label}`);
+    return;
+  }
   const logName = crypto.createHash("sha256").update(command + label).digest("hex").slice(0, 16);
   const logPath = path.join(options.logDirectory, `${logName}.log`);
   fs.mkdirSync(options.logDirectory, { recursive: true });
@@ -46,6 +56,9 @@ function runValidationTier(repoRoot, options = {}) {
   const functionsRoot = path.join(repoRoot, "functions");
   const phase = options.phase || "all";
   if (!["all", "static", "emulators"].includes(phase)) throw new Error(`Unknown validation phase: ${phase}`);
+  if (options.emulatorShard && (classification.tier !== "Full" || phase !== "emulators")) {
+    throw new Error("Emulator sharding requires a Full emulator phase.");
+  }
   const git = args => childProcess.execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", windowsHide: true }).trim();
   const stateRoot = path.resolve(repoRoot, git(["rev-parse", "--git-path", "crownlands-safe-update/validation"]));
   const execute = options.execute || ((command, args, cwd) => run(command, args, { cwd, logDirectory: path.join(stateRoot, "logs") }));
@@ -55,7 +68,12 @@ function runValidationTier(repoRoot, options = {}) {
 
   if (classification.tier === "Full") {
     if (phase !== "emulators") runPnpm("gate:static");
-    if (phase !== "static") runPnpm("test:emulators");
+    if (phase !== "static") {
+      if (options.emulatorShard) {
+        runNode("tools/generate-release-manifest.js");
+        execute(process.execPath, [path.join(functionsRoot, "test/run-emulator-gates.js"), "--shard", options.emulatorShard], functionsRoot);
+      } else runPnpm("test:emulators");
+    }
     return { ...classification, validationPhase: phase, emulatorsDeferred: phase === "static" };
   }
 
@@ -93,6 +111,7 @@ function runValidationTier(repoRoot, options = {}) {
         runNode("tools/generate-release-manifest.js");
         runNode("tools/build-production-client.js");
         runNode("tools/validate-production-artifact.js");
+        runNode("tools/validate-asset-performance-budgets.js");
       }
       for (const test of classification.staticTests) {
         const args = testArguments(test);
@@ -121,10 +140,11 @@ function parseArguments(args) {
     else if (value === "--head") options.headRef = args[++index];
     else if (value === "--force-full") options.forceFull = true;
     else if (value === "--phase") options.phase = args[++index];
+    else if (value === "--emulator-shard") options.emulatorShard = args[++index];
     else if (value === "--skip-install") options.skipInstall = true;
     else if (value === "--no-cache") options.noCache = true;
     else throw new Error(`Unknown option: ${value}`);
-    if (["--base", "--head", "--phase"].includes(value) && !args[index]) throw new Error(`${value} requires a value.`);
+    if (["--base", "--head", "--phase", "--emulator-shard"].includes(value) && !args[index]) throw new Error(`${value} requires a value.`);
   }
   return options;
 }
@@ -143,4 +163,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { runValidationTier };
+module.exports = { runValidationTier, run };

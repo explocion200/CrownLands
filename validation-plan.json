@@ -1,38 +1,70 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b2ef97b90db1add398cf70bc6c34e6a7f28e9782",
+  "baseCommit": "8d47b57758b19aac6391cef814502a58d7d40e93",
   "coverage": [
     {
       "paths": [
-        "readability.css",
-        "docs/UI_MAP_SMOOTHNESS_2026_09_29.md"
+        "functions/package.json",
+        "functions/pnpm-lock.yaml",
+        "functions/pnpm-workspace.yaml",
+        "tools/test-functions-dependencies.js"
       ],
       "tests": [
-        "tools/validate-ui-readability.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-responsive-browser.js",
-        "tools/validate-map-picker-input.js"
+        "tools/test-functions-dependencies.js",
+        "tools/validate-coordinated-release.js",
+        "functions/test/emulator-reset-gate.js",
+        "functions/test/emulator-coordinated-release.js"
       ],
-      "reason": "The shared readability stylesheet affects map labels, dialogs, controls and focus. Preserve cascade/declarations and verify contrast, City Info geometry/actions, map picker input and responsive touch, Shop, Chat, pickup and recovery behavior. Local before/after CSS matching and computed-style comparisons cover Map, City Info, Cities, Bag and Shop at three viewports; the note records measurements and stress-test limits. No gameplay design decisions or backend rules change."
+      "reason": "Patch the production fast-uri dependency used by AJV and CloudEvents without upgrading unrelated packages. Exercise both advisory inputs, ordinary URI/schema references, CloudEvent HTTP round trips, runtime startup, release compatibility and callable/reset gates. Preparation also audits the lockfile and builds the production artifact. The dependency regression is included in the full static gate."
     },
     {
       "paths": [
-        "game.js",
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-main-city-change.js",
-        "tools/validate-clans.js"
+        ".github/workflows/crownlands-release-gate.yml",
+        "docs/SAFE_UPDATE_WORKFLOW.md",
+        "functions/test/run-emulator-gates.js",
+        "tools/run-validation-tier.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-release-gate.js"
       ],
       "tests": [
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-city-wall-shields-browser.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-map-object-scale.js",
-        "tools/validate-main-city-change.js",
-        "tools/validate-clans.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-responsive-browser.js"
+        "tools/test-targeted-validation.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js",
+        "functions/test/emulator-reset-gate.js",
+        "functions/test/emulator-coordinated-release.js"
       ],
-      "reason": "City DOM reconciliation must avoid redundant writes while preserving selection/order highlights, clan membership, ownership, main-city identity, level, labels, shields and geometry. The new busy-map browser test verifies zero unchanged attributes and real state transitions at desktop and two landscape sizes; existing shield, map, clan and main-city checks protect shared presentation dependencies. No authority, protocol, schema, server calculations or production state changes, so no emulator suite is selected for this client presentation update."
+      "reason": "Verify full-suite partition completeness and uniqueness, reset ordering, invalid shard rejection, unchanged targeted selection, full/targeted phase dispatch, CI progress and error propagation, local log retention, all-worker required gates and existing push protections. Selected emulator checks validate the runner and updated dependency together. An explicit manual Full run on this branch will exercise all four CI groups and every full static check before declaring the repair ready; gameplay and production data are unchanged."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "The full gate exposed stale per-file source caps after already merged PRs #391 and #393-397: game.js is 7899 bytes over its prior cap (9898 bytes growth, 2442 gzip bytes), and Clan CSS is 31 bytes over. Bound those existing baselines by 8 KiB and 1 KiB while preserving the independent aggregate installation, image, request and performance limits. Every affected production build now runs this guard before merge; this branch adds no client payload."
+    },
+    {
+      "paths": [
+        "tools/validate-operation-timing.js"
+      ],
+      "tests": [
+        "tools/validate-operation-timing.js"
+      ],
+      "reason": "Repair the full-gate VM fixture for measuredTransaction's existing realm context and season guard dependencies. Use the real guard and AsyncLocalStorage; verify fallback/request realm identity across internal retries, read-only options, exact results/errors and timing privacy. No server or gameplay code changes."
+    },
+    {
+      "paths": [
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "reason": "Repair full-gate browser fixtures without changing gameplay or weakening assertions: wait for the preceding gear-box cue to finish naturally before asserting a fresh single-source sound start; select a normal leaderboard row for its parchment color and separately require three podium champions plus 97 remaining ranks. Clear prior-page readiness before navigation. Retain audio, receipt, recovery, rarity, privacy, totals, focus and responsive layout checks."
     }
   ]
 }
