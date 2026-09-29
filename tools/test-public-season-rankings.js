@@ -15,7 +15,7 @@ const db = {
   collection(location) {
     assert.equal(location, "seasonResults");
     let cursor;
-    return { orderBy(_field, direction) { assert.equal(direction, "desc"); return this; },
+    return { orderBy(field, direction) { assert.equal(field, "seasonId"); assert.equal(direction, "desc"); return this; },
       startAfter(value) { cursor = value; return this; }, limit(value) { assert.equal(value, PAGE_SIZE); return this; },
       async get() { const docs = [...records].filter(([id]) => id < cursor).sort(([a], [b]) => b.localeCompare(a)).slice(0, PAGE_SIZE)
         .map(([id, data]) => ({ id, data: () => data })); return { size: docs.length, docs }; } };

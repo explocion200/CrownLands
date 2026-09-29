@@ -1,6 +1,5 @@
 "use strict";
 
-const { FieldPath } = require("firebase-admin/firestore");
 const { BOARDS, supported, seasonInfo } = require("./season-rewards");
 const PAGE_SIZE = 24;
 const invalid = () => { throw Object.assign(new Error("Invalid archive selection."), { status: 400 }); };
@@ -36,7 +35,9 @@ async function readArchive(db, query = {}, nowMs = Date.now()) {
       entries: publicRows(snapshot.data().entries, board) };
   }
   if (query.board || (query.before && (!supported(query.before) || query.before > currentSeason))) invalid();
-  const snapshot = await db.collection("seasonResults").orderBy(FieldPath.documentId(), "desc")
+  // arm() stores seasonId in every header. Firestore supports descending field
+  // indexes, but rejects a query ordered only by descending document ID.
+  const snapshot = await db.collection("seasonResults").orderBy("seasonId", "desc")
     .startAfter(query.before || currentSeason).limit(PAGE_SIZE).get();
   const seasons = snapshot.docs.filter(doc => supported(doc.id) && doc.data().status === "ready")
     .map(doc => ({ seasonId: doc.id, endsAtMs: seasonInfo(doc.id).endsAtMs }));
