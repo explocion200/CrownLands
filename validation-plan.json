@@ -1,25 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5e4c4f0e61eb7dddd4f5a4aa56ca2c95101f8cd2",
+  "baseCommit": "5589c92a09d15562e32fe4699ca99a562460cb8e",
   "coverage": [
     {
       "tests": [
-        "tools/test-season-rewards.js",
-        "tools/validate-season-rewards-browser.js"
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js"
       ],
       "paths": [
-        "season-rewards-ui.js",
-        "season-rewards-ui.css",
-        "tools/validate-season-rewards-browser.js"
+        "clan-treasury-ui.css",
+        "clan-treasury-ui.js",
+        "tools/validate-clan-treasury-browser.js"
       ],
-      "reason": "Validate all three published standings and tier schedules, combined box totals, positive-score and clan eligibility, unavailable data, one-request refresh, small-screen overview visibility, and unchanged claims, honors and archive navigation. Client presentation only; existing server APIs and reward policy are unchanged, so no emulator suite is required."
+      "reason": "Verify Treasury shares the Clan and Rewards navigation at desktop and landscape-mobile sizes, with visible tab selection, reachable donation controls, fixed review action, and preserved drafts through tab switches and live refreshes. Exercise the existing confirmation, retry and authoritative balance handling plus shared clan routing and optional stylesheet loading. Presentation only: no server, permissions, balances or donation rules change, so no emulator suite is required."
     },
     {
       "tests": [],
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the confirmed all-leaderboard overview presentation without changing reward balance, authority, season rules or deployment status."
+      "reason": "Record the user-confirmed shared Treasury navigation in place of Back to Rewards, with release verification still pending. No gameplay rule change."
     }
   ]
 }

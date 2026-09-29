@@ -35,17 +35,8 @@
  :is(#profileScreen #clanContent, #modal) .clan-treasury-ui .donation-footer .primary{min-height:44px!important}
  :is(#profileScreen #clanContent, #modal) .clan-treasury-ui .treasury-record>p.eyebrow{font-size:7px!important}
 }
-/* A focused Treasury view replaces stacked navigation with a return control. */
-#profileScreen #clanContent:has(#clanRewardsPanel.active .clan-treasury-ui)>.clan-section-nav{display:none!important}
-#profileScreen #clanContent #clanRewardsPanel:has(.clan-treasury-ui)>.rewards-tabs{display:none!important}
-#profileScreen #clanContent .clan-treasury-ui .window-header{justify-content:space-between!important}
-#profileScreen #clanContent .clan-treasury-ui #ct-back{min-height:44px!important;font:14px Georgia,serif!important;padding:6px 10px!important;box-shadow:none!important;background:#eadbb9!important;border:1px solid #b79e6e!important}
+/* Treasury shares the Clan and Rewards navigation; details scroll below it. */
 @media(orientation:landscape) and (max-height:560px){
- #profileScreen #clanContent .clan-treasury-ui{grid-template-rows:44px minmax(0,1fr) auto!important}
- #profileScreen #clanContent .clan-treasury-ui .window-header{display:flex!important;padding:0 9px!important}
- #profileScreen #clanContent .clan-treasury-ui .window-header h2{font-size:20px!important}
- #profileScreen #clanContent .clan-treasury-ui .window-header .eyebrow{display:none!important}
- #profileScreen #clanContent .clan-treasury-ui #ct-back{font-size:12px!important;border-block:0!important}
  #profileScreen #clanContent .clan-treasury-ui .personal-stats strong{font-size:18px!important}
  #profileScreen #clanContent .clan-treasury-ui .personal-stats{margin-bottom:4px!important}
  #profileScreen #clanContent .clan-treasury-ui .personal-stats>div{display:flex!important;flex-wrap:wrap!important;gap:0 7px!important;align-items:baseline!important}
