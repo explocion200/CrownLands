@@ -23,7 +23,7 @@ assert.match(
   "The retry helper no longer delegates each attempt to Firestore."
 );
 const measuredHelper = sourceRange("function measuredTransaction", "function isRetryableTransactionInfrastructureError");
-assert.match(measuredHelper.source, /db\.runTransaction\(transaction =>[\s\S]*return operation\(transaction\)[\s\S]*transactionOptions/,
+assert.match(measuredHelper.source, /db\.runTransaction\(transaction =>[\s\S]*return SEASON_REWARDS\.guardTransaction\(db, transaction, operation, scope\)[\s\S]*transactionOptions/,
   "Timing must preserve Firestore's callback, retries, and read-only options.");
 assert.match(
   retryHelper.source,
@@ -37,20 +37,19 @@ const starterClaim = sourceRange(
 );
 assert.match(
   starterClaim.source,
-  /db\.runTransaction\([\s\S]*?\{ maxAttempts: 1 \}[\s\S]*?retryableContention/,
+  /measuredTransaction\([\s\S]*?\{ maxAttempts: 1 \}[\s\S]*?retryableContention/,
   "Starting-city placement lost its dedicated reservation/contention retry loop."
 );
 
 const rawTransactionCalls = [...serverSource.matchAll(/db\.runTransaction\(/g)];
 assert.equal(
   rawTransactionCalls.length,
-  2,
+  1,
   "A Firestore transaction bypasses the shared infrastructure retry contract."
 );
 for (const match of rawTransactionCalls) {
   const index = match.index;
-  const allowed = (index >= measuredHelper.start && index < measuredHelper.end)
-    || (index >= starterClaim.start && index < starterClaim.end);
+  const allowed = index >= measuredHelper.start && index < measuredHelper.end;
   assert.ok(allowed, `Unexpected raw Firestore transaction near character ${index}.`);
 }
 

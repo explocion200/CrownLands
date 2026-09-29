@@ -69,45 +69,72 @@ async function arm(db, seasonId, nowMs = Date.now()) {
   });
 }
 
-// Buffer writes so the closing fence is read in the SAME transaction, after
-// discovering its actual touched boards but before any Firestore writes. This
-// covers every existing score/clan/battle producer without a global hot write.
+const transactionFences = new WeakMap();
+// Economy operations know they will publish a score. Start their fence read
+// alongside the other reads, keeping it local to this transaction attempt.
+function prefetchTransaction(transaction, seasonId) {
+  transactionFences.get(transaction)?.(seasonId);
+}
+
+// Buffer writes so the closing fence remains in the SAME transaction. Other
+// producers discover their touched seasons before any writes are flushed.
 async function guardTransaction(db, transaction, operation, scope, clock = Date.now) {
   const writes = [];
+  const reads = new Map();
+  const readFence = seasonId => {
+    if (!supported(seasonId) || reads.has(seasonId)) return reads.get(seasonId);
+    const prior = previousSeason(seasonId);
+    const refs = [headerRef(db, seasonId)];
+    if (supported(prior)) refs.push(headerRef(db, prior));
+    // Handle rejections immediately even if the operation is still reading.
+    const read = Promise.resolve().then(() => transaction.getAll(...refs))
+      .then(snapshots => ({ snapshots }), error => ({ error }));
+    reads.set(seasonId, read);
+    return read;
+  };
   let proxy;
   proxy = new Proxy(transaction, { get(target, property) {
     if (["set", "update", "create", "delete"].includes(property)) return (...args) => { writes.push([property, args]); return proxy; };
     const value = target[property];
     return typeof value === "function" ? value.bind(target) : value;
   } });
-  const result = await operation(proxy);
-  const seasons = new Set();
-  for (const [method, [ref]] of writes) {
-    const parts = ref.path.split("/");
-    if (["leaderboards", "clanLeaderboards"].includes(parts[0]) || (parts[0] === "pvpKillEvents" && method === "create")) {
-      if (supported(parts[1].split("--")[0])) seasons.add(parts[1].split("--")[0]);
-    }
-    if (parts[0] === "clans" && supported(scope?.resetGeneration)) seasons.add(scope.resetGeneration);
-  }
-  const pending = [];
-  for (const seasonId of seasons) {
-    const info = seasonInfo(seasonId), ref = headerRef(db, seasonId);
-    const snap = await transaction.get(ref), stored = snap.data();
-    if (clock() >= info.endsAtMs || (stored && stored.status !== "open")) fail("This season has closed. Re-enter the current kingdom.");
-    const prior = previousSeason(seasonId);
-    if (supported(prior)) {
-      const previous = await transaction.get(headerRef(db, prior));
-      if (!["captured", "finalizing", "ready"].includes(previous.data()?.status)) {
-        fail("Last season’s standings are being preserved. Please reconnect shortly.");
+  transactionFences.set(proxy, readFence);
+  try {
+    const result = await operation(proxy);
+    const seasons = new Set();
+    for (const [method, [ref]] of writes) {
+      const parts = ref.path.split("/");
+      if (["leaderboards", "clanLeaderboards"].includes(parts[0]) || (parts[0] === "pvpKillEvents" && method === "create")) {
+        if (supported(parts[1].split("--")[0])) seasons.add(parts[1].split("--")[0]);
       }
+      if (parts[0] === "clans" && supported(scope?.resetGeneration)) seasons.add(scope.resetGeneration);
     }
-    if (!snap.exists) pending.push([ref, metadata(info, clock())]);
+    for (const seasonId of seasons) readFence(seasonId);
+    const fences = new Map(await Promise.all([...reads].map(async ([id, read]) => [id, await read])));
+    for (const { error } of fences.values()) if (error) throw error;
+    const pending = [];
+    for (const seasonId of seasons) {
+      const info = seasonInfo(seasonId), ref = headerRef(db, seasonId);
+      const [snap, previous] = fences.get(seasonId).snapshots, stored = snap.data();
+      if (clock() >= info.endsAtMs || (stored && stored.status !== "open")) fail("This season has closed. Re-enter the current kingdom.");
+      const prior = previousSeason(seasonId);
+      if (supported(prior)) {
+        if (!["captured", "finalizing", "ready"].includes(previous.data()?.status)) {
+          fail("Last season’s standings are being preserved. Please reconnect shortly.");
+        }
+      }
+      if (!snap.exists) pending.push([ref, metadata(info, clock())]);
+    }
+    // Recheck wall time after reads/retries, before flushing the buffered writes.
+    for (const seasonId of seasons) if (clock() >= seasonInfo(seasonId).endsAtMs) fail("This season has closed. Re-enter the current kingdom.");
+    for (const [ref, data] of pending) transaction.create(ref, data);
+    for (const [method, args] of writes) transaction[method](...args);
+    return result;
+  } finally {
+    transactionFences.delete(proxy);
+    // A failed operation must not leave reads running against its retired attempt.
+    await Promise.all(reads.values());
   }
-  // Recheck wall time after reads/retries, before flushing the buffered writes.
-  for (const seasonId of seasons) if (clock() >= seasonInfo(seasonId).endsAtMs) fail("This season has closed. Re-enter the current kingdom.");
-  for (const [ref, data] of pending) transaction.create(ref, data);
-  for (const [method, args] of writes) transaction[method](...args);
-  return result;
 }
 
 function publicEntry(row, id, board, rank) {
@@ -346,4 +373,4 @@ async function claim(db, uid, seasonId, requestId, nowMs = Date.now()) {
 }
 
 module.exports = { FIRST_SEASON, VERSION, BOARDS, TIERS, TITLES, seasonInfo, previousSeason, supported,
-  rewardFor, honorFor, publicEntry, headerRef, awardRef, arm, guardTransaction, capture, prepareTransition, buildAwards, finalize, claim, standings, status, history, honors };
+  rewardFor, honorFor, publicEntry, headerRef, awardRef, arm, prefetchTransaction, guardTransaction, capture, prepareTransition, buildAwards, finalize, claim, standings, status, history, honors };
