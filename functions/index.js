@@ -1,4 +1,4 @@
-const { onCall: firebaseOnCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall: firebaseOnCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
@@ -10,6 +10,7 @@ const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
 const PVP_LEADERBOARD = require("./pvp-leaderboard");
 const SEASON_REWARDS = require("./season-rewards");
+const PUBLIC_SEASON_RANKINGS = require("./public-season-rankings");
 const { deliverNotificationOutbox } = require("./notification-delivery");
 const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
@@ -34670,6 +34671,10 @@ exports.getSeasonRewardStatus = timedCallable("getSeasonRewardStatus", {
   const uid = requireAuth(request);
   return SEASON_REWARDS.status(db, uid, safeString(request.data?.seasonId, 40), RESET_GENERATION);
 });
+
+exports.getPublicSeasonRankings = onRequest({
+  region: "us-central1", maxInstances: 5, cors: true, invoker: "public",
+}, PUBLIC_SEASON_RANKINGS.createHandler(db));
 
 exports.getSeasonLeaderboard = timedCallable("getSeasonLeaderboard", {
   region: "us-central1", maxInstances: 20, invoker: "public",

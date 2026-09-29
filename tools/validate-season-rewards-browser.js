@@ -20,6 +20,7 @@ async function main() {
     const ready=async expression=>{for(let i=0;i<240;i++){if(await evaluate(expression))return;await wait(125);}throw Error("Timed out: "+expression);};
     for(const [width,height] of [[1366,820],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+      await evaluate('delete document.documentElement.dataset.ledgerQa');
       await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&ledgerUi=players"});
       await ready('document.documentElement?.dataset.ledgerQa==="ready"');
       const info=R.seasonInfo("realm-2026-09");
@@ -33,24 +34,29 @@ async function main() {
           return structuredClone(seasonFixture);
         };
         window.CrownlandsOnline.claimSeasonRewards=async payload=>{window.seasonClaims++;await new Promise(resolve=>setTimeout(resolve,150));seasonFixture.award.claimed=true;seasonFixture.award.receipt={claimedAtMs:Date.now(),seasonId:payload.seasonId};return {ok:true,gear:{commonGearBoxes:19,uncommonGearBoxes:5}};};
-        window.CrownlandsOnline.getSeasonLeaderboard=async()=>({entries:[{rank:1,playerName:'First ruler',kingPower:100,pvpKills:99}]});
+        window.seasonHistoryCalls=0;
+        window.CrownlandsOnline.getSeasonLeaderboard=async()=>{window.seasonHistoryCalls++;throw Error('History belongs on the website');};
         showLeaderboardModal(); document.getElementById('seasonRewardsInfoBtn').click();`);
       await ready("document.querySelectorAll('.season-table tbody tr').length===7");
       assert(await evaluate("document.querySelector('.season-projection').textContent.includes('2')"));
       assert(await evaluate("document.querySelector('.season-rules').textContent.includes('19 Common + 5 Uncommon')"));
+      assert.equal(await evaluate("document.querySelector('.season-projection h3').textContent"),"Potential reward");
+      assert.equal(await evaluate("document.querySelector('[data-season-select]')===null && document.querySelector('[data-season-history]')===null"),true,"Current season view must not browse prior standings");
+      assert.deepEqual(await evaluate("(()=>{const a=document.querySelector('.season-archive-link');return {href:a.href,target:a.target,noopener:a.rel.includes('noopener')};})()"),{href:"https://playcrownlands.com/season-rankings.html",target:"_blank",noopener:true});
+      await evaluate("Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))");
       const fits=await evaluate(`(()=>{const p=document.querySelector('.season-panel'),s=document.querySelector('.season-scroll'),f=document.querySelector('.season-footer'),b=f.getBoundingClientRect();return {horizontal:p.scrollWidth<=p.clientWidth+1,scroll:s.scrollHeight>s.clientHeight,footer:b.bottom<=innerHeight+1,table:s.querySelector('table').scrollWidth<=s.clientWidth};})()`);
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`info-${width}.png`),Buffer.from(result.data,"base64")));
       assert(fits.horizontal&&fits.scroll&&fits.footer&&fits.table,`${width} layout: ${JSON.stringify(fits)}`);
       await evaluate("document.querySelector('[data-season-results]').click()");
       await ready("document.querySelectorAll('.season-award-rows article').length===3");
       assert.equal(await evaluate("document.querySelectorAll('.season-medal').length"),3);
+      assert.deepEqual(await evaluate("Array.from(document.querySelector('[data-season-select]').options).map(o=>o.value)"),["realm-2026-09"],"Reward receipts retain prior seasons without a current-season option");
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`results-${width}.png`),Buffer.from(result.data,"base64")));
       await evaluate("document.querySelector('[data-season-claim]').click(); document.querySelector('[data-season-claim]').click()");
       await ready("document.querySelector('.season-claimed')!==null");
       assert.equal(await evaluate("window.seasonClaims"),1);
       assert.equal(await evaluate("state.gear.commonGearBoxes"),19);
-      await evaluate("document.querySelector('[data-season-history]').click()");
-      await ready("document.querySelector('.season-table')?.textContent.includes('First ruler')");
+      assert.equal(await evaluate("window.seasonHistoryCalls"),0,"The game must not fetch archived standings");
       await evaluate("document.querySelector('[data-season-back]').click();showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09',login:true})");
       await ready("document.querySelector('[data-season-back]')?.textContent==='Later'");
       await evaluate("document.querySelector('[data-season-back]').click()");
@@ -78,6 +84,7 @@ async function main() {
       assert.equal(await evaluate("onlineStatusDetail.textContent.includes('Enter your kingdom again')"),true);
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`reconnect-${width}.png`),Buffer.from(result.data,"base64")));
     }
+    await evaluate('delete document.documentElement.dataset.ledgerQa');
     await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&ledgerUi=players"});
     await ready('document.documentElement?.dataset.ledgerQa==="ready"');
     await evaluate(`window.seasonFixture=${JSON.stringify({...R.seasonInfo("realm-2026-09"),status:"ready",pendingSeasons:[]})};
@@ -91,7 +98,7 @@ async function main() {
     await evaluate("window.CrownlandsOnline.getSeasonRewardStatus=()=>new Promise(resolve=>window.resolveSeason=resolve);showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'});modal.close();showLeaderboardModal();window.resolveSeason(seasonFixture)");
     await wait(100);assert.equal(await evaluate("modal.classList.contains('leaderboard-modal') && !document.querySelector('.season-panel')"),true);
     assert.deepEqual(errors,[]);
-    console.log("Season reward browser passed desktop/mobile layouts, three-board rewards, single claim, gear refresh, honors, history, login dismissal, pending/error and stale-response guards.");
+    console.log("Season reward browser passed desktop/mobile layouts, current projection, website archive link, private reward receipts, single claim, gear refresh, honors, login dismissal, pending/error and stale-response guards.");
   } finally {
     if(client)await client.send("Browser.close").catch(()=>{});
     if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}
