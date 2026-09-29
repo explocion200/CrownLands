@@ -6,6 +6,7 @@ window.CROWNLANDS_ADS_CONFIG = Object.freeze({
   dailyLimit: 20,
   testAdUnitPath: "/22639388115/rewarded_web_example",
   approvedProductionHosts: Object.freeze([
+    "playcrownlands.com",
     "crownland.netlify.app",
   ]),
   // Google Ad Manager > Inventory > Ad units. Use the full path:

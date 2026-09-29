@@ -65,6 +65,35 @@ async function main() {
   await transient.c.heartbeatGameServerMembership();assert.deepEqual(transient.actions,[]);
   assert.equal(transient.c.gameServerHeartbeatInFlight,false);
 
+  const polling=context();
+  Object.assign(polling.c,{updateCheckInFlight:false,deployedUpdateAvailableBuildId:"",deployedUpdateNoticeShown:false,document:{visibilityState:"visible"}});
+  vm.runInContext(extract("checkForDeployedUpdate"),polling.c);
+  polling.c.fetchDeployedBuildId=()=>new Promise(()=>{});
+  const check=polling.c.checkForDeployedUpdate();await tick();
+  [...polling.timers.values()].find(t=>t.ms===10000).fn();
+  assert.equal(await check,false);assert.equal(polling.c.updateCheckInFlight,false,"A hung fetch permanently disabled update checks.");
+  polling.c.fetchDeployedBuildId=async()=>"new-build";
+  assert.equal(await polling.c.checkForDeployedUpdate(),true);
+  assert.deepEqual(polling.actions,["update:new-build"]);
+
+  for(const stage of ["registration","worker-update","ready"]) {
+    const f=context();let reloads=0,messages=0;
+    Object.assign(f.c,{state:null,URL,UPDATE_RELOAD_PAUSE_MS:650,deployedUpdateReloadInProgress:false,
+      deployedUpdateAvailableBuildId:"",deployedUpdateNoticeShown:false,setMapSwitchLoading:()=>{}});
+    f.c.console.info=()=>{};
+    f.c.window.location={href:"https://playcrownlands.com/play/",replace:url=>{assert.equal(new URL(url).searchParams.get("build"),"new-build");reloads++;}};
+    f.c.navigator={serviceWorker:{getRegistration:()=>stage==="registration"?new Promise(()=>{}):Promise.resolve({
+      update:()=>stage==="worker-update"?new Promise(()=>{}):Promise.resolve(),waiting:{postMessage:()=>messages++}
+    })}};
+    vm.runInContext(extract("handleDeployedUpdate"),f.c);
+    const updating=f.c.handleDeployedUpdate("new-build");await tick();
+    await f.c.handleDeployedUpdate("new-build");
+    if(stage!=="ready"){[...f.timers.values()].find(t=>t.ms===3000).fn();await tick();}
+    [...f.timers.values()].find(t=>t.ms===650).fn();await updating;
+    assert.equal(reloads,1,"A stalled "+stage+" must not block or duplicate the update reload.");
+    assert.equal(messages,stage==="ready"?1:0);
+  }
+
   const login=context(), reward=deferred();login.api.getSeasonRewardStatus=()=>reward.promise;
   login.c.startLoginPresentationDailyRefresh();await tick();
   assert(login.actions.includes("daily-ready"));assert.equal(login.c.loginPresentationSequence.seasonResolved,undefined);

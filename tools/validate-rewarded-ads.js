@@ -225,6 +225,19 @@ assert.doesNotMatch(indexSource, /class="login-game-info"/);
 assert.match(gameSource, /productionHostApproved\s*=\s*approvedProductionHosts\.has\(hostname\)/);
 assert.match(gameSource, /productionHostApproved\s*\?\s*productionAdUnitPath\s*:\s*""/);
 assert.match(adsConfigSource, /productionAdUnitPath:\s*""/);
+const hostContext = { window: { location: { hostname: "playcrownlands.com" } }, Set };
+vm.createContext(hostContext);
+vm.runInContext(adsConfigSource + "\nconst ADS_CONFIG = window.CROWNLANDS_ADS_CONFIG;\n"
+  + extractFunction(gameSource, "getRewardedAdClientConfig"), hostContext);
+assert.equal(hostContext.getRewardedAdClientConfig().productionHostApproved, true,
+  "The canonical game host must be eligible for its configured production unit.");
+assert.equal(hostContext.getRewardedAdClientConfig().adUnitPath, "",
+  "Production must remain unavailable until a real unit is supplied, without falling back to Google's test unit.");
+hostContext.window.location.hostname = "localhost";
+assert.equal(hostContext.getRewardedAdClientConfig().adUnitPath, "/22639388115/rewarded_web_example");
+hostContext.window.location.hostname = "unapproved.example";
+assert.equal(hostContext.getRewardedAdClientConfig().productionHostApproved, false);
+assert.equal(hostContext.getRewardedAdClientConfig().adUnitPath, "");
 assert.match(privacySource, /Google Ad Manager/);
 assert.match(privacySource, /Google AdSense/);
 assert.match(privacySource, /rewarded/i);

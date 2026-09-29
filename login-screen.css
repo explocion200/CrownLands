@@ -179,8 +179,9 @@
 }
 #setupScreen .login-utilities > * { position: static; }
 
-/* Sign-in supports portrait. The existing landscape requirement resumes in game. */
-body:has(#setupScreen.visible) .rotate-warning { display: none; }
+/* Sign-in supports portrait. Keep this sibling-scoped: body:has() makes
+   ordinary map mutations invalidate styles throughout the game. */
+#setupScreen.visible ~ .rotate-warning { display: none; }
 
 @media (orientation: portrait) {
   #setupScreen .login-background img { object-position: 27% center; }
