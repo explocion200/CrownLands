@@ -21,7 +21,12 @@
 
 body { color: var(--cl-readable-dark); }
 
-:where(button, input, select, textarea, a, [tabindex]):focus-visible {
+:where(button):focus-visible,
+:where(input):focus-visible,
+:where(select):focus-visible,
+:where(textarea):focus-visible,
+:where(a):focus-visible,
+:where([tabindex]):focus-visible {
   outline: 3px solid var(--cl-focus-ring);
   outline-offset: 2px;
 }
@@ -42,160 +47,156 @@ body { color: var(--cl-readable-dark); }
   opacity: 1;
 }
 
+/* Single-argument :where() entries keep zero specificity and let the browser
+   index each surface, instead of testing a large union on every map element. */
 /* Paper surfaces use ink, never inherited ivory. */
-:where(
-  .modal .modal-card,
-  .profile-screen,
-  .panel,
-  .cl-panel,
-  .online-login,
-  .login-game-info,
-  .profile-settings-section,
-  .audio-channel-card,
-  .kingdom-stat,
-  .profile-achievement-summary,
-  .profile-achievement-summary-grid > div,
-  .profile-notification-row,
-  .profile-skill-summary > div,
-  .profile-skill-reset,
-  .profile-skill-list .skill-row,
-  .skill-preset-detail,
-  .skill-preset-allocation-group,
-  .shop-balance,
-  .shop-rewarded-section,
-  .shop-item,
-  .inventory-summary,
-  .inventory-slot,
-  .inventory-selection,
-  .city-list-summary,
-  .city-list-row,
-  .city-list-empty,
-  .leaderboard-row,
-  .leaderboard-empty,
-  .battle-report-card,
-  .battle-report-empty,
-  .battle-report-detail-head,
-  .battle-report-detail-grid > div,
-  .incoming-attack-summary,
-  .incoming-attack-card,
-  .incoming-attack-empty,
-  .outgoing-attack-card,
-  .active-objective-card,
-  .held-camp-operation-card,
-  .held-stronghold-operation-card,
-  .reinforcement-operation-card,
-  .holding-reinforcement-panel,
-  .holding-reinforcement-row,
-  .scout-report-city,
-  .scout-report-overview > div,
-  .scout-breakdown-row,
-  .scout-skill-list,
-  .troop-route-city,
-  .troop-slider-control,
-  .troop-slider-preview > div,
-  .send-confirm-card,
-  .send-outcome,
-  .camp-public-status > div,
-  .gold-camp-info-grid > div,
-  .camp-reward-overview > div,
-  .camp-reward-row,
-  .relic-drop-row,
-  .deed-camp-condition,
-  .deed-camp-history-row,
-  .citadel-reign-row,
-  .citadel-reign-note,
-  .citadel-reign-empty,
-  .clan-panel,
-  .clan-card,
-  .clan-hero,
-  .clan-create-card,
-  .clan-discovery,
-  .clan-roster-panel,
-  .clan-gift-panel,
-  .clan-quest-panel,
-  .clan-social-card,
-  .clan-rename-card,
-  .clan-list-row,
-  .clan-member-row,
-  .clan-applications article,
-  .clan-rally-card,
-  .clan-quest-card,
-  .public-profile-section,
-  .public-profile-location,
-  .public-profile-clan,
-  .public-clan-details dl div,
-  .public-clan-member,
-  .daily-reward-panel,
-  .daily-reward-card,
-  .daily-reward-loading,
-  .daily-reward-error,
-  .daily-mission-row,
-  .daily-mission-detail-stat,
-  .daily-mission-recommendation,
-  .seasonal-achievement-panel,
-  .seasonal-achievement-hero,
-  .seasonal-achievement-row,
-  .seasonal-achievement-details,
-  .offline-reward-grid > div,
-  .offline-lost-cities,
-  .level-up-reward-card,
-  .level-up-reward-item,
-  .patch-notes-intro,
-  .patch-notes-release-list article
-) {
+:where(.modal .modal-card),
+:where(.profile-screen),
+:where(.panel),
+:where(.cl-panel),
+:where(.online-login),
+:where(.login-game-info),
+:where(.profile-settings-section),
+:where(.audio-channel-card),
+:where(.kingdom-stat),
+:where(.profile-achievement-summary),
+:where(.profile-achievement-summary-grid > div),
+:where(.profile-notification-row),
+:where(.profile-skill-summary > div),
+:where(.profile-skill-reset),
+:where(.profile-skill-list .skill-row),
+:where(.skill-preset-detail),
+:where(.skill-preset-allocation-group),
+:where(.shop-balance),
+:where(.shop-rewarded-section),
+:where(.shop-item),
+:where(.inventory-summary),
+:where(.inventory-slot),
+:where(.inventory-selection),
+:where(.city-list-summary),
+:where(.city-list-row),
+:where(.city-list-empty),
+:where(.leaderboard-row),
+:where(.leaderboard-empty),
+:where(.battle-report-card),
+:where(.battle-report-empty),
+:where(.battle-report-detail-head),
+:where(.battle-report-detail-grid > div),
+:where(.incoming-attack-summary),
+:where(.incoming-attack-card),
+:where(.incoming-attack-empty),
+:where(.outgoing-attack-card),
+:where(.active-objective-card),
+:where(.held-camp-operation-card),
+:where(.held-stronghold-operation-card),
+:where(.reinforcement-operation-card),
+:where(.holding-reinforcement-panel),
+:where(.holding-reinforcement-row),
+:where(.scout-report-city),
+:where(.scout-report-overview > div),
+:where(.scout-breakdown-row),
+:where(.scout-skill-list),
+:where(.troop-route-city),
+:where(.troop-slider-control),
+:where(.troop-slider-preview > div),
+:where(.send-confirm-card),
+:where(.send-outcome),
+:where(.camp-public-status > div),
+:where(.gold-camp-info-grid > div),
+:where(.camp-reward-overview > div),
+:where(.camp-reward-row),
+:where(.relic-drop-row),
+:where(.deed-camp-condition),
+:where(.deed-camp-history-row),
+:where(.citadel-reign-row),
+:where(.citadel-reign-note),
+:where(.citadel-reign-empty),
+:where(.clan-panel),
+:where(.clan-card),
+:where(.clan-hero),
+:where(.clan-create-card),
+:where(.clan-discovery),
+:where(.clan-roster-panel),
+:where(.clan-gift-panel),
+:where(.clan-quest-panel),
+:where(.clan-social-card),
+:where(.clan-rename-card),
+:where(.clan-list-row),
+:where(.clan-member-row),
+:where(.clan-applications article),
+:where(.clan-rally-card),
+:where(.clan-quest-card),
+:where(.public-profile-section),
+:where(.public-profile-location),
+:where(.public-profile-clan),
+:where(.public-clan-details dl div),
+:where(.public-clan-member),
+:where(.daily-reward-panel),
+:where(.daily-reward-card),
+:where(.daily-reward-loading),
+:where(.daily-reward-error),
+:where(.daily-mission-row),
+:where(.daily-mission-detail-stat),
+:where(.daily-mission-recommendation),
+:where(.seasonal-achievement-panel),
+:where(.seasonal-achievement-hero),
+:where(.seasonal-achievement-row),
+:where(.seasonal-achievement-details),
+:where(.offline-reward-grid > div),
+:where(.offline-lost-cities),
+:where(.level-up-reward-card),
+:where(.level-up-reward-item),
+:where(.patch-notes-intro),
+:where(.patch-notes-release-list article) {
   color: var(--cl-readable-paper);
 }
 
-:where(
-  .modal .modal-card,
-  .profile-screen,
-  .profile-settings-section,
-  .shop-item,
-  .inventory-slot,
-  .inventory-selection,
-  .city-list-row,
-  .leaderboard-row,
-  .battle-report-card,
-  .incoming-attack-card,
-  .outgoing-attack-card,
-  .troop-route-city,
-  .troop-slider-control,
-  .troop-slider-preview > div,
-  .send-confirm-card,
-  .camp-info-tab-panel,
-  .clan-panel,
-  .clan-card,
-  .daily-reward-card,
-  .daily-mission-row,
-  .seasonal-achievement-row
-) :where(p, li, dd, dt, label, span, small) {
+:where(.modal .modal-card) :where(p, li, dd, dt, label, span, small),
+:where(.profile-screen) :where(p, li, dd, dt, label, span, small),
+:where(.profile-settings-section) :where(p, li, dd, dt, label, span, small),
+:where(.shop-item) :where(p, li, dd, dt, label, span, small),
+:where(.inventory-slot) :where(p, li, dd, dt, label, span, small),
+:where(.inventory-selection) :where(p, li, dd, dt, label, span, small),
+:where(.city-list-row) :where(p, li, dd, dt, label, span, small),
+:where(.leaderboard-row) :where(p, li, dd, dt, label, span, small),
+:where(.battle-report-card) :where(p, li, dd, dt, label, span, small),
+:where(.incoming-attack-card) :where(p, li, dd, dt, label, span, small),
+:where(.outgoing-attack-card) :where(p, li, dd, dt, label, span, small),
+:where(.troop-route-city) :where(p, li, dd, dt, label, span, small),
+:where(.troop-slider-control) :where(p, li, dd, dt, label, span, small),
+:where(.troop-slider-preview > div) :where(p, li, dd, dt, label, span, small),
+:where(.send-confirm-card) :where(p, li, dd, dt, label, span, small),
+:where(.camp-info-tab-panel) :where(p, li, dd, dt, label, span, small),
+:where(.clan-panel) :where(p, li, dd, dt, label, span, small),
+:where(.clan-card) :where(p, li, dd, dt, label, span, small),
+:where(.daily-reward-card) :where(p, li, dd, dt, label, span, small),
+:where(.daily-mission-row) :where(p, li, dd, dt, label, span, small),
+:where(.seasonal-achievement-row) :where(p, li, dd, dt, label, span, small) {
   color: var(--cl-readable-paper-muted);
   opacity: 1;
 }
 
-:where(
-  .modal .modal-card,
-  .profile-screen,
-  .profile-settings-section,
-  .shop-item,
-  .inventory-slot,
-  .inventory-selection,
-  .city-list-row,
-  .leaderboard-row,
-  .battle-report-card,
-  .incoming-attack-card,
-  .outgoing-attack-card,
-  .troop-route-city,
-  .troop-slider-control,
-  .troop-slider-preview > div,
-  .send-confirm-card,
-  .camp-info-tab-panel,
-  .clan-panel,
-  .clan-card,
-  .daily-reward-card,
-  .daily-mission-row,
-  .seasonal-achievement-row
-) :where(h2, h3, h4, strong, b) {
+:where(.modal .modal-card) :where(h2, h3, h4, strong, b),
+:where(.profile-screen) :where(h2, h3, h4, strong, b),
+:where(.profile-settings-section) :where(h2, h3, h4, strong, b),
+:where(.shop-item) :where(h2, h3, h4, strong, b),
+:where(.inventory-slot) :where(h2, h3, h4, strong, b),
+:where(.inventory-selection) :where(h2, h3, h4, strong, b),
+:where(.city-list-row) :where(h2, h3, h4, strong, b),
+:where(.leaderboard-row) :where(h2, h3, h4, strong, b),
+:where(.battle-report-card) :where(h2, h3, h4, strong, b),
+:where(.incoming-attack-card) :where(h2, h3, h4, strong, b),
+:where(.outgoing-attack-card) :where(h2, h3, h4, strong, b),
+:where(.troop-route-city) :where(h2, h3, h4, strong, b),
+:where(.troop-slider-control) :where(h2, h3, h4, strong, b),
+:where(.troop-slider-preview > div) :where(h2, h3, h4, strong, b),
+:where(.send-confirm-card) :where(h2, h3, h4, strong, b),
+:where(.camp-info-tab-panel) :where(h2, h3, h4, strong, b),
+:where(.clan-panel) :where(h2, h3, h4, strong, b),
+:where(.clan-card) :where(h2, h3, h4, strong, b),
+:where(.daily-reward-card) :where(h2, h3, h4, strong, b),
+:where(.daily-mission-row) :where(h2, h3, h4, strong, b),
+:where(.seasonal-achievement-row) :where(h2, h3, h4, strong, b) {
   color: var(--cl-readable-paper-strong);
   opacity: 1;
 }
@@ -249,89 +250,83 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* Timber, iron, and artwork-backed surfaces use ivory. */
-:where(
-  .setup-card,
-  .online-login,
-  .login-game-info,
-  .commander-panel,
-  .bottom-nav,
-  .map-loading-panel,
-  .profile-screen-header,
-  .shop-modal .modal-card,
-  .inventory-modal .modal-card,
-  .common-gear-box-modal .modal-card,
-  .common-gear-building-modal .modal-card,
-  .inner-castle-modal .modal-card,
-  .inner-castle-preview-tray,
-  .common-gear-building-shell,
-  .common-gear-character-panel,
-  .common-gear-slot,
-  .common-gear-reveal-shell,
-  .battle-visual-target,
-  .battle-visual-rule,
-  .battle-visual-section,
-  .battle-visual-wall,
-  .battle-visual-rewards,
-  .battle-visual-hero,
-  .battle-visual-detail-card,
-  .battle-visual-bonus-card,
-  .battle-visual-outcome,
-  .camp-stats-locked,
-  .clan-shield-editor,
-  .clan-shield-editor-preview,
-  .clan-shield-preview-stage,
-  .clan-shield-control,
-  .clan-shield-color-group,
-  .realm-activity-card.citadel,
-  .effect-status-badge
-) {
+:where(.setup-card),
+:where(.online-login),
+:where(.login-game-info),
+:where(.commander-panel),
+:where(.bottom-nav),
+:where(.map-loading-panel),
+:where(.profile-screen-header),
+:where(.shop-modal .modal-card),
+:where(.inventory-modal .modal-card),
+:where(.common-gear-box-modal .modal-card),
+:where(.common-gear-building-modal .modal-card),
+:where(.inner-castle-modal .modal-card),
+:where(.inner-castle-preview-tray),
+:where(.common-gear-building-shell),
+:where(.common-gear-character-panel),
+:where(.common-gear-slot),
+:where(.common-gear-reveal-shell),
+:where(.battle-visual-target),
+:where(.battle-visual-rule),
+:where(.battle-visual-section),
+:where(.battle-visual-wall),
+:where(.battle-visual-rewards),
+:where(.battle-visual-hero),
+:where(.battle-visual-detail-card),
+:where(.battle-visual-bonus-card),
+:where(.battle-visual-outcome),
+:where(.camp-stats-locked),
+:where(.clan-shield-editor),
+:where(.clan-shield-editor-preview),
+:where(.clan-shield-preview-stage),
+:where(.clan-shield-control),
+:where(.clan-shield-color-group),
+:where(.realm-activity-card.citadel),
+:where(.effect-status-badge) {
   color: var(--cl-readable-dark);
 }
 
-:where(
-  .setup-card,
-  .online-login,
-  .login-game-info,
-  .commander-panel,
-  .bottom-nav,
-  .map-loading-panel,
-  .profile-screen-header,
-  .shop-modal .modal-card,
-  .inventory-modal .modal-card,
-  .common-gear-box-modal .modal-card,
-  .common-gear-building-modal .modal-card,
-  .inner-castle-modal .modal-card,
-  .inner-castle-preview-tray,
-  .common-gear-building-shell,
-  .battle-visual-report,
-  .camp-stats-locked,
-  .clan-shield-editor,
-  .realm-activity-card.citadel
-) :where(p, li, span, small, label) {
+:where(.setup-card) :where(p, li, span, small, label),
+:where(.online-login) :where(p, li, span, small, label),
+:where(.login-game-info) :where(p, li, span, small, label),
+:where(.commander-panel) :where(p, li, span, small, label),
+:where(.bottom-nav) :where(p, li, span, small, label),
+:where(.map-loading-panel) :where(p, li, span, small, label),
+:where(.profile-screen-header) :where(p, li, span, small, label),
+:where(.shop-modal .modal-card) :where(p, li, span, small, label),
+:where(.inventory-modal .modal-card) :where(p, li, span, small, label),
+:where(.common-gear-box-modal .modal-card) :where(p, li, span, small, label),
+:where(.common-gear-building-modal .modal-card) :where(p, li, span, small, label),
+:where(.inner-castle-modal .modal-card) :where(p, li, span, small, label),
+:where(.inner-castle-preview-tray) :where(p, li, span, small, label),
+:where(.common-gear-building-shell) :where(p, li, span, small, label),
+:where(.battle-visual-report) :where(p, li, span, small, label),
+:where(.camp-stats-locked) :where(p, li, span, small, label),
+:where(.clan-shield-editor) :where(p, li, span, small, label),
+:where(.realm-activity-card.citadel) :where(p, li, span, small, label) {
   color: var(--cl-readable-dark-muted);
   opacity: 1;
 }
 
-:where(
-  .setup-card,
-  .online-login,
-  .login-game-info,
-  .commander-panel,
-  .bottom-nav,
-  .map-loading-panel,
-  .profile-screen-header,
-  .shop-modal .modal-card,
-  .inventory-modal .modal-card,
-  .common-gear-box-modal .modal-card,
-  .common-gear-building-modal .modal-card,
-  .inner-castle-modal .modal-card,
-  .inner-castle-preview-tray,
-  .common-gear-building-shell,
-  .battle-visual-report,
-  .camp-stats-locked,
-  .clan-shield-editor,
-  .realm-activity-card.citadel
-) :where(h1, h2, h3, h4, strong, b) {
+:where(.setup-card) :where(h1, h2, h3, h4, strong, b),
+:where(.online-login) :where(h1, h2, h3, h4, strong, b),
+:where(.login-game-info) :where(h1, h2, h3, h4, strong, b),
+:where(.commander-panel) :where(h1, h2, h3, h4, strong, b),
+:where(.bottom-nav) :where(h1, h2, h3, h4, strong, b),
+:where(.map-loading-panel) :where(h1, h2, h3, h4, strong, b),
+:where(.profile-screen-header) :where(h1, h2, h3, h4, strong, b),
+:where(.shop-modal .modal-card) :where(h1, h2, h3, h4, strong, b),
+:where(.inventory-modal .modal-card) :where(h1, h2, h3, h4, strong, b),
+:where(.common-gear-box-modal .modal-card) :where(h1, h2, h3, h4, strong, b),
+:where(.common-gear-building-modal .modal-card) :where(h1, h2, h3, h4, strong, b),
+:where(.inner-castle-modal .modal-card) :where(h1, h2, h3, h4, strong, b),
+:where(.inner-castle-preview-tray) :where(h1, h2, h3, h4, strong, b),
+:where(.common-gear-building-shell) :where(h1, h2, h3, h4, strong, b),
+:where(.battle-visual-report) :where(h1, h2, h3, h4, strong, b),
+:where(.camp-stats-locked) :where(h1, h2, h3, h4, strong, b),
+:where(.clan-shield-editor) :where(h1, h2, h3, h4, strong, b),
+:where(.realm-activity-card.citadel) :where(h1, h2, h3, h4, strong, b) {
   color: var(--cl-readable-dark-strong);
   opacity: 1;
 }
@@ -400,108 +395,98 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* Shared controls keep their role legible in every surface context. */
-:where(
-  .primary-btn,
-  .profile-primary-btn,
-  .shop-buy-btn,
-  .inventory-use-btn,
-  .offline-collect-btn,
-  .troop-slider-confirm,
-  .main-city-change-btn,
-  .city-level-up-btn,
-  .skill-row button,
-  .profile-skill-reset button,
-  .leaderboard-toolbar button,
-  .action-buttons button,
-  .daily-mission-action button,
-  .seasonal-achievement-reward button,
-  .level-up-collect-btn,
-  .modal-actions button
-):not(:disabled) {
+:where(.primary-btn):not(:disabled),
+:where(.profile-primary-btn):not(:disabled),
+:where(.shop-buy-btn):not(:disabled),
+:where(.inventory-use-btn):not(:disabled),
+:where(.offline-collect-btn):not(:disabled),
+:where(.troop-slider-confirm):not(:disabled),
+:where(.main-city-change-btn):not(:disabled),
+:where(.city-level-up-btn):not(:disabled),
+:where(.skill-row button):not(:disabled),
+:where(.profile-skill-reset button):not(:disabled),
+:where(.leaderboard-toolbar button):not(:disabled),
+:where(.action-buttons button):not(:disabled),
+:where(.daily-mission-action button):not(:disabled),
+:where(.seasonal-achievement-reward button):not(:disabled),
+:where(.level-up-collect-btn):not(:disabled),
+:where(.modal-actions button):not(:disabled) {
   color: var(--cl-readable-dark-strong);
   font-weight: 900;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .72);
 }
 
-:where(
-  .ghost-btn,
-  .profile-secondary-btn,
-  .battle-report-back,
-  .battle-report-detail-btn,
-  .battle-report-locate-btn,
-  .city-list-toolbar button,
-  .city-list-locate,
-  .city-list-info,
-  .city-list-pager button,
-  .troop-slider-cancel,
-  .incoming-attack-locate,
-  .realm-activity-location-btn,
-  .recall-horn-btn,
-  .modal-actions .safe-action,
-  .modal-close,
-  .profile-screen-close,
-  .profile-icon-btn,
-  .audio-mute-button
-):not(:disabled) {
+:where(.ghost-btn):not(:disabled),
+:where(.profile-secondary-btn):not(:disabled),
+:where(.battle-report-back):not(:disabled),
+:where(.battle-report-detail-btn):not(:disabled),
+:where(.battle-report-locate-btn):not(:disabled),
+:where(.city-list-toolbar button):not(:disabled),
+:where(.city-list-locate):not(:disabled),
+:where(.city-list-info):not(:disabled),
+:where(.city-list-pager button):not(:disabled),
+:where(.troop-slider-cancel):not(:disabled),
+:where(.incoming-attack-locate):not(:disabled),
+:where(.realm-activity-location-btn):not(:disabled),
+:where(.recall-horn-btn):not(:disabled),
+:where(.modal-actions .safe-action):not(:disabled),
+:where(.modal-close):not(:disabled),
+:where(.profile-screen-close):not(:disabled),
+:where(.profile-icon-btn):not(:disabled),
+:where(.audio-mute-button):not(:disabled) {
   color: var(--cl-readable-dark-strong);
   font-weight: 850;
 }
 
-:where(
-  .primary-btn,
-  .profile-primary-btn,
-  .shop-buy-btn,
-  .inventory-use-btn,
-  .offline-collect-btn,
-  .troop-slider-confirm,
-  .main-city-change-btn,
-  .city-level-up-btn,
-  .skill-row button,
-  .profile-skill-reset button,
-  .leaderboard-toolbar button,
-  .action-buttons button,
-  .daily-mission-action button,
-  .seasonal-achievement-reward button,
-  .level-up-collect-btn,
-  .modal-actions button
-):disabled {
+:where(.primary-btn):disabled,
+:where(.profile-primary-btn):disabled,
+:where(.shop-buy-btn):disabled,
+:where(.inventory-use-btn):disabled,
+:where(.offline-collect-btn):disabled,
+:where(.troop-slider-confirm):disabled,
+:where(.main-city-change-btn):disabled,
+:where(.city-level-up-btn):disabled,
+:where(.skill-row button):disabled,
+:where(.profile-skill-reset button):disabled,
+:where(.leaderboard-toolbar button):disabled,
+:where(.action-buttons button):disabled,
+:where(.daily-mission-action button):disabled,
+:where(.seasonal-achievement-reward button):disabled,
+:where(.level-up-collect-btn):disabled,
+:where(.modal-actions button):disabled {
   color: #514638;
   opacity: .84;
   font-weight: 850;
   text-shadow: 0 1px rgba(255, 249, 229, .42);
 }
 
-:where(
-  .profile-tabs button,
-  .push-alerts-option,
-  .animation-mode-option,
-  .skill-preset-tabs button,
-  .battle-report-filters button,
-  .seasonal-achievement-filters button,
-  .active-operations-tab,
-  .clan-section-nav button,
-  .clan-browser-nav button
-) {
+:where(.profile-tabs button),
+:where(.push-alerts-option),
+:where(.animation-mode-option),
+:where(.skill-preset-tabs button),
+:where(.battle-report-filters button),
+:where(.seasonal-achievement-filters button),
+:where(.active-operations-tab),
+:where(.clan-section-nav button),
+:where(.clan-browser-nav button) {
   color: #3b2b1d;
   font-weight: 900;
   opacity: 1;
 }
 
-:where(
-  .profile-tabs button.active,
-  .profile-tabs button[aria-selected="true"],
-  .push-alerts-option.active,
-  .push-alerts-option[aria-pressed="true"],
-  .animation-mode-option.active,
-  .animation-mode-option[aria-pressed="true"],
-  .skill-preset-tabs button.active,
-  .skill-preset-tabs button[aria-selected="true"],
-  .battle-report-filters button.active,
-  .seasonal-achievement-filters button.active,
-  .active-operations-tab.active,
-  .clan-section-nav button.active,
-  .clan-browser-nav button.active
-) {
+:where(.profile-tabs button.active),
+:where(.profile-tabs button[aria-selected="true"]),
+:where(.push-alerts-option.active),
+:where(.push-alerts-option[aria-pressed="true"]),
+:where(.animation-mode-option.active),
+:where(.animation-mode-option[aria-pressed="true"]),
+:where(.skill-preset-tabs button.active),
+:where(.skill-preset-tabs button[aria-selected="true"]),
+:where(.battle-report-filters button.active),
+:where(.seasonal-achievement-filters button.active),
+:where(.active-operations-tab.active),
+:where(.clan-section-nav button.active),
+:where(.clan-browser-nav button.active) {
   color: var(--cl-readable-dark-strong);
   text-shadow: 0 1px rgba(0, 0, 0, .7);
 }
@@ -611,11 +596,19 @@ body { color: var(--cl-readable-dark); }
   text-shadow: 0 2px 1px #1a0c09;
 }
 
-:where(.shop-item, .inventory-slot, .inventory-selection, .shop-balance, .inventory-summary) :where(strong, b) {
+:where(.shop-item) :where(strong, b),
+:where(.inventory-slot) :where(strong, b),
+:where(.inventory-selection) :where(strong, b),
+:where(.shop-balance) :where(strong, b),
+:where(.inventory-summary) :where(strong, b) {
   color: var(--cl-readable-paper-strong);
 }
 
-:where(.shop-item, .inventory-slot, .inventory-selection, .shop-balance, .inventory-summary) :where(span, small, p) {
+:where(.shop-item) :where(span, small, p),
+:where(.inventory-slot) :where(span, small, p),
+:where(.inventory-selection) :where(span, small, p),
+:where(.shop-balance) :where(span, small, p),
+:where(.inventory-summary) :where(span, small, p) {
   color: var(--cl-readable-paper-muted);
   opacity: 1;
 }
@@ -649,44 +642,40 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* Troop, march, scout, and battle information remains ink on paper. */
-:where(
-  .troop-route-city,
-  .troop-slider-control,
-  .troop-slider-preview > div,
-  .send-confirm-card,
-  .send-outcome,
-  .battle-report-card,
-  .battle-report-detail-head,
-  .battle-report-detail-grid > div,
-  .incoming-attack-summary,
-  .incoming-attack-card,
-  .outgoing-attack-card,
-  .scout-report-city,
-  .scout-report-overview > div,
-  .scout-breakdown-row,
-  .scout-skill-list
-) :where(strong, b, h3, h4) {
+:where(.troop-route-city) :where(strong, b, h3, h4),
+:where(.troop-slider-control) :where(strong, b, h3, h4),
+:where(.troop-slider-preview > div) :where(strong, b, h3, h4),
+:where(.send-confirm-card) :where(strong, b, h3, h4),
+:where(.send-outcome) :where(strong, b, h3, h4),
+:where(.battle-report-card) :where(strong, b, h3, h4),
+:where(.battle-report-detail-head) :where(strong, b, h3, h4),
+:where(.battle-report-detail-grid > div) :where(strong, b, h3, h4),
+:where(.incoming-attack-summary) :where(strong, b, h3, h4),
+:where(.incoming-attack-card) :where(strong, b, h3, h4),
+:where(.outgoing-attack-card) :where(strong, b, h3, h4),
+:where(.scout-report-city) :where(strong, b, h3, h4),
+:where(.scout-report-overview > div) :where(strong, b, h3, h4),
+:where(.scout-breakdown-row) :where(strong, b, h3, h4),
+:where(.scout-skill-list) :where(strong, b, h3, h4) {
   color: var(--cl-readable-paper-strong) !important;
   opacity: 1;
 }
 
-:where(
-  .troop-route-city,
-  .troop-slider-control,
-  .troop-slider-preview > div,
-  .send-confirm-card,
-  .send-outcome,
-  .battle-report-card,
-  .battle-report-detail-head,
-  .battle-report-detail-grid > div,
-  .incoming-attack-summary,
-  .incoming-attack-card,
-  .outgoing-attack-card,
-  .scout-report-city,
-  .scout-report-overview > div,
-  .scout-breakdown-row,
-  .scout-skill-list
-) :where(span, small, p, label) {
+:where(.troop-route-city) :where(span, small, p, label),
+:where(.troop-slider-control) :where(span, small, p, label),
+:where(.troop-slider-preview > div) :where(span, small, p, label),
+:where(.send-confirm-card) :where(span, small, p, label),
+:where(.send-outcome) :where(span, small, p, label),
+:where(.battle-report-card) :where(span, small, p, label),
+:where(.battle-report-detail-head) :where(span, small, p, label),
+:where(.battle-report-detail-grid > div) :where(span, small, p, label),
+:where(.incoming-attack-summary) :where(span, small, p, label),
+:where(.incoming-attack-card) :where(span, small, p, label),
+:where(.outgoing-attack-card) :where(span, small, p, label),
+:where(.scout-report-city) :where(span, small, p, label),
+:where(.scout-report-overview > div) :where(span, small, p, label),
+:where(.scout-breakdown-row) :where(span, small, p, label),
+:where(.scout-skill-list) :where(span, small, p, label) {
   color: var(--cl-readable-paper-muted) !important;
   opacity: 1;
 }
@@ -701,28 +690,24 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* City information nests dark military/economic tiles inside a parchment modal. */
-:where(
-  .modal-city-stats .stat-wide,
-  .modal-city-stats .stat-chip,
-  .modal-city-stats .main-city-action-panel,
-  .modal-city-stats .city-level-up-panel,
-  .modal-city-stats .relinquish-city-action-panel,
-  .modal-city-stats .holding-reinforcement-panel,
-  .modal-city-stats .holding-reinforcement-row
-) :where(strong, b, h3, h4, .player-name-link) {
+:where(.modal-city-stats .stat-wide) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .stat-chip) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .main-city-action-panel) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .city-level-up-panel) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .relinquish-city-action-panel) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .holding-reinforcement-panel) :where(strong, b, h3, h4, .player-name-link),
+:where(.modal-city-stats .holding-reinforcement-row) :where(strong, b, h3, h4, .player-name-link) {
   color: var(--cl-readable-dark-strong) !important;
   opacity: 1;
 }
 
-:where(
-  .modal-city-stats .stat-wide,
-  .modal-city-stats .stat-chip,
-  .modal-city-stats .main-city-action-panel,
-  .modal-city-stats .city-level-up-panel,
-  .modal-city-stats .relinquish-city-action-panel,
-  .modal-city-stats .holding-reinforcement-panel,
-  .modal-city-stats .holding-reinforcement-row
-) :where(span, small, p, label) {
+:where(.modal-city-stats .stat-wide) :where(span, small, p, label),
+:where(.modal-city-stats .stat-chip) :where(span, small, p, label),
+:where(.modal-city-stats .main-city-action-panel) :where(span, small, p, label),
+:where(.modal-city-stats .city-level-up-panel) :where(span, small, p, label),
+:where(.modal-city-stats .relinquish-city-action-panel) :where(span, small, p, label),
+:where(.modal-city-stats .holding-reinforcement-panel) :where(span, small, p, label),
+:where(.modal-city-stats .holding-reinforcement-row) :where(span, small, p, label) {
   color: var(--cl-readable-dark-muted) !important;
   opacity: 1;
 }
@@ -779,93 +764,87 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* Objective and clan panels use one parchment information language. */
-:where(
-  .camp-info-tab-panel,
-  .camp-public-status > div,
-  .gold-camp-info-grid > div,
-  .gold-camp-description,
-  .camp-reward-overview > div,
-  .camp-reward-row,
-  .relic-drop-row,
-  .deed-camp-condition,
-  .deed-camp-history-row,
-  .citadel-reign-row,
-  .citadel-reign-note,
-  .citadel-reign-empty,
-  .clan-panel,
-  .clan-card,
-  .clan-hero,
-  .clan-create-card,
-  .clan-discovery,
-  .clan-roster-panel,
-  .clan-gift-panel,
-  .clan-quest-panel,
-  .clan-social-card,
-  .clan-rename-card,
-  .clan-list-row,
-  .clan-member-row,
-  .clan-applications article,
-  .clan-rally-card,
-  .clan-quest-card,
-  .clan-objective-card
-) {
+:where(.camp-info-tab-panel),
+:where(.camp-public-status > div),
+:where(.gold-camp-info-grid > div),
+:where(.gold-camp-description),
+:where(.camp-reward-overview > div),
+:where(.camp-reward-row),
+:where(.relic-drop-row),
+:where(.deed-camp-condition),
+:where(.deed-camp-history-row),
+:where(.citadel-reign-row),
+:where(.citadel-reign-note),
+:where(.citadel-reign-empty),
+:where(.clan-panel),
+:where(.clan-card),
+:where(.clan-hero),
+:where(.clan-create-card),
+:where(.clan-discovery),
+:where(.clan-roster-panel),
+:where(.clan-gift-panel),
+:where(.clan-quest-panel),
+:where(.clan-social-card),
+:where(.clan-rename-card),
+:where(.clan-list-row),
+:where(.clan-member-row),
+:where(.clan-applications article),
+:where(.clan-rally-card),
+:where(.clan-quest-card),
+:where(.clan-objective-card) {
   color: var(--cl-readable-paper);
 }
 
-:where(
-  .camp-info-tab-panel,
-  .camp-public-status > div,
-  .gold-camp-info-grid > div,
-  .gold-camp-description,
-  .camp-reward-overview > div,
-  .camp-reward-row,
-  .relic-drop-row,
-  .deed-camp-condition,
-  .deed-camp-history-row,
-  .citadel-reign-row,
-  .citadel-reign-note,
-  .clan-panel,
-  .clan-card,
-  .clan-hero,
-  .clan-roster-panel,
-  .clan-gift-panel,
-  .clan-quest-panel,
-  .clan-social-card,
-  .clan-list-row,
-  .clan-member-row,
-  .clan-rally-card,
-  .clan-quest-card,
-  .clan-objective-card
-) :where(strong, b, h3, h4) {
+:where(.camp-info-tab-panel) :where(strong, b, h3, h4),
+:where(.camp-public-status > div) :where(strong, b, h3, h4),
+:where(.gold-camp-info-grid > div) :where(strong, b, h3, h4),
+:where(.gold-camp-description) :where(strong, b, h3, h4),
+:where(.camp-reward-overview > div) :where(strong, b, h3, h4),
+:where(.camp-reward-row) :where(strong, b, h3, h4),
+:where(.relic-drop-row) :where(strong, b, h3, h4),
+:where(.deed-camp-condition) :where(strong, b, h3, h4),
+:where(.deed-camp-history-row) :where(strong, b, h3, h4),
+:where(.citadel-reign-row) :where(strong, b, h3, h4),
+:where(.citadel-reign-note) :where(strong, b, h3, h4),
+:where(.clan-panel) :where(strong, b, h3, h4),
+:where(.clan-card) :where(strong, b, h3, h4),
+:where(.clan-hero) :where(strong, b, h3, h4),
+:where(.clan-roster-panel) :where(strong, b, h3, h4),
+:where(.clan-gift-panel) :where(strong, b, h3, h4),
+:where(.clan-quest-panel) :where(strong, b, h3, h4),
+:where(.clan-social-card) :where(strong, b, h3, h4),
+:where(.clan-list-row) :where(strong, b, h3, h4),
+:where(.clan-member-row) :where(strong, b, h3, h4),
+:where(.clan-rally-card) :where(strong, b, h3, h4),
+:where(.clan-quest-card) :where(strong, b, h3, h4),
+:where(.clan-objective-card) :where(strong, b, h3, h4) {
   color: var(--cl-readable-paper-strong) !important;
   opacity: 1;
 }
 
-:where(
-  .camp-info-tab-panel,
-  .camp-public-status > div,
-  .gold-camp-info-grid > div,
-  .gold-camp-description,
-  .camp-reward-overview > div,
-  .camp-reward-row,
-  .relic-drop-row,
-  .deed-camp-condition,
-  .deed-camp-history-row,
-  .citadel-reign-row,
-  .citadel-reign-note,
-  .clan-panel,
-  .clan-card,
-  .clan-hero,
-  .clan-roster-panel,
-  .clan-gift-panel,
-  .clan-quest-panel,
-  .clan-social-card,
-  .clan-list-row,
-  .clan-member-row,
-  .clan-rally-card,
-  .clan-quest-card,
-  .clan-objective-card
-) :where(span, small, p, label, dt, dd) {
+:where(.camp-info-tab-panel) :where(span, small, p, label, dt, dd),
+:where(.camp-public-status > div) :where(span, small, p, label, dt, dd),
+:where(.gold-camp-info-grid > div) :where(span, small, p, label, dt, dd),
+:where(.gold-camp-description) :where(span, small, p, label, dt, dd),
+:where(.camp-reward-overview > div) :where(span, small, p, label, dt, dd),
+:where(.camp-reward-row) :where(span, small, p, label, dt, dd),
+:where(.relic-drop-row) :where(span, small, p, label, dt, dd),
+:where(.deed-camp-condition) :where(span, small, p, label, dt, dd),
+:where(.deed-camp-history-row) :where(span, small, p, label, dt, dd),
+:where(.citadel-reign-row) :where(span, small, p, label, dt, dd),
+:where(.citadel-reign-note) :where(span, small, p, label, dt, dd),
+:where(.clan-panel) :where(span, small, p, label, dt, dd),
+:where(.clan-card) :where(span, small, p, label, dt, dd),
+:where(.clan-hero) :where(span, small, p, label, dt, dd),
+:where(.clan-roster-panel) :where(span, small, p, label, dt, dd),
+:where(.clan-gift-panel) :where(span, small, p, label, dt, dd),
+:where(.clan-quest-panel) :where(span, small, p, label, dt, dd),
+:where(.clan-social-card) :where(span, small, p, label, dt, dd),
+:where(.clan-list-row) :where(span, small, p, label, dt, dd),
+:where(.clan-member-row) :where(span, small, p, label, dt, dd),
+:where(.clan-rally-card) :where(span, small, p, label, dt, dd),
+:where(.clan-quest-card) :where(span, small, p, label, dt, dd),
+:where(.clan-objective-card) :where(span, small, p, label, dt, dd) {
   color: var(--cl-readable-paper-muted) !important;
   opacity: 1;
 }
@@ -880,36 +859,32 @@ body { color: var(--cl-readable-dark); }
 }
 
 /* Daily rewards, missions, and achievements share high-contrast ink. */
-:where(
-  .daily-reward-panel,
-  .daily-reward-card,
-  .daily-reward-loading,
-  .daily-reward-error,
-  .daily-mission-row,
-  .daily-mission-detail-stat,
-  .daily-mission-recommendation,
-  .seasonal-achievement-panel,
-  .seasonal-achievement-hero,
-  .seasonal-achievement-row,
-  .seasonal-achievement-details
-) :where(strong, b, h3, h4) {
+:where(.daily-reward-panel) :where(strong, b, h3, h4),
+:where(.daily-reward-card) :where(strong, b, h3, h4),
+:where(.daily-reward-loading) :where(strong, b, h3, h4),
+:where(.daily-reward-error) :where(strong, b, h3, h4),
+:where(.daily-mission-row) :where(strong, b, h3, h4),
+:where(.daily-mission-detail-stat) :where(strong, b, h3, h4),
+:where(.daily-mission-recommendation) :where(strong, b, h3, h4),
+:where(.seasonal-achievement-panel) :where(strong, b, h3, h4),
+:where(.seasonal-achievement-hero) :where(strong, b, h3, h4),
+:where(.seasonal-achievement-row) :where(strong, b, h3, h4),
+:where(.seasonal-achievement-details) :where(strong, b, h3, h4) {
   color: var(--cl-readable-paper-strong) !important;
   opacity: 1;
 }
 
-:where(
-  .daily-reward-panel,
-  .daily-reward-card,
-  .daily-reward-loading,
-  .daily-reward-error,
-  .daily-mission-row,
-  .daily-mission-detail-stat,
-  .daily-mission-recommendation,
-  .seasonal-achievement-panel,
-  .seasonal-achievement-hero,
-  .seasonal-achievement-row,
-  .seasonal-achievement-details
-) :where(span, small, p, label) {
+:where(.daily-reward-panel) :where(span, small, p, label),
+:where(.daily-reward-card) :where(span, small, p, label),
+:where(.daily-reward-loading) :where(span, small, p, label),
+:where(.daily-reward-error) :where(span, small, p, label),
+:where(.daily-mission-row) :where(span, small, p, label),
+:where(.daily-mission-detail-stat) :where(span, small, p, label),
+:where(.daily-mission-recommendation) :where(span, small, p, label),
+:where(.seasonal-achievement-panel) :where(span, small, p, label),
+:where(.seasonal-achievement-hero) :where(span, small, p, label),
+:where(.seasonal-achievement-row) :where(span, small, p, label),
+:where(.seasonal-achievement-details) :where(span, small, p, label) {
   color: var(--cl-readable-paper-muted) !important;
   opacity: 1;
 }

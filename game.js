@@ -28880,36 +28880,40 @@ function renderCitiesUncached(force = false) {
     const existingCityNode = existingCityNodes.get(city.id);
     const btn = existingCityNode || document.createElement("button");
     existingCityNodes.delete(city.id);
-    btn.type = "button";
-    btn.dataset.cityId = city.id;
+    if (btn.type !== "button") btn.type = "button";
+    if (btn.dataset.cityId !== city.id) btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(displayCity.level);
-    btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
-    if (displayCity !== city) btn.classList.add("upgrade-syncing");
+    const cityClasses = ["city-node", OWNER[city.owner].css, `castle-stage-${castleStage}`];
+    if (displayCity !== city) cityClasses.push("upgrade-syncing");
     const clanAlly = isClanAllyCity(city);
-    if (clanAlly) btn.classList.add("clan-ally");
+    if (clanAlly) cityClasses.push("clan-ally");
     const enemyPowerBand = getStableEnemyCityPowerBand(city);
     if (enemyPowerBand) {
-      btn.classList.add(`enemy-power-${enemyPowerBand}`);
-      btn.dataset.enemyPowerBand = enemyPowerBand;
-    } else {
+      cityClasses.push(`enemy-power-${enemyPowerBand}`);
+      if (btn.dataset.enemyPowerBand !== enemyPowerBand) btn.dataset.enemyPowerBand = enemyPowerBand;
+    } else if (btn.dataset.enemyPowerBand !== undefined) {
       delete btn.dataset.enemyPowerBand;
     }
-    if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
+    if (stronghold) cityClasses.push("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     const mainCity = !stronghold && (city.owner === "player"
       ? state.mainCityId ? city.id === state.mainCityId : Boolean(city.isMainCity)
       : isProtectedMainCity(city));
-    if (mainCity) btn.classList.add("main-city-node");
+    if (mainCity) cityClasses.push("main-city-node");
     const shielded = !stronghold && isCityProtectedByPeaceShield(city);
-    if (shielded) btn.classList.add("peace-shielded");
-    if (city.id === selectedSourceId) btn.classList.add("selected");
-    if (city.id === selectedTargetId) btn.classList.add("targeted");
-    if (scoutNearbySource?.id === city.id) btn.classList.add("scout-radius-source");
-    if (regroupSource?.id === city.id) btn.classList.add("regroup-radius-source");
-    if (scoutNearbySource && isNearbyScoutCandidate(scoutNearbySource, city)) btn.classList.add("scout-nearby-target");
-    if (regroupSource && isNearbyRegroupCandidate(regroupSource, city)) btn.classList.add("regroup-target");
+    if (shielded) cityClasses.push("peace-shielded");
+    if (city.id === selectedSourceId) cityClasses.push("selected");
+    if (city.id === selectedTargetId) cityClasses.push("targeted");
+    if (scoutNearbySource?.id === city.id) cityClasses.push("scout-radius-source");
+    if (regroupSource?.id === city.id) cityClasses.push("regroup-radius-source");
+    if (scoutNearbySource && isNearbyScoutCandidate(scoutNearbySource, city)) cityClasses.push("scout-nearby-target");
+    if (regroupSource && isNearbyRegroupCandidate(regroupSource, city)) cityClasses.push("regroup-target");
     if (sendMode && source && city.id !== source.id) {
-      btn.classList.add(city.owner === "player" ? "supportable" : "attackable");
+      cityClasses.push(city.owner === "player" ? "supportable" : "attackable");
     }
+    // Reconcile once: resetting then restoring classes restyles every city even
+    // when only the selection or a different city's snapshot changed.
+    const cityClassName = cityClasses.join(" ");
+    if (btn.className !== cityClassName) btn.className = cityClassName;
     btn.style.left = `${mapPoint.x}px`;
     btn.style.top = `${mapPoint.y}px`;
     if (stronghold) btn.style.setProperty("--stronghold-size", `${getStrongholdVisualSize(city)}px`);
@@ -28987,8 +28991,10 @@ function renderCitiesUncached(force = false) {
       <span class="city-ring"></span>
         ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" decoding="async" /></span>`;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} garrison troops`}.${assembly.ready || assembly.inbound ? ` ${rallyAssemblyText(assembly)}.` : ""}${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
-    btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
+    const cityAriaLabel = `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} garrison troops`}.${assembly.ready || assembly.inbound ? ` ${rallyAssemblyText(assembly)}.` : ""}${powerBandLabel ? ` ${powerBandLabel}.` : ""}`;
+    if (btn.getAttribute("aria-label") !== cityAriaLabel) btn.setAttribute("aria-label", cityAriaLabel);
+    const cityTitle = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
+    if (btn.title !== cityTitle) btn.title = cityTitle;
     const cityHtml = `
       ${structureHtml}
       ${cityLabel}
