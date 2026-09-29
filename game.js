@@ -16699,7 +16699,7 @@ async function checkForDeployedUpdate(force = false) {
   if (!force && document.visibilityState === "hidden") return false;
   updateCheckInFlight = true;
   try {
-    const deployedBuildId = await fetchDeployedBuildId();
+    const deployedBuildId = await withTimeout(fetchDeployedBuildId(), 10000, "The update check is taking too long.");
     if (!deployedBuildId || deployedBuildId === APP_BUILD_ID) return false;
     if (deployedBuildId === deployedUpdateAvailableBuildId && deployedUpdateNoticeShown) return false;
     await handleDeployedUpdate(deployedBuildId);
@@ -16749,9 +16749,11 @@ async function handleDeployedUpdate(deployedBuildId) {
 
   if ("serviceWorker" in navigator) {
     try {
-      const registration = await navigator.serviceWorker.getRegistration("/");
-      await registration?.update?.();
-      registration?.waiting?.postMessage?.({ type: "SKIP_WAITING" });
+      await withTimeout((async () => {
+        const registration = await navigator.serviceWorker.getRegistration("/");
+        await registration?.update?.();
+        registration?.waiting?.postMessage?.({ type: "SKIP_WAITING" });
+      })(), 3000, "The service worker update is taking too long.");
     } catch (error) {
       console.warn("[Crownlands] Service worker update check failed before reload.", error);
     }

@@ -1,50 +1,45 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0b3e4739b49e87859891fa0ff14c58b3942d16be",
+  "baseCommit": "02b0a4c6fb366602604254c5f0a9ee42af6d9531",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-lag-recovery.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-season-rewards-browser.js"
+        "login-screen.css",
+        "docs/GAME_HEALTH_FIXES_2026_09_29.md"
       ],
       "tests": [
-        "tools/validate-lag-recovery.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/validate-login-session-behavior.js",
-        "tools/validate-login-stability-matrix.js",
-        "tools/validate-season-rewards-browser.js",
-        "tools/validate-realtime-health.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-welcome-back-summary.js"
+        "tools/validate-login-assets.js",
+        "tools/validate-login-layout-browser.js",
+        "tools/validate-responsive-browser.js"
       ],
-      "reason": "Exercise mismatched heartbeats through bounded update checks and explicit verified re-entry, including duplicate requests, stale sessions, transient outages and hung checks. Ensure season status resolves after five seconds, rejects late/stale results, and preserves normal reward-before-daily ordering. Reuse session takeover, foreground, synchronization, pending economy and Welcome Back checks for the shared lifecycle cleanup. Inspect the signed-in recovery screen and season UI at desktop, 844x390 and 568x320 using isolated browser fixtures. No player rules or art change."
+      "reason": "Check portrait sign-in suppression and gameplay rotation warning across 56 real markup/CSS layouts. Exercise desktop, landscape and 4x CPU map switches plus affected touch, HUD, pickup, shop and chat interactions. Before/after Chromium traces identify body subtree style invalidation; the technical note records measured evidence and unresolved production ad prerequisites without changing design rules."
     },
     {
       "paths": [
-        "functions/index.js",
-        "functions/season-rewards.js",
-        "tools/test-season-transaction-latency.js",
-        "functions/test/emulator-season-rewards.js",
-        "tools/validate-transaction-retries.js"
+        "firebaseClient.js",
+        "tools/validate-login-session-behavior.js",
+        "game.js",
+        "tools/validate-lag-recovery.js"
       ],
       "tests": [
-        "tools/test-season-transaction-latency.js",
-        "tools/test-season-rewards.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-performance-bottlenecks.js",
-        "tools/validate-inactive-player-lifecycle.js",
-        "functions/test/emulator-season-rewards.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-pvp-leaderboard.js",
-        "functions/test/emulator-core-expansion-state.js",
-        "functions/test/emulator-reset-gate.js",
-        "functions/test/emulator-inactive-city-level-reset.js"
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-lag-recovery.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-login-stability-matrix.js",
+        "tools/validate-realm-sharding.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Prove fence reads overlap pending economy reads and batch current/prior season checks without a cross-attempt cache or unrelated heartbeat reads. Check failure cleanup, missing-header arming, prior-capture rejection and deadline crossing before any writes flush. Emulator coverage preserves closing races, captured clan rosters, delayed Glory, exactly-once rewards, concurrent economy and army operations, reset/admission, and inactivity maintenance. Economy profile and maintenance reads remain authoritative and fail closed before participation processing. Restore stale transaction-validator expectations left by PR #393 while retaining dedicated starting-city maxAttempts and the sole raw-transaction wrapper. Production latency must be verified after a separately authorized deployment."
+      "reason": "Verify accepted realm propagation before heartbeat requests, stale-session disposal and device/tab takeover. Exercise hung update fetches and service-worker lookup/update with controlled timers, proving polling resumes and exactly one reload proceeds. Existing compatibility/re-entry, foreground and login matrix checks protect lifecycle cleanup. The reset-gate emulator covers existing admission, compatibility, session and reset contracts; no server authority or production data is changed."
+    },
+    {
+      "paths": [
+        "ads-config.js",
+        "tools/validate-rewarded-ads.js"
+      ],
+      "tests": [
+        "tools/validate-rewarded-ads.js"
+      ],
+      "reason": "Execute production-host selection for the canonical domain, localhost and an unapproved host. Keep production ads unavailable without a real unit and preserve click-triggered loading, App Check, server-only rewards and replay protection. External Google Ad Manager/App Check configuration and live ad completion remain unverified; no server switch is enabled."
     }
   ]
 }

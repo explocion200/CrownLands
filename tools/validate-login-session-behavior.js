@@ -52,6 +52,15 @@ async function main() {
   await Promise.all([f.h.activateCurrentSession(), f.h.activateCurrentSession()]);
   assert.equal(f.calls.filter(call => call.name === "joinGameServer").length, 1, "Concurrent login triggers submitted twice.");
   assert.equal(f.c.activeSessionSnapshot.loginAtMs, 123, "A device clock replaced the accepted server timestamp.");
+  const assigned = fixture();
+  assigned.operation(async (name, payload) => name === "getRealmInfo"
+    ? { resetGeneration: "realm-test", worldId: "main-realm-test", realmShardId: "shard_0001" }
+    : { status: "active", resetGeneration: "realm-test", worldId: "main-realm-test", realmShardId: "shard_0002",
+      activeSession: { version: 2, id: payload.sessionId, revision: 1 } });
+  await assigned.h.activateCurrentSession();
+  await assigned.h.callServerFunction("heartbeatGameServer");
+  assert.equal(assigned.calls.at(-1).payload.clientRealmShardId, "shard_0002",
+    "The first heartbeat used the discovery realm instead of the realm accepted during admission.");
   const watcher = f.watchers.at(-1), own = f.c.activeSessionSnapshot;
   f.emit(watcher, { version: 2, id: "old", revision: 99, loginAtMs: Date.now() + 86400000 }, { fromCache: true });
   f.emit(watcher, { version: 2, id: "old", revision: 99 }, { hasPendingWrites: true });

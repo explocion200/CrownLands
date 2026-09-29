@@ -387,6 +387,9 @@
         if (result?.status !== "active" || activeSession?.id !== getActiveSessionId() || activeSession?.version !== 2) {
           throw Object.assign(new Error("This device could not finish connecting. Try signing in again."), { code: "functions/unavailable" });
         }
+        // Match the explicit join path: publish the accepted realm before
+        // session-ready listeners can send a heartbeat.
+        if (result?.resetGeneration && result?.worldId) applyRealmIdentity(result);
         client.activeSessionActivatedUid = uid;
         client.activeSessionSnapshot = activeSession;
         client.activeSessionError = null;
