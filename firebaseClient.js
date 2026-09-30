@@ -2947,13 +2947,30 @@
         limit(Math.max(1,Math.min(100,Math.floor(Number(limitCount)||100)))))),
       getDoc(doc(client.db,"pvpLeaderboards",scope.board)),
     ]);
-    // Fetch current public identities in at most four bounded queries. Renaming,
-    // heraldry changes, clan changes and reclaiming a city never reset the score.
+    // Keep identity queries below the scoped security-rule evaluation limit:
+    // 20+ IDs can be denied even though Firestore accepts up to 30 in an IN query.
+    // Renaming, heraldry/clan changes and reclaiming a city never reset the score.
+    const identityBatchSize = 10;
     const ids=scores.docs.map(row=>row.id), identities=new Map();
-    await Promise.all(Array.from({length:Math.ceil(ids.length/30)},async (_,index)=>{
-      const result=await getDocs(query(collection(client.db,"leaderboards",scope.board,"entries"),
-        ...constraints,where(documentId(),"in",ids.slice(index*30,index*30+30))));
-      result.docs.forEach(row=>identities.set(row.id,row.data()));
+    await Promise.all(Array.from({length:Math.ceil(ids.length/identityBatchSize)},async (_,index)=>{
+      const batchIds=ids.slice(index*identityBatchSize,(index+1)*identityBatchSize);
+      try {
+        const result=await getDocs(query(collection(client.db,"leaderboards",scope.board,"entries"),
+          ...constraints,where(documentId(),"in",batchIds)));
+        result.docs.forEach(row=>identities.set(row.id,row.data()));
+      } catch (error) {
+        if (error?.code !== "permission-denied") throw error;
+        // A missing or out-of-scope identity can deny the whole ID query. Keep
+        // authorized names and let only the unavailable identity use "Ruler".
+        await Promise.all(batchIds.map(async identityUid=>{
+          try {
+            const row=await getDoc(doc(client.db,"leaderboards",scope.board,"entries",identityUid));
+            if (row.exists()) identities.set(row.id,row.data());
+          } catch (identityError) {
+            if (identityError?.code !== "permission-denied") throw identityError;
+          }
+        }));
+      }
     }));
     if (client.user?.uid !== scope.uid || ONLINE_WORLD_ID !== scope.worldId
       || RESET_GENERATION !== scope.resetGeneration || getRealmStorageId() !== scope.board
