@@ -495,6 +495,33 @@
     return bonuses;
   }
 
+  // Keep the values that were used by a calculation, even if the player equips
+  // something else or a later release changes the item's progression curve.
+  function normalizeBonusItems(items) {
+    if (!Array.isArray(items)) return null;
+    return items.filter(item => item && getDefinition(item.gearKey)
+      && Number.isFinite(Number(item.bonusPercent)) && Number(item.bonusPercent) > 0)
+      .slice(0, 32).map(item => {
+        const definition = getDefinition(item.gearKey);
+        return {
+          gearKey: definition.gearKey,
+          gearName: String(item.gearName || definition.gearName).slice(0, 80),
+          rarity: definition.rarity,
+          level: Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(item.level) || 1))),
+          statType: definition.statType,
+          bonusPercent: Number(item.bonusPercent),
+        };
+      });
+  }
+
+  function getEquippedBonusItems(profileOrGear, statTypes = []) {
+    const gear = normalizeState(profileOrGear?.gear || profileOrGear);
+    const items = Object.values(gear.equipped).flatMap(slots => Object.values(slots))
+      .map(id => gear.instances[id]).filter(Boolean)
+      .map(item => ({ ...item, bonusPercent: getBonusPercent(item) }));
+    return normalizeBonusItems(items).filter(item => !statTypes.length || statTypes.includes(item.statType));
+  }
+
   function getUpgradeRequirement(level, rarity = RARITY) {
     if (level && typeof level === "object") {
       const definition = getDefinition(level.gearKey);
@@ -637,6 +664,8 @@
     getDefinition,
     getBonusPercent,
     getBonuses,
+    normalizeBonusItems,
+    getEquippedBonusItems,
     getUpgradeRequirement,
     getUpgradeResult,
     getUpgradeGoldCost,

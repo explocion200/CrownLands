@@ -6466,6 +6466,8 @@ function normalizeRallyParticipant(raw = {}) {
     attackSkillLevel: Math.max(0, Math.floor(safeNumber(raw.attackSkillLevel, 0))),
     attackBonusPercent: Math.max(0, safeNumber(raw.attackBonusPercent, 0)),
     attackGearPercent: Math.max(0, safeNumber(raw.attackGearPercent, 0)),
+    attackGearItems: COMMON_GEAR.normalizeBonusItems(raw.attackGearItems),
+    casualtyGearItems: COMMON_GEAR.normalizeBonusItems(raw.casualtyGearItems),
     clanTrainingPercent: Math.max(0, Math.min(10, safeNumber(raw.clanTrainingPercent, 0))),
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, 0)),
     objectiveMarchSpeedBonusPercent: Math.max(0, safeNumber(raw.objectiveMarchSpeedBonusPercent, 0)),
@@ -6620,6 +6622,7 @@ function getRallyAttackPackages(rally = {}, participantProfiles = null) {
       fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
       fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
       casualtyGearPercent: gearBonuses.casualtyEfficiency,
+      casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
     } : participant;
     return {
       ...combatParticipant,
@@ -6739,6 +6742,8 @@ function createRallyParticipantSnapshot({
     attackSkillLevel: getSkillLevel(profile, "swordmastery"),
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
     attackGearPercent: getCommonGearBonuses(profile).attackStrength,
+    attackGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["attackStrength"]),
+    casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
     attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
       1 + COMMON_GEAR.capBonus("attack", getSkillPercent(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength + Math.max(0, Math.min(10, clanTrainingPercent))) / 100
     ),
@@ -9174,7 +9179,7 @@ function getBattleAttackerBasePower({
   attackPowerPerTroop = 0,
 } = {}) {
   const normalizedTroops = Math.max(0, Math.floor(safeNumber(troops, 0)));
-  const multiplier = 1 + Math.max(0, safeNumber(bonusPercent, 0)) / 100;
+  const multiplier = 1 + COMMON_GEAR.capBonus("attack", safeNumber(bonusPercent, 0)) / 100;
   const snapshottedPowerPerTroop = Math.max(0, safeNumber(attackPowerPerTroop, 0));
   if (snapshottedPowerPerTroop > 0) {
     return Math.max(0, Math.floor(normalizedTroops * snapshottedPowerPerTroop / multiplier));
@@ -9288,6 +9293,7 @@ function createBattleCasualtyRecoverySnapshot({
   recoveredTroops = 0,
   fieldMedicsPercent = undefined,
   casualtyGearPercent = undefined,
+  casualtyGearItems = undefined,
   clanInfirmaryPercent = 0,
   combinedRecoveryPercent = undefined,
 } = {}) {
@@ -9320,6 +9326,11 @@ function createBattleCasualtyRecoverySnapshot({
     skillLabel: "Field Medics",
     fieldMedicsPercent: skillPercent,
     gearPercent,
+    items: COMMON_GEAR.normalizeBonusItems(casualtyGearItems === undefined
+      ? casualtyGearPercent === undefined
+        ? COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"])
+        : null
+      : casualtyGearItems),
     appliedGearPercent,
     clanInfirmaryPercent: clanPercent,
     appliedClanPercent,
@@ -9356,6 +9367,41 @@ function createBattlePowerGearEffect({
   };
 }
 
+function createBattleGearItemEffects(items, statType, percent, value, owner = {}) {
+  if (!(percent > 0) || !(value > 0)) return [];
+  const equipped = COMMON_GEAR.normalizeBonusItems(items)?.filter(item => item.statType === statType);
+  const recordedPercent = equipped?.reduce((sum, item) => sum + item.bonusPercent, 0) || 0;
+  const sources = Math.abs(recordedPercent - percent) < 0.001 ? equipped : [{
+    gearKey: "", gearName: "Item not recorded", rarity: "", level: 0, statType, bonusPercent: percent,
+  }];
+  const isPower = ["attackStrength", "defenderStrength", "wallStrength"].includes(statType);
+  let assigned = 0;
+  return sources.map((item, index) => {
+    const share = index === sources.length - 1 ? value - assigned
+      : isPower ? Math.floor(value * item.bonusPercent / percent)
+        : value * item.bonusPercent / percent;
+    assigned += share;
+    return {
+      ...item,
+      ownerUid: safeString(owner.gearOwnerUid || owner.ownerUid, 128),
+      ownerName: normalizePlayerName(owner.gearOwnerName || owner.ownerName, "Ruler"),
+      bonusPower: isPower ? Math.max(0, Math.floor(share)) : 0,
+      appliedPercent: isPower ? 0 : Math.max(0, share),
+    };
+  });
+}
+
+function createBattleParticipantRecovery(row = {}, losses = 0) {
+  return createBattleCasualtyRecoverySnapshot({
+    losses,
+    fieldMedicsPercent: row.fieldMedicsSkillPercent ?? 0,
+    casualtyGearPercent: row.casualtyGearPercent ?? 0,
+    casualtyGearItems: row.casualtyGearItems,
+    clanInfirmaryPercent: row.clanInfirmaryPercent || 0,
+    combinedRecoveryPercent: row.fieldMedicsPercent,
+  });
+}
+
 function createBattleGearEffectsSnapshot({
   attackerParticipants = [],
   defenderParticipants = [],
@@ -9364,11 +9410,40 @@ function createBattleGearEffectsSnapshot({
   wallGearPercent = 0,
   attackerCasualtyRecovery = null,
   defenderCasualtyRecovery = null,
+  wallOwner = {},
+  siege = null,
 } = {}) {
   const attackers = Array.isArray(attackerParticipants) ? attackerParticipants : [];
   const defenders = Array.isArray(defenderParticipants) ? defenderParticipants : [];
+  const itemEffects = (participants, statType) => {
+    const entries = participants.flatMap(row => {
+      const attacking = statType === "attackStrength";
+      const power = row.powerBreakdown?.[attacking ? "gearAttackStrengthBonusPower" : "gearDefenderStrengthBonusPower"] || 0;
+      const recovery = row.casualtyRecovery;
+      return [
+        ...createBattleGearItemEffects(attacking ? row.attackGearItems : row.defenseGearItems,
+          statType, attacking ? row.gearAttackStrengthPercent : row.gearDefenderStrengthPercent, power, row),
+        ...createBattleGearItemEffects(recovery?.items, "casualtyEfficiency", recovery?.gearPercent,
+          recovery?.losses > 0 ? recovery.appliedGearPercent : 0,
+          { ownerUid: row.ownerUid, ownerName: row.ownerName }),
+      ];
+    });
+    // The city's shield supports its own garrison and allied reinforcements.
+    // Show that single equipped item once with its actual combined contribution.
+    const grouped = new Map();
+    for (const entry of entries) {
+      const key = JSON.stringify([entry.ownerUid, entry.gearKey, entry.level, entry.statType, entry.bonusPercent]);
+      const prior = grouped.get(key);
+      if (prior) prior.bonusPower += entry.bonusPower;
+      else grouped.set(key, entry);
+    }
+    return [...grouped.values()];
+  };
+  const repairItems = COMMON_GEAR.normalizeBonusItems(wallOwner.repairGearItems);
+  const repairPercent = repairItems?.reduce((sum, item) => sum + item.bonusPercent, 0) || 0;
   return {
     attacker: {
+      items: itemEffects(attackers, "attackStrength"),
       attackStrength: createBattlePowerGearEffect({
         sourceLabel: "War Captain gear",
         statLabel: "Attack Strength",
@@ -9385,6 +9460,13 @@ function createBattleGearEffectsSnapshot({
         : null,
     },
     defender: {
+      items: [
+        ...itemEffects(defenders, "defenderStrength"),
+        ...createBattleGearItemEffects(wallOwner.wallGearItems, "wallStrength", wallGearPercent,
+          defensePowerBreakdown.gearWallStrengthBonusPower, wallOwner),
+        ...createBattleGearItemEffects(repairItems, "wallRepairSpeed", repairPercent,
+          siege?.repairAddedMs > 0 ? Math.min(repairPercent, siege.repairReductionPercent || 0) : 0, wallOwner),
+      ],
       defenderStrength: createBattlePowerGearEffect({
         sourceLabel: "Gatehouse gear",
         statLabel: "Defender Strength",
@@ -9462,6 +9544,10 @@ function createDetailedBattleSnapshot({
       shieldwallDisciplinePercent: row.shieldwallDisciplinePercent,
       gearDefenderStrengthPercent: row.gearDefenderStrengthPercent,
       gearDefenderStrengthBonusPower: row.gearDefenderStrengthBonusPower,
+      defenseGearItems: COMMON_GEAR.normalizeBonusItems(row.defenseGearItems),
+      gearOwnerUid: row.gearOwnerUid || row.ownerUid,
+      gearOwnerName: row.gearOwnerName || row.ownerName,
+      casualtyRecovery: createBattleParticipantRecovery(row, settled.losses || 0),
       effectivePower: row.effectivePower,
       objectiveSource: safeString(row.objectiveSource, 48),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
@@ -9498,6 +9584,8 @@ function createDetailedBattleSnapshot({
       clanTrainingPercent,
       gearAttackStrengthPercent,
       effectivePower,
+      attackGearItems: COMMON_GEAR.normalizeBonusItems(row.attackGearItems),
+      casualtyRecovery: createBattleParticipantRecovery(row, settled.losses || 0),
       powerBreakdown: createBattleAttackPowerBreakdown(
         basePower,
         effectivePower,
@@ -9546,12 +9634,21 @@ function createDetailedBattleSnapshot({
     swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
     swordmasteryPercent: attackerSwordmasteryPercent,
     gearAttackStrengthPercent: attackerGearStrengthPercent,
+    attackGearItems: combatSnapshot ? combatSnapshot.attackGearItems
+      : COMMON_GEAR.getEquippedBonusItems(attackerProfile, ["attackStrength"]),
+    casualtyRecovery: attackerCasualtyRecovery,
     effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
     powerBreakdown: attackerPowerBreakdown,
     losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
     survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
   };
   const normalizedProtection = normalizeAttackProtectionSnapshot(attackProtection);
+  if (rallyAttackers.length) {
+    Object.keys(attackerPowerBreakdown).forEach(key => {
+      attackerPowerBreakdown[key] = rallyAttackers.reduce((sum, row) => sum + (row.powerBreakdown[key] || 0), 0);
+    });
+    attackerSnapshot.basePower = attackerPowerBreakdown.baseAttackPower;
+  }
   const defenderSnapshot = {
     ownerUid: safeString(defenderUid, 128),
     ownerName: defensePackages.owner.ownerName,
@@ -9565,6 +9662,9 @@ function createDetailedBattleSnapshot({
     shieldwallDisciplinePercent: defensePackages.owner.shieldwallDisciplinePercent,
     gearDefenderStrengthPercent: defensePackages.owner.gearDefenderStrengthPercent,
     gearDefenderStrengthBonusPower: defensePackages.owner.gearDefenderStrengthBonusPower,
+    defenseGearItems: COMMON_GEAR.normalizeBonusItems(defensePackages.owner.defenseGearItems),
+    casualtyRecovery: defenderCasualtyRecovery
+      || createBattleParticipantRecovery(defensePackages.owner, ownerLosses),
     personalDefenseBonusPercent: Math.max(
       0,
       safeNumber(defenderBonuses.personalDefenseBonusPercent, defenderBonuses.cityDefenseBonusPercent)
@@ -9630,6 +9730,8 @@ function createDetailedBattleSnapshot({
     attackPowerBreakdown: attackerPowerBreakdown,
     defensePowerBreakdown,
     wallGearPercent: defensePackages.owner.gearWallStrengthPercent,
+    wallOwner: defensePackages.owner,
+    siege,
     attackerCasualtyRecovery,
     defenderCasualtyRecovery,
   });
@@ -9868,7 +9970,23 @@ function writeReport(transaction, uid, report, profileSnap = null, extraProfileP
       && safeString(existing.cityId, 96) === safeString(report.cityId, 96)
     ))
   ));
-  const nextReports = [...retainedReports, report].slice(-120);
+  // Full item rosters belong in the report document and private battle snapshot.
+  // Keep the 120-entry profile fallback compact, especially for large rallies.
+  const withoutItemDetails = value => {
+    if (!value || !Object.hasOwn(value, "items")) return value;
+    const compact = { ...value };
+    delete compact.items;
+    return compact;
+  };
+  const nextReports = [...retainedReports, report].slice(-120).map(entry => ({
+    ...entry,
+    ...(entry.casualtyRecovery ? { casualtyRecovery: withoutItemDetails(entry.casualtyRecovery) } : {}),
+    ...(entry.gearEffects ? { gearEffects: Object.fromEntries(Object.entries(entry.gearEffects)
+      .map(([side, effects]) => [side, {
+        ...withoutItemDetails(effects),
+        ...(effects?.casualtyRecovery ? { casualtyRecovery: withoutItemDetails(effects.casualtyRecovery) } : {}),
+      }])) } : {}),
+  }));
   const reportDocument = {
     ...report,
     realmShardId: getCurrentRealmShardId(),
@@ -11400,6 +11518,15 @@ function calculateDefenderArmyPackages({
     stoneworksPercent: Math.max(0, safeNumber(ownerStats.stoneworksPercent, 0)),
     gearWallStrengthPercent: Math.max(0, safeNumber(ownerStats.gearWallStrengthPercent, 0)),
   };
+  Object.assign(ownerPackage, {
+    defenseGearItems: COMMON_GEAR.getEquippedBonusItems(ownerProfile, ["defenderStrength"]),
+    wallGearItems: COMMON_GEAR.getEquippedBonusItems(ownerProfile, ["wallStrength"]),
+    repairGearItems: COMMON_GEAR.getEquippedBonusItems(ownerProfile, ["wallRepairSpeed"]),
+    casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(ownerProfile, ["casualtyEfficiency"]),
+    fieldMedicsSkillPercent: getSkillPercent(ownerProfile, "fieldMedics"),
+    casualtyGearPercent: getCommonGearBonuses(ownerProfile).casualtyEfficiency,
+    fieldMedicsPercent: getCasualtyRecoveryPercent(ownerProfile),
+  });
   const destinationGearDefenderStrengthPercent = rewardCamp
     ? 0
     : Math.max(0, safeNumber(ownerStats.gearDefenderStrengthPercent, 0));
@@ -11449,6 +11576,13 @@ function calculateDefenderArmyPackages({
       shieldwallDisciplineLevel,
       shieldwallDisciplinePercent,
       gearDefenderStrengthPercent: destinationGearDefenderStrengthPercent,
+      defenseGearItems: ownerPackage.defenseGearItems,
+      gearOwnerUid: ownerPackage.ownerUid,
+      gearOwnerName: ownerPackage.ownerName,
+      casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
+      fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
+      casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
+      fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
       gearDefenderStrengthBonusPower: 0,
       personalBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
         stats.personalObjectiveTroopDefenseBonusPercent,
@@ -24024,6 +24158,7 @@ function normalizeAttackCombatSnapshot(raw = null) {
     swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
     swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
     attackStrengthPercent: Math.max(0, safeNumber(raw.attackStrengthPercent, 0)),
+    attackGearItems: COMMON_GEAR.normalizeBonusItems(raw.attackGearItems),
     attackPowerPerTroop,
     launchTroops,
     launchAttackPower: Math.max(0, Math.floor(safeNumber(
@@ -24045,6 +24180,7 @@ function createAttackCombatSnapshot(troops = 1, attackerProfile = {}) {
     swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
     swordmasteryPercent,
     attackStrengthPercent,
+    attackGearItems: COMMON_GEAR.getEquippedBonusItems(attackerProfile, ["attackStrength"]),
     attackPowerPerTroop,
     launchTroops,
     launchAttackPower: Math.floor(launchTroops * attackPowerPerTroop),
@@ -27011,10 +27147,10 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
         ? getSkillPercent(profile, "shieldwallDiscipline")
         : 0;
       const gearBonuses = profileIsCurrent ? getCommonGearBonuses(profile) : {};
-      const gearDefenderStrengthPercent = Math.max(0, safeNumber(gearBonuses.defenseStrength, 0));
+      const gearDefenderStrengthPercent = Math.max(0, safeNumber(gearBonuses.defenderStrength, 0));
       const basePower = Math.floor(troops * BASE_TROOP_DEFENSE_POWER);
       const effectivePower = Math.floor(basePower * (
-        1 + (shieldwallDisciplinePercent + gearDefenderStrengthPercent) / 100
+        1 + COMMON_GEAR.capBonus("defense", shieldwallDisciplinePercent + gearDefenderStrengthPercent) / 100
       ));
       return ownerUid && troops > 0 ? {
         id: doc?.id || ownerUid,
@@ -27028,6 +27164,8 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
         shieldwallDisciplinePercent,
         shieldwallDisciplineLevel: profileIsCurrent ? getSkillLevel(profile, "shieldwallDiscipline") : 0,
         gearDefenderStrengthPercent,
+        defenseGearItems: COMMON_GEAR.getEquippedBonusItems(profileIsCurrent ? profile : {}, ["defenderStrength"]),
+        casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profileIsCurrent ? profile : {}, ["casualtyEfficiency"]),
         fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile, CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary)) : 0,
         clanInfirmaryPercent: profileIsCurrent ? CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary) : 0,
         fieldMedicsSkillPercent: profileIsCurrent ? getSkillPercent(profile, "fieldMedics") : 0,
@@ -27665,6 +27803,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         fieldMedicsPercent: allocation.fieldMedicsPercent,
         fieldMedicsSkillPercent: allocation.fieldMedicsSkillPercent,
         casualtyGearPercent: allocation.casualtyGearPercent,
+        casualtyGearItems: COMMON_GEAR.normalizeBonusItems(allocation.casualtyGearItems),
         clanInfirmaryPercent: allocation.clanInfirmaryPercent || 0,
         stationOnVictory: shouldStation,
         stationedAtBattle: shouldStation,
@@ -27776,6 +27915,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
         fieldMedicsPercent: allocation.fieldMedicsPercent,
         fieldMedicsSkillPercent: allocation.fieldMedicsSkillPercent,
         casualtyGearPercent: allocation.casualtyGearPercent,
+        casualtyGearItems: COMMON_GEAR.normalizeBonusItems(allocation.casualtyGearItems),
         clanInfirmaryPercent: allocation.clanInfirmaryPercent || 0,
         towerGarrisonCounterSettledAtBattle: Boolean(profileIsCurrent),
         createdAtMs: nowMs,
@@ -29033,6 +29173,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
           fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
           casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
+          casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
           createdAtMs: nowMs,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -29691,6 +29832,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         recoveredTroops: attackerRecoveredTroops,
         fieldMedicsPercent: leaderAllocation.fieldMedicsSkillPercent,
         casualtyGearPercent: leaderAllocation.casualtyGearPercent,
+        casualtyGearItems: leaderAllocation.casualtyGearItems,
         combinedRecoveryPercent: leaderAllocation.fieldMedicsPercent,
       });
       const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
@@ -29948,6 +30090,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             fieldMedicsPercent: entry.fieldMedicsPercent,
             fieldMedicsSkillPercent: entry.fieldMedicsSkillPercent,
             casualtyGearPercent: entry.casualtyGearPercent,
+            casualtyGearItems: COMMON_GEAR.normalizeBonusItems(entry.casualtyGearItems),
             stationOnVictory: Boolean(result.success && entry.survivors > 0),
             stationedAtBattle: Boolean(stationContributionRef),
             reinforcementId: stationContributionRef?.id || "",
@@ -32195,6 +32338,7 @@ async function settleReinforcementBattleReceipt(event) {
         recoveredTroops: recovery?.credited || 0,
         fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
         casualtyGearPercent: receipt.casualtyGearPercent,
+        casualtyGearItems: COMMON_GEAR.normalizeBonusItems(receipt.casualtyGearItems),
         clanInfirmaryPercent: receipt.clanInfirmaryPercent || 0,
         combinedRecoveryPercent: receipt.fieldMedicsPercent,
       })
@@ -32596,6 +32740,7 @@ async function settleRallyBattleReceipt(event) {
         recoveredTroops: recovery?.credited || 0,
         fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
         casualtyGearPercent: receipt.casualtyGearPercent,
+        casualtyGearItems: COMMON_GEAR.normalizeBonusItems(receipt.casualtyGearItems),
         clanInfirmaryPercent: receipt.clanInfirmaryPercent || 0,
         combinedRecoveryPercent: receipt.fieldMedicsPercent,
       })
@@ -34179,6 +34324,10 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
     });
     const citadelDefenderParticipants = [defensePackages.owner, ...(defensePackages.reinforcements || [])]
       .map(participant => ({
+        ...participant,
+        casualtyRecovery: participant.ownerUid === defenderUid ? defenderCasualtyRecovery
+          : createBattleParticipantRecovery(participant,
+            allocation.contributions.find(row => row.ownerUid === participant.ownerUid)?.losses || 0),
         gearDefenderStrengthPercent: participant.gearDefenderStrengthPercent,
         powerBreakdown: {
           gearDefenderStrengthBonusPower: participant.gearDefenderStrengthBonusPower,
@@ -34252,6 +34401,7 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
         fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
         fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
         casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
+        casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

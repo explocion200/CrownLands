@@ -39327,6 +39327,7 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     clanTrainingPercent: attacker ? Math.max(0, ...participants.map(p => p.clanTrainingPercent || 0)) : 0,
     skillPercentText,
     gearLabel: explicitCombatGear?.sourceLabel || (attacker ? "War Captain gear" : "Defensive Commander gear"),
+    gearItems: explicitSideGear?.items,
     gearBonusPower,
     gearPercentText,
     casualtyRecovery: explicitSideGear?.casualtyRecovery || null,

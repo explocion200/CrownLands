@@ -50,6 +50,13 @@ async function resolve(actor, movement) {
 }
 
 async function main() {
+  const gearModel = require("../common-gear.js");
+  const equippedGear = gearModel.createDefaultState();
+  for (const key of ["barracks_weapon_epic_01", "barracks_necklace_legendary_01", "gatehouse_weapon_legendary_01"]) {
+    const def = gearModel.getDefinition(key);
+    equippedGear.instances[key] = { instanceId: key, gearKey: key, level: 5 };
+    equippedGear.equipped[def.buildingId][def.slot] = key;
+  }
   const actors = [];
   for (let i = 0; i < 7; i++) actors.push(await createActor(`Report Ruler ${i + 1}`));
   const attackers = actors.slice(0, 3), defenders = actors.slice(3, 6), outsider = actors[6];
@@ -71,7 +78,8 @@ async function main() {
       const role = index ? "member" : "leader";
       await db.doc(`clans/${clanIds[side]}/members/${actor.uid}`).set({ ...identity, clanId: clanIds[side],
         uid: actor.uid, role, status: "active", joinedAtMs: now - 172800000 });
-      await db.doc(`players/${actor.uid}`).update({ clanId: clanIds[side], clanName: `Report Clan ${side}`, clanRole: role });
+      await db.doc(`players/${actor.uid}`).update({ clanId: clanIds[side], clanName: `Report Clan ${side}`, clanRole: role,
+        gear: equippedGear });
     }
   }
   const tower = towers.TOWERS[0], towerRef = db.doc(`holdingTowers/${tower.id}`);
@@ -139,6 +147,18 @@ async function main() {
     assert.equal(snapshot.target.targetType, "tower");
     assert.deepEqual([...snapshot.participantUids].sort(), involved.map(actor => actor.uid).sort());
     const attackingRows = snapshot.attackers, defendingRows = [snapshot.defender, ...snapshot.reinforcements];
+    for (const row of attackingRows) {
+      assert(snapshot.gearEffects.attacker.items.some(item => item.ownerUid === row.ownerUid && item.gearKey === "barracks_weapon_epic_01"),
+        "A rally participant's attack item was missing");
+    }
+    if (!neutral) for (const row of defendingRows) {
+      assert.equal(row.gearDefenderStrengthPercent, 60, "Tower shield bonus was ignored");
+      assert.equal(row.effectivePower, Math.floor(row.basePower * (1 + (row.shieldwallDisciplinePercent + 60) / 100)));
+      assert(snapshot.gearEffects.defender.items.some(item => item.ownerUid === row.ownerUid && item.gearKey === "gatehouse_weapon_legendary_01"),
+        "A Tower defender's shield was missing");
+      if (row.losses > 0) assert(snapshot.gearEffects.defender.items.some(item => item.ownerUid === row.ownerUid && item.statType === "casualtyEfficiency"),
+        "A Tower defender's recovery medallion was missing");
+    }
     assert.equal(attackingRows.length, 3); assert.equal(defendingRows.length, neutral ? 1 : 3);
     assert.equal(snapshot.combatRule.captureAllowed,!limited);
     if(limited)assert.equal(snapshot.combatRule.id,"clan_tower_raid");

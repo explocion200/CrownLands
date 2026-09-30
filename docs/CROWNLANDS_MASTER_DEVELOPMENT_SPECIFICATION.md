@@ -935,6 +935,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Equipped bonuses apply additively to their applicable base systems.
 - Common Gear bonuses stack with skills and may raise an effective result above the skill-only cap where the implemented rule allows. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Gear Effects appear in battle reports. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- **Individual battle items — confirmed September 29, 2026:** Attack and defense reports identify each equipped item that contributed attack power, soldier defense, wall power, casualty recovery or new wall repair reduction. Show its saved name, rarity, level, owner and applied contribution on the appropriate side, including Rally members and allied defenders. Attack items use the same launch snapshot as attack power; defense and recovery use the same resolution-time equipment as their calculations. Apply existing caps and rounding to the recorded contribution. Historical reports retain their recorded totals and explicitly mark unavailable item identities. Production, travel and scouting items retain their own scopes. This adds no new combat bonus or balance rule. **Status:** `IN DEVELOPMENT` on `codex/battle-item-effects`; publication requires separate verification.
 
 ### Confirmed season persistence
 

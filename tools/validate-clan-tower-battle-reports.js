@@ -5,6 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const source = fs.readFileSync(path.resolve(__dirname, "../functions/index.js"), "utf8");
 const context = vm.createContext({
+  COMMON_GEAR: require("../common-gear.js"),
   DEFENSE_COMBAT_VERSION: 1, BASE_TROOP_DEFENSE_POWER: 1.3, BATTLE_SNAPSHOT_MODEL_VERSION: 1,
   SIEGE_COMBAT_VERSION: 1, ONLINE_WORLD_ID: "fixture", RESET_GENERATION: "fixture",
   FieldValue: { serverTimestamp: () => 123 },
@@ -19,6 +20,7 @@ const context = vm.createContext({
 });
 for (const name of ["splitBattleObjectiveBonusPower", "createBattleAttackPowerBreakdown", "getBattleAttackerBasePower",
   "createBattleDefensePowerBreakdown", "createBattleWallPowerBreakdown", "createBattlePowerGearEffect",
+  "createBattleCasualtyRecoverySnapshot", "createBattleParticipantRecovery", "createBattleGearItemEffects",
   "createBattleGearEffectsSnapshot", "createDetailedBattleSnapshot", "createHoldingTowerBattleSnapshot"]) {
   const start = source.indexOf(`function ${name}(`), end = source.indexOf("\nfunction ", start + 10);
   assert(start >= 0, name);
@@ -91,3 +93,108 @@ assert.equal(limitedSnapshot.combatRule.id, "clan_tower_raid");
 assert.equal(limitedSnapshot.combatRule.captureAllowed, false);
 assert.equal(limitedSnapshot.formula.captureRequiresAttackPowerAboveDefense, false);
 assert.deepEqual(JSON.parse(JSON.stringify(limitedSnapshot.totals)), snapshot.totals, "Ownership cap changed combat totals");
+
+const G = require("../common-gear.js"), T = require("../functions/holding-towers.js");
+function equippedProfile(rarity = "legendary", level = 5) {
+  const gear = G.createDefaultState();
+  for (const def of G.DEFINITIONS.filter(def => def.rarity === rarity)) {
+    const instanceId = def.gearKey;
+    gear.instances[instanceId] = { instanceId, gearKey: def.gearKey, level };
+    gear.equipped[def.buildingId][def.slot] = instanceId;
+  }
+  return { gear, worldId: "fixture", resetGeneration: "fixture", realmShardId: "shard_0001",
+    clanId: "defenders", playerName: "Item Owner", shieldwallDiscipline: 100, fieldMedics: 50 };
+}
+Object.assign(context, { Map, HOLDING_TOWERS: T, CLAN_BUILDINGS: require("../clan-tower-buildings.js"),
+  REALM_TOPOLOGY: { normalizeRealmShardId: value => value }, getCurrentRealmShardId: () => "shard_0001",
+  normalizeServerFlag: value => value || null, getBaseCityWalls: () => 5000,
+  getSiegeRepairWindowMinutes: () => 16, FORTIFICATION_STATE_VERSION: 1,
+  getSkillPercent: (profile, skill) => profile?.[skill] || 0,
+  getCommonGearBonuses: profile => ({ ...G.getBonuses(profile), attackStrength: profile?.attackStrength || G.getBonuses(profile).attackStrength }),
+});
+for (const name of ["getCasualtyRecoveryPercent", "isCurrentHoldingTowerGarrison", "createHoldingTowerDefensePackages"]) {
+  const start = source.indexOf(`function ${name}(`), end = source.indexOf("\nfunction ", start + 10);
+  vm.runInContext(source.slice(start, end), context);
+}
+const tower = { ...T.createNeutralTowerState(T.TOWERS[0].id), ownerKind: "clan", clanId: "defenders",
+  buildings: { infirmary: 10 }, wallIntegrityBps: 10000 };
+const garrison = { ...equippedProfile(), towerId: tower.id, ownerUid: "defender", troops: 10000 };
+for (const rarity of G.RARITIES) for (let level = 1; level <= 5; level++) {
+  const profile = equippedProfile(rarity, level);
+  const defense = context.createHoldingTowerDefensePackages(tower, [garrison], 123, new Map([["defender", profile]]));
+  const percent = G.getBonuses(profile).defenderStrength;
+  assert.equal(defense.contributions[0].gearDefenderStrengthPercent, percent, "Tower ignored its equipped shield");
+  assert.equal(defense.totalGarrisonDefense, Math.floor(13000 * (1 + (100 + percent) / 100)));
+  assert.equal(defense.contributions[0].fieldMedicsPercent, Math.min(90, 65 + G.getBonuses(profile).casualtyEfficiency));
+}
+const stale = context.createHoldingTowerDefensePackages(tower, [garrison], 123,
+  new Map([["defender", { ...equippedProfile(), resetGeneration: "other" }]]));
+assert.equal(stale.totalGarrisonDefense, 13000, "Stale profile bonuses leaked into the active Tower");
+assert.equal(context.getBattleAttackerBasePower({ troops: 10000, attackPowerPerTroop: 3.75, bonusPercent: 210 }), 12500,
+  "Capped rallies reported a lower base attack power");
+
+const itemPackages = packages.map((row, index) => {
+  const profile = equippedProfile(["rare", "epic", "legendary"][index]);
+  const bonuses = G.getBonuses(profile), attackPowerPerTroop = 1.25 * (1 + Math.min(200, 110 + bonuses.attackStrength) / 100);
+  return { ...row, attackBonusPercent: 100, attackGearPercent: bonuses.attackStrength, clanTrainingPercent: 10,
+    attackPowerPerTroop, effectivePower: Math.floor(row.troops * attackPowerPerTroop),
+    attackGearItems: G.getEquippedBonusItems(profile, ["attackStrength"]),
+    casualtyGearItems: G.getEquippedBonusItems(profile, ["casualtyEfficiency"]),
+    fieldMedicsSkillPercent: 50, casualtyGearPercent: bonuses.casualtyEfficiency, fieldMedicsPercent: 50 + bonuses.casualtyEfficiency };
+});
+const itemDefenders = contributions.map(row => ({ ...row, gearDefenderStrengthPercent: 60,
+  effectivePower: Math.floor(row.basePower * 1.6), shieldwallDisciplinePercent: 0,
+  defenseGearItems: G.getEquippedBonusItems(equippedProfile(), ["defenderStrength"]),
+  casualtyGearItems: G.getEquippedBonusItems(equippedProfile(), ["casualtyEfficiency"]),
+  fieldMedicsSkillPercent: 50, casualtyGearPercent: 40, fieldMedicsPercent: 90, clanInfirmaryPercent: 15 }));
+const itemSnapshot = context.createHoldingTowerBattleSnapshot({ ...input, packages: itemPackages,
+  defense: { ...input.defense, contributions: itemDefenders,
+    totalDefense: 5000 + itemDefenders.reduce((sum, row) => sum + row.effectivePower, 0) },
+  result: { ...input.result, attackPower: itemPackages.reduce((sum, row) => sum + row.effectivePower, 0),
+    defensePower: 5000 + itemDefenders.reduce((sum, row) => sum + row.effectivePower, 0) } });
+for (const side of ["attacker", "defender"]) {
+  const effects = itemSnapshot.gearEffects[side].items;
+  assert.equal(effects.length, 6, "A participant's combat or recovery item disappeared");
+  assert.equal(effects.filter(row => row.statType === "casualtyEfficiency").length, 3);
+  assert(effects.every(row => row.gearKey && row.ownerUid && row.level === 5));
+  assert.equal(effects.reduce((sum, row) => sum + row.bonusPower, 0),
+    itemSnapshot.gearEffects[side][side === "attacker" ? "attackStrength" : "defenderStrength"].bonusPower);
+}
+const wallOwner = { ownerUid: "wall-owner", ownerName: "Wall Keeper",
+  wallGearItems: G.getEquippedBonusItems(equippedProfile(), ["wallStrength"]),
+  repairGearItems: G.getEquippedBonusItems(equippedProfile(), ["wallRepairSpeed"]) };
+const wallEffects = context.createBattleGearEffectsSnapshot({ wallOwner, wallGearPercent: 100,
+  defensePowerBreakdown: { gearWallStrengthBonusPower: 10003 }, siege: { repairAddedMs: 10000, repairReductionPercent: 50 } });
+assert.equal(wallEffects.defender.items.length, 7, "Each wall armor piece and repair seal must be recorded");
+assert.equal(wallEffects.defender.items.reduce((sum, row) => sum + row.bonusPower, 0), 10003, "Item rounding lost wall power");
+assert.equal(wallEffects.defender.items.find(row => row.statType === "wallRepairSpeed").appliedPercent, 50);
+assert.equal(context.createBattleGearEffectsSnapshot({ wallOwner, wallGearPercent: 100,
+  siege: { repairAddedMs: 0, repairReductionPercent: 50 } }).defender.items.length, 0, "Unused wall/repair gear appeared");
+
+const cityShield = G.getEquippedBonusItems(equippedProfile(), ["defenderStrength"]);
+const sharedShield = context.createBattleGearEffectsSnapshot({ defenderParticipants: [
+  { ownerUid: "city-owner", ownerName: "City Ruler", defenseGearItems: cityShield, gearDefenderStrengthPercent: 60,
+    powerBreakdown: { gearDefenderStrengthBonusPower: 780 } },
+  { ownerUid: "ally", ownerName: "Ally", gearOwnerUid: "city-owner", gearOwnerName: "City Ruler",
+    defenseGearItems: cityShield, gearDefenderStrengthPercent: 60,
+    powerBreakdown: { gearDefenderStrengthBonusPower: 1560 } },
+] });
+assert.equal(sharedShield.defender.items.length, 1, "A shared city shield was listed as two equipped items");
+assert.equal(sharedShield.defender.items[0].ownerUid, "city-owner");
+assert.equal(sharedShield.defender.items[0].bonusPower, 2340, "Shared shield lost an allied army's contribution");
+const recordedRecovery = context.createBattleCasualtyRecoverySnapshot({ profile: equippedProfile(), losses: 100,
+  fieldMedicsPercent: 80, casualtyGearPercent: 40, combinedRecoveryPercent: 90 });
+assert.equal(recordedRecovery.appliedGearPercent, 10, "Recovery item exceeded the remaining cap");
+assert.equal(recordedRecovery.items, null, "An old receipt inherited the player's current item identity");
+const unknownItem = context.createBattleGearItemEffects(null, "attackStrength", 1.5, 19, { ownerUid: "old-ruler" });
+assert.equal(unknownItem[0].gearName, "Item not recorded");
+assert.equal(unknownItem[0].bonusPower, 19);
+const noRecovery = context.createBattleGearEffectsSnapshot({ attackerParticipants: [{ ownerUid: "ruler",
+  casualtyRecovery: context.createBattleCasualtyRecoverySnapshot({ profile: equippedProfile(), losses: 0 }) }] });
+assert.equal(noRecovery.attacker.items.length, 0, "A recovery item appeared without casualties");
+const savedItem = { ...cityShield[0], bonusPercent: 11.25, gearName: "Saved shield name" };
+assert.equal(G.normalizeBonusItems([savedItem])[0].bonusPercent, 11.25, "Historical values were recalculated from current item curves");
+assert.equal(G.normalizeBonusItems([savedItem])[0].gearName, "Saved shield name");
+module.exports.itemSnapshot = JSON.parse(JSON.stringify(itemSnapshot));
+module.exports.wallEffects = JSON.parse(JSON.stringify(wallEffects));
+console.log("Tower shields at every rarity/level, capped rally base power, all participant items, recovery and wall/repair attribution passed.");

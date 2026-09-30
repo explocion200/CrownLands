@@ -90,6 +90,7 @@ function createEquippedGear(selections = []) {
   selections.forEach((selection, index) => {
     const definition = commonGear.DEFINITIONS.find(entry => (
       entry.buildingId === selection.buildingId && entry.slot === selection.slot
+        && entry.rarity === (selection.rarity || "common")
     ));
     assert(definition, `Missing ${selection.buildingId}/${selection.slot} gear definition.`);
     const instanceId = `battle_report_gear_${index}`;
@@ -130,6 +131,7 @@ async function main() {
   const defenderGear = createEquippedGear([
     { buildingId: "gatehouse", slot: "weapon" },
     { buildingId: "gatehouse", slot: "head" },
+    { buildingId: "gatehouse", slot: "necklace" },
     { buildingId: "barracks", slot: "necklace" },
   ]);
 
@@ -202,6 +204,10 @@ async function main() {
     },
   });
   assert(launch.movement?.id === armyId, "The battle-report test attack did not launch.");
+  await db.doc(`players/${attacker.uid}`).update({ gear: createEquippedGear([
+    { buildingId: "barracks", slot: "weapon", rarity: "legendary" },
+    { buildingId: "barracks", slot: "necklace" },
+  ]) });
   const notificationOutbox = await db.doc(`serverNotificationOutbox/incoming_${armyId}_${defender.uid}`).get();
   assert(notificationOutbox.exists, "The attack did not atomically queue its defender notification.");
   assert(notificationOutbox.data()?.notification?.defenderUid === defender.uid, "The queued alert targets the wrong defender.");
@@ -218,6 +224,18 @@ async function main() {
   assert(snapshotDoc.exists, "The authoritative battle snapshot was not written.");
   const snapshot = snapshotDoc.data() || {};
   assert(snapshot.modelVersion === 7, "The explicit gear-effects snapshot version was not stored.");
+  const attackItems = snapshot.gearEffects.attacker.items;
+  const defenseItems = snapshot.gearEffects.defender.items;
+  assert(attackItems.find(item => item.statType === "attackStrength")?.gearKey === "barracks_weapon_common_01",
+    "The report substituted gear equipped after launch.");
+  assert(attackItems.find(item => item.statType === "attackStrength")?.bonusPercent === 1.5,
+    "A later upgrade changed the battle's equipped bonus.");
+  for (const stat of ["defenderStrength", "wallStrength", "casualtyEfficiency"]) {
+    assert(defenseItems.some(item => item.statType === stat && item.gearKey), `Missing defending item: ${stat}`);
+  }
+  if (snapshot.siege?.repairAddedMs > 0) assert(defenseItems.some(item => item.statType === "wallRepairSpeed"), "Repair seal missing");
+  assert(attackItems.some(item => item.statType === "casualtyEfficiency"), "Attacker recovery medallion missing");
+  await db.doc(`players/${attacker.uid}`).update({ gear: attackerGear });
   assert(snapshot.gearEffects?.attacker?.attackStrength?.bonusPower > 0, "Attacker gear power was not snapshotted.");
   assert(snapshot.gearEffects?.defender?.defenderStrength?.bonusPower > 0, "Defender gear power was not snapshotted.");
   assert(snapshot.gearEffects?.defender?.wallStrength?.bonusPower > 0, "Wall gear power was not snapshotted separately.");
@@ -253,6 +271,12 @@ async function main() {
   assert(attackerReport.gearEffects?.defender?.defenderStrength?.bonusPower > 0, "The attack report fallback omitted defender gear.");
   assert(defenderReport.gearEffects?.attacker?.attackStrength?.bonusPower > 0, "The defense report fallback omitted attacker gear.");
   assert(defenderReport.gearEffects?.defender?.wallStrength?.bonusPower > 0, "The defense report fallback omitted wall gear.");
+  assert(JSON.stringify(attackerReport.gearEffects) === JSON.stringify(defenderReport.gearEffects), "Recipients saw different item effects.");
+  for (const [user, report] of [[attacker, attackerReport], [defender, defenderReport]]) {
+    assert(report.gearEffects.attacker.items === undefined, "Profile history duplicated the full item roster.");
+    const canonical = (await db.doc(`players/${user.uid}/serverReports/${report.id}`).get()).data();
+    assert(JSON.stringify(canonical.gearEffects) === JSON.stringify(snapshot.gearEffects), "Canonical report lost item details.");
+  }
   assert(attackerReport.casualtyRecovery?.fieldMedicsPercent === 20, "Attacker Field Medics was not snapshotted separately.");
   assert(attackerReport.casualtyRecovery?.gearPercent === 1.5, "Attacker casualty gear was not snapshotted separately.");
   assert(defenderReport.casualtyRecovery?.fieldMedicsPercent === 20, "Defender Field Medics was not snapshotted separately.");

@@ -467,6 +467,7 @@ async function main() {
   vm.runInContext([
     extractFunction(serverSource, "usesSoldierDefenseModel"),
     extractFunction(serverSource, "getCityStats"),
+    extractFunction(serverSource, "getCasualtyRecoveryPercent"),
     extractFunction(serverSource, "calculateDefenderArmyPackages"),
     "this.getCityStats = getCityStats;",
     "this.calculateDefenderArmyPackages = calculateDefenderArmyPackages;",
@@ -780,7 +781,59 @@ async function main() {
   assert.match(commonGear.getDefinition(gearKeys["gatehouse:necklace"]).statLabel, /new wall damage/i);
   assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*90% combined cap.*main city/i);
 
-  console.log("Validated equipped-only gear aggregation, immediate upgrade/unequip effects, movement and rally ETA parity, scoped production, owner-wide allied defense, attribution, and casualty caps.");
+  // Exercise every definition and level through the gameplay functions, rather
+  // than only checking the catalogue's displayed bonus values.
+  let itemCases = 0;
+  activeClientSkillPercents = {};
+  clientMovementContext.skillMultiplier = () => 1.6;
+  clientMovementContext.getStrongholdMarchSpeedMultiplier = () => 1.08;
+  const repairContext = vm.createContext({ Math, Number, Date, safeNumber, clamp,
+    timestampToMs: value => Number(value) || 0, getSiegeRepairWindowMinutes: () => 60 });
+  vm.runInContext(extractFunction(serverSource, "getSiegeRepairTiming"), repairContext);
+  for (const definition of commonGear.DEFINITIONS) for (let level = 1; level <= 5; level++) {
+    const profile = createGearProfile([{ gearKey: definition.gearKey, level }]);
+    profile.mainCityId = "main_city";
+    const bonus = definition.bonusByLevel[level];
+    const equippedItems = commonGear.getEquippedBonusItems(profile);
+    assert.equal(equippedItems.length, 1);
+    assert.equal(equippedItems[0].bonusPercent, bonus);
+    assert.equal(equippedItems[0].gearKey, definition.gearKey);
+    const totals = commonGear.getBonuses(profile);
+    for (const [key, value] of Object.entries(totals)) assert.equal(value, key === definition.statType ? bonus : 0);
+    activeClientStatsProfile = profile;
+    const clientStats = clientStatsContext.getCityStats({ id: "main_city", owner: "player", level: 1, troops: 100_000 });
+    const serverStats = defenseContext.getCityStats({ id: "main_city", level: 1, troops: 100_000 }, profile);
+    assert.equal(clientStats.cityWalls, serverStats.cityWalls, definition.gearKey + " wall preview");
+    assert.equal(clientStats.troopDefense, serverStats.troopDefense, definition.gearKey + " defense preview");
+    for (const cityId of ["main_city", "other_city"]) {
+      const production = productionContext.getCityProductionStats({ id: cityId, level: 1 }, profile, {}, { nowMs: 1 });
+      const preview = clientStatsContext.getCityStats({ id: cityId, owner: "player", level: 1, troops: 0 });
+      assertClose(preview.goldProductionPerHour, production.goldProductionPerHour, definition.gearKey + " gold scope");
+      assertClose(preview.troopProductionPerHour, production.troopProductionPerHour, definition.gearKey + " troop scope");
+    }
+    clientAttackContext.getCommonGearBonuses = () => totals;
+    assertClose(clientAttackContext.getAttackPower(100_000, "player"),
+      attackContext.getAttackPower(100_000, { ...profile, testSwordmasteryPercent: 100 }), definition.gearKey + " attack preview");
+    activeClientMovementProfile = profile;
+    for (const kind of ["attack", "transfer", "reinforce", "scout"]) {
+      assert.equal(clientMovementContext.travelTime(source, target, "player", 2_000, 100, kind),
+        serverTravel(profile, kind), definition.gearKey + " " + kind + " travel");
+    }
+    if (definition.statType === "casualtyEfficiency") {
+      capContext.getCommonGearBonuses = () => totals;
+      assert.equal(capContext.getCasualtyRecoveryPercent(profile, 15), Math.min(90, 50 + bonus + 15));
+    }
+    if (definition.statType === "wallRepairSpeed") {
+      const timing = repairContext.getSiegeRepairTiming(1, 100, 100, 5_000, 1_000, commonGear.capBonus("wallRepair", bonus));
+      assert.equal(timing.repairAtMs, 5_000 + Math.round(3_600_000 * (1 - bonus / 100)));
+    }
+    const stored = createGearProfile([], [{ gearKey: definition.gearKey, level }]);
+    assert.equal(commonGear.getEquippedBonusItems(stored).length, 0);
+    assert(Object.values(commonGear.getBonuses(stored)).every(value => value === 0));
+    itemCases++;
+  }
+  assert.equal(itemCases, 800);
+  console.log("Validated all 800 equipped item/level combinations: gameplay and preview parity, production scope, movement, attack, defense, walls, repair and recovery; stored items give no bonus.");
 }
 
 main().catch(error => {

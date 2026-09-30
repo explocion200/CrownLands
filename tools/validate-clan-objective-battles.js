@@ -128,6 +128,7 @@ assert.equal(citadelClanmate.upgradeCostReductionPercent, 5);
 
 const defenseContext = {
   COMMON_GEAR: require("../common-gear.js"),
+  getCommonGearBonuses: profile => require("../common-gear.js").getBonuses(profile),
   Map,
   Date,
   SIEGE_COMBAT_VERSION: 1,
@@ -186,6 +187,7 @@ const defenseContext = {
   },
 };
 vm.createContext(defenseContext);
+vm.runInContext(extractFunction(server, "getCasualtyRecoveryPercent"), defenseContext);
 vm.runInContext(extractFunction(server, "calculateReinforcementFortificationDefense"), defenseContext, {
   filename: "functions/index.js",
 });

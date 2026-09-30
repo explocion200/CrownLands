@@ -13,6 +13,7 @@ function functionSource(source, name) {
 }
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 const context = vm.createContext({
+  COMMON_GEAR: require("../common-gear.js"),
   window: {}, escapeHtml: esc, formatNumber: value => String(value),
   getRegionLabel: region => region, clamp: (n,min,max) => Math.min(max,Math.max(min,n)),
   formatWallIntegrity: value => `${value / 100}%`, renderCrownlandsIcon: () => "",
@@ -62,6 +63,36 @@ const loading=ui.loading({type:"attack",cityName:"Thornfield"},options.badge);
 assert(loading.includes('role="status"') && loading.includes('id="battleReportBackBtn"') && loading.includes("data-detail-close"));
 assert(!loading.includes("data-report-jump") && !loading.includes("122000"),"Loading fabricated settled data");
 console.log("Validated full-report values, viewer order, escaping, historical fallback, gear, rally, all camp rewards, red defense shield, and navigation hooks.");
+
+const { itemSnapshot, wallEffects } = require("./validate-clan-tower-battle-reports.js");
+for (const name of ["normalizeBattleGearItemEffects", "normalizeBattleCasualtyRecovery", "normalizeBattlePowerGearEffect", "normalizeBattleGearEffects"]) {
+  vm.runInContext(functionSource(read("common-gear-ui.js"), name), context);
+}
+const saved = context.normalizeBattleGearEffects(itemSnapshot.gearEffects);
+const attackItems = { ...attacker, gearItems: saved.attacker.items };
+const defenseItems = { ...defender, gearItems: [...saved.defender.items, ...wallEffects.defender.items] };
+for (const viewerRole of ["attacker", "defender"]) {
+  const rendered = ui.render({ ...options, viewerRole,
+    left: viewerRole === "attacker" ? attackItems : defenseItems,
+    right: viewerRole === "attacker" ? defenseItems : attackItems });
+  for (const item of [...attackItems.gearItems, ...defenseItems.gearItems]) {
+    assert(rendered.includes(esc(item.gearName)), item.gearName);
+    assert(rendered.includes(`data-gear-key="${item.gearKey}"`));
+    assert(rendered.includes(esc(item.ownerName)));
+  }
+  assert(rendered.includes("Legendary · Level 5"));
+  assert(rendered.includes("+40% recovery"));
+  assert(rendered.includes("−50% repair time"));
+  const section = rendered.slice(rendered.indexOf('id="battleDetail-gear"'));
+  assert(section.indexOf(`data-bonus-side="${viewerRole}"`) < section.indexOf(`data-bonus-side="${viewerRole === "attacker" ? "defender" : "attacker"}"`));
+}
+const emptySide = ui.render({ ...options, left: attackItems, right: { ...defender, gearItems: [] } });
+assert(emptySide.includes("Defender Gear") && emptySide.includes("No item bonuses applied"));
+assert.equal(context.normalizeBattleGearEffects({ attacker: {} }), null);
+assert.equal(context.normalizeBattleGearEffects({ attacker: { attackStrength: { bonusPower: 100, bonusPercent: 20 } } }).attacker.items, null);
+const escapedItem = ui.render({ ...options, left: { ...attacker, gearItems: [{ ...saved.attacker.items[0], gearName: '<img src=x onerror="bad()">', ownerName: '<script>bad()</script>' }] } });
+assert(escapedItem.includes("&lt;img") && !escapedItem.includes('<img src=x'));
+console.log("Individual item art, rarity, level, owner, applied power/recovery/repair, both perspectives and historical fallback passed.");
 const towerSnapshot = require("./validate-clan-tower-battle-reports").snapshot;
 for (const viewerUid of towerSnapshot.participantUids) {
   const before = JSON.stringify(towerSnapshot);
