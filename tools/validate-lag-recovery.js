@@ -98,13 +98,16 @@ async function main() {
   login.c.startLoginPresentationDailyRefresh();await tick();
   assert(login.actions.includes("daily-ready"));assert.equal(login.c.loginPresentationSequence.seasonResolved,undefined);
   const timeout=[...login.timers.values()].find(t=>t.ms===5000);assert(timeout);timeout.fn();await tick();
-  assert.equal(login.c.loginPresentationSequence.seasonResolved,true);assert.equal(login.c.loginPresentationSequence.seasonStatus,null);
+  assert.equal(login.c.loginPresentationSequence.seasonResolved,true);assert.equal(login.c.loginPresentationSequence.seasonStatus.loadFailed,true,"A timed-out lookup must retain a retryable season pop-up.");
   const count=login.actions.length;reward.resolve({award:{claimed:false}});await tick();assert.equal(login.actions.length,count,"Late rewards must not reopen login dialogs.");
   const replaced=context(), old=deferred();replaced.api.getSeasonRewardStatus=()=>old.promise;
   replaced.c.startLoginPresentationDailyRefresh();await tick();replaced.c.loginPresentationGeneration=2;replaced.c.loginPresentationSequence={generation:2};
   old.resolve({award:{claimed:false}});await tick();assert.equal(replaced.c.loginPresentationSequence.seasonResolved,undefined);
   const synchronous=context();synchronous.api.getSeasonRewardStatus=()=>{throw Error("adapter failure");};
   synchronous.c.startLoginPresentationDailyRefresh();await tick();assert.equal(synchronous.c.loginPresentationSequence.seasonResolved,true);
+  assert.equal(synchronous.c.loginPresentationSequence.seasonStatus.loadFailed,true,"Lookup errors must not masquerade as no rewards.");
+  const rejected=context();rejected.api.getSeasonRewardStatus=async()=>{throw Error("temporary rewards outage");};
+  rejected.c.startLoginPresentationDailyRefresh();await tick();assert.equal(rejected.c.loginPresentationSequence.seasonStatus.loadFailed,true);
   console.log("Lag recovery: update/re-entry, bounded waits, duplicate/stale sessions, transient failures and late reward responses passed.");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

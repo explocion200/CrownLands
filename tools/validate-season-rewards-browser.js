@@ -83,6 +83,36 @@ async function main() {
       assert.equal(await evaluate("document.querySelectorAll('.season-medal').length"),3);
       assert.deepEqual(await evaluate("Array.from(document.querySelector('[data-season-select]').options).map(o=>o.value)"),["realm-2026-09"],"Reward receipts retain prior seasons without a current-season option");
       await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`results-${width}.png`),Buffer.from(result.data,"base64")));
+      // Exercise the entry sequence, not just a manually opened reward panel.
+      await evaluate(`modal.close();
+        refreshDailyMissionStatus=async()=>null;refreshSeasonalAchievementStatus=async()=>null;
+        refreshDailyLoginRewardStatus=async()=>null;pendingOfflineRewardsSummary=null;
+        onlineRealmActivityEvents=[];realmActivityAuthoritativeHydrated=true;`);
+      await wait(100);
+      for (const closeSelector of ['[data-season-back]','#closeModalBtn']) {
+        await evaluate("window.rewardLoginGeneration=beginLoginPresentationSequence();startLoginPresentationDailyRefresh(rewardLoginGeneration)");
+        await ready("loginPresentationSequence?.seasonResolved===true");
+        assert.equal(await evaluate("modal.open"),false,"Automatic rewards must wait until the new kingdom has loaded");
+        await evaluate("markLoginPresentationMapReady(rewardLoginGeneration)");
+        await ready("modal.classList.contains('season-login-rewards') && document.querySelector('[data-season-claim]')!==null");
+        assert(await evaluate("document.querySelector('[data-season-message]').textContent.includes('Leaderboards → Season Rewards')"));
+        assert(await evaluate("(()=>{const b=document.querySelector('.season-footer').getBoundingClientRect();return b.bottom<=innerHeight+1 && b.top>=0;})()"),`${width}: Later and the deferred-claim reminder must stay visible`);
+        assert(await evaluate("(()=>{const b=document.querySelector('[data-season-claim]').getBoundingClientRect(),f=document.querySelector('.season-footer').getBoundingClientRect();return b.top>=f.top && b.bottom<=f.bottom && b.right<=innerWidth;})()"),`${width}: Claim rewards must stay visible beside Later without scrolling`);
+        if(closeSelector==='[data-season-back]')await client.send("Page.captureScreenshot",{format:"png"}).then(result=>fs.writeFileSync(path.join(out,`login-${width}.png`),Buffer.from(result.data,"base64")));
+        await evaluate(`document.querySelector(${JSON.stringify(closeSelector)}).click()`);
+        await ready("loginPresentationSequence===null && !modal.open");
+        assert.equal(await evaluate("window.seasonClaims"),0,"Later and Close must never claim or discard rewards");
+        assert.equal(await evaluate("seasonFixture.award.claimed===true"),false);
+      }
+      await evaluate("showLeaderboardModal();document.getElementById('seasonRewardsInfoBtn').click()");
+      await ready("document.querySelectorAll('[data-season-board]').length===3");
+      await evaluate("document.querySelector('[data-season-results]').click()");
+      await ready("document.querySelector('[data-season-claim]')!==null");
+      assert.equal(await evaluate("document.querySelectorAll('.season-award-rows article').length"),3,"Dismissed rewards remain claimable from the leaderboard reward panel");
+      if(width===844) {
+        await evaluate("showSeasonRewardsPanel({view:'results',login:true})");
+        await ready("document.querySelector('.season-footer [data-season-claim]')!==null");
+      }
       await evaluate("document.querySelector('[data-season-claim]').click(); document.querySelector('[data-season-claim]').click()");
       await ready("document.querySelector('.season-claimed')!==null");
       assert.equal(await evaluate("window.seasonClaims"),1);
@@ -120,16 +150,33 @@ async function main() {
     await ready('document.documentElement?.dataset.ledgerQa==="ready"');
     await evaluate(`window.seasonFixture=${JSON.stringify({...R.seasonInfo("realm-2026-09"),status:"ready",pendingSeasons:[]})};
       window.CrownlandsOnline.getSeasonRewardStatus=async()=>{if(window.seasonMode==='error')throw Error('Synthetic rewards outage');return {...seasonFixture,status:'finalizing',award:null};};`);
+    await evaluate(`modal.close();RESET_GENERATION='realm-2026-10';window.seasonMode='error';
+      refreshDailyMissionStatus=async()=>null;refreshSeasonalAchievementStatus=async()=>null;
+      refreshDailyLoginRewardStatus=async()=>null;pendingOfflineRewardsSummary=null;
+      onlineRealmActivityEvents=[];realmActivityAuthoritativeHydrated=true;`);
+    await wait(100);
+    await evaluate("window.rewardLoginGeneration=beginLoginPresentationSequence();startLoginPresentationDailyRefresh(rewardLoginGeneration);markLoginPresentationMapReady(rewardLoginGeneration)");
+    await ready("modal.classList.contains('season-login-rewards') && document.querySelector('.season-empty')?.textContent.includes('unavailable')");
+    assert.equal(await evaluate("document.querySelector('[data-season-back]').textContent"),"Later","A failed automatic check must still show a dismissible retry panel");
+    await evaluate("window.seasonMode='pending';document.querySelector('[data-season-retry]').click()");
+    await ready("document.querySelector('.season-empty')?.textContent.includes('being finalized')");
+    await evaluate("document.querySelector('[data-season-back]').click()");
+    await ready("loginPresentationSequence===null && !modal.open");
     await evaluate("window.seasonMode='pending';showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'})");
     await ready("document.querySelector('.season-empty')?.textContent.includes('being finalized')");
     assert.equal(await evaluate("document.querySelector('[data-season-claim]')===null"),true);
     await evaluate("window.seasonMode='error';document.querySelector('[data-season-retry]').click()");
     await ready("document.querySelector('.season-empty')?.textContent.includes('unavailable')");
+    await evaluate("window.CrownlandsOnline.getSeasonRewardStatus=()=>new Promise(()=>{});showSeasonRewardsPanel({view:'results'})");
+    await ready("document.querySelector('.season-empty')?.textContent.includes('taking too long')");
+    assert.equal(await evaluate("document.querySelector('[data-season-retry]').textContent"),"Try again","A hung panel lookup must offer a retry");
     // A response to a dismissed panel must never overwrite another dialog.
-    await evaluate("window.CrownlandsOnline.getSeasonRewardStatus=()=>new Promise(resolve=>window.resolveSeason=resolve);showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'});modal.close();showLeaderboardModal();window.resolveSeason(seasonFixture)");
+    await evaluate("window.CrownlandsOnline.getSeasonRewardStatus=()=>new Promise(resolve=>window.resolveSeason=resolve);showSeasonRewardsPanel({view:'results',seasonId:'realm-2026-09'})");
+    await ready("typeof window.resolveSeason==='function'");
+    await evaluate("modal.close();showLeaderboardModal();window.resolveSeason(seasonFixture)");
     await wait(100);assert.equal(await evaluate("modal.classList.contains('leaderboard-modal') && !document.querySelector('.season-panel')"),true);
     assert.deepEqual(errors,[]);
-    console.log("Season reward browser passed desktop/mobile three-board overviews, combined totals, all reward tiers, zero/unranked/ineligible/unavailable states, one-request refresh, website archive link, private receipts, single claim, gear refresh, honors, login dismissal, pending/error and stale-response guards.");
+    console.log("Season reward browser passed desktop/mobile automatic post-spawn rewards, Later/Close retention and leaderboard claims, failed-login retry, bounded panel waits, three-board overviews, reward tiers, receipts, single claim, gear refresh, honors, pending/error and stale-response guards.");
   } finally {
     if(client)await client.send("Browser.close").catch(()=>{});
     if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}

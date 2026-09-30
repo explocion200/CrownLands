@@ -58,8 +58,9 @@ assert.match(
 
 function createAdvanceContext(sequence) {
   const actions = [];
+  const seasonOptions = [];
   const context = {
-    showSeasonRewardsPanel: () => { actions.push("season"); return true; },
+    showSeasonRewardsPanel: options => { seasonOptions.push(options); actions.push("season"); return true; },
     loginPresentationGeneration: 1,
     loginPresentationSequence: sequence,
     realmActivityAuthoritativeHydrated: true,
@@ -85,7 +86,7 @@ function createAdvanceContext(sequence) {
   vm.createContext(context);
   vm.runInContext(functionSource("isLoginPresentationSequenceActive"), context);
   vm.runInContext(functionSource("advanceLoginPresentationSequence"), context);
-  return { context, actions };
+  return { context, actions, seasonOptions };
 }
 
 {
@@ -121,6 +122,41 @@ function createAdvanceContext(sequence) {
   sequence.seasonFinished = true; sequence.seasonOpen = false;
   context.advanceLoginPresentationSequence(sequence);
   assert.deepEqual(actions, ["season", "daily"]);
+}
+
+for (const scenario of [
+  { name: "failed lookup", status: { loadFailed: true }, expectedSeason: "" },
+  { name: "pending finalization", status: { seasonId: "realm-2026-09", status: "finalizing", participated: true }, expectedSeason: "realm-2026-09" },
+  { name: "older unclaimed award", status: { seasonId: "realm-2026-10", status: "ready", pendingSeasons: ["realm-2026-09"] }, expectedSeason: "realm-2026-09" },
+]) {
+  const sequence = createSequence({ mapReady: false, seasonFinished: false, seasonStatus: scenario.status, dailyRequired: true, dailyFinished: false, welcomeFinished: false });
+  const { context, actions, seasonOptions } = createAdvanceContext(sequence);
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, [], `${scenario.name}: rewards must wait for the kingdom to load.`);
+  sequence.mapReady = true;
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["season"], `${scenario.name}: show the season pop-up before Daily Login.`);
+  assert.equal(seasonOptions[0].seasonId, scenario.expectedSeason);
+  assert.equal(seasonOptions[0].view, "results");
+  assert.equal(seasonOptions[0].login, true);
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["season"], `${scenario.name}: no duplicate pop-up.`);
+  vm.runInContext(functionSource("completeLoginPresentationModal"), context);
+  context.completeLoginPresentationModal("season");
+  assert.deepEqual(actions, ["season", "daily"], `${scenario.name}: dismissal releases Daily Login.`);
+  context.completeLoginPresentationModal("daily");
+  assert.deepEqual(actions, ["season", "daily", "welcome"]);
+}
+
+for (const status of [
+  { status: "ready", award: { claimed: true } },
+  { status: "ready", participated: true, award: null },
+  { status: "not-started", pendingSeasons: [] },
+]) {
+  const sequence = createSequence({ seasonFinished: false, seasonStatus: status });
+  const { context, actions } = createAdvanceContext(sequence);
+  context.advanceLoginPresentationSequence(sequence);
+  assert.deepEqual(actions, ["realm"], "Claimed awards and confirmed non-winners must not receive a reward pop-up.");
 }
 
 for (const scenario of [

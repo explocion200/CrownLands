@@ -19542,9 +19542,9 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
   if (!sequence.seasonFinished) {
     if (sequence.seasonOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
     const season = sequence.seasonStatus;
-    if (season && ((season.participated && season.status !== "ready") || (season.award && !season.award.claimed) || season.pendingSeasons?.length)) {
+    if (season && (season.loadFailed || (season.participated && season.status !== "ready") || (season.award && !season.award.claimed) || season.pendingSeasons?.length)) {
       sequence.seasonOpen = true;
-      showSeasonRewardsPanel({ view: "results", seasonId: season.award && !season.award.claimed ? season.seasonId : season.pendingSeasons?.[0] || season.seasonId, login: true });
+      showSeasonRewardsPanel({ view: "results", seasonId: season.award && !season.award.claimed ? season.seasonId : season.pendingSeasons?.[0] || season.seasonId || "", login: true });
       return true;
     }
     sequence.seasonFinished = true;
@@ -19577,11 +19577,13 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
 
 function startLoginPresentationDailyRefresh(generation = loginPresentationGeneration) {
   const rewardsApi = getOnlineApi();
+  // A failed lookup is not evidence that this ruler has no earned rewards.
+  // Keep the season slot and offer a retryable panel before the daily rewards.
   withTimeout(
     Promise.resolve().then(() => rewardsApi?.getSeasonRewardStatus?.({})),
     LOGIN_SEASON_STATUS_TIMEOUT_MS,
     "Season rewards are taking too long to load. They remain available from Leaderboards."
-  ).catch(() => null).then(status => {
+  ).catch(() => ({ loadFailed: true })).then(status => {
     const sequence = loginPresentationSequence;
     if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return;
     sequence.seasonStatus = status;
@@ -38252,7 +38254,7 @@ async function refreshLeaderboardSeasonDecorations() {
   } catch (_error) { leaderboardSeasonStatusPromise = null; }
 }
 
-function showSeasonRewardsPanel({ view = "info", seasonId = RESET_GENERATION, board = leaderboardActiveTab, login = false } = {}) {
+function showSeasonRewardsPanel({ view = "info", seasonId = view === "results" ? "" : RESET_GENERATION, board = leaderboardActiveTab, login = false } = {}) {
   const api = getOnlineApi(), uid = getCurrentOnlineUid(), world = ONLINE_WORLD_ID;
   if (!api?.getSeasonRewardStatus || !window.CrownlandsSeasonRewards) return;
   modal.className = "modal season-rewards-modal" + (login ? " season-login-rewards" : "");
@@ -38261,7 +38263,15 @@ function showSeasonRewardsPanel({ view = "info", seasonId = RESET_GENERATION, bo
   modalBody.seasonRewardsOwner = owner;
   const isCurrent = () => modal.open && modalBody.seasonRewardsOwner === owner && modal.classList.contains("season-rewards-modal") && uid === getCurrentOnlineUid() && world === ONLINE_WORLD_ID;
   if (!modal.open) modal.showModal();
-  const controller = window.CrownlandsSeasonRewards.open({ host: modalBody, api, currentSeason: RESET_GENERATION, seasonId, board, view, login, isCurrent,
+  const rewardsApi = {
+    getSeasonRewardStatus: payload => withTimeout(
+      Promise.resolve().then(() => api.getSeasonRewardStatus(payload)),
+      LOGIN_SEASON_STATUS_TIMEOUT_MS,
+      "Season rewards are taking too long to load. Please try again."
+    ),
+    claimSeasonRewards: payload => api.claimSeasonRewards(payload),
+  };
+  const controller = window.CrownlandsSeasonRewards.open({ host: modalBody, api: rewardsApi, currentSeason: RESET_GENERATION, seasonId, board, view, login, isCurrent,
     onBack: () => { showLeaderboardModal(); modalBody.querySelector(`[data-leaderboard-tab="${board}"]`)?.click(); },
     onLater: () => modal.close(),
     onClaim: async result => {
