@@ -348,6 +348,40 @@ async function validateAsyncBehavior() {
   };
   vm.createContext(foregroundContext);
   vm.runInContext(functionSource("synchronizeForegroundGame"), foregroundContext, { filename: "game.js" });
+  const firebaseSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
+  let monotonicNow = 1000, serverNow = 1_000_000, clockReads = 0, clockFails = false;
+  const clockContext = { serverClock: { atMs: serverNow, receivedAt: monotonicNow }, performance: { now: () => monotonicNow } };
+  vm.createContext(clockContext);
+  vm.runInContext(extractFunction(firebaseSource, "getServerNowMs"), clockContext);
+  foregroundContext.getOnlineApi = () => ({
+    isSignedIn: () => true,
+    getServerNowMs: clockContext.getServerNowMs,
+    getRealmInfo: async () => {
+      clockReads++;
+      if (clockFails) throw Error("Controlled clock refresh failure");
+      clockContext.serverClock = { atMs: serverNow, receivedAt: monotonicNow };
+      return { serverTimeMs: serverNow };
+    },
+  });
+  for (const name of ["getArmyClockNowMs", "getOnlineArmyRemainingSeconds", "getArmyTravelProgress"]) {
+    vm.runInContext(functionSource(name), foregroundContext);
+  }
+  foregroundContext.normalizeTimestampMs = Number;
+  foregroundContext.clamp = (n, low, high) => Math.max(low, Math.min(high, n));
+  // Android sleep can advance server time while performance.now is suspended.
+  serverNow += 120_000;
+  const march = { launchedAtMs: serverNow - 30_000, arrivesAtMs: serverNow + 30_000, total: 60 };
+  assert.equal(foregroundContext.getArmyTravelProgress(march), 0);
+  assert.equal(await foregroundContext.synchronizeForegroundGame(120_000), true);
+  assert.equal(clockReads, 1, "Foreground resume never refreshed the server clock after phone sleep.");
+  assert.equal(foregroundContext.getArmyTravelProgress(march), .5, "A resumed march stayed on its origin city.");
+  assert.equal(foregroundContext.getOnlineArmyRemainingSeconds(march), 30);
+  monotonicNow += 1000;
+  assert(foregroundContext.getArmyTravelProgress(march) > .5, "Resumed troop positions stopped advancing.");
+  assert.equal(foregroundContext.getOnlineArmyRemainingSeconds(march), 29);
+  clockFails = true;
+  assert.equal(await foregroundContext.synchronizeForegroundGame(5000), false, "A failed clock refresh must enter the existing resume retry flow.");
+  clockFails = false;
   let finishPresence;
   let resumePaints = 0;
   let recoveryCalls = 0;
@@ -469,7 +503,7 @@ async function validateAsyncBehavior() {
 }
 
 validateAsyncBehavior()
-  .then(() => console.log("Validated coalesced foreground resume, heartbeat timeout recovery, authoritative catch-up, listener recovery, retries, and safe summaries."))
+  .then(() => console.log("Validated phone-sleep clock recovery and moving march countdowns, coalesced foreground resume, heartbeat timeout recovery, authoritative catch-up, listener recovery, retries, and safe summaries."))
   .catch(error => {
     console.error(error);
     process.exitCode = 1;

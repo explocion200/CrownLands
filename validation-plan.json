@@ -1,82 +1,62 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "417376561e9a485700bb8f5f8e771a83a2849158",
+  "baseCommit": "830879cd88398fb30122631f5f471c73a8d456d8",
   "coverage": [
     {
       "paths": [
-        "common-gear.js",
-        "functions/common-gear.js",
-        "tools/validate-gear-bonus-gameplay.js"
+        "game.js"
       ],
       "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-stackable-timed-items.js",
-        "tools/validate-swift-march-order.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-peace-shield-returns.js"
+        "tools/validate-foreground-resume.js",
+        "tools/validate-responsive-runtime.js",
+        "tools/validate-login-realm-sequence.js",
+        "tools/validate-army-resolution-retries.js",
+        "tools/validate-pending-army-departures.js",
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-owned-city-cross-map-sync.js"
       ],
-      "reason": "Audit all 160 gear definitions at all five levels through equipped-only aggregation, source snapshots and client/server production, army/scout travel, attack, soldier defense, walls, repair and recovery calculations. Preserve saved bonus values across later equipment/balance changes. Exercise authoritative equip/upgrade transactions and item consumption, timed production boosts, Swift March, Veil and Peace Shield scopes."
+      "reason": "Refresh the existing authoritative clock read on foreground resume, including a suspended monotonic clock, march progress/countdowns and retry after clock-read failure. Cover shared login presentation, pending departures, arrival retries and visible march motion. Preserve the City List scroll container during roster refreshes and avoid resetting unchanged scroll offsets; verify native mobile swipes during full and upgrade-row refreshes, focus, stable ordering, paging, live Gold, queued upgrades and cross-map ownership. No server timing, balances, mutation payloads, backend code or rules change. City List costs now use compact English K/M/B/T labels with one fractional digit, while full exact costs remain in title and aria-label attributes; the displayed format never changes submitted upgrade values."
     },
     {
       "paths": [
-        "functions/index.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "tools/validate-clan-objective-battles.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-report-system.js"
+        "city-list-ui.css",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-owned-city-list.js",
+        "modal-ui.js"
       ],
       "tests": [
-        "tools/validate-report-system.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-clan-objective-battles.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-citadel-assaults.js",
-        "tools/validate-soldier-defense.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-combat-forecast.js",
-        "tools/test-pvp-leaderboard.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-report-delivery-rules.js",
-        "functions/test/emulator-pvp-leaderboard.js"
+        "tools/validate-city-list-browser.js",
+        "tools/validate-owned-city-list.js"
       ],
-      "reason": "Fix Tower garrison shields reading the wrong bonus field and enforce the existing defense cap. Verify launch-time attack identities, resolution-time defense/recovery identities, complete individual contributions for both sides, mixed and capped rallies, shared city shields, all wall armor and repair seals, receipt settlement, zero-loss and neutral defenders, privacy and retry safety. Retain full details in canonical reports while compacting 120-entry profile summaries. Exercise affected combat, Citadel wall bypass, reinforcement, forecast and PvP attribution dependencies. Confirm the Tower test process exits after its assertions so the emulator gate can continue."
+      "reason": "Keep roster notices in a fixed flex section while preserving the scrolling area. Check desktop, portrait and two landscape sizes, real CDP touch scrolling through refreshes, unchanged five-row pagination and touch targets, retry and empty states, controls, focus and scroll retention. Inspect browser screenshots. The new list reconciliation stays in the existing dialog presentation helper; other modal lifecycle and text-patching helpers are unchanged. Exercise Level 125 costs on all four viewports, assert rendered cost text fits inside every button, and cover thousand/million/billion/trillion formatting and threshold rounding. Captions are contained on one line."
     },
     {
       "paths": [
-        "common-gear-ui.js",
-        "battle-report-detail-ui.js",
-        "game.js",
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-battle-items-browser.js"
+        "tools/validate-foreground-resume.js"
       ],
       "tests": [
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-report-system.js",
-        "tools/validate-battle-items-browser.js",
-        "tools/validate-military-ui.js"
+        "tools/validate-foreground-resume.js"
       ],
-      "reason": "Verify saved item names, actual art, rarity, level, owner, applied power and capped recovery/repair on attacker and defender sides. Preserve viewer-first order, legacy aggregate reports, unknown item identities and HTML escaping. Render city and Tower reports from both perspectives at desktop and two landscape-mobile sizes, check every image, scrolling, viewport bounds and runtime errors."
+      "reason": "Run the new regression against the actual client clock and march-progress functions: simulated phone sleep leaves a fresh march at its city until foreground refresh, then restores its position and advancing countdown. Clock refresh failure must reach the existing retry flow without delaying economy presentation on unrelated presence."
     },
     {
-      "paths": ["tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "The individual item model and report rows add 4,209 client source bytes with existing art. Bound that feature to 8 KiB including build metadata; verify production packaging with full commit IDs as used in CI, while retaining the per-file, offline-shell and combined artifact limits."
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Bound the existing dialog helper at 5 KiB for City List reconciliation and its cached compact cost formatter. Preserve the game.js and aggregate shell caps; verify actual normalized entrypoint bytes and existing asset limits."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly requested individual battle item display, battle-time snapshot rules, existing effect scopes and pending deployment status. No new balance values or bonus caps are introduced."
+      "reason": "Record the user-confirmed City List presentation: compact cost labels, contained captions, and exact costs in tooltips and accessible labels. This documentation does not change upgrade economics or release status."
     }
   ]
 }

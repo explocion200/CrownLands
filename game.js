@@ -23323,6 +23323,8 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
     Promise.resolve(refreshAllOwnedCities(true)),
     Promise.resolve(loadOnlineRegionCitiesForResolution(targetRegionId)),
     Promise.resolve(loadServerReportsOnce()),
+    // Phone sleep can pause performance.now; resample the server clock.
+    Promise.resolve(api.getRealmInfo()),
     Promise.resolve(heartbeatGameServerMembership()),
     Promise.resolve(publishOnlinePresence(true)),
   ];
@@ -23347,7 +23349,7 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
   const realtimeResult = shouldRestartRealtime ? refreshResults[refreshResults.length - 1] : null;
   const realtimeSynced = !shouldRestartRealtime
     || (realtimeResult?.status === "fulfilled" && realtimeResult.value === true);
-  const readsSynced = refreshResults.slice(0, 3).every(result => result.status === "fulfilled" && result.value !== false);
+  const readsSynced = refreshResults.slice(0, 4).every(result => result.status === "fulfilled" && result.value !== false);
   return Boolean(economySynced && realtimeSynced && readsSynced);
 }
 
@@ -33718,7 +33720,7 @@ function renderCityListModal() {
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
   const pageCities = cities.slice(start, start + CITY_LIST_PAGE_SIZE);
   modalTitle.textContent = "City List";
-  modalBody.innerHTML = `
+  const markup = `
     <div class="city-list-panel">
       <div class="cll-header">
         <div aria-hidden="true"><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div>
@@ -33735,8 +33737,10 @@ function renderCityListModal() {
         </button>
         <span class="cll-page-caption">${cityDetailsNumber(cities.length)} holdings across maps</span>
       </div>
-      ${rosterIsSyncing ? `<div class="cll-notice" role="status">Syncing full city roster...</div>` : ""}
-      ${rosterNeedsRetry ? `<div class="cll-notice" role="alert"><span>Full roster unavailable. Showing saved cities.</span><button data-city-list-sync-retry type="button">Retry sync</button></div>` : ""}
+      <div class="cll-notices">
+        ${rosterIsSyncing ? `<div class="cll-notice" role="status">Syncing full city roster...</div>` : ""}
+        ${rosterNeedsRetry ? `<div class="cll-notice" role="alert"><span>Full roster unavailable. Showing saved cities.</span><button data-city-list-sync-retry type="button">Retry sync</button></div>` : ""}
+      </div>
       <div class="cll-columns" aria-hidden="true"><span>City &amp; location</span><span>Level</span><span>Garrison</span><span>Production / hour</span><span>Develop city</span></div>
       <div class="city-list-rows" tabindex="0" role="region" aria-label="Owned city roster">
         ${pageCities.length
@@ -33751,6 +33755,8 @@ function renderCityListModal() {
       </div></div>
     </div>
   `;
+
+  patchCityListPanel(modalBody, markup, preserveUiState).forEach(bindCityListRowActions);
 
   modalBody.querySelectorAll("[data-city-list-sort]").forEach(button => {
     button.addEventListener("click", () => {
@@ -33780,8 +33786,8 @@ function renderCityListModal() {
     });
   });
 
-  bindCityListRowActions(modalBody);
-  modalBody.querySelector(".city-list-rows").scrollTop = previousScrollTop;
+  const scroller = modalBody.querySelector(".city-list-rows");
+  if (scroller.scrollTop !== previousScrollTop) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
 }
 
@@ -33843,7 +33849,7 @@ function patchCityListUpgradeRows(dirtyCityKeys = null) {
       setTextIfChanged(button.querySelector("small"), updated.querySelector("small").textContent);
     });
   });
-  if (scroller) scroller.scrollTop = previousScrollTop;
+  if (scroller && scroller.scrollTop !== previousScrollTop) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
   return changed;
 }
@@ -33924,7 +33930,7 @@ function renderCityListUpgradeButton(city, option) {
   const cost = Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)} gold` : "Unavailable";
   const details = `${cityDetailsNumber(option.levels)} levels · ${cost}${option.disabled && option.reason ? `. ${option.reason}` : ""}`;
   const recovery = Boolean(instantEconomySyncRecovery);
-  const caption = recovery ? "Syncing" : option.reason === "Incoming" || option.reason === "Refresh" ? option.reason : Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)}g` : "—";
+  const caption = recovery ? "Syncing" : option.reason === "Incoming" || option.reason === "Refresh" ? option.reason : Number.isFinite(option.cost) ? `${formatCityListCost(option.cost)}g` : "—";
   return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" title="${escapeHtml(recovery ? "Refreshing confirmed balance…" : details)}" aria-label="${escapeHtml(`${label} ${city.name}. ${recovery ? "Refreshing confirmed balance…" : details}`)}" ${option.disabled || recovery ? "disabled" : ""}><strong>${escapeHtml(label)}</strong><small>${escapeHtml(caption)}</small></button>`;
 }
 

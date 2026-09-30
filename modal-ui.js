@@ -1,5 +1,39 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported patchOperationModalText, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+
+const formatCityListCost = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format;
+
+function patchCityListPanel(host, markup, preserve) {
+  const rendered = document.createElement("div");
+  rendered.innerHTML = markup;
+  const panel = preserve ? host.querySelector(".city-list-panel") : null;
+  if (!panel) {
+    host.replaceChildren(rendered.firstElementChild);
+    return [host];
+  }
+  const changedRows = [];
+  // Keep the scroller attached so refreshes cannot cancel a native swipe.
+  for (const section of [...rendered.firstElementChild.children]) {
+    const current = panel.querySelector(`:scope > .${section.classList[0]}`);
+    if (current && section.classList.contains("city-list-rows")) {
+      const previousRows = new Map([...current.children].map(row => [row.dataset.cityListRowKey || "", row]));
+      const keptRows = new Set();
+      [...section.children].forEach((row, index) => {
+        const previous = previousRows.get(row.dataset.cityListRowKey || "");
+        const next = previous?.isEqualNode(row) ? previous : row;
+        if (next !== previous) {
+          if (previous) previous.replaceWith(next);
+          changedRows.push(next);
+        }
+        if (current.children[index] !== next) current.insertBefore(next, current.children[index] || null);
+        keptRows.add(next);
+      });
+      [...current.children].forEach(row => { if (!keptRows.has(row)) row.remove(); });
+    } else if (current) current.replaceWith(section);
+    else panel.append(section);
+  }
+  return changedRows;
+}
 
 // Preserve pressed controls during countdown/quantity changes. Identity,
 // permissions, busy state, or structure changes use the normal rebind path.
