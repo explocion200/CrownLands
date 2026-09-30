@@ -38,7 +38,7 @@
     if (id === "shop") return `Shop Level ${current} catalogue`;
     const amount = bonus(id, current);
     return id === "workshop" ? `${amount}% shorter wall construction and repairs`
-      : id === "infirmary" ? `+${amount}% recovery for Tower defenders (75% combined cap)`
+      : id === "infirmary" ? `+${amount}% recovery for Tower defenders (90% combined cap)`
         : `+${amount}% rally attack strength at launch`;
   }
   function artStage(value) { const current = level(value); return current === 10 ? 4 : current >= 7 ? 3 : current >= 4 ? 2 : 1; }

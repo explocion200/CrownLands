@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-09-season-rewards-v1",
+  "releaseId": "crownlands-2026-09-29-skill-gear-balance-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "8ac2c299db33b5fe10a4f68ba17ad42c2e36801476e5452f053d67b49ba305b7",
+  "apiContractHash": "ce56bd390d4e6e004a3b7178d6357acf04bee76a65ebb41cb361023c02f48f34",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

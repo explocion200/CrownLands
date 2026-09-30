@@ -9,28 +9,30 @@
   const RARITY = "common";
   const RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"]);
   const INVENTORY_LIMIT = 2000;
-  const BONUS_CAPS = Object.freeze({ attack: 100, defense: 100, walls: 150, marchSpeed: 150, wallRepair: 50 });
+  const BONUS_CAPS = Object.freeze({ attack: 200, defense: 200, walls: 200, marchSpeed: 200, scoutSpeed: 250, wallRepair: 50 });
   const MAX_LEVEL = 5;
   const BOX_REVEAL_COUNT = 3;
   const SHOP_DAILY_LIMIT = 1;
   const SHOP_PRICE_HOURS = 1;
   const RELIC_BONUS_CHANCE_PERCENT = 1;
-  const CASUALTY_RECOVERY_CAP_PERCENT = 75;
+  const CASUALTY_RECOVERY_CAP_PERCENT = 90;
   const UPGRADE_RECEIPT_LIMIT = 24;
   const BONUS_BY_LEVEL = Object.freeze({ 1: 0.25, 2: 0.5, 3: 0.8, 4: 1.15, 5: 1.5 });
   const BONUS_MAXIMA = Object.freeze({
-    troopProductionAllCities: [1.5, 3, 5, 7.5, 10],
-    attackStrength: [1.5, 5, 12, 20, 30],
-    casualtyEfficiency: [1.5, 3, 5, 7.5, 10],
-    goldProductionMainCity: [1.5, 3, 5, 7.5, 10],
-    goldProductionAllCities: [1.5, 4, 8, 13, 20],
+    troopProductionAllCities: [1.5, 3, 6, 10, 15],
+    attackStrength: [1.5, 10, 30, 60, 100],
+    casualtyEfficiency: [1.5, 5, 12, 25, 40],
+    goldProductionMainCity: [1.5, 3, 6, 10, 15],
+    goldProductionAllCities: [1.5, 8, 20, 45, 70],
     ownedMarchSpeed: [1.5, 3, 5, 7.5, 10],
-    enemyMarchSpeed: [1.5, 5, 12, 20, 30],
-    scoutSpeed: [1.5, 6, 15, 30, 50],
-    wallStrength: [1.5, 3, 5.5, 8.5, 12.5],
-    defenderStrength: [1.5, 5, 12, 20, 30],
-    wallRepairSpeed: [1.5, 5, 12, 20, 30],
+    enemyMarchSpeed: [1.5, 8, 20, 40, 60],
+    scoutSpeed: [1.5, 10, 30, 65, 110],
+    wallStrength: [1.5, 3, 6, 10, 15],
+    defenderStrength: [1.5, 8, 20, 40, 60],
+    wallRepairSpeed: [1.5, 6, 15, 30, 50],
   });
+  const LEDGER_BONUS_MAXIMA = Object.freeze([1.5, 3, 5, 7.5, 10]);
+  const HEAVY_WALL_ARMOR_BONUS_MAXIMA = Object.freeze([1.5, 4, 8, 13, 20]);
   // Each row contains Levels 1→2, 2→3, 3→4, 4→5 and promotion to the next rarity.
   const UPGRADE_GOLD_COSTS = Object.freeze({
     common: Object.freeze([100_000, 170_000, 300_000, 500_000, 850_000]),
@@ -282,7 +284,7 @@
     if (buildingId === "barracks") {
       if (ARMOR_SLOTS.has(slot)) return ["troopProductionAllCities", "troop production in all owned cities"];
       if (slot === "weapon") return ["attackStrength", "attack strength for all attacks"];
-      return ["casualtyEfficiency", "casualty recovery with Field Medics (75% combined cap; recovered troops return to the main city)"];
+      return ["casualtyEfficiency", "casualty recovery with Field Medics (90% combined cap; recovered troops return to the main city)"];
     }
     if (buildingId === "treasury") {
       if (slot === "necklace") return ["goldProductionAllCities", "gold production in all owned cities"];
@@ -301,7 +303,11 @@
   const DEFINITIONS = Object.freeze(Object.values(BUILDINGS).flatMap(building => (
     SLOTS.flatMap(slot => RARITIES.map((rarity, rarityIndex) => {
       const [statType, statLabel] = getEffect(building.id, slot);
-      const maximums = BONUS_MAXIMA[statType];
+      const maximums = building.id === "treasury" && slot === "weapon"
+        ? LEDGER_BONUS_MAXIMA
+        : building.id === "gatehouse" && ["chest", "pants"].includes(slot)
+          ? HEAVY_WALL_ARMOR_BONUS_MAXIMA
+          : BONUS_MAXIMA[statType];
       const bonusByLevel = rarityIndex === 0 ? BONUS_BY_LEVEL : Object.freeze(Object.fromEntries(
         [1, 2, 3, 4, 5].map(level => [level, Number((maximums[rarityIndex - 1]
           + (maximums[rarityIndex] - maximums[rarityIndex - 1]) * level / MAX_LEVEL).toFixed(2))])

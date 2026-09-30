@@ -12,6 +12,7 @@
     victoryPointsExponentScale: 2,
     baseAttackPowerPerTroop: 1.25,
     baseDefensePowerPerTroop: 1.30,
+    defenseBonusCapPercent: 200,
     scoutIntelMinutes: 10,
     strongholdEffectiveLevel: 50,
     citadelEffectiveLevel: 100,
@@ -217,6 +218,7 @@
       const shieldwallPercent = getSkillPercent("shieldwallDiscipline", inputs.shieldwallDisciplineLevel);
       const guildPercent = getSkillPercent("guildCharters", inputs.guildChartersLevel);
       const packagePercent = clamp(inputs.citadelPackagePercent, 0, 100);
+      const soldierDefensePercent = clamp(shieldwallPercent + packagePercent, 0, RULES.defenseBonusCapPercent);
       const upgradePackagePercent = clamp(inputs.citadelUpgradeReductionPercent, 0, 100);
       const defenderTroops = Math.max(0, Math.floor(finite(inputs.defenderTroops, 0)));
       const baseGoldPerHour = getGoldPerHour(level);
@@ -242,7 +244,7 @@
         fullWallPower,
         ownerGarrisonBasePower,
         ownerGarrisonPower: Math.floor(
-          defenderTroops * baseDefensePowerPerTroop * (1 + (shieldwallPercent + packagePercent) / 100)
+          defenderTroops * baseDefensePowerPerTroop * (1 + soldierDefensePercent / 100)
         ),
         repairMinutes: getRepairMinutes(level),
         upgradeCost: getUpgradeCost(level, guildPercent + upgradePackagePercent),
@@ -250,6 +252,7 @@
         granariesPercent,
         stoneworksPercent,
         shieldwallPercent,
+        soldierDefensePercent,
         baseDefensePowerPerTroop,
         guildPercent,
         packagePercent,
@@ -276,7 +279,7 @@
       });
       const attackerTroops = Math.max(1, Math.floor(finite(inputs.attackerTroops, 1)));
       const reinforcementTroops = Math.max(0, Math.floor(finite(inputs.reinforcementTroops, 0)));
-      const reinforcementDefensePercent = clamp(inputs.reinforcementDefensePercent, 0, 100);
+      const reinforcementDefensePercent = clamp(inputs.reinforcementDefensePercent, 0, RULES.defenseBonusCapPercent);
       const swordmasteryPercent = getSkillPercent("swordmastery", inputs.swordmasteryLevel);
       const baseAttackPowerPerTroop = read(
         economy,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "IMPLEMENTED — PENDING RELEASE; PRODUCTION CAPS DEFERRED",
-  "baselineCommit": "c66fd0f4b9e49d1be5399c3277f28e94edb95c3a",
+  "baselineCommit": "28e6aa2b62e68951a00548ca13d09df73651e987",
   "rarities": [
     "common",
     "uncommon",
@@ -24,28 +24,56 @@
       7.5,
       10
     ],
-    "medium": [
+    "armor": [
+      1.5,
+      3,
+      6,
+      10,
+      15
+    ],
+    "heavyWalls": [
       1.5,
       4,
       8,
       13,
       20
     ],
-    "strong": [
+    "attack": [
+      1.5,
+      10,
+      30,
+      60,
+      100
+    ],
+    "recovery": [
       1.5,
       5,
       12,
-      20,
-      30
+      25,
+      40
     ],
-    "walls": [
+    "gold": [
       1.5,
-      3,
-      5.5,
-      8.5,
-      12.5
+      8,
+      20,
+      45,
+      70
+    ],
+    "strength": [
+      1.5,
+      8,
+      20,
+      40,
+      60
     ],
     "scouts": [
+      1.5,
+      10,
+      30,
+      65,
+      110
+    ],
+    "repair": [
       1.5,
       6,
       15,
@@ -55,27 +83,30 @@
   },
   "effects": {
     "troopProductionAllCities": {
-      "curve": "modest",
+      "curve": "armor",
       "slots": 6,
       "building": "barracks"
     },
     "attackStrength": {
-      "curve": "strong",
+      "curve": "attack",
       "slots": 1,
       "building": "barracks"
     },
     "casualtyEfficiency": {
-      "curve": "modest",
+      "curve": "recovery",
       "slots": 1,
       "building": "barracks"
     },
     "goldProductionMainCity": {
-      "curve": "modest",
+      "curve": "armor",
       "slots": 7,
-      "building": "treasury"
+      "building": "treasury",
+      "slotCurves": {
+        "weapon": "modest"
+      }
     },
     "goldProductionAllCities": {
-      "curve": "medium",
+      "curve": "gold",
       "slots": 1,
       "building": "treasury"
     },
@@ -85,7 +116,7 @@
       "building": "royal-stables"
     },
     "enemyMarchSpeed": {
-      "curve": "strong",
+      "curve": "strength",
       "slots": 1,
       "building": "royal-stables"
     },
@@ -95,31 +126,36 @@
       "building": "royal-stables"
     },
     "wallStrength": {
-      "curve": "walls",
+      "curve": "armor",
       "slots": 6,
-      "building": "gatehouse"
+      "building": "gatehouse",
+      "slotCurves": {
+        "chest": "heavyWalls",
+        "pants": "heavyWalls"
+      }
     },
     "defenderStrength": {
-      "curve": "strong",
+      "curve": "strength",
       "slots": 1,
       "building": "gatehouse"
     },
     "wallRepairSpeed": {
-      "curve": "strong",
+      "curve": "repair",
       "slots": 1,
       "building": "gatehouse"
     }
   },
   "caps": {
-    "attackBonus": 100,
-    "defendingSoldierBonus": 100,
-    "wallStrengthBonus": 150,
-    "troopProductionBonus": 200,
-    "mainCityGoldBonus": 250,
-    "otherCityGoldBonus": 200,
-    "marchSpeedBonus": 150,
-    "casualtyRecovery": 75,
-    "regularWallRepairReduction": 50
+    "attackBonus": 200,
+    "defendingSoldierBonus": 200,
+    "wallStrengthBonus": 200,
+    "troopProductionBonus": 250,
+    "mainCityGoldBonus": 350,
+    "otherCityGoldBonus": 250,
+    "marchSpeedBonus": 200,
+    "casualtyRecovery": 90,
+    "regularWallRepairReduction": 50,
+    "scoutSpeedBonus": 250
   },
   "costs": {
     "basis": "Fixed Gold per upgrade or promotion, independent of production, city count and bonuses. Cumulative totals include crafting both inputs at every step; item acquisition is excluded.",

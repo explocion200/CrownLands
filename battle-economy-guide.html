@@ -76,10 +76,10 @@
           <input id="cityLevelRange" type="range" min="1" max="150" step="1" value="75" />
           <input id="cityLevelNumber" type="number" min="1" step="1" value="75" inputmode="numeric" aria-label="City level number" />
         </label>
-        <label class="guide-control" for="taxSkillLevel"><span>Tax Stewardship <output id="taxSkillOutput" for="taxSkillLevel">Lv 0</output></span><input id="taxSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
-        <label class="guide-control" for="granarySkillLevel"><span>Royal Granaries <output id="granarySkillOutput" for="granarySkillLevel">Lv 0</output></span><input id="granarySkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
-        <label class="guide-control" for="cityStoneworksLevel"><span>Stoneworks <output id="cityStoneworksOutput" for="cityStoneworksLevel">Lv 0</output></span><input id="cityStoneworksLevel" type="range" min="0" max="25" step="1" value="0" /></label>
-        <label class="guide-control" for="cityShieldwallLevel"><span>Shieldwall Discipline <output id="cityShieldwallOutput" for="cityShieldwallLevel">Lv 0</output></span><input id="cityShieldwallLevel" type="range" min="0" max="30" step="1" value="0" /></label>
+        <label class="guide-control" for="taxSkillLevel"><span>Tax Stewardship <output id="taxSkillOutput" for="taxSkillLevel">Lv 0</output></span><input id="taxSkillLevel" type="range" min="0" max="34" step="1" value="0" /></label>
+        <label class="guide-control" for="granarySkillLevel"><span>Royal Granaries <output id="granarySkillOutput" for="granarySkillLevel">Lv 0</output></span><input id="granarySkillLevel" type="range" min="0" max="34" step="1" value="0" /></label>
+        <label class="guide-control" for="cityStoneworksLevel"><span>Stoneworks <output id="cityStoneworksOutput" for="cityStoneworksLevel">Lv 0</output></span><input id="cityStoneworksLevel" type="range" min="0" max="34" step="1" value="0" /></label>
+        <label class="guide-control" for="cityShieldwallLevel"><span>Shieldwall Discipline <output id="cityShieldwallOutput" for="cityShieldwallLevel">Lv 0</output></span><input id="cityShieldwallLevel" type="range" min="0" max="34" step="1" value="0" /></label>
         <label class="guide-control" for="guildSkillLevel"><span>Guild Charters <output id="guildSkillOutput" for="guildSkillLevel">Lv 0</output></span><input id="guildSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
         <label class="guide-control" for="cityCitadelPackage"><span>Realm-wide package</span><select id="cityCitadelPackage"><option value="0:0">None</option><option value="5:5">Clan Citadel package +5%</option><option value="10:10">Controlled Citadel package +10%</option></select></label>
         <label class="guide-control" for="cityDefenderTroops"><span>Example stationed troops</span><input id="cityDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
@@ -189,16 +189,16 @@
         <fieldset>
           <legend>Offensive force</legend>
           <label for="battleAttackerTroops"><span>Troops committed</span><input id="battleAttackerTroops" type="number" min="1" step="1000" value="1000000" inputmode="numeric" /></label>
-          <label for="battleSwordLevel"><span>Swordmastery <output id="battleSwordOutput" for="battleSwordLevel">Lv 0</output></span><input id="battleSwordLevel" type="range" min="0" max="30" step="1" value="0" /></label>
+          <label for="battleSwordLevel"><span>Swordmastery <output id="battleSwordOutput" for="battleSwordLevel">Lv 0</output></span><input id="battleSwordLevel" type="range" min="0" max="50" step="1" value="0" /></label>
         </fieldset>
         <fieldset>
           <legend>Defending holding</legend>
           <label for="battleCityLevel"><span>City level</span><input id="battleCityLevel" type="number" min="1" step="1" value="50" inputmode="numeric" /></label>
           <label for="battleDefenderTroops"><span>Owner troops</span><input id="battleDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
-          <label for="battleShieldLevel"><span>Shieldwall Discipline <output id="battleShieldOutput" for="battleShieldLevel">Lv 0</output></span><input id="battleShieldLevel" type="range" min="0" max="30" step="1" value="0" /></label>
+          <label for="battleShieldLevel"><span>Shieldwall Discipline <output id="battleShieldOutput" for="battleShieldLevel">Lv 0</output></span><input id="battleShieldLevel" type="range" min="0" max="34" step="1" value="0" /></label>
           <label for="battleReinforcementTroops"><span>Clan reinforcement troops</span><input id="battleReinforcementTroops" type="number" min="0" step="1000" value="0" inputmode="numeric" /></label>
           <label for="battleReinforcementBonus"><span>Reinforcement Shieldwall + objective bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>This combined percentage applies to that contributor&rsquo;s 1.30 soldier base. It never adds another wall.</small></label>
-          <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+          <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="34" step="1" value="0" /></label>
           <label for="battleObjectiveDefense"><span>Objective soldier defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
           <label for="battleWallIntegrity"><span>Current wall integrity <output id="battleWallOutput" for="battleWallIntegrity">100%</output></span><input id="battleWallIntegrity" type="range" min="0" max="100" step="1" value="100" /></label>
         </fieldset>
@@ -254,7 +254,7 @@
       <details class="guide-math">
         <summary>Show the battle math</summary>
         <div class="formula-list">
-          <p><strong>Attack power:</strong> floor(committed troops &times; 1.25 &times; (1 + Swordmastery%)). Maximum Swordmastery raises this to 2 power per troop.</p>
+          <p><strong>Attack power:</strong> floor(committed troops &times; 1.25 &times; (1 + Swordmastery%)). Maximum Swordmastery raises this to 2.5 power per troop.</p>
           <p><strong>Soldier defense:</strong> floor(troops &times; 1.30 &times; (1 + Shieldwall Discipline% + personal objective% + shared clan objective%)). Maximum Shieldwall without objective support is 2.08 power per soldier.</p>
           <p><strong>Wall phase:</strong> the current wall absorbs attack power first. Penetrating power is max(0, attack power &minus; current wall).</p>
           <p><strong>Garrison phase:</strong> penetrating power must be strictly greater than the combined owner and reinforcement defense. Equality is a defensive hold.</p>

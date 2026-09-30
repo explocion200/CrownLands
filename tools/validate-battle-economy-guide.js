@@ -7,6 +7,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 const config = JSON.parse(read("functions/economy-config.json"));
 const guide = require(path.join(root, "battle-guide-calculations.js"));
 const calculator = guide.create(config);
+assert.equal(guide.RULES.defenseBonusCapPercent, require("../common-gear.js").BONUS_CAPS.defense);
 const server = read("functions/index.js");
 const client = read("game.js");
 const page = read("battle-economy-guide.html");
@@ -48,18 +49,24 @@ for (let level = 2; level <= 500; level += 1) {
 }
 
 const skillExpectations = {
-  swordmastery: { level: 30, percent: 60 },
-  shieldwallDiscipline: { level: 30, percent: 60 },
-  stoneworks: { level: 25, percent: 75 },
-  taxStewardship: { level: 25, percent: 75 },
-  royalGranaries: { level: 25, percent: 75 },
+  swordmastery: { level: 50, percent: 100 },
+  shieldwallDiscipline: { level: 34, percent: 100 },
+  stoneworks: { level: 34, percent: 100 },
+  taxStewardship: { level: 34, percent: 100 },
+  royalGranaries: { level: 34, percent: 100 },
   guildCharters: { level: 25, percent: 50 },
-  marchOrders: { level: 20, percent: 60 },
+  marchOrders: { level: 20, percent: 100 },
   fieldMedics: { level: 25, percent: 50 },
 };
 for (const [skill, expectation] of Object.entries(skillExpectations)) {
   assert.equal(calculator.getSkillMaximumLevel(skill), expectation.level, `${skill} maximum level drifted.`);
   assert.equal(calculator.getSkillPercent(skill, 1000), expectation.percent, `${skill} cap drifted.`);
+}
+for (const [id, skill] of Object.entries({ taxSkillLevel: "taxStewardship", granarySkillLevel: "royalGranaries",
+  cityStoneworksLevel: "stoneworks", cityShieldwallLevel: "shieldwallDiscipline", guildSkillLevel: "guildCharters",
+  battleSwordLevel: "swordmastery", battleShieldLevel: "shieldwallDiscipline", battleStoneLevel: "stoneworks" })) {
+  const input = page.match(new RegExp(`<input id="${id}"[^>]+>`))?.[0];
+  assert(input?.includes(`max="${skillExpectations[skill].level}"`), `${id} cannot reach the configured skill cap.`);
 }
 
 const unboosted = calculator.getCitySnapshot({ level: 50, defenderTroops: 1_000_000 });
@@ -69,7 +76,7 @@ const boosted = calculator.getCitySnapshot({
   taxStewardshipLevel: 25,
   royalGranariesLevel: 25,
   stoneworksLevel: 25,
-  shieldwallDisciplineLevel: 30,
+  shieldwallDisciplineLevel: 20,
   guildChartersLevel: 25,
   citadelPackagePercent: 10,
   citadelUpgradeReductionPercent: 10,
@@ -79,6 +86,14 @@ assert.equal(boosted.troopsPerHour, Math.floor(unboosted.baseTroopsPerHour * 1.8
 assert.equal(boosted.fullWallPower, Math.floor(unboosted.baseWall * 1.75), "Only Stoneworks may strengthen the wall.");
 assert.equal(boosted.ownerGarrisonPower, 2_210_000, "Shieldwall and objective soldier defense drifted.");
 assert.ok(boosted.upgradeCost < unboosted.upgradeCost, "Upgrade reductions must lower the next upgrade price.");
+const maximumSkills = calculator.getCitySnapshot({ level: 50, defenderTroops: 1_000_000,
+  taxStewardshipLevel: 34, royalGranariesLevel: 34, stoneworksLevel: 34,
+  shieldwallDisciplineLevel: 34, citadelPackagePercent: 10 });
+assert.equal(maximumSkills.goldPerHour, Math.floor(unboosted.baseGoldPerHour * 2.1));
+assert.equal(maximumSkills.troopsPerHour, Math.floor(unboosted.baseTroopsPerHour * 2.1));
+assert.equal(maximumSkills.fullWallPower, unboosted.baseWall * 2);
+assert.equal(maximumSkills.ownerGarrisonPower, 2_730_000, "Maximum skill must leave room for objective defense.");
+assert.equal(maximumSkills.soldierDefensePercent, 110);
 
 const equality = calculator.simulateSiege({
   attackerTroops: 160,

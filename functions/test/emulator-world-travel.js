@@ -243,6 +243,18 @@ async function verifyPreviewFreshness(actor, source, target) {
     if (equipped) assert(preview.durationMs < unequippedDuration, "A just-equipped scouting bonus was missing from the preview.");
     else assert.equal(preview.durationMs, unequippedDuration, "A just-removed scouting bonus remained in the preview.");
   }
-  console.log("Preview freshness passed: seven immediate equipment changes reflected without sleeps or retries.");
+  let previousDuration = unequippedDuration;
+  for (const [rarity, level] of [["common", 5], ["epic", 5], ["legendary", 1], ["legendary", 4], ["legendary", 5]]) {
+    const gear = commonGear.createDefaultState();
+    gear.instances.progression = { instanceId: "progression", gearKey: `royal_stables_necklace_${rarity}_01`, level };
+    gear.equipped["royal-stables"].necklace = "progression";
+    await profile.update({ gear: commonGear.normalizeState(gear) });
+    const preview = await call("previewArmyRoute", actor, { fromId: source.id, toId: target.id,
+      sourceRegionId: source.regionId, targetRegionId: target.regionId, kind: "scout", requestedTroops: 1 });
+    assert(preview.durationMs < previousDuration, `${rarity} ${level} must improve authoritative scout travel through Legendary 5.`);
+    previousDuration = preview.durationMs;
+  }
+  await profile.update({ gear: commonGear.createDefaultState() });
+  console.log("Preview freshness and Common/Epic/Legendary scout progression passed through Legendary Level 5.");
 }
 main().then(() => process.exit(0)).catch(error => { console.error(error.stack); process.exit(1); });

@@ -74,10 +74,8 @@ const context = {
   Number,
   String,
   SKILL_ORDER,
-  SKILL_FINAL_DOUBLE_COST_LEVELS: 5,
   SKILL_STANDARD_POINT_COST: 1,
-  SKILL_FINAL_POINT_COST: 2,
-  SKILL_PRESET_MODEL_VERSION: 5,
+  SKILL_PRESET_MODEL_VERSION: 6,
   SKILL_PRESET_NAME_MAX_LENGTH: 24,
   SKILL_PRESET_SLOTS,
   normalizeTimestampMs: value => Math.max(0, Math.floor(Number(value) || 0)),
@@ -98,6 +96,8 @@ vm.runInContext([
   extractFunction(gameSource, "getSkillPointCost"),
   extractFunction(gameSource, "getSkillUpgradePointCost"),
   extractFunction(gameSource, "getSpentSkillPoints"),
+  extractFunction(gameSource, "getAvailableSkillPoints"),
+  extractFunction(gameSource, "syncCharacterSkillPoints"),
   extractFunction(gameSource, "createDefaultSkills"),
   extractFunction(gameSource, "normalizeSkillPresetName"),
   extractFunction(gameSource, "normalizeSkillPresetAllocation"),
@@ -114,11 +114,11 @@ vm.runInContext([
 
 for (const skill of SKILL_ORDER) {
   const maxLevel = maxLevels[skill];
-  assert.equal(context.getSkillPointCost(skill, maxLevel - 6), 1, `${skill}'s pre-final-tier upgrade must cost 1 point.`);
-  assert.equal(context.getSkillPointCost(skill, maxLevel - 5), 2, `${skill}'s final five upgrades must begin at a 2-point cost.`);
-  assert.equal(context.getSkillPointCost(skill, maxLevel - 1), 2, `${skill}'s cap upgrade must cost 2 points.`);
+  for (let level = 0; level < maxLevel; level += 1) {
+    assert.equal(context.getSkillPointCost(skill, level), 1, `${skill} level ${level + 1} must cost 1 point.`);
+  }
   assert.equal(context.getSkillPointCost(skill, maxLevel), 0, `${skill} must have no cost after its cap.`);
-  assert.equal(context.getSkillUpgradePointCost(skill, 0, maxLevel), maxLevel + 5, `${skill}'s complete point cost must include five extra points.`);
+  assert.equal(context.getSkillUpgradePointCost(skill, 0, maxLevel), maxLevel, `${skill}'s complete point cost must equal its cap level.`);
 }
 
 const defaults = context.createDefaultSkillPresets();
@@ -164,12 +164,88 @@ const upgradedV3 = context.normalizeSkillPresets({
   activeSlot: secondActive.activeSlot,
   slots: secondActive.slots.slice(0, 3),
 });
-assert.equal(upgradedV3.modelVersion, 5);
+assert.equal(upgradedV3.modelVersion, 6);
 assert.equal(upgradedV3.slots.length, 4);
 assert.equal(upgradedV3.slots[0].name, "War Build");
 assert.equal(upgradedV3.slots[1].name, "Duplicate Build");
 assert.equal(upgradedV3.slots[3].saved, false);
 assert.equal(upgradedV3.activeSlot, 2);
+
+const serverContext = {
+  SKILL_ORDER,
+  SKILL_CONFIG: economyConfig.skills,
+  SKILL_STANDARD_POINT_COST: 1,
+  SKILL_PRESET_MODEL_VERSION: 6,
+  SKILL_PRESET_NAME_MAX_LENGTH: 24,
+  SKILL_PRESET_SLOTS,
+  CHARACTER_START_LEVEL: 1,
+  safeNumber: (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback,
+  safeString: (value, limit) => String(value || "").slice(0, limit),
+  timestampToMs: value => Number(value) || 0,
+};
+vm.createContext(serverContext);
+vm.runInContext([
+  "normalizeSkillLevel", "getSkillMaxLevel", "normalizeSkillLevelForSkill",
+  "getSkillPointCost", "getSkillUpgradePointCost", "getSkillDowngradePointRefund",
+  "normalizeSkillUpgrades", "getSpentSkillPoints", "getEarnedSkillPoints", "getAvailableSkillPoints",
+  "normalizeSkillPresetName", "normalizeSkillPresetAllocation", "normalizeSkillPresets",
+  "isValidSkillPresetAllocation", "getSkillLevel", "getSkillPercent",
+].map(name => extractFunction(serverSource, name)).join("\n"), serverContext);
+
+for (const skill of SKILL_ORDER) {
+  const maximum = maxLevels[skill];
+  for (let level = 0; level <= maximum; level += 1) {
+    assert.equal(serverContext.getSkillPointCost(skill, level), context.getSkillPointCost(skill, level));
+    assert.equal(serverContext.getSkillUpgradePointCost(skill, 0, level), level);
+    assert.equal(serverContext.getSkillDowngradePointRefund(skill, level, level), level);
+    assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: level } }, skill),
+      Math.min(level * economyConfig.skills[skill].percentPerLevel, economyConfig.skills[skill].maxPercent));
+  }
+}
+
+// This Level 100 build formerly spent 90 points: 35 defense + 25 speed + 30 discount.
+const oldAllocation = { ...context.createDefaultSkills(), shieldwallDiscipline: 30, marchOrders: 20, guildCharters: 25 };
+const convertedAllocation = { ...oldAllocation };
+const oldPresets = {
+  modelVersion: 5,
+  activeSlot: 1,
+  slots: [{ slot: 1, name: "Veteran", saved: true, upgrades: oldAllocation, spentPoints: 90, savedAtMs: 12345 }],
+};
+for (const [label, runtime, valid] of [
+  ["client", context, context.isValidLocalSkillPresetAllocation],
+  ["server", serverContext, serverContext.isValidSkillPresetAllocation],
+]) {
+  const converted = runtime.normalizeSkillPresets(oldPresets);
+  assert.equal(converted.modelVersion, 6);
+  assert.equal(converted.activeSlot, 1, `${label} lost the active preset.`);
+  assert.equal(converted.slots[0].name, "Veteran");
+  assert.equal(converted.slots[0].savedAtMs, 12345);
+  assert.deepEqual({ ...converted.slots[0].upgrades }, convertedAllocation);
+  assert.equal(converted.slots[0].spentPoints, 75);
+  assert.equal(runtime.getAvailableSkillPoints({ level: 100 }, oldAllocation), 24, `${label} did not return the 15 old final-tier surcharge points.`);
+  assert.equal(valid(converted.slots[0].upgrades, { level: 100 }), true);
+  assert.deepEqual(runtime.normalizeSkillPresets(converted), converted, `${label} migration is not idempotent.`);
+  const currentOverCap = runtime.normalizeSkillPresets({ ...oldPresets, modelVersion: 6,
+    slots: [{ ...oldPresets.slots[0], upgrades: { ...oldAllocation, shieldwallDiscipline: 35 } }] });
+  assert.equal(valid(currentOverCap.slots[0].upgrades, { level: 100 }), false, `${label} silently accepted an invalid current preset.`);
+  const corruptOld = runtime.normalizeSkillPresets({ ...oldPresets, slots: [{ ...oldPresets.slots[0], upgrades: { ...oldAllocation, marchOrders: 999 } }] });
+  assert.equal(valid(corruptOld.slots[0].upgrades, { level: 100 }), false, `${label} accepted a corrupt old preset.`);
+}
+const oldCharacter = { level: 100, xp: 17, skillPoints: 9 };
+assert.equal(context.syncCharacterSkillPoints(oldCharacter, oldAllocation), true);
+assert.deepEqual(oldCharacter, { level: 100, xp: 17, skillPoints: 24 });
+assert.equal(context.syncCharacterSkillPoints(oldCharacter, convertedAllocation), false, "Repeated reconciliation issued another refund.");
+assert.equal(serverContext.getAvailableSkillPoints({ level: 1 }, {}), 0);
+assert.equal(serverContext.getAvailableSkillPoints({ level: 2 }, {}), 1);
+assert.equal(Object.values(maxLevels).reduce((sum, level) => sum + level, 0), 256);
+for (const skill of ["shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries"]) {
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 33 } }, skill), 99);
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 34 } }, skill), 100,
+    `${skill}'s last point must stop at 100%, not 102%.`);
+  assert.equal(serverContext.getSkillPercent({ upgrades: { [skill]: 999 } }, skill), 100);
+}
+assert.match(serverSource, /const SKILL_POINT_SYSTEM_VERSION = 2;/, "This rebalance must not trigger the legacy clear-all reset.");
+
 const emptyDraft = context.createSkillPresetDraft(defaults.slots[0]);
 assert.equal(emptyDraft.name, "Preset 1");
 assert.ok(SKILL_ORDER.every(skill => emptyDraft.upgrades[skill] === 0), "An empty preset draft did not start from zero.");
@@ -234,11 +310,11 @@ assert.ok(adjustStart > 0 && adjustEnd > adjustStart, "Missing signed skill adju
 const adjustCallable = serverSource.slice(adjustStart, adjustEnd);
 assert.match(adjustCallable, /requestId[\s\S]*?normalizeSkillLevelAdjustments[\s\S]*?requestSignature[\s\S]*?skillLevelAdjustmentRequestRef/, "Signed skill adjustments are not request-ID-backed.");
 assert.match(adjustCallable, /transaction\.get\(requestRef\)[\s\S]*?replayed: true[\s\S]*?prepareEconomyCollection/, "Signed skill adjustments are not replay safe.");
-assert.match(adjustCallable, /levelDelta[\s\S]*?getSkillUpgradePointCost[\s\S]*?getSkillDowngradePointRefund[\s\S]*?getSpentSkillPoints\(nextUpgrades\) > getEarnedSkillPoints/, "Signed adjustments do not enforce weighted spend, refund, and complete-allocation limits.");
+assert.match(adjustCallable, /levelDelta[\s\S]*?getSkillUpgradePointCost[\s\S]*?getSkillDowngradePointRefund[\s\S]*?getSpentSkillPoints\(nextUpgrades\) > getEarnedSkillPoints/, "Signed adjustments do not enforce spend, refund, and complete-allocation limits.");
 assert.match(adjustCallable, /setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?spentSkillPoints[\s\S]*?refundedSkillPoints[\s\S]*?transaction\.set\(requestRef/, "Signed adjustments do not clear the active marker or store their authoritative receipt.");
 const spendHelper = extractFunction(serverSource, "spendSkillAllocations");
 assert.match(spendHelper, /prepareEconomyCollection[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?writePreparedEconomy/, "Skill spending does not settle production and clear the active preset atomically.");
-assert.match(spendHelper, /getSkillUpgradePointCost[\s\S]*?totalPointCost[\s\S]*?character\.skillPoints < totalPointCost/, "Server skill spending does not enforce the final-tier point cost.");
+assert.match(spendHelper, /getSkillUpgradePointCost[\s\S]*?totalPointCost[\s\S]*?character\.skillPoints < totalPointCost/, "Server skill spending does not enforce the one-point upgrade cost.");
 assert.doesNotMatch(spendHelper, /replaceSkillPresetSlot/, "Spending points overwrites a saved preset.");
 assert.match(serverSource.slice(spendStart, resetStart), /exports\.spendSkillPoints[\s\S]*?normalizeSkillSpendAllocations[\s\S]*?spendSkillAllocations/, "The batched skill callable is missing its shared authoritative path.");
 assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
@@ -289,7 +365,7 @@ assert.match(extractFunction(gameSource, "skillRow"), /data-skill-decrement[\s\S
 assert.match(stylesSource, /\.skill-row-actions[\s\S]*?grid-template-columns: minmax\(44px, 1fr\) minmax\(58px, auto\) minmax\(44px, 1fr\)/, "The segmented skill control is not responsive.");
 assert.match(stylesSource, /\.profile-skill-list \.skill-row button \{[^}]*min-height: 44px;/, "Preset point controls do not meet the mobile touch-target height.");
 assert.match(visualQaSource, /display: grid !important[\s\S]*?skill-current-build-tab selected[\s\S]*?data-qa-applied-preset[\s\S]*?Free\. Returns 61 spent points\.[\s\S]*?data-skill-decrement[\s\S]*?data-skill-cost>2 PTS[\s\S]*?data-skill-cost>MAX[\s\S]*?skill-preset-exit-dialog[\s\S]*?view"\) === "active"[\s\S]*?classList\.add\("selected"\)/, "The responsive skill-control visual-QA fixture is incomplete.");
-assert.match(extractFunction(gameSource, "adjustSkillPresetDraft"), /direction[\s\S]*?currentLevel - 1[\s\S]*?getSkillPointCost[\s\S]*?getAvailableSkillPoints[\s\S]*?currentLevel \+ 1/, "Draft point controls do not enforce refunds, caps, and weighted point costs locally.");
+assert.match(extractFunction(gameSource, "adjustSkillPresetDraft"), /direction[\s\S]*?currentLevel - 1[\s\S]*?getSkillPointCost[\s\S]*?getAvailableSkillPoints[\s\S]*?currentLevel \+ 1/, "Draft point controls do not enforce refunds, caps, and point costs locally.");
 assert.match(gameSource, /skillPresetExitDialog\.addEventListener\("close"[\s\S]*?decision === "discard"[\s\S]*?decision === "save"/, "Dirty draft exits do not offer Save, Discard, and Cancel behavior.");
 assert.match(gameSource, /renderSkillPresetAllocation[\s\S]*?SKILL_GROUPS\.map[\s\S]*?skill-preset-allocation-group/, "Saved allocations are not grouped by role.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.map[\s\S]*?profile-skill-group/, "The current skill list is not grouped by role.");
@@ -315,7 +391,7 @@ assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId 
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 0, "Reset Skills is not configured as free.");
 assert.equal(Number(economyConfig.playerCosts.skillPresetApplyHours), 1, "Preset Apply is not using its one-hour base-gold cost.");
 
-console.log("Validated signed live skill refunds, free resets, weighted costs, shared controls, preset drafts, readable tab states, compatibility, and rules.");
+console.log("Validated signed live skill refunds, free resets, uniform costs, preserved presets, surplus refunds, shared controls, preset drafts, readable tab states, compatibility, and rules.");
 
 // Exercise the same affordability update used during periodic renders and name editing.
 const applyButton = { disabled: false };

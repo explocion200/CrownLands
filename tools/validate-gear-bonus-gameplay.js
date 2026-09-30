@@ -176,12 +176,12 @@ async function main() {
     pathLength: 2_000,
     troopCount,
     kind,
-    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.6 * 1.08),
+    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.6 + 0.08),
   });
   assertClose(
-    movementContext.addCommonGearMarchSpeed(movementProfiles.weapon, "attack", 1.6 * 1.08),
-    1.6 * 1.08 + 0.015,
-    "Max March Orders no longer preserves (capped skill × objective) + gear."
+    movementContext.addCommonGearMarchSpeed(movementProfiles.weapon, "attack", 1.6 + 0.08),
+    1.6 + 0.08 + 0.015,
+    "Max March Orders no longer preserves additive skill + objective + gear."
   );
   assert.ok(serverTravel(movementProfiles.necklace, "scout", 1) < serverTravel(movementProfiles.none, "scout", 1));
   assert.equal(serverTravel(movementProfiles.weapon, "scout", 1), serverTravel(movementProfiles.none, "scout", 1));
@@ -242,6 +242,20 @@ async function main() {
   }
 
   const rallyNowMs = 10_000;
+  // Legendary gear fills the approved budgets; no extra objective/skill compounding.
+  const maximumStables = createGearProfile(commonGear.SLOTS.map(slot => ({ gearKey: `royal_stables_${slot}_legendary_01`, level: 5 })));
+  activeClientMovementProfile = maximumStables;
+  clientMovementContext.skillMultiplier = () => 2;
+  clientMovementContext.getStrongholdMarchSpeedMultiplier = () => 1.4;
+  for (const kind of ["transfer", "reinforce", "attack", "rally", "rally_join", "scout"]) {
+    const expected = kind === "scout" ? 3.5 : 3;
+    assertClose(movementContext.addCommonGearMarchSpeed(maximumStables, kind, 2.4), expected);
+    assertClose(clientMovementContext.getTravelSpeedMultiplier("player", kind), expected);
+    assertClose(movementContext.addCommonGearMarchSpeed(maximumStables, kind, 5), expected, "Excess speed must be capped by order kind.");
+    clientMovementContext.getStrongholdMarchSpeedMultiplier = () => 4;
+    assertClose(clientMovementContext.getTravelSpeedMultiplier("player", kind), expected);
+    clientMovementContext.getStrongholdMarchSpeedMultiplier = () => 1.4;
+  }
   const rallyMovement = movementContext.createRallyAssemblyMovement({
     order: { id: "assembly_1", sourceRegionId: "region_test" },
     rally: { id: "rally_1", clanId: "clan_1", assemblyRegionId: "region_test", assemblyCityId: "assembly", leaderUid: "leader" },
@@ -528,19 +542,19 @@ async function main() {
   assert.equal(maxDefensePackages.owner.cityWalls, 1_840, "Gatehouse wall gear was clamped by max Stoneworks.");
 
   const legendaryDefense = createGearProfile(["head", "chest", "pants", "boots", "gloves", "belt", "weapon"].map(slot => ({ gearKey: `gatehouse_${slot}_legendary_01`, level: 5 })));
-  legendaryDefense.testShieldwallPercent = 60;
-  legendaryDefense.testStoneworksPercent = 75;
+  legendaryDefense.testShieldwallPercent = 100;
+  legendaryDefense.testStoneworksPercent = 100;
   const cappedArmies = defenseContext.calculateDefenderArmyPackages({
     target: defenseTarget, ownerProfile: legendaryDefense,
     ownerBonuses: { objectiveTroopDefenseBonusPercent: 80 },
     contributions: [{ id: "ally-cap", ownerUid: "ally", ownerName: "Ally", troops: 2000 }],
-    contributorProfiles: new Map([["ally", { testShieldwallPercent: 60 }]]),
+    contributorProfiles: new Map([["ally", { testShieldwallPercent: 100 }]]),
     contributorStats: new Map([["ally", {}]]), siegeCombatVersion: 1, defenseCombatVersion: 1,
   });
-  assert.equal(cappedArmies.owner.effectivePower, 5200, "Owner must stop at +100% defense.");
-  assert.equal(cappedArmies.reinforcements[0].effectivePower, 4940, "Excess owner defense cannot spill into the ally's 90% bonus.");
-  assert.equal(cappedArmies.owner.cityWalls, 2500, "Legendary walls and Stoneworks must stop at +150%.");
-  assert.equal(cappedArmies.totalGarrisonDefense, 10140);
+  assert.equal(cappedArmies.owner.effectivePower, 7800, "Owner must stop at +200% defense.");
+  assert.equal(cappedArmies.reinforcements[0].effectivePower, 6760, "Excess owner defense cannot spill into the ally's 160% bonus.");
+  assert.equal(cappedArmies.owner.cityWalls, 3000, "Legendary walls and Stoneworks reach +200%.");
+  assert.equal(cappedArmies.totalGarrisonDefense, 14560);
 
   let activeClientStatsProfile = defenseProfile;
   let activeClientSkillPercents = {};
@@ -674,6 +688,11 @@ async function main() {
     attackContext.getAttackPower(1_000, combinedAttackProfile),
     "Max Swordmastery + attack gear client/server drift"
   );
+  const legendaryAttack = { ...createGearProfile([{ gearKey: "barracks_weapon_legendary_01", level: 5 }]), testSwordmasteryPercent: 100 };
+  assert.equal(attackContext.getAttackPower(1_000, legendaryAttack), 3_750);
+  clientAttackContext.getSkillPercent = () => 100;
+  clientAttackContext.getCommonGearBonuses = () => commonGear.getBonuses(legendaryAttack);
+  assert.equal(clientAttackContext.getAttackPower(1_000, "player"), 3_750);
 
   let casualtySkillPercent = 50;
   const capContext = {
@@ -685,7 +704,14 @@ async function main() {
   vm.runInContext(`${extractFunction(serverSource, "getCasualtyRecoveryPercent")}; this.getCasualtyRecoveryPercent = getCasualtyRecoveryPercent;`, capContext, { filename: "functions/index.js" });
   assert.equal(capContext.getCasualtyRecoveryPercent({}), 51.5, "Barracks casualty gear did not stack above max Field Medics.");
   casualtySkillPercent = 89;
-  assert.equal(capContext.getCasualtyRecoveryPercent({}), 75, "Field Medics plus gear exceeded the 75% casualty cap.");
+  assert.equal(capContext.getCasualtyRecoveryPercent({}), 90, "Field Medics plus gear exceeded the 90% casualty cap.");
+  casualtySkillPercent = 50;
+  capContext.getCommonGearBonuses = profile => commonGear.getBonuses(profile);
+  for (const [rarity, level, expected] of [["epic", 5, 75], ["legendary", 1, 78], ["legendary", 4, 87], ["legendary", 5, 90]]) {
+    const profile = createGearProfile([{ gearKey: `barracks_necklace_${rarity}_01`, level }]);
+    assert.equal(capContext.getCasualtyRecoveryPercent(profile), expected);
+    assert(capContext.getCasualtyRecoveryPercent(profile, 15) <= 90);
+  }
 
   const casualtySnapshotContext = {
     COMMON_GEAR: commonGear,
@@ -706,7 +732,7 @@ async function main() {
     },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
     getCasualtyRecoveryPercent(profile) {
-      return Math.min(75, (Number(profile?.fieldMedicsPercent) || 0) + commonGear.getBonuses(profile).casualtyEfficiency);
+      return Math.min(commonGear.CASUALTY_RECOVERY_CAP_PERCENT, (Number(profile?.fieldMedicsPercent) || 0) + commonGear.getBonuses(profile).casualtyEfficiency);
     },
   };
   vm.createContext(casualtySnapshotContext);
@@ -752,7 +778,7 @@ async function main() {
   assert.match(clientSource, /function renderBattleRewards[\s\S]*?Field Medics \+ Barracks gear · returned to the main city/);
 
   assert.match(commonGear.getDefinition(gearKeys["gatehouse:necklace"]).statLabel, /new wall damage/i);
-  assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*75% combined cap.*main city/i);
+  assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*90% combined cap.*main city/i);
 
   console.log("Validated equipped-only gear aggregation, immediate upgrade/unequip effects, movement and rally ETA parity, scoped production, owner-wide allied defense, attribution, and casualty caps.");
 }
