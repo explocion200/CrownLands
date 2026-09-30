@@ -98,7 +98,7 @@ The web and itch.io clients now use the same exact client build `fdf326a...`, re
 
 The August 24 through August 27 audits remain historical evidence. The August 30 release audit records current `origin/main`, web production, and the public itch.io iframe at build `fdf326a...`; the existing Firebase Functions deployment was not changed by this client-only release. Repository and public-asset facts are not proof that authenticated production state follows the same path. Login, interrupted-connection recovery, and second-tab replacement remain manual production smoke tests because no approved QA account was used. The primary-domain public site remains a separate publication surface and is not proven current by the game Netlify deployment.
 
-### Current cross-channel release ledger
+### August 31 cross-channel release ledger (historical)
 
 | Channel / artifact | Build and deployment time | Validation result | Known difference |
 |---|---|---|---|
@@ -107,10 +107,24 @@ The August 24 through August 27 audits remain historical evidence. The August 30
 | Primary-domain public pages | Exact build and deployment ownership **NEEDS VERIFICATION** | `clans-rallies-guide.html` exposes the current 2–20-player rules, but `how-to-play.html` still says a Rally holds up to three rulers, can target Reward Camps, removes the shield, may launch with inbound contributions, and uses the leader's march bonuses | The corrected beginner-guide source is merged and present on the canonical game host, but is not deployed to this separate public-site surface. Do not treat the game Netlify deploy as proof that these pages were refreshed. |
 | itch.io published client | Build `fdf326a9462fab2982cbdd2cf9c8326060217159`; public HTML5 upload `#19037216`; published August 31, 2026 at 00:15 UTC | Production artifact validation passed 279 files and 57 itch-relative resources; the public page points to `html-classic.itch.zone/html/19037216/`, whose manifest, index, service worker, heartbeat generation counter, and stale-response guard matched `fdf326a...` over HTTP | Authenticated itch.io gameplay was not exercised. The older Butler `html5` channel and latest-build API remain labeled `2026-08-30-city-list-off-map-ownership-3390c83c`, but they do not control the verified public iframe. Local ZIP SHA-256: `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D`. |
 
+### September 30 mobile fixes web release
+
+[PR #404](https://github.com/explocion200/CrownLands/pull/404) merged the foreground server-clock refresh, connected City List scroll-container preservation, and compact upgrade-button Gold costs from `codex/mobile-marches-city-scroll`. This verified web release supersedes the historical web build above for these capabilities.
+
+| Channel / artifact | Verified build and publication | Validation and limits |
+|---|---|---|
+| Primary web game at `https://playcrownlands.com/play/` | Build `5c47de7d5da6fec86c70a7324ae400bb65a6f641`; Netlify deploy `6abcee2fa5024d0008e5cca5`; published September 30, 2026 at 11:11:12 UTC | All three required checks passed for the exact PR head in [run 36705217692](https://github.com/explocion200/CrownLands/actions/runs/36705217692). Eleven focused local validators, the production build, artifact checks, lint, runtime-data consistency, and asset budgets passed. Live entry, manifest, service worker and affected source hashes matched the merged build on the primary domain and `crownland.netlify.app`. |
+| Production browser verification | Same verified web build; September 30, 2026 | Cold load and reload passed at 1440×900, 844×390, 568×320 and 390×844. Signed-out presentation probes confirmed `10.3Bg` captions, exact tooltip/accessibility prices, a stable scrolling container, and the deployed foreground clock-refresh path. The final eight cases had no uncaught script errors or failed first-party requests. Initial rapid reloads recorded a temporary HTTP 403; an isolated reload and the final run with completed navigation and settling passed. Authenticated gameplay and physical Android sleep/resume remain manual checks. |
+| Firebase Functions / Firestore | Existing deployment retained | PR #404 changes client behavior only. The server-source hash and API contract hash match the pre-release production manifest. No Functions, rules, indexes, or production data were changed in this release. |
+| itch.io | Not republished by this release | These three fixes are verified as `LIVE — WEB`; this record makes no claim that the current itch.io client contains them. |
+
+The release evidence is saved locally under `release-artifacts/mobile-marches-city-scroll/deployment/`, including deployment metadata, source/hash checks, browser results, the initial reload observation and screenshots. The PR release record provides the web deployment identity. This is an audit of the named build; later documentation-only descendants can have a different build ID without changing these runtime sources.
+
 ## FM-3. Release Channel Matrix
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Foreground troop-clock recovery, City List scroll preservation, and compact Gold upgrade costs | Verified in web build `5c47de7...` from PR #404 | Not republished or verified for this release | `LIVE — WEB`; authenticated gameplay and physical Android sleep/resume remain manual checks |
 | Core cities, economy, armies, combat, objectives, clans, rallies, chat, missions, achievements, Shop, Bag, and Common Gear foundation | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; primary-domain beginner guide remains stale | Present in exact build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS` |
 | Connected world size | 20 regions | 20 regions | `LIVE — ALL PUBLISHED CHANNELS` |

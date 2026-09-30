@@ -1,62 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "830879cd88398fb30122631f5f471c73a8d456d8",
+  "baseCommit": "5c47de7d5da6fec86c70a7324ae400bb65a6f641",
   "coverage": [
-    {
-      "paths": [
-        "game.js"
-      ],
-      "tests": [
-        "tools/validate-foreground-resume.js",
-        "tools/validate-responsive-runtime.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/validate-army-resolution-retries.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-marching-army-visibility-browser.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-owned-city-cross-map-sync.js"
-      ],
-      "reason": "Refresh the existing authoritative clock read on foreground resume, including a suspended monotonic clock, march progress/countdowns and retry after clock-read failure. Cover shared login presentation, pending departures, arrival retries and visible march motion. Preserve the City List scroll container during roster refreshes and avoid resetting unchanged scroll offsets; verify native mobile swipes during full and upgrade-row refreshes, focus, stable ordering, paging, live Gold, queued upgrades and cross-map ownership. No server timing, balances, mutation payloads, backend code or rules change. City List costs now use compact English K/M/B/T labels with one fractional digit, while full exact costs remain in title and aria-label attributes; the displayed format never changes submitted upgrade values."
-    },
-    {
-      "paths": [
-        "city-list-ui.css",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-owned-city-list.js",
-        "modal-ui.js"
-      ],
-      "tests": [
-        "tools/validate-city-list-browser.js",
-        "tools/validate-owned-city-list.js"
-      ],
-      "reason": "Keep roster notices in a fixed flex section while preserving the scrolling area. Check desktop, portrait and two landscape sizes, real CDP touch scrolling through refreshes, unchanged five-row pagination and touch targets, retry and empty states, controls, focus and scroll retention. Inspect browser screenshots. The new list reconciliation stays in the existing dialog presentation helper; other modal lifecycle and text-patching helpers are unchanged. Exercise Level 125 costs on all four viewports, assert rendered cost text fits inside every button, and cover thousand/million/billion/trillion formatting and threshold rounding. Captions are contained on one line."
-    },
-    {
-      "paths": [
-        "tools/validate-foreground-resume.js"
-      ],
-      "tests": [
-        "tools/validate-foreground-resume.js"
-      ],
-      "reason": "Run the new regression against the actual client clock and march-progress functions: simulated phone sleep leaves a fresh march at its city until foreground refresh, then restores its position and advancing countdown. Clock refresh failure must reach the existing retry flow without delaying economy presentation on unrelated presence."
-    },
-    {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Bound the existing dialog helper at 5 KiB for City List reconciliation and its cached compact cost formatter. Preserve the game.js and aggregate shell caps; verify actual normalized entrypoint bytes and existing asset limits."
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the user-confirmed City List presentation: compact cost labels, contained captions, and exact costs in tooltips and accessible labels. This documentation does not change upgrade economics or release status."
+      "reason": "Record the user-authorized PR #404 web deployment, exact verified build and required checks, observed production browser results and remaining manual checks. Add the three deployed client fixes to the required release-channel matrix and label the older ledger historical. Documentation only: no runtime, backend, build tooling, player-facing rules, or balance changes; no runtime tests apply."
     }
   ]
 }
