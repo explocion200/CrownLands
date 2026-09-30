@@ -150,15 +150,15 @@ async function main() {
       await evaluate(`modalBody.querySelector('[data-shop-building]').value='training';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);
       await ready('modalBody.dataset.trainingReady === "true"');
       assert(await evaluate('modal.classList.contains("training-grounds-modal")'));
-      assert.equal(await evaluate('modalBody.querySelector("#currentBenefit").textContent'), '+1%');
+      assert.equal(await evaluate('modalBody.querySelector("#currentBenefit").textContent'), '1 / 10');
       await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
       await evaluate('clanTreasuryStatus=null;treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:0})');
       assert(await evaluate('modalBody.querySelector("#upgrade").disabled'));
       await evaluate('treasuryLive.onTreasury({balance:20000000,totalDonated:20000000,totalSpent:0,revision:1})');
-      assert(await evaluate('!modalBody.querySelector("#upgrade").disabled'), 'A clan donation did not enable the building upgrade.');
+      assert(await evaluate('modalBody.querySelector("#upgrade").disabled'), 'A donation must not enable retired building upgrades.');
       assert.equal(await evaluate('holdingTowerDetailsTab'), 'buildings', 'A live donation changed the selected tab.');
       assert.equal(await evaluate('modalBody.querySelector("#balance").textContent'), (20000000).toLocaleString());
-      assert(await evaluate('renderClanTreasuryPanel().includes((20000000).toLocaleString("en-US"))'), 'The clan panel disagrees with the Tower Treasury.');
+      assert.equal(await evaluate('clanTreasuryStatus.treasury.balance'), 20000000, 'The shared Treasury state disagrees with the Tower.');
       // Wall services now live outside the dedicated building screen. Preserve their live-balance checks.
       await evaluate('modalBody.querySelector("[data-training-back]").click();modalBody.querySelector("[data-tower-tab=walls]").click();treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:2})');
       assert(await evaluate('modalBody.querySelector("[data-tower-action=upgrade]").disabled'));
@@ -167,10 +167,12 @@ async function main() {
       assert.equal(await evaluate('modalBody.querySelector("[data-tower-upgrade-count]").value'), '2', 'A live donation reset the wall quantity.');
       assert.equal(await evaluate('holdingTowerDetailsTab'), 'walls', 'A live donation changed the wall services tab.');
       await evaluate('treasuryLive.onTreasury({balance:10000000000,totalDonated:10000000000,totalSpent:0,revision:4});modalBody.querySelector("[data-tower-tab=buildings]").click()');
+      await evaluate('holdingTowerBuildingSelection="workshop";renderHoldingTowerModal(buildingFixture)');
+      await ready('modalBody.dataset.workshopReady === "true"');
       const orders=await evaluate('buildingCalls.length');
       await reachable('#upgrade');
       await ready(`buildingCalls.length===${orders+1} && !holdingTowerActionsInFlight.size`);
-      assert.equal((await evaluate('buildingCalls.at(-1)')).buildingId,'training');
+      assert.equal((await evaluate('buildingCalls.at(-1)')).buildingId,'workshop');
       await evaluate('buildingFixture.buildingProject.progressStartedAtMs=0;buildingFixture.attackBlocked=true;renderHoldingTowerModal(buildingFixture)');
       assert(await evaluate('modalBody.querySelector(".project-card.paused") && modalBody.querySelector("#upgrade").textContent === "Upgrade paused"'));
       await evaluate('buildingFixture.buildingProject=null;buildingFixture.attackBlocked=false;holdingTowerBuildingSelection="shop";renderHoldingTowerModal({...buildingFixture,clanShop:{level:1,localLevel:1,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(1,{},Date.now()).map(i=>({...i,price:1000}))}})');

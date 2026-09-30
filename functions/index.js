@@ -148,10 +148,10 @@ function getCommonGearBonuses(profileOrGear = {}) {
   return COMMON_GEAR.getBonuses(profileOrGear);
 }
 
-function getCasualtyRecoveryPercent(profile = {}, clanInfirmaryPercent = 0) {
+function getCasualtyRecoveryPercent(profile = {}) {
   return Math.min(
     COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT,
-    getSkillPercent(profile, "fieldMedics") + getCommonGearBonuses(profile).casualtyEfficiency + Math.max(0, clanInfirmaryPercent)
+    getSkillPercent(profile, "fieldMedics") + getCommonGearBonuses(profile).casualtyEfficiency
   );
 }
 
@@ -14079,7 +14079,9 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
         economy.profilePatch.scoutReports
       );
     }
-    transaction.update(economy.profileRef, addLegacyShopItemDeletes());
+    if (LEGACY_SHOP_ITEM_IDS.some(id => Object.prototype.hasOwnProperty.call(economy.profileBefore?.shopItems || {}, id))) {
+      transaction.update(economy.profileRef, addLegacyShopItemDeletes());
+    }
   }
   if (
     !options.suppressDailyMissionProduction
@@ -22120,7 +22122,7 @@ async function applyHoldingTowerTreasurySpend(request, operationType, applySpend
       const message = safeString(error?.message, 160);
       const code = message === "insufficient-clan-treasury" ? "failed-precondition"
         : message.includes("limit") || message.includes("queue-full") ? "resource-exhausted"
-          : message.includes("active") || message.includes("damaged") || message.includes("attack") || message.includes("full")
+          : message.includes("active") || message.includes("damaged") || message.includes("attack") || message.includes("full") || message === "building-mechanics-being-redesigned"
             ? "failed-precondition"
             : "invalid-argument";
       throw new HttpsError(code, message.replace(/-/g, " ") || "The Holding Tower operation could not be completed.");
@@ -22646,6 +22648,7 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
         safeString(member.worldId, 120) !== ONLINE_WORLD_ID
         || safeString(member.resetGeneration, 120) !== RESET_GENERATION
         || member.status === "removed"
+        || getPlayerLastLoginAtMs(member) >= afterLoginAtMs
       ) return;
       transaction.set(memberRef, {
         lastLoginAtMs: afterLoginAtMs,
@@ -22714,20 +22717,35 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   const afterStats = event.data?.after?.exists ? event.data.after.data() || {} : {};
   if (safeString(afterStats.resetGeneration, 120) !== RESET_GENERATION) return;
   const previousStatsPower = Math.max(0, Math.floor(safeNumber(beforeStats.kingPower, 0)));
-  const nextPower = Math.max(0, Math.floor(safeNumber(afterStats.kingPower, 0)));
-  if (previousStatsPower === nextPower) return;
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
-  if (safeString(profile.resetGeneration, 120) !== RESET_GENERATION) return;
-  const clanId = safeString(profile.clanId, 128);
-  if (!clanId) return;
+  const eventPower = Math.max(0, Math.floor(safeNumber(afterStats.kingPower, 0)));
+  if (!uid || previousStatsPower === eventPower) return;
   await runTransactionWithInfrastructureRetry(async transaction => {
+    // Firestore events can arrive out of order or more than once. Read current
+    // stats and membership under the same transaction as the aggregate update.
+    const [profileSnap, statsSnap] = await Promise.all([
+      transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(playerGlobalStatsRef(uid)),
+    ]);
+    const profile = profileSnap.data() || {};
+    const stats = statsSnap.data() || {};
+    if (!profileSnap.exists || !statsSnap.exists
+        || profile.resetGeneration !== RESET_GENERATION || stats.resetGeneration !== RESET_GENERATION
+        || profile.worldId !== ONLINE_WORLD_ID || stats.worldId !== ONLINE_WORLD_ID) return;
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) return;
     const [clanSnap, memberSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
     ]);
     if (!clanSnap.exists || !memberSnap.exists) return;
     const clan = clanSnap.data() || {};
-    const previousPower = Math.max(0, Math.floor(safeNumber(memberSnap.data()?.kingPower, 0)));
+    const member = memberSnap.data() || {};
+    if (clan.resetGeneration !== RESET_GENERATION || member.resetGeneration !== RESET_GENERATION
+        || clan.worldId !== ONLINE_WORLD_ID || member.worldId !== ONLINE_WORLD_ID
+        || member.status === "removed") return;
+    const nextPower = Math.max(0, Math.floor(safeNumber(stats.kingPower, 0)));
+    const previousPower = Math.max(0, Math.floor(safeNumber(member.kingPower, 0)));
+    if (previousPower === nextPower) return;
     const totalKingPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0)) - previousPower + nextPower);
     transaction.set(memberSnap.ref, { kingPower: nextPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     transaction.set(clanSnap.ref, { totalKingPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -23756,7 +23774,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       const profile = entry.profile || {};
       return createRallyParticipantSnapshot({
         uid: participant.uid,
-        clanTrainingPercent: rally.assemblyType === "tower" ? CLAN_BUILDINGS.bonus("training", assembly.buildings?.training) : 0,
+        clanTrainingPercent: 0,
         profile,
         source: {
           id: participant.sourceId,
@@ -27166,8 +27184,8 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
         gearDefenderStrengthPercent,
         defenseGearItems: COMMON_GEAR.getEquippedBonusItems(profileIsCurrent ? profile : {}, ["defenderStrength"]),
         casualtyGearItems: COMMON_GEAR.getEquippedBonusItems(profileIsCurrent ? profile : {}, ["casualtyEfficiency"]),
-        fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile, CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary)) : 0,
-        clanInfirmaryPercent: profileIsCurrent ? CLAN_BUILDINGS.bonus("infirmary", current.buildings.infirmary) : 0,
+        fieldMedicsPercent: profileIsCurrent ? getCasualtyRecoveryPercent(profile) : 0,
+        clanInfirmaryPercent: 0,
         fieldMedicsSkillPercent: profileIsCurrent ? getSkillPercent(profile, "fieldMedics") : 0,
         casualtyGearPercent: Math.max(0, safeNumber(gearBonuses.casualtyEfficiency, 0)),
       } : null;

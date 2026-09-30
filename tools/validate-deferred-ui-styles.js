@@ -29,7 +29,7 @@ function fixture() {
       addEventListener(type, handler) { listeners.set(type, handler); },
       removeEventListener(type, handler) { if (listeners.get(type) === handler) listeners.delete(type); } });
   }
-  const context = { document: { querySelector: selector => links.get(selector.match(/="([^"]+)"/)?.[1]), createElement: node },
+  const context = { document: { querySelectorAll: () => [], querySelector: selector => links.get(selector.match(/="([^"]+)"/)?.[1]), createElement: node },
     setTimeout: fn => { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout: id => timers.delete(id) };
   vm.createContext(context); vm.runInContext(read("optional-ui-styles.js"), context);
   return { links, timers, ensure: context.ensureOptionalUiStyle };
@@ -42,7 +42,7 @@ const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve()
   assert.equal(links.get("help").rel, "stylesheet");
   ensure("help", host, () => latestCalls++);
   assert.equal(host.children[0], panel, "Repeated renders retain the loading controls");
-  assert.equal(timers.size, 1, "Repeated renders share a single request");
+  assert.equal(timers.size, 2, "Repeated renders share a style request and one loading deadline");
   links.get("help").listeners.get("load")(); await settle();
   assert.equal(oldCalls, 0); assert.equal(latestCalls, 1);
   assert.equal(timers.size, 0);
@@ -70,7 +70,7 @@ const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve()
   links.get("treasury").listeners.get("load")(); await settle();
   assert.equal(latestCalls, 2);
   ensure("infirmary", host, () => { throw Error("Timeout must not render"); });
-  [...timers.values()][0](); await settle();
+  [...timers.values()].forEach(callback => callback()); await settle();
   assert.equal(host.children[0].children[1].hidden, false);
   assert.equal(timers.size, 0, "Stalled loads are bounded and cleaned up");
   let resume, scope = "first-session", rendered = 0;
@@ -93,7 +93,7 @@ const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve()
       match: async request => values.get(request.url || request)?.clone(),
       keys: async () => [...values.keys()], delete: async key => values.delete(key) };
   };
-  vm.runInNewContext(worker, { URL, Request, Response, Headers, console, importScripts() {},
+  vm.runInNewContext(worker, { URL, Request, Response, Headers, console, setTimeout, clearTimeout, importScripts() {},
     self: { location: new URL("https://example.test/service-worker.js"), addEventListener: (name, fn) => handlers.set(name, fn) },
     caches: { open: async name => store(name), match: async request => {
       for (const values of stores.values()) if (values.has(request.url)) return values.get(request.url).clone();

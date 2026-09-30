@@ -192,8 +192,7 @@ requireMatch(game, /modalHeaderNav\.innerHTML = renderDailyRewardModalTabs\(\)[\
 requireMatch(game, /modalHeaderNav\?\.querySelectorAll\("\[data-daily-reward-tab\]"\)[\s\S]*modalHeaderNav\?\.querySelector/, "Reward tab binding or focus escaped the shared header slot.");
 requireMatch(game, /modalHeaderNav\.hidden = true[\s\S]*modalHeaderNav\.replaceChildren\(\)/, "Closing the shared modal does not clear its header navigation.");
 requireMatch(game, /async function showDailyLoginRewardsModal[\s\S]*options\.initialTab[\s\S]*:\s*"rewards"/, "Opening the modal no longer defaults to Daily Login or accept direct tab navigation.");
-requireMatch(game, /function renderDailyMissionSection[\s\S]*dailyMissionsList[\s\S]*function renderDailyQuestTab[\s\S]*renderDailyMissionSection\(\)/, "Player Daily Missions are not rendered in the reward modal's Quests tab.");
-requireMatch(game, /function bindDailyQuestControls[\s\S]*handleDailyMissionListClick/, "Daily Mission controls are not connected inside the reward modal.");
+require("./validate-active-reward-ui");
 requireMatch(rewardModalSource, /CrownlandsDailyLoginUI\.mount[\s\S]*claim: claimDailyLoginReward/, "Daily Login must use the approved presentation with the authoritative claim action.");
 requireMatch(read("daily-login-ui.js"), /common-gear-chest-r1\.svg/, "The approved chest art is missing.");
 const clanRewardsPanelSource = game.slice(

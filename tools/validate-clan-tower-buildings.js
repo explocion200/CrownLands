@@ -15,13 +15,21 @@ assert.equal(B.DURATION_MINUTES.reduce((a,b)=>a+b)*4, 14*24*60+6*60);
 for (const id of B.DEFINITIONS.map(d=>d.id)) {
   let tower = owned(), at = now;
   for (let level = 1; level <= 10; level++) {
-    const prior = tower.buildings[id]; tower = start(tower,id,at);
+    const prior = tower.buildings[id];
+    if (B.mechanicsPending(id)) {
+      assert.equal(B.bonus(id, level), 0);
+      assert.throws(() => start(tower, id, at), /building-mechanics-being-redesigned/);
+      // A project paid before retirement must still finish and preserve its level.
+      tower.buildingProject = {id: "paid", buildingId: id, fromLevel: prior, targetLevel: level,
+        paidCost: B.cost(level), remainingMs: B.duration(level), progressStartedAtMs: at,
+        clanId: tower.clanId, ownershipRevision: tower.ownershipRevision};
+    } else tower = start(tower,id,at);
     assert.equal(advance(tower,at+B.duration(level)-1).buildings[id],prior);
     at += B.duration(level); tower = advance(tower,at);
     assert.equal(tower.buildings[id],level); assert.equal(tower.buildingProject,null);
     assert(fs.existsSync(path.join(__dirname,"..",B.art(id,level))));
   }
-  assert.throws(()=>start(tower,id,at), /building-level-limit/);
+  assert.throws(()=>start(tower,id,at), B.mechanicsPending(id) ? /building-mechanics-being-redesigned/ : /building-level-limit/);
 }
 let tower = start(owned(), "workshop");
 assert.throws(()=>start(tower,"shop"), /building-project-active/);
@@ -45,7 +53,7 @@ const legacy = owned({wallLevel:90,upgradeQueue:[{id:"legacy",fromLevel:90,targe
 assert.equal(advance(legacy,now+600000).wallLevel,91);
 const repair = T.startPaidRepair(owned({buildings:{workshop:10},wallIntegrityBps:5000}),1e8,()=>1,()=>60,{uid:"leader"},now,"repair").state;
 assert.equal(repair.repair.completeAtMs-now,15*minute);
-const capture = T.conquerTower(start(owned({buildings:{shop:10,workshop:1,infirmary:0,training:4}}),"infirmary"),{id:"clan-b"},now+minute);
+const capture = T.conquerTower(start(owned({buildings:{shop:10,workshop:1,infirmary:0,training:4}}),"workshop"),{id:"clan-b"},now+minute);
 assert.deepEqual(capture.buildings,{shop:9,workshop:1,infirmary:0,training:3});assert.equal(capture.buildingProject,null);
 assert.deepEqual(T.createNeutralTowerState(T.TOWERS[0].id).buildings,B.normalizeLevels());
 // Every catalogue stage, UTC daily reset, rolling Shield cooldown, and level-loss accounting.
@@ -68,8 +76,10 @@ function extract(name){const start=server.indexOf(`function ${name}(`);assert(st
 const context=vm.createContext({COMMON_GEAR:require("../common-gear"),BASE_TROOP_ATTACK_POWER:1.25,RALLY_PARTICIPANT_INBOUND:"inbound",safeNumber:(v,f=0)=>Number.isFinite(Number(v))?Number(v):f,getSkillPercent:(p,s)=>s==="fieldMedics"?p.medic||0:p.sword||0,getSkillLevel:()=>0,getCommonGearBonuses:p=>({casualtyEfficiency:p.gear||0,attackStrength:p.attackGear||0}),skillMultiplier:p=>1+(p.sword||0)/100,addCommonGearMarchSpeed:(p,k,m)=>m,normalizeRallyParticipant:p=>p,normalizePlayerName:(v,f)=>v||f,normalizeRegionId:v=>v});
 for(const name of ["getCasualtyRecoveryPercent","createRallyParticipantSnapshot","createBattleCasualtyRecoverySnapshot","createBattleAttackPowerBreakdown"]) vm.runInContext(extract(name),context);
 assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:9}),59);
-assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:9},15),74);
-assert.equal(context.getCasualtyRecoveryPercent({medic:80,gear:9},15),90);
+assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:9},15),59);
+assert.equal(context.getCasualtyRecoveryPercent({medic:80,gear:9},15),89);
+assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:40}),90);
+// Historical snapshots retain the clan contribution already recorded at battle time.
 const recovery=context.createBattleCasualtyRecoverySnapshot({losses:1000,recoveredTroops:750,fieldMedicsPercent:50,casualtyGearPercent:10,clanInfirmaryPercent:15});
 assert.equal(recovery.appliedClanPercent,15);assert.equal(recovery.clanRecoveredTroops,150);assert.equal(recovery.gearRecoveredTroops,100);
 const profile={sword:20,attackGear:9};

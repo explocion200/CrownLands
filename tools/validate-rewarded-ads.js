@@ -153,28 +153,8 @@ assert.match(firebaseClientSource, /async function getRewardedAdStatus/);
 assert.match(firebaseClientSource, /async function prepareRewardedAd/);
 assert.match(firebaseClientSource, /async function claimRewardedAd/);
 
-const rewardRenderer = extractFunction(gameSource, "renderRewardedAdShopItem");
-assert.match(rewardRenderer, /data-rewarded-ad-watch/);
-assert.ok(
-  rewardRenderer.indexOf("shop-item-image-placeholder") < rewardRenderer.indexOf("rewarded-ad-shop-copy")
-    && rewardRenderer.indexOf("rewarded-ad-shop-copy") < rewardRenderer.indexOf("data-rewarded-ad-watch"),
-  "Rewarded items must render image, short copy, and Watch Advertisement control from left to right."
-);
-assert.doesNotMatch(rewardRenderer, /rewarded-ad-shop-action/);
-assert.match(rewardRenderer, /Watch Advertisement/);
-assert.match(rewardRenderer, /item\.description/);
-assert.match(rewardRenderer, /today \(UTC\)/);
-assert.match(rewardRenderer, /Estimated reward:/);
-assert.doesNotMatch(rewardRenderer, /City levels only/);
+require("./validate-active-reward-ui");
 assert.doesNotMatch(gameSource, /Ad Manager setup required/);
-
-const paidRenderer = extractFunction(gameSource, "renderShopItem");
-assert.match(paidRenderer, /data-shop-select/);
-assert.match(paidRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
-assert.doesNotMatch(paidRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|shop-item-value/);
-assert.doesNotMatch(paidRenderer, /data-shop-buy|<button[\s\S]*?>Buy<\/button>/);
-assert.doesNotMatch(paidRenderer, /data-rewarded-ad-watch/);
-assert.match(gameSource, /function renderShopPurchaseBar[\s\S]*shop-purchase-description[\s\S]*data-shop-selected-owned[\s\S]*data-shop-selected-daily[\s\S]*data-shop-selected-price[\s\S]*data-shop-purchase-selected/);
 
 const rewardedFlow = extractFunction(gameSource, "requestGoogleRewardedAd");
 assert.match(rewardedFlow, /OutOfPageFormat\.REWARDED/);

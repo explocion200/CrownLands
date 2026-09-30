@@ -6,6 +6,7 @@ const WORLD_IMAGE_CACHE_NAME = `crownlands-world-images-${CACHE_VERSION}`;
 const MAX_RUNTIME_CACHE_ENTRIES = 72;
 const MAX_REGION_CACHE_ENTRIES = 8;
 const MAX_WORLD_IMAGE_CACHE_ENTRIES = 12;
+const NETWORK_CACHE_WAIT_MS = 4000;
 const APP_BASE_URL = new URL("./", self.location.href);
 
 function resolveAppUrl(path = "") {
@@ -35,13 +36,6 @@ function getNotificationOpenUrl(notificationData = {}) {
 // bounded runtime cache. Keep installation focused on the playable shell.
 const STATIC_CACHE_URLS = [
   "/main-screen-art-ui.css?v=20260923-hud-ink-r1",
-  "/infirmary-ui.js?v=20260923-infirmary-r1",
-  "/clan-treasury-ui.js?v=20260923-treasury-r1",
-  "/training-grounds-ui.js?v=20260923-training-r1",
-  "/engineers-workshop-ui.js?v=20260923-workshop-r1",
-  "/clan-shop-ui.js?v=20260922-clan-shop-r1",
-  "/help-handbook-content.js?v=20260922-handbook-r1",
-  "/help-handbook-ui.js?v=20260922-handbook-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",
   "/player-journey.css?v=20260920-journey-r1",
@@ -94,8 +88,6 @@ const STATIC_CACHE_URLS = [
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
   "/city-details-ui.css?v=20260909-city-details-r1",
   "/city-list-ui.css?v=20260909-city-list-r1",
-  "/item-bag-ui.js?v=item-bag-r1",
-  "/shop-ui.js?v=royal-shop-r1",
   "/city-details-ui.js?v=20260909-city-details-r1",
   "/modal-ui.js?v=20260915-modal-lifecycle-r1",
   "/optional-ui-styles.js?v=20260924-deferred-styles-r1",
@@ -249,25 +241,51 @@ async function putInCache(request, response) {
 }
 
 async function cacheFirst(request, event) {
-  const cached = await caches.match(request).catch(() => null);
+  const cached = await matchCurrentBuildCache(request);
   if (cached) return cached;
   const response = await fetch(request);
   event.waitUntil(putInCache(request, response));
   return response;
 }
 
+async function matchCurrentBuildCache(request, fallbackUrl = null) {
+  // Never recover code or HTML from another release while activation is pending.
+  for (const name of [RUNTIME_CACHE_NAME, CACHE_NAME, REGION_CACHE_NAME, WORLD_IMAGE_CACHE_NAME]) {
+    try {
+      const cache = await caches.open(name);
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      if (name === CACHE_NAME && fallbackUrl) {
+        const fallback = await cache.match(fallbackUrl);
+        if (fallback) return fallback;
+      }
+    } catch (_) { /* Storage can be unavailable; the network still works. */ }
+  }
+  return null;
+}
+
 async function networkFirst(request, fallbackUrl = "/index.html", event) {
+  const network = fetch(request);
+  event.waitUntil(network.then(response => putInCache(request, response)).catch(() => false));
+  let timer;
   try {
-    const response = await fetch(request);
-    event.waitUntil(putInCache(request, response));
-    return response;
-  } catch (error) {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await caches.match(request);
+    const response = await Promise.race([
+      network,
+      new Promise(resolve => { timer = setTimeout(() => resolve(null), NETWORK_CACHE_WAIT_MS); }),
+    ]);
+    // Access denials and missing resources remain visible. Recover only from a
+    // slow network or a temporary server error, using this build's cached files.
+    if (response && response.status < 500) return response;
+    const cached = await matchCurrentBuildCache(request, fallbackUrl);
     if (cached) return cached;
-    const fallback = fallbackUrl ? await cache.match(fallbackUrl) : null;
-    if (fallback) return fallback;
+    // An uncached first visit may need longer on a slow connection.
+    return response || await network;
+  } catch (error) {
+    const cached = await matchCurrentBuildCache(request, fallbackUrl);
+    if (cached) return cached;
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
