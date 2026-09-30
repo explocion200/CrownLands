@@ -50,6 +50,7 @@ async function main(buildings = ["infirmary", "training"]) {
         await ready(`modalBody.dataset.${id}Ready === "true" && Boolean(modalBody.querySelector('#nextBenefit'))`);
         await ev("document.fonts.ready");
         await ready("[...modalBody.querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0)");
+        await ev("Promise.all(document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getTiming().iterations)).map(animation => animation.finished.catch(() => {})))");
         assert.equal(await ev("modalBody.querySelector('#currentBenefit').textContent"), "4 / 10");
         assert.equal(await ev("modalBody.querySelector('#nextBenefit').textContent"), "+0%");
         assert(await ev("modalBody.querySelector('#upgrade').disabled"));

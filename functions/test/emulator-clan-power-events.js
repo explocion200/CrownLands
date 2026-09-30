@@ -19,7 +19,8 @@ const context = vm.createContext({
   exports: {}, db, FieldValue, RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
   safeString: value => String(value || ""), safeNumber: (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   onDocumentWritten: (_options, handler) => handler, withDocumentRealmShard: handler => handler,
-  runTransactionWithInfrastructureRetry: callback => db.runTransaction(callback),
+  // Firestore checks native Promise identity; the extracted callback has a VM realm.
+  runTransactionWithInfrastructureRetry: callback => db.runTransaction(async transaction => callback(transaction)),
   playerGlobalStatsRef: uid => db.doc(`players/${uid}/stats/global`),
   leaderboardEntryRef: uid => db.doc(`auditLeaderboards/${identity.resetGeneration}/entries/${uid}`),
   clanIdentityPatch: id => ({clanId: id}),

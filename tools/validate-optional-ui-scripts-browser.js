@@ -46,6 +46,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       for (const [name, open, loaded] of screens) {
         await ev(open);
         await ready(`modal.open && (${loaded}) && !modalBody.querySelector('.optional-ui-loading')`);
+        await ev("Promise.all(document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getTiming().iterations)).map(animation => animation.finished.catch(() => {})))");
         const bounds = await ev("(() => {const r=modal.getBoundingClientRect();return {fits:r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1,overflow:modal.scrollWidth>modal.clientWidth+1};})()");
         assert(bounds.fits && !bounds.overflow, JSON.stringify({width, name, bounds}));
         results.push({width, height, name, passed: true});
