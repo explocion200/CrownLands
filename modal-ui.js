@@ -1,5 +1,7 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported patchOperationModalText, patchCityListPanel, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+
+const formatCityListCost = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format;
 
 function patchCityListPanel(host, markup, preserve) {
   const rendered = document.createElement("div");

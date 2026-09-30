@@ -63,7 +63,7 @@
 #modal.city-list-modal .cll-upgrades { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) 44px; gap:5px; }
 #modal.city-list-modal .city-list-upgrade { width:auto; min-width:0; height:auto; padding:5px 2px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; background:#e7d9b44d!important; }
 #modal.city-list-modal .city-list-upgrade strong { font-size:12px; font-weight:600; color:inherit!important; }
-#modal.city-list-modal .city-list-upgrade small { font-size:10px; font-variant-numeric:tabular-nums; color:var(--cll-muted)!important; overflow-wrap:anywhere; max-width:100%; }
+#modal.city-list-modal .city-list-upgrade small { font-size:10px; font-variant-numeric:tabular-nums; color:var(--cll-muted)!important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 #modal.city-list-modal .cll-upgrades .cll-locate { width:44px; padding:10px; background:transparent!important; border-color:transparent!important; }
 #modal.city-list-modal .cll-locate svg { width:22px; height:22px; fill:none; stroke:var(--cll-moss); stroke-width:1.5; }
 #modal.city-list-modal .city-list-upgrade-result { display:block; margin-top:5px; color:var(--cll-moss)!important; font-size:10px; white-space:normal; }

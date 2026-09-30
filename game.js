@@ -33930,7 +33930,7 @@ function renderCityListUpgradeButton(city, option) {
   const cost = Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)} gold` : "Unavailable";
   const details = `${cityDetailsNumber(option.levels)} levels · ${cost}${option.disabled && option.reason ? `. ${option.reason}` : ""}`;
   const recovery = Boolean(instantEconomySyncRecovery);
-  const caption = recovery ? "Syncing" : option.reason === "Incoming" || option.reason === "Refresh" ? option.reason : Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)}g` : "—";
+  const caption = recovery ? "Syncing" : option.reason === "Incoming" || option.reason === "Refresh" ? option.reason : Number.isFinite(option.cost) ? `${formatCityListCost(option.cost)}g` : "—";
   return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" title="${escapeHtml(recovery ? "Refreshing confirmed balance…" : details)}" aria-label="${escapeHtml(`${label} ${city.name}. ${recovery ? "Refreshing confirmed balance…" : details}`)}" ${option.disabled || recovery ? "disabled" : ""}><strong>${escapeHtml(label)}</strong><small>${escapeHtml(caption)}</small></button>`;
 }
 
