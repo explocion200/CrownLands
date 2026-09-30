@@ -11,6 +11,7 @@
         "functions/test/emulator-holding-tower-lifecycle.js",
         "tools/validate-clan-tower-battle-reports.js",
         "tools/validate-clan-tower-buildings.js",
+        "tools/validate-clan-rallies.js",
         "tools/validate-gear-bonus-gameplay.js",
         "tools/validate-reset-release.js",
         "functions/test/emulator-clan-power-events.js"

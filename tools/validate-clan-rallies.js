@@ -106,6 +106,7 @@ const getRallyAttackPackages = new Function(
   "getSkillPercent",
   "skillMultiplier",
   "getCasualtyRecoveryPercent",
+  "COMMON_GEAR",
   `${rallyPowerSource}; return getRallyAttackPackages;`
 )(
   safeNumber,
@@ -116,7 +117,8 @@ const getRallyAttackPackages = new Function(
   (profile, skill) => profile[`${skill}Level`] || 0,
   (profile, skill) => profile[`${skill}Percent`] || 0,
   (profile, skill) => 1 + (profile[`${skill}Percent`] || 0) / 100,
-  profile => profile.casualtyRecoveryPercent || 0
+  profile => profile.casualtyRecoveryPercent || 0,
+  require("../common-gear.js")
 );
 const legacyRallyPackages = getRallyAttackPackages({
   attackPower: 320,
