@@ -185,7 +185,8 @@ const entrypointBudgets = {
   "kingdom-ledgers-ui.css": 31 * 1024,
   "stronghold-details-ui.js": 6 * 1024,
   "stronghold-details-ui.css": 30 * 1024,
-  "modal-ui.js": 4 * 1024,
+  // City List reconciliation lives with dialog presentation; game.js keeps its cap.
+  "modal-ui.js": 5 * 1024,
   "skills-ledger-ui.css": 37 * 1024,
   // Current main's Clan controls total 86,047 bytes, 31 over the previous cap.
   "clan-ledger-ui.css": 85 * 1024,

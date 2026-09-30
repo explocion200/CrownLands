@@ -24,13 +24,14 @@
       "paths": [
         "city-list-ui.css",
         "tools/validate-city-list-browser.js",
-        "tools/validate-owned-city-list.js"
+        "tools/validate-owned-city-list.js",
+        "modal-ui.js"
       ],
       "tests": [
         "tools/validate-city-list-browser.js",
         "tools/validate-owned-city-list.js"
       ],
-      "reason": "Keep roster notices in a fixed flex section while preserving the scrolling area. Check desktop, portrait and two landscape sizes, real CDP touch scrolling through refreshes, unchanged five-row pagination and touch targets, retry and empty states, controls, focus and scroll retention. Inspect browser screenshots."
+      "reason": "Keep roster notices in a fixed flex section while preserving the scrolling area. Check desktop, portrait and two landscape sizes, real CDP touch scrolling through refreshes, unchanged five-row pagination and touch targets, retry and empty states, controls, focus and scroll retention. Inspect browser screenshots. The new list reconciliation stays in the existing dialog presentation helper; other modal lifecycle and text-patching helpers are unchanged."
     },
     {
       "paths": [
@@ -40,6 +41,15 @@
         "tools/validate-foreground-resume.js"
       ],
       "reason": "Run the new regression against the actual client clock and march-progress functions: simulated phone sleep leaves a fresh march at its city until foreground refresh, then restores its position and advancing countdown. Clock refresh failure must reach the existing retry flow without delaying economy presentation on unrelated presence."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Bound the existing dialog helper at 5 KiB for 1,454 bytes of City List reconciliation. Preserve the game.js and aggregate shell caps; verify actual normalized entrypoint bytes and existing asset limits."
     }
   ]
 }

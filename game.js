@@ -23323,8 +23323,7 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
     Promise.resolve(refreshAllOwnedCities(true)),
     Promise.resolve(loadOnlineRegionCitiesForResolution(targetRegionId)),
     Promise.resolve(loadServerReportsOnce()),
-    // performance.now can pause during phone sleep. Refresh the server clock
-    // before considering resume complete so new marches leave their origin.
+    // Phone sleep can pause performance.now; resample the server clock.
     Promise.resolve(api.getRealmInfo()),
     Promise.resolve(heartbeatGameServerMembership()),
     Promise.resolve(publishOnlinePresence(true)),
@@ -33721,8 +33720,7 @@ function renderCityListModal() {
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
   const pageCities = cities.slice(start, start + CITY_LIST_PAGE_SIZE);
   modalTitle.textContent = "City List";
-  const rendered = document.createElement("div");
-  rendered.innerHTML = `
+  const markup = `
     <div class="city-list-panel">
       <div class="cll-header">
         <div aria-hidden="true"><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div>
@@ -33758,34 +33756,7 @@ function renderCityListModal() {
     </div>
   `;
 
-  const panel = preserveUiState ? modalBody.querySelector(".city-list-panel") : null;
-  const rowActionRoots = [];
-  if (panel) {
-    // Keep the scroller attached: replacing it cancels native touch scrolling
-    // even if its scrollTop is copied into the replacement afterwards.
-    for (const section of [...rendered.firstElementChild.children]) {
-      const current = panel.querySelector(`:scope > .${section.classList[0]}`);
-      if (current && section.classList.contains("city-list-rows")) {
-        const previousRows = new Map([...current.children].map(row => [row.dataset.cityListRowKey || "", row]));
-        const keptRows = new Set();
-        [...section.children].forEach((row, index) => {
-          const previous = previousRows.get(row.dataset.cityListRowKey || "");
-          const next = previous?.isEqualNode(row) ? previous : row;
-          if (next !== previous) {
-            if (previous) previous.replaceWith(next);
-            rowActionRoots.push(next);
-          }
-          if (current.children[index] !== next) current.insertBefore(next, current.children[index] || null);
-          keptRows.add(next);
-        });
-        [...current.children].forEach(row => { if (!keptRows.has(row)) row.remove(); });
-      } else if (current) current.replaceWith(section);
-      else panel.append(section);
-    }
-  } else {
-    modalBody.replaceChildren(rendered.firstElementChild);
-    rowActionRoots.push(modalBody);
-  }
+  patchCityListPanel(modalBody, markup, preserveUiState).forEach(bindCityListRowActions);
 
   modalBody.querySelectorAll("[data-city-list-sort]").forEach(button => {
     button.addEventListener("click", () => {
@@ -33815,7 +33786,6 @@ function renderCityListModal() {
     });
   });
 
-  rowActionRoots.forEach(bindCityListRowActions);
   const scroller = modalBody.querySelector(".city-list-rows");
   if (scroller.scrollTop !== previousScrollTop) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
