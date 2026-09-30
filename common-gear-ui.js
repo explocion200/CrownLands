@@ -1020,35 +1020,17 @@ function normalizeBattlePowerGearEffect(value = null) {
   };
 }
 
-function normalizeBattleGearItemEffects(items) {
-  if (!Array.isArray(items)) return null;
-  const stats = ["attackStrength", "defenderStrength", "wallStrength", "casualtyEfficiency", "wallRepairSpeed"];
-  return items.filter(item => item && stats.includes(item.statType))
-    .map(item => ({
-      gearKey: String(item.gearKey || "").slice(0, 96),
-      gearName: String(item.gearName || "Item not recorded").slice(0, 80),
-      rarity: COMMON_GEAR.RARITIES.includes(item.rarity) ? item.rarity : "",
-      level: Math.max(0, Math.min(5, Math.floor(Number(item.level) || 0))),
-      statType: item.statType,
-      bonusPercent: Math.max(0, Number(item.bonusPercent) || 0),
-      bonusPower: Math.max(0, Math.floor(Number(item.bonusPower) || 0)),
-      appliedPercent: Math.max(0, Number(item.appliedPercent) || 0),
-      ownerUid: String(item.ownerUid || "").slice(0, 128),
-      ownerName: String(item.ownerName || "Ruler").slice(0, 40),
-    }));
-}
-
 function normalizeBattleGearEffects(value = null) {
   if (!value || typeof value !== "object") return null;
   const attackerValue = value.attacker && typeof value.attacker === "object" ? value.attacker : {};
   const defenderValue = value.defender && typeof value.defender === "object" ? value.defender : {};
   const attacker = {
-    items: normalizeBattleGearItemEffects(attackerValue.items),
+    items: COMMON_GEAR.normalizeBattleItemEffects(attackerValue.items),
     attackStrength: normalizeBattlePowerGearEffect(attackerValue.attackStrength),
     casualtyRecovery: normalizeBattleCasualtyRecovery(attackerValue.casualtyRecovery),
   };
   const defender = {
-    items: normalizeBattleGearItemEffects(defenderValue.items),
+    items: COMMON_GEAR.normalizeBattleItemEffects(defenderValue.items),
     defenderStrength: normalizeBattlePowerGearEffect(defenderValue.defenderStrength),
     wallStrength: normalizeBattlePowerGearEffect(defenderValue.wallStrength),
     casualtyRecovery: normalizeBattleCasualtyRecovery(defenderValue.casualtyRecovery),
@@ -1086,9 +1068,7 @@ function applyRecordedGearEffectsToBattleSide(side = {}, gearEffects = null, rol
 function getBattleSideBonusEntries(side = {}) {
   if (side.gearOnly) {
     if (Array.isArray(side.gearItems)) return side.gearItems.map(item => {
-      const stats = { attackStrength: "attack strength", defenderStrength: "soldier defense",
-        wallStrength: "wall strength", casualtyEfficiency: "casualty recovery", wallRepairSpeed: "new wall repair time" };
-      const percent = number => Number(number.toFixed(2)).toString();
+      const percent = number => Number(number.toFixed(2));
       const definition = COMMON_GEAR.getDefinition(item.gearKey);
       const recovery = item.statType === "casualtyEfficiency";
       const repair = item.statType === "wallRepairSpeed";
@@ -1099,8 +1079,8 @@ function getBattleSideBonusEntries(side = {}) {
         value: recovery ? `+${percent(item.appliedPercent)}% recovery`
           : repair ? `−${percent(item.appliedPercent)}% repair time`
             : `+${formatNumber(item.bonusPower)} ${item.statType === "wallStrength" ? "wall " : ""}power`,
-        help: [item.rarity ? `${item.rarity[0].toUpperCase()}${item.rarity.slice(1)} · Level ${item.level}` : "Historical item identity unavailable",
-          `${percent(item.bonusPercent)}% ${stats[item.statType]}`,
+        help: [item.rarity ? `${item.rarity[0].toUpperCase()}${item.rarity.slice(1)} · Level ${item.level}` : "",
+          `${percent(item.bonusPercent)}% ${definition?.statLabel || "gear bonus"}`,
           item.ownerName || "",
           recovery ? "Recovery after cap · Main City" : repair ? "This battle’s new wall damage" : ""].filter(Boolean).join(" · "),
       };

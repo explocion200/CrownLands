@@ -65,7 +65,7 @@ assert(!loading.includes("data-report-jump") && !loading.includes("122000"),"Loa
 console.log("Validated full-report values, viewer order, escaping, historical fallback, gear, rally, all camp rewards, red defense shield, and navigation hooks.");
 
 const { itemSnapshot, wallEffects } = require("./validate-clan-tower-battle-reports.js");
-for (const name of ["normalizeBattleGearItemEffects", "normalizeBattleCasualtyRecovery", "normalizeBattlePowerGearEffect", "normalizeBattleGearEffects"]) {
+for (const name of ["normalizeBattleCasualtyRecovery", "normalizeBattlePowerGearEffect", "normalizeBattleGearEffects"]) {
   vm.runInContext(functionSource(read("common-gear-ui.js"), name), context);
 }
 const saved = context.normalizeBattleGearEffects(itemSnapshot.gearEffects);

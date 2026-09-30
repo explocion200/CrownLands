@@ -522,6 +522,25 @@
     return normalizeBonusItems(items).filter(item => !statTypes.length || statTypes.includes(item.statType));
   }
 
+  function normalizeBattleItemEffects(items) {
+    if (!Array.isArray(items)) return null;
+    const stats = ["attackStrength", "defenderStrength", "wallStrength", "casualtyEfficiency", "wallRepairSpeed"];
+    const nonnegative = value => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+    return items.filter(item => item && stats.includes(item.statType))
+      .map(item => ({
+        gearKey: String(item.gearKey || "").slice(0, 96),
+        gearName: String(item.gearName || "Item not recorded").slice(0, 80),
+        rarity: RARITIES.includes(item.rarity) ? item.rarity : "",
+        level: Math.min(MAX_LEVEL, Math.floor(nonnegative(item.level))),
+        statType: item.statType,
+        bonusPercent: nonnegative(item.bonusPercent),
+        bonusPower: Math.floor(nonnegative(item.bonusPower)),
+        appliedPercent: nonnegative(item.appliedPercent),
+        ownerUid: String(item.ownerUid || "").slice(0, 128),
+        ownerName: String(item.ownerName || "Ruler").slice(0, 40),
+      }));
+  }
+
   function getUpgradeRequirement(level, rarity = RARITY) {
     if (level && typeof level === "object") {
       const definition = getDefinition(level.gearKey);
@@ -666,6 +685,7 @@
     getBonuses,
     normalizeBonusItems,
     getEquippedBonusItems,
+    normalizeBattleItemEffects,
     getUpgradeRequirement,
     getUpgradeResult,
     getUpgradeGoldCost,
