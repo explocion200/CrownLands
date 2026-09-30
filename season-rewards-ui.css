@@ -52,7 +52,9 @@
 .season-rules h3,.season-honors h3 { font-family:Georgia,serif; color:#4e3819; }
 .season-notice { padding:10px 12px; background:#e5d6b4; border-left:3px solid #977328; }
 .season-footer { display:flex; align-items:center; gap:12px; justify-content:space-between; padding:10px 14px; background:#e4d4b0; border-top:1px solid #b99b62; }
-.season-footer [role=status] { font-size:12px; color:#8b2e23; }
+.season-footer-actions { display:flex; flex:none; gap:8px; align-items:center; }
+.season-footer .season-claim { background:#426348; color:#fff; border-color:#234329; font-weight:700; }
+.season-footer [role=status] { min-width:0; font-size:12px; color:#8b2e23; }
 .season-empty { padding:22px 12px; text-align:center; }
 .season-award-rows article { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 0; border-bottom:1px solid #c3ac7e; }
 .season-award-rows article>div:first-child { display:flex; flex-direction:column; }
