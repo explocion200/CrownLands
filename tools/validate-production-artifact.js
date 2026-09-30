@@ -266,7 +266,11 @@ if (loginFiles.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).si
 const seasonRewardBytes = ["season-rewards-ui.js", "season-rewards-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (seasonRewardBytes > 28 * 1024) throw new Error("Season rewards presentation exceeds its 28 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget;
+// Individual battle items add 4,209 source bytes using existing art. Reserve
+// 8 KiB including build metadata (CI uses full commit IDs in asset URLs).
+// Existing per-file, offline-shell and combined artifact limits still apply.
+const battleItemReportingBudget = 8 * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

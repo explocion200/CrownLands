@@ -2,6 +2,7 @@ const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
+const { deepStrictEqual } = require("node:assert/strict");
 const commonGear = require("../common-gear.js");
 const realm = require("../release-config.json");
 
@@ -271,11 +272,11 @@ async function main() {
   assert(attackerReport.gearEffects?.defender?.defenderStrength?.bonusPower > 0, "The attack report fallback omitted defender gear.");
   assert(defenderReport.gearEffects?.attacker?.attackStrength?.bonusPower > 0, "The defense report fallback omitted attacker gear.");
   assert(defenderReport.gearEffects?.defender?.wallStrength?.bonusPower > 0, "The defense report fallback omitted wall gear.");
-  assert(JSON.stringify(attackerReport.gearEffects) === JSON.stringify(defenderReport.gearEffects), "Recipients saw different item effects.");
+  deepStrictEqual(attackerReport.gearEffects, defenderReport.gearEffects, "Recipients saw different item effects.");
   for (const [user, report] of [[attacker, attackerReport], [defender, defenderReport]]) {
     assert(report.gearEffects.attacker.items === undefined, "Profile history duplicated the full item roster.");
     const canonical = (await db.doc(`players/${user.uid}/serverReports/${report.id}`).get()).data();
-    assert(JSON.stringify(canonical.gearEffects) === JSON.stringify(snapshot.gearEffects), "Canonical report lost item details.");
+    deepStrictEqual(canonical.gearEffects, snapshot.gearEffects, "Canonical report lost item details.");
   }
   assert(attackerReport.casualtyRecovery?.fieldMedicsPercent === 20, "Attacker Field Medics was not snapshotted separately.");
   assert(attackerReport.casualtyRecovery?.gearPercent === 1.5, "Attacker casualty gear was not snapshotted separately.");

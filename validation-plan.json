@@ -67,6 +67,11 @@
       "reason": "Verify saved item names, actual art, rarity, level, owner, applied power and capped recovery/repair on attacker and defender sides. Preserve viewer-first order, legacy aggregate reports, unknown item identities and HTML escaping. Render city and Tower reports from both perspectives at desktop and two landscape-mobile sizes, check every image, scrolling, viewport bounds and runtime errors."
     },
     {
+      "paths": ["tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "The individual item model and report rows add 4,209 client source bytes with existing art. Bound that feature to 8 KiB including build metadata; verify production packaging with full commit IDs as used in CI, while retaining the per-file, offline-shell and combined artifact limits."
+    },
+    {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
