@@ -83,7 +83,7 @@
       if (report.goldAwarded>0) rows.push(metric("gold","Gold",`+${formatNumber(report.goldAwarded)}`));
       if (report.fieldMedicsRecovered>0) {
         rows.push(metric("troops","Casualty recovery",`+${formatNumber(report.fieldMedicsRecovered)}`));
-        help="Field Medics + Barracks gear · 75% combined cap · returned to the main city";
+        help="Field Medics + Barracks gear · 90% combined cap · returned to the main city";
       }
       if (report.troopsAwarded>0) rows.push(metric("troops","Level-up troops",`+${formatNumber(report.troopsAwarded)}`));
     }

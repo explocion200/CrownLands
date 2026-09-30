@@ -153,8 +153,8 @@ async function main() {
         document.getElementById('battleSwordLevel').dispatchEvent(new Event('input', { bubbles: true }));
       })()`);
       assert.equal(await evaluate("document.getElementById('cityShieldwallOutput').textContent"), "Lv 34 · +100%");
-      assert.equal(await evaluate("document.getElementById('cityGarrisonDefense').textContent"), "2,600,000");
-      assert((await evaluate("document.getElementById('cityGarrisonHelp').textContent")).includes("applied +100%"));
+      assert.equal(await evaluate("document.getElementById('cityGarrisonDefense').textContent"), "2,730,000");
+      assert((await evaluate("document.getElementById('cityGarrisonHelp').textContent")).includes("applied +110%"));
       assert.equal(await evaluate("document.getElementById('battleSwordOutput').textContent"), "Lv 50 · +100%");
       await evaluate("document.fonts.ready");
       await evaluate("document.getElementById('cityGarrisonDefense').scrollIntoView({ block: 'center', behavior: 'instant' })");

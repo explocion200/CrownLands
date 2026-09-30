@@ -163,7 +163,8 @@ function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultipli
     : ["attack", "rally", "rally_join"].includes(normalizedKind)
       ? bonuses.enemyMarchSpeed
       : bonuses.ownedMarchSpeed;
-  return Math.min(1 + COMMON_GEAR.BONUS_CAPS.marchSpeed / 100,
+  const cap = normalizedKind === "scout" ? COMMON_GEAR.BONUS_CAPS.scoutSpeed : COMMON_GEAR.BONUS_CAPS.marchSpeed;
+  return Math.min(1 + cap / 100,
     Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100));
 }
 
@@ -6720,7 +6721,7 @@ function createRallyParticipantSnapshot({
   clanTrainingPercent = 0,
 } = {}) {
   const marchSpeedMultiplier = addCommonGearMarchSpeed(profile, "attack", skillMultiplier(profile, "marchOrders")
-    * (1 + Math.max(0, safeNumber(objectiveMarchSpeedBonusPercent, 0)) / 100));
+    + Math.max(0, safeNumber(objectiveMarchSpeedBonusPercent, 0)) / 100);
   return normalizeRallyParticipant({
     uid,
     ownerName: normalizePlayerName(profile.playerName || profile.displayName || source.ownerName, "Ruler"),
@@ -6810,7 +6811,7 @@ function createRallyAssemblyMovement({
   const troops = Math.max(1, Math.floor(safeNumber(participant.troops, 1)));
   const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
   const speedMultiplier = addCommonGearMarchSpeed(profile, "rally_join", skillMultiplier(profile, "marchOrders")
-    * (1 + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100));
+    + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100);
   const duration = calculateTravelTime({
     pathLength: validatedRoute.pathLength,
     troopCount: troops,
@@ -12341,7 +12342,7 @@ function createRallyReturnMovement({
     troopCount: troops,
     kind: movementKind,
     speedMultiplier: addCommonGearMarchSpeed(profile, movementKind, skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
+      + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
   });
   return {
     id: rawId,
@@ -12499,7 +12500,7 @@ function createRelinquishContinuationMovement({
     troopCount: troops,
     kind: "transfer",
     speedMultiplier: addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
+      + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
   });
   return {
     id: continuationId,
@@ -12582,7 +12583,7 @@ function createReinforcementReturnMovement({
     troopCount: troops,
     kind: "transfer",
     speedMultiplier: addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
+      + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
   });
   return {
     id: movementId,
@@ -19186,7 +19187,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         troopCount: transferredTroops,
         kind: "transfer",
         speedMultiplier: addCommonGearMarchSpeed(economy.profileAfter, "transfer", skillMultiplier(economy.profileAfter, "marchOrders")
-          * (1 + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100)),
+          + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100),
       });
       movement = {
         id: order.id,
@@ -24384,7 +24385,7 @@ exports.previewArmyRoute = timedCallable(
         )
       );
       const speedMultiplier = addCommonGearMarchSpeed(profile, kind, skillMultiplier(profile, "marchOrders")
-        * (1 + marchSpeedBonusPercent / 100));
+        + marchSpeedBonusPercent / 100);
       const durationSeconds = calculateTravelTime({
         pathLength: route.pathLength,
         troopCount: troops,
@@ -25318,7 +25319,7 @@ exports.sendNearbyScouts = timedCallable(
           city: source,
         });
       const speedMultiplier = addCommonGearMarchSpeed(profile, "scout", skillMultiplier(profile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100));
+        + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
       const armies = targets.map((target, index) => {
         const route = routes[index];
         const targetOwnerUid = getOwnerUid(target);
@@ -25546,7 +25547,7 @@ exports.sendRegroupOrders = timedCallable(
           city: target,
         });
       const speedMultiplier = addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100));
+        + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
       const armies = sources.map((source, index) => {
         const troops = Math.max(1, Math.floor(safeNumber(source.troops, 0)));
         const route = routes[index];
@@ -25871,7 +25872,7 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
         profile,
         "scout",
         skillMultiplier(profile, "marchOrders")
-          * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)
+          + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100
       ),
     });
     const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
@@ -26180,7 +26181,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         speedMultiplier: addCommonGearMarchSpeed(
           profileAfter,
           speedKind,
-          skillMultiplier(profileAfter, "marchOrders") * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)
+          skillMultiplier(profileAfter, "marchOrders") + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100
         ),
       });
       const arrivesAtMs = nowMs + Math.ceil(duration * 1000);
@@ -26729,7 +26730,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       kind: resolvedKind,
       targetType: order.targetType,
       speedMultiplier: addCommonGearMarchSpeed(attackerProfile, resolvedKind, skillMultiplier(attackerProfile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100)),
+        + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
     const originalArrivesAtMs = nowMs + Math.ceil(originalDuration * 1000);
     const swiftMarchDurationMs = useSwiftMarchOrder

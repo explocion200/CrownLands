@@ -32,7 +32,7 @@ const defender = {role:"defender",flagKey:"defender",primary:{ownerUid:"d",owner
 const options = {report:{type:"attack",cityName:"Thornfield",xpAwarded:850,goldAwarded:12000,fieldMedicsRecovered:6000,troopsAwarded:1500},badge:{tone:"victory",label:"VICTORY"},left:attacker,right:defender,defender,viewerRole:"attacker",target:{name:"Thornfield & Watch",targetType:"city",level:2,regionId:"Northgate"},siege:{startingIntegrityBps:10000,endingIntegrityBps:0,repairWindowMinutes:16},resultLabel:"Captured the holding"};
 const before=JSON.stringify(options), html=ui.render(options);
 assert.equal(JSON.stringify(options),before,"Rendering mutates settled report values");
-for(const text of ["122000","66130","80000","60000","35450","5000","Swordmastery","Shieldwall Discipline","Personal objective support","Clan objective support","Stoneworks","War Captain gear","Defensive Commander gear","Gatehouse wall gear","+1000 recovered","16 minute repair window","+850","+12000","+6000","+1500","75% combined cap"]) assert(html.includes(text),`Missing recorded field: ${text}`);
+for(const text of ["122000","66130","80000","60000","35450","5000","Swordmastery","Shieldwall Discipline","Personal objective support","Clan objective support","Stoneworks","War Captain gear","Defensive Commander gear","Gatehouse wall gear","+1000 recovered","16 minute repair window","+850","+12000","+6000","+1500","90% combined cap"]) assert(html.includes(text),`Missing recorded field: ${text}`);
 assert(html.includes("Thornfield &amp; Watch"));
 assert(html.includes("&lt;script&gt;"));
 assert(!html.includes("<script>"),"Ruler content injected markup");

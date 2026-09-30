@@ -28,6 +28,12 @@ for (const [rarityIndex, rarity] of G.RARITIES.entries()) {
   }
 }
 let upgrades = 0, promotions = 0, values = 0;
+const approvedMaximums = {
+  barracks: { armor: 15, weapon: 100, necklace: 40 },
+  treasury: { armor: 15, weapon: 10, necklace: 70 },
+  "royal-stables": { armor: 10, weapon: 60, necklace: 110 },
+  gatehouse: { armor: 15, chest: 20, pants: 20, weapon: 60, necklace: 50 },
+};
 for (const family of G.COMMON_DEFINITIONS) {
   let previousBonus = 0;
   for (const [rarityIndex, rarity] of G.RARITIES.entries()) {
@@ -36,7 +42,11 @@ for (const family of G.COMMON_DEFINITIONS) {
       const target = G.normalizeInstance({ instanceId: "target", gearKey, level, rarity: "forged", acquiredAtMs: 1 });
       assert.equal(target.rarity, rarity, "Definition, not client rarity, is authoritative");
       const bonus = G.getBonusPercent(target);
-      assert.equal(bonus, M.bonus(P, family.statType, rarityIndex, level));
+      const maxima = approvedMaximums[family.buildingId];
+      const maximum = maxima[family.slot] ?? maxima.armor;
+      if (rarity === "legendary" && level === 5) assert.equal(bonus, maximum);
+      else assert(bonus < maximum, `${gearKey}/${level} reaches the maximum before Legendary 5`);
+      assert.equal(bonus, M.bonus(P, family.statType, rarityIndex, level, family.slot));
       assert(bonus > previousBonus, `${gearKey}/${level} must improve even at promotion`);
       previousBonus = bonus;
       values++;
@@ -124,6 +134,17 @@ for (const [category, cap] of Object.entries(G.BONUS_CAPS)) {
   assert.equal(G.capBonus(category, 1.5), 1.5);
 }
 const server = fs.readFileSync(path.join(__dirname, "../functions/index.js"), "utf8");
+const maximumLoadout = G.createDefaultState();
+for (const definition of G.DEFINITIONS.filter(d => d.rarity === "legendary")) {
+  maximumLoadout.instances[definition.familyKey] = G.normalizeInstance({ instanceId: definition.familyKey, gearKey: definition.gearKey, level: 5 });
+  maximumLoadout.equipped[definition.buildingId][definition.slot] = definition.familyKey;
+}
+const totals = G.getBonuses(maximumLoadout);
+for (const [effect, expected] of Object.entries({ troopProductionAllCities: 90, attackStrength: 100,
+  casualtyEfficiency: 40, goldProductionMainCity: 100, goldProductionAllCities: 70, ownedMarchSpeed: 60,
+  enemyMarchSpeed: 60, scoutSpeed: 110, wallStrength: 100, defenderStrength: 60, wallRepairSpeed: 50 })) {
+  assert.equal(totals[effect], expected, `Maximum equipped ${effect}`);
+}
 assert(server.includes('const rarity = uncommon && index === 0 ? "uncommon" : "common";'));
 assert(server.includes("pool[crypto.randomInt(0, pool.length)]"));
 assert(server.includes("requireGearCapacity(gear, participation.profile)"));
@@ -133,13 +154,13 @@ console.log(`PASS: ${values} values, ${upgrades} two-item upgrades, ${promotions
 
 const vm = require("node:vm");
 const ui = fs.readFileSync(path.join(__dirname, "../common-gear-ui.js"), "utf8");
-const previewScope = { COMMON_GEAR: G, state: { gear: G.createDefaultState() }, getSkillPercent: () => 100,
-  getStrongholdMarchSpeedMultiplier: () => 2 };
+const previewScope = { COMMON_GEAR: G, state: { gear: G.createDefaultState() }, getSkillPercent: skill => skill === "fieldMedics" ? 50 : 100,
+  getStrongholdMarchSpeedMultiplier: () => 1.4 };
 vm.createContext(previewScope);
 vm.runInContext(ui.slice(ui.indexOf("function getCommonGearAppliedPreview("), ui.indexOf("function createCommonGearViewModel(")), previewScope);
-for (const [key, cap] of [["barracks_weapon_epic_01",100],["gatehouse_head_epic_01",150],["royal_stables_weapon_epic_01",150],["gatehouse_necklace_epic_01",50],["barracks_necklace_epic_01",75]]) {
+for (const [key, cap] of [["barracks_weapon_epic_01",200],["gatehouse_head_epic_01",200],["royal_stables_weapon_epic_01",200],["royal_stables_necklace_epic_01",250],["gatehouse_necklace_epic_01",50],["barracks_necklace_epic_01",90]]) {
   const item = G.normalizeInstance({instanceId:"preview",gearKey:key,level:5});
   const text = previewScope.getCommonGearAppliedPreview(item,G.getUpgradeResult(item));
   assert(text.includes(`Total cap ${cap}%`),text);
-  if (key.startsWith("barracks") || key.startsWith("royal-stables")) assert(text.includes("applied +0%"),text);
+  assert(!text.includes("applied +0%"), "Each Epic promotion must still improve with the approved skill/objective budget: " + text);
 }

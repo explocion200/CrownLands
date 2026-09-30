@@ -54,24 +54,24 @@ assert.equal(attackPower(0), 1_250_000);
 assert.equal(attackPower(swordMaximum), 2_500_000);
 assert.equal(defensePower(0), 1_300_000);
 assert.equal(defensePower(shieldwallMaximum), 2_600_000);
-assert.equal(defensePower(shieldwallMaximum + 8), 2_600_000);
-assert.equal(defensePower(shieldwallMaximum + 10), 2_600_000);
-assert.equal(defensePower(shieldwallMaximum + 4), 2_600_000);
-assert.equal(defensePower(shieldwallMaximum + 5), 2_600_000);
+assert.equal(defensePower(shieldwallMaximum + 8), 2_704_000);
+assert.equal(defensePower(shieldwallMaximum + 10), 2_730_000);
+assert.equal(defensePower(shieldwallMaximum + 4), 2_652_000);
+assert.equal(defensePower(shieldwallMaximum + 5), 2_665_000);
 
 const maxAttackPerTroop = attackBase * (1 + swordMaximum / 100);
 const minimumTroops = defense => Math.floor(defense / maxAttackPerTroop) + 1;
 assert.equal(minimumTroops(defensePower(shieldwallMaximum)), 1_040_001);
-assert.equal(minimumTroops(defensePower(shieldwallMaximum + 8)), 1_040_001);
-assert.equal(minimumTroops(defensePower(shieldwallMaximum + 10)), 1_040_001);
+assert.equal(minimumTroops(defensePower(shieldwallMaximum + 8)), 1_081_601);
+assert.equal(minimumTroops(defensePower(shieldwallMaximum + 10)), 1_092_001);
 
 const wallForLevel = level => Math.floor(
   balanceCalculator.getBaseWall(level) * (1 + stoneworksMaximum / 100)
 );
 const benchmarks = new Map([
-  [50, { wall: 2_913_338, normal: 2_205_336, stronghold: 2_205_336, citadel: 2_205_336 }],
-  [100, { wall: 6_000_000, normal: 3_440_001, stronghold: 3_440_001, citadel: 3_440_001 }],
-  [150, { wall: 12_400_000, normal: 6_000_001, stronghold: 6_000_001, citadel: 6_000_001 }],
+  [50, { wall: 2_913_338, normal: 2_205_336, stronghold: 2_246_936, citadel: 2_257_336 }],
+  [100, { wall: 6_000_000, normal: 3_440_001, stronghold: 3_481_601, citadel: 3_492_001 }],
+  [150, { wall: 12_400_000, normal: 6_000_001, stronghold: 6_041_601, citadel: 6_052_001 }],
 ]);
 for (const [level, expected] of benchmarks) {
   const wall = wallForLevel(level);

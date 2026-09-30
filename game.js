@@ -23783,7 +23783,8 @@ function getTravelSpeedMultiplier(owner, kind) {
         : getCommonGearBonuses().ownedMarchSpeed
     : 0;
   return owner === "player"
-    ? Math.min(1 + COMMON_GEAR.BONUS_CAPS.marchSpeed / 100, skillMultiplier("marchOrders") * getStrongholdMarchSpeedMultiplier(owner) + Math.max(0, Number(gearSpeedPercent) || 0) / 100)
+    ? Math.min(1 + (kind === "scout" ? COMMON_GEAR.BONUS_CAPS.scoutSpeed : COMMON_GEAR.BONUS_CAPS.marchSpeed) / 100,
+      skillMultiplier("marchOrders") + getStrongholdMarchSpeedMultiplier(owner) - 1 + Math.max(0, Number(gearSpeedPercent) || 0) / 100)
     : 1;
 }
 

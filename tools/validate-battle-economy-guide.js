@@ -92,8 +92,8 @@ const maximumSkills = calculator.getCitySnapshot({ level: 50, defenderTroops: 1_
 assert.equal(maximumSkills.goldPerHour, Math.floor(unboosted.baseGoldPerHour * 2.1));
 assert.equal(maximumSkills.troopsPerHour, Math.floor(unboosted.baseTroopsPerHour * 2.1));
 assert.equal(maximumSkills.fullWallPower, unboosted.baseWall * 2);
-assert.equal(maximumSkills.ownerGarrisonPower, 2_600_000, "The guide must enforce the combined defense cap at maximum skill.");
-assert.equal(maximumSkills.soldierDefensePercent, 100);
+assert.equal(maximumSkills.ownerGarrisonPower, 2_730_000, "Maximum skill must leave room for objective defense.");
+assert.equal(maximumSkills.soldierDefensePercent, 110);
 
 const equality = calculator.simulateSiege({
   attackerTroops: 160,

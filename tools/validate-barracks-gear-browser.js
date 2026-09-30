@@ -163,6 +163,8 @@ async function main() {
         const expected = rarity === 'legendary' ? 'Max Level' : 'Promote to '+G.RARITIES[G.RARITIES.indexOf(rarity)+1].replace(/^./,c=>c.toUpperCase());
         assert.equal(await evaluate(`modal.querySelector('[data-gear-merge]').textContent.trim()`), expected);
         assert(await evaluate(`modal.querySelector('.tg-cap-preview').textContent.includes('if equipped')`));
+        const expectedBonus = G.getBonusPercent({ gearKey: `${building.replace(/-/g, '_')}_weapon_${rarity}_01`, level: 5 });
+        assert.equal(await evaluate(`modal.querySelector('.tg-effect strong').textContent`), `+${expectedBonus.toFixed(2)}%`);
         if (rarity !== 'legendary') {
           await click('[data-gear-merge]');
           assert(await evaluate(`modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Confirm') || modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Upgrade') || modal.querySelector('[data-gear-merge-confirm]').textContent.includes('Promote')`));
@@ -175,6 +177,25 @@ async function main() {
           }
           await click('[data-gear-merge-cancel]');
         }
+      }
+      // All eight slots matter: wall chest/pants and the Treasury Ledger have distinct curves.
+      for (const building of Object.keys(G.BUILDINGS)) {
+        await evaluate(`(() => {
+          const g=COMMON_GEAR.createDefaultState();
+          for(const d of COMMON_GEAR.DEFINITIONS.filter(d=>d.buildingId===${JSON.stringify(building)}&&d.rarity==='legendary')) {
+            g.instances[d.slot]=COMMON_GEAR.normalizeInstance({instanceId:d.slot,gearKey:d.gearKey,level:5});g.equipped[d.buildingId][d.slot]=d.slot;
+          }
+          state.gear=normalizeCommonGearState(g);commonGearMergeConfirmOpen=false;
+        })()`);
+        for (const slot of G.SLOTS) {
+          await evaluate(`selectedCommonGearInstanceId=${JSON.stringify(slot)};selectedCommonGearSlot=${JSON.stringify(slot)};renderCommonGearBuilding(${JSON.stringify(building)})`);
+          const bonus = G.getBonusPercent({ gearKey: `${building.replace(/-/g, '_')}_${slot}_legendary_01`, level: 5 });
+          assert.equal(await evaluate(`modal.querySelector('.tg-effect strong').textContent`), `+${bonus.toFixed(2)}%`);
+          assert(await evaluate(`modal.querySelector('[data-gear-merge]').disabled`));
+          assert(await evaluate(`modal.querySelector('.tg-next').textContent.includes('Maximum bonus reached')`));
+        }
+        await paint();
+        fs.writeFileSync(path.join(out,`legendary-${building}-${width}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
       }
     }
     // A lost response retries the same intent; a response from an obsolete session must not touch the next one.

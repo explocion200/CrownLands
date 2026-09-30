@@ -9,7 +9,7 @@ const E = require(path.join(root,"functions/economy-config.json"));
 const C = require(path.join(root,"clan-tower-buildings.js"));
 const server = fs.readFileSync(path.join(root,"functions/index.js"),"utf8");
 assert.equal(P.status,"IMPLEMENTED — PENDING RELEASE; PRODUCTION CAPS DEFERRED");
-assert.equal(G.MAX_LEVEL,5); assert.equal(G.CASUALTY_RECOVERY_CAP_PERCENT,75);
+assert.equal(G.MAX_LEVEL,5); assert.equal(G.CASUALTY_RECOVERY_CAP_PERCENT,90);
 assert.deepEqual(Object.values(G.BONUS_BY_LEVEL),P.commonLevels);
 assert.equal(G.COMMON_DEFINITIONS.length,32);
 assert.deepEqual([...new Set(G.COMMON_DEFINITIONS.map(d=>d.statType))].sort(),Object.keys(P.effects).sort());
@@ -17,13 +17,15 @@ for(const [effect,config] of Object.entries(P.effects)) {
   const definitions=G.COMMON_DEFINITIONS.filter(d=>d.statType===effect);
   assert.equal(definitions.length,config.slots);
   assert(definitions.every(d=>d.buildingId===config.building));
+  for (const definition of definitions) {
   let previous=0;
   for(let rarity=0;rarity<5;rarity++) for(let level=1;level<=5;level++) {
-    const value=M.bonus(P,effect,rarity,level);
+    const value=M.bonus(P,effect,rarity,level,definition.slot);
     assert(value>previous,`${effect}: every level and promotion must improve intrinsic bonus`);
     if(!rarity) assert.equal(value,G.BONUS_BY_LEVEL[level]);
     assert(Number.isSafeInteger(M.copiesFromCommon(rarity,level)));
     previous=value;
+  }
   }
 }
 assert.equal(M.copiesFromCommon(0,5),16);
@@ -34,18 +36,18 @@ assert.equal(M.cumulativeGold(P,0,5),G.getCumulativeGoldCostForLevel(5));
 assert.equal(M.upgradeGold(P,4,5),null);
 assert.equal(M.cumulativeGold(P,4,5,4),318000000000);
 assert.equal(C.bonus("infirmary",10),15); assert.equal(C.bonus("training",10),10);
-assert.equal(E.skills.fieldMedics.maxPercent,50); assert.equal(E.skills.swordmastery.maxPercent,60);
-assert.equal(E.skills.marchOrders.maxPercent,60); assert.equal(E.shopItems.war_drums_30m.bonusPercent,30);
+assert.equal(E.skills.fieldMedics.maxPercent,50); assert.equal(E.skills.swordmastery.maxPercent,100);
+assert.equal(E.skills.marchOrders.maxPercent,100); assert.equal(E.shopItems.war_drums_30m.bonusPercent,30);
 assert.equal(E.shopItems.royal_tax_decree_30m.bonusPercent,50);
-assert.equal(M.scenario(P,"attack",{rarityIndex:4,level:5,skill:60,clan:10}).applied,100);
-assert.equal(M.scenario(P,"recovery",{rarityIndex:4,level:5,skill:50,clan:15}).applied,75);
-assert.equal(M.scenario(P,"recovery",{rarityIndex:4,level:5,skill:50}).applied,60);
-assert.equal(M.scenario(P,"walls",{rarityIndex:4,level:5,skill:75}).applied,150);
-assert.equal(M.scenario(P,"transfer",{rarityIndex:4,level:5,skill:60,objectives:10}).applied,136);
-assert.equal(M.scenario(P,"mainGold",{rarityIndex:4,level:5,skill:75,objectives:10,timed:50}).applied,225);
-assert.equal(M.scenario(P,"otherGold",{rarityIndex:4,level:5,skill:75,objectives:10,timed:50}).applied,155);
-assert.equal(M.scenario(P,"troops",{rarityIndex:4,level:5,skill:75,objectives:10,timed:30}).applied,175);
-assert.equal(M.scenario(P,"repair",{rarityIndex:4,level:5,skill:50,objectives:100,clan:50}).applied,30);
+assert.equal(M.scenario(P,"attack",{rarityIndex:4,level:5,skill:100,clan:10}).applied,200);
+assert.equal(M.scenario(P,"recovery",{rarityIndex:4,level:5,skill:50,clan:15}).applied,90);
+assert.equal(M.scenario(P,"recovery",{rarityIndex:4,level:5,skill:50}).applied,90);
+assert.equal(M.scenario(P,"walls",{rarityIndex:4,level:5,skill:100}).applied,200);
+assert.equal(M.scenario(P,"transfer",{rarityIndex:4,level:5,skill:100,objectives:10}).applied,170);
+assert.equal(M.scenario(P,"mainGold",{rarityIndex:4,level:5,skill:100,objectives:10,timed:50}).applied,330);
+assert.equal(M.scenario(P,"otherGold",{rarityIndex:4,level:5,skill:100,objectives:10,timed:50}).applied,230);
+assert.equal(M.scenario(P,"troops",{rarityIndex:4,level:5,skill:100,objectives:10,timed:30}).applied,230);
+assert.equal(M.scenario(P,"repair",{rarityIndex:4,level:5,skill:50,objectives:100,clan:50}).applied,50);
 const kinds=["attack","recovery","defense","walls","troops","mainGold","otherGold","transfer","attackMarch","scout","repair"];
 let vectors=0;
 for(const kind of kinds) for(let rarityIndex=0;rarityIndex<5;rarityIndex++) for(let level=1;level<=5;level++)
@@ -61,29 +63,30 @@ for(const name of ["calculateGoldProductionRates","calculateTroopProductionRates
   const start=server.indexOf(`function ${name}(`), end=server.indexOf("\nfunction ",start+1);
   assert(start>=0 && end>start); vm.runInContext(server.slice(start,end),context);
 }
-const baselineTroops=context.calculateTroopProductionRates(100,75+9,10,30).troopProductionPerHour;
-const baselineGold=context.calculateGoldProductionRates(100,75+12,10,50).goldProductionPerHour;
-assert.equal(Math.round(baselineTroops),224); assert.equal(Math.round(baselineGold),247);
+const baselineTroops=context.calculateTroopProductionRates(100,100+9,10,30).troopProductionPerHour;
+const baselineGold=context.calculateGoldProductionRates(100,100+12,10,50).goldProductionPerHour;
+assert.equal(Math.round(baselineTroops),249); assert.equal(Math.round(baselineGold),272);
 // A cap cannot be applied to an averaged objective ledger without losing correctness.
 const exact=(Math.min(200,100+0)+Math.min(200,100+200))/2;
 const averaged=Math.min(200,100+(0+200)/2);
 assert.equal(exact,150); assert.equal(averaged,200);
 const fmt=n=>Number(n).toLocaleString("en-US",{maximumFractionDigits:2});
-const lines=["# Gear progression: calculated review","","Generated by `node tools/validate-gear-progression-proposal.js --write`. Per-item curves and upgrade costs are implemented pending release. Production cap scenarios remain a deferred design study.","",`Baseline: \`${P.baselineCommit}\`. ${vectors} design cap scenarios passed (production caps deferred); all 275 intrinsic effect/rarity/level combinations increase monotonically.`,"","## Per-item bonuses at every level",""];
+const lines=["# Gear progression: calculated review","","Generated by `node tools/validate-gear-progression-proposal.js --write`. Per-item curves and upgrade costs are implemented pending release. Production cap scenarios remain a deferred design study.","",`Baseline: \`${P.baselineCommit}\`. ${vectors} design cap scenarios passed (production caps deferred); all 800 intrinsic item/rarity/level combinations increase monotonically.`,"","## Per-item bonuses at every level",""];
 for(const [curve,maximums] of Object.entries(P.curves)) {
-  const effect=Object.keys(P.effects).find(e=>P.effects[e].curve===curve);
+  const definition=G.COMMON_DEFINITIONS.find(d=>(P.effects[d.statType].slotCurves?.[d.slot] || P.effects[d.statType].curve)===curve);
+  const effect=definition.statType;
   lines.push(`### ${curve}`,"","| Rarity | Level 1 | Level 2 | Level 3 | Level 4 | Level 5 |","|---|---:|---:|---:|---:|---:|");
-  P.rarities.forEach((r,i)=>lines.push(`| ${r} | ${[1,2,3,4,5].map(l=>fmt(M.bonus(P,effect,i,l))+"%").join(" | ")} |`));
+  P.rarities.forEach((r,i)=>lines.push(`| ${r} | ${[1,2,3,4,5].map(l=>fmt(M.bonus(P,effect,i,l,definition.slot))+"%").join(" | ")} |`));
   lines.push("");
 }
 lines.push("## All 32 pieces and rarity maxima","","Every armor slot is listed; these are individual item bonuses, not full-set totals.","","| Officer | Piece | Effect | Curve | Common 5 | Green 5 | Blue 5 | Purple 5 | Gold 5 |","|---|---|---|---|---:|---:|---:|---:|---:|");
-for(const d of G.COMMON_DEFINITIONS) lines.push(`| ${d.characterRole} | ${d.gearName} | ${d.statType} | ${P.effects[d.statType].curve} | ${[0,1,2,3,4].map(r=>fmt(M.bonus(P,d.statType,r,5))+"%").join(" | ")} |`);
+for(const d of G.COMMON_DEFINITIONS) lines.push(`| ${d.characterRole} | ${d.gearName} | ${d.statType} | ${P.effects[d.statType].slotCurves?.[d.slot] || P.effects[d.statType].curve} | ${[0,1,2,3,4].map(r=>fmt(M.bonus(P,d.statType,r,5,d.slot))+"%").join(" | ")} |`);
 lines.push("","## Gear-only totals at maximum Legendary","","| Effect | Pieces | Per item | Equipped total |","|---|---:|---:|---:|");
-for(const [effect,config] of Object.entries(P.effects)) lines.push(`| ${effect} | ${config.slots} | ${fmt(M.bonus(P,effect,4,5))}% | ${fmt(M.bonus(P,effect,4,5)*config.slots)}% |`);
-lines.push("","Main-city Gold receives both Treasury groups: 70% + 20% = 90% from gear. Other cities receive only the 20% necklace.","","## Cost of preserving two-item crafting at every step","","Values assume one exact matching item family. Gold totals include both inputs at each step and exclude acquiring Common Level 1 pieces. Every transaction uses the fixed price table.","","| Target | Matching Common Level 1 copies | Total crafting Gold from Common | Direct next upgrade Gold |","|---|---:|---:|---:|");
+for(const [effect,config] of Object.entries(P.effects)) lines.push(`| ${effect} | ${config.slots} | ${[...new Set(G.COMMON_DEFINITIONS.filter(d=>d.statType===effect).map(d=>fmt(M.bonus(P,effect,4,5,d.slot))+"%"))].join(" / ")} | ${fmt(M.gearTotal(P,effect,4,5))}% |`);
+lines.push("","Main-city Gold receives both Treasury groups: 100% + 70% = 170% from gear. Other cities receive only the 70% necklace.","","## Cost of preserving two-item crafting at every step","","Values assume one exact matching item family. Gold totals include both inputs at each step and exclude acquiring Common Level 1 pieces. Every transaction uses the fixed price table.","","| Target | Matching Common Level 1 copies | Total crafting Gold from Common | Direct next upgrade Gold |","|---|---:|---:|---:|");
 P.rarities.forEach((rarity,r)=>[1,5].forEach(level=>lines.push(`| ${rarity} ${level} | ${fmt(M.copiesFromCommon(r,level))} | ${fmt(M.cumulativeGold(P,r,level))} | ${M.upgradeGold(P,r,level)===null?"Maximum":fmt(M.upgradeGold(P,r,level))} |`)));
-lines.push("","Confirmed acquisition: higher rarities come only from upgrading existing Common gear. Two matching Common Level 5 pieces produce one Uncommon Level 1. A Legendary Level 1 represents 65,536 matching Common Level 5 pieces; Legendary Level 5 represents 1,048,576. Existing crafted items retain their progress. These equivalents expose a pacing concern; they do not authorize higher-rarity drops or different duplicate mechanics.","","## Baseline and cap edge cases","",`- Current production with maximum Common gear, maximum skill and an illustrative +10% objective: ${fmt(baselineTroops)} troops or ${fmt(baselineGold)} Main City Gold per 100 base units while the respective item is active.`,"- At maximum Common, new total caps first reduce uncapped results above objective bonuses of 86% for troops, 113% for Main City Gold, 73.5% for other-city Gold, and 38.5% for soldier defense. These are thresholds, not measurements of player holdings.","- At maximum Common and March Orders, the proposed 2.5x speed ceiling binds above objective bonuses of 50.625% for transfers and 55.3125% for attacks/scouts.",`- Offline cap counterexample: two equal intervals with +100% non-objective bonuses and objective bonuses of 0% then 200% produce an average +${exact}% after a +200% cap. Capping their average incorrectly gives +${averaged}%.`,"- Intrinsic gear bonuses always increase. Effective power/output may stay unchanged when a total cap already binds; the UI must disclose unused bonus.","","Generating this review does not modify live data or production. The branch implements the item curves and non-production caps; deployment remains pending.","");
+lines.push("","Confirmed acquisition: upgrade existing gear; the existing day-30 box also grants one Uncommon Level 1 piece. Two matching Common Level 5 pieces produce one Uncommon Level 1. A Legendary Level 1 represents 65,536 matching Common Level 5 pieces; Legendary Level 5 represents 1,048,576. Existing crafted items retain their progress. These equivalents expose a pacing concern; they do not authorize higher-rarity drops or different duplicate mechanics.","","## Baseline and cap edge cases","",`- Current production with maximum Common gear, maximum skill and an illustrative +10% objective: ${fmt(baselineTroops)} troops or ${fmt(baselineGold)} Main City Gold per 100 base units while the respective item is active.`,"- Production caps of +250% troops, +350% Main City Gold and +250% other-city Gold remain deferred; runtime production still adds every eligible source.","- New march speed adds skill, objective and applicable gear bonuses, capped at +200% for armies or +250% for scouts.",`- Offline cap counterexample: two equal intervals with +100% non-objective bonuses and objective bonuses of 0% then 200% produce an average +${exact}% after a +200% cap. Capping their average incorrectly gives +${averaged}%.`,"- Intrinsic gear bonuses always increase. Effective power/output may stay unchanged when a total cap already binds; the UI must disclose unused bonus.","","Generating this review does not modify live data or production. The branch implements the item curves and non-production caps; deployment remains pending.","");
 const report=lines.join("\n");
 if(process.argv.includes("--write")) fs.writeFileSync(path.join(folder,"CALCULATED_REVIEW.md"),report);
 else assert.equal(fs.readFileSync(path.join(folder,"CALCULATED_REVIEW.md"),"utf8").replace(/\r\n/g,"\n"),report,"Regenerate the review after changing the model.");
-console.log(`PASS: 32 current definitions; 275 strictly increasing draft bonuses; ${vectors} cap scenarios; baseline production; duplicate/gold growth; offline clipping counterexample. Runtime parity is checked separately; production caps remain deferred.`);
+console.log(`PASS: 32 current definitions; 800 strictly increasing item bonuses; ${vectors} cap scenarios; baseline production; duplicate/gold growth; offline clipping counterexample. Runtime parity is checked separately; production caps remain deferred.`);

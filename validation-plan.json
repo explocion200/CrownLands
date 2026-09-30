@@ -11,7 +11,11 @@
         "functions/test/emulator-skill-presets.js",
         "functions/test/emulator-skill-point-system-reset.js",
         "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-battle-report-gear-effects.js"
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-rally-assembly.js",
+        "functions/test/emulator-rally-rules.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
       "paths": [
         "game.js",
@@ -22,9 +26,10 @@
         "tools/validate-skill-presets.js",
         "tools/validate-soldier-defense.js",
         "tools/validate-skill-point-efficiency-browser.js",
-        "functions/test/emulator-skill-presets.js"
+        "functions/test/emulator-skill-presets.js",
+        "functions/test/emulator-world-travel.js"
       ],
-      "reason": "Verify all eight increased skill caps and per-point rates, client/server parity, one-point upgrades/refunds through each cap, exact 99% to 100% final increments, point-budget and concurrent-spend enforcement, version-5 preset repricing with preserved allocations/metadata, idempotent surcharge refunds, existing version-2 build preservation and the historical reset path. Exercise changed movement through authoritative army orders and defense/gear battle reports. Check all eight cap controls and saved drafts at desktop and two landscape-mobile sizes."
+      "reason": "Verify all eight increased skill caps and per-point rates, client/server parity, one-point upgrades/refunds through each cap, exact 99% to 100% final increments, point-budget and concurrent-spend enforcement, version-5 preset repricing with preserved allocations/metadata, idempotent surcharge refunds, existing version-2 build preservation and the historical reset path. Exercise changed movement through authoritative army orders and defense/gear battle reports. Check all eight cap controls and saved drafts at desktop and two landscape-mobile sizes. Gear caps now allow +200% attack/defense/walls, +200% army speed, +250% scout speed and 90% recovery. Verify additive movement at every route/launch path, rally snapshot and slowest-participant behavior, per-army defense clipping, maximum Legendary effects, and immediate authoritative scout progression through Legendary 5."
     },
     {
       "tests": [
@@ -62,6 +67,50 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "reason": "Document the confirmed per-point rates, uniform costs, increased skill caps and retained build/preset allocations. State exact maximum point requirements and distinguish pending deployment from audited live behavior."
+    },
+    {
+      "paths": [
+        "common-gear.js",
+        "functions/common-gear.js",
+        "common-gear-ui.js",
+        "docs/gear-rarity-progression/model.js",
+        "docs/gear-rarity-progression/proposal.json",
+        "docs/gear-rarity-progression/CALCULATED_REVIEW.md",
+        "docs/gear-rarity-progression/README.md",
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-gear-progression-proposal.js",
+        "tools/validate-barracks-gear-browser.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-gear-progression-proposal.js",
+        "tools/validate-barracks-gear-browser.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "reason": "Verify all 800 per-item values, strict growth at every level/promotion, Legendary-5-only maxima, distinct Ledger and heavy wall-armor curves, independent full-loadout budgets, Common preservation and client/server parity. Exercise authoritative upgrades/equipment changes, quote/replay safety, equipped-only bonuses and battle effects. Inspect all four officer screens, promotion previews, each maximum slot and cap disclosure at desktop and landscape-mobile sizes. Regenerate and validate the numerical review; production caps remain deferred."
+    },
+    {
+      "paths": [
+        "clan-tower-buildings.js",
+        "functions/clan-tower-buildings.js",
+        "infirmary-ui.js",
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-infirmary-browser.js",
+        "battle-report-detail-ui.js",
+        "tools/validate-battle-report-detail.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-infirmary-browser.js",
+        "tools/validate-battle-report-detail.js",
+        "functions/test/emulator-clan-tower-battle-reports.js"
+      ],
+      "reason": "Recovery ceiling changes require matching Infirmary and battle-report descriptions. Verify 90% capped example arithmetic and state preservation after refresh at desktop and landscape-mobile sizes, casualty attribution and existing Tower battle behavior. Clan building bonus amounts and replacement mechanics remain outside this gear revision."
     }
   ]
 }

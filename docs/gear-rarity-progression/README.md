@@ -1,8 +1,8 @@
 # Gear rarity progression
 
-**26 September 2026 · IMPLEMENTED — PENDING RELEASE.** Rarity progression, reviewed art, crafting prices and non-production caps are implemented on this branch. Production caps remain deferred; no deployment is claimed.
+**29 September 2026 · UPDATED BONUSES — PENDING RELEASE.** Rarity progression, reviewed art, crafting prices and non-production caps are implemented on this branch. Production caps remain deferred; no deployment is claimed.
 
-The user confirmed the five colors/rarities, upward crafting from existing gear, and better artwork at each tier. The accepted working direction uses **100% total attack** and **75% total recovery**. Higher rarities come only from upgrading the current Common gear upward; separate higher-rarity drops, rewards and purchases are outside this update. The user explicitly retained matching duplicates for every level after reviewing the material growth; this requirement is settled. The accepted curves and prices below are implemented pending release.
+The user confirmed the five colors/rarities, upward crafting from existing gear, and better artwork at each tier. The September 29 approved gear budgets use **+200% total attack** and **90% total recovery**, with locked skill values and every gear maximum reserved for Legendary Level 5. Higher rarities come only from upgrading the current Common gear upward; separate higher-rarity drops, rewards and purchases are outside this update. The user explicitly retained matching duplicates for every level after reviewing the material growth; this requirement is settled. The accepted curves and prices below are implemented pending release.
 
 ## 1. Crafting rules
 
@@ -17,48 +17,47 @@ The user confirmed the five colors/rarities, upward crafting from existing gear,
 
 ## 2. Per-piece and complete-loadout bonuses
 
-Each cell below is the **maximum for one item at Level 5**. Armor means head, chest, pants, boots, gloves and belt. Treasury's seven Main City pieces also include its Ledger. Values are percentage points, not multipliers compounded per item.
+Each cell is the **maximum for one item at Level 5**, in percentage points. Armor has six slots: head, chest, pants, boots, gloves and belt. Every level and promotion increases the intrinsic bonus; only Legendary Level 5 reaches the last column.
 
 | Officer / equipment | Effect | Common | Uncommon | Rare | Epic | Legendary |
 |---|---|---:|---:|---:|---:|---:|
-| War Captain: each armor piece, six slots | Troop production, all owned regular cities | 1.5% | 3% | 5% | 7.5% | 10% |
-| War Captain: sword | Attack strength | 1.5% | 5% | 12% | 20% | 30% |
-| War Captain: medallion | Casualty recovery | 1.5% | 3% | 5% | 7.5% | 10% |
-| Master of Coin: armor and Ledger, seven slots | Main City Gold production | 1.5% | 3% | 5% | 7.5% | 10% |
-| Master of Coin: chain | All-city Gold production | 1.5% | 4% | 8% | 13% | 20% |
-| Cavalry Master: each armor piece, six slots | Transfer/reinforcement speed | 1.5% | 3% | 5% | 7.5% | 10% |
-| Cavalry Master: lance | Attack/rally travel speed | 1.5% | 5% | 12% | 20% | 30% |
-| Cavalry Master: pendant | Scout speed | 1.5% | 6% | 15% | 30% | 50% |
-| Defensive Commander: each armor piece, six slots | Regular-city wall strength | 1.5% | 3% | 5.5% | 8.5% | 12.5% |
-| Defensive Commander: shield | Defending soldier strength | 1.5% | 5% | 12% | 20% | 30% |
-| Defensive Commander: seal | Reduction to new regular-city wall repair time | 1.5% | 5% | 12% | 20% | 30% |
+| War Captain: each armor piece | All-city troop production | 1.5% | 3% | 6% | 10% | 15% |
+| War Captain: sword | Attack strength | 1.5% | 10% | 30% | 60% | 100% |
+| War Captain: medallion | Casualty recovery | 1.5% | 5% | 12% | 25% | 40% |
+| Master of Coin: each armor piece | Main City Gold | 1.5% | 3% | 6% | 10% | 15% |
+| Master of Coin: Ledger | Main City Gold | 1.5% | 3% | 5% | 7.5% | 10% |
+| Master of Coin: chain | All-city Gold | 1.5% | 8% | 20% | 45% | 70% |
+| Cavalry Master: each armor piece | Transfer/reinforcement speed | 1.5% | 3% | 5% | 7.5% | 10% |
+| Cavalry Master: lance | Attack/rally speed | 1.5% | 8% | 20% | 40% | 60% |
+| Cavalry Master: pendant | Scout speed | 1.5% | 10% | 30% | 65% | 110% |
+| Defensive Commander: chest and pants, each | Regular-city wall strength | 1.5% | 4% | 8% | 13% | 20% |
+| Defensive Commander: other armor, each | Regular-city wall strength | 1.5% | 3% | 6% | 10% | 15% |
+| Defensive Commander: shield | Defending soldier strength | 1.5% | 8% | 20% | 40% | 60% |
+| Defensive Commander: seal | Reduction to new regular-city repair time | 1.5% | 6% | 15% | 30% | 50% |
 
-Common retains 0.25 / 0.50 / 0.80 / 1.15 / 1.50%. Within every later rarity, five equal increments connect the previous rarity's Level 5 bonus to the new maximum. Thus a green sword is 2.2 / 2.9 / 3.6 / 4.3 / 5%, and a green recovery medallion is 1.8 / 2.1 / 2.4 / 2.7 / 3%. See [every level and all 32 pieces](CALCULATED_REVIEW.md).
+Common retains 0.25 / 0.50 / 0.80 / 1.15 / 1.50%. Each later rarity uses five equal increments from the prior rarity's maximum, rounded to two decimals. For example, Legendary swords give 68 / 76 / 84 / 92 / 100%; Legendary medallions give 28 / 31 / 34 / 37 / 40%. See [every level and all 32 pieces](CALCULATED_REVIEW.md).
 
-Maximum Legendary loadouts give 60% troop production, 70% Main City Gold plus the 20% all-city chain, 60% friendly movement, and 75% wall strength. Single weapons/jewelry use their individual values above. These are gear totals; the next section accounts for other sources.
+A complete Legendary Level 5 loadout gives **90% troop production**, **100% Main City Gold plus 70% all-city Gold (170% combined in the Main City)**, **60% friendly movement**, and **100% wall strength**. The wall set is 20 + 20 + 15 + 15 + 15 + 15. These totals require all contributing pieces at Legendary Level 5. Existing inventories keep their IDs, rarities, levels and equipped state and immediately use the revised definitions; no item loses bonus.
 
 ## 3. Total caps and contribution scopes
 
-These are final ceilings **after all applicable contributors** (except the explicitly deferred production rows), not promises that every player reaches them. A +100% power/output bonus means twice base power/output; 75% recovery instead means returning 75 of every 100 eligible casualties. City level changes the base and does not consume a percentage cap.
+The fixed skill maximum is 100% for Swordmastery, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries and March Orders; Field Medics and Guild Charters stay at 50%. Every skill level costs one point. The gear revision leaves these values unchanged.
 
-| Category | Cap | Contributors and order |
+| Category | Combined cap | Current contributors |
 |---|---:|---|
-| Attack strength | +100% (2x base) | Swordmastery up to 60 + equipped sword up to 30 + Training Grounds up to 10 for rallies launched from that Clan Tower. Solo maximum from these sources is +90%. |
-| Defending soldier strength | +100% (2x base) | Shieldwall Discipline up to 60 + applicable shield up to 30 + the defending ruler's objective bonuses. Apply per defending army, before summing armies. |
-| Regular-city wall strength | +150% (2.5x base) | Stoneworks up to 75 + six armor pieces totaling up to 75. Does not multiply soldier defense or add another physical wall per reinforcer. |
-| Troop production (DEFERRED) | +200% (3x base) | Royal Granaries up to 75 + gear up to 60 + personal/shared objectives + War Drums 30 while active. |
-| Main City Gold (DEFERRED) | +250% (3.5x base) | Tax Stewardship up to 75 + seven pieces totaling 70 + chain 20 + personal/shared objectives + Royal Tax Decree 50 while active. |
-| Other regular-city Gold (DEFERRED) | +200% (3x base) | Tax Stewardship up to 75 + chain 20 + personal/shared objectives + Royal Tax Decree 50 while active. |
-| March speed | +150% (2.5x base speed) | Preserve `(1 + March Orders/100) × (1 + objective speed/100) + applicable gear/100`, then cap at 2.5. March Orders max is 60; use friendly armor 60, lance 30, or scout pendant 50 according to order kind. |
-| Ordinary casualty recovery | 75% hard ceiling; 60% attainable from proposed current sources | Field Medics up to 50 + medallion up to 10. Return actual credited troops to the Main City. |
-| Clan Tower defender recovery | 75% | Field Medics 50 + personal medallion 10 + that Tower's Infirmary 15. The Infirmary adds nothing to attacking armies or ordinary-city defense. |
-| New regular-city wall repair duration reduction | 50% hard ceiling; 30% attainable from proposed current sources | Seal up to 30; no current skill or objective call-site contribution was found. Do not retroactively shorten an existing repair deadline. |
+| Attack strength | +200% (3x base) | Swordmastery 100 + sword 100. Current Tower rally Training Grounds also feeds this cap until its planned replacement. |
+| City defending soldiers | +200% (3x base) | Shieldwall 100 + shield 60 + applicable objectives. Apply the cap per army before summing. |
+| Regular-city walls | +200% (3x base) | Stoneworks 100 + armor set 100. Reinforcements do not add extra walls. |
+| Army march speed | +200% (3x base speed) | March Orders 100 + objectives + friendly armor 60 or lance 60, according to order kind. |
+| Scout speed | +250% (3.5x base speed) | March Orders 100 + objectives + pendant 110. |
+| Casualty recovery | 90% | Field Medics 50 + medallion 40. Existing Tower Infirmary recovery also remains subject to this ceiling until its planned replacement. |
+| New regular-city repair reduction | 50% | Seal 50. Existing repair deadlines remain intact. |
 
-**Unchanged separate systems:** Guild Charters (50%) plus applicable objective city-upgrade reduction retains its existing 85% ceiling and does not discount gear crafting. Engineers' Workshop reduces its own Tower wall construction/paid repair times by up to 50%; do not add the regular-city seal or change Tower construction. Gear adds no direct King Power percentage. Troop production changes eventual troop counts, which affect King Power through the existing accounting.
+Movement now adds skill, objective and gear percentages: speed multiplier = 1 + their sum / 100, then applies the order's cap. Existing launched marches keep their stored timing. Swift March Order retains its separate one-use effect and minimum remaining time. Travel floors and rally slowest-participant rules remain unchanged. Base troop attack stays 1.25 and defense stays 1.30.
 
-Swift March Order is an existing one-use exception that halves an eligible transfer's remaining time, with a one-second minimum. Keep it separate from the ongoing speed cap and keep its current eligibility. Ordinary computed travel floors remain 30 seconds, scouts 10 seconds, and rallies retain their slowest participant's launch-time speed. Faster speed is not the same as the same percentage reduction in duration.
+**Remaining balance work:** proposed total production ceilings are +250% troops, +350% Main City Gold and +250% other-city Gold. They remain deferred: runtime production still adds skill, gear, objectives and active War Drums (+30%) or Royal Tax Decree (+50%) through the existing offline accounting. This update does not implement the proposed objective budgets of 40% defense/speed and 30% production. Current objective percentages and ownership/sharing rules remain in effect. Do not describe these proposed allowances as currently obtainable bonuses.
 
-**Objective accounting is not a flat 18% limit.** Current `combinePlayerObjectiveBonuses` can add several holdings. Normal strongholds contribute 8% in their category; the Citadel has 10% categories and a 10% city-upgrade discount. Clan sharing normally contributes half, removes duplicate self-benefit, and uses a different Citadel-controller policy. Preserve those ownership/sharing rules, calculate the applicable personal/shared total, then apply an approved final category cap. Objectives do not grant attack strength or casualty recovery. War Drums grants production, not combat attack.
+The user plans to replace Clan attack/recovery bonuses with other castle benefits. This gear update supplies the full attack and recovery budgets through personal skills and Legendary gear; replacement building mechanics remain separate. Guild Charters plus objective city-upgrade reduction retains the existing 85% runtime ceiling; the proposed 60% combined limit is separate work. Engineers' Workshop retains its own 50% Tower construction/paid-repair reduction. Gear does not directly multiply King Power.
 
 ## 4. Costs and attainability
 
@@ -92,13 +91,13 @@ These are total material equivalents for one exact family, not additional items 
 
 ## 5. Implementation and release boundaries
 
-Implemented on `codex/gear-rarity-progression`, pending review and authorized release:
+The September 29 bonus revision is on `codex/skill-point-efficiency`, pending review and authorized release:
 
 - All 160 definitions and reviewed art variants, with existing Common keys and levels preserved. Artwork from PR #372 is included; the combined progression PR supersedes that separate art-only diff.
 - Transactions consume exactly two matching inputs and Gold, create a new identity, transfer equipped state, and retain target-bound replay receipts. Uncertain client retries keep the same request ID and price; session changes invalidate pending UI callbacks.
 - Schema v3 accepts earlier Common inventories without truncation and preserves unsupported records. The server refuses future schemas. Opening a box checks the 2,000-item limit and a conservative 900,000-byte profile budget before committing; failure preserves the box. Upgrades can reduce an already-full bag.
 - Attack, per-army city defense, city walls, movement, recovery and new city repair use the caps above. Existing march snapshots and repair deadlines remain unchanged. City shield bonuses retain their destination-owner scope for allied troops. No new Gatehouse shield benefit is added to Clan Tower defenders.
-- **Production caps are deferred.** Higher-rarity production gear is active, but current additive production and exact offline objective/timed-item accounting remain intact. The proposed 200/250/200 percent ceilings are a design study, not runtime behavior. A later change needs bounded exact interval accounting and separate approval.
+- **Production caps are deferred.** Higher-rarity production gear is active, but current additive production and exact offline objective/timed-item accounting remain intact. The proposed 250/350/250 percent ceilings are a design study, not runtime behavior. A later change needs bounded exact interval accounting and separate approval.
 - Four officer screens show current/result rarity, level, artwork, cost and intrinsic bonus. Contextual equipped previews show applicable final caps and applied improvement. Tower-only bonuses depend on the battle location and are described separately. Art loads on demand: 320 small derivatives total 7,326,712 bytes; source masters are excluded from production and no rarity art is added to startup precache.
 - The new release ID requires old active-realm clients to refresh, with an additional schema capability guard for promotions and higher-rarity loadout changes. The active topology, realm generation, server instance settings and reward sources are unchanged.
 
@@ -116,4 +115,4 @@ Deploy the compatible backend and matching frontend together after release autho
 - `node tools/validate-gear-rarities.js` checks runtime/catalog parity with those curves and costs.
 - [Proposal data](proposal.json), [calculator](model.js), [all numbers](CALCULATED_REVIEW.md), [Master Specification](../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md).
 
-Branch: `codex/gear-rarity-progression`. Pull request: [#373](https://github.com/explocion200/CrownLands/pull/373). Status: implementation complete; release gated by the required PR checks; not merged or deployed.
+Branch: `codex/skill-point-efficiency`. Pull request: [#402](https://github.com/explocion200/CrownLands/pull/402). Updated gear bonuses are not merged or deployed.

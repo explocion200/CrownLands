@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-09-29-skill-caps-v1",
+  "releaseId": "crownlands-2026-09-29-skill-gear-balance-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "4c7ea93d2ddf97e448576cdb6e89e16c8e8abf3653a11e3752a8f86d114ed7bc",
+  "apiContractHash": "ce56bd390d4e6e004a3b7178d6357acf04bee76a65ebb41cb361023c02f48f34",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

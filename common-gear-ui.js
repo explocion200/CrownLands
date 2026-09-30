@@ -1338,8 +1338,8 @@ function getCommonGearAppliedPreview(item, nextItem) {
     cap = COMMON_GEAR.BONUS_CAPS.defense; label = "Main City soldiers";
   } else if (["ownedMarchSpeed", "enemyMarchSpeed", "scoutSpeed"].includes(def.statType)) {
     const objectiveMultiplier = typeof getStrongholdMarchSpeedMultiplier === "function" ? getStrongholdMarchSpeedMultiplier("player") : 1;
-    base += ((1 + skill("marchOrders") / 100) * objectiveMultiplier - 1) * 100;
-    cap = COMMON_GEAR.BONUS_CAPS.marchSpeed; label = "New march speed";
+    base += skill("marchOrders") + (objectiveMultiplier - 1) * 100;
+    cap = def.statType === "scoutSpeed" ? COMMON_GEAR.BONUS_CAPS.scoutSpeed : COMMON_GEAR.BONUS_CAPS.marchSpeed; label = "New march speed";
   } else if (def.statType === "wallRepairSpeed") {
     cap = COMMON_GEAR.BONUS_CAPS.wallRepair; label = "New city repair reduction";
   }

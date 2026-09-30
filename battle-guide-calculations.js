@@ -12,7 +12,7 @@
     victoryPointsExponentScale: 2,
     baseAttackPowerPerTroop: 1.25,
     baseDefensePowerPerTroop: 1.30,
-    defenseBonusCapPercent: 100,
+    defenseBonusCapPercent: 200,
     scoutIntelMinutes: 10,
     strongholdEffectiveLevel: 50,
     citadelEffectiveLevel: 100,

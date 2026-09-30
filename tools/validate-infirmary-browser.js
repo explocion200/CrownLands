@@ -42,11 +42,11 @@ async function main(){
    assert.equal(await ev(`modalBody.querySelector('#currentBenefit').textContent`),'+6%');
    assert.equal(await ev(`modalBody.querySelector('#nextBenefit').textContent`),'+7.5%');
    assert.equal(await ev(`modalBody.querySelectorAll('[data-infirmary-building] option').length`),4);
-   await ev(`modalBody.querySelector('#recoveryExample').open=true;modalBody.querySelector('#exampleBase').value='60';modalBody.querySelector('#exampleBase').dispatchEvent(new Event('change',{bubbles:true}));modalBody.querySelector('#overviewPanel').scrollTop=99999`);await delay(50);
-   assert.equal(await ev(`modalBody.querySelector('#exampleTotal').textContent`),'66%');assert.equal(await ev(`modalBody.querySelector('#exampleNext').textContent`),'67.5%');
-   assert(await ev(`modalBody.querySelector('#exampleCap').textContent.includes('adds 60 recovered troops')`));
+   await ev(`modalBody.querySelector('#recoveryExample').open=true;modalBody.querySelector('#exampleBase').value='90';modalBody.querySelector('#exampleBase').dispatchEvent(new Event('change',{bubbles:true}));modalBody.querySelector('#overviewPanel').scrollTop=99999`);await delay(50);
+   assert.equal(await ev(`modalBody.querySelector('#exampleTotal').textContent`),'90%');assert.equal(await ev(`modalBody.querySelector('#exampleNext').textContent`),'90%');
+   assert(await ev(`modalBody.querySelector('#exampleCap').textContent.includes('Only 0 of this Infirmary’s 6 percentage points apply')`));
    await ev('refreshHoldingTower(infirmaryTower.id)');
-   assert(await ev(`modalBody.querySelector('#recoveryExample').open&&modalBody.querySelector('#exampleBase').value==='60'&&modalBody.querySelector('#overviewPanel').scrollTop>0`));await layout();await screenshot(width+'-recovery-cap');
+   assert(await ev(`modalBody.querySelector('#recoveryExample').open&&modalBody.querySelector('#exampleBase').value==='90'&&modalBody.querySelector('#overviewPanel').scrollTop>0`));await layout();await screenshot(width+'-recovery-cap');
    await ev(`modalBody.querySelector('#exampleBase').value='30';modalBody.querySelector('#exampleBase').dispatchEvent(new Event('change',{bubbles:true}))`);
    assert.equal(await ev(`modalBody.querySelector('#exampleTotal').textContent`),'36%');assert.equal(await ev(`modalBody.querySelector('#exampleNext').textContent`),'37.5%');
    await ev(`modalBody.querySelector('#tab-levels').click();modalBody.querySelector('#levelsPanel').scrollTop=99999`);

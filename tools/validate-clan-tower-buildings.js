@@ -69,7 +69,7 @@ const context=vm.createContext({COMMON_GEAR:require("../common-gear"),BASE_TROOP
 for(const name of ["getCasualtyRecoveryPercent","createRallyParticipantSnapshot","createBattleCasualtyRecoverySnapshot","createBattleAttackPowerBreakdown"]) vm.runInContext(extract(name),context);
 assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:9}),59);
 assert.equal(context.getCasualtyRecoveryPercent({medic:50,gear:9},15),74);
-assert.equal(context.getCasualtyRecoveryPercent({medic:80,gear:9},15),75);
+assert.equal(context.getCasualtyRecoveryPercent({medic:80,gear:9},15),90);
 const recovery=context.createBattleCasualtyRecoverySnapshot({losses:1000,recoveredTroops:750,fieldMedicsPercent:50,casualtyGearPercent:10,clanInfirmaryPercent:15});
 assert.equal(recovery.appliedClanPercent,15);assert.equal(recovery.clanRecoveredTroops,150);assert.equal(recovery.gearRecoveredTroops,100);
 const profile={sword:20,attackGear:9};
