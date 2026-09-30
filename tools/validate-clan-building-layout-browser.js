@@ -111,7 +111,7 @@ async function main() {
             overflow: modal.scrollWidth > modal.clientWidth + 1 || [...shell.querySelectorAll(".detail-scroll")].filter(n => !n.hidden).some(n => n.scrollWidth > n.clientWidth + 1) };
         });
         assert.equal(result.overview, "true"); assert.equal(result.benefitCount, 2); assert.equal(result.choices, 4);
-        assert.equal(result.cost, "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
+        assert.equal(result.cost, ["infirmary", "training"].includes(id) ? "4 / 10" : "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
         if (!reference) reference = result;
         else for (const key of ["header", "sidebar", "footer", "goldFont"]) assert.deepEqual(result[key], reference[key], id + ": inconsistent " + key + " at " + width);
         await screenshot(`${width}-${id}-overview.png`);

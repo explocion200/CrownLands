@@ -10,8 +10,8 @@
   const DEFINITIONS = Object.freeze([
     { id: "shop", name: "Clan Shop", description: "Extra personal purchases shared across your clan's Shops.", x: -0.37, y: -0.03 },
     { id: "workshop", name: "Engineers’ Workshop", description: "Shortens this Tower's wall construction and repairs.", x: 0.37, y: -0.03 },
-    { id: "infirmary", name: "Infirmary", description: "Recovers more of each ruler's casualties when defending this Tower.", x: -0.23, y: 0.23 },
-    { id: "training", name: "Training Grounds", description: "Adds attack strength to all participants in rallies launched here.", x: 0.23, y: 0.23 },
+    { id: "infirmary", name: "Infirmary", description: "New mechanics are being designed. Completed levels are preserved.", x: -0.23, y: 0.23 },
+    { id: "training", name: "Training Grounds", description: "New mechanics are being designed. Completed levels are preserved.", x: 0.23, y: 0.23 },
   ].map(Object.freeze));
   const DURATION_MINUTES = Object.freeze([0, 30, 60, 120, 240, 360, 480, 600, 720, 1080, 1440]);
   const SHOP_ITEMS = Object.freeze([
@@ -31,15 +31,15 @@
     return 5_000_000 * 2 ** (targetLevel - 1);
   }
   function duration(targetLevel) { cost(targetLevel); return DURATION_MINUTES[targetLevel] * MINUTE; }
-  function bonus(id, value) { return level(value) * ({ workshop: 5, infirmary: 1.5, training: 1 }[id] || 0); }
+  function mechanicsPending(id) { return id === "infirmary" || id === "training"; }
+  function bonus(id, value) { return id === "workshop" ? level(value) * 5 : 0; }
   function benefit(id, value) {
     const current = level(value);
+    if (mechanicsPending(id)) return "Mechanics being redesigned · upgrades paused";
     if (!current) return "Not built";
     if (id === "shop") return `Shop Level ${current} catalogue`;
     const amount = bonus(id, current);
-    return id === "workshop" ? `${amount}% shorter wall construction and repairs`
-      : id === "infirmary" ? `+${amount}% recovery for Tower defenders (90% combined cap)`
-        : `+${amount}% rally attack strength at launch`;
+    return `${amount}% shorter wall construction and repairs`;
   }
   function artStage(value) { const current = level(value); return current === 10 ? 4 : current >= 7 ? 3 : current >= 4 ? 2 : 1; }
   function art(id, value) { return `assets/clan-buildings/${id}-${artStage(value)}.webp`; }
@@ -72,5 +72,5 @@
     else usage.counts[itemId] = item.count + quantity;
     return usage;
   }
-  return Object.freeze({ MAX_LEVEL, SHIELD_COOLDOWN_MS, DEFINITIONS, DURATION_MINUTES, SHOP_ITEMS, level, normalizeLevels, definition, cost, duration, bonus, benefit, artStage, art, wallDuration, shopStatus, purchaseUsage });
+  return Object.freeze({ MAX_LEVEL, SHIELD_COOLDOWN_MS, DEFINITIONS, DURATION_MINUTES, SHOP_ITEMS, level, normalizeLevels, definition, cost, duration, mechanicsPending, bonus, benefit, artStage, art, wallDuration, shopStatus, purchaseUsage });
 });

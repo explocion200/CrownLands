@@ -265,6 +265,13 @@ async function main() {
   });
   assert.equal(treasuryWrite.status,403,"A member could write the Treasury directly.");
   await towerRef.update({wallIntegrityBps:10000,buildings:{shop:0,workshop:0,infirmary:0,training:0},buildingProject:null});
+  const preservedBalance = (await treasuryRef.get()).data().balance;
+  for (const buildingId of ["infirmary", "training"]) {
+    const retired = await invoke("startClanTowerBuilding", leader, {towerId:tower.id, buildingId, operationId:`retired_${randomUUID()}`});
+    assert.match(retired.error?.message || "", /mechanics.being.redesigned/i);
+    assert.equal((await treasuryRef.get()).data().balance, preservedBalance, "Paused upgrades must not charge Gold");
+    assert.equal((await towerRef.get()).data().buildingProject, null);
+  }
   const buildPayload = {towerId:tower.id,buildingId:"shop",operationId:`build_${randomUUID()}`};
   assert((await invoke("startClanTowerBuilding",member,buildPayload)).error,"A regular member could spend the Treasury.");
   const build = await call("startClanTowerBuilding",leader,buildPayload);
@@ -363,7 +370,7 @@ async function main() {
   await towerRallyRef.update({participants:towerParticipants});
   const trained=await call("launchClanRally",leader,{clanId,rallyId:towerRallyId});
   const launchParticipants=(await towerRallyRef.get()).data().participants;
-  assert(launchParticipants.every(p=>p.clanTrainingPercent===10),"Training Grounds was not applied to every participant at launch.");
+  assert(launchParticipants.every(p=>p.clanTrainingPercent===0),"A new Rally received the retired Training Grounds bonus.");
   const lockedPower=(await towerRallyRef.get()).data().attackPower;
   await towerRef.update({"buildings.training":1});
   const defenderBefore=(await cityRef(outsider.home).get()).data().troops;
@@ -376,8 +383,8 @@ async function main() {
     await new Promise(resolve=>setTimeout(resolve,1000));
   }
   assert(defenderReport?.casualtyRecovery,"Tower defender recovery report was not produced.");
-  assert.equal(defenderReport.casualtyRecovery.clanInfirmaryPercent,15);
-  assert(defenderReport.casualtyRecovery.clanRecoveredTroops>0,"Infirmary recovered no troops from a damaging attack.");
+  assert.equal(defenderReport.casualtyRecovery.clanInfirmaryPercent,0);
+  assert.equal(defenderReport.casualtyRecovery.clanRecoveredTroops,0,"A new Tower battle received retired Infirmary recovery.");
   assert((await cityRef(outsider.home).get()).data().troops>=defenderBefore+defenderReport.casualtyRecovery.recoveredTroops,"Tower casualties did not recover to their owner's Main City.");
   await assertTowerPower(outsider, (await secondRef.collection("garrison").doc(outsider.uid).get()).data().troops);
   await call("resolveArmyOrder",leader,{armyId:trained.movement.id,routeRegionIds:trained.movement.routeRegionIds});

@@ -821,7 +821,7 @@ async function main() {
     }
     if (definition.statType === "casualtyEfficiency") {
       capContext.getCommonGearBonuses = () => totals;
-      assert.equal(capContext.getCasualtyRecoveryPercent(profile, 15), Math.min(90, 50 + bonus + 15));
+      assert.equal(capContext.getCasualtyRecoveryPercent(profile, 15), Math.min(90, 50 + bonus), "Retired clan recovery cannot increase equipped recovery");
     }
     if (definition.statType === "wallRepairSpeed") {
       const timing = repairContext.getSiegeRepairTiming(1, 100, 100, 5_000, 1_000, commonGear.capBonus("wallRepair", bonus));

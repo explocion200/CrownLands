@@ -58,6 +58,7 @@ function advance(state, nowMs, resumeAtMs = nowMs) {
 function start(state, buildingId, balance, actor, nowMs, operationId) {
   if (state.ownerKind !== "clan") throw new Error("tower-not-owned");
   if (!BUILDINGS.definition(buildingId)) throw new Error("unknown-building");
+  if (BUILDINGS.mechanicsPending(buildingId)) throw new Error("building-mechanics-being-redesigned");
   if (state.buildingProject) throw new Error("building-project-active");
   if (state.attackBlocked) throw new Error("tower-under-rally-attack");
   if (state.wallIntegrityBps !== FULL || state.repair) throw new Error("tower-wall-damaged");

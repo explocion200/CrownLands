@@ -11,8 +11,6 @@ const controller = read("instant-economy-actions.js");
 const commonGear = read("common-gear-ui.js");
 const commonGearConfig = read("common-gear.js");
 const server = read("functions/index.js");
-const palette = read("crownlands-palette.css");
-const visualQa = read("docs/visual-qa/scalable-shop-pricing/index.html");
 
 const hours = Object.freeze({
   royal_tax_decree_30m: 0.18,
@@ -72,12 +70,7 @@ assert.match(server, /const unitPrice = getShopItemPriceForEconomy\(economy, ite
 assert.match(server, /Math\.floor\(safeNumber\(data\.cost, 0\)\) !== unitPrice[\s\S]*?Shop item price changed/, "Stale Shop prices must be rejected before purchase.");
 assert.match(controller, /getShopItemPrice\(item\)[\s\S]*?reservedGold:\s*price/, "Instant purchases must reserve the displayed scalable price.");
 
-assert.match(client, /function renderShopItem[\s\S]*?data-shop-select[\s\S]*?role="option"/);
-const paidRenderer = client.match(/function renderShopItem[\s\S]*?\n}/)?.[0] || "";
-assert.match(paidRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
-assert.doesNotMatch(paidRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|item\.description|shop-item-value|data-shop-buy|>Buy</);
-assert.match(paidRenderer, /aria-label="\$\{escapeHtml\(item\.label\)\}"/);
-assert.match(client, /function renderShopPurchaseBar[\s\S]*?shop-purchase-description[\s\S]*?data-shop-selected-owned[\s\S]*?data-shop-selected-daily[\s\S]*?data-shop-selected-price[\s\S]*?data-shop-purchase-selected/);
+require("./validate-active-reward-ui");
 const purchaseStateRenderer = client.match(/function getShopPurchaseState[\s\S]*?\n}/)?.[0] || "";
 assert.match(purchaseStateRenderer, /purchaseCount[\s\S]*?purchaseLimit/, "The selected Shop item must expose today's purchase count and cap.");
 assert.match(purchaseStateRenderer, /canBuy:\s*available && affordable/, "A pending purchase must not disable rapid repeat buying.");
@@ -93,25 +86,9 @@ for (const description of [
   assert.ok(client.includes(description), `Missing concise Shop description: ${description}`);
 }
 assert.doesNotMatch(client.match(/function getShopPurchaseState[\s\S]*?\n}/)?.[0] || "", /Scales from raw|raw base gold|city premium|30m value/);
-assert.match(commonGear, /function renderCommonGearShopItem[\s\S]*?data-shop-select="common_gear_box"/);
 assert.match(commonGear, /function getCommonGearBoxShopPrice\(\)[\s\S]{0,320}getShopPricingContext\(\)[\s\S]{0,320}calculateScalableShopPrice\(/, "The Gear Box must display its hour-scaled price.");
 assert.match(server, /function getCommonGearBoxPriceForEconomy[\s\S]{0,400}calculateScalableShopPrice\([\s\S]{0,200}COMMON_GEAR_BOX_ITEM_ID/, "The Gear Box price must be server-authoritative.");
 assert.match(server, /Math\.floor\(safeNumber\(data\.cost, 0\)\) !== status\.shop\.price[\s\S]{0,160}Gear Box price changed/, "A stale quoted Gear Box price must be rejected.");
-const commonGearRenderer = commonGear.match(/function renderCommonGearShopItem[\s\S]*?\n}/)?.[0] || "";
-assert.match(commonGearRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
-assert.doesNotMatch(commonGearRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|data-common-gear-buy|>Buy</);
-assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/);
-assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*scroll-snap-type:\s*x proximity;/);
-assert.match(palette, /\.shop-modal \.shop-purchase-bar\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;[^}]*grid-template-columns:/);
-assert.match(palette, /\.shop-modal \.shop-items \.shop-item\.selected/);
-assert.match(palette, /--shop-paid-tile-size:\s*clamp\(104px,\s*12vw,\s*132px\);/);
-assert.match(palette, /\.shop-modal \.shop-items \.shop-item\s*\{[^}]*flex:\s*0 0 var\(--shop-paid-tile-size\);[^}]*inline-size:\s*var\(--shop-paid-tile-size\);[^}]*block-size:\s*var\(--shop-paid-tile-size\);[^}]*min-inline-size:\s*var\(--shop-paid-tile-size\);[^}]*min-block-size:\s*var\(--shop-paid-tile-size\);[^}]*aspect-ratio:\s*1 \/ 1;[^}]*grid-template:\s*minmax\(0,\s*1fr\) \/ minmax\(0,\s*1fr\);[^}]*place-items:\s*center;/);
-assert.match(palette, /\.shop-modal \.shop-items \.shop-item-image-placeholder\s*\{[^}]*inline-size:\s*100%;[^}]*block-size:\s*100%;[^}]*aspect-ratio:\s*1 \/ 1;/);
-assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?--shop-paid-tile-size:\s*clamp\(82px,\s*13vw,\s*108px\);/);
-assert.match(palette, /@media \(max-width:\s*620px\)[\s\S]*?--shop-paid-tile-size:\s*64px;/);
-assert.doesNotMatch(palette, /\.shop-modal \.shop-items \.shop-item-copy/);
-assert.match(palette, /@media \(max-height:\s*560px\) and \(orientation:\s*landscape\)/);
-assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?\.shop-modal \.shop-rewarded-section\s*\{[^}]*display:\s*grid;/, "Mobile landscape must keep the desktop Shop section hierarchy.");
 assert.match(client, /function rememberShopCarouselScroll\(\)[\s\S]*?shopCarouselScrollLeft\s*=\s*Math\.max\(0,\s*carousel\.scrollLeft\)/);
 assert.match(client, /function restoreShopCarouselScroll\(\)[\s\S]*?carousel\.scrollLeft\s*=\s*targetScrollLeft/);
 assert.match(client, /function renderShopModal\(\)[\s\S]*?rememberShopCarouselScroll\(\)[\s\S]*?restoreShopCarouselScroll\(\)/);
@@ -120,7 +97,5 @@ const selectShopItemSource = client.match(/function selectShopItem[\s\S]*?\n}/)?
 assert.match(selectShopItemSource, /reveal\s*=\s*focus/);
 assert.match(selectShopItemSource, /if\s*\(reveal\)[\s\S]*?scrollIntoView/);
 assert.equal((selectShopItemSource.match(/scrollIntoView/g) || []).length, 1, "Only explicit keyboard reveal may move the carousel.");
-assert.equal((visualQa.match(/class="shop-item(?: common-gear-shop-item)?(?: selected)?"/g) || []).length, 7, "The visual QA fixture must include all seven paid image tiles.");
-assert.doesNotMatch(visualQa.match(/<div class="shop-items"[\s\S]*?<\/div>\s*<section class="shop-purchase-bar"/)?.[0] || "", /shop-item-copy|data-shop-card-price/, "The visual QA carousel contains duplicated card details.");
 
-console.log("Validated raw-base scalable Shop pricing, equal square image tiles, horizontal scrolling, concise details, and anchored purchase controls.");
+console.log("Validated authoritative Shop pricing, quoted costs, limits, active selection rendering and keyboard selection.");

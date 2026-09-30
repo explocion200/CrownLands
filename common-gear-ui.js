@@ -1874,6 +1874,9 @@ function renderCommonGearBuilding(buildingId) {
   modal.classList.add("common-gear-building-modal");
   modal.dataset.commonGearBuildingId = buildingId;
   modalTitle.textContent = `${building.name} — ${building.characterRole}`;
+  if (!ensureModalUiScripts("gear", () => {
+    if (modal.dataset.commonGearBuildingId === buildingId) renderCommonGearBuilding(buildingId);
+  })) return true;
   modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : buildingId === "barracks" ? renderBarracksGearScreen(viewModel) : buildingId === "gatehouse" ? renderGatehouseGearScreen(viewModel) : buildingId === "royal-stables" ? renderRoyalStablesGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
     <div class="common-gear-main">
       <section class="common-gear-loadout-panel" data-gear-panel="loadout" data-gear-officer="${escapeHtml(buildingId)}">
@@ -2098,14 +2101,6 @@ function getCommonGearBoxShopPrice() {
     pricing.cityCount,
     SHOP_MINIMUM_PRICE_GOLD
   );
-}
-
-function renderCommonGearShopItem(selectedItemId = "") {
-  if (!COMMON_GEAR) return "";
-  const selected = selectedItemId === COMMON_GEAR_BOX_ITEM.id;
-  return `<button class="shop-item common-gear-shop-item ${selected ? "selected" : ""}" data-shop-item="common_gear_box" data-shop-select="common_gear_box" type="button" role="option" aria-label="Common Gear Box" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
-    <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
-  </button>`;
 }
 
 async function buyCommonGearBox() {

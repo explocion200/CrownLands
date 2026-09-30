@@ -50,6 +50,10 @@ async function main() {
           state.battleReports = [report]; battleSnapshotCache.clear();
           await showBattleReportDetail(report.id);
         })()`);
+        for (let attempt = 0; attempt < 200; attempt++) {
+          if (await evaluate("Boolean(modalBody.querySelector('[data-tower-participant]'))")) break;
+          await delay(50);
+        }
         const info = await evaluate(`(() => {
           const body = modalBody.querySelector('.report-body');
           const rows = [...body.querySelectorAll('[data-tower-participant]')];

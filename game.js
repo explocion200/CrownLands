@@ -34339,6 +34339,7 @@ function stopDailyMissionLifecycle({ clear = false } = {}) {
 
 function renderDailyMissions() {
   if (modal?.classList.contains("quest-ledger-modal") && activeDailyRewardModalTab === "quests") {
+    if (!ensureModalUiScripts("quests", renderDailyMissions)) return;
     window.CrownlandsQuestsUI.mount(modalBody, {
       status: dailyMissionState, loading: dailyMissionStatusLoading, error: dailyMissionError,
       available: supportsDailyMissions(), busy: dailyMissionActionsInFlight.values().next().value || "",
@@ -35545,41 +35546,6 @@ function bindDailyRewardModalTabs() {
   });
 }
 
-function renderDailyMissionSection() {
-  return `
-    <section id="dailyMissionsSection" class="daily-missions-section" aria-label="Daily Missions">
-      <div class="daily-missions-heading">
-        <div class="profile-section-heading"><span>Daily</span><h3>MISSIONS <strong id="dailyMissionsCompleted">0/3</strong></h3></div>
-        <div class="daily-missions-meta">
-          <span id="dailyMissionsCountdown">New missions in --:--:--</span>
-          <span id="dailyMissionsRerolls">Reroll: 1</span>
-        </div>
-      </div>
-      <div id="dailyMissionsList" class="daily-missions-list" aria-live="polite">
-        <div class="daily-mission-placeholder">Preparing today’s missions…</div>
-      </div>
-      <p id="dailyMissionsStatus" class="daily-missions-status" hidden></p>
-    </section>`;
-}
-
-function renderDailyQuestTab() {
-  return `<section id="dailyRewardPanelQuests" class="daily-quest-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabQuests">${renderDailyMissionSection()}</section>`;
-}
-
-function bindDailyQuestControls() {
-  const dailyMissionsList = modalBody?.querySelector("#dailyMissionsList");
-  if (!dailyMissionsList) return;
-  dailyMissionsList.addEventListener("click", handleDailyMissionListClick);
-  dailyMissionsList.addEventListener("keydown", event => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    if (event.target.closest("button")) return;
-    const row = event.target.closest("[data-daily-mission-row]");
-    if (!row) return;
-    event.preventDefault();
-    showDailyMissionDetails(row.dataset.dailyMissionRow);
-  });
-}
-
 function renderDailyLoginRewardModal(options = {}) {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
   modal.classList.toggle("daily-cycle-modal", activeDailyRewardModalTab === "rewards");
@@ -35616,6 +35582,7 @@ function renderDailyLoginRewardModal(options = {}) {
     return;
   }
   if (activeDailyRewardModalTab === "achievements") {
+    if (!ensureModalUiScripts("achievements", () => renderDailyLoginRewardModal(options))) return;
     if (window.CrownlandsAchievementsUI) {
       window.CrownlandsAchievementsUI.mount(modalBody, {
         status: seasonalAchievementState, loading: seasonalAchievementStatusLoading, error: seasonalAchievementError,
@@ -35669,6 +35636,7 @@ function renderDailyLoginRewardModal(options = {}) {
   const dailyBaseRates = usesServerEconomyAuthority() && hasUsableGlobalStats(dailyGlobalStats)
     ? { goldPerHour: dailyGlobalStats.baseGoldPerHour, troopsPerHour: dailyGlobalStats.baseTroopPerHour }
     : getHarvestBonusBaseRates();
+  if (!ensureModalUiScripts("daily-login", () => renderDailyLoginRewardModal(options))) return;
   window.CrownlandsDailyLoginUI.mount(modalBody, {
     status, rates: dailyBaseRates, busy: dailyLoginRewardClaimInFlight,
     error: dailyLoginRewardError, hasCity: Number(dailyGlobalStats?.cityCount) > 0 || playerRegularCities().length > 0,
@@ -35906,34 +35874,6 @@ function getRewardedAdAvailability(status = rewardedAdStatus) {
   }
   if (!status.eligible) return { canWatch: false, text: "Ad unavailable — retry" };
   return { canWatch: true, text: "Available now" };
-}
-
-function renderRewardedAdShopItem(item = {}) {
-  const status = rewardedAdStatus;
-  const availability = getRewardedAdAvailability(status);
-  const rewardAmount = Math.max(0, Math.floor(Number(status?.previewRewards?.[item.id]) || 0));
-  const claimedToday = Math.max(0, Math.floor(Number(status?.claimedToday) || 0));
-  const dailyLimit = Math.max(1, Math.floor(Number(status?.dailyLimit) || getRewardedAdClientConfig().dailyLimit));
-  return `
-    <article class="shop-item rewarded-ad-shop-item">
-      <div class="shop-item-image-placeholder has-image" aria-hidden="true">
-        <img class="shop-item-image" src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />
-      </div>
-      <div class="shop-item-copy rewarded-ad-shop-copy">
-        <strong>${escapeHtml(item.label)}</strong>
-        <span>${escapeHtml(item.description)}</span>
-        <small>${rewardAmount > 0 ? `Estimated reward: ${formatNumber(rewardAmount)} ${escapeHtml(item.rewardLabel)}` : "Exact reward calculated before the ad"}</small>
-        <small class="shop-item-purchase-limit">${formatNumber(claimedToday)}/${formatNumber(dailyLimit)} watched today (UTC)</small>
-        ${availability.text ? `<small class="rewarded-ad-availability">${escapeHtml(availability.text)}</small>` : ""}
-      </div>
-      <button
-        class="shop-buy-btn rewarded-ad-watch-btn"
-        data-rewarded-ad-watch="${escapeHtml(item.id)}"
-        type="button"
-        ${availability.canWatch ? "" : "disabled"}
-      >Watch Advertisement</button>
-    </article>
-  `;
 }
 
 function startRewardedAdShopCountdown() {
@@ -36278,17 +36218,6 @@ function renderItemIcon(item, imageClass = "") {
     return `<img${classAttr} src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />`;
   }
   return `<span>${escapeHtml(label.slice(0, 1))}</span>`;
-}
-
-function renderShopItem(item, selectedItemId = "") {
-  const selected = selectedItemId === item.id;
-  return `
-    <button class="shop-item ${selected ? "selected" : ""}" data-shop-item="${escapeHtml(item.id)}" data-shop-select="${escapeHtml(item.id)}" type="button" role="option" aria-label="${escapeHtml(item.label)}" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
-      <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
-        ${renderItemIcon(item, "shop-item-image")}
-      </div>
-    </button>
-  `;
 }
 
 function getShopShortDescription(itemId = "") {
@@ -36973,40 +36902,6 @@ function clearSelection(shouldRender = true) {
   regroupSourceId = null;
   sendMode = false;
   if (shouldRender) renderAll();
-}
-
-function recruit(cityId) {
-  const city = cityById(cityId);
-  const cost = getRecruitCost(city);
-  if (!city) return;
-  if (state.gold < cost) {
-    rejectGameAction(`Recruiting at ${city.name} costs ${formatNumber(cost)} gold.`);
-    return;
-  }
-  state.gold -= cost;
-  const amount = getRecruitAmount(city);
-  city.troopFloat += amount;
-  city.troops = Math.floor(city.troopFloat);
-  markOwnedCityChanged(city);
-  playGoldSpendSound(cost);
-  addLog(`Recruited ${formatNumber(amount)} troops at ${city.name}.`);
-  showToast(`Recruited at ${city.name}`);
-  saveGame();
-  renderAll();
-}
-
-function fortifyCity(cityId) {
-  const city = cityById(cityId);
-  if (!city) return;
-  showToast("City levels strengthen walls. Soldier defense comes from the 1.30 base, Shieldwall Discipline, Gatehouse gear, and objective support.");
-}
-
-function getRecruitAmount(city) {
-  return Math.max(20, Math.floor(getCityStats(city).troopProductionPerHour / 2));
-}
-
-function getRecruitCost(city) {
-  return Math.floor(25 + getCityStats(city).level * 5);
 }
 
 function getCityUpgradeTargetHours(currentLevel) {
@@ -39928,6 +39823,12 @@ async function showBattleReportDetail(reportId) {
   modal.dataset.battleReportDetailId = report.id;
   modal.className = "modal battle-report-modal";
   modalTitle.textContent = "Report Details";
+  if (report.type !== "scout" && !ensureModalUiScripts("battle-report", () => {
+    if (modal.dataset.battleReportDetailId === report.id) void showBattleReportDetail(report.id);
+  })) {
+    if (!modal.open) modal.showModal();
+    return;
+  }
   modalBody.innerHTML = report.type === "scout"
     ? renderScoutAttemptReportDetail(report, badge)
     : !report.battleId
@@ -40273,6 +40174,14 @@ function ensureModalUiStyle(name, render) {
   const scope = getOnlineRequestScope();
   const view = modal.className;
   return ensureOptionalUiStyle(name, modalBody, () => {
+    if (modal.open && modal.className === view && scope === getOnlineRequestScope()) render();
+  });
+}
+
+function ensureModalUiScripts(name, render) {
+  const scope = getOnlineRequestScope();
+  const view = modal.className;
+  return ensureOptionalUiScripts(name, modalBody, () => {
     if (modal.open && modal.className === view && scope === getOnlineRequestScope()) render();
   });
 }

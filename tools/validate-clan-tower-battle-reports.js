@@ -125,7 +125,8 @@ for (const rarity of G.RARITIES) for (let level = 1; level <= 5; level++) {
   const percent = G.getBonuses(profile).defenderStrength;
   assert.equal(defense.contributions[0].gearDefenderStrengthPercent, percent, "Tower ignored its equipped shield");
   assert.equal(defense.totalGarrisonDefense, Math.floor(13000 * (1 + (100 + percent) / 100)));
-  assert.equal(defense.contributions[0].fieldMedicsPercent, Math.min(90, 65 + G.getBonuses(profile).casualtyEfficiency));
+  assert.equal(defense.contributions[0].fieldMedicsPercent, Math.min(90, 50 + G.getBonuses(profile).casualtyEfficiency));
+  assert.equal(defense.contributions[0].clanInfirmaryPercent, 0);
 }
 const stale = context.createHoldingTowerDefensePackages(tower, [garrison], 123,
   new Map([["defender", { ...equippedProfile(), resetGeneration: "other" }]]));

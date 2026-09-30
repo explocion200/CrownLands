@@ -13,7 +13,8 @@
     const active = project?.buildingId === def.id;
     const paused = active && (!project.progressStartedAtMs || tower.attackBlocked || tower.wallIntegrityBps < 10000);
     const end = active && !paused ? project.progressStartedAtMs + project.remainingMs : 0;
-    const reason = !own ? "Only the controlling clan can manage these buildings."
+    const reason = B.mechanicsPending(def.id) ? "New mechanics are being designed. Upgrades are paused."
+      : !own ? "Only the controlling clan can manage these buildings."
       : !manager ? "The Clan Leader and Officers manage construction."
       : current >= 10 ? "Maximum level reached."
       : project ? active ? paused ? "Construction paused until the walls are fully repaired and no attack is incoming." : "Construction in progress." : "Another building project is already underway."
@@ -57,5 +58,61 @@
       <footer class="upgrade-footer"><dl id="upgradeFacts"></dl><button id="${upgradeId}" class="primary" type="button" aria-describedby="upgradeNote"></button><p id="upgradeNote" role="status"></p></footer>
     </div>`;
   }
-  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render, frame });
+  function mountPendingMechanics(host, tower, id, options = {}) {
+    host._clanTowerClockCleanup?.();
+    const view = options.view || {}, level = B.level(tower.buildings?.[id]), def = B.definition(id);
+    const scroll = Object.fromEntries(["#overviewPanel", "#levelsPanel", ".building-panel"].map(s => [s, host.querySelector(s)?.scrollTop || 0]));
+    const focused = host.contains(document.activeElement) ? document.activeElement?.id : "";
+    const closeId = id === "infirmary" ? "closeInfirmary" : "closeTraining";
+    host.innerHTML = frame(tower, id, {closeId, icon: `assets/icons/skills/${id === "infirmary" ? "fieldMedics" : "swordmastery"}.svg`});
+    const $ = selector => host.querySelector(selector);
+    $("#balance").textContent = options.treasuryBalance == null ? "Unavailable" : num(options.treasuryBalance);
+    $("#buildingLevel").textContent = level ? `${def.name} Level ${level}` : `${def.name} unbuilt`;
+    $("#levelTrack").innerHTML = Array.from({length: 10}, (_, i) => `<span class="${i < level ? "reached" : ""}"></span>`).join("");
+    $("#levelTrack").setAttribute("aria-label", `Level ${level} of 10`);
+    $("#buildingCaption").textContent = "Your completed levels are preserved.";
+    $(".building-note").textContent = "New mechanics are being designed. New upgrades are paused.";
+    const project = tower.buildingProject;
+    $("#overviewPanel").innerHTML = `<h2 class="section-heading">Mechanics being redesigned</h2><p class="section-intro">${esc(def.name)} keeps its completed levels while its new role is designed.</p><div class="benefit-comparison"><article class="benefit-card"><small>Saved progress</small><strong id="currentBenefit">${level} / 10</strong><p>completed levels</p><span class="gain">Progress preserved</span></article><span class="comparison-arrow" aria-hidden="true">◆</span><article class="benefit-card next"><small>Current combat bonus</small><strong id="nextBenefit">+0%</strong><p>${id === "infirmary" ? "casualty recovery" : "rally attack strength"}</p><span class="gain">Previous bonus retired</span></article></div><div class="benefit-explanation"><article><img src="assets/icons/skills/fieldMedics.svg" alt=""><div><h3>Skills and equipment</h3><p>Recovery comes from Field Medics and equipped gear, up to 90%.</p></div></article><article><img src="assets/icons/skills/swordmastery.svg" alt=""><div><h3>Armies already launched</h3><p>Existing marches keep the attack bonuses saved at departure.</p></div></article></div>${project ? `<section class="project-card"><div class="project-heading"><h3>Previously paid construction</h3><span class="state-badge">${esc(B.definition(project.buildingId)?.name)}</span></div><p>Paid work can finish under the existing construction rules. New upgrades are paused.</p><div class="project-stats"><span>Level ${num(project.targetLevel)}</span><strong data-project-time></strong></div></section>` : ""}`;
+    $("#levelsPanel").innerHTML = `<h2 class="section-heading">${esc(def.name)} levels</h2><p class="section-intro">Completed levels stay saved. These are the original construction costs and times.</p><table class="levels-table"><thead><tr><th>Level</th><th>Status</th><th>Treasury Gold</th><th>Build time</th></tr></thead><tbody>${Array.from({length: 10}, (_, i) => `<tr class="${i + 1 === level ? "current" : ""}"><td>${i + 1}</td><td>${i < level ? "Completed" : "Not built"}</td><td>${num(B.cost(i + 1))}</td><td>${duration(B.duration(i + 1))}</td></tr>`).join("")}</tbody></table>`;
+    $("#upgradeFacts").innerHTML = `<div><dt>Saved level</dt><dd id="upgradeCost">${level} / 10</dd></div><div><dt>Combat bonus</dt><dd>+0%</dd></div>`;
+    $("#upgrade").disabled = true;
+    $("#upgrade").textContent = "Upgrades paused";
+    $("#upgradeNote").textContent = "New mechanics are being designed. Your completed levels are preserved.";
+    function section(selected) {
+      view.section = selected === "levels" ? "levels" : "overview";
+      host.querySelectorAll("[data-section]").forEach(button => {
+        const active = button.dataset.section === view.section;
+        button.setAttribute("aria-selected", String(active)); button.tabIndex = active ? 0 : -1;
+      });
+      $("#overviewPanel").hidden = view.section !== "overview";
+      $("#levelsPanel").hidden = view.section !== "levels";
+    }
+    $("#" + closeId).addEventListener("click", () => options.onClose?.());
+    $(`[data-${id}-back]`).addEventListener("click", () => options.onBack?.());
+    $(`[data-${id}-building]`).addEventListener("change", event => options.onBuilding?.(event.target.value));
+    host.querySelectorAll("[data-section]").forEach(button => button.addEventListener("click", () => section(button.dataset.section)));
+    $(".clan-building-tabs").addEventListener("keydown", event => {
+      if (!event.target.closest("[data-section]") || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault(); section(event.key === "Home" ? "overview" : event.key === "End" ? "levels" : view.section === "overview" ? "levels" : "overview");
+      $("#tab-" + view.section).focus();
+    });
+    section(view.section);
+    for (const [selector, top] of Object.entries(scroll)) $(selector).scrollTop = top;
+    if (focused) host.querySelector("#" + CSS.escape(focused))?.focus({preventScroll: true});
+    const projectKey = project ? `${project.id}:${project.targetLevel}:${project.progressStartedAtMs}` : "";
+    function tick() {
+      if (!project) return;
+      const paused = !project.progressStartedAtMs || tower.attackBlocked || tower.wallIntegrityBps < 10000;
+      const remaining = paused ? project.remainingMs : Math.max(0, project.progressStartedAtMs + project.remainingMs - Date.now());
+      $("[data-project-time]").textContent = `${paused ? "Paused · " : ""}${remaining ? duration(remaining) + " remaining" : "Awaiting confirmation"}`;
+      if (!paused && !remaining && view.countdownRefreshKey !== projectKey) {view.countdownRefreshKey = projectKey; options.onCountdownComplete?.();}
+    }
+    tick();
+    const dialog = host.closest("dialog"), clock = project ? global.setInterval(tick, 1000) : 0;
+    const cleanup = () => {if (clock) global.clearInterval(clock); dialog?.removeEventListener("close", cleanup);};
+    host._clanTowerClockCleanup = cleanup; dialog?.addEventListener("close", cleanup, {once: true});
+    host.dataset[`${id}Ready`] = "true";
+  }
+  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render, frame, mountPendingMechanics });
 })(window);
