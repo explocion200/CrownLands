@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e0345789d37b3c4e4ea504619f5c2f1de10ce39f",
+  "baseCommit": "204c89c07c6c0b7560ee30d142835fdd345d0d98",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-lag-recovery.js", "tools/validate-login-realm-sequence.js"],
-      "tests": ["tools/validate-lag-recovery.js", "tools/validate-login-realm-sequence.js", "tools/validate-season-rewards-browser.js", "tools/test-season-rewards.js"],
-      "reason": "Season lookup failures must keep an automatic, dismissible reward panel in the login sequence after map readiness and before Daily Login and Welcome Back. Cover timeouts, synchronous and asynchronous failures, pending finalization, older unclaimed awards, confirmed non-winners, stale generations, duplicate callbacks and bounded panel retries. Existing lag recovery and season policy checks protect the shared timeout, login and reward dependencies. Server scoring, entitlements, persistence and claim transactions are unchanged."
+      "paths": ["game.js"],
+      "tests": ["tools/validate-rally-assembly.js", "tools/validate-rally-assembly-browser.js", "tools/validate-clan-rallies.js", "tools/validate-world-travel-network.js"],
+      "reason": "Keep the latest owned-city selection when Clan profile reads return, while preserving initial profile hydration and authoritative clan membership refresh. Cover the shared source selection, eligibility and route dependencies, rally creation/join controls, and no-substitution behavior for unavailable sources. Server rally authority, troop transactions, persistence and rules are unchanged, so no emulator suite is required for this client selection fix."
     },
     {
-      "paths": ["season-rewards-ui.js", "season-rewards-ui.css", "tools/validate-season-rewards-browser.js"],
-      "tests": ["tools/validate-season-rewards-browser.js", "functions/test/emulator-season-rewards.js"],
-      "reason": "Exercise the actual login sequence and reward dialog at 1366x820, 844x390 and 568x320. Verify automatic post-spawn opening, visible fixed Claim/Later controls, both dismissal paths without claiming, subsequent leaderboard claims, one submission per claim, gear refresh, receipts, pending/error views and stale response isolation. The existing season emulator suite verifies the unchanged claim dependency: exactly-once box awards, full inventory, concurrent/replayed claims and persistence across season resets."
+      "paths": ["tools/validate-rally-assembly-browser.js"],
+      "tests": ["tools/validate-rally-assembly-browser.js"],
+      "reason": "Exercise real Clan opening and a deferred profile refresh at 1440x900, 844x390 and 568x320. Verify that an older saved selection cannot replace the city selected before or during the request; both Clan and Activity show that city, use its troop limit, wait for confirmation, and submit its ID. Verify startup restoration, refreshed clan membership, and no fallback after missing, empty or lost city selections."
     }
   ]
 }
