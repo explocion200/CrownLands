@@ -260,20 +260,21 @@ async function main() {
       }
       for (const unavailable of ["unselected", "empty", "lost"]) {
         const before = await evaluate('joinRequests.length');
-        await evaluate(`(() => {
+        const result = await evaluate(`(async () => {
           if(modal.open)modal.close();closeProfileScreen({force:true});clearSelection(false);onlineClanRallies=[joinRally];
           selectCity(assemblyCity.id);
           if(${JSON.stringify(unavailable)}==='unselected')lastSelectedOwnedCityId='';
-          if(${JSON.stringify(unavailable)}==='empty')assemblyCity.troops=0;
+          if(${JSON.stringify(unavailable)}==='empty')assemblyCity.troops=assemblyCity.troopFloat=0;
           if(${JSON.stringify(unavailable)}==='lost')assemblyCity.owner='enemy';
-          window.pendingRallyProfileRefresh=refreshClanState({silent:true});resolveRallyProfile();
+          const refresh=refreshClanState({silent:true});resolveRallyProfile();await refresh;
+          // Keep the empty fixture and assertion in one turn, before production ticks.
+          beginJoinClanRallyContribution(joinRally);
+          return {open:modal.open,requests:joinRequests.length,message:toast.textContent};
         })()`);
-        await evaluate('pendingRallyProfileRefresh');
-        await evaluate('beginJoinClanRallyContribution(joinRally)');
-        assert.deepEqual(await evaluate('({open:modal.open,requests:joinRequests.length})'), {open:false,requests:before},
-          `A ${unavailable} selection must never fall back to the older saved city after refreshing`);
-        assert.match(await evaluate('toast.textContent'), /Select an owned city.*Join Rally/);
-        await evaluate('assemblyCity.owner="player";assemblyCity.troops=600');
+        assert.deepEqual({open:result.open,requests:result.requests}, {open:false,requests:before},
+          `An unavailable (${unavailable}) selection must never fall back to the older saved city after refreshing`);
+        assert.match(result.message, /Select an owned city.*Join Rally/);
+        await evaluate('assemblyCity.owner="player";assemblyCity.troops=assemblyCity.troopFloat=600');
       }
       console.log(`Rally creation, assembly, leadership/join controls and confirmed joins from both panels passed at ${width}x${height}.`);
     }
