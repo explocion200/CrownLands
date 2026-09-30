@@ -1,117 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5de3465e09c2886eb8ee09186138e4f0cf91d496",
+  "baseCommit": "f12191d9228660477c389dcdfcf1afb54790d5ae",
   "coverage": [
-    {
-      "paths": [
-        "clan-tower-buildings.js",
-        "functions/clan-tower-buildings.js",
-        "functions/clan-tower-construction.js",
-        "functions/index.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-clan-power-events.js"
-      ],
-      "tests": [
-        "tools/validate-runtime-audit-cleanup.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-reset-release.js",
-        "tools/validate-clans.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-skills.js",
-        "functions/test/emulator-clan-power-events.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-clan-tower-battle-reports.js"
-      ],
-      "reason": "Current stats and membership must be read atomically for clan power, with delayed/duplicate events, legitimate decreases and concurrent members covered by real Firestore transactions. Economy collection skips an already-completed legacy deletion while preserving migration, authoritative charges and concurrency. Training Grounds and Infirmary contribute zero to new launches/resolutions and reject new construction before payment; retain completed levels, paid projects, prior receipts and historical attack/report snapshots. Test the shared recovery helper across every gear combination, skill caps, siege and Tower battle attribution, plus realm/reset isolation."
-    },
-    {
-      "paths": [
-        "clan-tower-buildings-ui.js",
-        "help-handbook-content.js",
-        "infirmary-ui.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-infirmary-browser.js",
-        "tools/validate-training-grounds-browser.js",
-        "training-grounds-ui.js",
-        "tools/validate-clan-pending-mechanics-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-pending-mechanics-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-clan-tower-buildings.js"
-      ],
-      "reason": "Keep approved clan art, frames, building selection and level progress while replacing retired bonus claims and paid actions with accurate pending-mechanics content. Browser checks cover desktop and landscape sizes, shared frames, map taps, treasury updates, disabled spending, scroll/tab retention, keyboard navigation and authoritative completion of previously paid projects. Retired building test entry points delegate to the current shared browser coverage; help text must load through the optional loader."
-    },
-    {
-      "paths": [
-        "common-gear-ui.js",
-        "functions/package.json",
-        "game.js",
-        "index.html",
-        "optional-ui-styles.js",
-        "service-worker.js",
-        "tools/validate-clan-tower-reports-browser.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-daily-missions.js",
-        "tools/validate-deferred-ui-styles.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-shop-pricing.js",
-        "tools/validate-active-reward-ui.js",
-        "tools/validate-optional-ui-scripts-browser.js",
-        "tools/validate-runtime-audit-cleanup.js"
-      ],
-      "tests": [
-        "tools/validate-runtime-audit-cleanup.js",
-        "tools/validate-active-reward-ui.js",
-        "tools/validate-deferred-ui-styles.js",
-        "tools/validate-optional-ui-scripts-browser.js",
-        "tools/validate-runtime.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-performance-bottlenecks.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-treasury-gear-browser.js",
-        "tools/validate-shop-browser.js",
-        "tools/validate-clan-tower-reports-browser.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-daily-missions.js",
-        "tools/validate-rewarded-ads.js",
-        "tools/validate-shop-pricing.js"
-      ],
-      "reason": "Defer 17 screen scripts through existing modal/style entry points with declaration ordering, shared requests, bounded loading, retries and account/view ownership. Verify no deferred downloads at startup and actual Help, Bag, gear, rewards, Shop and report opening on desktop/mobile. Cache tests cover slow/offline/5xx recovery within the current build, background refresh and retained 403/404/API behavior. Remove only verified unused helpers and replace stale quest/Shop assertions with active rendering/action tests; include the new unit checks in the full regression command. Production build and asset budgets cover packaged URLs and core dependencies."
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the user-confirmed retirement of clan attack/recovery mechanics while preserving visuals and progress, reconcile obsolete 75% recovery guidance with the existing 90% skill/gear rule, and document ordering-safe clan totals. Mark the update as in development and not deployed; runtime behavior and cross-system dependencies are covered by the implementation groups."
-    },
-    {
-      "paths": [
-        "functions/pnpm-workspace.yaml",
-        "functions/pnpm-lock.yaml",
-        "tools/test-functions-dependencies.js"
-      ],
-      "tests": [
-        "tools/test-functions-dependencies.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-clan-power-events.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-clan-tower-battle-reports.js"
-      ],
-      "reason": "The required production audit found four advisories in existing transitive dependencies. Update fast-uri from 3.1.7 to 3.1.8 and each installed brace-expansion major to its compatible patch version (1.1.21, 2.1.7, 5.0.12). Preserve direct dependencies and unrelated lock entries. Exercise the real Functions Framework URI/schema/CloudEvent and Firestore glob dependency chains, encoded hostname normalization, deep brace handling, and server transactions through the selected emulator suites. The production audit remains mandatory."
+      "reason": "Documentation-only release evidence and channel status for the verified PR #406 deployment. No runtime, gameplay, dependency or configuration change. Cross-check build identity, live assets, browser results, backend source and required checks against saved deployment evidence."
     }
   ]
 }
