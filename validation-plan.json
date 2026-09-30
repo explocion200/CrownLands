@@ -96,6 +96,21 @@
       ],
       "tests": [],
       "reason": "Record the user-confirmed retirement of clan attack/recovery mechanics while preserving visuals and progress, reconcile obsolete 75% recovery guidance with the existing 90% skill/gear rule, and document ordering-safe clan totals. Mark the update as in development and not deployed; runtime behavior and cross-system dependencies are covered by the implementation groups."
+    },
+    {
+      "paths": [
+        "functions/pnpm-workspace.yaml",
+        "functions/pnpm-lock.yaml",
+        "tools/test-functions-dependencies.js"
+      ],
+      "tests": [
+        "tools/test-functions-dependencies.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-clan-power-events.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-clan-tower-battle-reports.js"
+      ],
+      "reason": "The required production audit found four advisories in existing transitive dependencies. Update fast-uri from 3.1.7 to 3.1.8 and each installed brace-expansion major to its compatible patch version (1.1.21, 2.1.7, 5.0.12). Preserve direct dependencies and unrelated lock entries. Exercise the real Functions Framework URI/schema/CloudEvent and Firestore glob dependency chains, encoded hostname normalization, deep brace handling, and server transactions through the selected emulator suites. The production audit remains mandatory."
     }
   ]
 }

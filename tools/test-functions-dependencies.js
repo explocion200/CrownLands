@@ -16,6 +16,19 @@ assert.equal(uri.parse(confusedHost).host, new URL(confusedHost).hostname, "Host
 assert.equal(uri.parse("http://[127.0.0.1/app").error, "URI host is malformed.");
 assert.equal(uri.parse("https://example.com:443/path").host, "example.com");
 assert.equal(uri.parse("http://[::1]:8080/path").error, undefined);
+assert.equal(uri.parse("//%41.com").host, "a.com", "Encoded hostnames must use the same case normalization as literal hosts.");
+assert.equal(uri.equal("//%41.com", "//a.com"), true);
+
+// Exercise the actual Firestore dependency path used by deployed functions.
+const adminRequire = createRequire(functionsRequire.resolve("firebase-admin/firestore"));
+const firestoreRequire = createRequire(adminRequire.resolve("@google-cloud/firestore"));
+const gaxRequire = createRequire(firestoreRequire.resolve("google-gax"));
+const rimrafRequire = createRequire(gaxRequire.resolve("rimraf"));
+const globRequire = createRequire(rimrafRequire.resolve("glob"));
+const minimatchRequire = createRequire(globRequire.resolve("minimatch"));
+const expand = minimatchRequire("brace-expansion");
+assert.deepEqual(expand("region-{a,b}-{1..2}"), ["region-a-1", "region-a-2", "region-b-1", "region-b-2"]);
+assert.doesNotThrow(() => expand("{".repeat(4000) + "a,b" + "}".repeat(4000)), "Deep patterns must not exhaust the server stack.");
 
 const Ajv = eventsRequire("ajv");
 const ajv = new Ajv();
