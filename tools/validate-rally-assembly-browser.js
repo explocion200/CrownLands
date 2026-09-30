@@ -166,12 +166,23 @@ async function main() {
           assemblyX:joinAssembly.x,assemblyY:joinAssembly.y,
           participants:[{uid:'rally-creator',ownerName:'Rally Creator',troops:300,status:'assembled',role:'leader'}]};
         onlineClanRallies=[joinRally];window.joinRequests=[];
-        const api=getOnlineApi();getOnlineApi=()=>({...api,joinClanRally:async request=>{
-          joinRequests.push(request);
-          return {ok:true,rally:{...joinRally,participants:[...joinRally.participants,
-            {uid:getCurrentOnlineUid(),ownerName:state.playerName,troops:request.army.troops,status:'inbound'}]}};
+        window.savedSourceCity=playerCities().find(city=>city.id!==assemblyCity.id);
+        window.savedRallyProfile={...getPlayerProfileSnapshot(),uid:getCurrentOnlineUid(),
+          clanId:state.clanId,clanName:clanSnapshot.name,clanTag:clanSnapshot.tag,clanRole:'leader',
+          lastSelectedOwnedCityId:savedSourceCity.id};
+        const api=getOnlineApi();getOnlineApi=()=>({...api,
+          loadPlayerProfile:()=>new Promise(resolve=>{window.resolveRallyProfile=()=>resolve(savedRallyProfile);}),
+          loadClan:async()=>clanSnapshot,loadClanMembers:async()=>[],loadClanApplications:async()=>[],
+          joinClanRally:async request=>{
+            joinRequests.push(request);
+            return {ok:true,rally:{...joinRally,participants:[...joinRally.participants,
+              {uid:getCurrentOnlineUid(),ownerName:state.playerName,troops:request.army.troops,status:'inbound'}]}};
         }});
       })()`);
+      assert(await evaluate(`(() => {
+        lastSelectedOwnedCityId='';applyOnlineProfileSnapshot(savedRallyProfile);
+        return lastSelectedOwnedCityId===savedSourceCity.id;
+      })()`), "Initial profile hydration must still restore the saved city selection");
       // The same membership and authority rules must hold on both entry points.
       assert(await evaluate(`(() => {
         for(const activity of [false,true]) {
@@ -203,14 +214,24 @@ async function main() {
       for (const entry of ["clan", "activity"]) {
         await evaluate(`(() => {
           if(modal.open)modal.close();clearSelection(false);onlineClanRallies=[joinRally];
-          selectCity(assemblyCity.id);selectCity(joinAssembly.id);
-          state.clanRole='leader';
+          window.resolveRallyProfile=null;
+          state.clanRole='member';
           if(${JSON.stringify(entry)}==='clan') {
-            activeProfileTab='clan';clanView.hidden=false;profileScreen.classList.add('open','clan-active');
-            profileScreen.setAttribute('aria-hidden','false');updateProfileTabHeader();renderClanView();
-            setClanMobileSection('warroom');
-          } else {closeProfileScreen({force:true});activeOperationsTab='rallies';showOutgoingAttacksModal();}
+            selectCity(assemblyCity.id);selectCity(joinAssembly.id);showClanHub();
+          } else {
+            closeProfileScreen({force:true});selectCity(savedSourceCity.id);
+            window.pendingRallyProfileRefresh=refreshClanState({silent:true});
+            // A new map selection while the profile request is pending also wins.
+            selectCity(assemblyCity.id);selectCity(joinAssembly.id);
+          }
         })()`);
+        await ready('clanUiLoading && typeof resolveRallyProfile === "function"');
+        await evaluate('resolveRallyProfile()');
+        await ready('!clanUiLoading');
+        assert.equal(await evaluate('lastSelectedOwnedCityId'), fixture.cityId,
+          "Refreshing the Clan profile must preserve the latest session selection, including selections made during the request");
+        assert.equal(await evaluate('state.clanRole'), 'leader', "Clan membership must still refresh from the profile");
+        await evaluate(`${JSON.stringify(entry)}==='clan' ? setClanMobileSection('warroom') : (activeOperationsTab='rallies',showOutgoingAttacksModal())`);
         const root = entry === "clan" ? "clanContent" : "modalBody";
         await ready(`${root}.querySelector('[data-rally-action=join]')?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
         assert.match(await evaluate(`${root}.textContent`), /From Alderwatch. Choose how many troops to send/);
@@ -236,6 +257,23 @@ async function main() {
         await ready(`joinRequests.length === ${before + 1} && !rallyActionRequests.has('join:'+joinRally.id)`);
         assert.deepEqual(await evaluate('({source:joinRequests.at(-1).army.fromId,target:joinRequests.at(-1).army.toId,troops:joinRequests.at(-1).army.troops,rally:joinRequests.at(-1).rallyId})'),
           {source:fixture.cityId,target:await evaluate('joinAssembly.id'),troops:137,rally:'join-rally'});
+      }
+      for (const unavailable of ["unselected", "empty", "lost"]) {
+        const before = await evaluate('joinRequests.length');
+        await evaluate(`(() => {
+          if(modal.open)modal.close();closeProfileScreen({force:true});clearSelection(false);onlineClanRallies=[joinRally];
+          selectCity(assemblyCity.id);
+          if(${JSON.stringify(unavailable)}==='unselected')lastSelectedOwnedCityId='';
+          if(${JSON.stringify(unavailable)}==='empty')assemblyCity.troops=0;
+          if(${JSON.stringify(unavailable)}==='lost')assemblyCity.owner='enemy';
+          window.pendingRallyProfileRefresh=refreshClanState({silent:true});resolveRallyProfile();
+        })()`);
+        await evaluate('pendingRallyProfileRefresh');
+        await evaluate('beginJoinClanRallyContribution(joinRally)');
+        assert.deepEqual(await evaluate('({open:modal.open,requests:joinRequests.length})'), {open:false,requests:before},
+          `A ${unavailable} selection must never fall back to the older saved city after refreshing`);
+        assert.match(await evaluate('toast.textContent'), /Select an owned city.*Join Rally/);
+        await evaluate('assemblyCity.owner="player";assemblyCity.troops=600');
       }
       console.log(`Rally creation, assembly, leadership/join controls and confirmed joins from both panels passed at ${width}x${height}.`);
     }

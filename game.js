@@ -13351,7 +13351,7 @@ function mergeOnlineBattleReports(profileReports = []) {
   ]);
 }
 
-function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
+function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky", { preserveCitySelection = false } = {}) {
   if (!state || !profile || typeof profile !== "object") return;
   if (profile.uid && profile.uid !== getCurrentOnlineUid()) return;
   const identityRevision = Math.max(0, Math.floor(Number(profile.identityRevision) || 0));
@@ -13406,7 +13406,9 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.lastRealmAnnouncementEventId = String(profile.lastRealmAnnouncementEventId || "").slice(0, 180);
   state.marchPercent = normalizeMarchPercent(profile.marchPercent);
   selectedMarchPercent = state.marchPercent;
-  lastSelectedOwnedCityId = getKnownCityId(profile.lastSelectedOwnedCityId) || lastSelectedOwnedCityId;
+  if (!preserveCitySelection) {
+    lastSelectedOwnedCityId = getKnownCityId(profile.lastSelectedOwnedCityId) || lastSelectedOwnedCityId;
+  }
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
   state.lastCityRelinquishedAtMs = normalizeTimestampMs(profile.lastCityRelinquishedAtMs);
   state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(profile.gameSeconds) || Number(state.gameSeconds) || 0);
@@ -25803,7 +25805,8 @@ async function refreshClanState(options = {}) {
   try {
     const profile = options.skipProfileLoad ? null : await api.loadPlayerProfile?.();
     if (state !== requestedState || getCurrentOnlineUid() !== requestedUid) return;
-    if (profile) applyOnlineProfileSnapshot(profile, state?.playerName || "Ruler");
+    // A saved profile can lag behind map selections, including clicks made during this request.
+    if (profile) applyOnlineProfileSnapshot(profile, state?.playerName || "Ruler", { preserveCitySelection: true });
     if (state?.clanId) {
       const subscriptionsStarted = startClanRealtimeSubscriptions(api, state.clanId);
       if (!subscriptionsStarted) {
