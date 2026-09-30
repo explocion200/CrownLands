@@ -1,116 +1,82 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "28e6aa2b62e68951a00548ca13d09df73651e987",
+  "baseCommit": "417376561e9a485700bb8f5f8e771a83a2849158",
   "coverage": [
-    {
-      "tests": [
-        "tools/validate-skills.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-soldier-defense.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "functions/test/emulator-skill-presets.js",
-        "functions/test/emulator-skill-point-system-reset.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-rally-assembly.js",
-        "functions/test/emulator-rally-rules.js",
-        "functions/test/emulator-rally-lifecycle.js"
-      ],
-      "paths": [
-        "game.js",
-        "functions/index.js",
-        "economy-config.js",
-        "functions/economy-config.json",
-        "tools/validate-skills.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-soldier-defense.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "functions/test/emulator-skill-presets.js",
-        "functions/test/emulator-world-travel.js"
-      ],
-      "reason": "Verify all eight increased skill caps and per-point rates, client/server parity, one-point upgrades/refunds through each cap, exact 99% to 100% final increments, point-budget and concurrent-spend enforcement, version-5 preset repricing with preserved allocations/metadata, idempotent surcharge refunds, existing version-2 build preservation and the historical reset path. Exercise changed movement through authoritative army orders and defense/gear battle reports. Check all eight cap controls and saved drafts at desktop and two landscape-mobile sizes. Gear caps now allow +200% attack/defense/walls, +200% army speed, +250% scout speed and 90% recovery. Verify additive movement at every route/launch path, rally snapshot and slowest-participant behavior, per-army defense clipping, maximum Legendary effects, and immediate authoritative scout progression through Legendary 5."
-    },
-    {
-      "tests": [
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-skill-presets.js"
-      ],
-      "paths": [
-        "release-config.js",
-        "functions/release-config.json"
-      ],
-      "reason": "Verify matching client/server release identity and API contract for the active monthly realm, and reject the prior client before an authoritative skill purchase. World topology, reset generations and inactive compatibility records are unchanged."
-    },
-    {
-      "tests": [
-        "tools/validate-public-site-content.js",
-        "tools/validate-battle-economy-guide.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-skill-point-efficiency-browser.js"
-      ],
-      "paths": [
-        "game-rules.html",
-        "how-to-play.html",
-        "skills-presets-guide.html",
-        "tools/validate-battle-economy-guide.js",
-        "battle-guide-calculations.js",
-        "battle-economy-guide.html",
-        "battle-economy-guide.js"
-      ],
-      "reason": "Verify published skill rates/caps and maximum levels, the final clipped skill increment, maximum-build production/walls/attack, and the calculator defense cap matching authoritative combat. Public guide structure and source wording remain consistent with the skill UI. Check updated calculator slider limits and displayed applied defense at desktop and landscape-mobile sizes."
-    },
-    {
-      "tests": [],
-      "paths": [
-        "README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Document the confirmed per-point rates, uniform costs, increased skill caps and retained build/preset allocations. State exact maximum point requirements and distinguish pending deployment from audited live behavior."
-    },
     {
       "paths": [
         "common-gear.js",
         "functions/common-gear.js",
-        "common-gear-ui.js",
-        "docs/gear-rarity-progression/model.js",
-        "docs/gear-rarity-progression/proposal.json",
-        "docs/gear-rarity-progression/CALCULATED_REVIEW.md",
-        "docs/gear-rarity-progression/README.md",
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-gear-progression-proposal.js",
-        "tools/validate-barracks-gear-browser.js"
+        "tools/validate-gear-bonus-gameplay.js"
       ],
       "tests": [
         "tools/validate-common-gear.js",
         "tools/validate-gear-rarities.js",
         "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-gear-progression-proposal.js",
-        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-stackable-timed-items.js",
+        "tools/validate-swift-march-order.js",
         "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-battle-report-gear-effects.js"
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-scouting-veil.js",
+        "functions/test/emulator-peace-shield-returns.js"
       ],
-      "reason": "Verify all 800 per-item values, strict growth at every level/promotion, Legendary-5-only maxima, distinct Ledger and heavy wall-armor curves, independent full-loadout budgets, Common preservation and client/server parity. Exercise authoritative upgrades/equipment changes, quote/replay safety, equipped-only bonuses and battle effects. Inspect all four officer screens, promotion previews, each maximum slot and cap disclosure at desktop and landscape-mobile sizes. Regenerate and validate the numerical review; production caps remain deferred."
+      "reason": "Audit all 160 gear definitions at all five levels through equipped-only aggregation, source snapshots and client/server production, army/scout travel, attack, soldier defense, walls, repair and recovery calculations. Preserve saved bonus values across later equipment/balance changes. Exercise authoritative equip/upgrade transactions and item consumption, timed production boosts, Swift March, Veil and Peace Shield scopes."
     },
     {
       "paths": [
-        "clan-tower-buildings.js",
-        "functions/clan-tower-buildings.js",
-        "infirmary-ui.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-infirmary-browser.js",
-        "battle-report-detail-ui.js",
-        "tools/validate-battle-report-detail.js"
+        "functions/index.js",
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "tools/validate-clan-objective-battles.js",
+        "tools/validate-clan-tower-battle-reports.js",
+        "tools/validate-report-system.js"
       ],
       "tests": [
+        "tools/validate-report-system.js",
+        "tools/validate-clan-tower-battle-reports.js",
+        "tools/validate-clan-objective-battles.js",
         "tools/validate-clan-tower-buildings.js",
-        "tools/validate-infirmary-browser.js",
-        "tools/validate-battle-report-detail.js",
-        "functions/test/emulator-clan-tower-battle-reports.js"
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-citadel-assaults.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-combat-forecast.js",
+        "tools/test-pvp-leaderboard.js",
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-report-delivery-rules.js",
+        "functions/test/emulator-pvp-leaderboard.js"
       ],
-      "reason": "Recovery ceiling changes require matching Infirmary and battle-report descriptions. Verify 90% capped example arithmetic and state preservation after refresh at desktop and landscape-mobile sizes, casualty attribution and existing Tower battle behavior. Clan building bonus amounts and replacement mechanics remain outside this gear revision."
+      "reason": "Fix Tower garrison shields reading the wrong bonus field and enforce the existing defense cap. Verify launch-time attack identities, resolution-time defense/recovery identities, complete individual contributions for both sides, mixed and capped rallies, shared city shields, all wall armor and repair seals, receipt settlement, zero-loss and neutral defenders, privacy and retry safety. Retain full details in canonical reports while compacting 120-entry profile summaries. Exercise affected combat, Citadel wall bypass, reinforcement, forecast and PvP attribution dependencies. Confirm the Tower test process exits after its assertions so the emulator gate can continue."
+    },
+    {
+      "paths": [
+        "common-gear-ui.js",
+        "battle-report-detail-ui.js",
+        "game.js",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-battle-items-browser.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js",
+        "tools/validate-battle-items-browser.js",
+        "tools/validate-military-ui.js"
+      ],
+      "reason": "Verify saved item names, actual art, rarity, level, owner, applied power and capped recovery/repair on attacker and defender sides. Preserve viewer-first order, legacy aggregate reports, unknown item identities and HTML escaping. Render city and Tower reports from both perspectives at desktop and two landscape-mobile sizes, check every image, scrolling, viewport bounds and runtime errors."
+    },
+    {
+      "paths": ["tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "The individual item model and report rows add 4,209 client source bytes with existing art. Bound that feature to 8 KiB including build metadata; verify production packaging with full commit IDs as used in CI, while retaining the per-file, offline-shell and combined artifact limits."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the explicitly requested individual battle item display, battle-time snapshot rules, existing effect scopes and pending deployment status. No new balance values or bonus caps are introduced."
     }
   ]
 }

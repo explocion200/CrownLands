@@ -35,6 +35,41 @@ function functionBody(source, name) {
   return source.slice(start, nextFunction === -1 ? source.length : nextFunction);
 }
 
+// Keep complete item details in canonical reports without growing the player's
+// 120-report fallback by every participant's gear roster.
+const reportWrites = new Map();
+const storageContext = {
+  db: { doc: value => value },
+  safeString: value => String(value || ""),
+  timestampToMs: value => Number(value) || 0,
+  isSuccessfulScoutIntelReport: () => false,
+  getBattleReportsArray: profile => profile.battleReports.slice(-119),
+  reportRef: (uid, id) => `reports/${uid}/${id}`,
+  getCurrentRealmShardId: () => "test-shard",
+  FieldValue: { serverTimestamp: () => 123 },
+};
+vm.createContext(storageContext);
+vm.runInContext(functionBody(server, "writeReport"), storageContext);
+const storedRecovery = { gearPercent: 40, items: [{ gearKey: "saved-medallion" }] };
+const completeReport = { id: "latest", occurredAtMs: 123, casualtyRecovery: storedRecovery,
+  gearEffects: { attacker: { items: Array.from({ length: 100 }, (_, i) => ({ gearKey: `saved-sword-${i}` })),
+    attackStrength: { bonusPower: 1234 }, casualtyRecovery: storedRecovery }, defender: { items: [] } } };
+const reportProfile = { battleReports: Array.from({ length: 120 }, (_, i) => ({ ...completeReport, id: `prior-${i}` })) };
+storageContext.writeReport({ set: (ref, data) => reportWrites.set(ref, data) }, "ruler", completeReport,
+  { exists: true, data: () => reportProfile });
+const storedSummary = reportWrites.get("players/ruler").battleReports;
+assert.equal(storedSummary.length, 120);
+for (const summary of storedSummary) {
+  assert.equal(summary.gearEffects.attacker.items, undefined);
+  assert.equal(summary.gearEffects.defender.items, undefined);
+  assert.equal(summary.casualtyRecovery.items, undefined);
+  assert.equal(summary.gearEffects.attacker.casualtyRecovery.items, undefined);
+  assert.equal(summary.gearEffects.attacker.attackStrength.bonusPower, 1234);
+}
+assert.equal(reportWrites.get("reports/ruler/latest").gearEffects.attacker.items.length, 100);
+assert.equal(completeReport.gearEffects.attacker.items.length, 100, "Profile compaction mutated the detailed report.");
+assert.equal(reportProfile.battleReports[0].gearEffects.attacker.items.length, 100, "Profile compaction mutated the input snapshot.");
+
 assert.match(server, /occurredAtMs:\s*nowMs,[\s\S]*?createdAtMs:\s*nowMs/, "Server reports lack an authoritative occurrence timestamp.");
 assert.match(server, /exports\.markReportsViewed\s*=\s*onCall[\s\S]*?reportsViewedAtMs[\s\S]*?Math\.min\(nowMs/, "The server read marker is missing or not bounded by server time.");
 assert.match(api, /async function markReportsViewed[\s\S]*?callServerFunction\("markReportsViewed"/, "The report read marker is not exposed by the Firebase client.");
@@ -213,9 +248,9 @@ assert.match(detailedSnapshotServer, /attackerParticipants:\s*rallyAttackers\.le
 assert.match(server, /fieldMedicsSkillPercent:[\s\S]*?casualtyGearPercent:/, "Battle casualty receipts do not separate Field Medics from Barracks casualty gear.");
 assert.ok((server.match(/gearEffects:\s*battleGearEffects/g) || []).length >= 9, "Attack and defense report fallbacks do not retain authoritative gear effects.");
 const getBattleAttackerBasePower = new Function(
-  "safeNumber",
+  "safeNumber", "COMMON_GEAR",
   `${functionBody(server, "getBattleAttackerBasePower")}; return getBattleAttackerBasePower;`
-)((value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback);
+)((value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback, require("../common-gear.js"));
 assert.equal(
   getBattleAttackerBasePower({ troops: 100, effectivePower: 200, bonusPercent: 60, attackPowerPerTroop: 2 }),
   125,
@@ -236,7 +271,8 @@ assert.match(functionBody(client, "getLegacyBattleSides"), /applyRecordedGearEff
 const serverGearSandbox = {
   Math,
   Number,
-  COMMON_GEAR: { CASUALTY_RECOVERY_CAP_PERCENT: 90 },
+  COMMON_GEAR: require("../common-gear.js"),
+  normalizePlayerName: (value, fallback) => value || fallback,
   safeNumber(value, fallback = 0) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
@@ -255,6 +291,7 @@ vm.createContext(serverGearSandbox);
 [
   "createBattleCasualtyRecoverySnapshot",
   "createBattlePowerGearEffect",
+  "createBattleGearItemEffects",
   "createBattleGearEffectsSnapshot",
 ].forEach(name => vm.runInContext(`${functionBody(server, name)}; this.${name} = ${name};`, serverGearSandbox));
 const casualtySnapshot = serverGearSandbox.createBattleCasualtyRecoverySnapshot({
@@ -297,6 +334,7 @@ assert.equal(gearEffectsSnapshot.defender.wallStrength.bonusPower, 9, "Wall gear
 assert.equal(JSON.stringify(authoritativeBreakdowns), authoritativeBreakdownsBefore, "Report attribution mutated authoritative battle totals.");
 
 const gearRenderSandbox = {
+  COMMON_GEAR: require("../common-gear.js"),
   Math,
   Number,
   escapeHtml(value) { return String(value ?? ""); },

@@ -46,13 +46,15 @@
   }
   function bonusCard(side,entries,gear=false) {
     const title=side.role === "attacker" ? gear ? "Attacker Gear" : "Attack bonuses" : gear ? "Defender Gear" : "Defense bonuses";
-    return `<article class="detail-card"><h4>${title}</h4>${entries.length ? entries.map(entry=>{const icon=bonusIcon(entry,side,gear);return `<div class="bonus-row">${art(icon,`bonus-art${icon.endsWith("Gear") ? " item" : ""}`)}<div class="bonus-copy"><strong>${esc(entry.label)}</strong>${entry.help ? `<small>${esc(entry.help)}</small>` : ""}</div><span class="bonus-value">${esc(entry.value)}</span></div>`;}).join("") : '<p class="no-bonus">No additional combat bonuses</p>'}</article>`;
+    return `<article class="detail-card" data-bonus-side="${side.role}"><h4>${title}</h4>${entries.length ? entries.map(entry=>{const icon=bonusIcon(entry,side,gear);return `<div class="bonus-row"${entry.gearKey ? ` data-gear-key="${esc(entry.gearKey)}"` : ""}>${entry.art ? `<img class="bonus-art item" src="${esc(entry.art)}" alt="" decoding="async">` : art(icon,`bonus-art${icon.endsWith("Gear") ? " item" : ""}`)}<div class="bonus-copy"><strong>${esc(entry.label)}</strong>${entry.help ? `<small>${esc(entry.help)}</small>` : ""}</div><span class="bonus-value">${esc(entry.value)}</span></div>`;}).join("") : `<p class="no-bonus">${gear ? "No item bonuses applied" : "No additional combat bonuses"}</p>`}</article>`;
   }
   function bonuses(left,right) {
     return section("bonuses","Bonuses",`<div class="two-column">${[left,right].map(side=>bonusCard(side,getBattleSideBonusEntries(side))).join("")}</div>`,"realm");
   }
   function gearEffects({left,right,report,viewerRole}) {
-    const cards=[left,right].map(side=>{const entries=getBattleSideBonusEntries({...side,gearOnly:true,casualtyRecovery:side.casualtyRecovery || (viewerRole === side.role ? report.casualtyRecovery : null)});return entries.length ? bonusCard(side,entries,true) : "";}).filter(Boolean);
+    const sides=[left,right].map(side=>({side,entries:getBattleSideBonusEntries({...side,gearOnly:true,casualtyRecovery:side.casualtyRecovery || (viewerRole === side.role ? report.casualtyRecovery : null)})}));
+    const cards=sides.some(({side,entries})=>entries.length || Array.isArray(side.gearItems))
+      ? sides.map(({side,entries})=>bonusCard(side,entries,true)) : [];
     const recovery = report.casualtyRecovery;
     const clanRows = [];
     if (recovery?.clanInfirmaryPercent > 0) clanRows.push(metric("troops", "Clan Infirmary", `+${formatNumber(recovery.clanRecoveredTroops || 0)} recovered`, `+${recovery.clanInfirmaryPercent}% Tower defense recovery; ${recovery.combinedPercent}% combined (90% cap). Returned to your Main City.`));

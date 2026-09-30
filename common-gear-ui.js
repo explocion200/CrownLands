@@ -987,6 +987,7 @@ function normalizeBattleCasualtyRecovery(value = null) {
     skillLabel: String(value.skillLabel || "Field Medics").slice(0, 64),
     fieldMedicsPercent: Math.max(0, Number(value.fieldMedicsPercent) || 0),
     gearPercent,
+    items: COMMON_GEAR.normalizeBonusItems(value.items),
     appliedGearPercent,
     combinedPercent: Math.max(0, Number(value.combinedPercent) || 0),
     capPercent: Math.max(0, Number(value.capPercent) || 0),
@@ -1024,15 +1025,17 @@ function normalizeBattleGearEffects(value = null) {
   const attackerValue = value.attacker && typeof value.attacker === "object" ? value.attacker : {};
   const defenderValue = value.defender && typeof value.defender === "object" ? value.defender : {};
   const attacker = {
+    items: COMMON_GEAR.normalizeBattleItemEffects(attackerValue.items),
     attackStrength: normalizeBattlePowerGearEffect(attackerValue.attackStrength),
     casualtyRecovery: normalizeBattleCasualtyRecovery(attackerValue.casualtyRecovery),
   };
   const defender = {
+    items: COMMON_GEAR.normalizeBattleItemEffects(defenderValue.items),
     defenderStrength: normalizeBattlePowerGearEffect(defenderValue.defenderStrength),
     wallStrength: normalizeBattlePowerGearEffect(defenderValue.wallStrength),
     casualtyRecovery: normalizeBattleCasualtyRecovery(defenderValue.casualtyRecovery),
   };
-  return attacker.attackStrength || attacker.casualtyRecovery
+  return attacker.items || defender.items || attacker.attackStrength || attacker.casualtyRecovery
     || defender.defenderStrength || defender.wallStrength || defender.casualtyRecovery
     ? { attacker, defender }
     : null;
@@ -1052,6 +1055,7 @@ function applyRecordedGearEffectsToBattleSide(side = {}, gearEffects = null, rol
   const wallEffect = role === "defender" ? sideEffects.wallStrength : null;
   return {
     ...side,
+    gearItems: sideEffects.items,
     gearLabel: combatEffect?.sourceLabel || side.gearLabel,
     gearBonusPower: combatEffect?.bonusPower || 0,
     gearPercentText: formatBattleGearEffectPercent(combatEffect),
@@ -1063,6 +1067,24 @@ function applyRecordedGearEffectsToBattleSide(side = {}, gearEffects = null, rol
 
 function getBattleSideBonusEntries(side = {}) {
   if (side.gearOnly) {
+    if (Array.isArray(side.gearItems)) return side.gearItems.map(item => {
+      const percent = number => Number(number.toFixed(2));
+      const definition = COMMON_GEAR.getDefinition(item.gearKey);
+      const recovery = item.statType === "casualtyEfficiency";
+      const repair = item.statType === "wallRepairSpeed";
+      return {
+        icon: renderCrownlandsIcon(recovery ? "troops" : repair ? "city" : "shield"),
+        art: definition?.art || "", gearKey: item.gearKey,
+        label: item.gearName,
+        value: recovery ? `+${percent(item.appliedPercent)}% recovery`
+          : repair ? `−${percent(item.appliedPercent)}% repair time`
+            : `+${formatNumber(item.bonusPower)} ${item.statType === "wallStrength" ? "wall " : ""}power`,
+        help: [item.rarity ? `${item.rarity[0].toUpperCase()}${item.rarity.slice(1)} · Level ${item.level}` : "",
+          `${percent(item.bonusPercent)}% ${definition?.statLabel || "gear bonus"}`,
+          item.ownerName || "",
+          recovery ? "Recovery after cap · Main City" : repair ? "This battle’s new wall damage" : ""].filter(Boolean).join(" · "),
+      };
+    });
     const entries = [];
     if (side.gearBonusPower > 0) entries.push({ icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), label: side.gearLabel, value: `+${formatNumber(side.gearBonusPower)} power`, help: side.gearPercentText });
     if (side.wallGearPower > 0) entries.push({ icon: renderCrownlandsIcon("city"), label: "Gatehouse wall gear", value: `+${formatNumber(side.wallGearPower)} wall power`, help: `+${side.wallGearPercent}% · separate from Stoneworks` });
