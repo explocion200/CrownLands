@@ -246,4 +246,6 @@ async function main() {
   assert.equal(holdings.filter(doc=>doc.data().clanId===clanIds[0]).length,1);
   console.log("Concurrent Clan Tower victories: one capture, one non-capturing victory.");
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main()
+  .then(() => process.exit(0))
+  .catch(error => { console.error(error); process.exit(1); });

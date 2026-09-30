@@ -48,7 +48,7 @@
         "functions/test/emulator-report-delivery-rules.js",
         "functions/test/emulator-pvp-leaderboard.js"
       ],
-      "reason": "Fix Tower garrison shields reading the wrong bonus field and enforce the existing defense cap. Verify launch-time attack identities, resolution-time defense/recovery identities, complete individual contributions for both sides, mixed and capped rallies, shared city shields, all wall armor and repair seals, receipt settlement, zero-loss and neutral defenders, privacy and retry safety. Retain full details in canonical reports while compacting 120-entry profile summaries. Exercise affected combat, Citadel wall bypass, reinforcement, forecast and PvP attribution dependencies."
+      "reason": "Fix Tower garrison shields reading the wrong bonus field and enforce the existing defense cap. Verify launch-time attack identities, resolution-time defense/recovery identities, complete individual contributions for both sides, mixed and capped rallies, shared city shields, all wall armor and repair seals, receipt settlement, zero-loss and neutral defenders, privacy and retry safety. Retain full details in canonical reports while compacting 120-entry profile summaries. Exercise affected combat, Citadel wall bypass, reinforcement, forecast and PvP attribution dependencies. Confirm the Tower test process exits after its assertions so the emulator gate can continue."
     },
     {
       "paths": [
