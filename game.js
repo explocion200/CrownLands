@@ -23323,6 +23323,9 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
     Promise.resolve(refreshAllOwnedCities(true)),
     Promise.resolve(loadOnlineRegionCitiesForResolution(targetRegionId)),
     Promise.resolve(loadServerReportsOnce()),
+    // performance.now can pause during phone sleep. Refresh the server clock
+    // before considering resume complete so new marches leave their origin.
+    Promise.resolve(api.getRealmInfo()),
     Promise.resolve(heartbeatGameServerMembership()),
     Promise.resolve(publishOnlinePresence(true)),
   ];
@@ -23347,7 +23350,7 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
   const realtimeResult = shouldRestartRealtime ? refreshResults[refreshResults.length - 1] : null;
   const realtimeSynced = !shouldRestartRealtime
     || (realtimeResult?.status === "fulfilled" && realtimeResult.value === true);
-  const readsSynced = refreshResults.slice(0, 3).every(result => result.status === "fulfilled" && result.value !== false);
+  const readsSynced = refreshResults.slice(0, 4).every(result => result.status === "fulfilled" && result.value !== false);
   return Boolean(economySynced && realtimeSynced && readsSynced);
 }
 
@@ -33718,7 +33721,8 @@ function renderCityListModal() {
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
   const pageCities = cities.slice(start, start + CITY_LIST_PAGE_SIZE);
   modalTitle.textContent = "City List";
-  modalBody.innerHTML = `
+  const rendered = document.createElement("div");
+  rendered.innerHTML = `
     <div class="city-list-panel">
       <div class="cll-header">
         <div aria-hidden="true"><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div>
@@ -33735,8 +33739,10 @@ function renderCityListModal() {
         </button>
         <span class="cll-page-caption">${cityDetailsNumber(cities.length)} holdings across maps</span>
       </div>
-      ${rosterIsSyncing ? `<div class="cll-notice" role="status">Syncing full city roster...</div>` : ""}
-      ${rosterNeedsRetry ? `<div class="cll-notice" role="alert"><span>Full roster unavailable. Showing saved cities.</span><button data-city-list-sync-retry type="button">Retry sync</button></div>` : ""}
+      <div class="cll-notices">
+        ${rosterIsSyncing ? `<div class="cll-notice" role="status">Syncing full city roster...</div>` : ""}
+        ${rosterNeedsRetry ? `<div class="cll-notice" role="alert"><span>Full roster unavailable. Showing saved cities.</span><button data-city-list-sync-retry type="button">Retry sync</button></div>` : ""}
+      </div>
       <div class="cll-columns" aria-hidden="true"><span>City &amp; location</span><span>Level</span><span>Garrison</span><span>Production / hour</span><span>Develop city</span></div>
       <div class="city-list-rows" tabindex="0" role="region" aria-label="Owned city roster">
         ${pageCities.length
@@ -33751,6 +33757,35 @@ function renderCityListModal() {
       </div></div>
     </div>
   `;
+
+  const panel = preserveUiState ? modalBody.querySelector(".city-list-panel") : null;
+  const rowActionRoots = [];
+  if (panel) {
+    // Keep the scroller attached: replacing it cancels native touch scrolling
+    // even if its scrollTop is copied into the replacement afterwards.
+    for (const section of [...rendered.firstElementChild.children]) {
+      const current = panel.querySelector(`:scope > .${section.classList[0]}`);
+      if (current && section.classList.contains("city-list-rows")) {
+        const previousRows = new Map([...current.children].map(row => [row.dataset.cityListRowKey || "", row]));
+        const keptRows = new Set();
+        [...section.children].forEach((row, index) => {
+          const previous = previousRows.get(row.dataset.cityListRowKey || "");
+          const next = previous?.isEqualNode(row) ? previous : row;
+          if (next !== previous) {
+            if (previous) previous.replaceWith(next);
+            rowActionRoots.push(next);
+          }
+          if (current.children[index] !== next) current.insertBefore(next, current.children[index] || null);
+          keptRows.add(next);
+        });
+        [...current.children].forEach(row => { if (!keptRows.has(row)) row.remove(); });
+      } else if (current) current.replaceWith(section);
+      else panel.append(section);
+    }
+  } else {
+    modalBody.replaceChildren(rendered.firstElementChild);
+    rowActionRoots.push(modalBody);
+  }
 
   modalBody.querySelectorAll("[data-city-list-sort]").forEach(button => {
     button.addEventListener("click", () => {
@@ -33780,8 +33815,9 @@ function renderCityListModal() {
     });
   });
 
-  bindCityListRowActions(modalBody);
-  modalBody.querySelector(".city-list-rows").scrollTop = previousScrollTop;
+  rowActionRoots.forEach(bindCityListRowActions);
+  const scroller = modalBody.querySelector(".city-list-rows");
+  if (scroller.scrollTop !== previousScrollTop) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
 }
 
@@ -33843,7 +33879,7 @@ function patchCityListUpgradeRows(dirtyCityKeys = null) {
       setTextIfChanged(button.querySelector("small"), updated.querySelector("small").textContent);
     });
   });
-  if (scroller) scroller.scrollTop = previousScrollTop;
+  if (scroller && scroller.scrollTop !== previousScrollTop) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
   return changed;
 }

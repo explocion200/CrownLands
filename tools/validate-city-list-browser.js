@@ -20,6 +20,7 @@ async function main() {
     session = await startBrowserSession(browser);
     client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
     await Promise.all([client.send("Page.enable"), client.send("Runtime.enable")]);
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text));
     const evaluate = async expression => {
       const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
@@ -30,7 +31,7 @@ async function main() {
       const shot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(artifacts, `${name}.png`), Buffer.from(shot.data, "base64"));
     };
-    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "phone", width: 390, height: 844 }, { name: "landscape", width: 844, height: 390 }, { name: "short", width: 568, height: 320 }]) {
+    for (const viewport of [{ name: "landscape", width: 844, height: 390 }, { name: "desktop", width: 1440, height: 900 }, { name: "phone", width: 390, height: 844 }, { name: "short", width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: false });
       await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
       for (let i = 0; i < 480 && !await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready'"); i++) await wait(250);
@@ -57,7 +58,43 @@ async function main() {
       assert.equal(layout.paper, "rgb(242, 232, 205)");
       assert.equal(Math.round(layout.bounds.width), Math.min(1040, viewport.width - 24));
       assert.equal(layout.count, 5, "The ledger must retain five holdings per page.");
+      let touchScroll = null;
+      const swipe = await evaluate(`(() => {
+        window.clQaScrollNode=modalBody.querySelector('.city-list-rows');
+        clQaScrollNode.scrollTop=0;
+        const r=clQaScrollNode.getBoundingClientRect();
+        return {x:r.x+r.width/2,y:r.bottom-12,distance:Math.min(100,r.height-24),overflow:clQaScrollNode.scrollHeight-clQaScrollNode.clientHeight};
+      })()`);
+      if (swipe.overflow > 50) {
+        const touch = (type, offset = 0) => client.send("Input.dispatchTouchEvent", {
+          type, touchPoints: type === "touchEnd" ? [] : [{ x: swipe.x, y: swipe.y - offset }],
+        });
+        await touch("touchStart");
+        // Refresh before Chrome has committed the gesture to scrolling.
+        await evaluate("clQaCity.troops+=1;renderCityListModal()");
+        let halfway = 0;
+        for (let step = 1; step <= 8; step++) {
+          await touch("touchMove", swipe.distance * step / 8);
+          await wait(20);
+          if (step === 4) {
+            halfway = await evaluate("modalBody.querySelector('.city-list-rows').scrollTop");
+            await evaluate("clQaCity.troops+=1;renderCityListModal();patchCityListUpgradeRows(new Set([getCityListRowKey(clQaCity)]))");
+          }
+        }
+        await touch("touchEnd");
+        await wait(100);
+        const after = await evaluate("({same:clQaScrollNode===modalBody.querySelector('.city-list-rows'),top:modalBody.querySelector('.city-list-rows').scrollTop})");
+        assert(after.same && after.top > halfway + 15, `Roster refresh interrupted the native swipe: ${JSON.stringify({halfway,...after})}`);
+        touchScroll = { halfway, ...after };
+        // Stop the fling before the independent keyboard/upgrade assertions.
+        await touch("touchStart");
+        await client.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+      } else {
+        assert(await evaluate("renderCityListModal();clQaScrollNode===modalBody.querySelector('.city-list-rows')"), "A roster refresh replaced the scroll container.");
+      }
+      await evaluate("modalBody.querySelector('.city-list-rows').scrollTop=0");
       await evaluate(`(() => {
+        clQaCity.troops=18240;renderCityListModal();
         window.clQaRows=modalBody.querySelector('.city-list-rows');
         window.clQaOrder=[...clQaRows.children].map(r=>r.dataset.cityListRowKey).join(',');
         window.clQaRow=[...clQaRows.children].find(r=>r.dataset.cityListRowKey===getCityListRowKey(clQaCity));
@@ -151,7 +188,7 @@ async function main() {
         if(JSON.stringify(before)!==JSON.stringify(after))throw Error('City List styling leaked into City Details');
         return {offMapInfo:true,locate:true,isolated:true};
       })()`);
-      results.push({ viewport: viewport.name, layout, states, navigation });
+      results.push({ viewport: viewport.name, layout, touchScroll, states, navigation });
       console.log(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, [], "Uncaught errors occurred in City List.");

@@ -76,6 +76,7 @@
 #modal.city-list-modal .cll-pagination button { width:44px; padding:10px; border-color:transparent!important; }
 #modal.city-list-modal .cll-pagination span { font:14px Georgia,serif; }
 #modal.city-list-modal .cll-notice { flex:none; margin:0 24px 8px; padding:8px 10px; background:#dfcca94d; border-left:2px solid #957343; display:flex; align-items:center; justify-content:space-between; gap:10px; color:#665231; font-size:12px; }
+#modal.city-list-modal .cll-notices { flex:none; }
 #modal.city-list-modal .cll-notice button { padding:0 12px; }
 #modal.city-list-modal .cll-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:180px; height:100%; text-align:center; color:var(--cll-muted); }
 #modal.city-list-modal .cll-empty>.cd-icon { width:64px; height:64px; opacity:.65; }
