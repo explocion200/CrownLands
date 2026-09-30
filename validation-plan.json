@@ -1,13 +1,24 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f12191d9228660477c389dcdfcf1afb54790d5ae",
+  "baseCommit": "3a92c88352e644716a58d54b10edfb56a6835bcc",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "firebaseClient.js",
+        "tools/test-pvp-leaderboard-client.js",
+        "functions/test/emulator-pvp-leaderboard-client.js"
       ],
+      "tests": [
+        "tools/test-pvp-leaderboard-client.js",
+        "functions/test/emulator-pvp-leaderboard-client.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "reason": "Field of Glory identity reads must fit the existing scoped Firestore rules. The emulator executes the actual loader with a verified player token for 20 and 100 ranks, including missing and out-of-scope identities. Unit checks cover chunk boundaries, denied identity fallback, network failures, canonical score ordering, empty boards and stale account/session/season responses. The real game browser check covers the consuming leaderboard and its desktop/landscape presentation, refresh and failure states. Scoring, combat, rules and season finalization are unchanged."
+    },
+    {
+      "paths": ["docs/visual-qa/leaderboard-podium/README.md"],
       "tests": [],
-      "reason": "Documentation-only release evidence and channel status for the verified PR #406 deployment. No runtime, gameplay, dependency or configuration change. Cross-check build identity, live assets, browser results, backend source and required checks against saved deployment evidence."
+      "reason": "Update the implementation notes to match the verified identity batch size and describe the authenticated regression test. No gameplay or balance rule changes."
     }
   ]
 }
