@@ -3,7 +3,7 @@
 let selectedActivityRallyId = "";
 let activityRallyScope = "";
 
-// Presentation only. Reserved troops never re-enter spendable garrison or defense.
+// Reserved troops defend the assembly city but remain unavailable for other orders.
 function getCityRallyAssembly(city) {
   const totals = { ready: 0, inbound: 0 };
   if (!state?.clanId || !city || (city.owner !== "player" && !isClanAllyCity(city))) return totals;
@@ -33,7 +33,7 @@ function renderCityRallyAssemblyPanel(city) {
 }
 
 function renderCityRallyAssemblyContent(totals) {
-  return `<strong>Rally assembly</strong><span>${formatNumber(totals.ready)} ready here · ${formatNumber(totals.inbound)} inbound</span><small>Ready troops are reserved for the rally. They are separate from the available garrison.</small>`;
+  return `<strong>Rally assembly</strong><span>${formatNumber(totals.ready)} ready here · ${formatNumber(totals.inbound)} inbound</span><small>Ready troops defend this city until launch and can suffer casualties. They remain reserved for the rally.</small>`;
 }
 
 function patchCityRallyAssemblyPanels() {
@@ -122,7 +122,7 @@ function renderRalliesActivityCard(rally, context) {
   const ready = activeParticipants.filter(person => person.status === "assembled").length;
   const count = activeParticipants.length || participants.length;
   const minimumParticipants = getClanRallyMinimumParticipants(rally);
-  const allReady = activeParticipants.length >= minimumParticipants && ready === activeParticipants.length;
+  const allReady = ready >= minimumParticipants && activeParticipants.some(person => person.uid === rally.leaderUid && person.status === "assembled");
   const horns = getProjectedInventoryCount(RECALL_HORN_ITEM_ID);
   const recallBusy = recallHornRequests.has(String(rally.armyId || ""));
   const actionBusy = busy || recallBusy;
@@ -141,7 +141,7 @@ function renderRalliesActivityCard(rally, context) {
   } else if (launched) note = "The combined army is marching. Only its creator may recall it.";
   else note = "The rally is returning. Contributions remain assigned to their rulers.";
   if (forming && canManageFormingRally) {
-    const launchNote = allReady ? "<strong>All contributions are ready.</strong> Launch when you choose." : activeParticipants.length < minimumParticipants ? `At least ${minimumParticipants} rulers must be ready to launch.` : `${activeParticipants.length - ready} ${activeParticipants.length - ready === 1 ? "contribution is" : "contributions are"} still inbound. Every army must arrive before launch.`;
+    const launchNote = allReady ? `<strong>Ready to launch.</strong> ${inboundTroops ? "Incoming troops will turn back." : "Launch when you choose."}` : `At least ${minimumParticipants} rulers, including the creator, must be ready to launch.`;
     note = leader ? launchNote : `${note} ${launchNote}`;
     controls += command("cancel", "Cancel", "danger") + command("launch", "Launch", "primary", !allReady);
   }
@@ -150,7 +150,7 @@ function renderRalliesActivityCard(rally, context) {
     <header class="rally-title"><div class="target-seal"><img src="${identity.art}" alt=""></div><div class="target-heading"><h3 id="activityRallyTitle">${escapeHtml(rally.targetName || rally.targetId || "Objective")}</h3><p>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${identity.type}</p></div><span class="status-pill ${identity.state}">${identity.label}</span></header>
     <div class="rally-scroll" tabindex="0" aria-label="Rally information and all participants"><div class="rally-overview"><div class="rally-meta"><div><small>Rally creator</small>${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</div><div><small>Assembly city</small>${renderRallyAssemblyLink(rally)}</div></div>
     <div class="muster-totals ${Math.max(force, inboundTroops) > 9999999 ? "large" : ""}"><div><small>${recalling ? "Returning troops" : launched ? "Marching troops" : "Assembled troops"}</small><strong>${formatMarchesNumber(force)}</strong></div><div><small>Incoming troops</small><strong>${formatMarchesNumber(inboundTroops)}</strong></div><div><small>${forming ? "Rulers ready" : "Rulers in rally"}</small><strong class="ready-total">${forming ? `${ready} / ${activeParticipants.length}` : count}</strong></div></div></div>
-    <div class="muster-heading"><h4>The muster</h4><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS} rulers${forming ? " · All must be ready" : ""}</span></div>
+    <div class="muster-heading"><h4>The muster</h4><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS} rulers${forming ? ` · ${minimumParticipants} Ready required` : ""}</span></div>
     <table class="muster-table" aria-label="Rally participants"><thead><tr><th scope="col">Ruler</th><th scope="col">Troops</th><th scope="col">Status</th></tr></thead><tbody>${participants.map((person, index) => {
       const label = getClanRallyParticipantStatusLabel(rally, person);
       const statusClass = label === "Returning" ? "returning" : label === "Marching" ? "marching" : person.status === "inbound" ? "inbound" : "ready";

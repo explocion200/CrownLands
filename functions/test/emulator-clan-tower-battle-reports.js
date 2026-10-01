@@ -50,6 +50,9 @@ async function resolve(actor, movement) {
 }
 
 async function main() {
+  const seasons = require("../season-rewards");
+  const previous = seasons.previousSeason(`realm-${new Date().toISOString().slice(0, 7)}`);
+  if (seasons.supported(previous)) await seasons.arm(db, previous, seasons.seasonInfo(previous).startsAtMs + 1);
   const gearModel = require("../common-gear.js");
   const equippedGear = gearModel.createDefaultState();
   for (const key of ["barracks_weapon_epic_01", "barracks_necklace_legendary_01", "gatehouse_weapon_legendary_01"]) {
