@@ -28912,6 +28912,27 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ),
       };
     };
+    if (isReturning && army.returnReason === "rally_launched_before_arrival") {
+      // This army has reversed along its outbound route and is now at its original source.
+      const participant = { uid: attackerUid, ownerName: army.ownerName, sourceId: army.fromId,
+        sourceName: army.fromName, sourceRegionId, troops: troopCount, survivors: troopCount };
+      const destination = getRallyReturnDestination(attackerEconomy, attackerProfile, participant,
+        source ? { ...source, regionId: sourceRegionId } : null);
+      const returnAttack = destination?.rallyReturnAttack ? createRallySourceRecaptureMovement({
+        rally: { id: army.rallyId, clanId: army.rallyClanId }, participant, target: destination.city,
+        targetRegionId: sourceRegionId, economy: attackerEconomy, profile: attackerProfile,
+        nowMs, movementId: `${armyId}_return_attack`,
+      }) : null;
+      const returned = returnAttack ? { returned: 0, cityId: "", regionId: "" } : returnRecalledTroops(troopCount);
+      if (returnAttack) writeArmyMovementCopies(transaction, returnAttack, { includeCreatedAt: true });
+      writeParticipantEconomies({}, {}, { addActiveArmies: returnAttack ? [returnAttack] : [],
+        statsCityPatches: getLatestSourceReturnStatsPatches() });
+      markResolved({ kind: "return", returnReason: army.returnReason, returned: returned.returned,
+        returnCityId: returned.cityId, returnAttackArmyId: returnAttack?.id || "" });
+      return { ok: true, status: "resolved", kind: "return", returned: returned.returned,
+        returnCityId: returned.cityId, returnRegionId: returned.regionId, returnAttackMovement: returnAttack,
+        cityUpdates: withEconomyCityUpdates(cityUpdates), currentUser: profilePatchForCaller() };
+    }
     const rallyReturnClanOwned = Boolean(
       isRallyReturn
       && defenderUid

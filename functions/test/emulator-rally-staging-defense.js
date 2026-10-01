@@ -147,11 +147,17 @@ async function main() {
     "An inbound army reverses from its actual position");
   assert.equal(returned.arrivesAtMs - returned.recalledAtMs, Math.ceil(400000 * returned.returnStartProgress),
     "Return time covers only the distance already travelled");
-  await due(inbound, late);
+  const homeBeforeReturn = await read(cityRef(inbound.home));
+  const creditedReturn = await due(inbound, late);
+  assert.equal(creditedReturn.returned, 7000, "Arrival credits the source immediately, without another return journey");
+  assert.equal(creditedReturn.returnCityId, inbound.home.id);
+  const homeAfterReturn = await read(cityRef(inbound.home));
+  assert(homeAfterReturn.troops >= homeBeforeReturn.troops + 7000);
   const settledReturn = await read(db.doc(`armies/${late.id}`));
   assert.equal(settledReturn.status, "resolved");
   await call("resolveArmyOrder", inbound, { armyId: late.id, routeRegionIds: late.routeRegionIds });
   assert.deepEqual(await read(db.doc(`armies/${late.id}`)), settledReturn, "A duplicate return cannot credit twice");
+  assert.equal((await read(cityRef(inbound.home))).troopFloat, homeAfterReturn.troopFloat);
 
   // The transaction race must choose either an assembled attack package or a return.
   await seedAssembly(); const racing = await form(); await join(racing, ally);
