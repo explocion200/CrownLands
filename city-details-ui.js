@@ -129,10 +129,19 @@ function captureCityDetailsRefresh(city) {
     if (!updated) return;
     if (amount !== undefined) updated.dataset.cdAmount = amount;
     if (failure !== undefined) updated.dataset.cdFailure = failure;
-    if (tab) updated.querySelector(`#${CSS.escape(tab)}`)?.click();
+    if (tab) selectCityDetailsTab(updated, updated.querySelector(`#${CSS.escape(tab)}`));
     patchCityDetailsPanel(true);
     restore(updated);
   };
+}
+
+function selectCityDetailsTab(root, tab) {
+  root.querySelectorAll('[role="tab"]').forEach(candidate => {
+    const selected = candidate === tab;
+    candidate.setAttribute("aria-selected", String(selected));
+    candidate.tabIndex = selected ? 0 : -1;
+    root.querySelector(`#${candidate.getAttribute("aria-controls")}`).hidden = !selected;
+  });
 }
 
 function bindCityDetailsPanel(city) {
@@ -143,12 +152,7 @@ function bindCityDetailsPanel(city) {
     if (mainCity) openInnerCastle(mainCity.id, city.id);
   });
   const tabs = [...root.querySelectorAll('[role="tab"]')];
-  const selectTab = tab => tabs.forEach(candidate => {
-    const selected = candidate === tab;
-    candidate.setAttribute("aria-selected", String(selected));
-    candidate.tabIndex = selected ? 0 : -1;
-    root.querySelector(`#${candidate.getAttribute("aria-controls")}`).hidden = !selected;
-  });
+  const selectTab = tab => selectCityDetailsTab(root, tab);
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => selectTab(tab));
     tab.addEventListener("keydown", event => {

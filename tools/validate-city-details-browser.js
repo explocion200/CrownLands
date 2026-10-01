@@ -76,7 +76,10 @@ async function main() {
           const tab=root.querySelector('[role="tab"][aria-selected="true"]').id;
           const focus=document.activeElement.id;
           const scroll=['.cd-ledger','.cd-actions'].map(selector=>root.querySelector(selector).scrollTop);
-          refreshClanRelationshipPresentation();
+          let clicks=0;const onClick=()=>clicks++;
+          document.addEventListener('click',onClick);
+          try {refreshClanRelationshipPresentation();}finally {document.removeEventListener('click',onClick);}
+          if(clicks)throw Error('Live refresh fired a synthetic user click');
           const updated=modalBody.querySelector('.cd-panel');
           if(updated.dataset.cdAmount!==amount || updated.querySelector('.cd-upgrade').dataset.cityUpgradeLevels!=='5')throw Error('Live clan refresh reset the +5 upgrade selection');
           if(updated.querySelector('[role="tab"][aria-selected="true"]').id!==tab || document.activeElement.id!==focus)throw Error('Live clan refresh reset the City Details tab or focus');
