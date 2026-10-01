@@ -23,7 +23,7 @@
         "tools/validate-rally-assembly-browser.js",
         "tools/validate-kingdom-ledgers-browser.js"
       ],
-      "reason": "Shared refresh state captures presentation only, with explicit keys for each session/view. New desktop and landscape browser coverage checks clan creation/search drafts, cursor ranges, roster focus, gift scrolling, holding tabs/disclosures, inventory pages/scroll and scope boundaries. Existing suites exercise shared modal lifecycle, Treasury drafts and donation actions, Item Bag action settlement and removed-page fallback. The requested wider UI audit also checks existing City List, Shop, Skills, incoming threats, scout/report, rally and Kingdom Activity/leaderboard preservation paths. No backend, economy formula, ownership or action authorization changes."
+      "reason": "Shared refresh state captures presentation only, with explicit keys for each session/view. New desktop and landscape browser coverage checks clan creation/search drafts, cursor ranges, roster focus, gift scrolling, holding tabs/disclosures, inventory pages/scroll and scope boundaries. Player/clan profiles opened from a holding remain visible during clan relationship, world benefit and stronghold ownership snapshots, both loading and loaded. Existing suites exercise shared modal lifecycle, Treasury drafts and donation actions, Item Bag action settlement and removed-page fallback. The requested wider UI audit also checks existing City List, Shop, Skills, incoming threats, scout/report, rally and Kingdom Activity/leaderboard preservation paths. No backend, economy formula, ownership or action authorization changes."
     },
     {
       "paths": ["common-gear-ui.js"],

@@ -1,5 +1,16 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported captureCommonGearRefresh, captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported getOpenCityInfoId, refreshOpenCityInfoModal, captureCommonGearRefresh, captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+
+function getOpenCityInfoId() {
+  // Profile links replace the dialog in place, without its close cleanup.
+  return modal?.open && modalBody?.querySelector(".cd-panel,.stronghold-legacy-info-panel,.crown-citadel-info-panel")
+    ? String(modal.dataset.cityInfoId || "") : "";
+}
+
+function refreshOpenCityInfoModal() {
+  const cityId = getOpenCityInfoId();
+  if (cityId) showCityInfoModal(cityId);
+}
 
 // Call only when rebuilding the same view/session. Restore interaction state,
 // while keeping newly rendered permissions, prices and available actions.

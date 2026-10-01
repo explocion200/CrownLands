@@ -106,6 +106,39 @@ async function main() {
         if(modalBody.querySelector('[aria-selected="true"]').dataset.strongholdInfoTab!=='overview')throw Error('Holding state leaked to another target');
         modal.close();return {scroll:before};
       })()`);
+      const profileNavigation = await evaluate(`(async () => {
+        const previousApi=getOnlineApi;
+        const callbacks={};
+        const api={...previousApi(),isSignedIn:()=>true,
+          loadPublicPlayerProfile:async uid=>({uid,displayName:'Refresh Ruler',clanId:''}),
+          loadClan:async()=>({id:'refresh-clan',name:'Refresh Clan',tag:'RFR',status:'active'}),
+          loadClanMembers:async()=>[],
+          subscribeClanSocialState:(_id,handlers)=>{Object.assign(callbacks,handlers);return ()=>{};}};
+        getOnlineApi=()=>api;
+        try {
+          startClanSocialStateSubscription(api,'refresh-navigation');
+          let revision=1;
+          for(const open of [()=>showPublicPlayerProfile('refresh-ruler'),()=>showPublicClanDetails('refresh-clan')]) {
+            showCityInfoModal(refreshQaHolding.id);
+            const pending=open();
+            const loading=modalBody.firstElementChild;
+            refreshClanRelationshipPresentation();callbacks.onWorldBenefits({revision:revision++});
+            if(modalBody.firstElementChild!==loading)throw Error('Live refresh replaced a loading public profile with City Details');
+            await pending;
+            const profile=modalBody.querySelector('.public-player-profile,.public-clan-details');
+            if(!profile)throw Error('Public profile fixture failed to load');
+            refreshClanRelationshipPresentation();callbacks.onWorldBenefits({revision:revision++});
+            if(!profile.isConnected)throw Error('Live refresh navigated away from a public profile');
+            // A stronghold ownership snapshot must not reopen details behind the profile.
+            const holding=cityById(refreshQaHolding.id);
+            const cities=state.cities.filter(city=>getCityRegionId(city)===getCityRegionId(holding))
+              .map(city=>city.id===holding.id?{...city,lastCapturedAtMs:Date.now()+revision}:city);
+            applyOnlineCities(cities,getCityRegionId(holding));
+            if(!profile.isConnected)throw Error('Stronghold snapshot navigated away from a public profile');
+          }
+          return {loadingPreserved:true,profilesPreserved:true};
+        } finally {getOnlineApi=previousApi;modal.close();}
+      })()`);
       await evaluate(`(${installBagFixture.toString()})()`);
       await wait("!!modalBody.querySelector('.ib-bag-shell')");
       await delay(100);
@@ -174,7 +207,7 @@ async function main() {
         if(modalBody.querySelector('[data-day][aria-pressed="true"]').dataset.day!=='1')throw Error('Daily selection leaked to a new reward cycle');
         modal.close();return {day,scroll:before,newCycleReset:true};
       })()`);
-      results.push({width,height,clanDraft,clanMembers,holdings,bag,gear,daily});
+      results.push({width,height,clanDraft,clanMembers,holdings,profileNavigation,bag,gear,daily});
       console.log(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, [], "Unexpected browser errors");

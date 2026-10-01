@@ -17696,7 +17696,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
   const byId = new Map(onlineCities.map(city => [city.id, city]));
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
-  const openStrongholdId = modal?.open ? String(modal.dataset.cityInfoId || "") : "";
+  const openStrongholdId = getOpenCityInfoId();
   const previousOpenStronghold = localById.get(openStrongholdId);
   const previousStrongholdLegacySignature = previousOpenStronghold
     && isStronghold(previousOpenStronghold)
@@ -25339,7 +25339,7 @@ function refreshClanRelationshipPresentation() {
   renderPaths();
   renderArmies(true);
   renderPanel();
-  if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
+  refreshOpenCityInfoModal();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
 }
 
@@ -25722,7 +25722,7 @@ function startClanSocialStateSubscription(api, clanId) {
       clanWorldBenefits = benefits;
       if ((Number(benefits?.revision) || 0) !== previousRevision) {
         renderPanel();
-        if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
+        refreshOpenCityInfoModal();
       }
     },
     onError: (error, source) => {
