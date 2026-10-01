@@ -315,6 +315,16 @@
     "legacyRequestsEnabled": true,
     "fixedXpRate": 0.005
   },
+  "campPowerRewards": {
+    "version": 1,
+    "weakMaxPower": 7813452,
+    "middleMaxPower": 192405409,
+    "multipliers": {
+      "weak": 3,
+      "middle": 1,
+      "strong": 0.5
+    }
+  },
   "camps": {
     "gold": {
       "holdMinutes": 10,

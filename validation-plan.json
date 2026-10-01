@@ -1,25 +1,68 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "36eb528c397efc87032109be9bff21ad5c4937b6",
+  "baseCommit": "7b3836758c785b53be71e527971c493d9ff2a679",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-home-navigation-browser.js"],
-      "tests": [
-        "tools/validate-home-navigation-browser.js",
-        "tools/validate-focused-ui-correction.js",
-        "tools/validate-main-city-change.js",
-        "tools/validate-core-expansion-release.js",
-        "tools/validate-reset-release.js",
-        "tools/validate-connection-recovery.js",
-        "tools/validate-owned-city-cross-map-sync.js",
-        "tools/validate-map-picker-input.js"
+      "paths": [
+        "functions/index.js",
+        "functions/economy-config.json",
+        "economy-config.js",
+        "tools/validate-camp-power-rewards.js",
+        "functions/test/emulator-camp-power-rewards.js",
+        "tools/validate-economy-balance.js",
+        "functions/test/emulator-shared-camp-rewards.js"
       ],
-      "reason": "Home refreshes authoritative realm activation only when its cached home map is unavailable, then uses the existing guarded map switch and Main City camera behavior. Real browser coverage at desktop and two landscape sizes reproduces stale activation, checks current-map and cross-map fast paths, closed-map rejection, failed-refresh retry, duplicate pointer taps, session replacement and newer navigation. The optional scope guard on realm verification rejects obsolete Home replies before changing realm state; existing callers keep their behavior. Selected shared-dependency suites cover Home button wiring, Main City identity, realm contract/activation gates, connection recovery, cross-map owned-city reconciliation and actual Atlas navigation. No backend, release identity, activation rules or production data changes; the live pointer and current expansion metadata were read only."
+      "tests": [
+        "tools/validate-camp-power-rewards.js",
+        "tools/validate-economy-balance.js",
+        "tools/validate-king-power.js",
+        "tools/validate-reward-camp-lifecycle.js",
+        "tools/validate-report-system.js",
+        "functions/test/emulator-camp-power-rewards.js",
+        "functions/test/emulator-shared-camp-rewards.js"
+      ],
+      "reason": "Gold and Warband payouts multiply only raw production hours by current authoritative King Power. Recompute from owned cities, held camps, active marches, profile troop commitments and clan objective support in the payout transaction before reward or return writes. Test exact boundaries, all claims and multipliers, floors, rounding, missing/stale power, late tier changes, reward-driven tier changes, boosted-versus-raw production, duplicate races, moving troops, cross-location allowances, private receipts and reports. Existing economy assertions for tax and training caps were stale at 75; align tests with the already-approved and unchanged 100 caps. No ordinary production or other reward rules change. Arm the empty prior-season emulator fixture so the existing shared-camp suite can enter October through the normal closing guard."
     },
     {
-      "paths": ["tools/validate-asset-performance-budgets.js"],
-      "tests": ["tools/validate-asset-performance-budgets.js"],
-      "reason": "Home recovery and session guards add approximately 1.4 KiB to the existing game script, with about 0.4 KiB already available. Increase only that file's allowance by 1 KiB and verify all aggregate loading, installed-shell and production-artifact limits. No new script request or dependency."
+      "paths": [
+        "game.js",
+        "camp-details-ui.js",
+        "tools/validate-camp-power-rewards-browser.js"
+      ],
+      "tests": [
+        "tools/validate-camp-power-rewards.js",
+        "tools/validate-camp-power-rewards-browser.js",
+        "tools/validate-holding-details-ui.js",
+        "tools/validate-held-camp-operations.js",
+        "tools/validate-reward-camp-lifecycle.js"
+      ],
+      "reason": "Camp overview, personal reward ladder and rules show the power tier, multiplier, exact thresholds and fractional effective hours with matching raw-rate estimates. An open panel refreshes when its power snapshot changes and displays unavailable instead of granting an assumed tier when power is missing. Real browser checks cover both camp types, all tiers, updated and missing power at 1440x900, 844x390 and 568x320; preserve shared progress, tabs and held-camp interactions."
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js"
+      ],
+      "tests": [
+        "tools/test-targeted-validation.js",
+        "functions/test/emulator-camp-power-rewards.js"
+      ],
+      "reason": "Register the new emulator suite in the existing Core expansion suite allowlist so it validates the active monthly shared topology. Workflow checks exercise explicit selection and sharding; no gate policy changes."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Tier helpers, live estimate refresh and explanatory camp copy add less than 3 KiB to game.js. Increase only its existing allowance by 3 KiB and retain aggregate loading, shell and artifact budgets."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the explicitly approved power tiers, unchanged minimums and daily limits, September benchmark method, metadata and the narrow historical aggregate balancing exception. Deployment remains pending and historical individual rankings are not runtime eligibility."
     }
   ]
 }

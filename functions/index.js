@@ -33054,13 +33054,45 @@ function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
 
-function getRewardCampDailyReward(config, claimIndex = 0, productionRates = {}) {
+function getRewardCampPowerTier(kingPower) {
+  const rules = ECONOMY_CONFIG.campPowerRewards;
+  if (!Number.isSafeInteger(kingPower) || kingPower < 0 || !rules) return null;
+  const tier = kingPower <= rules.weakMaxPower ? "weak"
+    : kingPower <= rules.middleMaxPower ? "middle" : "strong";
+  return { tier, kingPower, multiplier: rules.multipliers[tier], version: rules.version,
+    weakMaxPower: rules.weakMaxPower, middleMaxPower: rules.middleMaxPower };
+}
+
+async function readRewardCampPowerTier(transaction, uid, profile, cityEntries, nowMs) {
+  if (profile.resetGeneration !== RESET_GENERATION || profile.worldId !== ONLINE_WORLD_ID || !cityEntries.length) {
+    throw new HttpsError("failed-precondition", "Current kingdom power is unavailable. Retry the camp reward.");
+  }
+  const benefitsRef = clanWorldBenefitsRef(safeString(profile.clanId, 128));
+  const [armies, camps, benefits] = await Promise.all([
+    transaction.get(activeArmiesQueryForPlayer(uid)),
+    transaction.get(heldRewardCampsQueryForPlayer(uid)),
+    benefitsRef ? transaction.get(benefitsRef) : null,
+  ]);
+  // Recalculate in the payout transaction before the reward or returning march.
+  // This includes city/camp troops, marches, reinforcements, rallies and towers.
+  const stats = createGlobalStatsSnapshot({
+    uid, profile, cityEntries, nowMs,
+    activeArmies: createActiveArmiesFromSnapshot(uid, armies),
+    heldCamps: createHeldCampEntriesFromSnapshot(uid, camps),
+    bonuses: combinePlayerObjectiveBonuses(uid, cityEntries, benefits?.exists ? benefits.data() : null),
+  });
+  const tier = getRewardCampPowerTier(stats.kingPower);
+  if (!tier) throw new HttpsError("unavailable", "Current kingdom power is unavailable. Retry the camp reward.");
+  return tier;
+}
+
+function getRewardCampDailyReward(config, claimIndex = 0, productionRates = {}, multiplier = 1) {
   const index = Math.max(0, Math.floor(safeNumber(claimIndex, 0)));
   const minimumReward = Math.min(
     Number.MAX_SAFE_INTEGER,
     Math.max(0, Math.floor(safeNumber(config?.dailyRewards?.[index], 0)))
   );
-  const rewardHours = Math.max(0, safeNumber(config?.rewardHours?.[index], 0));
+  const rewardHours = Math.max(0, safeNumber(config?.rewardHours?.[index], 0)) * multiplier;
   if (!rewardHours) return minimumReward;
   const hourlyRate = config.rewardType === "troops"
     ? Math.max(0, safeNumber(productionRates.baseTroopPerHour, 0))
@@ -33319,6 +33351,15 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const priorClaims = claimData.date === today
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
       : 0;
+    const powerTier = productionCitiesSnap
+      ? await readRewardCampPowerTier(transaction, holderUid, player,
+        createOwnedCityEntriesFromSnapshot(holderUid, productionCitiesSnap), nowMs)
+      : null;
+    const powerReward = powerTier ? {
+      ...powerTier,
+      baseHours: config.rewardHours[priorClaims] || 0,
+      effectiveHours: (config.rewardHours[priorClaims] || 0) * powerTier.multiplier,
+    } : null;
     const deedDailyLimitReached = isDeedCamp && priorClaims >= 1;
     const relicDailyLimitReached = isRelicCamp && priorClaims >= config.maxDailyRewards;
     const priorRelicRewards = isRelicCamp
@@ -33338,7 +33379,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         : getRewardCampDailyReward(config, priorClaims, {
             baseGoldPerHour: baseProductionRates.goldPerHour,
             baseTroopPerHour: baseProductionRates.troopsPerHour,
-          });
+          }, powerTier.multiplier);
     if (config.rewardType === "gold") {
       const currentGoldFloat = Math.max(0, safeNumber(player.goldFloat, player.gold || 0));
       reward = Math.min(reward, Math.max(0, Math.floor(Number.MAX_SAFE_INTEGER - currentGoldFloat)));
@@ -33531,6 +33572,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         date: today,
         count: nextClaims,
         lastReward: reward,
+        ...(powerReward ? { powerReward } : {}),
         lastCampId: camp.id,
         lastClaimedAtMs: nowMs,
         ...(isRelicCamp ? {
@@ -33582,7 +33624,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
           ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but the daily limit of ${config.maxDailyRewards} Relic Camp rewards was already reached. The camp reset to neutral.${returnSummary}`
           : `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. The item was added to your bag.${relicGearBoxAwarded ? " You also found a Common Gear Box!" : ""}${returnSummary}`
       : reward > 0
-        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnSummary}`
+        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}. ${powerTier.tier} tier: ${powerTier.multiplier}× production hours (${powerReward.effectiveHours}h); guaranteed minimum preserved.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnSummary}`;
     const campReportReward = deedCityPatch
       ? {
@@ -33645,6 +33687,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       completedAtMs: nowMs,
       realmShardId: getCurrentRealmShardId(),
       pendingCity,
+      ...(powerReward ? { powerReward } : {}),
       ...(pendingCity ? { campPath: campRef.path, campSnapshot: camp, selectionEntropy: deedSelectionEntropy } : {}),
       status: "completed",
       result: isDeedCamp
@@ -33668,6 +33711,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       reward,
       rewardType: config.rewardType,
       campType: config.campType,
+      ...(powerReward ? { powerReward } : {}),
       ...(deedCompletionMetadata || {}),
       dailyClaim: nextClaims,
       awardedCity: deedCityPatch ? {

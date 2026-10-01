@@ -4,7 +4,7 @@
   const num=value=>Math.max(0,Math.floor(Number(value)||0)).toLocaleString();
   const dailyLimit=config=>config.type==='deed'?1:['gold','troops'].includes(config.type)?(config.dailyRewards?.length||0):Math.max(0,Number(config.maxDailyRewards)||0);
   function node(doc,tag,className,text) {const el=doc.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;}
-  function mount(root, {camp,config,mapName,onClose,estimatedRewards=()=>[]}={}) {
+  function mount(root, {camp,config,mapName,onClose,estimatedRewards=()=>[],powerTier=()=>null}={}) {
     const overview=root.querySelector('[data-camp-info-panel="stats"]');
     if(!overview)return;
     const doc=root.ownerDocument,wrapper=overview.parentElement,create=(tag,cls,text)=>node(doc,tag,cls,text);
@@ -29,7 +29,7 @@
     const back=create('button','camp-back','Back to Map');back.type='button';back.addEventListener('click',onClose);footer.append(footerCopy,rewards,back);wrapper.append(footer);
     const updateTabs=()=>{tabs.forEach(t=>t.tabIndex=t.getAttribute('aria-selected')==='true'?0:-1);rewards.hidden=tabs.find(t=>t.dataset.campInfoTab==='reward').getAttribute('aria-selected')==='true';};
     tabs.forEach((tab,i)=>{tab.addEventListener('click',updateTabs);tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next].click();tabs[next].focus();});});
-    wrapper._campDetails={config,estimatedRewards};updateTabs();updateRewards(root,camp.id,config,null,'loading');
+    wrapper._campDetails={config,estimatedRewards,powerTier};updateTabs();updateRewards(root,camp.id,config,null,'loading');
   }
   function updateRewards(root,campId,config,progress,status='ready') {
     const summary=[...root.querySelectorAll('[data-camp-reward-summary]')].find(el=>el.dataset.campRewardSummary===String(campId));if(!summary)return;
@@ -37,9 +37,15 @@
     const heading=create('h2','',status==='ready'?'Your next reward':status==='loading'?'Loading your rewards…':'Reward progress unavailable');summary.replaceChildren(heading);
     if(status!=='ready')return;
     const estimates=wrapper._campDetails?.estimatedRewards()||[],limit=Number(dailyLimit(config)),claimed=Math.max(0,Number(progress?.count)||0),complete=claimed>=limit;
+    const productionCamp=['gold','troops'].includes(config.type),tier=productionCamp?wrapper._campDetails?.powerTier?.():null;
+    if(productionCamp&&!tier){heading.textContent='Power estimate unavailable';summary.append(create('p','','Reconnect or reopen this panel to refresh your kingdom power.'));return;}
     const reward=config.type==='deed'?'1 random city':config.type==='items'?'1 usable item':`${num(estimates[claimed])} ${config.rewardLabel}`;
     const row=create('div','camp-reward-amount'),image=create('img','');image.src=icons[config.type]||icons.gold;image.alt='';row.append(image,create('strong','',complete?'Daily limit reached':reward));summary.append(row,create('p','',`${num(Math.min(claimed,limit))} of ${num(limit)} earned today · Shared across all ${config.name} locations.`));
-    if(!complete&&['gold','troops'].includes(config.type))summary.append(create('small','','Current estimate. Final reward uses production when the hold resolves.'));
+    if(tier){
+      const name=tier.tier[0].toUpperCase()+tier.tier.slice(1),hours=complete?0:(config.rewardHours[claimed]||0)*tier.multiplier;
+      summary.append(create('p','',`${name} tier · ${tier.multiplier}× production hours · King Power ${num(tier.kingPower)}`));
+      if(!complete)summary.append(create('small','',`${hours} hours of raw production. Final reward uses power and production when the hold resolves; guaranteed minimums still apply.`));
+    }
   }
   global.CrownlandsCampDetailsUi=Object.freeze({mount,updateRewards,dailyLimit});
 })(typeof window!=='undefined'?window:globalThis);

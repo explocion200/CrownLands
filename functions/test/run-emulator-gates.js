@@ -50,6 +50,7 @@ const coreExpansionGates = new Set([
   "emulator-world-travel.js",
   "emulator-coordinated-release.js",
   "emulator-shared-camp-rewards.js",
+  "emulator-camp-power-rewards.js",
   "emulator-chat-translation.js",
   "emulator-combat-authorization.js",
   "emulator-peace-shield-returns.js",
