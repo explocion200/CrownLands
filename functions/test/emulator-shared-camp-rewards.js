@@ -113,6 +113,10 @@ function reader(actor) {
 }
 
 async function main() {
+  // A fresh emulator needs an armed prior season before the monthly transition.
+  const seasons = require("../season-rewards");
+  const previous = seasons.previousSeason(`realm-${new Date().toISOString().slice(0, 7)}`);
+  if (seasons.supported(previous)) await seasons.arm(db, previous, seasons.seasonInfo(previous).startsAtMs + 1);
   const [holder, outsider] = await Promise.all([user("Camp Holder"), user("Camp Visitor")]);
   const info = await call("getRealmInfo", holder);
   assert.equal(info.worldTopology, "core-expansion-v1");

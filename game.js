@@ -28677,6 +28677,15 @@ function updateVisibleCityDynamicText(targetIds = null) {
       campInfoCountdown.textContent = camp.payoutPending
         ? countdown > 0 ? formatDuration(countdown) : "Payout ready"
         : "Neutral";
+      const config = getRewardCampConfig(camp);
+      if (["gold", "troops"].includes(config?.type)) {
+        const key = `${state.globalStats?.updatedAtMs}:${getCurrentRewardCampPowerTier()?.kingPower}`;
+        const cached = getCachedRewardCampProgress(config);
+        if (cached && campInfoCountdown.dataset.rewardEstimateKey !== key) {
+          campInfoCountdown.dataset.rewardEstimateKey = key;
+          renderRewardCampProgressPanel(camp.id, config, cached.progress);
+        }
+      }
     }
   }
   modalBody?.querySelectorAll("[data-citadel-reign-score], [data-stronghold-legacy-score]").forEach(score => {
@@ -29720,7 +29729,26 @@ function relicCampProgressMarkup(config, progress, status = "ready") {
     <p class="camp-reward-reset">Relic Camp rewards reset at 00:00 UTC.</p>`;
 }
 
+function getRewardCampPowerTier(kingPower) {
+  const rules = ECONOMY_CONFIG.campPowerRewards;
+  if (!Number.isSafeInteger(kingPower) || kingPower < 0 || !rules) return null;
+  const tier = kingPower <= rules.weakMaxPower ? "weak"
+    : kingPower <= rules.middleMaxPower ? "middle" : "strong";
+  return { tier, kingPower, multiplier: rules.multipliers[tier], version: rules.version,
+    weakMaxPower: rules.weakMaxPower, middleMaxPower: rules.middleMaxPower };
+}
+
+function getCurrentRewardCampPowerTier() {
+  if (!usesServerEconomyAuthority()) return getRewardCampPowerTier(getKingPower());
+  const stats = state?.globalStats;
+  if (!hasUsableGlobalStats(stats) || stats.version < KING_POWER_AUTHORITY_VERSION
+    || (stats.uid && stats.uid !== getCurrentOnlineUid())) return null;
+  return getRewardCampPowerTier(stats.kingPower);
+}
+
 function getRewardCampEstimatedRewards(config) {
+  const tier = getCurrentRewardCampPowerTier();
+  if (!tier) return [];
   const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
   const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
   const globalStats = normalizeGlobalStatsSnapshot(state?.globalStats);
@@ -29735,7 +29763,7 @@ function getRewardCampEstimatedRewards(config) {
     Math.max(
       0,
       Math.floor(Number(minimum) || 0),
-      Math.floor(hourlyRate * Math.max(0, Number(rewardHours[index]) || 0))
+      Math.floor(hourlyRate * Math.max(0, Number(rewardHours[index]) || 0) * tier.multiplier)
     )
   ));
 }
@@ -29757,6 +29785,8 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
     <p class="camp-reward-reset">${claimed ? "Your daily reward has been awarded or reserved until a city becomes available. " : ""}Deed Camp rewards reset at 00:00 UTC.</p>`;
   }
   const rewards = getRewardCampEstimatedRewards(config);
+  const tier = getCurrentRewardCampPowerTier();
+  if (!tier) return `<div class="camp-reward-loading error"><strong>Power estimate unavailable</strong><p>Reconnect or reopen this panel to refresh your kingdom power. The server checks your current power when the hold resolves.</p></div>`;
   const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
   const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
   const claimed = clamp(Math.floor(Number(progress?.count) || 0), 0, rewards.length);
@@ -29772,7 +29802,7 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
       <li class="camp-reward-row ${rowState}">
         <span class="camp-reward-check" aria-hidden="true">${isClaimed ? renderCrownlandsIcon("check") : index + 1}</span>
         <span class="camp-reward-copy">
-          <small>Claim ${index + 1}${rewardHours[index] ? ` &middot; ${formatNumber(rewardHours[index])}h base production` : ""}</small>
+          <small>Claim ${index + 1}${rewardHours[index] ? ` &middot; ${rewardHours[index] * tier.multiplier}h raw production` : ""}</small>
           <strong>${formatNumber(reward)} ${escapeHtml(config.rewardLabel)}</strong>
           ${reward > minimums[index] ? `<small>Current estimate; minimum ${formatNumber(minimums[index])}</small>` : ""}
         </span>
@@ -29785,6 +29815,7 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
       <div><span>Next reward</span><strong>${completed ? "Complete" : `${formatNumber(nextReward)} ${escapeHtml(config.rewardLabel)}`}</strong></div>
     </div>
     <div class="camp-reward-meter" role="progressbar" aria-label="Daily camp reward progress" aria-valuemin="0" aria-valuemax="${rewards.length}" aria-valuenow="${claimed}"><span style="width:${progressPercent}%"></span></div>
+    <p class="camp-reward-reset">${escapeHtml(tier.tier)} tier · ${tier.multiplier}× production hours · King Power ${formatNumber(tier.kingPower)}. Final rewards use power and raw production when the hold resolves; guaranteed minimums still apply.</p>
     <ol class="camp-reward-list">${rows}</ol>
     <p class="camp-reward-reset">${completed ? "Further successful holds award 0 today. " : ""}The reward ladder resets at 00:00 UTC.</p>`;
 }
@@ -30097,7 +30128,8 @@ function showRewardCampInfoModal(campId) {
         <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes. Rewards scale with your kingdom's permanent base production, with a guaranteed minimum. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
         <p>${escapeHtml(rewardDestination)} When the timer ends, all stationed troops leave in a return march to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral.</p>
         <p>Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
-        <p>Today's estimated rewards: ${estimatedCampRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
+        <p>Weak kingdoms (up to ${ECONOMY_CONFIG.campPowerRewards.weakMaxPower.toLocaleString()} King Power) receive ${ECONOMY_CONFIG.campPowerRewards.multipliers.weak}× production hours; middle kingdoms (up to ${ECONOMY_CONFIG.campPowerRewards.middleMaxPower.toLocaleString()}) receive ${ECONOMY_CONFIG.campPowerRewards.multipliers.middle}×; stronger kingdoms receive ${ECONOMY_CONFIG.campPowerRewards.multipliers.strong}×. Your current power at resolution determines the tier. Guaranteed minimums stay the same.</p>
+        <p>Today's estimated rewards: ${estimatedCampRewards.length ? estimatedCampRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ") : "unavailable until current power is synchronized"}. Further successful holds award 0 until the next UTC day.</p>
       </div>`;
   modalTitle.textContent = camp.name;
   modalBody.innerHTML = `
@@ -30155,6 +30187,7 @@ function showRewardCampInfoModal(campId) {
   window.CrownlandsCampDetailsUi?.mount(modalBody, {
     camp, config, mapName: WORLD_REGIONS_BY_ID.get(camp.regionId)?.name || "The Core",
     onClose: () => modal.close(), estimatedRewards: () => getRewardCampEstimatedRewards(config),
+    powerTier: getCurrentRewardCampPowerTier,
   });
   refreshRewardCampProgressPanel(camp.id, config);
   void refreshOwnedCampDefense(camp);

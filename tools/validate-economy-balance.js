@@ -189,6 +189,7 @@ requireMatch(payoutSource, /baseGoldPerHour:\s*baseProductionRates\.goldPerHour[
 assert.doesNotMatch(payoutSource, /untimedGoldPerHour|untimedTroopPerHour/, "Camp payout still reads permanently boosted production.");
 const clientCampEstimateSource = extractFunction(clientSource, "getRewardCampEstimatedRewards");
 requireMatch(clientCampEstimateSource, /globalStats\?\.baseTroopPerHour/, "Online Warband Camp estimates do not use raw troop production.");
+requireMatch(clientCampEstimateSource, /tier\.multiplier/, "Camp previews must apply the configured power tier.");
 requireMatch(clientCampEstimateSource, /globalStats\?\.baseGoldPerHour/, "Online Gold Camp estimates do not use raw Gold production.");
 requireMatch(clientCampEstimateSource, /getHarvestBonusBaseRates\(\)/, "Local Camp estimates do not share the raw regular-city production helper.");
 assert.doesNotMatch(clientCampEstimateSource, /untimedGoldPerHour|untimedTroopPerHour/, "Client Camp estimates still use permanently boosted production.");
@@ -256,8 +257,8 @@ assert.ok(upgradeTargetHours(50) / 10 <= 0.5, "A ten-city level-50 kingdom shoul
 assert.ok(upgradeTargetHours(100) / 10 <= 4, "A ten-city level-100 kingdom should remain war-friendly.");
 assert.ok(upgradeTargetHours(150) / 10 >= 20, "Level 150 should feel like endgame progression.");
 
-assert.deepEqual(serverConfig.skills.taxStewardship, { percentPerLevel: 3, maxPercent: 75 });
-assert.deepEqual(serverConfig.skills.royalGranaries, { percentPerLevel: 3, maxPercent: 75 });
+assert.deepEqual(serverConfig.skills.taxStewardship, { percentPerLevel: 3, maxPercent: 100 });
+assert.deepEqual(serverConfig.skills.royalGranaries, { percentPerLevel: 3, maxPercent: 100 });
 assert.deepEqual(serverConfig.skills.guildCharters, { percentPerLevel: 2, maxPercent: 50 });
 assert.equal(serverConfig.playerCosts.nearbyScoutGold, 250_000);
 assert.equal(serverConfig.playerCosts.regroupGold, 250_000);
