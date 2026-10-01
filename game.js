@@ -26997,17 +26997,8 @@ function renderClanView() {
     if (activeProfileTab === "clan" && styleScope === getOnlineRequestScope()) renderClanView();
   })) return;
   syncClanNavigationState();
-  const viewKey = JSON.stringify([getOnlineSessionRequestScope(), state?.clanId, state?.clanRole, activeClanMobileSection,
-    activeClanBrowserSection, activeClanRewardSection, clanShieldEditorOpen, clanRenameEditorOpen]);
-  const restore = clanContent.dataset.refreshView === viewKey ? captureUiRefreshState(clanView, {
-    scrollSelectors: [".description-scroll", ".activity-scroll", ".scroll-region", ".clan-roster", ".clan-list",
-      ".clan-browser-panel", ".clan-rename-card", ".clan-shield-editor-preview", ".clan-shield-editor-controls"],
-    focusAttributes: ["data-clan-form", "data-clan-action", "data-member-id", "data-clan-rally", "data-reward-id",
-      "data-clan-section", "data-clan-browser-section", "data-clan-reward", "aria-label"],
-    draftSelector: '.clan-browser form input, .clan-browser form textarea, .clan-browser form select',
-  }) : () => {};
+  const restore = captureClanViewRefresh();
   renderClanViewContent();
-  clanContent.dataset.refreshView = viewKey;
   restore();
 }
 
@@ -33295,38 +33286,6 @@ function refreshOpenHoldingReinforcementPanel() {
   bindHoldingReinforcementButtons(replacement);
 }
 
-function captureHoldingDetailsRefresh(city) {
-  const key = JSON.stringify([getOnlineSessionRequestScope(), getCityRegionId(city), city.id, city.owner, city.ownerUid]);
-  const previous = modal.open && modalBody.querySelector(".gold-camp-info-panel");
-  const sameView = previous && previous.dataset.refreshView === key;
-  const tabId = sameView && previous.querySelector('[role="tab"][aria-selected="true"]')?.id;
-  const folds = sameView ? [...previous.querySelectorAll(".detail-fold")].map(fold => fold.open) : [];
-  const restore = sameView ? captureUiRefreshState(modalBody, {
-    scrollSelectors: [".identity-column", ".details-column", ".camp-info-tab-panel", ".citadel-reign-list"],
-    focusAttributes: ["data-player-profile-uid", "data-return-clan-reinforcement", "aria-label"],
-  }) : () => {};
-  return () => {
-    const root = modalBody.querySelector(".gold-camp-info-panel");
-    if (!root) return;
-    root.dataset.refreshView = key;
-    const selected = tabId && root.querySelector(`#${CSS.escape(tabId)}`);
-    if (selected) {
-      root.querySelectorAll('[role="tab"]').forEach(tab => {
-        const active = tab === selected;
-        tab.classList.toggle("active", active);
-        tab.setAttribute("aria-selected", String(active));
-        tab.tabIndex = active ? 0 : -1;
-        const panel = root.querySelector(`#${CSS.escape(tab.getAttribute("aria-controls"))}`);
-        if (panel) panel.hidden = !active;
-      });
-      const footer = root.querySelector(".holding-footer");
-      if (footer) footer.hidden = selected.getAttribute("aria-controls") !== root.querySelector(".overview-panel")?.id;
-    }
-    root.querySelectorAll(".detail-fold").forEach((fold, index) => { if (folds[index] !== undefined) fold.open = folds[index]; });
-    restore();
-  };
-}
-
 function showCrownCitadelInfoModal(city) {
   const restoreDetails = captureHoldingDetailsRefresh(city);
   modal.dataset.cityInfoId = city.id;
@@ -36518,12 +36477,7 @@ function showInventoryModal() {
   const selectedEntryIsGearBox = isGearBoxItem(selectedEntry?.id);
   const selectedEntryActionLabel = selectedEntryIsGearBox ? "OPEN" : "USE";
   const effectLabel = getInventoryEffectLabel(selectedEntry);
-  const refreshKey = JSON.stringify([getOnlineSessionRequestScope(), model.category, model.page, selectedEntry?.entryKey || ""]);
-  const previousBag = modal.open && modalBody.querySelector(".ib-bag-shell");
-  const restoreBag = previousBag && previousBag.dataset.refreshView === refreshKey ? captureUiRefreshState(modalBody, {
-    scrollSelectors: [".ib-selection-scroll", ".ib-item-viewport", ".ib-categories"],
-    focusAttributes: ["data-inventory-select", "data-inventory-use", "data-inventory-page", "aria-label"],
-  }) : () => {};
+  const restoreBag = captureItemBagRefresh(model, selectedEntry);
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   commonGearBoxView?.dispose();
   modal.className = "inventory-modal modal";
@@ -36533,7 +36487,6 @@ function showInventoryModal() {
     return;
   }
   modalBody.innerHTML = renderItemBagPanel(model, selectedEntry, selectedEntryActiveRemaining, selectedEntryActionLabel, effectLabel);
-  modalBody.querySelector(".ib-bag-shell").dataset.refreshView = refreshKey;
   bindInventoryCategoryControls();
   modalBody.querySelectorAll("[data-inventory-page]").forEach(button => {
     button.addEventListener("click", () => setInventoryPage(Number(button.dataset.inventoryPage), true));

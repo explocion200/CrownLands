@@ -31,6 +31,11 @@
       "reason": "The shared officer renderer now preserves the selected item's details scroll and focused control during same-view updates. Browser coverage exercises all four officer screens, deferred script loading, Treasury equip/upgrade/confirmation behavior, and desktop plus two landscape sizes. Existing explicit action focus and bag selection models remain authoritative."
     },
     {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "New shared refresh helpers add less than 7 KiB to the existing dialog presentation module. Bound that module's allowance explicitly; the main game and aggregate installed-shell caps stay unchanged and there is no additional script request. Verify the complete production artifact remains within asset and shell limits."
+    },
+    {
       "paths": ["daily-login-ui.js"],
       "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-daily-login-rewards.js", "tools/validate-optional-ui-scripts-browser.js"],
       "reason": "Daily Login refresh keeps its week/day focus and scroll only for the same session and reward position; a new cycle resets normally. Browser tests use the actual daily reward model and deferred renderer. Static reward validation verifies the authoritative schedule and claim integration remain unchanged."
