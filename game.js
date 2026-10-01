@@ -1075,10 +1075,10 @@ const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours
 const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
 const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
-const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 60);
+const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 80);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 30);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 30);
-const HARVEST_BONUS_TYPES = ["gold", "troops"];
+const HARVEST_BONUS_TYPES = COSMETIC_CATALOG.PICKUP_TYPES;
 const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 2) * 60;
 const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 2) * 60;
 const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
@@ -5836,7 +5836,7 @@ function renderHarvestBonuses() {
   getActiveHarvestBonuses(activeRegionId).forEach(bonus => {
     const type = normalizeHarvestBonusType(bonus.type);
     const remaining = getHarvestBonusRemaining(type, daily);
-    const label = type === "troops" ? "troop bonus" : "gold bonus";
+    const label = type === "crowns" ? "Crown pickup: 1 Crown" : type === "troops" ? "troop bonus" : "gold bonus";
     const mapPoint = worldToMapPoint(bonus);
     let buttonElement = existingNodes.get(bonus.id);
     existingNodes.delete(bonus.id);
@@ -10190,7 +10190,7 @@ function currentDailyDateKey(now = new Date()) {
 function normalizeDailyCaptureTracker(daily) {
   const today = currentDailyDateKey();
   if (!daily || typeof daily !== "object" || daily.date !== today) {
-    return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
+    return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0, harvestedCrownBonuses: 0 };
   }
   const legacyHarvested = clamp(Math.floor(Number(daily.harvestedBonuses) || 0), 0, HARVEST_BONUS_DAILY_LIMIT);
   const hasTypedCounts = Number.isFinite(Number(daily.harvestedGoldBonuses)) || Number.isFinite(Number(daily.harvestedTroopBonuses));
@@ -10200,18 +10200,20 @@ function normalizeDailyCaptureTracker(daily) {
   const harvestedTroopBonuses = hasTypedCounts
     ? clamp(Math.floor(Number(daily.harvestedTroopBonuses) || 0), 0, HARVEST_BONUS_DAILY_TROOP_LIMIT)
     : clamp(legacyHarvested - harvestedGoldBonuses, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT);
-  const harvestedBonuses = clamp(harvestedGoldBonuses + harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
+  const harvestedCrownBonuses = clamp(Math.floor(Number(daily.harvestedCrownBonuses) || 0), 0, 20);
+  const harvestedBonuses = clamp(harvestedGoldBonuses + harvestedTroopBonuses + harvestedCrownBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
   return {
     date: today,
     neutralCaptures: clamp(Math.floor(Number(daily.neutralCaptures) || 0), 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
     harvestedBonuses,
     harvestedGoldBonuses,
     harvestedTroopBonuses,
+    harvestedCrownBonuses,
   };
 }
 
 function ensureDailyCaptureTracker() {
-  if (!state) return { date: currentDailyDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
+  if (!state) return { date: currentDailyDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0, harvestedCrownBonuses: 0 };
   state.daily = normalizeDailyCaptureTracker(state.daily);
   return state.daily;
 }
@@ -13031,6 +13033,7 @@ function applyServerArmyResult(result = null, options = {}) {
 }
 
 function applyServerEconomyResult(result = null, options = {}) {
+  if (result?.cosmetics) applyCosmeticResult(result);
   if (!result || typeof result !== "object") return false;
   const nextShopPricing = result.shopPricing || result.currentUser?.shopPricing;
   if (nextShopPricing && typeof nextShopPricing === "object") {
@@ -22422,19 +22425,17 @@ function getHarvestBonusTroopReward() {
   return clamp(Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops), HARVEST_BONUS_MIN_TROOPS, HARVEST_BONUS_MAX_TROOPS);
 }
 
-function getHarvestBonusIcon(type) {
-  return normalizeHarvestBonusType(type) === "troops"
-    ? `<img class="harvest-bonus-icon" src="${TROOP_PICKUP_ICON_SRC}" alt="" draggable="false">`
-    : `<img class="harvest-bonus-icon" src="${GOLD_PICKUP_ICON_SRC}" alt="" draggable="false">`;
-}
+function getHarvestBonusIcon(type) { return renderCosmeticPickupIcon(type); }
 
 function getHarvestBonusDailyLimit(type) {
+  if (type === "crowns") return 20;
   return normalizeHarvestBonusType(type) === "troops"
     ? HARVEST_BONUS_DAILY_TROOP_LIMIT
     : HARVEST_BONUS_DAILY_GOLD_LIMIT;
 }
 
 function getHarvestBonusDailyCount(type, daily = ensureDailyCaptureTracker()) {
+  if (type === "crowns") return cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : Math.max(0, Number(daily.harvestedCrownBonuses) || 0);
   return normalizeHarvestBonusType(type) === "troops"
     ? Math.max(0, Math.floor(Number(daily.harvestedTroopBonuses) || 0))
     : Math.max(0, Math.floor(Number(daily.harvestedGoldBonuses) || 0));
@@ -22452,14 +22453,12 @@ function canHarvestBonusType(type, daily = ensureDailyCaptureTracker()) {
 }
 
 function getAlternateHarvestBonusType(type) {
-  return normalizeHarvestBonusType(type) === "troops" ? "gold" : "troops";
+  return COSMETIC_CATALOG.nextType(normalizeHarvestBonusType(type));
 }
 
 function getNextAvailableHarvestBonusType(daily = ensureDailyCaptureTracker()) {
   const preferred = normalizeHarvestBonusType(state?.harvestNextBonusType);
-  if (canHarvestBonusType(preferred, daily)) return preferred;
-  const alternate = getAlternateHarvestBonusType(preferred);
-  return canHarvestBonusType(alternate, daily) ? alternate : "";
+  return COSMETIC_CATALOG.availableType(preferred, type => type === "crowns" && !usesServerEconomyAuthority() ? 0 : getHarvestBonusRemaining(type, daily));
 }
 
 function incrementHarvestBonusDailyCount(type, daily = ensureDailyCaptureTracker()) {
@@ -22892,7 +22891,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
   }
   const daily = ensureDailyCaptureTracker();
   if (!canHarvestBonusType(type, daily)) {
-    showToast(`Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
+    showToast(`Daily ${type === "crowns" ? "Crown" : type === "troops" ? "troop" : "gold"} harvest limit reached.`);
     return;
   }
   if (usesServerEconomyAuthority()) {
@@ -22909,7 +22908,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
     let claimConfirmed = false;
     pendingHarvestBonusIds.add(pendingId);
     try {
-      renderHarvestFeedback(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
+      renderHarvestFeedback(`Collecting ${type === "crowns" ? "Crowns" : type === "troops" ? "troops" : "gold"}...`);
       const result = await api.collectHarvestBonus({
         bonusId: bonus.id,
         type,
@@ -22923,14 +22922,16 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       const reward = Math.max(0, Math.floor(Number(result?.reward) || 0));
       const serverDaily = normalizeDailyCaptureTracker(result?.currentUser?.daily || state.daily);
       renderPanel();
-      if (type === "troops") {
+      if (type === "crowns") {
+        showToast(result?.replayed ? "Crown pickup already collected." : `Collected +1 Crown (${COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow())}/20 today)${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
+      } else if (type === "troops") {
         const targetName = result?.targetCityName || getHarvestBonusTroopTargetCity()?.name || "main city";
         addLog(`Harvested stored troop production: ${formatNumber(reward)} troops to ${targetName}.`);
         showToast(`Harvested +${formatNumber(reward)} troops (${formatNumber(serverDaily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
       } else {
         showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
       }
-      if (reward > 0) {
+      if (reward > 0 && type !== "crowns" && !result?.replayed) {
         if (type === "gold") playGameSound("map_gold_pickup", { regionId: bonus.regionId });
         else playGameSound("map_troop_pickup", { regionId: bonus.regionId });
         playRewardAnimation(type, {
@@ -22963,6 +22964,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
     return;
   }
 
+  if (type === "crowns") { showToast("Connect to the server to collect Crowns."); return; }
   state.harvestBonuses.splice(index, 1);
   if (type === "troops") {
     const troopReward = getHarvestBonusTroopReward();
@@ -24407,6 +24409,7 @@ function renderAll() {
 }
 
 function renderHud() {
+  syncCosmeticsSession();
   renderOnboardingMapTip();
   setTextIfChanged(lordNameText, state.playerName);
   ensureDailyCaptureTracker();
@@ -27492,29 +27495,7 @@ async function handleClanClick(event) {
   });
 }
 
-function updateProfileTabHeader() {
-  window.CrownlandsPlayerProfileUI?.setOverview(activeProfileTab === "profile" && Boolean(flagEditorView?.hidden));
-  const showingSkills = activeProfileTab === "skills";
-  const showingSettings = activeProfileTab === "settings";
-  const showingClan = activeProfileTab === "clan";
-  if (profileScreenTitle) profileScreenTitle.textContent = showingSettings ? "Settings" : showingSkills ? "Skills" : showingClan ? "Clan" : "Profile";
-  if (profileTabBtn) {
-    profileTabBtn.classList.toggle("active", !showingSkills && !showingSettings && !showingClan);
-    profileTabBtn.setAttribute("aria-selected", String(!showingSkills && !showingSettings && !showingClan));
-  }
-  if (clanTabBtn) {
-    clanTabBtn.classList.toggle("active", showingClan);
-    clanTabBtn.setAttribute("aria-selected", String(showingClan));
-  }
-  if (skillsTabBtn) {
-    skillsTabBtn.classList.toggle("active", showingSkills);
-    skillsTabBtn.setAttribute("aria-selected", String(showingSkills));
-  }
-  if (settingsTabBtn) {
-    settingsTabBtn.classList.toggle("active", showingSettings);
-    settingsTabBtn.setAttribute("aria-selected", String(showingSettings));
-  }
-}
+function updateProfileTabHeader() { updateCosmeticProfileNavigation(); }
 
 function renderProfileScreen() {
   if (!state || !profileScreen?.classList.contains("open")) return;
@@ -28081,7 +28062,7 @@ function renderFlagEditor() {
     size: "small",
   });
   const selectedPattern = FLAG_PATTERNS.find(option => option.key === flagDraft.pattern);
-  const selectedSymbol = FLAG_SYMBOLS.find(option => option.key === flagDraft.symbol);
+  const selectedSymbol = PLAYER_FLAG_CONFIG.getSymbol(flagDraft.symbol);
   if (flagEditorPatternName) flagEditorPatternName.textContent = selectedPattern?.label || flagDraft.pattern;
   if (flagEditorSymbolName) flagEditorSymbolName.textContent = selectedSymbol?.label || flagDraft.symbol;
   const contrast = PLAYER_FLAG_CONFIG.getContrastWarnings(flagDraft, stableKey);
@@ -28120,7 +28101,8 @@ function renderFlagEditor() {
     });
   });
 
-  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => {
+  const ownedFlagSymbols = PLAYER_FLAG_CONFIG.SYMBOLS.filter(option => option.premium && cosmeticState?.owned[COSMETIC_CATALOG.flagItem(option.key)?.id]);
+  flagSymbolOptions.innerHTML = [...FLAG_SYMBOLS, ...ownedFlagSymbols].map(option => {
     const selected = flagDraft.symbol === option.key;
     return `<button type="button" data-flag-symbol="${option.key}" class="player-flag-editor__control player-flag-editor__symbol-card${selected ? " active" : ""}" aria-label="${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}<span>${escapeHtml(option.label)}</span></button>`;
   }).join("");
@@ -28587,6 +28569,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
       city.ownerName || "",
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
+      cosmeticCityAttributes(city),
       clanAlly ? 1 : 0,
       rallyAssembly.ready,
       rallyAssembly.inbound,
@@ -29023,6 +29006,7 @@ function renderCitiesUncached(force = false) {
       btn._renderContent = cityHtml;
     }
     applyCityOwnerFlags(btn, city);
+    applyCosmeticCityNode(btn, city);
     if (!existingCityNode) cityFragment.appendChild(btn);
   });
   existingCampNodes.forEach(node => node.remove());
@@ -31002,6 +30986,8 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
   token.style.transform = `translate(${mapPoint.x}px, ${mapPoint.y}px) translate(-50%, -50%)`;
 
+  const troopSkin = attack.kind === "scout" ? "" : cosmeticAppearance(attack.ownerUid || (isPersonalArmy(attack) ? cosmeticUid : "")).troops || "";
+  token.dataset.troopSkin = troopSkin;
   const armyIcon = attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
     icon: iconElement,
@@ -36458,6 +36444,7 @@ function bindShopItemSelection() {
 function renderShopModal() {
   if (!state) return;
   if (!ensureModalUiStyle("shop", renderShopModal)) return;
+  if (cosmeticOpenShopRequested) { royalShopSection = "skins"; cosmeticOpenShopRequested = false; }
   rememberShopCarouselScroll();
   const selectableIds = getSelectableShopItemIds();
   if (!selectableIds.includes(selectedShopItemId)) selectedShopItemId = selectableIds[0] || "";
@@ -41734,6 +41721,7 @@ if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => sho
 if (profileViewAchievementsBtn) profileViewAchievementsBtn.addEventListener("click", () => showDailyLoginRewardsModal({ initialTab: "achievements" }));
 if (profileInnerCastleBtn) profileInnerCastleBtn.addEventListener("click", openProfileInnerCastle);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
+document.getElementById("skinsTabBtn")?.addEventListener("click", () => showProfileSkins());
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (clanTabBtn) clanTabBtn.addEventListener("click", showProfileClan);
 if (skillsTabBtn) skillsTabBtn.addEventListener("click", showProfileSkills);

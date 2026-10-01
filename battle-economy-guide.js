@@ -316,7 +316,7 @@
     const pickups = config.pickups || {};
     const initialPickupMinutes = Number(pickups.initialSpawnDelayMinutes) || 0;
     const respawnPickupMinutes = Number(pickups.respawnAfterCollectionMinutes) || 0;
-    $("pickupEconomyText").textContent = `First pickup after ${format(initialPickupMinutes)} minute${initialPickupMinutes === 1 ? "" : "s"} · then ${format(respawnPickupMinutes)} minute${respawnPickupMinutes === 1 ? "" : "s"} after each collection · center-biased placement · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} gold and ${format(pickups.dailyTroopCap)} troop pickups`;
+    $("pickupEconomyText").textContent = `First pickup after ${format(initialPickupMinutes)} minute${initialPickupMinutes === 1 ? "" : "s"} · then ${format(respawnPickupMinutes)} minute${respawnPickupMinutes === 1 ? "" : "s"} after each collection · center-biased placement · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} Gold, ${format(pickups.dailyTroopCap)} troop and ${format(pickups.dailyCrownCap)} Crown pickups · rotate Gold → Troops → Crowns · 1 Crown per Crown pickup`;
     const repairExamples = [
       { label: "Level 1 city", level: 1 },
       { label: "Level 25 city", level: 25 },

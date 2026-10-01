@@ -42,17 +42,18 @@ const expectedLegacyOnlySymbols = [
 
 assert.deepEqual(config.COLORS.map(({ label, value }) => [label, value]), expectedColors, "The curated heraldic palette changed.");
 assert.deepEqual(config.PATTERN_KEYS, expectedPatterns, "The supported heraldic patterns changed.");
-assert.deepEqual(config.SYMBOL_KEYS, expectedSymbols, "The medieval symbol catalog changed.");
+assert.deepEqual(config.SYMBOLS.filter(symbol => !symbol.premium).map(symbol => symbol.key), expectedSymbols, "The medieval symbol catalog changed.");
 assert.deepEqual(config.SELECTABLE_SYMBOL_KEYS, expectedSelectableSymbols, "The approved selectable symbol catalog changed.");
 assert.deepEqual(config.LEGACY_ONLY_SYMBOL_KEYS, expectedLegacyOnlySymbols, "The legacy-only compatibility catalog changed.");
 assert.equal(new Set(config.COLOR_VALUES).size, 20, "Flag colors must remain distinct.");
-assert.equal(new Set(config.SYMBOL_KEYS).size, 30, "Flag symbol IDs must remain distinct.");
+assert.equal(new Set(config.SYMBOL_KEYS).size, 34, "Flag symbol IDs must remain distinct.");
 assert.equal(new Set(config.SELECTABLE_SYMBOL_KEYS).size, 21, "Selectable flag symbol IDs must remain distinct.");
 
 for (const pattern of expectedPatterns) {
   assert.ok(styles.includes(`.kingdom-flag.pattern-${pattern}`), `Missing rendering for ${pattern}.`);
 }
 for (const symbol of config.SYMBOLS) {
+  if (symbol.premium) continue; // Owned placeholders are rendered separately and never selected at random.
   assert.match(symbol.icon, /^flag-[a-z-]+$/, `${symbol.label} must use a dedicated heraldic icon.`);
   const source = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key) ? runtimeSprite : index;
   assert.equal((source.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `${symbol.label} must have exactly one SVG sprite symbol.`);

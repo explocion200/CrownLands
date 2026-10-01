@@ -1,74 +1,41 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "758260e410bd72e1aa90ed25f4bb4a0801886f4d",
+  "baseCommit": "646bb15c01e5b9c910711cd5000333736dd481e9",
   "coverage": [
     {
-      "paths": [
-        "functions/index.js",
-        "functions/rally-staging.js",
-        "tools/validate-rally-staging-defense.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "functions/test/emulator-clan-tower-battle-reports.js"
-      ],
-      "tests": [
-        "tools/validate-rally-staging-defense.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-reinforcement-retargeting.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-king-power.js",
-        "tools/validate-report-system.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-soldier-defense.js",
-        "tools/validate-combat-forecast.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "functions/test/emulator-clan-tower-battle-reports.js",
-        "functions/test/emulator-player-camp-defense.js"
-      ],
-      "reason": "Arrived forming-rally contributions defend their assembly city or Tower using each ruler's defense package. Split casualties between normal garrisons and each rally; update commitments, recovery, reports and cancellation without creating spendable troops. Test integer conservation, multiple rallies, ordinary reinforcement arrivals beside staged troops, scouts, city/Tower combat, defeated assembly, early launch with the existing Ready minimum, atomic inbound turnbacks, duplicate settlement and arrival/launch races. Shared army defense also serves camps and siege; preserve those calculations and troop totals. Correct rally-join realm scope so current movements remain visible and counted. Arm only the empty prior-season fixture in the existing Core Tower report suite for the October season guard."
+      "paths": ["functions/cosmetics.js", "functions/cosmetics-service.js", "functions/index.js", "firestore.rules", "functions/economy-config.json", "functions/test/emulator-cosmetics.js", "functions/test/emulator-harvest-pickup-rewards.js", "tools/validate-cosmetics.js"],
+      "tests": ["tools/validate-cosmetics.js", "tools/validate-harvest-pickups.js", "functions/test/emulator-cosmetics.js", "functions/test/emulator-harvest-pickup-rewards.js"],
+      "reason": "Validate permanent private wallets, server prices, partial bundles, idempotent purchases and claims, equipment, premium ownership rules, UTC caps and the new pickup rotation. Retain existing raw Gold/troop reward and rejected-claim coverage for the shared collection code."
     },
     {
-      "paths": [
-        "game.js",
-        "rallies-activity-ui.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-clan-rallies.js"
-      ],
-      "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "War Room and Activity launch readiness use arrived contributor minima, including the creator. Confirmation names inbound contributors who will return; assembly copy explains live defense and reserved ownership. Real-browser checks cover launch readiness, Tower minimum, inbound confirmation, privacy and reachable controls at desktop and landscape-mobile sizes. Existing assembly visibility and join flows remain covered."
+      "paths": ["functions/playerFlagConfig.js", "functions/flagRenderer.js", "tools/validate-player-flags.js", "tools/validate-random-starter-flags.js", "tools/validate-flag-symbol-art.js"],
+      "tests": ["tools/validate-player-flags.js", "tools/validate-random-starter-flags.js", "tools/validate-flag-symbol-art.js", "tools/validate-cosmetics.js", "functions/test/emulator-cosmetics.js"],
+      "reason": "Premium symbols extend saved flags without changing the approved free artwork or random starter choices. Exercise premium equip, free editing, owned editing and rejection of unowned symbols."
     },
     {
-      "paths": [
-        "functions/test/run-emulator-gates.js"
-      ],
-      "tests": [
-        "tools/test-targeted-validation.js",
-        "functions/test/emulator-rally-staging-defense.js"
-      ],
-      "reason": "Register the focused current Core expansion emulator suite in the existing allowlist. Verify explicit selection and sharding without changing gate policy or inactive topology tests."
+      "paths": ["game.js", "cosmetics-client.js", "skins-ui.js", "skins-ui.css", "shop-ui.js", "index.html", "tools/validate-cosmetics-browser.js"],
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js", "tools/validate-shop-browser.js", "tools/validate-shop-pricing.js", "tools/validate-profile-theme.js", "tools/validate-player-flags.js", "tools/validate-harvest-pickups.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Check preview versus purchase/equip, uncertain purchase recovery, stale confirmations, default restoration, city appearance, sale closure, and reachable controls at desktop and landscape-mobile sizes. Exercise affected Shop, profile, flag and pickup behavior and enforce existing entry-point budgets."
     },
     {
-      "paths": [
-        "clans-rallies-guide.html",
-        "how-to-play.html"
-      ],
-      "tests": [
-        "tools/validate-clan-rallies.js"
-      ],
-      "reason": "Update player guidance for live assembly defense and early launch with automatic inbound returns. Preserve the existing minimum of two Ready participants, or three for Tower targets."
+      "paths": ["firebaseClient.js"],
+      "tests": ["tools/validate-cosmetics.js", "tools/validate-cosmetics-browser.js", "tools/validate-harvest-pickups.js", "functions/test/emulator-cosmetics.js"],
+      "reason": "The shared transport retains pickup callables and adds session-scoped private ownership and public equipped-appearance subscriptions; validate exports and corresponding authority boundaries."
     },
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [],
-      "reason": "Record the user-confirmed changes to staged defense and early launch, casualty ownership, and atomic returns. Existing minimum participant rules remain unchanged. Deployment remains pending; no production data or archived topology changes."
+      "paths": ["economy-config.js", "battle-economy-guide.js", "daily-rewards-guide.html", "how-to-play.html", "tools/validate-harvest-pickups.js", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-cosmetics.js"],
+      "reason": "Keep client caps and player-facing rules consistent with the confirmed 30 Gold, 30 troop and 20 Crown daily pickups, one Crown per pickup, permanent cosmetics and no Crowns in daily quests."
+    },
+    {
+      "paths": ["release-config.js", "functions/release-config.json", "service-worker.js", "tools/build-production-client.js", "tools/generate-release-manifest.js", "tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-release-gate.js", "tools/validate-asset-performance-budgets.js", "functions/test/emulator-cosmetics.js"],
+      "reason": "Package and cache every cosmetic module in production, verify the client/server release contract and ensure current clients use the new pickup protocol. The existing world topology and reset generation remain the current release target."
+    },
+    {
+      "paths": ["functions/test/run-emulator-gates.js"],
+      "tests": ["tools/test-targeted-validation.js", "tools/test-safe-update-pipeline.js", "tools/test-change-risk-classifier.js", "tools/validate-release-gate.js", "functions/test/emulator-cosmetics.js"],
+      "reason": "Register the new cosmetics authority suite against the current core-expansion topology and verify selected-test execution and safe PR gates."
     }
   ]
 }

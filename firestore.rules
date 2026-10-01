@@ -86,13 +86,20 @@ service cloud.firestore {
           'battle-axe', 'war-hammer', 'spearhead', 'gauntlet', 'tower', 'castle-gate',
           'fleur-de-lis', 'oak-tree', 'sunburst', 'cross', 'moon', 'diamond', 'guardian',
           'banner', 'helm',
-          'castle', 'star', 'swords', 'fleur', 'sun', 'knight', 'spire', 'keep'
+          'castle', 'star', 'swords', 'fleur', 'sun', 'knight', 'spire', 'keep',
+          'halloween-pumpkin', 'halloween-bat', 'halloween-skull', 'halloween-raven'
         ];
+    }
+
+    function ownsFlagSymbol(flag) {
+      let premium = {'halloween-pumpkin':'halloween_pumpkin', 'halloween-bat':'halloween_bat', 'halloween-skull':'halloween_skull', 'halloween-raven':'halloween_raven'};
+      return !(flag.symbol in premium) || (exists(/databases/$(database)/documents/players/$(request.auth.uid)/cosmetics/state)
+        && get(/databases/$(database)/documents/players/$(request.auth.uid)/cosmetics/state).data.get('owned', {}).get(premium[flag.symbol], false) == true);
     }
 
     function validOptionalPlayerFlag(container) {
       return container is map
-        && (!container.keys().hasAny(['flag']) || validPlayerFlagValue(container.flag));
+        && (!container.keys().hasAny(['flag']) || (validPlayerFlagValue(container.flag) && ownsFlagSymbol(container.flag)));
     }
 
     function validPlayerSaveFlag() {
@@ -118,7 +125,7 @@ service cloud.firestore {
       return shieldCount(request.resource.data) == 0
         && request.resource.data.get('activeSession', {}).get('version', 0) != 2
         && validPlayerProfileNameCreate()
-        && (!request.resource.data.keys().hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag))
+        && (!request.resource.data.keys().hasAny(['flag']) || (validPlayerFlagValue(request.resource.data.flag) && ownsFlagSymbol(request.resource.data.flag)))
         && !request.resource.data.keys().hasAny([
           'gold',
           'goldFloat',
@@ -226,7 +233,7 @@ service cloud.firestore {
           && request.resource.data.get('activeSession', {}).get('version', 0) != 2
         ))
         && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName))
-        && (!affected.hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag))
+        && (!affected.hasAny(['flag']) || (validPlayerFlagValue(request.resource.data.flag) && ownsFlagSymbol(request.resource.data.flag)))
         && (!affected.hasAny(['playerName', 'flag', 'identityRevision']) || (
           affected.hasOnly(['playerName', 'flag', 'identityRevision', 'updatedAt'])
           && request.resource.data.identityRevision is int
@@ -244,7 +251,7 @@ service cloud.firestore {
       return ownsCityOwnerIdentity()
         && profileFieldUnchanged('clanReinforcementSlotCount')
         && (profileFieldUnchanged('ownerName') || validPlayerNameValue(request.resource.data.ownerName))
-        && (profileFieldUnchanged('ownerFlag') || validPlayerFlagValue(request.resource.data.ownerFlag))
+        && (profileFieldUnchanged('ownerFlag') || (validPlayerFlagValue(request.resource.data.ownerFlag) && ownsFlagSymbol(request.resource.data.ownerFlag)))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'ownerName',
           'ownerFlag',
@@ -278,7 +285,21 @@ service cloud.firestore {
       }
     }
 
+    match /playerCosmetics/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /players/{uid} {
+      match /cosmetics/{stateId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow write: if false;
+      }
+      match /cosmeticReceipts/{receiptId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow write: if false;
+      }
+
       allow read: if ownsPlayerDoc(uid);
       allow create: if ownsPlayerDoc(uid) && validPlayerProfileCreate();
       allow update: if ownsPlayerDoc(uid) && validPlayerProfileUpdate();

@@ -1085,13 +1085,9 @@
     });
   }
 
-  async function collectHarvestBonus(payload = {}) {
-    return callServerFunction("collectHarvestBonus", payload);
-  }
+  const cosmeticsApi = globalThis.CrownlandsCosmeticsClient.create({ client, callServerFunction, subscribeScopedSnapshot });
 
-  async function reserveHarvestBonusSpawn(payload = {}) {
-    return callServerFunction("reserveHarvestBonusSpawn", payload);
-  }
+
 
   async function upgradeCity(payload = {}) {
     return callServerFunction("upgradeCity", payload);
@@ -3635,8 +3631,7 @@
     getRewardedAdStatus,
     prepareRewardedAd,
     claimRewardedAd,
-    reserveHarvestBonusSpawn,
-    collectHarvestBonus,
+    ...cosmeticsApi,
     getCityUpgradeXpPreview,
     upgradeCity,
     spendSkillPoint,

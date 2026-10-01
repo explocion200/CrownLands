@@ -1,0 +1,53 @@
+.skins-panel { color:#302719; background:#eadbbb; padding:14px; min-height:0; height:100%; display:flex; flex-direction:column; gap:10px; box-sizing:border-box; overflow:auto; }
+.skins-panel [hidden] { display:none!important; }
+.skins-heading { display:flex; justify-content:space-between; gap:16px; align-items:center; }
+.skins-heading h2,.skins-heading p { margin:0; }
+.skins-heading p,.skins-notice,.skins-footer { font-size:12px; }
+.skins-wallet { display:grid; gap:4px; text-align:right; font-size:13px; }
+.skins-wallet strong { color:#634600; font-size:20px; }
+.skins-panel button { background:#f4e8ca; color:#302719; border:1px solid #8b724e; border-radius:5px; padding:8px 12px; cursor:pointer; font:inherit; }
+.skins-panel button:hover { background:#fff0cb; }
+.skins-panel button:focus-visible { outline:3px solid #82510a; outline-offset:2px; }
+.skins-panel button:disabled { opacity:.65; cursor:default; }
+.skins-filters { display:flex; flex-wrap:wrap; gap:5px; }
+.skins-panel button[aria-pressed="true"] { background:#d0ac61; border:2px solid #593e18; }
+.skins-notice { margin:0; line-height:1.5; }
+.skins-notice strong { font-weight:normal; color:#695033; }
+.skins-body { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr); gap:14px; min-height:0; flex:1; overflow:auto; padding:3px; }
+.skins-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; align-content:start; overflow:auto; min-height:0; padding:3px; }
+.skin-card { display:flex; flex-direction:column; align-items:center; gap:7px; min-height:140px; text-align:center; }
+.skin-card strong { font-size:14px; }
+.skin-card>span:last-child { font-size:12px; }
+.skin-art { display:grid; place-items:center; width:64px; height:64px; font-size:48px; color:#685379; border:1px dashed #877297; border-radius:10px; background:#dcd0c2; }
+.skin-detail { overflow:auto; padding:14px; background:#f3e7cc; border:1px solid #aa9270; border-radius:6px; }
+.skin-detail>.skin-art { width:96px; height:96px; font-size:66px; margin:0 auto; }
+.skin-detail h3 { margin:10px 0; }
+.skin-detail p,.skin-detail li { font-size:14px; line-height:1.45; }
+.skin-detail ul { padding-left:20px; }
+.skin-primary,.skin-confirm button:first-of-type { width:100%; background:#665634!important; color:#fff5dc!important; }
+.skin-confirm { border-top:1px solid #aa9270; padding-top:8px; }
+.skin-confirm button { margin:4px 0; }
+.skins-feedback { border:1px solid #916746; padding:8px; margin:0; background:#fff0ce; }
+.skins-footer { display:flex; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0; }
+.skins-footer span { margin-left:auto; }
+.skin-flag-preview { display:block; width:65px; height:75px; position:relative; overflow:hidden; background:var(--flag-primary,#742b27); border:2px solid #735d37; clip-path:polygon(0 0,100% 0,100% 85%,50% 100%,0 85%); }
+.skin-flag-preview .flag-symbol { display:block; position:absolute; inset:12px; }
+.skin-flag-preview svg { width:100%; height:100%; }
+#modal.shop-modal .skin-flag-preview .flag-symbol { color:var(--flag-symbol-color)!important; }
+#skinsView { min-height:0; height:100%; overflow:hidden; }
+#profileScreen .profile-tabs { grid-template-columns:repeat(5,minmax(52px,1fr)); }
+#profileScreen.skins-active { background:#eadbbb!important; display:flex!important; flex-direction:column; }
+#profileScreen.skins-active #skinsView { flex:1; height:auto; }
+#profileScreen.skins-active .profile-screen-header { flex-shrink:0; }
+#profileScreen.skins-active .skins-panel { font:14px/1.4 "Segoe UI",Arial,sans-serif; }
+#profileScreen.skins-active .skins-panel :is(h2,h3,p,span,strong,button) { font-family:inherit; font-variant:normal; text-transform:none; }
+#modal.shop-modal .rs-shop-shell.skin-shop-shell { grid-template-rows:52px 48px minmax(0,1fr)!important; }
+#modal.shop-modal .skin-shop-shell>.skins-panel { height:100%; max-height:none; min-height:0; }
+.shop-modal .skins-panel { max-height:calc(100dvh - 180px); }
+.city-node[data-city-skin="halloween_city"] .city-castle::after { content:"Skin preview"; position:absolute; left:50%; bottom:0; transform:translateX(-50%); white-space:nowrap; font-size:12px; background:#e9dfef; color:#4d3a5d; padding:2px 4px; border:1px dashed #695278; pointer-events:none; }
+.city-node[data-flag-border="halloween_border"] .kingdom-flag { outline:3px dashed #7c5987; outline-offset:1px; }
+.army-token[data-troop-skin="halloween_troops"] .army-token-icon { border:2px dashed #7c5987; border-radius:5px; }
+.harvest-bonus-crowns .harvest-bonus-icon { display:grid; place-items:center; width:100%; height:100%; color:#654482; font:bold 76px Georgia,serif; background:#eadced; border:3px solid #765689; border-radius:50%; text-shadow:0 1px #fff; }
+@media (max-width:900px) { .skins-panel { padding:8px; gap:6px; } .skins-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .skin-card { min-height:105px; padding:7px!important; } .skins-heading h2 { font-size:19px; } .skins-wallet strong { font-size:17px; } .skins-body { grid-template-columns:minmax(0,1fr) minmax(190px,.8fr); gap:8px; } .skin-art { width:44px; height:44px; font-size:32px; } .skin-detail>.skin-art { width:52px; height:52px; font-size:38px; } }
+@media (max-height:500px) { .skins-heading p { display:none; } .skins-heading h2 { font-size:17px; } .skins-notice { font-size:11px; } .skins-filters button { padding:5px 8px; font-size:12px; } .skins-body { min-height:65px; } .skins-footer span { display:none; } #modal.shop-modal .rs-shop-shell.skin-shop-shell { grid-template-rows:34px 44px minmax(0,1fr)!important; } #modal.shop-modal .skin-shop-shell .rs-shop-header { min-height:0!important;padding:4px 12px!important; } .skins-wallet { display:flex; flex-wrap:wrap; align-items:center;justify-content:flex-end;gap:4px 10px; } .skins-wallet strong { font-size:15px; } .skins-wallet span { font-size:11px; } .skins-wallet button { padding:5px 8px; } }
+@media (max-height:500px) { #profileScreen.skins-active .profile-screen-header { display:flex!important;align-items:center;gap:8px;padding:6px!important;min-height:52px; } #profileScreen.skins-active .profile-screen-heading>span { display:none; } #profileScreen.skins-active .profile-screen-heading h2 { font-size:17px; } #profileScreen.skins-active .profile-tabs { flex:1;min-width:0;gap:3px;padding:0; } #profileScreen.skins-active .profile-tabs button { min-width:0;min-height:36px;padding:4px;font-size:11px; } #profileScreen.skins-active .profile-screen-close { position:static;width:36px;min-width:36px;height:36px; } }

@@ -106,7 +106,7 @@ const selectableSymbols = [
   "tower", "castle-gate", "fleur-de-lis", "oak-tree", "sunburst", "cross",
 ];
 const legacyOnlySymbols = ["double-eagle", "griffin", "raven", "falcon", "moon", "diamond", "guardian", "banner", "helm"];
-assert.equal(config.SYMBOL_KEYS.length, 30, "The v2 catalog must contain exactly 30 stable symbol IDs.");
+assert.equal(config.SYMBOL_KEYS.length, 34, "The catalog retains 30 original symbols and adds four owned Halloween symbols.");
 assert.deepEqual(config.SELECTABLE_SYMBOL_KEYS, selectableSymbols, "The editor must expose exactly the 21 approved symbols.");
 assert.deepEqual(config.LEGACY_ONLY_SYMBOL_KEYS, legacyOnlySymbols, "The legacy-only compatibility set changed.");
 for (const symbol of legacyOnlySymbols) assert.ok(config.SYMBOL_KEYS.includes(symbol), `Missing readable legacy-only ${symbol} ID.`);
@@ -117,6 +117,7 @@ for (let index = 0; index < 100; index += 1) {
 assert.equal(config.PATTERN_KEYS.length, 14);
 for (const pattern of config.PATTERN_KEYS) assert.ok(styles.includes(`pattern-${pattern}`), `Missing ${pattern} CSS geometry.`);
 for (const symbol of config.SYMBOLS) {
+  if (symbol.premium) continue; // Explicit placeholder renderer; never part of the free/random symbol pool.
   const source = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key) ? runtimeSprite : index;
   assert.equal((source.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `Missing or duplicated ${symbol.label} SVG.`);
 }
