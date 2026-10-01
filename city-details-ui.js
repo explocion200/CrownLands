@@ -1,5 +1,5 @@
 "use strict";
-/* exported renderCityDetailsPanel, renderCityDetailsUpgrade, bindCityDetailsPanel, patchCityDetailsPanel, recordCityDetailsFailure */
+/* exported captureCityDetailsRefresh, renderCityDetailsPanel, renderCityDetailsUpgrade, bindCityDetailsPanel, patchCityDetailsPanel, recordCityDetailsFailure */
 
 // Presentation only. Costs, projections, visibility and actions remain game-owned.
 const cityDetailsIcons = {
@@ -89,7 +89,7 @@ function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", 
     </dl>
     <div class="cd-management">${mainCityBlock}${renderRelinquishCityAction(city)}</div>
     ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}` : foreignMarkup;
-  return `<section class="cd-panel" data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineRequestScope())}" data-cd-owned="${owned}">
+  return `<section class="cd-panel" data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineSessionRequestScope())}" data-cd-owned="${owned}">
     <div class="cd-ledger">
       <section class="cd-portrait"><img data-cd-art src="${escapeHtml(getCastleAsset(getCastleStage(projected.level)))}" alt=""><div><p class="cd-relation">${relation}</p><span class="cd-level">Level <b data-cd-value="level">${formatNumber(projected.level)}</b></span><div class="cd-owner">${owner}</div><span class="cd-allegiance">${cityDetailsIcon("allegiance")}${owned ? "Your kingdom" : relation}</span></div></section>
       ${owned && canEnterInnerCastle(mainCity) ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" title="Open your main city's Inner Castle">${cityDetailsIcon("city")}Enter Inner Castle</button>` : ""}
@@ -113,6 +113,37 @@ function renderCityDetailsUpgrade(city) {
   </footer>`;
 }
 
+function captureCityDetailsRefresh(city) {
+  const root = modal.open && modalBody.querySelector(".cd-panel");
+  if (!root || root.dataset.cityDetails !== city.id || root.dataset.cdRegion !== getCityRegionId(city)
+    || root.dataset.cdScope !== getOnlineSessionRequestScope() || root.dataset.cdOwned !== String(city.owner === "player")) return () => {};
+  const amount = root.dataset.cdAmount;
+  const failure = root.dataset.cdFailure;
+  const tab = root.querySelector('[role="tab"][aria-selected="true"]')?.id;
+  const restore = captureUiRefreshState(root, {
+    scrollSelectors: [".cd-ledger", ".cd-actions"],
+    focusAttributes: ["data-cd-amount", "data-city-upgrade-mode"],
+  });
+  return () => {
+    const updated = modalBody.querySelector(".cd-panel");
+    if (!updated) return;
+    if (amount !== undefined) updated.dataset.cdAmount = amount;
+    if (failure !== undefined) updated.dataset.cdFailure = failure;
+    if (tab) selectCityDetailsTab(updated, updated.querySelector(`#${CSS.escape(tab)}`));
+    patchCityDetailsPanel(true);
+    restore(updated);
+  };
+}
+
+function selectCityDetailsTab(root, tab) {
+  root.querySelectorAll('[role="tab"]').forEach(candidate => {
+    const selected = candidate === tab;
+    candidate.setAttribute("aria-selected", String(selected));
+    candidate.tabIndex = selected ? 0 : -1;
+    root.querySelector(`#${candidate.getAttribute("aria-controls")}`).hidden = !selected;
+  });
+}
+
 function bindCityDetailsPanel(city) {
   const root = modalBody.querySelector(".cd-panel");
   if (!root) return;
@@ -121,12 +152,7 @@ function bindCityDetailsPanel(city) {
     if (mainCity) openInnerCastle(mainCity.id, city.id);
   });
   const tabs = [...root.querySelectorAll('[role="tab"]')];
-  const selectTab = tab => tabs.forEach(candidate => {
-    const selected = candidate === tab;
-    candidate.setAttribute("aria-selected", String(selected));
-    candidate.tabIndex = selected ? 0 : -1;
-    root.querySelector(`#${candidate.getAttribute("aria-controls")}`).hidden = !selected;
-  });
+  const selectTab = tab => selectCityDetailsTab(root, tab);
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => selectTab(tab));
     tab.addEventListener("keydown", event => {
@@ -156,7 +182,7 @@ function patchCityDetailsPanel(initialRender = false) {
   const root = modalBody?.querySelector('.cd-panel[data-cd-owned="true"]');
   if (!root) return false;
   const city = getOwnedCitySnapshotForUpgrade(root.dataset.cityDetails, root.dataset.cdRegion);
-  const current = root.dataset.cdScope === getOnlineRequestScope();
+  const current = root.dataset.cdScope === getOnlineSessionRequestScope();
   const button = root.querySelector(".cd-upgrade");
   if (!current || !city || city.owner !== "player" || isStronghold(city)) {
     if (button) button.disabled = true;
@@ -222,7 +248,7 @@ function recordCityDetailsFailure(action) {
   // Feedback must never affect queue settlement, including during navigation.
   try {
     const root = modal?.open && modalBody?.querySelector('.cd-panel[data-cd-owned="true"]');
-    if (root && root.dataset.cdScope === getOnlineRequestScope() && action.generation === instantEconomyGeneration
+    if (root && root.dataset.cdScope === getOnlineSessionRequestScope() && action.generation === instantEconomyGeneration
       && action.key === getCityUpgradeActionKey(root.dataset.cityDetails, root.dataset.cdRegion)) root.dataset.cdFailure = String(action.id);
   } catch (error) {
     console.warn("Could not present city detail feedback", error);
