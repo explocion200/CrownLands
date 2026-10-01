@@ -134,6 +134,8 @@ async function main() {
     profileBefore.committedRallyTroops - (10000 - survivors.participants.find(p => p.uid === leader.uid).troops));
   assert((await read(cityRef(assembly))).alliedReinforcementTroops < 1000, "Reserved survivors cannot leak into reinforcement totals");
   const readyTroops = survivors.participants.filter(p => p.status === "assembled").reduce((sum, p) => sum + p.troops, 0);
+  const journeyStart = Date.now() - 100000;
+  await db.doc(`armies/${late.id}`).update({ launchedAtMs: journeyStart, arrivesAtMs: journeyStart + 400000, total: 400 });
   const launches = await Promise.all([1, 2].map(() => call("launchClanRally", leader, { clanId: clan, rallyId: first.id })));
   assert.equal(launches.filter(r => !r.duplicate).length, 1);
   assert.equal(launches[0].movement.troops, readyTroops);
@@ -141,6 +143,10 @@ async function main() {
   assert.equal(returned.returning, true);
   assert.equal(returned.returnReason, "rally_launched_before_arrival");
   assert.equal(returned.troops, 7000);
+  assert.equal(returned.returnStartProgress, (returned.recalledAtMs - journeyStart) / 400000,
+    "An inbound army reverses from its actual position");
+  assert.equal(returned.arrivesAtMs - returned.recalledAtMs, Math.ceil(400000 * returned.returnStartProgress),
+    "Return time covers only the distance already travelled");
   await due(inbound, late);
   const settledReturn = await read(db.doc(`armies/${late.id}`));
   assert.equal(settledReturn.status, "resolved");

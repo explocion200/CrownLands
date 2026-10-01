@@ -23795,8 +23795,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
         || (incoming.realmShardId && REALM_TOPOLOGY.normalizeRealmShardId(incoming.realmShardId) !== getCurrentRealmShardId())) {
         throw new HttpsError("aborted", "An incoming contribution is being reconciled. Retry the launch.");
       }
-      return incoming.returning ? incoming : { ...createAlliedTargetReturnMovement(incoming, nowMs),
-        returnReason: "rally_launched_before_arrival", rallyReturn: true };
+      return incoming.returning ? incoming : {
+        ...createMidRouteReturnMovement(incoming, nowMs, "rally_launched_before_arrival"),
+        kind: "transfer", retargetedFromKind: incoming.kind, rallyReturn: true,
+      };
     });
     const returnedInbound = inboundReturns.map(movement => ({ uid: movement.ownerUid,
       ownerName: movement.ownerName, troops: movement.troops, armyId: movement.id }));

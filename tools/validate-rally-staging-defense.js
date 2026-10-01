@@ -55,6 +55,7 @@ assert.match(launch, /assembledParticipants.length < minimumParticipants/);
 assert.doesNotMatch(launch, /unreadyParticipants|All participants must be Ready/);
 assert(launch.indexOf("transaction.get(canonicalArmyRef(participant.joinArmyId))") < launch.indexOf("inboundReturns.forEach"));
 assert.match(launch, /rally_launched_before_arrival/);
+assert.match(launch, /createMidRouteReturnMovement\(incoming, nowMs, "rally_launched_before_arrival"\)/);
 assert.match(launch, /rally.status === RALLY_STATUS_LAUNCHED[\s\S]*duplicate: true/);
 assert.match(server, /writeRallyStagingDefenseSettlement[\s\S]*rally_assembly_defeated/);
 assert.match(server, /committedRallyTroops: Math.max\(0, getProfileCommittedRallyTroops\(profile\) - losses\)/);
