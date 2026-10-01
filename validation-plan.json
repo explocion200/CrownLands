@@ -48,6 +48,7 @@
         "tools/validate-player-camp-defense.js",
         "tools/validate-soldier-defense.js",
         "tools/validate-combat-forecast.js",
+        "tools/validate-scout-report-ui.js",
         "tools/validate-player-camp-defense-browser.js",
         "functions/test/emulator-player-camp-defense.js"
       ],
@@ -55,6 +56,7 @@
         "tools/validate-player-camp-defense.js",
         "tools/validate-soldier-defense.js",
         "tools/validate-combat-forecast.js",
+        "tools/validate-report-system.js",
         "tools/validate-player-camp-defense-browser.js",
         "functions/test/emulator-player-camp-defense.js"
       ],
@@ -77,7 +79,8 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "how-to-play.html",
         "game-rules.html",
-        "battle-economy-guide.html"
+        "battle-economy-guide.html",
+        "tools/validate-battle-economy-guide.js"
       ],
       "tests": [
         "tools/validate-public-site-content.js",
