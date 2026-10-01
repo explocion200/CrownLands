@@ -2160,6 +2160,7 @@ const islandMapPickerViewState = {
   hasView: false,
 };
 let islandMapHomeRefreshInFlight = false;
+let mainCityReturnRequestScope = "";
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let onlinePresenceRequestGeneration = 0;
@@ -17017,7 +17018,7 @@ async function startActiveOnlineIslandSubscription(api, islandId, targetRegionId
   return true;
 }
 
-async function verifyRealmCompatibility(api, { force = false } = {}) {
+async function verifyRealmCompatibility(api, { force = false, requestScope = null } = {}) {
   if (!api?.getRealmInfo) {
     throw new Error("The Crownlands server is still updating. Refresh in a moment.");
   }
@@ -17034,6 +17035,9 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
     10000,
     "The Crownlands server version check is taking too long."
   );
+  if (requestScope !== null && requestScope !== getOnlineSessionRequestScope()) {
+    throw new Error("The active session changed during the realm check.");
+  }
   const serverCoreExpansionActive = String(realm?.worldTopology || "legacy").toLowerCase() === "core-expansion-v1";
   if (CORE_EXPANSION_TOPOLOGY_PREPARED && serverCoreExpansionActive !== CORE_EXPANSION_TOPOLOGY_ACTIVE) {
     try {
@@ -40981,26 +40985,48 @@ function updateMainCityReturnButton(frameRect = null) {
 }
 
 async function returnToMainCity() {
-  if (!state) return;
-  const targetRegionId = getMainCityRegionId();
-  if (targetRegionId !== getActiveMapRegionId()) {
-    await switchOnlineIsland(targetRegionId);
-    if (targetRegionId !== getActiveMapRegionId()) return;
+  if (!state || isMapInteractionBlocked()) return;
+  const requestScope = getOnlineSessionRequestScope();
+  if (mainCityReturnRequestScope === requestScope) return;
+  mainCityReturnRequestScope = requestScope;
+  const sourceRegionId = getActiveMapRegionId();
+  const isCurrent = () => state && requestScope === getOnlineSessionRequestScope();
+  try {
+    let targetRegionId = getMainCityRegionId();
+    if (!isWorldRegionRuntimeActive(targetRegionId) && getOnlineApi()?.isSignedIn?.()) {
+      showToast("Checking your home map...");
+      // A home assignment can arrive before the expansion subscription refresh.
+      await verifyRealmCompatibility(getOnlineApi(), { force: true, requestScope });
+      if (!isCurrent() || sourceRegionId !== getActiveMapRegionId() || isMapInteractionBlocked()) return;
+      targetRegionId = getMainCityRegionId();
+    }
+    if (targetRegionId !== getActiveMapRegionId()) {
+      const switched = await switchOnlineIsland(targetRegionId);
+      if (!isCurrent() || !switched || targetRegionId !== getActiveMapRegionId()) return;
+    }
+    if (targetRegionId !== getMainCityRegionId()) return;
+    const mainCity = getLoadedMainCity() || getMainCityReference();
+    if (!mainCity) {
+      showToast("No main city to return to.");
+      return;
+    }
+    scoutNearbySourceId = null;
+    regroupSourceId = null;
+    sendMode = false;
+    selectedSourceId = mainCity.owner === "player" ? mainCity.id : null;
+    rememberOwnedAttackSource(mainCity);
+    selectedTargetId = null;
+    centerOnCity(mainCity.id);
+    renderAll();
+    showToast(`Returned to ${mainCity.name}`);
+  } catch (error) {
+    if (isCurrent()) {
+      console.warn("Could not return to the main city", error);
+      showToast("Could not return home. Please try again.");
+    }
+  } finally {
+    if (mainCityReturnRequestScope === requestScope) mainCityReturnRequestScope = "";
   }
-  const mainCity = getLoadedMainCity() || getMainCityReference();
-  if (!mainCity) {
-    showToast("No main city to return to.");
-    return;
-  }
-  scoutNearbySourceId = null;
-  regroupSourceId = null;
-  sendMode = false;
-  selectedSourceId = mainCity.owner === "player" ? mainCity.id : null;
-  rememberOwnedAttackSource(mainCity);
-  selectedTargetId = null;
-  centerOnCity(mainCity.id);
-  renderAll();
-  showToast(`Returned to ${mainCity.name}`);
 }
 
 function screenToMap(clientX, clientY) {

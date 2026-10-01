@@ -179,7 +179,9 @@ const entrypointBudgets = {
   // (2,442 gzip bytes): flags/rewards, Rally joining, recovery and map reconciliation.
   // Existing headroom absorbs 1,999 bytes; bound the remaining 7,899 at 8 KiB.
   // No runtime code changes here, and the aggregate offline-shell cap is unchanged.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8) * 1024,
+  // Home's stale-map recovery adds 1.4 KiB; existing headroom covers 0.4 KiB.
+  // Bound the remainder at 1 KiB; the aggregate offline-shell cap is unchanged.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
