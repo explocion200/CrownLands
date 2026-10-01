@@ -424,7 +424,7 @@ async function main() {
         `${scenario.name} ${type} pickup did not persist its two-minute timer.`
       );
       assert(
-        result.currentUser?.harvestNextBonusType === (type === "troops" ? "gold" : "troops"),
+        result.currentUser?.harvestNextBonusType === (type === "troops" ? "crowns" : "troops"),
         `${scenario.name} ${type} pickup did not alternate the next pickup type.`
       );
       assert(

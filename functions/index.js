@@ -52,6 +52,8 @@ const {
   MINIMUM_NPC_CITIES_FOR_SPAWN,
   derivePlayerRegionSpawnEligibility,
 } = require("./player-region-spawn.js");
+const COSMETICS = require("./cosmetics.js");
+const { createCosmeticsService } = require("./cosmetics-service.js");
 const COMMON_GEAR = require("./common-gear.js");
 const DAILY_LOGIN = require("./dailyLoginRewards.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
@@ -124,6 +126,7 @@ function safeConfigString(value, fallback = "") {
 admin.initializeApp();
 
 const db = getFirestore();
+const cosmeticService = createCosmeticsService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry, assertCurrentPlayerProfile, normalizeFlag: normalizeServerFlag });
 const messaging = getMessaging();
 
 function normalizeCommonGear(profileOrGear = {}) {
@@ -276,7 +279,7 @@ const ANTI_FARM_POLICY_VERSION = 2;
 const ANTI_FARM_INSTALLATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const ANTI_FARM_MAX_ACCOUNT_INSTALLATIONS = 8;
 const ANTI_FARM_MAX_INSTALLATION_ACCOUNTS = 12;
-const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 60);
+const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 80);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 30);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 30);
 const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 30) * 60;
@@ -7974,7 +7977,7 @@ function getRewardedAdServerConfigFromSnapshot(snapshot = null) {
 function normalizeDaily(daily = {}, now = new Date()) {
   const today = getCurrentDateKey(now);
   if (!daily || typeof daily !== "object" || daily.date !== today) {
-    return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
+    return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0, harvestedCrownBonuses: 0 };
   }
   return {
     date: today,
@@ -7982,6 +7985,7 @@ function normalizeDaily(daily = {}, now = new Date()) {
     harvestedBonuses: clampInt(daily.harvestedBonuses, 0, HARVEST_BONUS_DAILY_LIMIT),
     harvestedGoldBonuses: clampInt(daily.harvestedGoldBonuses, 0, HARVEST_BONUS_DAILY_GOLD_LIMIT),
     harvestedTroopBonuses: clampInt(daily.harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT),
+    harvestedCrownBonuses: clampInt(daily.harvestedCrownBonuses, 0, 20),
   };
 }
 
@@ -8003,14 +8007,15 @@ function mergeHarvestDailyTrackers(serverDaily = {}, clientDaily = {}, now = new
     neutralCaptures: clampInt(Math.max(server.neutralCaptures, client.neutralCaptures), 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
     harvestedGoldBonuses,
     harvestedTroopBonuses,
-    harvestedBonuses: clampInt(harvestedGoldBonuses + harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT),
+    harvestedCrownBonuses: server.harvestedCrownBonuses,
+    harvestedBonuses: clampInt(harvestedGoldBonuses + harvestedTroopBonuses + server.harvestedCrownBonuses, 0, HARVEST_BONUS_DAILY_LIMIT),
   };
 }
 
 function getHarvestBonusRemaining(type = "gold", daily = {}) {
-  const normalizedType = type === "troops" ? "troops" : "gold";
-  const typeLimit = normalizedType === "troops" ? HARVEST_BONUS_DAILY_TROOP_LIMIT : HARVEST_BONUS_DAILY_GOLD_LIMIT;
-  const typeCount = normalizedType === "troops" ? daily.harvestedTroopBonuses : daily.harvestedGoldBonuses;
+  const normalizedType = normalizeHarvestBonusType(type);
+  const typeLimit = COSMETICS.PICKUP_CAPS[normalizedType];
+  const typeCount = normalizedType === "crowns" ? daily.harvestedCrownBonuses : normalizedType === "troops" ? daily.harvestedTroopBonuses : daily.harvestedGoldBonuses;
   const typeRemaining = typeLimit - clampInt(typeCount, 0, typeLimit);
   const totalRemaining = HARVEST_BONUS_DAILY_LIMIT - clampInt(daily.harvestedBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
   return Math.max(0, Math.min(typeRemaining, totalRemaining));
@@ -8018,12 +8023,14 @@ function getHarvestBonusRemaining(type = "gold", daily = {}) {
 
 function incrementHarvestDailyTracker(type = "gold", daily = {}) {
   const next = normalizeDaily(daily);
-  if (type === "troops") {
+  if (type === "crowns") {
+    next.harvestedCrownBonuses = clampInt(next.harvestedCrownBonuses + 1, 0, 20);
+  } else if (type === "troops") {
     next.harvestedTroopBonuses = clampInt(next.harvestedTroopBonuses + 1, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT);
   } else {
     next.harvestedGoldBonuses = clampInt(next.harvestedGoldBonuses + 1, 0, HARVEST_BONUS_DAILY_GOLD_LIMIT);
   }
-  next.harvestedBonuses = clampInt(next.harvestedGoldBonuses + next.harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
+  next.harvestedBonuses = clampInt(next.harvestedGoldBonuses + next.harvestedTroopBonuses + next.harvestedCrownBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
   return next;
 }
 
@@ -8564,7 +8571,7 @@ function recordSuccessfulRapidNeutralHandoff(transaction, context = {}, {
 }
 
 function normalizeHarvestBonusType(type = "gold") {
-  return safeString(type, 16) === "troops" ? "troops" : "gold";
+  return COSMETICS.PICKUP_TYPES.includes(type) ? type : "gold";
 }
 
 function normalizeHarvestBonuses(bonuses = [], nowMs = Date.now()) {
@@ -15980,14 +15987,12 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
     const profileSnap = await transaction.get(profileRef);
     const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
     const profile = participation.profile;
+    const account = await cosmeticService.read(transaction, uid);
     const daily = mergeHarvestDailyTrackers(profile.daily, data.daily, new Date(nowMs));
+    daily.harvestedCrownBonuses = COSMETICS.countToday(account.state, nowMs);
+    daily.harvestedBonuses = daily.harvestedGoldBonuses + daily.harvestedTroopBonuses + daily.harvestedCrownBonuses;
     const preferredType = normalizeHarvestBonusType(profile.harvestNextBonusType || requestedType);
-    const alternateType = preferredType === "troops" ? "gold" : "troops";
-    const spawnType = getHarvestBonusRemaining(preferredType, daily) > 0
-      ? preferredType
-      : getHarvestBonusRemaining(alternateType, daily) > 0
-        ? alternateType
-        : "";
+    const spawnType = COSMETICS.availableType(preferredType, type => getHarvestBonusRemaining(type, daily));
     const activeBonuses = enforceHarvestBonusActiveLimit(profile.harvestBonuses, nowMs);
     const currentNextSpawnAtMs = getHarvestNextSpawnAtMs(profile, nowMs);
     const writeProfileState = (overrides = {}) => {
@@ -16010,6 +16015,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
       }, { merge: true });
       return {
         ok: true,
+        cosmetics: account.state,
         spawned: Boolean(overrides.spawned),
         relocated: Boolean(overrides.relocated),
         reason: overrides.reason || "",
@@ -16067,7 +16073,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
       spawned: true,
       harvestBonuses,
       harvestNextSpawnAtMs,
-      harvestNextBonusType: spawnType === "troops" ? "gold" : "troops",
+      harvestNextBonusType: COSMETICS.nextType(spawnType),
     });
   });
 });
@@ -16198,23 +16204,29 @@ exports.returnClanReinforcement = timedCallable(
 exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
-  const type = safeString(data.type, 16) === "troops" ? "troops" : "gold";
+  const type = normalizeHarvestBonusType(data.type);
   const bonusId = safeString(data.bonusId || data.id, 96);
   const nowMs = Date.now();
 
   return runTransactionWithInfrastructureRetry(async transaction => {
+    const account = await cosmeticService.read(transaction, uid);
+    const crownReceiptRef = type === "crowns" && /^[a-zA-Z0-9_-]{1,96}$/.test(bonusId) ? cosmeticService.receiptRef(uid, `pickup_${bonusId}`) : null;
+    const previousClaim = crownReceiptRef ? await transaction.get(crownReceiptRef) : null;
+    if (previousClaim?.exists) return { ok: true, replayed: true, rewardType: "crowns", reward: 0, cosmetics: account.state };
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let daily = mergeHarvestDailyTrackers(economy.profileAfter.daily, data.daily, new Date(nowMs));
+    daily.harvestedCrownBonuses = COSMETICS.countToday(account.state, nowMs);
+    daily.harvestedBonuses = daily.harvestedGoldBonuses + daily.harvestedTroopBonuses + daily.harvestedCrownBonuses;
     const activeHarvestBonuses = enforceHarvestBonusActiveLimit(economy.profileAfter.harvestBonuses, nowMs);
     const activeBonus = activeHarvestBonuses.find(bonus => bonus.id === bonusId && bonus.type === type);
     if (!activeBonus) {
       throw new HttpsError("failed-precondition", "That pickup expired. Reload the map and try the next one.");
     }
     if (getHarvestBonusRemaining(type, daily) <= 0) {
-      throw new HttpsError("failed-precondition", `Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
+      throw new HttpsError("failed-precondition", `Daily ${type === "crowns" ? "Crown" : type === "troops" ? "troop" : "gold"} harvest limit reached.`);
     }
 
-    const reward = getHarvestBonusReward(economy, type);
+    const reward = type === "crowns" ? 1 : getHarvestBonusReward(economy, type);
     daily = incrementHarvestDailyTracker(type, daily);
     const harvestBonuses = removeHarvestBonusFromProfile({ harvestBonuses: activeHarvestBonuses }, bonusId);
     const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_RESPAWN_SECONDS * 1000;
@@ -16223,9 +16235,17 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
       harvestBonuses,
       harvestSpawnTimer: HARVEST_BONUS_RESPAWN_SECONDS,
       harvestNextSpawnAtMs,
-      harvestNextBonusType: type === "troops" ? "gold" : "troops",
+      harvestNextBonusType: COSMETICS.nextType(type),
     };
 
+    if (type === "crowns") {
+      if (!crownReceiptRef) throw new HttpsError("invalid-argument", "Invalid Crown pickup.");
+      const next = cosmeticService.translate(() => COSMETICS.collectCrown(account.state, nowMs));
+      transaction.set(account.ref, next);
+      transaction.create(crownReceiptRef, { bonusId, reward: 1, collectedAtMs: nowMs });
+      writePreparedEconomy(transaction, economy, profileOverrides);
+      return { ...createEconomyResponse(economy, { ...profileOverrides, rewardType: type, reward }), cosmetics: next };
+    }
     if (type === "troops") {
       const mainInfo = getMainCityInfo(economy.profileAfter);
       const mainEntry = mainInfo ? getEconomyCityByRef(economy, mainInfo.ref) : null;
@@ -35580,3 +35600,8 @@ exports.resolveDueRewardCampPayouts = onSchedule({
   });
   console.log("Scheduled reward camp payouts finished", { scanned: due.size, paid, skipped, failed });
 });
+
+// Account cosmetics are permanent and never part of seasonal economy initialization.
+exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));
+exports.purchaseCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.purchase(requireAuth(request), request.data || {}));
+exports.equipCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.equip(requireAuth(request), request.data || {}));

@@ -10,6 +10,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
+  "skins-ui.js", "skins-ui.css", "cosmetics-client.js",
   "main-screen-art-ui.css",
   "infirmary-ui.js", "infirmary-ui.css",
   "clan-treasury-ui.js", "clan-treasury-ui.css",
@@ -142,6 +143,7 @@ copy("audio/manifest.json");
 copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath));
 copy("functions/clanQuestPeriod.js");
 copy("functions/world-travel-network.js");
+copy("functions/cosmetics.js");
 copy("functions/playerFlagConfig.js");
 copy("functions/flagRenderer.js");
 copy("functions/clanHeraldryConfig.js");

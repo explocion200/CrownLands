@@ -80,6 +80,7 @@
     Object.freeze({ key: "guardian", label: "Guardian Shield", icon: "flag-guardian" }),
     Object.freeze({ key: "banner", label: "Forked War Banner", icon: "flag-banner" }),
     Object.freeze({ key: "helm", label: "Great Helm", icon: "flag-helm" }),
+    ...["pumpkin", "bat", "skull", "raven"].map(name => Object.freeze({ key: `halloween-${name}`, label: `Halloween ${name} (placeholder)`, icon: "flag-crown", premium: true })),
   ]);
 
   const LEGACY_ONLY_SYMBOL_KEYS = Object.freeze([
@@ -94,7 +95,7 @@
     "helm",
   ]);
   const SELECTABLE_SYMBOLS = Object.freeze(
-    SYMBOLS.filter(option => !LEGACY_ONLY_SYMBOL_KEYS.includes(option.key))
+    SYMBOLS.filter(option => !option.premium && !LEGACY_ONLY_SYMBOL_KEYS.includes(option.key))
   );
 
   const COLOR_VALUES = Object.freeze(COLORS.map(option => option.value));

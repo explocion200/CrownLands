@@ -26,15 +26,15 @@ assert.equal(economyConfig.pickups.minimumGold, 125, "The Gold pickup floor must
 assert.equal(economyConfig.pickups.minimumTroops, 125, "The troop pickup floor must be exactly half of its former value.");
 assert.equal(economyConfig.pickups.dailyGoldCap, 30, "The per-player UTC Gold pickup cap must be 30.");
 assert.equal(economyConfig.pickups.dailyTroopCap, 30, "The per-player UTC troop pickup cap must be 30.");
-assert.equal(economyConfig.pickups.dailyTotalCap, 60, "The aggregate cap must allow both independent 30-pickup type limits.");
+assert.equal(economyConfig.pickups.dailyTotalCap, 80, "The aggregate cap must allow 30 Gold, 30 troop and 20 Crown pickups.");
 
 assert.match(howToPlaySource, /first active-map pickup appears after two minutes/i, "How to Play must describe the two-minute initial pickup wait.");
 assert.match(howToPlaySource, /successful collection starts a two-minute wait/i, "How to Play must describe the two-minute post-collection wait.");
 assert.match(dailyRewardsGuideSource, /first pickup appears after two minutes/i, "The Daily Rewards Guide must describe the two-minute initial pickup wait.");
 assert.match(dailyRewardsGuideSource, /next appears two minutes later/i, "The Daily Rewards Guide must describe the two-minute post-collection wait.");
-assert.match(howToPlaySource, /thirty minutes of stored gold production and thirty minutes of stored troop production/i, "How to Play must describe the halved pickup rewards.");
-assert.match(howToPlaySource, /daily limits are 30 of each type, 60 total/i, "How to Play must describe both independent type caps.");
-assert.match(dailyRewardsGuideSource, /daily limit is thirty of each type, sixty total/i, "The Daily Rewards Guide must describe both independent type caps.");
+assert.match(howToPlaySource, /thirty minutes of stored gold production, thirty minutes of stored troop production, and one Crown/i, "How to Play must describe all three pickup rewards.");
+assert.match(howToPlaySource, /daily limits are 30 Gold, 30 troop and 20 Crown pickups, 80 total/i, "How to Play must describe both independent type caps.");
+assert.match(dailyRewardsGuideSource, /daily limit is thirty Gold, thirty troop and twenty Crown pickups, eighty total/i, "The Daily Rewards Guide must describe both independent type caps.");
 assert.match(battleEconomyGuideSource, /initialPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the initial pickup wait.");
 assert.match(battleEconomyGuideSource, /respawnPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the post-collection pickup wait.");
 assert.match(battleEconomyGuideHtml, /economy-config\.js\?v=20260904-layer1-travel-balance-r1/, "The Battle & Economy Guide must request the current pickup configuration.");
@@ -102,6 +102,7 @@ assert.equal(context.getCurrentDateKey(utcRollover), "2026-07-22");
 assert.equal(context.getCurrentDateKey(new Date("2026-07-21T23:59:59.999Z")), "2026-07-21");
 
 const dailyLimitContext = {
+  COSMETICS: require("../functions/cosmetics"),
   HARVEST_BONUS_DAILY_LIMIT: economyConfig.pickups.dailyTotalCap,
   HARVEST_BONUS_DAILY_GOLD_LIMIT: economyConfig.pickups.dailyGoldCap,
   HARVEST_BONUS_DAILY_TROOP_LIMIT: economyConfig.pickups.dailyTroopCap,
@@ -119,6 +120,7 @@ const dailyLimitContext = {
 vm.createContext(dailyLimitContext);
 for (const functionName of [
   "getCurrentDateKey",
+  "normalizeHarvestBonusType",
   "normalizeDaily",
   "getHarvestBonusRemaining",
   "incrementHarvestDailyTracker",
@@ -144,6 +146,7 @@ assert.deepEqual(
     harvestedBonuses: 60,
     harvestedGoldBonuses: 30,
     harvestedTroopBonuses: 30,
+    harvestedCrownBonuses: 0,
   },
   "Gold and troop pickups did not independently reach 30 under the aggregate cap.",
 );

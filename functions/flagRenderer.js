@@ -55,7 +55,11 @@
         symbolElement.hidden = hideSymbol;
         symbolElement.dataset.flagSymbol = symbol.key;
         if (hideSymbol) symbolElement.replaceChildren();
-        else symbolElement.innerHTML = renderIcon(symbol.icon || symbol.key, "flag-symbol-icon");
+        else if (symbol.premium) {
+          // Deliberately labeled development art; approved artwork replaces this slot later.
+          const letter = { "halloween-pumpkin": "P", "halloween-bat": "B", "halloween-skull": "S", "halloween-raven": "R" }[symbol.key] || "?";
+          symbolElement.innerHTML = `<svg class="flag-symbol-icon" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 3 61 32 32 61 3 32Z" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4 3"/><text x="32" y="44" text-anchor="middle" fill="currentColor" font-size="34" font-family="serif">${letter}</text></svg>`;
+        } else symbolElement.innerHTML = renderIcon(symbol.icon || symbol.key, "flag-symbol-icon");
       }
       element.dataset.flagRenderSignature = renderSignature;
       return normalized;

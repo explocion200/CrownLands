@@ -10,7 +10,9 @@ const proof = fs.readFileSync(path.join(root, "docs", "visual-qa", "player-flags
 const selectedRoot = path.join(root, "assets", "flag-symbols", "selected");
 const manifest = JSON.parse(fs.readFileSync(path.join(selectedRoot, "manifest.json"), "utf8"));
 
-const expectedIds = config.SYMBOLS.map(symbol => `cl-icon-${symbol.icon}`);
+const approvedSymbols = config.SYMBOLS.filter(symbol => !symbol.premium);
+const approvedKeys = approvedSymbols.map(symbol => symbol.key);
+const expectedIds = approvedSymbols.map(symbol => `cl-icon-${symbol.icon}`);
 const symbolMatches = [...index.matchAll(/<symbol\s+id="([^"]+)"\s+viewBox="([^"]+)"[^>]*>([\s\S]*?)<\/symbol>/g)];
 const inlineFlagSymbols = symbolMatches.filter(match => match[1].startsWith("cl-icon-flag-"));
 const runtimeFlagSymbols = [...runtimeSprite.matchAll(/<symbol\s+id="([^"]+)"\s+viewBox="([^"]+)"[^>]*>([\s\S]*?)<\/symbol>/g)];
@@ -23,7 +25,7 @@ assert.equal(new Set(discoveredIds).size, discoveredIds.length, "Duplicate runti
 assert.deepEqual([...discoveredIds].sort(), [...expectedIds].sort(), "Runtime and fallback symbols do not preserve the stable 30-ID catalog.");
 assert.deepEqual(runtimeFlagSymbols.map(match => match[1]), config.SELECTABLE_SYMBOLS.map(symbol => `cl-icon-${symbol.icon}`), "Runtime sprite ordering changed from the approved catalog.");
 assert.deepEqual(inlineFlagSymbols.map(match => match[1]), config.LEGACY_ONLY_SYMBOL_KEYS.map(id => `cl-icon-flag-${id}`), "Inline fallbacks changed from the legacy-only catalog.");
-assert.deepEqual(manifest.stableSymbolIds, config.SYMBOL_KEYS, "Source manifest does not preserve the stable 30-ID catalog.");
+assert.deepEqual(manifest.stableSymbolIds, approvedKeys, "Source manifest does not preserve the stable 30-ID catalog.");
 
 const forbiddenMarkup = /<(?:text|image|foreignObject|script)|href\s*=\s*"https?:|style\s*=|on\w+\s*=/i;
 const allowedElements = new Set(["path", "circle", "rect", "polygon", "ellipse", "g"]);
@@ -82,7 +84,7 @@ assert.equal(alternateEntries.length, 1, "Expected one documented duplicate/alte
 assert.equal(alternateEntries[0].symbolId, "eagle", "The documented alternate must remain an eagle candidate.");
 assert.deepEqual(
   [...manifest.missingUploadedIds].sort(),
-  config.SYMBOL_KEYS.filter(id => !selectedIds.includes(id)).sort(),
+  approvedKeys.filter(id => !selectedIds.includes(id)).sort(),
   "Missing uploaded IDs do not match catalog coverage."
 );
 assert.deepEqual(manifest.missingUploadedIds, config.LEGACY_ONLY_SYMBOL_KEYS, "Missing artwork IDs must remain the legacy-only compatibility set.");

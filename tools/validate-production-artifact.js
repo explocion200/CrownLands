@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "login-screen.css",
   "assets/optimized/login-kingdom-960-6646f1d404b1.webp",
   "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp",
@@ -270,7 +271,15 @@ if (seasonRewardBytes > 28 * 1024) throw new Error("Season rewards presentation 
 // 8 KiB including build metadata (CI uses full commit IDs in asset URLs).
 // Existing per-file, offline-shell and combined artifact limits still apply.
 const battleItemReportingBudget = 8 * 1024;
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget;
+// Cosmetics add 36,150 bytes of catalog, transport, UI and styles with placeholder
+// art. Cap these modules at 36 KiB and reserve 8 KiB for entry/flag/build integration.
+// Final artwork needs a separate budget review; existing entry-point limits apply.
+const cosmeticModuleBudget = 36 * 1024;
+const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 36 KiB budget.");
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
