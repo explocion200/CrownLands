@@ -1,5 +1,5 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported captureCommonGearRefresh, captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
 
 // Call only when rebuilding the same view/session. Restore interaction state,
 // while keeping newly rendered permissions, prices and available actions.
@@ -102,6 +102,21 @@ function captureItemBagRefresh(model, selectedEntry) {
   }) : () => {};
   return () => {
     const root = modalBody.querySelector(".ib-bag-shell");
+    if (root) root.dataset.refreshView = refreshKey;
+    restore();
+  };
+}
+
+function captureCommonGearRefresh(viewModel) {
+  const refreshKey = JSON.stringify([getCommonGearActionScope(), viewModel.buildingId, viewModel.selectedSlot,
+    viewModel.selected?.instanceId || "", selectedCommonGearBagFilter, commonGearMergeConfirmOpen]);
+  const previous = modal.open && modalBody.querySelector("[data-common-gear-screen]");
+  const restore = previous && previous.dataset.refreshView === refreshKey ? captureUiRefreshState(modalBody, {
+    scrollSelectors: ['[data-gear-panel="details"]', "[data-gear-bag-scroll]"],
+    focusAttributes: ["data-gear-slot", "data-gear-instance", "data-gear-panel", "data-gear-equip", "data-gear-merge", "data-gear-merge-cancel", "data-gear-merge-confirm", "aria-label"],
+  }) : () => {};
+  return () => {
+    const root = modalBody.querySelector("[data-common-gear-screen]");
     if (root) root.dataset.refreshView = refreshKey;
     restore();
   };
