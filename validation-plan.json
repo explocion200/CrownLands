@@ -1,11 +1,39 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "32a44761353f6728dec52c36477d078c9ee48857",
+  "baseCommit": "36eb528c397efc87032109be9bff21ad5c4937b6",
   "coverage": [
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": [],
-      "reason": "Documentation-only release evidence and status update. Verify PR #411 checks, deployed Firebase source, Netlify publication, both public host asset hashes and six signed-out browser cases against retained release artifacts. No executable behavior changes or additional runtime suites apply."
+      "paths": ["city-details-ui.js", "tools/validate-city-details-browser.js"],
+      "tests": ["tools/validate-city-details-browser.js"],
+      "reason": "Reproduces the +5 reset through the live clan refresh caller. Covers full refreshes during queued upgrades and rejected actions, MAX, projected affordability, tabs, focus, independent scroll columns, session changes, fresh visits, foreign privacy and Inner Castle return at five desktop/phone/landscape sizes. Queue settlement and server authority are unchanged."
+    },
+    {
+      "paths": ["game.js", "modal-ui.js", "tools/validate-ui-refresh-browser.js"],
+      "tests": [
+        "tools/validate-ui-refresh-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-shop-browser.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js"
+      ],
+      "reason": "Shared refresh state captures presentation only, with explicit keys for each session/view. New desktop and landscape browser coverage checks clan creation/search drafts, cursor ranges, roster focus, gift scrolling, holding tabs/disclosures, inventory pages/scroll and scope boundaries. Existing suites exercise shared modal lifecycle, Treasury drafts and donation actions, Item Bag action settlement and removed-page fallback. The requested wider UI audit also checks existing City List, Shop, Skills, incoming threats, scout/report, rally and Kingdom Activity/leaderboard preservation paths. No backend, economy formula, ownership or action authorization changes."
+    },
+    {
+      "paths": ["common-gear-ui.js"],
+      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-treasury-gear-browser.js", "tools/validate-optional-ui-scripts-browser.js"],
+      "reason": "The shared officer renderer now preserves the selected item's details scroll and focused control during same-view updates. Browser coverage exercises all four officer screens, deferred script loading, Treasury equip/upgrade/confirmation behavior, and desktop plus two landscape sizes. Existing explicit action focus and bag selection models remain authoritative."
+    },
+    {
+      "paths": ["daily-login-ui.js"],
+      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-daily-login-rewards.js", "tools/validate-optional-ui-scripts-browser.js"],
+      "reason": "Daily Login refresh keeps its week/day focus and scroll only for the same session and reward position; a new cycle resets normally. Browser tests use the actual daily reward model and deferred renderer. Static reward validation verifies the authoritative schedule and claim integration remain unchanged."
     }
   ]
 }

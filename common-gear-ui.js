@@ -1877,6 +1877,13 @@ function renderCommonGearBuilding(buildingId) {
   if (!ensureModalUiScripts("gear", () => {
     if (modal.dataset.commonGearBuildingId === buildingId) renderCommonGearBuilding(buildingId);
   })) return true;
+  const refreshKey = JSON.stringify([getCommonGearActionScope(), buildingId, viewModel.selectedSlot,
+    viewModel.selected?.instanceId || "", selectedCommonGearBagFilter, commonGearMergeConfirmOpen]);
+  const previous = modal.open && modalBody.querySelector("[data-common-gear-screen]");
+  const restore = previous && previous.dataset.refreshView === refreshKey ? captureUiRefreshState(modalBody, {
+    scrollSelectors: ['[data-gear-panel="details"]', "[data-gear-bag-scroll]"],
+    focusAttributes: ["data-gear-slot", "data-gear-instance", "data-gear-panel", "data-gear-equip", "data-gear-merge", "data-gear-merge-cancel", "data-gear-merge-confirm", "aria-label"],
+  }) : () => {};
   modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : buildingId === "barracks" ? renderBarracksGearScreen(viewModel) : buildingId === "gatehouse" ? renderGatehouseGearScreen(viewModel) : buildingId === "royal-stables" ? renderRoyalStablesGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
     <div class="common-gear-main">
       <section class="common-gear-loadout-panel" data-gear-panel="loadout" data-gear-officer="${escapeHtml(buildingId)}">
@@ -1903,8 +1910,10 @@ function renderCommonGearBuilding(buildingId) {
     </footer>
     ${renderCommonGearMergeConfirmation(viewModel)}
   </section>`;
+  modalBody.querySelector("[data-common-gear-screen]").dataset.refreshView = refreshKey;
   bindCommonGearScreen(viewModel);
   bindTreasuryGearPortrait();
+  restore();
   restoreCommonGearFocus();
   return true;
 }

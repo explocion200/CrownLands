@@ -1,5 +1,49 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+
+// Call only when rebuilding the same view/session. Restore interaction state,
+// while keeping newly rendered permissions, prices and available actions.
+function captureUiRefreshState(root, { scrollSelectors = [], focusAttributes = [], draftSelector = "" } = {}) {
+  if (!root) return () => {};
+  const identify = element => {
+    if (element.id) return `#${CSS.escape(element.id)}`;
+    const form = element.parentElement?.closest("form");
+    const formSelector = form && identify(form);
+    if (formSelector && element.name) return `${formSelector} [name="${CSS.escape(element.name)}"]`;
+    const attributes = focusAttributes.filter(name => name !== "aria-label" && element.hasAttribute(name));
+    if (attributes.length) return attributes.map(name => `[${name}="${CSS.escape(element.getAttribute(name))}"]`).join("");
+    return focusAttributes.includes("aria-label") && element.hasAttribute("aria-label")
+      ? `[aria-label="${CSS.escape(element.getAttribute("aria-label"))}"]` : "";
+  };
+  const active = root.contains(document.activeElement) ? document.activeElement : null;
+  const focusSelector = active ? identify(active) : "";
+  const selection = active && typeof active.selectionStart === "number"
+    ? [active.selectionStart, active.selectionEnd, active.selectionDirection] : null;
+  const scroll = [
+    { selector: "", index: 0, top: root.scrollTop, left: root.scrollLeft },
+    ...scrollSelectors.flatMap(selector => [...root.querySelectorAll(selector)].map((element, index) => ({
+      selector, index, top: element.scrollTop, left: element.scrollLeft,
+    }))),
+  ];
+  // Drafts are opt-in; never copy authoritative values or action attributes.
+  const drafts = draftSelector ? [...root.querySelectorAll(draftSelector)].map(element => ({ selector: identify(element), value: element.value })) : [];
+  return (updatedRoot = root) => {
+    if (!updatedRoot) return;
+    drafts.forEach(draft => {
+      const field = draft.selector && updatedRoot.querySelector(draft.selector);
+      if (field && !field.disabled) field.value = draft.value;
+    });
+    const focus = active && updatedRoot.contains(active) ? active : focusSelector && updatedRoot.querySelector(focusSelector);
+    if (focus && !focus.disabled) {
+      focus.focus({ preventScroll: true });
+      if (selection && typeof focus.setSelectionRange === "function" && typeof focus.selectionStart === "number") focus.setSelectionRange(...selection);
+    }
+    scroll.forEach(saved => {
+      const element = saved.selector ? updatedRoot.querySelectorAll(saved.selector)[saved.index] : updatedRoot;
+      if (element) { element.scrollTop = saved.top; element.scrollLeft = saved.left; }
+    });
+  };
+}
 
 const formatCityListCost = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format;
 
