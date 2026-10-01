@@ -1,11 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "32a44761353f6728dec52c36477d078c9ee48857",
+  "baseCommit": "36eb528c397efc87032109be9bff21ad5c4937b6",
   "coverage": [
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": [],
-      "reason": "Documentation-only release evidence and status update. Verify PR #411 checks, deployed Firebase source, Netlify publication, both public host asset hashes and six signed-out browser cases against retained release artifacts. No executable behavior changes or additional runtime suites apply."
+      "paths": ["game.js", "tools/validate-home-navigation-browser.js"],
+      "tests": [
+        "tools/validate-home-navigation-browser.js",
+        "tools/validate-focused-ui-correction.js",
+        "tools/validate-main-city-change.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-reset-release.js",
+        "tools/validate-connection-recovery.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-map-picker-input.js"
+      ],
+      "reason": "Home refreshes authoritative realm activation only when its cached home map is unavailable, then uses the existing guarded map switch and Main City camera behavior. Real browser coverage at desktop and two landscape sizes reproduces stale activation, checks current-map and cross-map fast paths, closed-map rejection, failed-refresh retry, duplicate pointer taps, session replacement and newer navigation. The optional scope guard on realm verification rejects obsolete Home replies before changing realm state; existing callers keep their behavior. Selected shared-dependency suites cover Home button wiring, Main City identity, realm contract/activation gates, connection recovery, cross-map owned-city reconciliation and actual Atlas navigation. No backend, release identity, activation rules or production data changes; the live pointer and current expansion metadata were read only."
+    },
+    {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "Home recovery and session guards add approximately 1.4 KiB to the existing game script, with about 0.4 KiB already available. Increase only that file's allowance by 1 KiB and verify all aggregate loading, installed-shell and production-artifact limits. No new script request or dependency."
     }
   ]
 }
