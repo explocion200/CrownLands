@@ -154,6 +154,29 @@ async function main() {
       assert(await evaluate(`(() => {const r=modalBody.querySelector("[data-rally-action=assembly]").getBoundingClientRect();return r.height>=${minimumMeasuredTargetHeight}&&r.left>=0&&r.right<=innerWidth;})()`));
       await evaluate('modalBody.querySelector("[data-rally-action=assembly]").click()');
       await ready('!modal.open');
+      // Both launch entry points accept a Ready quorum while an ally is still inbound.
+      await evaluate('assemblyRally.participants[2].status="inbound"');
+      assert(await evaluate(`(() => {
+        for(const activity of [false,true]) {
+          const root=document.createElement('div');root.innerHTML=renderClanRallyCard(assemblyRally,activity);
+          if(root.querySelector('[data-rally-action=launch]').disabled)return false;
+          assemblyRally.participants[1].status='inbound';root.innerHTML=renderClanRallyCard(assemblyRally,activity);
+          if(!root.querySelector('[data-rally-action=launch]').disabled)return false;
+          assemblyRally.participants[1].status='assembled';
+          assemblyRally.targetType='tower';root.innerHTML=renderClanRallyCard(assemblyRally,activity);
+          if(!root.querySelector('[data-rally-action=launch]').disabled)return false;
+          assemblyRally.targetType='city';
+        }
+        return true;
+      })()`), 'Launch readiness must count arrived rulers, preserving target minimums');
+      await evaluate('window.earlyLaunchChoice=confirmClanRallyAction(assemblyRally,"launch");void 0');
+      assert.match(await evaluate('modalBody.textContent'), /incoming contributions will turn back now/);
+      assert(!await evaluate('modalBody.querySelector("[data-rally-confirm=accept]").disabled'));
+      await screenshot(`early-launch-${width}`);
+      await evaluate('modalBody.querySelector("[data-rally-confirm=cancel]").scrollIntoView({block:"center"})');
+      await click('modalBody.querySelector("[data-rally-confirm=cancel]")');
+      await evaluate('modal.close()');
+      assert.equal(await evaluate('earlyLaunchChoice'),false);
       // A failed/stale reservation must never grant extra sendable troops.
       await evaluate('beginSendMode(assemblyCity.id)');
       assert.equal(await evaluate('getTroopOrderSourceById(selectedSourceId).troops'), 600);

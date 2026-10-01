@@ -1,42 +1,47 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7b3836758c785b53be71e527971c493d9ff2a679",
+  "baseCommit": "758260e410bd72e1aa90ed25f4bb4a0801886f4d",
   "coverage": [
     {
       "paths": [
         "functions/index.js",
-        "functions/economy-config.json",
-        "economy-config.js",
-        "tools/validate-camp-power-rewards.js",
-        "functions/test/emulator-camp-power-rewards.js",
-        "tools/validate-economy-balance.js",
-        "functions/test/emulator-shared-camp-rewards.js"
+        "functions/rally-staging.js",
+        "tools/validate-rally-staging-defense.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "functions/test/emulator-clan-tower-battle-reports.js"
       ],
       "tests": [
-        "tools/validate-camp-power-rewards.js",
-        "tools/validate-economy-balance.js",
+        "tools/validate-rally-staging-defense.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-reinforcement-retargeting.js",
+        "tools/validate-holding-towers.js",
         "tools/validate-king-power.js",
-        "tools/validate-reward-camp-lifecycle.js",
         "tools/validate-report-system.js",
-        "functions/test/emulator-camp-power-rewards.js",
-        "functions/test/emulator-shared-camp-rewards.js"
+        "tools/validate-siege-combat.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-combat-forecast.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-player-camp-defense.js"
       ],
-      "reason": "Gold and Warband payouts multiply only raw production hours by current authoritative King Power. Recompute from owned cities, held camps, active marches, profile troop commitments and clan objective support in the payout transaction before reward or return writes. Test exact boundaries, all claims and multipliers, floors, rounding, missing/stale power, late tier changes, reward-driven tier changes, boosted-versus-raw production, duplicate races, moving troops, cross-location allowances, private receipts and reports. Existing economy assertions for tax and training caps were stale at 75; align tests with the already-approved and unchanged 100 caps. No ordinary production or other reward rules change. Arm the empty prior-season emulator fixture so the existing shared-camp suite can enter October through the normal closing guard."
+      "reason": "Arrived forming-rally contributions defend their assembly city or Tower using each ruler's defense package. Split casualties between normal garrisons and each rally; update commitments, recovery, reports and cancellation without creating spendable troops. Test integer conservation, multiple rallies, ordinary reinforcement arrivals beside staged troops, scouts, city/Tower combat, defeated assembly, early launch with the existing Ready minimum, atomic inbound turnbacks, duplicate settlement and arrival/launch races. Shared army defense also serves camps and siege; preserve those calculations and troop totals. Correct rally-join realm scope so current movements remain visible and counted. Arm only the empty prior-season fixture in the existing Core Tower report suite for the October season guard."
     },
     {
       "paths": [
         "game.js",
-        "camp-details-ui.js",
-        "tools/validate-camp-power-rewards-browser.js"
+        "rallies-activity-ui.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-clan-rallies.js"
       ],
       "tests": [
-        "tools/validate-camp-power-rewards.js",
-        "tools/validate-camp-power-rewards-browser.js",
-        "tools/validate-holding-details-ui.js",
-        "tools/validate-held-camp-operations.js",
-        "tools/validate-reward-camp-lifecycle.js"
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Camp overview, personal reward ladder and rules show the power tier, multiplier, exact thresholds and fractional effective hours with matching raw-rate estimates. An open panel refreshes when its power snapshot changes and displays unavailable instead of granting an assumed tier when power is missing. Real browser checks cover both camp types, all tiers, updated and missing power at 1440x900, 844x390 and 568x320; preserve shared progress, tabs and held-camp interactions."
+      "reason": "War Room and Activity launch readiness use arrived contributor minima, including the creator. Confirmation names inbound contributors who will return; assembly copy explains live defense and reserved ownership. Real-browser checks cover launch readiness, Tower minimum, inbound confirmation, privacy and reachable controls at desktop and landscape-mobile sizes. Existing assembly visibility and join flows remain covered."
     },
     {
       "paths": [
@@ -44,25 +49,26 @@
       ],
       "tests": [
         "tools/test-targeted-validation.js",
-        "functions/test/emulator-camp-power-rewards.js"
+        "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Register the new emulator suite in the existing Core expansion suite allowlist so it validates the active monthly shared topology. Workflow checks exercise explicit selection and sharding; no gate policy changes."
+      "reason": "Register the focused current Core expansion emulator suite in the existing allowlist. Verify explicit selection and sharding without changing gate policy or inactive topology tests."
     },
     {
       "paths": [
-        "tools/validate-asset-performance-budgets.js"
+        "clans-rallies-guide.html",
+        "how-to-play.html"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-clan-rallies.js"
       ],
-      "reason": "Tier helpers, live estimate refresh and explanatory camp copy add less than 3 KiB to game.js. Increase only its existing allowance by 3 KiB and retain aggregate loading, shell and artifact budgets."
+      "reason": "Update player guidance for live assembly defense and early launch with automatic inbound returns. Preserve the existing minimum of two Ready participants, or three for Tower targets."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly approved power tiers, unchanged minimums and daily limits, September benchmark method, metadata and the narrow historical aggregate balancing exception. Deployment remains pending and historical individual rankings are not runtime eligibility."
+      "reason": "Record the user-confirmed changes to staged defense and early launch, casualty ownership, and atomic returns. Existing minimum participant rules remain unchanged. Deployment remains pending; no production data or archived topology changes."
     }
   ]
 }

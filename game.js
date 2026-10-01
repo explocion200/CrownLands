@@ -26810,8 +26810,8 @@ function renderClanRallyCard(rally, activityLedger = false) {
   }).join("");
   let controls = "";
   const minimumParticipants = getClanRallyMinimumParticipants(rally);
-  const allReady = activeParticipants.length >= minimumParticipants
-    && activeParticipants.every(participant => participant.status === "assembled");
+  const allReady = activeParticipants.filter(participant => participant.status === "assembled").length >= minimumParticipants
+    && activeParticipants.some(participant => participant.uid === rally.leaderUid && participant.status === "assembled");
   const canJoin = forming && !ownParticipant && !leader && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS;
   if (canJoin) {
     controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
@@ -26821,7 +26821,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
   // Managing another ruler's rally does not replace the Clan Leader's contribution controls.
   if (forming && canManageFormingRally) {
     controls += `
-      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" title="${allReady ? "Launch Rally" : `Waiting for ${minimumParticipants}+ Ready; every contribution must arrive`}" ${busy || !allReady ? "disabled" : ""}>Launch</button>
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" title="${allReady ? "Launch Rally" : `Waiting for ${minimumParticipants}+ Ready, including the creator`}" ${busy || !allReady ? "disabled" : ""}>Launch</button>
       <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
   } else if (launched && leader) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
@@ -26847,7 +26847,7 @@ function renderClanRallyPanel() {
   const selected = onlineClanRallies.find(rally => rally.id === selectedClanRallyId) || onlineClanRallies[0];
   return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
     <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
-    <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies from a map objective. Every contribution must arrive and show Ready before the creator or Clan Leader can launch.</p>
+    <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies from a map objective. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
     ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/marchOrders.svg" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
   </section>`;
 }
@@ -26886,11 +26886,11 @@ function confirmClanRallyAction(rally, action) {
         <h3>${escapeHtml(rally.targetName || "Rally objective")}</h3>
       </div>
       ${launching
-        ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">Launch is blocked until these contributions arrive:</p>${inboundList}` : ""}`
+        ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">These incoming contributions will turn back now:</p>${inboundList}` : ""}`
         : `<p>The creator's troops return to the assembly city. Assembled allies and inbound contributions will travel back normally.</p>`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
-        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept" ${launching && inbound.length ? "disabled" : ""}>${launching ? "Launch Rally" : "Cancel Rally"}</button>
+        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Rally" : "Cancel Rally"}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -26964,7 +26964,7 @@ async function runClanRallyAction(action, rally) {
         regionId: result?.movement?.sourceRegionId || rally.sourceRegionId || rally.targetRegionId,
         allowCrossMap: true,
       });
-      showToast("Rally launched with every Ready participant.");
+      showToast("Rally launched with the Ready participants. Any incoming contributions are returning.");
     } else {
       showToast("Rally cancelled. Committed forces are returning.");
     }
@@ -31923,7 +31923,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ${activeRetaliationId && orderKind === "attack" ? '<div class="troop-retaliation-note" data-retaliation-note></div>' : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
-      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${getClanRallyMinimumParticipants(activeRallyOrderContext?.rally || target)}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${getClanRallyMinimumParticipants(activeRallyOrderContext?.rally || target)}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Ready troops defend the assembly city until launch. Incoming troops turn back if you launch early." : "Your troops defend the assembly city after arrival. If the rally launches first, they turn back."}</span></div>` : ""}
 
       ${orderKind === "attack" && !campTarget ? renderOnboardingTip("attack", target, "order") : ""}
       <div class="troop-slider-control">
