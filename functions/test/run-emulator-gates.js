@@ -55,6 +55,7 @@ const coreExpansionGates = new Set([
   "emulator-peace-shield-returns.js",
   "emulator-holding-tower-lifecycle.js",
   "emulator-clan-tower-battle-reports.js",
+  "emulator-player-camp-defense.js",
 ]);
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))

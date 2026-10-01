@@ -31,9 +31,12 @@ const breached = ui.renderIntel({ ...model, report: { ...report, totalDefense: 0
 assert(breached.includes('<strong>0</strong>') && breached.includes("0% intact") && breached.includes("−37623 net adjustment"), "Zero power or breached walls were replaced by fallback troop/base values");
 const old = ui.renderIntel({ ...model, soldierDefenseEnabled: false, siege: null });
 assert(old.includes("Not recorded") && old.includes("Wall integrity and repair timing were not recorded"), "Old intelligence fabricated unknown details");
-const camp = ui.renderIntel({ ...model, rewardCampTarget: true, report: { ...report, troops: 18000, totalDefense: 18000 }, ownerTroops: 18000, baseTotalDefense: 18000, reinforcementTroops: 0, reinforcements: [] });
+const camp = ui.renderIntel({ ...model, rewardCampTarget: true, soldierDefenseEnabled: false, siege: null, report: { ...report, troops: 18000, totalDefense: 18000 }, ownerTroops: 18000, baseTotalDefense: 18000, reinforcementTroops: 0, reinforcements: [] });
 assert(!camp.includes('id="scoutDetail-walls"') && !camp.includes('class="skill-row"') && !camp.includes("Wall integrity at scout time"), "Camp rendered city-only intelligence");
 assert(camp.includes("1.00 power per troop") && camp.includes("Camp objectives have no wall layer"));
+const playerCamp = ui.renderIntel({ ...model, rewardCampTarget: true, siege: null, baseTotalDefense: 26000, report: { ...report, ownerDefensePower: 23010, totalDefense: 30290 } }).replaceAll(",", "");
+for (const text of ["23010", "7280", "30290", "1.30 base", "Shieldwall +10%", "owner gear +3%", "Player defense bonuses", "capped at +200%"]) assert(playerCamp.includes(text), `Player camp lost recorded defense detail: ${text}`);
+assert(!playerCamp.includes("1.00 power per troop") && !playerCamp.includes('id="scoutDetail-walls"'), "Player camp used neutral troop power or a city wall");
 const attempt = { id: "blocked", type: "scout", cityId: "target", cityName: "Thornfield", cityLevel: 2, summary: "Veil blocked the scout <unsafe>", troops: 987654321, totalDefense: 876543210, scoutReport: report };
 const hidden = ui.renderAttempt(attempt, { label: "SCOUT BLOCKED" });
 assert(hidden.includes("Veil blocked the scout &lt;unsafe&gt;") && hidden.includes("No current intelligence"));

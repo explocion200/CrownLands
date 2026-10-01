@@ -31,7 +31,7 @@ const requiredServerSnippets = [
   "projection.launchCombatForecast = FieldValue.delete()",
   "launchCombatForecast: normalizeCombatForecast(launchCombatForecast)",
   "combatForecastVersion: COMBAT_FORECAST_VERSION",
-  "defenseCombatVersion: order.targetType === \"camp\" ? 0 : DEFENSE_COMBAT_VERSION",
+  "defenseCombatVersion: DEFENSE_COMBAT_VERSION",
   "id: \"protected_raid\"",
   "id: \"protected_breach\"",
 ];

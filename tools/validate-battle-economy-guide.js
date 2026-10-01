@@ -202,8 +202,9 @@ assert.match(runtime, /drawLineChart\(\$\("wallLevelChart"\)[^\n]+title: "Full w
 assert.doesNotMatch(runtime, /wallLevelChart[^\n]+logarithmic/, "The wall chart must not use a logarithmic display scale.");
 assert.match(page, /id="special-rules"/);
 assert.match(page, /Every neutral camp starts with 20,000 troops/);
-assert.match(page, /no level, wall, Stoneworks, Shieldwall/);
-assert.match(page, /exactly 1\.00 defense power/);
+assert.match(page, /Neutral NPC troops have 1\.00 defense each without bonuses/);
+assert.match(page, /Player garrisons and reinforcements use 1\.30 base defense plus their own Shieldwall, equipped soldier-defense gear and objective support, capped at \+200% per army/);
+assert.match(page, /Camps have no walls, so wall-strength bonuses do not apply/);
 assert.match(page, /<details class="guide-math">/);
 assert.match(page, /<noscript>/);
 assert.match(page, /battle-guide-calculations\.js/);

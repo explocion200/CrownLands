@@ -90,11 +90,11 @@ for (const [source, label] of [[server, "Server"], [client, "Client"]]) {
   assert.match(stats, /objectiveTroopDefenseBonusPercent/, `${label} does not expose the soldier-only objective-defense field.`);
   assert.match(stats, /level = rewardCamp \? 0/, `${label} still assigns a city level to reward camps.`);
   assert.match(stats, /baseCityWalls = rewardCamp \? 0/, `${label} still assigns walls to reward camps.`);
-  assert.match(stats, /baseTroopDefense = rewardCamp[\s\S]*?REWARD_CAMP_TROOP_POWER/, `${label} does not apply the fixed camp troop-power multiplier.`);
+  assert.match(stats, /baseTroopDefense = fixedCampDefense[\s\S]*?REWARD_CAMP_TROOP_POWER/, `${label} does not apply the fixed camp troop-power multiplier.`);
 }
 assert.match(
   extractFunction(client, "getCityStats"),
-  /const rewardCamp = isRewardCampTarget\(city\)[\s\S]*?soldierDefenseEnabled = !rewardCamp/,
+  /const rewardCamp = isRewardCampTarget\(city\)[\s\S]*?soldierDefenseEnabled = \(!rewardCamp/,
   "Client city stats do not use the defined reward-camp helper."
 );
 assert.doesNotMatch(client, /\bisRewardCamp\(/, "Client references the server-only isRewardCamp helper.");
@@ -110,12 +110,12 @@ assert.match(client, /function getObjectiveTroopDefenseBonusPercent/);
 assert.match(server, /const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;/);
 assert.match(server, /const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;/);
 assert.match(server, /CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0\.5;/);
-assert.match(server, /defenseCombatVersion: order\.targetType === "camp" \? 0 : DEFENSE_COMBAT_VERSION/);
+assert.match(server, /defenseCombatVersion: DEFENSE_COMBAT_VERSION/);
 assert.match(server, /rallyAttack:\s*true[\s\S]*?siegeCombatVersion:\s*SIEGE_COMBAT_VERSION[\s\S]*?defenseCombatVersion:\s*DEFENSE_COMBAT_VERSION/);
 assert.match(server, /Math\.floor\(safeNumber\(army\.defenseCombatVersion, 0\)\)/, "Unversioned in-flight armies do not settle with legacy defense.");
 assert.match(server, /effectiveKind === "attack" && safeString\(army\.kind, 24\) !== "attack"[\s\S]*?DEFENSE_COMBAT_VERSION/, "Reinforcement-to-attack conversion does not adopt the live defense model.");
-assert.match(extractFunction(server, "usesSoldierDefenseModel"), /!isRewardCamp\(city\)/, "Reward camps are not excluded from Version 1 defense.");
-assert.match(extractFunction(server, "calculateDefenderArmyPackages"), /const rewardCamp = targetType === "camp"[\s\S]*?bonusPercent = rewardCamp \? 0[\s\S]*?basePower = rewardCamp[\s\S]*?REWARD_CAMP_TROOP_POWER/, "Camp reinforcements do not use fixed 1.00 troop power.");
+assert.match(extractFunction(server, "usesSoldierDefenseModel"), /!isRewardCamp\(city\) \|\| Boolean\(getOwnerUid\(city\)\)/, "Only player-held camps may use soldier defense.");
+assert.match(extractFunction(server, "calculateDefenderArmyPackages"), /const rewardCamp = targetType === "camp"[\s\S]*?bonusPercent = fixedCampDefense \? 0[\s\S]*?basePower = fixedCampDefense[\s\S]*?REWARD_CAMP_TROOP_POWER/, "Camp reinforcements do not use fixed 1.00 troop power.");
 assert.match(server, /capabilities:[\s\S]*?defenseCombatVersion: DEFENSE_COMBAT_VERSION/);
 
 assert.match(server, /function createScoutReportSnapshot[\s\S]*?baseDefensePowerPerTroop[\s\S]*?shieldwallDisciplinePercent/);
@@ -138,3 +138,4 @@ for (const document of [read("README.md"), read("how-to-play.html"), read("game-
 assert.ok(packageJson.scripts.test.includes("validate-soldier-defense.js"), "The soldier-defense validator is not part of the Functions suite.");
 
 console.log("Validated Version 1 soldier defense, Shieldwall, additive objective/gear support, Stoneworks-plus-gear walls, legacy marches, retained reset-credit compatibility, and benchmarks.");
+require("./validate-player-camp-defense");

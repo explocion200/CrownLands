@@ -1,16 +1,93 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "204c89c07c6c0b7560ee30d142835fdd345d0d98",
+  "baseCommit": "9b3ba821d253c5d19708bc0d2196e7ee3036338f",
   "coverage": [
     {
-      "paths": ["game.js"],
-      "tests": ["tools/validate-rally-assembly.js", "tools/validate-rally-assembly-browser.js", "tools/validate-clan-rallies.js", "tools/validate-world-travel-network.js"],
-      "reason": "Keep the latest owned-city selection when Clan profile reads return, while preserving initial profile hydration and authoritative clan membership refresh. Cover the shared source selection, eligibility and route dependencies, rally creation/join controls, and no-substitution behavior for unavailable sources. Server rally authority, troop transactions, persistence and rules are unchanged, so no emulator suite is required for this client selection fix."
+      "paths": [
+        "functions/index.js"
+      ],
+      "tests": [
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-skills.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-clan-objective-battles.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-king-power.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-report-system.js",
+        "tools/validate-reward-camp-lifecycle.js",
+        "functions/test/emulator-player-camp-defense.js",
+        "functions/test/emulator-battle-report-gear-effects.js",
+        "functions/test/emulator-scout-report-lifecycle.js",
+        "functions/test/emulator-reward-camp-lifecycle.js"
+      ],
+      "reason": "Apply normal live player soldier defense to held Camps while NPCs stay at 1.00. Verify distinct holder and allied skills/equipment/objective support, per-army caps, no walls, launch forecast snapshots, arrival-time changes, scouting, battle item attribution and unchanged camp rewards, city combat and King Power. Emulator scenarios cover real current-world Camp actions and private holder-only inspection, with existing city battle, scouting and camp lifecycle regressions."
     },
     {
-      "paths": ["tools/validate-rally-assembly-browser.js"],
-      "tests": ["tools/validate-rally-assembly-browser.js"],
-      "reason": "Exercise real Clan opening and a deferred profile refresh at 1440x900, 844x390 and 568x320. Verify that an older saved selection cannot replace the city selected before or during the request; both Clan and Activity show that city, use its troop limit, wait for confirmation, and submit its ID. Verify startup restoration, refreshed clan membership, and no fallback after missing, empty or lost city selections."
+      "paths": [
+        "game.js",
+        "scout-report-ui.js",
+        "firebaseClient.js"
+      ],
+      "tests": [
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-player-camp-defense-browser.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-report-system.js",
+        "tools/validate-universal-profile-links.js",
+        "functions/test/emulator-player-camp-defense.js"
+      ],
+      "reason": "Keep client defense and saved scout/battle presentation consistent with server packages. Show holder defense from a private server inspection, handle offline errors, preserve old report values and enemy scouting privacy, and check desktop plus 844x390 and 568x320 layouts."
+    },
+    {
+      "paths": [
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-scout-report-ui.js",
+        "tools/validate-player-camp-defense-browser.js",
+        "functions/test/emulator-player-camp-defense.js"
+      ],
+      "tests": [
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-report-system.js",
+        "tools/validate-player-camp-defense-browser.js",
+        "functions/test/emulator-player-camp-defense.js"
+      ],
+      "reason": "Run the added defense calculation, source-path, visual and current-realm emulator coverage. Retain legacy NPC and report behavior, verify no duplicate resolution or cross-owner inspection, and execute the new unit checks through the existing soldier-defense suite for future full regression."
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js"
+      ],
+      "tests": [
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "functions/test/emulator-player-camp-defense.js"
+      ],
+      "reason": "Register the new Camp combat emulator suite against the active Core/New Lands topology and validate emulator selection plus safe-update workflow dependencies."
+    },
+    {
+      "paths": [
+        "README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "how-to-play.html",
+        "game-rules.html",
+        "battle-economy-guide.html",
+        "tools/validate-battle-economy-guide.js"
+      ],
+      "tests": [
+        "tools/validate-public-site-content.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-battle-economy-guide.js"
+      ],
+      "reason": "Record the October 1 confirmed player-camp rule and pending deployment status. Align shipped guides with the tested 1.30 player base, own bonuses, +200% cap, neutral NPC exclusion and wall-free camps without changing other game rules."
     }
   ]
 }
