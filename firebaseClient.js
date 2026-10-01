@@ -1024,6 +1024,10 @@
     return callServerFunction("resolveRewardCampPayout", payload);
   }
 
+  async function getRewardCampDefense(payload = {}) {
+    return callServerFunction("getRewardCampDefense", payload);
+  }
+
   async function recallRewardCampGarrison(payload = {}) {
     return callServerFunction("recallRewardCampGarrison", payload);
   }
@@ -3745,6 +3749,7 @@
     returnClanReinforcement,
     resolveGoldCampPayout,
     resolveRewardCampPayout,
+    getRewardCampDefense,
     recallRewardCampGarrison,
     enablePushNotifications,
     registerPushNotifications,

@@ -9680,8 +9680,9 @@ function getCityStats(city, options = {}) {
   const defenseCombatVersion = Math.max(0, Math.floor(Number(
     options.defenseCombatVersion ?? (supportsDefenseCombat() ? DEFENSE_COMBAT_VERSION : 0)
   ) || 0));
-  const soldierDefenseEnabled = !rewardCamp
+  const soldierDefenseEnabled = (!rewardCamp || Boolean(city?.ownerUid) || city?.owner === "player")
     && defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
+  const fixedCampDefense = rewardCamp && !soldierDefenseEnabled;
   const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
   const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
@@ -9691,7 +9692,7 @@ function getCityStats(city, options = {}) {
     ? getSkillPercent("shieldwallDiscipline")
     : 0;
   const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, Number(gearBonuses.wallStrength) || 0);
-  const gearDefenderStrengthPercent = rewardCamp ? 0 : Math.max(0, Number(gearBonuses.defenderStrength) || 0);
+  const gearDefenderStrengthPercent = fixedCampDefense ? 0 : Math.max(0, Number(gearBonuses.defenderStrength) || 0);
   const gearTroopProductionPercent = stronghold || rewardCamp
     ? 0
     : Math.max(0, Number(gearBonuses.troopProductionAllCities) || 0);
@@ -9714,7 +9715,7 @@ function getCityStats(city, options = {}) {
   const strongholdTroopBonusPercent = includeStrongholdBoosts && !stronghold && !rewardCamp && city?.owner === "player"
     ? getControlledStrongholdTroopBonusPercent("player")
     : 0;
-  const objectiveTroopDefenseBonusPercent = !rewardCamp && includeStrongholdBoosts
+  const objectiveTroopDefenseBonusPercent = !fixedCampDefense && includeStrongholdBoosts
     ? getControlledObjectiveTroopDefenseBonusPercentForCity(city)
     : 0;
   const includeTimedItemBoosts = options.includeTimedItemBoosts !== false;
@@ -9750,17 +9751,17 @@ function getCityStats(city, options = {}) {
   );
   const defendingTroops = Math.max(0, Number(city?.troops) || 0)
     + (city?.owner === "player" ? Math.max(0, Number(city?.alliedReinforcementTroops) || 0) : 0);
-  const baseTroopDefense = rewardCamp
+  const baseTroopDefense = fixedCampDefense
     ? Math.floor(defendingTroops * REWARD_CAMP_TROOP_POWER)
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER)
       : Math.floor(defendingTroops);
-  const troopDefenseBeforeObjective = rewardCamp
+  const troopDefenseBeforeObjective = fixedCampDefense
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
       : Math.floor(defendingTroops * (1 + defensePercent / 100));
-  const troopDefenseBeforeGear = rewardCamp
+  const troopDefenseBeforeGear = fixedCampDefense
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
@@ -29968,6 +29969,33 @@ function refreshDeedCampHistoryPanel(camp) {
   });
 }
 
+async function refreshOwnedCampDefense(camp) {
+  const api = getOnlineApi();
+  if (camp.owner !== "player" || !api?.isSignedIn?.() || !api.getRewardCampDefense) return;
+  const panel = modalBody.querySelector(".camp-defense-grid");
+  const uid = getCurrentOnlineUid();
+  const realm = getRewardCampProgressCacheKey(getRewardCampConfig(camp));
+  if (!panel) return;
+  const current = () => modal.open && panel.isConnected && modal.dataset.campInfoId === camp.id
+    && uid === getCurrentOnlineUid() && realm === getRewardCampProgressCacheKey(getRewardCampConfig(camp))
+    && getCampTargetById(camp.id)?.owner === "player";
+  try {
+    const result = await api.getRewardCampDefense({ campId: camp.id, regionId: getCityRegionId(camp) });
+    if (!current() || result.ownerUid !== uid) return;
+    const troops = Math.max(0, Math.floor(Number(result.troops) || 0));
+    const defense = Math.max(0, Math.floor(Number(result.totalDefense) || 0));
+    panel.querySelector("[data-camp-defense-troops]").textContent = formatNumber(troops);
+    panel.querySelector("[data-camp-defense-power]").textContent = formatNumber(defense);
+    panel.querySelector("[data-camp-defense-rate]").textContent = troops ? (defense / troops).toFixed(2) : "—";
+    panel.querySelector("[data-camp-defense-help]").textContent = "Current holder and allied bonuses · Checked when opened";
+  } catch (_error) {
+    if (!current()) return;
+    panel.querySelector("[data-camp-defense-power]").textContent = "Unavailable";
+    panel.querySelector("[data-camp-defense-rate]").textContent = "—";
+    panel.querySelector("[data-camp-defense-help]").textContent = "Reopen to retry the server defense check.";
+  }
+}
+
 function showRewardCampInfoModal(campId) {
   const camp = getCampTargetById(campId);
   if (!camp) {
@@ -29995,7 +30023,7 @@ function showRewardCampInfoModal(campId) {
           ? Math.max(0, Math.floor(Number(camp.currentGarrison) || 0))
             + Math.max(0, Math.floor(Number(camp.alliedReinforcementTroops) || 0))
           : Math.max(0, Math.floor(Number(report.troops) || 0));
-        const liveStats = holderHasAccess ? getCityStats({ ...camp, troops, troopFloat: troops }) : null;
+        const liveStats = holderHasAccess ? getCityStats({ ...camp, troops, troopFloat: troops, alliedReinforcementTroops: 0 }) : null;
         const totalDefense = holderHasAccess
           ? Math.max(0, Math.floor(Number(liveStats.totalDefense) || 0))
           : Math.max(0, Math.floor(Number(report.totalDefense) || 0));
@@ -30016,18 +30044,18 @@ function showRewardCampInfoModal(campId) {
   const statsMarkup = visibleStats
     ? `
       <div class="gold-camp-info-grid camp-defense-grid">
-        <div><span>Stationed troops</span><strong>${formatNumber(visibleStats.troops)}</strong></div>
-        <div><span>Power per troop</span><strong>${REWARD_CAMP_TROOP_POWER.toFixed(2)}</strong></div>
+        <div><span>Stationed troops</span><strong data-camp-defense-troops>${formatNumber(visibleStats.troops)}</strong></div>
+        <div><span>Average power per troop</span><strong data-camp-defense-rate>${holderHasAccess && getOnlineApi()?.isSignedIn?.() ? "…" : visibleStats.troops ? (visibleStats.totalDefense / visibleStats.troops).toFixed(2) : "—"}</strong></div>
         <div><span>Camp level</span><strong>None</strong></div>
         <div><span>Walls</span><strong>None</strong></div>
-        <div class="camp-total-defense"><span>Total defense</span><strong>${formatNumber(visibleStats.totalDefense)}</strong><small>Troops only; no defense bonuses</small></div>
+        <div class="camp-total-defense"><span>Total defense</span><strong data-camp-defense-power>${holderHasAccess && getOnlineApi()?.isSignedIn?.() ? "Checking…" : formatNumber(visibleStats.totalDefense)}</strong><small data-camp-defense-help>${holderHasAccess ? "Includes each army’s own defense bonuses" : "Recorded defense at scout arrival"}</small></div>
       </div>
       ${report ? `<p class="camp-scout-expiry">Scout snapshot expires in <strong>${formatDuration(reportRemaining)}</strong>. Reinforcements or battles after the scout arrived are not revealed.</p>` : ""}`
     : `
       <div class="camp-stats-locked">
         <span class="camp-stats-lock" aria-hidden="true">${renderCrownlandsIcon("shield")}</span>
         <strong>Camp defenses hidden</strong>
-        <p>Scout this camp to reveal its stationed troops. Camps have no level or walls, and every stationed troop supplies exactly 1.00 defense power.</p>
+        <p>Scout this camp to reveal its defense. NPC troops have 1.00 power each. Player troops receive their own soldier-defense bonuses. Camps have no walls.</p>
       </div>`;
   const rewardPanelMarkup = `<div data-camp-reward-panel="${escapeHtml(camp.id)}">${rewardCampProgressMarkup(config, null, "loading")}</div>`
     + (isDeedCamp ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>` : "");
@@ -30095,7 +30123,7 @@ function showRewardCampInfoModal(campId) {
       <section id="campRulesPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRulesTab" data-camp-info-panel="rules" hidden>
         <div class="gold-camp-description">
           <strong>Camp combat</strong>
-          <p>Every neutral camp starts with 20,000 troops. Camps have no level, walls, Stoneworks, or objective defense bonus; each stationed troop and reinforcement contributes exactly 1.00 defense power.</p>
+          <p>Neutral camps start with 20,000 NPC troops at 1.00 defense each, without bonuses. Player troops use 1.30 base defense plus their owner’s Shieldwall, equipped soldier-defense gear and personal or clan objective support, capped at +200% per army. Reinforcements use their own owner’s bonuses. Camps have no level or walls, so wall-strength bonuses do not apply.</p>
         </div>
         ${rulesMarkup}
       </section>
@@ -30125,6 +30153,7 @@ function showRewardCampInfoModal(campId) {
     onClose: () => modal.close(), estimatedRewards: () => getRewardCampEstimatedRewards(config),
   });
   refreshRewardCampProgressPanel(camp.id, config);
+  void refreshOwnedCampDefense(camp);
 }
 
 function showScoutReportModal(cityId) {
@@ -30144,8 +30173,7 @@ function showScoutReportModal(cityId) {
   const currentPlayerUid = getCurrentOnlineUid();
   const rewardCampTarget = report.targetType === "camp" || isRewardCampTarget(city);
   const cityLevel = rewardCampTarget ? 0 : clampCityLevel(report.cityLevel || city.level);
-  const soldierDefenseEnabled = !rewardCampTarget
-    && Math.floor(Number(report.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
+  const soldierDefenseEnabled = Math.floor(Number(report.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const defensePercent = soldierDefenseEnabled ? 0 : Math.max(0, Number(report.defensePercent) || cityLevel * 2);
   const cityWalls = rewardCampTarget
     ? 0
@@ -30228,8 +30256,8 @@ function showScoutReportModal(cityId) {
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutDefenderRow(renderCrownlandsIcon("troops"), reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%${defenderGearCopy}` : "")}
-          ${reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%${row.gearDefenderStrengthPercent > 0 ? ` · owner gear +${formatGearPercent(row.gearDefenderStrengthPercent)}%` : ""}` : "")).join("")}
+          ${scoutDefenderRow(renderCrownlandsIcon("troops"), reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, soldierDefenseEnabled ? (rewardCampTarget ? report.ownerDefensePower : siege?.ownerGarrisonDefensePower) : rewardCampTarget ? ownerTroops : 0, rewardCampTarget && !soldierDefenseEnabled ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || report.objectiveTroopDefenseBonusPercent || 0)}%${defenderGearCopy}` : "")}
+          ${reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, soldierDefenseEnabled ? row.effectivePower : rewardCampTarget ? row.troops : 0, rewardCampTarget && !soldierDefenseEnabled ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%${row.gearDefenderStrengthPercent > 0 ? ` · owner gear +${formatGearPercent(row.gearDefenderStrengthPercent)}%` : ""}` : "")).join("")}
           ${rewardCampTarget
             ? scoutBreakdownRow(renderCrownlandsIcon("city"), "Walls", "Camp objectives have no wall layer", 0)
             : siege
@@ -30242,7 +30270,7 @@ function showScoutReportModal(cityId) {
       ${rewardCampTarget ? `
       <section class="scout-report-section">
         <h3>Camp combat rules</h3>
-        <div class="scout-stale-note"><strong>Fixed troop power</strong><span>Camp levels, walls, Stoneworks, Shieldwall, and objective bonuses do not apply. Every stationed troop contributes exactly 1.00 defense power.</span></div>
+        <div class="scout-stale-note"><strong>Camp defense</strong><span>${soldierDefenseEnabled ? "Player troops receive their own Shieldwall, equipped soldier-defense gear and objective bonuses." : "This snapshot records 1.00 defense per troop without bonuses."} Camps have no level or walls.</span></div>
       </section>` : `
       <div class="scout-skill-columns">
         <section class="scout-report-section">
@@ -39235,7 +39263,7 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     losses: Math.max(0, Math.floor(Number(attacker ? totals.attackerLosses : totals.defenderLosses) || 0)),
     survivors: Math.max(0, Math.floor(Number(attacker ? totals.attackerSurvivors : totals.defenderSurvivors) || 0)),
     participantSummary,
-    skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
+    skillLabel: attacker ? "Swordmastery" : modernDefense ? "Shieldwall Discipline" : campTarget ? "Camp troop power" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     clanTrainingBonusPower: attacker ? sumDetailedBattleParticipantPower(participants, "clanTrainingBonusPower") : 0,
     clanTrainingPercent: attacker ? Math.max(0, ...participants.map(p => p.clanTrainingPercent || 0)) : 0,
@@ -39466,7 +39494,9 @@ function renderRallyParticipantResults(snapshot = null) {
 
 function getBattleRuleLabel(snapshot = null) {
   if (snapshot?.combatRule?.id === "clan_tower_raid") return "One Clan Tower per clan — attack allowed, capture disabled";
-  if (snapshot?.target?.targetType === "camp") return "Camp combat — 1.00 defense per troop, no level or walls";
+  if (snapshot?.target?.targetType === "camp") return Number(snapshot.defenseCombatVersion) >= DEFENSE_COMBAT_VERSION
+    ? "Camp combat — each player’s soldier-defense bonuses apply; no walls"
+    : "Camp combat — 1.00 defense per troop, no level or walls";
   if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
   if (snapshot?.combatRule?.id === "protected_breach") return "Protected breach — wall breach only";
   if (snapshot?.combatRule?.id === "protected_capture") return "Protected capture — capture allowed";
