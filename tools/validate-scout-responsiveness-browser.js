@@ -78,7 +78,9 @@ async function main(){
         await evaluate(functions(source));
         const measurements=await evaluate(`(async()=>{
           const qa=scoutQa,pending=[],launch=[],report=[],arrival=[];let duplicateGuard=true,stableWheel=true;
-          for(let i=0;i<10;i++) {
+          // Forty observations give p95 its own percentile rank; with ten,
+          // this statistic was the maximum and one delayed frame failed it.
+          for(let i=0;i<40;i++) {
             qa.reset();await qa.nextFrame();const wheel=cityLayer.querySelector(".foreign-city-action-wheel");
             const beforeCalls=qa.calls,start=performance.now();const request=scoutTarget(qa.target);
             const pendingButton=cityLayer.querySelector(".wheel-scout");
@@ -161,11 +163,11 @@ async function main(){
         const pending=pendingOutgoingMissions.size===1;await qa.nextFrame();await promise;await qa.nextFrame();
         return {pending,accepted:state.attacks.some(a=>a.onlineId===mission.onlineId),pendingCleared:!pendingOutgoingMissions.size,mapNodeKept:node.isConnected};})()`);
       assert(row.regularMarch.pending&&row.regularMarch.accepted&&row.regularMarch.pendingCleared&&row.regularMarch.mapNodeKept);
-      if (!process.env.CI) assert(row.versions.after.pendingMs.p95<=100,`${viewport.name}: pending feedback exceeded 100ms`);
-      if (!process.env.CI) assert(row.versions.after.reportMs.p95<=200,`${viewport.name}: report presentation exceeded 200ms`);
       evidence.viewports.push(row);
       fs.writeFileSync(path.join(artifacts,"browser-benchmark.json"),JSON.stringify(evidence,null,2));
       console.log(JSON.stringify(row));
+      if (!process.env.CI) assert(row.versions.after.pendingMs.p95<=100,`${viewport.name}: pending feedback exceeded 100ms`);
+      if (!process.env.CI) assert(row.versions.after.reportMs.p95<=200,`${viewport.name}: report presentation exceeded 200ms`);
     }
     console.log("Scouting browser passed: desktop/4x mobile pending feedback, duplicate taps, report bursts, focus/scroll, Tower refresh failure, and receiving-report status. Production endpoints blocked.");
   }finally{

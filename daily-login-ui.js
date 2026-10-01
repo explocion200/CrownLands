@@ -10,7 +10,12 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
   const { status, rates, busy, error, claim, items } = options;
 
-  const position = `${status.cycleId}:${status.nextDay}`;
+  const position = `${options.scope || "local"}:${status.cycleId}:${status.nextDay}`;
+  const previous = root.querySelector(".daily-shell");
+  const restore = previous?.dataset.refreshView === position ? captureUiRefreshState(root, {
+    scrollSelectors: ["#weeks", "#detailScroll", "#weekNav"],
+    focusAttributes: ["data-day", "data-week"],
+  }) : () => {};
 
   if(position !== lastPosition){ selected = status.nextDay; lastPosition = position; }
 
@@ -113,6 +118,8 @@ $("#weeks").addEventListener("keydown",e=>{const b=e.target.closest("[data-day]"
   $("#weeks").style.setProperty("--daily-weeks",weekNumbers.length);
 
   render();
+  $(".daily-shell").dataset.refreshView = position;
+  restore();
 
 } };
 

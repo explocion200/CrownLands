@@ -65,6 +65,28 @@ async function main() {
         document.getElementById('cdDefencesTab').click();
         document.getElementById('cdDefencesTab').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));
         if(document.getElementById('cdOverview').hidden || document.activeElement.id!=='cdOverviewTab')throw Error('Tab keyboard navigation failed');
+        modalBody.querySelector('[data-cd-amount="1"]').click();
+        document.getElementById('cdDefencesTab').click();
+        modalBody.querySelector('.cd-ledger').scrollTop=100;
+        modalBody.querySelector('.cd-actions').scrollTop=80;
+        document.getElementById('cdDefencesTab').focus({preventScroll:true});
+        window.cdQaRefreshCheck=()=>{
+          const root=modalBody.querySelector('.cd-panel');
+          const amount=root.dataset.cdAmount;
+          const tab=root.querySelector('[role="tab"][aria-selected="true"]').id;
+          const focus=document.activeElement.id;
+          const scroll=['.cd-ledger','.cd-actions'].map(selector=>root.querySelector(selector).scrollTop);
+          let clicks=0;const onClick=()=>clicks++;
+          document.addEventListener('click',onClick);
+          try {refreshClanRelationshipPresentation();}finally {document.removeEventListener('click',onClick);}
+          if(clicks)throw Error('Live refresh fired a synthetic user click');
+          const updated=modalBody.querySelector('.cd-panel');
+          if(updated.dataset.cdAmount!==amount || updated.querySelector('.cd-upgrade').dataset.cityUpgradeLevels!=='5')throw Error('Live clan refresh reset the +5 upgrade selection');
+          if(updated.querySelector('[role="tab"][aria-selected="true"]').id!==tab || document.activeElement.id!==focus)throw Error('Live clan refresh reset the City Details tab or focus');
+          if(['.cd-ledger','.cd-actions'].some((selector,index)=>updated.querySelector(selector).scrollTop!==scroll[index]))throw Error('Live clan refresh reset City Details scrolling');
+        };
+        cdQaRefreshCheck();
+        document.getElementById('cdOverviewTab').click();
         window.cdQaButton=modalBody.querySelector('.cd-upgrade');
         window.cdQaLedger=modalBody.querySelector('.cd-ledger');
         cdQaLedger.scrollTop=100;window.cdQaScroll=cdQaLedger.scrollTop;
@@ -85,6 +107,8 @@ async function main() {
         cdQaButton.click();patchCityUpgradeUi();
         if(getPendingCityUpgradeCount(cdQaCity)!==5 || getProjectedGold()!==cdQaGold-cdQaCost || cdQaCity.level!==24)throw Error('Exact +5 did not reserve authoritative projection');
         if(cdQaButton.disabled || modalBody.querySelector('[data-cd-value="level"]').textContent!=='29')throw Error('Pending feedback blocked affordable input or lost projected level');
+        cdQaRefreshCheck();
+        window.cdQaButton=modalBody.querySelector('.cd-upgrade');window.cdQaLedger=modalBody.querySelector('.cd-ledger');
         cdQaButton.click();patchCityUpgradeUi();
         if(getPendingCityUpgradeCount(cdQaCity)!==10 || modalBody.querySelector('[data-cd-value="level"]').textContent!=='34')throw Error('Repeated +5 lost queue projection');
       })()`);
@@ -102,6 +126,9 @@ async function main() {
         patchCityUpgradeUi();
         if(getPendingCityUpgradeCount(cdQaCity)!==0)throw Error('Rejected dependent actions remained queued');
         if(!document.getElementById('cdFeedback').textContent.includes('not confirmed') || modalBody.querySelector('[data-cd-value="level"]').textContent!=='24')throw Error('Rejection did not roll back');
+        cdQaRefreshCheck();
+        window.cdQaButton=modalBody.querySelector('.cd-upgrade');window.cdQaLedger=modalBody.querySelector('.cd-ledger');
+        if(!document.getElementById('cdFeedback').textContent.includes('not confirmed'))throw Error('Full refresh lost failure feedback');
         if(cdQaLedger.scrollTop!==cdQaScroll)throw Error('Recovery moved the ledger');
       })()`);
       await screenshot(`error-${viewport.name}`);
@@ -114,6 +141,9 @@ async function main() {
         modalBody.querySelector('[data-cd-amount="2"]').click();
         const max=getCityUpgradeOptionState(cdQaCity).options[2];
         if(cdQaButton.dataset.cityUpgradeMode!=='max' || Number(cdQaButton.dataset.cityUpgradeLevels)!==max.levels)throw Error('MAX did not use projected affordability');
+        showCityInfoModal(cdQaCity.id);
+        window.cdQaButton=modalBody.querySelector('.cd-upgrade');window.cdQaLedger=modalBody.querySelector('.cd-ledger');
+        if(cdQaButton.dataset.cityUpgradeMode!=='max' || Number(cdQaButton.dataset.cityUpgradeLevels)!==max.levels)throw Error('Full refresh reset MAX');
         modalBody.querySelector('[data-cd-amount="0"]').click();
         document.getElementById('cdDefencesTab').click();patchCityUpgradeUi();
         if(document.getElementById('cdDefences').hidden)throw Error('Patching changed the selected tab');
@@ -131,6 +161,17 @@ async function main() {
       await screenshot(`success-${viewport.name}`);
       await evaluate("document.getElementById('cdDefencesTab').click()");
       await screenshot(`defences-${viewport.name}`);
+      await evaluate(`(() => {
+        modalBody.querySelector('[data-cd-amount="1"]').click();
+        const scope=getOnlineRequestScope;
+        try {
+          getOnlineRequestScope=()=>scope()+':changed-session';showCityInfoModal(cdQaCity.id);
+          if(modalBody.querySelector('[aria-pressed="true"]').dataset.cdAmount!=='0')throw Error('City selection leaked across session scope');
+        } finally {getOnlineRequestScope=scope;}
+        showCityInfoModal(cdQaCity.id);modalBody.querySelector('[data-cd-amount="1"]').click();
+        modal.close();showCityInfoModal(cdQaCity.id);
+        if(modalBody.querySelector('[aria-pressed="true"]').dataset.cdAmount!=='0')throw Error('A fresh city visit inherited stale selection');
+      })()`);
       const castleEntry = await evaluate(`(() => {
         const main=getMainCityReference();
         const other=state.cities.find(c=>c.id!==main.id&&!isStronghold(c)&&!isCrownCitadel(c));

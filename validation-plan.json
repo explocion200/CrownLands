@@ -1,41 +1,49 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "646bb15c01e5b9c910711cd5000333736dd481e9",
+  "baseCommit": "10d801c637c9fe1f70425c223cc6525d0d1d8018",
   "coverage": [
     {
-      "paths": ["functions/cosmetics.js", "functions/cosmetics-service.js", "functions/index.js", "firestore.rules", "functions/economy-config.json", "functions/test/emulator-cosmetics.js", "functions/test/emulator-harvest-pickup-rewards.js", "tools/validate-cosmetics.js"],
-      "tests": ["tools/validate-cosmetics.js", "tools/validate-harvest-pickups.js", "functions/test/emulator-cosmetics.js", "functions/test/emulator-harvest-pickup-rewards.js"],
-      "reason": "Validate permanent private wallets, server prices, partial bundles, idempotent purchases and claims, equipment, premium ownership rules, UTC caps and the new pickup rotation. Retain existing raw Gold/troop reward and rejected-claim coverage for the shared collection code."
+      "paths": ["city-details-ui.js", "tools/validate-city-details-browser.js"],
+      "tests": ["tools/validate-city-details-browser.js"],
+      "reason": "Reproduces the +5 reset through the live clan refresh caller. Covers full refreshes during queued upgrades and rejected actions, MAX, projected affordability, tabs, focus, independent scroll columns, session changes, fresh visits, foreign privacy and Inner Castle return at five desktop/phone/landscape sizes. Queue settlement and server authority are unchanged."
     },
     {
-      "paths": ["functions/playerFlagConfig.js", "functions/flagRenderer.js", "tools/validate-player-flags.js", "tools/validate-random-starter-flags.js", "tools/validate-flag-symbol-art.js"],
-      "tests": ["tools/validate-player-flags.js", "tools/validate-random-starter-flags.js", "tools/validate-flag-symbol-art.js", "tools/validate-cosmetics.js", "functions/test/emulator-cosmetics.js"],
-      "reason": "Premium symbols extend saved flags without changing the approved free artwork or random starter choices. Exercise premium equip, free editing, owned editing and rejection of unowned symbols."
+      "paths": ["game.js", "modal-ui.js", "tools/validate-ui-refresh-browser.js"],
+      "tests": [
+        "tools/validate-ui-refresh-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-shop-browser.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js"
+      ],
+      "reason": "Shared refresh state captures presentation only, with explicit keys for each session/view. New desktop and landscape browser coverage checks clan creation/search drafts, cursor ranges, roster focus, gift scrolling, holding tabs/disclosures, inventory pages/scroll and scope boundaries. Player/clan profiles opened from a holding remain visible during clan relationship, world benefit and stronghold ownership snapshots, both loading and loaded. Existing suites exercise shared modal lifecycle, Treasury drafts and donation actions, Item Bag action settlement and removed-page fallback. The requested wider UI audit also checks existing City List, Shop, Skills, incoming threats, scout/report, rally and Kingdom Activity/leaderboard preservation paths. No backend, economy formula, ownership or action authorization changes."
     },
     {
-      "paths": ["game.js", "cosmetics-client.js", "skins-ui.js", "skins-ui.css", "shop-ui.js", "index.html", "tools/validate-cosmetics-browser.js"],
-      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js", "tools/validate-shop-browser.js", "tools/validate-shop-pricing.js", "tools/validate-profile-theme.js", "tools/validate-player-flags.js", "tools/validate-harvest-pickups.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Check preview versus purchase/equip, uncertain purchase recovery, stale confirmations, default restoration, city appearance, sale closure, and reachable controls at desktop and landscape-mobile sizes. Exercise affected Shop, profile, flag and pickup behavior and enforce existing entry-point budgets."
+      "paths": ["common-gear-ui.js"],
+      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-treasury-gear-browser.js", "tools/validate-optional-ui-scripts-browser.js"],
+      "reason": "The shared officer renderer now preserves the selected item's details scroll and focused control during same-view updates. Browser coverage exercises all four officer screens, deferred script loading, Treasury equip/upgrade/confirmation behavior, and desktop plus two landscape sizes. Existing explicit action focus and bag selection models remain authoritative."
     },
     {
-      "paths": ["firebaseClient.js"],
-      "tests": ["tools/validate-cosmetics.js", "tools/validate-cosmetics-browser.js", "tools/validate-harvest-pickups.js", "functions/test/emulator-cosmetics.js"],
-      "reason": "The shared transport retains pickup callables and adds session-scoped private ownership and public equipped-appearance subscriptions; validate exports and corresponding authority boundaries."
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "New shared refresh helpers add less than 8 KiB to the existing dialog presentation module. Bound that module's allowance explicitly; the main game and aggregate installed-shell caps stay unchanged and there is no additional script request. Verify the complete production artifact remains within asset and shell limits."
     },
     {
-      "paths": ["economy-config.js", "battle-economy-guide.js", "daily-rewards-guide.html", "how-to-play.html", "tools/validate-harvest-pickups.js", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-cosmetics.js"],
-      "reason": "Keep client caps and player-facing rules consistent with the confirmed 30 Gold, 30 troop and 20 Crown daily pickups, one Crown per pickup, permanent cosmetics and no Crowns in daily quests."
+      "paths": ["tools/validate-scout-responsiveness-browser.js"],
+      "tests": ["tools/validate-scout-responsiveness-browser.js"],
+      "reason": "The wider UI audit exposed noisy local timing failures: the previous ten-sample p95 was the single slowest frame. Increase to 40 observations for a meaningful percentile rank, retaining the 100 ms pending-feedback and 200 ms report limits and all functional assertions. Persist measurements before assertions so failed runs retain diagnostic evidence. Scouting gameplay code is identical to the branch base."
     },
     {
-      "paths": ["release-config.js", "functions/release-config.json", "service-worker.js", "tools/build-production-client.js", "tools/generate-release-manifest.js", "tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-release-gate.js", "tools/validate-asset-performance-budgets.js", "functions/test/emulator-cosmetics.js"],
-      "reason": "Package and cache every cosmetic module in production, verify the client/server release contract and ensure current clients use the new pickup protocol. The existing world topology and reset generation remain the current release target."
-    },
-    {
-      "paths": ["functions/test/run-emulator-gates.js"],
-      "tests": ["tools/test-targeted-validation.js", "tools/test-safe-update-pipeline.js", "tools/test-change-risk-classifier.js", "tools/validate-release-gate.js", "functions/test/emulator-cosmetics.js"],
-      "reason": "Register the new cosmetics authority suite against the current core-expansion topology and verify selected-test execution and safe PR gates."
+      "paths": ["daily-login-ui.js"],
+      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-daily-login-rewards.js", "tools/validate-optional-ui-scripts-browser.js"],
+      "reason": "Daily Login refresh keeps its week/day focus and scroll only for the same session and reward position; a new cycle resets normally. Browser tests use the actual daily reward model and deferred renderer. Static reward validation verifies the authoritative schedule and claim integration remain unchanged."
     }
   ]
 }

@@ -1877,6 +1877,7 @@ function renderCommonGearBuilding(buildingId) {
   if (!ensureModalUiScripts("gear", () => {
     if (modal.dataset.commonGearBuildingId === buildingId) renderCommonGearBuilding(buildingId);
   })) return true;
+  const restore = captureCommonGearRefresh(viewModel);
   modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : buildingId === "barracks" ? renderBarracksGearScreen(viewModel) : buildingId === "gatehouse" ? renderGatehouseGearScreen(viewModel) : buildingId === "royal-stables" ? renderRoyalStablesGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
     <div class="common-gear-main">
       <section class="common-gear-loadout-panel" data-gear-panel="loadout" data-gear-officer="${escapeHtml(buildingId)}">
@@ -1905,6 +1906,7 @@ function renderCommonGearBuilding(buildingId) {
   </section>`;
   bindCommonGearScreen(viewModel);
   bindTreasuryGearPortrait();
+  restore();
   restoreCommonGearFocus();
   return true;
 }

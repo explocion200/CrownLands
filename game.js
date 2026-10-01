@@ -17703,7 +17703,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
   const byId = new Map(onlineCities.map(city => [city.id, city]));
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
-  const openStrongholdId = modal?.open ? String(modal.dataset.cityInfoId || "") : "";
+  const openStrongholdId = getOpenCityInfoId();
   const previousOpenStronghold = localById.get(openStrongholdId);
   const previousStrongholdLegacySignature = previousOpenStronghold
     && isStronghold(previousOpenStronghold)
@@ -25346,7 +25346,7 @@ function refreshClanRelationshipPresentation() {
   renderPaths();
   renderArmies(true);
   renderPanel();
-  if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
+  refreshOpenCityInfoModal();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
 }
 
@@ -25729,7 +25729,7 @@ function startClanSocialStateSubscription(api, clanId) {
       clanWorldBenefits = benefits;
       if ((Number(benefits?.revision) || 0) !== previousRevision) {
         renderPanel();
-        if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
+        refreshOpenCityInfoModal();
       }
     },
     onError: (error, source) => {
@@ -27003,11 +27003,15 @@ function renderClanView() {
   if (!ensureOptionalUiStyle(["clan", "treasury"], clanContent, () => {
     if (activeProfileTab === "clan" && styleScope === getOnlineRequestScope()) renderClanView();
   })) return;
+  syncClanNavigationState();
+  const restore = captureClanViewRefresh();
+  renderClanViewContent();
+  restore();
+}
+
+function renderClanViewContent() {
   if (clanTreasuryView.scope === getClanTreasuryScope()) window.CrownlandsClanTreasuryUi?.capture(clanContent, clanTreasuryView);
   else clanTreasuryView = { scope: getClanTreasuryScope() };
-  const rosterScrollTop = clanContent.querySelector(".clan-roster")?.scrollTop || 0;
-  const applicationScrollTop = clanContent.querySelector(".clan-applications .scroll-region")?.scrollTop || 0;
-  syncClanNavigationState();
   if (state?.clanRole !== "leader") {
     clanRenameEditorOpen = false;
     clanRenameSaving = false;
@@ -27020,7 +27024,7 @@ function renderClanView() {
     clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">${renderCrownlandsIcon("clan")}</span><h3>Clans unlock at Level 10</h3><p>Raise your Hero to Level 10 to create or join a clan.</p><strong>Level ${heroLevel} / 10</strong></section>`;
     return;
   }
-  if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length) || (state?.clanId && !clanSnapshot)) {
+  if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length && !clanContent.querySelector(".clan-browser")) || (state?.clanId && !clanSnapshot)) {
     clanContent.innerHTML = `<section class="clan-empty"><h3>Loading clans…</h3></section>`;
     return;
   }
@@ -27085,10 +27089,6 @@ function renderClanView() {
     ${renderClanRallyPanel()}
     ${renderClanRewardsPanel()}`;
   applyClanRosterFlags();
-  const roster = clanContent.querySelector(".clan-roster");
-  const applications = clanContent.querySelector(".clan-applications .scroll-region");
-  if (roster) roster.scrollTop = rosterScrollTop;
-  if (applications) applications.scrollTop = applicationScrollTop;
   bindClanTreasuryPanel();
   bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
@@ -33310,6 +33310,7 @@ function refreshOpenHoldingReinforcementPanel() {
 }
 
 function showCrownCitadelInfoModal(city) {
+  const restoreDetails = captureHoldingDetailsRefresh(city);
   modal.dataset.cityInfoId = city.id;
   const owned = city.owner === "player";
   const report = owned ? null : getScoutReport(city.id);
@@ -33378,6 +33379,7 @@ function showCrownCitadelInfoModal(city) {
   mountStrongholdDetails(city);
   bindHoldingReinforcementButtons();
   if (owned) bindRelinquishCityButton(city);
+  restoreDetails();
   if (!modal.open) modal.showModal();
   void hydrateObjectiveClanAffiliation(city);
 }
@@ -33453,6 +33455,7 @@ function renderCityFortificationStatus(city, stats = null, report = null) {
 function showCityInfoModal(cityId) {
   const city = cityById(cityId);
   if (!city) return;
+  const restoreDetails = isStronghold(city) ? captureHoldingDetailsRefresh(city) : captureCityDetailsRefresh(city);
   clearInnerCastleModalState();
   const stronghold = isStronghold(city);
   const formatInfoNumber = stronghold ? formatLedgerNumber : formatNumber;
@@ -33507,10 +33510,12 @@ function showCityInfoModal(cityId) {
       modalTitle.textContent = city.name;
       bindCityDetailsPanel(city);
       renderCombatTimers();
+      restoreDetails();
     }
     if (stronghold) {
       bindStrongholdInfoTabs(city);
       mountStrongholdDetails(city);
+      restoreDetails();
     }
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
@@ -33559,6 +33564,7 @@ function showCityInfoModal(cityId) {
     mountStrongholdDetails(city);
     bindRelinquishCityButton(city);
     bindHoldingReinforcementButtons();
+    restoreDetails();
     if (!modal.open) modal.showModal();
     void hydrateObjectiveClanAffiliation(city);
     return;
@@ -33595,6 +33601,7 @@ function showCityInfoModal(cityId) {
   bindCityLevelUpButtons(city);
   bindRelinquishCityButton(city);
   bindHoldingReinforcementButtons();
+  restoreDetails();
   if (!modal.open) modal.showModal();
 }
 
@@ -35694,6 +35701,7 @@ function renderDailyLoginRewardModal(options = {}) {
     : getHarvestBonusBaseRates();
   if (!ensureModalUiScripts("daily-login", () => renderDailyLoginRewardModal(options))) return;
   window.CrownlandsDailyLoginUI.mount(modalBody, {
+    scope: getOnlineSessionRequestScope(),
     status, rates: dailyBaseRates, busy: dailyLoginRewardClaimInFlight,
     error: dailyLoginRewardError, hasCity: Number(dailyGlobalStats?.cityCount) > 0 || playerRegularCities().length > 0,
     items: Object.fromEntries(DAILY_LOGIN_REWARD_ITEM_ORDER.map(id => {
@@ -36493,6 +36501,7 @@ function showInventoryModal() {
   const selectedEntryIsGearBox = isGearBoxItem(selectedEntry?.id);
   const selectedEntryActionLabel = selectedEntryIsGearBox ? "OPEN" : "USE";
   const effectLabel = getInventoryEffectLabel(selectedEntry);
+  const restoreBag = captureItemBagRefresh(model, selectedEntry);
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   commonGearBoxView?.dispose();
   modal.className = "inventory-modal modal";
@@ -36526,6 +36535,7 @@ function showInventoryModal() {
   inventoryPageDirection = 0;
   if (!modal.open) modal.showModal();
   bindItemBagPresentation();
+  restoreBag();
 }
 
 function consumeInventoryItem(item) {
