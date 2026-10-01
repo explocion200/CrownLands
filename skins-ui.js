@@ -94,7 +94,7 @@ function cosmeticPreview(item) {
   const glyphs = { city: "♜", troops: "⚑", border: "◇", flag: "⚑", bundle: "♛" };
   if (category === "flag" && state?.flag) {
     const symbol = item.symbol || state.flag.symbol;
-    return `<span class="skin-flag-preview" data-skin-flag-symbol="${escapeHtml(symbol)}"><span class="flag-symbol"></span></span>`;
+    return `<span class="kingdom-flag skin-flag-preview" data-skin-flag-symbol="${escapeHtml(symbol)}"><span class="flag-symbol"></span></span>`;
   }
   return `<span class="skin-art skin-art-${category}" aria-hidden="true">${glyphs[category] || "♛"}</span>`;
 }

@@ -75,6 +75,16 @@ async function main(){
   assert.deepEqual(appearances.stronghold,["",""]);assert.deepEqual(appearances.captured,["",""]);
   assert.equal(appearances.remote,"halloween_city");assert.deepEqual(appearances.before,appearances.after);
   assert.equal(appearances.troop,"halloween_troops");assert.deepEqual(appearances.scout,["",true]);assert.equal(appearances.rally,"halloween_troops");
+  const flagPreview = await evaluate(`(()=>{
+    const saved=state.flag,selection=cosmeticSelected;state.flag={...saved,pattern:'split'};cosmeticCategory='flag';refreshCosmeticPanels();
+    const flag=document.querySelector('[data-skins-mode=shop] [data-skin-flag-symbol]');
+    const pattern=getComputedStyle(flag,'::before'),symbol=getComputedStyle(flag.querySelector('.flag-symbol'));
+    const result={pattern:flag.classList.contains('pattern-split'),content:pattern.content,left:pattern.left,color:symbol.color,expected:state.flag.symbolColor};
+    state.flag=saved;cosmeticCategory='all';cosmeticSelected=selection;refreshCosmeticPanels();return result;
+  })()`);
+  assert(flagPreview.pattern&&flagPreview.content!=='none'&&parseFloat(flagPreview.left)>0,"Flag preview must render the saved two-color pattern");
+  const rgb=flagPreview.expected.replace('#','').match(/../g).map(hex=>parseInt(hex,16));
+  assert.equal(flagPreview.color,`rgb(${rgb.join(', ')})`,"Flag preview must retain the saved symbol color");
   await click('[data-skin-browse]');await wait('activeProfileTab==="skins"');await click('[data-skin-select="halloween_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city");
   await evaluate('renderCities(true)');assert(await evaluate('!!document.querySelector(".city-node[data-city-skin=halloween_city]")'));
   await click('[data-skin-select="default_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");

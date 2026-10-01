@@ -271,8 +271,8 @@ if (seasonRewardBytes > 28 * 1024) throw new Error("Season rewards presentation 
 // 8 KiB including build metadata (CI uses full commit IDs in asset URLs).
 // Existing per-file, offline-shell and combined artifact limits still apply.
 const battleItemReportingBudget = 8 * 1024;
-// Cosmetics add 36,150 bytes of catalog, transport, UI and styles with placeholder
-// art. Cap these modules at 36 KiB and reserve 8 KiB for entry/flag/build integration.
+// Cosmetics add catalog, transport, UI and styles with placeholder art.
+// Cap these modules at 36 KiB and reserve 8 KiB for entry/flag/build integration.
 // Final artwork needs a separate budget review; existing entry-point limits apply.
 const cosmeticModuleBudget = 36 * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
