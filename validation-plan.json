@@ -21,6 +21,11 @@
       "reason": "Map rendering invokes the cosmetic renderer for each city. Stop redundant skin/border attribute assignments after reproducing the same 600 unchanged writes on the released base. The existing reconciliation test checks unchanged refreshes, retained images/focus and changed ownership/classes; cosmetics browser coverage checks equip/default, strongholds and remote owner appearance. Advance the matching entry/precache script version and verify browser loading plus the required production artifact build. No purchases, prices, ownership authority or server behavior changed."
     },
     {
+      "paths": ["crownlands-palette.css"],
+      "tests": ["tools/validate-map-loading-browser.js"],
+      "reason": "Give the map loading label the existing dark parchment text color after screenshot review showed pale text on a pale panel. Verify computed text color, loading-panel viewport bounds and screenshots at desktop and two landscape-mobile sizes. Entry and service-worker stylesheet versions advance together and the production build validates the asset references."
+    },
+    {
       "paths": ["tools/validate-map-loading-browser.js"],
       "tests": ["tools/validate-map-loading-browser.js"],
       "reason": "Execute the new browser regression against the real runtime with a loopback-only synthetic API. It reproduced the missing initial lock before the fix and now covers recovery, stale sessions, art/city readiness, cache churn and desktop/mobile loading presentation."

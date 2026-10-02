@@ -163,6 +163,11 @@ body {
   box-shadow: var(--cl-panel-shadow) !important;
 }
 
+.map-loading-panel .map-loading-label {
+  color: var(--cl-text) !important;
+  text-shadow: none;
+}
+
 :is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)::before {
   border-color: rgba(153, 118, 67, .44) !important;
 }

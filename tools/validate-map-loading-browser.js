@@ -71,6 +71,7 @@ async function main() {
         return bounds.left>=0 && bounds.top>=0 && bounds.right<=innerWidth && bounds.bottom<=innerHeight
           && mapLoadingLabel.textContent.includes(getRegionLabel(mapQa.target));
       })()`),"The loading message must be visible within the viewport");
+      assert.equal(await evaluate("getComputedStyle(mapLoadingLabel).color"),"rgb(47, 33, 19)","Use the dark parchment text color for a readable loading message");
       const shot=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,`loading-${width}.png`),Buffer.from(shot.data,"base64"));
       await evaluate("mapQa.holdDefinition=false;mapQa.releaseDefinition()");
