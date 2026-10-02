@@ -1,0 +1,52 @@
+[
+  {
+    "stage": 1,
+    "path": "assets/optimized/halloween-city-stage-1-512x512-2e7107395536.webp",
+    "sha256": "2e7107395536cd01e85606341d07fa683376970b50e7793af14b754847f63878",
+    "bytes": 98168,
+    "width": 512,
+    "height": 512,
+    "sourceSha256": "4fb8da82ea6c99e0c72924c76fb0fc7cc48ed21d904de88568ca51b45c08f75d",
+    "sourceFile": "exec-21551773-9dd3-4396-b9fb-f78ce069ba6d.png"
+  },
+  {
+    "stage": 2,
+    "path": "assets/optimized/halloween-city-stage-2-512x512-7211d081d4d3.webp",
+    "sha256": "7211d081d4d38e79db193aecc905ca1763e51693aa766f193d65b21d1b296b23",
+    "bytes": 90822,
+    "width": 512,
+    "height": 512,
+    "sourceSha256": "e41100971cd8c529dddc7e80c84d557b9b4a693123e41f9abb0618ed6bafbffd",
+    "sourceFile": "exec-b6ce6b36-d30e-4cc8-b2cf-99d15a5cec71.png"
+  },
+  {
+    "stage": 3,
+    "path": "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp",
+    "sha256": "e8a2d852d17c394bf61cecb3f339d20c7119d7daae3f5a4caf3b5c6ea870d52e",
+    "bytes": 102466,
+    "width": 512,
+    "height": 512,
+    "sourceSha256": "db53a9a4f343abd10d74f41c4ef7f9449c0e7e42f3e925489d693cffbf9d5a20",
+    "sourceFile": "exec-e04d72f5-af42-44ba-b4d9-897286a6b29d.png"
+  },
+  {
+    "stage": 4,
+    "path": "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
+    "sha256": "62288da1de9d29c88618fa77b42b1642d61d9c8d61a3914934cf3f0ed9778da1",
+    "bytes": 101752,
+    "width": 512,
+    "height": 512,
+    "sourceSha256": "e5e6f459224260305ecb20372abdb4326a4c2df3a9a1554f010d02c5b1c8dc27",
+    "sourceFile": "exec-a4def5b0-4516-41d9-8f07-124d7e2a79b7.png"
+  },
+  {
+    "stage": 5,
+    "path": "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
+    "sha256": "66fd4698ab6b6e82c61b4d5d5da0d593fb3d363b4ce517a9d17262a6d1cb2e65",
+    "bytes": 98662,
+    "width": 512,
+    "height": 512,
+    "sourceSha256": "b8ceb0556d0cb6cbaf6ef5b90245e192915fc0faadccbccdeac5cbb6f1b76edc",
+    "sourceFile": "exec-3706f51c-e500-4aae-a5d6-de6c2c151d65.png"
+  }
+]

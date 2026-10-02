@@ -1,4 +1,4 @@
-/* Cosmetic ownership and Crowns are server-authoritative. Catalog skin art remains a labeled placeholder. */
+/* Cosmetic ownership and Crowns are server-authoritative. Unapproved catalog art stays labeled. */
 /* exported cosmeticOpenShopRequested, syncCosmeticsSession, applyCosmeticCityNode, updateCosmeticProfileNavigation, renderCosmeticPickupIcon */
 const COSMETIC_CATALOG = globalThis.CrownlandsCosmetics;
 let cosmeticState = null, cosmeticUid = "", cosmeticStop = null, cosmeticOwnerStop = null;
@@ -6,6 +6,8 @@ let cosmeticError = "", cosmeticBusy = false, cosmeticOffset = 0, cosmeticConfir
 let cosmeticPendingPurchase = null, cosmeticCategory = "all", cosmeticSelected = "halloween_city";
 let cosmeticOwnerSignature = "", cosmeticOwnersDirty = false, cosmeticOpenShopRequested = false;
 const cosmeticOwnerAppearances = new Map(), cosmeticNeededOwners = new Map();
+const cosmeticFailedCityArt = new Set();
+let cosmeticPreviewStage = 5;
 const cosmeticNow = () => Date.now() + cosmeticOffset;
 const cosmeticRequestId = () => `skin_${globalThis.crypto.randomUUID().replaceAll("-", "")}`;
 
@@ -22,6 +24,7 @@ function syncCosmeticsSession() {
   cosmeticStop?.(); cosmeticOwnerStop?.(); cosmeticStop = null; cosmeticOwnerStop = null;
   cosmeticUid = uid; cosmeticState = null; cosmeticBusy = false; cosmeticError = ""; cosmeticConfirmation = null;
   cosmeticOwnerAppearances.clear(); cosmeticNeededOwners.clear(); cosmeticOwnerSignature = "";
+  cosmeticFailedCityArt.clear();
   cosmeticPendingPurchase = null;
   renderCosmeticHud();
   if (!uid) return;
@@ -66,7 +69,7 @@ function syncCosmeticOwners() {
   cosmeticOwnerSignature = signature; cosmeticOwnerStop?.();
   const session = cosmeticUid;
   cosmeticOwnerStop = getOnlineApi()?.subscribeCosmeticOwners?.(uids, rows => {
-    if (session !== cosmeticUid) return;
+    if (session !== cosmeticUid || signature !== cosmeticOwnerSignature) return;
     cosmeticOwnerAppearances.clear();
     rows.forEach(row => cosmeticOwnerAppearances.set(row.uid, row.equipped || {}));
     renderCities(true);
@@ -84,15 +87,56 @@ function applyCosmeticCityNode(node, city) {
   const [skin, border] = cosmeticCityAttributes(city).split(":");
   if (node.dataset.citySkin !== (skin || "")) node.dataset.citySkin = skin || "";
   if (node.dataset.flagBorder !== (border || "")) node.dataset.flagBorder = border || "";
-  const art = COSMETIC_CATALOG.item(skin)?.assets?.[getCastleStage(city.level)];
+  const stage = getCastleStage(city.level);
+  const art = COSMETIC_CATALOG.item(skin)?.assets?.[stage];
   const image = node.querySelector(".city-art");
-  if (art && image && image.getAttribute("src") !== art) {
-    const fallback = image.src; image.onerror = () => { image.onerror = null; image.src = fallback; }; image.src = art;
+  const castle = node.querySelector(".city-castle");
+  const availableArt = art && !cosmeticFailedCityArt.has(art);
+  if (image) {
+    const fallback = getCastleAsset(stage), target = availableArt ? art : fallback;
+    if (image.getAttribute("src") !== target) {
+      image.onerror = availableArt ? () => {
+        image.onerror = null;
+        cosmeticFailedCityArt.add(art);
+        image.src = fallback;
+        castle?.querySelector(".halloween-city-bats")?.remove();
+      } : null;
+      image.src = target;
+    }
   }
+  const bats = castle?.querySelector(".halloween-city-bats");
+  if (skin === "halloween_city" && availableArt && image && castle) {
+    const count = stage >= 4 ? 3 : 2;
+    if (!bats || Number(bats.dataset.batCount) !== count) {
+      bats?.remove();
+      castle.insertAdjacentHTML("beforeend", cosmeticBats(stage));
+      const phase = [...String(city.id || "")].reduce((sum, ch) => (sum * 31 + ch.charCodeAt(0)) % 8000, 0);
+      castle.querySelector(".halloween-city-bats").style.setProperty("--bat-phase", `${-phase / 1000}s`);
+    }
+  } else bats?.remove();
 }
 
-function cosmeticPreview(item) {
+function cosmeticBats(stage) {
+  const count = stage >= 4 ? 3 : 2;
+  const bat = `<svg class="halloween-bat" viewBox="0 0 70 48" focusable="false" aria-hidden="true">
+    <path class="halloween-bat-wing bat-wing-left" d="M33 23C24 18 14 9 2 7C6 14 8 23 5 29C12 23 16 25 17 32C22 26 27 28 28 35L35 29Z"/>
+    <path class="halloween-bat-wing bat-wing-right" d="M37 23C46 18 56 9 68 7C64 14 62 23 65 29C58 23 54 25 53 32C48 26 43 28 42 35L35 29Z"/>
+    <path d="M31 21L30 13L34 17Q35 16 36 17L40 13L39 22Q41 29 37 33L35 39L33 33Q29 29 31 21Z"/>
+  </svg>`;
+  return `<span class="halloween-city-bats" data-bat-count="${count}" aria-hidden="true">${Array.from({ length: count }, () => `<span class="halloween-bat-flight">${bat}</span>`).join("")}</span>`;
+}
+
+function cosmeticStagePicker(item) {
+  if (item?.id !== "halloween_city") return "";
+  return `<div class="skin-stage-picker" role="group" aria-label="Preview city level">${["1–24", "25–49", "50–74", "75–99", "100+"].map((label, index) => `<button type="button" data-skin-stage="${index + 1}" aria-pressed="${cosmeticPreviewStage === index + 1}" aria-label="Preview levels ${label}">${label}</button>`).join("")}</div>`;
+}
+
+function cosmeticPreview(item, detail = false) {
   const category = item?.category || "city";
+  if (item?.id === "halloween_city") {
+    const stage = detail ? cosmeticPreviewStage : 5;
+    return `<span class="skin-city-preview" aria-hidden="true"><img src="${item.assets[stage]}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail ? cosmeticBats(stage) : ""}</span>`;
+  }
   const glyphs = { city: "♜", troops: "⚑", border: "◇", flag: "⚑", bundle: "♛" };
   if (category === "flag" && state?.flag) {
     const symbol = item.symbol || state.flag.symbol;
@@ -122,25 +166,35 @@ function renderSkinsPanel(mode = "shop") {
   const quote = !library && selected && cosmeticState ? COSMETIC_CATALOG.quote(selected.id, cosmeticState, cosmeticNow()) : null;
   const owned = library || quote?.missing.length === 0;
   const sale = COSMETIC_CATALOG.availability(cosmeticNow());
-  const action = library ? cosmeticEquipped(selected || {}) ? "Equipped" : selected?.free ? "Restore Default" : "Equip" : owned ? selected?.category === "flag" ? "Open Flag Editor" : "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
+  const action = library ? cosmeticEquipped(selected || {}) ? "Applied" : selected?.free ? "Restore Default" : "Apply" : owned ? selected?.category === "flag" ? "Open Flag Editor" : "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
   const disabled = cosmeticBusy || !cosmeticState || (library ? cosmeticEquipped(selected || {}) : !owned && (!quote?.onSale || cosmeticState.crowns < quote.price));
   const feedback = cosmeticError || (cosmeticPendingPurchase ? "A purchase needs checking. Check its result before buying again." : "");
   if (cosmeticConfirmation && !cosmeticBusy && !cosmeticPendingPurchase && (!quote || cosmeticConfirmation.offerId !== quote.offerId || cosmeticConfirmation.price !== quote.price || !quote.onSale || cosmeticState.crowns < quote.price)) cosmeticConfirmation = null;
   const confirm = cosmeticConfirmation;
   return `<section class="skins-panel" data-skins-mode="${mode}" aria-label="${library ? "My skins" : "Skin shop"}">
     <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "Halloween Collection"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span><button type="button" data-skin-earn>Earn Crowns</button></div></header>
-    <p class="skins-notice">Permanent cosmetics · Free switching · ${sale.onSale ? "Sale ends November 1 at 00:00 UTC" : "Returns October 1 at 00:00 UTC"}. <strong>Placeholder artwork — final designs pending.</strong></p>
+    <p class="skins-notice">Permanent cosmetics · Free switching · ${sale.onSale ? "Sale ends November 1 at 00:00 UTC" : "Returns October 1 at 00:00 UTC"}.</p>
     <nav class="skins-filters" aria-label="Skin categories">${categories.map(([id,label]) => `<button type="button" data-skin-category="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join("")}</nav>
     ${feedback ? `<p class="skins-feedback" role="status">${escapeHtml(feedback)} <button type="button" data-skin-reload>${cosmeticPendingPurchase ? "Check Purchase" : "Retry"}</button></p>` : ""}
     ${!cosmeticUid ? '<p role="status">Sign in to load your permanent collection.</p>' : !cosmeticState && !cosmeticError ? '<p role="status">Loading your collection…</p>' : ""}
-    <div class="skins-body"><div class="skins-grid" aria-label="Cosmetics">${choices.map(item => `<button type="button" class="skin-card" data-skin-select="${item.id}" aria-pressed="${item.id === cosmeticSelected}">${cosmeticPreview(item)}<strong>${escapeHtml(item.name)}</strong><span>${library ? cosmeticEquipped(item) ? "Equipped" : item.free ? "Free" : "Owned" : cosmeticState && COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).missing.length === 0 ? "Owned" : (cosmeticState ? COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).price : item.price ?? 1200) + " Crowns"}</span></button>`).join("")}</div>
-    <section class="skin-detail" aria-label="Selected cosmetic">${selected ? `${cosmeticPreview(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p>${selected.placeholder ? '<p class="skins-notice">Preview uses temporary artwork.</p>' : ""}${quote?.missing.length ? `<p><strong>${quote.price} Crowns</strong>${selected.itemIds ? " · 20% off unowned pieces" : ""}</p><ul>${quote.missing.map(id => `<li>${escapeHtml(COSMETIC_CATALOG.item(id).name)}</li>`).join("")}</ul>` : ""}${confirm ? `<section class="skin-confirm" aria-label="Confirm purchase"><h3>Confirm purchase</h3><p>Unlock ${confirm.missing.length} item${confirm.missing.length === 1 ? "" : "s"} for <strong>${confirm.price} Crowns</strong>.</p><p>Balance after purchase: <strong>${cosmeticState.crowns - confirm.price} Crowns</strong></p><button type="button" data-skin-confirm ${cosmeticBusy ? "disabled" : ""}>${cosmeticBusy ? "Checking…" : "Confirm Purchase"}</button><button type="button" data-skin-cancel ${cosmeticBusy ? "disabled" : ""}>Cancel</button></section>` : `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>${quote && !owned && quote.onSale && cosmeticState.crowns < quote.price ? '<p>Not enough Crowns. Collect Crown pickups on the map.</p>' : ""}`}` : ""}</section></div>
+    <div class="skins-body"><div class="skins-grid" aria-label="Cosmetics">${choices.map(item => `<button type="button" class="skin-card" data-skin-select="${item.id}" aria-pressed="${item.id === cosmeticSelected}">${cosmeticPreview(item)}<strong>${escapeHtml(item.name)}</strong><span>${library ? cosmeticEquipped(item) ? "Applied" : item.free ? "Free" : "Owned" : cosmeticState && COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).missing.length === 0 ? "Owned" : (cosmeticState ? COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).price : item.price ?? 1200) + " Crowns"}</span></button>`).join("")}</div>
+    <section class="skin-detail" aria-label="Selected cosmetic">${selected ? `<div class="skin-detail-content">${cosmeticPreview(selected, true)}${cosmeticStagePicker(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p>${selected.placeholder ? '<p class="skins-notice">Preview uses temporary artwork.</p>' : ""}${quote?.missing.length ? `<p><strong>${quote.price} Crowns</strong>${selected.itemIds ? " · 20% off unowned pieces" : ""}</p><ul>${quote.missing.map(id => `<li>${escapeHtml(COSMETIC_CATALOG.item(id).name)}</li>`).join("")}</ul>` : ""}</div>${confirm ? `<section class="skin-confirm" aria-label="Confirm purchase"><h3>Confirm purchase</h3><p>Unlock ${confirm.missing.length} item${confirm.missing.length === 1 ? "" : "s"} for <strong>${confirm.price} Crowns</strong>.</p><p>Balance after purchase: <strong>${cosmeticState.crowns - confirm.price} Crowns</strong></p><button type="button" data-skin-confirm ${cosmeticBusy ? "disabled" : ""}>${cosmeticBusy ? "Checking…" : "Confirm Purchase"}</button><button type="button" data-skin-cancel ${cosmeticBusy ? "disabled" : ""}>Cancel</button></section>` : `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>${quote && !owned && quote.onSale && cosmeticState.crowns < quote.price ? '<p>Not enough Crowns. Collect Crown pickups on the map.</p>' : ""}`}` : ""}</section></div>
     <footer class="skins-footer"><button type="button" data-skin-browse>${library ? "Browse Shop" : "My Skins"}</button><span>Appearance only · Owned items remain usable all year</span></footer></section>`;
 }
 
 function bindSkinsPanel(root) {
   if (!root) return;
   const mode = root.dataset.skinsMode;
+  root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
+    cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
+  }));
+  root.querySelectorAll("[data-skin-preview-art]").forEach(image => {
+    image.onerror = () => {
+      image.onerror = null;
+      image.src = getCastleAsset(Number(image.dataset.skinPreviewStage));
+      image.parentElement.querySelector(".halloween-city-bats")?.remove();
+    };
+  });
   root.querySelectorAll("[data-skin-flag-symbol]").forEach(element => FlagRenderer.render(element, { ...state.flag, symbol: element.dataset.skinFlagSymbol }, { stableKey: cosmeticUid || "preview" }));
   root.querySelectorAll("[data-skin-category]").forEach(button => button.addEventListener("click", () => { cosmeticCategory = button.dataset.skinCategory; cosmeticConfirmation = null; refreshCosmeticPanels(); }));
   root.querySelectorAll("[data-skin-select]").forEach(button => button.addEventListener("click", () => { if (cosmeticBusy) return; cosmeticSelected = button.dataset.skinSelect; cosmeticConfirmation = null; refreshCosmeticPanels(); }));
@@ -237,7 +291,7 @@ async function equipSelectedCosmetic() {
     const result = await getOnlineApi().equipCosmetic({ category: selected.category, itemId: selected.free ? "" : selected.id, expectedRevision: cosmeticState.revision, expectedIdentityRevision: state.identityRevision || 0, requestId: cosmeticRequestId() });
     if (uid !== cosmeticUid) return;
     applyCosmeticResult(result);
-    renderHud(); renderCities(true); showToast("Appearance equipped.");
+    renderHud(); renderCities(true); showToast("Appearance applied.");
   } catch (error) { if (uid === cosmeticUid) { await reloadCosmetics(); cosmeticError = error.message || "Could not equip this cosmetic."; } }
   finally { if (uid === cosmeticUid) { cosmeticBusy = false; refreshCosmeticPanels(); } }
 }

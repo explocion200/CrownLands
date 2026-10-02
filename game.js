@@ -29015,7 +29015,7 @@ function renderCitiesUncached(force = false) {
       btn._renderContent = cityHtml;
     }
     applyCityOwnerFlags(btn, city);
-    applyCosmeticCityNode(btn, city);
+    applyCosmeticCityNode(btn, displayCity);
     if (!existingCityNode) cityFragment.appendChild(btn);
   });
   existingCampNodes.forEach(node => node.remove());

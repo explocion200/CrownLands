@@ -279,17 +279,25 @@ const battleItemReportingBudget = 8 * 1024;
 // separate 8 KiB integration allowance and existing entry/offline-shell limits.
 // Profile Skins now matches the existing parchment ledger. Its scoped theme
 // adds 9,717 normalized CSS bytes, bounded to 10 KiB; it reuses shipped art.
-const cosmeticModuleBudget = 47 * 1024;
+// Approved five-stage city previews, Apply recovery and bat motion add 6,631
+// normalized bytes. Reserve 7 KiB; entry and offline-shell caps stay unchanged.
+const cosmeticModuleBudget = (47 + 7) * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 47 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 54 KiB budget.");
+// Five transparent city stages total 491,870 bytes and load only when used.
+const halloweenCityArtBudget = 512 * 1024;
+const halloweenCityArtPaths = Object.values(require(path.join(dist, "functions/cosmetics.js")).item("halloween_city").assets);
+if (halloweenCityArtPaths.length !== 5) throw new Error("Halloween City must ship all five stage assets.");
+const halloweenCityArtBytes = halloweenCityArtPaths.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (halloweenCityArtBytes > halloweenCityArtBudget) throw new Error("Halloween city art exceeds its 512 KiB budget.");
 // The approved coin and pouch total 21,298 encoded bytes; bound these two
 // runtime-cached WebPs at 24 KiB. Editable source PNGs must never ship.
 const currencyArtBudget = 24 * 1024;
 const currencyArtBytes = ["assets/optimized/crown-coin-96x96-34224e7d7fb4.webp", "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (currencyArtBytes > currencyArtBudget) throw new Error("Crowns coin and pickup artwork exceed their 24 KiB budget.");
-const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget;
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);

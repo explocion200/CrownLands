@@ -47,6 +47,23 @@ for (const item of C.ITEMS.filter(item => item.category === "flag")) {
   assert(!flags.SELECTABLE_SYMBOL_KEYS.includes(item.symbol), "Premium symbols cannot appear in random starter flags");
 }
 const root = path.resolve(__dirname, "..");
+const citySkin = C.item("halloween_city");
+assert.equal(citySkin.placeholder, false, "Approved city art must replace the placeholder");
+assert.deepEqual(Object.keys(citySkin.assets), ["1", "2", "3", "4", "5"]);
+const crypto = require("node:crypto");
+const provenance = JSON.parse(fs.readFileSync(path.join(root, "docs/visual-qa/halloween-city-skin/assets.json"), "utf8"));
+let skinBytes = 0;
+for (const entry of provenance) {
+  assert.equal(citySkin.assets[entry.stage], entry.path);
+  const bytes = fs.readFileSync(path.join(root, entry.path)); skinBytes += bytes.length;
+  assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), entry.sha256);
+  assert.equal(bytes.toString("ascii", 8, 12), "WEBP");
+  assert.equal(bytes.toString("ascii", 12, 16), "VP8X");
+  assert(bytes[20] & 0x10, "City sprites need transparent alpha");
+  assert.equal(bytes.readUIntLE(24, 3) + 1, 512); assert.equal(bytes.readUIntLE(27, 3) + 1, 512);
+}
+assert.equal(provenance.length, 5); assert(skinBytes < 512 * 1024, "Five city skins exceed their lazy-loaded 512 KiB budget");
+assert.equal(JSON.parse(fs.readFileSync(path.join(root, "docs/visual-qa/halloween-city-skin/prompts.json"), "utf8")).prompts.length, 5);
 const index = fs.readFileSync(path.join(root, "functions/index.js"), "utf8");
 assert(index.includes('cosmeticService.read(transaction, uid)'));
 assert(!index.slice(index.indexOf("exports.claimDailyMissionReward"),index.indexOf("exports.applyPvpKillEvent")).includes("COSMETICS"), "Daily quests must not award Crowns");

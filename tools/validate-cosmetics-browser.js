@@ -56,7 +56,7 @@ function profileFrame() {
 }
 function profileControls() {
  const panel=document.querySelector('[data-skins-mode=profile]');
- const controls=[...profileScreen.querySelectorAll('.profile-tabs button,#profileCloseBtn'),...panel.querySelectorAll('.skins-filters button,[data-skin-earn],[data-skin-browse]')];
+ const controls=[...profileScreen.querySelectorAll('.profile-tabs button,#profileCloseBtn'),...panel.querySelectorAll('.skins-filters button,[data-skin-earn],[data-skin-browse],[data-skin-action]')];
  return {controls:controls.map(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{name:e.id||e.textContent,visible:r.width>0&&r.height>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,hit:e===hit||e.contains(hit)};}),
    titleWidth:document.getElementById('profileScreenTitle').getBoundingClientRect().width,
    overflow:panel.scrollHeight>panel.clientHeight+1||panel.scrollWidth>panel.clientWidth+1};
@@ -110,7 +110,14 @@ async function main(){
   assert(flagPreview.pattern&&flagPreview.content!=='none'&&parseFloat(flagPreview.left)>0,"Flag preview must render the saved two-color pattern");
   const rgb=flagPreview.expected.replace('#','').match(/../g).map(hex=>parseInt(hex,16));
   assert.equal(flagPreview.color,`rgb(${rgb.join(', ')})`,"Flag preview must retain the saved symbol color");
-  await click('[data-skin-browse]');await wait('activeProfileTab==="skins"');await click('[data-skin-select="halloween_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city");
+  await click('[data-skin-browse]');await wait('activeProfileTab==="skins"');await click('[data-skin-select="halloween_city"]');
+  assert.equal(await evaluate('document.querySelector("[data-skin-action]").textContent'),"Apply");
+  for(const stage of [1,2,3,4,5]) {
+    await click(`[data-skin-stage="${stage}"]`);
+    await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").decode()');
+    assert.equal(await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").getAttribute("src")'),await evaluate(`COSMETIC_CATALOG.item("halloween_city").assets[${stage}]`));
+  }
+  await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city");
   await evaluate('renderCities(true)');assert(await evaluate('!!document.querySelector(".city-node[data-city-skin=halloween_city]")'));
   await click('[data-skin-select="default_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   for(const [width,height] of [[1440,900],[844,390],[568,320],[568,280]]){

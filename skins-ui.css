@@ -19,13 +19,15 @@
 .skin-card strong { font-size:14px; }
 .skin-card>span:last-child { font-size:12px; }
 .skin-art { display:grid; place-items:center; width:64px; height:64px; font-size:48px; color:#685379; border:1px dashed #877297; border-radius:10px; background:#dcd0c2; }
-.skin-detail { overflow:auto; padding:14px; background:#f3e7cc; border:1px solid #aa9270; border-radius:6px; }
-.skin-detail>.skin-art { width:96px; height:96px; font-size:66px; margin:0 auto; }
+.skin-detail { display:flex; flex-direction:column; gap:10px; overflow:hidden; padding:14px; background:#f3e7cc; border:1px solid #aa9270; border-radius:6px; }
+.skin-detail-content { flex:1; min-height:0; overflow:auto; scrollbar-width:thin; }
+.skin-detail-content>.skin-art { width:96px; height:96px; font-size:66px; margin:0 auto; }
+.skin-detail>.skin-primary { flex:none; }
 .skin-detail h3 { margin:10px 0; }
 .skin-detail p,.skin-detail li { font-size:14px; line-height:1.45; }
 .skin-detail ul { padding-left:20px; }
 .skin-primary,.skin-confirm button:first-of-type { width:100%; background:#665634!important; color:#fff5dc!important; }
-.skin-confirm { border-top:1px solid #aa9270; padding-top:8px; }
+.skin-confirm { flex:0 1 auto; max-height:100%; overflow:auto; border-top:1px solid #aa9270; padding-top:8px; }
 .skin-confirm button { margin:4px 0; }
 .skins-feedback { border:1px solid #916746; padding:8px; margin:0; background:#fff0ce; }
 .skins-footer { display:flex; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0; }
@@ -39,12 +41,50 @@
 #modal.shop-modal .rs-shop-shell.skin-shop-shell { grid-template-rows:52px 48px minmax(0,1fr)!important; }
 #modal.shop-modal .skin-shop-shell>.skins-panel { height:100%; max-height:none; min-height:0; }
 .shop-modal .skins-panel { max-height:calc(100dvh - 180px); }
-.city-node[data-city-skin="halloween_city"] .city-castle::after { content:"Skin preview"; position:absolute; left:50%; bottom:0; transform:translateX(-50%); white-space:nowrap; font-size:12px; background:#e9dfef; color:#4d3a5d; padding:2px 4px; border:1px dashed #695278; pointer-events:none; }
+.skin-city-preview { display:block; position:relative; width:64px; height:64px; flex:none; pointer-events:none; }
+.skin-city-preview>img { display:block; width:100%; height:100%; object-fit:contain; }
+.skin-detail-content>.skin-city-preview { width:min(100%,220px); height:auto; aspect-ratio:1; margin:0 auto; }
+.skin-stage-picker { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:4px 0 10px; }
+.skins-panel .skin-stage-picker button { padding:6px 7px; min-height:32px; font-size:11px; }
+.halloween-city-bats { position:absolute; inset:0; pointer-events:none; --bat-phase:-1.3s; }
+.halloween-bat-flight { position:absolute; inset:0; pointer-events:none; animation:halloweenBatOrbit 8s linear infinite; animation-delay:var(--bat-phase); }
+.halloween-bat-flight:nth-child(2) { animation-duration:9s; animation-delay:calc(var(--bat-phase) - 4.1s); }
+.halloween-bat-flight:nth-child(3) { animation-duration:10s; animation-delay:calc(var(--bat-phase) - 6.6s); }
+.halloween-bat { position:absolute; display:block; left:43%; top:49%; width:14%; height:auto; overflow:visible; fill:#302534; stroke:#211b22; stroke-width:1.35; stroke-linejoin:round; }
+.halloween-bat-wing { transform-box:view-box; animation:halloweenBatFlap .34s ease-in-out infinite alternate; }
+.bat-wing-left { transform-origin:48% 50%; }
+.bat-wing-right { transform-origin:52% 50%; }
+.halloween-bat-flight:nth-child(2) .halloween-bat-wing { animation-duration:.29s; animation-delay:-.19s; }
+.halloween-bat-flight:nth-child(3) .halloween-bat-wing { animation-duration:.31s; animation-delay:-.4s; }
+@keyframes halloweenBatOrbit {
+  0%,100% { transform:translate(42%,0) rotate(8deg) scale(.95); }
+  12.5% { transform:translate(30%,16%) rotate(1deg) scale(1.02); }
+  25% { transform:translate(0,23%) rotate(-7deg) scale(1.08); }
+  37.5% { transform:translate(-30%,16%) rotate(-12deg) scale(1.02); }
+  50% { transform:translate(-42%,0) rotate(-6deg) scale(.95); }
+  62.5% { transform:translate(-30%,-16%) rotate(2deg) scale(.88); }
+  75% { transform:translate(0,-23%) rotate(10deg) scale(.84); }
+  87.5% { transform:translate(30%,-16%) rotate(14deg) scale(.88); }
+}
+@keyframes halloweenBatFlap { from { transform:scaleY(.35) rotate(-6deg); } to { transform:scaleY(1) rotate(6deg); } }
+html[data-animation-mode="reduced"] .halloween-city-bats *,
+html[data-animation-mode="off"] .halloween-city-bats *,
+.map-frame.camera-moving .halloween-city-bats *,
+.map-frame.zooming .halloween-city-bats * { animation-play-state:paused!important; }
+.map-frame.low-zoom .halloween-city-bats,
+.map-frame.crowded-map .halloween-city-bats { display:none; }
+@media(prefers-reduced-motion:reduce) {
+  html:not([data-animation-mode="full"]) .halloween-city-bats * { animation-play-state:paused!important; }
+}
+@media(max-height:600px),(max-width:1000px) {
+  .skin-city-preview { width:44px; height:44px; }
+  .skin-detail-content>.skin-city-preview { max-width:150px; }
+}
 .city-node[data-flag-border="halloween_border"] .kingdom-flag { outline:3px dashed #7c5987; outline-offset:1px; }
 .army-token[data-troop-skin="halloween_troops"] .army-token-icon { border:2px dashed #7c5987; border-radius:5px; }
 .harvest-bonus-node.harvest-bonus-crowns { --pickup-glow-bright:rgba(216,181,238,.96); --pickup-glow-core:rgba(150,94,181,.78); --pickup-glow-wide:rgba(99,57,127,.5); }
 .harvest-bonus-node.harvest-bonus-crowns .harvest-bonus-icon { filter:drop-shadow(0 0 9px rgba(193,145,218,.86)) drop-shadow(0 0 19px rgba(108,61,137,.64)) drop-shadow(0 4px 4px rgba(25,16,9,.52)); }
-@media (max-width:900px) { .skins-panel { padding:8px; gap:6px; } .skins-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .skin-card { min-height:105px; padding:7px!important; } .skins-heading h2 { font-size:19px; } .skins-wallet strong { font-size:17px; } .skins-body { grid-template-columns:minmax(0,1fr) minmax(190px,.8fr); gap:8px; } .skin-art { width:44px; height:44px; font-size:32px; } .skin-detail>.skin-art { width:52px; height:52px; font-size:38px; } }
+@media (max-width:900px) { .skins-panel { padding:8px; gap:6px; } .skins-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .skin-card { min-height:105px; padding:7px!important; } .skins-heading h2 { font-size:19px; } .skins-wallet strong { font-size:17px; } .skins-body { grid-template-columns:minmax(0,1fr) minmax(190px,.8fr); gap:8px; } .skin-art { width:44px; height:44px; font-size:32px; } .skin-detail-content>.skin-art { width:52px; height:52px; font-size:38px; } }
 @media (max-height:500px) { .skins-heading p { display:none; } .skins-heading h2 { font-size:17px; } .skins-notice { font-size:11px; } .skins-filters button { padding:5px 8px; font-size:12px; } .skins-body { min-height:65px; } .skins-footer span { display:none; } #modal.shop-modal .rs-shop-shell.skin-shop-shell { grid-template-rows:34px 44px minmax(0,1fr)!important; } #modal.shop-modal .skin-shop-shell .rs-shop-header { min-height:0!important;padding:4px 12px!important; } .skins-wallet { display:flex; flex-wrap:wrap; align-items:center;justify-content:flex-end;gap:4px 10px; } .skins-wallet strong { font-size:15px; } .skins-wallet span { font-size:11px; } .skins-wallet button { padding:5px 8px; } }
 /* My Skins shares the Profile ledger frame. Keep these rules out of the Shop,
    map appearances and Crown pickup marker. Existing handlers own all actions. */
@@ -144,6 +184,7 @@
  #profileScreen.skins-active .skin-card>:first-child{grid-column:1;grid-row:1/3}
  #profileScreen.skins-active .skin-card>:is(strong,span:last-child){grid-column:2}
  #profileScreen.skins-active .skin-card .skin-art{width:32px;height:32px;font-size:26px}
+ #profileScreen.skins-active .skin-card .skin-city-preview{width:32px;height:32px}
  #profileScreen.skins-active .skin-card .skin-flag-preview{width:28px;height:32px}
  #profileScreen.skins-active .skin-card .skin-flag-preview .flag-symbol{inset:4px}
 }

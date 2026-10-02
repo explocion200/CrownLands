@@ -61,6 +61,12 @@ async function main(){
  await assert.rejects(service.purchase(owner.uid,{offerId:"not_real",expectedPrice:0,catalogVersion:1,requestId:"test_fake_offer"},now),/catalog/);
  const equipped=await call("equipCosmetic",owner.token,{category:"city",itemId:"halloween_city",expectedRevision:wallet.revision,requestId:"test_equip_city"});
  assert.equal(equipped.state.equipped.city,"halloween_city");wallet=equipped.state;
+ const visibleAppearance=await (await rest(stranger,`playerCosmetics/${owner.uid}`)).json();
+ assert.equal(visibleAppearance.fields.equipped.mapValue.fields.city.stringValue,"halloween_city","Another player must see the applied city skin");
+ const restored=await call("equipCosmetic",owner.token,{category:"city",itemId:"",expectedRevision:wallet.revision,requestId:"test_restore_city"});
+ assert.equal((await service.publicRef(owner.uid).get()).data().equipped.city,"","Default must also publish to other players");
+ const reapplied=await call("equipCosmetic",owner.token,{category:"city",itemId:"halloween_city",expectedRevision:restored.state.revision,requestId:"test_reapply_city"});
+ wallet=reapplied.state;
  const profile=(await profileRef.get()).data();
  const flag=await call("equipCosmetic",owner.token,{category:"flag",itemId:"halloween_pumpkin",expectedRevision:wallet.revision,expectedIdentityRevision:profile.identityRevision||0,requestId:"test_equip_flag"});
  assert.equal(flag.flag.symbol,"halloween-pumpkin");assert.equal(flag.flag.primary,profile.flag.primary);assert.equal(flag.flag.pattern,profile.flag.pattern);
@@ -74,6 +80,7 @@ async function main(){
  assert.equal((await rest(owner,`playerCosmetics/${owner.uid}`,"PATCH",{fields:{revision:{integerValue:"999"}}})).status,403);
  function fields(value){return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,typeof v==="string"?{stringValue:v}:typeof v==="number"?{integerValue:String(v)}:{mapValue:{fields:fields(v)}}]));}
  await call("claimStartingCity",stranger.token,{playerName:"Free ruler"});
+ await assert.rejects(call("equipCosmetic",stranger.token,{category:"city",itemId:"halloween_city",expectedRevision:0,requestId:"test_unowned_city"}),/do not own/);
  const strangerProfile=(await db.doc(`players/${stranger.uid}`).get()).data();
  const mask="?updateMask.fieldPaths=flag&updateMask.fieldPaths=identityRevision";
  const freePatch={flag:flags.toStoredFlag({...strangerProfile.flag,symbol:"crown"},stranger.uid),identityRevision:(strangerProfile.identityRevision||0)+1};
