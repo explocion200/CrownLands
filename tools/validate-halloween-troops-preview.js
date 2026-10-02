@@ -24,8 +24,8 @@ async function main() {
     const viewport = (width, height) => client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
     await media("no-preference"); await viewport(1200, 1100);
     await client.send("Page.navigate", { url: address.url + "/docs/visual-qa/halloween-troops/preview.html" });
-    for (let n = 0; n < 100 && !await evaluate("document.documentElement.dataset.previewReady"); n++) await delay(100);
-    assert.equal(await evaluate("document.documentElement.dataset.previewReady"), "true", "All artwork must load");
+    for (let n = 0; n < 100 && !await evaluate("document.documentElement?.dataset.previewReady"); n++) await delay(100);
+    assert.equal(await evaluate("document.documentElement?.dataset.previewReady"), "true", "All artwork must load");
     const atlasReport = await evaluate("(async()=>{const result=[];for(const [file,sheet] of Object.entries(atlasLayout)){const img=new Image();img.src=file;await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);result.push({size:[c.width,c.height],expected:[sheet.width,sheet.height],corner:ctx.getImageData(0,0,1,1).data[3],rows:sheet.rows.map(row=>row.map(f=>{const p=ctx.getImageData(f.x,f.y,f.width,f.height).data;let visible=0,hash=0;for(let i=3;i<p.length;i+=4){if(p[i]>128)visible++;hash=(hash*31+p[i])>>>0}return {visible,hash,fits:f.x>=0&&f.y>=0&&f.x+f.width<=c.width&&f.y+f.height<=c.height&&f.width<=320&&f.height<=320}}))})}return result})()");
     assert.equal(atlasReport.length, 2);
     for (const sheet of atlasReport) {

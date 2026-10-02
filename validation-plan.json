@@ -20,7 +20,7 @@
       "tests": [
         "tools/validate-halloween-troops-preview.js"
       ],
-      "reason": "Approved art and interactive reference: 32 transparent poses, eight and reversed directions, upright troop information, responsive layouts and motion preferences. Production integration is tested separately."
+      "reason": "Approved art and interactive reference: 32 transparent poses, eight and reversed directions, upright troop information, responsive layouts and motion preferences. Production integration is tested separately. Readiness polling tolerates the brief missing document element after navigation, exposed by the Linux CI runner."
     },
     {
       "paths": [
