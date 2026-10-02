@@ -47,7 +47,8 @@
         "tools/build-halloween-troop-atlas.js",
         "tools/validate-halloween-troop-skin-browser.js",
         "troop-skins.css",
-        "troop-skins.js"
+        "troop-skins.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-halloween-troop-skin-browser.js",

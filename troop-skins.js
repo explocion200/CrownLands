@@ -22,7 +22,7 @@
     layer.className = "troop-skin-sprite"; layer.setAttribute("aria-hidden", "true"); layer.dataset.skinMotion = "idle";
     strip.className = "troop-skin-frames";
     image.className = "troop-skin-atlas"; image.alt = ""; image.draggable = false; image.decoding = "async";
-    image.src = globalThis.CrownlandsCosmetics.item("halloween_troops").assets.atlas;
+    if (loadState !== "failed") image.src = globalThis.CrownlandsCosmetics.item("halloween_troops").assets.atlas;
     strip.append(image); layer.append(strip);
     layer.style.setProperty("--troop-row", "3");
     return layer;
