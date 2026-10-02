@@ -18,11 +18,11 @@ function createCosmeticMotion() {
     cancelAnimationFrame(frame); frame = 0;
     const covered = document.getElementById("profileScreen")?.classList.contains("open") || document.getElementById("modal")?.open;
     // Keep compositor layers bounded even when many owned cities share a skin.
-    let mapSlots = innerWidth <= 1000 ? 6 : 8, previewSlots = 1;
+    let mapSlots = innerWidth <= 1000 ? 6 : 8, troopSlots = innerWidth <= 1000 ? 6 : 8, previewSlots = 1;
     for (const [layer, info] of layers) {
       if (!layer.isConnected) { observer?.unobserve(layer); layers.delete(layer); continue; }
       const eligible = !document.hidden && info.visible && (info.preview || !covered);
-      const active = eligible && (info.preview ? previewSlots-- > 0 : mapSlots-- > 0);
+      const active = eligible && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : mapSlots-- > 0);
       const value = active ? "active" : "idle";
       if (layer.dataset.skinMotion !== value) layer.dataset.skinMotion = value;
     }
@@ -33,7 +33,7 @@ function createCosmeticMotion() {
     schedule();
   }) : null;
   const mutations = new MutationObserver(schedule);
-  for (const id of ["cityLayer", "skinsView"]) {
+  for (const id of ["cityLayer", "armyLayer", "skinsView"]) {
     const root = document.getElementById(id); if (root) mutations.observe(root, { childList: true });
   }
   for (const id of ["profileScreen", "modal"]) {
@@ -43,9 +43,9 @@ function createCosmeticMotion() {
   document.addEventListener("visibilitychange", refresh);
   window.addEventListener("resize", schedule, { passive: true });
   return {
-    watch(layer, preview = false) {
+    watch(layer, preview = false, kind = "city") {
       if (layers.has(layer)) return;
-      layers.set(layer, { preview, visible: false }); observer?.observe(layer); schedule();
+      layers.set(layer, { preview, kind, visible: false }); observer?.observe(layer); schedule();
     },
     forget(layer) { if (layer) { observer?.unobserve(layer); layers.delete(layer); schedule(); } },
     schedule,
@@ -76,7 +76,7 @@ function syncCosmeticsSession() {
   cosmeticStop = api?.subscribeCosmetics?.({
     onState: value => {
       if (cosmeticUid !== uid) return;
-      try { const next = COSMETIC_CATALOG.normalize(value); if (cosmeticState && next.revision < cosmeticState.revision) return; cosmeticState = next; cosmeticError = ""; refreshCosmeticPanels(); renderCities(true); }
+      try { const next = COSMETIC_CATALOG.normalize(value); if (cosmeticState && next.revision < cosmeticState.revision) return; cosmeticState = next; cosmeticError = ""; refreshCosmeticPanels(); renderCities(true); renderArmies(true); }
       catch (error) { cosmeticError = error.message; refreshCosmeticPanels(); }
     },
     onError: error => { if (cosmeticUid === uid) { cosmeticError = error.message || "Could not load your collection."; refreshCosmeticPanels(); } },
@@ -115,7 +115,7 @@ function syncCosmeticOwners() {
     if (session !== cosmeticUid || signature !== cosmeticOwnerSignature) return;
     cosmeticOwnerAppearances.clear();
     rows.forEach(row => cosmeticOwnerAppearances.set(row.uid, row.equipped || {}));
-    renderCities(true);
+    renderCities(true); renderArmies(true);
   });
 }
 setInterval(syncCosmeticOwners, 2000);
@@ -177,12 +177,13 @@ function cosmeticStagePicker(item) {
 
 function cosmeticPreview(item, detail = false) {
   const category = item?.category || "city";
+  if (item?.id === "halloween_troops") return `<span class="skin-troop-preview" data-troop-preview="${detail ? "detail" : "card"}" aria-hidden="true"></span>`;
   if (item?.id === "halloween_city" || item?.id === "default_city") {
     const stage = detail ? cosmeticPreviewStage : 5;
     const halloween = item.id === "halloween_city";
     return `<span class="skin-city-preview" aria-hidden="true"><img src="${halloween ? item.assets[stage] : getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : ""}</span>`;
   }
-  const glyphs = { city: "♜", troops: "⚑", border: "◇", flag: "⚑", bundle: "♛" };
+  const glyphs = { city: "♜", troops: "⚔", border: "◇", flag: "⚑", bundle: "♛" };
   if (category === "flag" && state?.flag) {
     const symbol = item.symbol || state.flag.symbol;
     return `<span class="kingdom-flag skin-flag-preview" data-skin-flag-symbol="${escapeHtml(symbol)}"><span class="flag-symbol"></span></span>`;
@@ -232,6 +233,7 @@ function bindSkinsPanel(root) {
   if (!root) return;
   cosmeticMotion?.schedule();
   root.querySelectorAll(".skin-detail .halloween-city-bats").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
+  root.querySelectorAll("[data-troop-preview]").forEach(element => globalThis.CrownlandsTroopSkins?.preview(element, element.dataset.troopPreview === "detail", cosmeticMotion ||= createCosmeticMotion()));
   const mode = root.dataset.skinsMode;
   root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
     cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
@@ -339,7 +341,7 @@ async function equipSelectedCosmetic() {
     const result = await getOnlineApi().equipCosmetic({ category: selected.category, itemId: selected.free ? "" : selected.id, expectedRevision: cosmeticState.revision, expectedIdentityRevision: state.identityRevision || 0, requestId: cosmeticRequestId() });
     if (uid !== cosmeticUid) return;
     applyCosmeticResult(result);
-    renderHud(); renderCities(true); showToast("Appearance applied.");
+    renderHud(); renderCities(true); renderArmies(true); showToast("Appearance applied.");
   } catch (error) { if (uid === cosmeticUid) { await reloadCosmetics(); cosmeticError = error.message || "Could not equip this cosmetic."; } }
   finally { if (uid === cosmeticUid) { cosmeticBusy = false; refreshCosmeticPanels(); } }
 }

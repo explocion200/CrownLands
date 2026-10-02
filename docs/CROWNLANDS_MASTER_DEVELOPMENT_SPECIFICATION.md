@@ -991,6 +991,14 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Add two visible flapping bats circling smaller city stages and three around the two larger stages. Keep the movement restrained, preserve map hit areas and labels, and respect reduced/off animation preferences. Pause decorative motion during camera movement; crowded and distant views may omit the bats to preserve map readability and performance.
 - Missing city art uses the standard stage image without changing ownership or the equipped choice. This replaces the city placeholder only. **Status:** approved for implementation; not yet verified deployed.
 
+#### Approved Halloween troop appearance — October 2, 2026
+
+- Halloween March uses the approved three human soldiers in muted plum cloaks and steel armor, with two spearmen and a pumpkin lantern bearer. Match the painted medieval map style. Use eight travel directions with four walking poses each; face the current route segment and reverse correctly on recalled routes.
+- Replace the existing troop placeholder in Shop → Skins at its established 300-Crown price. Purchase unlocks it without equipping. Profile → Skins → Troops previews the owned choice; **Apply** equips it and Default restores the original marker. Current and future marches use the owner's public equipped appearance, with the leader's choice for combined rallies and distinct scout markers.
+- Keep the existing upright mission icon, visible or estimated troop count, timer, relationship colors and route-location controls below the formation. The decorative soldiers do not enlarge or intercept the marker's hit area, disclose hidden counts, or change movement or combat.
+- Share one optimized atlas across all formations. Bound walking animation to eight visible armies on desktop or six on landscape mobile, plus one selected profile/shop preview. Other formations retain a static directional pose. Pause decorative walking in covered/background maps, during camera movement and zooming, in crowded/distant views, and under reduced/off motion preferences. Missing artwork preserves the standard informative marker and ownership.
+- **Status:** approved for implementation and release preparation; deployment has not been verified. The ornate Halloween flag-border draft remains a separate update.
+
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 
 - Show the permanent Crowns wallet directly beneath Gold under the player profile. Both counters share a burgundy panel treatment, width, aligned icons and amounts. Crowns use the approved muted purple coin with an antique silver rim and a pale crown; Gold retains the approved engraved Gold coin.

@@ -16,7 +16,9 @@
         4: "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
         5: "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
       } },
-    { id: "halloween_troops", category: "troops", name: "Halloween March", price: 300, description: "Changes your traveling troop markers. Scouts keep their distinct marker." },
+    { id: "halloween_troops", category: "troops", name: "Halloween March", price: 300, placeholder: false,
+      description: "Three soldiers in plum cloaks, led by a pumpkin lantern bearer. Eight walking directions follow your troop routes. Mission colors, troop information and scout markers remain clear.",
+      assets: { atlas: "assets/optimized/halloween-troops-640x1280-1889602f174b.webp" } },
     { id: "halloween_border", category: "border", name: "Halloween Flag Border", price: 200, description: "Frames your flags above regular cities on the map." },
     ...["Pumpkin", "Bat", "Skull", "Raven"].map(name => ({ id: `halloween_${name.toLowerCase()}`, category: "flag", name: `${name} Flag Icon`, price: 100, symbol: `halloween-${name.toLowerCase()}`, description: "Adds a personal flag symbol, preserving your flag colors and pattern." })),
   ].map(item => Object.freeze({ placeholder: true, ...item, assets: Object.freeze(item.assets || {}) })));

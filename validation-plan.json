@@ -5,22 +5,61 @@
     {
       "paths": [
         "docs/visual-qa/halloween-troops/art-source.json",
+        "docs/visual-qa/halloween-troops/atlas-layout.json",
         "docs/visual-qa/halloween-troops/design.json",
+        "docs/visual-qa/halloween-troops/direction-art-source.json",
         "docs/visual-qa/halloween-troops/march-atlas.png",
+        "docs/visual-qa/halloween-troops/march-north-east.png",
+        "docs/visual-qa/halloween-troops/march-south-west.png",
         "docs/visual-qa/halloween-troops/preview.css",
         "docs/visual-qa/halloween-troops/preview.html",
         "docs/visual-qa/halloween-troops/preview.js",
         "docs/visual-qa/halloween-troops/style-reference.jpg",
-        "tools/validate-halloween-troops-preview.js",
-        "docs/visual-qa/halloween-troops/atlas-layout.json",
-        "docs/visual-qa/halloween-troops/march-north-east.png",
-        "docs/visual-qa/halloween-troops/march-south-west.png",
-        "docs/visual-qa/halloween-troops/direction-art-source.json"
+        "tools/validate-halloween-troops-preview.js"
       ],
       "tests": [
         "tools/validate-halloween-troops-preview.js"
       ],
-      "reason": "Standalone cosmetic design preview. Verify 32 transparent walking poses, all eight segment-derived headings, reverse routes, continuous turns, independent upright mission/count labels, bounded animation count, manual/reduced-motion/background/offscreen pauses, asset loading, and desktop/landscape/portrait layouts. No game renderer, shop, public cosmetics, economy, production entry or backend changes. Live multiplayer integration and performance with many armies remain future work."
+      "reason": "Approved art and interactive reference: 32 transparent poses, eight and reversed directions, upright troop information, responsive layouts and motion preferences. Production integration is tested separately."
+    },
+    {
+      "paths": [
+        "functions/cosmetics.js"
+      ],
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "functions/test/emulator-cosmetics.js"
+      ],
+      "reason": "Shared client/server catalog replaces troop placeholder metadata and references the approved atlas at the existing price. Validate authoritative ownership, price, revisions, idempotency, separate purchase/equip, public appearance permissions and default switching."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "game.js",
+        "index.html",
+        "service-worker.js",
+        "skins-ui.css",
+        "skins-ui.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js",
+        "assets/optimized/halloween-troops-640x1280-1889602f174b.webp",
+        "docs/visual-qa/halloween-troops/production-atlas.json",
+        "tools/build-halloween-troop-atlas.js",
+        "tools/validate-halloween-troop-skin-browser.js",
+        "troop-skins.css",
+        "troop-skins.js"
+      ],
+      "tests": [
+        "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-skin-motion-browser.js",
+        "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Integrate approved art through existing troop and cosmetic renderers. Validate eight headings and recalled/cross-map segments without changing positions or timing; purchase/selection/Apply/Default and own/remote/leader/scout appearance; count privacy, route controls, stable nodes, failure fallback, decoded art and 6/8 motion caps. Shared motion changes require city/preview regression checks. Desktop/mobile stress reports compare full-map and isolated decoration costs. Production build, entry/cache smoke and budgets check module/resource packaging, the compiled atlas provenance hash and lazy loading. Master Specification records only the approved troop design; no gameplay, price or deployed-state change."
     }
   ]
 }

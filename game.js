@@ -22180,12 +22180,16 @@ function cloneRoute(route) {
   };
 }
 
-function pointAlongRoute(points, progress) {
+function pointAlongRoute(points, progress, heading = null) {
   if (!Array.isArray(points) || points.length < 2) return { x: 0, y: 0 };
   const metrics = getPathMetrics(points);
   let wanted = metrics.total * clamp(progress, 0, 1);
   for (const segment of metrics.segments) {
     if (wanted <= segment.length) {
+      if (heading) {
+        const direction = segment.length > 0 ? segment : metrics.segments.find(part => part.length > 0);
+        if (direction) { heading.dx = direction.to.x - direction.from.x; heading.dy = direction.to.y - direction.from.y; }
+      }
       const t = segment.length <= 0 ? 0 : wanted / segment.length;
       return {
         x: segment.from.x + (segment.to.x - segment.from.x) * t,
@@ -28396,11 +28400,11 @@ function getArmyRouteRelationshipClass(mission) {
   return isHostileClanMarch(mission) ? "clan-hostile-route" : "clan-support-route";
 }
 
-function getMissionPointAtProgress(mission, progress, segments = getMissionDisplayRouteSegments(mission)) {
+function getMissionPointAtProgress(mission, progress, segments = getMissionDisplayRouteSegments(mission), heading = null) {
   if (!segments.length) {
     const path = normalizeArmyPath(mission?.path);
     return path.length >= 2
-      ? { regionId: getCityRegionId(mission?.fromId), point: pointAlongRoute(path, progress) }
+      ? { regionId: getCityRegionId(mission?.fromId), point: pointAlongRoute(path, progress, heading) }
       : null;
   }
   const totalLength = Math.max(0.1, segments.reduce((total, segment) => total + segment.length, 0));
@@ -28408,12 +28412,12 @@ function getMissionPointAtProgress(mission, progress, segments = getMissionDispl
   for (const segment of segments) {
     const length = Math.max(0.1, segment.length || routeLength(segment.points));
     if (wanted <= length) {
-      return { regionId: segment.regionId, point: pointAlongRoute(segment.points, wanted / length) };
+      return { regionId: segment.regionId, point: pointAlongRoute(segment.points, wanted / length, heading) };
     }
     wanted -= length;
   }
   const lastSegment = segments[segments.length - 1];
-  return { regionId: lastSegment.regionId, point: lastSegment.points[lastSegment.points.length - 1] };
+  return { regionId: lastSegment.regionId, point: pointAlongRoute(lastSegment.points, 1, heading) };
 }
 
 function renderPaths() {
@@ -30997,6 +31001,9 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
 
   const troopSkin = attack.kind === "scout" ? "" : cosmeticAppearance(attack.ownerUid || (isPersonalArmy(attack) ? cosmeticUid : "")).troops || "";
   token.dataset.troopSkin = troopSkin;
+  if (troopSkin === "halloween_troops" || token.dataset.troopArt) {
+    globalThis.CrownlandsTroopSkins?.apply(token, troopSkin, cosmeticMotion ||= createCosmeticMotion());
+  }
   const armyIcon = attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
     icon: iconElement,
@@ -31124,6 +31131,7 @@ function renderArmiesUncached(force = false) {
       correction: previous?.pending && !attack.serverPending
         ? { from: previous.point, startedAt: now }
         : previous?.correction || null,
+      heading: previous?.heading || { dx: 0, dy: 1 },
     });
   }
   if (fragment.childNodes.length) armyLayer.appendChild(fragment);
@@ -31150,9 +31158,15 @@ function renderVisibleArmyMotion(now = performance.now()) {
   const nowMs = getArmyClockNowMs();
   const regionId = getActiveMapRegionId();
   for (const motion of visibleArmyMotion.values()) {
-    const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments);
+    const skinned = globalThis.CrownlandsTroopSkins?.has(motion.token);
+    const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments, skinned ? motion.heading : null);
     motion.token.hidden = !segment || segment.regionId !== regionId;
     if (motion.token.hidden) continue;
+    if (skinned) {
+      const recalled = normalizeTimestampMs(motion.army.recalledAtMs);
+      const reverse = motion.army.returning && recalled > 0 && normalizeTimestampMs(motion.army.arrivesAtMs) > recalled;
+      globalThis.CrownlandsTroopSkins.face(motion.token, motion.heading.dx, motion.heading.dy, reverse);
+    }
     let point = worldToMapPoint(segment.point);
     if (motion.correction) {
       const blend = clamp((now - motion.correction.startedAt) / 150, 0, 1);

@@ -1,0 +1,28 @@
+/* One shared 640x1280 atlas; only the four-frame strip animates. */
+.troop-skin-sprite{display:none;position:relative;width:88px;height:88px;overflow:hidden;contain:strict;pointer-events:none}
+html[data-troop-art="ready"] .troop-skin-sprite{display:block}
+.troop-skin-frames{position:absolute;left:0;top:0;width:400%;height:100%;transform:translateX(0)}
+.troop-skin-atlas{position:absolute;left:0;top:calc(var(--troop-row,3)*-100%);width:100%;height:800%;max-width:none;pointer-events:none}
+.troop-skin-sprite[data-skin-motion="active"] .troop-skin-frames{animation:halloweenTroopWalk .8s steps(1,end) infinite;will-change:transform}
+@keyframes halloweenTroopWalk{0%,100%{transform:translateX(0)}25%{transform:translateX(-25%)}50%{transform:translateX(-50%)}75%{transform:translateX(-75%)}}
+.army-token>.troop-skin-sprite{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%)}
+html[data-troop-art="ready"] .army-token[data-troop-art="true"] .army-token-nav{bottom:calc(100% + 94px)}
+.skin-troop-preview{display:grid;place-items:center;width:80px;height:80px;position:relative}
+.skin-troop-preview>.troop-skin-sprite{width:80px;height:80px}
+.skin-troop-preview::before{content:"⚔";font-size:44px}
+html[data-troop-art="ready"] .skin-troop-preview::before{display:none}
+.skin-detail-content>.skin-troop-preview{width:180px;height:180px;margin:auto}
+.skin-detail-content>.skin-troop-preview>.troop-skin-sprite{width:180px;height:180px}
+html[data-animation-mode="reduced"] .troop-skin-frames,
+html[data-animation-mode="off"] .troop-skin-frames,
+.map-frame.camera-moving .troop-skin-frames,
+.map-frame.zooming .troop-skin-frames,
+.map-frame.low-zoom .troop-skin-frames,
+.map-frame.crowded-map .troop-skin-frames{animation-play-state:paused!important;will-change:auto!important}
+.map-frame.low-zoom .army-token>.troop-skin-sprite,
+.map-frame.crowded-map .army-token>.troop-skin-sprite{width:64px;height:64px}
+@media(prefers-reduced-motion:reduce){html:not([data-animation-mode="full"]) .troop-skin-frames{animation-play-state:paused!important;will-change:auto!important}}
+@media(max-height:600px),(max-width:1000px){
+  .skin-troop-preview,.skin-troop-preview>.troop-skin-sprite{width:56px;height:56px}
+  .skin-detail-content>.skin-troop-preview,.skin-detail-content>.skin-troop-preview>.troop-skin-sprite{width:140px;height:140px}
+}
