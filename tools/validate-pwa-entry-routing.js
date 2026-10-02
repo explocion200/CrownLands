@@ -145,6 +145,8 @@ const workerContext = {
   caches,
   clients: self.clients,
   console,
+  setTimeout,
+  clearTimeout,
   fetch: async () => { throw new Error("Synthetic offline navigation"); },
   importScripts() {},
   self,
@@ -153,6 +155,7 @@ vm.runInNewContext(serviceWorker, workerContext);
 
 async function dispatchNavigation(url) {
   let responsePromise = null;
+  const background = [];
   listeners.get("fetch")({
     request: {
       destination: "document",
@@ -162,8 +165,10 @@ async function dispatchNavigation(url) {
       url,
     },
     respondWith(value) { responsePromise = Promise.resolve(value); },
+    waitUntil(value) { background.push(Promise.resolve(value)); },
   });
-  return responsePromise;
+  try { return await responsePromise; }
+  finally { await Promise.all(background); }
 }
 
 async function run() {

@@ -112,14 +112,31 @@ async function main(){
   assert.equal(flagPreview.color,`rgb(${rgb.join(', ')})`,"Flag preview must retain the saved symbol color");
   await click('[data-skin-browse]');await wait('activeProfileTab==="skins"');await click('[data-skin-select="halloween_city"]');
   assert.equal(await evaluate('document.querySelector("[data-skin-action]").textContent'),"Apply");
+  assert.equal(await evaluate('__skinQA.equips'),0,"Selection must not equip a skin");
+  await evaluate('applyCosmeticResult({state:__skinQA.wallet})');
+  assert.equal(await evaluate('cosmeticSelected'),"halloween_city","Wallet refresh must preserve the selection");
+  assert.equal(await evaluate('document.querySelectorAll(".skins-footer [data-skin-action]").length'),1,"Apply must have one persistent footer action");
   for(const stage of [1,2,3,4,5]) {
     await click(`[data-skin-stage="${stage}"]`);
     await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").decode()');
     assert.equal(await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").getAttribute("src")'),await evaluate(`COSMETIC_CATALOG.item("halloween_city").assets[${stage}]`));
   }
+  assert.equal(await evaluate('__skinQA.equips'),0,"Stage previews must not equip a skin");
   await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city");
+  assert.equal(await evaluate('__skinQA.equips'),1,"Apply must equip exactly once");
+  assert(await evaluate('document.querySelector("[data-skin-action]").disabled && document.querySelector("[data-skin-action]").textContent === "Applied"'));
   await evaluate('renderCities(true)');assert(await evaluate('!!document.querySelector(".city-node[data-city-skin=halloween_city]")'));
-  await click('[data-skin-select="default_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
+  await click('[data-skin-select="default_city"]');
+  assert.equal(await evaluate('document.querySelector("[data-skin-action]").textContent'),"Apply");
+  assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city","Selecting Default must wait for Apply");
+  assert.equal(await evaluate('document.querySelector("[data-skin-select=default_city] strong").textContent'),"Default City");
+  for(const stage of [1,2,3,4,5]) {
+    await click(`[data-skin-stage="${stage}"]`);
+    await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").decode()');
+    assert.equal(await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").getAttribute("src")'),await evaluate(`getCastleAsset(${stage})`));
+    assert.equal(await evaluate('document.querySelectorAll(".skin-detail .halloween-city-bats").length'),0,"Default preview must not show Halloween bats");
+  }
+  await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   for(const [width,height] of [[1440,900],[844,390],[568,320],[568,280]]){
     await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
     await evaluate('showProfileScreen()');

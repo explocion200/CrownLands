@@ -281,10 +281,12 @@ const battleItemReportingBudget = 8 * 1024;
 // adds 9,717 normalized CSS bytes, bounded to 10 KiB; it reuses shipped art.
 // Approved five-stage city previews, Apply recovery and bat motion add 6,631
 // normalized bytes. Reserve 7 KiB; entry and offline-shell caps stay unchanged.
-const cosmeticModuleBudget = (47 + 7) * 1024;
+// Explicit Apply and bounded visible-only motion bring the normalized modules
+// to 57,104 bytes. Add 2 KiB to the prior 54 KiB cap; artwork is unchanged.
+const cosmeticModuleBudget = (47 + 7 + 2) * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 54 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 56 KiB budget.");
 // Five transparent city stages total 491,870 bytes and load only when used.
 const halloweenCityArtBudget = 512 * 1024;
 const halloweenCityArtPaths = Object.values(require(path.join(dist, "functions/cosmetics.js")).item("halloween_city").assets);
