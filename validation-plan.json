@@ -62,6 +62,11 @@
       "reason": "Run the extended catalog and real-browser regressions. They exercise the new Apply label, each asset and stage boundary, animation preference and actual wing/flight movement, stable DOM reuse, owner/default transitions, failed-art recovery and projected levels with synthetic account data only."
     },
     {
+      "paths": ["tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Bound the measured 6,631-byte cosmetics code increase to 7 KiB and the five lazy-loaded WebPs (491,870 bytes) to 512 KiB. Require every catalog stage in the built artifact. Preserve the existing startup, offline-shell, per-file and combined artifact limits."
+    },
+    {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],

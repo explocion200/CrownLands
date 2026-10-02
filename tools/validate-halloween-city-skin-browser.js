@@ -92,6 +92,14 @@ async function checkCityArt() {
   renderCities(true);
   assert(cityLayer.querySelector(`[data-city-id="${pendingCity.id}"] .city-art`).getAttribute("src") === item.assets[2], "Pending upgrade must use its projected stage");
   getProjectedCityForInstantActions = originalProjection; renderCities(true);
+  // Confirm the real map shows moving bats at a readable zoom, outside the
+  // distant/crowded overview where decorative layers are intentionally hidden.
+  setAnimationModePreference("full");
+  setZoomAroundPoint(1.6, innerWidth / 2, innerHeight / 2); centerOnCity(regular[4].id);
+  await new Promise(resolve => setTimeout(resolve, 1000)); renderCities(true);
+  const closeupBat = cityLayer.querySelector(`[data-city-id="${regular[4].id}"] .halloween-bat`);
+  assert(closeupBat?.getBoundingClientRect().width >= 10, "Map bats must be visible at city zoom");
+  assert(getComputedStyle(closeupBat.parentElement).animationPlayState === "running", "Map bats did not resume after camera movement");
   return { stages, mapCities: ownedNodes.length, motion: "full/reduced/off passed", fallback: "passed", ownership: "own/remote/capture/default passed" };
 }
 
