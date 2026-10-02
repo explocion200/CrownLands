@@ -16,6 +16,11 @@
       "reason": "Set the navigation lock before uncached definitions load, bound definition fetch and JSON-body reads, release failed requests for retry, and reject stale state/session navigation. Exercise the real loader and switcher with delayed/failed definitions, artwork and city snapshots at desktop and landscape-mobile sizes, all 81 active maps on desktop, cache eviction, retries and retired subscriptions. Home, picker gestures, map interaction/location announcements, city rendering and map-art decoding are affected shared navigation dependencies. Check the existing game asset budget and build. No server-authoritative behavior, backend files or world data changed, so no emulator suites apply."
     },
     {
+      "paths": ["skins-ui.js", "index.html", "service-worker.js"],
+      "tests": ["tools/validate-city-map-reconciliation-browser.js", "tools/validate-cosmetics-browser.js", "tools/validate-map-loading-browser.js"],
+      "reason": "Map rendering invokes the cosmetic renderer for each city. Stop redundant skin/border attribute assignments after reproducing the same 600 unchanged writes on the released base. The existing reconciliation test checks unchanged refreshes, retained images/focus and changed ownership/classes; cosmetics browser coverage checks equip/default, strongholds and remote owner appearance. Advance the matching entry/precache script version and verify browser loading plus the required production artifact build. No purchases, prices, ownership authority or server behavior changed."
+    },
+    {
       "paths": ["tools/validate-map-loading-browser.js"],
       "tests": ["tools/validate-map-loading-browser.js"],
       "reason": "Execute the new browser regression against the real runtime with a loopback-only synthetic API. It reproduced the missing initial lock before the fix and now covers recovery, stale sessions, art/city readiness, cache churn and desktop/mobile loading presentation."

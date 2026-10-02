@@ -8,6 +8,8 @@ Navigation now sets the existing loading state before requesting the definition.
 
 Region definition downloads now abort after 15 seconds, including a stalled response body. The loader clears the failed pending request so retry can fetch again. Map art and authoritative city snapshots still gate the destination becoming ready. No gameplay rules, backend code, map assets, or world data changed.
 
+The existing city reconciliation check also exposed repeated skin/border attribute writes on every unchanged map refresh: 600 writes across three refreshes of 100 cities. The same failure reproduced with the unchanged released `game.js`. The skin renderer now assigns those two attributes only when their values change; its script version is updated in the entry page and service worker. Existing appearance checks cover equip/default, ownership changes and strongholds.
+
 ## Browser regression coverage
 
 `tools/validate-map-loading-browser.js` uses the real navigation, renderer and region loader against the loopback benchmark API. Its city snapshots and failure responses are synthetic.
