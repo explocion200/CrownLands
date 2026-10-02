@@ -3,7 +3,7 @@
   "baseCommit": "7aecc4dd8f492771c72b2bcdffec0517ea65c489",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-shop-cooldowns-browser.js"],
+      "paths": ["game.js", "shop-ui.js", "index.html", "tools/validate-shop-cooldowns-browser.js"],
       "tests": ["tools/validate-shop-cooldowns-browser.js", "tools/validate-shop-browser.js", "tools/validate-utc-cooldowns.js", "tools/validate-rewarded-ads.js", "tools/validate-cosmetics-browser.js"],
       "reason": "Repair the shared Shop timer: update purchase deadlines and exact UTC unlock, resume after ad disclosure, refresh server-confirmed ad eligibility at cooldown expiry and UTC rollover, retry failures at a bounded rate, and stop cleanly on modal exit. The new browser test drives the real interval callback at three sizes and covers every paid cap, shared Gold/Troop cooldown, stable controls, delayed/failed reads and close/reopen. Existing Shop, ad and cosmetics tests cover affected purchase, confirmation, Skins and modal lifecycle dependencies. Prices, limits and backend mutations remain unchanged."
     },

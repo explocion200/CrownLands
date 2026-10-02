@@ -35943,30 +35943,14 @@ function getRewardedAdAvailability(status = rewardedAdStatus) {
 function startRewardedAdShopCountdown() {
   if (rewardedAdShopCountdownTimer) window.clearInterval(rewardedAdShopCountdownTimer);
   let nextStatusRefreshAtMs = 0;
-  const updateVisibleShop = () => {
-    if (!modal.open || !modal.classList.contains("shop-modal") || modal.classList.contains("rewarded-ad-confirmation-modal")) return;
-    patchRoyalShopSelection();
-    const availability = getRewardedAdAvailability();
-    modalBody.querySelectorAll(".rewarded-ad-availability").forEach(element => setTextIfChanged(element, availability.text));
-  };
   rewardedAdShopCountdownTimer = window.setInterval(() => {
     if (!modal.open || !modal.classList.contains("shop-modal")) {
       window.clearInterval(rewardedAdShopCountdownTimer);
       rewardedAdShopCountdownTimer = 0;
       return;
     }
-    // The disclosure temporarily replaces the Shop body; resume when it returns.
-    if (modal.classList.contains("rewarded-ad-confirmation-modal")) return;
-    updateVisibleShop();
-    const nowMs = Date.now();
-    const status = rewardedAdStatus;
-    const needsStatusRefresh = (status?.dayKey && status.dayKey !== getUtcDateKeyAtMs(nowMs))
-      || (status?.reason === "cooldown" && getRewardedAdCooldownRemainingMs(status, nowMs) <= 0)
-      || status?.reason === "status-error";
-    if (needsStatusRefresh && !rewardedAdStatusLoading && !rewardedAdInFlight && nowMs >= nextStatusRefreshAtMs) {
-      // Keep eligibility server-confirmed, with bounded retries if it is unavailable.
-      nextStatusRefreshAtMs = nowMs + 30000;
-      void refreshRewardedAdStatus({ render: false }).then(updateVisibleShop);
+    if (typeof updateRoyalShopCountdown === "function") {
+      nextStatusRefreshAtMs = updateRoyalShopCountdown(nextStatusRefreshAtMs);
     }
   }, 1000);
 }

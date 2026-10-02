@@ -1,5 +1,5 @@
 /* Approved Shop presentation. Prices, inventory, purchase queues and rewarded ads remain server-backed. */
-/* exported renderRoyalShopPanel, bindRoyalShopPresentation, patchRoyalShopSelection */
+/* exported renderRoyalShopPanel, bindRoyalShopPresentation, patchRoyalShopSelection, updateRoyalShopCountdown */
 let royalShopSection = "provisions";
 let royalShopRewardId = "gold";
 let royalShopBoxPending = false;
@@ -98,6 +98,29 @@ function patchRoyalShopSelection() {
     const title = royalShopExact(price) + " Gold";
     if (well && well.title !== title) { well.title = title; well.innerHTML = royalShopMoney(price); card.setAttribute("aria-label", `${getShopPurchaseState(card.dataset.shopSelect).label}, ${title}`); }
   });
+}
+
+function updateRoyalShopCountdown(nextStatusRefreshAtMs = 0) {
+  // The disclosure temporarily replaces the Shop body; resume when it returns.
+  if (modal.classList.contains("rewarded-ad-confirmation-modal")) return nextStatusRefreshAtMs;
+  const updateVisibleShop = () => {
+    if (!modal.open || !modal.classList.contains("shop-modal") || modal.classList.contains("rewarded-ad-confirmation-modal")) return;
+    patchRoyalShopSelection();
+    const availability = getRewardedAdAvailability();
+    modalBody.querySelectorAll(".rewarded-ad-availability").forEach(element => setTextIfChanged(element, availability.text));
+  };
+  updateVisibleShop();
+  const nowMs = Date.now();
+  const status = rewardedAdStatus;
+  const needsStatusRefresh = (status?.dayKey && status.dayKey !== getUtcDateKeyAtMs(nowMs))
+    || (status?.reason === "cooldown" && getRewardedAdCooldownRemainingMs(status, nowMs) <= 0)
+    || status?.reason === "status-error";
+  if (needsStatusRefresh && !rewardedAdStatusLoading && !rewardedAdInFlight && nowMs >= nextStatusRefreshAtMs) {
+    // Keep eligibility server-confirmed, with bounded retries if it is unavailable.
+    nextStatusRefreshAtMs = nowMs + 30000;
+    void refreshRewardedAdStatus({ render: false }).then(updateVisibleShop);
+  }
+  return nextStatusRefreshAtMs;
 }
 
 function bindRoyalShopPresentation() {
