@@ -9,17 +9,30 @@
     88
   ],
   "animation": {
-    "poses": 4,
+    "directions": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+    ],
+    "posesPerDirection": 4,
+    "totalPoses": 32,
     "cycleSeconds": 0.8,
-    "sampleRouteSeconds": 18,
-    "technique": "One cached transparent atlas; CSS transform steps for poses; separate transform for sample route.",
+    "tourSegmentSeconds": 3,
+    "sampleStraightRouteSeconds": 7,
+    "technique": "Two cached transparent atlases; measured frame clips aligned to one baseline. CSS transform steps select walking poses; one compositor animation moves along the current route segment. Heading comes from the screen-space segment vector. No per-frame JavaScript animation loop.",
     "guards": [
       "Manual pause",
       "Reduced motion",
       "Offscreen previews",
       "Background tab"
     ],
-    "static": "Size comparison thumbnails"
+    "static": "Direction gallery and size comparison thumbnails",
+    "animatedElements": 3
   },
   "integrationRequirements": [
     "Keep authoritative route position, timing and mission indicators.",
@@ -31,6 +44,7 @@
   "limits": [
     "Illustrative route and sample count/time only.",
     "Production performance with many simultaneous armies still requires integration and measurement.",
-    "No shop, gameplay, economy, or player-data changes."
+    "No shop, gameplay, economy, or player-data changes.",
+    "Generated artwork is a review draft; fine equipment and gait consistency need final art approval."
   ]
 }

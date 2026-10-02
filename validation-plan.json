@@ -11,12 +11,16 @@
         "docs/visual-qa/halloween-troops/preview.html",
         "docs/visual-qa/halloween-troops/preview.js",
         "docs/visual-qa/halloween-troops/style-reference.jpg",
-        "tools/validate-halloween-troops-preview.js"
+        "tools/validate-halloween-troops-preview.js",
+        "docs/visual-qa/halloween-troops/atlas-layout.json",
+        "docs/visual-qa/halloween-troops/march-north-east.png",
+        "docs/visual-qa/halloween-troops/march-south-west.png",
+        "docs/visual-qa/halloween-troops/direction-art-source.json"
       ],
       "tests": [
         "tools/validate-halloween-troops-preview.js"
       ],
-      "reason": "Standalone cosmetic design preview. Browser validation checks transparent atlas poses, visible walking and route movement, independent readable mission/count labels, return direction, pause/reduced-motion/background/offscreen behavior, asset loading and desktop/landscape/portrait layouts. No game renderer, public cosmetics, economy, production entry or backend behavior changes. Live multiplayer integration and performance with many armies remain future work."
+      "reason": "Standalone cosmetic design preview. Verify 32 transparent walking poses, all eight segment-derived headings, reverse routes, continuous turns, independent upright mission/count labels, bounded animation count, manual/reduced-motion/background/offscreen pauses, asset loading, and desktop/landscape/portrait layouts. No game renderer, shop, public cosmetics, economy, production entry or backend changes. Live multiplayer integration and performance with many armies remain future work."
     }
   ]
 }

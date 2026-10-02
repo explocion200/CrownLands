@@ -2,39 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Crownlands — Halloween March draft</title>
+  <title>Crownlands — Halloween March directions</title>
   <link rel="stylesheet" href="preview.css"><script src="preview.js" defer></script>
 </head>
 <body>
 <main>
-  <header><div><p class="eyebrow">CROWNLANDS · HALLOWEEN COLLECTION</p><h1>Halloween March</h1></div><span class="draft">Animated design draft</span></header>
+  <header><div><p class="eyebrow">CROWNLANDS · HALLOWEEN COLLECTION</p><h1>Halloween March</h1></div><span class="draft">Eight-direction draft</span></header>
   <div class="showcase">
-    <section class="map-scene motion-host" id="map-scene" aria-label="Troops traveling along a sample map route">
-      <div class="map-heading"><h2>Traveling troops</h2><p>Three soldiers. One pumpkin lantern.</p></div>
-      <svg class="route-line" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"><path d="M180 300L820 730"/></svg>
+    <section class="map-scene motion-host" id="map-scene" aria-label="Troops following a sample route in eight directions">
+      <div class="map-heading"><h2>Follow the march</h2><p>Front, side and back views along the route.</p></div>
+      <svg class="route-line" aria-hidden="true"><path/></svg>
       <div class="endpoint origin"><img src="../../../assets/optimized/halloween-city-stage-1-512x512-2e7107395536.webp" alt=""><span>Thornford</span></div>
       <div class="endpoint destination"><img src="../../../assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp" alt=""><span>Wyvernhollow</span></div>
-      <div class="route-track"><div class="route-axis"><div class="army">
-        <div class="facing"><div class="formation" role="img" aria-label="Three purple-cloaked soldiers carrying spears, shields and a pumpkin lantern"><img class="atlas" src="march-atlas.png" alt=""></div></div>
+      <div class="route-axis"><div class="army">
+        <div class="formation" role="img" aria-label="Marching soldiers"><img class="atlas" src="march-north-east.png" alt=""></div>
         <div class="army-badge"><img class="mission-icon" src="../../../assets/icons/troop-orders/crossed-swords.svg" alt="Attack"><strong class="troop-count">12.5K</strong><span>18m 20s</span></div>
-      </div></div></div>
-      <div class="map-footer"><span id="route-caption">Outbound · Thornford → Wyvernhollow</span><small>Sample route, count and time</small></div>
+      </div></div>
+      <div class="map-footer"><span id="route-caption"></span><small>Sample route, count and time</small></div>
     </section>
     <aside class="detail">
       <h2>Lantern bearer &amp; spearmen</h2>
-      <p>Steel armor, weathered plum cloaks and a warm pumpkin glow, painted to match the map.</p>
-      <div class="detail-art motion-host" id="detail-art"><div class="facing"><div class="formation" role="img" aria-label="Enlarged marching formation"><img class="atlas" src="march-atlas.png" alt=""></div></div><span>Enlarged detail</span></div>
+      <p>Same plum cloaks, steel armor and pumpkin lantern, viewed from every side.</p>
+      <div class="detail-art motion-host" id="detail-art"><div class="formation" role="img" aria-label="Enlarged marching formation"><img class="atlas" src="march-north-east.png" alt=""></div><span id="facing-label">Enlarged detail</span></div>
       <div class="controls">
-        <label for="relationship">March relationship</label><select id="relationship"><option value="player">Your troops</option><option value="ally">Clan ally</option><option value="enemy">Enemy</option></select>
+        <label for="direction">Route</label><select id="direction"><option value="auto">Tour all eight directions</option><option value="N">↑ North</option><option value="NE">↗ Northeast</option><option value="E">→ East</option><option value="SE">↘ Southeast</option><option value="S">↓ South</option><option value="SW">↙ Southwest</option><option value="W">← West</option><option value="NW">↖ Northwest</option></select>
+        <label for="relationship">Relationship</label><select id="relationship"><option value="player">Your troops</option><option value="ally">Clan ally</option><option value="enemy">Enemy</option></select>
         <label for="mission">Mission</label><select id="mission"><option value="attack">Attack</option><option value="transfer">Transfer</option></select>
-        <label for="direction">Direction</label><select id="direction"><option value="outbound">Outbound</option><option value="return">Returning</option></select>
+        <label class="toggle"><input type="checkbox" id="returning"> Reverse the route</label>
         <label class="toggle"><input type="checkbox" id="motion" checked> Play marching animation</label>
         <p id="motion-status" role="status"></p>
       </div>
     </aside>
   </div>
-  <section class="sizes"><div><h2>Map readability</h2><p>The artwork sits above the count and mission badge. Scouts retain their separate marker.</p></div><div class="size-sample"><div class="formation small"><img class="atlas" src="march-atlas.png" alt="Small static troop preview"></div><span>64 px · Distant view</span></div><div class="size-sample"><div class="formation medium"><img class="atlas" src="march-atlas.png" alt="Normal static troop preview"></div><span>88 px · Proposed map size</span></div></section>
-  <footer>Design preview · Four walking poses · Motion pauses offscreen and in the background and respects reduced motion · Live game integration pending</footer>
+  <section class="directions-section"><h2>Choose a direction</h2><p>Tap a view to see its walking animation on the map.</p><div id="direction-gallery"></div></section>
+  <section class="sizes"><div><h2>Map readability</h2><p>The count, mission and timer stay upright as the troops turn. Scouts retain their separate marker.</p></div><div class="size-sample"><div class="formation small" data-follow-facing><img class="atlas" src="march-north-east.png" alt="Small troop preview"></div><span>64 px · Distant view</span></div><div class="size-sample"><div class="formation medium" data-follow-facing><img class="atlas" src="march-north-east.png" alt="Normal troop preview"></div><span>88 px · Proposed map size</span></div></section>
+  <footer>Design preview · Four walking poses per direction · Motion pauses offscreen, in the background and for reduced motion · Live game integration pending</footer>
 </main>
 </body>
 </html>
