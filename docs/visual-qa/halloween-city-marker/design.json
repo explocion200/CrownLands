@@ -14,14 +14,17 @@
     "cityFill": "SVG path controlled by --city-tone; preview reads existing ownership/strength palette colors",
     "playerFlag": "Independent vector primary/secondary dyes and crossed-swords symbol; sample heraldry is illustrative",
     "level": "Editable SVG text; preserves the current owned-city dark ink and other states' light ink",
-    "decoration": "Static narrow iron/purple rim, engraved bat corners, small pumpkin below the level"
+    "decoration": "Transparent painted PNG: ornate bronze and iron rim, thorn vines, bat-wing skull crest, three pumpkin lanterns. Two moving bats use the existing approved city-bat shapes, with wing flaps and lantern opacity flicker."
   },
   "sources": [
     "styles.css: .foreign-city-shield, .city-owner-column, .enemy-power-unknown",
     "crownlands-palette.css: --cl-player-owned, --cl-main-city, --cl-clan, --cl-enemy-weaker, --cl-enemy-equal, --cl-enemy-stronger, --cl-neutral",
     "assets/flag-symbols/selected/svg/crossed-swords.svg",
     "functions/flagRenderer.js: independent player heraldry colors and symbol",
-    "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp"
+    "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp",
+    "skins-ui.js: cosmeticBats wing/body shapes",
+    "art-source.json: built-in image generation prompt and provenance"
   ],
-  "integration": "Keep the existing authoritative ownership and strength classification, player flag renderer, city level, selected-city variants, shop ownership, and public appearance sync. The preview changes no gameplay or sale availability. Decorative artwork remains subject to visual approval."
+  "motion": "CSS transform and opacity loops only, maximum 14 animations across the hero and map-size previews. Comparison thumbnails stay still. Pause with the control, reduced-motion preference, document visibility and IntersectionObserver. This validates preview behavior, not performance of hundreds of live map markers.",
+  "integration": "Keep the existing authoritative ownership and strength classification, player flag renderer, city level, selected-city variants, shop ownership, and public appearance sync. Painted ornaments extend beyond the original marker with pointer-events:none. Game integration still needs shared visibility/crowding/camera guards and an optimized production asset. The preview changes no gameplay or sale availability. Decorative artwork remains subject to visual approval."
 }

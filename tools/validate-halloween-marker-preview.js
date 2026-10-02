@@ -8,7 +8,7 @@ const draft = "docs/visual-qa/halloween-city-marker";
 const read = file => fs.readFileSync(path.resolve(__dirname, "..", file), "utf8");
 async function main() {
   const source = read(`${draft}/marker.svg`), palette = read("crownlands-palette.css");
-  assert.doesNotMatch(source, /<(?:image|script|animate|filter)\b/i, "The marker must remain static vector art");
+  assert.doesNotMatch(source, /<(?:image|script|animate|filter)\b/i, "The center must remain independent static vector art");
   assert(Buffer.byteLength(source) < 10000, "Keep the compact marker draft under 10 KB");
   const server = createMapBenchmarkServer(), address = await server.listen(); let session, client;
   const errors = [], out = path.resolve(__dirname, "../release-artifacts/halloween-marker-preview"); fs.mkdirSync(out, { recursive: true });
@@ -17,11 +17,15 @@ async function main() {
     assert(browser, "Chromium required"); session = await startBrowserSession(browser);
     client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
     await Promise.all([client.send("Runtime.enable"), client.send("Page.enable")]);
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+    await client.send("Emulation.setDeviceMetricsOverride", { width: 1200, height: 1100, deviceScaleFactor: 1, mobile: false });
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const evaluate = async expression => { const result = await client.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
     await client.send("Page.navigate", { url: `${address.url}/${draft}/preview.html` });
     for (let n = 0; n < 100 && !await evaluate("document.documentElement.dataset.previewReady"); n++) await delay(100);
     assert.equal(await evaluate("document.documentElement.dataset.previewReady"), "true");
+    const alpha = await evaluate("(()=>{const img=document.querySelector('.ornate-frame'),canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);return [ctx.getImageData(0,0,1,1).data[3],ctx.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data[3]]})()");
+    assert.deepEqual(alpha, [0, 0], "Painted frame must have a transparent exterior and center");
     const border = await evaluate("document.querySelector('#hero-marker [data-halloween-border]').innerHTML");
     const flag = await evaluate("document.querySelector('#hero-marker [data-player-flag]').innerHTML");
     for (const [state, token] of Object.entries({ owned: "player-owned", main: "main-city", clan: "clan", weaker: "enemy-weaker", equal: "enemy-equal", stronger: "enemy-stronger", neutral: "neutral" })) {
@@ -42,17 +46,40 @@ async function main() {
     await evaluate("document.getElementById('border').checked=false;document.getElementById('border').dispatchEvent(new Event('input',{bubbles:true}))");
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#hero-marker [data-halloween-border]')).display"), "none");
     await evaluate("document.getElementById('primary').value='#182b3e';document.getElementById('secondary').value='#a9443b';document.getElementById('symbol').value='#eee5cd';document.getElementById('level').value='50';document.getElementById('border').checked=true;updateMarkerPreview()");
+    await delay(100);
+    const batBefore = await evaluate("getComputedStyle(document.querySelector('#hero-marker .border-flight')).transform");
+    const wingBefore = await evaluate("getComputedStyle(document.querySelector('#hero-marker .border-wing')).transform");
+    const lampBefore = await evaluate("getComputedStyle(document.querySelector('#hero-marker .lantern-glow')).opacity");
+    await delay(180);
+    assert.notEqual(await evaluate("getComputedStyle(document.querySelector('#hero-marker .border-flight')).transform"), batBefore, "Bats must visibly travel");
+    assert.notEqual(await evaluate("getComputedStyle(document.querySelector('#hero-marker .border-wing')).transform"), wingBefore, "Bat wings must flap");
+    assert.notEqual(await evaluate("getComputedStyle(document.querySelector('#hero-marker .lantern-glow')).opacity"), lampBefore, "Lantern light must flicker");
+    assert.equal(await evaluate("document.querySelector('#hero-marker>svg').getAnimations({subtree:true}).length"), 0, "Flag, center and level must not animate");
+    assert.equal(await evaluate("document.querySelector('#color-examples').getAnimations({subtree:true}).length"), 0, "Comparison thumbnails must remain still");
+    await evaluate("document.getElementById('motion').checked=false;document.getElementById('motion').dispatchEvent(new Event('input',{bubbles:true}))");
+    assert(await evaluate("document.getAnimations().every(a=>a.playState==='paused')"), "Pause control must stop all decoration");
+    await evaluate("document.getElementById('motion').checked=true;updateMarkerPreview()");
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] }); await delay(100);
+    assert(await evaluate("document.getAnimations().every(a=>a.playState==='paused')"), "System reduced motion must stop decoration");
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
+    await evaluate("Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))");
+    assert(await evaluate("document.getAnimations().every(a=>a.playState==='paused')"), "Background lifecycle must pause motion");
+    await evaluate("delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))");
     for (const [width, height] of [[1200, 950], [844, 390], [360, 740]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false }); await delay(100);
       const metrics = await evaluate("({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,markerWidth:document.querySelector('#actual-marker').getBoundingClientRect().width,markerHeight:document.querySelector('#actual-marker').getBoundingClientRect().height,images:[...document.images].every(i=>i.complete&&i.naturalWidth>0),levelClear:document.querySelector('#hero-marker [data-city-level]').getBBox().y>34})");
       assert(metrics.width <= width, `Horizontal overflow at ${width}`); assert(metrics.images, "City art must load");
       assert.equal(metrics.markerWidth, 46); assert.equal(metrics.markerHeight, 58); assert(metrics.levelClear, "Level must stay below the flag");
-      assert.equal(await evaluate("document.getAnimations().length"), 0, "Border preview must not animate");
+      assert(await evaluate("document.getAnimations().length<=14"), "Only the two main previews may animate");
       const screenshot = await client.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: metrics.height, scale: 1 } });
       fs.writeFileSync(path.join(out, `preview-${width}.png`), Buffer.from(screenshot.data, "base64"));
     }
+    await evaluate("window.scrollTo(0,document.documentElement.scrollHeight)"); await delay(150);
+    assert.equal(await evaluate("document.getElementById('hero-marker').dataset.motion"), "off", "Offscreen hero must stop");
+    await evaluate("window.scrollTo(0,0)"); await delay(150);
+    assert.equal(await evaluate("document.getElementById('hero-marker').dataset.motion"), "on", "Visible hero must resume");
     assert.deepEqual(errors, []);
-    console.log("Halloween marker preview passed: original shape, eight color states, independent vector heraldry, live level, border toggle, static artwork, desktop and mobile layout.");
+    console.log("Halloween marker preview passed: original vector center, eight color states, independent heraldry/level, transparent painted frame, animated bats and lanterns, pause/reduced-motion/background/offscreen guards, and desktop/mobile layouts.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

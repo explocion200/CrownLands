@@ -10,12 +10,14 @@
         "docs/visual-qa/halloween-city-marker/preview.js",
         "docs/visual-qa/halloween-city-marker/style-reference.jpg",
         "docs/visual-qa/halloween-city-marker/design.json",
-        "tools/validate-halloween-marker-preview.js"
+        "tools/validate-halloween-marker-preview.js",
+        "docs/visual-qa/halloween-city-marker/ornate-frame.png",
+        "docs/visual-qa/halloween-city-marker/art-source.json"
       ],
       "tests": [
         "tools/validate-halloween-marker-preview.js"
       ],
-      "reason": "Exercise the standalone vector design preview against the existing city-color palette and flag symbol. Verify eight ownership/strength colors, independent heraldry dyes and level, original pointed geometry, static border toggle, loaded city art, and desktop, landscape-mobile and narrow-phone layouts. This draft is outside the game entry points; no shop, gameplay, backend or public appearance logic changes. Production build gates ensure the existing client artifact remains valid."
+      "reason": "Exercise the standalone design preview against the existing city-color palette and approved bat shapes. Verify eight ownership/strength colors, independent vector heraldry and level, original pointed center, PNG transparency, animated flight/wing/lantern layers, pause and reduced-motion/background/offscreen guards, and desktop/landscape/narrow-phone layouts. Motion is limited to two previews; game rendering, purchases, backend and public appearance logic are unchanged. Production build gates keep the client artifact valid."
     },
     {
       "paths": [

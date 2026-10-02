@@ -22,7 +22,7 @@
       </section>
       <section class="details" aria-label="Preview controls">
         <h2>Halloween border preview</h2>
-        <p>The narrow Halloween rim follows the existing city marker. Its center keeps the ownership and King Power colors, with the player’s flag and city level inside.</p>
+        <p>Carved pumpkin lanterns, a bat-wing crest and bronze thorn vines frame the city flag. Flying bats and a warm lantern flicker bring it to life; the center keeps the existing ownership and King Power colors.</p>
         <label for="relationship">Ownership / strength</label>
         <select id="relationship">
           <option value="owned">Your city</option><option value="main">Your main city</option><option value="clan">Clan ally</option>
@@ -36,12 +36,13 @@
         </div></fieldset>
         <div class="level-control"><label for="level">City level</label><input id="level" type="number" min="1" max="999" value="50"></div>
         <label class="toggle"><input id="border" type="checkbox" checked> Halloween border</label>
+        <label class="toggle"><input id="motion" type="checkbox" checked> Animate bats and lanterns</label>
         <div class="actual"><div id="actual-marker" class="marker actual-marker"></div><p><strong>At map size</strong><br>46 × 58 px before map zoom</p></div>
         <p class="state-label" id="state-label" role="status"></p>
       </section>
     </div>
     <section class="comparison" aria-label="Existing city color examples"><h2>Existing game colors</h2><div id="color-examples"></div></section>
-    <footer>Vector draft · Separate color, heraldry, level and decorative border · No animation</footer>
+    <footer>Design draft · Painted outer frame, editable vector center · Motion pauses offscreen and respects reduced motion</footer>
   </main>
 </body>
 </html>
