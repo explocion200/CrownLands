@@ -35942,21 +35942,16 @@ function getRewardedAdAvailability(status = rewardedAdStatus) {
 
 function startRewardedAdShopCountdown() {
   if (rewardedAdShopCountdownTimer) window.clearInterval(rewardedAdShopCountdownTimer);
+  let nextStatusRefreshAtMs = 0;
   rewardedAdShopCountdownTimer = window.setInterval(() => {
-    if (
-      !modal.open
-      || !modal.classList.contains("shop-modal")
-      || modal.classList.contains("rewarded-ad-confirmation-modal")
-    ) {
+    if (!modal.open || !modal.classList.contains("shop-modal")) {
       window.clearInterval(rewardedAdShopCountdownTimer);
       rewardedAdShopCountdownTimer = 0;
       return;
     }
-    if (getRewardedAdCooldownRemainingMs() > 0) {
-      const availability = getRewardedAdAvailability();
-      modalBody.querySelectorAll(".rewarded-ad-availability").forEach(element => setTextIfChanged(element, availability.text));
+    if (typeof updateRoyalShopCountdown === "function") {
+      nextStatusRefreshAtMs = updateRoyalShopCountdown(nextStatusRefreshAtMs);
     }
-    else if (rewardedAdStatus?.reason === "cooldown") refreshRewardedAdStatus();
   }, 1000);
 }
 

@@ -104,6 +104,31 @@ for (const [itemId, limit] of Object.entries(context.ITEM_DAILY_PURCHASE_LIMITS)
   assert.equal(status.remainingMs, 60_000, `${itemId} should lock after its daily cap.`);
 }
 
+const serverContext = {
+  Date, Math,
+  ITEM_DAILY_PURCHASE_LIMITS: itemDailyPurchaseLimits,
+  MAX_ITEM_DAILY_PURCHASE_LIMIT: context.MAX_ITEM_DAILY_PURCHASE_LIMIT,
+  timestampToMs: context.timestampToMs,
+  safeNumber: (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback,
+  safeString: (value, length) => String(value || "").trim().slice(0, length),
+};
+vm.createContext(serverContext);
+vm.runInContext([
+  "getUtcDateKey", "getNextUtcDayStartMs", "normalizeItemPurchaseTimestamps",
+  "normalizeDailyItemPurchaseCounter", "getItemDailyPurchaseLimit", "getItemPurchaseStatus",
+].map(name => extractFunction(serverSource, name)).join("\n"), serverContext, { filename: serverPath });
+const midnight = Date.parse("2026-07-24T00:00:00.000Z");
+for (const [itemId, limit] of Object.entries(itemDailyPurchaseLimits)) {
+  const counters = { [itemId]: { utcDate: "2026-07-23", purchaseCount: limit } };
+  for (const nowMs of [midnight - 1000, midnight, midnight + 1000]) {
+    const actual = JSON.parse(JSON.stringify(serverContext.getItemPurchaseStatus(itemId, counters, nowMs)));
+    const client = JSON.parse(JSON.stringify(context.getItemPurchaseStatus(itemId, counters, nowMs)));
+    assert.deepEqual(actual, client, `${itemId}: client and server reset deadlines differ`);
+    assert.equal(actual.count, nowMs < midnight ? limit : 0);
+    assert.equal(actual.remainingMs, nowMs < midnight ? 1000 : 0);
+  }
+}
+
 const selectionRenderSource = extractFunction(source, "renderSelectionChangeNow");
 assert.doesNotMatch(selectionRenderSource, /renderAll\(/, "Selection changes must not redraw the full map.");
 assert.match(selectionRenderSource, /renderCities\(\)/);
@@ -116,4 +141,4 @@ assert.match(serverSource, /function getItemPurchaseStatus[\s\S]*?getNextUtcDayS
 assert.match(serverSource, /utcDate:\s*purchaseStatus\.utcDate[\s\S]*?purchaseCount:/, "The server should persist UTC purchase counters.");
 assert.match(serverSource, /once per UTC day|times per UTC day/, "Purchase limit errors should describe UTC-day limits.");
 
-console.log("Validated UTC shop resets, legacy cooldown migration, and responsive selection rendering.");
+console.log("Validated matching client/server UTC shop resets, exact midnight boundaries, legacy cooldown migration, and responsive selection rendering.");
