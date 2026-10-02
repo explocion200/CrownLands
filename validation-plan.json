@@ -28,6 +28,11 @@
       "reason": "Keep the offline shell in sync with the updated skins script and stylesheet and HUD stylesheet URLs. Artwork uses the existing runtime cache without new install preloads. Existing production artifact validation and asset budget checks cover offline shell references and shipped files. Cache strategy and backend contract remain unchanged."
     },
     {
+      "paths": ["tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Package the two approved delivery WebPs and forbid their editable PNG sources. The measured 833-byte cosmetic module increase gets a bounded 1 KiB allowance; the 21,298 bytes of currency artwork receive a separate 24 KiB cap. Run production packaging/reference/budget validation and existing installation-cache budgets. No existing offline, entry, runtime performance or total artifact limit is relaxed."
+    },
+    {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/visual-qa/crowns-currency/README.md"],
       "tests": [],
       "reason": "Record the owner's confirmed artwork, counter order and timer alignment alongside source provenance, final generation prompts, delivery encodings and validation instructions. Documentation makes no production deployment claim."

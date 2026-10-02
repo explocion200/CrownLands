@@ -22,6 +22,8 @@ The built-in image-generation tool produced the transparent sources below from t
 
 Delivery encoding used Sharp: resize to the listed square size with `fit: "contain"` and a transparent background, then WebP with `quality: 90`, `alphaQuality: 100`, `effort: 6`. No semantic edits or background removal were done during encoding. Filenames contain the first 12 characters of their encoded SHA-256 hashes.
 
+Production validation caps the two delivery assets at 24 KiB combined (21,298 bytes measured) and rejects the source-art directory. The HUD renderer and pickup styling add 833 normalized bytes to the cosmetic modules, increasing their dedicated cap from 36 to 37 KiB. Existing offline-shell, entry-point and total artifact limits remain in place.
+
 Source SHA-256:
 
 - Coin: `ffa23f7cb2b7e52105ac4bc10654ba838db02ad4e73eb0c892e8742d3fe579e3`

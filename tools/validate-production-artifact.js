@@ -7,6 +7,8 @@ const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
+  "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
+  "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
   "login-screen.css",
   "assets/optimized/login-kingdom-960-6646f1d404b1.webp",
   "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp",
@@ -66,6 +68,7 @@ const required = [
 ];
 const forbidden = [
   "docs/art-sources/login",
+  "docs/visual-qa/crowns-currency/art",
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
   "assets/castles", "assets/inner-castle", "assets/optimized/manifest.json",
   "assets/worlds/world_01/world-layout.json",
@@ -271,14 +274,20 @@ if (seasonRewardBytes > 28 * 1024) throw new Error("Season rewards presentation 
 // 8 KiB including build metadata (CI uses full commit IDs in asset URLs).
 // Existing per-file, offline-shell and combined artifact limits still apply.
 const battleItemReportingBudget = 8 * 1024;
-// Cosmetics add catalog, transport, UI and styles with placeholder art.
-// Cap these modules at 36 KiB and reserve 8 KiB for entry/flag/build integration.
-// Final artwork needs a separate budget review; existing entry-point limits apply.
-const cosmeticModuleBudget = 36 * 1024;
+// The approved wallet HUD and purple pickup styling add 833 normalized bytes
+// over the 36,289-byte cosmetic modules. Allow one 1 KiB step, preserving the
+// separate 8 KiB integration allowance and existing entry/offline-shell limits.
+const cosmeticModuleBudget = 37 * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 36 KiB budget.");
-const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024;
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 37 KiB budget.");
+// The approved coin and pouch total 21,298 encoded bytes; bound these two
+// runtime-cached WebPs at 24 KiB. Editable source PNGs must never ship.
+const currencyArtBudget = 24 * 1024;
+const currencyArtBytes = ["assets/optimized/crown-coin-96x96-34224e7d7fb4.webp", "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (currencyArtBytes > currencyArtBudget) throw new Error("Crowns coin and pickup artwork exceed their 24 KiB budget.");
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
