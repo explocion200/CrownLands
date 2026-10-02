@@ -49,6 +49,18 @@ function appearanceChecks() {
   cosmeticState = saved;
   return { own, stronghold, captured, remote, before, after, troop, scout, rally };
 }
+function profileFrame() {
+ const frame=getComputedStyle(profileScreen),title=getComputedStyle(document.getElementById('profileScreenTitle'));
+ return {width:frame.width,height:frame.height,paper:frame.backgroundColor,border:frame.borderColor,shadow:frame.boxShadow,
+   titleFont:title.fontFamily,active:getComputedStyle(profileScreen.querySelector('.profile-tabs button.active')).backgroundColor};
+}
+function profileControls() {
+ const panel=document.querySelector('[data-skins-mode=profile]');
+ const controls=[...profileScreen.querySelectorAll('.profile-tabs button,#profileCloseBtn'),...panel.querySelectorAll('.skins-filters button,[data-skin-earn],[data-skin-browse]')];
+ return {controls:controls.map(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{name:e.id||e.textContent,visible:r.width>0&&r.height>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,hit:e===hit||e.contains(hit)};}),
+   titleWidth:document.getElementById('profileScreenTitle').getBoundingClientRect().width,
+   overflow:panel.scrollHeight>panel.clientHeight+1||panel.scrollWidth>panel.clientWidth+1};
+}
 async function main(){
  const browser=[process.env.CHROME_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","/usr/bin/google-chrome","/usr/bin/chromium"].find(p=>p&&fs.existsSync(p));assert(browser,"Chromium required");
  const server=createMapBenchmarkServer(),address=await server.listen();let session,client;const errors=[];
@@ -59,6 +71,12 @@ async function main(){
   const evaluate=async expression=>{const result=await client.send("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value;};
   const wait=async expression=>{for(let i=0;i<400;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,125));}throw Error("Timed out: "+expression);};
   const click=async selector=>{await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw Error('Missing or disabled '+${JSON.stringify(selector)});e.scrollIntoView({block:'nearest'});e.click();})()`);};
+  const tap=async selector=>{
+    await evaluate('Promise.all(profileScreen.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw Error('Missing or disabled control');e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(hit!==e&&!e.contains(hit))throw Error('Control is obscured: '+${JSON.stringify(selector)});return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+    await client.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
+    await client.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
+  };
   await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0"});await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
   await evaluate(`(${fixture.toString()})()`);await wait("!!document.querySelector('[data-skins-mode=shop]')");
   await click('[data-skin-action]');
@@ -92,14 +110,46 @@ async function main(){
   await click('[data-skin-select="default_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   for(const [width,height] of [[1440,900],[844,390],[568,320],[568,280]]){
     await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
+    await evaluate('showProfileScreen()');
+    const reference=await evaluate(`(${profileFrame.toString()})()`);
     for(const mode of ["profile","shop"]){
       await evaluate(mode==="profile"?'openMySkins()':'openSkinShop()');await wait(`!!document.querySelector('[data-skins-mode=${mode}]')`);
       await evaluate('new Promise(r=>setTimeout(r,450))');
       const metrics=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=${mode}]'),r=e.getBoundingClientRect();return{width:r.width,left:r.left,right:r.right,scroll:e.scrollWidth,client:e.clientWidth}})()`);
       assert(metrics.left>=-1&&metrics.right<=width+1,JSON.stringify(metrics));assert(metrics.scroll<=metrics.client+2,"Skins horizontal overflow");
+      if(mode==='profile'){
+        assert.deepEqual(await evaluate(`(${profileFrame.toString()})()`),reference,'Skins must share the Profile frame and typography');
+        for(const category of ['flag','troops','border','city']){
+          await tap(`[data-skins-mode=profile] [data-skin-category="${category}"]`);
+          await click('[data-skins-mode=profile] .skin-card:last-child');
+          const controls=await evaluate(`(${profileControls.toString()})()`);
+          assert(!controls.overflow&&controls.titleWidth>0&&controls.controls.every(e=>e.visible&&e.hit),`Profile controls hidden at ${width}x${height}: ${JSON.stringify(controls)}`);
+          if(category==='flag'){
+            const color=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=profile] .skin-flag-preview');return{actual:getComputedStyle(e.querySelector('.flag-symbol')).color,expected:state.flag.symbolColor};})()`);
+            assert.equal(color.actual,`rgb(${color.expected.replace('#','').match(/../g).map(n=>parseInt(n,16)).join(', ')})`,'Profile theme must preserve flag colors');
+            await tap('[data-skin-editor]');assert(await evaluate('!flagEditorView.hidden'));
+            await click('#skinsTabBtn');
+          }
+        }
+        await tap('[data-skins-mode=profile] [data-skin-action]');await wait('!cosmeticBusy');
+        assert.equal(await evaluate('cosmeticState.equipped.city'),'halloween_city');
+        await click('[data-skins-mode=profile] [data-skin-select=default_city]');
+        await tap('[data-skins-mode=profile] [data-skin-action]');await wait('!cosmeticBusy');
+        assert.equal(await evaluate('cosmeticState.equipped.city'),'');
+        await click('[data-skins-mode=profile] [data-skin-select=halloween_city]');
+        await evaluate("document.querySelector('[data-skins-mode=profile] .skin-detail').scrollTop=0");
+      }else assert(await evaluate('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).pointerEvents==="none"'),'The closed profile must not cover Shop');
       const footer=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=${mode}] [data-skin-browse]');e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),panel=e.closest('.skins-panel').getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{top:r.top,bottom:r.bottom,panelBottom:panel.bottom,clickable:e===hit||e.contains(hit)}})()`);
       assert(footer.top>=0&&footer.bottom<=Math.min(height,footer.panelBottom)+1&&footer.clickable,`${mode} footer inaccessible at ${width}x${height}: ${JSON.stringify(footer)}`);
       const screenshot=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,`${mode}-${width}x${height}.png`),Buffer.from(screenshot.data,'base64'));
+      if(mode==='profile'){
+        await tap('#profileTabBtn');assert(await evaluate('activeProfileTab==="profile"'));
+        assert.deepEqual(await evaluate(`(${profileFrame.toString()})()`),reference,'Returning to Profile must preserve its theme');
+        await tap('#skillsTabBtn');assert(await evaluate('activeProfileTab==="skills"'));
+        await tap('#settingsTabBtn');assert(await evaluate('activeProfileTab==="settings"'));
+        await tap('#skinsTabBtn');await tap('#profileCloseBtn');
+        await wait('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).visibility==="hidden" && getComputedStyle(profileScreen).pointerEvents==="none"');
+      }
     }
   }
   await evaluate('cosmeticOffset=Date.UTC(2026,10,1)-Date.now();cosmeticState=COSMETIC_CATALOG.normalize();cosmeticSelected="halloween_city";refreshCosmeticPanels()');
