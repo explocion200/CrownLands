@@ -64,9 +64,15 @@ const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLo
   cacheLimit: REGION_DEFINITION_CACHE_LIMIT,
   getActiveRegionId: () => getActiveMapRegionId(),
   fetchJson: async (definitionPath, summary) => {
-    const response = await fetch(definitionPath, { cache: "no-cache", credentials: "same-origin" });
-    if (!response.ok) throw new Error(`${summary.name || summary.id} definition returned HTTP ${response.status}.`);
-    return response.json();
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(definitionPath, { cache: "no-cache", credentials: "same-origin", signal: controller.signal });
+      if (!response.ok) throw new Error(`${summary.name || summary.id} definition returned HTTP ${response.status}.`);
+      return await response.json();
+    } finally {
+      window.clearTimeout(timeout);
+    }
   },
   onLoad: regionId => {
     editorMapCache.delete(regionId);
@@ -15789,14 +15795,21 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     if (fromMapPicker) showToast("Finish loading the current island first.");
     return false;
   }
+  const targetLabel = getRegionLabel(targetRegionId);
   const sourceRegionId = normalizeRegionId(getActiveMapRegionId());
+  const switchState = state;
+  const session = onlineSessionGeneration;
+  setMapSwitchLoading(`Loading ${targetLabel}...`);
   try {
     await ensureRegionDefinitionLoaded(targetRegionId, { protectedRegionIds: [sourceRegionId] });
   } catch (error) {
-    console.warn(`Could not load ${getRegionLabel(targetRegionId)} definition`, error);
-    showToast(`Could not load ${getRegionLabel(targetRegionId)}. Your current map is unchanged.`);
+    console.warn(`Could not load ${targetLabel} definition`, error);
+    showToast(`Could not load ${targetLabel}. Your current map is unchanged.`);
     return false;
+  } finally {
+    clearMapSwitchLoading();
   }
+  if (state !== switchState || onlineSessionGeneration !== session) return false;
   if (!state) {
     const transition = sourceRegionId === targetRegionId
       ? null
@@ -15804,7 +15817,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     try {
       const ready = await preloadIslandMap(targetRegionId);
       if (!ready) {
-        showToast(`Could not load ${getRegionLabel(targetRegionId)} map art.`);
+        showToast(`Could not load ${targetLabel} map art.`);
         cancelMapVisualTransition(transition);
         return false;
       }
@@ -15827,13 +15840,13 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
   if (!getOnlineApi()?.isSignedIn?.()) {
     const transition = beginMapVisualTransition(sourceRegionId, targetRegionId, { fromMapPicker, transitionSide });
     let transitionSettled = false;
-    setMapSwitchLoading(`Loading ${getRegionLabel(targetRegionId)}...`);
+    setMapSwitchLoading(`Loading ${targetLabel}...`);
     prepareSelectionForIslandSwitch();
     if (!preserveModal && fromMapPicker && modal.open) modal.close();
     try {
       const ready = await preloadIslandMap(targetRegionId);
       if (!ready) {
-        showToast(`Could not load ${getRegionLabel(targetRegionId)} map art.`);
+        showToast(`Could not load ${targetLabel} map art.`);
         return false;
       }
       state.activeRegionId = targetRegionId;
@@ -15853,7 +15866,6 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
 
   const previousRegionId = getActiveOnlineRegionId();
   const previousLabel = getRegionLabel(previousRegionId);
-  const targetLabel = getRegionLabel(targetRegionId);
   const homeRegionId = state.online?.mainRegionId || previousRegionId;
   let leftPreviousIsland = false;
   const transition = beginMapVisualTransition(previousRegionId, targetRegionId, { fromMapPicker, transitionSide });
@@ -15863,10 +15875,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
   if (!preserveModal && fromMapPicker && modal.open) modal.close();
   try {
     onlineStatusDetail.textContent = `Preparing ${targetLabel}...`;
-    const [mapReady] = await Promise.all([
-      preloadIslandMap(targetRegionId, { fetchPriority: "high" }),
-      ensureRegionDefinitionLoaded(targetRegionId, { protectedRegionIds: [previousRegionId] }),
-    ]);
+    const mapReady = await preloadIslandMap(targetRegionId, { fetchPriority: "high" });
     if (!mapReady) {
       showToast(`Could not load ${targetLabel} map art.`);
       onlineStatusDetail.textContent = `${previousLabel} connected.`;

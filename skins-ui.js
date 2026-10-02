@@ -82,7 +82,8 @@ function cosmeticCityAttributes(city) {
 
 function applyCosmeticCityNode(node, city) {
   const [skin, border] = cosmeticCityAttributes(city).split(":");
-  node.dataset.citySkin = skin || ""; node.dataset.flagBorder = border || "";
+  if (node.dataset.citySkin !== (skin || "")) node.dataset.citySkin = skin || "";
+  if (node.dataset.flagBorder !== (border || "")) node.dataset.flagBorder = border || "";
   const art = COSMETIC_CATALOG.item(skin)?.assets?.[getCastleStage(city.level)];
   const image = node.querySelector(".city-art");
   if (art && image && image.getAttribute("src") !== art) {
