@@ -43,7 +43,27 @@ async function main() {
     assert.equal(await evaluate("document.querySelector('#hero-marker [data-city-level]').textContent"), "99");
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#hero-marker [data-city-fill]')).fill"), "rgb(75, 20, 24)");
     assert.equal(await evaluate("document.querySelector('#hero-marker [data-city-fill]').getAttribute('d')"), "M0 0H46V47.56L23 58L0 47.56Z");
-    assert(await evaluate("(()=>{const svg=document.querySelector('#hero-marker>svg'),flag=svg.querySelector('clipPath rect').getBBox(),level=svg.querySelector('[data-city-level]').getBBox();return flag.x<=0&&flag.y<=0&&flag.x+flag.width>=svg.viewBox.baseVal.width&&flag.y+flag.height<level.y})()"), "Flag must meet the frame at the top and both sides without covering the level band");
+    const lowerFrameFits = await evaluate(`(() => {
+      const svg = document.querySelector('#hero-marker>svg'), img = document.querySelector('#hero-marker .ornate-frame');
+      const marker = svg.getBoundingClientRect(), frame = img.getBoundingClientRect();
+      const canvas = document.createElement('canvas'); canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+      // Sample the actual transparent opening along both lower diagonal edges.
+      return [1060, 1100, 1120].every(row => {
+        const pixels = ctx.getImageData(0, row, canvas.width, 1).data;
+        return [-1, 1].every(direction => {
+          let column = Math.floor(canvas.width / 2);
+          if (pixels[column * 4 + 3] >= 128) return false;
+          while (column > 0 && column < canvas.width - 1 && pixels[column * 4 + 3] < 128) column += direction;
+          column -= direction;
+          const x = (frame.left - marker.left + column * frame.width / canvas.width) * 46 / marker.width;
+          const y = (frame.top - marker.top + row * frame.height / canvas.height) * 58 / marker.height;
+          const inset = y <= 47.56 ? 0 : 23 * (y - 47.56) / (58 - 47.56);
+          return y <= 58 && x >= inset - .1 && x <= 46 - inset + .1;
+        });
+      });
+    })()`);
+    assert(lowerFrameFits, "The lower frame opening must overlap the colored marker, leaving no transparent V-shaped gap");
     await evaluate("document.getElementById('border').checked=false;document.getElementById('border').dispatchEvent(new Event('input',{bubbles:true}))");
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#hero-marker [data-halloween-border]')).display"), "none");
     await evaluate("document.getElementById('primary').value='#182b3e';document.getElementById('secondary').value='#a9443b';document.getElementById('symbol').value='#eee5cd';document.getElementById('level').value='50';document.getElementById('border').checked=true;updateMarkerPreview()");

@@ -12,9 +12,9 @@
   },
   "layers": {
     "cityFill": "SVG path controlled by --city-tone; preview reads existing ownership/strength palette colors",
-    "playerFlag": "Independent vector primary/secondary dyes and crossed-swords symbol; sample heraldry is illustrative. The upper flag fills the frame opening edge to edge with 1 SVG unit of bleed under the painted rim, removing the old inset and double border. A full-width divider at y=34 separates the city-level band.",
+    "playerFlag": "Independent vector primary/secondary dyes and crossed-swords symbol; sample heraldry is illustrative",
     "level": "Editable SVG text; preserves the current owned-city dark ink and other states' light ink",
-    "decoration": "Transparent painted PNG: ornate bronze and iron rim, thorn vines, bat-wing skull crest, three pumpkin lanterns. Two moving bats use the existing approved city-bat shapes, with wing flaps and lantern opacity flicker."
+    "decoration": "Transparent painted PNG: ornate bronze and iron rim, thorn vines, bat-wing skull crest, three pumpkin lanterns. The frame is fitted at 148% width and 138% height, offset -24% left and -22% top, so its lower V overlaps the colored city marker without a transparent gap. The original inset player flag remains unchanged. Two moving bats use the existing approved city-bat shapes, with wing flaps and lantern opacity flicker."
   },
   "sources": [
     "styles.css: .foreign-city-shield, .city-owner-column, .enemy-power-unknown",

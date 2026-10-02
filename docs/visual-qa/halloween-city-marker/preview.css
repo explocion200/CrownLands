@@ -4,7 +4,7 @@
 .marker{position:relative;isolation:isolate}
 .marker>svg{position:relative;z-index:0}
 [data-halloween-border]{position:absolute;inset:0;pointer-events:none;z-index:1}
-.ornate-frame{position:absolute;width:148%;max-width:none;height:auto;left:-24%;top:-24%;pointer-events:none}
+.ornate-frame{position:absolute;width:148%;max-width:none;height:138%;left:-24%;top:-22%;pointer-events:none}
 .hero{width:150px}
 .city-name{margin-bottom:54px}
 .city-art{margin-top:44px;height:150px}
@@ -15,7 +15,7 @@
 .lantern-glow{position:absolute;width:25%;aspect-ratio:1;border-radius:50%;background:radial-gradient(closest-side,#ffe59ba6,#ef9d3d42 45%,#ea921600 100%);opacity:.3;pointer-events:none}
 .lantern-left{left:-19%;top:-18%}
 .lantern-right{right:-19%;top:-18%}
-.lantern-bottom{left:37.5%;top:103%}
+.lantern-bottom{left:37.5%;top:94%}
 .border-flight{position:absolute;width:27%;aspect-ratio:70/48;left:-37%;top:20%;transform:translate(0,-30%) rotate(-12deg)}
 .flight-right{left:auto;right:-36%;top:59%;width:25%;transform:translate(0,25%) rotate(10deg)}
 .border-bat{position:absolute;inset:0;fill:#3c2d3d;stroke:#211b22;stroke-width:1.35;stroke-linejoin:round}
