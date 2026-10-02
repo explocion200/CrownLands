@@ -67,9 +67,11 @@ async function main(){
   await evaluate('cosmeticState=__skinQA.wallet;refreshCosmeticPanels()');
   await click('[data-skin-action]');assert.equal(await evaluate('cosmeticConfirmation.price'),600);await click('[data-skin-confirm]');await wait('!cosmeticBusy');
   assert.equal(await evaluate('cosmeticState.crowns'),1400);assert.equal(await evaluate('cosmeticState.equipped.city'),"");
+  assert.equal(await evaluate('document.getElementById("crownsBalance").title'),"1,400 Crowns","Confirmed spending must update the map counter");
   await click('[data-skin-select="halloween_collection"]');assert.equal(await evaluate('COSMETIC_CATALOG.quote(cosmeticSelected,cosmeticState,cosmeticNow()).price'),720);
   await evaluate('__skinQA.mode="lost"');await click('[data-skin-action]');await click('[data-skin-confirm]');await wait('!cosmeticBusy');assert.equal(await evaluate('!!cosmeticPendingPurchase'),true);
   await click('[data-skin-reload]');await wait('!cosmeticBusy');assert.equal(await evaluate('__skinQA.purchases'),2);assert.equal(await evaluate('cosmeticState.crowns'),680);assert.equal(await evaluate('__skinQA.requests[1].requestId===__skinQA.requests[2].requestId'),true);
+  assert.equal(await evaluate('document.getElementById("crownsText").textContent'),"680","A reconciled purchase must update the counter once");
   const appearances = await evaluate(`(${appearanceChecks.toString()})()`);
   assert.deepEqual(appearances.own,["halloween_city","halloween_border"]);
   assert.deepEqual(appearances.stronghold,["",""]);assert.deepEqual(appearances.captured,["",""]);

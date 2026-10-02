@@ -40822,8 +40822,7 @@ function getElementAvoidRect(element, viewRect, padding = 12) {
 
 function getMainCityReturnAvoidRects(viewRect) {
   return [
-    document.querySelector(".profile-stack"),
-    document.querySelector(".resource-bar"),
+    ...document.querySelectorAll(".profile-stack, .profile-action-row, .resource-bar, #quickChat, #chatToggleBtn"),
     inventoryBtn,
     shopBtn,
     cityListBtn,

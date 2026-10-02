@@ -35,7 +35,7 @@ function getNotificationOpenUrl(notificationData = {}) {
 // Optional screen styles are requested when their screen opens and use the
 // bounded runtime cache. Keep installation focused on the playable shell.
 const STATIC_CACHE_URLS = [
-  "/main-screen-art-ui.css?v=20260923-hud-ink-r1",
+  "/main-screen-art-ui.css?v=20261001-crowns-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",
   "/player-journey.css?v=20260920-journey-r1",
@@ -74,9 +74,9 @@ const STATIC_CACHE_URLS = [
   "/common-gear.js?v=20260825-gear-upgrade-consumption-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
   "/functions/cosmetics.js?v=halloween-v1",
-  "/skins-ui.js?v=halloween-v1",
+  "/skins-ui.js?v=crowns-ui-r1",
   "/cosmetics-client.js?v=halloween-v1",
-  "/skins-ui.css?v=halloween-v1",
+  "/skins-ui.css?v=crowns-ui-r1",
   "/functions/playerFlagConfig.js?v=20260825-player-flags-audit-r1",
   "/functions/flagRenderer.js?v=20260819-player-flags-v2-r1",
   "/functions/clanHeraldryConfig.js?v=20260823-clan-heraldry-live-ui-r1",

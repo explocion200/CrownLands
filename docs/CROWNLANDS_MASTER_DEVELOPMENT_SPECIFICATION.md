@@ -968,6 +968,14 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Wallets, ownership, equipped choices and purchase/collection receipts are permanent account records outside seasonal profiles. Balances and inventories are private; only equipped appearance data is public. Server transactions control rewards, pricing, grants and equipment. Duplicate collection requests and seasonal counter replacement cannot restore a spent Crown allowance. Failed/expired claims cannot debit or grant currency.
 - Support desktop, keyboard navigation and landscape mobile. Keep map hit areas, levels, relationship markers and intelligence rules intact; missing art falls back to the standard appearance while retaining ownership.
 
+#### Approved Crowns counter and pickup presentation — October 1, 2026
+
+- Show the permanent Crowns wallet directly beneath Gold under the player profile. Both counters share a burgundy panel treatment, width, aligned icons and amounts. Crowns use the approved muted purple coin with an antique silver rim and a pale crown; Gold retains the approved engraved Gold coin.
+- Display the confirmed wallet balance, updating after collection, spending and wallet snapshots. Show an unavailable/loading mark while the current account's wallet is unknown, and clear the previous account's balance on sign-out or account changes. The compact number exposes its exact amount through accessible text and a tooltip.
+- Place Shield Cooldown and Retaliation below the Crowns counter, aligned to the same left edge with consistent spacing. Preserve existing deadlines, city identities, expandable retaliation details and map-location actions. Keep the stack and nearby controls usable on desktop and landscape mobile.
+- Crown pickups use the approved purple pouch with matching silver-and-purple coins inside the same circular marker as Gold and troop pickups. Tint its ring, radial glow and artwork halo purple. Retain existing pickup sizing, hit area, motion preferences, collection authority, timing and the one-Crown reward.
+- This approval covers the currency artwork and HUD layout; the Halloween skin catalog's other placeholder art remains pending. Sources, prompts and visual checks: [Crowns currency artwork](./visual-qa/crowns-currency/README.md). Status: approved for implementation; production deployment requires separate authorization and verification.
+
 ### Monetization
 
 - Optional rewarded-ad pathways exist. **Status:** `LIVE — ALL PUBLISHED CHANNELS` for the foundation; exact availability may depend on channel configuration.
