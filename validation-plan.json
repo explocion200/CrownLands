@@ -35,6 +35,11 @@
       "reason": "Validate the motion guards and bounded renderer against a 60-city fixture, then verify the real map and selected preview still show moving bats while collection thumbnails and the covered map stay still. Frame timings are reported, not used as hardware-dependent pass/fail thresholds."
     },
     {
+      "paths": ["tools/validate-pwa-entry-routing.js"],
+      "tests": ["tools/validate-focused-browser-smoke.js"],
+      "reason": "Update the service-worker test fixture to supply the timers and FetchEvent.waitUntil lifecycle used by the current worker. This restores the production smoke dependency needed to verify the changed client/cache asset versions without changing routing behavior."
+    },
+    {
       "paths": ["tools/validate-production-artifact.js"],
       "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
       "reason": "The existing build gate checks the narrowly increased 56 KiB cosmetics module cap against 57,104 normalized bytes. No new art or dependencies; all other entry, shell and asset caps remain enforced."
