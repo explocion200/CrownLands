@@ -69,16 +69,20 @@ async function main(){
   session=await startBrowserSession(browser);client=await CdpClient.connect(session.targets.find(t=>t.type==="page").webSocketDebuggerUrl);
   await client.send("Runtime.enable");await client.send("Page.enable");client.on("Runtime.exceptionThrown",event=>errors.push(event.exceptionDetails.exception?.description||event.exceptionDetails.text));
   const evaluate=async expression=>{const result=await client.send("Runtime.evaluate",{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description||result.exceptionDetails.text);return result.result.value;};
-  const wait=async expression=>{for(let i=0;i<400;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,125));}throw Error("Timed out: "+expression);};
+  const wait=async expression=>{for(let i=0;i<400;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,125));}throw Error("Timed out: "+expression+"; "+JSON.stringify(await evaluate("({tab:activeProfileTab,dialog:flagDiscardDialog.open,result:flagDiscardDialog.returnValue,pending:!!pendingFlagEditorExit})"))+"; "+JSON.stringify(errors));};
   const click=async selector=>{await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw Error('Missing or disabled '+${JSON.stringify(selector)});e.scrollIntoView({block:'nearest'});e.click();})()`);};
   const tap=async selector=>{
     await evaluate('Promise.all(profileScreen.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
-    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw Error('Missing or disabled control');e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(hit!==e&&!e.contains(hit))throw Error('Control is obscured: '+${JSON.stringify(selector)});return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw Error('Missing or disabled control');e.scrollIntoView({block:'center',behavior:'instant'});const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);if(hit!==e&&!e.contains(hit))throw Error('Control is obscured at '+innerWidth+'x'+innerHeight+' bounds '+JSON.stringify(r)+' scroll '+flagEditorControlScroll.scrollTop+' by '+hit?.outerHTML.slice(0,400)+': '+${JSON.stringify(selector)});return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);
     await client.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
     await client.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
   };
   await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0"});await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
   await evaluate(`(${fixture.toString()})()`);await wait("!!document.querySelector('[data-skins-mode=shop]')");
+  const originalFlag=await evaluate('state.flag');
+  await evaluate('modal.close();showProfileScreen();showFlagEditor();setFlagEditorSection("symbol")');
+  assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),0,'Unowned flag icons must not appear in the editor');
+  await evaluate('openSkinShop()');
   await click('[data-skin-action]');
   await evaluate('cosmeticState={...cosmeticState,crowns:10};refreshCosmeticPanels()');
   assert.equal(await evaluate('cosmeticConfirmation'),null,"A changed wallet must dismiss an unaffordable confirmation");
@@ -89,6 +93,7 @@ async function main(){
   await click('[data-skin-select="halloween_collection"]');assert.equal(await evaluate('COSMETIC_CATALOG.quote(cosmeticSelected,cosmeticState,cosmeticNow()).price'),720);
   await evaluate('__skinQA.mode="lost"');await click('[data-skin-action]');await click('[data-skin-confirm]');await wait('!cosmeticBusy');assert.equal(await evaluate('!!cosmeticPendingPurchase'),true);
   await click('[data-skin-reload]');await wait('!cosmeticBusy');assert.equal(await evaluate('__skinQA.purchases'),2);assert.equal(await evaluate('cosmeticState.crowns'),680);assert.equal(await evaluate('__skinQA.requests[1].requestId===__skinQA.requests[2].requestId'),true);
+  assert.deepEqual(await evaluate('state.flag'),originalFlag,'Purchasing flag icons must not equip them');
   assert.equal(await evaluate('document.getElementById("crownsText").textContent'),"680","A reconciled purchase must update the counter once");
   const appearances = await evaluate(`(${appearanceChecks.toString()})()`);
   assert.deepEqual(appearances.own,["halloween_city","halloween_border"]);
@@ -119,17 +124,12 @@ async function main(){
       assert(metrics.left>=-1&&metrics.right<=width+1,JSON.stringify(metrics));assert(metrics.scroll<=metrics.client+2,"Skins horizontal overflow");
       if(mode==='profile'){
         assert.deepEqual(await evaluate(`(${profileFrame.toString()})()`),reference,'Skins must share the Profile frame and typography');
-        for(const category of ['flag','troops','border','city']){
+        assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=profile] [data-skin-category]")].map(e=>e.dataset.skinCategory)'),['city','troops','border'],'Flag icons belong in the flag editor');
+        for(const category of ['troops','border','city']){
           await tap(`[data-skins-mode=profile] [data-skin-category="${category}"]`);
           await click('[data-skins-mode=profile] .skin-card:last-child');
           const controls=await evaluate(`(${profileControls.toString()})()`);
           assert(!controls.overflow&&controls.titleWidth>0&&controls.controls.every(e=>e.visible&&e.hit),`Profile controls hidden at ${width}x${height}: ${JSON.stringify(controls)}`);
-          if(category==='flag'){
-            const color=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=profile] .skin-flag-preview');return{actual:getComputedStyle(e.querySelector('.flag-symbol')).color,expected:state.flag.symbolColor};})()`);
-            assert.equal(color.actual,`rgb(${color.expected.replace('#','').match(/../g).map(n=>parseInt(n,16)).join(', ')})`,'Profile theme must preserve flag colors');
-            await tap('[data-skin-editor]');assert(await evaluate('!flagEditorView.hidden'));
-            await click('#skinsTabBtn');
-          }
         }
         await tap('[data-skins-mode=profile] [data-skin-action]');await wait('!cosmeticBusy');
         assert.equal(await evaluate('cosmeticState.equipped.city'),'halloween_city');
@@ -145,7 +145,7 @@ async function main(){
         assert(await evaluate('document.querySelector("[data-skins-mode=profile] [data-skin-action]").disabled && getComputedStyle(document.querySelector("[data-skins-mode=profile]")).overflowY==="auto"'),'Loading must remain readable and prevent premature equip');
         await evaluate('applyCosmeticResult({state:__skinQA.wallet});document.querySelector("[data-skins-mode=profile]").scrollTop=0');
       }else assert(await evaluate('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).pointerEvents==="none"'),'The closed profile must not cover Shop');
-      const footer=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=${mode}] [data-skin-browse]');e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),panel=e.closest('.skins-panel').getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{top:r.top,bottom:r.bottom,panelBottom:panel.bottom,clickable:e===hit||e.contains(hit)}})()`);
+      const footer=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=${mode}] [data-skin-browse]');e.scrollIntoView({block:'center',behavior:'instant'});const r=e.getBoundingClientRect(),panel=e.closest('.skins-panel').getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{top:r.top,bottom:r.bottom,panelBottom:panel.bottom,clickable:e===hit||e.contains(hit)}})()`);
       assert(footer.top>=0&&footer.bottom<=Math.min(height,footer.panelBottom)+1&&footer.clickable,`${mode} footer inaccessible at ${width}x${height}: ${JSON.stringify(footer)}`);
       const screenshot=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,`${mode}-${width}x${height}.png`),Buffer.from(screenshot.data,'base64'));
       if(mode==='profile'){
@@ -155,13 +155,46 @@ async function main(){
         await tap('#settingsTabBtn');assert(await evaluate('activeProfileTab==="settings"'));
         await tap('#skinsTabBtn');await tap('#profileCloseBtn');
         await wait('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).visibility==="hidden" && getComputedStyle(profileScreen).pointerEvents==="none"');
+      }else{
+        await tap('[data-skins-mode=shop] [data-skin-category=flag]');
+        await click('[data-skins-mode=shop] [data-skin-select=halloween_pumpkin]');
+        assert.equal(await evaluate('document.querySelector("[data-skins-mode=shop] [data-skin-action]").textContent'),'Open Flag Editor');
+        const savedFlag=await evaluate('state.flag');
+        await tap('[data-skins-mode=shop] [data-skin-action]');
+        assert(await evaluate('!modal.open && !flagEditorView.hidden && flagEditorSection==="symbol" && activeProfileTab==="profile"'),'Owned flag icons must open Edit Flag → Symbol');
+        assert.deepEqual(await evaluate('state.flag'),savedFlag,'Opening the editor must not equip an icon');
+        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),4);
+        assert(await evaluate('!!flagSymbolOptions.querySelector("[data-flag-symbol=crown]")'),'Existing free icons must remain available');
+        await tap('#flagSymbolOptions button[data-flag-symbol=halloween-pumpkin]');
+        assert.deepEqual(await evaluate('({...flagDraft,symbol:state.flag.symbol})'),savedFlag,'Selecting an icon must preserve colors and pattern');
+        assert.deepEqual(await evaluate('state.flag'),savedFlag,'Only Save Flag applies the draft');
+        await evaluate('applyCosmeticResult({state:__skinQA.wallet})');
+        assert.equal(await evaluate('flagDraft.symbol'),'halloween-pumpkin','Wallet refresh must preserve the draft');
+        await tap('#skinsTabBtn');assert(await evaluate('flagDiscardDialog.open'),'Leaving an edited flag must ask before discarding');
+        await tap('#flagStayEditingBtn');await wait('!flagDiscardDialog.open && !pendingFlagEditorExit');
+        await tap('#flagSaveBtn');await wait('!flagSaveInFlight');
+        assert(await evaluate('state.flag.symbol==="halloween-pumpkin" && !isFlagEditorDirty()'),'Save Flag must apply the chosen icon');
+        const editorShot=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,`flag-editor-${width}x${height}.png`),Buffer.from(editorShot.data,'base64'));
+        await tap('#flagSymbolOptions button[data-flag-symbol=crown]');await tap('#flagSaveBtn');await wait('!flagSaveInFlight');
+        assert.equal(await evaluate('state.flag.symbol'),'crown','Free icons still save through the same editor');
+        await evaluate('cosmeticState=null;refreshCosmeticPanels()');
+        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),0);
+        await tap('#flagSymbolOptions button[data-flag-symbol=lion]');
+        await evaluate('applyCosmeticResult({state:__skinQA.wallet})');
+        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),4,'Late ownership must update an open editor');
+        assert.equal(await evaluate('flagDraft.symbol'),'lion','Late ownership must preserve unsaved edits');
+        await tap('#skinsTabBtn');
+        assert(await evaluate('flagDiscardDialog.open && !!pendingFlagEditorExit'),'Discard must retain the requested destination');
+        await tap('#flagDiscardChangesBtn');await wait('!flagDiscardDialog.open && activeProfileTab==="skins"');
+        assert.equal(await evaluate('state.flag.symbol'),'crown','Discard must keep the saved flag');
+        await tap('[data-skins-mode=profile] [data-skin-browse]');
       }
     }
   }
   await evaluate('cosmeticOffset=Date.UTC(2026,10,1)-Date.now();cosmeticState=COSMETIC_CATALOG.normalize();cosmeticSelected="halloween_city";refreshCosmeticPanels()');
   assert(await evaluate('document.querySelector("[data-skins-mode=shop] [data-skin-action]").disabled'));
   await click('[data-rs-section="provisions"]');assert(await evaluate('!!document.querySelector(".rs-shop-selection")'));
-  assert.deepEqual(errors,[]);console.log("Cosmetics browser passed: purchase, bundle, uncertain receipt retry, equip/default, map appearance, sale closure and desktop/landscape layouts.");
+  assert.deepEqual(errors,[]);console.log("Cosmetics browser passed: purchase, bundle, uncertain receipt retry, flag editor ownership/save/discard, equip/default, map appearance, sale closure and desktop/landscape layouts.");
  }finally{if(client){await client.send("Browser.close").catch(()=>{});client.close();}if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}await server.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -101,16 +101,13 @@ function cosmeticPreview(item) {
 }
 
 function cosmeticChoices(mode) {
-  const category = cosmeticCategory === "all" || cosmeticCategory === "bundle" ? "city" : cosmeticCategory;
   if (mode === "shop") return COSMETIC_CATALOG.OFFERS.filter(item => cosmeticCategory === "all" || item.category === cosmeticCategory);
-  const defaults = category === "flag"
-    ? PLAYER_FLAG_CONFIG.SELECTABLE_SYMBOLS.map(option => ({ id: `free_${option.key}`, category: "flag", name: option.label, symbol: option.key, free: true, description: "Free flag symbol. Your colors and pattern are preserved." }))
-    : [{ id: `default_${category}`, category, name: "Default", free: true, description: "Restore the original appearance." }];
+  const category = ["city", "troops", "border"].includes(cosmeticCategory) ? cosmeticCategory : "city";
+  const defaults = [{ id: `default_${category}`, category, name: "Default", free: true, description: "Restore the original appearance." }];
   return [...defaults, ...COSMETIC_CATALOG.ITEMS.filter(item => item.category === category && cosmeticState?.owned[item.id])];
 }
 
 function cosmeticEquipped(item) {
-  if (item.category === "flag") return state?.flag?.symbol === item.symbol;
   return (cosmeticState?.equipped[item.category] || "") === (item.free ? "" : item.id);
 }
 
@@ -119,13 +116,12 @@ function renderSkinsPanel(mode = "shop") {
   const choices = cosmeticChoices(mode);
   if (!choices.some(item => item.id === cosmeticSelected)) cosmeticSelected = choices[0]?.id || "";
   const selected = choices.find(item => item.id === cosmeticSelected);
-  const categories = library ? Object.entries(COSMETIC_CATALOG.CATEGORIES) : [["all", "All"], ...Object.entries(COSMETIC_CATALOG.CATEGORIES), ["bundle", "Bundles"]];
-  const activeCategory = library && ["all", "bundle"].includes(cosmeticCategory) ? "city" : cosmeticCategory;
+  const categories = library ? Object.entries(COSMETIC_CATALOG.CATEGORIES).filter(([id]) => id !== "flag") : [["all", "All"], ...Object.entries(COSMETIC_CATALOG.CATEGORIES), ["bundle", "Bundles"]];
+  const activeCategory = library ? choices[0].category : cosmeticCategory;
   const quote = !library && selected && cosmeticState ? COSMETIC_CATALOG.quote(selected.id, cosmeticState, cosmeticNow()) : null;
   const owned = library || quote?.missing.length === 0;
   const sale = COSMETIC_CATALOG.availability(cosmeticNow());
-  let action = library ? cosmeticEquipped(selected || {}) ? "Equipped" : selected?.free ? "Restore Default" : "Equip" : owned ? "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
-  if (library && selected?.category === "flag" && selected.free && !cosmeticEquipped(selected)) action = "Equip";
+  const action = library ? cosmeticEquipped(selected || {}) ? "Equipped" : selected?.free ? "Restore Default" : "Equip" : owned ? selected?.category === "flag" ? "Open Flag Editor" : "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
   const disabled = cosmeticBusy || !cosmeticState || (library ? cosmeticEquipped(selected || {}) : !owned && (!quote?.onSale || cosmeticState.crowns < quote.price));
   const feedback = cosmeticError || (cosmeticPendingPurchase ? "A purchase needs checking. Check its result before buying again." : "");
   if (cosmeticConfirmation && !cosmeticBusy && !cosmeticPendingPurchase && (!quote || cosmeticConfirmation.offerId !== quote.offerId || cosmeticConfirmation.price !== quote.price || !quote.onSale || cosmeticState.crowns < quote.price)) cosmeticConfirmation = null;
@@ -138,7 +134,7 @@ function renderSkinsPanel(mode = "shop") {
     ${!cosmeticUid ? '<p role="status">Sign in to load your permanent collection.</p>' : !cosmeticState && !cosmeticError ? '<p role="status">Loading your collection…</p>' : ""}
     <div class="skins-body"><div class="skins-grid" aria-label="Cosmetics">${choices.map(item => `<button type="button" class="skin-card" data-skin-select="${item.id}" aria-pressed="${item.id === cosmeticSelected}">${cosmeticPreview(item)}<strong>${escapeHtml(item.name)}</strong><span>${library ? cosmeticEquipped(item) ? "Equipped" : item.free ? "Free" : "Owned" : cosmeticState && COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).missing.length === 0 ? "Owned" : (cosmeticState ? COSMETIC_CATALOG.quote(item.id,cosmeticState,cosmeticNow()).price : item.price ?? 1200) + " Crowns"}</span></button>`).join("")}</div>
     <section class="skin-detail" aria-label="Selected cosmetic">${selected ? `${cosmeticPreview(selected)}<h3>${escapeHtml(selected.name)}</h3><p>${escapeHtml(selected.description)}</p>${selected.placeholder ? '<p class="skins-notice">Preview uses temporary artwork.</p>' : ""}${quote?.missing.length ? `<p><strong>${quote.price} Crowns</strong>${selected.itemIds ? " · 20% off unowned pieces" : ""}</p><ul>${quote.missing.map(id => `<li>${escapeHtml(COSMETIC_CATALOG.item(id).name)}</li>`).join("")}</ul>` : ""}${confirm ? `<section class="skin-confirm" aria-label="Confirm purchase"><h3>Confirm purchase</h3><p>Unlock ${confirm.missing.length} item${confirm.missing.length === 1 ? "" : "s"} for <strong>${confirm.price} Crowns</strong>.</p><p>Balance after purchase: <strong>${cosmeticState.crowns - confirm.price} Crowns</strong></p><button type="button" data-skin-confirm ${cosmeticBusy ? "disabled" : ""}>${cosmeticBusy ? "Checking…" : "Confirm Purchase"}</button><button type="button" data-skin-cancel ${cosmeticBusy ? "disabled" : ""}>Cancel</button></section>` : `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>${quote && !owned && quote.onSale && cosmeticState.crowns < quote.price ? '<p>Not enough Crowns. Collect Crown pickups on the map.</p>' : ""}`}` : ""}</section></div>
-    <footer class="skins-footer"><button type="button" data-skin-browse>${library ? "Browse Shop" : "My Skins"}</button>${library && activeCategory === "flag" ? '<button type="button" data-skin-editor>Open Flag Editor</button>' : ""}<span>Appearance only · Owned items remain usable all year</span></footer></section>`;
+    <footer class="skins-footer"><button type="button" data-skin-browse>${library ? "Browse Shop" : "My Skins"}</button><span>Appearance only · Owned items remain usable all year</span></footer></section>`;
 }
 
 function bindSkinsPanel(root) {
@@ -151,14 +147,18 @@ function bindSkinsPanel(root) {
     modal.close(); closeProfileScreen(); showToast("Collect Crown pickups on the map: 1 Crown each, up to 20 per UTC day. Pickups rotate Gold → Troops → Crowns.");
   });
   root.querySelector("[data-skin-browse]")?.addEventListener("click", () => mode === "shop" ? openMySkins() : openSkinShop());
-  root.querySelector("[data-skin-editor]")?.addEventListener("click", () => { showProfileView(); showFlagEditor(); });
   root.querySelector("[data-skin-reload]")?.addEventListener("click", () => cosmeticPendingPurchase ? submitCosmeticPurchase() : reloadCosmetics());
   root.querySelector("[data-skin-cancel]")?.addEventListener("click", () => { cosmeticConfirmation = null; refreshCosmeticPanels(); });
   root.querySelector("[data-skin-confirm]")?.addEventListener("click", () => submitCosmeticPurchase());
   root.querySelector("[data-skin-action]")?.addEventListener("click", () => {
     if (mode === "profile") { void equipSelectedCosmetic(); return; }
     const quote = COSMETIC_CATALOG.quote(cosmeticSelected, cosmeticState, cosmeticNow());
-    if (!quote.missing.length) { openMySkins(); return; }
+    if (!quote.missing.length) {
+      if (COSMETIC_CATALOG.item(cosmeticSelected)?.category === "flag") {
+        modal.close(); showProfileScreen(); showFlagEditor(); setFlagEditorSection("symbol");
+      } else openMySkins();
+      return;
+    }
     if (cosmeticPendingPurchase) { cosmeticError = "Check the pending purchase first."; refreshCosmeticPanels(); return; }
     cosmeticConfirmation = quote; refreshCosmeticPanels();
     document.querySelector("[data-skin-confirm]")?.focus();
@@ -178,6 +178,12 @@ function renderCosmeticHud() {
 
 function refreshCosmeticPanels() {
   renderCosmeticHud();
+  if (profileScreen.classList.contains("open") && !flagEditorView.hidden && flagDraft) {
+    const scroll = flagEditorControlScroll.scrollTop, symbol = document.activeElement?.dataset.flagSymbol;
+    renderFlagEditor();
+    flagEditorControlScroll.scrollTop = scroll;
+    if (symbol) flagSymbolOptions.querySelector(`[data-flag-symbol="${CSS.escape(symbol)}"]`)?.focus({ preventScroll: true });
+  }
   document.querySelectorAll(".skins-panel").forEach(root => {
     if (root.dataset.skinsMode === "profile" && (activeProfileTab !== "skins" || !profileScreen.classList.contains("open"))) return;
     if (root.dataset.skinsMode === "shop" && !modal.open) return;
@@ -203,7 +209,7 @@ async function submitCosmeticPurchase() {
     const result = await getOnlineApi().purchaseCosmetic(request);
     if (uid !== cosmeticUid) return;
     cosmeticPendingPurchase = null; cosmeticConfirmation = null;
-    applyCosmeticResult(result); showToast("Cosmetics added to My Skins.");
+    applyCosmeticResult(result); showToast("Cosmetics unlocked.");
   } catch (error) {
     if (uid !== cosmeticUid) return;
     const definite = /(?:invalid-argument|failed-precondition|permission-denied|resource-exhausted|already-exists)$/.test(String(error.code));
@@ -227,16 +233,9 @@ async function equipSelectedCosmetic() {
   if (!selected) return;
   const uid = cosmeticUid; cosmeticBusy = true; cosmeticError = ""; refreshCosmeticPanels();
   try {
-    if (selected.free && selected.category === "flag") {
-      await saveOnlinePlayerIdentity({ flag: { ...state.flag, symbol: selected.symbol } });
-    } else {
-      const result = await getOnlineApi().equipCosmetic({ category: selected.category, itemId: selected.free ? "" : selected.id, expectedRevision: cosmeticState.revision, expectedIdentityRevision: state.identityRevision || 0, requestId: cosmeticRequestId() });
-      if (uid !== cosmeticUid) return;
-      applyCosmeticResult(result);
-      if (result.flag) { state.flag = result.flag; state.identityRevision = result.identityRevision; }
-    }
+    const result = await getOnlineApi().equipCosmetic({ category: selected.category, itemId: selected.free ? "" : selected.id, expectedRevision: cosmeticState.revision, expectedIdentityRevision: state.identityRevision || 0, requestId: cosmeticRequestId() });
     if (uid !== cosmeticUid) return;
-    if (selected.category === "flag") { rememberCurrentPlayerIdentity(); void syncPlayerIdentityToAllOwnedCities({ forceLeaderboard: true }).catch(error => console.warn("Flag projection refresh pending", error)); }
+    applyCosmeticResult(result);
     renderHud(); renderCities(true); showToast("Appearance equipped.");
   } catch (error) { if (uid === cosmeticUid) { await reloadCosmetics(); cosmeticError = error.message || "Could not equip this cosmetic."; } }
   finally { if (uid === cosmeticUid) { cosmeticBusy = false; refreshCosmeticPanels(); } }
@@ -250,7 +249,7 @@ function showProfileSkins(options = {}) {
   profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   [profileView, skillsView, settingsView, clanView, flagEditorView].forEach(view => { view.hidden = true; });
   clearFlagEditorSession(); cancelProfileNameEdit();
-  if (["all", "bundle"].includes(cosmeticCategory)) cosmeticCategory = "city";
+  if (!["city", "troops", "border"].includes(cosmeticCategory)) cosmeticCategory = "city";
   cosmeticConfirmation = null; updateProfileTabHeader();
   const view = document.getElementById("skinsView"); view.innerHTML = renderSkinsPanel("profile"); bindSkinsPanel(view.querySelector(".skins-panel"));
   void reloadCosmetics();

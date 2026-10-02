@@ -8,14 +8,24 @@
       "reason": "Match Profile Skins to the existing parchment ledger while keeping Shop and map styles scoped. Compare actual Profile and Skins frames and typography, exercise categories, flag colors/editor, Equip/default, tab navigation, close and fixed controls at desktop and three landscape sizes. Loading/error states retain scrolling and a reachable Retry action. Existing purchase/reconciliation and Shop coverage remains active. The Crown HUD validator checks the shared stylesheet's pickup, wallet and timer rendering. No game or backend logic changes."
     },
     {
-      "paths": ["index.html", "service-worker.js", "tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Version the updated stylesheet consistently in the page and offline shell. Production validation packages the final CSS and verifies the existing assets and references. Bound the measured 9,717-byte CSS addition to a 10 KiB cosmetic-module increment, while retaining the installation-cache, entry, image and combined artifact limits. No new runtime assets or preload requests."
+      "paths": ["skins-ui.js"],
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js", "tools/validate-player-identity-browser.js", "tools/validate-crowns-hud-browser.js"],
+      "reason": "Keep flag icon selection in the existing Edit Flag Symbol controls. Remove the duplicate Profile Skins flag category and direct equip path, route owned Shop icons to the editor, and refresh owned choices without resetting the draft. Exercise purchase without auto-equip, owned/unowned choices, premium/free saves, colors/pattern, unsaved exit, delayed wallet load and stale flag-category navigation at four screen sizes. Existing identity browser coverage checks authoritative save behavior; catalog and Crown HUD validators cover shared purchase and wallet refresh dependencies. No server APIs or authority rules change."
     },
     {
-      "paths": ["docs/visual-qa/profile-skins-theme/README.md"],
+      "paths": ["game.js"],
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-player-identity-browser.js"],
+      "reason": "Keep clicks inside the existing flag-discard dialog from triggering the profile outside-click handler and replacing the requested destination with Close Profile. Real pointer tests exercise Stay Editing and Discard Changes when leaving the flag editor for Skins on desktop and landscape sizes, with saved flag and unsaved draft checks. Existing identity browser coverage verifies unchanged flag save behavior."
+    },
+    {
+      "paths": ["index.html", "service-worker.js", "tools/validate-production-artifact.js"],
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Version the updated stylesheet and cosmetics script consistently in the page and offline shell. Production validation packages them and verifies the existing assets and references. Bound the measured 9,717-byte CSS addition to a 10 KiB cosmetic-module increment, while retaining the installation-cache, entry, image and combined artifact limits. No new runtime assets or preload requests."
+    },
+    {
+      "paths": ["docs/visual-qa/profile-skins-theme/README.md", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Document the mismatch, existing theme references, payload measurements and desktop/landscape validation. No gameplay or deployment rule changes."
+      "reason": "Document the owner's confirmed flag-editor placement, existing theme references, payload measurements and desktop/landscape validation. No balance or deployment rule changes."
     }
   ]
 }
