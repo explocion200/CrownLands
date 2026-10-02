@@ -1,0 +1,27 @@
+{
+  "status": "Design preview; not connected to the game or shop",
+  "request": "Match the full city marker circled in 226007.jpg, including the player's rectangular flag and level. Preserve ownership and King Power color changes.",
+  "styleReference": "User-supplied 225787.jpg; medieval ink-and-wash map",
+  "geometry": {
+    "source": "styles.css .foreign-city-shield",
+    "width": 46,
+    "height": 58,
+    "tipBeginsAtPercent": 82,
+    "bodyPath": "M0 0H46V47.56L23 58L0 47.56Z",
+    "playerMarkerNote": "Production integration must retain the separate .city-owner-column geometry (42 px wide, minimum 53 px high, 84% shoulder), plus selected-city layouts and hit areas. This reference draft demonstrates the unselected 46-by-58 marker pictured by the user."
+  },
+  "layers": {
+    "cityFill": "SVG path controlled by --city-tone; preview reads existing ownership/strength palette colors",
+    "playerFlag": "Independent vector primary/secondary dyes and crossed-swords symbol; sample heraldry is illustrative",
+    "level": "Editable SVG text; preserves the current owned-city dark ink and other states' light ink",
+    "decoration": "Static narrow iron/purple rim, engraved bat corners, small pumpkin below the level"
+  },
+  "sources": [
+    "styles.css: .foreign-city-shield, .city-owner-column, .enemy-power-unknown",
+    "crownlands-palette.css: --cl-player-owned, --cl-main-city, --cl-clan, --cl-enemy-weaker, --cl-enemy-equal, --cl-enemy-stronger, --cl-neutral",
+    "assets/flag-symbols/selected/svg/crossed-swords.svg",
+    "functions/flagRenderer.js: independent player heraldry colors and symbol",
+    "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp"
+  ],
+  "integration": "Keep the existing authoritative ownership and strength classification, player flag renderer, city level, selected-city variants, shop ownership, and public appearance sync. The preview changes no gameplay or sale availability. Decorative artwork remains subject to visual approval."
+}

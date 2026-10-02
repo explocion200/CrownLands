@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands — Halloween city marker draft</title>
+  <link rel="stylesheet" href="../../../crownlands-palette.css">
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">CROWNLANDS · HALLOWEEN</p><h1>City flag border</h1></div><span class="draft">Design preview</span></header>
+    <div class="review">
+      <section class="map-sample" aria-label="City marker in map context">
+        <div class="map-city">
+          <div class="ruler">Sir Render</div><div class="city-name">Wyvernhollow</div>
+          <div id="hero-marker" class="marker hero" aria-label="Enlarged marker"></div>
+          <img class="city-art" src="../../../assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp" alt="Halloween city">
+        </div>
+        <span class="map-note">Enlarged detail · original pointed shape</span>
+      </section>
+      <section class="details" aria-label="Preview controls">
+        <h2>Halloween border preview</h2>
+        <p>The narrow Halloween rim follows the existing city marker. Its center keeps the ownership and King Power colors, with the player’s flag and city level inside.</p>
+        <label for="relationship">Ownership / strength</label>
+        <select id="relationship">
+          <option value="owned">Your city</option><option value="main">Your main city</option><option value="clan">Clan ally</option>
+          <option value="weaker">Weaker / protected</option><option value="equal">In range</option><option value="stronger" selected>Stronger</option>
+          <option value="unknown">Strength unknown</option><option value="neutral">Neutral</option>
+        </select>
+        <fieldset><legend>Player’s flag</legend><div class="dyes">
+          <label>Primary<input id="primary" type="color" value="#182b3e"></label>
+          <label>Secondary<input id="secondary" type="color" value="#a9443b"></label>
+          <label>Symbol<input id="symbol" type="color" value="#eee5cd"></label>
+        </div></fieldset>
+        <div class="level-control"><label for="level">City level</label><input id="level" type="number" min="1" max="999" value="50"></div>
+        <label class="toggle"><input id="border" type="checkbox" checked> Halloween border</label>
+        <div class="actual"><div id="actual-marker" class="marker actual-marker"></div><p><strong>At map size</strong><br>46 × 58 px before map zoom</p></div>
+        <p class="state-label" id="state-label" role="status"></p>
+      </section>
+    </div>
+    <section class="comparison" aria-label="Existing city color examples"><h2>Existing game colors</h2><div id="color-examples"></div></section>
+    <footer>Vector draft · Separate color, heraldry, level and decorative border · No animation</footer>
+  </main>
+</body>
+</html>
