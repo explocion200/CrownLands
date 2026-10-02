@@ -119,7 +119,16 @@ async function main(){
   }
   await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"halloween_city");
   await evaluate('renderCities(true)');assert(await evaluate('!!document.querySelector(".city-node[data-city-skin=halloween_city]")'));
-  await click('[data-skin-select="default_city"]');await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
+  await click('[data-skin-select="default_city"]');
+  assert.equal(await evaluate('document.querySelector("[data-skin-action]").textContent'),"Restore Default");
+  assert.equal(await evaluate('document.querySelector("[data-skin-select=default_city] strong").textContent'),"Default City");
+  for(const stage of [1,2,3,4,5]) {
+    await click(`[data-skin-stage="${stage}"]`);
+    await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").decode()');
+    assert.equal(await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").getAttribute("src")'),await evaluate(`getCastleAsset(${stage})`));
+    assert.equal(await evaluate('document.querySelectorAll(".skin-detail .halloween-city-bats").length'),0,"Default preview must not show Halloween bats");
+  }
+  await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   for(const [width,height] of [[1440,900],[844,390],[568,320],[568,280]]){
     await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
     await evaluate('showProfileScreen()');

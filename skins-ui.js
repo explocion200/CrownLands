@@ -127,15 +127,16 @@ function cosmeticBats(stage) {
 }
 
 function cosmeticStagePicker(item) {
-  if (item?.id !== "halloween_city") return "";
+  if (item?.id !== "halloween_city" && item?.id !== "default_city") return "";
   return `<div class="skin-stage-picker" role="group" aria-label="Preview city level">${["1–24", "25–49", "50–74", "75–99", "100+"].map((label, index) => `<button type="button" data-skin-stage="${index + 1}" aria-pressed="${cosmeticPreviewStage === index + 1}" aria-label="Preview levels ${label}">${label}</button>`).join("")}</div>`;
 }
 
 function cosmeticPreview(item, detail = false) {
   const category = item?.category || "city";
-  if (item?.id === "halloween_city") {
+  if (item?.id === "halloween_city" || item?.id === "default_city") {
     const stage = detail ? cosmeticPreviewStage : 5;
-    return `<span class="skin-city-preview" aria-hidden="true"><img src="${item.assets[stage]}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail ? cosmeticBats(stage) : ""}</span>`;
+    const halloween = item.id === "halloween_city";
+    return `<span class="skin-city-preview" aria-hidden="true"><img src="${halloween ? item.assets[stage] : getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : ""}</span>`;
   }
   const glyphs = { city: "♜", troops: "⚑", border: "◇", flag: "⚑", bundle: "♛" };
   if (category === "flag" && state?.flag) {
@@ -148,7 +149,7 @@ function cosmeticPreview(item, detail = false) {
 function cosmeticChoices(mode) {
   if (mode === "shop") return COSMETIC_CATALOG.OFFERS.filter(item => cosmeticCategory === "all" || item.category === cosmeticCategory);
   const category = ["city", "troops", "border"].includes(cosmeticCategory) ? cosmeticCategory : "city";
-  const defaults = [{ id: `default_${category}`, category, name: "Default", free: true, description: "Restore the original appearance." }];
+  const defaults = [{ id: `default_${category}`, category, name: category === "city" ? "Default City" : "Default", free: true, description: category === "city" ? "The original city appearance at every level. Restore it across all your regular cities for free, whenever you want." : "Restore the original appearance." }];
   return [...defaults, ...COSMETIC_CATALOG.ITEMS.filter(item => item.category === category && cosmeticState?.owned[item.id])];
 }
 

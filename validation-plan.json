@@ -1,77 +1,29 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "73ed9b4c56dcc17e568aeeee16c2babf6864c7cc",
+  "baseCommit": "03e85f3301a09a48db71ea7541438d65323bb768",
   "coverage": [
     {
       "paths": [
-        "functions/cosmetics.js",
-        "functions/test/emulator-cosmetics.js"
-      ],
-      "tests": [
-        "tools/validate-cosmetics.js",
-        "functions/test/emulator-cosmetics.js"
-      ],
-      "reason": "The shared catalog publishes approved five-stage art while retaining the existing item ID, 600-Crown price, October window, bundles and account ownership. Exercise purchase replay, separate apply/default, unowned rejection, permanent ownership and another authenticated account reading the public equipped city skin. The affected authoritative cosmetics emulator runs in CI."
-    },
-    {
-      "paths": [
         "skins-ui.js",
-        "skins-ui.css",
-        "game.js",
         "index.html",
         "service-worker.js"
       ],
       "tests": [
-        "tools/validate-cosmetics.js",
         "tools/validate-cosmetics-browser.js",
         "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-map-loading-browser.js",
+        "tools/validate-cosmetics.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Verify Shop purchase and all five previews, Profile ownership and visible Apply/Default controls, actual stage images and animated bats for local and remote owners, captured cities, projected upgrade stages, fallback after image failure, stronghold exclusions and full/reduced/off motion. Shared map rendering must preserve nodes, image identity, labels, focus and unchanged-refresh budgets. Test desktop and landscape layouts, map reloading and synchronized entry/precache versions; production build validates shipped references."
+      "reason": "Replace the generic Default city symbol with the actual original stage artwork in Profile Skins and allow five level previews. Verify free Restore Default alongside purchased Halloween skins, absence of bats in default previews, mobile controls, asset decoding and matching cached script references. Existing authoritative equip behavior is unchanged; the prior emulator checks already cover Default restore."
     },
     {
       "paths": [
-        "assets/optimized/halloween-city-stage-1-512x512-2e7107395536.webp",
-        "assets/optimized/halloween-city-stage-2-512x512-7211d081d4d3.webp",
-        "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp",
-        "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
-        "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
-        "docs/visual-qa/halloween-city-skin/assets.json",
-        "docs/visual-qa/halloween-city-skin/prompts.json"
+        "tools/validate-cosmetics-browser.js"
       ],
       "tests": [
-        "tools/validate-cosmetics.js",
-        "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-cosmetics-browser.js"
       ],
-      "reason": "Validate the five generated transparent WebP assets against their catalog mappings, provenance hashes, 512-pixel dimensions and combined 512-KiB lazy-load budget. Decode each in the real renderer and inspect the map/profile screenshots; source prompts remain reviewable and are excluded from the production artifact."
-    },
-    {
-      "paths": [
-        "tools/validate-cosmetics.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-city-skin-browser.js"
-      ],
-      "tests": [
-        "tools/validate-cosmetics.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-city-skin-browser.js"
-      ],
-      "reason": "Run the extended catalog and real-browser regressions. They exercise the new Apply label, each asset and stage boundary, animation preference and actual wing/flight movement, stable DOM reuse, owner/default transitions, failed-art recovery and projected levels with synthetic account data only."
-    },
-    {
-      "paths": ["tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Bound the measured 6,631-byte cosmetics code increase to 7 KiB and the five lazy-loaded WebPs (491,870 bytes) to 512 KiB. Require every catalog stage in the built artifact. Preserve the existing startup, offline-shell, per-file and combined artifact limits."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [],
-      "reason": "Record the user-approved Halloween city designs, bats and purchase-then-apply behavior without changing established price, ownership, sale, objective or gameplay rules. This document makes no claim that the feature is deployed."
+      "reason": "Exercise the visible Default City card, all five original artwork previews, Restore Default action, and existing purchase/apply/default flows at desktop and landscape-mobile sizes."
     }
   ]
 }
