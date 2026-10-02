@@ -16,7 +16,10 @@
         "tools/validate-city-map-reconciliation-browser.js",
         "tools/validate-cosmetics.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/run-focused-validators.js",
+        "tools/validate-ui-readability.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-targeted-ui-contrast.js",
         "tools/validate-focused-browser-smoke.js"
       ],
       "reason": "Verify select-then-Apply and the persistent footer on desktop and landscape phones, all five Default City previews, purchase/apply/default ownership flows, public appearances and stage changes. Check visibility-based animation limits, motion preferences, overlay/background pauses, detached/recycled nodes and stable map reconciliation. Check production entry/cache references and shared responsive styling. Server authority and economy rules are unchanged; no backend emulator dependency changes."
