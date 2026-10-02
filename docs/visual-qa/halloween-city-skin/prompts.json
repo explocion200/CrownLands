@@ -1,0 +1,27 @@
+{
+  "tool": "Built-in image_gen",
+  "intent": "background-extraction",
+  "source": "Approved halloween-city-skins-concept-v1.png from the preceding design draft",
+  "prompts": [
+    {
+      "stage": 1,
+      "prompt": "Use case: background-extraction. Asset type: transparent game city sprite. Edit target: the approved five-city Halloween concept sheet attached. Extract ONLY the TOP LEFT city (small round wooden palisade enclosing a low thatched timber hall), preserving its exact architecture, perspective, proportions, ink lines, muted colors, pumpkins, purple banners, warm windows, trees and tiny immediate earth footprint. Remove every other city, all text, all borders, and all parchment background. Do not redesign or add objects. No bats: the game adds moving bats separately. Center this single isolated city in a square transparent canvas, with its full silhouette occupying about 88 percent of canvas width and all towers and flags safely inside. No broad ground disc, no rectangular background, no shadow outside the original little ground footprint. Real transparent alpha outside the city. This is extraction of the selected approved design, not a new illustration."
+    },
+    {
+      "stage": 2,
+      "prompt": "Use case: background-extraction. Asset type: transparent game city sprite. Edit target: the approved five-city Halloween concept sheet attached. Extract ONLY the TOP MIDDLE city (larger timber palisade hamlet with houses, gatehouse and wooden watchtower), preserving its exact architecture, perspective, proportions, ink lines, muted colors, pumpkins, purple banners, warm windows, trees and tiny immediate earth footprint. Remove every other city, all text, all borders, and all parchment background. Do not redesign or add objects. No bats: the game adds moving bats separately. Center this single isolated city in a square transparent canvas, with its full silhouette occupying about 88 percent of canvas width and all towers and flags safely inside. No broad ground disc, no rectangular background, no shadow outside the original little ground footprint. Real transparent alpha outside the city. This is extraction of the selected approved design, not a new illustration."
+    },
+    {
+      "stage": 3,
+      "prompt": "Use case: background-extraction. Asset type: transparent game city sprite. Edit target: the approved five-city Halloween concept sheet attached. Extract ONLY the TOP RIGHT city (small square stone-walled keep with a crenellated central tower), preserving its exact architecture, perspective, proportions, ink lines, muted colors, pumpkins, purple banners, warm windows, trees and tiny immediate earth footprint. Remove every other city, all text, all borders, and all parchment background. Do not redesign or add objects. No bats: the game adds moving bats separately. Center this single isolated city in a square transparent canvas, with its full silhouette occupying about 88 percent of canvas width and all towers and flags safely inside. No broad ground disc, no rectangular background, no shadow outside the original little ground footprint. Real transparent alpha outside the city. This is extraction of the selected approved design, not a new illustration."
+    },
+    {
+      "stage": 4,
+      "prompt": "Use case: background-extraction. Asset type: transparent game city sprite. Edit target: the approved five-city Halloween concept sheet attached. Extract ONLY the BOTTOM LEFT city (large stone castle town with round towers and the central steep-roofed manor), preserving its exact architecture, perspective, proportions, ink lines, muted colors, pumpkins, purple banners, warm windows, trees and tiny immediate earth footprint. Remove every other city, all text, all borders, and all parchment background. Do not redesign or add objects. No bats: the game adds moving bats separately. Center this single isolated city in a square transparent canvas, with its full silhouette occupying about 88 percent of canvas width and all towers and flags safely inside. No broad ground disc, no rectangular background, no shadow outside the original little ground footprint. Real transparent alpha outside the city. This is extraction of the selected approved design, not a new illustration."
+    },
+    {
+      "stage": 5,
+      "prompt": "Use case: background-extraction. Asset type: transparent game city sprite. Edit target: the approved five-city Halloween concept sheet attached. Extract ONLY the BOTTOM RIGHT city (grand fortified stone city with the tall ornate central castle), preserving its exact architecture, perspective, proportions, ink lines, muted colors, pumpkins, purple banners, warm windows, trees and tiny immediate earth footprint. Remove every other city, all text, all borders, and all parchment background. Do not redesign or add objects. No bats: the game adds moving bats separately. Center this single isolated city in a square transparent canvas, with its full silhouette occupying about 88 percent of canvas width and all towers and flags safely inside. No broad ground disc, no rectangular background, no shadow outside the original little ground footprint. Real transparent alpha outside the city. This is extraction of the selected approved design, not a new illustration."
+    }
+  ]
+}

@@ -1,39 +1,72 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9e419506bfad7f909581ad032dcc3d342d2681e3",
+  "baseCommit": "73ed9b4c56dcc17e568aeeee16c2babf6864c7cc",
   "coverage": [
     {
-      "paths": ["game.js"],
+      "paths": [
+        "functions/cosmetics.js",
+        "functions/test/emulator-cosmetics.js"
+      ],
       "tests": [
-        "tools/validate-map-loading-browser.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-home-navigation-browser.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-map-picker-input.js",
+        "tools/validate-cosmetics.js",
+        "functions/test/emulator-cosmetics.js"
+      ],
+      "reason": "The shared catalog publishes approved five-stage art while retaining the existing item ID, 600-Crown price, October window, bundles and account ownership. Exercise purchase replay, separate apply/default, unowned rejection, permanent ownership and another authenticated account reading the public equipped city skin. The affected authoritative cosmetics emulator runs in CI."
+    },
+    {
+      "paths": [
+        "skins-ui.js",
+        "skins-ui.css",
+        "game.js",
+        "index.html",
+        "service-worker.js"
+      ],
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-halloween-city-skin-browser.js",
         "tools/validate-city-map-reconciliation-browser.js",
+        "tools/validate-map-loading-browser.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Set the navigation lock before uncached definitions load, bound definition fetch and JSON-body reads, release failed requests for retry, and reject stale state/session navigation. Exercise the real loader and switcher with delayed/failed definitions, artwork and city snapshots at desktop and landscape-mobile sizes, all 81 active maps on desktop, cache eviction, retries and retired subscriptions. Home, picker gestures, map interaction/location announcements, city rendering and map-art decoding are affected shared navigation dependencies. Check the existing game asset budget and build. No server-authoritative behavior, backend files or world data changed, so no emulator suites apply."
+      "reason": "Verify Shop purchase and all five previews, Profile ownership and visible Apply/Default controls, actual stage images and animated bats for local and remote owners, captured cities, projected upgrade stages, fallback after image failure, stronghold exclusions and full/reduced/off motion. Shared map rendering must preserve nodes, image identity, labels, focus and unchanged-refresh budgets. Test desktop and landscape layouts, map reloading and synchronized entry/precache versions; production build validates shipped references."
     },
     {
-      "paths": ["skins-ui.js", "index.html", "service-worker.js"],
-      "tests": ["tools/validate-city-map-reconciliation-browser.js", "tools/validate-cosmetics-browser.js", "tools/validate-map-loading-browser.js"],
-      "reason": "Map rendering invokes the cosmetic renderer for each city. Stop redundant skin/border attribute assignments after reproducing the same 600 unchanged writes on the released base. The existing reconciliation test checks unchanged refreshes, retained images/focus and changed ownership/classes; cosmetics browser coverage checks equip/default, strongholds and remote owner appearance. Advance the matching entry/precache script version and verify browser loading plus the required production artifact build. No purchases, prices, ownership authority or server behavior changed."
+      "paths": [
+        "assets/optimized/halloween-city-stage-1-512x512-2e7107395536.webp",
+        "assets/optimized/halloween-city-stage-2-512x512-7211d081d4d3.webp",
+        "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp",
+        "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
+        "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
+        "docs/visual-qa/halloween-city-skin/assets.json",
+        "docs/visual-qa/halloween-city-skin/prompts.json"
+      ],
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Validate the five generated transparent WebP assets against their catalog mappings, provenance hashes, 512-pixel dimensions and combined 512-KiB lazy-load budget. Decode each in the real renderer and inspect the map/profile screenshots; source prompts remain reviewable and are excluded from the production artifact."
     },
     {
-      "paths": ["crownlands-palette.css"],
-      "tests": ["tools/validate-map-loading-browser.js"],
-      "reason": "Give the map loading label the existing dark parchment text color after screenshot review showed pale text on a pale panel. Verify computed text color, loading-panel viewport bounds and screenshots at desktop and two landscape-mobile sizes. Entry and service-worker stylesheet versions advance together and the production build validates the asset references."
+      "paths": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-halloween-city-skin-browser.js"
+      ],
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-halloween-city-skin-browser.js"
+      ],
+      "reason": "Run the extended catalog and real-browser regressions. They exercise the new Apply label, each asset and stage boundary, animation preference and actual wing/flight movement, stable DOM reuse, owner/default transitions, failed-art recovery and projected levels with synthetic account data only."
     },
     {
-      "paths": ["tools/validate-map-loading-browser.js"],
-      "tests": ["tools/validate-map-loading-browser.js"],
-      "reason": "Execute the new browser regression against the real runtime with a loopback-only synthetic API. It reproduced the missing initial lock before the fix and now covers recovery, stale sessions, art/city readiness, cache churn and desktop/mobile loading presentation."
-    },
-    {
-      "paths": ["docs/visual-qa/map-loading/README.md"],
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
       "tests": [],
-      "reason": "Document the confirmed root cause, focused verification, read-only production asset audit and the distinction between synthetic browser coverage and authenticated production gameplay. Review against the saved receipts; this documentation adds no runtime behavior."
+      "reason": "Record the user-approved Halloween city designs, bats and purchase-then-apply behavior without changing established price, ownership, sale, objective or gameplay rules. This document makes no claim that the feature is deployed."
     }
   ]
 }

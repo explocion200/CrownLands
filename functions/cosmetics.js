@@ -7,11 +7,19 @@
   const VERSION = 1;
   const CATEGORIES = Object.freeze({ city: "Cities", flag: "Flag Icons", troops: "Troops", border: "Flag Borders" });
   const ITEMS = Object.freeze([
-    { id: "halloween_city", category: "city", name: "Halloween City", price: 600, description: "Applies to all your regular cities, including newly captured cities." },
+    { id: "halloween_city", category: "city", name: "Halloween City", price: 600, placeholder: false,
+      description: "Pumpkins, warm lanterns and circling bats across all five city stages. Apply in My Skins to change all your regular cities, including newly captured cities. Visible to every player.",
+      assets: {
+        1: "assets/optimized/halloween-city-stage-1-512x512-2e7107395536.webp",
+        2: "assets/optimized/halloween-city-stage-2-512x512-7211d081d4d3.webp",
+        3: "assets/optimized/halloween-city-stage-3-512x512-e8a2d852d17c.webp",
+        4: "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
+        5: "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
+      } },
     { id: "halloween_troops", category: "troops", name: "Halloween March", price: 300, description: "Changes your traveling troop markers. Scouts keep their distinct marker." },
     { id: "halloween_border", category: "border", name: "Halloween Flag Border", price: 200, description: "Frames your flags above regular cities on the map." },
     ...["Pumpkin", "Bat", "Skull", "Raven"].map(name => ({ id: `halloween_${name.toLowerCase()}`, category: "flag", name: `${name} Flag Icon`, price: 100, symbol: `halloween-${name.toLowerCase()}`, description: "Adds a personal flag symbol, preserving your flag colors and pattern." })),
-  ].map(item => Object.freeze({ ...item, placeholder: true, assets: Object.freeze({}) })));
+  ].map(item => Object.freeze({ placeholder: true, ...item, assets: Object.freeze(item.assets || {}) })));
   const BUNDLE = Object.freeze({ id: "halloween_collection", category: "bundle", name: "Halloween Collection", description: "All seven Halloween cosmetics. Save 20% on the pieces you do not own.", itemIds: Object.freeze(ITEMS.map(item => item.id)), placeholder: true });
   const OFFERS = Object.freeze([...ITEMS, BUNDLE]);
   const PICKUP_TYPES = Object.freeze(["gold", "troops", "crowns"]);

@@ -970,7 +970,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 ### Cosmetic skins and Crowns — confirmed October 1, 2026
 
-**Status:** implementation pending validation and authorized deployment. All initial art is explicitly marked as a placeholder; approved final art is required before public availability. Cash Crown packs are a separate future update.
+**Status:** implementation pending validation and authorized deployment. Halloween city artwork and bats were approved October 2, 2026; other initial collection art remains explicitly marked as a placeholder and requires approval before public availability. Cash Crown packs are a separate future update.
 
 - Add Shop → Skins and Profile → Skins. Shop navigation is Provisions / Skins / Free boosts; Profile navigation is Profile / Clan / Skills / Skins / Settings. Profile → Skins offers Cities, Troops and Flag Borders, owned/default choices, previews, equipped markers, free switching and a Browse Shop link. Flag Icons remain available to purchase in Shop → Skins; choose owned icons in the existing Edit Flag → Symbol controls. Purchases unlock items without equipping them and never enter the consumable Bag.
 - Crowns purchase cosmetics only; no gameplay benefit, resource conversion, player transfers or trading. Start at zero with no retroactive grants. Daily Missions and their existing Common Gear Box completion reward grant no Crowns. Earn Crowns through the map pickups specified in Section 6.
@@ -982,6 +982,14 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Premium flag symbols extend the existing saved personal flag, retaining its colors and pattern. Flag icons are selected only in Edit Flag → Symbol alongside the existing free symbols, then applied with Save Flag. The Shop's owned flag-icon action opens that editor without changing the saved flag. Ownership arriving while the editor is open refreshes the choices without replacing the current draft. Existing free/legacy designs retain compatibility. Premium symbols are excluded from random starter flags, and every save enforces ownership.
 - Wallets, ownership, equipped choices and purchase/collection receipts are permanent account records outside seasonal profiles. Balances and inventories are private; only equipped appearance data is public. Server transactions control rewards, pricing, grants and equipment. Duplicate collection requests and seasonal counter replacement cannot restore a spent Crown allowance. Failed/expired claims cannot debit or grant currency.
 - Support desktop, keyboard navigation and landscape mobile. Keep map hit areas, levels, relationship markers and intelligence rules intact; missing art falls back to the standard appearance while retaining ownership.
+
+#### Approved Halloween city skin and bats — October 2, 2026
+
+- Use the approved restrained Halloween cities: timber settlements progressing into stone keeps and castles, with pumpkins, warm windows and muted purple details. Supply the five existing visual stages: levels 1–24, 25–49, 50–74, 75–99 and 100+.
+- Shop → Skins sells the existing Halloween City unlock for 600 Crowns under the established October sale and permanent ownership rules. Show the actual artwork and previews for all five level ranges. Purchase adds it to Profile → Skins → Cities without applying it automatically.
+- Profile → Skins provides an **Apply** button. Once applied, the owner's appearance changes across every regular city and is visible to all other players through the public equipped appearance record. Newly captured cities adopt their current owner's skin. Restore Default removes the Halloween artwork and bats. Strongholds and objectives retain their established appearance.
+- Add two visible flapping bats circling smaller city stages and three around the two larger stages. Keep the movement restrained, preserve map hit areas and labels, and respect reduced/off animation preferences. Pause decorative motion during camera movement; crowded and distant views may omit the bats to preserve map readability and performance.
+- Missing city art uses the standard stage image without changing ownership or the equipped choice. This replaces the city placeholder only. **Status:** approved for implementation; not yet verified deployed.
 
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 
