@@ -148,10 +148,25 @@ Release evidence is retained locally under `release-artifacts/runtime-cleanup/de
 
 Evidence is retained locally under `release-artifacts/player-camp-defense-release/`. This records the verified implementation build; later documentation-only descendants may carry another web build ID with identical runtime sources.
 
+### October 2 Shop cooldown release
+
+[PR #422](https://github.com/explocion200/CrownLands/pull/422), from `codex/shop-cooldown-validation`, is verified as **LIVE — WEB**. An open Shop updates purchase countdowns and unlocks daily limits at midnight UTC. The shared Gold/Troop ad timer resumes after confirmation, refreshes server eligibility at expiry and day rollover, and retries failed checks at a bounded rate. Prices, limits, rewards and backend authority are unchanged.
+
+| Channel / artifact | Verified publication | Evidence and limits |
+|---|---|---|
+| Primary web game and canonical Netlify host | Build `5d7bbb0b3e66a19042195408b4c4be0437e4fe23`; Netlify deploy `6abfa5a9f081bb0008bc809a`; published 2026-10-02T12:38:43.165Z | Entry, release manifest, game code, Shop module and service worker match the merged production artifact on `playcrownlands.com` and `crownland.netlify.app`. |
+| Firebase backend | Existing deployment retained; verified 2026-10-02T12:42:38.264Z | All 131 Node.js 22 functions are ACTIVE with the previously verified source fingerprint `fc25b865333e4e762bdae94503bcc6b1f82344d5`. Release ID, API contract and server-source fingerprint match the compatible backend. The current realm is `main-realm-2026-10`. No Functions, rules, indexes or production records were changed. |
+| Required validation | [Passing checks for the exact PR head](https://github.com/explocion200/CrownLands/actions/runs/37007024184) | Five selected local validators, production build, artifact checks, asset budgets and lint passed. Static validation, Multiplayer emulator validation and Validate passed; no server emulator suite was required for this client change. |
+| Production browser verification | Cold and reload checks at 1440×900 and 844×390; verified 2026-10-02T12:42:38.264Z | Game entry, build identity, styles and lazy Shop module loading passed with no uncaught runtime errors or failed first-party assets. Authenticated purchases and live ad completion were not performed. The production ad unit remains unconfigured in the repository; cooldown regression tests use synthetic responses. |
+| itch.io | Not republished or verified by this release | No all-channel deployment claim. |
+
+Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/5d7bbb0b3e66a19042195408b4c4be0437e4fe23/`. This records the verified implementation build; later documentation-only descendants may carry another web build ID with identical runtime sources.
+
 ## FM-3. Release Channel Matrix
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Shop purchase countdowns, midnight unlock and shared ad cooldown recovery | Verified in web build `5d7bbb0...` from PR #422 | Not republished or verified for this release | `LIVE — WEB`; authenticated purchases and live ad completion remain manual checks |
 | Player camp defense bonuses and private holder inspection | Verified in web/backend build `32a4476...` from PR #411 | Shared backend updated; client not republished or verified for this release | `LIVE — WEB`; production combat smoke remains manual |
 | Transactional clan power, deferred optional screens and current-build cache recovery | Verified in web/backend build `f12191d...` from PR #406 | Client not republished or verified for this release | `LIVE — WEB`; shared backend verified |
 | Retired Training Grounds attack and Infirmary recovery, preserved visuals/levels and paused new upgrades | Verified in web/backend build `f12191d...` from PR #406 | Client presentation not republished; shared backend uses the new rules | `LIVE — WEB`; replacement mechanics remain undecided |
