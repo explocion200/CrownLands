@@ -1,0 +1,16 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "edit",
+  "generatedFile": "exec-f1d90221-73bb-47c5-a835-30a8e2a152ad.png",
+  "output": "march-atlas.png",
+  "width": 1254,
+  "height": 1254,
+  "transparent": true,
+  "layout": "2 by 2, four 627px square cells",
+  "references": [
+    "Previously approved three-soldier concept: exec-0e4827ed-19ba-4a57-accd-b4dd84c455f7.png",
+    "User-provided painted map: 1-225787.jpg"
+  ],
+  "prompt": "Use case: stylized-concept, game animation sprite sheet. Using Image 1 ONLY for the approved troop concept and Image 2 ONLY for the painted medieval map style, create a single square transparent PNG SPRITE SHEET, 2 columns by 2 rows of exactly equal square cells, NO visible grid, NO text or labels. Each of the four cells contains the SAME compact three-soldier formation viewed isometrically from above/front, facing and marching diagonally toward the lower right. Match the three troops from the LEFT HALF of Image 1: human medieval men in steel enclosed helmets, chainmail, weathered leather boots and belts, muted plum cloaks and tunics, antique bronze details. Two rear spearmen carry simple dark plum kite shields with faded ivory medieval emblems. The front-center leader carries a bright carved pumpkin lantern at his right side. Keep his other hand free; no giant hero weapon. Strong readable silhouettes at a small map scale. Fine brown ink outlines and matte watercolor texture, muted historical colors exactly compatible with Image 2. No modern 3D rendering, no neon magic, no cute cartoon, no scenery, no ground patches, no mist obscuring feet, no extra characters, no heraldic border. Both background and spaces between figures must be genuinely transparent. Animation requirements: four coherent phases of one WALK CYCLE in reading order: upper-left left-foot contact; upper-right passing pose; lower-left right-foot contact; lower-right opposite passing pose. Feet, knees, and arms visibly change walking pose, and the pumpkin lantern gently swings. Keep all helmet tops, spear tips, shield forms, faces and formation centers aligned to identical cell-relative positions, same camera, same character size, same lighting and same outfit details in every cell. No sudden costume changes or equipment switching. All pixels of each formation fully inside its own cell with about 8% clear padding on every side. The formation composition is triangle shaped: lantern bearer front/center, one guard behind-left, one behind-right. Spear tips fully visible. Output ONE 2-by-2 transparent animation atlas, ideally 1536x1536 pixels, with four distinct walking phases.",
+  "postprocessing": "Unmodified generated PNG. CSS clips individual cells and aligns their center and planted-foot baseline."
+}

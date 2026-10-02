@@ -1,53 +1,22 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "03e85f3301a09a48db71ea7541438d65323bb768",
+  "baseCommit": "87cb4571a1abf242a2064461919d9d821d815cc0",
   "coverage": [
     {
       "paths": [
-        "skins-ui.js",
-        "skins-ui.css",
-        "index.html",
-        "service-worker.js"
+        "docs/visual-qa/halloween-troops/art-source.json",
+        "docs/visual-qa/halloween-troops/design.json",
+        "docs/visual-qa/halloween-troops/march-atlas.png",
+        "docs/visual-qa/halloween-troops/preview.css",
+        "docs/visual-qa/halloween-troops/preview.html",
+        "docs/visual-qa/halloween-troops/preview.js",
+        "docs/visual-qa/halloween-troops/style-reference.jpg",
+        "tools/validate-halloween-troops-preview.js"
       ],
       "tests": [
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-skin-motion-browser.js",
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-cosmetics.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-halloween-troops-preview.js"
       ],
-      "reason": "Verify select-then-Apply and the persistent footer on desktop and landscape phones, all five Default City previews, purchase/apply/default ownership flows, public appearances and stage changes. Check visibility-based animation limits, motion preferences, overlay/background pauses, detached/recycled nodes and stable map reconciliation. Actual browser layout and production smoke cover the affected responsive UI and entry/cache references. Broader unchanged theme validators are outside this task; the palette validator also fails on origin/main because its hard-coded asset version is stale. Server authority and economy rules are unchanged; no backend emulator dependency changes."
-    },
-    {
-      "paths": [
-        "tools/validate-cosmetics-browser.js"
-      ],
-      "tests": [
-        "tools/validate-cosmetics-browser.js"
-      ],
-      "reason": "Exercise the actual Default City art, explicit Apply, selection persistence through wallet updates, preview-only changes and touchable footer actions at four desktop/landscape sizes."
-    },
-    {
-      "paths": ["tools/validate-halloween-city-skin-browser.js", "tools/validate-skin-motion-browser.js"],
-      "tests": ["tools/validate-halloween-city-skin-browser.js", "tools/validate-skin-motion-browser.js"],
-      "reason": "Validate the motion guards and bounded renderer against a 60-city fixture, then verify the real map and selected preview still show moving bats while collection thumbnails and the covered map stay still. Frame timings are reported, not used as hardware-dependent pass/fail thresholds."
-    },
-    {
-      "paths": ["tools/validate-pwa-entry-routing.js"],
-      "tests": ["tools/validate-focused-browser-smoke.js"],
-      "reason": "Update the service-worker test fixture to supply the timers and FetchEvent.waitUntil lifecycle used by the current worker. This restores the production smoke dependency needed to verify the changed client/cache asset versions without changing routing behavior."
-    },
-    {
-      "paths": ["tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "The existing build gate checks the narrowly increased 56 KiB cosmetics module cap against 57,104 normalized bytes. No new art or dependencies; all other entry, shell and asset caps remain enforced."
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": ["tools/validate-cosmetics-browser.js"],
-      "reason": "Record the user-confirmed selection followed by Apply, including applying Default City; the browser regression verifies the documented behavior."
+      "reason": "Standalone cosmetic design preview. Browser validation checks transparent atlas poses, visible walking and route movement, independent readable mission/count labels, return direction, pause/reduced-motion/background/offscreen behavior, asset loading and desktop/landscape/portrait layouts. No game renderer, public cosmetics, economy, production entry or backend behavior changes. Live multiplayer integration and performance with many armies remain future work."
     }
   ]
 }

@@ -1,0 +1,36 @@
+{
+  "status": "Animated design draft; not connected to the live game or shop.",
+  "catalogId": "halloween_troops",
+  "name": "Halloween March",
+  "art": "Three human medieval soldiers, muted plum cloaks, steel armor, two spearmen and a pumpkin lantern bearer.",
+  "preview": "preview.html",
+  "proposedSizes": [
+    64,
+    88
+  ],
+  "animation": {
+    "poses": 4,
+    "cycleSeconds": 0.8,
+    "sampleRouteSeconds": 18,
+    "technique": "One cached transparent atlas; CSS transform steps for poses; separate transform for sample route.",
+    "guards": [
+      "Manual pause",
+      "Reduced motion",
+      "Offscreen previews",
+      "Background tab"
+    ],
+    "static": "Size comparison thumbnails"
+  },
+  "integrationRequirements": [
+    "Keep authoritative route position, timing and mission indicators.",
+    "Preserve relationship colors and existing troop-count visibility rules.",
+    "Scouts retain their separate marker.",
+    "Combined rallies use the leader's equipped appearance.",
+    "Apply and replicate through existing public cosmetic state."
+  ],
+  "limits": [
+    "Illustrative route and sample count/time only.",
+    "Production performance with many simultaneous armies still requires integration and measurement.",
+    "No shop, gameplay, economy, or player-data changes."
+  ]
+}
