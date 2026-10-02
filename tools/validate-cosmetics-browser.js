@@ -138,6 +138,12 @@ async function main(){
         assert.equal(await evaluate('cosmeticState.equipped.city'),'');
         await click('[data-skins-mode=profile] [data-skin-select=halloween_city]');
         await evaluate("document.querySelector('[data-skins-mode=profile] .skin-detail').scrollTop=0");
+        await evaluate('cosmeticError="Could not load your collection. Check your connection and retry.";refreshCosmeticPanels()');
+        assert(await evaluate('getComputedStyle(document.querySelector("[data-skins-mode=profile]")).overflowY==="auto" && document.querySelector("[data-skins-mode=profile] .skins-body").clientHeight>=100'),'Error messages must preserve scrollable access to the collection');
+        await tap('[data-skins-mode=profile] [data-skin-reload]');await wait('!cosmeticError');
+        await evaluate('cosmeticState=null;refreshCosmeticPanels()');
+        assert(await evaluate('document.querySelector("[data-skins-mode=profile] [data-skin-action]").disabled && getComputedStyle(document.querySelector("[data-skins-mode=profile]")).overflowY==="auto"'),'Loading must remain readable and prevent premature equip');
+        await evaluate('applyCosmeticResult({state:__skinQA.wallet});document.querySelector("[data-skins-mode=profile]").scrollTop=0');
       }else assert(await evaluate('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).pointerEvents==="none"'),'The closed profile must not cover Shop');
       const footer=await evaluate(`(()=>{const e=document.querySelector('[data-skins-mode=${mode}] [data-skin-browse]');e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),panel=e.closest('.skins-panel').getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{top:r.top,bottom:r.bottom,panelBottom:panel.bottom,clickable:e===hit||e.contains(hit)}})()`);
       assert(footer.top>=0&&footer.bottom<=Math.min(height,footer.panelBottom)+1&&footer.clickable,`${mode} footer inaccessible at ${width}x${height}: ${JSON.stringify(footer)}`);

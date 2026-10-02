@@ -67,6 +67,9 @@
 #profileScreen.skins-active #profileCloseBtn svg{width:22px;height:22px}
 #profileScreen.skins-active #skinsView{height:100%;min-width:0;border:1px solid var(--line);border-top:0}
 #profileScreen.skins-active .skins-panel{padding:16px 20px;gap:10px;font:inherit;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%);color:var(--ink);overflow:hidden}
+#profileScreen.skins-active .skins-panel:has(>.skins-feedback,>p[role=status]){overflow-y:auto}
+#profileScreen.skins-active .skins-panel:has(>.skins-feedback,>p[role=status]) .skins-body{flex:1 0 110px}
+#profileScreen.skins-active .skins-feedback{flex:none}
 #profileScreen.skins-active .skins-heading{flex:none;min-width:0;border-bottom:1px solid var(--line);padding-bottom:10px}
 #profileScreen.skins-active .skins-heading h2{font:26px/1.15 Georgia,serif!important;margin:3px 0 0!important}
 #profileScreen.skins-active .skins-heading p{font-size:10px;letter-spacing:1.5px!important;color:var(--muted)!important}

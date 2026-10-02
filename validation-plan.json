@@ -5,12 +5,12 @@
     {
       "paths": ["skins-ui.css", "tools/validate-cosmetics-browser.js"],
       "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-crowns-hud-browser.js"],
-      "reason": "Match Profile Skins to the existing parchment ledger while keeping Shop and map styles scoped. Compare actual Profile and Skins frames and typography, exercise categories, flag colors/editor, Equip/default, tab navigation, close and fixed controls at desktop and three landscape sizes. Existing purchase/reconciliation and Shop coverage remains active. The Crown HUD validator checks the shared stylesheet's pickup, wallet and timer rendering. No game or backend logic changes."
+      "reason": "Match Profile Skins to the existing parchment ledger while keeping Shop and map styles scoped. Compare actual Profile and Skins frames and typography, exercise categories, flag colors/editor, Equip/default, tab navigation, close and fixed controls at desktop and three landscape sizes. Loading/error states retain scrolling and a reachable Retry action. Existing purchase/reconciliation and Shop coverage remains active. The Crown HUD validator checks the shared stylesheet's pickup, wallet and timer rendering. No game or backend logic changes."
     },
     {
       "paths": ["index.html", "service-worker.js", "tools/validate-production-artifact.js"],
       "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Version the updated stylesheet consistently in the page and offline shell. Production validation packages the final CSS and verifies the existing assets and references. Bound the measured 9,459-byte CSS addition to a 10 KiB cosmetic-module increment, while retaining the installation-cache, entry, image and combined artifact limits. No new runtime assets or preload requests."
+      "reason": "Version the updated stylesheet consistently in the page and offline shell. Production validation packages the final CSS and verifies the existing assets and references. Bound the measured 9,717-byte CSS addition to a 10 KiB cosmetic-module increment, while retaining the installation-cache, entry, image and combined artifact limits. No new runtime assets or preload requests."
     },
     {
       "paths": ["docs/visual-qa/profile-skins-theme/README.md"],

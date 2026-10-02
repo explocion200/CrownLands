@@ -278,7 +278,7 @@ const battleItemReportingBudget = 8 * 1024;
 // over the 36,289-byte cosmetic modules. Allow one 1 KiB step, preserving the
 // separate 8 KiB integration allowance and existing entry/offline-shell limits.
 // Profile Skins now matches the existing parchment ledger. Its scoped theme
-// adds 9,459 normalized CSS bytes, bounded to 10 KiB; it reuses shipped art.
+// adds 9,717 normalized CSS bytes, bounded to 10 KiB; it reuses shipped art.
 const cosmeticModuleBudget = 47 * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
