@@ -42063,7 +42063,7 @@ modal.addEventListener("cancel", event => {
   }
 });
 document.addEventListener("pointerdown", event => {
-  if (!profileScreen?.classList.contains("open") || modal.open || document.getElementById("profileProductionDialog")?.open) return;
+  if (!profileScreen?.classList.contains("open") || modal.open || flagDiscardDialog?.open || document.getElementById("profileProductionDialog")?.open) return;
   if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target)) return;
   event.preventDefault();
   event.stopPropagation();

@@ -1,41 +1,31 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9797cfe77166c901ea25531748b34896e98386a6",
+  "baseCommit": "b1275fc5f4a8b1917cd9d4ea0371d1f62af5981c",
   "coverage": [
     {
-      "paths": ["index.html", "main-screen-art-ui.css", "tools/validate-crowns-hud-browser.js"],
-      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-main-screen-art-browser.js", "tools/validate-combat-timers-browser.js"],
-      "reason": "The approved currency stack restores the Gold coin, adds Crowns and places Shield Cooldown/Retaliation underneath at the same left edge. Desktop and two landscape sizes check equal counter widths, amounts/icons, exact accessible balances, timer and dropdown reachability, asset loading and existing navigation. The shortest landscape layout puts simultaneous incoming/outgoing alerts in one row to clear the taller stack. Existing timer expiration, scrolling and location actions remain covered."
+      "paths": ["skins-ui.css", "tools/validate-cosmetics-browser.js"],
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-crowns-hud-browser.js"],
+      "reason": "Match Profile Skins to the existing parchment ledger while keeping Shop and map styles scoped. Compare actual Profile and Skins frames and typography, exercise categories, flag colors/editor, Equip/default, tab navigation, close and fixed controls at desktop and three landscape sizes. Loading/error states retain scrolling and a reachable Retry action. Existing purchase/reconciliation and Shop coverage remains active. The Crown HUD validator checks the shared stylesheet's pickup, wallet and timer rendering. No game or backend logic changes."
     },
     {
-      "paths": ["skins-ui.js", "tools/validate-cosmetics-browser.js"],
-      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js"],
-      "reason": "Render the existing authoritative cosmetic wallet into the HUD when loaded, collected, spent or refreshed. Exercise unknown and confirmed-zero balances, failed reads, revision ordering, account changes, sign-out, late responses, collection failure/pending/success and purchase reconciliation. Existing catalog, equip/default and permanent wallet rules are unchanged and exercised by the cosmetics validators. No new backend calls or authority changes."
-    },
-    {
-      "paths": ["skins-ui.css", "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp", "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp", "docs/visual-qa/crowns-currency/art/crown-coin-source-r1.png", "docs/visual-qa/crowns-currency/art/pickup-crowns-source-r1.png"],
-      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-harvest-pickups.js"],
-      "reason": "Approved transparent source art and small WebP delivery assets replace the Crown glyph. The existing pickup ring and animation now use purple variables. Verify loaded images, alpha, dimensions, equal Gold/troop/Crown marker and image sizing, distinct ring colors, clickable targets at three zooms, and the real collection response path. Existing pickup timing, caps, production rewards and placement rules remain unchanged. Production artifact validation verifies packaging and budgets; source images are excluded from delivery."
+      "paths": ["skins-ui.js"],
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js", "tools/validate-player-identity-browser.js", "tools/validate-crowns-hud-browser.js"],
+      "reason": "Keep flag icon selection in the existing Edit Flag Symbol controls. Remove the duplicate Profile Skins flag category and direct equip path, route owned Shop icons to the editor, and refresh owned choices without resetting the draft. Exercise purchase without auto-equip, owned/unowned choices, premium/free saves, colors/pattern, unsaved exit, delayed wallet load and stale flag-category navigation at four screen sizes. Existing identity browser coverage checks authoritative save behavior; catalog and Crown HUD validators cover shared purchase and wallet refresh dependencies. No server APIs or authority rules change."
     },
     {
       "paths": ["game.js"],
-      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-home-navigation-browser.js"],
-      "reason": "The taller profile stack can move the edge-of-map Home control toward Chat or the part of the profile-button row extending beyond its fixed-width parent. Add those existing controls to its collision avoidance list. Verify all HUD controls remain reachable and nonoverlapping at supported sizes, plus existing home/realm navigation, retry and stale-navigation behavior. No world data or gameplay rules change."
+      "tests": ["tools/validate-cosmetics-browser.js", "tools/validate-player-identity-browser.js"],
+      "reason": "Keep clicks inside the existing flag-discard dialog from triggering the profile outside-click handler and replacing the requested destination with Close Profile. Real pointer tests exercise Stay Editing and Discard Changes when leaving the flag editor for Skins on desktop and landscape sizes, with saved flag and unsaved draft checks. Existing identity browser coverage verifies unchanged flag save behavior."
     },
     {
-      "paths": ["service-worker.js"],
-      "tests": ["tools/validate-main-screen-art-browser.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Keep the offline shell in sync with the updated skins script and stylesheet and HUD stylesheet URLs. Artwork uses the existing runtime cache without new install preloads. Existing production artifact validation and asset budget checks cover offline shell references and shipped files. Cache strategy and backend contract remain unchanged."
-    },
-    {
-      "paths": ["tools/validate-production-artifact.js"],
+      "paths": ["index.html", "service-worker.js", "tools/validate-production-artifact.js"],
       "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Package the two approved delivery WebPs and forbid their editable PNG sources. The measured 833-byte cosmetic module increase gets a bounded 1 KiB allowance; the 21,298 bytes of currency artwork receive a separate 24 KiB cap. Run production packaging/reference/budget validation and existing installation-cache budgets. No existing offline, entry, runtime performance or total artifact limit is relaxed."
+      "reason": "Version the updated stylesheet and cosmetics script consistently in the page and offline shell. Production validation packages them and verifies the existing assets and references. Bound the measured 9,717-byte CSS addition to a 10 KiB cosmetic-module increment, while retaining the installation-cache, entry, image and combined artifact limits. No new runtime assets or preload requests."
     },
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/visual-qa/crowns-currency/README.md"],
+      "paths": ["docs/visual-qa/profile-skins-theme/README.md", "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Record the owner's confirmed artwork, counter order and timer alignment alongside source provenance, final generation prompts, delivery encodings and validation instructions. Documentation makes no production deployment claim."
+      "reason": "Document the owner's confirmed flag-editor placement, existing theme references, payload measurements and desktop/landscape validation. No balance or deployment rule changes."
     }
   ]
 }

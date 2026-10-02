@@ -277,10 +277,12 @@ const battleItemReportingBudget = 8 * 1024;
 // The approved wallet HUD and purple pickup styling add 833 normalized bytes
 // over the 36,289-byte cosmetic modules. Allow one 1 KiB step, preserving the
 // separate 8 KiB integration allowance and existing entry/offline-shell limits.
-const cosmeticModuleBudget = 37 * 1024;
+// Profile Skins now matches the existing parchment ledger. Its scoped theme
+// adds 9,717 normalized CSS bytes, bounded to 10 KiB; it reuses shipped art.
+const cosmeticModuleBudget = 47 * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 37 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 47 KiB budget.");
 // The approved coin and pouch total 21,298 encoded bytes; bound these two
 // runtime-cached WebPs at 24 KiB. Editable source PNGs must never ship.
 const currencyArtBudget = 24 * 1024;
