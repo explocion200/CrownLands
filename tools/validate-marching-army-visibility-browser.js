@@ -123,7 +123,8 @@ async function main() {
             check(token.getAttribute("aria-label").includes(target.name), `${label}/${missing}: destination name missing`);
             check(token.title.includes(target.name), `${label}/${missing}: destination tooltip missing`);
             const expected = worldToMapPoint(getMissionPointAtProgress(army, getArmyTravelProgress(army)).point);
-            check(token.style.transform === `translate(${expected.x}px, ${expected.y}px) translate(-50%, -50%)`, `${label}/${missing}: marker left its route`);
+            const displayed = token.style.transform.match(/^translate\(([-.\d]+)px, ([-.\d]+)px\)/);
+            check(displayed && Math.max(Math.abs(Number(displayed[1])-expected.x), Math.abs(Number(displayed[2])-expected.y)) * zoom * devicePixelRatio <= .126, `${label}/${missing}: marker left its route`);
             check(armyTokenCache.size === 1, `${label}/${missing}: duplicate token`);
             checked++;
           }

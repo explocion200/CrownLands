@@ -22295,10 +22295,10 @@ function frame(now) {
     kingPowerRenderFrameCacheActive = true;
     kingPowerRenderFrameCache = null;
     if (state) {
-      if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
-        renderArmies();
+      if (!document.hidden && !profileScreen.classList.contains("open") && !modal.open) {
+        if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) renderArmies();
+        renderVisibleArmyMotion(now);
       }
-      renderVisibleArmyMotion(now);
       if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
         lastCityDynamicTextTime = now;
         updateVisibleCityDynamicText();
@@ -30977,7 +30977,7 @@ function createArmyTokenElement(attack) {
   return token;
 }
 
-function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInteractionDisabled = false) {
+function updateArmyTokenElement(token, attack, targetCity, endpointInteractionDisabled = false) {
   const clanAlly = isCurrentClanmateArmy(attack);
   const ownerClass = isPersonalArmy(attack)
     ? OWNER.player.css
@@ -30997,10 +30997,8 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (endpointInteractionDisabled && document.activeElement === token) token.blur();
   const expanded = String(selected);
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
-  token.style.transform = `translate(${mapPoint.x}px, ${mapPoint.y}px) translate(-50%, -50%)`;
-
   const troopSkin = attack.kind === "scout" ? "" : cosmeticAppearance(attack.ownerUid || (isPersonalArmy(attack) ? cosmeticUid : "")).troops || "";
-  token.dataset.troopSkin = troopSkin;
+  if (token.dataset.troopSkin !== troopSkin) token.dataset.troopSkin = troopSkin;
   if (troopSkin === "halloween_troops" || token.dataset.troopArt) {
     globalThis.CrownlandsTroopSkins?.apply(token, troopSkin, cosmeticMotion ||= createCosmeticMotion());
   }
@@ -31122,7 +31120,7 @@ function renderArmiesUncached(force = false) {
       armyTokenCache.set(tokenId, token);
       fragment.appendChild(token);
     }
-    updateArmyTokenElement(token, attack, mapPoint, to, endpointInteractionDisabled);
+    updateArmyTokenElement(token, attack, to, endpointInteractionDisabled);
     const previous = visibleArmyMotion.get(tokenId);
     visibleArmyMotion.set(tokenId, {
       token, army: attack, point: previous?.point || mapPoint,
@@ -31157,17 +31155,20 @@ function renderVisibleArmyMotion(now = performance.now()) {
   if (!visibleArmyMotion.size) return;
   const nowMs = getArmyClockNowMs();
   const regionId = getActiveMapRegionId();
+  const bounds = getActiveMapBounds();
+  const pixelScale = 4 * zoom * (window.devicePixelRatio || 1);
   for (const motion of visibleArmyMotion.values()) {
     const skinned = globalThis.CrownlandsTroopSkins?.has(motion.token);
     const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments, skinned ? motion.heading : null);
-    motion.token.hidden = !segment || segment.regionId !== regionId;
-    if (motion.token.hidden) continue;
+    const hidden = !segment || segment.regionId !== regionId;
+    if (motion.token.hidden !== hidden) motion.token.hidden = hidden;
+    if (hidden) continue;
     if (skinned) {
       const recalled = normalizeTimestampMs(motion.army.recalledAtMs);
       const reverse = motion.army.returning && recalled > 0 && normalizeTimestampMs(motion.army.arrivesAtMs) > recalled;
       globalThis.CrownlandsTroopSkins.face(motion.token, motion.heading.dx, motion.heading.dy, reverse);
     }
-    let point = worldToMapPoint(segment.point);
+    let point = { x: segment.point.x - bounds.left, y: segment.point.y - bounds.top };
     if (motion.correction) {
       const blend = clamp((now - motion.correction.startedAt) / 150, 0, 1);
       point = { x: motion.correction.from.x + (point.x - motion.correction.from.x) * blend,
@@ -31175,7 +31176,13 @@ function renderVisibleArmyMotion(now = performance.now()) {
       if (blend === 1) motion.correction = null;
     }
     motion.point = point;
-    motion.token.style.transform = `translate(${point.x}px, ${point.y}px) translate(-50%, -50%)`;
+    // Keep exact route state; only the display rounds to a quarter device pixel.
+    // Slow marches otherwise invalidate styles even for imperceptible movement.
+    const x = Math.round(point.x * pixelScale) / pixelScale, y = Math.round(point.y * pixelScale) / pixelScale;
+    const parts = getArmyTokenParts(motion.token);
+    if (parts.x === x && parts.y === y) continue;
+    parts.x = x; parts.y = y;
+    motion.token.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
   }
 }
 

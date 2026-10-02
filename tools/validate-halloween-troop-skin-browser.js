@@ -218,4 +218,5 @@ async function main() {
     await server.close();
   }
 }
-main().catch(error=>{console.error(error.stack||error.message);process.exitCode=1});
+module.exports = { setup, crowded };
+if (require.main === module) main().catch(error=>{console.error(error.stack||error.message);process.exitCode=1});

@@ -184,7 +184,8 @@ const entrypointBudgets = {
   // Camp power tiers, exact ranges and live reward previews add under 3 KiB.
   // Troop heading and appearance integration bring the runtime to 1905.9 KiB.
   // Allow one 1 KiB step; the new renderer and atlas have separate tight caps.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1) * 1024,
+  // Quarter-pixel march display caching and covered-map gating add under 1 KiB.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,

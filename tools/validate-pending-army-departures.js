@@ -28,6 +28,8 @@ async function main() {
     refreshScoutActionWheels: noop, renderHud: noop, updateIncomingAttackUi: noop, updateOutgoingAttackUi: noop,
     updateOnlineArmySyncBadge: noop, normalizeTimestampMs: Number, clamp: (n, a, b) => Math.min(b, Math.max(a, n)),
     worldToMapPoint: p => p, getActiveMapRegionId: () => "map",
+    getActiveMapBounds: () => ({left:0,top:0}), zoom:1, window:{devicePixelRatio:1},
+    getArmyTokenParts: token => token.parts ||= {},
     getMissionPointAtProgress: (_army, progress, segments) => {
       assert(segments, "Per-frame motion must reuse discovered route geometry");
       return { regionId: segments[0].regionId, point: { x: progress * 100, y: 0 } };
@@ -88,6 +90,13 @@ async function main() {
   context.visibleArmyMotion.set("canonical", motion);
   context.renderVisibleArmyMotion(); const start = token.style.transform;
   clock += 16; context.renderVisibleArmyMotion(); assert.notEqual(token.style.transform, start, "Motion remained at label cadence");
+  motion.correction = { from:{x:-10,y:0}, startedAt:clock };
+  context.renderVisibleArmyMotion(); assert.equal(motion.point.x,-10,"Accepted snapshot flashed before its blend");
+  clock += 75; context.renderVisibleArmyMotion();
+  assert(Math.abs(motion.point.x-(-10+(9.1+10)*.5))<1e-9,"Snapshot blend changed its duration or route position");
+  clock += 75; context.renderVisibleArmyMotion();
+  assert.equal(motion.correction,null,"Snapshot correction did not finish after 150ms");
+  assert(Math.abs(motion.point.x-16.6)<1e-9,"Completed blend did not adopt the authoritative point");
   motion.segments[0].regionId = "other-map";
   context.renderVisibleArmyMotion(); assert.equal(token.hidden, true, "Portal crossing painted on the wrong map");
   console.log("Pending departures passed: next-frame feedback, persisted ID reuse, provisional cap, rejection/timeout, snapshot-before-response, 24-target reconciliation, session/realm cleanup, frame motion and portal isolation.");
