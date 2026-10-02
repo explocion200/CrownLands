@@ -132,10 +132,14 @@ async function checkCityArt() {
         await document.querySelector('.skin-detail [data-skin-preview-art]').decode();
         await Promise.all(profileScreen.getAnimations({subtree:true}).filter(animation=>animation.effect.getTiming().iterations!==Infinity).map(animation=>animation.finished.catch(()=>{})));
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        for(let n=0;n<30 && !document.querySelector('.skin-detail .halloween-city-bats[data-skin-motion=active]');n++) await new Promise(resolve=>setTimeout(resolve,50));
         const bats=[...document.querySelectorAll('.skin-detail .halloween-bat')];
         return bats.map(bat=>({width:bat.getBoundingClientRect().width,height:bat.getBoundingClientRect().height,display:getComputedStyle(bat).display,fill:getComputedStyle(bat).fill}));
       })()`);
       assert(preview.length === 3 && preview.every(bat => bat.width > 0 && bat.height > 0 && bat.display !== "none"), JSON.stringify(preview));
+      assert(await evaluate("document.querySelector('.skin-detail').getAnimations({subtree:true}).some(a=>a.playState==='running')"), "Selected preview must animate");
+      assert.equal(await evaluate("document.querySelector('.skins-grid').getAnimations({subtree:true}).filter(a=>a.playState==='running').length"), 0, "Collection thumbnails must remain static");
+      assert.equal(await evaluate("cityLayer.getAnimations({subtree:true}).filter(a=>a.animationName?.startsWith('halloweenBat') && a.playState==='running').length"), 0, "Map bats must stop behind Profile");
       const profileImage = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(output, `profile-${width}x${height}.png`), Buffer.from(profileImage.data, "base64"));
     }
