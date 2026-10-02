@@ -17,7 +17,7 @@
       "tests": [
         "tools/validate-halloween-marker-preview.js"
       ],
-      "reason": "Exercise the standalone design preview against the existing city-color palette and approved bat shapes. Verify eight ownership/strength colors, independent vector heraldry and level, original pointed center, PNG transparency, animated flight/wing/lantern layers, pause and reduced-motion/background/offscreen guards, and desktop/landscape/narrow-phone layouts. Motion is limited to two previews; game rendering, purchases, backend and public appearance logic are unchanged. Production build gates keep the client artifact valid."
+      "reason": "Exercise the standalone design preview against the existing city-color palette and approved bat shapes. Verify eight ownership/strength colors, independent vector heraldry and level, edge-to-edge flag fit with a clear level band, original pointed center, PNG transparency, animated flight/wing/lantern layers, pause and reduced-motion/background/offscreen guards, and desktop/landscape/narrow-phone layouts. Motion is limited to two previews; game rendering, purchases, backend and public appearance logic are unchanged. Production build gates keep the client artifact valid."
     },
     {
       "paths": [

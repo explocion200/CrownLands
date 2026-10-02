@@ -43,6 +43,7 @@ async function main() {
     assert.equal(await evaluate("document.querySelector('#hero-marker [data-city-level]').textContent"), "99");
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#hero-marker [data-city-fill]')).fill"), "rgb(75, 20, 24)");
     assert.equal(await evaluate("document.querySelector('#hero-marker [data-city-fill]').getAttribute('d')"), "M0 0H46V47.56L23 58L0 47.56Z");
+    assert(await evaluate("(()=>{const svg=document.querySelector('#hero-marker>svg'),flag=svg.querySelector('clipPath rect').getBBox(),level=svg.querySelector('[data-city-level]').getBBox();return flag.x<=0&&flag.y<=0&&flag.x+flag.width>=svg.viewBox.baseVal.width&&flag.y+flag.height<level.y})()"), "Flag must meet the frame at the top and both sides without covering the level band");
     await evaluate("document.getElementById('border').checked=false;document.getElementById('border').dispatchEvent(new Event('input',{bubbles:true}))");
     assert.equal(await evaluate("getComputedStyle(document.querySelector('#hero-marker [data-halloween-border]')).display"), "none");
     await evaluate("document.getElementById('primary').value='#182b3e';document.getElementById('secondary').value='#a9443b';document.getElementById('symbol').value='#eee5cd';document.getElementById('level').value='50';document.getElementById('border').checked=true;updateMarkerPreview()");
