@@ -1,4 +1,4 @@
-/* Cosmetic ownership and Crowns are server-authoritative. All launch art is a labeled placeholder. */
+/* Cosmetic ownership and Crowns are server-authoritative. Catalog skin art remains a labeled placeholder. */
 /* exported cosmeticOpenShopRequested, syncCosmeticsSession, applyCosmeticCityNode, updateCosmeticProfileNavigation, renderCosmeticPickupIcon */
 const COSMETIC_CATALOG = globalThis.CrownlandsCosmetics;
 let cosmeticState = null, cosmeticUid = "", cosmeticStop = null, cosmeticOwnerStop = null;
@@ -23,6 +23,7 @@ function syncCosmeticsSession() {
   cosmeticUid = uid; cosmeticState = null; cosmeticBusy = false; cosmeticError = ""; cosmeticConfirmation = null;
   cosmeticOwnerAppearances.clear(); cosmeticNeededOwners.clear(); cosmeticOwnerSignature = "";
   cosmeticPendingPurchase = null;
+  renderCosmeticHud();
   if (!uid) return;
   try { cosmeticPendingPurchase = JSON.parse(sessionStorage.getItem(`crownlands-cosmetic-purchase:${uid}`) || "null"); } catch { /* Storage may be unavailable. */ }
   const api = getOnlineApi();
@@ -164,7 +165,19 @@ function bindSkinsPanel(root) {
   });
 }
 
+function renderCosmeticHud() {
+  const counter = document.getElementById("crownsBalance");
+  if (!counter) return;
+  const balance = cosmeticUid && cosmeticState ? cosmeticState.crowns : null;
+  const label = balance !== null ? `${balance.toLocaleString("en-US")} Crowns`
+    : !cosmeticUid ? "Sign in to load Crowns" : cosmeticError ? "Crowns balance unavailable" : "Loading Crowns";
+  setTextIfChanged(document.getElementById("crownsText"), balance === null ? "—" : formatNumber(balance));
+  counter.setAttribute("aria-label", label);
+  counter.title = label;
+}
+
 function refreshCosmeticPanels() {
+  renderCosmeticHud();
   document.querySelectorAll(".skins-panel").forEach(root => {
     if (root.dataset.skinsMode === "profile" && (activeProfileTab !== "skins" || !profileScreen.classList.contains("open"))) return;
     if (root.dataset.skinsMode === "shop" && !modal.open) return;
@@ -281,7 +294,7 @@ function updateCosmeticProfileNavigation() {
 
 
 function renderCosmeticPickupIcon(type) {
-  if (type === "crowns") return `<span class="harvest-bonus-icon" aria-hidden="true">♛</span>`;
+  if (type === "crowns") return `<img class="harvest-bonus-icon" src="assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp" alt="" width="192" height="192" draggable="false">`;
   return normalizeHarvestBonusType(type) === "troops"
     ? `<img class="harvest-bonus-icon" src="${TROOP_PICKUP_ICON_SRC}" alt="" draggable="false">`
     : `<img class="harvest-bonus-icon" src="${GOLD_PICKUP_ICON_SRC}" alt="" draggable="false">`;

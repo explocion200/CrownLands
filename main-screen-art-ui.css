@@ -12,4 +12,20 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 .profile-action-row{margin-left:-7px}
 /* Match Reports' 12px outer inset: the header supplies the screen inset,
    and 7px cancels the row/Gold margins. Preserve the header's safe area. */
-.profile-stack{left:7px!important}
+.profile-stack{left:7px!important;height:auto!important;align-content:start}
+/* Stack both balances at the same width; deadlines follow the complete group. */
+.profile-currencies{display:grid;gap:4px;justify-items:stretch;width:max-content;margin:.16rem 0 0 -7px}
+.profile-currencies .profile-gold{margin:0;grid-template-columns:20px minmax(0,1fr)}
+.profile-currencies .cl-icon{width:20px;height:20px;object-fit:contain}
+.profile-currencies strong{text-align:right;font-variant-numeric:tabular-nums}
+.profile-crowns .cl-icon{filter:drop-shadow(0 1px 0 #24142599)}
+.profile-stack>.combat-timers{margin-left:-7px}
+/* Keep both march alerts clear of the taller currency/timer stack on short phones. */
+@media(orientation:landscape) and (max-height:360px){
+ body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])){
+  --cl-operation-button-width:92px;display:grid!important;grid-template-columns:repeat(2,92px);
+ }
+ body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #incomingAttackBtn{grid-column:1;grid-row:1}
+ body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #outgoingAttackBtn{grid-column:2;grid-row:1}
+ body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #logBtn{grid-column:1;grid-row:2}
+}

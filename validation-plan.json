@@ -1,49 +1,36 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "10d801c637c9fe1f70425c223cc6525d0d1d8018",
+  "baseCommit": "9797cfe77166c901ea25531748b34896e98386a6",
   "coverage": [
     {
-      "paths": ["city-details-ui.js", "tools/validate-city-details-browser.js"],
-      "tests": ["tools/validate-city-details-browser.js"],
-      "reason": "Reproduces the +5 reset through the live clan refresh caller. Covers full refreshes during queued upgrades and rejected actions, MAX, projected affordability, tabs, focus, independent scroll columns, session changes, fresh visits, foreign privacy and Inner Castle return at five desktop/phone/landscape sizes. Queue settlement and server authority are unchanged."
+      "paths": ["index.html", "main-screen-art-ui.css", "tools/validate-crowns-hud-browser.js"],
+      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-main-screen-art-browser.js", "tools/validate-combat-timers-browser.js"],
+      "reason": "The approved currency stack restores the Gold coin, adds Crowns and places Shield Cooldown/Retaliation underneath at the same left edge. Desktop and two landscape sizes check equal counter widths, amounts/icons, exact accessible balances, timer and dropdown reachability, asset loading and existing navigation. The shortest landscape layout puts simultaneous incoming/outgoing alerts in one row to clear the taller stack. Existing timer expiration, scrolling and location actions remain covered."
     },
     {
-      "paths": ["game.js", "modal-ui.js", "tools/validate-ui-refresh-browser.js"],
-      "tests": [
-        "tools/validate-ui-refresh-browser.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-item-bag-browser.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-shop-browser.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js"
-      ],
-      "reason": "Shared refresh state captures presentation only, with explicit keys for each session/view. New desktop and landscape browser coverage checks clan creation/search drafts, cursor ranges, roster focus, gift scrolling, holding tabs/disclosures, inventory pages/scroll and scope boundaries. Player/clan profiles opened from a holding remain visible during clan relationship, world benefit and stronghold ownership snapshots, both loading and loaded. Existing suites exercise shared modal lifecycle, Treasury drafts and donation actions, Item Bag action settlement and removed-page fallback. The requested wider UI audit also checks existing City List, Shop, Skills, incoming threats, scout/report, rally and Kingdom Activity/leaderboard preservation paths. No backend, economy formula, ownership or action authorization changes."
+      "paths": ["skins-ui.js", "tools/validate-cosmetics-browser.js"],
+      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-cosmetics-browser.js", "tools/validate-cosmetics.js"],
+      "reason": "Render the existing authoritative cosmetic wallet into the HUD when loaded, collected, spent or refreshed. Exercise unknown and confirmed-zero balances, failed reads, revision ordering, account changes, sign-out, late responses, collection failure/pending/success and purchase reconciliation. Existing catalog, equip/default and permanent wallet rules are unchanged and exercised by the cosmetics validators. No new backend calls or authority changes."
     },
     {
-      "paths": ["common-gear-ui.js"],
-      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-treasury-gear-browser.js", "tools/validate-optional-ui-scripts-browser.js"],
-      "reason": "The shared officer renderer now preserves the selected item's details scroll and focused control during same-view updates. Browser coverage exercises all four officer screens, deferred script loading, Treasury equip/upgrade/confirmation behavior, and desktop plus two landscape sizes. Existing explicit action focus and bag selection models remain authoritative."
+      "paths": ["skins-ui.css", "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp", "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp", "docs/visual-qa/crowns-currency/art/crown-coin-source-r1.png", "docs/visual-qa/crowns-currency/art/pickup-crowns-source-r1.png"],
+      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-harvest-pickups.js"],
+      "reason": "Approved transparent source art and small WebP delivery assets replace the Crown glyph. The existing pickup ring and animation now use purple variables. Verify loaded images, alpha, dimensions, equal Gold/troop/Crown marker and image sizing, distinct ring colors, clickable targets at three zooms, and the real collection response path. Existing pickup timing, caps, production rewards and placement rules remain unchanged. Production artifact validation verifies packaging and budgets; source images are excluded from delivery."
     },
     {
-      "paths": ["tools/validate-asset-performance-budgets.js"],
-      "tests": ["tools/validate-asset-performance-budgets.js"],
-      "reason": "New shared refresh helpers add less than 8 KiB to the existing dialog presentation module. Bound that module's allowance explicitly; the main game and aggregate installed-shell caps stay unchanged and there is no additional script request. Verify the complete production artifact remains within asset and shell limits."
+      "paths": ["game.js"],
+      "tests": ["tools/validate-crowns-hud-browser.js", "tools/validate-home-navigation-browser.js"],
+      "reason": "The taller profile stack can move the edge-of-map Home control toward Chat or the part of the profile-button row extending beyond its fixed-width parent. Add those existing controls to its collision avoidance list. Verify all HUD controls remain reachable and nonoverlapping at supported sizes, plus existing home/realm navigation, retry and stale-navigation behavior. No world data or gameplay rules change."
     },
     {
-      "paths": ["tools/validate-scout-responsiveness-browser.js"],
-      "tests": ["tools/validate-scout-responsiveness-browser.js"],
-      "reason": "The wider UI audit exposed noisy local timing failures: the previous ten-sample p95 was the single slowest frame. Increase to 40 observations for a meaningful percentile rank, retaining the 100 ms pending-feedback and 200 ms report limits and all functional assertions. Persist measurements before assertions so failed runs retain diagnostic evidence. Scouting gameplay code is identical to the branch base."
+      "paths": ["service-worker.js"],
+      "tests": ["tools/validate-main-screen-art-browser.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Keep the offline shell in sync with the updated skins script and stylesheet and HUD stylesheet URLs. Artwork uses the existing runtime cache without new install preloads. Existing production artifact validation and asset budget checks cover offline shell references and shipped files. Cache strategy and backend contract remain unchanged."
     },
     {
-      "paths": ["daily-login-ui.js"],
-      "tests": ["tools/validate-ui-refresh-browser.js", "tools/validate-daily-login-rewards.js", "tools/validate-optional-ui-scripts-browser.js"],
-      "reason": "Daily Login refresh keeps its week/day focus and scroll only for the same session and reward position; a new cycle resets normally. Browser tests use the actual daily reward model and deferred renderer. Static reward validation verifies the authoritative schedule and claim integration remain unchanged."
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/visual-qa/crowns-currency/README.md"],
+      "tests": [],
+      "reason": "Record the owner's confirmed artwork, counter order and timer alignment alongside source provenance, final generation prompts, delivery encodings and validation instructions. Documentation makes no production deployment claim."
     }
   ]
 }
