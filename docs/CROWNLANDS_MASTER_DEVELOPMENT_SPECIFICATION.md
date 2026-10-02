@@ -970,7 +970,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 ### Cosmetic skins and Crowns — confirmed October 1, 2026
 
-**Status:** implementation pending validation and authorized deployment. Halloween city artwork and bats were approved October 2, 2026; other initial collection art remains explicitly marked as a placeholder and requires approval before public availability. Cash Crown packs are a separate future update.
+**Status:** implementation pending validation and authorized deployment. Halloween city artwork, bats and Halloween March troop artwork were approved October 2, 2026; remaining initial collection art remains explicitly marked as a placeholder and requires approval before public availability. Cash Crown packs are a separate future update.
 
 - Add Shop → Skins and Profile → Skins. Shop navigation is Provisions / Skins / Free boosts; Profile navigation is Profile / Clan / Skills / Skins / Settings. Profile → Skins offers Cities, Troops and Flag Borders, owned/default choices, previews, equipped markers, free switching and a Browse Shop link. Flag Icons remain available to purchase in Shop → Skins; choose owned icons in the existing Edit Flag → Symbol controls. Purchases unlock items without equipping them and never enter the consumable Bag.
 - Crowns purchase cosmetics only; no gameplay benefit, resource conversion, player transfers or trading. Start at zero with no retroactive grants. Daily Missions and their existing Common Gear Box completion reward grant no Crowns. Earn Crowns through the map pickups specified in Section 6.
