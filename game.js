@@ -4128,8 +4128,9 @@ function getHoldingTowerQaScenario() {
 function beginHoldingTowerModalSession(towerId, view) {
   holdingTowerModalSession?.cleanup();
   const session = { towerId, view };
+  const onClose = () => { if (!modal.open) session.cleanup(); };
   session.cleanup = () => {
-    modal.removeEventListener("close", session.cleanup);
+    modal.removeEventListener("close", onClose);
     if (holdingTowerModalSession !== session) return;
     holdingTowerModalSession = null;
     selectedHoldingTowerId = "";
@@ -4146,7 +4147,8 @@ function beginHoldingTowerModalSession(towerId, view) {
   holdingTowerModalSession = session;
   selectedHoldingTowerId = view === "details" ? towerId : "";
   // Install before any network request, including a slow first load.
-  modal.addEventListener("close", session.cleanup, { once: true });
+  // Ignore a queued native close from the previous view after a quick reopen.
+  modal.addEventListener("close", onClose);
   return session;
 }
 

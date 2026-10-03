@@ -39,7 +39,7 @@
         "tools/validate-clan-tower-orders-browser.js",
         "tools/validate-holding-tower-client-lifecycle.js"
       ],
-      "reason": "Extend Tower API-boundary coverage for shielded attacks and reinforcement cancellation/confirmation, repeat submit, and changed Tower ownership. The existing bare-input unit harness has no active shield and uses an explicit no-warning adapter; real popup behavior is covered by the browser suites."
+      "reason": "Extend Tower API-boundary coverage for shielded attacks and reinforcement cancellation/confirmation, repeat submit, and changed Tower ownership. The existing bare-input unit harness has no active shield and uses an explicit no-warning adapter; real popup behavior is covered by the browser suites. Deliver a stale close event after reopening a Tower order to verify its underlying session remains valid, with explicit cleanup and real closure still removing listeners."
     },
     {
       "paths": [

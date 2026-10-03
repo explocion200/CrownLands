@@ -243,9 +243,19 @@ async function main() {
         modalBody.querySelector('[data-tower-order-form]').requestSubmit();
       })()`);
       assert(await evaluate('!!document.getElementById("peaceShieldOrderDialog")&&towerOrderQa.orders.length===0'), JSON.stringify({mode,state:await evaluate('({open:modal.open,warning:!!document.getElementById("peaceShieldOrderDialog"),orders:towerOrderQa.orders.length,shield:state.itemEffects.shieldExpiresAtMs,notice:toast.textContent})')}));
+      await evaluate('modal.dispatchEvent(new Event("close"))');
+      assert(await evaluate('isHoldingTowerModalSessionCurrent(holdingTowerModalSession)'), 'A queued close must not retire the current Tower order');
       await evaluate('document.querySelector("#peaceShieldOrderDialog footer [data-shield-cancel]").click()');
       assert(await evaluate('modal.open&&towerOrderQa.orders.length===0&&state.itemEffects.shieldExpiresAtMs===towerOrderQa.shield'));
-      await evaluate('modalBody.querySelector("[data-tower-order-form]").requestSubmit();document.querySelector("#peaceShieldOrderDialog [data-shield-continue]").click();modalBody.querySelector("[data-tower-order-form]").requestSubmit()');
+      const retryState=await evaluate(`(() => {
+        modalBody.querySelector('[data-tower-order-form]').requestSubmit();
+        return {warning:!!document.getElementById('peaceShieldOrderDialog'),orders:towerOrderQa.orders.length,
+          shield:state.itemEffects.shieldExpiresAtMs,session:holdingTowerModalSession,notice:toast.textContent,
+          mode:modalBody.querySelector('[data-tower-order-form]').dataset.towerOrderMode,
+          current:isHoldingTowerModalSessionCurrent(holdingTowerModalSession),busy:holdingTowerActionsInFlight.has(towerOrderQa.tower.id)};
+      })()`);
+      assert(retryState.warning,JSON.stringify({mode,retryState}));
+      await evaluate('document.querySelector("#peaceShieldOrderDialog [data-shield-continue]").click();modalBody.querySelector("[data-tower-order-form]").requestSubmit()');
       assert.equal(await evaluate('towerOrderQa.orders.length'),1,'Approved Tower order must send once');
       assert.equal(await evaluate('towerOrderQa.orders[0].army.troops'),1003);
       await evaluate("towerOrderQa.finishSend({ok:true})");
