@@ -92,7 +92,7 @@
       "tests": [
         "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Extend the existing current Core-expansion lifecycle fixture with members younger than the former 24-hour wait, blocked and successful Tower Rally joins, departure cooldown admission checks and rejoin probation. All writes are emulator-only; use the existing isolated gate configuration."
+      "reason": "Extend the existing current Core-expansion lifecycle fixture with members younger than the former 24-hour wait, blocked and successful Tower Rally joins, departure cooldown admission checks and rejoin probation. Prepare the empty prior-season reward fixture before current-realm bootstrap, matching the existing Rally test setup so monthly rollover does not prevent these checks. All writes are emulator-only; use the existing isolated gate configuration."
     },
     {
       "paths": [

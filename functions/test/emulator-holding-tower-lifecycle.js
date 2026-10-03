@@ -81,6 +81,10 @@ async function assertTroopPower(actor) {
 }
 
 async function main() {
+  // An empty emulator still crosses the real monthly season boundary.
+  const seasons = require("../season-rewards");
+  const previous = seasons.previousSeason(`realm-${new Date().toISOString().slice(0, 7)}`);
+  if (seasons.supported(previous)) await seasons.arm(db, previous, seasons.seasonInfo(previous).startsAtMs + 1);
   const actors = [];
   for (let index = 0; index < 4; index++) actors.push(await createActor(`Tower Ruler ${index + 1}`));
   const [leader, member] = actors, outsider = actors[3];
