@@ -61,6 +61,10 @@ const artifacts = path.resolve(__dirname, "../release-artifacts/shield-order-con
       await client.send("Emulation.setDeviceMetricsOverride", { width,height,deviceScaleFactor:1,mobile:height<600 });
       await evaluate("shieldQa.open();shieldQa.send();shieldQa.send()");
       assert(await evaluate('document.querySelectorAll("#peaceShieldOrderDialog").length===1&&shieldQa.sent.length===0'));
+      // Native close events from the preceding view can arrive after this
+      // parent dialog has already reopened. They must not dismiss its warning.
+      await evaluate('modal.dispatchEvent(new Event("close"))');
+      assert(await evaluate('!!document.getElementById("peaceShieldOrderDialog")&&modal.open'), 'A queued close from the previous view dismissed the new warning');
       assert(await evaluate('document.activeElement.matches("footer [data-shield-cancel]")'), "Cancel must have initial focus");
       const layout=await evaluate(`(()=>{const d=document.getElementById('peaceShieldOrderDialog'),r=d.getBoundingClientRect();return {fits:r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1,overflow:d.scrollWidth>d.clientWidth+1,buttons:[...d.querySelectorAll('footer button')].map(b=>{const r=b.getBoundingClientRect();return r.height>=44&&r.bottom<=innerHeight&&r.top>=0;}),text:d.innerText}})()`);
       assert(layout.fits&&!layout.overflow&&layout.buttons.every(Boolean),JSON.stringify(layout));

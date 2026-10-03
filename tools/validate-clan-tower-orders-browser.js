@@ -242,7 +242,7 @@ async function main() {
         q.open(${JSON.stringify(mode)});q.setAmount(1003);
         modalBody.querySelector('[data-tower-order-form]').requestSubmit();
       })()`);
-      assert(await evaluate('!!document.getElementById("peaceShieldOrderDialog")&&towerOrderQa.orders.length===0'));
+      assert(await evaluate('!!document.getElementById("peaceShieldOrderDialog")&&towerOrderQa.orders.length===0'), JSON.stringify({mode,state:await evaluate('({open:modal.open,warning:!!document.getElementById("peaceShieldOrderDialog"),orders:towerOrderQa.orders.length,shield:state.itemEffects.shieldExpiresAtMs,notice:toast.textContent})')}));
       await evaluate('document.querySelector("#peaceShieldOrderDialog footer [data-shield-cancel]").click()');
       assert(await evaluate('modal.open&&towerOrderQa.orders.length===0&&state.itemEffects.shieldExpiresAtMs===towerOrderQa.shield'));
       await evaluate('modalBody.querySelector("[data-tower-order-form]").requestSubmit();document.querySelector("#peaceShieldOrderDialog [data-shield-continue]").click();modalBody.querySelector("[data-tower-order-form]").requestSubmit()');

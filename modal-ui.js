@@ -41,7 +41,10 @@ function confirmPeaceShieldOrder(source, target, kind, troops, confirmation, ret
     if (current && focused?.isConnected) focused.focus({ preventScroll: true });
     if (accepted && current) retry({ key });
   };
-  const parentClosed = () => finish(false);
+  const parentClosed = () => {
+    // A queued close for the preceding view must not dismiss a new warning.
+    if (!modal.open || modalBody.firstElementChild !== view) finish(false);
+  };
   modal.addEventListener("close", parentClosed);
   dialog.addEventListener("keydown", event => {
     if (event.key !== "Escape") return;
