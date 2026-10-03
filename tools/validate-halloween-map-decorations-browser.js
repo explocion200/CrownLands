@@ -72,16 +72,36 @@ async function main() {
         const assert=(ok,message)=>{if(!ok)throw Error(message)};
         const region=getActiveMapRegionId(), layer=mapBg.querySelector('.halloween-map-decorations'), image=layer.firstElementChild;
         assert(layer.children.length===24,'Expected full density for motion check');
-        markCameraInteraction({zooming:true});
-        const movingVisible=[...layer.children].filter(prop=>getComputedStyle(prop).visibility!=='hidden').length;
-        assert(movingVisible===9,'Camera movement exceeds the original nine-prop paint budget');
-        await new Promise(resolve=>setTimeout(resolve,500));
-        const settledVisible=[...layer.children].filter(prop=>getComputedStyle(prop).visibility!=='hidden').length;
-        assert(settledVisible===24,'Decorations did not return after camera settled');
+        const props=[...layer.children], origin={x:camera.x,y:camera.y,zoom};
+        const visibleCount=()=>props.filter(prop=>{const style=getComputedStyle(prop);return style.visibility==='visible'&&style.display!=='none'&&Number(style.opacity)>0}).length;
+        let motionMutations=0;
+        const motionObserver=new MutationObserver(records=>{motionMutations+=records.length});motionObserver.observe(layer,{subtree:true,attributes:true,childList:true});
+        const motion=[];
+        for(let cycle=0;cycle<2;cycle++)for(const zooming of [false,true]){
+          const counts=[];
+          for(let frame=0;frame<12;frame++){
+            camera.x=origin.x+Math.sin(frame/12*Math.PI*2)*120;
+            camera.y=origin.y+Math.cos(frame/12*Math.PI*2)*80;
+            zoom=origin.zoom+(zooming?Math.sin(frame/12*Math.PI*2)*.08:0);
+            markCameraInteraction({zooming});updateCameraTransform();
+            await new Promise(requestAnimationFrame);
+            counts.push(visibleCount());
+          }
+          assert(counts.every(count=>count===24),'Decorations disappeared during '+(zooming?'zoom':'pan'));
+          camera.x=origin.x;camera.y=origin.y;zoom=origin.zoom;updateCameraTransform();
+          await new Promise(resolve=>setTimeout(resolve,500));
+          assert(!isCameraInteractionActive(),'Camera did not settle');
+          assert(visibleCount()===24,'Decorations changed after movement settled');
+          assert(props.every((prop,index)=>layer.children[index]===prop),'Camera movement replaced decoration nodes');
+          motion.push({cycle,zooming,minVisible:Math.min(...counts),settledVisible:visibleCount()});
+        }
+        assert(motionMutations+motionObserver.takeRecords().length===0,'Camera movement mutates static decorations');motionObserver.disconnect();
         const box=image.halloweenBounds, original=getActiveHarvestBonuses;
         getActiveHarvestBonuses=id=>id===region?[{x:(box.left+box.right)/2,y:(box.top+box.bottom)/2}]:[];
         refreshHalloweenDecorationVisibility();
         assert(image.hidden&&getComputedStyle(image).display==='none','Pickup did not suppress overlapping prop');
+        markCameraInteraction({zooming:true});
+        assert(image.hidden&&getComputedStyle(image).display==='none','Camera movement exposed a prop behind a pickup');
         getActiveHarvestBonuses=original;refreshHalloweenDecorationVisibility();assert(!image.hidden,'Prop did not recover');
         const observer=new MutationObserver(()=>{});observer.observe(layer,{subtree:true,attributes:true,childList:true});
         const start=performance.now();for(let i=0;i<1000;i++)refreshHalloweenDecorationVisibility();const refreshMs=performance.now()-start;
@@ -108,9 +128,13 @@ async function main() {
         const focus=mapBg.querySelector('.halloween-map-decorations img[src*="cauldron"]').halloweenBounds;
         centerOnWorldPoint({x:(focus.left+focus.right)/2,y:(focus.top+focus.bottom)/2},region);
         await Promise.all([...mapBg.querySelectorAll('.halloween-map-decorations img')].map(image=>image.decode()));
-        return {refreshMs,mutations:0,movingVisible,settledVisible,staleMap:true,template:true,optionalFailure:true,seasonEnd:true,pickup:true};
+        return {refreshMs,mutations:0,motion,staleMap:true,template:true,optionalFailure:true,seasonEnd:true,pickup:true};
       })()`);
-      await delay(200);
+      await delay(500);
+      await evaluate("markCameraInteraction({zooming:true,settleMs:2000})");
+      const movingShot = await client.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(output, `map-${width}-moving.png`), Buffer.from(movingShot.data, "base64"));
+      await wait("!isCameraInteractionActive()");
       const shot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(output, `map-${width}.png`), Buffer.from(shot.data, "base64"));
       results.push({ width, height, traversal, behavior });

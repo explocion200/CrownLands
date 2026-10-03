@@ -1,61 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5f32748bfa5e924a6ee76e78cb8813a6c8c40807",
+  "baseCommit": "7cbd0410667f5ff84f8c43c6be8276535b790cea",
   "coverage": [
     {
-      "paths": [
-        "game.js",
-        "modal-ui.js",
-        "styles.css"
-      ],
-      "tests": [
-        "tools/validate-shield-order-confirmation-browser.js",
-        "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-troop-selection-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-military-ui.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-peace-shield-returns.js",
-        "tools/validate-modal-lifecycle-browser.js"
-      ],
-      "reason": "The shared confirmation gates normal city orders, the older percentage Attack preview, and Tower attack/reinforcement dispatch before any launch API. Test Continue, Cancel, Escape, close, repeated clicks, exact troop counts, active/expired/replaced shields, account/session/view changes, lost origin/Tower ownership, reduced garrison, and changed selections. Exercise the real dispatch handlers at desktop and two landscape phone sizes. Preserve safe transfers, neutral regular-city attacks, Rally commitments, existing shield-removal rules, protection caps, route authority and modal cleanup. This is a client confirmation only; no server contract or rules change, so emulator suites are not required. The broader authoritative-army validator has a pre-existing stale Rally-cancellation source assertion on unchanged origin/main server code; it is outside this client-only change. Existing troop-selection browser checks retain route-readiness coverage. A deterministic regression delivers a queued native close event from the preceding modal view; the new warning must stay open while actual parent closure still cancels safely."
+      "paths": ["styles.css"],
+      "tests": ["tools/validate-halloween-map-decorations-browser.js", "tools/validate-halloween-map-performance-browser.js", "tools/validate-halloween-map-decorations.js", "tools/validate-map-interactions.js"],
+      "reason": "Remove the Halloween-only camera-state visibility rule that hid props after the first nine. Exercise repeated pan, zoom and settle at desktop and landscape-phone dimensions with all 24 static props visible and identical nodes; preserve pickup suppression, maximum city and scenery clearances, input pass-through, map switching, template reuse, October gating and stale loads. Measure frame pacing and main-thread CPU with 40 maximum-level cities, 25 armies, all seven textures, normal/4x CPU and phone DPR 2. No server, world data, camera handler, gameplay rule, asset or layout changes; emulator suites are not affected."
     },
     {
-      "paths": [
-        "tools/validate-shield-order-confirmation-browser.js"
-      ],
-      "tests": [
-        "tools/validate-shield-order-confirmation-browser.js"
-      ],
-      "reason": "Run the added browser scenarios against the actual game client with only fixture state and dispatch observation. External requests are blocked. Screenshots and safe dismissal/dispatch assertions cover 1440x900, 844x390 and 568x320."
+      "paths": ["tools/validate-halloween-map-decorations-browser.js"],
+      "tests": ["tools/validate-halloween-map-decorations-browser.js"],
+      "reason": "Regression fails on the previous hide-during-motion CSS. Require 24 visible props throughout repeated pan/zoom cycles and settling, preserve node identity, collect asynchronous DOM mutations, and retain pickup overlap suppression while moving. Save moving and settled desktop/mobile screenshots."
     },
     {
-      "paths": [
-        "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-orders-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "reason": "Extend Tower API-boundary coverage for shielded attacks and reinforcement cancellation/confirmation, repeat submit, and changed Tower ownership. The existing bare-input unit harness has no active shield and uses an explicit no-warning adapter; real popup behavior is covered by the browser suites. Deliver a stale close event after reopening a Tower order to verify its underlying session remains valid, with explicit cleanup and real closure still removing listeners."
+      "paths": ["tools/validate-halloween-map-performance-browser.js"],
+      "tests": ["tools/validate-halloween-map-performance-browser.js"],
+      "reason": "Require all measured props to be visible during every performance sample, ensuring hidden props cannot satisfy the existing density benchmark. Retain its repeated ABBA frame/CPU comparison, thresholds, texture/node limits, static animation check and stability checks."
     },
     {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Bound the added shared confirmation dialog code to one 4 KiB module increment. The dialog is created only on Send, removed on dismissal, and adds no network fetches, timers, images or map frame work. Preserve the aggregate installation budget and all unrelated source/art budgets."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
+      "paths": ["docs/art-sources/halloween-map-decorations/README.md"],
       "tests": [],
-      "reason": "Record the user-confirmed explicit Continue/Cancel warning and unchanged shield rules as pending release. The separate one-item production grant is not repository code and is excluded from this feature diff."
+      "reason": "Replace the outdated nine-prop movement behavior with corrected static visibility behavior and explain regression/performance evidence and pending release. No game design or balance change."
     }
   ]
 }
