@@ -26,7 +26,7 @@ const emptyActions=towerUi.mapActions({...owner,ownStationedTroops:0,permissions
 assert.equal(towerUi.mapActions({...owner,ownStationedTroops:0,buildings:{shop:1}}).find(a=>a.action==='store').disabled,false);
 assert.match(emptyActions.find(a=>a.action==='send').reason,/your own troops/);
 const probationActions=towerUi.mapActions({...owner,eligibility:{eligible:false},permissions:{inspect:true}});
-assert(probationActions.find(a=>a.action==='send').reason.includes('24 hours'));
+assert(probationActions.find(a=>a.action==='send').reason.includes('1 hour'));
 for(const level of [0,1]) {
   const store=towerUi.mapActions({...owner,buildings:{shop:level},buildingProject:{buildingId:'shop',targetLevel:level+1},eligibility:{eligible:false}}).find(a=>a.action==='store');
   assert.equal(store.disabled,level===0,'Store access must use the local completed level, even during construction or probation.');

@@ -91,11 +91,19 @@ for (const definition of towers.TOWERS) {
   assert.equal(neutral.veilUsage.count, 0);
 }
 
-// Authoritative 24-hour membership probation and three-person Rally gate.
-const eligibleMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - 25 * HOUR_MS });
-const probationMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - 23 * HOUR_MS });
+// Authoritative one-hour membership probation and three-person Rally gate.
+const eligibleMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - HOUR_MS });
+const probationMember = uid => ({ uid, clanId: "clan-red", status: "active", joinedAtMs: NOW - HOUR_MS + 1 });
+assert.equal(towers.TOWER_ACCESS_PROBATION_MS, HOUR_MS);
 assert.equal(towers.isEligibleMember(probationMember("new"), NOW, "clan-red"), false);
-assert.equal(towers.isEligibleMember({ ...eligibleMember("exact"), joinedAtMs: NOW - 24 * HOUR_MS }, NOW, "clan-red"), true);
+assert.equal(towers.isEligibleMember(eligibleMember("exact"), NOW, "clan-red"), true);
+assert.deepEqual(towers.getEligibility(probationMember("new"), NOW, "clan-red"), {
+  eligible: false, joinedAtMs: NOW - HOUR_MS + 1, eligibleAtMs: NOW + 1, remainingMs: 1,
+});
+for (const patch of [{ joinedAtMs: NOW }, { joinedAtMs: NOW + 1 }, { joinedAtMs: 0 }, { status: "removed" }, { clanId: "clan-other" }]) {
+  assert.equal(towers.isEligibleMember({ ...eligibleMember("invalid"), ...patch }, NOW, "clan-red"), false);
+}
+assert.equal(towers.isEligibleMember({ ...eligibleMember("rejoined"), joinedAt: NOW - HOUR_MS + 1 }, NOW, "clan-red"), false, "A newer membership timestamp must restart probation.");
 assert.equal(towers.isEligibleMember(eligibleMember("persisted"), NOW + 31 * 24 * HOUR_MS, "clan-red"), true, "A reset must not restart a persisted membership age.");
 const members = new Map(Array.from({ length: 6 }, (_, index) => {
   const uid = `member-${index + 1}`;

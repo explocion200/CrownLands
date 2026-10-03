@@ -1,26 +1,105 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7cbd0410667f5ff84f8c43c6be8276535b790cea",
+  "baseCommit": "3add0e5e9df2a10d13a5a8ace95ac38a439a148e",
   "coverage": [
     {
-      "paths": ["styles.css"],
-      "tests": ["tools/validate-halloween-map-decorations-browser.js", "tools/validate-halloween-map-performance-browser.js", "tools/validate-halloween-map-decorations.js", "tools/validate-map-interactions.js"],
-      "reason": "Remove the Halloween-only camera-state visibility rule that hid props after the first nine. Exercise repeated pan, zoom and settle at desktop and landscape-phone dimensions with all 24 static props visible and identical nodes; preserve pickup suppression, maximum city and scenery clearances, input pass-through, map switching, template reuse, October gating and stale loads. Measure frame pacing and main-thread CPU with 40 maximum-level cities, 25 armies, all seven textures, normal/4x CPU and phone DPR 2. No server, world data, camera handler, gameplay rule, asset or layout changes; emulator suites are not affected."
+      "paths": [
+        "functions/index.js",
+        "functions/holding-towers.js"
+      ],
+      "tests": [
+        "tools/validate-clan-membership-cooldowns.js",
+        "tools/validate-clans.js",
+        "tools/validate-holding-towers.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Reduce authoritative departure admission and shared Tower membership probation to one hour. Exercise exact eligibility boundaries, current membership/clan guards, Tower-target and Tower-origin Rally permissions, troop orders, scouting eligibility and Clan Shop purchases. Shorten saved 24-hour departures only when their protected clan-change timestamp identifies the original start; preserve unmatched deadlines. The Tower lifecycle emulator tests actual create/join dispatch below and above one hour, reinforcement/withdrawal rejection, purchase eligibility, leave/join/apply/create cooldowns, saved deadline conversion and rejoin probation. Existing role, minimum-three-contributor, troop-accounting, clan-removal, construction and ownership checks remain covered."
     },
     {
-      "paths": ["tools/validate-halloween-map-decorations-browser.js"],
-      "tests": ["tools/validate-halloween-map-decorations-browser.js"],
-      "reason": "Regression fails on the previous hide-during-motion CSS. Require 24 visible props throughout repeated pan/zoom cycles and settling, preserve node identity, collect asynchronous DOM mutations, and retain pickup overlap suppression while moving. Save moving and settled desktop/mobile screenshots."
+      "paths": [
+        "game.js",
+        "firebaseClient.js"
+      ],
+      "tests": [
+        "tools/validate-clan-membership-cooldowns.js",
+        "tools/validate-clans.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-clan-tower-orders-browser.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Use the same effective saved departure deadline for initial profile load and authoritative live clan snapshots. Preserve current-realm filtering while forwarding the existing protected timestamp; test client/server conversion parity and countdown boundaries. Check existing clan confirmation/dispatch behavior and Tower troop-order UI. These changes do not add a new Firestore field, API endpoint, listener or timer."
     },
     {
-      "paths": ["tools/validate-halloween-map-performance-browser.js"],
-      "tests": ["tools/validate-halloween-map-performance-browser.js"],
-      "reason": "Require all measured props to be visible during every performance sample, ensuring hidden props cannot satisfy the existing density benchmark. Retain its repeated ABBA frame/CPU comparison, thresholds, texture/node limits, static animation check and stability checks."
+      "paths": [
+        "clan-shop-ui.js",
+        "clan-tower-buildings-ui.js"
+      ],
+      "tests": [
+        "tools/validate-clan-shop-browser.js",
+        "tools/validate-clan-membership-cooldowns.js"
+      ],
+      "reason": "Update only membership-wait copy. Check the blocked purchase message and layout at desktop and two landscape phone sizes, then verify the existing countdown refresh unlocks the control after an authoritative eligibility response without buying anything. Preserve item limits, prices, inventory, retries, ownership and purchase cooldowns."
     },
     {
-      "paths": ["docs/art-sources/halloween-map-decorations/README.md"],
+      "paths": [
+        "clan-tower-details-ui.js",
+        "holding-tower-ui.js",
+        "help-handbook-content.js"
+      ],
+      "tests": [
+        "tools/validate-holding-details-ui.js",
+        "tools/validate-clan-membership-cooldowns.js",
+        "tools/validate-clan-tower-orders-browser.js"
+      ],
+      "reason": "Replace 24-hour membership instructions and disabled-action explanations with one hour. Render the actual Tower details, preserve role/action gating and check handbook and fallback copy for stale waits. No new layout or artwork."
+    },
+    {
+      "paths": [
+        "tools/validate-clan-membership-cooldowns.js"
+      ],
+      "tests": [
+        "tools/validate-clan-membership-cooldowns.js"
+      ],
+      "reason": "Run production backend and client helpers against new, saved, elapsed and exact-boundary deadlines, unmatched metadata, existing membership and pending application cases; retain profile/snapshot wiring and copy checks."
+    },
+    {
+      "paths": [
+        "tools/validate-clans.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-holding-details-ui.js"
+      ],
+      "tests": [
+        "tools/validate-clan-membership-cooldowns.js",
+        "tools/validate-clans.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-holding-details-ui.js"
+      ],
+      "reason": "Update the old duration expectations. Tower participants and scout origins now use exactly one hour; reject one millisecond short, future/missing timestamps, removed/wrong-clan membership and a newer join timestamp. Preserve minimum Rally force, current-realm fences and construction/role rules."
+    },
+    {
+      "paths": [
+        "tools/validate-clan-shop-browser.js"
+      ],
+      "tests": [
+        "tools/validate-clan-shop-browser.js"
+      ],
+      "reason": "Exercise one-hour purchase messaging and live eligibility refresh in the real browser UI with isolated callable responses, at 1440x900, 844x390 and 568x320."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "tests": [
+        "functions/test/emulator-holding-tower-lifecycle.js"
+      ],
+      "reason": "Extend the existing current Core-expansion lifecycle fixture with members younger than the former 24-hour wait, blocked and successful Tower Rally joins, departure cooldown admission checks and rejoin probation. All writes are emulator-only; use the existing isolated gate configuration."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
       "tests": [],
-      "reason": "Replace the outdated nine-prop movement behavior with corrected static visibility behavior and explain regression/performance evidence and pending release. No game design or balance change."
+      "reason": "Record the user-requested one-hour departure and Tower participation waits, unchanged role/ownership rules, existing deadline handling and separate clocks. Mark the update pending release; coordinated backend and web deployment remains required."
     }
   ]
 }

@@ -37,8 +37,8 @@ requires(server, /CLAN_CREATE_GOLD_COST\s*=\s*100_000/, "Clan creation must cost
 requires(server, /CLAN_NAME_CHANGE_GOLD_COST\s*=\s*500_000/, "Clan renaming must cost 500,000 gold.");
 requires(server, /CLAN_NAME_CHANGE_COOLDOWN_MS\s*=\s*7\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan renaming must have a seven-day cooldown.");
 requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.");
-requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
-requires(server, /function assertNoClan[\s\S]*?clanJoinCooldownUntilMs[\s\S]*?cooldownUntilMs\s*>\s*nowMs[\s\S]*?wait before joining another clan/, "Clan joining and applications must enforce the authoritative leave cooldown.");
+requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be one hour.");
+requires(server, /function assertNoClan[\s\S]*?getClanJoinCooldownUntilMs[\s\S]*?cooldownUntilMs\s*>\s*nowMs[\s\S]*?wait before joining another clan/, "Clan joining and applications must enforce the authoritative leave cooldown.");
 requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
 requires(server, /function createResetClanWorldBenefits[\s\S]*?resetGeneration: RESET_GENERATION,[\s\S]*?realmShardId: getCurrentRealmShardId\(\)/, "Reset clan benefits must carry the active realm shard.");
 requires(server, /function createResetClanGiftActivity[\s\S]*?resetGeneration: RESET_GENERATION,[\s\S]*?realmShardId: getCurrentRealmShardId\(\)/, "Reset clan gift activity must carry the active realm shard.");

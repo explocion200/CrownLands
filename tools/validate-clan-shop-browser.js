@@ -21,13 +21,13 @@ async function main(){
    await ready('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"');
    await ev(`(() => {
     window.__CROWNLANDS_BENCHMARK__.closeModal();
-    const api=getOnlineApi();window.shopQa={calls:[],usage:{},fail:false,hold:false,unavailable:false,gold:5000000,boxes:2,items:{recall_horn:1},level:10,eligible:true};
+    const api=getOnlineApi();window.shopQa={calls:[],usage:{},fail:false,hold:false,unavailable:false,gold:5000000,boxes:2,items:{recall_horn:1},level:10,eligible:true,eligibleAt:Date.now()+3600000};
     window.shopTower=HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id),'owner');
     Object.assign(shopTower,{buildings:{shop:10,workshop:1,infirmary:1,training:1},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repairActive:false});
     state.clanId=shopTower.clanId;state.gold=shopQa.gold;state.gear.commonGearBoxes=2;
     clanTreasuryClanId=state.clanId;clanTreasuryStatus={treasury:{balance:3400000000}};
     loadClanTreasuryStatus=async()=>clanTreasuryStatus;
-    shopQa.stock=()=>({level:shopQa.level,localLevel:shopTower.buildings.shop,eligible:shopQa.eligible,eligibleAtMs:Date.now()+3600000,items:CrownlandsClanTowerBuildings.shopStatus(shopQa.level,shopQa.usage,Date.now()).map(i=>({...i,price:135000}))});
+    shopQa.stock=()=>({level:shopQa.level,localLevel:shopTower.buildings.shop,eligible:shopQa.eligible||Date.now()>=shopQa.eligibleAt,eligibleAtMs:shopQa.eligibleAt,items:CrownlandsClanTowerBuildings.shopStatus(shopQa.level,shopQa.usage,Date.now()).map(i=>({...i,price:135000}))});
     shopQa.reply=()=>({ok:true,clanShop:shopQa.stock(),currentUser:{gold:shopQa.gold,goldFloat:shopQa.gold,shopItems:shopQa.items,gear:{...state.gear,commonGearBoxes:shopQa.boxes}}});
     getOnlineApi=()=>({...api,isReady:()=>true,isSignedIn:()=>true,subscribeHoldingTowerState:()=>()=>{},
       getHoldingTowerState:async()=>({worldActive:true,towers:[{...shopTower}]}),
@@ -74,7 +74,12 @@ async function main(){
    assert(await ev(`modalBody.querySelector('#purchase').disabled`));
    await ev(`shopQa.eligible=false;refreshHoldingTower(shopTower.id)`);
    await ev(`modalBody.querySelector('[data-item="war_drums_30m"]').click()`);
-   assert(await ev(`modalBody.querySelector('#purchase').disabled && modalBody.textContent.includes('24 hours')`));
+   assert(await ev(`modalBody.querySelector('#purchase').disabled && modalBody.textContent.includes('1 hour')`));
+   await checkLayout();await screenshot(width+'-membership-wait');
+   const callsBeforeUnlock=await ev('shopQa.calls.length');
+   await ev(`shopQa.eligibleAt=Date.now()+500;refreshHoldingTower(shopTower.id)`);
+   await ready(`!modalBody.querySelector('#purchase').disabled`);
+   assert.equal(await ev('shopQa.calls.length'),callsBeforeUnlock,'Eligibility expiry submitted a purchase');
    await ev(`shopQa.eligible=true;shopQa.gold=0;refreshHoldingTower(shopTower.id)`);
    assert.equal(await ev(`modalBody.querySelector('#purchase').textContent`),'Not enough Gold');
    await ev(`shopQa.gold=5000000;shopTower.buildings.shop=9;shopQa.level=9;refreshHoldingTower(shopTower.id)`);
