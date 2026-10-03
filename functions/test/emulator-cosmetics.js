@@ -72,8 +72,11 @@ async function main(){
  assert.equal(border.state.equipped.border,"halloween_border");
  assert.equal(border.state.equipped.city,"halloween_city","Applying a frame must retain the city skin");
  assert.equal(border.state.crowns,wallet.crowns,"Applying an owned frame is free");
- await call("equipCosmetic",owner.token,borderRequest);
- assert.equal((await walletRef.get()).data().revision,border.state.revision,"Repeated Apply must replay without another revision");
+ await assert.rejects(call("equipCosmetic",owner.token,borderRequest),/collection changed/,"Repeated Apply with the old revision must be rejected");
+ const afterStaleBorder=(await walletRef.get()).data();
+ assert.equal(afterStaleBorder.revision,border.state.revision,"Stale Apply must not write another revision");
+ assert.equal(afterStaleBorder.crowns,border.state.crowns,"Stale Apply must not charge Crowns");
+ assert.equal(afterStaleBorder.equipped.border,"halloween_border","Stale Apply must preserve the equipped frame");
  const publicBorder=await (await rest(stranger,`playerCosmetics/${owner.uid}`)).json();
  assert.equal(publicBorder.fields.equipped.mapValue.fields.border.stringValue,"halloween_border","Other players must see the applied frame");
  const defaultBorder=await call("equipCosmetic",owner.token,{category:"border",itemId:"",expectedRevision:border.state.revision,requestId:"test_default_border"});
