@@ -1,64 +1,44 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "dc5e18fa3c61207f3db3c9970888089f5c18e16f",
+  "baseCommit": "18fd6e0ad888fbc8fd0f01a13b8985a6565b2127",
   "coverage": [
     {
       "paths": [
-        "functions/combat-authorization.js",
-        "functions/index.js"
+        "functions/index.js",
+        "functions/former-clan-protection.js",
+        "firestore.rules"
       ],
       "tests": [
+        "tools/validate-former-clan-protection.js",
+        "tools/validate-clan-membership-cooldowns.js",
         "tools/validate-combat-authorization.js",
         "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-clan-rallies.js",
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Extend new server-created grants and the matching capturer abandon lock to 24 hours. Cover exact expiry, saved deadlines, inverse King Power qualification, city and Tower dispatch, transactional consumption, concurrent retries, travel after expiry, recall and defeat. Existing shield cooldown, ownership, shield, Main City, realm and troop checks remain covered. Read all grants for the exact immutable city path inside the launch transaction and consume every currently valid same-city grant together. Prevent concurrent launches through different capture IDs, while preserving other cities and expired/used records."
+      "reason": "Record an atomic roster snapshot on leave, kick and disband. Enforce exact 24-hour city protection at preview, city/Tower dispatch and arrival, including converted support and hostile Rally returns. Check repeated departures, clan switching, ownership changes, outsiders, objective exclusions, realm isolation, Firestore forgery denial, replay and preserved troops/Shield/retaliation on denial. Exercise shared combat authorization and retain existing one-hour joining and Rally rules. The current-realm combat emulator runs actual callable lifecycle and affected shared objective/retaliation paths."
     },
     {
       "paths": [
-        "combat-timers-ui.js"
-      ],
-      "tests": [
-        "tools/validate-combat-authorization.js",
-        "tools/validate-combat-timers-browser.js"
-      ],
-      "reason": "Format hour-scale countdowns without changing sub-hour Shield timers. Keep used receipts hidden and explain consumption on Send. Test 24:00:00 in the HUD and expanded list at desktop and both landscape phone sizes, timer boundaries, expiry, snapshot reconstruction and map navigation."
-    },
-    {
-      "paths": [
-        "help-handbook-content.js"
-      ],
-      "tests": [
+        "game.js",
+        "help-handbook-content.js",
         "tools/validate-help-handbook-browser.js"
       ],
-      "reason": "Render and search the existing handbook in the isolated browser fixture at desktop and landscape sizes with the 24-hour window and spent-on-dispatch explanation."
+      "tests": [
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-help-handbook-browser.js"
+      ],
+      "reason": "Explain the restriction in leave/kick/disband confirmations and searchable Help. Render actual dialogs and handbook at 1440x900, 844x390 and 568x320. Verify reachable unclipped controls, cancellation, changed-clan safety, search and existing reader navigation. Inspect affected mobile screenshots."
     },
     {
       "paths": [
-        "battle-economy-guide.html"
+        "tools/validate-former-clan-protection.js"
       ],
       "tests": [
-        "tools/validate-battle-economy-guide.js"
+        "tools/validate-former-clan-protection.js"
       ],
-      "reason": "Validate the public guide structure and current gameplay guidance after updating retaliation duration and the one-launch rule. No calculation or combat formulas change."
-    },
-    {
-      "paths": [
-        "tools/validate-combat-authorization.js"
-      ],
-      "tests": [
-        "tools/validate-combat-authorization.js"
-      ],
-      "reason": "Run the new day-long grant/lock boundaries, historical deadline preservation, usedAt/usedArmy rejection and countdown transition assertions against production helpers."
-    },
-    {
-      "paths": [
-        "tools/validate-combat-timers-browser.js"
-      ],
-      "tests": [
-        "tools/validate-combat-timers-browser.js"
-      ],
-      "reason": "Exercise actual timer rendering with a full-day single-city opportunity, ensure text fits three viewport sizes and preserve existing multi-city navigation and expiry cases."
+      "reason": "Test production policy boundaries, exact expiry, roster deduplication, prior active deadlines, stale generation/shard exclusion, malformed records, owner direction and ordinary-city scope."
     },
     {
       "paths": [
@@ -67,15 +47,14 @@
       "tests": [
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Exercise actual captures with 24-hour persisted grants and locks, dispatch at hour 23, arrival after hour 24, concurrent sends and used-grant denial from both source types. Add genuine defeat and recall cases that never restore rights. Prepare the empty prior-season fixture to pass current monthly rollover; all mutations remain emulator-only."
+      "reason": "Extend the existing active-realm combat suite with real leave, kick and disband callables; valid inbound marches; concurrent denied sends; Tower dispatch; retaliation; converted support and Rally return resolution; preserved defender troops; idempotent replay; switching clans; expiry; private server-owned storage. Existing combat authorization and objective cases remain in the same suite."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the confirmed October 3 duration change, existing-deadline policy, matching abandon lock and consumption on launch. Mark pending release and preserve historical September decisions."
+      "reason": "Record the user-confirmed full attack block, 24-hour duration, directional scope and future departure policy. Identify implementation as pending merge and authorized deployment; no live data changes."
     }
   ]
 }

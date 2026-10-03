@@ -27224,7 +27224,7 @@ function confirmClanDisband() {
       <p>${formingRallyCount
         ? `${formatNumber(formingRallyCount)} forming ${formingRallyCount === 1 ? "rally" : "rallies"} will be cancelled and committed troops will return.`
         : "Any forming rallies will be cancelled and committed troops will return."} Launched Rallies are recalled automatically, without consuming a Recall Horn.</p>
-      <p>Other members can join another clan immediately. Your 1-hour clan cooldown begins when the clan is disbanded.</p>
+      <p>Other members can join another clan immediately. Your 1-hour clan cooldown begins when the clan is disbanded. Former members cannot attack each other's cities for 24 hours.</p>
       <footer>
         <button type="button" class="profile-secondary-btn" data-clan-disband-confirm="cancel">Keep Clan</button>
         <button type="button" class="danger-action" data-clan-disband-confirm="accept">Disband Clan Permanently</button>
@@ -27593,8 +27593,8 @@ async function handleClanClick(event) {
     const details = {
       promote: ["Promote clan member?", `Promote ${name} to Officer. Officers may review applications and create Rallies.`, "Promote"],
       demote: ["Demote clan officer?", `Return ${name} to the Member role.`, "Demote"],
-      kick: ["Remove clan member?", `Remove ${name} from your clan. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
-      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 1-hour cooldown begins. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
+      kick: ["Remove clan member?", `Remove ${name} from your clan. Current clanmates cannot attack this ruler's cities for 24 hours. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
+      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 1-hour join cooldown begins. Your former clanmates cannot attack your cities for 24 hours. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
     }[action];
     if (!await confirmClanLedgerAction(...details)) return;
     if (state?.clanId !== clanId || getCurrentOnlineUid() !== uid || clanUiLoading) return;

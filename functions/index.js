@@ -66,6 +66,7 @@ const HOLDING_TOWERS = require("./holding-towers.js");
 const CLAN_BUILDINGS = HOLDING_TOWERS.BUILDINGS;
 const ANTI_HANDOFF = require("./anti-handoff-policy.js");
 const COMBAT_AUTHORIZATION = require("./combat-authorization.js");
+const FORMER_CLAN_PROTECTION = require("./former-clan-protection.js");
 const RALLY_STAGING = require("./rally-staging.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
@@ -8274,6 +8275,9 @@ function getAntiFarmBlockedMessage(policy = {}, nowMs = Date.now()) {
   const suffix = blockedUntilMs > nowMs
     ? ` Available again in ${formatAntiFarmDuration(blockedUntilMs - nowMs)}.`
     : "";
+  if (policy.reason === "former-clan-city-protection") {
+    return `Former clan protection: you cannot attack this ruler's cities for 24 hours after their clan departure.${suffix}`;
+  }
   if (policy.reason === "rapid-neutral-handoff-limit") {
     return `Rapid neutral-city handoff limit reached: 7 of 7 for this direction.${suffix}`;
   }
@@ -8330,9 +8334,22 @@ function writeAntiFarmAudit(transaction, pairRef, {
   }, { merge: false });
 }
 
+function formerClanProtectionIdentity() {
+  return { worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() };
+}
+
+function formerClanCityAttackPolicy(attackerUid, defenderProfile, target, targetType, nowMs) {
+  const until = targetType === "city" && getOwnerUid(target) && getOwnerUid(target) !== attackerUid
+    && !isStronghold(target) && !isRewardCamp(target)
+    ? FORMER_CLAN_PROTECTION.blockedUntil(defenderProfile?.formerClanCityProtection, attackerUid,
+      formerClanProtectionIdentity(), nowMs) : 0;
+  return createAntiFarmPolicy(until > nowMs, until ? "former-clan-city-protection" : "", until);
+}
+
 async function evaluateHostileAntiFarmPolicy(transaction, {
   attackerUid = "",
   defenderUid = "",
+  defenderProfile = {},
   target = {},
   targetType = "city",
   targetRegionId = "",
@@ -8373,8 +8390,9 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
       policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
     })
     : createAntiFarmPolicy();
-  const policy = sharedDecision.policy.blocked ? sharedDecision.policy : rapidPolicy;
-  const internalReason = sharedDecision.policy.blocked
+  const formerClanPolicy = formerClanCityAttackPolicy(attackerUid, defenderProfile, target, targetType, nowMs);
+  const policy = formerClanPolicy.blocked ? formerClanPolicy : sharedDecision.policy.blocked ? sharedDecision.policy : rapidPolicy;
+  const internalReason = formerClanPolicy.blocked ? formerClanPolicy.reason : sharedDecision.policy.blocked
     ? sharedDecision.internalReason
     : rapidHandoff.blocked ? "rapid-neutral-handoff-limit" : "";
   if (policy.blocked) {
@@ -21402,7 +21420,6 @@ async function reconcileHoldingTowersBeforeDisband(clanId = "") {
 }
 
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
-  const nowMs = Date.now();
   const [preflightClanSnap, preflightActorSnap, preflightActorProfileSnap, preflightTargetSnap] = await Promise.all([
     db.doc(`clans/${clanId}`).get(),
     db.doc(`clans/${clanId}/members/${actorUid}`).get(),
@@ -21429,13 +21446,15 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
   await returnDepartingHoldingTowerGarrisons(targetUid, clanId, reason);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
+    const nowMs = Date.now();
+    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap, membersSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
       transaction.get(db.doc(`players/${actorUid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
       transaction.get(db.doc(`players/${targetUid}`)),
       transaction.get(clanWorldBenefitsRef(clanId)),
+      transaction.get(db.collection(`clans/${clanId}/members`)),
     ]);
     if (!clanSnap.exists || !actorProfileSnap.exists || !targetMemberSnap.exists) {
       throw new HttpsError("not-found", "Clan member was not found.");
@@ -21472,6 +21491,10 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
         ),
         pendingClanApplicationId: FieldValue.delete(),
         clanJoinCooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
+        formerClanCityProtection: FORMER_CLAN_PROTECTION.departureProtection(
+          targetProfile.formerClanCityProtection, targetUid, membersSnap.docs.map(member => member.id),
+          formerClanProtectionIdentity(), nowMs
+        ),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
@@ -21726,6 +21749,9 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
           clanJoinCooldownUntilMs: memberUid === uid
             ? nowMs + CLAN_JOIN_COOLDOWN_MS
             : FieldValue.delete(),
+          formerClanCityProtection: FORMER_CLAN_PROTECTION.departureProtection(
+            memberProfile.formerClanCityProtection, memberUid, memberUids, formerClanProtectionIdentity(), nowMs
+          ),
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
       }
@@ -23973,6 +23999,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       antiFarmContext = await evaluateHostileAntiFarmPolicy(transaction, {
         attackerUid: creatorUid,
         defenderUid: targetOwnerUid,
+        defenderProfile: targetOwnerProfile,
         target,
         targetType: "city",
         targetRegionId: rally.targetRegionId,
@@ -24216,6 +24243,12 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     const defenderProfile = defenderProfileSnap?.exists ? defenderProfileSnap.data() || {} : {};
     const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const formerClanPolicy = formerClanCityAttackPolicy(uid, defenderProfile, target, targetType, nowMs);
+    if (formerClanPolicy.blocked) {
+      throw new HttpsError("failed-precondition", getAntiFarmBlockedMessage(formerClanPolicy, nowMs), {
+        antiFarmPolicy: formerClanPolicy,
+      });
+    }
     const defenseContext = await getAuthoritativeDefensePackages(transaction, {
       target,
       targetType,
@@ -26493,6 +26526,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         ? await evaluateHostileAntiFarmPolicy(transaction, {
           attackerUid: uid,
           defenderUid: targetOwnerUid,
+          defenderProfile,
           target,
           targetType,
           targetRegionId: order.targetRegionId,
@@ -27049,6 +27083,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       antiFarmContext = await evaluateHostileAntiFarmPolicy(transaction, {
         attackerUid: uid,
         defenderUid: targetOwnerUid,
+        defenderProfile: defenderPowerData,
         target,
         targetType: order.targetType,
         targetRegionId: order.targetRegionId,
@@ -29114,6 +29149,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ? await evaluateHostileAntiFarmPolicy(transaction, {
         attackerUid,
         defenderUid,
+        defenderProfile,
         target,
         targetType,
         targetRegionId,
@@ -29128,6 +29164,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
         pairState: normalizeAntiFarmPairState({}, nowMs),
       };
+    // Returning Rally troops can become a hostile recapture of their original
+    // city. They skip the ordinary anti-farm gate, but must respect a departure.
+    if (effectiveKind === "attack" && (!isReturning || isRallyReturnAttack)) {
+      const departurePolicy = formerClanCityAttackPolicy(attackerUid, defenderProfile, target, targetType, nowMs);
+      if (departurePolicy.blocked) antiFarmContext.policy = departurePolicy;
+    }
     // Firestore transactions require every combat read to finish before this
     // slot-release write; doing it above left converted support permanently active.
     if (shouldReleaseClanReinforcementTarget) {

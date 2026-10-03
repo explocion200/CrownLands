@@ -54,7 +54,7 @@ async function main() {
         assert(geometry.fit && !geometry.overflow && geometry.footer && geometry.search, JSON.stringify({ width, height, chapter, ...geometry }));
         assert.deepEqual(geometry.broken, []);
         assert.equal(geometry.active, chapter);
-        assert.equal(geometry.topics, chapter === "first-steps" ? 5 : 4);
+        assert.equal(geometry.topics, ["first-steps", "clans"].includes(chapter) ? 5 : 4);
         await screenshot(`${width}x${height}-${chapter}`);
         const reachable = await evaluate(`(() => { const reading = document.querySelector('#readingScroll'); reading.scrollTop = reading.scrollHeight; const card = document.querySelector('.topic-card:last-child'); const r = card.getBoundingClientRect(), view = reading.getBoundingClientRect(); return r.bottom <= view.bottom + 1 && r.bottom > view.top; })()`);
         assert(reachable, "Last topic must be reachable through the reading pane.");
@@ -67,6 +67,8 @@ async function main() {
       assert(await evaluate(`document.querySelectorAll('.topic-card').length > 0 && /retaliation/i.test(document.querySelector('#article').textContent)`));
       await evaluate(`document.querySelector('#search').value='shield';document.querySelector('#search').dispatchEvent(new Event('input'))`);
       assert(await evaluate(`document.querySelectorAll('.topic-card').length > 1`));
+      await evaluate(`document.querySelector('#search').value='former';document.querySelector('#search').dispatchEvent(new Event('input'))`);
+      assert(await evaluate(`/24 hours/.test(document.querySelector('#article').textContent) && /cannot attack/.test(document.querySelector('#article').textContent)`));
       await screenshot(`${width}x${height}-search`);
       await evaluate(`document.querySelector('#search').value='<img src=x onerror=alert(1)>';document.querySelector('#search').dispatchEvent(new Event('input'))`);
       assert(await evaluate(`document.querySelectorAll('.topic-card').length === 0 && !document.querySelector('#article img[onerror]')`));
@@ -106,6 +108,34 @@ async function main() {
     assert.equal(await evaluate(`getOnboardingPrefs().enabled`), false);
     await evaluate(`modal.close()`);await delay(50);
     assert.equal(await evaluate(`modal.classList.contains('help-handbook-modal')`), false);
+    // Exercise the changed departure confirmations with production DOM and CSS.
+    await evaluate(`stopClanRealtimeSubscriptions({clear:true});state.clanId='qa-clan';state.clanRole='leader';
+      clanMembers=[{uid:'qa-peer',displayName:'QA Ruler'}];clanSnapshot={name:'QA Clan',memberCount:2};
+      onlineClanRallies=[];clanUiLoading=false;
+      runClanAction=()=>{throw Error('Cancel must never submit a clan action');};
+      document.querySelector('link[href^="clan-ledger-ui.css"]').rel='stylesheet'`);
+    await ready(`Boolean(document.querySelector('link[href^="clan-ledger-ui.css"]').sheet)`);
+    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: height < 600 });
+      for (const action of ["leave", "kick", "disband"]) {
+        await evaluate(action === "disband" ? `void (window.departureConfirmation=confirmClanDisband())` :
+          `(() => {const button=document.createElement('button');button.dataset.clanAction='${action}';button.dataset.memberId='qa-peer';
+            window.departureConfirmation=handleClanClick({target:button});})()`);
+        await delay(250);
+        assert(await evaluate(`modal.open && /24 hours/.test(modalBody.textContent) && /cannot attack/.test(modalBody.textContent)`));
+        await screenshot(`${width}x${height}-${action}`);
+        const visible = await evaluate(`(() => {
+          const footer=modalBody.querySelector('footer');footer.scrollIntoView({block:'end'});
+          const fits=node=>{const r=node.getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;};
+          return fits(modal)&&Array.from(footer.querySelectorAll('button')).every(fits)&&modal.scrollWidth<=modal.clientWidth+1;
+        })()`);
+        assert(visible, `Departure confirmation controls clipped: ${action} ${width}x${height}`);
+        await screenshot(`${width}x${height}-${action}-controls`);
+        await evaluate(`modalBody.querySelector('[data-clan-${action === "disband" ? "disband" : "ledger"}-confirm="cancel"]').click();window.departureConfirmation`);
+        assert.equal(await evaluate("modal.open"), false);
+        await delay(30);
+      }
+    }
     assert.deepEqual(errors, []);
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }

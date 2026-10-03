@@ -186,6 +186,7 @@ service cloud.firestore {
            'clanIdentityRevisionVersion',
            'clanIdentityUpdatedAtMs',
            'clanJoinCooldownUntilMs',
+           'formerClanCityProtection',
            'pendingClanApplicationId',
            'resetGeneration',
            'worldId',
