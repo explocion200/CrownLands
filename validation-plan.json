@@ -67,7 +67,7 @@
         "functions/test/emulator-holding-tower-lifecycle.js",
         "functions/test/emulator-player-camp-defense.js"
       ],
-      "reason": "Regression tests change skills and gear after departure, in both directions; verify capped and zero recovery, report item identity, actual credited troops, replay safety and individual Rally participant settlement with live defense."
+      "reason": "Regression tests change skills and gear after departure, in both directions; verify capped and zero recovery, report item identity, actual credited troops, replay safety and individual Rally participant settlement with live defense. Keep the wall-only fixture strong enough for three strikes under the current staged wall curve."
     }
   ]
 }
