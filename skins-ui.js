@@ -3,7 +3,7 @@
 const COSMETIC_CATALOG = globalThis.CrownlandsCosmetics;
 let cosmeticState = null, cosmeticUid = "", cosmeticStop = null, cosmeticOwnerStop = null;
 let cosmeticError = "", cosmeticBusy = false, cosmeticOffset = 0, cosmeticConfirmation = null;
-let cosmeticPendingPurchase = null, cosmeticCategory = "all", cosmeticSelected = "halloween_city";
+let cosmeticPendingPurchase = null, cosmeticCategory = "city", cosmeticSelected = "halloween_city";
 let cosmeticOwnerSignature = "", cosmeticOwnersDirty = false, cosmeticOpenShopRequested = false;
 const cosmeticOwnerAppearances = new Map(), cosmeticNeededOwners = new Map();
 const cosmeticFailedCityArt = new Set();
@@ -18,17 +18,11 @@ function createCosmeticMotion() {
     cancelAnimationFrame(frame); frame = 0;
     const covered = document.getElementById("profileScreen")?.classList.contains("open") || document.getElementById("modal")?.open;
     // Keep compositor layers bounded even when many owned cities share a skin.
-    const eligible = info => !document.hidden && info.visible && (info.preview || !covered);
-    let visibleFrames = 0;
+    let mapSlots = innerWidth <= 1000 ? 3 : 4, previewSlots = 1;
     for (const [layer, info] of layers) {
       if (!layer.isConnected) { observer?.unobserve(layer); layers.delete(layer); continue; }
-      if (!info.preview && info.kind === "border" && eligible(info)) visibleFrames++;
-    }
-    // Reserve only visible frame slots, independent of which skin was applied first.
-    let frameSlots = Math.min(visibleFrames, innerWidth <= 1000 ? 2 : 3);
-    let mapSlots = (innerWidth <= 1000 ? 6 : 8) - frameSlots, troopSlots = innerWidth <= 1000 ? 6 : 8, previewSlots = 1;
-    for (const [layer, info] of layers) {
-      const active = eligible(info) && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : info.kind === "border" ? frameSlots-- > 0 : mapSlots-- > 0);
+      const eligible = !document.hidden && info.visible && (info.preview || !covered);
+      const active = eligible && (info.preview ? previewSlots-- > 0 : mapSlots-- > 0);
       const value = active ? "active" : "idle";
       if (layer.dataset.skinMotion !== value) layer.dataset.skinMotion = value;
     }
@@ -49,9 +43,9 @@ function createCosmeticMotion() {
   document.addEventListener("visibilitychange", refresh);
   window.addEventListener("resize", schedule, { passive: true });
   return {
-    watch(layer, preview = false, kind = "city") {
+    watch(layer, preview = false) {
       if (layers.has(layer)) return;
-      layers.set(layer, { preview, kind, visible: false }); observer?.observe(layer); schedule();
+      layers.set(layer, { preview, visible: false }); observer?.observe(layer); schedule();
     },
     forget(layer) { if (layer) { observer?.unobserve(layer); layers.delete(layer); schedule(); } },
     schedule,
@@ -129,15 +123,12 @@ setInterval(syncCosmeticOwners, 2000);
 function cosmeticCityAttributes(city) {
   if (isStronghold(city)) return "";
   const appearance = cosmeticAppearance(city.ownerUid || (city.owner === "player" ? cosmeticUid : ""));
-  return `${appearance.city || ""}:${appearance.border || ""}`;
+  return COSMETIC_CATALOG.item(appearance.city)?.category === "city" ? appearance.city : "";
 }
 
 function applyCosmeticCityNode(node, city) {
-  const [skin, border] = cosmeticCityAttributes(city).split(":");
+  const skin = cosmeticCityAttributes(city);
   if (node.dataset.citySkin !== (skin || "")) node.dataset.citySkin = skin || "";
-  if (node.dataset.flagBorder !== (border || "")) node.dataset.flagBorder = border || "";
-  if (border === "halloween_border") cosmeticMotion ||= createCosmeticMotion();
-  globalThis.CrownlandsCityFlagSkins?.apply(node, border, cosmeticMotion);
   const stage = getCastleStage(city.level);
   const art = COSMETIC_CATALOG.item(skin)?.assets?.[stage];
   const image = node.querySelector(".city-art");
@@ -184,27 +175,18 @@ function cosmeticStagePicker(item) {
 }
 
 function cosmeticPreview(item, detail = false) {
-  const category = item?.category || "city";
-  if (item?.id === "halloween_troops") return `<span class="skin-troop-preview" data-troop-preview="${detail ? "detail" : "card"}" aria-hidden="true"></span>`;
   if (item?.id === "halloween_city" || item?.id === "default_city") {
     const stage = detail ? cosmeticPreviewStage : 5;
     const halloween = item.id === "halloween_city";
     return `<span class="skin-city-preview" aria-hidden="true"><img src="${halloween ? item.assets[stage] : getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : ""}</span>`;
   }
-  if (category === "border") return `<span class="skin-border-preview" aria-hidden="true"><span class="skin-border-marker" data-flag-frame-preview="${item.id}" data-frame-detail="${detail}"><span class="skin-border-center"><span class="kingdom-flag" data-border-heraldry><span class="flag-symbol"></span></span><span class="skin-border-level">50</span></span></span></span>`;
-  const glyphs = { city: "♜", troops: "⚔", border: "◇", flag: "⚑", bundle: "♛" };
-  if (category === "flag" && state?.flag) {
-    const symbol = item.symbol || state.flag.symbol;
-    return `<span class="kingdom-flag skin-flag-preview" data-skin-flag-symbol="${escapeHtml(symbol)}"><span class="flag-symbol"></span></span>`;
-  }
-  return `<span class="skin-art skin-art-${category}" aria-hidden="true">${glyphs[category] || "♛"}</span>`;
+  return "";
 }
 
 function cosmeticChoices(mode) {
-  if (mode === "shop") return COSMETIC_CATALOG.OFFERS.filter(item => cosmeticCategory === "all" || item.category === cosmeticCategory);
-  const category = ["city", "troops", "border"].includes(cosmeticCategory) ? cosmeticCategory : "city";
-  const defaults = [{ id: `default_${category}`, category, name: category === "city" ? "Default City" : "Default", free: true, description: category === "city" ? "The original city appearance at every level. Restore it across all your regular cities for free, whenever you want." : "Restore the original appearance." }];
-  return [...defaults, ...COSMETIC_CATALOG.ITEMS.filter(item => item.category === category && cosmeticState?.owned[item.id])];
+  if (mode === "shop") return COSMETIC_CATALOG.OFFERS;
+  const defaults = [{ id: "default_city", category: "city", name: "Default City", free: true, description: "The original city appearance at every level. Restore it across all your regular cities for free, whenever you want." }];
+  return [...defaults, ...COSMETIC_CATALOG.ITEMS.filter(item => cosmeticState?.owned[item.id])];
 }
 
 function cosmeticEquipped(item) {
@@ -216,19 +198,19 @@ function renderSkinsPanel(mode = "shop") {
   const choices = cosmeticChoices(mode);
   if (!choices.some(item => item.id === cosmeticSelected)) cosmeticSelected = choices[0]?.id || "";
   const selected = choices.find(item => item.id === cosmeticSelected);
-  const categories = library ? Object.entries(COSMETIC_CATALOG.CATEGORIES).filter(([id]) => id !== "flag") : [["all", "All"], ...Object.entries(COSMETIC_CATALOG.CATEGORIES), ["bundle", "Bundles"]];
-  const activeCategory = library ? choices[0].category : cosmeticCategory;
+  const categories = Object.entries(COSMETIC_CATALOG.CATEGORIES);
+  const activeCategory = COSMETIC_CATALOG.CATEGORIES[cosmeticCategory] ? cosmeticCategory : "city";
   const quote = !library && selected && cosmeticState ? COSMETIC_CATALOG.quote(selected.id, cosmeticState, cosmeticNow()) : null;
   const owned = library || quote?.missing.length === 0;
   const sale = COSMETIC_CATALOG.availability(cosmeticNow());
-  const action = library ? cosmeticEquipped(selected || {}) ? "Applied" : "Apply" : owned ? selected?.category === "flag" ? "Open Flag Editor" : "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
+  const action = library ? cosmeticEquipped(selected || {}) ? "Applied" : "Apply" : owned ? "View in My Skins" : quote?.onSale ? "Review Purchase" : "Available in October";
   const disabled = cosmeticBusy || !cosmeticState || (library ? cosmeticEquipped(selected || {}) : !owned && (!quote?.onSale || cosmeticState.crowns < quote.price));
   const feedback = cosmeticError || (cosmeticPendingPurchase ? "A purchase needs checking. Check its result before buying again." : "");
   if (cosmeticConfirmation && !cosmeticBusy && !cosmeticPendingPurchase && (!quote || cosmeticConfirmation.offerId !== quote.offerId || cosmeticConfirmation.price !== quote.price || !quote.onSale || cosmeticState.crowns < quote.price)) cosmeticConfirmation = null;
   const confirm = cosmeticConfirmation;
   const applyButton = `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>`;
   return `<section class="skins-panel" data-skins-mode="${mode}" aria-label="${library ? "My skins" : "Skin shop"}">
-    <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "Halloween Collection"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span><button type="button" data-skin-earn>Earn Crowns</button></div></header>
+    <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "City Skins"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span><button type="button" data-skin-earn>Earn Crowns</button></div></header>
     <p class="skins-notice">${library ? "Select a skin, then press Apply. Switching is free." : `Permanent cosmetics · Free switching · ${sale.onSale ? "Sale ends November 1 at 00:00 UTC" : "Returns October 1 at 00:00 UTC"}.`}</p>
     <nav class="skins-filters" aria-label="Skin categories">${categories.map(([id,label]) => `<button type="button" data-skin-category="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join("")}</nav>
     ${feedback ? `<p class="skins-feedback" role="status">${escapeHtml(feedback)} <button type="button" data-skin-reload>${cosmeticPendingPurchase ? "Check Purchase" : "Retry"}</button></p>` : ""}
@@ -242,9 +224,6 @@ function bindSkinsPanel(root) {
   if (!root) return;
   cosmeticMotion?.schedule();
   root.querySelectorAll(".skin-detail .halloween-city-bats").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
-  root.querySelectorAll("[data-troop-preview]").forEach(element => globalThis.CrownlandsTroopSkins?.preview(element, element.dataset.troopPreview === "detail", cosmeticMotion ||= createCosmeticMotion()));
-  root.querySelectorAll("[data-flag-frame-preview]").forEach(host => globalThis.CrownlandsCityFlagSkins?.preview(host, host.dataset.frameDetail === "true", cosmeticMotion ||= createCosmeticMotion()));
-  root.querySelectorAll("[data-border-heraldry]").forEach(host => FlagRenderer.render(host, state.flag, { stableKey: cosmeticUid || "preview" }));
   const mode = root.dataset.skinsMode;
   root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
     cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
@@ -256,7 +235,6 @@ function bindSkinsPanel(root) {
       removeCosmeticBats(image.parentElement.querySelector(".halloween-city-bats"));
     };
   });
-  root.querySelectorAll("[data-skin-flag-symbol]").forEach(element => FlagRenderer.render(element, { ...state.flag, symbol: element.dataset.skinFlagSymbol }, { stableKey: cosmeticUid || "preview" }));
   root.querySelectorAll("[data-skin-category]").forEach(button => button.addEventListener("click", () => { cosmeticCategory = button.dataset.skinCategory; cosmeticConfirmation = null; refreshCosmeticPanels(); }));
   root.querySelectorAll("[data-skin-select]").forEach(button => button.addEventListener("click", () => { if (cosmeticBusy) return; cosmeticSelected = button.dataset.skinSelect; cosmeticConfirmation = null; refreshCosmeticPanels(); }));
   root.querySelector("[data-skin-earn]")?.addEventListener("click", () => {
@@ -270,9 +248,7 @@ function bindSkinsPanel(root) {
     if (mode === "profile") { void equipSelectedCosmetic(); return; }
     const quote = COSMETIC_CATALOG.quote(cosmeticSelected, cosmeticState, cosmeticNow());
     if (!quote.missing.length) {
-      if (COSMETIC_CATALOG.item(cosmeticSelected)?.category === "flag") {
-        modal.close(); showProfileScreen(); showFlagEditor(); setFlagEditorSection("symbol");
-      } else openMySkins();
+      openMySkins();
       return;
     }
     if (cosmeticPendingPurchase) { cosmeticError = "Check the pending purchase first."; refreshCosmeticPanels(); return; }
@@ -365,7 +341,7 @@ function showProfileSkins(options = {}) {
   profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   [profileView, skillsView, settingsView, clanView, flagEditorView].forEach(view => { view.hidden = true; });
   clearFlagEditorSession(); cancelProfileNameEdit();
-  if (!["city", "troops", "border"].includes(cosmeticCategory)) cosmeticCategory = "city";
+  cosmeticCategory = "city";
   cosmeticConfirmation = null; updateProfileTabHeader();
   const view = document.getElementById("skinsView"); view.innerHTML = renderSkinsPanel("profile"); bindSkinsPanel(view.querySelector(".skins-panel"));
   void reloadCosmetics();
@@ -375,7 +351,7 @@ function openMySkins() {
   modal.close(); profileScreen.classList.add("open"); profileScreen.setAttribute("aria-hidden", "false"); showProfileSkins();
 }
 function openSkinShop() {
-  requestFlagEditorExit(() => { closeProfileScreen({ force: true }); cosmeticCategory = "all"; cosmeticConfirmation = null; cosmeticOpenShopRequested = true; showShopModal(); });
+  requestFlagEditorExit(() => { closeProfileScreen({ force: true }); cosmeticCategory = "city"; cosmeticConfirmation = null; cosmeticOpenShopRequested = true; showShopModal(); });
 }
 
 function updateCosmeticProfileNavigation() {

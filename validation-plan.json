@@ -4,61 +4,47 @@
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/halloween-city-marker/art-source.json",
-        "docs/visual-qa/halloween-city-marker/design.json",
-        "docs/visual-qa/halloween-city-marker/marker.svg",
-        "docs/visual-qa/halloween-city-marker/ornate-frame.png",
-        "docs/visual-qa/halloween-city-marker/preview.css",
-        "docs/visual-qa/halloween-city-marker/preview.html",
-        "docs/visual-qa/halloween-city-marker/preview.js",
-        "docs/visual-qa/halloween-city-marker/style-reference.jpg",
-        "tools/validate-halloween-marker-preview.js"
-      ],
-      "tests": [
-        "tools/validate-halloween-marker-preview.js"
-      ],
-      "reason": "Preserve the approved painted frame reference, transparent center and bottom V fit, independent eight-state color/heraldry/level controls and responsive preview motion guards. The new production runtime is verified separately. Navigation polling tolerates the transient missing document element exposed by the prior Linux CI."
-    },
-    {
-      "paths": [
         "functions/cosmetics.js",
-        "functions/test/emulator-cosmetics.js"
+        "functions/cosmetics-service.js",
+        "functions/test/emulator-cosmetics.js",
+        "tools/validate-cosmetics.js"
       ],
       "tests": [
         "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
         "functions/test/emulator-cosmetics.js"
       ],
-      "reason": "The shared catalog replaces only the border placeholder metadata and points to approved art at the unchanged 200-Crown price. Check authoritative ownership, free Apply/Default, purchase replay, public appearance visible to another player, revision guards, and independent city/flag choices; the emulator now explicitly exercises border Apply/stale-repeat rejection/Default and unowned rejection."
+      "reason": "Restrict the shared/server catalog to city skins. Validate unchanged 600-Crown city purchase, sale and replay rules, old retired receipt reconciliation, denied retired offers and Apply requests, preserved wallet/ownership/receipts, city Apply/Default public projection and private account protections. Existing free/saved flag identity compatibility remains enforced."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md",
+        "game.js",
         "index.html",
         "service-worker.js",
         "skins-ui.css",
         "skins-ui.js",
         "tools/build-production-client.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-player-flags.js",
         "tools/validate-production-artifact.js",
-        "assets/optimized/halloween-flag-frame-320x400-bd768affdd56.webp",
-        "city-flag-skins.css",
-        "city-flag-skins.js",
-        "docs/visual-qa/halloween-city-marker/performance-review.json",
-        "docs/visual-qa/halloween-city-marker/production-frame.json",
-        "tools/build-halloween-flag-frame.js",
-        "tools/validate-halloween-flag-frame-browser.js"
+        "tools/validate-skin-motion-browser.js",
+        "docs/visual-qa/halloween-city-skin/city-only-performance.json"
       ],
       "tests": [
-        "tools/validate-halloween-flag-frame-browser.js",
         "tools/validate-cosmetics-browser.js",
-        "tools/validate-skin-motion-browser.js",
         "tools/validate-halloween-city-skin-browser.js",
         "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-march-frame-performance-browser.js",
+        "tools/validate-skin-motion-browser.js",
+        "tools/validate-player-flags.js",
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-focused-browser-smoke.js"
       ],
-      "reason": "Integrate the approved frame through live city nodes, existing selection/purchase/Apply controls, owned/remote/captured/selected layouts, colors, flags, levels and missing-art fallback. Pixel checks verify transparent raster and lower V coverage at production size. The shared motion scheduler and shadow isolation affect city bats and troop previews, requiring those regressions. Desktop/mobile stress checks enforce combined city slots, frame caps, fair allocation when either skin is applied after the other, zero steady layout, no repeated node writes, one shared art fetch, visibility/overlay/camera/crowded/motion guards and recycling. Production build checks package both modules and hash-verified optimized art with explicit small budgets. Documents record confirmed art direction, implementation and measured limits, not deployment."
+      "reason": "Remove troop/frame UI, map hooks and production loads; ignore stale owned and remote selections while retaining standard troop counts, estimates, scouts, rallies, timing and route frame pacing. City purchase/Apply/Default, five stages, captures, missing art, normal free flag editing and desktop/landscape controls require browser coverage. The lower city animation cap and isolated still-image shadow require motion budget, lifecycle and recycled-node checks. Production validation checks unchanged entries/caches, city and currency art budgets, and absence of retired renderer/atlas assets. The player-flag validator now checks matching current script/cache versions instead of a stale fixed date. Documentation records the confirmed city-only revision and synthetic limits."
     }
   ]
 }

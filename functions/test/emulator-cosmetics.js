@@ -55,8 +55,23 @@ async function main(){
  await Promise.all([service.purchase(owner.uid,request,now),service.purchase(owner.uid,request,now)]);
  assert.equal((await walletRef.get()).data().crowns,900);
  await assert.rejects(service.purchase(owner.uid,{...request,offerId:"halloween_troops"},now),/different purchase/);
- await service.purchase(owner.uid,{offerId:C.BUNDLE.id,expectedPrice:720,catalogVersion:1,requestId:"test_remaining_bundle"},now);
- let wallet=(await walletRef.get()).data();assert.equal(wallet.crowns,180);assert.equal(Object.keys(wallet.owned).length,7);
+ let wallet=(await walletRef.get()).data();assert.equal(wallet.crowns,900);assert.equal(Object.keys(wallet.owned).length,1);
+ const legacyOwned={...wallet.owned,halloween_troops:true,halloween_border:true,halloween_pumpkin:true,halloween_bat:true,halloween_skull:true,halloween_raven:true};
+ await walletRef.set({...wallet,owned:legacyOwned,equipped:{city:"",troops:"halloween_troops",border:"halloween_border"}});
+ const loaded=await call("getCosmeticsState",owner.token);
+ assert.deepEqual(loaded.state.owned,legacyOwned);assert.equal(loaded.state.crowns,900);
+ assert.deepEqual(loaded.state.equipped,{city:"",troops:"",border:""});
+ for(const offerId of ["halloween_troops","halloween_border","halloween_pumpkin","halloween_bat","halloween_skull","halloween_raven","halloween_collection"]){
+   await assert.rejects(service.purchase(owner.uid,{offerId,expectedPrice:0,catalogVersion:1,requestId:"retired_"+offerId},now),/catalog/);
+ }
+ assert.equal((await walletRef.get()).data().crowns,900);
+ const receiptBefore=await service.receiptRef(owner.uid,request.requestId).get();
+ assert.equal((await service.purchase(owner.uid,request,now)).replayed,true);
+ assert.deepEqual((await service.receiptRef(owner.uid,request.requestId).get()).data(),receiptBefore.data());
+ const retiredReplay={offerId:"halloween_troops",expectedPrice:300,catalogVersion:1,requestId:"historical_troop_receipt"};
+ await service.receiptRef(owner.uid,retiredReplay.requestId).create({signature:JSON.stringify([retiredReplay.offerId,retiredReplay.expectedPrice,retiredReplay.catalogVersion]),offerId:retiredReplay.offerId,price:300,missing:["halloween_troops"]});
+ assert.equal((await service.purchase(owner.uid,retiredReplay,now)).replayed,true,"Historical retired purchases still reconcile without charging");
+ assert.equal((await walletRef.get()).data().crowns,900);
  assert.equal(wallet.equipped.city,"");
  await assert.rejects(service.purchase(owner.uid,{offerId:"not_real",expectedPrice:0,catalogVersion:1,requestId:"test_fake_offer"},now),/catalog/);
  const equipped=await call("equipCosmetic",owner.token,{category:"city",itemId:"halloween_city",expectedRevision:wallet.revision,requestId:"test_equip_city"});
@@ -67,27 +82,14 @@ async function main(){
  assert.equal((await service.publicRef(owner.uid).get()).data().equipped.city,"","Default must also publish to other players");
  const reapplied=await call("equipCosmetic",owner.token,{category:"city",itemId:"halloween_city",expectedRevision:restored.state.revision,requestId:"test_reapply_city"});
  wallet=reapplied.state;
- const borderRequest={category:"border",itemId:"halloween_border",expectedRevision:wallet.revision,requestId:"test_equip_border"};
- const border=await call("equipCosmetic",owner.token,borderRequest);
- assert.equal(border.state.equipped.border,"halloween_border");
- assert.equal(border.state.equipped.city,"halloween_city","Applying a frame must retain the city skin");
- assert.equal(border.state.crowns,wallet.crowns,"Applying an owned frame is free");
- await assert.rejects(call("equipCosmetic",owner.token,borderRequest),/collection changed/,"Repeated Apply with the old revision must be rejected");
- const afterStaleBorder=(await walletRef.get()).data();
- assert.equal(afterStaleBorder.revision,border.state.revision,"Stale Apply must not write another revision");
- assert.equal(afterStaleBorder.crowns,border.state.crowns,"Stale Apply must not charge Crowns");
- assert.equal(afterStaleBorder.equipped.border,"halloween_border","Stale Apply must preserve the equipped frame");
- const publicBorder=await (await rest(stranger,`playerCosmetics/${owner.uid}`)).json();
- assert.equal(publicBorder.fields.equipped.mapValue.fields.border.stringValue,"halloween_border","Other players must see the applied frame");
- const defaultBorder=await call("equipCosmetic",owner.token,{category:"border",itemId:"",expectedRevision:border.state.revision,requestId:"test_default_border"});
- assert.equal((await service.publicRef(owner.uid).get()).data().equipped.border,"","Default frame must publish to other players");
- assert.equal(defaultBorder.state.equipped.city,"halloween_city");
- wallet=defaultBorder.state;
  const profile=(await profileRef.get()).data();
- const flag=await call("equipCosmetic",owner.token,{category:"flag",itemId:"halloween_pumpkin",expectedRevision:wallet.revision,expectedIdentityRevision:profile.identityRevision||0,requestId:"test_equip_flag"});
- assert.equal(flag.flag.symbol,"halloween-pumpkin");assert.equal(flag.flag.primary,profile.flag.primary);assert.equal(flag.flag.pattern,profile.flag.pattern);
- await assert.rejects(call("equipCosmetic",owner.token,{category:"troops",itemId:"halloween_troops",expectedRevision:0,requestId:"test_stale_equip"}),/collection changed/);
- const saved=(await walletRef.get()).data();await profileRef.set({...profile,flag:flag.flag,identityRevision:flag.identityRevision,daily:{date:today}});
+ for(const category of ["troops","border","flag"]){
+   await assert.rejects(call("equipCosmetic",owner.token,{category,itemId:category==="troops"?"halloween_troops":category==="border"?"halloween_border":"halloween_pumpkin",expectedRevision:wallet.revision,requestId:"test_retired_"+category}),/Only city skins/);
+ }
+ assert.deepEqual((await walletRef.get()).data().owned,legacyOwned,"Retirement must preserve purchases");
+ assert.deepEqual((await service.publicRef(owner.uid).get()).data().equipped,{city:"halloween_city",troops:"",border:""});
+ await assert.rejects(call("equipCosmetic",owner.token,{category:"city",itemId:"",expectedRevision:0,requestId:"test_stale_equip"}),/collection changed/);
+ const saved=(await walletRef.get()).data();await profileRef.set({...profile,daily:{date:today}});
  assert.deepEqual((await walletRef.get()).data(),saved,"Seasonal parent replacement must preserve permanent cosmetics");
  assert.equal((await rest(owner,`players/${owner.uid}/cosmetics/state`)).status,200);
  assert.equal((await rest(stranger,`players/${owner.uid}/cosmetics/state`)).status,403);
@@ -97,7 +99,6 @@ async function main(){
  function fields(value){return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,typeof v==="string"?{stringValue:v}:typeof v==="number"?{integerValue:String(v)}:{mapValue:{fields:fields(v)}}]));}
  await call("claimStartingCity",stranger.token,{playerName:"Free ruler"});
  await assert.rejects(call("equipCosmetic",stranger.token,{category:"city",itemId:"halloween_city",expectedRevision:0,requestId:"test_unowned_city"}),/do not own/);
- await assert.rejects(call("equipCosmetic",stranger.token,{category:"border",itemId:"halloween_border",expectedRevision:0,requestId:"test_unowned_border"}),/do not own/);
  const strangerProfile=(await db.doc(`players/${stranger.uid}`).get()).data();
  const mask="?updateMask.fieldPaths=flag&updateMask.fieldPaths=identityRevision";
  const freePatch={flag:flags.toStoredFlag({...strangerProfile.flag,symbol:"crown"},stranger.uid),identityRevision:(strangerProfile.identityRevision||0)+1};
@@ -111,8 +112,8 @@ async function main(){
  assert.equal((await rest(stranger,cityPath,"PATCH",{fields:fields({ownerFlag:paidPatch.flag})})).status,403,"City identity projection must not bypass premium ownership");
  const ownerProfile=(await profileRef.get()).data();
  const ownedPatch={flag:flags.toStoredFlag({...ownerProfile.flag,symbol:"halloween-bat"},owner.uid),identityRevision:ownerProfile.identityRevision+1};
- assert.equal((await rest(owner,`players/${owner.uid}${mask}`,"PATCH",{fields:fields(ownedPatch)})).status,200,"Owned premium flag must remain selectable in the flag editor");
+ assert.equal((await rest(owner,`players/${owner.uid}${mask}`,"PATCH",{fields:fields(ownedPatch)})).status,200,"Existing saved flag identities remain compatible with ownership rules");
  assert.deepEqual(Object.keys((await service.publicRef(owner.uid).get()).data()).sort(),["equipped","revision"]);
- console.log("Cosmetics emulator passed: atomic Crown claims, duplicate receipts, daily cap across resets, rotation skipping, purchase replay, bundles, equipment, flag preservation and private/write-protected account data.");
+ console.log("Cosmetics emulator passed: atomic Crown claims, duplicate receipts, daily cap across resets, rotation skipping, purchase replay, retired offer/equip rejection, preserved entitlements, city equipment, flag preservation and private/write-protected account data.");
 }
 main().then(()=>process.exit(0)).catch(error=>{console.error(error);process.exit(1);});

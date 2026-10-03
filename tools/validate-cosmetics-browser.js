@@ -25,11 +25,11 @@ function appearanceChecks() {
   const city = { ...state.cities.find(city => city.owner === "player"), ownerUid: cosmeticUid };
   const node = document.createElement("div");
   applyCosmeticCityNode(node, city);
-  const own = [node.dataset.citySkin, node.dataset.flagBorder];
+  const own = node.dataset.citySkin;
   applyCosmeticCityNode(node, { ...city, kind: "stronghold" });
-  const stronghold = [node.dataset.citySkin, node.dataset.flagBorder];
+  const stronghold = node.dataset.citySkin;
   applyCosmeticCityNode(node, { ...city, owner: "enemy", ownerUid: "capturing-ruler" });
-  const captured = [node.dataset.citySkin, node.dataset.flagBorder];
+  const captured = node.dataset.citySkin;
   cosmeticOwnerAppearances.set("capturing-ruler", { city: "halloween_city", troops: "halloween_troops" });
   applyCosmeticCityNode(node, { ...city, owner: "enemy", ownerUid: "capturing-ruler" });
   const remote = node.dataset.citySkin;
@@ -38,14 +38,14 @@ function appearanceChecks() {
   cosmeticState = saved;
   updateArmyTokenElement(token, attack, city);
   const before = [token.className, token.querySelector(".army-token-count").textContent, token.querySelector(".army-token-time").textContent, token.querySelector(".army-token-icon").textContent];
-  cosmeticState = COSMETIC_CATALOG.equip(saved, "troops", "halloween_troops");
+  cosmeticState = { ...saved, owned: {...saved.owned, halloween_troops: true}, equipped: {...saved.equipped, troops: "halloween_troops"} };
   updateArmyTokenElement(token, attack, city);
-  const troop = token.dataset.troopSkin;
+  const troop = !!token.querySelector(".troop-skin-sprite");
   const after = [token.className, token.querySelector(".army-token-count").textContent, token.querySelector(".army-token-time").textContent, token.querySelector(".army-token-icon").textContent];
   updateArmyTokenElement(token, { ...attack, kind: "scout" }, city);
-  const scout = [token.dataset.troopSkin, !!token.querySelector(".army-token-icon svg")];
+  const scout = [!!token.querySelector(".troop-skin-sprite"), !!token.querySelector(".army-token-icon svg")];
   updateArmyTokenElement(token, { ...attack, owner: "enemy", ownerUid: "capturing-ruler", kind: "rally" }, city);
-  const rally = token.dataset.troopSkin;
+  const rally = !!token.querySelector(".troop-skin-sprite");
   cosmeticState = saved;
   return { own, stronghold, captured, remote, before, after, troop, scout, rally };
 }
@@ -87,29 +87,19 @@ async function main(){
   await evaluate('cosmeticState={...cosmeticState,crowns:10};refreshCosmeticPanels()');
   assert.equal(await evaluate('cosmeticConfirmation'),null,"A changed wallet must dismiss an unaffordable confirmation");
   await evaluate('cosmeticState=__skinQA.wallet;refreshCosmeticPanels()');
-  await click('[data-skin-action]');assert.equal(await evaluate('cosmeticConfirmation.price'),600);await click('[data-skin-confirm]');await wait('!cosmeticBusy');
+  await evaluate('__skinQA.mode="lost"');await click('[data-skin-action]');assert.equal(await evaluate('cosmeticConfirmation.price'),600);await click('[data-skin-confirm]');await wait('!cosmeticBusy');
+  assert.equal(await evaluate('!!cosmeticPendingPurchase'),true);
+  await click('[data-skin-reload]');await wait('!cosmeticBusy');
+  assert.equal(await evaluate('__skinQA.purchases'),1);
+  assert.equal(await evaluate('__skinQA.requests[0].requestId===__skinQA.requests[1].requestId'),true);
   assert.equal(await evaluate('cosmeticState.crowns'),1400);assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   assert.equal(await evaluate('document.getElementById("crownsBalance").title'),"1,400 Crowns","Confirmed spending must update the map counter");
-  await click('[data-skin-select="halloween_collection"]');assert.equal(await evaluate('COSMETIC_CATALOG.quote(cosmeticSelected,cosmeticState,cosmeticNow()).price'),720);
-  await evaluate('__skinQA.mode="lost"');await click('[data-skin-action]');await click('[data-skin-confirm]');await wait('!cosmeticBusy');assert.equal(await evaluate('!!cosmeticPendingPurchase'),true);
-  await click('[data-skin-reload]');await wait('!cosmeticBusy');assert.equal(await evaluate('__skinQA.purchases'),2);assert.equal(await evaluate('cosmeticState.crowns'),680);assert.equal(await evaluate('__skinQA.requests[1].requestId===__skinQA.requests[2].requestId'),true);
-  assert.deepEqual(await evaluate('state.flag'),originalFlag,'Purchasing flag icons must not equip them');
-  assert.equal(await evaluate('document.getElementById("crownsText").textContent'),"680","A reconciled purchase must update the counter once");
+  assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=shop] [data-skin-select]")].map(n=>n.dataset.skinSelect)'),['halloween_city']);
   const appearances = await evaluate(`(${appearanceChecks.toString()})()`);
-  assert.deepEqual(appearances.own,["halloween_city","halloween_border"]);
-  assert.deepEqual(appearances.stronghold,["",""]);assert.deepEqual(appearances.captured,["",""]);
-  assert.equal(appearances.remote,"halloween_city");assert.deepEqual(appearances.before,appearances.after);
-  assert.equal(appearances.troop,"halloween_troops");assert.deepEqual(appearances.scout,["",true]);assert.equal(appearances.rally,"halloween_troops");
-  const flagPreview = await evaluate(`(()=>{
-    const saved=state.flag,selection=cosmeticSelected;state.flag={...saved,pattern:'split'};cosmeticCategory='flag';refreshCosmeticPanels();
-    const flag=document.querySelector('[data-skins-mode=shop] [data-skin-flag-symbol]');
-    const pattern=getComputedStyle(flag,'::before'),symbol=getComputedStyle(flag.querySelector('.flag-symbol'));
-    const result={pattern:flag.classList.contains('pattern-split'),content:pattern.content,left:pattern.left,color:symbol.color,expected:state.flag.symbolColor};
-    state.flag=saved;cosmeticCategory='all';cosmeticSelected=selection;refreshCosmeticPanels();return result;
-  })()`);
-  assert(flagPreview.pattern&&flagPreview.content!=='none'&&parseFloat(flagPreview.left)>0,"Flag preview must render the saved two-color pattern");
-  const rgb=flagPreview.expected.replace('#','').match(/../g).map(hex=>parseInt(hex,16));
-  assert.equal(flagPreview.color,`rgb(${rgb.join(', ')})`,"Flag preview must retain the saved symbol color");
+  assert.equal(appearances.own,'halloween_city');assert.equal(appearances.stronghold,'');assert.equal(appearances.captured,'');
+  assert.equal(appearances.remote,'halloween_city');assert.deepEqual(appearances.before,appearances.after);
+  assert.equal(appearances.troop,false);assert.deepEqual(appearances.scout,[false,true]);assert.equal(appearances.rally,false);
+  assert.deepEqual(await evaluate('state.flag'),originalFlag);
   await click('[data-skin-browse]');await wait('activeProfileTab==="skins"');await click('[data-skin-select="halloween_city"]');
   assert.equal(await evaluate('document.querySelector("[data-skin-action]").textContent'),"Apply");
   assert.equal(await evaluate('__skinQA.equips'),0,"Selection must not equip a skin");
@@ -134,7 +124,7 @@ async function main(){
     await click(`[data-skin-stage="${stage}"]`);
     await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").decode()');
     assert.equal(await evaluate('document.querySelector(".skin-detail [data-skin-preview-art]").getAttribute("src")'),await evaluate(`getCastleAsset(${stage})`));
-    assert.equal(await evaluate('document.querySelectorAll(".skin-detail .halloween-city-bats").length'),0,"Default preview must not show Halloween bats");
+    assert.equal(await evaluate('document.querySelectorAll("[data-skins-mode=profile] .skin-detail .halloween-city-bats").length'),0,"Default preview must not show Halloween bats");
   }
   await click('[data-skin-action]');await wait('!cosmeticBusy');assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   for(const [width,height] of [[1440,900],[844,390],[568,320],[568,280]]){
@@ -148,8 +138,8 @@ async function main(){
       assert(metrics.left>=-1&&metrics.right<=width+1,JSON.stringify(metrics));assert(metrics.scroll<=metrics.client+2,"Skins horizontal overflow");
       if(mode==='profile'){
         assert.deepEqual(await evaluate(`(${profileFrame.toString()})()`),reference,'Skins must share the Profile frame and typography');
-        assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=profile] [data-skin-category]")].map(e=>e.dataset.skinCategory)'),['city','troops','border'],'Flag icons belong in the flag editor');
-        for(const category of ['troops','border','city']){
+        assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=profile] [data-skin-category]")].map(e=>e.dataset.skinCategory)'),['city'],'Only city skins remain');
+        for(const category of ['city']){
           await tap(`[data-skins-mode=profile] [data-skin-category="${category}"]`);
           await click('[data-skins-mode=profile] .skin-card:last-child');
           const controls=await evaluate(`(${profileControls.toString()})()`);
@@ -180,32 +170,17 @@ async function main(){
         await tap('#skinsTabBtn');await tap('#profileCloseBtn');
         await wait('!profileScreen.classList.contains("open") && getComputedStyle(profileScreen).visibility==="hidden" && getComputedStyle(profileScreen).pointerEvents==="none"');
       }else{
-        await tap('[data-skins-mode=shop] [data-skin-category=flag]');
-        await click('[data-skins-mode=shop] [data-skin-select=halloween_pumpkin]');
-        assert.equal(await evaluate('document.querySelector("[data-skins-mode=shop] [data-skin-action]").textContent'),'Open Flag Editor');
-        const savedFlag=await evaluate('state.flag');
-        await tap('[data-skins-mode=shop] [data-skin-action]');
-        assert(await evaluate('!modal.open && !flagEditorView.hidden && flagEditorSection==="symbol" && activeProfileTab==="profile"'),'Owned flag icons must open Edit Flag → Symbol');
-        assert.deepEqual(await evaluate('state.flag'),savedFlag,'Opening the editor must not equip an icon');
-        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),4);
-        assert(await evaluate('!!flagSymbolOptions.querySelector("[data-flag-symbol=crown]")'),'Existing free icons must remain available');
-        await tap('#flagSymbolOptions button[data-flag-symbol=halloween-pumpkin]');
-        assert.deepEqual(await evaluate('({...flagDraft,symbol:state.flag.symbol})'),savedFlag,'Selecting an icon must preserve colors and pattern');
-        assert.deepEqual(await evaluate('state.flag'),savedFlag,'Only Save Flag applies the draft');
-        await evaluate('applyCosmeticResult({state:__skinQA.wallet})');
-        assert.equal(await evaluate('flagDraft.symbol'),'halloween-pumpkin','Wallet refresh must preserve the draft');
-        await tap('#skinsTabBtn');assert(await evaluate('flagDiscardDialog.open'),'Leaving an edited flag must ask before discarding');
-        await tap('#flagStayEditingBtn');await wait('!flagDiscardDialog.open && !pendingFlagEditorExit');
-        await tap('#flagSaveBtn');await wait('!flagSaveInFlight');
-        assert(await evaluate('state.flag.symbol==="halloween-pumpkin" && !isFlagEditorDirty()'),'Save Flag must apply the chosen icon');
-        const editorShot=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,`flag-editor-${width}x${height}.png`),Buffer.from(editorShot.data,'base64'));
+        await evaluate('modal.close();showProfileScreen();showFlagEditor();setFlagEditorSection("symbol");cosmeticState.owned.halloween_pumpkin=true;cosmeticState.owned.halloween_bat=true;renderFlagEditor()');
+        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),0,'Retired paid icons stay out of the editor, even when owned');
+        assert(await evaluate('!!flagSymbolOptions.querySelector("[data-flag-symbol=crown]")'),'Free flag symbols remain available');
+        await tap('#flagSymbolOptions button[data-flag-symbol=lion]');await tap('#flagSaveBtn');await wait('!flagSaveInFlight');
         await tap('#flagSymbolOptions button[data-flag-symbol=crown]');await tap('#flagSaveBtn');await wait('!flagSaveInFlight');
         assert.equal(await evaluate('state.flag.symbol'),'crown','Free icons still save through the same editor');
         await evaluate('cosmeticState=null;refreshCosmeticPanels()');
         assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),0);
         await tap('#flagSymbolOptions button[data-flag-symbol=lion]');
         await evaluate('applyCosmeticResult({state:__skinQA.wallet})');
-        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),4,'Late ownership must update an open editor');
+        assert.equal(await evaluate('flagSymbolOptions.querySelectorAll("[data-flag-symbol^=halloween]").length'),0,'Late ownership must not restore retired choices');
         assert.equal(await evaluate('flagDraft.symbol'),'lion','Late ownership must preserve unsaved edits');
         await tap('#skinsTabBtn');
         assert(await evaluate('flagDiscardDialog.open && !!pendingFlagEditorExit'),'Discard must retain the requested destination');
@@ -218,7 +193,7 @@ async function main(){
   await evaluate('cosmeticOffset=Date.UTC(2026,10,1)-Date.now();cosmeticState=COSMETIC_CATALOG.normalize();cosmeticSelected="halloween_city";refreshCosmeticPanels()');
   assert(await evaluate('document.querySelector("[data-skins-mode=shop] [data-skin-action]").disabled'));
   await click('[data-rs-section="provisions"]');assert(await evaluate('!!document.querySelector(".rs-shop-selection")'));
-  assert.deepEqual(errors,[]);console.log("Cosmetics browser passed: purchase, bundle, uncertain receipt retry, flag editor ownership/save/discard, equip/default, map appearance, sale closure and desktop/landscape layouts.");
+  assert.deepEqual(errors,[]);console.log("Cosmetics browser passed: city-only purchase, uncertain receipt retry, retired appearance fallback, free flag save/discard, equip/default, map appearance, sale closure and desktop/landscape layouts.");
  }finally{if(client){await client.send("Browser.close").catch(()=>{});client.close();}if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}await server.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

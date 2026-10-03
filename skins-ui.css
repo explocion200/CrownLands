@@ -47,7 +47,7 @@
 .skin-stage-picker { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:4px 0 10px; }
 .skins-panel .skin-stage-picker button { padding:6px 7px; min-height:32px; font-size:11px; }
 .halloween-city-bats { position:absolute; inset:0; pointer-events:none; --bat-phase:-1.3s; }
-/* Keep city bats outside the castle's shadow group when city and border skins coexist. */
+/* Shadow the still city image so bat motion does not repaint the whole castle. */
 .city-node[data-city-skin="halloween_city"] .city-castle { filter:none; }
 .city-node[data-city-skin="halloween_city"] .city-art { filter:drop-shadow(0 5px 5px rgba(0,0,0,.35)); }
 .map-frame:is(.camera-moving,.zooming,.crowded-map,.low-zoom) .city-node[data-city-skin="halloween_city"] .city-art { filter:none; }

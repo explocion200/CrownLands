@@ -243,11 +243,13 @@ assert.match(index, /data-flag-editor-tab="colors"/);
 assert.match(index, /id="flagResetBtn"/);
 assert.match(index, /id="flagRandomizeBtn"/);
 assert.match(index, /id="flagDiscardDialog"/);
+const gameEntry = index.match(/<script src="(game\.js\?v=[^"]+)"/);
+assert.ok(gameEntry, "The game entry must use a versioned script URL.");
+assert.ok(worker.includes(`/${gameEntry[1]}"`), "The service worker must cache the current game entry.");
 for (const source of [index, worker]) {
   assert.match(source, /functions\/playerFlagConfig\.js\?v=20260825-player-flags-audit-r1/);
   assert.match(source, /functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1/);
   assert.match(source, /player-flag-editor\.css\?v=20260819-player-flags-v2-r1/);
-  assert.match(source, /game\.js\?v=20260909-city-details-r1/);
 }
 for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /functions\/flagRenderer\.js/);

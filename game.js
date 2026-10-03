@@ -28114,8 +28114,7 @@ function renderFlagEditor() {
     });
   });
 
-  const ownedFlagSymbols = PLAYER_FLAG_CONFIG.SYMBOLS.filter(option => option.premium && cosmeticState?.owned[COSMETIC_CATALOG.flagItem(option.key)?.id]);
-  flagSymbolOptions.innerHTML = [...FLAG_SYMBOLS, ...ownedFlagSymbols].map(option => {
+  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => {
     const selected = flagDraft.symbol === option.key;
     return `<button type="button" data-flag-symbol="${option.key}" class="player-flag-editor__control player-flag-editor__symbol-card${selected ? " active" : ""}" aria-label="${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}<span>${escapeHtml(option.label)}</span></button>`;
   }).join("");
@@ -30997,11 +30996,6 @@ function updateArmyTokenElement(token, attack, targetCity, endpointInteractionDi
   if (endpointInteractionDisabled && document.activeElement === token) token.blur();
   const expanded = String(selected);
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
-  const troopSkin = attack.kind === "scout" ? "" : cosmeticAppearance(attack.ownerUid || (isPersonalArmy(attack) ? cosmeticUid : "")).troops || "";
-  if (token.dataset.troopSkin !== troopSkin) token.dataset.troopSkin = troopSkin;
-  if (troopSkin === "halloween_troops" || token.dataset.troopArt) {
-    globalThis.CrownlandsTroopSkins?.apply(token, troopSkin, cosmeticMotion ||= createCosmeticMotion());
-  }
   const armyIcon = attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
     icon: iconElement,
@@ -31158,16 +31152,10 @@ function renderVisibleArmyMotion(now = performance.now()) {
   const bounds = getActiveMapBounds();
   const pixelScale = 4 * zoom * (window.devicePixelRatio || 1);
   for (const motion of visibleArmyMotion.values()) {
-    const skinned = globalThis.CrownlandsTroopSkins?.has(motion.token);
-    const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments, skinned ? motion.heading : null);
+    const segment = getMissionPointAtProgress(motion.army, getArmyTravelProgress(motion.army, nowMs), motion.segments);
     const hidden = !segment || segment.regionId !== regionId;
     if (motion.token.hidden !== hidden) motion.token.hidden = hidden;
     if (hidden) continue;
-    if (skinned) {
-      const recalled = normalizeTimestampMs(motion.army.recalledAtMs);
-      const reverse = motion.army.returning && recalled > 0 && normalizeTimestampMs(motion.army.arrivesAtMs) > recalled;
-      globalThis.CrownlandsTroopSkins.face(motion.token, motion.heading.dx, motion.heading.dy, reverse);
-    }
     let point = { x: segment.point.x - bounds.left, y: segment.point.y - bounds.top };
     if (motion.correction) {
       const blend = clamp((now - motion.correction.startedAt) / 150, 0, 1);

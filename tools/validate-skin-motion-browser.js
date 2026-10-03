@@ -71,7 +71,7 @@ async function main() {
       const row = { width, height, ...fixture, cpuThrottle: 4, activeAnimations: active, frameP95Ms: frames[Math.floor(frames.length * .95)], taskMs: (after.TaskDuration - before.TaskDuration) * 1000, styleMs: (after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000, layoutMs: (after.LayoutDuration - before.LayoutDuration) * 1000 };
       results.push(row); console.log(JSON.stringify(row));
       if (!baseline) {
-        assert(active > 0 && active <= (width <= 1000 ? 6 : 8) * 6, "Active map animations must stay within the city budget");
+        assert(active > 0 && active <= (width <= 1000 ? 3 : 4) * 6, "Active map animations must stay within the city budget");
         assert.equal(await evaluate("[...skinMotionFixture.children].slice(40).reduce((n,node)=>n+node.getAnimations({subtree:true}).filter(a=>a.playState==='running').length,0)"), 0, "Offscreen cities must not animate");
       }
       await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });

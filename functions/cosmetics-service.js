@@ -1,7 +1,7 @@
 "use strict";
 const C = require("./cosmetics");
 
-function createCosmeticsService({ db, HttpsError, runTransaction, assertCurrentPlayerProfile, normalizeFlag }) {
+function createCosmeticsService({ db, HttpsError, runTransaction, assertCurrentPlayerProfile }) {
   const stateRef = uid => db.doc(`players/${uid}/cosmetics/state`);
   const publicRef = uid => db.doc(`playerCosmetics/${uid}`);
   const receiptRef = (uid, id) => db.doc(`players/${uid}/cosmeticReceipts/${id}`);
@@ -46,19 +46,9 @@ function createCosmeticsService({ db, HttpsError, runTransaction, assertCurrentP
       assertCurrentPlayerProfile(profile);
       if (request.expectedRevision !== account.state.revision) throw new HttpsError("failed-precondition", "Your collection changed. Review your equipped skins and retry.");
       const next = translate(() => C.equip(account.state, request.category, request.itemId));
-      let flag = null, identityRevision = profile.identityRevision || 0;
-      if (request.category === "flag") {
-        const symbol = C.item(request.itemId)?.symbol;
-        if (!symbol) throw new HttpsError("invalid-argument", "Choose a flag icon, or use the flag editor for free symbols.");
-        if (request.expectedIdentityRevision !== identityRevision) throw new HttpsError("failed-precondition", "Your flag changed. Reload it before equipping a symbol.");
-        flag = normalizeFlag({ ...profile.flag, symbol }, uid);
-        identityRevision++;
-        transaction.update(profileRef, { flag, identityRevision, updatedAtMs: now });
-        next.revision++;
-      }
       transaction.set(account.ref, next);
       transaction.set(publicRef(uid), { equipped: next.equipped, revision: next.revision });
-      return { state: next, flag, identityRevision, serverNowMs: now };
+      return { state: next, serverNowMs: now };
     });
   }
   return { stateRef, publicRef, receiptRef, read, load, purchase, equip, translate };
