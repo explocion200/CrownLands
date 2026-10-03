@@ -102,6 +102,30 @@ limitations and measurements are in
 `docs/visual-qa/halloween-troops/performance-review.json`. Physical mobile testing
 of dense battles remains advisable before claiming smooth performance there.
 
+## Halloween city flag frame review (2026-10-03)
+
+The approved painted frame uses one 39,148-byte WebP (500 KiB decoded), loaded
+only when a frame or preview is shown. It preserves the existing flag, color and
+level nodes. Stable refreshes make no frame DOM writes. Three frames may animate
+on desktop and two on landscape mobile, sharing the existing eight/six city
+slots. Only the selected Shop/Profile preview animates. Camera motion, crowded
+or distant maps, overlays, background visibility and motion preferences stop
+decoration; static frames remain visible.
+
+The stress review found that parent drop shadows repainted moving decorations.
+Shadows now apply to the still frame and still Halloween city image. In the
+controlled 120-city fixture (80 visible), normal-speed frame p95 was 7.1–7.5 ms
+for the frame alone and 7.5–7.6 ms with both skins. Moving the castle shadow cut
+combined normal-speed main-thread work by about 75–77%. These samples use a
+144 Hz host and isolate decoration from simulation. Layout work was zero.
+
+At 4× CPU throttling, the combined maximum-motion fixture reached 20.9–27.8 ms
+p95. It intentionally bypasses the normal crowded-map guard to exercise the
+animation cap; the separate guard checks confirm that dense views stop all
+cosmetic animation. Physical mobile testing remains necessary before claiming
+smooth performance on particular phones. Inputs and before/after measurements:
+[frame performance review](./visual-qa/halloween-city-marker/performance-review.json).
+
 ## Release procedure and limits
 
 The branch must pass the repository's complete `prepare-pr` flow, production build, and required GitHub checks (`Static validation`, `Multiplayer emulator validation`, `Validate`) against current main. Normal merge is followed by the established Netlify Git deployment and safe public desktop/landscape smoke checks at `https://playcrownlands.com/play/`, including the merged commit in release metadata and loaded scripts. This release requires no Functions, rules, indexes, cleanup migration, or production data changes. The backend contract remains compatible with the deployed PR #254 backend.

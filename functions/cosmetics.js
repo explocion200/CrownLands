@@ -19,7 +19,7 @@
     { id: "halloween_troops", category: "troops", name: "Halloween March", price: 300, placeholder: false,
       description: "Three soldiers in plum cloaks, led by a pumpkin lantern bearer. Eight walking directions follow your troop routes. Mission colors, troop information and scout markers remain clear.",
       assets: { atlas: "assets/optimized/halloween-troops-640x1280-1889602f174b.webp" } },
-    { id: "halloween_border", category: "border", name: "Halloween Flag Border", price: 200, description: "Frames your flags above regular cities on the map." },
+    { id: "halloween_border", category: "border", name: "Halloween Flag Border", price: 200, placeholder: false, description: "An ornate bronze-and-thorn frame with pumpkin lanterns and circling bats. Keeps your flag, city level and ownership colors visible. Apply to all your regular cities; visible to every player.", assets: { frame: "assets/optimized/halloween-flag-frame-320x400-bd768affdd56.webp" } },
     ...["Pumpkin", "Bat", "Skull", "Raven"].map(name => ({ id: `halloween_${name.toLowerCase()}`, category: "flag", name: `${name} Flag Icon`, price: 100, symbol: `halloween-${name.toLowerCase()}`, description: "Adds a personal flag symbol, preserving your flag colors and pattern." })),
   ].map(item => Object.freeze({ placeholder: true, ...item, assets: Object.freeze(item.assets || {}) })));
   const BUNDLE = Object.freeze({ id: "halloween_collection", category: "bundle", name: "Halloween Collection", description: "All seven Halloween cosmetics. Save 20% on the pieces you do not own.", itemIds: Object.freeze(ITEMS.map(item => item.id)), placeholder: true });

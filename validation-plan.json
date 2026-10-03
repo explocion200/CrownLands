@@ -1,83 +1,64 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "87cb4571a1abf242a2064461919d9d821d815cc0",
+  "baseCommit": "0710db379f5863acc684f56800feabaf19a6cf5a",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/halloween-troops/art-source.json",
-        "docs/visual-qa/halloween-troops/atlas-layout.json",
-        "docs/visual-qa/halloween-troops/design.json",
-        "docs/visual-qa/halloween-troops/direction-art-source.json",
-        "docs/visual-qa/halloween-troops/march-atlas.png",
-        "docs/visual-qa/halloween-troops/march-north-east.png",
-        "docs/visual-qa/halloween-troops/march-south-west.png",
-        "docs/visual-qa/halloween-troops/preview.css",
-        "docs/visual-qa/halloween-troops/preview.html",
-        "docs/visual-qa/halloween-troops/preview.js",
-        "docs/visual-qa/halloween-troops/style-reference.jpg",
-        "tools/validate-halloween-troops-preview.js"
+        "docs/visual-qa/halloween-city-marker/art-source.json",
+        "docs/visual-qa/halloween-city-marker/design.json",
+        "docs/visual-qa/halloween-city-marker/marker.svg",
+        "docs/visual-qa/halloween-city-marker/ornate-frame.png",
+        "docs/visual-qa/halloween-city-marker/preview.css",
+        "docs/visual-qa/halloween-city-marker/preview.html",
+        "docs/visual-qa/halloween-city-marker/preview.js",
+        "docs/visual-qa/halloween-city-marker/style-reference.jpg",
+        "tools/validate-halloween-marker-preview.js"
       ],
       "tests": [
-        "tools/validate-halloween-troops-preview.js"
+        "tools/validate-halloween-marker-preview.js"
       ],
-      "reason": "Approved art and interactive reference: 32 transparent poses, eight and reversed directions, upright troop information, responsive layouts and motion preferences. Production integration is tested separately. Readiness polling tolerates the brief missing document element after navigation, exposed by the Linux CI runner."
+      "reason": "Preserve the approved painted frame reference, transparent center and bottom V fit, independent eight-state color/heraldry/level controls and responsive preview motion guards. The new production runtime is verified separately. Navigation polling tolerates the transient missing document element exposed by the prior Linux CI."
     },
     {
       "paths": [
-        "functions/cosmetics.js"
+        "functions/cosmetics.js",
+        "functions/test/emulator-cosmetics.js"
       ],
       "tests": [
         "tools/validate-cosmetics.js",
         "functions/test/emulator-cosmetics.js"
       ],
-      "reason": "Shared client/server catalog replaces troop placeholder metadata and references the approved atlas at the existing price. Validate authoritative ownership, price, revisions, idempotency, separate purchase/equip, public appearance permissions and default switching."
+      "reason": "The shared catalog replaces only the border placeholder metadata and points to approved art at the unchanged 200-Crown price. Check authoritative ownership, free Apply/Default, purchase replay, public appearance visible to another player, revision guards, and independent city/flag choices; the emulator now explicitly exercises border Apply/replay/Default and unowned rejection."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "game.js",
+        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md",
         "index.html",
         "service-worker.js",
         "skins-ui.css",
         "skins-ui.js",
         "tools/build-production-client.js",
         "tools/validate-production-artifact.js",
-        "assets/optimized/halloween-troops-640x1280-1889602f174b.webp",
-        "docs/visual-qa/halloween-troops/production-atlas.json",
-        "tools/build-halloween-troop-atlas.js",
-        "tools/validate-halloween-troop-skin-browser.js",
-        "troop-skins.css",
-        "troop-skins.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-marching-army-visibility-browser.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-march-frame-performance-browser.js",
-        "docs/visual-qa/halloween-troops/performance-review.json",
-        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md"
+        "assets/optimized/halloween-flag-frame-320x400-bd768affdd56.webp",
+        "city-flag-skins.css",
+        "city-flag-skins.js",
+        "docs/visual-qa/halloween-city-marker/performance-review.json",
+        "docs/visual-qa/halloween-city-marker/production-frame.json",
+        "tools/build-halloween-flag-frame.js",
+        "tools/validate-halloween-flag-frame-browser.js"
       ],
       "tests": [
-        "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-halloween-flag-frame-browser.js",
         "tools/validate-cosmetics-browser.js",
-        "tools/validate-marching-army-visibility-browser.js",
         "tools/validate-skin-motion-browser.js",
         "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-halloween-troop-skin-browser.js",
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-focused-browser-smoke.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-march-frame-performance-browser.js"
+        "tools/validate-focused-browser-smoke.js"
       ],
-      "reason": "Integrate approved art through existing troop and cosmetic renderers. Validate eight headings and recalled/cross-map segments without changing positions or timing; purchase/selection/Apply/Default and own/remote/leader/scout appearance; count privacy, route controls, stable nodes, failure fallback, decoded art and 6/8 motion caps. Shared motion changes require city/preview regression checks. Desktop/mobile stress reports compare full-map and isolated decoration costs. Production build, entry/cache smoke and budgets check module/resource packaging, the compiled atlas provenance hash and lazy loading. Master Specification records only the approved troop design; no gameplay, price or deployed-state change. March performance changes require bounded display-error and DOM-write checks across zoom/DPR, fast/Swift/return routes, region transitions, pending-snapshot blending and covered-map catch-up. The optional baseline comparator records controlled CPU/frame measurements; it is not a physical-device guarantee."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-tower-map-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-map-browser.js"
-      ],
-      "reason": "The mandatory entry smoke exposed an existing Rally fixture mismatch with the October 1 Master Specification and unchanged main renderer: its leader was missing from participants and it incorrectly rejected all inbound contributions. Supply the creator and assert the established Ready minimum, creator readiness, and early launch with additional inbound troops in both card views. No Rally runtime or gameplay rules changed."
+      "reason": "Integrate the approved frame through live city nodes, existing selection/purchase/Apply controls, owned/remote/captured/selected layouts, colors, flags, levels and missing-art fallback. Pixel checks verify transparent raster and lower V coverage at production size. The shared motion scheduler and shadow isolation affect city bats and troop previews, requiring those regressions. Desktop/mobile stress checks enforce combined city slots, frame caps, zero steady layout, no repeated node writes, one shared art fetch, visibility/overlay/camera/crowded/motion guards and recycling. Production build checks package both modules and hash-verified optimized art with explicit small budgets. Documents record confirmed art direction, implementation and measured limits, not deployment."
     }
   ]
 }

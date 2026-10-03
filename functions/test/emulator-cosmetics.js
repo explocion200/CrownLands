@@ -67,6 +67,19 @@ async function main(){
  assert.equal((await service.publicRef(owner.uid).get()).data().equipped.city,"","Default must also publish to other players");
  const reapplied=await call("equipCosmetic",owner.token,{category:"city",itemId:"halloween_city",expectedRevision:restored.state.revision,requestId:"test_reapply_city"});
  wallet=reapplied.state;
+ const borderRequest={category:"border",itemId:"halloween_border",expectedRevision:wallet.revision,requestId:"test_equip_border"};
+ const border=await call("equipCosmetic",owner.token,borderRequest);
+ assert.equal(border.state.equipped.border,"halloween_border");
+ assert.equal(border.state.equipped.city,"halloween_city","Applying a frame must retain the city skin");
+ assert.equal(border.state.crowns,wallet.crowns,"Applying an owned frame is free");
+ await call("equipCosmetic",owner.token,borderRequest);
+ assert.equal((await walletRef.get()).data().revision,border.state.revision,"Repeated Apply must replay without another revision");
+ const publicBorder=await (await rest(stranger,`playerCosmetics/${owner.uid}`)).json();
+ assert.equal(publicBorder.fields.equipped.mapValue.fields.border.stringValue,"halloween_border","Other players must see the applied frame");
+ const defaultBorder=await call("equipCosmetic",owner.token,{category:"border",itemId:"",expectedRevision:border.state.revision,requestId:"test_default_border"});
+ assert.equal((await service.publicRef(owner.uid).get()).data().equipped.border,"","Default frame must publish to other players");
+ assert.equal(defaultBorder.state.equipped.city,"halloween_city");
+ wallet=defaultBorder.state;
  const profile=(await profileRef.get()).data();
  const flag=await call("equipCosmetic",owner.token,{category:"flag",itemId:"halloween_pumpkin",expectedRevision:wallet.revision,expectedIdentityRevision:profile.identityRevision||0,requestId:"test_equip_flag"});
  assert.equal(flag.flag.symbol,"halloween-pumpkin");assert.equal(flag.flag.primary,profile.flag.primary);assert.equal(flag.flag.pattern,profile.flag.pattern);
@@ -81,6 +94,7 @@ async function main(){
  function fields(value){return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,typeof v==="string"?{stringValue:v}:typeof v==="number"?{integerValue:String(v)}:{mapValue:{fields:fields(v)}}]));}
  await call("claimStartingCity",stranger.token,{playerName:"Free ruler"});
  await assert.rejects(call("equipCosmetic",stranger.token,{category:"city",itemId:"halloween_city",expectedRevision:0,requestId:"test_unowned_city"}),/do not own/);
+ await assert.rejects(call("equipCosmetic",stranger.token,{category:"border",itemId:"halloween_border",expectedRevision:0,requestId:"test_unowned_border"}),/do not own/);
  const strangerProfile=(await db.doc(`players/${stranger.uid}`).get()).data();
  const mask="?updateMask.fieldPaths=flag&updateMask.fieldPaths=identityRevision";
  const freePatch={flag:flags.toStoredFlag({...strangerProfile.flag,symbol:"crown"},stranger.uid),identityRevision:(strangerProfile.identityRevision||0)+1};

@@ -7,6 +7,7 @@ const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "troop-skins.js", "troop-skins.css",
+  "city-flag-skins.js", "city-flag-skins.css",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
@@ -285,10 +286,11 @@ const battleItemReportingBudget = 8 * 1024;
 // Explicit Apply and bounded visible-only motion bring the normalized modules
 // to 57,104 bytes. Add 2 KiB to the prior 54 KiB cap; artwork is unchanged.
 // Approved troop previews, subscriptions and separate animation slots add under 1 KiB.
-const cosmeticModuleBudget = (47 + 7 + 2 + 1) * 1024;
+// Border preview and catalog metadata add under 2 KiB; the renderer is separately bounded.
+const cosmeticModuleBudget = (47 + 7 + 2 + 1 + 2) * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 57 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 59 KiB budget.");
 // Five transparent city stages total 491,870 bytes and load only when used.
 const halloweenCityArtBudget = 512 * 1024;
 const halloweenCityArtPaths = Object.values(require(path.join(dist, "functions/cosmetics.js")).item("halloween_city").assets);
@@ -309,7 +311,14 @@ const troopBytes = fs.readFileSync(path.join(dist, troopArt));
 const troopArtBudget = 224 * 1024, troopModuleBudget = 8 * 1024;
 if (troopArt !== troopProvenance.output || troopBytes.length > troopArtBudget || require("node:crypto").createHash("sha256").update(troopBytes).digest("hex") !== troopProvenance.sha256) throw new Error("Halloween troop atlas differs from approved production art or exceeds 224 KiB.");
 if (["troop-skins.js", "troop-skins.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > troopModuleBudget) throw new Error("Troop skin renderer exceeds 8 KiB.");
-const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget + troopArtBudget + troopModuleBudget;
+// Approved frame: one shared 39,148-byte transparent WebP, loaded only when used.
+const frameArt = require(path.join(dist, "functions/cosmetics.js")).item("halloween_border").assets.frame;
+const frameProvenance = require(path.join(root, "docs/visual-qa/halloween-city-marker/production-frame.json"));
+const frameBytes = fs.readFileSync(path.join(dist, frameArt));
+const frameArtBudget = 40 * 1024, frameModuleBudget = 10 * 1024;
+if (frameArt !== frameProvenance.output || frameBytes.length > frameArtBudget || require("node:crypto").createHash("sha256").update(frameBytes).digest("hex") !== frameProvenance.sha256) throw new Error("Halloween flag frame differs from approved art or exceeds 40 KiB.");
+if (["city-flag-skins.js", "city-flag-skins.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > frameModuleBudget) throw new Error("City flag skin renderer exceeds 10 KiB.");
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget + troopArtBudget + troopModuleBudget + frameArtBudget + frameModuleBudget;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);

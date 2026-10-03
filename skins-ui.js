@@ -18,11 +18,11 @@ function createCosmeticMotion() {
     cancelAnimationFrame(frame); frame = 0;
     const covered = document.getElementById("profileScreen")?.classList.contains("open") || document.getElementById("modal")?.open;
     // Keep compositor layers bounded even when many owned cities share a skin.
-    let mapSlots = innerWidth <= 1000 ? 6 : 8, troopSlots = innerWidth <= 1000 ? 6 : 8, previewSlots = 1;
+    let mapSlots = innerWidth <= 1000 ? 6 : 8, troopSlots = innerWidth <= 1000 ? 6 : 8, frameSlots = innerWidth <= 1000 ? 2 : 3, previewSlots = 1;
     for (const [layer, info] of layers) {
       if (!layer.isConnected) { observer?.unobserve(layer); layers.delete(layer); continue; }
       const eligible = !document.hidden && info.visible && (info.preview || !covered);
-      const active = eligible && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : mapSlots-- > 0);
+      const active = eligible && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : (info.kind !== "border" || frameSlots-- > 0) && mapSlots-- > 0);
       const value = active ? "active" : "idle";
       if (layer.dataset.skinMotion !== value) layer.dataset.skinMotion = value;
     }
@@ -130,6 +130,8 @@ function applyCosmeticCityNode(node, city) {
   const [skin, border] = cosmeticCityAttributes(city).split(":");
   if (node.dataset.citySkin !== (skin || "")) node.dataset.citySkin = skin || "";
   if (node.dataset.flagBorder !== (border || "")) node.dataset.flagBorder = border || "";
+  if (border === "halloween_border") cosmeticMotion ||= createCosmeticMotion();
+  globalThis.CrownlandsCityFlagSkins?.apply(node, border, cosmeticMotion);
   const stage = getCastleStage(city.level);
   const art = COSMETIC_CATALOG.item(skin)?.assets?.[stage];
   const image = node.querySelector(".city-art");
@@ -183,6 +185,7 @@ function cosmeticPreview(item, detail = false) {
     const halloween = item.id === "halloween_city";
     return `<span class="skin-city-preview" aria-hidden="true"><img src="${halloween ? item.assets[stage] : getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : ""}</span>`;
   }
+  if (category === "border") return `<span class="skin-border-preview" aria-hidden="true"><span class="skin-border-marker" data-flag-frame-preview="${item.id}" data-frame-detail="${detail}"><span class="skin-border-center"><span class="kingdom-flag" data-border-heraldry><span class="flag-symbol"></span></span><span class="skin-border-level">50</span></span></span></span>`;
   const glyphs = { city: "♜", troops: "⚔", border: "◇", flag: "⚑", bundle: "♛" };
   if (category === "flag" && state?.flag) {
     const symbol = item.symbol || state.flag.symbol;
@@ -234,6 +237,8 @@ function bindSkinsPanel(root) {
   cosmeticMotion?.schedule();
   root.querySelectorAll(".skin-detail .halloween-city-bats").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
   root.querySelectorAll("[data-troop-preview]").forEach(element => globalThis.CrownlandsTroopSkins?.preview(element, element.dataset.troopPreview === "detail", cosmeticMotion ||= createCosmeticMotion()));
+  root.querySelectorAll("[data-flag-frame-preview]").forEach(host => globalThis.CrownlandsCityFlagSkins?.preview(host, host.dataset.frameDetail === "true", cosmeticMotion ||= createCosmeticMotion()));
+  root.querySelectorAll("[data-border-heraldry]").forEach(host => FlagRenderer.render(host, state.flag, { stableKey: cosmeticUid || "preview" }));
   const mode = root.dataset.skinsMode;
   root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
     cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
