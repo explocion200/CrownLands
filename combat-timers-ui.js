@@ -3,8 +3,9 @@
   const escape = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
   function remaining(expiresAtMs, nowMs) {
     const seconds = Math.max(0, Math.ceil((Number(expiresAtMs) - nowMs) / 1000));
-    if (seconds >= 3600) return `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-    return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    const parts = [Math.floor(seconds / 60) % 60, seconds % 60];
+    if (seconds >= 3600) parts.unshift(Math.floor(seconds / 3600));
+    return parts.map(value => String(value).padStart(2, "0")).join(":");
   }
   function activeRecords(records, nowMs) {
     return (Array.isArray(records) ? records : []).filter(record => record.status === "available"
