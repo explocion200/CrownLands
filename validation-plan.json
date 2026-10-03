@@ -1,73 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "db914ee8fe45b665b4faf4d3cee7b110732c7f6b",
+  "baseCommit": "5292ae522fe7d08ab0db1a098bb0172cf66868ad",
   "coverage": [
     {
       "paths": [
-        "functions/index.js"
-      ],
-      "tests": [
-        "tools/validate-attack-departure-snapshots.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-clan-tower-battle-reports.js",
-        "tools/validate-report-system.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-player-camp-defense.js",
-        "tools/validate-rally-staging-defense.js",
-        "tools/validate-former-clan-protection.js",
-        "tools/validate-military-ui.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-player-camp-defense.js",
-        "functions/test/emulator-combat-authorization.js"
-      ],
-      "reason": "Lock solo and participant recovery skill/gear values at attack departure, including an explicit zero; preserve version-1 attack power and legacy missing-recovery fallback. Exercise city victory/defeat, Camp fights, protected outcomes, rallies and Tower rallies, hostile returns, authoritative reports, actual Main City credits and idempotent settlement. Verify defender live bonuses, troop accounting, staging, forecast and privacy dependencies."
-    },
-    {
-      "paths": [
-        "README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly confirmed departure-time rule and its scope, old-march compatibility, existing recovery exclusions, current development status and required authorized deployment."
-    },
-    {
-      "paths": [
-        "help-handbook-content.js",
-        "battle-reports-guide.html"
-      ],
-      "tests": [
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-public-site-content.js"
-      ],
-      "reason": "Explain departure-time attack, march and recovery effects in existing player Help and the battle guide. Check Help at desktop and landscape-mobile sizes and verify public page content integrity."
-    },
-    {
-      "paths": [
-        "tools/validate-attack-departure-snapshots.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-rallies.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-player-camp-defense.js"
-      ],
-      "tests": [
-        "tools/validate-attack-departure-snapshots.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-clan-rallies.js",
-        "functions/test/emulator-battle-report-gear-effects.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-player-camp-defense.js"
-      ],
-      "reason": "Regression tests change skills and gear after departure, in both directions; verify capped and zero recovery, report item identity, actual credited troops, replay safety and individual Rally participant settlement with live defense. Keep the wall-only fixture strong enough for three strikes under the current staged wall curve."
+      "reason": "Documentation-only record of the authorized and verified PR 438 production release: exact backend, rules, web and itch builds; passing existing validation; prior merged changes included; PR 437 held; compatibility and separate public-guide limits. No gameplay, runtime, dependency or UI behavior changes."
     }
   ]
 }
