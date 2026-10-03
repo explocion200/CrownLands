@@ -1147,7 +1147,8 @@
       0,
       readEconomyNumber(economy?.troopCombat?.baseDefensePowerPerTroop, 1.3)
     );
-    const ratioStartTroopsPerHour = getEconomyPreviewTroopsPerHour(goldLinkedEndLevel, economy);
+    const wallTroopFactor = readEconomyNumber(config.wallTroopsPerVictoryPoint, 10.815);
+    const ratioStartTroopsPerHour = getEconomyPreviewTroopsPerHour(goldLinkedEndLevel, economy, wallTroopFactor);
     const maximumHours = Math.max(0, readEconomyNumber(config.wallProductionRatioMaximumHours, 240));
     const ratioStartHours = ratioStartTroopsPerHour > 0 && defensePowerPerTroop > 0
       ? goldLinkedWall / (ratioStartTroopsPerHour * defensePowerPerTroop)
@@ -1159,15 +1160,15 @@
       ratioStartHours + (maximumHours - ratioStartHours) * Math.max(0, ratioProgress)
     );
     return safeWall(
-      getEconomyPreviewTroopsPerHour(normalizedLevel, economy)
+      getEconomyPreviewTroopsPerHour(normalizedLevel, economy, wallTroopFactor)
         * defensePowerPerTroop
         * targetHours
     );
   }
 
-  function getEconomyPreviewTroopsPerHour(level, economy = state.economy) {
+  function getEconomyPreviewTroopsPerHour(level, economy = state.economy, factor = economy?.cityEconomy?.troopsPerVictoryPoint) {
     const rawTroops = getEconomyPreviewVictoryPoints(level)
-      * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+      * Math.max(0, readEconomyNumber(factor));
     if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
     return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
   }
@@ -1454,6 +1455,12 @@
                 step: 0.1,
                 description: "Base troops per hour for one city = that city's visible VP × this value. Royal Granaries, strongholds, and War Drums multiply the result afterward.",
               }
+            )}
+            ${economyNumberInput(
+              "cityEconomy.wallTroopsPerVictoryPoint",
+              "Wall reference troops per VP",
+              economy.cityEconomy.wallTroopsPerVictoryPoint,
+              { step: 0.001, description: "Keep at 10.815 to preserve the approved high-level wall curve independently of troop production." }
             )}
           </article>
           <article class="economy-breakdown-card">

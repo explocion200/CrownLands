@@ -675,7 +675,8 @@ const CITY_LEVEL_STATS = {
   wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 13.51875),
+  wallTroopsPerVictoryPoint: economyNumber("cityEconomy.wallTroopsPerVictoryPoint", 10.815),
 };
 const SKILL_CONFIG = {
   swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 100) },
@@ -4046,8 +4047,8 @@ function getCityVictoryPoints(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawVictoryPoints)));
 }
 
-function getBaseCityTroopProductionPerHour(level) {
-  const rawTroops = getCityVictoryPoints(level) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+function getBaseCityTroopProductionPerHour(level, factor = CITY_LEVEL_STATS.troopProductionPerVictoryPoint) {
+  const rawTroops = getCityVictoryPoints(level) * factor;
   if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
 }
@@ -4202,7 +4203,8 @@ function getBaseCityWalls(level, regularCity = true) {
   }
   if (normalizedLevel <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
 
-  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel);
+  // Preserve wall strength when normal troop production is rebalanced.
+  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint);
   const ratioStartHours = ratioStartTroopsPerHour > 0 && BASE_TROOP_DEFENSE_POWER > 0
     ? goldLinkedWall / (ratioStartTroopsPerHour * BASE_TROOP_DEFENSE_POWER)
     : CITY_LEVEL_STATS.wallProductionRatioMaximumHours;
@@ -4215,7 +4217,7 @@ function getBaseCityWalls(level, regularCity = true) {
         * Math.max(0, ratioProgress)
   );
   return safeWall(
-    getBaseCityTroopProductionPerHour(normalizedLevel)
+    getBaseCityTroopProductionPerHour(normalizedLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint)
       * BASE_TROOP_DEFENSE_POWER
       * targetProductionHours
   );

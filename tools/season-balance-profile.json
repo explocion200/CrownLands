@@ -13,7 +13,7 @@
     "defenders": 50000000,
     "minimumCaptureTroops": 59000000,
     "maximumCaptureTroops": 62000000,
-    "minimumProductionDays": 2.3,
-    "maximumProductionDays": 2.5
+    "minimumProductionDays": 1.84,
+    "maximumProductionDays": 2
   }
 }
