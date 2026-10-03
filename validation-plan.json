@@ -3,6 +3,11 @@
   "baseCommit": "02accfa4ff9a1c29c9beebd7b3c52e0348e33c88",
   "coverage": [
     {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "Bound the measured 194-byte normalized game.js increase (43 gzip bytes) with one 1 KiB source allowance; verify aggregate offline-shell, image, request and frame budgets remain intact."
+    },
+    {
       "paths": [
         "functions/index.js",
         "functions/economy-config.json",
