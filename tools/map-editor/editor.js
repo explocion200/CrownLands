@@ -1067,14 +1067,16 @@
       : Number.MAX_SAFE_INTEGER;
     const base = Math.max(0, readEconomyNumber(config.wallDefenseBase, 200));
     if (regularCity && readEconomyNumber(config.wallCurveModelVersion, 1) >= 3 && normalizedLevel <= 100) {
-      if (normalizedLevel <= 25) return safeWall(base + readEconomyNumber(config.wallEarlyScale, 400)
-        * Math.pow(normalizedLevel - 1, readEconomyNumber(config.regularWallEarlyExponent, 1.2986357706197937)));
+      const finishRegularWall = wall => readEconomyNumber(config.wallCurveModelVersion, 1) >= 4
+        ? safeWall((wall + getEconomyPreviewBaseWall(normalizedLevel, economy, false)) / 2) : wall;
+      if (normalizedLevel <= 25) return finishRegularWall(safeWall(base + readEconomyNumber(config.wallEarlyScale, 400)
+        * Math.pow(normalizedLevel - 1, readEconomyNumber(config.regularWallEarlyExponent, 1.2986357706197937))));
       const startLevel = normalizedLevel <= 50 ? 25 : normalizedLevel <= 75 ? 50 : 75;
       const startWall = readEconomyNumber(config[`regularWallLevel${startLevel}`],
         startLevel === 25 ? 25_000 : startLevel === 50 ? 250_000 : 1_000_000);
       const endWall = startLevel === 75 ? readEconomyNumber(config.wallMidDefense, 3_000_000)
         : readEconomyNumber(config[`regularWallLevel${startLevel + 25}`], startLevel === 25 ? 250_000 : 1_000_000);
-      return safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25));
+      return finishRegularWall(safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25)));
     }
     if (Math.floor(readEconomyNumber(config.wallCurveModelVersion, 1)) < 2) {
       return safeWall(base + Math.max(0, readEconomyNumber(config.wallDefensePerLevel, 28858)) * (normalizedLevel - 1));

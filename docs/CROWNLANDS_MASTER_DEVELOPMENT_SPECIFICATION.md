@@ -533,6 +533,16 @@ The following balance is confirmed for the next coordinated client and Functions
 - Stoneworks and equipped wall gear apply to the new regular-city base with the existing combined cap. Troop defense, production, upgrade prices, damage rules, repair duration and Shield eligibility retain their current rules. Existing integrity and repair deadlines carry over; the release does not refill walls or rewrite player records. Arriving armies use the live defensive wall curve; historical battle and scout records retain their saved values.
 - King Power retains its current formula and naturally reflects the lower base walls when authoritative economy/stat calculations refresh. Previews, city details, the public calculator and editor preview use the same values. Publish the matching client and backend together under `crownlands-2026-10-03-city-wall-stages-v3`; older clients must refresh before gameplay requests.
 
+### Intermediate regular-city wall strength — October 3, 2026
+
+**Status: IN DEVELOPMENT — NOT DEPLOYED.** The user requested city walls between the earlier stronger curve and the current five-stage curve. The implementation uses a 50/50 midpoint at every level, revising the five-stage regular-city balance above.
+
+- For regular cities at Levels 1–100, calculate both the version-2 wall and version-3 wall with their existing whole-number rounding, then use round((v2Wall + v3Wall) / 2). This applies to owned, neutral and Main Cities in the active Core realm.
+- Base wall anchors become 200 at Level 1, 600 at Level 2, 85,279 at Level 25, 853,335 at Level 50, 1,614,168 at Level 75 and 3,000,000 at Level 100. Every level gains strength; the average stays between both earlier curves at every level.
+- Level 100+ walls, Towers, Strongholds, the Citadel, camp behavior, wall-bonus caps, repair timing, integrity and Shield eligibility retain their existing rules. Existing damage and repair deadlines carry forward; this revision performs no wall refill or production-data rewrite. Troop production, including both 20-day account exceptions, retains the deployed 25% production release behavior.
+- King Power's wall component and current attack forecasts use the revised walls on authoritative refresh. Arriving armies face the current defensive wall curve; saved battle and scout reports keep their recorded values. The client, Functions, battle calculator and editor preview must agree.
+- Use wall model 4 and matching client/backend release crownlands-2026-10-03-city-wall-midpoint-v4; existing clients must refresh before gameplay requests. Merge and deployment require authorization. The user has explicitly held future itch.io updates until separately requested.
+
 ### Approved flat 25% troop-production increase — October 3, 2026
 
 **Status: IN DEVELOPMENT — NOT DEPLOYED.** The user selected a flat 25% increase at every city level, replacing the unchanged-production scope of the five-stage wall revision. This applies to the active Core realm's regular cities, including Main Cities.

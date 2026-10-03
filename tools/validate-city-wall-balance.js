@@ -62,7 +62,7 @@ const wallStats = {
   wallProductionRatioMaximumHours: Number(cityEconomy.wallProductionRatioMaximumHours),
 };
 
-assert.equal(wallStats.wallCurveModelVersion, 3);
+assert.equal(wallStats.wallCurveModelVersion, 4);
 assert.equal(cityEconomy.troopsPerVictoryPoint, 13.51875);
 assert.equal(wallStats.wallTroopsPerVictoryPoint, 10.815);
 assert.equal(wallStats.cityWallsBase, 200);
@@ -114,16 +114,16 @@ vm.runInContext(extractFunction(editorSource, "getEconomyPreviewBaseWall"), edit
 const expectedWalls = new Map([
   [1, 200],
   [2, 600],
-  [5, 2_621],
-  [10, 7_139],
-  [25, 25_000],
-  [26, 27_412],
-  [30, 39_622],
-  [40, 99_527],
-  [50, 250_000],
-  [51, 264_255],
-  [75, 1_000_000],
-  [76, 1_044_924],
+  [5, 4_028],
+  [10, 15_451],
+  [25, 85_279],
+  [26, 94_224],
+  [30, 166_717],
+  [40, 505_505],
+  [50, 853_335],
+  [51, 875_896],
+  [75, 1_614_168],
+  [76, 1_652_063],
   [100, 3_000_000],
   [101, 3_030_867],
   [125, 4_090_593],
@@ -165,9 +165,9 @@ const maximumAttack = baseAttackPower * (1 + swordmasteryMaximum / 100);
 assert.equal(maximumAttack, 2.5);
 
 const siegeBenchmarks = new Map([
-  [25, { wall: 50_000, attackers: 1_060_001 }],
-  [50, { wall: 500_000, attackers: 1_240_001 }],
-  [75, { wall: 2_000_000, attackers: 1_840_001 }],
+  [25, { wall: 170_558, attackers: 1_108_224 }],
+  [50, { wall: 1_706_670, attackers: 1_722_669 }],
+  [75, { wall: 3_228_336, attackers: 2_331_335 }],
   [100, { wall: 6_000_000, attackers: 3_440_001 }],
   [150, { wall: 12_400_000, attackers: 6_000_001 }],
 ]);
@@ -181,6 +181,9 @@ for (const [level, expected] of siegeBenchmarks) {
 
 const previousCurve = require("../battle-guide-calculations.js").create({
   ...config, cityEconomy: { ...cityEconomy, wallCurveModelVersion: 2 },
+});
+const lighterCurve = require("../battle-guide-calculations.js").create({
+  ...config, cityEconomy: { ...cityEconomy, wallCurveModelVersion: 3 },
 });
 const beforeProductionIncrease = require("../battle-guide-calculations.js").create({
   ...config, cityEconomy: { ...cityEconomy, troopsPerVictoryPoint: 10.815 },
@@ -211,7 +214,11 @@ for (let level = 1; level <= 10_000; level += 1) {
   assert.equal(calculator.getBaseWall(level, false), originalWall, "Guide objective wall changed");
   assert.equal(editorContext.getEconomyPreviewBaseWall(level, config, false), originalWall, "Editor objective wall changed");
   if (level >= 100) assert.equal(currentWall, originalWall, "Level 100+ strength changed");
-  else assert(currentWall <= originalWall, "An early wall became stronger");
+  else {
+    const lighterWall = lighterCurve.getBaseWall(level);
+    assert.equal(currentWall, Math.round((originalWall + lighterWall) / 2), `Midpoint drifted at Level ${level}.`);
+    assert(currentWall >= lighterWall && currentWall <= originalWall, "Wall left the two previous balance curves");
+  }
   if (level > 1 && level <= wallStats.wallEarlyEndLevel) {
     assert.ok(currentWall / previousWall <= 3, `Early adjacent wall growth exceeds 3x at Level ${level}.`);
   }
@@ -230,7 +237,7 @@ const level30ObjectiveAttackers = Math.floor(level30ObjectiveDefense / baseAttac
 assert.equal(level30ObjectiveAttackers, 246_489, "Level-30 objective defense benchmark drifted.");
 
 console.log(
-  `Validated the staged wall curve across client, server, guide, and editor: L1 ${levelOneWalls.toLocaleString()}, `
+  `Validated midpoint walls across client, server, guide, and editor: L1 ${levelOneWalls.toLocaleString()}, `
     + `L50 ${calculator.getBaseWall(50).toLocaleString()}, L100 ${calculator.getBaseWall(100).toLocaleString()}, `
     + `L150 ${calculator.getBaseWall(150).toLocaleString()}, and a 240-hour production ratio from L200 onward.`
 );

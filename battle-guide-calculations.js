@@ -91,15 +91,17 @@
         ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)))
         : Number.MAX_SAFE_INTEGER;
       if (regularCity && read(economy, "cityEconomy.wallCurveModelVersion", 1) >= 3 && normalized <= 100) {
-        if (normalized <= 25) return safeWall(read(economy, "cityEconomy.wallDefenseBase", 200)
+        const finishRegularWall = wall => read(economy, "cityEconomy.wallCurveModelVersion", 1) >= 4
+          ? safeWall((wall + getBaseWall(normalized, false)) / 2) : wall;
+        if (normalized <= 25) return finishRegularWall(safeWall(read(economy, "cityEconomy.wallDefenseBase", 200)
           + read(economy, "cityEconomy.wallEarlyScale", 400)
-            * Math.pow(normalized - 1, read(economy, "cityEconomy.regularWallEarlyExponent", 1.2986357706197937)));
+            * Math.pow(normalized - 1, read(economy, "cityEconomy.regularWallEarlyExponent", 1.2986357706197937))));
         const startLevel = normalized <= 50 ? 25 : normalized <= 75 ? 50 : 75;
         const startWall = read(economy, `cityEconomy.regularWallLevel${startLevel}`,
           startLevel === 25 ? 25_000 : startLevel === 50 ? 250_000 : 1_000_000);
         const endWall = startLevel === 75 ? read(economy, "cityEconomy.wallMidDefense", 3_000_000)
           : read(economy, `cityEconomy.regularWallLevel${startLevel + 25}`, startLevel === 25 ? 250_000 : 1_000_000);
-        return safeWall(startWall * Math.pow(endWall / startWall, (normalized - startLevel) / 25));
+        return finishRegularWall(safeWall(startWall * Math.pow(endWall / startWall, (normalized - startLevel) / 25)));
       }
       if (Math.floor(read(economy, "cityEconomy.wallCurveModelVersion", 1)) < 2) {
         return safeWall(
