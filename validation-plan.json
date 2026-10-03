@@ -1,105 +1,81 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3add0e5e9df2a10d13a5a8ace95ac38a439a148e",
+  "baseCommit": "dc5e18fa3c61207f3db3c9970888089f5c18e16f",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/holding-towers.js"
+        "functions/combat-authorization.js",
+        "functions/index.js"
       ],
       "tests": [
-        "tools/validate-clan-membership-cooldowns.js",
-        "tools/validate-clans.js",
-        "tools/validate-holding-towers.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-combat-authorization.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Reduce authoritative departure admission and shared Tower membership probation to one hour. Exercise exact eligibility boundaries, current membership/clan guards, Tower-target and Tower-origin Rally permissions, troop orders, scouting eligibility and Clan Shop purchases. Shorten saved 24-hour departures only when their protected clan-change timestamp identifies the original start; preserve unmatched deadlines. The Tower lifecycle emulator tests actual create/join dispatch below and above one hour, reinforcement/withdrawal rejection, purchase eligibility, leave/join/apply/create cooldowns, saved deadline conversion and rejoin probation. Existing role, minimum-three-contributor, troop-accounting, clan-removal, construction and ownership checks remain covered."
+      "reason": "Extend new server-created grants and the matching capturer abandon lock to 24 hours. Cover exact expiry, saved deadlines, inverse King Power qualification, city and Tower dispatch, transactional consumption, concurrent retries, travel after expiry, recall and defeat. Existing shield cooldown, ownership, shield, Main City, realm and troop checks remain covered. Read all grants for the exact immutable city path inside the launch transaction and consume every currently valid same-city grant together. Prevent concurrent launches through different capture IDs, while preserving other cities and expired/used records."
     },
     {
       "paths": [
-        "game.js",
-        "firebaseClient.js"
+        "combat-timers-ui.js"
       ],
       "tests": [
-        "tools/validate-clan-membership-cooldowns.js",
-        "tools/validate-clans.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-clan-tower-orders-browser.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-combat-authorization.js",
+        "tools/validate-combat-timers-browser.js"
       ],
-      "reason": "Use the same effective saved departure deadline for initial profile load and authoritative live clan snapshots. Preserve current-realm filtering while forwarding the existing protected timestamp; test client/server conversion parity and countdown boundaries. Check existing clan confirmation/dispatch behavior and Tower troop-order UI. These changes do not add a new Firestore field, API endpoint, listener or timer."
+      "reason": "Format hour-scale countdowns without changing sub-hour Shield timers. Keep used receipts hidden and explain consumption on Send. Test 24:00:00 in the HUD and expanded list at desktop and both landscape phone sizes, timer boundaries, expiry, snapshot reconstruction and map navigation."
     },
     {
       "paths": [
-        "clan-shop-ui.js",
-        "clan-tower-buildings-ui.js"
-      ],
-      "tests": [
-        "tools/validate-clan-shop-browser.js",
-        "tools/validate-clan-membership-cooldowns.js"
-      ],
-      "reason": "Update only membership-wait copy. Check the blocked purchase message and layout at desktop and two landscape phone sizes, then verify the existing countdown refresh unlocks the control after an authoritative eligibility response without buying anything. Preserve item limits, prices, inventory, retries, ownership and purchase cooldowns."
-    },
-    {
-      "paths": [
-        "clan-tower-details-ui.js",
-        "holding-tower-ui.js",
         "help-handbook-content.js"
       ],
       "tests": [
-        "tools/validate-holding-details-ui.js",
-        "tools/validate-clan-membership-cooldowns.js",
-        "tools/validate-clan-tower-orders-browser.js"
+        "tools/validate-help-handbook-browser.js"
       ],
-      "reason": "Replace 24-hour membership instructions and disabled-action explanations with one hour. Render the actual Tower details, preserve role/action gating and check handbook and fallback copy for stale waits. No new layout or artwork."
+      "reason": "Render and search the existing handbook in the isolated browser fixture at desktop and landscape sizes with the 24-hour window and spent-on-dispatch explanation."
     },
     {
       "paths": [
-        "tools/validate-clan-membership-cooldowns.js"
+        "battle-economy-guide.html"
       ],
       "tests": [
-        "tools/validate-clan-membership-cooldowns.js"
+        "tools/validate-battle-economy-guide.js"
       ],
-      "reason": "Run production backend and client helpers against new, saved, elapsed and exact-boundary deadlines, unmatched metadata, existing membership and pending application cases; retain profile/snapshot wiring and copy checks."
+      "reason": "Validate the public guide structure and current gameplay guidance after updating retaliation duration and the one-launch rule. No calculation or combat formulas change."
     },
     {
       "paths": [
-        "tools/validate-clans.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-holding-details-ui.js"
+        "tools/validate-combat-authorization.js"
       ],
       "tests": [
-        "tools/validate-clan-membership-cooldowns.js",
-        "tools/validate-clans.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-holding-details-ui.js"
+        "tools/validate-combat-authorization.js"
       ],
-      "reason": "Update the old duration expectations. Tower participants and scout origins now use exactly one hour; reject one millisecond short, future/missing timestamps, removed/wrong-clan membership and a newer join timestamp. Preserve minimum Rally force, current-realm fences and construction/role rules."
+      "reason": "Run the new day-long grant/lock boundaries, historical deadline preservation, usedAt/usedArmy rejection and countdown transition assertions against production helpers."
     },
     {
       "paths": [
-        "tools/validate-clan-shop-browser.js"
+        "tools/validate-combat-timers-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-shop-browser.js"
+        "tools/validate-combat-timers-browser.js"
       ],
-      "reason": "Exercise one-hour purchase messaging and live eligibility refresh in the real browser UI with isolated callable responses, at 1440x900, 844x390 and 568x320."
+      "reason": "Exercise actual timer rendering with a full-day single-city opportunity, ensure text fits three viewport sizes and preserve existing multi-city navigation and expiry cases."
     },
     {
       "paths": [
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "functions/test/emulator-combat-authorization.js"
       ],
       "tests": [
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Extend the existing current Core-expansion lifecycle fixture with members younger than the former 24-hour wait, blocked and successful Tower Rally joins, departure cooldown admission checks and rejoin probation. Prepare the empty prior-season reward fixture before current-realm bootstrap, matching the existing Rally test setup so monthly rollover does not prevent these checks. All writes are emulator-only; use the existing isolated gate configuration."
+      "reason": "Exercise actual captures with 24-hour persisted grants and locks, dispatch at hour 23, arrival after hour 24, concurrent sends and used-grant denial from both source types. Add genuine defeat and recall cases that never restore rights. Prepare the empty prior-season fixture to pass current monthly rollover; all mutations remain emulator-only."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
       ],
       "tests": [],
-      "reason": "Record the user-requested one-hour departure and Tower participation waits, unchanged role/ownership rules, existing deadline handling and separate clocks. Mark the update pending release; coordinated backend and web deployment remains required."
+      "reason": "Record the confirmed October 3 duration change, existing-deadline policy, matching abandon lock and consumption on launch. Mark pending release and preserve historical September decisions."
     }
   ]
 }

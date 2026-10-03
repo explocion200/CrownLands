@@ -59,3 +59,13 @@ Peace Shield eligibility now requires full wall integrity on the particular owne
 Activating a Shield reverses incoming attacks only for fully repaired targets still owned by the activating player. Other incoming attacks continue; the arrival shield check blocks combat if repair completes in time. Eligible outgoing attacks retain their existing reversal behavior. There is no new repair-completion scheduler or automatic mid-route reversal at repair time.
 
 Focused validation adds client/server exact-boundary and expiry cases, automatic map refresh at desktop and landscape-mobile sizes, 30:00 timer rendering, actual minute-20 retaliation, failed full-wall dispatch, repair before arrival, damaged-city capture, former-owner isolation and mixed incoming-march eligibility. Required GitHub checks provide the authoritative emulator results. No production records or archived realms are changed.
+
+## October 3 revision: 24-hour, single-launch retaliation
+
+Branch: `codex/one-shot-24h-retaliation`. Status: pending validation, merge and deployment.
+
+New qualifying city losses grant 24 hours to send one retaliation attack at that exact city. The capturer’s no-abandon lock lasts the same 24 hours. The existing transaction consumes the right at successful dispatch, not at arrival or victory; losses, recalls and forced returns never restore it. A successful send consumes all currently valid pending grants for that same city, including older overlapping capture records. Independent captured cities retain their own opportunities. Existing saved deadlines remain unchanged, and spent or expired opportunities are not renewed. The separate Shield activation cooldown remains 15 minutes.
+
+The HUD and attack feedback display hours for long countdowns and retain minute/second display below one hour. The handbook and battle/economy guide explain the 24-hour window and consumption on send. The change adds no timers, listeners or per-frame work.
+
+Focused coverage includes the exact 24-hour boundary, historical saved deadlines, same-city concurrent dispatch and retries, failed dispatch preservation, failed combat and recall without renewed retaliation, Tower-origin attacks, arrival after the window, independent cities, and desktop/landscape-mobile countdown layout.
