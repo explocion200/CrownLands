@@ -1,0 +1,72 @@
+{
+  "baseCommit": "0710db379f5863acc684f56800feabaf19a6cf5a",
+  "environment": "Windows Chrome, 144 Hz host, 4x CDP CPU throttling, sequential isolated runs; 60 cities, 40 visible and 20 offscreen.",
+  "changes": [
+    "Shadow only the still city image",
+    "Bound city bat groups to 4 desktop / 3 landscape mobile",
+    "Retire troop and frame runtime integration"
+  ],
+  "baseline": {
+    "results": [
+      {
+        "width": 1440,
+        "height": 900,
+        "cities": 60,
+        "visible": 40,
+        "offscreen": 20,
+        "cpuThrottle": 4,
+        "activeAnimations": 48,
+        "frameP95Ms": 90.40000000000009,
+        "taskMs": 3042.469,
+        "styleMs": 648.82,
+        "layoutMs": 0
+      },
+      {
+        "width": 844,
+        "height": 390,
+        "cities": 60,
+        "visible": 40,
+        "offscreen": 20,
+        "cpuThrottle": 4,
+        "activeAnimations": 36,
+        "frameP95Ms": 62.5,
+        "taskMs": 3065.622,
+        "styleMs": 540.548,
+        "layoutMs": 0
+      }
+    ],
+    "errors": []
+  },
+  "current": {
+    "results": [
+      {
+        "width": 1440,
+        "height": 900,
+        "cities": 60,
+        "visible": 40,
+        "offscreen": 20,
+        "cpuThrottle": 4,
+        "activeAnimations": 24,
+        "frameP95Ms": 20.800000000000182,
+        "taskMs": 2744.289,
+        "styleMs": 1225.8700000000001,
+        "layoutMs": 0
+      },
+      {
+        "width": 844,
+        "height": 390,
+        "cities": 60,
+        "visible": 40,
+        "offscreen": 20,
+        "cpuThrottle": 4,
+        "activeAnimations": 18,
+        "frameP95Ms": 20.799999999999955,
+        "taskMs": 2674.052,
+        "styleMs": 1132.259,
+        "layoutMs": 0
+      }
+    ],
+    "errors": []
+  },
+  "limits": "Synthetic isolated cosmetic measurements, not physical mobile or full-game frame-rate guarantees. Both runs perform zero steady layout; offscreen/overlay/camera/crowded/motion guards are verified separately."
+}

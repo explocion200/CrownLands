@@ -6,7 +6,6 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
-  "troop-skins.js", "troop-skins.css",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
@@ -284,11 +283,11 @@ const battleItemReportingBudget = 8 * 1024;
 // normalized bytes. Reserve 7 KiB; entry and offline-shell caps stay unchanged.
 // Explicit Apply and bounded visible-only motion bring the normalized modules
 // to 57,104 bytes. Add 2 KiB to the prior 54 KiB cap; artwork is unchanged.
-// Approved troop previews, subscriptions and separate animation slots add under 1 KiB.
-const cosmeticModuleBudget = (47 + 7 + 2 + 1) * 1024;
+// City-only catalog removes the troop renderer and premium flag/bundle UI.
+const cosmeticModuleBudget = 56 * 1024;
 const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 57 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 56 KiB budget.");
 // Five transparent city stages total 491,870 bytes and load only when used.
 const halloweenCityArtBudget = 512 * 1024;
 const halloweenCityArtPaths = Object.values(require(path.join(dist, "functions/cosmetics.js")).item("halloween_city").assets);
@@ -301,15 +300,11 @@ const currencyArtBudget = 24 * 1024;
 const currencyArtBytes = ["assets/optimized/crown-coin-96x96-34224e7d7fb4.webp", "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (currencyArtBytes > currencyArtBudget) throw new Error("Crowns coin and pickup artwork exceed their 24 KiB budget.");
-// One shared 223,350-byte atlas replaces the two draft PNGs (3,270,803 bytes).
-// Source art stays out of production; atlas loading is deferred until needed.
-const troopArt = require(path.join(dist, "functions/cosmetics.js")).item("halloween_troops").assets.atlas;
-const troopProvenance = require(path.join(root, "docs/visual-qa/halloween-troops/production-atlas.json"));
-const troopBytes = fs.readFileSync(path.join(dist, troopArt));
-const troopArtBudget = 224 * 1024, troopModuleBudget = 8 * 1024;
-if (troopArt !== troopProvenance.output || troopBytes.length > troopArtBudget || require("node:crypto").createHash("sha256").update(troopBytes).digest("hex") !== troopProvenance.sha256) throw new Error("Halloween troop atlas differs from approved production art or exceeds 224 KiB.");
-if (["troop-skins.js", "troop-skins.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > troopModuleBudget) throw new Error("Troop skin renderer exceeds 8 KiB.");
-const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget + troopArtBudget + troopModuleBudget;
+for (const file of files) {
+  const entry = { path: path.relative(dist, file).replace(/\\/g, "/") };
+  if (/^(?:troop-skins|city-flag-skins)\.(?:js|css)$/.test(entry.path) || /^assets\/optimized\/halloween-(?:troops|flag-frame)-/.test(entry.path)) throw new Error("Retired cosmetic shipped: " + entry.path);
+}
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);

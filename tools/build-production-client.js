@@ -10,7 +10,6 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
-  "troop-skins.js", "troop-skins.css",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js",
   "main-screen-art-ui.css",
   "infirmary-ui.js", "infirmary-ui.css",
@@ -118,6 +117,7 @@ const currentUiRuntimeArt = new Set(
 copyDirectoryFiles("assets/optimized", relativePath => {
   const normalized = relativePath.replace(/\\/g, "/");
   return !normalized.endsWith("manifest.json")
+    && !/^assets\/optimized\/halloween-(troops|flag-frame)-/.test(normalized)
     && (!normalized.startsWith("assets/optimized/inner-castle-") || currentUiRuntimeArt.has(normalized))
     && (!/^assets\/optimized\/gear-(barracks|treasury|royal-stables|gatehouse)-(head|chest|pants|boots|gloves|belt|weapon|necklace)-/.test(normalized) || currentUiRuntimeArt.has(normalized))
     && (!/^assets\/optimized\/item-(peace-shield|war-drums|royal-tax-decree|veil-of-silence|swift-march|recall-horn)-/.test(normalized) || currentUiRuntimeArt.has(normalized));

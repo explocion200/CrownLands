@@ -107,3 +107,13 @@ of dense battles remains advisable before claiming smooth performance there.
 The branch must pass the repository's complete `prepare-pr` flow, production build, and required GitHub checks (`Static validation`, `Multiplayer emulator validation`, `Validate`) against current main. Normal merge is followed by the established Netlify Git deployment and safe public desktop/landscape smoke checks at `https://playcrownlands.com/play/`, including the merged commit in release metadata and loaded scripts. This release requires no Functions, rules, indexes, cleanup migration, or production data changes. The backend contract remains compatible with the deployed PR #254 backend.
 
 The final PR and release handoff record actual gate, merge, deployment, and live-smoke outcomes. Physical mobile hardware and authenticated production mutation timings require a controlled QA session; emulator/browser results must not be presented as that evidence.
+
+## City-only cosmetics revision (October 2, 2026)
+
+The city-only catalog retires troop skins, city flag frames, paid flag icons and bundles. Production entries and service-worker installs no longer load the troop renderer or its atlas. Historical art sources remain outside the production artifact. Stale local/public equipment cannot recreate troop or frame decorations.
+
+City bats animate around at most four visible cities on desktop or three on landscape mobile, plus one selected preview. Motion stops behind overlays, offscreen, during camera movement, in crowded/distant views and under reduced/off settings. The Halloween castle shadow is applied to its still image, so bat movement no longer repaints the entire filtered castle group. Existing march frame pacing and covered-map safeguards remain in place.
+
+Validation covers city purchase/Apply/Default, preserved historical entitlements, retired purchase/Apply rejection, default march information and privacy, desktop/mobile layout, city animation budgets and production exclusion of retired assets. Browser CPU throttling is a useful stress check; physical mobile frame rates require device verification before release.
+
+This catalog revision requires coordinated client and Functions deployment after authorization. The earlier rendering-only release procedure does not cover the new server catalog restrictions. No bulk account migration or refund is part of this change.

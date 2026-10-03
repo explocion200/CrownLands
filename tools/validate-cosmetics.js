@@ -5,11 +5,11 @@ const C = require("../functions/cosmetics");
 const flags = require("../functions/playerFlagConfig");
 const october = Date.UTC(2026, 9, 1), november = Date.UTC(2026, 10, 1);
 const state = C.normalize({ crowns: 1500 });
-assert.equal(C.ITEMS.length, 7);
-assert.equal(C.quote(C.BUNDLE.id, state, october).price, 1200);
+assert.deepEqual(C.ITEMS.map(item => item.id), ["halloween_city"]);
+assert.deepEqual(C.OFFERS.map(item => item.id), ["halloween_city"]);
+assert.deepEqual(Object.keys(C.CATEGORIES), ["city"]);
 const bought = C.purchase(state, { offerId: "halloween_city", expectedPrice: 600, catalogVersion: 1 }, october);
 assert.equal(bought.state.crowns, 900);
-assert.equal(C.quote(C.BUNDLE.id, bought.state, october).price, 720);
 assert.deepEqual(bought.state.equipped, { city: "", troops: "", border: "" }, "Purchase must never auto-equip");
 assert.throws(() => C.purchase(state, { offerId: "halloween_city", expectedPrice: 0, catalogVersion: 1 }, october), /offer changed/);
 assert.throws(() => C.purchase(state, { offerId: "halloween_city", expectedPrice: 600, catalogVersion: 1 }, november), /October/);
@@ -20,7 +20,7 @@ assert.equal(C.availability(november - 1).onSale, true);
 assert.equal(C.availability(november).startsAtMs, Date.UTC(2027, 9, 1));
 assert.equal(C.availability(november).endsAtMs, Date.UTC(2027, 10, 1));
 assert.throws(() => C.equip(state, "city", "halloween_city"), /do not own/);
-assert.throws(() => C.equip(bought.state, "troops", "halloween_city"), /do not own/);
+assert.throws(() => C.equip(bought.state, "troops", "halloween_city"), /Only city skins/);
 const equipped = C.equip(bought.state, "city", "halloween_city");
 assert.equal(equipped.equipped.city, "halloween_city");
 assert.equal(C.equip(equipped, "city", "").equipped.city, "");
@@ -42,9 +42,17 @@ assert.deepEqual(counts, { gold: 30, troops: 30, crowns: 20 });
 assert.equal(C.availableType(preferred, type => C.PICKUP_CAPS[type] - counts[type]), "");
 assert(!seen.slice(60).includes("crowns"));
 assert.throws(() => C.normalize({ version: 99 }), /Update the game/);
-for (const item of C.ITEMS.filter(item => item.category === "flag")) {
-  assert.equal(flags.normalizeFlag({ symbol: item.symbol }, "owner").symbol, item.symbol);
-  assert(!flags.SELECTABLE_SYMBOL_KEYS.includes(item.symbol), "Premium symbols cannot appear in random starter flags");
+const retired = { halloween_troops: true, halloween_border: true, halloween_pumpkin: true, halloween_bat: true, halloween_skull: true, halloween_raven: true };
+const legacy = C.normalize({ crowns: 999, owned: { ...retired, halloween_city: true }, equipped: { city: 'halloween_city', troops: 'halloween_troops', border: 'halloween_border' }, revision: 17 });
+assert.deepEqual(legacy.owned, { ...retired, halloween_city: true }, 'Retirement must preserve historical ownership');
+assert.equal(legacy.crowns, 999); assert.equal(legacy.revision, 17);
+assert.deepEqual(legacy.equipped, { city: 'halloween_city', troops: '', border: '' });
+for (const id of [...Object.keys(retired), 'halloween_collection']) assert.throws(() => C.quote(id, legacy, october), /catalog/);
+for (const category of ['troops', 'border', 'flag']) assert.throws(() => C.equip(legacy, category, ''), /Only city skins/);
+for (const name of ['pumpkin', 'bat', 'skull', 'raven']) {
+ const symbol = 'halloween-' + name;
+ assert.equal(flags.normalizeFlag({ symbol }, 'owner').symbol, symbol, 'Saved flag identities remain compatible');
+ assert(!flags.SELECTABLE_SYMBOL_KEYS.includes(symbol));
 }
 const root = path.resolve(__dirname, "..");
 const citySkin = C.item("halloween_city");
@@ -88,4 +96,4 @@ for(const name of ["reserveHarvestBonusSpawn","collectHarvestBonus","getCosmetic
   api[name]({test:true});
 }
 assert.deepEqual(calls.map(call=>call.name),["reserveHarvestBonusSpawn","collectHarvestBonus","getCosmeticsState","purchaseCosmetic","equipCosmetic"]);
-console.log("Cosmetics passed: prices, bundles, seasonal boundaries, ownership, persistence, 80-pickup rotation, daily caps, flag compatibility and no quest grants.");
+console.log("Cosmetics passed: city-only catalog, retired purchase/equip rejection, seasonal boundaries, ownership, persistence, 80-pickup rotation, daily caps, saved flag compatibility and no quest grants.");
