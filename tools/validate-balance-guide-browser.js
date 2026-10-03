@@ -30,7 +30,7 @@ async function main() {
       await client.send("Page.navigate", { url: address.url + "/battle-economy-guide.html" });
       let ready = false;
       for (let attempt = 0; attempt < 100 && !ready; attempt++) {
-        ready = await evaluate("Boolean(document.getElementById('cityTroopHelp')?.textContent.includes('Base 10,652/h'))");
+        ready = await evaluate("Boolean(document.getElementById('cityTroopHelp')?.textContent.includes('Base 13,315/h'))");
         if (!ready) await wait(50);
       }
       assert(ready, "The guide did not load the new production curve");
@@ -39,7 +39,7 @@ async function main() {
         const text = await evaluate(`(() => { const input=document.getElementById('cityLevelNumber');input.value=${level};input.dispatchEvent(new Event('input',{bubbles:true}));return document.getElementById('cityWallHelp').textContent; })()`);
         assert(text.includes(`Base ${wall.toLocaleString("en-US")}`), `Wall at ${level}: ${text}`);
       }
-      for (const [level, expected] of [[1, 129], [100, 15227], [150, 25285], [200, 36349]]) {
+      for (const [level, expected] of [[1, 162], [25, 3514], [50, 8097], [75, 13315], [100, 19034], [150, 31606], [200, 45436]]) {
         const text = await evaluate(`(() => { const input=document.getElementById('cityLevelNumber');input.value=${level};input.dispatchEvent(new Event('input',{bubbles:true}));return document.getElementById('cityTroopHelp').textContent; })()`);
         assert(text.includes(`Base ${expected.toLocaleString("en-US")}/h`), `${level}: ${text}`);
       }

@@ -40,6 +40,8 @@ const cityEconomy = config.cityEconomy;
 const skills = config.skills;
 const troopCombat = config.troopCombat;
 const wallStats = {
+  troopProductionPerVictoryPoint: Number(cityEconomy.troopsPerVictoryPoint),
+  wallTroopsPerVictoryPoint: Number(cityEconomy.wallTroopsPerVictoryPoint),
   cityWallsBase: Number(cityEconomy.wallDefenseBase),
   cityWallsPerLevel: Number(cityEconomy.wallDefensePerLevel),
   wallCurveModelVersion: Number(cityEconomy.wallCurveModelVersion),
@@ -61,7 +63,8 @@ const wallStats = {
 };
 
 assert.equal(wallStats.wallCurveModelVersion, 3);
-assert.equal(cityEconomy.troopsPerVictoryPoint, 10.815);
+assert.equal(cityEconomy.troopsPerVictoryPoint, 13.51875);
+assert.equal(wallStats.wallTroopsPerVictoryPoint, 10.815);
 assert.equal(wallStats.cityWallsBase, 200);
 assert.equal(wallStats.wallBridgeDefense, 1_456_669);
 assert.equal(wallStats.wallMidDefense, 3_000_000);
@@ -79,7 +82,7 @@ function createRuntimeWallContext() {
     clampCityLevel: level => Math.max(1, Math.floor(Number(level) || 1)),
     getMillionLordsPassiveGoldPerHour: calculator.getGoldPerHour,
     getCityUpgradeTargetHours: calculator.getUpgradeTargetHours,
-    getBaseCityTroopProductionPerHour: calculator.getTroopsPerHour,
+    getCityVictoryPoints: calculator.getVictoryPoints,
     Number,
     Math,
   };
@@ -89,6 +92,8 @@ function createRuntimeWallContext() {
 
 const clientContext = createRuntimeWallContext();
 const serverContext = createRuntimeWallContext();
+vm.runInContext(extractFunction(clientSource, "getBaseCityTroopProductionPerHour"), clientContext);
+vm.runInContext(extractFunction(serverSource, "getBaseCityTroopProductionPerHour"), serverContext);
 vm.runInContext(extractFunction(clientSource, "getBaseCityWalls"), clientContext);
 vm.runInContext(extractFunction(serverSource, "getBaseCityWalls"), serverContext);
 
@@ -98,11 +103,12 @@ const editorContext = {
   readEconomyNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   getEconomyPreviewGoldPerHour: level => calculator.getGoldPerHour(level),
   getEconomyPreviewUpgradeTargetHours: level => calculator.getUpgradeTargetHours(level),
-  getEconomyPreviewTroopsPerHour: level => calculator.getTroopsPerHour(level),
+  getEconomyPreviewVictoryPoints: calculator.getVictoryPoints,
   Number,
   Math,
 };
 vm.createContext(editorContext);
+vm.runInContext(extractFunction(editorSource, "getEconomyPreviewTroopsPerHour"), editorContext);
 vm.runInContext(extractFunction(editorSource, "getEconomyPreviewBaseWall"), editorContext);
 
 const expectedWalls = new Map([
@@ -176,9 +182,24 @@ for (const [level, expected] of siegeBenchmarks) {
 const previousCurve = require("../battle-guide-calculations.js").create({
   ...config, cityEconomy: { ...cityEconomy, wallCurveModelVersion: 2 },
 });
+const beforeProductionIncrease = require("../battle-guide-calculations.js").create({
+  ...config, cityEconomy: { ...cityEconomy, troopsPerVictoryPoint: 10.815 },
+});
+const productionAnchors = new Map([[1,162],[2,256],[10,1216],[25,3514],[50,8097],
+  [75,13315],[100,19034],[101,19264],[150,31606],[200,45436]]);
+let previousProduction = 0;
 let previousWall = 0;
 for (let level = 1; level <= 10_000; level += 1) {
+  const production = calculator.getTroopsPerHour(level);
+  assert.equal(production, Math.floor(calculator.getVictoryPoints(level) * 13.51875));
+  assert.equal(clientContext.getBaseCityTroopProductionPerHour(level), production);
+  assert.equal(serverContext.getBaseCityTroopProductionPerHour(level), production);
+  assert.equal(editorContext.getEconomyPreviewTroopsPerHour(level), production);
+  assert(Number.isSafeInteger(production) && production > previousProduction);
+  if (productionAnchors.has(level)) assert.equal(production, productionAnchors.get(level));
+  previousProduction = production;
   const currentWall = serverContext.getBaseCityWalls(level);
+  assert.equal(currentWall, beforeProductionIncrease.getBaseWall(level), "Troop production changed wall strength");
   assert.ok(Number.isSafeInteger(currentWall), `Wall power exceeded safe-integer limits at Level ${level}.`);
   assert.ok(currentWall >= previousWall, `Wall power decreased between Levels ${level - 1} and ${level}.`);
   assert.equal(clientContext.getBaseCityWalls(level), currentWall, `Client/server wall mismatch at Level ${level}.`);
@@ -200,7 +221,7 @@ assert.equal(calculator.getBaseWall(2) / calculator.getBaseWall(1), 3, "Level 2 
 
 for (const level of [200, 250, 500, 1_000]) {
   const equivalentHours = calculator.getBaseWall(level)
-    / (calculator.getTroopsPerHour(level) * baseDefensePower);
+    / (calculator.getTroopsPerHour(level, 10.815) * baseDefensePower);
   assert.ok(Math.abs(equivalentHours - 240) < 0.01, `Post-200 wall ratio drifted at Level ${level}.`);
 }
 

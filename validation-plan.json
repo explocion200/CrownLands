@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "148dd5a92ec39cc6d19fd6474a997b9dccbce7c3",
+  "baseCommit": "db914ee8fe45b665b4faf4d3cee7b110732c7f6b",
   "coverage": [
     {
       "paths": [
@@ -15,20 +15,26 @@
         "tools/validate-city-wall-balance.js",
         "tools/validate-economy-balance.js",
         "tools/validate-battle-economy-guide.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-soldier-defense.js",
+        "tools/validate-level-up-rewards.js",
         "tools/validate-king-power.js",
-        "tools/validate-combat-forecast.js",
         "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-combat-authorization.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-combat-forecast.js",
         "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-report-system.js",
-        "tools/validate-city-wall-shields.js",
+        "tools/validate-camp-power-rewards.js",
+        "tools/validate-shared-camp-rewards.js",
+        "tools/validate-harvest-pickups.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-rewarded-ads.js",
+        "tools/validate-achievement-scroll-and-rewards.js",
         "tools/audit-season-balance.js",
-        "functions/test/emulator-combat-authorization.js"
+        "tools/validate-asset-performance-budgets.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-camp-power-rewards.js",
+        "functions/test/emulator-shared-camp-rewards.js"
       ],
-      "reason": "Verify approved stages across client/server/calculator/editor through level 10,000, boundaries, early capture affordability, unchanged objectives and level 100+ walls. Cover bonuses, King Power, reinforcements, siege/repair, protection, forecasts and reports; real Core-realm callable scouts, previews and captures."
+      "reason": "Verify flat 25% base production before rounding and client/server/calculator/editor parity through level 10,000. Freeze every wall value with the pre-increase reference, including high levels and objectives. Cover bonuses, King Power and protection, troop accounting, combat forecasts, production-scaled rewards and loading budgets. Real current-Core callables verify accrual, fractional persistence, concurrent collection and solo/shared camp payouts."
     },
     {
       "paths": [
@@ -39,7 +45,7 @@
         "tools/validate-reset-release.js",
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Validate matching release contracts and actual stale-client rejection. Realm/reset configuration stays unchanged; deployment requires matching client and backend."
+      "reason": "Matching client/backend release contract prevents old clients from displaying the previous production rate while submitting gameplay requests. Verify stale-client rejection without changing realm or reset identity."
     },
     {
       "paths": [
@@ -49,37 +55,34 @@
         "help-handbook-content.js"
       ],
       "tests": [
-        "tools/validate-siege-combat.js",
         "tools/validate-battle-economy-guide.js",
         "tools/validate-balance-guide-browser.js",
         "tools/validate-help-handbook-browser.js",
         "tools/validate-city-wall-shields-browser.js"
       ],
-      "reason": "Update player-facing stages and explanations. Verify actual wall values and Help at desktop and landscape-phone sizes; preserve repairs, Shield rules, production and protection."
+      "reason": "Document the new base rate, unchanged walls and existing bonus/reward rules. Verify the calculator, Help and actual City Info production labels at desktop and landscape-mobile sizes."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record explicitly approved stages, scope, integrity, objective exclusions, King Power refresh and coordinated-release requirement. Documentation only."
+      "reason": "Record the explicitly confirmed flat 25% production decision, derived anchors, unchanged walls, reward effects and coordinated deployment requirement. Record the previous wall PR as merged, pending deployment."
     },
     {
       "paths": [
         "tools/validate-city-wall-balance.js",
         "tools/validate-economy-balance.js",
         "tools/validate-battle-economy-guide.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-soldier-defense.js"
+        "tools/validate-level-up-rewards.js"
       ],
       "tests": [
         "tools/validate-city-wall-balance.js",
         "tools/validate-economy-balance.js",
         "tools/validate-battle-economy-guide.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-soldier-defense.js"
+        "tools/validate-level-up-rewards.js"
       ],
-      "reason": "Update independent approved wall anchors and capture thresholds, preserve high-level/objective benchmarks, and correct stale expectations to previously approved 100% skill caps."
+      "reason": "Update independent production and reward anchors. Exercise actual client/server/editor production functions and retain fixed wall, Gold, repair and objective expectations."
     },
     {
       "paths": [
@@ -90,7 +93,7 @@
         "tools/validate-city-wall-shields-browser.js",
         "tools/validate-balance-guide-browser.js"
       ],
-      "reason": "Check City Info/calculator boundaries, compact formatting and contained scrollable layouts at 1440x900, 844x390 and 568x320. Retain Shield/repair and guide regressions."
+      "reason": "Verify displayed production through level 200 alongside unchanged walls, compact formatting and contained layouts at 1440x900, 844x390 and 568x320."
     },
     {
       "paths": [
@@ -99,7 +102,7 @@
       "tests": [
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Actual scouts, previews, sends and captures at 25/26, 50/51, 75/76 and 100/101; persisted wall values, casualties, old-client rejection and unchanged Stronghold/Citadel/Tower walls. Existing PvP, retaliation, former-clan, Rally and Tower cases remain selected."
+      "reason": "Add actual current-Core Main City hourly accrual cases across all wall stages, fractional balances and concurrent replay safety, plus previous-release rejection. Keep existing real combat and wall-boundary regressions."
     },
     {
       "paths": [
@@ -111,16 +114,7 @@
         "tools/validate-city-wall-balance.js",
         "tools/validate-economy-balance.js"
       ],
-      "reason": "Fix pre-existing audit failure reproduced using origin/main economy. Old guard predates approved 100% skill caps. Fixed test-only 2.3-2.5-day range surrounds existing 2.390624-day Level-150 benchmark: 60.6M attackers / 25.349M daily troops. Preserve exact production/reward and 59-62M capture guards; no high-level gameplay change."
-    },
-    {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Allow two KiB for bounded wall calculations; preserve aggregate loading/offline/map art budgets. No new assets, requests, timers or rendering effects."
+      "reason": "Update fixed portfolio and Hero troop benchmarks for the approved 25% increase. Scale the production-day guard by 1/1.25 while keeping the independent capture, wall and Gold guards unchanged."
     }
   ]
 }
