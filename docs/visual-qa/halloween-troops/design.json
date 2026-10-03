@@ -1,0 +1,59 @@
+{
+  "status": "Approved design integrated into the game and existing shop; release preparation only, not verified deployed.",
+  "catalogId": "halloween_troops",
+  "name": "Halloween March",
+  "art": "Three human medieval soldiers, muted plum cloaks, steel armor, two spearmen and a pumpkin lantern bearer.",
+  "preview": "preview.html",
+  "proposedSizes": [
+    64,
+    88
+  ],
+  "animation": {
+    "directions": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+    ],
+    "posesPerDirection": 4,
+    "totalPoses": 32,
+    "cycleSeconds": 0.8,
+    "tourSegmentSeconds": 3,
+    "sampleStraightRouteSeconds": 7,
+    "technique": "Two cached transparent atlases; measured frame clips aligned to one baseline. CSS transform steps select walking poses; one compositor animation moves along the current route segment. Heading comes from the screen-space segment vector. No per-frame JavaScript animation loop.",
+    "guards": [
+      "Manual pause",
+      "Reduced motion",
+      "Offscreen previews",
+      "Background tab"
+    ],
+    "static": "Direction gallery and size comparison thumbnails",
+    "animatedElements": 3
+  },
+  "integrationRequirements": [
+    "Keep authoritative route position, timing and mission indicators.",
+    "Preserve relationship colors and existing troop-count visibility rules.",
+    "Scouts retain their separate marker.",
+    "Combined rallies use the leader's equipped appearance.",
+    "Apply and replicate through existing public cosmetic state."
+  ],
+  "limits": [
+    "The standalone preview uses illustrative routes and sample counts/times.",
+    "Browser CPU throttling is a stress check, not a guarantee for every physical phone.",
+    "Overloaded full-map fixtures may lag with both default and Halloween markers; report those baselines alongside isolated decoration measurements.",
+    "No price, combat, movement, production-data or release-channel changes. The flag border is a separate draft."
+  ],
+  "production": {
+    "atlas": "production-atlas.json",
+    "technique": "One shared 640x1280 WebP; cached troop nodes and direction rows. Four walking poses use CSS transform steps. Route position and timing use the existing authoritative march renderer.",
+    "animatedArmyLimit": { "desktop": 8, "landscapeMobile": 6 },
+    "animatedPreviewLimit": 1,
+    "guards": ["Offscreen", "Covered map", "Background tab", "Camera movement", "Zooming", "Crowded view", "Distant view", "Reduced/off motion preferences"],
+    "validation": "tools/validate-halloween-troop-skin-browser.js",
+    "localResults": "release-artifacts/halloween-troop-skin/validation.json"
+  }
+}

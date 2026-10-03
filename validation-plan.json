@@ -1,53 +1,83 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "03e85f3301a09a48db71ea7541438d65323bb768",
+  "baseCommit": "87cb4571a1abf242a2064461919d9d821d815cc0",
   "coverage": [
     {
       "paths": [
-        "skins-ui.js",
-        "skins-ui.css",
-        "index.html",
-        "service-worker.js"
+        "docs/visual-qa/halloween-troops/art-source.json",
+        "docs/visual-qa/halloween-troops/atlas-layout.json",
+        "docs/visual-qa/halloween-troops/design.json",
+        "docs/visual-qa/halloween-troops/direction-art-source.json",
+        "docs/visual-qa/halloween-troops/march-atlas.png",
+        "docs/visual-qa/halloween-troops/march-north-east.png",
+        "docs/visual-qa/halloween-troops/march-south-west.png",
+        "docs/visual-qa/halloween-troops/preview.css",
+        "docs/visual-qa/halloween-troops/preview.html",
+        "docs/visual-qa/halloween-troops/preview.js",
+        "docs/visual-qa/halloween-troops/style-reference.jpg",
+        "tools/validate-halloween-troops-preview.js"
       ],
       "tests": [
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-skin-motion-browser.js",
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-cosmetics.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-halloween-troops-preview.js"
       ],
-      "reason": "Verify select-then-Apply and the persistent footer on desktop and landscape phones, all five Default City previews, purchase/apply/default ownership flows, public appearances and stage changes. Check visibility-based animation limits, motion preferences, overlay/background pauses, detached/recycled nodes and stable map reconciliation. Actual browser layout and production smoke cover the affected responsive UI and entry/cache references. Broader unchanged theme validators are outside this task; the palette validator also fails on origin/main because its hard-coded asset version is stale. Server authority and economy rules are unchanged; no backend emulator dependency changes."
+      "reason": "Approved art and interactive reference: 32 transparent poses, eight and reversed directions, upright troop information, responsive layouts and motion preferences. Production integration is tested separately. Readiness polling tolerates the brief missing document element after navigation, exposed by the Linux CI runner."
     },
     {
       "paths": [
-        "tools/validate-cosmetics-browser.js"
+        "functions/cosmetics.js"
       ],
       "tests": [
-        "tools/validate-cosmetics-browser.js"
+        "tools/validate-cosmetics.js",
+        "functions/test/emulator-cosmetics.js"
       ],
-      "reason": "Exercise the actual Default City art, explicit Apply, selection persistence through wallet updates, preview-only changes and touchable footer actions at four desktop/landscape sizes."
+      "reason": "Shared client/server catalog replaces troop placeholder metadata and references the approved atlas at the existing price. Validate authoritative ownership, price, revisions, idempotency, separate purchase/equip, public appearance permissions and default switching."
     },
     {
-      "paths": ["tools/validate-halloween-city-skin-browser.js", "tools/validate-skin-motion-browser.js"],
-      "tests": ["tools/validate-halloween-city-skin-browser.js", "tools/validate-skin-motion-browser.js"],
-      "reason": "Validate the motion guards and bounded renderer against a 60-city fixture, then verify the real map and selected preview still show moving bats while collection thumbnails and the covered map stay still. Frame timings are reported, not used as hardware-dependent pass/fail thresholds."
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "game.js",
+        "index.html",
+        "service-worker.js",
+        "skins-ui.css",
+        "skins-ui.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js",
+        "assets/optimized/halloween-troops-640x1280-1889602f174b.webp",
+        "docs/visual-qa/halloween-troops/production-atlas.json",
+        "tools/build-halloween-troop-atlas.js",
+        "tools/validate-halloween-troop-skin-browser.js",
+        "troop-skins.css",
+        "troop-skins.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-pending-army-departures.js",
+        "tools/validate-march-frame-performance-browser.js",
+        "docs/visual-qa/halloween-troops/performance-review.json",
+        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md"
+      ],
+      "tests": [
+        "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-skin-motion-browser.js",
+        "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-focused-browser-smoke.js",
+        "tools/validate-pending-army-departures.js",
+        "tools/validate-march-frame-performance-browser.js"
+      ],
+      "reason": "Integrate approved art through existing troop and cosmetic renderers. Validate eight headings and recalled/cross-map segments without changing positions or timing; purchase/selection/Apply/Default and own/remote/leader/scout appearance; count privacy, route controls, stable nodes, failure fallback, decoded art and 6/8 motion caps. Shared motion changes require city/preview regression checks. Desktop/mobile stress reports compare full-map and isolated decoration costs. Production build, entry/cache smoke and budgets check module/resource packaging, the compiled atlas provenance hash and lazy loading. Master Specification records only the approved troop design; no gameplay, price or deployed-state change. March performance changes require bounded display-error and DOM-write checks across zoom/DPR, fast/Swift/return routes, region transitions, pending-snapshot blending and covered-map catch-up. The optional baseline comparator records controlled CPU/frame measurements; it is not a physical-device guarantee."
     },
     {
-      "paths": ["tools/validate-pwa-entry-routing.js"],
-      "tests": ["tools/validate-focused-browser-smoke.js"],
-      "reason": "Update the service-worker test fixture to supply the timers and FetchEvent.waitUntil lifecycle used by the current worker. This restores the production smoke dependency needed to verify the changed client/cache asset versions without changing routing behavior."
-    },
-    {
-      "paths": ["tools/validate-production-artifact.js"],
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "The existing build gate checks the narrowly increased 56 KiB cosmetics module cap against 57,104 normalized bytes. No new art or dependencies; all other entry, shell and asset caps remain enforced."
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": ["tools/validate-cosmetics-browser.js"],
-      "reason": "Record the user-confirmed selection followed by Apply, including applying Default City; the browser regression verifies the documented behavior."
+      "paths": [
+        "tools/validate-clan-tower-map-browser.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-map-browser.js"
+      ],
+      "reason": "The mandatory entry smoke exposed an existing Rally fixture mismatch with the October 1 Master Specification and unchanged main renderer: its leader was missing from participants and it incorrectly rejected all inbound contributions. Supply the creator and assert the established Ready minimum, creator readiness, and early launch with additional inbound troops in both card views. No Rally runtime or gameplay rules changed."
     }
   ]
 }

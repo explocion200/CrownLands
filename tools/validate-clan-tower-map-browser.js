@@ -204,16 +204,17 @@ async function main() {
       if (touch) await evaluate(`(() => { const toggle=document.getElementById('chatToggleBtn');if(toggle?.getAttribute('aria-expanded')==='true')toggle.click(); })()`);
       assert(await evaluate(`(() => {
         for (const targetType of ['tower','city']) for (const activity of [false,true]) {
-          for (const [count,inbound] of [[2,false],[3,true],[3,false]]) {
+          for (const [count,inbound] of [[2,false],[2,true],[3,true],[3,false],[4,true]]) for (const leaderReady of [false,true]) {
             const rally={id:'minimum-qa',status:'forming',leaderUid:getCurrentOnlineUid(),targetType,targetId:HOLDING_TOWER_DEFINITIONS[0].id,
-              participants:Array.from({length:count},(_,i)=>({uid:'minimum-'+i,ownerName:'Ruler '+i,troops:1,status:inbound&&i===count-1?'inbound':'assembled'}))};
+              participants:Array.from({length:count},(_,i)=>({uid:i===0?getCurrentOnlineUid():'minimum-'+i,ownerName:'Ruler '+i,troops:1,status:(!leaderReady&&i===0)||(inbound&&i===count-1)?'inbound':'assembled'}))};
             const container=document.createElement('div');container.innerHTML=renderClanRallyCard(rally,activity);
             const launch=container.querySelector('[data-rally-action="launch"]');
-            if(!launch||launch.disabled!==(inbound||(targetType==='tower'&&count<3)))return false;
+            const readyCount=count-(inbound?1:0)-(leaderReady?0:1);
+            if(!launch||launch.disabled!==(!leaderReady||readyCount<(targetType==='tower'?3:2)))return false;
           }
         }
         return true;
-      })()`), 'Both Rally views must require three Ready Tower contributors and preserve ordinary two-member rallies');
+      })()`), 'Both Rally views require a Ready creator and two Ready city contributors or three for Towers; additional inbound troops do not block launch');
       for (const level of [1,0.6]) {
         for (let index=0;index<4;index++) {
           const tower=await prepare(index,level);

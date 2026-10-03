@@ -970,7 +970,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 ### Cosmetic skins and Crowns — confirmed October 1, 2026
 
-**Status:** implementation pending validation and authorized deployment. Halloween city artwork and bats were approved October 2, 2026; other initial collection art remains explicitly marked as a placeholder and requires approval before public availability. Cash Crown packs are a separate future update.
+**Status:** implementation pending validation and authorized deployment. Halloween city artwork, bats and Halloween March troop artwork were approved October 2, 2026; remaining initial collection art remains explicitly marked as a placeholder and requires approval before public availability. Cash Crown packs are a separate future update.
 
 - Add Shop → Skins and Profile → Skins. Shop navigation is Provisions / Skins / Free boosts; Profile navigation is Profile / Clan / Skills / Skins / Settings. Profile → Skins offers Cities, Troops and Flag Borders, owned/default choices, previews, equipped markers, free switching and a Browse Shop link. Flag Icons remain available to purchase in Shop → Skins; choose owned icons in the existing Edit Flag → Symbol controls. Purchases unlock items without equipping them and never enter the consumable Bag.
 - Crowns purchase cosmetics only; no gameplay benefit, resource conversion, player transfers or trading. Start at zero with no retroactive grants. Daily Missions and their existing Common Gear Box completion reward grant no Crowns. Earn Crowns through the map pickups specified in Section 6.
@@ -990,6 +990,14 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Profile → Skins lets players select an owned skin to preview it, then press the fixed **Apply** button to equip it. Selection alone does not change the equipped appearance. Once applied, the owner's appearance changes across every regular city and is visible to all other players through the public equipped appearance record. Newly captured cities adopt their current owner's skin. Selecting Default City and pressing Apply restores the original artwork and removes the bats. Strongholds and objectives retain their established appearance.
 - Add two visible flapping bats circling smaller city stages and three around the two larger stages. Keep the movement restrained, preserve map hit areas and labels, and respect reduced/off animation preferences. Pause decorative motion during camera movement; crowded and distant views may omit the bats to preserve map readability and performance.
 - Missing city art uses the standard stage image without changing ownership or the equipped choice. This replaces the city placeholder only. **Status:** approved for implementation; not yet verified deployed.
+
+#### Approved Halloween troop appearance — October 2, 2026
+
+- Halloween March uses the approved three human soldiers in muted plum cloaks and steel armor, with two spearmen and a pumpkin lantern bearer. Match the painted medieval map style. Use eight travel directions with four walking poses each; face the current route segment and reverse correctly on recalled routes.
+- Replace the existing troop placeholder in Shop → Skins at its established 300-Crown price. Purchase unlocks it without equipping. Profile → Skins → Troops previews the owned choice; **Apply** equips it and Default restores the original marker. Current and future marches use the owner's public equipped appearance, with the leader's choice for combined rallies and distinct scout markers.
+- Keep the existing upright mission icon, visible or estimated troop count, timer, relationship colors and route-location controls below the formation. The decorative soldiers do not enlarge or intercept the marker's hit area, disclose hidden counts, or change movement or combat.
+- Share one optimized atlas across all formations. Bound walking animation to eight visible armies on desktop or six on landscape mobile, plus one selected profile/shop preview. Other formations retain a static directional pose. Pause decorative walking in covered/background maps, during camera movement and zooming, in crowded/distant views, and under reduced/off motion preferences. Missing artwork preserves the standard informative marker and ownership.
+- **Status:** approved for implementation and release preparation; deployment has not been verified. The ornate Halloween flag-border draft remains a separate update.
 
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 

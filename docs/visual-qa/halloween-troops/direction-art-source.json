@@ -1,0 +1,35 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "built-in",
+  "reference": "march-atlas.png",
+  "images": [
+    {
+      "output": "march-north-east.png",
+      "directions": [
+        "N",
+        "NE",
+        "E",
+        "SE"
+      ],
+      "prompt": "Create a production-style transparent 4-column by 4-row game sprite atlas, square image, ideally 2048 by 2048 pixels, 16 equal square cells, NO labels, NO visible grid. Use the attached image strictly as character identity and painting style reference. Every cell depicts the SAME three medieval human soldiers: front leader holding a small orange pumpkin lantern in his LEFT hand, two rear spearmen with plum kite shields bearing faded ivory fleur-de-lis, steel closed helmets, weathered muted plum capes and tunics, chainmail, leather boots. Delicate brown ink and matte watercolor, restrained Halloween style. Each formation is viewed from the same fixed overhead strategy camera at about 35 degrees elevation; rotate the CHARACTERS in the world for each row, never rotate the flat picture. All soldiers in a cell face the SAME travel direction. The leader is always the furthest along that travel direction, the two guards follow behind, so in a north view leader is at the top, in an east view leader is at the right. Keep each character's height and relative scale fixed in every cell. Fit every formation and spear tip within a centered 82%-width/82%-height cell box, with transparent margins all around. Transparent exterior and spaces between bodies, no scenery, no ground, no cast shadow patch, no extra troops. COLUMNS are four visibly distinct phases of a coherent walk cycle: left-foot contact, passing pose, right-foot contact, opposite passing pose. Keep helmet, spear and torso positions stable while legs bend/stride, arms swing slightly and lantern swings slightly. Equipment and hands must not swap, same soldiers throughout. All four columns within each row face IDENTICAL direction; only walk phase changes. ROW 1: NORTH / straight UP-screen, rear view, full backs of capes, heels and backs of helmets visible, no faces. ROW 2: NORTHEAST / diagonally UP-RIGHT, three-quarter REAR-RIGHT view, backs and right-facing helmet profiles visible. ROW 3: EAST / straight RIGHT-screen, side profile, noses and feet clearly point right, all bodies upright. ROW 4: SOUTHEAST / diagonally DOWN-RIGHT, three-quarter FRONT view, fronts of armor and shields visible.",
+      "generatedFile": "exec-2443cb1c-89fb-4544-88b1-31cb923c5030.png"
+    },
+    {
+      "output": "march-south-west.png",
+      "directions": [
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "prompt": "Create a production-style transparent 4-column by 4-row game sprite atlas, square image, ideally 2048 by 2048 pixels, 16 equal square cells, NO labels, NO visible grid. Use the attached image strictly as character identity and painting style reference. Every cell depicts the SAME three medieval human soldiers: front leader holding a small orange pumpkin lantern in his LEFT hand, two rear spearmen with plum kite shields bearing faded ivory fleur-de-lis, steel closed helmets, weathered muted plum capes and tunics, chainmail, leather boots. Delicate brown ink and matte watercolor, restrained Halloween style. Each formation is viewed from the same fixed overhead strategy camera at about 35 degrees elevation; rotate the CHARACTERS in the world for each row, never rotate the flat picture. All soldiers in a cell face the SAME travel direction. The leader is always the furthest along that travel direction, the two guards follow behind, so in a north view leader is at the top, in an east view leader is at the right. Keep each character's height and relative scale fixed in every cell. Fit every formation and spear tip within a centered 82%-width/82%-height cell box, with transparent margins all around. Transparent exterior and spaces between bodies, no scenery, no ground, no cast shadow patch, no extra troops. COLUMNS are four visibly distinct phases of a coherent walk cycle: left-foot contact, passing pose, right-foot contact, opposite passing pose. Keep helmet, spear and torso positions stable while legs bend/stride, arms swing slightly and lantern swings slightly. Equipment and hands must not swap, same soldiers throughout. All four columns within each row face IDENTICAL direction; only walk phase changes. ROW 1: SOUTH / straight DOWN-screen, straight FRONT view, fronts of helmets and armor visible, leader at the bottom of formation. ROW 2: SOUTHWEST / diagonally DOWN-LEFT, three-quarter FRONT view, noses and feet point down-left. ROW 3: WEST / straight LEFT-screen, side profile, noses and feet clearly point left, all bodies upright. ROW 4: NORTHWEST / diagonally UP-LEFT, three-quarter REAR-LEFT view, BACKS of capes and helmets visible, no frontal faces.",
+      "generatedFile": "exec-8168b937-be2c-411e-9db7-b805643a93b1.png"
+    }
+  ],
+  "correction": {
+    "output": "march-north-east.png",
+    "generatedFile": "exec-5b5c275e-79fd-4dc6-9ae9-8b6aee20121e.png",
+    "prompt": "Correct just TWO cells of this transparent 4 by 4 sprite sheet. Keep every other cell pixel-identical and retain overall dimensions and transparency. ROW 1 COLUMN 4: the leader's pumpkin lantern must be in the SAME left hand and on the same screen-left side as the leaders in row 1 columns 1–3, not in the right hand. ROW 4 COLUMN 4: restore the lantern bearer leader at the front lower-right of the formation, wearing the exact same armor/plum cape as row 4 columns 1–3, with no spear or shield, carrying the orange pumpkin lantern in his LEFT hand at screen-right, same size and position as in the other row 4 cells but opposite passing walking pose. Keep exactly two spearmen behind this leader. Keep the remaining fourteen cells entirely unchanged, same painting style, frame alignment, transparent background, NO new labels."
+  },
+  "display": "Original generated PNGs preserved. Measured frame bounds are in atlas-layout.json. CSS aligns frame centers and foot baselines without resampling the source files. A small top-right clip on three southeast cells excludes neighboring-row boot pixels."
+}

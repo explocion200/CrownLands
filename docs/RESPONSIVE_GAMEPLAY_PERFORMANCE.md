@@ -75,6 +75,33 @@ multiplayer emulator gates. These checks do not establish physical iOS/Android
 behavior or authenticated production latency. This audit changes client gesture
 handling and validation only; release status is recorded in the final handoff.
 
+## Troop rendering review (2026-10-02)
+
+Crowded-map traces identified repeated inline transform updates as the main source
+of style work. March display coordinates now round to a quarter device pixel and
+reuse the previous transform until that displayed position changes. Exact route
+coordinates, departure/arrival times, recall progress and the 150 ms acceptance
+blend remain unchanged. Label refreshes no longer overwrite motion transforms;
+map bounds are resolved once per movement pass. Passive troop rendering pauses
+behind the profile or a dialog and while the document is hidden, then catches up
+to the current clock. Server reconciliation continues independently.
+
+The controlled comparison against `a1b75d4` used 120 synthetic marches, with 80
+rendered and 40 culled, at desktop and landscape-mobile sizes. At normal CPU speed,
+main-thread task time per second fell 56–66%, style time fell 86–92%, and p95 frame
+time after the change was 7.1 ms. The host runs near 144 Hz. Four-times CPU
+throttling still produced 146–153 ms p95 frame times despite improvement; this
+overloaded case remains a performance limit. These are browser measurements,
+not physical phone or production results.
+
+`tools/validate-march-frame-performance-browser.js` checks display error, redundant
+style writes, speed/recall/region changes and covered-map catch-up. Its optional
+`--baseline a1b75d4` comparison uses identical online-authority render paths; the
+underlying fixture otherwise defaults to legacy local economy. The saved inputs,
+limitations and measurements are in
+`docs/visual-qa/halloween-troops/performance-review.json`. Physical mobile testing
+of dense battles remains advisable before claiming smooth performance there.
+
 ## Release procedure and limits
 
 The branch must pass the repository's complete `prepare-pr` flow, production build, and required GitHub checks (`Static validation`, `Multiplayer emulator validation`, `Validate`) against current main. Normal merge is followed by the established Netlify Git deployment and safe public desktop/landscape smoke checks at `https://playcrownlands.com/play/`, including the merged commit in release metadata and loaded scripts. This release requires no Functions, rules, indexes, cleanup migration, or production data changes. The backend contract remains compatible with the deployed PR #254 backend.

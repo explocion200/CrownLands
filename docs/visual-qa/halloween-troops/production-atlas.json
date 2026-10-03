@@ -1,0 +1,25 @@
+{
+  "output": "assets/optimized/halloween-troops-640x1280-1889602f174b.webp",
+  "sha256": "1889602f174ba7043ec5b5f93d145375c22b9fd644b5a9e7d9b68f8a5bf3d31c",
+  "bytes": 223350,
+  "width": 640,
+  "height": 1280,
+  "cell": 160,
+  "rows": [
+    "N",
+    "NE",
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW"
+  ],
+  "source": [
+    "march-north-east.png",
+    "march-south-west.png"
+  ],
+  "layout": "atlas-layout.json",
+  "quality": 0.88,
+  "decodedRgbaBytes": 3276800
+}
