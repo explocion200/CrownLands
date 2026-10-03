@@ -207,18 +207,18 @@ assert.equal(profile.version, 1);
 assert.equal(cityCount, 30, "The apex portfolio must contain exactly 30 cities.");
 assert.equal(Math.max(...Object.keys(profile.apexPortfolio).map(Number)), 150, "The apex capital must be Level 150.");
 assert.equal(baseGoldPerHour, 706_112_926, "Apex base gold production drifted; review the season benchmark.");
-assert.equal(baseTroopsPerHour, 289_883, "Apex base troop production drifted; review the season benchmark.");
+assert.equal(baseTroopsPerHour, 362_347, "Apex base troop production drifted; review the season benchmark.");
 assert.equal(levelRewards.gold, 228_530_487_042, "Cumulative Hero Gold rewards through Level 150 drifted.");
-assert.equal(levelRewards.troops, 90_914_284, "Cumulative Hero troop rewards through Level 150 drifted.");
+assert.equal(levelRewards.troops, 113_643_999, "Cumulative Hero troop rewards through Level 150 drifted.");
 assert.ok(
   minimumCaptureTroops >= siege.minimumCaptureTroops && minimumCaptureTroops <= siege.maximumCaptureTroops,
   `Level-150 capture threshold ${minimumCaptureTroops} left the ${siege.minimumCaptureTroops}-${siege.maximumCaptureTroops} guardrail.`
 );
 assert.equal(pickupGoldHours, 15, "The pickup rebalance must provide at most 15 raw Gold-production hours per UTC day.");
 assert.equal(pickupTroopHours, 15, "The pickup rebalance must provide at most 15 raw troop-production hours per UTC day.");
-// Fixed reference for the already-approved 100% skill caps and raw-production pickups:
-// 60,600,000 attacking troops / 25,349,025.994 troops per day = 2.390624 days.
-// Level-150 walls and this portfolio are unchanged by the five-stage wall revision.
+// Fixed reference after the flat +25% production revision, with existing walls:
+// 60,600,000 attacking troops / 31,685,692.234 troops per day = 1.912535 days.
+// The prior 2.3–2.5-day guard scales by 1/1.25; capture strength stays unchanged.
 // Keep the guard independent of current output so future balance drift still fails.
 assert.ok(
   productionDays >= siege.minimumProductionDays && productionDays <= siege.maximumProductionDays,

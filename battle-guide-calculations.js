@@ -80,8 +80,8 @@
       return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
     }
 
-    function getTroopsPerHour(level) {
-      const raw = getVictoryPoints(level) * read(economy, "cityEconomy.troopsPerVictoryPoint", 10.815);
+    function getTroopsPerHour(level, factor = read(economy, "cityEconomy.troopsPerVictoryPoint", 13.51875)) {
+      const raw = getVictoryPoints(level) * factor;
       return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
     }
 
@@ -169,7 +169,8 @@
         "troopCombat.baseDefensePowerPerTroop",
         RULES.baseDefensePowerPerTroop
       );
-      const ratioStartTroopsPerHour = getTroopsPerHour(goldLinkedEndLevel);
+      const wallTroopFactor = read(economy, "cityEconomy.wallTroopsPerVictoryPoint", 10.815);
+      const ratioStartTroopsPerHour = getTroopsPerHour(goldLinkedEndLevel, wallTroopFactor);
       const maximumHours = read(economy, "cityEconomy.wallProductionRatioMaximumHours", 240);
       const ratioStartHours = ratioStartTroopsPerHour > 0 && defensePowerPerTroop > 0
         ? goldLinkedWall / (ratioStartTroopsPerHour * defensePowerPerTroop)
@@ -180,7 +181,7 @@
         maximumHours,
         ratioStartHours + (maximumHours - ratioStartHours) * Math.max(0, ratioProgress)
       );
-      return safeWall(getTroopsPerHour(normalized) * defensePowerPerTroop * targetHours);
+      return safeWall(getTroopsPerHour(normalized, wallTroopFactor) * defensePowerPerTroop * targetHours);
     }
 
     function getRepairMinutes(level) {

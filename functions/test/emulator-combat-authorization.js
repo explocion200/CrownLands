@@ -303,6 +303,7 @@ async function main() {
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
   await formerClanCases();
   await stagedWallCases();
+  await troopProductionCases();
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {
@@ -452,6 +453,37 @@ async function stagedWallCases() {
   const towerReport = await resolve(actor, scout.movement);
   assert.equal(towerReport.scoutReport.fullWallPower, 1_456_669, "Tower wall changed");
   console.log("Five-stage city walls passed: scouts, forecasts, real captures at every boundary, old-client rejection, unchanged Stronghold/Citadel/Tower walls.");
+}
+
+async function troopProductionCases() {
+  const actor = await user("TroopProduction");
+  const claim = await call("claimStartingCity", actor, { playerName: actor.label });
+  const ref = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
+  for (const [level, expectedRate] of [[1,162],[25,3514],[50,8097],[75,13315],
+    [100,19034],[101,19264],[150,31606],[200,45436]]) {
+    const startedAt = Date.now() - 3_600_000;
+    await ref.set({level,troops:1000,troopFloat:1000.25,productionUpdatedAtMs:startedAt}, {merge:true});
+    await profileRef(actor).set({economyUpdatedAtMs:startedAt,lastSeenAtMs:startedAt}, {merge:true});
+    await call("collectEconomy", actor);
+    const city = (await ref.get()).data();
+    const stats = (await db.doc(`players/${actor.uid}/stats/global`).get()).data();
+    assert.equal(stats.baseTroopPerHour, expectedRate, `Hourly production at ${level}`);
+    const expectedTroops = 1000.25 + expectedRate * (city.productionUpdatedAtMs - startedAt) / 3_600_000;
+    assert(Math.abs(city.troopFloat - expectedTroops) < 0.001, `Persisted production at ${level}`);
+    assert.equal(city.troops, Math.floor(city.troopFloat));
+    assert(city.troops >= 1000 + expectedRate, "An hour of production was not credited");
+    const beforeReplay = city.troopFloat;
+    await Promise.all([call("collectEconomy", actor),call("collectEconomy", actor)]);
+    const afterReplay = (await ref.get()).data();
+    assert(afterReplay.troopFloat >= beforeReplay);
+    assert(afterReplay.troopFloat - beforeReplay < expectedRate / 60, "Repeated collection credited an hour twice");
+  }
+  const currentRelease = identity.releaseId;
+  try {
+    identity.releaseId = "crownlands-2026-10-03-city-wall-stages-v3";
+    await deny("collectEconomy", actor, {}, /refresh|update/i);
+  } finally { identity.releaseId = currentRelease; }
+  console.log("Flat 25% troop production passed: all stages, Main City, hourly persistence, fractions, concurrent collection and stale-client rejection.");
 }
 
 async function formerClanCases() {
