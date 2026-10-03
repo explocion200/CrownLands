@@ -60,7 +60,7 @@ async function main() {
             overlaps:props.flatMap(p=>boxes.filter(b=>collides(rect(p),b))).length,
             clicks:props.every(p=>getComputedStyle(p).pointerEvents==='none'),layers:mapBg.querySelectorAll('.halloween-map-decorations').length};
         })()`);
-        assert(check.count >= 1 && check.count <= 9, JSON.stringify({ id, check }));
+        assert(check.count >= 1 && check.count <= 24, JSON.stringify({ id, check }));
         assert.equal(check.missing, 0); assert.equal(check.animations, 0); assert.equal(check.overlaps, 0, `${id}: decoration covers scenery or maximum city art`);
         assert(check.clicks); assert.equal(check.layers, 1);
         traversal.push({ id, ...check });
@@ -68,6 +68,13 @@ async function main() {
       const behavior = await evaluate(`(async()=>{
         const assert=(ok,message)=>{if(!ok)throw Error(message)};
         const region=getActiveMapRegionId(), layer=mapBg.querySelector('.halloween-map-decorations'), image=layer.firstElementChild;
+        assert(layer.children.length===24,'Expected full density for motion check');
+        markCameraInteraction({zooming:true});
+        const movingVisible=[...layer.children].filter(prop=>getComputedStyle(prop).visibility!=='hidden').length;
+        assert(movingVisible===9,'Camera movement exceeds the original nine-prop paint budget');
+        await new Promise(resolve=>setTimeout(resolve,500));
+        const settledVisible=[...layer.children].filter(prop=>getComputedStyle(prop).visibility!=='hidden').length;
+        assert(settledVisible===24,'Decorations did not return after camera settled');
         const box=image.halloweenBounds, original=getActiveHarvestBonuses;
         getActiveHarvestBonuses=id=>id===region?[{x:(box.left+box.right)/2,y:(box.top+box.bottom)/2}]:[];
         refreshHalloweenDecorationVisibility();
@@ -98,7 +105,7 @@ async function main() {
         const focus=mapBg.querySelector('.halloween-map-decorations img').halloweenBounds;
         centerOnWorldPoint({x:(focus.left+focus.right)/2,y:(focus.top+focus.bottom)/2},region);
         await Promise.all([...mapBg.querySelectorAll('.halloween-map-decorations img')].map(image=>image.decode()));
-        return {refreshMs,mutations:0,staleMap:true,template:true,optionalFailure:true,seasonEnd:true,pickup:true};
+        return {refreshMs,mutations:0,movingVisible,settledVisible,staleMap:true,template:true,optionalFailure:true,seasonEnd:true,pickup:true};
       })()`);
       await delay(200);
       const shot = await client.send("Page.captureScreenshot", { format: "png" });

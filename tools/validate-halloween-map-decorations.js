@@ -19,8 +19,8 @@ const separated = (a, b, gap = 0) => a.x + a.w + gap <= b.x || b.x + b.w + gap <
   || a.y + a.h + gap <= b.y || b.y + b.h + gap <= a.y;
 for (const summary of catalog.regions) {
   const definition = read(summary.regionDefinitionPath);
-  const placed = data.maps[summary.id].map(item => ({ ...item, ...data.assets[item.asset] }));
-  assert(placed.length >= 3 && placed.length <= 9, `Sparse decorations missing on ${summary.id}`);
+  const placed = data.maps[summary.id].map(([asset, x, y]) => ({ x, y, ...data.assets[asset] }));
+  assert(placed.length >= 7 && placed.length <= 24, `Decoration budget violated on ${summary.id}`);
   for (const [index, box] of placed.entries()) {
     assert(box.x >= 240 && box.y >= 235 && box.x + box.w <= 1232 && box.y + box.h <= 880, "Decoration enters baked edge scenery");
     for (const city of definition.cities) assert(separated(box, { x: city.x - 35, y: city.y - 60, w: 70, h: 90 }, 10), `City/flag clearance: ${city.id}`);
@@ -32,7 +32,7 @@ for (const summary of catalog.regions) {
       const dy = y - Math.max(box.y, Math.min(y, box.y + box.h));
       assert(Math.hypot(dx, dy) > width / 2 + 6, `Road overlap: ${summary.id}`);
     }
-    for (const other of placed.slice(index + 1)) assert(Math.hypot(box.x - other.x, box.y - other.y) >= 150, "Decorations clustered too densely");
+    for (const other of placed.slice(index + 1)) assert(Math.hypot(box.x - other.x, box.y - other.y) >= 90, "Decorations clustered too densely");
   }
   total += placed.length;
 }

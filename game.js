@@ -5705,10 +5705,10 @@ async function loadHalloweenMapLayouts() {
   if (!halloweenMapLayoutPromise) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    halloweenMapLayoutPromise = fetch("assets/optimized/halloween-map-layouts-v1.json", { signal: controller.signal })
+    halloweenMapLayoutPromise = fetch("assets/optimized/halloween-map-layouts-v2.json", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject(new Error("Decoration layout unavailable")))
       .then(data => {
-        if (data?.schemaVersion !== 1 || data.topology !== "core-expansion-v1" || data.width !== 1448 || data.height !== 1086
+        if (data?.schemaVersion !== 2 || data.topology !== "core-expansion-v1" || data.width !== 1448 || data.height !== 1086
           || !Array.isArray(data.assets) || !data.maps) throw new Error("Invalid decoration layout");
         return data;
       })
@@ -5740,8 +5740,10 @@ async function renderHalloweenMapDecorations(regionId, swapToken) {
     const end = islandImagePointToWorld(regionId, { x: point.x + 35, y: point.y + 30 });
     reserved.push({ left: start.x, top: start.y, right: end.x, bottom: end.y });
   }
-  for (const item of placements.slice(0, 9)) {
-    const asset = data.assets[item.asset];
+  for (const placement of placements.slice(0, 24)) {
+    if (!Array.isArray(placement)) continue;
+    const [assetIndex, x, y] = placement;
+    const item = { x, y }, asset = data.assets[assetIndex];
     if (!asset || !/^assets\/optimized\/halloween-map-[a-z]+-[a-f0-9]{12}\.webp$/.test(asset.src)
       || ![item.x, item.y, asset.w, asset.h].every(Number.isFinite) || asset.w <= 0 || asset.h <= 0) continue;
     const start = islandImagePointToWorld(regionId, item);

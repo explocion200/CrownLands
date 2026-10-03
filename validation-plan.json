@@ -18,15 +18,16 @@
         "tools/validate-harvest-pickups.js",
         "tools/validate-illustrated-map-art.js",
         "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-halloween-map-performance-browser.js"
       ],
-      "reason": "Optional October scenery changes shared map-image completion and pickup rendering. Cover lazy loading, timeout/failure recovery, stale map guards, replacement rather than accumulating layers, max-stage city/scenery clearance, generated template fallback, UTC season gates, click-through controls and unchanged pickup spawn/reward behavior. Exercise existing map-loading races and all prepared maps. Validate matching shell/cache URLs and bounded packaged art; no backend or authority changes. The measured 59,990-byte feature increment receives a bounded 64 KiB artifact allowance and 5 KiB game-source allowance; installed-shell and runtime frame budgets remain unchanged."
+      "reason": "Optional October scenery changes shared map-image completion and pickup rendering. Cover lazy loading, timeout/failure recovery, stale map guards, layer replacement, max-stage city/scenery clearance, generated template fallback, UTC season gates, click-through controls and unchanged pickup spawn/reward behavior. Exercise existing map-loading races and all prepared maps. Validate matching shell/cache URLs and bounded packaged art; no backend or authority changes. Increase the node cap from 9 to 24 with compact layouts; use the existing camera movement state to retain the nine-prop painting limit during pan/zoom. Compare frame pacing and CPU time with 40 maximum-level cities and 25 marches at desktop/mobile dimensions, normal and throttled CPU. Existing 64 KiB artifact allowance, 5 KiB game-source allowance and installation/frame limits remain unchanged."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "assets/optimized/halloween-map-lanterns-162e79b96e58.webp",
-        "assets/optimized/halloween-map-layouts-v1.json",
+        "assets/optimized/halloween-map-layouts-v2.json",
         "assets/optimized/halloween-map-pumpkins-a6d32ca03ef7.webp",
         "assets/optimized/halloween-map-scarecrow-9242bd705a4b.webp",
         "docs/art-sources/halloween-map-decorations/README.md",
@@ -40,13 +41,16 @@
         "docs/visual-qa/halloween-map-decorations/validation.json",
         "tools/build-halloween-map-decorations.js",
         "tools/validate-halloween-map-decorations-browser.js",
-        "tools/validate-halloween-map-decorations.js"
+        "tools/validate-halloween-map-decorations.js",
+        "tools/validate-halloween-map-performance-browser.js",
+        "docs/visual-qa/halloween-map-decorations/performance.json"
       ],
       "tests": [
         "tools/validate-halloween-map-decorations.js",
-        "tools/validate-halloween-map-decorations-browser.js"
+        "tools/validate-halloween-map-decorations-browser.js",
+        "tools/validate-halloween-map-performance-browser.js"
       ],
-      "reason": "Three generated transparent sprites and reproducible offline layouts add scenery to the active topology. Check every current city, road, tree/rock, landmark and Tower compound footprint across 81 maps, sparse counts, sprite hashes and payload budget. Browser checks at desktop and landscape-phone sizes cover art decoding, max-stage city clearances, no added animations or idle DOM mutations and supporting visual evidence. Specification records only the user-confirmed separate-layer Halloween art direction; October timing is identified as a draft default."
+      "reason": "Three generated transparent sprites and reproducible offline layouts add 1,604 placements across 81 prepared maps. Preserve the original placements and all city, road, tree/rock, landmark and Tower compound clearances. Check counts, spacing, sprite hashes, compact schema reproducibility and 56,692-byte lazy payload. Browser checks cover art decoding, max-stage city clearances, motion visibility and recovery, no animations, no layer accumulation or idle DOM mutations, and desktop/phone visual evidence. Performance proof includes repeated idle and camera movement comparisons with CPU throttling. Specification records the confirmed separate scenery layer and increased density with limited rendering cost; October timing remains a draft default."
     }
   ]
 }

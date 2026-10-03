@@ -6,7 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
-  "assets/optimized/halloween-map-layouts-v1.json",
+  "assets/optimized/halloween-map-layouts-v2.json",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
@@ -82,7 +82,7 @@ for (const relativePath of forbidden) {
   if (fs.existsSync(path.join(dist, relativePath))) throw new Error(`Production artifact includes forbidden source data ${relativePath}.`);
 }
 
-const halloweenMapLayoutPath = "assets/optimized/halloween-map-layouts-v1.json";
+const halloweenMapLayoutPath = "assets/optimized/halloween-map-layouts-v2.json";
 const halloweenMapLayout = JSON.parse(fs.readFileSync(path.join(dist, halloweenMapLayoutPath), "utf8"));
 const halloweenMapBytes = [halloweenMapLayoutPath, ...halloweenMapLayout.assets.map(asset => asset.src)]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
@@ -313,7 +313,7 @@ for (const file of files) {
   if (/^(?:troop-skins|city-flag-skins)\.(?:js|css)$/.test(entry.path) || /^assets\/optimized\/halloween-(?:troops|flag-frame)-/.test(entry.path)) throw new Error("Retired cosmetic shipped: " + entry.path);
 }
 const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget;
-// Halloween map art/layouts add 55,473 bytes and shell hooks add 4,517 bytes.
+// Denser Halloween map art/layouts add 56,692 bytes; shell hooks stay under 5 KiB.
 // Bound the combined feature below 64 KiB; retain the install-cache/frame limits.
 const halloweenMapFeatureBudget = 64 * 1024;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget;
