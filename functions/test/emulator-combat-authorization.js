@@ -301,6 +301,7 @@ async function main() {
   assert.deepEqual(read1.fields.peaceShieldCooldownExpiresAtMs, read2.fields.peaceShieldCooldownExpiresAtMs);
   await verifySpentRetaliation(high, low, hSource, lSource, targets[3]);
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
+  await formerClanCases();
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {
@@ -388,5 +389,193 @@ async function verifySmoothProtectionRanges(attacker, defender, source, target) 
   await profileRef(attacker).set({ peaceShieldCooldownExpiresAtMs: 0 }, { merge: true });
   await Promise.all([attacker, defender].map(actor => call("collectEconomy", actor)));
   console.log("Smooth protection passed: normal/assault/raid across early, 10M, 100M and billion-power kingdoms, authoritative previews, launches, persisted snapshots, retries and arrivals.");
+}
+async function formerClanCases() {
+  const departure = require("../former-clan-protection");
+  const towers = require("../holding-towers");
+  const [leader, leaver, peer, outsider] = await Promise.all(
+    ["DepartureLeader", "DepartingRuler", "FormerPeer", "UnrelatedRuler"].map(user)
+  );
+  const claims = [];
+  for (const actor of [leader, leaver, peer, outsider]) {
+    claims.push(await call("claimStartingCity", actor, { playerName: actor.label }));
+    await profileRef(actor).set({ itemEffects: { shieldExpiresAtMs: 0 } }, { merge: true });
+  }
+  const region = claims[0].regionId || claims[0].mainRegionId;
+  const occupied = new Set((await db.collection(`islands/${islandId(region)}/cities`).get()).docs
+    .filter(doc => doc.data().ownerUid).map(doc => doc.id));
+  const seeds = layout.maps.find(map => map.id === region).cities.filter(city => !occupied.has(city.id) && city.kind !== "stronghold");
+  assert(seeds.length >= 4);
+  const source = await seedCity({ ...seeds[0], regionId: region }, leader, 100_000);
+  const target = await seedCity({ ...seeds[1], regionId: region }, leaver, 100_000);
+  const outsideSource = await seedCity({ ...seeds[2], regionId: region }, outsider, 100_000);
+  const otherCity = await seedCity({ ...seeds[3], regionId: region }, leaver, 100_000);
+  await cityRef(target).update({ level: 5, investedGold: 12_345 });
+  await Promise.all([leader, leaver, outsider].map(actor => call("collectEconomy", actor)));
+  // Orders are valid before the defender joins and then leaves the attacker's clan.
+  const inbound = [];
+  for (let i = 0; i < 3; i++) inbound.push((await call("sendArmyOrder", leader, order(source, target, 10_000))).movement);
+  async function seedClan(members) {
+    const clanId = `departure_${randomUUID()}`, now = Date.now();
+    await db.doc(`clans/${clanId}`).set({ ...identity, status: "active", leaderUid: members[0].uid,
+      name: "Departure Clan", tag: "DC", normalizedName: clanId, normalizedTag: clanId,
+      memberCount: members.length, totalKingPower: 0 });
+    for (const [index, actor] of members.entries()) {
+      const role = index ? "member" : "leader";
+      await db.doc(`clans/${clanId}/members/${actor.uid}`).set({ ...identity, clanId, uid: actor.uid,
+        status: "active", role, joinedAtMs: now - 172_800_000 });
+      await profileRef(actor).set({ clanId, clanRole: role }, { merge: true });
+    }
+    return clanId;
+  }
+  const clanId = await seedClan([leader, leaver, peer]);
+  await deny("kickClanMember", peer, { targetUid: leaver.uid }, /permission|leader|role/i);
+  assert.equal((await profile(leaver)).formerClanCityProtection, undefined);
+  const beforeLeave = Date.now();
+  await call("leaveClan", leaver);
+  const departed = await profile(leaver), record = departed.formerClanCityProtection;
+  const deadline = departure.protectedUntil(record, leader.uid, identity, Date.now());
+  assert(deadline >= beforeLeave + departure.DURATION_MS && deadline <= Date.now() + departure.DURATION_MS);
+  assert.deepEqual(record.attackers.map(row => row.uid).sort(), [leader.uid, peer.uid].sort());
+  assert.equal(departed.clanJoinCooldownUntilMs, deadline - 23 * 3_600_000);
+  const preview = { fromId: source.id, toId: target.id, sourceRegionId: region, targetRegionId: region, requestedTroops: 10_000 };
+  assert.equal((await call("previewArmyProtection", leader, preview)).combatForecast.captureProtectedUntilMs, deadline);
+  const storageId = `${identity.resetGeneration}--${identity.realmShardId}`;
+  async function weakTarget() {
+    await cityRef(target).update({ troops: 100, troopFloat: 100, productionUpdatedAtMs: Date.now() + 3_600_000 });
+  }
+  async function protectedVictory(movement, extra = {}) {
+    await weakTarget();
+    const before = (await cityRef(target).get()).data();
+    await db.doc(`armies/${movement.id}`).update({ arrivesAtMs: Date.now() - 1000, ...extra });
+    const result = await call("resolveArmyOrder", leader, { armyId: movement.id, routeRegionIds: movement.routeRegionIds });
+    assert.equal(result.outcome, "victory", JSON.stringify(result));
+    assert.equal(result.captureBlockedReason, "former_clan_protection");
+    assert(result.returned > 0, "Winning survivors were not returned");
+    const after = (await cityRef(target).get()).data();
+    for (const key of ["ownerUid", "level", "investedGold", "lastCapturedAtMs"]) assert.equal(after[key], before[key], key);
+    assert(after.troops < before.troops, "Protection incorrectly prevented combat casualties");
+    const battle = (await db.doc(`battleSnapshots/${storageId}/entries/${movement.id}`).get()).data();
+    assert(battle.totals.attackerLosses > 0 && battle.totals.defenderLosses > 0);
+    assert.equal(battle.combatRule.id, "former_clan_protection");
+    assert.equal(battle.combatRule.captureAllowed, false);
+    assert.equal(battle.combatRule.captureProtectedUntilMs, deadline);
+    const report = result.reports.find(entry => entry.type === "attack");
+    assert.equal(report.captureBlockedReason, "former_clan_protection");
+    assert.match(report.summary, /Battle won.*remains under.*Former-clan protection/);
+    assert.equal(report.survivors, result.returned);
+    const events = await db.collection("dailyMissionEvents").where("eventId", "==", `battle_resolved_${movement.id}_${leader.uid}`).get();
+    assert.equal(events.size, 1);
+    assert.equal(events.docs[0].data().success, true);
+    assert.equal(events.docs[0].data().cityCaptured, false, "A protected victory earned conquest mission credit");
+    assert.equal((await grants(leaver).get()).size, 0, "Non-capture granted retaliation");
+    const returnedTroops = (await cityRef(source).get()).data().troops;
+    const replay = await call("resolveArmyOrder", leader, { armyId: movement.id, routeRegionIds: movement.routeRegionIds });
+    assert.equal(replay.status, "resolved");
+    assert.equal((await cityRef(source).get()).data().troops, returnedTroops, "Resolution replay duplicated troops");
+    return { result, battle, report };
+  }
+  // Valid pre-departure marches fight at arrival; converted support and hostile
+  // Rally returns cannot bypass the current owner's capture restriction.
+  for (const [index, movement] of inbound.entries()) {
+    const verified = await protectedVictory(movement,
+      index === 1 ? { kind: "transfer", launchKind: "transfer" }
+        : index === 2 ? { rallyReturn: true, rallyReturnAttack: true } : {});
+    if (index === 0) {
+      assert(verified.battle.siege.endingIntegrityBps < verified.battle.siege.startingIntegrityBps, "Protection prevented wall damage");
+      assert(verified.report.xpAwarded > 0, "Protection removed ordinary battle XP");
+    }
+  }
+  // Successful sends after departure spend troops, drop the active Shield and
+  // start the ordinary offensive cooldown; the victory still cannot take land.
+  await weakTarget();
+  await resolve(leader, (await call("sendArmyOrder", leader, order(source, target, 1, { kind: "scout" }))).movement);
+  const forecast = (await call("previewArmyProtection", leader, preview)).combatForecast;
+  assert.equal(forecast.status, "scouted");
+  assert.equal(forecast.expectedOutcome, "victory_no_capture");
+  assert(forecast.estimatedDefenderLosses > 0);
+  const shieldUntil = Date.now() + 3_600_000;
+  await profileRef(leader).set({ itemEffects: { shieldExpiresAtMs: shieldUntil }, peaceShieldCooldownExpiresAtMs: 0 }, { merge: true });
+  const attack = await call("sendArmyOrder", leader, order(source, target, 10_000));
+  assert((await profile(leader)).itemEffects.shieldExpiresAtMs < shieldUntil);
+  assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, attack.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
+  await protectedVictory(attack.movement);
+  const grantId = `departure_grant_${randomUUID()}`;
+  await grants(leader).doc(grantId).set({ ...identity, id: grantId, originalOwnerUid: leader.uid, capturerUid: leaver.uid,
+    cityId: target.id, regionId: region, cityPath: cityRef(target).path, cityName: target.name,
+    capturedAtMs: Date.now() - 1000, expiresAtMs: deadline, status: "available", usedAtMs: 0, usedArmyId: "" });
+  const retaliation = await call("sendArmyOrder", leader, order(source, target, 10_000, { retaliationId: grantId }));
+  assert.equal((await grants(leader).doc(grantId).get()).data().status, "used");
+  await protectedVictory(retaliation.movement);
+  const tower = towers.TOWERS[2];
+  await db.doc(`holdingTowers/${tower.id}`).set({ ...towers.createNeutralTowerState(tower.id, Date.now()),
+    ...identity, ownerKind: "clan", clanId });
+  await db.doc(`holdingTowers/${tower.id}/garrison/${leader.uid}`).set({
+    ...identity, towerId: tower.id, clanId, uid: leader.uid, troops: 1000 });
+  await profileRef(leader).set({ towerGarrisonTroops: 1000, towerGarrisonResetGeneration: identity.resetGeneration }, { merge: true });
+  const towerAttack = await call("sendHoldingTowerArmyOrder", leader, {
+    ...order(tower, target, 900), sourceType: "tower", targetType: "city",
+  });
+  await protectedVictory(towerAttack.movement);
+  // Defeats keep their losses and report a real battle rather than an attack block.
+  await weakTarget();
+  const lost = await resolve(leader, (await call("sendArmyOrder", leader, order(source, target, 1))).movement);
+  assert.equal(lost.outcome, "defeat");
+  assert.equal((await cityRef(target).get()).data().ownerUid, leaver.uid);
+  // A different clan does not bypass protection; it covers every owned city.
+  await profileRef(leader).update({ clanId: "another-clan" });
+  const switched = await call("sendArmyOrder", leader, order(source, target, 10_000));
+  await protectedVictory(switched.movement);
+  assert.equal((await call("previewArmyProtection", leader, { ...preview, toId: otherCity.id })).combatForecast.captureProtectedUntilMs, deadline);
+  await profileRef(leader).update({ clanId });
+  assert.equal((await call("previewArmyProtection", outsider, { ...preview, fromId: outsideSource.id })).combatForecast.captureProtectedUntilMs, 0);
+  const objective = layout.maps.flatMap(map => (map.objectives || []).map(seed => ({ ...seed, regionId: map.id })))
+    .find(seed => seed.type === "gold");
+  assert(objective);
+  await cityRef(objective).set({ ...objective, ...identity, kind: "stronghold", ownerKind: "player",
+    ownerUid: leaver.uid, troops: 100, troopFloat: 100 });
+  assert.equal((await call("previewArmyProtection", leader, { ...preview, toId: objective.id, targetRegionId: objective.regionId })).combatForecast.captureProtectedUntilMs, 0);
+  await call("sendArmyOrder", leader, order(source, objective, 1));
+  await cityRef(otherCity).update({ ownerUid: outsider.uid, ownerName: outsider.label });
+  assert.equal((await call("previewArmyProtection", leader, { ...preview, toId: otherCity.id })).combatForecast.captureProtectedUntilMs, 0);
+  // Kicks and disbands use the same snapshot while preserving existing cooldown rules.
+  await call("kickClanMember", leader, { targetUid: peer.uid });
+  assert(departure.protectedUntil((await profile(peer)).formerClanCityProtection, leader.uid, identity, Date.now()));
+  assert.equal(departure.protectedUntil((await profile(leaver)).formerClanCityProtection, peer.uid, identity, Date.now()), deadline);
+  await seedClan([leader, peer]);
+  await call("disbandClan", leader);
+  for (const [defender, attacker] of [[leader, peer], [peer, leader]]) {
+    assert(departure.protectedUntil((await profile(defender)).formerClanCityProtection, attacker.uid, identity, Date.now()));
+  }
+  assert.equal((await profile(peer)).clanJoinCooldownUntilMs, undefined);
+  assert((await profile(leader)).clanJoinCooldownUntilMs > Date.now());
+  await seedClan([outsider, leaver]);
+  await call("leaveClan", leaver);
+  const second = (await profile(leaver)).formerClanCityProtection;
+  assert.equal(departure.protectedUntil(second, leader.uid, identity, Date.now()), deadline);
+  assert(departure.protectedUntil(second, outsider.uid, identity, Date.now()));
+  // Clients cannot create, replace, delete or edit the server-owned record.
+  const fresh = await user("Forgery");
+  for (const actor of [fresh, leaver]) {
+    assert.equal((await clientPatch(actor, profileRef(actor).path, "formerClanCityProtection", "forged")).status, 403);
+  }
+  for (const field of ["formerClanCityProtection", "formerClanCityProtection.attackers"]) {
+    const response = await fetch(`${restRoot}/${profileRef(leaver).path}?updateMask.fieldPaths=${field}`, {
+      method: "PATCH", headers: { authorization: `Bearer ${leaver.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ fields: {} }),
+    });
+    assert.equal(response.status, 403);
+  }
+  assert.equal((await clientRead(leader, profileRef(leaver).path)).status, 403);
+  // Capture uses arrival time: a protected dispatch can conquer after expiry.
+  const expiring = await call("sendArmyOrder", leader, order(source, target, 10_000));
+  await weakTarget();
+  await profileRef(leaver).update({ formerClanCityProtection: { ...second,
+    attackers: second.attackers.map(row => ({ ...row, expiresAtMs: Date.now() - 1 })) } });
+  assert.equal((await call("previewArmyProtection", leader, preview)).combatForecast.captureProtectedUntilMs, 0);
+  const captured = await resolve(leader, expiring.movement);
+  assert.equal(captured.outcome, "victory");
+  assert.equal((await cityRef(target).get()).data().ownerUid, leader.uid, "Expiry still prevented capture");
+  console.log("Former-clan capture protection passed: leave/kick/disband, 24-hour snapshots, normal damage/casualties/XP/Shield effects, victories without capture, survivor returns, no conquest mission credit or retaliation grant, Tower and retaliation attacks, converted support/Rally returns, clan switching, outsiders/objectives/new owners, expiry in transit, replay and Firestore authority.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

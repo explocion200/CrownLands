@@ -66,6 +66,7 @@ const HOLDING_TOWERS = require("./holding-towers.js");
 const CLAN_BUILDINGS = HOLDING_TOWERS.BUILDINGS;
 const ANTI_HANDOFF = require("./anti-handoff-policy.js");
 const COMBAT_AUTHORIZATION = require("./combat-authorization.js");
+const FORMER_CLAN_PROTECTION = require("./former-clan-protection.js");
 const RALLY_STAGING = require("./rally-staging.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
@@ -8330,6 +8331,17 @@ function writeAntiFarmAudit(transaction, pairRef, {
   }, { merge: false });
 }
 
+function formerClanProtectionIdentity() {
+  return { worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() };
+}
+
+function formerClanCityCaptureProtectedUntil(attackerUid, defenderProfile, target, targetType, nowMs) {
+  return targetType === "city" && getOwnerUid(target) && getOwnerUid(target) !== attackerUid
+    && !isStronghold(target) && !isRewardCamp(target)
+    ? FORMER_CLAN_PROTECTION.protectedUntil(defenderProfile?.formerClanCityProtection, attackerUid,
+      formerClanProtectionIdentity(), nowMs) : 0;
+}
+
 async function evaluateHostileAntiFarmPolicy(transaction, {
   attackerUid = "",
   defenderUid = "",
@@ -9051,6 +9063,8 @@ function makeReport({
     cityLevel: targetType === "camp" ? 0 : clampCityLevel(city?.level || 1),
     troopCount: Math.max(0, Math.floor(safeNumber(troopCount, city?.troops || 0))),
     sentTroops: Math.max(0, Math.floor(safeNumber(sentTroops, 0))),
+    ...(result.success && result.captureBlockedReason === "former_clan_protection"
+      ? { captureBlockedReason: "former_clan_protection" } : {}),
     survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
     defendersLeft: Math.max(0, Math.floor(safeNumber(result.defendersLeft, 0))),
     attackerLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
@@ -9863,6 +9877,11 @@ function createDetailedBattleSnapshot({
         breachRequired: false,
         maxDefenderLossPercent: 100,
       };
+  if (result.captureBlockedReason === "former_clan_protection") {
+    combatRule.id = "former_clan_protection";
+    combatRule.captureAllowed = false;
+    combatRule.captureProtectedUntilMs = result.captureProtectedUntilMs;
+  }
   return {
     battleId,
     armyId: safeString(armyId, 96),
@@ -21402,7 +21421,6 @@ async function reconcileHoldingTowersBeforeDisband(clanId = "") {
 }
 
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
-  const nowMs = Date.now();
   const [preflightClanSnap, preflightActorSnap, preflightActorProfileSnap, preflightTargetSnap] = await Promise.all([
     db.doc(`clans/${clanId}`).get(),
     db.doc(`clans/${clanId}/members/${actorUid}`).get(),
@@ -21429,13 +21447,15 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
   await returnDepartingHoldingTowerGarrisons(targetUid, clanId, reason);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
+    const nowMs = Date.now();
+    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap, membersSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
       transaction.get(db.doc(`players/${actorUid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
       transaction.get(db.doc(`players/${targetUid}`)),
       transaction.get(clanWorldBenefitsRef(clanId)),
+      transaction.get(db.collection(`clans/${clanId}/members`)),
     ]);
     if (!clanSnap.exists || !actorProfileSnap.exists || !targetMemberSnap.exists) {
       throw new HttpsError("not-found", "Clan member was not found.");
@@ -21472,6 +21492,10 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
         ),
         pendingClanApplicationId: FieldValue.delete(),
         clanJoinCooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
+        formerClanCityProtection: FORMER_CLAN_PROTECTION.departureProtection(
+          targetProfile.formerClanCityProtection, targetUid, membersSnap.docs.map(member => member.id),
+          formerClanProtectionIdentity(), nowMs
+        ),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
@@ -21726,6 +21750,9 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
           clanJoinCooldownUntilMs: memberUid === uid
             ? nowMs + CLAN_JOIN_COOLDOWN_MS
             : FieldValue.delete(),
+          formerClanCityProtection: FORMER_CLAN_PROTECTION.departureProtection(
+            memberProfile.formerClanCityProtection, memberUid, memberUids, formerClanProtectionIdentity(), nowMs
+          ),
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
       }
@@ -24216,6 +24243,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     const defenderProfile = defenderProfileSnap?.exists ? defenderProfileSnap.data() || {} : {};
     const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const captureProtectedUntilMs = formerClanCityCaptureProtectedUntil(uid, defenderProfile, target, targetType, nowMs);
     const defenseContext = await getAuthoritativeDefensePackages(transaction, {
       target,
       targetType,
@@ -24278,6 +24306,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       combatForecast: createCombatForecast({
         attackerProfile,
         target,
+        captureProtectedUntilMs,
         troops: effectiveTroops,
         attackProtection: protectionPreview,
         attackCombatSnapshot,
@@ -24504,6 +24533,7 @@ function normalizeCombatForecast(raw = null) {
   const normalized = {
     version: COMBAT_FORECAST_VERSION,
     status,
+    captureProtectedUntilMs: Math.max(0, safeNumber(raw.captureProtectedUntilMs, 0)),
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, BASE_TROOP_ATTACK_POWER)),
     swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
     swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
@@ -24524,7 +24554,7 @@ function normalizeCombatForecast(raw = null) {
     effectiveTroops: Math.max(1, Math.floor(safeNumber(raw.effectiveTroops, 1))),
     attackPower: Math.max(0, Math.floor(safeNumber(raw.attackPower, 0))),
     powerRatio: Math.max(0, safeNumber(raw.powerRatio, 0)),
-    expectedOutcome: ["capture", "breach", "raid", "defeat", "wall_hold", "garrison_hold"].includes(raw.expectedOutcome)
+    expectedOutcome: ["capture", "victory_no_capture", "breach", "raid", "defeat", "wall_hold", "garrison_hold"].includes(raw.expectedOutcome)
       ? raw.expectedOutcome
       : "defeat",
     estimatedSurvivors: Math.max(0, Math.floor(safeNumber(raw.estimatedSurvivors, 0))),
@@ -24554,6 +24584,7 @@ function normalizeCombatForecast(raw = null) {
 function createCombatForecast({
   attackerProfile = {},
   target = {},
+  captureProtectedUntilMs = 0,
   troops = 1,
   attackProtection = null,
   attackCombatSnapshot = null,
@@ -24565,6 +24596,7 @@ function createCombatForecast({
   const base = {
     version: COMBAT_FORECAST_VERSION,
     status: intel.status,
+    captureProtectedUntilMs,
     attackPowerPerTroop: snapshot?.attackPowerPerTroop || BASE_TROOP_ATTACK_POWER,
     swordmasteryLevel: snapshot?.swordmasteryLevel || 0,
     swordmasteryPercent: snapshot?.swordmasteryPercent || 0,
@@ -24607,7 +24639,7 @@ function createCombatForecast({
     effectiveTroops,
     attackPower: result.attackPower,
     powerRatio: result.ratio,
-    expectedOutcome: getCombatForecastOutcome(result),
+    expectedOutcome: result.success && captureProtectedUntilMs > nowMs ? "victory_no_capture" : getCombatForecastOutcome(result),
     estimatedSurvivors: result.survivors,
     estimatedDefendersLeft: result.defendersLeft,
     estimatedAttackerLosses: result.attackerLosses,
@@ -26949,6 +26981,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       ? createCombatForecast({
         attackerProfile,
         target,
+        captureProtectedUntilMs: formerClanCityCaptureProtectedUntil(uid, defenderPowerData, target, order.targetType, nowMs),
         troops,
         attackProtection,
         attackCombatSnapshot,
@@ -31135,6 +31168,16 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       convertedReinforcement,
       convertedReinforcementCaptureAllowed: convertedTransferReinforcement,
     });
+    // Capture is decided from the current owner and departure deadline at arrival,
+    // independently of damage, casualties, power protection and battle XP.
+    const captureProtectedUntilMs = formerClanCityCaptureProtectedUntil(
+      attackerUid, defenderProfile, target, targetType, nowMs
+    );
+    if (captureProtectedUntilMs) {
+      result.captureBlockedReason = "former_clan_protection";
+      result.captureProtectedUntilMs = captureProtectedUntilMs;
+    }
+    const cityCaptured = result.success && !captureProtectedUntilMs;
     const dailyMissionTargetCategory = getDailyMissionTargetCategory(target, "city");
     if (convertedReinforcement) {
       enqueueDailyMissionEvent(transaction, {
@@ -31159,7 +31202,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       committedTroops: troopCount,
       defenderLosses: result.defenderLosses,
       success: result.success,
-      cityCaptured: Boolean(result.success && oldOwnerUid && dailyMissionTargetCategory === "player_city"),
+      cityCaptured: Boolean(cityCaptured && oldOwnerUid && dailyMissionTargetCategory === "player_city"),
     });
     const settledFortificationState = writeFortificationSettlement(
       transaction,
@@ -31174,7 +31217,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     );
     const defenseAllocation = allocateRallyStagingDefenseLosses(getTargetOwnerTroops(target, "city"), stagingGroups, result.defenderLosses);
     consumePendingAwayCityTroops(defenderEconomy, { ...target, regionId: targetRegionId }, defenseAllocation.ownerGarrisonLosses, {
-      captured: result.success,
+      captured: cityCaptured,
     });
     currentBattleId = safeString(armyId, 160);
     const createResolvedBattleSnapshot = ({ attackerRecoveredTroops = 0, defenderRecoveredTroops = 0 } = {}) => (
@@ -31234,7 +31277,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const reinforcementDefenseSettlement = applyReinforcementDefenseSettlement({
       allocation: defenseAllocation,
       defenseXpPool: defenderXp,
-      outcome: result.success ? "lost" : result.breachCompleted ? "breached" : "held",
+      outcome: cityCaptured ? "lost" : result.breachCompleted ? "breached" : "held",
     });
     const settledDefenderXp = reinforcementDefenseSettlement.ownerXp;
     const attackerProgress = buildPlayerProgressPatch(attackerProfile, {
@@ -31273,7 +31316,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     finalizeLevelUpReward(attackerProgress, attackerLevelTroopReward);
     if (defenderProgress) finalizeLevelUpReward(defenderProgress, defenderLevelTroopReward);
 
-    if (result.breachCompleted) {
+    if (result.breachCompleted || (result.success && captureProtectedUntilMs)) {
+      const nonCaptureOutcome = result.success ? "victory" : "breach";
+      const captureProtectionSummary = captureProtectedUntilMs
+        ? ` Former-clan protection prevents capture for another ${formatAntiFarmDuration(captureProtectedUntilMs - nowMs)}.`
+        : "";
       const targetPatch = {
         troops: defenseAllocation.ownerRemaining,
         troopFloat: defenseAllocation.ownerRemaining,
@@ -31311,7 +31358,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       });
       writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
       const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
-      if (protectedAssaultBreachDocumentRef) {
+      if (result.breachCompleted && protectedAssaultBreachDocumentRef) {
         transaction.set(protectedAssaultBreachDocumentRef, {
           version: PROTECTED_ASSAULT_BREACH_VERSION,
           status: "active",
@@ -31349,7 +31396,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         id: `${armyId}_attack_${attackerUid}`,
         uid: attackerUid,
         type: "attack",
-        outcome: "breach",
+        outcome: nonCaptureOutcome,
         city: target,
         opponentUid: defenderUid,
         opponentName: defenderName,
@@ -31359,7 +31406,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `Walls breached. ${target.name || target.id} remains under ${defenderName}'s control; your follow-up protected assault can capture it.${returnedSummary} +0 XP.${protectedDefenseXpSummary}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops.` : ""}`,
+        summary: `${result.success ? "Battle won." : "Walls breached."} ${target.name || target.id} remains under ${defenderName}'s control.${captureProtectionSummary || " Your follow-up protected assault can capture it."}${returnedSummary} +${attackerProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
@@ -31388,7 +31435,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           id: `${armyId}_defense_${defenderUid}`,
           uid: defenderUid,
           type: "defense",
-          outcome: "breached",
+          outcome: result.success ? "held" : "breached",
           city: target,
           opponentUid: attackerUid,
           opponentName: attackerName,
@@ -31398,7 +31445,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           result,
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
-          summary: `${attackerName} breached the walls at ${target.name || target.id}, but did not capture the city. A follow-up protected assault from that ruler can capture it. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${attackerName} ${result.success ? "won the battle" : "breached the walls"} at ${target.name || target.id}, but did not capture the city.${captureProtectionSummary || " A follow-up protected assault from that ruler can capture it."} +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
@@ -31424,7 +31471,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       markResolved({
         kind: "attack",
-        outcome: "breach",
+        outcome: nonCaptureOutcome,
+        captureBlockedReason: result.captureBlockedReason || "",
         survivors: result.survivors,
         returned: returnedArmy.returned,
         attackerLosses: result.attackerLosses,
@@ -31435,7 +31483,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ok: true,
         status: "resolved",
         kind: "attack",
-        outcome: "breach",
+        outcome: nonCaptureOutcome,
+        captureBlockedReason: result.captureBlockedReason || "",
+        returned: returnedArmy.returned,
         reports: reportsForCaller(),
         ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         cityUpdates: withEconomyCityUpdates(cityUpdates),

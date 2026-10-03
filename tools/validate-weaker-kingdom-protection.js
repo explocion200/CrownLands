@@ -578,7 +578,7 @@ const requiredServerSnippets = [
   "demoAttack: army.demoAttack",
   "protectedAssaultBreaches",
   "assaultStage: resolutionAssaultStage",
-  "outcome: \"breach\"",
+  'const nonCaptureOutcome = result.success ? "victory" : "breach"',
   "Walls breached.",
   "returnRecalledTroops(result.survivors)",
 ];
