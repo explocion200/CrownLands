@@ -158,6 +158,14 @@ async function main() {
       const {frameTree}=await client.send("Page.getFrameTree");await client.send("Page.setDocumentContent",{frameId:frameTree.frame.id,html});
       for(let i=0;i<100&&!await evaluate("typeof createCosmeticMotion==='function'");i++)await delay(100);
       await evaluate("("+scene.toString()+")()");
+      // Most players already have city bats when they buy/apply this frame.
+      await evaluate("setFrameScene('city')");await delay(250);
+      await evaluate("setFrameScene('combined');CrownlandsCityFlagSkins.ready()");await delay(300);
+      assert(await evaluate("[...cityLayer.querySelectorAll('.flag-frame-decoration')].some(n=>n.getAnimations({subtree:true}).some(a=>a.playState==='running'))"),"Late-applied frames must not be starved by existing city bats");
+      assert(await evaluate("[...cityLayer.querySelectorAll('.halloween-city-bats')].some(n=>n.getAnimations({subtree:true}).some(a=>a.playState==='running'))"),"Frames must leave slots for city bats");
+      await evaluate("setFrameScene('frame')");await delay(250);
+      await evaluate("setFrameScene('combined')");await delay(250);
+      assert(await evaluate("[...cityLayer.querySelectorAll('.halloween-city-bats')].some(n=>n.getAnimations({subtree:true}).some(a=>a.playState==='running'))"),"Late-applied city bats must also receive slots");
       for(const rate of [1,4]) for(const variant of ["default","city","frame","combined"]) {
         await evaluate("setFrameScene('default');setFrameScene("+JSON.stringify(variant)+")"); if(variant!=="default")await evaluate("CrownlandsCityFlagSkins.ready()");await delay(350);
         await client.send("Emulation.setCPUThrottlingRate",{rate}); const before=await metrics();

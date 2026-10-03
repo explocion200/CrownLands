@@ -18,11 +18,17 @@ function createCosmeticMotion() {
     cancelAnimationFrame(frame); frame = 0;
     const covered = document.getElementById("profileScreen")?.classList.contains("open") || document.getElementById("modal")?.open;
     // Keep compositor layers bounded even when many owned cities share a skin.
-    let mapSlots = innerWidth <= 1000 ? 6 : 8, troopSlots = innerWidth <= 1000 ? 6 : 8, frameSlots = innerWidth <= 1000 ? 2 : 3, previewSlots = 1;
+    const eligible = info => !document.hidden && info.visible && (info.preview || !covered);
+    let visibleFrames = 0;
     for (const [layer, info] of layers) {
       if (!layer.isConnected) { observer?.unobserve(layer); layers.delete(layer); continue; }
-      const eligible = !document.hidden && info.visible && (info.preview || !covered);
-      const active = eligible && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : (info.kind !== "border" || frameSlots-- > 0) && mapSlots-- > 0);
+      if (!info.preview && info.kind === "border" && eligible(info)) visibleFrames++;
+    }
+    // Reserve only visible frame slots, independent of which skin was applied first.
+    let frameSlots = Math.min(visibleFrames, innerWidth <= 1000 ? 2 : 3);
+    let mapSlots = (innerWidth <= 1000 ? 6 : 8) - frameSlots, troopSlots = innerWidth <= 1000 ? 6 : 8, previewSlots = 1;
+    for (const [layer, info] of layers) {
+      const active = eligible(info) && (info.preview ? previewSlots-- > 0 : info.kind === "troops" ? troopSlots-- > 0 : info.kind === "border" ? frameSlots-- > 0 : mapSlots-- > 0);
       const value = active ? "active" : "idle";
       if (layer.dataset.skinMotion !== value) layer.dataset.skinMotion = value;
     }
