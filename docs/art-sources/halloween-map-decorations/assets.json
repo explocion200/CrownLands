@@ -1,0 +1,35 @@
+[
+  {
+    "name": "pumpkins",
+    "source": "docs/art-sources/halloween-map-decorations/pumpkins.png",
+    "output": "assets/optimized/halloween-map-pumpkins-a6d32ca03ef7.webp",
+    "sha256": "a6d32ca03ef72b63893e04891cd730bc05420a5645eb46518e0fd06bea3677f4",
+    "bytes": 7928,
+    "width": 1536,
+    "height": 1024,
+    "alphaMin": 0,
+    "alphaMax": 254
+  },
+  {
+    "name": "scarecrow",
+    "source": "docs/art-sources/halloween-map-decorations/scarecrow.png",
+    "output": "assets/optimized/halloween-map-scarecrow-9242bd705a4b.webp",
+    "sha256": "9242bd705a4bdbacb68586a36b950cf153c567379415e951310cbe06b83832b4",
+    "bytes": 13864,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255
+  },
+  {
+    "name": "lanterns",
+    "source": "docs/art-sources/halloween-map-decorations/lanterns.png",
+    "output": "assets/optimized/halloween-map-lanterns-162e79b96e58.webp",
+    "sha256": "162e79b96e582aa4d90d34b1dae68b6a1e18b2ea8fcac86f34cbd67b42a9182b",
+    "bytes": 12796,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255
+  }
+]

@@ -185,7 +185,9 @@ const entrypointBudgets = {
   // Troop heading and appearance integration bring the runtime to 1905.9 KiB.
   // Allow one 1 KiB step; the new renderer and atlas have separate tight caps.
   // Quarter-pixel march display caching and covered-map gating add under 1 KiB.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1) * 1024,
+  // Optional Halloween scenery adds 4,441 normalized bytes, bounded at 5 KiB.
+  // Its 55,473-byte layout/art payload is lazy; offline and frame caps stay fixed.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,

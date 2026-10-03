@@ -1,0 +1,161 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "traversal": [
+        {
+          "id": "core-v2-warband-camp-m2-m2",
+          "count": 7,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-north-west-holding-tower-m1-m1",
+          "count": 7,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-aurum-keep-m1-p0",
+          "count": 4,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-crown-citadel-p0-p0",
+          "count": 4,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-warband-camp-south-east-p2-p2",
+          "count": 6,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "new-lands-l01-p001",
+          "count": 9,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "new-lands-l02-p032",
+          "count": 9,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        }
+      ],
+      "behavior": {
+        "refreshMs": 2.799999952316284,
+        "mutations": 0,
+        "staleMap": true,
+        "template": true,
+        "optionalFailure": true,
+        "seasonEnd": true,
+        "pickup": true
+      }
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "traversal": [
+        {
+          "id": "core-v2-warband-camp-m2-m2",
+          "count": 7,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-north-west-holding-tower-m1-m1",
+          "count": 7,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-aurum-keep-m1-p0",
+          "count": 4,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-crown-citadel-p0-p0",
+          "count": 4,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "core-v2-warband-camp-south-east-p2-p2",
+          "count": 6,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "new-lands-l01-p001",
+          "count": 9,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        },
+        {
+          "id": "new-lands-l02-p032",
+          "count": 9,
+          "missing": 0,
+          "animations": 0,
+          "overlaps": 0,
+          "clicks": true,
+          "layers": 1
+        }
+      ],
+      "behavior": {
+        "refreshMs": 2.5999999046325684,
+        "mutations": 0,
+        "staleMap": true,
+        "template": true,
+        "optionalFailure": true,
+        "seasonEnd": true,
+        "pickup": true
+      }
+    }
+  ],
+  "errors": []
+}

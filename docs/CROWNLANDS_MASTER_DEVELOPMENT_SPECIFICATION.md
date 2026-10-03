@@ -291,6 +291,10 @@ City identities, ownership, Main City designation, progression and troops are pr
 
 Prepared maps have 81 distinct road networks. Future generated regions inherit the revised art and city clearance of their selected prepared template. This does not change map activation, capacity, adjacency, travel bonuses or combat rules. Implementation and release verification are recorded in [the illustrated map release notes](illustrated-map-release.md); the older production snapshot below is historical evidence, not this update's deployment status.
 
+### Confirmed Halloween map decoration direction — October 3, 2026
+
+Halloween decorations use the supplied painted medieval atlas as art inspiration. Place them on a separate scenery layer in clear ground, preserving existing trees, rocks, cities and other map objects. This is environmental artwork, separate from the city skin collection. Deployment has not been verified. Draft assets, placement rules and validation are recorded in [the Halloween map decoration notes](art-sources/halloween-map-decorations/README.md).
+
 ### Current production
 
 - Web production and the published itch.io client contain the same 20 connected regions. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.

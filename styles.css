@@ -1253,6 +1253,7 @@ input {
   display: block;
   pointer-events: none;
 }
+.halloween-map-decorations img[hidden] { display: none; }
 .illustrated-map-thumbnail {
   width: 100%;
   height: 100%;
