@@ -1403,6 +1403,7 @@ const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
 const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const CLAN_JOIN_COOLDOWN_MS = 60 * 60 * 1000;
 const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
 const CLAN_RALLY_MIN_PARTICIPANTS = 2;
 const CLAN_RALLY_MAX_PARTICIPANTS = 20;
@@ -13464,7 +13465,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.clanName = String(profile.clanName || "");
   state.clanTag = String(profile.clanTag || "");
   state.clanRole = String(profile.clanRole || "");
-  state.clanJoinCooldownUntilMs = normalizeTimestampMs(profile.clanJoinCooldownUntilMs);
+  state.clanJoinCooldownUntilMs = getClanJoinCooldownUntilMs(profile);
   state.pendingClanApplicationId = String(profile.pendingClanApplicationId || "");
   if (hasCurrentSkillPointSystem(profile)) {
     state.character = normalizeCharacterProgress(profile.character);
@@ -25044,7 +25045,7 @@ function handleOnlinePlayerClanSnapshot(event) {
   state.clanTag = String(detail.clanTag || "");
   state.clanRole = String(detail.clanRole || "");
   state.pendingClanApplicationId = String(detail.pendingClanApplicationId || "");
-  state.clanJoinCooldownUntilMs = normalizeTimestampMs(detail.clanJoinCooldownUntilMs);
+  state.clanJoinCooldownUntilMs = getClanJoinCooldownUntilMs(detail);
   updateOnlineChatClan(state.clanId);
   rememberPlayerIdentity({
     uid: getCurrentOnlineUid(),
@@ -25744,6 +25745,15 @@ function updateClanNameChangeCountdown() {
       : "Name change available now";
   }
   if (renameButton) renameButton.disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
+}
+
+function getClanJoinCooldownUntilMs(profile = {}) {
+  const untilMs = Math.max(0, normalizeTimestampMs(profile.clanJoinCooldownUntilMs));
+  const changedAtMs = Math.max(0, normalizeTimestampMs(profile.clanIdentityUpdatedAtMs));
+  // Match the server's conversion of previously saved 24-hour departures.
+  return changedAtMs > 0 && untilMs - changedAtMs === 24 * 60 * 60 * 1000
+    ? changedAtMs + CLAN_JOIN_COOLDOWN_MS
+    : untilMs;
 }
 
 function getClanJoinCooldownRemainingMs(nowMs = Date.now()) {
@@ -27214,7 +27224,7 @@ function confirmClanDisband() {
       <p>${formingRallyCount
         ? `${formatNumber(formingRallyCount)} forming ${formingRallyCount === 1 ? "rally" : "rallies"} will be cancelled and committed troops will return.`
         : "Any forming rallies will be cancelled and committed troops will return."} Launched Rallies are recalled automatically, without consuming a Recall Horn.</p>
-      <p>Other members can join another clan immediately. Your 24-hour clan cooldown begins when the clan is disbanded.</p>
+      <p>Other members can join another clan immediately. Your 1-hour clan cooldown begins when the clan is disbanded.</p>
       <footer>
         <button type="button" class="profile-secondary-btn" data-clan-disband-confirm="cancel">Keep Clan</button>
         <button type="button" class="danger-action" data-clan-disband-confirm="accept">Disband Clan Permanently</button>
@@ -27584,7 +27594,7 @@ async function handleClanClick(event) {
       promote: ["Promote clan member?", `Promote ${name} to Officer. Officers may review applications and create Rallies.`, "Promote"],
       demote: ["Demote clan officer?", `Return ${name} to the Member role.`, "Demote"],
       kick: ["Remove clan member?", `Remove ${name} from your clan. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
-      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 24-hour cooldown begins. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
+      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 1-hour cooldown begins. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
     }[action];
     if (!await confirmClanLedgerAction(...details)) return;
     if (state?.clanId !== clanId || getCurrentOnlineUid() !== uid || clanUiLoading) return;
@@ -29405,7 +29415,7 @@ async function selectClanTowerOnMap(towerId) {
       const source = cityById(sourceId);
       if (!tower || !source || source.owner !== "player") return;
       if (!getHoldingTowerOrderPermission(tower, "reinforce")) {
-        rejectGameAction(tower.ownerMember ? "Tower reinforcement requires 24 hours in the clan." : "You can send troops only into your clan's Tower.");
+        rejectGameAction(tower.ownerMember ? "Tower reinforcement requires 1 hour in the clan." : "You can send troops only into your clan's Tower.");
         return;
       }
       selectedTowerMapId = towerId;

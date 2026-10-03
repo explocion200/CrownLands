@@ -3,7 +3,7 @@
 const BUILDINGS = require("./clan-tower-buildings");
 const CONSTRUCTION = require("./clan-tower-construction");
 const MODEL_VERSION = 2;
-const TOWER_ACCESS_PROBATION_MS = 24 * 60 * 60 * 1000;
+const TOWER_ACCESS_PROBATION_MS = 60 * 60 * 1000;
 const TOWER_NEUTRAL_DEFENDERS = 10_000_000;
 const TOWER_MIN_RALLY_MEMBERS = 3;
 const TOWER_UPGRADE_MULTIPLIER = 5;

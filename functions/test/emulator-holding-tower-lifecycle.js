@@ -12,6 +12,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_
 const projectId = process.env.GCLOUD_PROJECT || "crown-land-b15e0";
 initializeApp({ projectId });
 const db = getFirestore();
+const HOUR_MS = 60 * 60 * 1000;
 let identity = {}, functionsHost;
 
 async function createActor(label) {
@@ -80,6 +81,10 @@ async function assertTroopPower(actor) {
 }
 
 async function main() {
+  // An empty emulator still crosses the real monthly season boundary.
+  const seasons = require("../season-rewards");
+  const previous = seasons.previousSeason(`realm-${new Date().toISOString().slice(0, 7)}`);
+  if (seasons.supported(previous)) await seasons.arm(db, previous, seasons.seasonInfo(previous).startsAtMs + 1);
   const actors = [];
   for (let index = 0; index < 4; index++) actors.push(await createActor(`Tower Ruler ${index + 1}`));
   const [leader, member] = actors, outsider = actors[3];
@@ -121,8 +126,8 @@ async function main() {
   const participants = [];
   for (const [index, actor] of actors.slice(0, 3).entries()) {
     const role = index ? "member" : "leader";
-    await db.doc(`clans/${clanId}/members/${actor.uid}`).set({ ...identity, clanId, uid: actor.uid, role, status: "active", joinedAtMs: now - 172_800_000 });
-    await db.doc(`players/${actor.uid}`).set({ clanId, clanRole: role, committedRallyTroops: index ? contribution : 0,
+    await db.doc(`clans/${clanId}/members/${actor.uid}`).set({ ...identity, clanId, uid: actor.uid, role, status: "active", joinedAtMs: now - 2 * HOUR_MS });
+    await db.doc(`players/${actor.uid}`).set({ clanId, clanRole: role, committedRallyTroops: index === 2 ? contribution : 0,
       rallyResetGeneration: identity.resetGeneration }, { merge: true });
     participants.push({ uid: actor.uid, ownerName: actor.label, role: index ? "ally" : "leader", troops: contribution,
       sourceId: actor.home.id, sourceRegionId: actor.home.regionId, status: "assembled", joinedAtMs: now - 1000, assembledAtMs: now - 1000 });
@@ -153,6 +158,16 @@ async function main() {
   const creationPayload = { clanId, rallyId, sourceType: "city", targetType: "tower",
     sourceRegionId: leader.home.regionId, targetRegionId: tower.regionId,
     army: { id: rallyId, kind: "attack", fromId: leader.home.id, toId: tower.id, troops: contribution, requestedTroops: contribution } };
+  const leaderMembership = db.doc(`clans/${clanId}/members/${leader.uid}`);
+  const memberMembership = db.doc(`clans/${clanId}/members/${member.uid}`);
+  await leaderMembership.update({ joinedAtMs: Date.now() - HOUR_MS / 2 });
+  const waiting = (await call("getHoldingTowerState", leader, { towerId: tower.id })).towers[0];
+  assert.equal(waiting.eligibility.eligible, false);
+  assert.equal(waiting.eligibility.eligibleAtMs - waiting.eligibility.joinedAtMs, HOUR_MS);
+  assert.equal(waiting.permissions.createRallyAttack, false);
+  assert.match((await invoke("createClanRally", leader, creationPayload)).error?.message || "", /after 1 hour/);
+  assert.equal((await rallyRef.get()).exists, false, "Probation created a Rally.");
+  await leaderMembership.update({ joinedAtMs: Date.now() - HOUR_MS - 1000 });
   const created = await call("createClanRally", leader, creationPayload);
   assert.equal(created.rally.targetId, tower.id);
   assert.equal(created.rally.targetType, "tower");
@@ -163,6 +178,18 @@ async function main() {
   const replay = await call("createClanRally", leader, creationPayload);
   assert.equal(replay.duplicate, true);
   assert.equal((await cityRef(leader.home).get()).data().troops, troopsAfterCreation, "Replaying Tower rally creation deducted troops twice.");
+  await cityRef(member.home).update({ troops: contribution, troopFloat: contribution });
+  await memberMembership.update({ joinedAtMs: Date.now() - HOUR_MS / 2 });
+  const joinArmyId = `tower_join_${randomUUID()}`;
+  const joinPayload = { clanId, rallyId, armyId: joinArmyId, sourceRegionId: member.home.regionId,
+    army: { id: joinArmyId, kind: "rally_join", targetType: "city", fromId: member.home.id,
+      troops: contribution, requestedTroops: contribution, sourceRegionId: member.home.regionId } };
+  assert.match((await invoke("joinClanRally", member, joinPayload)).error?.message || "", /after 1 hour/);
+  assert.equal((await db.doc(`armies/${joinArmyId}`).get()).exists, false, "Probation sent a Rally contribution.");
+  await memberMembership.update({ joinedAtMs: Date.now() - HOUR_MS - 1000 });
+  const joined = await call("joinClanRally", member, joinPayload);
+  assert.equal(joined.movement.troops, contribution);
+  await resolve(member, joined.movement);
   // Assemble additional fixture contributions to exercise target-specific launch and capture rules.
   await rallyRef.update({ participants: participants.slice(0, 2) });
   const tooSmall = await invoke("launchClanRally", leader, { clanId, rallyId });
@@ -208,6 +235,12 @@ async function main() {
   const others = unchanged.filter(([uid]) => uid !== member.uid);
   await call("collectEconomy", member);
   await assertTroopPower(member);
+  await memberMembership.update({ joinedAtMs: Date.now() - HOUR_MS / 2 });
+  for (const payload of [order(tower, member.home, "transfer", 1000, "tower", "city"), order(member.home, tower, "reinforce", 100, "city", "tower")]) {
+    assert.match((await invoke("sendHoldingTowerArmyOrder", member, payload)).error?.message || "", /after 1 hour/);
+  }
+  assert.equal((await garrisonRef(member).get()).data().troops, before, "Probation orders changed Tower troops.");
+  await memberMembership.update({ joinedAtMs: Date.now() - HOUR_MS - 1000 });
   const withdrawal = await call("sendHoldingTowerArmyOrder", member, order(tower, member.home, "transfer", 1000, "tower", "city"));
   assert.equal((await garrisonRef(member).get()).data().troops, before - 1000);
   const marchingPower = await assertTowerPower(member, before - 1000);
@@ -327,10 +360,10 @@ async function main() {
   assert((await invoke("purchaseClanTowerShopItem",member,{...purchase,operationId:`drop_${randomUUID()}`})).error);
   await secondRef.update({clanId});
   assert.equal((await call("getClanTowerShop",member,{towerId:second.id})).clanShop.items.find(i=>i.id==="swift_march_order").remaining,0);
-  await memberRef.update({joinedAtMs:Date.now()});
+  await memberRef.update({joinedAtMs:Date.now()-HOUR_MS/2});
   assert.equal((await call("getClanTowerShop",member,{towerId:tower.id})).clanShop.eligible,false);
   assert((await invoke("purchaseClanTowerShopItem",member,{towerId:tower.id,itemId:"recall_horn",operationId:`new_${randomUUID()}`})).error);
-  await memberRef.update({joinedAtMs:now-172_800_000});
+  await memberRef.update({joinedAtMs:Date.now()-HOUR_MS-1000});
   const boxesBefore=(await memberProfile.get()).data().gear?.commonGearBoxes || 0;
   const mainAllowanceBefore=(await memberProfile.get()).data().gear?.shopPurchase || null;
   await call("purchaseClanTowerShopItem",member,{towerId:tower.id,itemId:"common_gear_box",operationId:`box_${randomUUID()}`});
@@ -471,9 +504,33 @@ async function main() {
   const currentDaily = (await memberProfile.get()).data().daily;
   await memberProfile.update({daily: {...currentDaily, date: new Date().toISOString().slice(0, 10), neutralCaptures: 30}});
   await expectNpcBlocked(/Daily neutral capture limit reached/);
-  await call("leaveClan", member);
+  const departureStarted = Date.now();
+  const departed = await call("leaveClan", member);
+  assert(departed.cooldownUntilMs >= departureStarted + HOUR_MS && departed.cooldownUntilMs <= Date.now() + HOUR_MS,
+    "Leaving must start exactly one hour of clan admission cooldown.");
+  const departedProfile = (await memberProfile.get()).data();
+  assert.equal(departedProfile.clanJoinCooldownUntilMs - departedProfile.clanIdentityUpdatedAtMs, HOUR_MS);
   await assertTowerPower(member, 0);
   assert.equal((await garrisonRef(member).get()).exists, false, "Departed member still has stationed Tower troops.");
+  await memberProfile.update({ "character.level": 30 });
+  await db.doc(`clans/${clanId}`).update({ admissionMode: "open" });
+  for (const [name, data] of [["joinOpenClan", {clanId}], ["applyToClan", {clanId}], ["createClan", {name:"Cooldown Keep",tag:"CDK"}]]) {
+    const blocked = await invoke(name, member, data);
+    assert.match(blocked.error?.message || "", /wait before joining another clan/, name + " bypassed the departure wait.");
+    assert.equal(blocked.error.details.cooldownUntilMs, departed.cooldownUntilMs);
+  }
+  // Older saved 24-hour departures use the original start, not a new wait.
+  const oldDeparture = Date.now() - HOUR_MS / 2;
+  await memberProfile.update({ clanIdentityUpdatedAtMs: oldDeparture, clanJoinCooldownUntilMs: oldDeparture + 24 * HOUR_MS });
+  const oldBlocked = await invoke("joinOpenClan", member, {clanId});
+  assert.equal(oldBlocked.error?.details?.cooldownUntilMs, oldDeparture + HOUR_MS);
+  const elapsedDeparture = Date.now() - HOUR_MS - 1000;
+  await memberProfile.update({ clanIdentityUpdatedAtMs: elapsedDeparture, clanJoinCooldownUntilMs: elapsedDeparture + 24 * HOUR_MS });
+  await call("joinOpenClan", member, {clanId});
+  const rejoined = (await call("getHoldingTowerState", member, {towerId:tower.id})).towers[0];
+  assert.equal(rejoined.eligibility.eligible, false, "Rejoining bypassed the new membership wait.");
+  assert.equal(rejoined.eligibility.eligibleAtMs - rejoined.eligibility.joinedAtMs, HOUR_MS);
+  console.log("One-hour clan rules passed: Tower Rally create/join before and after probation, Shop eligibility, departure admission gates, legacy deadline shortening and rejoin probation.");
   console.log("Tower NPC cap passed: 29-city launch, 30/31-city rejection before troop/economy changes, cross-map count, in-flight cancellation/replay, daily cap, and allowed player-city/Camp/transfer orders.");
   console.log("Clan building callables passed: role checks, single job, Treasury retry, completion, highest Shop, shared concurrent stock, ownership/eligibility, gear delivery, Shield cooldown, seasonal usage and rules protection.");
   console.log("Tower lifecycle passed: callable rally creation/replay, two-player rejection for neutral and clan-owned Towers, three-player launch and capture, attributed survivors, owned controls, private garrison queries, outsider privacy, idempotent battle settlement, withdrawal and reinforcement.");

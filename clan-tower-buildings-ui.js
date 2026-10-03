@@ -29,7 +29,7 @@
     if (def.id === "shop" && own) {
       const status = tower.clanShop;
       const items = status?.items || B.shopStatus(0, {}, nowMs);
-      const eligibility = status && !status.eligible ? `<p class="ctb-note">Purchases unlock after 24 hours in the clan${status.eligibleAtMs ? ` · ${timer(status.eligibleAtMs, nowMs)} remaining` : ""}.</p>` : "";
+      const eligibility = status && !status.eligible ? `<p class="ctb-note">Purchases unlock after 1 hour in the clan${status.eligibleAtMs ? ` · ${timer(status.eligibleAtMs, nowMs)} remaining` : ""}.</p>` : "";
       shop = `<section class="ctb-shop"><header><div><h3>Clan Shop</h3><p>${status ? `Clan's best Shop: Level ${status.level}` : esc(tower.clanShopError || "Loading shop availability…")}</p></div><div><small>Your Gold</small><strong>${num(personalGold)}</strong></div></header><p class="ctb-note">Extra allowance shared across Clan Shops. Purchases use your personal Gold.</p>${!current ? '<p class="ctb-note">Build this Tower’s Shop to make purchases here.</p>' : ""}${eligibility}<div class="ctb-shop-items">${items.map(item => {
         const locked = !item.unlocked, exhausted = item.remaining < 1;
         const blocked = !status || !current || !status.eligible || locked || exhausted || actionBusy || personalGold < item.price;

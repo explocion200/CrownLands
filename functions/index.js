@@ -497,7 +497,7 @@ const CLAN_CREATE_GOLD_COST = 100_000;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_MEMBER_LIMIT = 30;
-const CLAN_JOIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const CLAN_JOIN_COOLDOWN_MS = 60 * 60 * 1000;
 const CLAN_LEADER_INACTIVE_MS = 14 * 24 * 60 * 60 * 1000;
 const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
@@ -12319,7 +12319,7 @@ function assertHoldingTowerMemberEligible(member = {}, nowMs = Date.now(), clanI
     }
     throw new HttpsError(
       "failed-precondition",
-      `Holding Tower access unlocks after 24 hours in this clan${eligibility.eligibleAtMs ? ` (${new Date(eligibility.eligibleAtMs).toISOString()})` : ""}.`
+      `Holding Tower access unlocks after 1 hour in this clan${eligibility.eligibleAtMs ? ` (${new Date(eligibility.eligibleAtMs).toISOString()})` : ""}.`
     );
   }
   return eligibility;
@@ -20297,13 +20297,23 @@ function assertClanUnlocked(profile = {}) {
   }
 }
 
+function getClanJoinCooldownUntilMs(profile = {}) {
+  const untilMs = Math.max(0, timestampToMs(profile.clanJoinCooldownUntilMs));
+  const changedAtMs = Math.max(0, timestampToMs(profile.clanIdentityUpdatedAtMs));
+  // Departures save both fields atomically. Shorten known old 24-hour waits
+  // from their original start without restarting them or rewriting profiles.
+  return changedAtMs > 0 && untilMs - changedAtMs === 24 * 60 * 60 * 1000
+    ? changedAtMs + CLAN_JOIN_COOLDOWN_MS
+    : untilMs;
+}
+
 function assertNoClan(profile = {}, nowMs = Date.now(), allowedApplicationClanId = "") {
   if (safeString(profile.clanId, 128)) throw new HttpsError("failed-precondition", "You are already in a clan.");
   const pendingClanApplicationId = safeString(profile.pendingClanApplicationId, 128);
   if (pendingClanApplicationId && pendingClanApplicationId !== allowedApplicationClanId) {
     throw new HttpsError("failed-precondition", "Cancel your existing clan application first.");
   }
-  const cooldownUntilMs = Math.max(0, timestampToMs(profile.clanJoinCooldownUntilMs));
+  const cooldownUntilMs = getClanJoinCooldownUntilMs(profile);
   if (cooldownUntilMs > nowMs) {
     throw new HttpsError("failed-precondition", "You must wait before joining another clan.", { cooldownUntilMs });
   }

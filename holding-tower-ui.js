@@ -181,7 +181,7 @@
     return `
       <section class="clan-social-card holding-tower-actions" aria-labelledby="holdingTowerActionsTitle">
         <div class="profile-section-heading clan-panel-heading holding-tower-section-heading"><span>Orders</span><h3 id="holdingTowerActionsTitle">Tower Actions</h3></div>
-        ${probation ? `<div class="holding-tower-probation"><strong>24-hour access probation</strong><span>Military Tower actions unlock in ${countdown(nowMs + Number(tower.eligibility?.remainingMs || 0), nowMs)}.</span></div>` : ""}
+        ${probation ? `<div class="holding-tower-probation"><strong>1-hour access probation</strong><span>Military Tower actions unlock in ${countdown(nowMs + Number(tower.eligibility?.remainingMs || 0), nowMs)}.</span></div>` : ""}
         <div class="action-buttons holding-tower-action-grid">
           ${permissions.scout && !tower.ownerMember ? `<button type="button" class="secondary" data-tower-action="scout" ${disabled}>Scout Tower</button>` : ""}
           ${permissions.createRallyAttack ? `<button type="button" class="danger attack-action" data-tower-action="rally-attack" ${disabled}>Form Rally Attack</button>` : ""}

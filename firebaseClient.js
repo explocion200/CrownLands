@@ -333,6 +333,7 @@
           clanRole: isCurrentRealm ? String(profile.clanRole || "") : "",
           pendingClanApplicationId: isCurrentRealm ? String(profile.pendingClanApplicationId || "") : "",
           clanJoinCooldownUntilMs: isCurrentRealm ? timestampToMs(profile.clanJoinCooldownUntilMs) : 0,
+          clanIdentityUpdatedAtMs: isCurrentRealm ? timestampToMs(profile.clanIdentityUpdatedAtMs) : 0,
         });
         dispatch("daily-login-reward", {
           state: isCurrentRealm && profile.dailyLoginReward && typeof profile.dailyLoginReward === "object"
