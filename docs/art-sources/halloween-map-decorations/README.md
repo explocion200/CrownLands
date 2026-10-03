@@ -1,6 +1,6 @@
 # Halloween map decorations
 
-Draft prepared on `codex/halloween-map-decorations`, in PR #430. Not merged or deployed to production.
+Original artwork prepared on `codex/halloween-map-decorations`, in PR #430. The scrolling visibility fix on `codex/halloween-decoration-scroll-visibility` is pending merge and deployment.
 
 ## Artwork
 
@@ -20,7 +20,7 @@ Production uses WebP derivatives with alpha, at most 160px per side, totaling 37
 ## Loading and performance
 
 - No animation, particles, filters, per-frame placement searches or extra game timers.
-- At most 24 static images are attached to the active map. During pan/zoom, the existing camera state hides props after the first nine, keeping the original painting limit. All props return after movement settles. Map swaps replace the old layer. Optional layout loading has an eight-second timeout and a stale-map guard; it never blocks map readiness.
+- At most 24 static images are attached to the active map. They remain visible during pan/zoom and move with the existing map transform, without rebuilding the layer or adding per-frame decoration work. Pickup overlap can still hide an individual prop. Map swaps replace the old layer. Optional layout loading has an eight-second timeout and a stale-map guard; it never blocks map readiness.
 - Images use async decoding and low request priority. Missing images disappear; failed layouts can retry on a later map load.
 - The versioned v3 layout retains schema 2's compact `[assetIndex, x, y]` tuples. The layout plus all seven sprites total 59,111 bytes, still bounded by the original 64 KiB validation gate. They are excluded from installation precaching and requested only during October.
 - Pickup visibility uses the existing refresh path. An unchanged refresh writes no DOM attributes. Desktop and mobile synthetic checks ran 1,000 refreshes without mutations.
@@ -30,7 +30,7 @@ Production uses WebP derivatives with alpha, at most 160px per side, totaling 37
 - Static validation checks all 81 maps against 3,720 canonical city positions, existing scenery, roads, objectives and compounds. Rebuilding the layout must reproduce the committed output.
 - Browser validation uses loopback fixtures at 1440×900 and 844×390. Seven representative maps include the Citadel, Stronghold, camps, Clan Tower and both New Lands layers. Maximum-stage city art, decoded images, click-through behavior, pickup suppression/recovery, seasonal removal, generated-template fallback, stale loads and optional-load failure/retry are covered.
 - A separate performance comparison uses 40 maximum-level cities and 25 marching armies, at desktop and landscape-phone dimensions (phone device pixel ratio 2). It compares nine props with 24 at normal and 4× CPU throttling, while idle and continuously panning/zooming. Each configuration receives four three-second samples in repeated ABBA order; comparisons use the median. Relative gates allow host scheduling noise and measure added cost, not an absolute frame-rate guarantee. This sampling was extended after shorter runs gave inconsistent throttled results.
-- The movement safeguard was added after the first rapid pan/zoom stress test exposed a hitch. The updated comparison passed all eight configurations. Functional checks verify that nine props remain during movement and 24 return afterward. Thirty repeated layer replacements leave one layer; 1,000 unchanged visibility refreshes produce no DOM writes.
+- The original movement rule hid props after the first nine, producing visible disappearance and reappearance during scrolling. The fix removes only that rule. Functional checks require all 24 props to remain visible through repeated pan/zoom/settle cycles, with unchanged nodes and no decoration mutations. Performance samples also assert that every measured prop is visible, so hidden scenery cannot produce a misleading pass. Thirty repeated layer replacements must leave one layer; 1,000 unchanged visibility refreshes must produce no DOM writes.
 - [Desktop preview](../../visual-qa/halloween-map-decorations/map-1440.png), [landscape phone preview](../../visual-qa/halloween-map-decorations/map-844.png), [browser results](../../visual-qa/halloween-map-decorations/validation.json).
 - [Performance samples and comparisons](../../visual-qa/halloween-map-decorations/performance.json).
-- These are synthetic browser checks. Physical phone frame rates and production deployment have not been verified.
+- The linked results record the original artwork review. Current runs write results and moving/settled screenshots to `release-artifacts/halloween-map-decorations/`. These are synthetic browser checks; physical phone frame rates and deployment of the scrolling fix require separate verification.

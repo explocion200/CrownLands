@@ -56,7 +56,12 @@ async function sampleScene(moving) {
   });
   camera.x = origin.x; camera.y = origin.y; zoom = origin.zoom; updateCameraTransform();
   times.sort((a, b) => a - b);
-  return { elapsedMs: performance.now() - start, frames: times.length, p95Ms: times[Math.floor(times.length * .95)], slowFrames: times.filter(ms => ms > 50).length };
+  const elapsedMs = performance.now() - start;
+  const visible = [...mapBg.querySelectorAll('.halloween-map-decorations img')].filter(image => {
+    const style = getComputedStyle(image);
+    return style.visibility === "visible" && style.display !== "none" && Number(style.opacity) > 0;
+  }).length;
+  return { elapsedMs, frames: times.length, p95Ms: times[Math.floor(times.length * .95)], slowFrames: times.filter(ms => ms > 50).length, visible };
 }
 
 async function main() {
@@ -111,6 +116,7 @@ async function main() {
           assert.equal(await evaluate("mapBg.querySelector('.halloween-map-decorations').getAnimations({subtree:true}).length"), 0);
           await delay(400);
           const before = await metrics(), frames = await evaluate(`(${sampleScene.toString()})(${moving})`), after = await metrics();
+          assert.equal(frames.visible, count, "All measured decorations must remain visible, including during pan/zoom");
           samples.push({ width, height, dpr, rate, moving, count, ...frames, taskMsPerSecond: (after.TaskDuration - before.TaskDuration) * 1e6 / frames.elapsedMs,
             styleMsPerSecond: (after.RecalcStyleDuration - before.RecalcStyleDuration) * 1e6 / frames.elapsedMs });
         }
