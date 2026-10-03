@@ -9618,6 +9618,31 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   box-shadow: 0 20px 55px rgba(0,0,0,.55);
 }
 .skill-preset-exit-dialog::backdrop { background: rgba(8,7,5,.72); }
+.peace-shield-order-dialog {
+  width: min(500px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+  padding: 0; border: 2px solid #9c8150; border-radius: 5px;
+  color: #3c3020; background: #efe3c3; box-shadow: 0 14px 45px #0008;
+}
+.peace-shield-order-dialog::backdrop { background: #17130ec4; }
+.peace-shield-order-dialog header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #ae946c; }
+.peace-shield-order-dialog h2 { flex: 1; margin: 0; font: 700 20px/1.2 var(--font-display, serif); }
+.peace-shield-order-dialog button { min-height: 44px; border: 1px solid #9c8150; border-radius: 3px; font: 700 16px/1.2 var(--font-display, serif); cursor: pointer; }
+.peace-shield-order-dialog header button { min-width: 44px; color: #523625; background: transparent; font-size: 26px; }
+.peace-shield-order-copy { padding: 12px 16px; }
+.peace-shield-order-copy p { margin: 0 0 10px; font-size: 16px; line-height: 1.35; }
+.peace-shield-order-copy p:last-child { margin-bottom: 0; }
+.peace-shield-order-route { padding: 10px; background: #d4bd8b55; overflow-wrap: anywhere; }
+.peace-shield-order-time { color: #704330; }
+.peace-shield-order-dialog footer { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 14px; }
+.peace-shield-order-dialog footer [data-shield-cancel] { color: #3c3020; background: #ddcba4; }
+.peace-shield-order-dialog [data-shield-continue] { color: #fff3d4; background: #642e35; }
+.peace-shield-order-dialog button:focus-visible { outline: 3px solid #8c651e; outline-offset: 2px; }
+@media (max-height: 440px) {
+  .peace-shield-order-dialog header { padding: 5px 12px; }
+  .peace-shield-order-copy { padding: 8px 12px; }
+  .peace-shield-order-copy p { margin-bottom: 7px; font-size: 14px; }
+  .peace-shield-order-dialog footer { padding: 0 12px 10px; }
+}
 .skill-preset-exit-dialog__card { display: grid; gap: .7rem; padding: 1rem; }
 .skill-preset-exit-dialog__card h2,
 .skill-preset-exit-dialog__card p { margin: 0; }

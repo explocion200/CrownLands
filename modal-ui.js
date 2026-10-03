@@ -1,5 +1,64 @@
 /* Shared dialog presentation. Gameplay and action authority remain in game.js. */
-/* exported getOpenCityInfoId, refreshOpenCityInfoModal, captureCommonGearRefresh, captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+/* exported confirmPeaceShieldOrder, getOpenCityInfoId, refreshOpenCityInfoModal, captureCommonGearRefresh, captureItemBagRefresh, captureHoldingDetailsRefresh, captureClanViewRefresh, captureUiRefreshState, patchOperationModalText, patchCityListPanel, formatCityListCost, installGameModalLifecycle, updateOnboardingMapTipVisibility, observeOnboardingOverlays */
+
+// Return false until the player explicitly approves this exact shield-breaking
+// order. Retry the normal submit handler so all current permissions are checked.
+function confirmPeaceShieldOrder(source, target, kind, troops, confirmation, retry) {
+  if (document.getElementById("peaceShieldOrderDialog")) return false;
+  const expiresAt = getActivePeaceShieldExpiresAtMs();
+  const breaksShield = kind === "reinforce"
+    || (kind === "attack" && shouldDeactivatePeaceShieldForPlayerAttack(target));
+  if (!expiresAt || !breaksShield) return true;
+  const scope = getOnlineSessionRequestScope();
+  const key = JSON.stringify([scope, source.id, target.id, getCityRegionId(source), getCityRegionId(target),
+    source.ownerUid, target.ownerUid, target.owner, target.ownershipRevision, kind, troops, expiresAt]);
+  if (confirmation?.key === key) return true;
+  const view = modalBody.firstElementChild;
+  const currentState = state;
+  const focused = document.activeElement;
+  const dialog = document.createElement("dialog");
+  dialog.id = "peaceShieldOrderDialog";
+  dialog.className = "peace-shield-order-dialog";
+  dialog.setAttribute("aria-labelledby", "peaceShieldOrderTitle");
+  dialog.setAttribute("aria-describedby", "peaceShieldOrderDescription");
+  dialog.innerHTML = `
+    <header><h2 id="peaceShieldOrderTitle">Sending will remove your shield</h2><button type="button" data-shield-cancel aria-label="Cancel sending">&times;</button></header>
+    <div class="peace-shield-order-copy">
+      <p id="peaceShieldOrderDescription">Sending these troops will end your Royal Peace Shield. Your cities will lose its protection.</p>
+      <p class="peace-shield-order-route"><strong>${formatMarchesNumber(troops)} troops</strong> from ${escapeHtml(source.name)} to <strong>${escapeHtml(target.name)}</strong></p>
+      <p class="peace-shield-order-time">Shield time remaining: <strong>${escapeHtml(formatDuration(getPeaceShieldRemainingSeconds()))}</strong></p>
+    </div>
+    <footer><button type="button" data-shield-cancel autofocus>Cancel</button><button type="button" data-shield-continue>Continue sending</button></footer>`;
+  let settled = false;
+  const finish = accepted => {
+    if (settled) return;
+    settled = true;
+    modal.removeEventListener("close", parentClosed);
+    const current = modal.open && modalBody.firstElementChild === view
+      && state === currentState && getOnlineSessionRequestScope() === scope;
+    dialog.close();
+    dialog.remove();
+    if (current && focused?.isConnected) focused.focus({ preventScroll: true });
+    if (accepted && current) retry({ key });
+  };
+  const parentClosed = () => finish(false);
+  modal.addEventListener("close", parentClosed);
+  dialog.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    finish(false);
+  });
+  dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
+  dialog.addEventListener("close", () => finish(false));
+  dialog.addEventListener("click", event => { if (event.target === dialog) finish(false); });
+  dialog.querySelectorAll("[data-shield-cancel]").forEach(button => button.addEventListener("click", () => finish(false)));
+  dialog.querySelector("[data-shield-continue]").addEventListener("click", () => finish(true));
+  document.body.append(dialog);
+  dialog.showModal();
+  dialog.querySelector("footer [data-shield-cancel]").focus();
+  return false;
+}
 
 function getOpenCityInfoId() {
   // Profile links replace the dialog in place, without its close cleanup.

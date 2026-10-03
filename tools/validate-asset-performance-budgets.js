@@ -196,7 +196,9 @@ const entrypointBudgets = {
   // Shared refresh preservation for cities, holdings, clan drafts, inventory,
   // equipment and Daily Login adds <8 KiB here, with no new script request.
   // Keep game.js and the aggregate offline-shell caps unchanged.
-  "modal-ui.js": (5 + 8) * 1024,
+  // Shield confirmation adds under 4 KiB of event-driven dialog code, with no
+  // images, timers, network requests or work in the rendering loop.
+  "modal-ui.js": (5 + 8 + 4) * 1024,
   "skills-ledger-ui.css": 37 * 1024,
   // Current main's Clan controls total 86,047 bytes, 31 over the previous cap.
   "clan-ledger-ui.css": 85 * 1024,

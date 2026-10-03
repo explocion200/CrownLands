@@ -231,8 +231,33 @@ async function main() {
     assert.equal(payload.sourceType,"tower");assert.equal(payload.targetType,"city");assert.equal(payload.army.troops,1003);assert.equal(payload.army.kind,"transfer");
     await evaluate("towerOrderQa.finishSend({ok:true})");
     await ready("!modal.open");
+    // Shield confirmation sits before the real Tower API call, including the
+    // incoming reinforcement path that also removes the sender's shield.
+    for (const mode of ["attack-from", "reinforce"]) {
+      await evaluate(`(() => {
+        const q=towerOrderQa;q.orders=[];
+        Object.assign(q.enemy,{owner:'enemy',ownerKind:'player',ownerUid:'shield-test-rival'});
+        state.itemEffects.shieldExpiresAtMs=Date.now()+7200000;
+        q.shield=state.itemEffects.shieldExpiresAtMs;
+        q.open(${JSON.stringify(mode)});q.setAmount(1003);
+        modalBody.querySelector('[data-tower-order-form]').requestSubmit();
+      })()`);
+      assert(await evaluate('!!document.getElementById("peaceShieldOrderDialog")&&towerOrderQa.orders.length===0'));
+      await evaluate('document.querySelector("#peaceShieldOrderDialog footer [data-shield-cancel]").click()');
+      assert(await evaluate('modal.open&&towerOrderQa.orders.length===0&&state.itemEffects.shieldExpiresAtMs===towerOrderQa.shield'));
+      await evaluate('modalBody.querySelector("[data-tower-order-form]").requestSubmit();document.querySelector("#peaceShieldOrderDialog [data-shield-continue]").click();modalBody.querySelector("[data-tower-order-form]").requestSubmit()');
+      assert.equal(await evaluate('towerOrderQa.orders.length'),1,'Approved Tower order must send once');
+      assert.equal(await evaluate('towerOrderQa.orders[0].army.troops'),1003);
+      await evaluate("towerOrderQa.finishSend({ok:true})");
+      await ready("!modal.open");
+    }
+    await evaluate(`towerOrderQa.orders=[];towerOrderQa.open('attack-from');towerOrderQa.setAmount(1003);
+      modalBody.querySelector('[data-tower-order-form]').requestSubmit();
+      holdingTowerSnapshots.set(towerOrderQa.tower.id,{...towerOrderQa.tower,ownershipRevision:999});
+      document.querySelector('#peaceShieldOrderDialog [data-shield-continue]').click()`);
+    assert.equal(await evaluate('towerOrderQa.orders.length'),0,'Lost Tower access must cancel an approved warning');
     assert.deepEqual(errors,[]);
-    console.log("Tower order scout disclosure, stale-route cancellation, ownership changes, failed-send retry and duplicate-submit protection passed.");
+    console.log("Tower order scout disclosure, stale-route cancellation, ownership changes, failed-send retry, shield confirmation and duplicate-submit protection passed.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { if (!await waitForProcessExit(browser.browserProcess)) { browser.browserProcess.kill(); await waitForProcessExit(browser.browserProcess); } await removeBrowserProfile(browser.profilePath); }
