@@ -9156,6 +9156,7 @@ function normalizeCombatForecast(raw = null) {
   const normalized = {
     version: COMBAT_FORECAST_VERSION,
     status,
+    captureProtectedUntilMs: Math.max(0, Number(raw.captureProtectedUntilMs) || 0),
     attackPowerPerTroop: Math.max(0, Number(raw.attackPowerPerTroop) || BASE_TROOP_ATTACK_POWER),
     swordmasteryLevel: Math.max(0, Math.floor(Number(raw.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(raw.swordmasteryPercent) || 0),
@@ -9176,7 +9177,7 @@ function normalizeCombatForecast(raw = null) {
     effectiveTroops: Math.max(1, Math.floor(Number(raw.effectiveTroops) || 1)),
     attackPower: Math.max(0, Math.floor(Number(raw.attackPower) || 0)),
     powerRatio: Math.max(0, Number(raw.powerRatio) || 0),
-    expectedOutcome: ["capture", "breach", "raid", "defeat", "wall_hold", "garrison_hold"].includes(raw.expectedOutcome)
+    expectedOutcome: ["capture", "victory_no_capture", "breach", "raid", "defeat", "wall_hold", "garrison_hold"].includes(raw.expectedOutcome)
       ? raw.expectedOutcome
       : "defeat",
     estimatedSurvivors: Math.max(0, Math.floor(Number(raw.estimatedSurvivors) || 0)),
@@ -10785,6 +10786,7 @@ function normalizeBattleReports(reports) {
         scoutDisclosure: normalizeDefenderScoutDisclosure(report.scoutDisclosure),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
+        captureBlockedReason: report.captureBlockedReason === "former_clan_protection" ? "former_clan_protection" : "",
         xpAwarded: count(report.xpAwarded),
         goldAwarded: count(report.goldAwarded),
         troopsAwarded: count(report.troopsAwarded),
@@ -13083,6 +13085,7 @@ function applyServerArmyResult(result = null, options = {}) {
   if (
     newestPlayerReport?.type === "attack"
     && newestPlayerReport.outcome === "victory"
+    && result.captureBlockedReason !== "former_clan_protection"
     && !resultTargetIsCamp
   ) {
     const capturedCity = cityById(newestPlayerReport.cityId);
@@ -27224,7 +27227,7 @@ function confirmClanDisband() {
       <p>${formingRallyCount
         ? `${formatNumber(formingRallyCount)} forming ${formingRallyCount === 1 ? "rally" : "rallies"} will be cancelled and committed troops will return.`
         : "Any forming rallies will be cancelled and committed troops will return."} Launched Rallies are recalled automatically, without consuming a Recall Horn.</p>
-      <p>Other members can join another clan immediately. Your 1-hour clan cooldown begins when the clan is disbanded. Former members cannot attack each other's cities for 24 hours.</p>
+      <p>Other members can join another clan immediately. Your 1-hour clan cooldown begins when the clan is disbanded. Former members can fight each other, but cannot capture each other's cities for 24 hours.</p>
       <footer>
         <button type="button" class="profile-secondary-btn" data-clan-disband-confirm="cancel">Keep Clan</button>
         <button type="button" class="danger-action" data-clan-disband-confirm="accept">Disband Clan Permanently</button>
@@ -27593,8 +27596,8 @@ async function handleClanClick(event) {
     const details = {
       promote: ["Promote clan member?", `Promote ${name} to Officer. Officers may review applications and create Rallies.`, "Promote"],
       demote: ["Demote clan officer?", `Return ${name} to the Member role.`, "Demote"],
-      kick: ["Remove clan member?", `Remove ${name} from your clan. Current clanmates cannot attack this ruler's cities for 24 hours. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
-      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 1-hour join cooldown begins. Your former clanmates cannot attack your cities for 24 hours. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
+      kick: ["Remove clan member?", `Remove ${name} from your clan. Current clanmates can attack this ruler, but cannot capture their cities for 24 hours. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
+      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 1-hour join cooldown begins. Former clanmates can attack you, but cannot capture your cities for 24 hours. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
     }[action];
     if (!await confirmClanLedgerAction(...details)) return;
     if (state?.clanId !== clanId || getCurrentOnlineUid() !== uid || clanUiLoading) return;
@@ -32287,13 +32290,23 @@ function updateTroopOrderPreview(source, target, route, { orderKind, amount, att
     return;
   }
 
+  const captureProtected = Number(combatForecast?.captureProtectedUntilMs) > Date.now();
+  const captureNotice = captureProtected
+    ? "Former-clan protection: attacks are allowed, but this city cannot be captured during the 24-hour departure window. Protection is checked again on arrival."
+    : "";
+  const attackProtectionNotice = getAttackProtectionNotice(retaliationId ? null
+    : normalizeAttackProtectionSnapshot(attackProtectionPreview));
+  if (actionNotice) {
+    actionNotice.textContent = [captureNotice, attackProtectionNotice].filter(Boolean).join(" ");
+    actionNotice.hidden = !actionNotice.textContent;
+  }
   const report = getScoutReportForTarget(target);
   if (!report) {
     const attackProtection = retaliationId ? null : normalizeAttackProtectionSnapshot(attackProtectionPreview)
       || createAttackProtectionSnapshot(source, target, amount, "player");
     const protectionNotice = getAttackProtectionNotice(attackProtection);
     const notice = modalBody.querySelector("#troopSliderActionNotice");
-    if (notice) { notice.textContent = protectionNotice || ""; notice.hidden = !protectionNotice; }
+    if (notice) { notice.textContent = [captureNotice, protectionNotice].filter(Boolean).join(" "); notice.hidden = !notice.textContent; }
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
@@ -32332,7 +32345,7 @@ function updateTroopOrderPreview(source, target, route, { orderKind, amount, att
     : preview.breachCompleted
       ? "Likely wall breach"
       : preview.success
-        ? "Likely capture"
+        ? captureProtected ? "Likely victory — city cannot be captured" : "Likely capture"
         : siege?.breached
           ? "Walls breached — garrison likely holds"
           : siege
@@ -39117,7 +39130,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
   const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
   const rawCombatRule = value.combatRule && typeof value.combatRule === "object" ? value.combatRule : {};
-  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid"]
+  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid", "former_clan_protection"]
     .includes(rawCombatRule.id)
     ? rawCombatRule.id
     : "normal_capture";
@@ -39260,6 +39273,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
     combatRule: {
       id: combatRuleId,
       captureAllowed: rawCombatRule.captureAllowed !== false,
+      captureProtectedUntilMs: Math.max(0, Number(rawCombatRule.captureProtectedUntilMs) || 0),
       breachRequired: rawCombatRule.breachRequired === true,
       maxDefenderLossPercent: Math.max(0, Number(rawCombatRule.maxDefenderLossPercent) || 0),
     },
@@ -39604,6 +39618,9 @@ function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", re
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") {
     return "The Citadel Legion returned the holding to neutral control";
   }
+  if (snapshot.combatRule?.id === "former_clan_protection" && snapshot.outcome === "victory") {
+    return viewerRole === "attacker" ? "Your side won — city ownership unchanged" : "Opponent won — you keep the city";
+  }
   if (snapshot.combatRule?.id === "protected_raid") return "Protected raid completed — no capture";
   if (snapshot.combatRule?.id === "clan_tower_raid" && snapshot.outcome === "victory") {
     return viewerRole === "attacker" ? "Your side won — Tower ownership unchanged" : "Opponent won — your clan keeps the Tower";
@@ -39644,6 +39661,7 @@ function renderRallyParticipantResults(snapshot = null) {
 }
 
 function getBattleRuleLabel(snapshot = null) {
+  if (snapshot?.combatRule?.id === "former_clan_protection") return "Former-clan protection — attacks allowed, city capture disabled for 24 hours";
   if (snapshot?.combatRule?.id === "clan_tower_raid") return "One Clan Tower per clan — attack allowed, capture disabled";
   if (snapshot?.target?.targetType === "camp") return Number(snapshot.defenseCombatVersion) >= DEFENSE_COMBAT_VERSION
     ? "Camp combat — each player’s soldier-defense bonuses apply; no walls"
@@ -39731,6 +39749,9 @@ function renderBattleRewards(report = null) {
 }
 
 function getLegacyBattleResultLabel(report = null) {
+  if (report?.captureBlockedReason === "former_clan_protection") {
+    return report.type === "defense" ? "Opponent won — you keep the city" : "Your side won — city ownership unchanged";
+  }
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
     return "The Citadel Legion damaged the holding";
   }

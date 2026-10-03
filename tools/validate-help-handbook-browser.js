@@ -68,7 +68,7 @@ async function main() {
       await evaluate(`document.querySelector('#search').value='shield';document.querySelector('#search').dispatchEvent(new Event('input'))`);
       assert(await evaluate(`document.querySelectorAll('.topic-card').length > 1`));
       await evaluate(`document.querySelector('#search').value='former';document.querySelector('#search').dispatchEvent(new Event('input'))`);
-      assert(await evaluate(`/24 hours/.test(document.querySelector('#article').textContent) && /cannot attack/.test(document.querySelector('#article').textContent)`));
+      assert(await evaluate(`/24 hours/.test(document.querySelector('#article').textContent) && /cannot capture/.test(document.querySelector('#article').textContent)`));
       await screenshot(`${width}x${height}-search`);
       await evaluate(`document.querySelector('#search').value='<img src=x onerror=alert(1)>';document.querySelector('#search').dispatchEvent(new Event('input'))`);
       assert(await evaluate(`document.querySelectorAll('.topic-card').length === 0 && !document.querySelector('#article img[onerror]')`));
@@ -122,7 +122,7 @@ async function main() {
           `(() => {const button=document.createElement('button');button.dataset.clanAction='${action}';button.dataset.memberId='qa-peer';
             window.departureConfirmation=handleClanClick({target:button});})()`);
         await delay(250);
-        assert(await evaluate(`modal.open && /24 hours/.test(modalBody.textContent) && /cannot attack/.test(modalBody.textContent)`));
+        assert(await evaluate(`modal.open && /24 hours/.test(modalBody.textContent) && /cannot capture/.test(modalBody.textContent)`));
         await screenshot(`${width}x${height}-${action}`);
         const visible = await evaluate(`(() => {
           const footer=modalBody.querySelector('footer');footer.scrollIntoView({block:'end'});
@@ -134,6 +134,58 @@ async function main() {
         await evaluate(`modalBody.querySelector('[data-clan-${action === "disband" ? "disband" : "ledger"}-confirm="cancel"]').click();window.departureConfirmation`);
         assert.equal(await evaluate("modal.open"), false);
         await delay(30);
+      }
+    }
+    // Use the real troop composer and report renderer with synthetic combat data.
+    await evaluate(`(() => {
+      clearSelection(false);setAnimationModePreference('off');clearOnlineServerReportWatcher();
+      const source=playerCities().find(city=>city.troops>0),target=state.cities.find(city=>city.owner==='neutral'&&!isStronghold(city)&&!isProtectedMainCity(city));
+      window.captureQa={source:{...source,troops:5000},target:{...target,name:'Protected City',owner:'enemy',ownerKind:'player',ownerUid:'qa-rival',troops:100},scouted:false};
+      const q=captureQa,lookup=cityById,lookupTarget=getArmyTargetById;
+      cityById=id=>id===q.source.id?q.source:id===q.target.id?q.target:lookup(id);
+      getArmyTargetById=id=>id===q.target.id?q.target:lookupTarget(id);
+      getTroopSliderSendLimit=source=>source.troops;supportsAuthoritativeArmyRoutes=()=>false;supportsSiegeCombat=()=>false;
+      createAttackProtectionSnapshot=()=>null;
+      getScoutReportForTarget=()=>q.scouted?{troops:100,totalDefense:100,expiresAtMs:Date.now()+3600000,ownerUid:'qa-rival'}:null;
+      q.open=()=>{selectedSourceId=q.source.id;selectedTargetId=q.target.id;selectedTroopAmount=1000;sendMode=true;
+        showTroopSliderModalWithRoute(q.source,q.target,{points:[{x:source.x,y:source.y},{x:target.x,y:target.y}],length:1000},
+          {orderKind:'attack',combatForecast:{version:COMBAT_FORECAST_VERSION,status:'unavailable',captureProtectedUntilMs:Date.now()+86400000}});
+      };
+    })()`);
+    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: height < 600 });
+      for (const scouted of [false, true]) {
+        await evaluate(`captureQa.scouted=${scouted};captureQa.open()`);
+        await delay(250);
+        assert(await evaluate(`!document.querySelector('#troopSliderActionNotice').hidden && /attacks are allowed.*cannot be captured/.test(document.querySelector('#troopSliderActionNotice').textContent)`));
+        if (scouted) assert(await evaluate(`/Likely victory.*cannot be captured/.test(document.querySelector('#troopSliderPreview').textContent)`));
+        await evaluate(`document.querySelector('#troopSliderActionNotice').scrollIntoView({block:'center'})`);
+        assert(await evaluate(`modal.scrollWidth<=modal.clientWidth+1 && modal.getBoundingClientRect().right<=innerWidth+1`));
+        await screenshot(`${width}x${height}-capture-notice-${scouted}`);
+        await evaluate("modal.close();clearSelection(false)");
+        await delay(50);
+      }
+      for (const role of ["attacker", "defender"]) {
+        await evaluate(`(async()=>{
+          const q=captureQa,s={modelVersion:1,battleId:'capture-qa',target:{id:q.target.id,name:q.target.name,regionId:getCityRegionId(q.target),targetType:'city',level:1},
+            attacker:{ownerUid:getCurrentOnlineUid()||'qa-attacker',ownerName:'Attacker',startingTroops:1000,losses:100,survivors:900,effectivePower:2000},
+            defender:{ownerUid:'qa-rival',ownerName:'Departing ruler',startingTroops:100,losses:100,survivors:0,effectivePower:100},
+            totals:{attackers:1000,defenders:100,attackerLosses:100,defenderLosses:100,attackerSurvivors:900,defenderSurvivors:0},
+            combatRule:{id:'former_clan_protection',captureAllowed:false,captureProtectedUntilMs:Date.now()+86400000},outcome:'victory'};
+          if ('${role}'==='defender') {s.attacker.ownerUid='qa-attacker';s.defender.ownerUid=getCurrentOnlineUid()||'qa-defender';}
+          loadDetailedBattleSnapshot=async()=>normalizeDetailedBattleSnapshot(s);
+          const report={id:'capture-qa',battleId:s.battleId,type:'${role === "attacker" ? "attack" : "defense"}',outcome:'${role === "attacker" ? "victory" : "held"}',
+            cityId:s.target.id,cityName:s.target.name,regionId:s.target.regionId,occurredAtMs:Date.now(),summary:'Battle won; city ownership unchanged.',
+            captureBlockedReason:'former_clan_protection'};
+          if(!getLegacyBattleResultLabel(normalizeBattleReports([report])[0]).includes('${role === "attacker" ? "city ownership unchanged" : "you keep the city"}')) throw Error('Fallback report lost capture protection');
+          state.battleReports=[report];await showBattleReportDetail(report.id);
+        })()`);
+        await delay(250);
+        assert(await evaluate(`/Former-clan protection/.test(modalBody.textContent) && /${role === "attacker" ? "city ownership unchanged" : "you keep the city"}/.test(modalBody.textContent)`));
+        assert(await evaluate(`modal.scrollWidth<=modal.clientWidth+1 && modal.getBoundingClientRect().right<=innerWidth+1`));
+        await screenshot(`${width}x${height}-protected-battle-${role}`);
+        await evaluate("modal.close()");
+        await delay(50);
       }
     }
     assert.deepEqual(errors, []);

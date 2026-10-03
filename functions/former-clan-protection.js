@@ -26,7 +26,7 @@ function departureProtection(previous, departingUid, memberUids, identity, nowMs
   };
 }
 
-function blockedUntil(record, attackerUid, identity, nowMs) {
+function protectedUntil(record, attackerUid, identity, nowMs) {
   if (!attackerUid || !sameRealm(record, identity)) return 0;
   return (Array.isArray(record.attackers) ? record.attackers : []).reduce((until, row) => (
     row?.uid === attackerUid && Number.isSafeInteger(row.expiresAtMs) && row.expiresAtMs > nowMs
@@ -34,4 +34,4 @@ function blockedUntil(record, attackerUid, identity, nowMs) {
   ), 0);
 }
 
-module.exports = { DURATION_MS, departureProtection, blockedUntil };
+module.exports = { DURATION_MS, departureProtection, protectedUntil };
