@@ -7869,7 +7869,7 @@ function offensiveShieldCooldownPatch(profile, uid, target, kind, nowMs) {
   }) ? COMBAT_AUTHORIZATION.shieldCooldownPatch(profile, RESET_GENERATION, nowMs) : {};
 }
 
-async function readRetaliationAuthorization(transaction, { uid, recordId, target, targetRef, targetType, kind, nowMs }) {
+async function readRetaliationAuthorization(transaction, { uid, recordId, target, targetRef, targetType, kind, nowMs, forLaunch = false }) {
   if (!recordId) return null;
   if (kind !== "attack" || targetType !== "city" || isStronghold(target) || !getOwnerUid(target) || getOwnerUid(target) === uid) {
     throw new HttpsError("failed-precondition", "Retaliation is only available for an attack on the exact captured regular city.");
@@ -7877,15 +7877,25 @@ async function readRetaliationAuthorization(transaction, { uid, recordId, target
   const ref = db.doc(`players/${uid}/retaliationWindows/${recordId}`);
   const snap = await transaction.get(ref);
   const record = snap.exists ? snap.data() : null;
-  const message = COMBAT_AUTHORIZATION.retaliationError(record, {
+  const identity = {
     uid, cityId: target.id, regionId: target.regionId, ...combatAuthorizationRealm(), nowMs,
-  });
+  };
+  const message = COMBAT_AUTHORIZATION.retaliationError(record, identity);
   if (message || record.cityPath !== targetRef.path) {
     throw new HttpsError("failed-precondition", message || "Retaliation is not valid for this city.", {
       reason: "retaliation-unavailable", retaliationId: recordId,
     });
   }
-  return { ref, record: { ...record, id: recordId } };
+  // Repeated losses can leave older unused grants for this city. Read them in
+  // the launch transaction so different grant IDs cannot authorize two sends.
+  let refs = [ref];
+  if (forLaunch) {
+    const cityGrants = await transaction.get(db.collection(`players/${uid}/retaliationWindows`)
+      .where("cityPath", "==", targetRef.path));
+    refs = cityGrants.docs.filter(doc => !COMBAT_AUTHORIZATION.retaliationError(doc.data(), identity))
+      .map(doc => doc.ref);
+  }
+  return { refs, record: { ...record, id: recordId } };
 }
 
 function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
@@ -7895,7 +7905,9 @@ function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
   }
   const used = { status: "used", usedArmyId: movement.id, usedAtMs: nowMs };
   // Both writes belong to the launch transaction: a failed dispatch consumes nothing.
-  transaction.set(authorization.ref, { ...used, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  for (const ref of authorization.refs) {
+    transaction.set(ref, { ...used, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
   movement.retaliationAuthorization = { ...authorization.record, ...used };
 }
 
@@ -26427,7 +26439,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         : Math.max(0, Math.floor(safeNumber(source.troops, 0)));
       const requestedTroops = kind === "scout" ? 1 : clampInt(order.requestedTroops || order.troops, 1, Math.max(1, availableTroops));
       const retaliation = await readRetaliationAuthorization(transaction, {
-        uid, recordId: order.retaliationId, target, targetRef, targetType, kind, nowMs,
+        uid, recordId: order.retaliationId, target, targetRef, targetType, kind, nowMs, forLaunch: true,
       });
       if (retaliation && (order.requestedTroops || order.troops) > availableTroops) {
         throw new HttpsError("failed-precondition", "Not enough troops in your Tower garrison. Your retaliation opportunity has not been used.");
@@ -26907,7 +26919,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       })
       : null;
     const retaliation = await readRetaliationAuthorization(transaction, {
-      uid, recordId: order.retaliationId, target, targetRef, targetType: order.targetType, kind: resolvedKind, nowMs,
+      uid, recordId: order.retaliationId, target, targetRef, targetType: order.targetType, kind: resolvedKind, nowMs, forLaunch: true,
     });
     if (retaliation && (order.requestedTroops || order.troops) > sourceTroops) {
       throw new HttpsError("failed-precondition", "Not enough troops in the source city. Your retaliation opportunity has not been used.");

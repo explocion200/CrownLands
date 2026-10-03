@@ -247,18 +247,23 @@ async function main() {
   assert.equal((await call("previewArmyProtection", high, { ...previewData, retaliationId: a.id })).attackProtection.mode, "normal");
   await deny("sendArmyOrder", high, order(hSource, cSource, 5000, { retaliationId: a.id }), /exact city/);
 
-  const attempts = [order(hSource, targets[0], 8000, { retaliationId: a.id }), order(hSource, targets[0], 8000, { retaliationId: a.id })];
+  // Model a prior qualifying loss of the same city that still has time left.
+  const olderRef = grants(high).doc(`older_${a.id}`);
+  await olderRef.set({ ...a, id: olderRef.id, capturedAtMs: a.capturedAtMs - 1000, expiresAtMs: a.expiresAtMs - 1000 });
+  const attempts = [order(hSource, targets[0], 8000, { retaliationId: a.id }), order(hSource, targets[0], 8000, { retaliationId: olderRef.id })];
   const concurrent = await Promise.all(attempts.map(data => invoke("sendArmyOrder", high, data)));
   assert.equal(concurrent.filter(result => result.ok).length, 1, JSON.stringify(concurrent));
   const winner = concurrent.find(result => result.ok).result.movement;
   assert.equal(winner.attackProtection, null);
   assert.equal((await capture.ref.get()).data().usedArmyId, winner.id);
+  assert.equal((await olderRef.get()).data().usedArmyId, winner.id, "A second grant for the same city survived dispatch");
   const highCooldown = (await profile(high)).peaceShieldCooldownExpiresAtMs;
   assert.equal(highCooldown, winner.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
   const duplicate = await call("sendArmyOrder", high, attempts.find(data => data.army.id === winner.id));
   assert(duplicate.duplicate, "Same request was not idempotent");
   assert.equal((await profile(high)).peaceShieldCooldownExpiresAtMs, highCooldown);
   await deny("sendArmyOrder", high, order(hSource, targets[0], 5000, { retaliationId: a.id }), /already been used/);
+  await deny("sendArmyOrder", high, order(hSource, targets[0], 5000, { retaliationId: olderRef.id }), /already been used/);
   const lockAfterUse = policy.abandonLockExpiresAt((await cityRef(targets[0]).get()).data(), low.uid, Date.now());
   assert.equal(lockAfterUse, a.expiresAtMs, "Using retaliation changed the capturer's original lock");
   assert.equal((await resolve(high, winner, 25 * 3_600_000)).outcome, "victory", "Retaliation expired in transit or depended on the original capturer remaining owner");

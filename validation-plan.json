@@ -4,14 +4,15 @@
   "coverage": [
     {
       "paths": [
-        "functions/combat-authorization.js"
+        "functions/combat-authorization.js",
+        "functions/index.js"
       ],
       "tests": [
         "tools/validate-combat-authorization.js",
         "tools/validate-weaker-kingdom-protection.js",
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Extend new server-created grants and the matching capturer abandon lock to 24 hours. Cover exact expiry, saved deadlines, inverse King Power qualification, city and Tower dispatch, transactional consumption, concurrent retries, travel after expiry, recall and defeat. Existing shield cooldown, ownership, shield, Main City, realm and troop checks remain covered."
+      "reason": "Extend new server-created grants and the matching capturer abandon lock to 24 hours. Cover exact expiry, saved deadlines, inverse King Power qualification, city and Tower dispatch, transactional consumption, concurrent retries, travel after expiry, recall and defeat. Existing shield cooldown, ownership, shield, Main City, realm and troop checks remain covered. Read all grants for the exact immutable city path inside the launch transaction and consume every currently valid same-city grant together. Prevent concurrent launches through different capture IDs, while preserving other cities and expired/used records."
     },
     {
       "paths": [
