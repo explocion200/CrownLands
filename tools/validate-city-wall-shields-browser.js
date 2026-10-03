@@ -80,6 +80,22 @@ async function main() {
       await wait(250);
       const detailsShot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(dir, `${width}x${height}-city-walls.png`), Buffer.from(detailsShot.data, "base64"));
+      for (const expired of [false, true]) {
+        const detail = await evaluate(`(() => {
+          const expiresAtMs=Date.now()+(${expired} ? -1000 : 86400000);
+          applyServerProfilePatch({troopProduction25Exclusion:{startsAtMs:expiresAtMs-1728000000,expiresAtMs}});
+          const city=wallQa.cities[2];city.level=100;showCityInfoModal(city.id);
+          return {rate:getCityStats(city).baseTroopProductionPerHour,reward:getLevelUpTroopReward(100),
+            walls:getCityStats(city).baseCityWalls,label:modalBody.querySelector('[data-cd-value="production"]').textContent,
+            expected:formatNumber(${expired ? 19034 : 15227})+'/h',overflow:modal.scrollWidth>modal.clientWidth+1};
+        })()`);
+        assert.equal(detail.rate, expired ? 19034 : 15227);
+        assert.equal(detail.reward, (expired ? 19034 : 15227) * 54);
+        assert.equal(detail.walls, 3000000);
+        assert(detail.label.startsWith(detail.expected), JSON.stringify(detail));
+        assert(!detail.overflow);
+      }
+      await evaluate("state.troopProduction25Exclusion=null");
       await evaluate("modal.close()");
       results.push({ width, height, before, repaired, after });
       console.log(`City wall shields browser passed at ${width}x${height}: production and wall values, own/rival cities, automatic repair, attack feedback, expiry and ownership.`);

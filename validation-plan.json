@@ -117,6 +117,32 @@
         "tools/validate-economy-balance.js"
       ],
       "reason": "Update fixed portfolio and Hero troop benchmarks for the approved 25% increase. Scale the production-day guard by 1/1.25 while keeping the independent capture, wall and Gold guards unchanged."
+    },
+    {
+      "paths": [
+        "functions/troop-production-policy.js",
+        "tools/admin-troop-production-exclusions.js",
+        "tools/validate-troop-production-exclusions.js",
+        "firestore.rules",
+        "tools/validate-gear-bonus-gameplay.js",
+        "functions/test/emulator-camp-power-rewards.js"
+      ],
+      "tests": [
+        "tools/validate-troop-production-exclusions.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/validate-city-wall-shields-browser.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-camp-power-rewards.js"
+      ],
+      "reason": "Verify the confirmed two-account 20-day exception: exact automatic expiry, pre-deployment and boundary accrual with timed items, unchanged bonuses/Gold/walls, old production-based rewards and King Power, client display, rename/profile rebuild persistence, client write denial, and scoped atomic deployment activation with idempotent retries. Actual Core collection and camp payouts exercise the authoritative policy."
+    },
+    {
+      "paths": [
+        "docs/TROOP_PRODUCTION_EXCLUSION_DEPLOYMENT.md"
+      ],
+      "tests": [],
+      "reason": "Document the confirmed deployment start, coordinated activation procedure, verification and retry handling; no production write or deployment occurs during preparation."
     }
   ]
 }

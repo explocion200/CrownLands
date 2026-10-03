@@ -101,6 +101,16 @@ async function main() {
   }
   const gold=all.find(c=>c.campType==="gold");
   const warband=all.find(c=>c.campType==="troops");
+  for (const expired of [false, true]) {
+    const expiresAtMs = Date.now() + (expired ? -1000 : 86400000);
+    await profile.update({ troopProduction25Exclusion: { startsAtMs: expiresAtMs - 20 * 86400000, expiresAtMs } });
+    await seed("troops", 20000000, 3); await hold(warband, actor, claim);
+    const result = await call("resolveRewardCampPayout", actor, { campId: warband.id, regionId: warband.regionId });
+    const rate = expired ? 19034 : 15227;
+    assert.equal(result.globalStats.baseTroopPerHour, rate);
+    assert.equal(result.powerReward.tier, "middle");
+    assert.equal(result.reward, rate * 2, "Camp troop payout did not follow account exclusion expiry");
+  }
   // Leave 50k power of headroom, then cross the boundary with the troop reward.
   // City soldiers contribute 2 army power plus 0.075 infrastructure power each.
   const nearBoundaryTroops=5000+Math.floor((7813452-50000-weakFixturePower)/2.075);

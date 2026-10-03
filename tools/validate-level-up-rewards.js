@@ -212,7 +212,7 @@ assert.doesNotMatch(
   "Server level-up troop calculation consults player or destination-city state."
 );
 assert.doesNotMatch(
-  clientLevelUpTroopRewardSource,
+  clientLevelUpTroopRewardSource.replace("state?.troopProduction25Exclusion", "serverPolicy"),
   /state|mainCity|cityById|getMainRewardCity/,
   "Client level-up troop calculation consults player or destination-city state."
 );
@@ -341,7 +341,7 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /while\s*\(next\.xp\s*>=\s*getXpRequiredForLevel\(next\.level\)\)[\s\S]*?next\.level\s*\+=\s*1[\s\S]*?goldReward\s*\+=\s*getLevelUpGoldReward\(next\.level\)[\s\S]*?troopReward\s*\+=\s*getLevelUpTroopReward\(next\.level\)/,
+  /while\s*\(next\.xp\s*>=\s*getXpRequiredForLevel\(next\.level\)\)[\s\S]*?next\.level\s*\+=\s*1[\s\S]*?goldReward\s*\+=\s*getLevelUpGoldReward\(next\.level\)[\s\S]*?troopReward\s*\+=\s*getLevelUpTroopReward\(next\.level, troopProduction25Exclusion, nowMs\)/,
   "Server multi-level XP awards must add each crossed level reward exactly once."
 );
 requireMatch(

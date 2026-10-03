@@ -479,11 +479,49 @@ async function troopProductionCases() {
     assert(afterReplay.troopFloat - beforeReplay < expectedRate / 60, "Repeated collection credited an hour twice");
   }
   const currentRelease = identity.releaseId;
+  const duration = 20 * 86400000;
+  for (const expired of [false, true]) {
+    const now = Date.now(), startedAt = now - 3600000;
+    const expiresAtMs = expired ? now - 1800000 : now + duration;
+    const exclusion = { startsAtMs: expiresAtMs - duration, expiresAtMs };
+    const itemEffects = { warDrumsStartedAtMs: now - 2700000, warDrumsExpiresAtMs: now - 900000 };
+    await ref.set({ level: 100, troops: 1000, troopFloat: 1000.25, productionUpdatedAtMs: startedAt }, { merge: true });
+    await profileRef(actor).set({ troopProduction25Exclusion: exclusion, itemEffects,
+      playerName: "Renamed Ruler", economyUpdatedAtMs: startedAt, lastSeenAtMs: startedAt }, { merge: true });
+    const result = await call("collectEconomy", actor, { troopProduction25Exclusion: null });
+    assert.deepEqual(result.currentUser.troopProduction25Exclusion, exclusion, "Client request bypassed trusted policy");
+    const city = (await ref.get()).data(), stats = (await db.doc(`players/${actor.uid}/stats/global`).get()).data();
+    assert.equal(stats.baseTroopPerHour, expired ? 19034 : 15227);
+    assert.equal(stats.baseReplacementPower, (expired ? 19034 : 15227) * 12);
+    const end = city.productionUpdatedAtMs;
+    const oldMs = expired ? expiresAtMs - startedAt : end - startedAt;
+    const newMs = expired ? end - expiresAtMs : 0;
+    const bonus = require("../economy-config.json").shopItems.war_drums_30m.bonusPercent / 100;
+    const boosted = expired ? (15227 + 19034) * 0.25 * bonus : 15227 * 0.5 * bonus;
+    const expected = 1000.25 + (15227 * oldMs + 19034 * newMs) / 3600000 + boosted;
+    assert(Math.abs(city.troopFloat - expected) < 0.001, "Accrual crossed expiry or War Drums incorrectly");
+    assert.equal((await clientPatch(actor, profileRef(actor).path, "troopProduction25Exclusion", "forged")).status, 403);
+    const deletion = await fetch(`${restRoot}/${profileRef(actor).path}?updateMask.fieldPaths=troopProduction25Exclusion`, {
+      method: "PATCH", headers: { authorization: `Bearer ${actor.token}`, "content-type": "application/json" }, body: '{"fields":{}}',
+    });
+    assert.equal(deletion.status, 403, "Client deleted the trusted exception");
+    await call("claimStartingCity", actor, { playerName: "Renamed Ruler" });
+    assert.deepEqual((await profile(actor)).troopProduction25Exclusion, exclusion, "Reclaim restarted or removed the timer");
+  }
+  const newActor = await user("PolicySpoof");
+  assert.equal((await clientPatch(newActor, profileRef(newActor).path, "troopProduction25Exclusion", "forged")).status, 403,
+    "New client profile can seed its own policy");
+  const resetWindow = { startsAtMs: Date.now(), expiresAtMs: Date.now() + duration };
+  resetWindow.expiresAtMs = resetWindow.startsAtMs + duration;
+  await profileRef(newActor).set({ playerName: "PolicySpoof", troopProduction25Exclusion: resetWindow });
+  const resetClaim = await call("claimStartingCity", newActor, { playerName: "PolicySpoof" });
+  assert.deepEqual(resetClaim.currentUser.troopProduction25Exclusion, resetWindow, "Fresh profile lost account policy");
+  assert.deepEqual((await profile(newActor)).troopProduction25Exclusion, resetWindow);
   try {
     identity.releaseId = "crownlands-2026-10-03-city-wall-stages-v3";
     await deny("collectEconomy", actor, {}, /refresh|update/i);
   } finally { identity.releaseId = currentRelease; }
-  console.log("Flat 25% troop production passed: all stages, Main City, hourly persistence, fractions, concurrent collection and stale-client rejection.");
+  console.log("Flat 25% troop production passed: all stages, persistence, fractions, concurrent collection, exclusion expiry, War Drums, rename/reclaim, policy authorization and stale-client rejection.");
 }
 
 async function formerClanCases() {

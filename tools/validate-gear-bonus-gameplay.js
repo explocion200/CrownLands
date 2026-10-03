@@ -317,6 +317,7 @@ async function main() {
   ]);
   productionProfile.mainCityId = "main_city";
   const productionContext = {
+    TROOP_PRODUCTION_POLICY: require("../functions/troop-production-policy"),
     COMMON_GEAR: commonGear,
     CITY_LEVEL_STATS: { victoryPointsBase: 100, victoryPointsPerLevel: 0, victoryPointsExponent: 1, victoryPointsExponentScale: 0, troopProductionPerVictoryPoint: 10 },
     WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT: 30,
@@ -596,6 +597,7 @@ async function main() {
   vm.createContext(clientStatsContext);
   vm.runInContext([
     extractFunction(clientSource, "getCityVictoryPoints"),
+    extractFunction(clientSource, "getTroopBaseFactor"),
     extractFunction(clientSource, "getBaseCityTroopProductionPerHour"),
     extractFunction(clientSource, "calculateGoldProductionRates"),
     extractFunction(clientSource, "calculateTroopProductionRates"),

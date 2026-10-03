@@ -7820,6 +7820,7 @@ function getLevelUpTroopRewardHours(level) {
 function getLevelUpTroopReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
   const production = getCityStats({ level: current }, {
+    troopProduction25Exclusion: state?.troopProduction25Exclusion,
     includeSkillBoosts: false,
     includeTimedItemBoosts: false,
   });
@@ -9562,6 +9563,13 @@ function getCityVictoryPoints(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawVictoryPoints)));
 }
 
+function getTroopBaseFactor(value, now = Date.now()) {
+  const start = Number(value?.startsAtMs), end = Number(value?.expiresAtMs);
+  return Number.isSafeInteger(start) && start > 0 && Number.isSafeInteger(end)
+    && end - start === 1728000000 && now < end
+    ? 10.815 : CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+}
+
 function getBaseCityTroopProductionPerHour(level, factor = CITY_LEVEL_STATS.troopProductionPerVictoryPoint) {
   const rawTroops = getCityVictoryPoints(level) * factor;
   if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
@@ -9838,7 +9846,9 @@ function getCityStats(city, options = {}) {
   const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && !rewardCamp && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : getBaseCityTroopProductionPerHour(level);
+  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : getBaseCityTroopProductionPerHour(level,
+    getTroopBaseFactor(options.troopProduction25Exclusion
+      ?? (city.owner === "player" && state?.troopProduction25Exclusion)));
   const {
     baseTroopProductionPerHour,
     untimedTroopProductionPerHour,
@@ -12804,6 +12814,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.shopItems = normalizeShopItems(patch.shopItems);
     changed = true;
   }
+  if (patch.troopProduction25Exclusion !== undefined) {
+    state.troopProduction25Exclusion = patch.troopProduction25Exclusion;
+    changed = true;
+  }
   if (patch.itemEffects && typeof patch.itemEffects === "object") {
     state.itemEffects = normalizeItemEffects(patch.itemEffects);
     changed = true;
@@ -13500,6 +13514,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.skillPointSystemResetAtMs = normalizeTimestampMs(profile.skillPointSystemResetAtMs);
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.gear = normalizeCommonGearState(profile.gear);
+  state.troopProduction25Exclusion = profile.troopProduction25Exclusion || null;
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
   applyCombatCooldownProfile(profile);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
