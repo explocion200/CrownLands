@@ -57,26 +57,48 @@ async function main() {
         renderCities();return qa.read();
       })()`);
       assert(after.every(r => !r.shield && !r.blocked), "Expired or previous-owner shield still shown");
-      for (const [level, expected] of [[25,25000],[26,27412],[50,250000],[51,264255],
-        [75,1000000],[76,1044924],[100,3000000],[101,3030867]]) {
+      for (const [level, expected, troopsPerHour] of [[1,200,162],[25,25000,3514],[26,27412,3677],
+        [50,250000,8097],[51,264255,8286],[75,1000000,13315],[76,1044924,13545],
+        [100,3000000,19034],[101,3030867,19264],[150,6200000,31606],[200,11340888,45436]]) {
         const detail = await evaluate(`(() => {
           const city=wallQa.cities[2];city.level=${level};
           showCityInfoModal(city.id);
           modalBody.querySelector('[data-cd-value="walls"]').scrollIntoView({block:'center',behavior:'instant'});
           return {base:getCityStats(city).baseCityWalls,expectedLabel:formatNumber(${expected}),
             text:modalBody.querySelector('[data-cd-value="walls"]').textContent.replace(/,/g,''),
+            troopsPerHour:getCityStats(city).baseTroopProductionPerHour,
+            expectedProductionLabel:formatNumber(${troopsPerHour})+'/h',
+            productionText:modalBody.querySelector('[data-cd-value="production"]').textContent.replace(/,/g,''),
             overflow:modal.scrollWidth>modal.clientWidth+1};
         })()`);
         assert.equal(detail.base, expected);
         assert(detail.text.startsWith(detail.expectedLabel + ' '), JSON.stringify(detail));
-        assert(!detail.overflow, "Wall value overflowed City Info");
+        assert.equal(detail.troopsPerHour, troopsPerHour);
+        assert(detail.productionText.startsWith(detail.expectedProductionLabel + ' '), JSON.stringify(detail));
+        assert(!detail.overflow, "Wall or production value overflowed City Info");
       }
       await wait(250);
       const detailsShot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(dir, `${width}x${height}-city-walls.png`), Buffer.from(detailsShot.data, "base64"));
+      for (const expired of [false, true]) {
+        const detail = await evaluate(`(() => {
+          const expiresAtMs=Date.now()+(${expired} ? -1000 : 86400000);
+          applyServerProfilePatch({troopProduction25Exclusion:{startsAtMs:expiresAtMs-1728000000,expiresAtMs}});
+          const city=wallQa.cities[2];city.level=100;showCityInfoModal(city.id);
+          return {rate:getCityStats(city).baseTroopProductionPerHour,reward:getLevelUpTroopReward(100),
+            walls:getCityStats(city).baseCityWalls,label:modalBody.querySelector('[data-cd-value="production"]').textContent,
+            expected:formatNumber(${expired ? 19034 : 15227})+'/h',overflow:modal.scrollWidth>modal.clientWidth+1};
+        })()`);
+        assert.equal(detail.rate, expired ? 19034 : 15227);
+        assert.equal(detail.reward, (expired ? 19034 : 15227) * 54);
+        assert.equal(detail.walls, 3000000);
+        assert(detail.label.startsWith(detail.expected), JSON.stringify(detail));
+        assert(!detail.overflow);
+      }
+      await evaluate("state.troopProduction25Exclusion=null");
       await evaluate("modal.close()");
       results.push({ width, height, before, repaired, after });
-      console.log(`City wall shields browser passed at ${width}x${height}: own/rival cities, automatic repair, attack feedback, expiry and ownership.`);
+      console.log(`City wall shields browser passed at ${width}x${height}: production and wall values, own/rival cities, automatic repair, attack feedback, expiry and ownership.`);
     }
     fs.writeFileSync(path.join(dir, "browser.json"), JSON.stringify(results, null, 2));
   } finally {

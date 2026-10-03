@@ -1234,7 +1234,8 @@ const CITY_LEVEL_STATS = {
   wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 13.51875),
+  wallTroopsPerVictoryPoint: economyNumber("cityEconomy.wallTroopsPerVictoryPoint", 10.815),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
@@ -7819,6 +7820,7 @@ function getLevelUpTroopRewardHours(level) {
 function getLevelUpTroopReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
   const production = getCityStats({ level: current }, {
+    troopProduction25Exclusion: state?.troopProduction25Exclusion,
     includeSkillBoosts: false,
     includeTimedItemBoosts: false,
   });
@@ -9561,8 +9563,15 @@ function getCityVictoryPoints(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawVictoryPoints)));
 }
 
-function getBaseCityTroopProductionPerHour(level) {
-  const rawTroops = getCityVictoryPoints(level) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+function getTroopBaseFactor(value, now = Date.now()) {
+  const start = Number(value?.startsAtMs), end = Number(value?.expiresAtMs);
+  return Number.isSafeInteger(start) && start > 0 && Number.isSafeInteger(end)
+    && end - start === 1728000000 && now < end
+    ? 10.815 : CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+}
+
+function getBaseCityTroopProductionPerHour(level, factor = CITY_LEVEL_STATS.troopProductionPerVictoryPoint) {
+  const rawTroops = getCityVictoryPoints(level) * factor;
   if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
 }
@@ -9655,7 +9664,8 @@ function getBaseCityWalls(level, regularCity = true) {
   }
   if (normalizedLevel <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
 
-  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel);
+  // Preserve wall strength when normal troop production is rebalanced.
+  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint);
   const ratioStartHours = ratioStartTroopsPerHour > 0 && BASE_TROOP_DEFENSE_POWER > 0
     ? goldLinkedWall / (ratioStartTroopsPerHour * BASE_TROOP_DEFENSE_POWER)
     : CITY_LEVEL_STATS.wallProductionRatioMaximumHours;
@@ -9668,7 +9678,7 @@ function getBaseCityWalls(level, regularCity = true) {
         * Math.max(0, ratioProgress)
   );
   return safeWall(
-    getBaseCityTroopProductionPerHour(normalizedLevel)
+    getBaseCityTroopProductionPerHour(normalizedLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint)
       * BASE_TROOP_DEFENSE_POWER
       * targetProductionHours
   );
@@ -9836,7 +9846,9 @@ function getCityStats(city, options = {}) {
   const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && !rewardCamp && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : getBaseCityTroopProductionPerHour(level);
+  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : getBaseCityTroopProductionPerHour(level,
+    getTroopBaseFactor(options.troopProduction25Exclusion
+      ?? (city.owner === "player" && state?.troopProduction25Exclusion)));
   const {
     baseTroopProductionPerHour,
     untimedTroopProductionPerHour,
@@ -12802,6 +12814,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.shopItems = normalizeShopItems(patch.shopItems);
     changed = true;
   }
+  if (patch.troopProduction25Exclusion !== undefined) {
+    state.troopProduction25Exclusion = patch.troopProduction25Exclusion;
+    changed = true;
+  }
   if (patch.itemEffects && typeof patch.itemEffects === "object") {
     state.itemEffects = normalizeItemEffects(patch.itemEffects);
     changed = true;
@@ -13498,6 +13514,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.skillPointSystemResetAtMs = normalizeTimestampMs(profile.skillPointSystemResetAtMs);
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.gear = normalizeCommonGearState(profile.gear);
+  state.troopProduction25Exclusion = profile.troopProduction25Exclusion || null;
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
   applyCombatCooldownProfile(profile);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);

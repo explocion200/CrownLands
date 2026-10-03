@@ -48,6 +48,7 @@ if (String(REALM_CONFIG.worldTopology || "").toLowerCase() === "core-expansion-v
   throw new Error("Core expansion activation requires the single monthly shared realm.");
 }
 const ECONOMY_CONFIG = require("./economy-config.json");
+const TROOP_PRODUCTION_POLICY = require("./troop-production-policy");
 const {
   MINIMUM_NPC_CITIES_FOR_SPAWN,
   derivePlayerRegionSpawnEligibility,
@@ -675,7 +676,8 @@ const CITY_LEVEL_STATS = {
   wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.815),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 13.51875),
+  wallTroopsPerVictoryPoint: economyNumber("cityEconomy.wallTroopsPerVictoryPoint", 10.815),
 };
 const SKILL_CONFIG = {
   swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 100) },
@@ -4046,8 +4048,8 @@ function getCityVictoryPoints(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawVictoryPoints)));
 }
 
-function getBaseCityTroopProductionPerHour(level) {
-  const rawTroops = getCityVictoryPoints(level) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+function getBaseCityTroopProductionPerHour(level, factor = CITY_LEVEL_STATS.troopProductionPerVictoryPoint) {
+  const rawTroops = getCityVictoryPoints(level) * factor;
   if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
 }
@@ -4076,7 +4078,9 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
   const royalTaxDecreeGoldBonusPercent = options.includeRoyalTaxDecree !== false && !stronghold && royalTaxDecreeExpiresAtMs > nowMs
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const rawTroopProductionPerHour = stronghold ? 0 : getBaseCityTroopProductionPerHour(level);
+  const rawTroopProductionPerHour = stronghold ? 0 : getBaseCityTroopProductionPerHour(level,
+    TROOP_PRODUCTION_POLICY.factorAt(options.troopProduction25Exclusion ?? profile.troopProduction25Exclusion,
+      nowMs, CITY_LEVEL_STATS.troopProductionPerVictoryPoint));
   const {
     baseTroopProductionPerHour,
     untimedTroopProductionPerHour,
@@ -4202,7 +4206,8 @@ function getBaseCityWalls(level, regularCity = true) {
   }
   if (normalizedLevel <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
 
-  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel);
+  // Preserve wall strength when normal troop production is rebalanced.
+  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint);
   const ratioStartHours = ratioStartTroopsPerHour > 0 && BASE_TROOP_DEFENSE_POWER > 0
     ? goldLinkedWall / (ratioStartTroopsPerHour * BASE_TROOP_DEFENSE_POWER)
     : CITY_LEVEL_STATS.wallProductionRatioMaximumHours;
@@ -4215,7 +4220,7 @@ function getBaseCityWalls(level, regularCity = true) {
         * Math.max(0, ratioProgress)
   );
   return safeWall(
-    getBaseCityTroopProductionPerHour(normalizedLevel)
+    getBaseCityTroopProductionPerHour(normalizedLevel, CITY_LEVEL_STATS.wallTroopsPerVictoryPoint)
       * BASE_TROOP_DEFENSE_POWER
       * targetProductionHours
   );
@@ -4520,13 +4525,14 @@ function getTroopKingPower(troops = 0) {
   return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
 }
 
-function getCityInfrastructurePowerComponents(city = {}, bonuses = {}) {
+function getCityInfrastructurePowerComponents(city = {}, bonuses = {}, troopProduction25Exclusion = null, nowMs = Date.now()) {
   // Camp troops already count as army power; combat bonuses do not add infrastructure.
   if (!city || isRewardCamp(city)) {
     return { replacementPower: 0, defensivePower: 0, sustainableTroopPerHour: 0 };
   }
   const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const production = getCityProductionStats(city, {}, bonuses, {
+    troopProduction25Exclusion, nowMs,
     includeWarDrums: false,
     includeRoyalTaxDecree: false,
   });
@@ -4754,8 +4760,8 @@ function createGlobalStatsSnapshot({
     const city = entry.city || {};
     const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
     const stats = getCityProductionStats(city, profileForStats, resolvedBonuses, { nowMs });
-    const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses);
-    const basePowerComponents = getCityInfrastructurePowerComponents(city, {});
+    const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses, profile.troopProduction25Exclusion, nowMs);
+    const basePowerComponents = getCityInfrastructurePowerComponents(city, {}, profile.troopProduction25Exclusion, nowMs);
     totalCityTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
     replacementPower += powerComponents.replacementPower;
@@ -5647,9 +5653,10 @@ function getLevelUpTroopRewardHours(level) {
   );
 }
 
-function getLevelUpTroopReward(level) {
+function getLevelUpTroopReward(level, troopProduction25Exclusion = null, nowMs = Date.now()) {
   const current = Math.max(1, Math.floor(safeNumber(level, 1)));
   const production = getCityProductionStats({ level: current }, {}, {}, {
+    troopProduction25Exclusion, nowMs,
     includeWarDrums: false,
     includeRoyalTaxDecree: false,
   });
@@ -5672,7 +5679,7 @@ function normalizeCharacterProgress(character = {}) {
   return normalized;
 }
 
-function applyXpToCharacter(character = {}, amount = 0) {
+function applyXpToCharacter(character = {}, amount = 0, troopProduction25Exclusion = null, nowMs = Date.now()) {
   const next = normalizeCharacterProgress(character);
   const fromLevel = next.level;
   let xp = Math.max(0, Math.floor(safeNumber(amount, 0)));
@@ -5686,7 +5693,7 @@ function applyXpToCharacter(character = {}, amount = 0) {
     next.skillPoints += 1;
     levelsGained += 1;
     goldReward += getLevelUpGoldReward(next.level);
-    troopReward += getLevelUpTroopReward(next.level);
+    troopReward += getLevelUpTroopReward(next.level, troopProduction25Exclusion, nowMs);
   }
   return {
     character: next,
@@ -10050,7 +10057,7 @@ function getBattleReportsArray(profile = {}, nowMs = Date.now()) {
 
 function buildPlayerProgressPatch(profile = {}, { xp = 0, gold = 0 } = {}) {
   const baseGold = Math.max(0, Math.floor(safeNumber(profile.gold, 0)));
-  const xpResult = applyXpToCharacter(profile.character, xp);
+  const xpResult = applyXpToCharacter(profile.character, xp, profile.troopProduction25Exclusion);
   const upgrades = normalizeSkillUpgrades(profile.upgrades);
   const character = reconcileSkillPoints(xpResult.character, upgrades);
   const nextGold = baseGold + Math.max(0, Math.floor(safeNumber(gold, 0))) + xpResult.goldReward;
@@ -13747,24 +13754,26 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       MAX_SERVER_PRODUCTION_SECONDS
     );
     maxElapsedSeconds = Math.max(maxElapsedSeconds, collectionElapsedSeconds);
-    const stats = getCityProductionStats(city, {
+    const productionProfile = {
       ...rawProfile,
       character: accruedCharacter,
       upgrades: accruedUpgrades,
       skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
       itemEffects,
-    }, productionBonuses, {
-      nowMs,
-      includeWarDrums: false,
-      includeRoyalTaxDecree: false,
+    };
+    const productionAt = atMs => getCityProductionStats(city, productionProfile, productionBonuses, {
+      nowMs: atMs, includeWarDrums: false, includeRoyalTaxDecree: false,
     });
+    const stats = productionAt(nowMs);
+    const currentFactor = TROOP_PRODUCTION_POLICY.factorAt(rawProfile.troopProduction25Exclusion,
+      nowMs, CITY_LEVEL_STATS.troopProductionPerVictoryPoint);
+    const gainBetween = startMs => TROOP_PRODUCTION_POLICY.integrate(
+      rawProfile.troopProduction25Exclusion, startMs, nowMs,
+      atMs => TROOP_PRODUCTION_POLICY.factorAt(rawProfile.troopProduction25Exclusion, atMs,
+        CITY_LEVEL_STATS.troopProductionPerVictoryPoint) === currentFactor ? stats : productionAt(atMs),
+      { startsAtMs: itemEffects.warDrumsStartedAtMs, expiresAtMs: itemEffects.warDrumsExpiresAtMs,
+        percent: WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT });
     const troopIntervalStartMs = nowMs - elapsedSeconds * 1000;
-    const warDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
-      troopIntervalStartMs,
-      nowMs,
-      itemEffects.warDrumsStartedAtMs,
-      itemEffects.warDrumsExpiresAtMs
-    );
     const taxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       nowMs - goldElapsedSeconds * 1000,
       nowMs,
@@ -13772,36 +13781,15 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       itemEffects.royalTaxDecreeExpiresAtMs
     );
     const currentTroopFloat = Math.max(0, safeNumber(city.troopFloat, safeNumber(city.troops, 0)));
-    const troopGainFloat = stats.troopProductionPerSecond * elapsedSeconds
-      + stats.baseTroopProductionPerHour / 3600
-        * warDrumsOverlapSeconds
-        * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
+    const troopGainFloat = gainBetween(troopIntervalStartMs);
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
-    const collectionWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
-      collectionStartedAtMs,
-      nowMs,
-      itemEffects.warDrumsStartedAtMs,
-      itemEffects.warDrumsExpiresAtMs
-    );
-    const collectionTroopGainFloat = stats.troopProductionPerSecond * collectionElapsedSeconds
-      + stats.baseTroopProductionPerHour / 3600
-        * collectionWarDrumsOverlapSeconds
-        * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
+    const collectionTroopGainFloat = gainBetween(nowMs - collectionElapsedSeconds * 1000);
     const cityTroopsGained = getIntegerProductionGain(
       nextTroopFloat - collectionTroopGainFloat,
       collectionTroopGainFloat
     );
-    const pendingWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
-      pendingCollectionStartedAtMs,
-      nowMs,
-      itemEffects.warDrumsStartedAtMs,
-      itemEffects.warDrumsExpiresAtMs
-    );
-    const pendingTroopGainFloat = stats.troopProductionPerSecond * pendingCollectionElapsedSeconds
-      + stats.baseTroopProductionPerHour / 3600
-        * pendingWarDrumsOverlapSeconds
-        * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
+    const pendingTroopGainFloat = gainBetween(nowMs - pendingCollectionElapsedSeconds * 1000);
     const pendingCityTroopsGained = getIntegerProductionGain(
       nextTroopFloat - pendingTroopGainFloat,
       pendingTroopGainFloat
@@ -14500,6 +14488,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     goldFloat: Math.max(0, safeNumber(goldFloat, gold ?? economy.goldFloat)),
     economyUpdatedAtMs: Math.max(0, timestampToMs(economy.profilePatch?.economyUpdatedAtMs)),
     shopItems: shopItems || economy.shopItems,
+    troopProduction25Exclusion: TROOP_PRODUCTION_POLICY.normalize(economy.profileAfter.troopProduction25Exclusion),
     itemEffects: itemEffects || economy.itemEffects,
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
     gear: normalizeCommonGear(gear !== undefined ? gear : economy.profileAfter),
@@ -18434,6 +18423,9 @@ function createFreshResetPlayerProfile({
   if (previous.activeSession && typeof previous.activeSession === "object") {
     profile.activeSession = sanitizeJsonValue(previous.activeSession);
   }
+  if (TROOP_PRODUCTION_POLICY.normalize(previous.troopProduction25Exclusion)) {
+    profile.troopProduction25Exclusion = TROOP_PRODUCTION_POLICY.normalize(previous.troopProduction25Exclusion);
+  }
   if (previous.notificationPreferences && typeof previous.notificationPreferences === "object") {
     profile.notificationPreferences = sanitizeJsonValue(previous.notificationPreferences);
   }
@@ -18463,6 +18455,7 @@ function createStartingCityCurrentUser(profile = {}, {
     shopItems: normalizeShopItems(profile.shopItems),
     gear: normalizeCommonGear(profile),
     itemEffects: normalizeItemEffects(profile.itemEffects),
+    troopProduction25Exclusion: TROOP_PRODUCTION_POLICY.normalize(profile.troopProduction25Exclusion),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns),
     dailyLoginReward: normalizeDailyLoginRewardState(profile.dailyLoginReward),
     daily: normalizeDaily(profile.daily),
