@@ -590,6 +590,8 @@ async function main() {
     productionUpdatedAtMs: Date.now(),
   }, { merge: true });
 
+  await db.doc(`players/${rallyCreator.uid}`).set({ upgrades: { fieldMedics: 25 } }, { merge: true });
+  await db.doc(`players/${ally.uid}`).set({ upgrades: { fieldMedics: 0 } }, { merge: true });
   const attackArmyId = `${rallyId}_attack`;
   const launched = await callFunction("launchClanRally", rallyCreator.token, {
     clanId,
@@ -611,6 +613,7 @@ async function main() {
     Math.abs(Number(launched.movement?.rallyMarchSpeedMultiplier) - 1.08) < 0.0001,
     `The launch did not recalculate the ally's live objective speed before locking the slowest march (${launched.movement?.rallyMarchSpeedMultiplier}).`
   );
+  await db.doc(`players/${rallyCreator.uid}`).set({ upgrades: { fieldMedics: 0 } }, { merge: true });
   const allyProfileAfterLaunch = (await db.doc(`players/${ally.uid}`).get()).data() || {};
   assert(allyProfileAfterLaunch.committedRallyTroops === 50_000_000, "The ally's Ready troops were returned at launch.");
   const rallyAtLaunch = (await db.doc(`clans/${clanId}/rallies/${rallyId}`).get()).data() || {};
@@ -707,6 +710,7 @@ async function main() {
   const battleSnapshot = (await db.doc(`battleSnapshots/${realm.resetGeneration}/entries/${attackArmyId}`).get()).data() || {};
   const allyBattlePackage = battleSnapshot.attackers?.find(entry => entry.ownerUid === ally.uid);
   assert(allyBattlePackage, "The shared Rally battle snapshot omitted the ally.");
+  assert(allyBattlePackage.casualtyRecovery.fieldMedicsPercent === allyAtLaunch.fieldMedicsSkillPercent, "A Rally ally gained recovery from skills changed during travel.");
   assert(allyBattlePackage.swordmasteryPercent === allyAtLaunch.attackBonusPercent, "Changing skills during travel changed Rally attack strength.");
   assert(allyBattlePackage.gearAttackStrengthPercent === allyAtLaunch.attackGearPercent, "Changing gear during travel changed the Rally attack package.");
   assert(battleSnapshot.totals?.attackPower === rallyAtLaunch.attackPower, "Rally combat discarded the combined launch-time attack power.");
@@ -765,6 +769,13 @@ async function main() {
   const allyReports = (await db.doc(`players/${ally.uid}`).get()).data()?.battleReports || [];
   assert(creatorReports.some(report => report.battleId === attackArmyId), "The Rally creator did not receive the battle report.");
   assert(allyReports.some(report => report.battleId === attackArmyId), "The Rally ally did not receive the battle report.");
+
+  const creatorRecovery = creatorReports.find(report => report.battleId === attackArmyId).casualtyRecovery;
+  assert(creatorRecovery.fieldMedicsPercent === 50, "Rally leader reset removed departure recovery.");
+  assert(creatorRecovery.recoveredTroops === Math.floor(creatorRecovery.losses * creatorRecovery.combinedPercent / 100), "Rally leader recovery disagrees with the locked report.");
+  const allyRecovery = allyReports.find(report => report.battleId === attackArmyId).casualtyRecovery;
+  assert(allyRecovery.fieldMedicsPercent === 0, "Rally settlement used an ally skill added after launch.");
+  assert(allyRecovery.recoveredTroops === Math.floor(allyRecovery.losses * allyAtLaunch.fieldMedicsPercent / 100), "Rally receipt settlement discarded departure recovery.");
 
   await db.doc(`players/${rallyCreator.uid}`).set({ upgrades: { marchOrders: 30 } }, { merge: true });
   await creatorCityRef.set({ troops: 1_000_000, troopFloat: 1_000_000 }, { merge: true });

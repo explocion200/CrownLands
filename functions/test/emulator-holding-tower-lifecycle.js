@@ -401,10 +401,12 @@ async function main() {
   assert.match(tooSmallOwned.error?.message || "",/At least 3 assembled players/,"Two players were allowed to attack a clan-owned Tower.");
   assert.equal((await towerRallyRef.get()).data().status,"forming");
   await towerRallyRef.update({participants:towerParticipants});
+  await db.doc(`players/${leader.uid}`).update({"upgrades.fieldMedics":25});
   const trained=await call("launchClanRally",leader,{clanId,rallyId:towerRallyId});
   const launchParticipants=(await towerRallyRef.get()).data().participants;
   assert(launchParticipants.every(p=>p.clanTrainingPercent===0),"A new Rally received the retired Training Grounds bonus.");
   const lockedPower=(await towerRallyRef.get()).data().attackPower;
+  await db.doc(`players/${leader.uid}`).update({"upgrades.fieldMedics":0});
   await towerRef.update({"buildings.training":1});
   const defenderBefore=(await cityRef(outsider.home).get()).data().troops;
   await resolve(leader,trained.movement);
@@ -416,6 +418,18 @@ async function main() {
     await new Promise(resolve=>setTimeout(resolve,1000));
   }
   assert(defenderReport?.casualtyRecovery,"Tower defender recovery report was not produced.");
+  let leaderBattleReceipt;
+  const storageId = `${identity.resetGeneration}--${identity.realmShardId}`;
+  for(let attempt=0;attempt<60;attempt++) {
+    leaderBattleReceipt=(await db.doc(`rallyBattleReceipts/${storageId}/entries/${trained.movement.id}_${leader.uid}`).get()).data();
+    if(leaderBattleReceipt?.status==="settled")break;
+    await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+  assert.equal(leaderBattleReceipt?.fieldMedicsSkillPercent,50,"Tower Rally lost departure Field Medics.");
+  assert.equal(leaderBattleReceipt?.status,"settled","Tower Rally recovery did not settle.");
+  const leaderBattleReport=(await db.doc(`players/${leader.uid}`).get()).data().battleReports.find(r=>r.battleId===trained.movement.id);
+  assert.equal(leaderBattleReport.casualtyRecovery.fieldMedicsPercent,50,"Tower Rally report used reset skills.");
+  assert.equal(leaderBattleReport.fieldMedicsRecovered,Math.floor(leaderBattleReceipt.losses*leaderBattleReceipt.fieldMedicsPercent/100),"Tower Rally recovery disagrees with its departure receipt.");
   assert.equal(defenderReport.casualtyRecovery.clanInfirmaryPercent,0);
   assert.equal(defenderReport.casualtyRecovery.clanRecoveredTroops,0,"A new Tower battle received retired Infirmary recovery.");
   assert((await cityRef(outsider.home).get()).data().troops>=defenderBefore+defenderReport.casualtyRecovery.recoveredTroops,"Tower casualties did not recover to their owner's Main City.");
