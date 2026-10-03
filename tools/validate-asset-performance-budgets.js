@@ -187,7 +187,9 @@ const entrypointBudgets = {
   // Quarter-pixel march display caching and covered-map gating add under 1 KiB.
   // Optional Halloween scenery adds under 5 KiB of normalized runtime source.
   // Its 59,111-byte layout/art payload is lazy; offline and frame caps stay fixed.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5) * 1024,
+  // Former-clan capture notices and report handling bring source to 1912.73 KiB.
+  // Bound remaining growth at 1 KiB; offline-shell and frame caps stay fixed.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,

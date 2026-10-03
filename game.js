@@ -32292,21 +32292,17 @@ function updateTroopOrderPreview(source, target, route, { orderKind, amount, att
 
   const captureProtected = Number(combatForecast?.captureProtectedUntilMs) > Date.now();
   const captureNotice = captureProtected
-    ? "Former-clan protection: attacks are allowed, but this city cannot be captured during the 24-hour departure window. Protection is checked again on arrival."
+    ? "Former-clan protection: attacks allowed; city capture blocked for 24 hours after departure. Checked again on arrival."
     : "";
+  const report = getScoutReportForTarget(target);
   const attackProtectionNotice = getAttackProtectionNotice(retaliationId ? null
-    : normalizeAttackProtectionSnapshot(attackProtectionPreview));
+    : normalizeAttackProtectionSnapshot(attackProtectionPreview)
+      || (!report ? createAttackProtectionSnapshot(source, target, amount, "player") : null));
   if (actionNotice) {
     actionNotice.textContent = [captureNotice, attackProtectionNotice].filter(Boolean).join(" ");
     actionNotice.hidden = !actionNotice.textContent;
   }
-  const report = getScoutReportForTarget(target);
   if (!report) {
-    const attackProtection = retaliationId ? null : normalizeAttackProtectionSnapshot(attackProtectionPreview)
-      || createAttackProtectionSnapshot(source, target, amount, "player");
-    const protectionNotice = getAttackProtectionNotice(attackProtection);
-    const notice = modalBody.querySelector("#troopSliderActionNotice");
-    if (notice) { notice.textContent = [captureNotice, protectionNotice].filter(Boolean).join(" "); notice.hidden = !notice.textContent; }
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>

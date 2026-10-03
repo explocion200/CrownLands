@@ -3,6 +3,11 @@
   "baseCommit": "18fd6e0ad888fbc8fd0f01a13b8985a6565b2127",
   "coverage": [
     {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "Bound the new capture notices, forecast fields and report handling at one additional KiB after removing duplicate notice handling. Normalized game source measures 1912.73 KiB against the updated 1913 KiB cap. Aggregate offline-shell, art, production artifact and frame budgets are unchanged."
+    },
+    {
       "paths": [
         "functions/index.js",
         "functions/former-clan-protection.js",

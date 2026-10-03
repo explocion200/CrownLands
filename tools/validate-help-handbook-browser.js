@@ -157,7 +157,7 @@ async function main() {
       for (const scouted of [false, true]) {
         await evaluate(`captureQa.scouted=${scouted};captureQa.open()`);
         await delay(250);
-        assert(await evaluate(`!document.querySelector('#troopSliderActionNotice').hidden && /attacks are allowed.*cannot be captured/.test(document.querySelector('#troopSliderActionNotice').textContent)`));
+        assert(await evaluate(`!document.querySelector('#troopSliderActionNotice').hidden && /attacks allowed.*capture blocked.*24 hours/.test(document.querySelector('#troopSliderActionNotice').textContent)`));
         if (scouted) assert(await evaluate(`/Likely victory.*cannot be captured/.test(document.querySelector('#troopSliderPreview').textContent)`));
         await evaluate(`document.querySelector('#troopSliderActionNotice').scrollIntoView({block:'center'})`);
         assert(await evaluate(`modal.scrollWidth<=modal.clientWidth+1 && modal.getBoundingClientRect().right<=innerWidth+1`));
