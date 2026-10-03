@@ -160,9 +160,16 @@ async function objectiveDispatchCases(actors, source, spareCity) {
   assert.equal(launched.movement.attackProtection, null);
   assert.equal((await grants(leader).doc(recordId).get()).data().usedArmyId, launched.movement.id);
   assert.equal((await profile(leader)).peaceShieldCooldownExpiresAtMs, launched.movement.launchedAtMs + policy.SHIELD_COOLDOWN_MS);
+  await deny("sendHoldingTowerArmyOrder", leader, {
+    ...towerOrder, army: { ...towerOrder.army, id: `combat_${randomUUID()}` },
+  }, /already been used/);
   console.log("Current-realm objectives passed: neutral vs player-held Camps/Gold/Citadel solo orders, five-player Gold/Citadel/Tower Rallies, every contributor, scouting/defender isolation, shield retention and Tower-origin retaliation.");
 }
 async function main() {
+  // Prepare the empty prior season before crossing the real monthly boundary.
+  const seasons = require("../season-rewards");
+  const previous = seasons.previousSeason(`realm-${new Date().toISOString().slice(0, 7)}`);
+  if (seasons.supported(previous)) await seasons.arm(db, previous, seasons.seasonInfo(previous).startsAtMs + 1);
   const [high, low, third] = await Promise.all([user("High"), user("Low"), user("Third")]);
   const info = await call("getRealmInfo", high);
   assert.equal(info.worldTopology, "core-expansion-v1");
@@ -200,6 +207,13 @@ async function main() {
   const a = { id: capture.id, ...capture.data() };
   assert.equal(a.cityId, targets[0].id);
   assert.equal(a.expiresAtMs - a.capturedAtMs, policy.RETALIATION_WINDOW_MS);
+  assert.equal(a.expiresAtMs - a.capturedAtMs, 86_400_000);
+  assert.equal((await cityRef(targets[0]).get()).data().retaliationAbandonLocks[low.uid], a.expiresAtMs);
+  // A still-unused opportunity must remain usable 23 hours after capture.
+  a.capturedAtMs -= 23 * 3_600_000;
+  a.expiresAtMs -= 23 * 3_600_000;
+  await capture.ref.update({ capturedAtMs: a.capturedAtMs, expiresAtMs: a.expiresAtMs });
+  await cityRef(targets[0]).update({ [`retaliationAbandonLocks.${low.uid}`]: a.expiresAtMs });
   assert.equal(policy.shieldCooldownExpiresAt(await profile(high), identity.resetGeneration), 0, "Losing a city started a cooldown");
   const abandonRequest = { cityId: targets[0].id, regionId: region };
   await deny("relinquishCity", low, abandonRequest, /City Cannot Be Abandoned/);
@@ -247,7 +261,7 @@ async function main() {
   await deny("sendArmyOrder", high, order(hSource, targets[0], 5000, { retaliationId: a.id }), /already been used/);
   const lockAfterUse = policy.abandonLockExpiresAt((await cityRef(targets[0]).get()).data(), low.uid, Date.now());
   assert.equal(lockAfterUse, a.expiresAtMs, "Using retaliation changed the capturer's original lock");
-  assert.equal((await resolve(high, winner, 3_600_000)).outcome, "victory", "Retaliation expired in transit or depended on the original capturer remaining owner");
+  assert.equal((await resolve(high, winner, 25 * 3_600_000)).outcome, "victory", "Retaliation expired in transit or depended on the original capturer remaining owner");
 
   // Multiple successful captures create independent records and reset only the attacker's cooldown.
   for (const target of targets.slice(1, 3)) {
@@ -280,8 +294,31 @@ async function main() {
   const read1 = await (await clientRead(high, profileRef(high).path)).json();
   const read2 = await (await clientRead(high, profileRef(high).path)).json();
   assert.deepEqual(read1.fields.peaceShieldCooldownExpiresAtMs, read2.fields.peaceShieldCooldownExpiresAtMs);
+  await verifySpentRetaliation(high, low, hSource, lSource, targets[3]);
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
+}
+async function verifySpentRetaliation(high, low, source, enemySource, seed) {
+  for (const ending of ["defeat", "recall"]) {
+    const target = await seedCity(seed, high, 1);
+    const captureAttack = await call("sendArmyOrder", low, order(enemySource, target, 1500));
+    assert.equal((await resolve(low, captureAttack.movement)).outcome, "victory");
+    const grant = (await grants(high).get()).docs.find(doc => doc.data().sourceArmyId === captureAttack.movement.id);
+    assert(grant, "The new qualifying loss must create its own opportunity");
+    const launched = await call("sendArmyOrder", high, order(source, target, 1, { retaliationId: grant.id }));
+    assert.equal((await grant.ref.get()).data().status, "used", "Retaliation must be consumed on Send");
+    if (ending === "defeat") {
+      assert.equal((await resolve(high, launched.movement)).outcome, "defeat");
+    } else {
+      await profileRef(high).set({ shopItems: { recall_horn: 1 } }, { merge: true });
+      await db.doc(`armies/${launched.movement.id}`).update({ arrivesAtMs: Date.now() + 600_000 });
+      const recalled = await call("useRecallHorn", high, { armyId: launched.movement.id });
+      assert.equal(recalled.movement.returning, true);
+    }
+    assert.equal((await grant.ref.get()).data().usedArmyId, launched.movement.id);
+    await deny("sendArmyOrder", high, order(source, target, 8000, { retaliationId: grant.id }), /already been used/);
+  }
+  console.log("Single-launch retaliation passed: defeat and recall never renew the spent opportunity.");
 }
 async function verifyWallShieldLifecycle(attacker, defender, source, targets, grant) {
   const target = targets.find(city => city.id === grant.data().cityId);

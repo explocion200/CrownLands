@@ -31,11 +31,11 @@ assert.match(policy.retaliationError(null, identity), /not found/);
 // Ownership is intentionally not an input to the grant check.
 assert.equal(policy.retaliationError({ ...record, currentOwnerUid: "third" }, identity), "");
 const city = { retaliationAbandonLocks: policy.captureAbandonLocks({}, "low", now) };
-assert.equal(policy.abandonLockExpiresAt(city, "low", now + 1_799_999), now + 1_800_000);
-assert.equal(policy.abandonLockExpiresAt(city, "low", now + 1_800_000), 0);
+assert.equal(policy.abandonLockExpiresAt(city, "low", now + 86_399_999), now + 86_400_000);
+assert.equal(policy.abandonLockExpiresAt(city, "low", now + 86_400_000), 0);
 assert.equal(policy.abandonLockExpiresAt(city, "third", now), 0);
-assert.equal(policy.captureAbandonLocks(city, "third", now + 1000).low, now + 1_800_000);
-assert.equal(policy.captureAbandonLocks(city, "low", now + 1000).low, now + 1_801_000);
+assert.equal(policy.captureAbandonLocks(city, "third", now + 1000).low, now + 86_400_000);
+assert.equal(policy.captureAbandonLocks(city, "low", now + 1000).low, now + 86_401_000);
 const army = { id: "attack", ownerUid: "high", kind: "attack", launchKind: "attack", createdByServer: true,
   toId: "city-a", targetRegionId: "map-a", launchedAtMs: record.expiresAtMs - 1,
   retaliationAuthorization: { ...record, usedAtMs: record.expiresAtMs - 1, usedArmyId: "attack" } };
@@ -44,13 +44,26 @@ for (const patch of [{ toId: "other" }, { targetRegionId: "other" }, { ownerUid:
   assert.equal(policy.hasCommittedRetaliation({ ...army, ...patch }, identity), false);
 }
 assert.equal(policy.SHIELD_COOLDOWN_MS, 900_000);
-assert.equal(policy.RETALIATION_WINDOW_MS, 1_800_000);
+assert.equal(policy.RETALIATION_WINDOW_MS, 86_400_000);
+const fullDay = { ...record, capturedAtMs: now, expiresAtMs: now + policy.RETALIATION_WINDOW_MS };
+for (const elapsed of [1_800_000, 43_200_000, 86_399_999]) {
+  assert.equal(policy.retaliationError(fullDay, { ...identity, nowMs: now + elapsed }), "");
+}
+assert.match(policy.retaliationError(fullDay, { ...identity, nowMs: now + 86_400_000 }), /Expired/);
+assert.match(policy.retaliationError({ ...fullDay, usedAtMs: now }, identity), /already been used/);
+// Saved grants and locks retain their exact server deadlines; they are not renewed.
+assert.match(policy.retaliationError(record, { ...identity, nowMs: now + 1_800_000 }), /Expired/);
+assert.equal(policy.abandonLockExpiresAt({ retaliationAbandonLocks: { low: now + 1_800_000 } }, "low", now + 1_800_000), 0);
+assert.equal(ui.remaining(now + 86_400_000, now), "24:00:00");
+assert.equal(ui.remaining(now + 86_399_000, now), "23:59:59");
+assert.equal(ui.remaining(now + 3_600_000, now), "01:00:00");
+assert.equal(ui.remaining(now + 3_599_000, now), "59:59");
 assert.equal(ui.remaining(now + 1_800_000, now), "30:00");
 assert.equal(policy.retaliationError({ ...record, capturedAtMs: now - 1_200_000, expiresAtMs: now + 600_000 }, identity), "", "Retaliation is usable after the old 15-minute boundary");
 assert.equal(ui.remaining(now + 900_000, now), "15:00");
 assert.equal(ui.remaining(now + 1000, now), "00:01");
 assert.equal(ui.remaining(now - 1, now), "00:00");
-assert.equal(ui.activeRecords([record, { ...record, id: "used", status: "used" }, { ...record, id: "expired", expiresAtMs: now }], now).length, 1);
+assert.equal(ui.activeRecords([record, { ...record, id: "used", status: "used" }, { ...record, id: "used-at", usedAtMs: now }, { ...record, id: "used-army", usedArmyId: "march" }, { ...record, id: "expired", expiresAtMs: now }], now).length, 1);
 const server = fs.readFileSync(path.resolve(__dirname, "../functions/index.js"), "utf8");
 const start = server.indexOf("exports.launchClanRally =");
 const rally = server.slice(start, server.indexOf("exports.previewArmyProtection", start));

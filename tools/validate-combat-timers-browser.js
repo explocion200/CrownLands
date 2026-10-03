@@ -69,6 +69,21 @@ async function main() {
       const shot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(artifacts, viewport.name + ".png"), Buffer.from(shot.data, "base64"));
       results.push({ viewport, layout });
+      const dayLayout = await evaluate(() => {
+        const element = document.getElementById("combatTimers"), ui = CrownlandsCombatTimersUI;
+        ui.render(element, { ...combatFixture, retaliation: [{ ...combatFixture.retaliation[0], expiresAtMs: combatFixtureNow + 86_400_000 }] }, combatFixtureNow);
+        element.querySelector("details").open = true;
+        const summary = element.querySelector("summary"), time = summary.querySelector("strong"), r = summary.getBoundingClientRect(), t = time.getBoundingClientRect();
+        return { text: time.textContent, listText: element.querySelector("[data-retaliation-time]").textContent,
+          fits: summary.scrollWidth <= summary.clientWidth && t.left >= r.left && t.right <= r.right };
+      });
+      assert.equal(dayLayout.text, "24:00:00");
+      assert.equal(dayLayout.listText, "24:00:00");
+      assert(dayLayout.fits, `24-hour countdown overflows at ${viewport.name}`);
+      const dayShot = await client.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(artifacts, viewport.name + "-24h.png"), Buffer.from(dayShot.data, "base64"));
+      results.push({ viewport, dayLayout });
+      await evaluate(() => { CrownlandsCombatTimersUI.render(document.getElementById("combatTimers"), combatFixture, combatFixtureNow); });
     }
     const navigation = await evaluate(async () => {
       const element=document.getElementById("combatTimers"),ui=CrownlandsCombatTimersUI;
@@ -114,7 +129,7 @@ async function main() {
     const states = await evaluate(() => {
       const element = document.getElementById("combatTimers"), ui = CrownlandsCombatTimersUI;
       const single = { ...combatFixture, retaliation: [combatFixture.retaliation[0]] };
-      ui.render(element, { ...single, retaliation: [{ ...single.retaliation[0], expiresAtMs: combatFixtureNow + 1_800_000 }] }, combatFixtureNow);
+      ui.render(element, { ...single, retaliation: [{ ...single.retaliation[0], expiresAtMs: combatFixtureNow + 86_400_000 }] }, combatFixtureNow);
       const extended = element.querySelector("summary").textContent;
       ui.render(element, single, combatFixtureNow);
       const one = element.querySelector("summary").textContent;
@@ -132,7 +147,7 @@ async function main() {
       return { extended, one, title, retaliationExpired, allExpired, signedOut, reconstructed, reboundCount };
     });
     assert.match(states.one, /05:00/);
-    assert.match(states.extended, /30:00/);
+    assert.match(states.extended, /24:00:00/);
     assert.match(states.title, /Stoneward Keep/);
     assert(states.retaliationExpired && states.allExpired && states.signedOut);
     assert.equal(states.reconstructed, "14:30");

@@ -1,7 +1,7 @@
 "use strict";
 
 const SHIELD_COOLDOWN_MS = 15 * 60 * 1000;
-const RETALIATION_WINDOW_MS = 30 * 60 * 1000;
+const RETALIATION_WINDOW_MS = 24 * 60 * 60 * 1000;
 const timestamp = value => Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
 
 function isOffensivePvp({ kind, attackerUid, attackerClanId = "", targetOwnerUid = "", targetClanId = "" }) {

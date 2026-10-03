@@ -3,11 +3,12 @@
   const escape = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]));
   function remaining(expiresAtMs, nowMs) {
     const seconds = Math.max(0, Math.ceil((Number(expiresAtMs) - nowMs) / 1000));
+    if (seconds >= 3600) return `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor(seconds / 60) % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
     return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
   }
   function activeRecords(records, nowMs) {
     return (Array.isArray(records) ? records : []).filter(record => record.status === "available"
-      && !record.usedArmyId && Number(record.expiresAtMs) > nowMs)
+      && !record.usedArmyId && !Number(record.usedAtMs) && Number(record.expiresAtMs) > nowMs)
       .sort((a, b) => a.expiresAtMs - b.expiresAtMs || String(a.id).localeCompare(String(b.id)));
   }
   const contexts = new WeakMap();
@@ -102,7 +103,7 @@
     if (!note) return;
     const record = activeRecords(records, nowMs).find(entry => entry.id === activeId);
     note.textContent = record
-      ? `Retaliation Available — ${remaining(record.expiresAtMs, nowMs)} remaining. One attack on this city; King Power limits are lifted for this launch.`
+      ? `Retaliation Available — ${remaining(record.expiresAtMs, nowMs)} remaining. Sending one attack uses this city's retaliation, even if it loses or is recalled. King Power limits are lifted for this launch.`
       : "Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.";
   }
   root.CrownlandsCombatTimersUI = { remaining, activeRecords, render, renderFeedback };
