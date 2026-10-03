@@ -1,50 +1,64 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0710db379f5863acc684f56800feabaf19a6cf5a",
+  "baseCommit": "61fddb9848470407ea71d4181e705c5429be5b31",
   "coverage": [
     {
       "paths": [
-        "functions/cosmetics.js",
-        "functions/cosmetics-service.js",
-        "functions/test/emulator-cosmetics.js",
-        "tools/validate-cosmetics.js"
+        "game.js",
+        "index.html",
+        "service-worker.js",
+        "styles.css",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-cosmetics.js",
-        "tools/validate-cosmetics-browser.js",
-        "functions/test/emulator-cosmetics.js"
+        "tools/validate-halloween-map-decorations.js",
+        "tools/validate-halloween-map-decorations-browser.js",
+        "tools/validate-map-loading-browser.js",
+        "tools/validate-harvest-pickups.js",
+        "tools/validate-illustrated-map-art.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-halloween-map-performance-browser.js"
       ],
-      "reason": "Restrict the shared/server catalog to city skins. Validate unchanged 600-Crown city purchase, sale and replay rules, old retired receipt reconciliation, denied retired offers and Apply requests, preserved wallet/ownership/receipts, city Apply/Default public projection and private account protections. Existing free/saved flag identity compatibility remains enforced."
+      "reason": "Optional October scenery changes shared map-image completion and pickup rendering. Cover lazy loading, timeout/failure recovery, stale map guards, layer replacement, max-stage city/scenery clearance, generated template fallback, UTC season gates, click-through controls and unchanged pickup spawn/reward behavior. Exercise existing map-loading races and all prepared maps. Validate matching shell/cache URLs and bounded packaged art; no backend or authority changes. Increase the node cap from 9 to 24 with compact layouts; use the existing camera movement state to retain the nine-prop painting limit during pan/zoom. Compare frame pacing and CPU time with 40 maximum-level cities and 25 marches at desktop/mobile dimensions, normal and throttled CPU. Existing 64 KiB artifact allowance, 5 KiB game-source allowance and installation/frame limits remain unchanged."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md",
-        "game.js",
-        "index.html",
-        "service-worker.js",
-        "skins-ui.css",
-        "skins-ui.js",
-        "tools/build-production-client.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-troop-skin-browser.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-skin-motion-browser.js",
-        "docs/visual-qa/halloween-city-skin/city-only-performance.json"
+        "assets/optimized/halloween-map-layouts-v3.json",
+        "docs/art-sources/halloween-map-decorations/README.md",
+        "docs/art-sources/halloween-map-decorations/assets.json",
+        "docs/art-sources/halloween-map-decorations/lanterns.png",
+        "docs/art-sources/halloween-map-decorations/prompts.json",
+        "docs/art-sources/halloween-map-decorations/pumpkins.png",
+        "docs/art-sources/halloween-map-decorations/scarecrow.png",
+        "docs/visual-qa/halloween-map-decorations/map-1440.png",
+        "docs/visual-qa/halloween-map-decorations/map-844.png",
+        "docs/visual-qa/halloween-map-decorations/validation.json",
+        "tools/build-halloween-map-decorations.js",
+        "tools/validate-halloween-map-decorations-browser.js",
+        "tools/validate-halloween-map-decorations.js",
+        "tools/validate-halloween-map-performance-browser.js",
+        "docs/visual-qa/halloween-map-decorations/performance.json",
+        "assets/optimized/halloween-map-pumpkins-fc5076146993.webp",
+        "assets/optimized/halloween-map-scarecrow-3a3bb592afb9.webp",
+        "assets/optimized/halloween-map-lanterns-991fdbe11d76.webp",
+        "assets/optimized/halloween-map-cauldron-9a3d0222d036.webp",
+        "docs/art-sources/halloween-map-decorations/cauldron.png",
+        "assets/optimized/halloween-map-graves-69c86dbfc3f9.webp",
+        "docs/art-sources/halloween-map-decorations/graves.png",
+        "assets/optimized/halloween-map-raven-53aa61d186f7.webp",
+        "docs/art-sources/halloween-map-decorations/raven.png",
+        "assets/optimized/halloween-map-ghost-3ac59a03bc5d.webp",
+        "docs/art-sources/halloween-map-decorations/ghost.png"
       ],
       "tests": [
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-halloween-troop-skin-browser.js",
-        "tools/validate-march-frame-performance-browser.js",
-        "tools/validate-skin-motion-browser.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-halloween-map-decorations.js",
+        "tools/validate-halloween-map-decorations-browser.js",
+        "tools/validate-halloween-map-performance-browser.js"
       ],
-      "reason": "Remove troop/frame UI, map hooks and production loads; ignore stale owned and remote selections while retaining standard troop counts, estimates, scouts, rallies, timing and route frame pacing. City purchase/Apply/Default, five stages, captures, missing art, normal free flag editing and desktop/landscape controls require browser coverage. The lower city animation cap and isolated still-image shadow require motion budget, lifecycle and recycled-node checks. Production validation checks unchanged entries/caches, city and currency art budgets, and absence of retired renderer/atlas assets. The player-flag validator now checks matching current script/cache versions instead of a stale fixed date. Documentation records the confirmed city-only revision and synthetic limits."
+      "reason": "Seven generated transparent sprites and reproducible offline layouts add 1,536 placements across 81 prepared maps. Every map includes all seven types; matching types are separated by at least 250 map pixels. Preserve city, road, tree/rock, landmark and Tower compound clearances. Check counts, spacing, sprite hashes, compact schema reproducibility and 59,111-byte lazy payload. Browser checks cover seven distinct decoded images per map, bounded decoded texture memory, max-stage city clearances, motion visibility and recovery, no animations, no layer accumulation or idle DOM mutations, and desktop/phone visual evidence. Performance proof exercises the full palette, idle and camera movement with CPU throttling. Specification records the confirmed separate scenery layer, increased variety and density with limited rendering cost; October timing remains a draft default."
     }
   ]
 }

@@ -1253,6 +1253,10 @@ input {
   display: block;
   pointer-events: none;
 }
+.halloween-map-decorations img[hidden] { display: none; }
+/* Reuse the existing camera gesture state: retain the first draft's paint
+   budget during pan/zoom, then show the denser scenery when movement settles. */
+.map-frame:is(.camera-moving, .zooming) .halloween-map-decorations img:nth-child(n+10) { visibility: hidden; }
 .illustrated-map-thumbnail {
   width: 100%;
   height: 100%;

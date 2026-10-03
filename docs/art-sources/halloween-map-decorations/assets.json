@@ -1,0 +1,93 @@
+[
+  {
+    "name": "pumpkins",
+    "source": "docs/art-sources/halloween-map-decorations/pumpkins.png",
+    "output": "assets/optimized/halloween-map-pumpkins-fc5076146993.webp",
+    "sha256": "fc507614699338db413717bb11e4f3539c142e9311bb6609339546faceecd52f",
+    "bytes": 3160,
+    "width": 1536,
+    "height": 1024,
+    "alphaMin": 0,
+    "alphaMax": 254,
+    "mapWidth": 40,
+    "mapHeight": 27
+  },
+  {
+    "name": "scarecrow",
+    "source": "docs/art-sources/halloween-map-decorations/scarecrow.png",
+    "output": "assets/optimized/halloween-map-scarecrow-3a3bb592afb9.webp",
+    "sha256": "3a3bb592afb9a7c34e3e9e62b62ba4933089ad27d95499fd4c4d7d7f89822f92",
+    "bytes": 5672,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 34,
+    "mapHeight": 34
+  },
+  {
+    "name": "lanterns",
+    "source": "docs/art-sources/halloween-map-decorations/lanterns.png",
+    "output": "assets/optimized/halloween-map-lanterns-991fdbe11d76.webp",
+    "sha256": "991fdbe11d766845f7ffba202648eb408922743cd7bdc7f44e3e190e93d30a83",
+    "bytes": 5084,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 32,
+    "mapHeight": 32
+  },
+  {
+    "name": "cauldron",
+    "source": "docs/art-sources/halloween-map-decorations/cauldron.png",
+    "output": "assets/optimized/halloween-map-cauldron-9a3d0222d036.webp",
+    "sha256": "9a3d0222d036ac97941c37e72cd622c54e0dd805c208035843bbf09b91b86266",
+    "bytes": 6350,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 32,
+    "mapHeight": 32
+  },
+  {
+    "name": "graves",
+    "source": "docs/art-sources/halloween-map-decorations/graves.png",
+    "output": "assets/optimized/halloween-map-graves-69c86dbfc3f9.webp",
+    "sha256": "69c86dbfc3f9ee9445749e26334aa355cee36009b68d153ca7a08da39c4d0872",
+    "bytes": 4886,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 32,
+    "mapHeight": 32
+  },
+  {
+    "name": "raven",
+    "source": "docs/art-sources/halloween-map-decorations/raven.png",
+    "output": "assets/optimized/halloween-map-raven-53aa61d186f7.webp",
+    "sha256": "53aa61d186f78838a1f8c9fcbcaebf4808b3c4afd0d1b9f67c1d5233b3c8edad",
+    "bytes": 6370,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 32,
+    "mapHeight": 32
+  },
+  {
+    "name": "ghost",
+    "source": "docs/art-sources/halloween-map-decorations/ghost.png",
+    "output": "assets/optimized/halloween-map-ghost-3ac59a03bc5d.webp",
+    "sha256": "3ac59a03bc5d20fd14017bfb12bfca00f7c0024999b5e5461f24da275f7ab67d",
+    "bytes": 5980,
+    "width": 1254,
+    "height": 1254,
+    "alphaMin": 0,
+    "alphaMax": 255,
+    "mapWidth": 32,
+    "mapHeight": 32
+  }
+]

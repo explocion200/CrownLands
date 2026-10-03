@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "assets/optimized/halloween-map-layouts-v3.json",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
@@ -80,6 +81,13 @@ for (const relativePath of required) {
 for (const relativePath of forbidden) {
   if (fs.existsSync(path.join(dist, relativePath))) throw new Error(`Production artifact includes forbidden source data ${relativePath}.`);
 }
+
+const halloweenMapLayoutPath = "assets/optimized/halloween-map-layouts-v3.json";
+const halloweenMapLayout = JSON.parse(fs.readFileSync(path.join(dist, halloweenMapLayoutPath), "utf8"));
+const halloweenMapBytes = [halloweenMapLayoutPath, ...halloweenMapLayout.assets.map(asset => asset.src)]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (halloweenMapBytes > 64 * 1024) throw new Error("Halloween map layouts and sprites exceed their 64 KiB lazy payload budget.");
+if (fs.existsSync(path.join(dist, "docs/art-sources/halloween-map-decorations"))) throw new Error("Editable Halloween source art must stay out of production.");
 
 const heraldryManifest = JSON.parse(fs.readFileSync(
   path.join(dist, "assets", "clan-heraldry", "art-set-v1", "manifest.json"),
@@ -305,7 +313,10 @@ for (const file of files) {
   if (/^(?:troop-skins|city-flag-skins)\.(?:js|css)$/.test(entry.path) || /^assets\/optimized\/halloween-(?:troops|flag-frame)-/.test(entry.path)) throw new Error("Retired cosmetic shipped: " + entry.path);
 }
 const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget;
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget;
+// Seven Halloween props and layouts add 59,111 bytes; shell hooks stay under 5 KiB.
+// Bound the combined feature below 64 KiB; retain the install-cache/frame limits.
+const halloweenMapFeatureBudget = 64 * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

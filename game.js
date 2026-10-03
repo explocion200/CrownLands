@@ -2410,6 +2410,7 @@ let stateCityByIdCacheSize = 0;
 let renderedMapRegionId = "";
 let renderedMapBoundsSignature = "";
 let mapImageSwapToken = 0;
+let halloweenMapLayoutPromise = null;
 let interactionRenderLockUntil = 0;
 let cameraInteractionSettleTimer = null;
 let deferredMapRenderPending = false;
@@ -5696,6 +5697,88 @@ function createIllustratedSceneryLayer(regionId) {
   return layer;
 }
 
+function isHalloweenMapSeason(date = new Date()) {
+  return CORE_EXPANSION_TOPOLOGY_ACTIVE && date.getUTCMonth() === 9;
+}
+
+async function loadHalloweenMapLayouts() {
+  if (!halloweenMapLayoutPromise) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    halloweenMapLayoutPromise = fetch("assets/optimized/halloween-map-layouts-v3.json", { signal: controller.signal })
+      .then(response => response.ok ? response.json() : Promise.reject(new Error("Decoration layout unavailable")))
+      .then(data => {
+        if (data?.schemaVersion !== 2 || data.topology !== "core-expansion-v1" || data.width !== 1448 || data.height !== 1086
+          || !Array.isArray(data.assets) || !data.maps) throw new Error("Invalid decoration layout");
+        return data;
+      })
+      .catch(() => { halloweenMapLayoutPromise = null; return null; })
+      .finally(() => clearTimeout(timeout));
+  }
+  return halloweenMapLayoutPromise;
+}
+
+async function renderHalloweenMapDecorations(regionId, swapToken) {
+  if (!isHalloweenMapSeason() || !getIllustratedMapPresentation(regionId)) return;
+  const data = await loadHalloweenMapLayouts();
+  // Optional art must never delay map readiness or attach to a newer map.
+  if (!data || !isHalloweenMapSeason() || swapToken !== mapImageSwapToken || mapBg.dataset.imageRegion !== regionId) return;
+  const summary = REGION_CATALOG_SUMMARIES_BY_ID.get(regionId);
+  const placements = data.maps[regionId] || data.maps[summary?.templateRegionId];
+  if (!Array.isArray(placements)) return;
+  const layer = document.createElement("div");
+  layer.className = "illustrated-map-scenery halloween-map-decorations";
+  layer.dataset.regionId = regionId;
+  layer.setAttribute("aria-hidden", "true");
+  const reserved = getHarvestBonusMapArtBounds(regionId);
+  // Layouts reserve every canonical city at its maximum stage. Also cover live
+  // positions, so a stale layout cannot decorate a relocated city.
+  for (const city of state?.cities || []) {
+    if (getCityRegionId(city) !== regionId || isStronghold(city)) continue;
+    const point = worldToIslandImagePointRaw(regionId, city);
+    const start = islandImagePointToWorld(regionId, { x: point.x - 35, y: point.y - 60 });
+    const end = islandImagePointToWorld(regionId, { x: point.x + 35, y: point.y + 30 });
+    reserved.push({ left: start.x, top: start.y, right: end.x, bottom: end.y });
+  }
+  for (const placement of placements.slice(0, 24)) {
+    if (!Array.isArray(placement)) continue;
+    const [assetIndex, x, y] = placement;
+    const item = { x, y }, asset = data.assets[assetIndex];
+    if (!asset || !/^assets\/optimized\/halloween-map-[a-z]+-[a-f0-9]{12}\.webp$/.test(asset.src)
+      || ![item.x, item.y, asset.w, asset.h].every(Number.isFinite) || asset.w <= 0 || asset.h <= 0) continue;
+    const start = islandImagePointToWorld(regionId, item);
+    const end = islandImagePointToWorld(regionId, { x: item.x + asset.w, y: item.y + asset.h });
+    if (reserved.some(box => start.x < box.right && end.x > box.left && start.y < box.bottom && end.y > box.top)) continue;
+    const image = document.createElement("img");
+    image.src = asset.src;
+    image.alt = "";
+    image.draggable = false;
+    image.decoding = "async";
+    image.fetchPriority = "low";
+    image.style.cssText = `left:${item.x / 1448 * 100}%;top:${item.y / 1086 * 100}%;width:${asset.w / 1448 * 100}%;height:${asset.h / 1086 * 100}%`;
+    image.halloweenBounds = { left: start.x, top: start.y, right: end.x, bottom: end.y };
+    image.onerror = () => image.remove();
+    layer.append(image);
+  }
+  mapBg.querySelector(".halloween-map-decorations")?.remove();
+  mapBg.append(layer);
+  refreshHalloweenDecorationVisibility();
+}
+
+function refreshHalloweenDecorationVisibility() {
+  const layer = mapBg?.querySelector(".halloween-map-decorations");
+  if (!layer) return;
+  if (!isHalloweenMapSeason()) { layer.remove(); return; }
+  const pickups = state ? getActiveHarvestBonuses(layer.dataset.regionId) : [];
+  for (const image of layer.children) {
+    const box = image.halloweenBounds;
+    const padding = HARVEST_BONUS_LAND_CLEARANCE;
+    const hidden = pickups.some(pickup => pickup.x + padding >= box.left && pickup.x - padding <= box.right
+      && pickup.y + padding >= box.top && pickup.y - padding <= box.bottom);
+    if (image.hidden !== hidden) image.hidden = hidden;
+  }
+}
+
 function renderIllustratedMapThumbnail(regionId, previewSrc) {
   const art = getIllustratedMapPresentation(regionId);
   if (!art) return `<img src="${escapeHtml(previewSrc)}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />`;
@@ -5764,6 +5847,7 @@ function setImageMapBackground(regionId, imageSrc) {
       const scenery = createIllustratedSceneryLayer(targetRegionId);
       if (scenery) mapBg.append(scenery);
       mapBg.classList.add("image-map-ready");
+      void renderHalloweenMapDecorations(targetRegionId, swapToken);
     });
   });
 }
@@ -5831,6 +5915,7 @@ function renderIslandTeleporters() {
 }
 
 function renderHarvestBonuses() {
+  refreshHalloweenDecorationVisibility();
   if (!harvestLayer) return;
   const existingNodes = new Map(Array.from(harvestLayer.querySelectorAll(".harvest-bonus-node"), node => [node.dataset.harvestBonusId, node]));
   if (!state) {
