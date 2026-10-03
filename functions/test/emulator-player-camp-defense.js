@@ -193,7 +193,9 @@ async function main() {
     strictEqual(report.totalDefense, total);
     strictEqual(report.ownerDefensePower, expected(10_000, 30, holderGear));
     strictEqual(report.reinforcements[0].effectivePower, expected(5_000, 60, allyGear));
+    await db.doc(`players/${attacker.uid}`).set({ upgrades: { fieldMedics: 25 } }, { merge: true });
     const attackId = await launch(camp, "attack", 20_000);
+    await db.doc(`players/${attacker.uid}`).set({ upgrades: { fieldMedics: 0 } }, { merge: true });
     const launched = (await db.doc(`armies/${attackId}`).get()).data();
     strictEqual(launched.launchCombatForecast.defensePower, total, "Forecast must preserve the scout's full camp defense");
     // Current defensive skills are evaluated on arrival, including pre-update marches.
@@ -202,6 +204,8 @@ async function main() {
     await arrive(attackId);
     const snapshot = (await db.doc(`battleSnapshots/${storageId}/entries/${attackId}`).get()).data();
     assert(snapshot, "Camp combat must persist a battle snapshot");
+    strictEqual(snapshot.attacker.casualtyRecovery.fieldMedicsPercent, 50, "Camp attack lost departure Field Medics");
+    strictEqual(snapshot.attacker.casualtyRecovery.recoveredTroops, Math.floor(snapshot.totals.attackerLosses / 2), "Camp attack recovery used arrival skills");
     strictEqual(snapshot.totals.defensePower, expected(10_000, 100, holderGear) + expected(5_000, 60, allyGear));
     strictEqual(snapshot.defenseCombatVersion, 1);
     assert(!snapshot.siege, "Camp bonuses must not create walls");

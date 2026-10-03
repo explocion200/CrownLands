@@ -142,7 +142,8 @@ assert.equal(
 const launchedRally = {
   attackPower: 125,
   participants: [{ uid: "leader", troops: 100, status: "assembled", attackSkillLevel: 0,
-    attackBonusPercent: 0, attackGearPercent: 0, attackPowerPerTroop: 1.25 }],
+    attackBonusPercent: 0, attackGearPercent: 0, attackPowerPerTroop: 1.25,
+    fieldMedicsPercent: 0, fieldMedicsSkillPercent: 0, casualtyGearPercent: 0, casualtyGearItems: [] }],
 };
 const changedProfile = {
   playerName: "Live Rally Leader",
@@ -157,7 +158,13 @@ const liveRallyPackage = getRallyAttackPackages(launchedRally, new Map([["leader
 assert.equal(liveRallyPackage.effectivePower, 125, "Changing skills or gear in transit changed launched Rally attack power.");
 assert.equal(liveRallyPackage.attackBonusPercent, 0, "The Rally report replaced launch-time Swordmastery.");
 assert.equal(liveRallyPackage.attackGearPercent, 0, "The Rally report replaced launch-time attack gear.");
-assert.equal(liveRallyPackage.fieldMedicsPercent, 24, "Battle-time Rally casualty recovery was not recalculated.");
+assert.equal(liveRallyPackage.fieldMedicsPercent, 0, "Skills added during travel increased Rally recovery.");
+assert.equal(liveRallyPackage.casualtyGearPercent, 0, "Gear added during travel increased Rally recovery.");
+const recoveryAtLaunch = { ...launchedRally, participants: [{ ...launchedRally.participants[0],
+  fieldMedicsPercent: 51.5, fieldMedicsSkillPercent: 50, casualtyGearPercent: 1.5 }] };
+const recoveryAfterReset = getRallyAttackPackages(recoveryAtLaunch, new Map([["leader", {}]]))[0];
+assert.equal(recoveryAfterReset.fieldMedicsPercent, 51.5, "Resetting skills or removing gear weakened launched Rally recovery.");
+assert.equal(recoveryAfterReset.fieldMedicsSkillPercent, 50, "Rally recovery lost its departure skill source.");
 assert.equal(liveRallyPackage.ownerName, changedProfile.playerName, "Rally identity did not refresh at battle time.");
 assert.equal(getRallyAttackPackages({ ...launchedRally, attackPower: 320 }, new Map([["leader", changedProfile]]))[0].effectivePower,
   320, "Live profile loading discarded a previously stored Rally attack total.");

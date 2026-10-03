@@ -139,7 +139,7 @@ async function main() {
   await Promise.all([
     db.doc(`players/${attacker.uid}`).set({
       gear: attackerGear,
-      upgrades: { swordmastery: 10, fieldMedics: 10 },
+      upgrades: { swordmastery: 10, fieldMedics: 25 },
       kingPower: 100_000,
       itemEffects: { shieldExpiresAtMs: 0 },
       economyUpdatedAtMs: nowMs,
@@ -205,9 +205,9 @@ async function main() {
     },
   });
   assert(launch.movement?.id === armyId, "The battle-report test attack did not launch.");
-  await db.doc(`players/${attacker.uid}`).update({ gear: createEquippedGear([
+  await db.doc(`players/${attacker.uid}`).update({ "upgrades.swordmastery": 50, "upgrades.fieldMedics": 0, gear: createEquippedGear([
     { buildingId: "barracks", slot: "weapon", rarity: "legendary" },
-    { buildingId: "barracks", slot: "necklace" },
+    { buildingId: "barracks", slot: "necklace", rarity: "legendary" },
   ]) });
   const notificationOutbox = await db.doc(`serverNotificationOutbox/incoming_${armyId}_${defender.uid}`).get();
   assert(notificationOutbox.exists, "The attack did not atomically queue its defender notification.");
@@ -278,11 +278,22 @@ async function main() {
     const canonical = (await db.doc(`players/${user.uid}/serverReports/${report.id}`).get()).data();
     deepStrictEqual(canonical.gearEffects, snapshot.gearEffects, "Canonical report lost item details.");
   }
-  assert(attackerReport.casualtyRecovery?.fieldMedicsPercent === 20, "Attacker Field Medics was not snapshotted separately.");
+  assert(attackerReport.casualtyRecovery?.fieldMedicsPercent === 50, "Attacker Field Medics was not locked at departure.");
   assert(attackerReport.casualtyRecovery?.gearPercent === 1.5, "Attacker casualty gear was not snapshotted separately.");
+  assert(attackerReport.fieldMedicsRecovered === Math.floor(snapshot.totals.attackerLosses * 51.5 / 100), "Departure recovery was not credited after the skill reset.");
+  assert(snapshot.attacker.casualtyRecovery.recoveredTroops === attackerReport.fieldMedicsRecovered, "Snapshot and credited recovery disagree.");
+  assert(snapshot.attacker.swordmasteryPercent === 20, "Changing skills strengthened a launched attack.");
+  const homeAfterRecovery = (await sourceRef.get()).data();
+  assert(homeAfterRecovery.troops >= 1_000 + attackerReport.fieldMedicsRecovered + (attackerReport.troopsAwarded || 0),
+    "The departure recovery shown in the report was not credited to the Main City.");
+  await sourceRef.update({ productionUpdatedAtMs: Date.now() + 60_000 });
+  const creditedBeforeReplay = (await sourceRef.get()).data().troops;
+  await callFunction("resolveArmyOrder", attacker.token, { armyId, regionIds: [regionId] });
+  assert((await sourceRef.get()).data().troops === creditedBeforeReplay, "Replaying an attack duplicated departure recovery.");
   assert(defenderReport.casualtyRecovery?.fieldMedicsPercent === 20, "Defender Field Medics was not snapshotted separately.");
   assert(defenderReport.casualtyRecovery?.gearPercent === 1.5, "Defender casualty gear was not snapshotted separately.");
 
+  // Level-40 walls withstand all three test strikes under the staged wall curve.
   // Exercise persisted wall-only combat against both the owner and an allied garrison.
   const ally = await createAuthUser("wall-ally");
   const allyClaim = await callFunction("claimStartingCity", ally.token, { playerName: "Wall Ally" });
@@ -307,7 +318,7 @@ async function main() {
     ...wallTargetDoc.data(), ...current,
     owner: "player", ownerKind: "player", ownerUid: defender.uid, ownerClanId: clanId,
     ownerName: "Gear Defender", ownerShieldExpiresAtMs: 0, isMainCity: false,
-    kind: "city", level: 25, regionId, troops: 100_000, troopFloat: 100_000,
+    kind: "city", level: 40, regionId, troops: 100_000, troopFloat: 100_000,
     alliedReinforcementTroops: 10_000, productionUpdatedAtMs: wallNowMs,
     fortificationState: { version: 1, integrityBps: 10_000, repairAtMs: 0 },
   });
@@ -324,6 +335,7 @@ async function main() {
   await batch.commit();
   await callFunction("collectEconomy", defender.token);
   await callFunction("collectEconomy", attacker.token);
+  await db.doc(`players/${attacker.uid}`).update({ "upgrades.swordmastery": 10, "upgrades.fieldMedics": 0, gear: commonGear.createDefaultState() });
   const wallArmyId = `wall_only_${crypto.randomBytes(6).toString("hex")}`;
   await callFunction("sendArmyOrder", attacker.token, {
     sourceRegionId: regionId, targetRegionId: regionId,
@@ -332,9 +344,12 @@ async function main() {
       sourceRegionId: regionId, targetRegionId: regionId },
   });
   await db.doc(`armies/${wallArmyId}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
+  await db.doc(`players/${attacker.uid}`).update({ "upgrades.fieldMedics": 25, gear: attackerGear });
   const wallResolution = await callFunction("resolveArmyOrder", attacker.token, { armyId: wallArmyId, regionIds: [regionId] });
   assert(wallResolution.status === "resolved", "The wall-only attack did not resolve.");
   const wallSnapshot = (await db.doc(`battleSnapshots/${realm.resetGeneration}/entries/${wallArmyId}`).get()).data() || {};
+  assert(wallSnapshot.attacker.casualtyRecovery.combinedPercent === 0, "Bonuses gained during travel increased attack recovery.");
+  assert(wallSnapshot.attacker.casualtyRecovery.recoveredTroops === 0, "A zero departure snapshot fell back to live recovery.");
   assert(wallSnapshot.totals?.defenderLosses === 0, "The wall-only battle snapshot reported defender deaths.");
   assert(wallSnapshot.totals?.defenderSurvivors === wallSnapshot.totals?.defenders, "The wall-only battle snapshot lost defending troops.");
   const [wallCityAfter, contributionAfter, wallDefenderAfter] = await Promise.all([

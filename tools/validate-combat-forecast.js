@@ -23,7 +23,7 @@ function readFunction(text, name) {
 
 const requiredServerSnippets = [
   "const COMBAT_FORECAST_VERSION = 4",
-  "const ATTACK_COMBAT_SNAPSHOT_VERSION = 1",
+  "const ATTACK_COMBAT_SNAPSHOT_VERSION = 2",
   "defensePower: defenseContext.packages.totalDefense",
   "attackCombatSnapshot: createAttackCombatSnapshot(troops, profile)",
   "getSnapshottedAttackPower(army.attackCombatSnapshot, troopCount)",
@@ -130,7 +130,7 @@ vm.runInContext(
 
 const attackSnapshotSandbox = {
   COMMON_GEAR: require("../common-gear.js"),
-  ATTACK_COMBAT_SNAPSHOT_VERSION: 1,
+  ATTACK_COMBAT_SNAPSHOT_VERSION: 2,
   BASE_TROOP_ATTACK_POWER: 1.25,
   Math,
   Number,
