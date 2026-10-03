@@ -5705,7 +5705,7 @@ async function loadHalloweenMapLayouts() {
   if (!halloweenMapLayoutPromise) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    halloweenMapLayoutPromise = fetch("assets/optimized/halloween-map-layouts-v2.json", { signal: controller.signal })
+    halloweenMapLayoutPromise = fetch("assets/optimized/halloween-map-layouts-v3.json", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject(new Error("Decoration layout unavailable")))
       .then(data => {
         if (data?.schemaVersion !== 2 || data.topology !== "core-expansion-v1" || data.width !== 1448 || data.height !== 1086

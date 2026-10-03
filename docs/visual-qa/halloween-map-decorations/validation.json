@@ -7,6 +7,8 @@
         {
           "id": "core-v2-warband-camp-m2-m2",
           "count": 12,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -15,7 +17,9 @@
         },
         {
           "id": "core-v2-north-west-holding-tower-m1-m1",
-          "count": 15,
+          "count": 14,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -25,6 +29,8 @@
         {
           "id": "core-v2-aurum-keep-m1-p0",
           "count": 7,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -34,6 +40,8 @@
         {
           "id": "core-v2-crown-citadel-p0-p0",
           "count": 7,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -43,6 +51,8 @@
         {
           "id": "core-v2-warband-camp-south-east-p2-p2",
           "count": 10,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -52,6 +62,8 @@
         {
           "id": "new-lands-l01-p001",
           "count": 22,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -61,6 +73,8 @@
         {
           "id": "new-lands-l02-p032",
           "count": 24,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -69,7 +83,7 @@
         }
       ],
       "behavior": {
-        "refreshMs": 7.799999952316284,
+        "refreshMs": 15.799999952316284,
         "mutations": 0,
         "movingVisible": 9,
         "settledVisible": 24,
@@ -87,6 +101,8 @@
         {
           "id": "core-v2-warband-camp-m2-m2",
           "count": 12,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -95,7 +111,9 @@
         },
         {
           "id": "core-v2-north-west-holding-tower-m1-m1",
-          "count": 15,
+          "count": 14,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -105,6 +123,8 @@
         {
           "id": "core-v2-aurum-keep-m1-p0",
           "count": 7,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -114,6 +134,8 @@
         {
           "id": "core-v2-crown-citadel-p0-p0",
           "count": 7,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -123,6 +145,8 @@
         {
           "id": "core-v2-warband-camp-south-east-p2-p2",
           "count": 10,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -132,6 +156,8 @@
         {
           "id": "new-lands-l01-p001",
           "count": 22,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -141,6 +167,8 @@
         {
           "id": "new-lands-l02-p032",
           "count": 24,
+          "variety": 7,
+          "decodedBytes": 682880,
           "missing": 0,
           "animations": 0,
           "overlaps": 0,
@@ -149,7 +177,7 @@
         }
       ],
       "behavior": {
-        "refreshMs": 6.6000001430511475,
+        "refreshMs": 8,
         "mutations": 0,
         "movingVisible": 9,
         "settledVisible": 24,

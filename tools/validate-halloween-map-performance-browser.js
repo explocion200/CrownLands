@@ -94,7 +94,9 @@ async function main() {
       assert.equal(fixture.cities, 40); assert.equal(fixture.marches, 25);
       // The phone viewport correctly culls marches beyond its visible bounds.
       assert(fixture.tokens > 0 && fixture.tokens <= 25, "Expected visible army tokens");
-      fixtures.push({ width, height, ...fixture });
+      const art = await evaluate("decorationPerf.layouts.assets.map(asset=>asset.src)");
+      assert.equal(art.length, 7, "Exercise the complete seven-prop palette");
+      fixtures.push({ width, height, ...fixture, art });
       for (const rate of [1, 4]) for (const moving of [false, true]) {
         await client.send("Emulation.setCPUThrottlingRate", { rate });
         // Repeat ABBA twice: four samples per variant reduce scheduling noise

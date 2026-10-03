@@ -53,14 +53,17 @@ async function main() {
           await Promise.all([...layer.children].map(image=>image.decode()));
           renderCities(true);
           const props=[...layer.children];
+          const decodedBytes=[...new Map(props.map(p=>[p.src,p.naturalWidth*p.naturalHeight*4])).values()].reduce((sum,bytes)=>sum+bytes,0);
           const rect=node=>{const r=node.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}};
           const boxes=[...cityLayer.querySelectorAll('.city-castle,.stronghold-building,.holding-tower-node'),...mapBg.querySelectorAll('.illustrated-map-scenery:not(.halloween-map-decorations) img')].map(rect);
           const collides=(a,b)=>a.w>0&&b.w>0&&a.h>0&&b.h>0&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-          return {count:props.length,missing:props.filter(p=>!p.naturalWidth).length,animations:layer.getAnimations({subtree:true}).length,
+          return {count:props.length,variety:new Set(props.map(p=>p.getAttribute('src'))).size,decodedBytes,missing:props.filter(p=>!p.naturalWidth).length,animations:layer.getAnimations({subtree:true}).length,
             overlaps:props.flatMap(p=>boxes.filter(b=>collides(rect(p),b))).length,
             clicks:props.every(p=>getComputedStyle(p).pointerEvents==='none'),layers:mapBg.querySelectorAll('.halloween-map-decorations').length};
         })()`);
         assert(check.count >= 1 && check.count <= 24, JSON.stringify({ id, check }));
+        assert.equal(check.variety, 7, `${id}: all seven prop types should be present`);
+        assert(check.decodedBytes <= 768 * 1024, `${id}: decoded decoration textures exceed the existing three-sprite 256px budget`);
         assert.equal(check.missing, 0); assert.equal(check.animations, 0); assert.equal(check.overlaps, 0, `${id}: decoration covers scenery or maximum city art`);
         assert(check.clicks); assert.equal(check.layers, 1);
         traversal.push({ id, ...check });
@@ -102,7 +105,7 @@ async function main() {
         halloweenTestMonth=10;refreshHalloweenDecorationVisibility();assert(!mapBg.querySelector('.halloween-map-decorations'),'Season end leaves decorations');
         halloweenTestMonth=9;await renderHalloweenMapDecorations(region,mapImageSwapToken);
         setZoomAroundPoint(1.5,innerWidth/2,innerHeight/2);
-        const focus=mapBg.querySelector('.halloween-map-decorations img').halloweenBounds;
+        const focus=mapBg.querySelector('.halloween-map-decorations img[src*="cauldron"]').halloweenBounds;
         centerOnWorldPoint({x:(focus.left+focus.right)/2,y:(focus.top+focus.bottom)/2},region);
         await Promise.all([...mapBg.querySelectorAll('.halloween-map-decorations img')].map(image=>image.decode()));
         return {refreshMs,mutations:0,movingVisible,settledVisible,staleMap:true,template:true,optionalFailure:true,seasonEnd:true,pickup:true};

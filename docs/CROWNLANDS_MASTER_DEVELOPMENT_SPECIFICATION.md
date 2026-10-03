@@ -293,7 +293,7 @@ Prepared maps have 81 distinct road networks. Future generated regions inherit t
 
 ### Confirmed Halloween map decoration direction — October 3, 2026
 
-Halloween decorations use the supplied painted medieval atlas as art inspiration. Place them on a separate scenery layer in clear ground, preserving existing trees, rocks, cities and other map objects. Increase the decoration density while preserving these clearances and limiting rendering work during map movement. This is environmental artwork, separate from the city skin collection. Production deployment has not been verified. Draft assets, placement rules and validation are recorded in [the Halloween map decoration notes](art-sources/halloween-map-decorations/README.md).
+Halloween decorations use the supplied painted medieval atlas as art inspiration. Place them on a separate scenery layer in clear ground, preserving existing trees, rocks, cities and other map objects. Increase the decoration density and variety while preserving these clearances and limiting rendering work during map movement. This is environmental artwork, separate from the city skin collection. Production deployment has not been verified. Draft assets, placement rules and validation are recorded in [the Halloween map decoration notes](art-sources/halloween-map-decorations/README.md).
 
 ### Current production
 

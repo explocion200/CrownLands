@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const root = path.resolve(__dirname, "..");
-const output = "assets/optimized/halloween-map-layouts-v2.json";
+const output = "assets/optimized/halloween-map-layouts-v3.json";
 const read = file => JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
 const overlaps = (a, b, gap = 0) => a.x < b.x + b.w + gap && a.x + a.w + gap > b.x
   && a.y < b.y + b.h + gap && a.y + a.h + gap > b.y;
@@ -15,8 +15,8 @@ function build() {
   const catalog = read("assets/worlds/core-expansion-v1/region-catalog.json");
   const roads = read("tools/map-art/clearance.json");
   const towers = read("tools/map-art/clan-tower-clearance.json");
-  const assets = read("docs/art-sources/halloween-map-decorations/assets.json").map((asset, index) => ({
-    src: asset.output, w: [40, 34, 32][index], h: [27, 34, 32][index],
+  const assets = read("docs/art-sources/halloween-map-decorations/assets.json").map(asset => ({
+    src: asset.output, w: asset.mapWidth, h: asset.mapHeight,
   }));
   const maps = {};
   for (const summary of catalog.regions) {
@@ -30,6 +30,14 @@ function build() {
       ...towers.maps.filter(map => map.id === summary.id).map(map => map.reserved),
     ];
     const seed = crypto.createHash("sha256").update(summary.id).digest().readUInt32LE(0);
+    // Mix the palette per map; every seven placements include every prop once.
+    const palette = assets.map((_, index) => index);
+    let paletteSeed = seed;
+    for (let index = palette.length - 1; index > 0; index--) {
+      paletteSeed = (Math.imul(paletteSeed, 1664525) + 1013904223) >>> 0;
+      const swap = paletteSeed % (index + 1);
+      [palette[index], palette[swap]] = [palette[swap], palette[index]];
+    }
     const candidatesFor = (step, jitter) => {
       let state = seed;
       const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 0x100000000);
@@ -42,13 +50,14 @@ function build() {
       return candidates.sort((a, b) => a.order - b.order);
     };
     const placements = [];
-    // Preserve the first draft's placements, then fill more of the safe gaps.
+    // Spread the first nine widely, then fill more of the safe gaps.
     for (const [candidates, spacing, limit] of [[candidatesFor(35, 24), 150, 9], [candidatesFor(20, 14), 90, 24]]) {
       for (const candidate of candidates) {
-        const asset = placements.length % assets.length;
+        const asset = palette[placements.length % palette.length];
         const box = { x: candidate.x, y: candidate.y, w: assets[asset].w, h: assets[asset].h };
         if (reserved.some(other => overlaps(box, other, 10))) continue;
         if (placements.some(other => Math.hypot(box.x - other.x, box.y - other.y) < spacing)) continue;
+        if (placements.some(other => other.asset === asset && Math.hypot(box.x - other.x, box.y - other.y) < 250)) continue;
         // 6px includes the 4.2px maximum gap between reviewed road samples.
         if (proof.roads.some(segment => segment.some(([x, y, width]) => distanceToRect(x, y, box) <= width / 2 + 6))) continue;
         placements.push({ asset, x: box.x, y: box.y });

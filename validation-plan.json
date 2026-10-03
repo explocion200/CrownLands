@@ -26,10 +26,7 @@
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "assets/optimized/halloween-map-lanterns-162e79b96e58.webp",
-        "assets/optimized/halloween-map-layouts-v2.json",
-        "assets/optimized/halloween-map-pumpkins-a6d32ca03ef7.webp",
-        "assets/optimized/halloween-map-scarecrow-9242bd705a4b.webp",
+        "assets/optimized/halloween-map-layouts-v3.json",
         "docs/art-sources/halloween-map-decorations/README.md",
         "docs/art-sources/halloween-map-decorations/assets.json",
         "docs/art-sources/halloween-map-decorations/lanterns.png",
@@ -43,14 +40,25 @@
         "tools/validate-halloween-map-decorations-browser.js",
         "tools/validate-halloween-map-decorations.js",
         "tools/validate-halloween-map-performance-browser.js",
-        "docs/visual-qa/halloween-map-decorations/performance.json"
+        "docs/visual-qa/halloween-map-decorations/performance.json",
+        "assets/optimized/halloween-map-pumpkins-fc5076146993.webp",
+        "assets/optimized/halloween-map-scarecrow-3a3bb592afb9.webp",
+        "assets/optimized/halloween-map-lanterns-991fdbe11d76.webp",
+        "assets/optimized/halloween-map-cauldron-9a3d0222d036.webp",
+        "docs/art-sources/halloween-map-decorations/cauldron.png",
+        "assets/optimized/halloween-map-graves-69c86dbfc3f9.webp",
+        "docs/art-sources/halloween-map-decorations/graves.png",
+        "assets/optimized/halloween-map-raven-53aa61d186f7.webp",
+        "docs/art-sources/halloween-map-decorations/raven.png",
+        "assets/optimized/halloween-map-ghost-3ac59a03bc5d.webp",
+        "docs/art-sources/halloween-map-decorations/ghost.png"
       ],
       "tests": [
         "tools/validate-halloween-map-decorations.js",
         "tools/validate-halloween-map-decorations-browser.js",
         "tools/validate-halloween-map-performance-browser.js"
       ],
-      "reason": "Three generated transparent sprites and reproducible offline layouts add 1,604 placements across 81 prepared maps. Preserve the original placements and all city, road, tree/rock, landmark and Tower compound clearances. Check counts, spacing, sprite hashes, compact schema reproducibility and 56,692-byte lazy payload. Browser checks cover art decoding, max-stage city clearances, motion visibility and recovery, no animations, no layer accumulation or idle DOM mutations, and desktop/phone visual evidence. Performance proof includes repeated idle and camera movement comparisons with CPU throttling. Specification records the confirmed separate scenery layer and increased density with limited rendering cost; October timing remains a draft default."
+      "reason": "Seven generated transparent sprites and reproducible offline layouts add 1,536 placements across 81 prepared maps. Every map includes all seven types; matching types are separated by at least 250 map pixels. Preserve city, road, tree/rock, landmark and Tower compound clearances. Check counts, spacing, sprite hashes, compact schema reproducibility and 59,111-byte lazy payload. Browser checks cover seven distinct decoded images per map, bounded decoded texture memory, max-stage city clearances, motion visibility and recovery, no animations, no layer accumulation or idle DOM mutations, and desktop/phone visual evidence. Performance proof exercises the full palette, idle and camera movement with CPU throttling. Specification records the confirmed separate scenery layer, increased variety and density with limited rendering cost; October timing remains a draft default."
     }
   ]
 }

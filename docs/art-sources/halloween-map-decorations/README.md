@@ -4,14 +4,16 @@ Draft prepared on `codex/halloween-map-decorations`, in PR #430. Not merged or d
 
 ## Artwork
 
-Three transparent illustrations follow the user's medieval atlas reference: pumpkins, a harvest scarecrow and a rustic lantern post. Generated with the built-in `image_gen` tool. [prompts.json](prompts.json) contains the exact prompts; [assets.json](assets.json) records source paths, production paths, hashes, dimensions and byte counts. The original PNGs are preserved here. Production uses 256px WebP derivatives with alpha, totaling 34,588 bytes. Resizing and WebP encoding used Sharp; the artwork was not redrawn in code.
+Seven transparent illustrations follow the user's medieval atlas reference: pumpkins, a harvest scarecrow, a rustic lantern post, a witch's cauldron, weathered graves, a raven perch and a cloth ghost. The four added props have distinct silhouettes and no pumpkins, addressing the repetition in the original set. Generated with the built-in `image_gen` tool. [prompts.json](prompts.json) contains the exact prompts; [assets.json](assets.json) records source paths, production paths, hashes, dimensions, map sizes and byte counts. The original PNGs are preserved here.
+
+Production uses WebP derivatives with alpha, at most 160px per side, totaling 37,502 bytes for all seven. Sharp resized each source to fit within 160×160 without enlargement, then encoded at quality 68, alpha quality 90 and effort 6. The original images remain intact; this is output sizing and compression. Replaced 256px derivatives are excluded from the build. Browser checks bound the combined decoded textures below the original three-sprite 256px allocation of 768 KiB.
 
 ## Placement and timing
 
 - The draft displays decorations during October, using UTC. This is an implementation default pending the user's timing preference.
-- The active `core-expansion-v1` topology has 1,604 placements across its 81 prepared maps, with 7–24 per map, increased from 650. The original placements are retained. Future generated regions inherit their prepared template's placements. Authoritative map activation is unchanged.
+- The active `core-expansion-v1` topology has 1,536 placements across its 81 prepared maps, with 7–24 per map. Every map includes all seven types in its first seven placements. A deterministic shuffled palette varies their distribution between maps. Some repeated placements were removed to spread matching props farther apart. Future generated regions inherit their prepared template's placements. Authoritative map activation is unchanged.
 - `node tools/build-halloween-map-decorations.js` creates the small layout file from the current client catalog, canonical city definitions, reviewed road samples and Clan Tower compound clearances. It never changes those inputs.
-- Full sprite rectangles clear city art and flags, separate trees/bushes/rocks, objective art, Tower compounds and roads. Placements remain in the interior, away from baked edge forests, mountains, camp props and navigation arrows. Nearby decorations are at least 90 map pixels apart. The crowded Ironwatch map retains seven props because no more safe space was found.
+- Full sprite rectangles clear city art and flags, separate trees/bushes/rocks, objective art, Tower compounds and roads. Placements remain in the interior, away from baked edge forests, mountains, camp props and navigation arrows. Nearby decorations are at least 90 map pixels apart; matching prop types are at least 250 pixels apart to avoid repetitive clusters.
 - Runtime also checks live city positions and current scenery bounds. Overlapping resource pickups hide the decoration until the pickup leaves; pickup rewards, timing and spawn rules are unchanged.
 - Decorations are free environmental scenery. They add no shop item, troop skin, flag border, hit target or pathfinding obstacle.
 
@@ -20,7 +22,7 @@ Three transparent illustrations follow the user's medieval atlas reference: pump
 - No animation, particles, filters, per-frame placement searches or extra game timers.
 - At most 24 static images are attached to the active map. During pan/zoom, the existing camera state hides props after the first nine, keeping the original painting limit. All props return after movement settles. Map swaps replace the old layer. Optional layout loading has an eight-second timeout and a stale-map guard; it never blocks map readiness.
 - Images use async decoding and low request priority. Missing images disappear; failed layouts can retry on a later map load.
-- The compact v2 layout stores `[assetIndex, x, y]` tuples. The layout plus the same three sprites total 56,692 bytes, only 1,219 bytes more than the first draft and still bounded by the original 64 KiB validation gate. They are excluded from installation precaching and requested only during October.
+- The versioned v3 layout retains schema 2's compact `[assetIndex, x, y]` tuples. The layout plus all seven sprites total 59,111 bytes, still bounded by the original 64 KiB validation gate. They are excluded from installation precaching and requested only during October.
 - Pickup visibility uses the existing refresh path. An unchanged refresh writes no DOM attributes. Desktop and mobile synthetic checks ran 1,000 refreshes without mutations.
 
 ## Validation and review
