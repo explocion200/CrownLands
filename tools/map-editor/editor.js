@@ -1059,13 +1059,23 @@
     return Math.max(10, Math.floor(rawCost + 0.000001));
   }
 
-  function getEconomyPreviewBaseWall(level, economy = state.economy) {
+  function getEconomyPreviewBaseWall(level, economy = state.economy, regularCity = true) {
     const config = economy?.cityEconomy || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
     const safeWall = rawWall => Number.isFinite(rawWall)
       ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)))
       : Number.MAX_SAFE_INTEGER;
     const base = Math.max(0, readEconomyNumber(config.wallDefenseBase, 200));
+    if (regularCity && readEconomyNumber(config.wallCurveModelVersion, 1) >= 3 && normalizedLevel <= 100) {
+      if (normalizedLevel <= 25) return safeWall(base + readEconomyNumber(config.wallEarlyScale, 400)
+        * Math.pow(normalizedLevel - 1, readEconomyNumber(config.regularWallEarlyExponent, 1.2986357706197937)));
+      const startLevel = normalizedLevel <= 50 ? 25 : normalizedLevel <= 75 ? 50 : 75;
+      const startWall = readEconomyNumber(config[`regularWallLevel${startLevel}`],
+        startLevel === 25 ? 25_000 : startLevel === 50 ? 250_000 : 1_000_000);
+      const endWall = startLevel === 75 ? readEconomyNumber(config.wallMidDefense, 3_000_000)
+        : readEconomyNumber(config[`regularWallLevel${startLevel + 25}`], startLevel === 25 ? 250_000 : 1_000_000);
+      return safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25));
+    }
     if (Math.floor(readEconomyNumber(config.wallCurveModelVersion, 1)) < 2) {
       return safeWall(base + Math.max(0, readEconomyNumber(config.wallDefensePerLevel, 28858)) * (normalizedLevel - 1));
     }
@@ -1619,19 +1629,29 @@
                 "cityEconomy.wallCurveModelVersion",
                 "Wall curve model version",
                 economy.cityEconomy.wallCurveModelVersion,
-                { step: 1, description: "Version 2 enables the smooth early, Gold-linked, and production-ratio stages." }
+                { step: 1, description: "Version 3 adds lighter regular-city stages through Level 100. Objectives retain version 2." }
               )}
+              ${economyNumberInput(
+                "cityEconomy.regularWallEarlyExponent", "Regular-city early wall exponent",
+                economy.cityEconomy.regularWallEarlyExponent,
+                { step: 0.000001, description: "Levels 1–25: 200 + 400 × (level − 1)^exponent, reaching 25,000." }
+              )}
+              ${[25, 50, 75].map(level => economyNumberInput(
+                `cityEconomy.regularWallLevel${level}`, `Regular-city wall at Level ${level}`,
+                economy.cityEconomy[`regularWallLevel${level}`],
+                { step: 1, description: "Regular-city stage endpoint. Objectives use the separate version-2 curve." }
+              )).join("")}
               ${economyNumberInput(
                 "cityEconomy.wallEarlyScale",
                 "Early wall scale",
                 economy.cityEconomy.wallEarlyScale,
-                { step: 1, description: "Added to the Level 1 base using scale × (level − 1)^exponent." }
+                { step: 1, description: "Shared starting scale; regular cities and objectives use separate exponents." }
               )}
               ${economyNumberInput(
                 "cityEconomy.wallEarlyExponent",
                 "Early wall exponent",
                 economy.cityEconomy.wallEarlyExponent,
-                { step: 0.000001, description: "Controls the smooth Levels 1–25 acceleration." }
+                { step: 0.000001, description: "Objective/version-2 Levels 1–25 exponent; regular cities use the separate field above." }
               )}
               ${economyNumberInput(
                 "cityEconomy.wallEarlyEndLevel",

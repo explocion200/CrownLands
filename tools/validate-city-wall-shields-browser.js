@@ -57,6 +57,24 @@ async function main() {
         renderCities();return qa.read();
       })()`);
       assert(after.every(r => !r.shield && !r.blocked), "Expired or previous-owner shield still shown");
+      for (const [level, expected] of [[25,25000],[26,27412],[50,250000],[51,264255],
+        [75,1000000],[76,1044924],[100,3000000],[101,3030867]]) {
+        const detail = await evaluate(`(() => {
+          const city=wallQa.cities[2];city.level=${level};
+          showCityInfoModal(city.id);
+          modalBody.querySelector('[data-cd-value="walls"]').scrollIntoView({block:'center',behavior:'instant'});
+          return {base:getCityStats(city).baseCityWalls,expectedLabel:formatNumber(${expected}),
+            text:modalBody.querySelector('[data-cd-value="walls"]').textContent.replace(/,/g,''),
+            overflow:modal.scrollWidth>modal.clientWidth+1};
+        })()`);
+        assert.equal(detail.base, expected);
+        assert(detail.text.startsWith(detail.expectedLabel + ' '), JSON.stringify(detail));
+        assert(!detail.overflow, "Wall value overflowed City Info");
+      }
+      await wait(250);
+      const detailsShot = await client.send("Page.captureScreenshot", { format: "png" });
+      fs.writeFileSync(path.join(dir, `${width}x${height}-city-walls.png`), Buffer.from(detailsShot.data, "base64"));
+      await evaluate("modal.close()");
       results.push({ width, height, before, repaired, after });
       console.log(`City wall shields browser passed at ${width}x${height}: own/rival cities, automatic repair, attack feedback, expiry and ownership.`);
     }

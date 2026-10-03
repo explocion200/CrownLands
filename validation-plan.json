@@ -1,79 +1,126 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "18fd6e0ad888fbc8fd0f01a13b8985a6565b2127",
+  "baseCommit": "148dd5a92ec39cc6d19fd6474a997b9dccbce7c3",
   "coverage": [
-    {
-      "paths": ["tools/validate-asset-performance-budgets.js"],
-      "tests": ["tools/validate-asset-performance-budgets.js"],
-      "reason": "Bound the new capture notices, forecast fields and report handling at one additional KiB after removing duplicate notice handling. Normalized game source measures 1912.73 KiB against the updated 1913 KiB cap. Aggregate offline-shell, art, production artifact and frame budgets are unchanged."
-    },
     {
       "paths": [
         "functions/index.js",
-        "functions/former-clan-protection.js",
-        "firestore.rules"
+        "functions/economy-config.json",
+        "economy-config.js",
+        "game.js",
+        "battle-guide-calculations.js",
+        "tools/map-editor/editor.js"
       ],
       "tests": [
-        "tools/validate-former-clan-protection.js",
-        "tools/validate-clan-membership-cooldowns.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-economy-balance.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-king-power.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-clan-reinforcements.js",
         "tools/validate-combat-authorization.js",
         "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-clan-rallies.js",
-        "functions/test/emulator-combat-authorization.js",
-        "tools/validate-combat-forecast.js",
         "tools/validate-report-system.js",
-        "tools/validate-siege-combat.js"
+        "tools/validate-city-wall-shields.js",
+        "tools/audit-season-balance.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Snapshot clanmates atomically on leave/kick/disband, preserving one-hour join rules and realm isolation. Permit normal dispatch and combat while preventing city capture at arrival for 24 hours. Check genuine victories, wall damage, casualties, XP, survivor returns, unchanged owner/level/investment, no conquest mission credit or new retaliation grants, normal Shield removal and spent retaliation, Tower-origin attacks, converted support and hostile Rally returns. Verify expiry during travel, outsiders/objectives/new owners, repeated departure, replay and Firestore authority. Shared combat, siege, report and forecast dependencies are covered."
+      "reason": "Verify approved stages across client/server/calculator/editor through level 10,000, boundaries, early capture affordability, unchanged objectives and level 100+ walls. Cover bonuses, King Power, reinforcements, siege/repair, protection, forecasts and reports; real Core-realm callable scouts, previews and captures."
     },
     {
       "paths": [
-        "game.js",
-        "help-handbook-content.js",
-        "tools/validate-help-handbook-browser.js"
+        "functions/release-config.json",
+        "release-config.js"
       ],
       "tests": [
-        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Validate matching release contracts and actual stale-client rejection. Realm/reset configuration stays unchanged; deployment requires matching client and backend."
+    },
+    {
+      "paths": [
+        "README.md",
+        "game-rules.html",
+        "battle-economy-guide.html",
+        "help-handbook-content.js"
+      ],
+      "tests": [
+        "tools/validate-siege-combat.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-balance-guide-browser.js",
         "tools/validate-help-handbook-browser.js",
-        "tools/validate-combat-forecast.js",
-        "tools/validate-report-system.js"
+        "tools/validate-city-wall-shields-browser.js"
       ],
-      "reason": "Explain attack-allowed/capture-disabled behavior in departure confirmations, Help, the troop composer with and without scout intel, and both battle-report perspectives including the fallback summary. Verify real desktop and landscape mobile layouts at 1440x900, 844x390 and 568x320, normalized forecast/recorded-rule data, cancellation and existing report behavior. Suppress the city-captured sound for protected victories."
-    },
-    {
-      "paths": [
-        "tools/validate-former-clan-protection.js"
-      ],
-      "tests": [
-        "tools/validate-former-clan-protection.js"
-      ],
-      "reason": "Test production policy boundaries, exact expiry, roster deduplication, prior active deadlines, stale generation/shard exclusion, malformed records, owner direction and ordinary-city scope."
-    },
-    {
-      "paths": [
-        "functions/test/emulator-combat-authorization.js"
-      ],
-      "tests": [
-        "functions/test/emulator-combat-authorization.js"
-      ],
-      "reason": "Run actual current-realm callables for leave/kick/disband and subsequent battles. Check wins with preserved ownership and level, ordinary casualties/wall damage/XP, survivor return, no conquest mission event or new retaliation, preview forecasts, Tower and retaliation dispatch, converted support and Rally returns, expiry in transit and idempotent replay. Preserve existing combat authorization and objective regression cases in the same suite."
+      "reason": "Update player-facing stages and explanations. Verify actual wall values and Help at desktop and landscape-phone sizes; preserve repairs, Shield rules, production and protection."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly revised decision: attacks allowed, city capture disabled for 24 hours, with arrival-time checks and unchanged battle rules. Preserve directional scope, roster snapshot, one-hour cooldown and future-departure release policy; no production data changes."
+      "reason": "Record explicitly approved stages, scope, integrity, objective exclusions, King Power refresh and coordinated-release requirement. Documentation only."
     },
     {
       "paths": [
-        "tools/validate-weaker-kingdom-protection.js"
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-economy-balance.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-soldier-defense.js"
       ],
       "tests": [
-        "tools/validate-weaker-kingdom-protection.js"
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-economy-balance.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-soldier-defense.js"
       ],
-      "reason": "Update the settlement-source assertion for the shared non-capturing victory/breach branch, while retaining behavioral checks for assault stages, raid limits, XP and saved attack protection."
+      "reason": "Update independent approved wall anchors and capture thresholds, preserve high-level/objective benchmarks, and correct stale expectations to previously approved 100% skill caps."
+    },
+    {
+      "paths": [
+        "tools/validate-city-wall-shields-browser.js",
+        "tools/validate-balance-guide-browser.js"
+      ],
+      "tests": [
+        "tools/validate-city-wall-shields-browser.js",
+        "tools/validate-balance-guide-browser.js"
+      ],
+      "reason": "Check City Info/calculator boundaries, compact formatting and contained scrollable layouts at 1440x900, 844x390 and 568x320. Retain Shield/repair and guide regressions."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "tests": [
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Actual scouts, previews, sends and captures at 25/26, 50/51, 75/76 and 100/101; persisted wall values, casualties, old-client rejection and unchanged Stronghold/Citadel/Tower walls. Existing PvP, retaliation, former-clan, Rally and Tower cases remain selected."
+    },
+    {
+      "paths": [
+        "tools/audit-season-balance.js",
+        "tools/season-balance-profile.json"
+      ],
+      "tests": [
+        "tools/audit-season-balance.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-economy-balance.js"
+      ],
+      "reason": "Fix pre-existing audit failure reproduced using origin/main economy. Old guard predates approved 100% skill caps. Fixed test-only 2.3-2.5-day range surrounds existing 2.390624-day Level-150 benchmark: 60.6M attackers / 25.349M daily troops. Preserve exact production/reward and 59-62M capture guards; no high-level gameplay change."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Allow two KiB for bounded wall calculations; preserve aggregate loading/offline/map art budgets. No new assets, requests, timers or rendering effects."
     }
   ]
 }

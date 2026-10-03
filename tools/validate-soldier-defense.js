@@ -69,7 +69,7 @@ const wallForLevel = level => Math.floor(
   balanceCalculator.getBaseWall(level) * (1 + stoneworksMaximum / 100)
 );
 const benchmarks = new Map([
-  [50, { wall: 2_913_338, normal: 2_205_336, stronghold: 2_246_936, citadel: 2_257_336 }],
+  [50, { wall: 500_000, normal: 1_240_001, stronghold: 1_281_601, citadel: 1_292_001 }],
   [100, { wall: 6_000_000, normal: 3_440_001, stronghold: 3_481_601, citadel: 3_492_001 }],
   [150, { wall: 12_400_000, normal: 6_000_001, stronghold: 6_041_601, citadel: 6_052_001 }],
 ]);

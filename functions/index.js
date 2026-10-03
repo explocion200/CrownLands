@@ -660,6 +660,10 @@ const CITY_LEVEL_STATS = {
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   wallCurveModelVersion: Math.max(1, Math.floor(economyNumber("cityEconomy.wallCurveModelVersion", 1))),
+  regularWallEarlyExponent: economyNumber("cityEconomy.regularWallEarlyExponent", 1.2986357706197937),
+  regularWallLevel25: economyNumber("cityEconomy.regularWallLevel25", 25_000),
+  regularWallLevel50: economyNumber("cityEconomy.regularWallLevel50", 250_000),
+  regularWallLevel75: economyNumber("cityEconomy.regularWallLevel75", 1_000_000),
   wallEarlyScale: economyNumber("cityEconomy.wallEarlyScale", 400),
   wallEarlyExponent: economyNumber("cityEconomy.wallEarlyExponent", 1.8550607303011009),
   wallEarlyEndLevel: economyNumber("cityEconomy.wallEarlyEndLevel", 25),
@@ -4124,12 +4128,23 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
   };
 }
 
-function getBaseCityWalls(level) {
+function getBaseCityWalls(level, regularCity = true) {
   const normalizedLevel = clampCityLevel(level);
   const safeWall = rawWall => {
     if (!Number.isFinite(rawWall)) return Number.MAX_SAFE_INTEGER;
     return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)));
   };
+  // Regular cities use lighter early walls. Objectives and Level 101+ retain v2.
+  if (regularCity && CITY_LEVEL_STATS.wallCurveModelVersion >= 3 && normalizedLevel <= 100) {
+    if (normalizedLevel <= 25) return safeWall(CITY_LEVEL_STATS.cityWallsBase
+      + CITY_LEVEL_STATS.wallEarlyScale * Math.pow(normalizedLevel - 1, CITY_LEVEL_STATS.regularWallEarlyExponent));
+    const startLevel = normalizedLevel <= 50 ? 25 : normalizedLevel <= 75 ? 50 : 75;
+    const startWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel25
+      : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel50 : CITY_LEVEL_STATS.regularWallLevel75;
+    const endWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel50
+      : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel75 : CITY_LEVEL_STATS.wallMidDefense;
+    return safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25));
+  }
   if (CITY_LEVEL_STATS.wallCurveModelVersion < 2) {
     return safeWall(
       CITY_LEVEL_STATS.cityWallsBase
@@ -4283,7 +4298,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
   const soldierDefenseEnabled = usesSoldierDefenseModel(defenseCombatVersion, city);
   const fixedCampDefense = rewardCamp && !soldierDefenseEnabled;
   const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
-  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
+  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level, !stronghold);
   const gearBonuses = defenderProfile ? getCommonGearBonuses(defenderProfile) : {};
   const stoneworksPercent = !rewardCamp && defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, safeNumber(gearBonuses.wallStrength, 0));
@@ -27391,7 +27406,7 @@ function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs 
   const neutralDefensePower = Math.floor(neutralTroops * BASE_TROOP_DEFENSE_POWER);
   const garrisonTroops = contributions.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.troops), 0);
   const garrisonDefensePower = contributions.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.effectivePower), 0);
-  const fullWallPower = getBaseCityWalls(current.wallLevel);
+  const fullWallPower = getBaseCityWalls(current.wallLevel, false);
   const currentWallPower = Math.floor(fullWallPower * current.wallIntegrityBps / HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS);
   return {
     tower: current,
@@ -27438,7 +27453,7 @@ function extendHoldingTowerPaidRepair(tower = {}, battleFortification = null, no
   if (!tower.repair || endingIntegrityBps >= HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS) {
     return { ...tower, wallIntegrityBps: endingIntegrityBps, repair: null };
   }
-  const fullWallPower = Math.max(1, safeNumber(battleFortification?.fullWallPower, getBaseCityWalls(tower.wallLevel)));
+  const fullWallPower = Math.max(1, safeNumber(battleFortification?.fullWallPower, getBaseCityWalls(tower.wallLevel, false)));
   const addedDamagePower = Math.max(0, safeNumber(battleFortification?.wallDamagePower, 0));
   const addedMs = Math.round(
     getSiegeRepairWindowMinutes(tower.wallLevel) * 60_000

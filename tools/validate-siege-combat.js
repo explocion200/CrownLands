@@ -474,7 +474,7 @@ assert.ok(client.includes("Walls breached — garrison likely holds"));
 assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?recover continuously[\s\S]*?neutral claims[\s\S]*?Protected raids[\s\S]*?do not persist wall damage/);
 assert.match(guide, /Defense happens in two layers[\s\S]*?all defending soldiers and reinforcements survive unharmed/);
 assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?rise continuously[\s\S]*?neutral handoff/);
-assert.match(readme, /two-phase siege model[\s\S]*?smooth staged curve[\s\S]*?full-breach repair window[\s\S]*?recover continuously[\s\S]*?later meaningful hits use that recovered strength/);
+assert.match(readme, /two-phase siege model[\s\S]*?five stages[\s\S]*?full-breach repair window[\s\S]*?recover continuously[\s\S]*?later meaningful hits use that recovered strength/);
 assert.match(editor, /Soldiers and walls[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
 assert.match(editorServer, /siegeCombat: Object\.fromEntries\(Object\.keys\(fallback\.siegeCombat/);
 assert.match(editorServer, /troopCombat: Object\.fromEntries\(Object\.keys\(fallback\.troopCombat/);

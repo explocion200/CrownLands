@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-10-01-halloween-skins-v1",
+  "releaseId": "crownlands-2026-10-03-city-wall-stages-v3",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "a41816f717f6bcd54446615e7208db449edde804e99827b96207d4f73a035c9d",
+  "apiContractHash": "f878fa5cb597ce762225ea711bf2cd35d5a88c06e57abd2128ee2bf4a1f36e80",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",
