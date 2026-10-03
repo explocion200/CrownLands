@@ -28,7 +28,7 @@
         "tools/validate-cosmetics.js",
         "functions/test/emulator-cosmetics.js"
       ],
-      "reason": "The shared catalog replaces only the border placeholder metadata and points to approved art at the unchanged 200-Crown price. Check authoritative ownership, free Apply/Default, purchase replay, public appearance visible to another player, revision guards, and independent city/flag choices; the emulator now explicitly exercises border Apply/replay/Default and unowned rejection."
+      "reason": "The shared catalog replaces only the border placeholder metadata and points to approved art at the unchanged 200-Crown price. Check authoritative ownership, free Apply/Default, purchase replay, public appearance visible to another player, revision guards, and independent city/flag choices; the emulator now explicitly exercises border Apply/stale-repeat rejection/Default and unowned rejection."
     },
     {
       "paths": [
