@@ -1219,6 +1219,10 @@ const CITY_LEVEL_STATS = {
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   wallCurveModelVersion: Math.max(1, Math.floor(economyNumber("cityEconomy.wallCurveModelVersion", 1))),
+  regularWallEarlyExponent: economyNumber("cityEconomy.regularWallEarlyExponent", 1.2986357706197937),
+  regularWallLevel25: economyNumber("cityEconomy.regularWallLevel25", 25_000),
+  regularWallLevel50: economyNumber("cityEconomy.regularWallLevel50", 250_000),
+  regularWallLevel75: economyNumber("cityEconomy.regularWallLevel75", 1_000_000),
   wallEarlyScale: economyNumber("cityEconomy.wallEarlyScale", 400),
   wallEarlyExponent: economyNumber("cityEconomy.wallEarlyExponent", 1.8550607303011009),
   wallEarlyEndLevel: economyNumber("cityEconomy.wallEarlyEndLevel", 25),
@@ -9577,12 +9581,23 @@ function formatCapturedCityLevelDrop(levelDrop) {
   return `Level ${formatNumber(levelDrop.previousLevel)} to ${formatNumber(levelDrop.nextLevel)}.`;
 }
 
-function getBaseCityWalls(level) {
+function getBaseCityWalls(level, regularCity = true) {
   const normalizedLevel = clampCityLevel(level);
   const safeWall = rawWall => {
     if (!Number.isFinite(rawWall)) return Number.MAX_SAFE_INTEGER;
     return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)));
   };
+  // Regular cities use lighter early walls. Objectives and Level 101+ retain v2.
+  if (regularCity && CITY_LEVEL_STATS.wallCurveModelVersion >= 3 && normalizedLevel <= 100) {
+    if (normalizedLevel <= 25) return safeWall(CITY_LEVEL_STATS.cityWallsBase
+      + CITY_LEVEL_STATS.wallEarlyScale * Math.pow(normalizedLevel - 1, CITY_LEVEL_STATS.regularWallEarlyExponent));
+    const startLevel = normalizedLevel <= 50 ? 25 : normalizedLevel <= 75 ? 50 : 75;
+    const startWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel25
+      : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel50 : CITY_LEVEL_STATS.regularWallLevel75;
+    const endWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel50
+      : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel75 : CITY_LEVEL_STATS.wallMidDefense;
+    return safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25));
+  }
   if (CITY_LEVEL_STATS.wallCurveModelVersion < 2) {
     return safeWall(
       CITY_LEVEL_STATS.cityWallsBase
@@ -9782,7 +9797,7 @@ function getCityStats(city, options = {}) {
     && defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
   const fixedCampDefense = rewardCamp && !soldierDefenseEnabled;
   const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
-  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
+  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level, !stronghold);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
   const gearBonuses = city?.owner === "player" ? getCommonGearBonuses() : {};
   const stoneworksPercent = !rewardCamp && includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;

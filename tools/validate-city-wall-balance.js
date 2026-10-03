@@ -43,6 +43,10 @@ const wallStats = {
   cityWallsBase: Number(cityEconomy.wallDefenseBase),
   cityWallsPerLevel: Number(cityEconomy.wallDefensePerLevel),
   wallCurveModelVersion: Number(cityEconomy.wallCurveModelVersion),
+  regularWallEarlyExponent: Number(cityEconomy.regularWallEarlyExponent),
+  regularWallLevel25: Number(cityEconomy.regularWallLevel25),
+  regularWallLevel50: Number(cityEconomy.regularWallLevel50),
+  regularWallLevel75: Number(cityEconomy.regularWallLevel75),
   wallEarlyScale: Number(cityEconomy.wallEarlyScale),
   wallEarlyExponent: Number(cityEconomy.wallEarlyExponent),
   wallEarlyEndLevel: Number(cityEconomy.wallEarlyEndLevel),
@@ -56,7 +60,7 @@ const wallStats = {
   wallProductionRatioMaximumHours: Number(cityEconomy.wallProductionRatioMaximumHours),
 };
 
-assert.equal(wallStats.wallCurveModelVersion, 2);
+assert.equal(wallStats.wallCurveModelVersion, 3);
 assert.equal(cityEconomy.troopsPerVictoryPoint, 10.815);
 assert.equal(wallStats.cityWallsBase, 200);
 assert.equal(wallStats.wallBridgeDefense, 1_456_669);
@@ -104,13 +108,16 @@ vm.runInContext(extractFunction(editorSource, "getEconomyPreviewBaseWall"), edit
 const expectedWalls = new Map([
   [1, 200],
   [2, 600],
-  [5, 5_435],
-  [10, 23_763],
-  [25, 145_557],
-  [30, 293_811],
-  [40, 911_482],
-  [50, 1_456_669],
-  [75, 2_228_335],
+  [5, 2_621],
+  [10, 7_139],
+  [25, 25_000],
+  [26, 27_412],
+  [30, 39_622],
+  [40, 99_527],
+  [50, 250_000],
+  [51, 264_255],
+  [75, 1_000_000],
+  [76, 1_044_924],
   [100, 3_000_000],
   [101, 3_030_867],
   [125, 4_090_593],
@@ -128,8 +135,10 @@ for (const [level, expected] of expectedWalls) {
   assert.equal(editorContext.getEconomyPreviewBaseWall(level), expected, `Map-editor wall preview is wrong at Level ${level}.`);
 }
 
-assert.match(clientSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level\)/);
-assert.match(serverSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level\)/);
+assert.match(clientSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level, !stronghold\)/);
+assert.match(serverSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level, !stronghold\)/);
+assert.match(serverSource, /getBaseCityWalls\(current.wallLevel, false\)/);
+assert.match(serverSource, /getBaseCityWalls\(tower.wallLevel, false\)/);
 assert.match(extractFunction(clientSource, "getBaseCityWalls"), /wallGoldLinkedCostExponent/);
 assert.match(extractFunction(serverSource, "getBaseCityWalls"), /wallProductionRatioMaximumHours/);
 
@@ -144,23 +153,29 @@ assert.ok(200 * baseAttackPower <= defendedLevelOneDefense, "An equally staffed 
 const stoneworksMaximum = Number(skills.stoneworks.maxPercent);
 const shieldwallMaximum = Number(skills.shieldwallDiscipline.maxPercent);
 const swordmasteryMaximum = Number(skills.swordmastery.maxPercent);
-assert.equal(stoneworksMaximum, 75);
-assert.equal(shieldwallMaximum, 60);
-assert.equal(baseAttackPower * (1 + swordmasteryMaximum / 100), 2);
+assert.equal(stoneworksMaximum, 100);
+assert.equal(shieldwallMaximum, 100);
+const maximumAttack = baseAttackPower * (1 + swordmasteryMaximum / 100);
+assert.equal(maximumAttack, 2.5);
 
 const siegeBenchmarks = new Map([
-  [50, { wall: 2_549_170, attackers: 2_314_586 }],
-  [100, { wall: 5_250_000, attackers: 3_665_001 }],
-  [150, { wall: 10_850_000, attackers: 6_465_001 }],
+  [25, { wall: 50_000, attackers: 1_060_001 }],
+  [50, { wall: 500_000, attackers: 1_240_001 }],
+  [75, { wall: 2_000_000, attackers: 1_840_001 }],
+  [100, { wall: 6_000_000, attackers: 3_440_001 }],
+  [150, { wall: 12_400_000, attackers: 6_000_001 }],
 ]);
 for (const [level, expected] of siegeBenchmarks) {
   const maxStoneworksWall = Math.floor(calculator.getBaseWall(level) * (1 + stoneworksMaximum / 100));
   const garrisonPower = Math.floor(1_000_000 * baseDefensePower * (1 + shieldwallMaximum / 100));
-  const minimumMaxSwordAttackers = Math.floor((maxStoneworksWall + garrisonPower) / 2) + 1;
+  const minimumMaxSwordAttackers = Math.floor((maxStoneworksWall + garrisonPower) / maximumAttack) + 1;
   assert.equal(maxStoneworksWall, expected.wall, `Max-Stoneworks wall changed at Level ${level}.`);
   assert.equal(minimumMaxSwordAttackers, expected.attackers, `One-wave threshold changed at Level ${level}.`);
 }
 
+const previousCurve = require("../battle-guide-calculations.js").create({
+  ...config, cityEconomy: { ...cityEconomy, wallCurveModelVersion: 2 },
+});
 let previousWall = 0;
 for (let level = 1; level <= 10_000; level += 1) {
   const currentWall = serverContext.getBaseCityWalls(level);
@@ -168,6 +183,14 @@ for (let level = 1; level <= 10_000; level += 1) {
   assert.ok(currentWall >= previousWall, `Wall power decreased between Levels ${level - 1} and ${level}.`);
   assert.equal(clientContext.getBaseCityWalls(level), currentWall, `Client/server wall mismatch at Level ${level}.`);
   assert.equal(editorContext.getEconomyPreviewBaseWall(level), currentWall, `Editor/server wall mismatch at Level ${level}.`);
+  assert.equal(calculator.getBaseWall(level), currentWall, `Guide/server wall mismatch at Level ${level}.`);
+  const originalWall = previousCurve.getBaseWall(level);
+  assert.equal(serverContext.getBaseCityWalls(level, false), originalWall, "Objective wall changed");
+  assert.equal(clientContext.getBaseCityWalls(level, false), originalWall, "Client objective wall changed");
+  assert.equal(calculator.getBaseWall(level, false), originalWall, "Guide objective wall changed");
+  assert.equal(editorContext.getEconomyPreviewBaseWall(level, config, false), originalWall, "Editor objective wall changed");
+  if (level >= 100) assert.equal(currentWall, originalWall, "Level 100+ strength changed");
+  else assert(currentWall <= originalWall, "An early wall became stronger");
   if (level > 1 && level <= wallStats.wallEarlyEndLevel) {
     assert.ok(currentWall / previousWall <= 3, `Early adjacent wall growth exceeds 3x at Level ${level}.`);
   }
@@ -181,7 +204,7 @@ for (const level of [200, 250, 500, 1_000]) {
   assert.ok(Math.abs(equivalentHours - 240) < 0.01, `Post-200 wall ratio drifted at Level ${level}.`);
 }
 
-const level30ObjectiveDefense = calculator.getBaseWall(30) + Math.floor(10_000 * baseDefensePower * 1.1);
+const level30ObjectiveDefense = calculator.getBaseWall(30, false) + Math.floor(10_000 * baseDefensePower * 1.1);
 const level30ObjectiveAttackers = Math.floor(level30ObjectiveDefense / baseAttackPower) + 1;
 assert.equal(level30ObjectiveAttackers, 246_489, "Level-30 objective defense benchmark drifted.");
 

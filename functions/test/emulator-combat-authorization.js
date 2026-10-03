@@ -302,6 +302,7 @@ async function main() {
   await verifySpentRetaliation(high, low, hSource, lSource, targets[3]);
   await objectiveDispatchCases([high, low, third], hSource, targets[3]);
   await formerClanCases();
+  await stagedWallCases();
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {
@@ -390,6 +391,69 @@ async function verifySmoothProtectionRanges(attacker, defender, source, target) 
   await Promise.all([attacker, defender].map(actor => call("collectEconomy", actor)));
   console.log("Smooth protection passed: normal/assault/raid across early, 10M, 100M and billion-power kingdoms, authoritative previews, launches, persisted snapshots, retries and arrivals.");
 }
+async function stagedWallCases() {
+  const actor = await user("WallStages");
+  const claimed = await call("claimStartingCity", actor, { playerName: actor.label });
+  const region = claimed.regionId || claimed.mainRegionId;
+  const occupied = new Set((await db.collection(`islands/${islandId(region)}/cities`).get()).docs
+    .filter(doc => doc.data().ownerUid).map(doc => doc.id));
+  const seeds = layout.maps.find(map => map.id === region).cities
+    .filter(city => !occupied.has(city.id) && city.kind !== "stronghold");
+  const milestones = [[25, 25_000], [26, 27_412], [50, 250_000], [51, 264_255],
+    [75, 1_000_000], [76, 1_044_924], [100, 3_000_000], [101, 3_030_867]];
+  assert(seeds.length > milestones.length);
+  const source = await seedCity({ ...seeds[0], regionId: region }, actor, 20_000_000);
+  await profileRef(actor).set({ itemEffects: { shieldExpiresAtMs: 0 }, gold: 1e12, goldFloat: 1e12 }, { merge: true });
+  await call("collectEconomy", actor);
+  // The coordinated release must reject clients still displaying the old curve.
+  const releaseId = identity.releaseId;
+  try {
+    identity.releaseId = "crownlands-2026-10-01-halloween-skins-v1";
+    await deny("collectEconomy", actor, {}, /refresh|update|client|release|realm/i);
+  } finally { identity.releaseId = releaseId; }
+  const storageId = `${identity.resetGeneration}--${identity.realmShardId}`;
+  for (const [index, [level, expectedWall]] of milestones.entries()) {
+    const target = { ...seeds[index + 1], regionId: region, ...identity, level,
+      ownerKind: "neutral", ownerUid: "", owner: "neutral", isMainCity: false,
+      troops: 100, troopFloat: 100, productionUpdatedAtMs: Date.now() + 3_600_000 };
+    await cityRef(target).set(target);
+    const scouting = await resolve(actor, (await call("sendArmyOrder", actor, order(source, target, 1, { kind: "scout" }))).movement);
+    assert.equal(scouting.scoutReport.fortification.fullWallPower, expectedWall, `Scout wall at ${level}`);
+    const troops = Math.ceil((expectedWall + 130) / 1.25) + 100;
+    const forecast = (await call("previewArmyProtection", actor, { fromId: source.id, toId: target.id,
+      sourceRegionId: region, targetRegionId: region, requestedTroops: troops })).combatForecast;
+    assert.equal(forecast.fortification.fullWallPower, expectedWall, `Forecast wall at ${level}`);
+    assert.equal(forecast.expectedOutcome, "capture");
+    const movement = (await call("sendArmyOrder", actor, order(source, target, troops))).movement;
+    const result = await resolve(actor, movement);
+    assert.equal(result.outcome, "victory", `Capture at ${level}`);
+    assert.equal((await cityRef(target).get()).data().ownerUid, actor.uid);
+    const battle = (await db.doc(`battleSnapshots/${storageId}/entries/${movement.id}`).get()).data();
+    assert.equal(battle.siege.fullWallPower, expectedWall, `Recorded wall at ${level}`);
+    assert(battle.totals.attackerLosses > 0 && battle.totals.defenderLosses === 100);
+  }
+  // Objectives keep the previous curve even below Level 100.
+  for (const [type, level, expected] of [["gold", 50, 1_456_669], ["crown", 100, 3_000_000]]) {
+    const target = layout.maps.flatMap(map => (map.objectives || []).map(seed => ({ ...seed, regionId: map.id })))
+      .find(seed => seed.type === type);
+    assert(target);
+    await cityRef(target).set({ ...target, ...identity, kind: "stronghold", level, ownerKind: "neutral",
+      ownerUid: "", troops: 100, troopFloat: 100 });
+    const scouting = await resolve(actor, (await call("sendArmyOrder", actor, order(source, target, 1, { kind: "scout" }))).movement);
+    assert.equal(scouting.scoutReport.fortification.fullWallPower, expected, `${type} wall changed`);
+  }
+  const towers = require("../holding-towers"), tower = towers.TOWERS[3];
+  await db.doc(`holdingTowers/${tower.id}`).set({
+    ...towers.createNeutralTowerState(tower.id, Date.now()), ...identity, wallLevel: 50,
+  });
+  const scout = await call("sendHoldingTowerArmyOrder", actor, {
+    ...order(source, tower, 1, { kind: "scout" }), sourceType: "city", targetType: "tower",
+  });
+  const towerReport = await resolve(actor, scout.movement);
+  assert.equal(towerReport.scoutReport.fullWallPower, 1_456_669, "Tower wall changed");
+  console.log("Five-stage city walls passed: scouts, forecasts, real captures at every boundary, old-client rejection, unchanged Stronghold/Citadel/Tower walls.");
+}
+
 async function formerClanCases() {
   const departure = require("../former-clan-protection");
   const towers = require("../holding-towers");

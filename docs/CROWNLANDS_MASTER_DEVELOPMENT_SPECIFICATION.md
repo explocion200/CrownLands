@@ -523,6 +523,16 @@ The following balance is confirmed for the next coordinated client and Functions
 - Stoneworks remains the only skill that strengthens the wall. Soldier defense, wall repair, objective support, reward-camp behavior, and the two-stage siege model do not change.
 - The Level 150 siege benchmark retains 59-62 million maximum-Swordmastery attackers. Under the September 27 production revision and current pickup caps, the existing apex portfolio requires 61,975,001 attackers against 50 million supported defenders, or approximately 2.625 maximum-activity production days (previously 2.756). The production-time regression budget scales down by 1 / 1.05 with the approved production increase.
 
+### Approved five-stage regular-city walls — October 3, 2026
+
+**Status: IMPLEMENTED — PENDING VALIDATION, MERGE AND AUTHORIZED DEPLOYMENT.** This approved revision replaces the regular-city wall progression through Level 100 described above. It applies to the active Core realm, including owned, neutral and Main Cities. Existing Main City attack protection remains in force.
+
+- Levels 1–25 have minor walls: 200 at Level 1, 600 at Level 2, and 25,000 at Level 25. Use `round(200 + 400 × (level - 1)^1.2986357706197937)`; no adjacent increase in this stage exceeds 3×.
+- Levels 26–50 reach 250,000, Levels 51–75 reach 1,000,000, and Levels 76–100 reach 3,000,000 base wall power. Interpolate geometrically between the endpoints at Levels 25, 50, 75 and 100: `round(startWall × (endWall / startWall)^((level - startLevel) / 25))`. Every level gains strength; entering a new stage does not apply a separate multiplier.
+- Level 101 and above retain the existing Gold-linked and production-linked curve exactly, including 6,200,000 at Level 150 and 11,340,888 at Level 200. Towers, Strongholds and the Citadel retain the entire existing objective wall curve. Camps remain wall-free.
+- Stoneworks and equipped wall gear apply to the new regular-city base with the existing combined cap. Troop defense, production, upgrade prices, damage rules, repair duration and Shield eligibility retain their current rules. Existing integrity and repair deadlines carry over; the release does not refill walls or rewrite player records. Arriving armies use the live defensive wall curve; historical battle and scout records retain their saved values.
+- King Power retains its current formula and naturally reflects the lower base walls when authoritative economy/stat calculations refresh. Previews, city details, the public calculator and editor preview use the same values. Publish the matching client and backend together under `crownlands-2026-10-03-city-wall-stages-v3`; older clients must refresh before gameplay requests.
+
 ### Approved smooth protection, production and travel revision — September 27, 2026
 
 **Status: IN DEVELOPMENT — NOT DEPLOYED.** The user approved implementation, testing and pull-request preparation. Merge and deployment require separate authorization. This revision supersedes the fixed 2×/2.5× protection thresholds and the 10.3 troop-production factor above.

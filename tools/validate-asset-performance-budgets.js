@@ -189,7 +189,9 @@ const entrypointBudgets = {
   // Its 59,111-byte layout/art payload is lazy; offline and frame caps stay fixed.
   // Former-clan capture notices and report handling bring source to 1912.73 KiB.
   // Bound remaining growth at 1 KiB; offline-shell and frame caps stay fixed.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1) * 1024,
+  // Five regular-city wall stages and objective isolation add under 2 KiB.
+  // No new assets, requests, listeners or timers; aggregate caps are unchanged.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,

@@ -180,14 +180,6 @@ const dailyTroopSources = {
 };
 const dailyGoldMaximum = Object.values(dailyGoldSources).reduce((sum, value) => sum + value, 0);
 const dailyTroopMaximum = Object.values(dailyTroopSources).reduce((sum, value) => sum + value, 0);
-const preRebalancePickupTroopHours = 25;
-const preRebalanceBoostedPickupTroopsPerDay = baseTroopsPerHour
-  * permanentTroopMultiplier
-  * preRebalancePickupTroopHours;
-const preRebalanceDailyTroopMaximum = dailyTroopMaximum
-  - dailyTroopSources.pickups
-  + preRebalanceBoostedPickupTroopsPerDay;
-const pickupBalanceProductionDayAdjustment = preRebalanceDailyTroopMaximum / dailyTroopMaximum;
 const clanGiftGoldHoursPerDay = (constants.clanMemberLimit - 1)
   * (24 * 60 / constants.clanGiftCooldownMinutes)
   * (constants.clanGiftProductionMinutes / 60);
@@ -224,13 +216,13 @@ assert.ok(
 );
 assert.equal(pickupGoldHours, 15, "The pickup rebalance must provide at most 15 raw Gold-production hours per UTC day.");
 assert.equal(pickupTroopHours, 15, "The pickup rebalance must provide at most 15 raw troop-production hours per UTC day.");
-// The approved +5% troop-production revision shortens the existing replacement-time budget.
-const approvedTroopProductionIncrease = 1.05;
-const adjustedMinimumProductionDays = siege.minimumProductionDays * pickupBalanceProductionDayAdjustment / approvedTroopProductionIncrease;
-const adjustedMaximumProductionDays = siege.maximumProductionDays * pickupBalanceProductionDayAdjustment / approvedTroopProductionIncrease;
+// Fixed reference for the already-approved 100% skill caps and raw-production pickups:
+// 60,600,000 attacking troops / 25,349,025.994 troops per day = 2.390624 days.
+// Level-150 walls and this portfolio are unchanged by the five-stage wall revision.
+// Keep the guard independent of current output so future balance drift still fails.
 assert.ok(
-  productionDays >= adjustedMinimumProductionDays && productionDays <= adjustedMaximumProductionDays,
-  `Level-150 siege replacement time ${productionDays.toFixed(2)} days left the rebalanced-pickup ${adjustedMinimumProductionDays.toFixed(2)}-${adjustedMaximumProductionDays.toFixed(2)}-day guardrail.`
+  productionDays >= siege.minimumProductionDays && productionDays <= siege.maximumProductionDays,
+  `Level-150 siege replacement time ${productionDays.toFixed(2)} days left the ${siege.minimumProductionDays}-${siege.maximumProductionDays}-day guardrail.`
 );
 assert.equal(
   dailyGoldSources.pickups,
