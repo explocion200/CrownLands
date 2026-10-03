@@ -607,6 +607,8 @@ These formulas are verified repository implementation. Exact deployed backend pa
 
 ### Offensive shield cooldown and city retaliation
 
+- **Confirmed October 3, 2026 — implementation pending release:** Pressing Send/Attack for an order that removes an active Royal Peace Shield opens a warning with **Continue sending** and **Cancel** before any dispatch. Show the destination, troop count and remaining Shield time. Cancel, close and Escape preserve the Shield and send no troops. Apply the same confirmation to shield-removing reinforcements and attacks from Holding Towers; keep existing Shield removal rules, harmless transfers, neutral-city attacks and Rally commitments unchanged. Continue rechecks the current order and account/realm before dispatch; repeated clicks cannot send duplicates.
+
 Confirmed September 19, 2026. **Status:** `IN DEVELOPMENT` until the authorized release is independently verified.
 
 - A successful player-initiated PvP attack dispatch starts a 15-minute Peace Shield activation cooldown. Each later qualifying dispatch restarts it. This includes player-held Camps, Strongholds, the Crown Citadel, and clan-held Towers. Every contributing ruler receives the cooldown when a combined PvP Rally actually launches; forming/joining a Rally does not start it. Existing active-shield removal/retention rules remain unchanged.

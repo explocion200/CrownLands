@@ -4128,8 +4128,9 @@ function getHoldingTowerQaScenario() {
 function beginHoldingTowerModalSession(towerId, view) {
   holdingTowerModalSession?.cleanup();
   const session = { towerId, view };
+  const onClose = () => { if (!modal.open) session.cleanup(); };
   session.cleanup = () => {
-    modal.removeEventListener("close", session.cleanup);
+    modal.removeEventListener("close", onClose);
     if (holdingTowerModalSession !== session) return;
     holdingTowerModalSession = null;
     selectedHoldingTowerId = "";
@@ -4146,7 +4147,8 @@ function beginHoldingTowerModalSession(towerId, view) {
   holdingTowerModalSession = session;
   selectedHoldingTowerId = view === "details" ? towerId : "";
   // Install before any network request, including a slow first load.
-  modal.addEventListener("close", session.cleanup, { once: true });
+  // Ignore a queued native close from the previous view after a quick reopen.
+  modal.addEventListener("close", onClose);
   return session;
 }
 
@@ -4643,7 +4645,7 @@ function renderHoldingTowerMapOrder(tower, mode, candidate, maxTroops) {
   </form>`;
 }
 
-async function submitHoldingTowerOrder(tower, mode) {
+async function submitHoldingTowerOrder(tower, mode, shieldConfirmation = null) {
   if (holdingTowerActionsInFlight.has(tower.id)) return;
   const session = holdingTowerModalSession;
   if (!isHoldingTowerModalSessionCurrent(session) || session.view !== "order" || session.mode !== mode || session.onlineSession !== onlineSessionGeneration) return;
@@ -4690,6 +4692,8 @@ async function submitHoldingTowerOrder(tower, mode) {
     return;
   }
   const kind = mode === "reinforce" ? "reinforce" : mode === "withdraw" ? "transfer" : "attack";
+  if (!rally && !confirmPeaceShieldOrder(from, to, kind, troops, shieldConfirmation,
+    confirmation => { void submitHoldingTowerOrder(tower, mode, confirmation); })) return;
   const armyId = createOnlineArmyId(rally ? "rally" : `tower_${kind}`);
   const payload = {
     clanId: state?.clanId,
@@ -32455,7 +32459,7 @@ function submitClanRallyTroopOrder(source, target, route) {
   return true;
 }
 
-async function confirmTroopSliderOrder() {
+async function confirmTroopSliderOrder(shieldConfirmation = null) {
   const confirmStartedAt = performance.now();
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   const target = activeRallyOrderContext?.target?.id === selectedTargetId
@@ -32532,6 +32536,8 @@ async function confirmTroopSliderOrder() {
     rejectGameAction("Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.");
     return;
   }
+  if (!confirmPeaceShieldOrder(source, target, activeTroopOrderKind, selectedTroopAmount, shieldConfirmation,
+    confirmation => { void confirmTroopSliderOrder(confirmation); })) return;
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
@@ -37038,8 +37044,7 @@ function showAttackPreview(source, target) {
     </div>
   `;
 
-  modalBody.querySelector("#confirmAttackBtn").addEventListener("click", () => {
-    modal.close();
+  const submitAttack = (shieldConfirmation = null) => {
     const currentSource = cityById(source.id);
     const currentTarget = cityById(target.id);
     if (!currentSource || !currentTarget || currentSource.owner !== "player" || currentTarget.owner === "player") {
@@ -37047,12 +37052,16 @@ function showAttackPreview(source, target) {
       renderAll();
       return;
     }
+    const troops = clamp(Math.floor(currentSource.troops * selectedMarchPercent), 1, currentSource.troops);
+    if (!confirmPeaceShieldOrder(currentSource, currentTarget, "attack", troops, shieldConfirmation, submitAttack)) return;
+    modal.close();
     const launched = launchAttack(currentSource.id, currentTarget.id, selectedMarchPercent, "player");
     if (launched) {
       selectedTargetId = null;
       renderAll();
     }
-  });
+  };
+  modalBody.querySelector("#confirmAttackBtn").addEventListener("click", submitAttack);
   modalBody.querySelector("#cancelAttackBtn").addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
 }

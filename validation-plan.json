@@ -1,64 +1,61 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "61fddb9848470407ea71d4181e705c5429be5b31",
+  "baseCommit": "5f32748bfa5e924a6ee76e78cb8813a6c8c40807",
   "coverage": [
     {
       "paths": [
         "game.js",
-        "index.html",
-        "service-worker.js",
-        "styles.css",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "modal-ui.js",
+        "styles.css"
       ],
       "tests": [
-        "tools/validate-halloween-map-decorations.js",
-        "tools/validate-halloween-map-decorations-browser.js",
-        "tools/validate-map-loading-browser.js",
-        "tools/validate-harvest-pickups.js",
-        "tools/validate-illustrated-map-art.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-halloween-map-performance-browser.js"
+        "tools/validate-shield-order-confirmation-browser.js",
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-troop-selection-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-modal-lifecycle-browser.js"
       ],
-      "reason": "Optional October scenery changes shared map-image completion and pickup rendering. Cover lazy loading, timeout/failure recovery, stale map guards, layer replacement, max-stage city/scenery clearance, generated template fallback, UTC season gates, click-through controls and unchanged pickup spawn/reward behavior. Exercise existing map-loading races and all prepared maps. Validate matching shell/cache URLs and bounded packaged art; no backend or authority changes. Increase the node cap from 9 to 24 with compact layouts; use the existing camera movement state to retain the nine-prop painting limit during pan/zoom. Compare frame pacing and CPU time with 40 maximum-level cities and 25 marches at desktop/mobile dimensions, normal and throttled CPU. Existing 64 KiB artifact allowance, 5 KiB game-source allowance and installation/frame limits remain unchanged."
+      "reason": "The shared confirmation gates normal city orders, the older percentage Attack preview, and Tower attack/reinforcement dispatch before any launch API. Test Continue, Cancel, Escape, close, repeated clicks, exact troop counts, active/expired/replaced shields, account/session/view changes, lost origin/Tower ownership, reduced garrison, and changed selections. Exercise the real dispatch handlers at desktop and two landscape phone sizes. Preserve safe transfers, neutral regular-city attacks, Rally commitments, existing shield-removal rules, protection caps, route authority and modal cleanup. This is a client confirmation only; no server contract or rules change, so emulator suites are not required. The broader authoritative-army validator has a pre-existing stale Rally-cancellation source assertion on unchanged origin/main server code; it is outside this client-only change. Existing troop-selection browser checks retain route-readiness coverage. A deterministic regression delivers a queued native close event from the preceding modal view; the new warning must stay open while actual parent closure still cancels safely."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "assets/optimized/halloween-map-layouts-v3.json",
-        "docs/art-sources/halloween-map-decorations/README.md",
-        "docs/art-sources/halloween-map-decorations/assets.json",
-        "docs/art-sources/halloween-map-decorations/lanterns.png",
-        "docs/art-sources/halloween-map-decorations/prompts.json",
-        "docs/art-sources/halloween-map-decorations/pumpkins.png",
-        "docs/art-sources/halloween-map-decorations/scarecrow.png",
-        "docs/visual-qa/halloween-map-decorations/map-1440.png",
-        "docs/visual-qa/halloween-map-decorations/map-844.png",
-        "docs/visual-qa/halloween-map-decorations/validation.json",
-        "tools/build-halloween-map-decorations.js",
-        "tools/validate-halloween-map-decorations-browser.js",
-        "tools/validate-halloween-map-decorations.js",
-        "tools/validate-halloween-map-performance-browser.js",
-        "docs/visual-qa/halloween-map-decorations/performance.json",
-        "assets/optimized/halloween-map-pumpkins-fc5076146993.webp",
-        "assets/optimized/halloween-map-scarecrow-3a3bb592afb9.webp",
-        "assets/optimized/halloween-map-lanterns-991fdbe11d76.webp",
-        "assets/optimized/halloween-map-cauldron-9a3d0222d036.webp",
-        "docs/art-sources/halloween-map-decorations/cauldron.png",
-        "assets/optimized/halloween-map-graves-69c86dbfc3f9.webp",
-        "docs/art-sources/halloween-map-decorations/graves.png",
-        "assets/optimized/halloween-map-raven-53aa61d186f7.webp",
-        "docs/art-sources/halloween-map-decorations/raven.png",
-        "assets/optimized/halloween-map-ghost-3ac59a03bc5d.webp",
-        "docs/art-sources/halloween-map-decorations/ghost.png"
+        "tools/validate-shield-order-confirmation-browser.js"
       ],
       "tests": [
-        "tools/validate-halloween-map-decorations.js",
-        "tools/validate-halloween-map-decorations-browser.js",
-        "tools/validate-halloween-map-performance-browser.js"
+        "tools/validate-shield-order-confirmation-browser.js"
       ],
-      "reason": "Seven generated transparent sprites and reproducible offline layouts add 1,536 placements across 81 prepared maps. Every map includes all seven types; matching types are separated by at least 250 map pixels. Preserve city, road, tree/rock, landmark and Tower compound clearances. Check counts, spacing, sprite hashes, compact schema reproducibility and 59,111-byte lazy payload. Browser checks cover seven distinct decoded images per map, bounded decoded texture memory, max-stage city clearances, motion visibility and recovery, no animations, no layer accumulation or idle DOM mutations, and desktop/phone visual evidence. Performance proof exercises the full palette, idle and camera movement with CPU throttling. Specification records the confirmed separate scenery layer, increased variety and density with limited rendering cost; October timing remains a draft default."
+      "reason": "Run the added browser scenarios against the actual game client with only fixture state and dispatch observation. External requests are blocked. Screenshots and safe dismissal/dispatch assertions cover 1440x900, 844x390 and 568x320."
+    },
+    {
+      "paths": [
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-orders-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js"
+      ],
+      "reason": "Extend Tower API-boundary coverage for shielded attacks and reinforcement cancellation/confirmation, repeat submit, and changed Tower ownership. The existing bare-input unit harness has no active shield and uses an explicit no-warning adapter; real popup behavior is covered by the browser suites. Deliver a stale close event after reopening a Tower order to verify its underlying session remains valid, with explicit cleanup and real closure still removing listeners."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Bound the added shared confirmation dialog code to one 4 KiB module increment. The dialog is created only on Send, removed on dismissal, and adds no network fetches, timers, images or map frame work. Preserve the aggregate installation budget and all unrelated source/art budgets."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the user-confirmed explicit Continue/Cancel warning and unchanged shield rules as pending release. The separate one-item production grant is not repository code and is excluded from this feature diff."
     }
   ]
 }
