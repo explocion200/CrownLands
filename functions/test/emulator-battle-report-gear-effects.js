@@ -293,7 +293,8 @@ async function main() {
   assert(defenderReport.casualtyRecovery?.fieldMedicsPercent === 20, "Defender Field Medics was not snapshotted separately.");
   assert(defenderReport.casualtyRecovery?.gearPercent === 1.5, "Defender casualty gear was not snapshotted separately.");
 
-  // Level-40 walls withstand all three test strikes under the staged wall curve.
+  // Level-20 walls withstand all three strikes, each above the 5% persistence
+  // threshold under the approved midpoint wall curve.
   // Exercise persisted wall-only combat against both the owner and an allied garrison.
   const ally = await createAuthUser("wall-ally");
   const allyClaim = await callFunction("claimStartingCity", ally.token, { playerName: "Wall Ally" });
@@ -318,7 +319,7 @@ async function main() {
     ...wallTargetDoc.data(), ...current,
     owner: "player", ownerKind: "player", ownerUid: defender.uid, ownerClanId: clanId,
     ownerName: "Gear Defender", ownerShieldExpiresAtMs: 0, isMainCity: false,
-    kind: "city", level: 40, regionId, troops: 100_000, troopFloat: 100_000,
+    kind: "city", level: 20, regionId, troops: 100_000, troopFloat: 100_000,
     alliedReinforcementTroops: 10_000, productionUpdatedAtMs: wallNowMs,
     fortificationState: { version: 1, integrityBps: 10_000, repairAtMs: 0 },
   });

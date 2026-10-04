@@ -89,6 +89,63 @@
         "tools/validate-deferred-ui-styles-browser.js"
       ],
       "reason": "Wait for deferred Help and officer screens to mount while retaining exact content, late-receipt isolation, layout, interaction and error assertions at desktop and landscape-mobile sizes."
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js",
+        "functions/test/prepare-current-season-fixture.js",
+        "tools/test-emulator-season-fixture.js"
+      ],
+      "tests": [
+        "tools/test-emulator-season-fixture.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-release-gate.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-realtime-health.js",
+        "functions/test/emulator-cosmetics.js",
+        "functions/test/emulator-first-time-onboarding.js",
+        "functions/test/emulator-main-city-recovery.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-coordinated-release.js",
+        "functions/test/emulator-shared-camp-rewards.js",
+        "functions/test/emulator-camp-power-rewards.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "functions/test/emulator-chat-translation.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-peace-shield-returns.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-player-camp-defense.js",
+        "functions/test/emulator-core-expansion-state.js"
+      ],
+      "reason": "Fresh current-realm emulator databases must model an on-time prior-season arm before actual realm entry captures the empty standings. Validate local-only endpoint guards, UTC rollover and suite partitioning; run every affected Core fixture while preserving production season fences and independent season-reward tests."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "tests": [
+        "tools/validate-city-wall-balance.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "reason": "The current midpoint wall curve made the prior level-40 setup fail its existing meaningful-damage precondition. Use a level-20 wall whose three attacks each exceed 5% without breaching; retain all wall-only casualty, concurrent persistence, reinforcement conservation and exactly-once credit assertions."
+    },
+    {
+      "paths": [
+        "game.js",
+        "tools/test-camera-settle.js"
+      ],
+      "tests": [
+        "tools/test-camera-settle.js",
+        "tools/validate-performance-bottlenecks.js",
+        "tools/validate-map-ui-responsiveness-browser.js",
+        "tools/validate-halloween-map-performance-browser.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-core-expansion-release.js"
+      ],
+      "reason": "Keep the existing camera quiet period after slow rendering, preventing full detail from repeatedly restoring between zoom inputs. Verify deferred updates eventually flush, live gestures stay active, pan timing and longer explicit locks are preserved, ordinary camera refreshes do not lock, and mobile/Tower/decorations rendering and cleanup still work."
     }
   ]
 }
