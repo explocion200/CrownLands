@@ -1,13 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "af766bd731c764b9c0d9de86a1c72c916563b20d",
+  "baseCommit": "c75206aa4e86030224afe1e6dc8013fc0c956bac",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/troops-helmet/README.md"
-      ],
-      "reason": "Documentation-only release record: reconcile the authoritative web snapshot, channel matrix and approved-art notes with verified PR 449 deployment, 69 exact live asset comparisons, six desktop/mobile browser cases, unchanged backend/realm and retained publication holds. No runtime, gameplay, build or backend source changes.",
+      "paths": ["animation-manager.js", "styles.css", "index.html", "service-worker.js", "tools/validate-animation-system.js", "tools/validate-halloween-map-transition-browser.js"],
+      "reason": "October-only visual selection shares the existing directional transition, cover timing, input lock, cleanup, motion preferences and map-readiness dependency. Check UTC boundaries and retained clouds; verify desktop/mobile rendering, slow/early completion, superseding/cancelled transitions and missing art. Real navigation validation covers shared map loading and rollback. Shell URL/cache changes are also verified by build and asset gates. No server authority or gameplay changes, so no emulator suite applies.",
+      "tests": ["tools/validate-animation-system.js", "tools/validate-halloween-map-transition-browser.js", "tools/validate-map-loading-browser.js", "tools/validate-asset-performance-budgets.js"]
+    },
+    {
+      "paths": ["assets/optimized/manifest.json", "assets/optimized/map-transition-halloween-512x512-85e000346b96.webp", "docs/art-sources/halloween-map-transition/bats-and-leaves.png", "docs/art-sources/halloween-map-transition/asset.json", "docs/art-sources/halloween-map-transition/prompt.json", "tools/validate-production-artifact.js"],
+      "reason": "A preserved image master and hashed alpha WebP replace only October transition appearance. The manifest validator checks source/output existence, bytes, hash, dimensions, alpha and all existing art/cache budgets; browser checks decode and use the shared tile at desktop/mobile sizes and preserve the cloud artwork path. Metadata records the generated source and final prompt. Build validation excludes authoring masters from production.",
+      "tests": ["tools/validate-asset-performance-budgets.js", "tools/validate-halloween-map-transition-browser.js", "tools/validate-production-artifact.js"]
+    },
+    {
+      "paths": ["docs/art-sources/halloween-map-transition/preview.html"],
+      "reason": "Local-only visual review page loads the real game fixture and exercises play/hold/reveal and original-cloud comparison. Its controls invoke the same animation manager; browser validation verifies both themes complete and release navigation. Production excludes the review page.",
+      "tests": ["tools/validate-halloween-map-transition-browser.js"]
+    },
+    {
+      "paths": ["docs/art-sources/halloween-map-transition/README.md"],
+      "reason": "Draft art and review notes record seasonal timing, preserved clouds, provenance, validation coverage, local preview instructions and unverified deployment. No runtime behavior is introduced by this documentation.",
       "tests": []
     }
   ]

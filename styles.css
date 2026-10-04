@@ -14259,6 +14259,27 @@ html[data-animation-mode="off"] .city-list-row.upgrade-confirmed {
   }
 }
 
+/* October 2026 draft: original cloud rules and assets remain above. */
+.crownlands-map-transition[data-theme="halloween"] .crownlands-map-transition__part--mist {
+  background:
+    radial-gradient(ellipse at 32% 38%, #b0a078, #897a62 52%, #554c60 100%),
+    #897a62;
+}
+
+.crownlands-map-transition[data-theme="halloween"] :is(.crownlands-map-transition__part--cloud-back, .crownlands-map-transition__part--cloud-front) {
+  --map-cloud-layer-opacity: .94;
+  background-image: url("assets/optimized/map-transition-halloween-512x512-85e000346b96.webp");
+  background-size: clamp(460px, 58vw, 800px) auto;
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+.crownlands-map-transition[data-theme="halloween"] .crownlands-map-transition__part--cloud-back {
+  --map-cloud-layer-opacity: .32;
+  background-position: 73% 22%;
+  background-size: clamp(380px, 43vw, 620px) auto;
+}
+
 /* Motion preferences ------------------------------------------------------- */
 .crownlands-vfx--mode-reduced :is(.crownlands-vfx__part--mist, .crownlands-vfx__part--fire, .crownlands-vfx__particle--smoke, .crownlands-vfx__particle--ember),
 html[data-animation-mode="reduced"] :is(.crownlands-vfx__part--mist, .crownlands-vfx__part--fire, .crownlands-vfx__particle--smoke, .crownlands-vfx__particle--ember) {
