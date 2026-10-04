@@ -130,17 +130,7 @@ assert.match(bagTheme, /\.inventory-slot-count \{[\s\S]*position: absolute;[\s\S
 assert.doesNotMatch(bagTheme, /#173f5e|#0b263d|#1c4a6c|#285c79|#11324e/, "The approved Bag must not regress to navy fantasy surfaces.");
 assert.match(profileTheme, /:not\(\[aria-pressed="true"\]\):not\(\.inventory-slot,\.inventory-page-arrow\)/, "The legacy Profile button layer must not repaint Bag cards or arrows navy.");
 assert.match(mobile, /max-height: 440px[\s\S]*\.modal\.inventory-modal[\s\S]*\.inventory-selection/, "Landscape Bag compaction is missing.");
-assert.match(index, /crownlands-build" content="20260827-instant-cross-map-city-upgrades-r1"/);
-for (const asset of ["styles.css"]) {
-  assert(index.includes(`${asset}?v=20260827-instant-cross-map-city-upgrades-r1`), `${asset} has a stale page cache stamp.`);
-  assert(worker.includes(`/${asset}?v=20260827-instant-cross-map-city-upgrades-r1`), `${asset} is missing from the refreshed offline shell.`);
-}
-assert(index.includes("mobile-viewport.css?v=20260825-shop-hourly-prices-r1"), "mobile-viewport.css has a stale cache stamp.");
-assert(worker.includes("/mobile-viewport.css?v=20260825-shop-hourly-prices-r1"), "mobile-viewport.css is missing from the refreshed offline shell.");
-assert(index.includes("instant-economy-actions.js?v=20260909-city-details-r1"), "instant-economy-actions.js has a stale queue-stability cache stamp.");
-assert(worker.includes("/instant-economy-actions.js?v=20260909-city-details-r1"), "instant-economy-actions.js is missing from the refreshed offline shell.");
-assert(index.includes("game.js?v=20260909-city-details-r1"), "game.js has a stale Layer 1 travel cache stamp.");
-assert(worker.includes("/game.js?v=20260909-city-details-r1"), "game.js is missing from the refreshed offline shell.");
-assert(worker.includes('CACHE_VERSION = "20260909-city-details-r1"'));
+require("./shell-cache-assertions").assertShellAssetVersions(index, worker,
+  ["styles.css", "mobile-viewport.css", "instant-economy-actions.js", "game.js"]);
 
 console.log("Validated the Crownlands Item Bag: authoritative item-ID stacks, xN badges, unique 4x2 paging, zero-count selection, responsive layout, and cache delivery.");

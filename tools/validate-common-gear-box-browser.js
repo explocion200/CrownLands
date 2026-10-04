@@ -58,7 +58,12 @@ async function main() {
     await evaluate('__boxQA.reset(2);void openOneCommonGearBox()');await settled();await evaluate('__boxQA.mode="lost";void openOneCommonGearBox()');await settled();assert(await evaluate("document.querySelector('.cgb-stored-mark.cgb-error').getClientRects().length>0"));await evaluate('state.gear=normalizeCommonGearState(__boxQA.gear);renderCommonGearBoxState()');await click('.cgb-footer-actions [data-cgb-action=open]');await settled();assert.equal(await evaluate('state.gear.commonGearBoxes'),0);assert.equal(await evaluate('Object.keys(state.gear.instances).length'),6);
     // Late results cannot reopen a closed modal or replace another panel.
     await evaluate('__boxQA.reset();__boxQA.mode="slow";void openOneCommonGearBox()');await click('#closeModalBtn');await paint();await evaluate('__boxQA.resolve()');await settled();assert.equal(await evaluate('modal.open'),false);assert.equal(await evaluate('state.gear.commonGearBoxes'),4);await evaluate('showCommonGearBoxReveal()');assert.equal(await evaluate("modal.querySelectorAll('.cgb-reward-card').length"),3);
-    await evaluate('__boxQA.reset();__boxQA.mode="slow";void openOneCommonGearBox();renderCommonGearBuilding("royal-stables")');await paint();await evaluate('__boxQA.resolve()');await settled();assert(await evaluate("!!modal.querySelector('[data-royal-stables-officer]')"));
+    await evaluate('__boxQA.reset();__boxQA.mode="slow";void openOneCommonGearBox();renderCommonGearBuilding("royal-stables")');await paint();await evaluate('__boxQA.resolve()');await settled();
+    // The receipt may settle while the destination's scripts are still loading.
+    // Keep that race, then wait for the real destination instead of two frames.
+    await wait("!!modal.querySelector('[data-royal-stables-officer]')");
+    assert.equal(await evaluate("modal.dataset.commonGearBuildingId"), "royal-stables");
+    assert.equal(await evaluate("!!modal.querySelector('#cgbChestArt')"), false, "A late chest receipt replaced the destination.");
     // A more recent profile snapshot and a different signed-in owner must not be overwritten.
     await evaluate('__boxQA.reset();__boxQA.mode="slow";void openOneCommonGearBox();state.gear.updatedAtMs=999;state.gear.commonGearBoxes=8;__boxQA.resolve()');await settled();assert.equal(await evaluate('state.gear.commonGearBoxes'),8);
     await evaluate('__boxQA.reset();__boxQA.mode="slow";void openOneCommonGearBox();__boxQA.uid="other-user";__boxQA.resolve()');await settled();assert.equal(await evaluate('state.gear.commonGearBoxes'),5);

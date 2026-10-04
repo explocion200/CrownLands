@@ -40867,9 +40867,10 @@ function flushDeferredMapRender() {
 
 function finishCameraInteraction() {
   if (!mapFrame) return;
-  if (hasActiveCameraGesture()) {
+  const remainingMs = Math.max(0, interactionRenderLockUntil - performance.now());
+  if (hasActiveCameraGesture() || remainingMs > 0) {
     if (cameraInteractionSettleTimer) window.clearTimeout(cameraInteractionSettleTimer);
-    cameraInteractionSettleTimer = window.setTimeout(finishCameraInteraction, PAN_RENDER_SETTLE_MS);
+    cameraInteractionSettleTimer = window.setTimeout(finishCameraInteraction, remainingMs || PAN_RENDER_SETTLE_MS);
     return;
   }
   cameraInteractionSettleTimer = null;
@@ -40914,6 +40915,12 @@ function applyCameraTransform() {
   updateClanTowerActionWheelLayout(undefined, { x: camera.x, y: camera.y, scale: zoom, offset });
   updateMainCityReturnButtonForCamera(rect);
   scheduleOnboardingPointer();
+  if (cameraInteractionSettleTimer) {
+    // A slow style/layout pass can consume the input's entire idle timeout.
+    // Allow the normal quiet period after rendering before restoring detail.
+    const settleMs = mapFrame.classList.contains("zooming") ? ZOOM_RENDER_SETTLE_MS : PAN_RENDER_SETTLE_MS;
+    interactionRenderLockUntil = Math.max(interactionRenderLockUntil, performance.now() + settleMs);
+  }
 }
 
 function updateCameraTransform() {

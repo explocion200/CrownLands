@@ -219,14 +219,20 @@
   function normalizeFlag(flag = null, stableKey = "") {
     const source = flag && typeof flag === "object" && !Array.isArray(flag) ? flag : {};
     const version = getFlagVersion(source);
-    const fallback = createDeterministicFlag(stableKey, version);
     const primaryKeys = ["primary", "primaryColor", "fieldColor", "background"];
     const secondaryKeys = ["secondary", "accent", "accentColor", "secondaryColor", "patternColor"];
     const symbolColorKeys = ["symbolColor", "iconColor", "chargeColor", "emblemColor"];
     const patternKeys = ["pattern", "patternId"];
     const symbolKeys = ["symbol", "symbolId", "icon", "emblem"];
-    const primary = firstNormalizedValue(source, primaryKeys, normalizeHexColor) || fallback.primary;
-    const secondary = firstNormalizedValue(source, secondaryKeys, normalizeHexColor) || fallback.secondary;
+    let primary = firstNormalizedValue(source, primaryKeys, normalizeHexColor);
+    let secondary = firstNormalizedValue(source, secondaryKeys, normalizeHexColor);
+    // Saved flags are normalized repeatedly by map, army and identity rendering.
+    // Generate the stable fallback only when a color actually needs repair.
+    if (!primary || !secondary) {
+      const fallback = createDeterministicFlag(stableKey, version);
+      primary ||= fallback.primary;
+      secondary ||= fallback.secondary;
+    }
     const symbolColor = firstNormalizedValue(source, symbolColorKeys, normalizeHexColor) || DEFAULT_FLAG.symbolColor;
     const pattern = firstNormalizedValue(source, patternKeys, value => {
       const candidate = String(value || "").trim();

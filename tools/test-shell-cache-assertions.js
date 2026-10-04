@@ -1,0 +1,14 @@
+"use strict";
+const assert = require("node:assert/strict");
+const { assertShellAssetVersions } = require("./shell-cache-assertions");
+const page = '<script src="game.js?v=new-release"></script>';
+const worker = 'const CACHE_VERSION = "release"; const urls = ["/game.js?v=new-release"];';
+const check = (index = page, cache = worker) => assertShellAssetVersions(index, cache, ["game.js"]);
+check();
+assert.throws(() => check(page, worker.replace("new-release", "stale-release")), /disagree/);
+assert.throws(() => check(page.replace("?v=new-release", "")), /versioned game.js/);
+assert.throws(() => check(page, worker.replace("?v=new-release", "?v=")), /cache versioned/);
+assert.throws(() => check(page, worker.replace('"release"', '""')), /cache namespace/);
+assert.throws(() => check(page.replace("game.js", "gameXjs")), /versioned game.js/);
+assert.throws(() => check(page, worker.replace("/game.js", "/old/game.js")), /cache versioned/);
+console.log("Validated shell cache parity rejects missing, empty, mismatched and wrong-path assets.");

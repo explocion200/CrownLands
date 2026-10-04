@@ -161,9 +161,13 @@ assert.match(settlementSource, /checkpointWriteBudget:\s*settlementParticipantCh
 const cancelRallyStart = server.indexOf("async function cancelClanRallyRequest");
 const cancelRallyEnd = server.indexOf("exports.launchClanRally", cancelRallyStart);
 const cancelRallySource = server.slice(cancelRallyStart, cancelRallyEnd);
-assert.match(cancelRallySource, /receiptKind:\s*"rally_cancel"[\s\S]*?cancellationSettlementPending/,
+const cancellationWriterStart = server.indexOf("function writeFormingRallyCancellation(");
+assert.ok(cancellationWriterStart >= 0 && cancellationWriterStart < cancelRallyStart);
+const cancellationWriter = server.slice(cancellationWriterStart, cancelRallyStart);
+assert.match(cancelRallySource, /writeFormingRallyCancellation\(transaction,/, "The cancellation endpoint must use the shared bounded settlement writer.");
+assert.match(cancellationWriter, /receiptKind:\s*"rally_cancel"[\s\S]*?cancellationSettlementPending/,
   "Rally cancellation must fan a 20-player Rally into bounded participant receipts.");
-assert.doesNotMatch(cancelRallySource, /prepareEconomyCollection|writeArmyMovementCopies|writeRallyJoinMovementCopies/,
+assert.doesNotMatch(cancelRallySource + cancellationWriter, /prepareEconomyCollection|writeArmyMovementCopies|writeRallyJoinMovementCopies/,
   "The parent Rally cancellation transaction must not perform unbounded participant settlement writes.");
 const cancelReceiptStart = server.indexOf("async function settleRallyCancellationReceipt");
 const cancelReceiptEnd = server.indexOf("async function settleRallyBattleReceipt", cancelReceiptStart);

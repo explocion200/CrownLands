@@ -127,7 +127,8 @@ for (const fileName of orderedGates) {
   const startedAt = Date.now();
   const grouped = process.env.GITHUB_ACTIONS === "true";
   if (grouped) console.log(`::group::${fileName}`);
-  const gateCommand = `node test/${fileName}`;
+  const forceCoreExpansion = coreExpansionGates.has(fileName);
+  const gateCommand = `${forceCoreExpansion ? "node test/prepare-current-season-fixture.js && " : ""}node test/${fileName}`;
   const maxAttempts = 2;
   let result;
 
@@ -136,7 +137,6 @@ for (const fileName of orderedGates) {
     const isolatedConfigPath = createIsolatedFirebaseConfig(`${fileName}-${attempt}`);
     console.log(`\n[Crownlands emulator gate] ${fileName}${attemptSuffix}`);
     try {
-      const forceCoreExpansion = coreExpansionGates.has(fileName);
       result = spawnSync(process.execPath, [
         firebaseCli,
         "emulators:exec",

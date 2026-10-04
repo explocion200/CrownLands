@@ -1,13 +1,162 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "90a48656eb4f2f39ab917ca67840e92beb2836aa",
+  "baseCommit": "c1e327b49579d8d496243c535287c85c983a435a",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "functions/package.json",
+        "functions/pnpm-lock.yaml",
+        "functions/pnpm-workspace.yaml",
+        "tools/test-functions-dependencies.js"
       ],
-      "tests": [],
-      "reason": "Documentation-only reconciliation of PR 439 with current main. Preserve the verified PR 438 history and record deployed PRs 440/441, channel-specific wall status, unchanged production-exception deadlines, and the user-held itch.io client. Reviewed against saved deployment evidence and the live web manifest. No runtime, gameplay, dependency or UI changes; runtime and emulator suites are not applicable."
+      "tests": [
+        "tools/test-functions-dependencies.js",
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-release-gate.js",
+        "functions/test/emulator-player-flag-rules.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Targeted transitive gRPC and multipart security patches require production-chain behavioral regression tests, Firestore transaction/transport integration and authorization coverage. The full static gate additionally runs the cache parity helper test; dependency audit is mandatory."
+    },
+    {
+      "paths": [
+        "functions/playerFlagConfig.js",
+        "tools/validate-player-flags.js"
+      ],
+      "tests": [
+        "tools/validate-player-flags.js",
+        "tools/validate-random-starter-flags.js",
+        "tools/test-player-flag-persistence.js",
+        "functions/test/emulator-player-flag-rules.js"
+      ],
+      "reason": "Avoid deterministic fallback generation for valid saved colors without changing stored flags, aliases, schemas, repair output or input objects. Cover shared browser/server normalization and persisted flag security."
+    },
+    {
+      "paths": [
+        "tools/validate-audio-delivery.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-item-bag-ui.js",
+        "tools/validate-login-resilience.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-objective-action-buttons.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-pass-3f-items.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-welcome-back-summary.js",
+        "tools/shell-cache-assertions.js",
+        "tools/test-shell-cache-assertions.js"
+      ],
+      "tests": [
+        "tools/validate-audio-delivery.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-item-bag-ui.js",
+        "tools/validate-login-resilience.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-objective-action-buttons.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-pass-3f-items.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-welcome-back-summary.js",
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-troop-production-exclusions.js",
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Repair stale assertions and missing VM browser dependencies exposed by the explicitly requested full audit. Run every modified validator; check current approved wall curve, timed troop accrual, camp defense, immutable cache asset parity and generated production delivery. No game rules or performance budgets are changed."
+    },
+    {
+      "paths": [
+        "tools/validate-onboarding-browser.js",
+        "tools/validate-common-gear-box-browser.js"
+      ],
+      "tests": [
+        "tools/validate-onboarding-browser.js",
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-deferred-ui-styles-browser.js"
+      ],
+      "reason": "Wait for deferred Help and officer screens to mount while retaining exact content, late-receipt isolation, layout, interaction and error assertions at desktop and landscape-mobile sizes."
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js",
+        "functions/test/prepare-current-season-fixture.js",
+        "tools/test-emulator-season-fixture.js"
+      ],
+      "tests": [
+        "tools/test-emulator-season-fixture.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-release-gate.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-realtime-health.js",
+        "functions/test/emulator-cosmetics.js",
+        "functions/test/emulator-first-time-onboarding.js",
+        "functions/test/emulator-main-city-recovery.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-coordinated-release.js",
+        "functions/test/emulator-shared-camp-rewards.js",
+        "functions/test/emulator-camp-power-rewards.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "functions/test/emulator-chat-translation.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-peace-shield-returns.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-clan-tower-battle-reports.js",
+        "functions/test/emulator-player-camp-defense.js",
+        "functions/test/emulator-core-expansion-state.js"
+      ],
+      "reason": "Fresh current-realm emulator databases must model an on-time prior-season arm before actual realm entry captures the empty standings. Validate local-only endpoint guards, UTC rollover and suite partitioning; run every affected Core fixture while preserving production season fences and independent season-reward tests."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "tests": [
+        "tools/validate-city-wall-balance.js",
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "reason": "The current midpoint wall curve made the prior level-40 setup fail its existing meaningful-damage precondition. Use a level-20 wall whose three attacks each exceed 5% without breaching; retain all wall-only casualty, concurrent persistence, reinforcement conservation and exactly-once credit assertions."
+    },
+    {
+      "paths": [
+        "game.js",
+        "tools/test-camera-settle.js"
+      ],
+      "tests": [
+        "tools/test-camera-settle.js",
+        "tools/validate-performance-bottlenecks.js",
+        "tools/validate-map-ui-responsiveness-browser.js",
+        "tools/validate-halloween-map-performance-browser.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-core-expansion-release.js"
+      ],
+      "reason": "Keep the existing camera quiet period after slow rendering, preventing full detail from repeatedly restoring between zoom inputs. Verify deferred updates eventually flush, live gestures stay active, pan timing and longer explicit locks are preserved, ordinary camera refreshes do not lock, and mobile/Tower/decorations rendering and cleanup still work."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-reward-camp-base-production.js"
+      ],
+      "tests": [
+        "tools/validate-camp-power-rewards.js",
+        "functions/test/emulator-reward-camp-base-production.js",
+        "functions/test/emulator-camp-power-rewards.js"
+      ],
+      "reason": "Objective ownership can change the approved reward-hours power tier without changing the raw production basis. Preserve every raw-rate and normal-bonus assertion, verify tier/hour metadata against configured boundaries, and run independent seeded-power boundary/authority/payout coverage in the current Core realm."
     }
   ]
 }

@@ -23,6 +23,43 @@ assert.equal(uri.equal("//%41.com", "//a.com"), true);
 const adminRequire = createRequire(functionsRequire.resolve("firebase-admin/firestore"));
 const firestoreRequire = createRequire(adminRequire.resolve("@google-cloud/firestore"));
 const gaxRequire = createRequire(firestoreRequire.resolve("google-gax"));
+const { BaseServerInterceptingCall } = gaxRequire("@grpc/grpc-js/build/src/server-interceptors");
+const { TLSSocket } = require("node:tls");
+const socket = Object.create(TLSSocket.prototype);
+const certificate = { raw: Buffer.from("dependency-test-certificate") };
+socket.getPeerCertificate = () => certificate;
+const call = { stream: { session: { socket } } };
+socket.authorized = false;
+assert.deepEqual(BaseServerInterceptingCall.prototype.getAuthContext.call(call), {},
+  "An unauthorized TLS certificate must not be exposed as an authenticated peer.");
+socket.authorized = true;
+assert.equal(BaseServerInterceptingCall.prototype.getAuthContext.call(call).sslPeerCertificate, certificate);
+assert.deepEqual(BaseServerInterceptingCall.prototype.getAuthContext.call({ stream: { session: { socket: {} } } }), {});
+
+// Isolate parser regressions: the old 252-byte boundary can block the event loop,
+// so a timer in the same process would not enforce a useful test deadline.
+const { spawnSync } = require("node:child_process");
+const multipart = spawnSync(process.execPath, ["-e", `
+  const assert = require('node:assert/strict');
+  const Busboy = require(process.argv[1]);
+  const boundary = 'b'.repeat(252);
+  const parser = new Busboy({ headers: { 'content-type': 'multipart/form-data; boundary=' + boundary } });
+  const fields = [];
+  let finished = false;
+  parser.on('field', (name, value) => fields.push([name, value]));
+  parser.on('error', error => { throw error; });
+  parser.on('finish', () => {
+    assert.deepEqual(fields, [['health', 'ok']]);
+    finished = true;
+  });
+  process.on('exit', () => assert.equal(finished, true, 'Multipart parsing did not complete.'));
+  parser.end('x'.repeat(1024) + '\\r\\n--' + boundary + '\\r\\n'
+    + 'Content-Disposition: form-data; name="health"\\r\\n'
+    + '__proto__: safe\\r\\nconstructor: safe\\r\\n\\r\\nok\\r\\n--' + boundary + '--\\r\\n');
+`, adminRequire.resolve("@fastify/busboy")], { encoding: "utf8", timeout: 5000, windowsHide: true });
+assert.equal(multipart.error, undefined, "Multipart parsing must finish within its isolated deadline.");
+assert.equal(multipart.status, 0, multipart.stderr || "Multipart parsing failed.");
+
 const rimrafRequire = createRequire(gaxRequire.resolve("rimraf"));
 const globRequire = createRequire(rimrafRequire.resolve("glob"));
 const minimatchRequire = createRequire(globRequire.resolve("minimatch"));
@@ -46,4 +83,4 @@ const decoded = HTTP.toEvent(message);
 assert.equal(decoded.id, event.id);
 assert.deepEqual(decoded.data, event.data);
 assert.throws(() => new CloudEvent({ id: "invalid", source: "/tests/dependencies" }));
-console.log("Validated production URI security fixes, schema references, and CloudEvent validation/HTTP round trips.");
+console.log("Validated production URI, TLS certificate and multipart parser security fixes, schema references, and CloudEvent round trips.");

@@ -83,6 +83,25 @@ assert.deepEqual(
   { version: 1, primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" }
 );
 assert.equal(config.normalizeFlag({ ...legacy, primary: "#12abEF" }, "owner-a").primary, "#12ABEF");
+for (const version of config.SUPPORTED_VERSIONS) {
+  for (const owner of ["", "owner-a", "owner-b", "ruler-123", "Roi-\u00e9"]) {
+    const fallback = config.createDeterministicFlag(owner, version);
+    for (const primary of ["", "invalid", "#12abEF"]) {
+      for (const secondary of [undefined, "invalid", "#987abc"]) {
+        const input = { ...legacy, version, primary, secondary };
+        const snapshot = { ...input };
+        const normalized = config.normalizeFlag(input, owner);
+        assert.deepEqual(normalized, {
+          ...legacy, version,
+          primary: primary === "#12abEF" ? "#12ABEF" : fallback.primary,
+          secondary: secondary === "#987abc" ? "#987ABC" : fallback.secondary,
+        }, "Repair only missing colors, retaining the same owner-derived fallback for either schema version.");
+        assert.deepEqual(input, snapshot, "Rendering must not mutate a saved flag.");
+        assert.deepEqual(config.normalizeFlag(normalized, owner), normalized, "Repeated map rendering must preserve repaired flags.");
+      }
+    }
+  }
+}
 assert.deepEqual(
   config.normalizeFlag({
     primary: "invalid",

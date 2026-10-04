@@ -27,12 +27,13 @@ requireMatch(game, /function stripServerEconomyProfileFields[\s\S]*clientWritabl
 requireMatch(game, /async function flushOnlineSave[\s\S]*Promise\.allSettled[\s\S]*isPermanentOnlineSaveError[\s\S]*target\.blocked = true[\s\S]*scheduleOnlineSaveRetry/, "Cloud saves do not isolate endpoints, circuit-break permission failures, and back off transient failures.");
 requireMatch(game, /if \(onlineSaveInFlight\) return onlineSavePromise \|\| false/, "Forced cloud flushes do not share the active save request.");
 
-const firebaseClientBuildId = "20260902-march-sync-realm-scope-r1";
-const gameBuildId = "20260909-city-details-r1";
-for (const [label, source] of [["index", index], ["service worker", worker]]) {
-  requireMatch(source, new RegExp(firebaseClientBuildId), `The ${label} does not carry the login-resilience cache version.`);
-  requireMatch(source, new RegExp(`firebaseClient\\.js\\?v=${firebaseClientBuildId}`), `The ${label} does not refresh the Firebase client.`);
-  requireMatch(source, new RegExp(`game\\.js\\?v=${gameBuildId}`), `The ${label} does not refresh the login UI.`);
+for (const asset of ["firebaseClient", "game"]) {
+  const pattern = new RegExp(`${asset}\\.js\\?v=([^"'\\s]+)`);
+  const indexVersion = index.match(pattern)?.[1];
+  const workerVersion = worker.match(pattern)?.[1];
+  if (!indexVersion || indexVersion !== workerVersion) {
+    throw new Error(`The index and service worker must carry the same nonempty ${asset} cache version.`);
+  }
 }
 
 console.log("Validated bounded Google popup recovery, redirect completion, actionable errors, and cache refresh.");

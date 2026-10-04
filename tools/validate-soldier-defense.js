@@ -69,7 +69,8 @@ const wallForLevel = level => Math.floor(
   balanceCalculator.getBaseWall(level) * (1 + stoneworksMaximum / 100)
 );
 const benchmarks = new Map([
-  [50, { wall: 500_000, normal: 1_240_001, stronghold: 1_281_601, citadel: 1_292_001 }],
+  // Approved model-4 midpoint: 853,335 base walls at level 50, doubled by Stoneworks.
+  [50, { wall: 1_706_670, normal: 1_722_669, stronghold: 1_764_269, citadel: 1_774_669 }],
   [100, { wall: 6_000_000, normal: 3_440_001, stronghold: 3_481_601, citadel: 3_492_001 }],
   [150, { wall: 12_400_000, normal: 6_000_001, stronghold: 6_041_601, citadel: 6_052_001 }],
 ]);

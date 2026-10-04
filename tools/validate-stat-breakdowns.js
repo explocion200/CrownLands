@@ -98,9 +98,17 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /stats\.troopProductionPerSecond \* elapsedSeconds\s*\+ stats\.baseTroopProductionPerHour \/ 3600\s*\* warDrumsOverlapSeconds\s*\* WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT \/ 100/,
-  "Authoritative War Drums credit is not based solely on raw city troop production."
+  /includeWarDrums: false[\s\S]*?TROOP_PRODUCTION_POLICY\.integrate\([\s\S]*?startsAtMs: itemEffects\.warDrumsStartedAtMs, expiresAtMs: itemEffects\.warDrumsExpiresAtMs,[\s\S]*?percent: WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT/,
+  "Authoritative troop accrual must integrate untimed rates with the timed War Drums window."
 );
+const troopPolicy = require("../functions/troop-production-policy");
+const startMs = 1000, endMs = startMs + 3600000;
+const ratesAt = () => ({ troopProductionPerSecond: 185 / 3600, baseTroopProductionPerHour: 100 });
+for (const [boostEnd, expected] of [[endMs, 215], [startMs + 1800000, 200], [startMs, 185]]) {
+  assert.equal(troopPolicy.integrate(null, startMs, endMs, ratesAt,
+    { startsAtMs: startMs, expiresAtMs: boostEnd, percent: 30 }), expected,
+  "Timed War Drums must add only raw production over its overlap, without multiplying permanent bonuses.");
+}
 
 requireMatch(
   serverSource,

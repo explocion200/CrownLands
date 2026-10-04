@@ -339,15 +339,26 @@ async function main() {
           + (scenario.secondCityOwned ? baseTroopPerHourForLevel(secondCityLevel) : 0),
       };
       const schedule = camp.rewardSchedule[claimIndex];
+      // Objectives can move this kingdom into another power tier. Production
+      // bonuses still must not enter the raw rate used by that tier's hours.
+      const power = result.powerReward?.kingPower;
+      assert(Number.isSafeInteger(power) && power >= 0, "Payout must report its pre-award kingdom power.");
+      const tiers = economyConfig.campPowerRewards;
+      const tier = power <= tiers.weakMaxPower ? "weak" : power <= tiers.middleMaxPower ? "middle" : "strong";
+      const multiplier = tiers.multipliers[tier];
+      assert(result.powerReward.tier === tier && result.powerReward.multiplier === multiplier,
+        `${scenario.name} returned a tier inconsistent with its pre-award power.`);
+      assert(result.powerReward.effectiveHours === Number(schedule.productionHours) * multiplier,
+        `${scenario.name} returned the wrong tier-adjusted reward hours.`);
       const expectedReward = Math.max(
         Number(schedule.minimumReward),
-        Math.floor(expectedRaw[type] * Number(schedule.productionHours))
+        Math.floor(expectedRaw[type] * Number(schedule.productionHours) * multiplier)
       );
       const stats = result.globalStats || {};
       assert(result.status === "paid", `${scenario.name} ${type} Camp did not pay successfully (${result.status}).`);
       assert(
         Number(result.reward) === expectedReward,
-        `${scenario.name} ${type} Camp used a boosted rate: ${result.reward}; expected raw ${expectedReward}.`
+        `${scenario.name} ${type} Camp paid ${result.reward}; expected ${expectedReward} from raw production and ${tier}-tier hours.`
       );
       assert(
         Number(stats.baseGoldPerHour) === expectedRaw.gold,

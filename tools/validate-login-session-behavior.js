@@ -18,6 +18,7 @@ function fixture({ local = storage(), session = storage(), offset = 0 } = {}) {
     Event, URL, URLSearchParams, Uint32Array, Math, Map, Set,
     Date: class extends Date { static now() { return Date.now() + offset; } } };
   const hooks = "window.testHooks = { client, init, setModules: modules => { loadModules = async () => modules; }, activateCurrentSession, startActiveSessionWatcher, stopActiveSessionWatcher, resetActiveSessionActivation, signOutForSessionReplacement, prepareExplicitSessionLogin, subscribeGameServerMembership, callServerFunction };";
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../cosmetics-client.js"), "utf8"), context);
   vm.runInNewContext(source.replace(/\n  init\(\);\n\}\)\(\);\s*$/, `\n${hooks}\n})();`), context);
   const h = window.testHooks, c = h.client;
   Object.assign(c, { configured: true, ready: true, db: {}, auth: {}, functions: {}, user: { uid: "account" }, initPromise: Promise.resolve() });

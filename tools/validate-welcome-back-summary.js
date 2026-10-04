@@ -172,7 +172,7 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /consumePendingAwayCityTroops\(defenderEconomy,[\s\S]*?defenseAllocation\.ownerLosses,[\s\S]*?captured:\s*result\.success/,
+  /consumePendingAwayCityTroops\(defenderEconomy,[\s\S]*?defenseAllocation\.ownerGarrisonLosses,[\s\S]*?captured:\s*result\.success/,
   "Defensive losses and captures do not reduce remaining away-produced troops."
 );
 requireMatch(

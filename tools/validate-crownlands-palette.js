@@ -14,9 +14,7 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260827-instant-cross-map-city-upgrades-r1";
-const cacheVersion = "20260909-city-details-r1";
-const paletteTag = `crownlands-palette.css?v=${releaseId}`;
+const paletteTag = "crownlands-palette.css?v=";
 
 // The v2 heraldry cascade boundary is intentionally kept in the global
 // palette so its broad legacy rules cannot override the dedicated editor.
@@ -140,7 +138,7 @@ assert.ok(index.indexOf(paletteTag) > index.indexOf("profile-theme.css"), "The C
 assert.ok(index.indexOf("action-buttons.css") > index.indexOf(paletteTag), "The exact objective-action layer must remain authoritative after the palette.");
 assert.ok(index.indexOf("mobile-viewport.css") > index.indexOf("action-buttons.css"), "Mobile reachability must remain the final stylesheet.");
 assert.ok(worker.includes(`/${paletteTag}`), "The Crownlands palette is missing from the offline shell.");
-assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The palette release does not restart stale clients.");
+require("./shell-cache-assertions").assertShellAssetVersions(index, worker, ["crownlands-palette.css"]);
 for (const source of [builder, manifestBuilder, artifactValidator, budgetValidator]) {
   assert.ok(source.includes("crownlands-palette.css"), "The Crownlands palette is missing from production delivery or budgets.");
 }

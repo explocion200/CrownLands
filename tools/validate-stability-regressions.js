@@ -83,7 +83,7 @@ async function main() {
   throws=false;vm.runInContext('frame(30)',frameContext);assert.equal(scheduled,3);
   const listeners=new Map(),background=[];let releaseCache,stored="";
   const slowCache=new Promise(resolve=>{releaseCache=resolve;});
-  const workerContext={URL,Request,Response,Headers,console,importScripts(){},
+  const workerContext={URL,Request,Response,Headers,console,setTimeout,clearTimeout,importScripts(){},
     self:{location:new URL("https://example.test/service-worker.js"),addEventListener:(name,fn)=>listeners.set(name,fn)},
     caches:{match:async()=>{throw new Error("Cache unavailable");},open:async()=>{await slowCache;return {put:async(_request,response)=>{stored=await response.text();}};}},
     fetch:async()=>new Response("network asset",{status:200}),

@@ -88,6 +88,8 @@ function loadWorker(href = "https://crownlands.test/service-worker.js") {
   URL,
   Request,
   Response,
+  setTimeout,
+  clearTimeout,
   caches,
   clients: self.clients,
   console: {
