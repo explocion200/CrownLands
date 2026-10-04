@@ -7063,6 +7063,19 @@
       "hasAlpha": true,
       "preparedDelivery": true,
       "sourceSha256": "058467b03ba35033c12a92f036408418af14efa3d957560c2440b98cf972a044"
+    },
+    {
+      "id": "troops-helmet",
+      "category": "hud",
+      "source": "docs/visual-qa/troops-helmet/art/troops-helmet-source-r1.png",
+      "output": "assets/optimized/troops-helmet-192x192-8c144647d31b.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7338,
+      "sha256": "8c144647d31b38a1b8734ba370e5ba73efab1bddc8f41ea7b6bd587047287f91",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "0d581275e7b355a70786eaf0ab76fa5446e1187411c309b52190e8446cf53156"
     }
   ]
 }

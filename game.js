@@ -14055,7 +14055,7 @@ function renderPublicPlayerProfile(profile) {
       <section class="public-profile-section" tabindex="0" aria-label="Public kingdom information">
         <div class="public-profile-heading"><span>Kingdom</span></div>
         <div class="public-profile-stat"><img src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" alt=""><div><strong>${formatNumber(profile.cityCount)}</strong><span>${profile.cityCount === 1 ? "City" : "Cities"} owned</span></div></div>
-        <div class="public-profile-stat public-profile-troop-estimate"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><strong>${profile.troopEstimate ? escapeHtml(profile.troopEstimate.label) : "Unavailable"}</strong><span>Estimated troops</span></div></div>
+        <div class="public-profile-stat public-profile-troop-estimate"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""><div><strong>${profile.troopEstimate ? escapeHtml(profile.troopEstimate.label) : "Unavailable"}</strong><span>Estimated troops</span></div></div>
         <div class="public-profile-strongholds">
           <div><strong>${formatNumber(profile.strongholdCount)}</strong><span>${profile.strongholdCount === 1 ? "Stronghold" : "Strongholds"} held</span></div>
           ${strongholds.length ? `<ul>${strongholds.map(stronghold => `<li>${escapeHtml(stronghold.name)}</li>`).join("")}</ul>` : `<p>No strongholds held.</p>`}
@@ -26820,7 +26820,7 @@ function renderClanQuestPanel() {
         const status = claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Ready" : `${Math.min(captureCount, reward.captures)} / ${reward.captures}`;
         return `
           <article class="clan-quest-card ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
-            <img class="clan-reward-art" src="${reward.rewardType === "troops" ? "assets/icons/daily-login-troops-r1.svg" : "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp"}" alt=""><div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
+            <img class="clan-reward-art" src="${reward.rewardType === "troops" ? "assets/optimized/troops-helmet-192x192-8c144647d31b.webp" : "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp"}" alt=""><div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
             <small>${status}</small>
             <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" data-quest-period-id="${escapeHtml(period.questPeriodId)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Collect" : "Locked"}</button>
           </article>`;
@@ -26850,7 +26850,7 @@ function renderClanOverviewPanel(canLead = false) {
           <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/marchOrders.svg" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card conquest" data-clan-action="section" data-clan-section="rewards" data-clan-reward="conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="${CLAN_QUEST_MAX_CAPTURES}" aria-valuenow="${Math.min(captureCount, CLAN_QUEST_MAX_CAPTURES)}"><i style="width:${Math.min(100,captureCount / CLAN_QUEST_MAX_CAPTURES * 100)}%"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
-          <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
         </div></div>
       </section>
     </section>`;
@@ -33250,7 +33250,7 @@ function mountStrongholdDetails(city) {
   const crown = isCrownCitadel(city);
   const kind = crown ? "crown" : isTrainingStronghold(city) ? "training" : isSpeedStronghold(city) ? "movement" : isDefenseStronghold(city) ? "defense" : "gold";
   const icon = crown ? "assets/icons/reward-achievements-r1.svg" : {
-    training: "assets/icons/daily-login-troops-r1.svg", movement: "assets/icons/skills/marchOrders.svg",
+    training: "assets/optimized/troops-helmet-192x192-8c144647d31b.webp", movement: "assets/icons/skills/marchOrders.svg",
     defense: "assets/icons/skills/shieldwallDiscipline.svg", gold: "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",
   }[kind];
   const crownBenefits = [
@@ -38122,7 +38122,7 @@ function renderReinforcementOperationPanel(entries = []) {
 
 function renderReinforcementOperationCard(entry) {
   const currentUid = getCurrentOnlineUid();
-  const troopsArt = "assets/icons/daily-login-troops-r1.svg";
+  const troopsArt = "assets/optimized/troops-helmet-192x192-8c144647d31b.webp";
   if (!entry.stationed) {
     const returning = Boolean(entry.returning || entry.reinforcementReturn);
     const incoming = entry.incomingClanReinforcement || (entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid);
@@ -38326,7 +38326,7 @@ function renderOutgoingAttackCard(mission) {
   return `<article class="march-row ${kind}${fullTroops.length > 8 ? " wide-force" : ""}" aria-label="${escapeHtml(missionLabel)} to ${escapeHtml(targetName)}">
     <div class="march-kind">${emblem}<strong>${missionLabel}</strong></div>
     <div class="march-route"><div class="route-point source"><span>${isReturning ? "Recalled before" : "Origin"}</span><strong>${escapeHtml(isReturning ? originalTargetName : sourceName)}</strong></div><span class="route-arrow" aria-hidden="true">${isReturning ? "↩" : "→"}</span><div class="route-point destination"><span>${isReturning ? "Returning to" : "Destination"} · ${escapeHtml(regionName)}</span><strong>${escapeHtml(targetName)}</strong><div class="target-info">${targetDetails}</div></div></div>
-    <div class="march-force"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong>${escapeHtml(fullTroops)}</strong><small>${forceLabel}</small></div>
+    <div class="march-force"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""><strong>${escapeHtml(fullTroops)}</strong><small>${forceLabel}</small></div>
     <div class="march-arrival${pending ? " pending" : mission.remaining <= 30 ? " urgent" : ""}"><strong>${timing}</strong><small>${timingNote}</small>${mission.swiftMarchUsedAtMs && !isReturning ? '<small class="applied">Swift March Order applied</small>' : ""}</div>
     <div class="march-actions">${swiftButton}${recallButton}${mapButton}${commandNote ? `<small class="command-note">${commandNote}</small>` : ""}</div>
   </article>`;

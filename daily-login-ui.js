@@ -41,7 +41,7 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
   let week = Math.ceil(selected/7);
 
-const art={gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",troops:"assets/icons/daily-login-troops-r1.svg",chest:"assets/icons/common-gear-chest-r1.svg",uncommonChest:"assets/icons/uncommon-gear-chest-r1.svg"};
+const art={gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",troops:"assets/optimized/troops-helmet-192x192-8c144647d31b.webp",chest:"assets/icons/common-gear-chest-r1.svg",uncommonChest:"assets/icons/uncommon-gear-chest-r1.svg"};
 
 
 

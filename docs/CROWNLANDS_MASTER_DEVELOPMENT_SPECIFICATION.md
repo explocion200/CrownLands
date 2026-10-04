@@ -1465,6 +1465,10 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 - Movement HUD, Reports, Chat, and modal layers must stack predictably.
 - Reduced-motion and performance-sensitive behavior must be respected where animation exists.
 
+### Confirmed troops helmet artwork — October 4, 2026
+
+The approved troops icon is a frontal medieval helmet with worn steel, a broad dark brim, two eye slots, an angular face guard, subtle brass rivets and a transparent background. Use the same image across shared troop statistics, production, rewards, reports, troop orders, city and objective panels, Barracks icon controls, and default troop reward particles. Retain existing icon sizes, accessible labels and explicit reward artwork. Map army/scout tokens, heraldry, troop pickup bundles, officers and equippable item illustrations retain their existing designs. Troop counts, production, combat, progression and server authority are unchanged. The approved source and prompt are retained in `docs/visual-qa/troops-helmet/`; the 192 × 192 WebP is recorded as `troops-helmet` in `assets/optimized/manifest.json`. Approval and integration do not establish a live deployment.
+
 ### Confirmed Inner Castle overview presentation
 
 - The approved overview uses parchment, muted moss, dark ink, and medieval engraved symbols. Desktop pairs the full Royal Bailey scene and six-building directory with a selected-building pane; the window is capped at 1040 × 790 pixels and fits the viewport.

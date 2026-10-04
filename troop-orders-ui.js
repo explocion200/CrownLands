@@ -117,7 +117,7 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel, amountS
   readout.className = "force-summary";
   const label = readout.querySelector("span").textContent;
   const amount = readout.querySelector("strong");
-  readout.innerHTML = `<div><p class="force-label">${label}</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""></div></div>`;
+  readout.innerHTML = `<div><p class="force-label">${label}</p><div class="force-readout"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""></div></div>`;
   readout.querySelector(".force-readout").append(amount);
   readout.append(remaining);
   control.querySelector("input[type=range]").className = "troop-amount-slider troop-range";
@@ -183,7 +183,7 @@ function updateTroopOrderPower(amount = selectedTroopAmount, forecastPreview = a
   const weaponNote = matches ? `Equipped · Level ${weapon.level} · +${troopOrderNumber(gearPercent)}%` : gearPercent > 0 ? `Forecast bonus · +${troopOrderNumber(gearPercent)}%` : "No attack bonus equipped";
   const skillLevel = forecast ? forecast.swordmasteryLevel : getSkillLevel("swordmastery");
   const rows = [
-    ["assets/icons/daily-login-troops-r1.svg", "Base troop power", `${BASE_TROOP_ATTACK_POWER} power per troop`, base, false],
+    ["assets/optimized/troops-helmet-192x192-8c144647d31b.webp", "Base troop power", `${BASE_TROOP_ATTACK_POWER} power per troop`, base, false],
     ["assets/icons/skills/swordmastery.svg", "Swordmastery", `Level ${skillLevel} · +${troopOrderNumber(skillPercent)}% attack`, base * skillPercent / 100, true],
     [definition?.art || "assets/optimized/gear-barracks-weapon-192x192-204241e66c5f.webp", weaponName, weaponNote, base * gearPercent / 100, true],
   ];
