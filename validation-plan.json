@@ -1,30 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "25fe88c6ba10eaa9c9dbb1384386365cc0e8af3a",
+  "baseCommit": "218dd88092230197e9d8f0ec20dece20a01b9c9c",
   "coverage": [
-    {
-      "paths": [
-        "item-bag-ui.js",
-        "instant-economy-actions.js",
-        "tools/validate-shield-activation-browser.js",
-        "tools/validate-instant-economy-actions.js"
-      ],
-      "tests": [
-        "tools/validate-shield-activation-browser.js",
-        "tools/validate-shield-order-confirmation-browser.js",
-        "tools/validate-item-bag-browser.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-stackable-timed-items.js",
-        "tools/validate-item-bag-ui.js"
-      ],
-      "reason": "Exercise the real Bag confirmation on desktop and landscape mobile, safe dismissal, current account/realm and eligibility rechecks, single activation, pending server results, rejection recovery and local activation. Verify shared dialog and queued item dependencies, including existing shield-removing orders and stackable boosts. Server authority and schemas are unchanged, so no emulator suites are affected."
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the requested activation confirmation and existing protection rules as implementation pending release; no runtime behavior is defined solely by this documentation."
+      "reason": "Record the verified PR 445 web deployment, required checks, live asset/backend parity and six read-only synthetic browser cases; update the channel matrix and activation status. This documentation-only release ledger changes no runtime, backend, configuration or artifacts. No runtime or emulator tests apply; evidence is retained locally under release-artifacts/shield-activation/deployment."
     }
   ]
 }
