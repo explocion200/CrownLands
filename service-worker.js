@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20261003-halloween-map-decorations-r3";
+const CACHE_VERSION = "20261004-stripe-test-checkout-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -74,6 +74,8 @@ const STATIC_CACHE_URLS = [
   "/common-gear.js?v=20260825-gear-upgrade-consumption-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
   "/functions/cosmetics.js?v=city-skins-only-r1",
+  "/crown-payments-ui.js?v=stripe-test-r1",
+  "/crown-payments-ui.css?v=stripe-test-r1",
   "/skins-ui.js?v=city-skins-only-r1",
   "/cosmetics-client.js?v=halloween-v1",
   "/skins-ui.css?v=city-skins-only-r1",

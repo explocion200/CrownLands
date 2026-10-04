@@ -1,0 +1,16 @@
+.crown-payments-dialog { box-sizing:border-box; width:min(560px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; padding:22px; color:#30281f; background:#f4ead6; border:2px solid #785944; border-radius:12px; font:16px/1.5 system-ui,sans-serif; }
+.crown-payments-dialog::backdrop { background:#19131bc9; }
+.crown-payments-dialog header,.crown-payments-dialog footer { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.crown-payments-dialog h2 { margin:0; font-size:21px; }
+.crown-payments-dialog button,.crown-payments-dialog select { box-sizing:border-box; min-height:44px; padding:9px 12px; border:1px solid #785944; border-radius:6px; font:inherit; color:inherit; background:#fff9ee; }
+.crown-payments-dialog select { display:block; width:100%; margin-top:6px; }
+.crown-payments-dialog label,.crown-payments-dialog select { color:#30281f; }
+.crown-payments-dialog select:disabled { color:#30281f !important; opacity:1; }
+.skins-wallet [data-crown-checkout] { min-height:44px; }
+.crown-payments-dialog button:not(:disabled) { cursor:pointer; }
+.crown-payments-dialog button:disabled { opacity:.6; }
+.crown-payments-dialog :focus-visible { outline:3px solid #70518b; outline-offset:2px; }
+.crown-payments-dialog [data-crown-pay] { color:#fff; background:#5d386c; }
+.crown-payments-dialog .crown-test-notice { padding:10px; border:1px solid #94729e; background:#e8dbee; font-weight:650; }
+.crown-payments-dialog .crown-order-reference { overflow-wrap:anywhere; font-size:12px; }
+@media (max-height:500px) { .crown-payments-dialog { padding:12px; font-size:14px; } .crown-payments-dialog p { margin:8px 0; } }

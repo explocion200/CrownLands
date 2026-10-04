@@ -65,6 +65,7 @@ function syncCosmeticsSession() {
   const uid = getCurrentOnlineUid();
   if (uid === cosmeticUid) return;
   cosmeticStop?.(); cosmeticOwnerStop?.(); cosmeticStop = null; cosmeticOwnerStop = null;
+  globalThis.CrownlandsCrownPaymentsUI?.reset(uid);
   cosmeticUid = uid; cosmeticState = null; cosmeticBusy = false; cosmeticError = ""; cosmeticConfirmation = null;
   cosmeticOwnerAppearances.clear(); cosmeticNeededOwners.clear(); cosmeticOwnerSignature = "";
   cosmeticFailedCityArt.clear();
@@ -210,7 +211,7 @@ function renderSkinsPanel(mode = "shop") {
   const confirm = cosmeticConfirmation;
   const applyButton = `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>`;
   return `<section class="skins-panel" data-skins-mode="${mode}" aria-label="${library ? "My skins" : "Skin shop"}">
-    <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "City Skins"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span><button type="button" data-skin-earn>Earn Crowns</button></div></header>
+    <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "City Skins"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span><button type="button" data-skin-earn>Earn Crowns</button>${!library ? '<span data-crown-payments></span>' : ""}</div></header>
     <p class="skins-notice">${library ? "Select a skin, then press Apply. Switching is free." : `Permanent cosmetics · Free switching · ${sale.onSale ? "Sale ends November 1 at 00:00 UTC" : "Returns October 1 at 00:00 UTC"}.`}</p>
     <nav class="skins-filters" aria-label="Skin categories">${categories.map(([id,label]) => `<button type="button" data-skin-category="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join("")}</nav>
     ${feedback ? `<p class="skins-feedback" role="status">${escapeHtml(feedback)} <button type="button" data-skin-reload>${cosmeticPendingPurchase ? "Check Purchase" : "Retry"}</button></p>` : ""}
@@ -225,6 +226,7 @@ function bindSkinsPanel(root) {
   cosmeticMotion?.schedule();
   root.querySelectorAll(".skin-detail .halloween-city-bats").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
   const mode = root.dataset.skinsMode;
+  if (mode === "shop") globalThis.CrownlandsCrownPaymentsUI?.mount(root.querySelector("[data-crown-payments]"), { uid: cosmeticUid, api: getOnlineApi() });
   root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
     cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
   }));
