@@ -53,12 +53,11 @@ assert.ok(modalClasses.size >= 20, "The reusable modal audit no longer covers th
 assert.ok(css.includes(".modal:not(.level-up-reward-modal)"), "Dynamic modal classes are not protected by the shared mobile rule.");
 
 const releaseId = "20260825-shop-hourly-prices-r1";
-const cacheVersion = "20260909-city-details-r1";
 const styleTag = `mobile-viewport.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The mobile viewport layer is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("action-buttons.css"), "The mobile viewport layer must load after every existing game theme.");
 assert.ok(worker.includes(`/${styleTag}`), "The mobile viewport layer is missing from the offline shell.");
-assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The mobile viewport release does not restart stale clients.");
+require("./shell-cache-assertions").assertShellAssetVersions(index, worker, ["mobile-viewport.css"]);
 for (const source of [builder, manifestBuilder, artifactValidator, budgetValidator]) {
   assert.ok(source.includes("mobile-viewport.css"), "The mobile viewport layer is missing from production packaging or budgets.");
 }

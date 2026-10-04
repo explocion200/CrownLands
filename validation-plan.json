@@ -1,13 +1,94 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "90a48656eb4f2f39ab917ca67840e92beb2836aa",
+  "baseCommit": "c1e327b49579d8d496243c535287c85c983a435a",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "functions/package.json",
+        "functions/pnpm-lock.yaml",
+        "functions/pnpm-workspace.yaml",
+        "tools/test-functions-dependencies.js"
       ],
-      "tests": [],
-      "reason": "Documentation-only reconciliation of PR 439 with current main. Preserve the verified PR 438 history and record deployed PRs 440/441, channel-specific wall status, unchanged production-exception deadlines, and the user-held itch.io client. Reviewed against saved deployment evidence and the live web manifest. No runtime, gameplay, dependency or UI changes; runtime and emulator suites are not applicable."
+      "tests": [
+        "tools/test-functions-dependencies.js",
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-release-gate.js",
+        "functions/test/emulator-player-flag-rules.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Targeted transitive gRPC and multipart security patches require production-chain behavioral regression tests, Firestore transaction/transport integration and authorization coverage. The full static gate additionally runs the cache parity helper test; dependency audit is mandatory."
+    },
+    {
+      "paths": [
+        "functions/playerFlagConfig.js",
+        "tools/validate-player-flags.js"
+      ],
+      "tests": [
+        "tools/validate-player-flags.js",
+        "tools/validate-random-starter-flags.js",
+        "tools/test-player-flag-persistence.js",
+        "functions/test/emulator-player-flag-rules.js"
+      ],
+      "reason": "Avoid deterministic fallback generation for valid saved colors without changing stored flags, aliases, schemas, repair output or input objects. Cover shared browser/server normalization and persisted flag security."
+    },
+    {
+      "paths": [
+        "tools/validate-audio-delivery.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-item-bag-ui.js",
+        "tools/validate-login-resilience.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-objective-action-buttons.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-pass-3f-items.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-welcome-back-summary.js",
+        "tools/shell-cache-assertions.js",
+        "tools/test-shell-cache-assertions.js"
+      ],
+      "tests": [
+        "tools/validate-audio-delivery.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-item-bag-ui.js",
+        "tools/validate-login-resilience.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-objective-action-buttons.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-pass-3f-items.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-stability-regressions.js",
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-welcome-back-summary.js",
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-city-wall-balance.js",
+        "tools/validate-troop-production-exclusions.js",
+        "tools/validate-player-camp-defense.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Repair stale assertions and missing VM browser dependencies exposed by the explicitly requested full audit. Run every modified validator; check current approved wall curve, timed troop accrual, camp defense, immutable cache asset parity and generated production delivery. No game rules or performance budgets are changed."
+    },
+    {
+      "paths": [
+        "tools/validate-onboarding-browser.js",
+        "tools/validate-common-gear-box-browser.js"
+      ],
+      "tests": [
+        "tools/validate-onboarding-browser.js",
+        "tools/validate-common-gear-box-browser.js",
+        "tools/validate-deferred-ui-styles-browser.js"
+      ],
+      "reason": "Wait for deferred Help and officer screens to mount while retaining exact content, late-receipt isolation, layout, interaction and error assertions at desktop and landscape-mobile sizes."
     }
   ]
 }

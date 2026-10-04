@@ -222,6 +222,8 @@ async function main() {
       assert.equal(await evaluate("modalBody.querySelector('.onboarding-tip')"), null, 'A Camp attack displayed a beginner tip.');
       await evaluate("modal.close()");
       await evaluate("saveOnboardingPrefs({enabled:false,dismissed:[]});renderOnboardingMapTip();showProfileSettings();document.getElementById('helpBtn').click()");
+      for (let attempt = 0; attempt < 200 && !await evaluate("modalBody.dataset.helpReady === 'true'"); attempt++) await wait(50);
+      assert.equal(await evaluate("modalBody.dataset.helpReady"), "true", "The deferred handbook did not finish mounting.");
       assert.equal(await evaluate("modalTitle.textContent"), "Help & first steps");
       assert.equal(await evaluate("modalBody.querySelectorAll('.topic-card').length"), 5);
       await evaluate("modalBody.querySelector('#tips').click();modalBody.querySelector('#backToGame').click()");
