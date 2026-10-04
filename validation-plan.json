@@ -146,6 +146,17 @@
         "tools/validate-core-expansion-release.js"
       ],
       "reason": "Keep the existing camera quiet period after slow rendering, preventing full detail from repeatedly restoring between zoom inputs. Verify deferred updates eventually flush, live gestures stay active, pan timing and longer explicit locks are preserved, ordinary camera refreshes do not lock, and mobile/Tower/decorations rendering and cleanup still work."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-reward-camp-base-production.js"
+      ],
+      "tests": [
+        "tools/validate-camp-power-rewards.js",
+        "functions/test/emulator-reward-camp-base-production.js",
+        "functions/test/emulator-camp-power-rewards.js"
+      ],
+      "reason": "Objective ownership can change the approved reward-hours power tier without changing the raw production basis. Preserve every raw-rate and normal-bonus assertion, verify tier/hour metadata against configured boundaries, and run independent seeded-power boundary/authority/payout coverage in the current Core realm."
     }
   ]
 }
