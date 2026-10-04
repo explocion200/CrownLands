@@ -47,6 +47,17 @@
       "hasAlpha": true
     },
     {
+      "id": "map-transition-halloween",
+      "category": "transition",
+      "source": "docs/art-sources/halloween-map-transition/bats-and-leaves.png",
+      "output": "assets/optimized/map-transition-halloween-512x512-85e000346b96.webp",
+      "width": 512,
+      "height": 512,
+      "bytes": 32516,
+      "sha256": "85e000346b963a33db428768401e41178d427f14ba50b5e195807a32d3f4b693",
+      "hasAlpha": true
+    },
+    {
       "id": "hud-leaderboard",
       "category": "hud",
       "source": "assets/leaderboard-icon.png",

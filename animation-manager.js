@@ -1272,6 +1272,13 @@
       });
     }
 
+    getMapTransitionTheme(atMs = Date.now()) {
+      // This month's draft ends automatically; retain clouds for future use.
+      return atMs >= Date.UTC(2026, 9, 1) && atMs < Date.UTC(2026, 10, 1)
+        ? "halloween"
+        : "clouds";
+    }
+
     beginMapTransition(options = {}) {
       const event = isObject(options) ? { ...options } : {};
       if (this.getEffectiveMode() === "off") return null;
@@ -1283,6 +1290,9 @@
       }
       const direction = normalizeDirection(event.direction);
       const mode = this.getEffectiveMode();
+      const theme = ["halloween", "clouds"].includes(event.theme)
+        ? event.theme
+        : this.getMapTransitionTheme();
       if (!this.reserveEffectSlot("transition", INTENSITY_PRIORITY.minor)) {
         this.lastSkipReason = "effect-cap";
         return null;
@@ -1315,6 +1325,7 @@
       element.className = `crownlands-map-transition crownlands-map-transition--${direction} crownlands-map-transition--mode-${mode} is-leaving`;
       element.dataset.transitionToken = String(event.token || record.instanceId);
       element.dataset.direction = direction;
+      element.dataset.theme = theme;
       element.dataset.phase = "leaving";
       element.setAttribute("aria-hidden", "true");
       element.style.pointerEvents = "none";

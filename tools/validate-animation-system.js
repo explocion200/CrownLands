@@ -433,6 +433,7 @@ const mapTransition = animations.beginMapTransition({
   root: transitionRoot,
   stage: transitionStage,
   direction: "east",
+  theme: "clouds",
   coverDurationMs: 420,
 });
 assert(mapTransition, "The cloud map transition did not start.");
@@ -449,6 +450,36 @@ assert.equal(mapTransition.element.dataset.phase, "loading", "Early finish must 
 assert(!transitionStage.classList.contains("is-entering"), "The live map stage must not receive an entering animation.");
 assert(animations.cancelMapTransition("static-validator", mapTransition.token), "Cloud transition cleanup failed.");
 assert(!transitionStage.classList.contains("is-transitioning"), "Cloud transition cleanup left map input blocked.");
+assert.equal(mapTransition.element.dataset.theme, "clouds", "Retained clouds must remain explicitly selectable.");
+
+const seasonalCases = [
+  ["2026-09-30T23:59:59.999Z", "clouds"],
+  ["2026-10-01T00:00:00.000Z", "halloween"],
+  ["2026-10-31T23:59:59.999Z", "halloween"],
+  ["2026-11-01T00:00:00.000Z", "clouds"],
+  ["2027-10-01T00:00:00.000Z", "clouds"],
+];
+for (const [date, expected] of seasonalCases) {
+  const atMs = Date.parse(date);
+  sandbox.Date = class extends Date { static now() { return atMs; } };
+  assert.equal(animations.getMapTransitionTheme(atMs), expected, date);
+  const seasonal = animations.beginMapTransition({ root: transitionRoot, stage: transitionStage });
+  assert.equal(seasonal.element.dataset.theme, expected, `Automatic theme at ${date}`);
+  assert.equal(seasonal.element.children.length, 5, "Seasonal artwork must reuse the existing five transition parts.");
+  seasonal.cancel("seasonal-validator");
+}
+delete sandbox.Date;
+for (const mode of ["full", "reduced", "off"]) {
+  animations.setMode(mode, { persist: false });
+  const seasonal = animations.beginMapTransition({ root: transitionRoot, stage: transitionStage, theme: "halloween" });
+  if (mode === "off") assert.equal(seasonal, null, "Off must skip Halloween transitions.");
+  else {
+    assert.equal(seasonal.element.dataset.theme, "halloween");
+    assert.equal(animations.mapTransition.record.transitionCoverDuration, mode === "reduced" ? 140 : 420);
+    seasonal.cancel("seasonal-mode-validator");
+    assert(!transitionStage.classList.contains("is-transitioning"), "Seasonal cancellation must restore map interaction.");
+  }
+}
 animations.setMode(initialMode, { persist: false });
 
 const reportStart = serverSource.indexOf("function makeReport({");
