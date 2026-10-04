@@ -66,7 +66,22 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Shield activation confirmation
+### Current verified web release — Approved Gold coin artwork
+
+The authorized release of [PR #447](https://github.com/explocion200/CrownLands/pull/447), from `codex/gold-coin-artwork`, is verified at build `5c595a9316b852193378008a63eba70e3d17866f`. The approved antique Gold coin replaces all 32 active Gold coin references across 22 presentation files, including the HUD, Shop, rewards, reports, city costs, Common Gear and default Gold particles. The separate purple Crowns artwork and illustrated Gold purses retain their existing role. Currency values, prices and gameplay rules are unchanged.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game at `https://playcrownlands.com/play/` and both game hosts | `LIVE — WEB`; Netlify production deploy `6ac2af9ff8213b000873457f`, published October 4, 2026 at `19:59:26.791 UTC` (3:59 p.m. Eastern). Eighty-one live asset comparisons passed across `playcrownlands.com`, `crownland.netlify.app` and `game.playcrownlands.com`: game entry, affected presentation files, styles, manifest, release configuration, service worker and the exact approved delivery image match the merged artifact. The existing manual publication hold remains enabled. |
+| Approved image delivery | The 192×192 transparent WebP is 12,526 bytes, SHA-256 `f2620b39eb0da997039aeaba064d70d41bba673c1e05c263924b14999d146299`. The full 40-character merged build ID passed production artifact validation within the existing size limits. The approved source PNG is retained in `docs/visual-qa/gold-coin/art/`. |
+| Firebase backend and current realm | Existing deployment retained. All 131 Node.js 22 functions remain ACTIVE at their baseline source hashes and revisions; the release contract is unchanged. The October realm remains `main-realm-2026-10`, generation `realm-2026-10`, shard `shard_0001`, ready. No Functions, rules, indexes or production records were changed by this release. |
+| Required validation | Static validation, Multiplayer emulator validation and Validate passed in [run 37229557961](https://github.com/explocion200/CrownLands/actions/runs/37229557961). Thirteen focused validators, syntax/lint, asset budgets and production artifact validation passed. No emulator suite was required for this presentation-only change. |
+| Production browser verification | Six cold-load/reload cases passed at 1440×900, 844×390 and 568×320. The live HUD references the approved asset; seven deployed currency helpers render it, including Shop and city/gear SVG images. Images decode at the intended dimensions and the synthetic presentation fits each viewport. No uncaught runtime errors, missing first-party assets or production gameplay mutations occurred. Authenticated gameplay and physical-device checks were not performed. |
+| itch.io | The existing publication hold remains in effect; this release was not uploaded there. The approved coin is verified as `LIVE — WEB` only. |
+
+Release evidence is retained locally under `release-artifacts/gold-coin/deployment/`, including baseline, publication, live asset/backend verification, browser results and screenshots. Local `main` was synchronized with `origin/main` at the implementation build after merging PR #447. Later documentation-only descendants may carry another commit without changing this published runtime build.
+
+### October 4 Shield activation confirmation release
 
 The authorized release of [PR #445](https://github.com/explocion200/CrownLands/pull/445), from `codex/shield-activation-confirmation`, is verified at build `218dd88092230197e9d8f0ec20dece20a01b9c9c`. Using a Royal Peace Shield from the Item Bag now asks for **Activate Shield** or **Cancel** before consuming or queueing the item. Dismissal preserves the item; approval rechecks inventory, active effects, offensive cooldown and the current account/realm. Existing protection and march-return rules remain unchanged.
 
@@ -210,6 +225,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Approved antique Gold coin artwork across currency presentation and default Gold particles | Verified in web build `5c595a93...` from PR #447 | Not republished; existing publication hold retained | `LIVE — WEB`; exact image and affected assets verified on all game hosts, with desktop/mobile browser checks |
 | Royal Peace Shield activation confirmation in the Item Bag | Verified in web build `218dd880...` from PR #445 | Not republished; existing publication hold retained | `LIVE — WEB`; synthetic production UI checks passed, authenticated item consumption remains untested |
 | Shop purchase countdowns, midnight unlock and shared ad cooldown recovery | Verified in web build `5d7bbb0...` from PR #422 | Not republished or verified for this release | `LIVE — WEB`; authenticated purchases and live ad completion remain manual checks |
 | Player camp defense bonuses and private holder inspection | Verified in web/backend build `32a4476...` from PR #411 | Shared backend updated; client not republished or verified for this release | `LIVE — WEB`; production combat smoke remains manual |
