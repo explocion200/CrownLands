@@ -126,6 +126,15 @@
       ],
       "tests": [],
       "reason": "Record the explicitly approved presentation, shared-icon scope, provenance/prompt and source/delivery details. Documentation does not change executable behavior or claim deployment."
+    },
+    {
+      "paths": [
+        "tools/validate-inner-castle-browser.js"
+      ],
+      "tests": [
+        "tools/validate-inner-castle-browser.js"
+      ],
+      "reason": "The affected icon screen must be measured after its existing opening transition finishes. The former immediate Treasury measurement also fails against unchanged main while the 44 px button is scaled. Wait for the native animation completion; retain every existing geometry, navigation, focus and accessibility assertion and all game animation/CSS behavior."
     }
   ]
 }
