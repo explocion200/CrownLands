@@ -6,6 +6,8 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "assets/optimized/map-transition-halloween-512x512-85e000346b96.webp",
+  "assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp",
   "assets/optimized/halloween-map-layouts-v3.json",
   "crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
@@ -317,6 +319,14 @@ const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudge
 // Seven Halloween props and layouts add 59,111 bytes; shell hooks stay under 5 KiB.
 // Bound the combined feature below 64 KiB; retain the install-cache/frame limits.
 const halloweenMapFeatureBudget = 64 * 1024;
+// Keep the original clouds while adding one 32,516-byte seasonal tile.
+// Bound its artwork at 32 KiB and reserve 4 KiB for theme/style/URL integration;
+// existing entry, offline-shell, prepared-world and total artifact caps stay fixed.
+const halloweenMapTransitionBudget = 36 * 1024;
+const halloweenTransitionTiles = files.filter(file => /^map-transition-halloween-.*\.webp$/.test(path.basename(file)));
+if (halloweenTransitionTiles.length !== 1 || fs.statSync(halloweenTransitionTiles[0]).size > 32 * 1024) {
+  throw new Error("Halloween transition must ship exactly one tile below 32 KiB.");
+}
 // The approved shared troops helmet adds one 7,338-byte transparent WebP.
 // Bound that asset and its net presentation-reference growth to one 8 KiB step;
 // per-file, entry-resource, offline-shell and combined artifact limits still apply.
@@ -324,7 +334,7 @@ const troopsHelmetArtworkBudget = 8 * 1024;
 if (fs.statSync(path.join(dist, "assets/optimized/troops-helmet-192x192-8c144647d31b.webp")).size > troopsHelmetArtworkBudget) {
   throw new Error("The shared troops helmet exceeds its 8 KiB artwork allowance.");
 }
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + troopsHelmetArtworkBudget;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + troopsHelmetArtworkBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

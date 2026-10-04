@@ -11,6 +11,7 @@ Painted charcoal bats and ochre autumn leaves sweep across an opaque parchment-a
 - `theme: "halloween"` or `theme: "clouds"` can override the date for local review. This is an animation-manager option, not a player setting or purchased skin.
 - [bats-and-leaves.png](bats-and-leaves.png) is the preserved transparent source created with built-in `image_gen`. [prompt.json](prompt.json) records the final prompt and reference role. [asset.json](asset.json) records the production derivative and SHA-256.
 - The single 512×512 alpha WebP is 32,516 bytes and is shared by both moving layers. It is requested when a Halloween transition begins, outside installation precaching. Decoded texture size is 1 MiB. The opaque veil remains available if that optional artwork fails.
+- Production packaging reserves 36 KiB for this retained-cloud addition: exactly one Halloween tile below 32 KiB and 4 KiB for theme/style/URL integration. Both textures are required in the build; existing entry, offline-shell, prepared-world and total artifact caps remain fixed.
 - The Halloween layers explicitly disable the cloud-only tint and screen blend, preserving dark ink outlines. Reduced motion hides bats/leaves and uses the existing stationary fade; Off creates no transition.
 
 ## Local review
