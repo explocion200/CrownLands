@@ -766,6 +766,9 @@ setImmediate(() => {
     getActiveRoyalTaxDecreeExpiresAtMs: () => 0,
     getActivePeaceShieldExpiresAtMs: () => 0,
     getActiveVeilOfSilenceExpiresAtMs: () => 0,
+    getOffensiveShieldCooldownRemaining: () => 0,
+    // Dialog decisions are covered by validate-shield-activation-browser.js.
+    confirmPeaceShieldActivation: () => true,
     isStackableTimedInventoryItem: () => false,
     usesServerEconomyAuthority: () => true,
     getOnlineApi: () => ({ activateInventoryItem: async () => { throw new Error("rejected"); } }),

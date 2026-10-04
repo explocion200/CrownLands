@@ -1,74 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5873bde85fc89e85b73d52a845d2b0146babdee9",
+  "baseCommit": "25fe88c6ba10eaa9c9dbb1384386365cc0e8af3a",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/crown-payments.js",
-        "functions/crown-payments-service.js",
-        "functions/crown-payments-http.js",
-        "functions/test/emulator-crown-payments.js",
-        "tools/test-crown-payments.js"
+        "item-bag-ui.js",
+        "instant-economy-actions.js",
+        "tools/validate-shield-activation-browser.js",
+        "tools/validate-instant-economy-actions.js"
       ],
       "tests": [
-        "tools/test-crown-payments.js",
-        "functions/test/emulator-crown-payments.js",
-        "functions/test/emulator-cosmetics.js"
+        "tools/validate-shield-activation-browser.js",
+        "tools/validate-shield-order-confirmation-browser.js",
+        "tools/validate-item-bag-browser.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-stackable-timed-items.js",
+        "tools/validate-item-bag-ui.js"
       ],
-      "reason": "Verify sandbox-only Stripe session creation, immutable quotes, account ownership and verification, raw signed webhooks, lost-response and concurrent retries, wallet overflow and atomic exactly-once test credits. Existing cosmetics tests protect the separate playable wallet, purchase authority and permanent ownership."
+      "reason": "Exercise the real Bag confirmation on desktop and landscape mobile, safe dismissal, current account/realm and eligibility rechecks, single activation, pending server results, rejection recovery and local activation. Verify shared dialog and queued item dependencies, including existing shield-removing orders and stackable boosts. Server authority and schemas are unchanged, so no emulator suites are affected."
     },
     {
       "paths": [
-        "functions/package.json",
-        "functions/pnpm-lock.yaml"
-      ],
-      "tests": [
-        "tools/test-crown-payments.js",
-        "tools/test-functions-dependencies.js",
-        "functions/test/emulator-crown-payments.js"
-      ],
-      "reason": "Pin the Stripe SDK and exercise its signature verification, while retaining locked Firebase dependency regression coverage and real Firestore transaction integration. Production dependency audit runs because the dependency files changed."
-    },
-    {
-      "paths": [
-        "crown-payments-ui.js",
-        "crown-payments-ui.css",
-        "cosmetics-client.js",
-        "skins-ui.js",
-        "tools/validate-crown-payments-browser.js"
-      ],
-      "tests": [
-        "tools/validate-crown-payments-browser.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-cosmetics.js"
-      ],
-      "reason": "Check the checkout in the actual Shop at desktop and landscape mobile, including popup blocking, saved-order retry, pending/confirmed receipt, malicious redirects and late account responses. Existing cosmetics coverage verifies unrelated Shop/Profile spending, free switching, artwork and auth-session behavior."
-    },
-    {
-      "paths": [
-        "index.html",
-        "service-worker.js",
-        "crown-payment-return.html",
-        "tools/build-production-client.js",
-        "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/test-shell-cache-assertions.js",
-        "tools/validate-focused-browser-smoke.js",
-        "tools/validate-crown-payments-browser.js"
-      ],
-      "reason": "Build and verify delivery, immutable cache parity and release fingerprints for the new checkout assets and static return page. Smoke-test production pages and run the actual Shop to catch missing globals, broken loading or layout integration."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWN_PAYMENTS.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the confirmed Stripe selection, disabled sandbox implementation status and remaining merchant/pricing/live-launch setup. Documentation does not approve fixture prices or change gameplay."
+      "reason": "Record the requested activation confirmation and existing protection rules as implementation pending release; no runtime behavior is defined solely by this documentation."
     }
   ]
 }

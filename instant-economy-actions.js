@@ -1122,7 +1122,7 @@ function upgradeCity(cityId, levels = 1, options) {
   return true;
 }
 
-function useInventoryItem(itemId) {
+function useInventoryItem(itemId, shieldConfirmation = null) {
   if (!state) return false;
   const item = getShopItemById(itemId);
   if (!item) return false;
@@ -1146,6 +1146,15 @@ function useInventoryItem(itemId) {
   if (!isStackableTimedInventoryItem(item) && projectedActive > Date.now()) {
     rejectGameAction(`${item.label} is already active for ${formatDuration(Math.ceil((projectedActive - Date.now()) / 1000))}.`);
     return false;
+  }
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+    const cooldown = getOffensiveShieldCooldownRemaining();
+    if (cooldown > 0) {
+      rejectGameAction(`Peace Shield unavailable: you recently attacked another player. Available in ${formatDuration(Math.ceil(cooldown / 1000))}.`);
+      return false;
+    }
+    if (!confirmPeaceShieldActivation(item, shieldConfirmation,
+      confirmation => useInventoryItem(item.id, confirmation))) return false;
   }
   if (usesServerEconomyAuthority()) {
     const queued = enqueueInstantEconomyAction({ type: "item", key: item.id, itemId: item.id, quantity: 1 });

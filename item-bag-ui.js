@@ -1,5 +1,5 @@
 /* Approved Item Bag presentation. Item eligibility and mutations remain in the existing action pipeline. */
-/* exported renderItemBagPanel, bindItemBagPresentation */
+/* exported renderItemBagPanel, bindItemBagPresentation, confirmPeaceShieldActivation */
 const ITEM_BAG_ICONS={
   bag:'<path fill="currentColor" fill-opacity=".10" d="m10 9-3-6h18l-4 6c3 5 8 7 8 14 0 8-26 8-26 0 0-7 5-9 7-14Z"/><path d="M9 10h13M13 4l2 4m6-4-2 4m-6 7-2 8m9-8 2 8m-8 5h7"/>',
   boosts:'<path fill="currentColor" fill-opacity=".12" d="M6 13c3 3 17 3 20 0v12c-3 5-17 5-20 0Z"/><ellipse cx="16" cy="13" rx="10" ry="4"/><path d="m7 16 4 10 5-8 5 8 4-10M4 3l15 6M28 3l-12 6M6 24c4 4 16 4 20 0"/>',
@@ -71,4 +71,64 @@ function bindItemBagPresentation() {
   observer.observe(modal, { attributes: true, attributeFilter: ["class", "open"] });
   observer.observe(modalBody, { childList: true });
   refresh();
+}
+
+function confirmPeaceShieldActivation(item, confirmation, retry) {
+  if (document.getElementById("peaceShieldActivationDialog")) return false;
+  const scope = getOnlineSessionRequestScope();
+  const key = JSON.stringify([scope, item.id]);
+  if (confirmation?.key === key) return true;
+  if (!modal.open || !modal.classList.contains("inventory-modal")) return false;
+  const view = modalBody.firstElementChild;
+  const currentState = state;
+  const focused = document.activeElement;
+  const dialog = document.createElement("dialog");
+  dialog.id = "peaceShieldActivationDialog";
+  dialog.className = "peace-shield-order-dialog";
+  dialog.setAttribute("aria-labelledby", "peaceShieldActivationTitle");
+  dialog.setAttribute("aria-describedby", "peaceShieldActivationDescription");
+  dialog.innerHTML = `
+    <header><h2 id="peaceShieldActivationTitle">Activate Royal Peace Shield?</h2><button type="button" data-shield-cancel aria-label="Cancel activation">&times;</button></header>
+    <div class="peace-shield-order-copy">
+      <p id="peaceShieldActivationDescription">Use <strong>1 Royal Peace Shield</strong> for <strong>${escapeHtml(formatDuration(ROYAL_PEACE_SHIELD_DURATION_MS / 1000))}</strong> of protection?</p>
+      <p>Only cities with fully repaired walls are protected. Damaged cities gain protection when repairs finish, while the Shield is active.</p>
+      <p>Eligible incoming and outgoing rival attacks will turn back.</p>
+    </div>
+    <footer><button type="button" data-shield-cancel autofocus>Cancel</button><button type="button" data-shield-continue>Activate Shield</button></footer>`;
+  let settled = false;
+  const isCurrent = () => modal.open && modal.classList.contains("inventory-modal")
+    && modalBody.firstElementChild === view && state === currentState
+    && getOnlineSessionRequestScope() === scope;
+  const observer = new MutationObserver(() => { if (!isCurrent()) finish(false); });
+  const finish = accepted => {
+    if (settled) return;
+    settled = true;
+    observer.disconnect();
+    modal.removeEventListener("close", parentClosed);
+    const current = isCurrent();
+    dialog.close();
+    dialog.remove();
+    if (current && focused?.isConnected) focused.focus({ preventScroll: true });
+    // Re-enter the normal item handler to recheck inventory, active effects and cooldown.
+    if (accepted && current) retry({ key });
+  };
+  const parentClosed = () => { if (!isCurrent()) finish(false); };
+  modal.addEventListener("close", parentClosed);
+  observer.observe(modal, { attributes: true, attributeFilter: ["class", "open"] });
+  observer.observe(modalBody, { childList: true });
+  dialog.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    finish(false);
+  });
+  dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); });
+  dialog.addEventListener("close", () => finish(false));
+  dialog.addEventListener("click", event => { if (event.target === dialog) finish(false); });
+  dialog.querySelectorAll("[data-shield-cancel]").forEach(button => button.addEventListener("click", () => finish(false)));
+  dialog.querySelector("[data-shield-continue]").addEventListener("click", () => finish(true));
+  document.body.append(dialog);
+  dialog.showModal();
+  dialog.querySelector("footer [data-shield-cancel]").focus();
+  return false;
 }
