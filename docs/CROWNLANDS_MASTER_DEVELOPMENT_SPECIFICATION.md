@@ -1075,6 +1075,12 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Crown pickups use the approved purple pouch with matching silver-and-purple coins inside the same circular marker as Gold and troop pickups. Tint its ring, radial glow and artwork halo purple. Retain existing pickup sizing, hit area, motion preferences, collection authority, timing and the one-Crown reward.
 - This approval covers the currency artwork and HUD layout; the city-only cosmetic catalog is governed by the revision above. Sources, prompts and visual checks: [Crowns currency artwork](./visual-qa/crowns-currency/README.md). Status: approved for implementation; production deployment requires separate authorization and verification.
 
+#### Stripe Crown purchases — confirmed October 4, 2026
+
+- The user requested payment support for buying Crowns and selected Stripe while creating a merchant account. The existing cosmetics-only, non-transferable Crown wallet and seasonal persistence rules remain in force.
+- Prepare hosted checkout and server-verified, replay-safe purchase receipts in Stripe test mode. Test payments must not add playable Crowns. Pack quantities/prices, selling currency and live refund/dispute policy remain unconfirmed; do not treat test fixtures as approved offers.
+- The initial implementation is restricted to designated test accounts and disabled until securely configured. Live payments require a separate implementation/release approval, completed merchant setup and verified sandbox checkout. Status: `IN DEVELOPMENT`; not deployed. Setup and remaining launch work: [Crown payments](./CROWN_PAYMENTS.md).
+
 ### Monetization
 
 - Optional rewarded-ad pathways exist. **Status:** `LIVE — ALL PUBLISHED CHANNELS` for the foundation; exact availability may depend on channel configuration.

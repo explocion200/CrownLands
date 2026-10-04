@@ -7,6 +7,7 @@ const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "assets/optimized/halloween-map-layouts-v3.json",
+  "crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html",
   "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",

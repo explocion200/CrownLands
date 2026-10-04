@@ -5,6 +5,9 @@
   async function getCosmeticsState() { return callServerFunction("getCosmeticsState", {}); }
   async function purchaseCosmetic(payload) { return callServerFunction("purchaseCosmetic", payload); }
   async function equipCosmetic(payload) { return callServerFunction("equipCosmetic", payload); }
+  async function getCrownPaymentCatalog() { return callServerFunction("getCrownPaymentCatalog", {}); }
+  async function createCrownCheckout(payload) { return callServerFunction("createCrownCheckout", payload); }
+  async function getCrownCheckoutStatus(payload) { return callServerFunction("getCrownCheckoutStatus", payload); }
   function subscribeCosmetics(handlers = {}) {
     if (!client.db || !client.user?.uid) return () => {};
     const { doc } = client.modules.firestore;
@@ -30,6 +33,6 @@
   async function reserveHarvestBonusSpawn(payload = {}) {
     return callServerFunction("reserveHarvestBonusSpawn", payload);
   }
-    return { reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
+    return { getCrownPaymentCatalog, createCrownCheckout, getCrownCheckoutStatus, reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
   } };
 })(globalThis);

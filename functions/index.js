@@ -55,6 +55,11 @@ const {
 } = require("./player-region-spawn.js");
 const COSMETICS = require("./cosmetics.js");
 const { createCosmeticsService } = require("./cosmetics-service.js");
+const { defineSecret } = require("firebase-functions/params");
+const { createCrownPaymentsService } = require("./crown-payments-service");
+const { createCrownPaymentsWebhook } = require("./crown-payments-http");
+const stripeCrownTestKey = defineSecret("STRIPE_CROWNS_TEST_SECRET_KEY");
+const stripeCrownTestWebhookSecret = defineSecret("STRIPE_CROWNS_TEST_WEBHOOK_SECRET");
 const COMMON_GEAR = require("./common-gear.js");
 const DAILY_LOGIN = require("./dailyLoginRewards.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
@@ -35720,3 +35725,37 @@ exports.resolveDueRewardCampPayouts = onSchedule({
 exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));
 exports.purchaseCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.purchase(requireAuth(request), request.data || {}));
 exports.equipCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.equip(requireAuth(request), request.data || {}));
+
+// Explicitly sandbox-only until the merchant account, packs and live purchase policy are approved.
+function crownTestStripe() {
+  const key = stripeCrownTestKey.value();
+  if (!/^sk_test_[a-zA-Z0-9]+$/.test(key || "")) throw new HttpsError("failed-precondition", "Stripe test checkout is not configured.");
+  const Stripe = require("stripe");
+  return new Stripe(key, { maxNetworkRetries: 2, timeout: 15000 });
+}
+const crownPayments = createCrownPaymentsService({ db, stripe: crownTestStripe });
+const crownPaymentOptions = { region: "us-central1", maxInstances: 5, concurrency: 20, invoker: "public" };
+function crownPaymentHandler(action) {
+  return async request => {
+    requireVerifiedEmailSession(request);
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Sign in to use Crown checkout.");
+    if (request.auth.token?.firebase?.sign_in_provider === "anonymous") throw new HttpsError("permission-denied", "Use a permanent account for Crown checkout.");
+    try { return await action(uid, request.data || {}); }
+    catch (error) {
+      const safeCodes = ["invalid-argument", "failed-precondition", "not-found", "resource-exhausted", "permission-denied"];
+      if (safeCodes.includes(error.code)) throw new HttpsError(error.code, error.message);
+      throw new HttpsError("unavailable", "Crown test checkout could not be checked. Retry the same order.");
+    }
+  };
+}
+exports.getCrownPaymentCatalog = firebaseOnCall(crownPaymentOptions, crownPaymentHandler(uid => crownPayments.catalog(uid)));
+exports.createCrownCheckout = firebaseOnCall({ ...crownPaymentOptions, secrets: [stripeCrownTestKey] }, crownPaymentHandler((uid, data) => crownPayments.create(uid, data)));
+exports.getCrownCheckoutStatus = firebaseOnCall({ ...crownPaymentOptions, secrets: [stripeCrownTestKey] }, crownPaymentHandler((uid, data) => crownPayments.status(uid, data.orderId)));
+exports.stripeCrownTestWebhook = onRequest({ ...crownPaymentOptions, secrets: [stripeCrownTestKey, stripeCrownTestWebhookSecret] }, createCrownPaymentsWebhook({
+  verify: (body, signature) => {
+    const Stripe = require("stripe");
+    return Stripe.webhooks.constructEvent(body, signature, stripeCrownTestWebhookSecret.value());
+  },
+  reconcile: sessionId => crownPayments.reconcile(sessionId),
+}));
