@@ -31,7 +31,7 @@
       const item = options.items[r.itemId] || {label:'Royal Item', art:chestArt};
       return { label: item.label, amount: `×${number(r.quantity || r.lockedAmount || 1)}`, image: item.art, item: true, note: 'Item reward fixed when this quest was assigned.' };
     }
-    return { label: r.type === 'gold' ? 'Gold' : 'Troops', amount: number(r.lockedAmount), image: r.type === 'gold' ? 'assets/icons/royal-shop-gold-r1.svg' : 'assets/icons/daily-login-troops-r1.svg', item: false, note: `Based on ${r.productionHours} ${r.productionHours === 1 ? 'hour' : 'hours'} of production at assignment. This reward stays fixed.` };
+    return { label: r.type === 'gold' ? 'Gold' : 'Troops', amount: number(r.lockedAmount), image: r.type === 'gold' ? 'assets/optimized/gold-coin-192x192-f2620b39eb0d.webp' : 'assets/icons/daily-login-troops-r1.svg', item: false, note: `Based on ${r.productionHours} ${r.productionHours === 1 ? 'hour' : 'hours'} of production at assignment. This reward stays fixed.` };
   }
   const isComplete = m => Boolean(m.completedAtMs || m.claimedAtMs) || m.progress >= m.target;
   const isClaimed = m => Boolean(m.claimedAtMs);

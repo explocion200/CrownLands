@@ -1,6 +1,6 @@
 (function (global) {
   "use strict";
-  const icons={gold:"assets/icons/royal-shop-gold-r1.svg",troops:"assets/icons/daily-login-troops-r1.svg",items:"assets/icons/reward-daily-quests-r1.svg",deed:"assets/icons/skills/guildCharters.svg"};
+  const icons={gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",troops:"assets/icons/daily-login-troops-r1.svg",items:"assets/icons/reward-daily-quests-r1.svg",deed:"assets/icons/skills/guildCharters.svg"};
   const num=value=>Math.max(0,Math.floor(Number(value)||0)).toLocaleString();
   const dailyLimit=config=>config.type==='deed'?1:['gold','troops'].includes(config.type)?(config.dailyRewards?.length||0):Math.max(0,Number(config.maxDailyRewards)||0);
   function node(doc,tag,className,text) {const el=doc.createElement(tag);el.className=className;if(text!==undefined)el.textContent=text;return el;}

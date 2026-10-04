@@ -3,11 +3,7 @@
 
 // Presentation only. Costs, projections, visibility and actions remain game-owned.
 const cityDetailsIcons = {
-    coin: `<path class="engraving-surface" d="M16 3 23 5 28 10 29 17 26 24 20 28 12 29 6 25 3 19 3 12 8 6Z"/>
-      <path class="engraving-shadow" d="M27 11 27 18 24 24 18 27 11 27 6 23 9 27 16 30 24 27 29 20 30 14Z"/>
-      <path class="engraving-detail" d="M10 8 16 6 23 9M7 12l-1 5 3 6M22 24l3-4"/>
-      <path class="engraving-ink" d="m9 11 4 3 3-6 3 6 4-3-2 10H11Z"/>
-      <path d="M12 24h8"/>`,
+    coin: `<image href="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" width="32" height="32"/>`,
     city: `<path class="engraving-surface" d="M3 28V9h3V5h4v4h3V5h6v4h3V5h4v4h3v19Z"/>
       <path class="engraving-shadow" d="M24 10h5v18h-5ZM3 25h26v3H3Z"/>
       <path d="M11 10v17M21 10v17M3 16h8m10 0h8"/>
