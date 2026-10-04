@@ -66,7 +66,21 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified release — troop production and midpoint city walls
+### Current verified web release — Shield activation confirmation
+
+The authorized release of [PR #445](https://github.com/explocion200/CrownLands/pull/445), from `codex/shield-activation-confirmation`, is verified at build `218dd88092230197e9d8f0ec20dece20a01b9c9c`. Using a Royal Peace Shield from the Item Bag now asks for **Activate Shield** or **Cancel** before consuming or queueing the item. Dismissal preserves the item; approval rechecks inventory, active effects, offensive cooldown and the current account/realm. Existing protection and march-return rules remain unchanged.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game at `https://playcrownlands.com/play/` and both game hosts | `LIVE — WEB`; Netlify production deploy `6ac28b6331efc10008da5eae`, published October 4, 2026 at `17:23:56.786 UTC` (1:23 p.m. Eastern). Twenty-one live asset comparisons passed across `playcrownlands.com`, `crownland.netlify.app` and `game.playcrownlands.com`: entry, manifest, Bag code, activation pipeline, styles, release configuration and service worker match the merged artifact. The existing manual publication hold remains enabled. |
+| Firebase backend and current realm | Existing deployment retained. All 131 Node.js 22 functions remain ACTIVE at their baseline source hashes and revisions; the release contract is unchanged. The October realm remains `main-realm-2026-10`, generation `realm-2026-10`, shard `shard_0001`, ready. No Functions, rules, indexes or production records were changed by this release. |
+| Required validation | Static validation, Multiplayer emulator validation and Validate passed in [run 37218710979](https://github.com/explocion200/CrownLands/actions/runs/37218710979). Six focused validators, production artifact validation, syntax/lint and asset budgets passed. No emulator suite was required for this client-only change. |
+| Production browser verification | Six cold-load/reload cases passed at 1440×900, 844×390 and 568×320. The live optional Bag module loaded, and the deployed confirmation fit each viewport with 44 px controls. Synthetic UI decisions verified Cancel and one-time approval, with no uncaught runtime errors or failed first-party assets. No authenticated production Shield item was consumed. |
+| itch.io | The existing publication hold remains in effect; this release was not uploaded there. The activation confirmation is verified as `LIVE — WEB` only. |
+
+Release evidence is retained locally under `release-artifacts/shield-activation/deployment/`, including baseline, publication, asset/backend verification, browser results and screenshots. Local `main` was synchronized with `origin/main` at the implementation build after merging PR #445. Later documentation-only descendants may carry another commit without changing these runtime sources.
+
+### October 3/4 troop production and midpoint city walls baseline
 
 The authorized deployment of [PR #441](https://github.com/explocion200/CrownLands/pull/441) is verified at build `90a48656eb4f2f39ab917ca67840e92beb2836aa`, release `crownlands-2026-10-03-city-wall-midpoint-v4`. Web and Firebase use the midpoint regular-city wall curve. The preceding [PR #440](https://github.com/explocion200/CrownLands/pull/440) supplied the approved 25% troop-production increase and both timed account exceptions; it replaced draft PR #437. The earlier attack-departure, retaliation and former-clan protections remain included.
 
@@ -196,6 +210,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Royal Peace Shield activation confirmation in the Item Bag | Verified in web build `218dd880...` from PR #445 | Not republished; existing publication hold retained | `LIVE — WEB`; synthetic production UI checks passed, authenticated item consumption remains untested |
 | Shop purchase countdowns, midnight unlock and shared ad cooldown recovery | Verified in web build `5d7bbb0...` from PR #422 | Not republished or verified for this release | `LIVE — WEB`; authenticated purchases and live ad completion remain manual checks |
 | Player camp defense bonuses and private holder inspection | Verified in web/backend build `32a4476...` from PR #411 | Shared backend updated; client not republished or verified for this release | `LIVE — WEB`; production combat smoke remains manual |
 | Transactional clan power, deferred optional screens and current-build cache recovery | Verified in web/backend build `f12191d...` from PR #406 | Client not republished or verified for this release | `LIVE — WEB`; shared backend verified |
@@ -692,7 +707,7 @@ Confirmed September 27, 2026. **Status:** `IN DEVELOPMENT`; merge and deployment
 
 - The September 27 rule granted 30 minutes for retaliation and the capturer's matching no-abandon lock; the confirmed October 3 revision above supersedes that duration with 24 hours for new qualifying captures. The offensive Peace Shield activation cooldown remains 15 minutes. Existing saved grants and locks retain their original expiration; there is no retroactive extension.
 - A Royal Peace Shield remains active for 12 hours, but protects each owned regular city only when its walls reach exactly 100% integrity. A partially repaired city remains attackable even if its owner has an active Shield. Full repair automatically activates protection for the remaining item duration, provided that ruler still owns the city. Repair does not restart or extend the item timer.
-- **Confirmed October 4, 2026 — implementation pending release:** Using a Royal Peace Shield from the Item Bag opens a confirmation with **Activate Shield** and **Cancel** before consuming or queueing the item. Explain that one item grants 12 hours, only fully repaired cities are protected, and eligible incoming/outgoing rival attacks turn back. Cancel, close, backdrop dismissal and Escape leave the item and marches unchanged. Activation rechecks inventory, active Shield, offensive cooldown and the current account/realm; repeated confirmation clicks activate at most once.
+- **Confirmed October 4, 2026 — LIVE — WEB at build `218dd880...` from PR #445; itch.io remains held:** Using a Royal Peace Shield from the Item Bag opens a confirmation with **Activate Shield** and **Cancel** before consuming or queueing the item. Explain that one item grants 12 hours, only fully repaired cities are protected, and eligible incoming/outgoing rival attacks turn back. Cancel, close, backdrop dismissal and Escape leave the item and marches unchanged. Activation rechecks inventory, active Shield, offensive cooldown and the current account/realm; repeated confirmation clicks activate at most once.
 - Eligibility is derived from the authoritative wall repair deadline at dispatch and arrival, including while the owner is offline. Capture clears the former owner's Shield metadata. The same eligibility check governs the map's shield appearance and attack feedback. Existing active Shields use the new city eligibility rule after deployment; no player data migration is required.
 - On item activation, eligible incoming rival marches reverse only when their target city is already fully repaired and still owned by the shield user. Eligible outgoing rival attacks still reverse. A march left travelling toward a damaged city is blocked by the existing arrival check if that city repairs before arrival. Full repair does not introduce a separate mid-route reversal event.
 - Main City protection, Stronghold/Camp/Tower exclusions, Citadel Legion behavior, ordinary attack restrictions and existing Shield cancellation rules remain unchanged.
