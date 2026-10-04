@@ -400,8 +400,8 @@ async function stagedWallCases() {
     .filter(doc => doc.data().ownerUid).map(doc => doc.id));
   const seeds = layout.maps.find(map => map.id === region).cities
     .filter(city => !occupied.has(city.id) && city.kind !== "stronghold");
-  const milestones = [[25, 25_000], [26, 27_412], [50, 250_000], [51, 264_255],
-    [75, 1_000_000], [76, 1_044_924], [100, 3_000_000], [101, 3_030_867]];
+  const milestones = [[25, 85_279], [26, 94_224], [50, 853_335], [51, 875_896],
+    [75, 1_614_168], [76, 1_652_063], [100, 3_000_000], [101, 3_030_867]];
   assert(seeds.length > milestones.length);
   const source = await seedCity({ ...seeds[0], regionId: region }, actor, 20_000_000);
   await profileRef(actor).set({ itemEffects: { shieldExpiresAtMs: 0 }, gold: 1e12, goldFloat: 1e12 }, { merge: true });
@@ -409,7 +409,7 @@ async function stagedWallCases() {
   // The coordinated release must reject clients still displaying the old curve.
   const releaseId = identity.releaseId;
   try {
-    identity.releaseId = "crownlands-2026-10-01-halloween-skins-v1";
+    identity.releaseId = "crownlands-2026-10-03-troop-production-25-v1";
     await deny("collectEconomy", actor, {}, /refresh|update|client|release|realm/i);
   } finally { identity.releaseId = releaseId; }
   const storageId = `${identity.resetGeneration}--${identity.realmShardId}`;
@@ -452,7 +452,7 @@ async function stagedWallCases() {
   });
   const towerReport = await resolve(actor, scout.movement);
   assert.equal(towerReport.scoutReport.fullWallPower, 1_456_669, "Tower wall changed");
-  console.log("Five-stage city walls passed: scouts, forecasts, real captures at every boundary, old-client rejection, unchanged Stronghold/Citadel/Tower walls.");
+  console.log("Midpoint city walls passed: scouts, forecasts, real captures at every boundary, old-client rejection, unchanged Stronghold/Citadel/Tower walls.");
 }
 
 async function troopProductionCases() {

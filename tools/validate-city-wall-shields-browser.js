@@ -57,8 +57,8 @@ async function main() {
         renderCities();return qa.read();
       })()`);
       assert(after.every(r => !r.shield && !r.blocked), "Expired or previous-owner shield still shown");
-      for (const [level, expected, troopsPerHour] of [[1,200,162],[25,25000,3514],[26,27412,3677],
-        [50,250000,8097],[51,264255,8286],[75,1000000,13315],[76,1044924,13545],
+      for (const [level, expected, troopsPerHour] of [[1,200,162],[25,85279,3514],[26,94224,3677],
+        [50,853335,8097],[51,875896,8286],[75,1614168,13315],[76,1652063,13545],
         [100,3000000,19034],[101,3030867,19264],[150,6200000,31606],[200,11340888,45436]]) {
         const detail = await evaluate(`(() => {
           const city=wallQa.cities[2];city.level=${level};

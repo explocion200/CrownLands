@@ -25,9 +25,9 @@ assert.equal(guide.RULES.citadelEffectiveLevel, 100);
 
 const expectedMilestones = {
   1: { vp: 12, gold: 285, troops: 162, wall: 200, repair: 15 },
-  25: { vp: 260, gold: 3915, troops: 3514, wall: 25000, repair: 23 },
-  50: { vp: 599, gold: 60360, troops: 8097, wall: 250000, repair: 30 },
-  75: { vp: 985, gold: 928095, troops: 13315, wall: 1000000, repair: 38 },
+  25: { vp: 260, gold: 3915, troops: 3514, wall: 85279, repair: 23 },
+  50: { vp: 599, gold: 60360, troops: 8097, wall: 853335, repair: 30 },
+  75: { vp: 985, gold: 928095, troops: 13315, wall: 1614168, repair: 38 },
   100: { vp: 1408, gold: 14266995, troops: 19034, wall: 3000000, repair: 45 },
   150: { vp: 2338, gold: 638858596, troops: 31606, wall: 6200000, repair: 60 },
 };

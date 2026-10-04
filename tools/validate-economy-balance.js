@@ -46,7 +46,7 @@ assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy conf
 assert.equal(serverConfig.cityEconomy.troopsPerVictoryPoint, 13.51875, "Base troop production must use the approved flat 25% increase.");
 assert(Math.abs(serverConfig.cityEconomy.troopsPerVictoryPoint / 10.815 - 1.25) < 1e-12);
 assert.equal(serverConfig.cityEconomy.wallTroopsPerVictoryPoint, 10.815);
-assert.equal(serverConfig.cityEconomy.wallCurveModelVersion, 3, "The five-stage regular-city wall curve must be active.");
+assert.equal(serverConfig.cityEconomy.wallCurveModelVersion, 4, "The midpoint regular-city wall curve must be active.");
 assert.equal(serverConfig.cityEconomy.wallBridgeDefense, 1_456_669);
 assert.equal(serverConfig.cityEconomy.wallMidDefense, 3_000_000);
 assert.equal(serverConfig.cityEconomy.wallGoldLinkedEndLevel, 150);

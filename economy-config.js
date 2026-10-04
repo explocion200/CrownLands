@@ -221,7 +221,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "wallTroopsPerVictoryPoint": 10.815,
     "wallDefenseBase": 200,
     "wallDefensePerLevel": 28858,
-    "wallCurveModelVersion": 3,
+    "wallCurveModelVersion": 4,
     "regularWallEarlyExponent": 1.2986357706197937,
     "regularWallLevel25": 25000,
     "regularWallLevel50": 250000,

@@ -34,8 +34,8 @@ async function main() {
         if (!ready) await wait(50);
       }
       assert(ready, "The guide did not load the new production curve");
-      for (const [level, wall] of [[1,200],[2,600],[25,25000],[26,27412],[50,250000],
-        [51,264255],[75,1000000],[76,1044924],[100,3000000],[101,3030867],[150,6200000]]) {
+      for (const [level, wall] of [[1,200],[2,600],[25,85279],[26,94224],[50,853335],
+        [51,875896],[75,1614168],[76,1652063],[100,3000000],[101,3030867],[150,6200000]]) {
         const text = await evaluate(`(() => { const input=document.getElementById('cityLevelNumber');input.value=${level};input.dispatchEvent(new Event('input',{bubbles:true}));return document.getElementById('cityWallHelp').textContent; })()`);
         assert(text.includes(`Base ${wall.toLocaleString("en-US")}`), `Wall at ${level}: ${text}`);
       }

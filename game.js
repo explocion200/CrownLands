@@ -9596,16 +9596,18 @@ function getBaseCityWalls(level, regularCity = true) {
     if (!Number.isFinite(rawWall)) return Number.MAX_SAFE_INTEGER;
     return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)));
   };
-  // Regular cities use lighter early walls. Objectives and Level 101+ retain v2.
+  // Version 4 averages the previous two city curves; objectives retain v2.
   if (regularCity && CITY_LEVEL_STATS.wallCurveModelVersion >= 3 && normalizedLevel <= 100) {
-    if (normalizedLevel <= 25) return safeWall(CITY_LEVEL_STATS.cityWallsBase
-      + CITY_LEVEL_STATS.wallEarlyScale * Math.pow(normalizedLevel - 1, CITY_LEVEL_STATS.regularWallEarlyExponent));
+    const finishRegularWall = wall => CITY_LEVEL_STATS.wallCurveModelVersion >= 4
+      ? safeWall((wall + getBaseCityWalls(normalizedLevel, false)) / 2) : wall;
+    if (normalizedLevel <= 25) return finishRegularWall(safeWall(CITY_LEVEL_STATS.cityWallsBase
+      + CITY_LEVEL_STATS.wallEarlyScale * Math.pow(normalizedLevel - 1, CITY_LEVEL_STATS.regularWallEarlyExponent)));
     const startLevel = normalizedLevel <= 50 ? 25 : normalizedLevel <= 75 ? 50 : 75;
     const startWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel25
       : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel50 : CITY_LEVEL_STATS.regularWallLevel75;
     const endWall = startLevel === 25 ? CITY_LEVEL_STATS.regularWallLevel50
       : startLevel === 50 ? CITY_LEVEL_STATS.regularWallLevel75 : CITY_LEVEL_STATS.wallMidDefense;
-    return safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25));
+    return finishRegularWall(safeWall(startWall * Math.pow(endWall / startWall, (normalizedLevel - startLevel) / 25)));
   }
   if (CITY_LEVEL_STATS.wallCurveModelVersion < 2) {
     return safeWall(

@@ -1,9 +1,9 @@
 (function () {
   window.CROWNLANDS_REALM_CONFIG = Object.freeze({
-  "releaseId": "crownlands-2026-10-03-troop-production-25-v1",
+  "releaseId": "crownlands-2026-10-03-city-wall-midpoint-v4",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "994db4aa127777605fb31fe635e5e661dc9ae105d5ae6044ce42b5526a8e7872",
+  "apiContractHash": "8767c34c43b07711aa37fce61b39a6c6394c7cdbf1127627803a91697747455a",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",
