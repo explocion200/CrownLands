@@ -66,7 +66,22 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Approved Gold coin artwork
+### Current verified web release — Approved troops helmet artwork
+
+The authorized release of [PR #449](https://github.com/explocion200/CrownLands/pull/449), from `codex/troops-helmet-artwork`, is verified at build `af766bd731c764b9c0d9de86a1c72c916563b20d`. The approved painted steel helmet replaces 27 generic troop, garrison, production and Barracks icon references across 18 active presentation files. Shared sprites, reports, holdings, rewards, troop orders, profiles and Inner Castle use the same transparent image. Existing explicit reward art, officer equipment, troop bundles, army/scout tokens and heraldry retain their roles. Troop values, combat, progression and server authority are unchanged.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game at `https://playcrownlands.com/play/` and both game hosts | `LIVE — WEB`; Netlify production deploy `6ac2c94bf80d710008ea359e`, published October 4, 2026 at `21:48:06.015 UTC` (5:48 p.m. Eastern). Sixty-nine live asset comparisons passed across `playcrownlands.com`, `crownland.netlify.app` and `game.playcrownlands.com`: game entry, all affected presentation files, styles, manifest, release configuration, service worker and approved delivery image match the merged artifact. The existing manual publication hold remains enabled. |
+| Approved image delivery | The 192×192 transparent WebP is 7,338 bytes, SHA-256 `8c144647d31b38a1b8734ba370e5ba73efab1bddc8f41ea7b6bd587047287f91`. The full 40-character merged build passed production artifact validation, including the bounded 8 KiB helmet allowance. Approved source pixels remain unchanged in `docs/visual-qa/troops-helmet/art/`. |
+| Firebase backend and current realm | Existing deployment retained. All 131 Node.js 22 functions remain ACTIVE at their baseline source hashes and revisions; the release contract is unchanged. The October realm remains `main-realm-2026-10`, generation `realm-2026-10`, shard `shard_0001`, ready. No Functions, rules, indexes or production records were changed by this release. |
+| Required validation | Static validation, Multiplayer emulator validation and Validate passed in [run 37234170460](https://github.com/explocion200/CrownLands/actions/runs/37234170460). Thirteen focused validators, syntax/lint, asset budgets and production artifact validation passed. No emulator suite was required for this presentation-only change. |
+| Production browser verification | Six cold-load/reload cases passed at 1440×900, 844×390 and 568×320. Both profile image sources and six deployed presentation helpers use the approved helmet: troops glyph, helmet alias, City stats, Barracks, Inner Castle and reward image. SVG images decode at 192×192, and 20–64 px samples fit each viewport. No uncaught runtime errors, missing first-party assets or production gameplay mutations occurred. Authenticated gameplay and physical-device checks were not performed. |
+| itch.io | The existing publication hold remains in effect; this release was not uploaded there. The approved helmet is verified as `LIVE — WEB` only. |
+
+Release evidence is retained locally under `release-artifacts/troops-helmet/deployment/`, including baseline, publication, live asset/backend verification, browser results and screenshots. Local `main` was synchronized with and verified against `origin/main` at the implementation build after merging PR #449. Later documentation-only descendants may carry another commit without changing this published runtime build.
+
+### October 4 approved Gold coin artwork release
 
 The authorized release of [PR #447](https://github.com/explocion200/CrownLands/pull/447), from `codex/gold-coin-artwork`, is verified at build `5c595a9316b852193378008a63eba70e3d17866f`. The approved antique Gold coin replaces all 32 active Gold coin references across 22 presentation files, including the HUD, Shop, rewards, reports, city costs, Common Gear and default Gold particles. The separate purple Crowns artwork and illustrated Gold purses retain their existing role. Currency values, prices and gameplay rules are unchanged.
 
@@ -225,6 +240,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Approved painted steel troops helmet across troop, garrison, production and Barracks presentation | Verified in web build `af766bd7...` from PR #449 | Not republished; existing publication hold retained | `LIVE — WEB`; exact image and affected assets verified on all game hosts, with desktop/mobile browser checks |
 | Approved antique Gold coin artwork across currency presentation and default Gold particles | Verified in web build `5c595a93...` from PR #447 | Not republished; existing publication hold retained | `LIVE — WEB`; exact image and affected assets verified on all game hosts, with desktop/mobile browser checks |
 | Royal Peace Shield activation confirmation in the Item Bag | Verified in web build `218dd880...` from PR #445 | Not republished; existing publication hold retained | `LIVE — WEB`; synthetic production UI checks passed, authenticated item consumption remains untested |
 | Shop purchase countdowns, midnight unlock and shared ad cooldown recovery | Verified in web build `5d7bbb0...` from PR #422 | Not republished or verified for this release | `LIVE — WEB`; authenticated purchases and live ad completion remain manual checks |
