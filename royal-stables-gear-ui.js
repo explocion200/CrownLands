@@ -7,7 +7,7 @@ const getRoyalStablesGearShortName=value=>value.replace("Cavalry Master's ","");
 const renderRoyalStablesGearArt=(src,alt="",detail=false)=>renderCommonGearArtwork(src,{alt,detail});
 const ROYAL_STABLES_GEAR_ICONS={
   stables:"<path fill=\"currentColor\" fill-opacity=\".12\" d=\"M9 3C-1 12 3 29 16 30 29 29 33 12 23 3l-5 3c8 7 5 17-2 18C9 23 6 13 14 6Z\"/><path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"M25 7c7 17-4 24-13 22 14 1 17-14 10-23Z\"/><path d=\"m9 7 2 1m-5 5 2 1m-2 6 2-1m1 7 1-2m11-17 2-1m1 7 2-1m-2 6 2 1m-4 5 1 2\"/>",
-  coins:'<image href="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" width="32" height="32"/>',
+  coins:'<image href="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" width="32" height="32"/>',
   bag:'<path d="M10 9 7 3h18l-4 6M10 9c-2 5-7 7-7 14 0 8 26 8 26 0 0-7-5-9-8-14ZM9 10h13m-8 5-2 6m7-6 2 6"/>',
   forge:"<g fill=\"none\" stroke-width=\"1.5\"><path fill=\"currentColor\" fill-opacity=\".12\" d=\"m4 6 3-2 19 20 1 5-5-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m6 7 18 19 3 3-5-2L4 8Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m16 11 4 4L7 30l-4-3Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m18 14 2 1L7 30l-2-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m10 7 6-5 14 12-6 6Z\"/> <path fill=\"currentColor\" stroke-width=\".5\" d=\"m25 10 5 4-6 6-5-4Z\"/> <path stroke-width=\"1.1\" d=\"m13 8 9 8M15 6l5 4\"/></g>",
   check:'<path d="m6 16 6 6L27 7"/>',

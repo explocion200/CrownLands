@@ -26,14 +26,14 @@
     {
       "paths": [
         "assets/optimized/manifest.json",
-        "assets/optimized/gold-coin-192x192-c682187a7b6c.webp",
+        "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",
         "docs/visual-qa/gold-coin/art/gold-coin-source-r2.png"
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-focused-browser-smoke.js"
       ],
-      "reason": "Verify the source and delivery file exist, exact encoded dimensions/hash/byte count, alpha preservation, the 32 KiB HUD asset allowance and production delivery including embedded base paths. The build/artifact gate packages the same optimized asset."
+      "reason": "Verify the source and delivery file exist, exact encoded dimensions/hash/byte count, alpha preservation, the 32 KiB HUD asset allowance and production delivery including embedded base paths. The build/artifact gate packages the same optimized asset. Local preparation uses the full 40-character commit build ID to match CI/Netlify stamp overhead and the unchanged combined artifact size limit."
     },
     {
       "paths": [

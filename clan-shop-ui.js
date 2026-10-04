@@ -3,7 +3,7 @@
  const B=global.CrownlandsClanTowerBuildings;
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const number=n=>Math.max(0,Math.floor(n||0)).toLocaleString();
- const money=n=>`<img src="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" alt="">${number(n)}`;
+ const money=n=>`<img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt="">${number(n)}`;
  function mount(host,tower,options={}){
   host._clanTowerClockCleanup?.();
   const view=options.view||{},itemDetails=options.itemDetails||{},now=Date.now();

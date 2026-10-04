@@ -7,7 +7,7 @@ const getGatehouseGearShortName=value=>value.replace("Defensive Commander's ",""
 const renderGatehouseGearArt=(src,alt="",detail=false)=>renderCommonGearArtwork(src,{alt,detail});
 const GATEHOUSE_GEAR_ICONS={
   gatehouse:"<path fill=\"currentColor\" fill-opacity=\".12\" d=\"M3 28V8h3V4h4v4h3V5h6v3h3V4h4v4h3v20Z\"/><path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"M25 9h4v19h-4Z\"/><path d=\"M11 9v18m10-18v18M3 17h8m10 0h8\"/><path fill=\"currentColor\" fill-opacity=\".12\" d=\"M12 28V18a4 4 0 0 1 8 0v10Z\"/><path d=\"M14 17v11m4-11v11m-6-7h8m-8 4h8\"/><path stroke-width=\".9\" d=\"M5 11h3m16 0h3M5 22h4m14 0h4\"/>",
-  coins:'<image href="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" width="32" height="32"/>',
+  coins:'<image href="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" width="32" height="32"/>',
   bag:'<path d="M10 9 7 3h18l-4 6M10 9c-2 5-7 7-7 14 0 8 26 8 26 0 0-7-5-9-8-14ZM9 10h13m-8 5-2 6m7-6 2 6"/>',
   forge:"<g fill=\"none\" stroke-width=\"1.5\"><path fill=\"currentColor\" fill-opacity=\".12\" d=\"m4 6 3-2 19 20 1 5-5-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m6 7 18 19 3 3-5-2L4 8Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m16 11 4 4L7 30l-4-3Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m18 14 2 1L7 30l-2-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m10 7 6-5 14 12-6 6Z\"/> <path fill=\"currentColor\" stroke-width=\".5\" d=\"m25 10 5 4-6 6-5-4Z\"/> <path stroke-width=\"1.1\" d=\"m13 8 9 8M15 6l5 4\"/></g>",
   check:'<path d="m6 16 6 6L27 7"/>',

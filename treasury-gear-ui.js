@@ -53,7 +53,7 @@ const getTreasuryGearShortName=value=>value.replace("Master of Coin's ","");
 const renderTreasuryGearArt=(src,alt="",detail=false)=>renderCommonGearArtwork(src,{alt,detail});
 const TREASURY_GEAR_ICONS={
   treasury:'<path d="M4 13h24v15H4V8l4-4h16l4 4v5M4 13h24M9 5v23M23 5v23"/><path d="M13 11h6v8h-6z"/>',
-  coins:'<image href="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" width="32" height="32"/>',
+  coins:'<image href="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" width="32" height="32"/>',
   bag:'<path d="M10 9 7 3h18l-4 6M10 9c-2 5-7 7-7 14 0 8 26 8 26 0 0-7-5-9-8-14ZM9 10h13m-8 5-2 6m7-6 2 6"/>',
   needle:'<path d="m7 26 16-20c4-5 8 0 4 4L7 26l-3 2zM22 9l3-3M10 23c4 11 20 6 13-1"/>',
   check:'<path d="m6 16 6 6L27 7"/>',

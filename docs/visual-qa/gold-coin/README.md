@@ -4,7 +4,7 @@ The user approved draft 1 and requested the coin wherever the Gold coin icon app
 
 - Generation: built-in image-generation tool, `stylized-concept`, transparent background.
 - Approved master: [gold-coin-source-r2.png](art/gold-coin-source-r2.png), 1254 × 1254 RGBA; unchanged generated pixels.
-- Runtime: [gold-coin-192x192-c682187a7b6c.webp](../../../assets/optimized/gold-coin-192x192-c682187a7b6c.webp), 192 × 192 with alpha, 20,534 bytes; Pillow Lanczos downsampling and WebP quality 92, method 6, exact alpha.
+- Runtime: [gold-coin-192x192-f2620b39eb0d.webp](../../../assets/optimized/gold-coin-192x192-f2620b39eb0d.webp), 192 × 192 with alpha, 12,526 bytes; Pillow Lanczos downsampling and WebP quality 68, method 6, exact alpha.
 - The optimized manifest preserves the approved delivery and records source/runtime hashes.
 
 All active references to the former engraved Gold SVG use the new image. City Details/City List and the four equipment screens use the same image inside their existing SVG wrappers, preserving icon sizing and accessibility. Gold reward/camp particles use it when no explicit reward artwork is supplied. Explicit Crowns reward art, the distinct purple Crowns coin, illustrated purses, buildings, officers, and archived previews retain their confirmed designs.
