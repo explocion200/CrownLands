@@ -1,4 +1,5 @@
 /* Presentation for held objectives; ownership, timers and map actions stay in game.js. */
+/* exported renderObjectivesActivityHeader, renderObjectivesActivityFooter, captureObjectivesActivityView, restoreObjectivesActivityView, renderHeldObjectivesView, renderHeldCampView, renderHeldStrongholdView */
 function renderObjectivesActivityHeader(strongholds) {
   return `<header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><span class="hold-heading">${strongholds ? "Held strongholds" : "Held camps"}</span><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>`;
 }
