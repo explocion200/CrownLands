@@ -7050,6 +7050,19 @@
         "height": 1173
       },
       "safetyPadding": 16
+    },
+    {
+      "id": "gold-coin",
+      "category": "hud",
+      "source": "docs/visual-qa/gold-coin/art/gold-coin-source-r2.png",
+      "output": "assets/optimized/gold-coin-192x192-c682187a7b6c.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 20534,
+      "sha256": "c682187a7b6c406dca2a968841347f0573d17b39206495c0553ee291246d3aeb",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "058467b03ba35033c12a92f036408418af14efa3d957560c2440b98cf972a044"
     }
   ]
 }

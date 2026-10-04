@@ -955,6 +955,7 @@
         : Math.sin(radians) * distance;
       const particle = this.createPart(context, kind, {
         ...options,
+        src: options.src || (kind === "coin" ? "assets/optimized/gold-coin-192x192-c682187a7b6c.webp" : undefined),
         particle: true,
         kind,
         index,

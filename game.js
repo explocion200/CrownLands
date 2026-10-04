@@ -26761,7 +26761,7 @@ function renderClanGiftPanel() {
     .slice(0, CLAN_GIFT_RECENT_DONATION_LIMIT);
   return `
     <section class="clan-gift-panel gifts-layout">
-      <div class="paper gift-feature"><img class="gift-art" src="assets/icons/royal-shop-gold-r1.svg" alt=""><div class="gift-copy"><div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
+      <div class="paper gift-feature"><img class="gift-art" src="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" alt=""><div class="gift-copy"><div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
       <p>Send every other clan member 30 minutes of base gold production once every five hours.</p></div>
       <div class="clan-gift-actions">
         <button type="button" data-clan-action="send-gift" ${clanGiftActionInFlight || cooldownMs ? "disabled" : ""}>${clanGiftActionInFlight ? "Sending…" : "Send .5h Gold Gift"}</button>
@@ -26820,7 +26820,7 @@ function renderClanQuestPanel() {
         const status = claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Ready" : `${Math.min(captureCount, reward.captures)} / ${reward.captures}`;
         return `
           <article class="clan-quest-card ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
-            <img class="clan-reward-art" src="${reward.rewardType === "troops" ? "assets/icons/daily-login-troops-r1.svg" : "assets/icons/royal-shop-gold-r1.svg"}" alt=""><div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
+            <img class="clan-reward-art" src="${reward.rewardType === "troops" ? "assets/icons/daily-login-troops-r1.svg" : "assets/optimized/gold-coin-192x192-c682187a7b6c.webp"}" alt=""><div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
             <small>${status}</small>
             <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" data-quest-period-id="${escapeHtml(period.questPeriodId)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Collect" : "Locked"}</button>
           </article>`;
@@ -26848,7 +26848,7 @@ function renderClanOverviewPanel(canLead = false) {
         <header class="activity-heading"><h2>Clan affairs</h2><span>The strength of your house</span></header>
         <div class="activity-scroll" tabindex="0" aria-label="Clan activity shortcuts"><div class="activity-grid">
           <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/marchOrders.svg" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
-          <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card conquest" data-clan-action="section" data-clan-section="rewards" data-clan-reward="conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="${CLAN_QUEST_MAX_CAPTURES}" aria-valuenow="${Math.min(captureCount, CLAN_QUEST_MAX_CAPTURES)}"><i style="width:${Math.min(100,captureCount / CLAN_QUEST_MAX_CAPTURES * 100)}%"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
         </div></div>
@@ -27845,7 +27845,7 @@ function renderSkillPresetPanel() {
               : `<p class="skill-preset-error">This draft exceeds the current skill limits or earned-point budget. Remove points before saving.</p>`}
             <footer>
               <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked || !valid || (selected.saved && !dirty) ? "disabled" : ""}>Save Preset</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" aria-label="Apply · ${formatNumber(applyCost)} Gold" title="${canAffordSkillPreset(applyCost) ? "1 hour of base Gold production" : `Need ${formatNumber(applyCost)} Gold; have ${formatNumber(state.gold)}.`}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply<small><img src="assets/icons/royal-shop-gold-r1.svg" alt="">${formatNumber(applyCost)}</small></button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" aria-label="Apply · ${formatNumber(applyCost)} Gold" title="${canAffordSkillPreset(applyCost) ? "1 hour of base Gold production" : `Need ${formatNumber(applyCost)} Gold; have ${formatNumber(state.gold)}.`}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply<small><img src="assets/optimized/gold-coin-192x192-c682187a7b6c.webp" alt="">${formatNumber(applyCost)}</small></button>
             </footer>`}
       </article>`}
     </section>`;
@@ -33251,7 +33251,7 @@ function mountStrongholdDetails(city) {
   const kind = crown ? "crown" : isTrainingStronghold(city) ? "training" : isSpeedStronghold(city) ? "movement" : isDefenseStronghold(city) ? "defense" : "gold";
   const icon = crown ? "assets/icons/reward-achievements-r1.svg" : {
     training: "assets/icons/daily-login-troops-r1.svg", movement: "assets/icons/skills/marchOrders.svg",
-    defense: "assets/icons/skills/shieldwallDiscipline.svg", gold: "assets/icons/royal-shop-gold-r1.svg",
+    defense: "assets/icons/skills/shieldwallDiscipline.svg", gold: "assets/optimized/gold-coin-192x192-c682187a7b6c.webp",
   }[kind];
   const crownBenefits = [
     ["Base gold", CROWN_CITADEL_GOLD_BONUS_PERCENT], ["Base troops", CROWN_CITADEL_TROOP_BONUS_PERCENT],

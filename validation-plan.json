@@ -1,13 +1,126 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "218dd88092230197e9d8f0ec20dece20a01b9c9c",
+  "baseCommit": "07ff4d4ea050e6dcfe171adc9c4a55eeae0fc77c",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "achievements-ui.js",
+        "battle-report-detail-ui.js",
+        "camp-details-ui.js",
+        "clan-shop-ui.js",
+        "clan-tower-buildings-ui.js",
+        "clan-tower-details-ui.js",
+        "daily-login-ui.js",
+        "engineers-workshop-ui.js",
+        "game.js",
+        "index.html",
+        "kingdom-ledgers-ui.js",
+        "objectives-activity-ui.js",
+        "quests-ui.js"
+      ],
+      "tests": [
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Only Gold artwork references change. The new asset is shared by rewards, reports, clans, objectives and profile counters; focused production smoke checks loading, module execution and desktop/landscape layouts. The complete runtime audit and local visual checks cover shared coin helpers. Prices, balances, progression, network calls and server authority are unchanged, so no emulator suites apply."
+    },
+    {
+      "paths": [
+        "assets/optimized/manifest.json",
+        "assets/optimized/gold-coin-192x192-c682187a7b6c.webp",
+        "docs/visual-qa/gold-coin/art/gold-coin-source-r2.png"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Verify the source and delivery file exist, exact encoded dimensions/hash/byte count, alpha preservation, the 32 KiB HUD asset allowance and production delivery including embedded base paths. The build/artifact gate packages the same optimized asset."
+    },
+    {
+      "paths": [
+        "city-details-ui.js"
+      ],
+      "tests": [
+        "tools/validate-city-details-browser.js"
+      ],
+      "reason": "The shared City Details coin helper also renders City List production and balance icons. Retain its SVG wrapper while loading the raster image; validate City Details at desktop and landscape-mobile sizes and retain upgrade affordability, feedback and controls."
+    },
+    {
+      "paths": [
+        "treasury-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-treasury-gear-browser.js"
+      ],
+      "reason": "The existing coin SVG wrapper now contains the approved image. Validate the affected equipment screen's own CSS, balance/upgrade cost layout and desktop/landscape rendering, including confirmation and unchanged equipment controls."
+    },
+    {
+      "paths": [
+        "barracks-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-barracks-gear-browser.js"
+      ],
+      "reason": "The existing coin SVG wrapper now contains the approved image. Validate the affected equipment screen's own CSS, balance/upgrade cost layout and desktop/landscape rendering, including confirmation and unchanged equipment controls."
+    },
+    {
+      "paths": [
+        "gatehouse-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-gatehouse-gear-browser.js"
+      ],
+      "reason": "The existing coin SVG wrapper now contains the approved image. Validate the affected equipment screen's own CSS, balance/upgrade cost layout and desktop/landscape rendering, including confirmation and unchanged equipment controls."
+    },
+    {
+      "paths": [
+        "royal-stables-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-royal-stables-gear-browser.js"
+      ],
+      "reason": "The existing coin SVG wrapper now contains the approved image. Validate the affected equipment screen's own CSS, balance/upgrade cost layout and desktop/landscape rendering, including confirmation and unchanged equipment controls."
+    },
+    {
+      "paths": [
+        "clan-treasury-ui.js",
+        "clan-treasury-ui.css"
+      ],
+      "tests": [
+        "tools/validate-clan-treasury-browser.js"
+      ],
+      "reason": "Clan donation amounts and the CSS balance coin use the shared Gold image. Validate treasury and donation confirmation rendering at desktop/landscape sizes, including existing amount selection, cancel/accept and pending/error states."
+    },
+    {
+      "paths": [
+        "shop-ui.js"
+      ],
+      "tests": [
+        "tools/validate-shop-browser.js"
+      ],
+      "reason": "The shared Shop balance/price helper and boosted Gold reward icon use the approved image; validate all Shop desktop/landscape states, purchases, affordability and reward disclosure without changing their behavior."
+    },
+    {
+      "paths": [
+        "animation-manager.js",
+        "styles.css"
+      ],
+      "tests": [
+        "tools/validate-animation-system.js",
+        "tools/validate-focused-browser-smoke.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-ui-readability.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-targeted-ui-contrast.js"
+      ],
+      "reason": "Coin particles receive the approved raster fallback while explicit reward art remains honored. Replace CSS coin drawings with the existing image child, retaining particle sizes/timing/motion preferences. Cover the animation runtime and shared stylesheet's active desktop/mobile layout and palette dependencies."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/gold-coin/README.md"
       ],
       "tests": [],
-      "reason": "Record the verified PR 445 web deployment, required checks, live asset/backend parity and six read-only synthetic browser cases; update the channel matrix and activation status. This documentation-only release ledger changes no runtime, backend, configuration or artifacts. No runtime or emulator tests apply; evidence is retained locally under release-artifacts/shield-activation/deployment."
+      "reason": "Record the user's explicit artwork approval, shared Gold icon scope, source/provenance, exact generation prompt and delivery details. These documentation changes have no executable behavior."
     }
   ]
 }

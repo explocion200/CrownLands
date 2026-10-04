@@ -1085,7 +1085,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 
-- Show the permanent Crowns wallet directly beneath Gold under the player profile. Both counters share a burgundy panel treatment, width, aligned icons and amounts. Crowns use the approved muted purple coin with an antique silver rim and a pale crown; Gold retains the approved engraved Gold coin.
+- Show the permanent Crowns wallet directly beneath Gold under the player profile. Both counters share a burgundy panel treatment, width, aligned icons and amounts. Crowns use the approved muted purple coin with an antique silver rim and a pale crown; Gold uses the approved antique Gold coin described below.
 - Display the confirmed wallet balance, updating after collection, spending and wallet snapshots. Show an unavailable/loading mark while the current account's wallet is unknown, and clear the previous account's balance on sign-out or account changes. The compact number exposes its exact amount through accessible text and a tooltip.
 - Place Shield Cooldown and Retaliation below the Crowns counter, aligned to the same left edge with consistent spacing. Preserve existing deadlines, city identities, expandable retaliation details and map-location actions. Keep the stack and nearby controls usable on desktop and landscape mobile.
 - Crown pickups use the approved purple pouch with matching silver-and-purple coins inside the same circular marker as Gold and troop pickups. Tint its ring, radial glow and artwork halo purple. Retain existing pickup sizing, hit area, motion preferences, collection authority, timing and the one-Crown reward.
@@ -1525,6 +1525,12 @@ Status: `IN DEVELOPMENT` on `codex/common-gear-box-draft`; the user approved the
 Status: `IN DEVELOPMENT` on `codex/bag-inventory-draft`; the user approved the Bag design, updated chest, merge, and deployment on 12 September 2026. Runtime integration is complete and release validation is in progress. LIVE status requires separate channel verification. Review details: [Item Bag](./visual-qa/bag-inventory/README.md).
 
 ### Confirmed Shop presentation
+
+#### Confirmed Gold coin artwork — October 4, 2026
+
+The approved Gold currency icon is a worn antique gold coin with a bold embossed crown, fine dark outlines, painted metal shading, and a transparent background. Use the same approved image throughout Gold balances, prices, production, rewards, City Details and City List, equipment screens, clan screens, objective icons, and default Gold coin particles. Keep the distinct purple Crowns currency artwork and existing illustrated purses, structures, and officers. The approved master and generation prompt are retained in `docs/visual-qa/gold-coin/`; the shared 192 × 192 WebP is recorded as `gold-coin` in `assets/optimized/manifest.json`.
+
+#### Shop layout and illustrations
 
 - The Shop uses the approved parchment, olive actions, engraved Gold coin and burgundy selection treatment. It shares the Bag's maximum 1200 × 790 window dimensions, with desktop and mobile landscape layouts. Portrait is not a design target.
 - Provisions and Free boosts are separate tabs. The seven current provisions use a four-column, two-row grid, with full names and current prices beneath their illustrations. The selected item's illustration, full description, owned quantity, daily allowance and single-item purchase action are shown on the right. Long details scroll independently; purchase controls remain visible on short landscape screens.
