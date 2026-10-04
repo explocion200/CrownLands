@@ -317,7 +317,14 @@ const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudge
 // Seven Halloween props and layouts add 59,111 bytes; shell hooks stay under 5 KiB.
 // Bound the combined feature below 64 KiB; retain the install-cache/frame limits.
 const halloweenMapFeatureBudget = 64 * 1024;
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget;
+// The approved shared troops helmet adds one 7,338-byte transparent WebP.
+// Bound that asset and its net presentation-reference growth to one 8 KiB step;
+// per-file, entry-resource, offline-shell and combined artifact limits still apply.
+const troopsHelmetArtworkBudget = 8 * 1024;
+if (fs.statSync(path.join(dist, "assets/optimized/troops-helmet-192x192-8c144647d31b.webp")).size > troopsHelmetArtworkBudget) {
+  throw new Error("The shared troops helmet exceeds its 8 KiB artwork allowance.");
+}
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + troopsHelmetArtworkBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

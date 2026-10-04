@@ -43,6 +43,7 @@ async function main() {
         await evaluate(`state.gear.newMarkers[${JSON.stringify(key)}]=Boolean(COMMON_GEAR.BUILDINGS[${JSON.stringify(key)}]);renderInnerCastle(getMainCityReference().id);`);
         await click(`.bailey-pin[data-inner-castle-building="${key}"]`);
         await evaluate("Promise.all([...document.querySelectorAll('.bailey-shell img')].map(i=>i.decode()))");
+        await evaluate("Promise.all(modal.querySelector('.modal-card').getAnimations().map(animation=>animation.finished.catch(()=>{})))");
         const data = await evaluate(`(()=>{
           const rect=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
           const tray=document.querySelector('.bailey-detail-tray'), scene=document.querySelector('.bailey-scene');
@@ -68,6 +69,7 @@ async function main() {
         if(data.button){
           assert(data.button.y>=data.copy.bottom); assert(data.button.bottom<=data.tray.bottom); assert(data.button.height>=44);
           await click('.bailey-manage');
+          await wait("!!document.querySelector('[data-gear-back]')");
           assert(await evaluate(`modal.classList.contains('common-gear-building-modal')&&!modal.classList.contains('bailey-modal')&&modal.dataset.commonGearBuildingId===${JSON.stringify(key)}`));
           // The existing equipment screen has its own independent scrolling design.
           await evaluate("document.querySelector('[data-gear-back]').click()");

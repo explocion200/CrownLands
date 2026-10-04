@@ -3,7 +3,7 @@
   // Decorative presentation is cached on demand, like the other ledger modules.
 // Same specialization icons used by the approved Strongholds ledger.
 const ATLAS_STRONGHOLD_BONUS_ICONS = Object.freeze({
- "core-v2-greybanner-hold-p0-m1": "assets/icons/daily-login-troops-r1.svg",
+ "core-v2-greybanner-hold-p0-m1": "assets/optimized/troops-helmet-192x192-8c144647d31b.webp",
  "core-v2-aurum-keep-m1-p0": "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",
  "core-v2-swiftgate-p1-p0": "assets/icons/skills/marchOrders.svg",
  "core-v2-ironwatch-p0-p1": "assets/icons/skills/shieldwallDiscipline.svg"

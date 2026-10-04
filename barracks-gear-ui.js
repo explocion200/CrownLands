@@ -6,7 +6,7 @@ const formatBarracksGearPercent = value => Number(value).toFixed(2);
 const getBarracksGearShortName=value=>value.replace("War Captain's ","");
 const renderBarracksGearArt=(src,alt="",detail=false)=>renderCommonGearArtwork(src,{alt,detail});
 const BARRACKS_GEAR_ICONS={
-  barracks:"<g fill=\"none\" stroke-width=\"1.5\"><path fill=\"currentColor\" fill-opacity=\".12\" d=\"M8 18v7l8 5 8-5v-7ZM6 16 8 9q3-6 8-6t8 6l2 7Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"M18 4q6 3 7 12h-6ZM19 20h5v5l-8 5v-5Z\"/> <path fill=\"currentColor\" stroke-width=\".5\" d=\"m5 14 22 1 3 3-1 2H3l-1-2ZM11 21h4v2h-4Zm6 0h4v2h-4Z\"/> <path d=\"m16 5-1 8m1 8v5\"/> <path stroke-width=\".9\" d=\"m10 25 2 2m0-3 2 2m5 1 2-2m-9-15 1-2\"/></g>",
+  barracks: '<image href="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" width="32" height="32"/>',
   coins:'<image href="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" width="32" height="32"/>',
   bag:'<path d="M10 9 7 3h18l-4 6M10 9c-2 5-7 7-7 14 0 8 26 8 26 0 0-7-5-9-8-14ZM9 10h13m-8 5-2 6m7-6 2 6"/>',
   forge:"<g fill=\"none\" stroke-width=\"1.5\"><path fill=\"currentColor\" fill-opacity=\".12\" d=\"m4 6 3-2 19 20 1 5-5-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m6 7 18 19 3 3-5-2L4 8Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m16 11 4 4L7 30l-4-3Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"m18 14 2 1L7 30l-2-2Z\"/> <path fill=\"currentColor\" fill-opacity=\".12\" d=\"m10 7 6-5 14 12-6 6Z\"/> <path fill=\"currentColor\" stroke-width=\".5\" d=\"m25 10 5 4-6 6-5-4Z\"/> <path stroke-width=\"1.1\" d=\"m13 8 9 8M15 6l5 4\"/></g>",

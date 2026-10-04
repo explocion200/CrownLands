@@ -9,11 +9,7 @@ const cityDetailsIcons = {
       <path d="M11 10v17M21 10v17M3 16h8m10 0h8"/>
       <path class="engraving-ink" d="M13 27v-8c0-5 6-5 6 0v8ZM6 11h2v3H6Zm18 0h2v3h-2Z"/>
       <path class="engraving-detail engraving-fine" d="M5 21h4m14 0h4M15 11h2M6 17v3m20-3v3"/>`,
-    troops: `<path class="engraving-surface" d="M8 18v7l8 5 8-5v-7ZM6 16 8 9q3-6 8-6t8 6l2 7Z"/>
-      <path class="engraving-shadow" d="M18 4q6 3 7 12h-6ZM19 20h5v5l-8 5v-5Z"/>
-      <path class="engraving-ink" d="m5 14 22 1 3 3-1 2H3l-1-2ZM11 21h4v2h-4Zm6 0h4v2h-4Z"/>
-      <path d="m16 5-1 8m1 8v5"/>
-      <path class="engraving-detail engraving-fine" d="m10 25 2 2m0-3 2 2m5 1 2-2m-9-15 1-2"/>`,
+    troops: `<image href="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" width="32" height="32"/>`,
     wall: `<path class="engraving-surface" d="M3 28 4 6h6v6h3V5h6v7h3V6h6l1 22Z"/>
       <path class="engraving-shadow" d="m25 7 3-1 1 22H3v-4h22Z"/>
       <path d="M4 18h24M5 24h23M9 12v6m9-6v6m-5 0v6m9-6v6M8 24v3m10-3v3"/>

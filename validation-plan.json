@@ -1,13 +1,140 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5c595a9316b852193378008a63eba70e3d17866f",
+  "baseCommit": "4f3a946eab1747bf2289740c81407b267766fc1a",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "achievements-ui.js",
+        "camp-details-ui.js",
+        "clan-tower-details-ui.js",
+        "daily-login-ui.js",
+        "game.js",
+        "help-handbook-content.js",
+        "index.html",
+        "kingdom-ledgers-ui.js",
+        "objectives-activity-ui.js",
+        "quests-ui.js"
       ],
-      "reason": "Documentation-only release record: reconcile the authoritative web snapshot and channel matrix with verified PR 447 deployment, exact live asset hashes, browser evidence, unchanged backend and retained itch.io hold. No runtime or gameplay source changes.",
-      "tests": []
+      "tests": [
+        "tools/validate-focused-browser-smoke.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-targeted-ui-contrast.js",
+        "tools/validate-crownlands-palette.js"
+      ],
+      "reason": "Only shared troops helmet references and the sprite image change. Cover current production entry/PWA paths, optional screen execution, active holding panels, reward/report/profile presentation, palette, readable layout and landscape viewports. The source audit confirms reference-only changes; synthetic artwork QA renders troop icons at actual display sizes. No economy, combat, realm or server-authority logic changes; no emulator suites apply."
+    },
+    {
+      "paths": [
+        "city-details-ui.js"
+      ],
+      "tests": [
+        "tools/validate-city-details-browser.js"
+      ],
+      "reason": "The shared city troop-stat helper retains its existing SVG wrapper but now contains the approved raster image. Validate actual City Details and its shared City List dependencies at desktop and short landscape sizes, preserving counts, projections and controls."
+    },
+    {
+      "paths": [
+        "barracks-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-barracks-gear-browser.js"
+      ],
+      "reason": "Replace only the shared Barracks helmet drawing inside its existing SVG. Verify equipment screen layout, inherited icon sizing and upgrade confirmation at desktop and landscape sizes; officer/item artwork and authoritative equipment actions are unchanged."
+    },
+    {
+      "paths": [
+        "common-gear-ui.js"
+      ],
+      "tests": [
+        "tools/validate-inner-castle-browser.js"
+      ],
+      "reason": "The existing Barracks directory and hanging-sign glyph now uses the same approved helmet inside its SVG. Check actual Inner Castle desktop/landscape layout, sign placement and navigation; building scenes, officers and gear rules remain unchanged."
+    },
+    {
+      "paths": [
+        "troop-orders-ui.js"
+      ],
+      "tests": [
+        "tools/validate-troop-selection-browser.js"
+      ],
+      "reason": "The readout and base-power row use the approved troops image. Validate the actual attack/transfer/reinforcement composer and responsive amount layout with synthetic routes/actions; troop limits and route/launch authority remain unchanged."
+    },
+    {
+      "paths": [
+        "battle-report-detail-ui.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Only the troop/reward icon path changes. Existing report renderer fixtures verify stored statistics, all camp reward categories, escaped markup and navigation hooks; browser smoke verifies runtime module loading."
+    },
+    {
+      "paths": [
+        "scout-report-ui.js"
+      ],
+      "tests": [
+        "tools/validate-scout-report-ui.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Select the optimized troops path while keeping all skill paths complete and unchanged. Existing city/camp report fixtures cover rendering, historical/live values and escaping; browser smoke verifies active presentation loading."
+    },
+    {
+      "paths": [
+        "stronghold-details-ui.js"
+      ],
+      "tests": [
+        "tools/validate-focused-browser-smoke.js",
+        "tools/validate-targeted-ui-contrast.js"
+      ],
+      "reason": "The strength-card map now stores full paths so a WebP and SVG can share the existing image helper. Only troop artwork changes; the defense skill path is preserved exactly. Cover production loading, objective/holding UI and readable strength cards."
+    },
+    {
+      "paths": [
+        "animation-manager.js"
+      ],
+      "tests": [
+        "tools/validate-animation-system.js"
+      ],
+      "reason": "Troop particles receive the approved helmet only when no explicit event/particle asset is supplied. Validate particle construction, Full/Reduced/Off behavior, budgets and cleanup while retaining existing Gold and explicit reward images."
+    },
+    {
+      "paths": [
+        "assets/optimized/manifest.json",
+        "assets/optimized/troops-helmet-192x192-8c144647d31b.webp",
+        "docs/visual-qa/troops-helmet/art/troops-helmet-source-r1.png"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-focused-browser-smoke.js"
+      ],
+      "reason": "Retain unchanged approved pixels and a single prepared content-hashed WebP. Validate source/runtime presence, SHA/bytes/dimensions, alpha and HUD per-file allowance; production packaging and base-path delivery must contain the exact approved derivative."
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Reserve one bounded 8 KiB step for the new 7,338-byte helmet and net reference growth. Enforce the helmet's individual 8 KiB cap; preserve all other per-file, entry-resource, offline-shell, world and aggregate limits. Validate a production artifact stamped with the full 40-character commit ID."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/troops-helmet/README.md"
+      ],
+      "tests": [],
+      "reason": "Record the explicitly approved presentation, shared-icon scope, provenance/prompt and source/delivery details. Documentation does not change executable behavior or claim deployment."
+    },
+    {
+      "paths": [
+        "tools/validate-inner-castle-browser.js"
+      ],
+      "tests": [
+        "tools/validate-inner-castle-browser.js"
+      ],
+      "reason": "The affected icon screen must be measured after its existing opening transition finishes. The former immediate Treasury measurement also fails against unchanged main while the 44 px button is scaled. Wait for the native animation completion; retain every existing geometry, navigation, focus and accessibility assertion and all game animation/CSS behavior."
     }
   ]
 }
