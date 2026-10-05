@@ -30997,6 +30997,19 @@ function getArmyByTokenId(tokenId) {
   return getRenderableArmies().find(attack => getArmyTokenId(attack) === normalizedId) || null;
 }
 
+function getArmyTokenParts(token) {
+  if (token.armyTokenParts) return token.armyTokenParts;
+  token.armyTokenParts = {
+    icon: token.querySelector(".army-token-icon"),
+    count: token.querySelector(".army-token-count"),
+    time: token.querySelector(".army-token-time"),
+    navigation: token.querySelector(".army-token-nav"),
+    fromButton: token.querySelector('[data-army-endpoint="from"]'),
+    toButton: token.querySelector('[data-army-endpoint="to"]'),
+  };
+  return token.armyTokenParts;
+}
+
 function updateArmyTokenNavigationSelection() {
   armyTokenCache.forEach((token, tokenId) => {
     const endpointInteractionDisabled = token.dataset.endpointInteractionDisabled === "true";

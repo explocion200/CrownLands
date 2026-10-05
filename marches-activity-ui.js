@@ -1,5 +1,5 @@
 /* Marches presentation helpers. Existing game data and action handlers stay authoritative. */
-/* exported captureMarchesListView, restoreMarchesListView, renderMarchesHeader, getArmyTokenParts, createArmyTokenElement */
+/* exported captureMarchesListView, restoreMarchesListView, renderMarchesHeader, createArmyTokenElement */
 function captureMarchesListView() {
   const previousMarchList = modalBody.querySelector(".march-list");
   const previousScroll = previousMarchList?.scrollTop || 0;
@@ -25,18 +25,6 @@ function restoreMarchesListView({ previousMarchList, previousScroll, focusedCont
 
 function renderMarchesHeader() {
   return `<header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><div class="carried-items" aria-label="March items in your bag"><span>${renderItemIcon(getShopItemById(SWIFT_MARCH_ORDER_ITEM_ID))}<span>Swift Orders <strong>${formatMarchesNumber(getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID))}</strong></span></span><span>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall Horns <strong>${formatMarchesNumber(getProjectedInventoryCount(RECALL_HORN_ITEM_ID))}</strong></span></span></div><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>`;
-}
-function getArmyTokenParts(token) {
-  if (token.armyTokenParts) return token.armyTokenParts;
-  token.armyTokenParts = {
-    icon: token.querySelector(".army-token-icon"),
-    count: token.querySelector(".army-token-count"),
-    time: token.querySelector(".army-token-time"),
-    navigation: token.querySelector(".army-token-nav"),
-    fromButton: token.querySelector('[data-army-endpoint="from"]'),
-    toButton: token.querySelector('[data-army-endpoint="to"]'),
-  };
-  return token.armyTokenParts;
 }
 function createArmyTokenElement(attack) {
   const position = document.createElement("div");
