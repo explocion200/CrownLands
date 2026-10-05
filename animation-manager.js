@@ -1336,7 +1336,8 @@
       this.createMapTransitionPart(element, "incoming", null, false);
       this.createMapTransitionPart(element, "mist");
       this.createMapTransitionPart(element, "cloud-back");
-      this.createMapTransitionPart(element, "cloud-front");
+      const foreground = this.createMapTransitionPart(element, "cloud-front");
+      if (theme === "halloween" && mode !== "reduced") this.createMapTransitionBats(foreground);
       if (stage) {
         stage.classList.add("is-transitioning");
         stage.classList.remove("is-leaving", "is-entering");
@@ -1373,6 +1374,35 @@
         this.notify("transitionphase", { token, direction, phase: "loading", element });
       });
       return transitionHandle;
+    }
+
+    createMapTransitionBats(foreground) {
+      // A bounded, temporary flock; wingbeats and flight use compositor transforms.
+      const placements = [
+        [12, 28, 96, -8], [27, 61, 128, 10], [38, 19, 78, -14],
+        [50, 44, 148, 8], [66, 72, 88, -5], [79, 24, 112, 12],
+        [88, 53, 82, -10], [20, 82, 72, 4], [55, 85, 64, 14], [92, 15, 60, -6],
+      ];
+      placements.slice(0, window.innerWidth < 900 ? 6 : 10).forEach(([x, y, size, tilt], index) => {
+        const bat = document.createElement("span");
+        bat.className = "crownlands-map-bat";
+        bat.style.left = `${x}%`;
+        bat.style.top = `${y}%`;
+        bat.style.setProperty("--bat-size", `${size}px`);
+        bat.style.setProperty("--bat-tilt", `${tilt}deg`);
+        bat.style.setProperty("--bat-delay", `${index * 8}ms`);
+        bat.style.setProperty("--bat-beat", `${180 + (index % 4) * 23}ms`);
+        bat.style.setProperty("--bat-phase", `${-index * 47}ms`);
+        const flight = document.createElement("span");
+        flight.className = "crownlands-map-bat__flight";
+        ["left", "right", "body"].forEach(part => {
+          const shape = document.createElement("span");
+          shape.className = `crownlands-map-bat__${part}`;
+          flight.appendChild(shape);
+        });
+        bat.appendChild(flight);
+        foreground.appendChild(bat);
+      });
     }
 
     cloneTransitionSnapshot(snapshot, cloneSnapshot) {

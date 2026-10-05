@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20261005-incoming-alerts-r1";
+const CACHE_VERSION = "20261005-animated-bats-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -46,6 +46,7 @@ const STATIC_CACHE_URLS = [
   "/settings-ledger-ui.css?v=20260913-settings-ledger-r1",
   "/assets/icons/settings-ledger.svg",
   "/styles.css?v=20261004-gameplay-smoothness-r1",
+  "/map-transition-bats.css?v=20261005-animated-bats-r1",
   "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
@@ -88,7 +89,7 @@ const STATIC_CACHE_URLS = [
   "/firebaseClient.js?v=20260902-march-sync-realm-scope-r1",
   "/email-auth-ui.js?v=20260925-email-auth-r1",
   "/holding-tower-ui.js?v=20260902-holding-towers-r1",
-  "/animation-manager.js?v=20261004-halloween-transition-draft-r1",
+  "/animation-manager.js?v=20261005-animated-bats-r1",
   "/instant-economy-actions.js?v=20260909-city-details-r1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
