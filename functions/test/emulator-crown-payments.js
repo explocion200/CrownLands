@@ -17,6 +17,8 @@ async function main() {
   const sessions = new Map(), keys = new Map(); let clock = Date.now(), loseResponse = false, tamper = null, earlyWebhook = false;
   const fake = { prices: { retrieve: async id => ({ id, livemode: false, active: true, type: "one_time", billing_scheme: "per_unit", unit_amount: 499, currency: "usd" }) }, checkout: { sessions: {
     create: async (params, options) => {
+      assert.equal(options.apiVersion, "2026-08-26.dahlia", "Card-only checkout requires the supported pre-Endive API contract");
+      assert.deepEqual(params.payment_method_types, ["card"]);
       let session = keys.get(options.idempotencyKey);
       if (!session) {
         session = { id: `cs_test_${keys.size + 1}`, livemode: false, mode: "payment", client_reference_id: params.client_reference_id,

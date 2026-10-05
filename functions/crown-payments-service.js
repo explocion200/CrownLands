@@ -59,13 +59,15 @@ function createCrownPaymentsService({ db, stripe, now = Date.now }) {
       // Never reuse an expired Stripe idempotency key or change its original parameters.
       if (now() - order.createdAtMs > 20 * 60 * 1000) P.fail("failed-precondition", "This checkout needs checking before it can be retried.");
       P.validatePrice(await client.prices.retrieve(order.priceId), order);
+      // Endive removed payment_method_types. Keep this card-only sandbox on
+      // its supported Checkout contract until payment-method configuration is migrated.
       session = await client.checkout.sessions.create({
         mode: "payment", payment_method_types: ["card"], line_items: [{ price: order.priceId, quantity: 1 }],
         client_reference_id: id, metadata: { crownOrderId: id, purpose: "crownlands_crowns_test" },
         success_url: P.RETURN_URL, cancel_url: P.RETURN_URL, expires_at: Math.floor(order.expiresAtMs / 1000),
         allow_promotion_codes: false, adaptive_pricing: { enabled: false },
         expand: ["line_items"],
-      }, { idempotencyKey: `crown-test-${id}` });
+      }, { idempotencyKey: `crown-test-${id}`, apiVersion: "2026-08-26.dahlia" });
     }
     if (!/^cs_test_[a-zA-Z0-9]+$/.test(session.id || "")) P.fail("failed-precondition", "Only Stripe test sessions are supported.");
     P.validateSession(session, order);

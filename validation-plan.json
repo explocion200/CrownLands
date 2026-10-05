@@ -1,34 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "4c080e9590b91e81f7d4b7db8a6ed1f0e1e7228e",
+  "baseCommit": "83424189a3e82bf8cf2a02dcecbe1c207b72b0c1",
   "coverage": [
     {
       "paths": [
-        "animation-manager.js",
-        "map-transition-bats.css",
-        "docs/art-sources/halloween-map-transition/preview.html",
-        "tools/validate-animation-system.js",
-        "tools/validate-halloween-map-transition-browser.js"
+        "docs/CROWN_PAYMENTS.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "The October presentation adds a temporary bounded flock to the shared map-transition foreground. Cover shared animation lifecycle and seasonal boundaries, valid directional flight and continuing wingbeats, real current-Core neighbor/return navigation, desktop and landscape-mobile appearance, retained clouds, missing-art cover, reduced/off motion, early finish, supersession, repeated cleanup, timeout recovery and switching Off during flight. Preview controls exercise the same runtime, with fitted landscape frames in portrait side panels and resizing between desktop and landscape-mobile sizes. No world data, multiplayer authority or gameplay rules change.",
-      "tests": [
-        "tools/validate-animation-system.js",
-        "tools/validate-halloween-map-transition-browser.js"
-      ]
+      "reason": "Record the authorized sandbox connection, approved 1,000-Crown / US$4.99 offer, uniquely resolved designated tester, excluded other accounts and unchanged playable wallet/current realm. Document the precise Stripe API cause, compatibility repair, verified single-function deployment, safely retained failed receipt and successful signed-in sandbox payment. Provider/session and Firestore read-back proved automatic webhook fulfillment before any status call, exactly one 1,000-Crown test credit, unchanged playable wallet and no extra credit after repeated status checks and a signed completion-event replay. Documentation does not change gameplay, skin pricing or UI; its runtime dependency is covered by the payment-service entry below.",
+      "tests": []
     },
     {
       "paths": [
-        "index.html",
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "functions/crown-payments-service.js",
+        "functions/test/emulator-crown-payments.js",
+        "tools/test-crown-payments.js"
       ],
-      "reason": "Ship and precache the dedicated bat stylesheet with matching versioned entry URLs and a refreshed service-worker cache. Require it in production, cap its payload at 5 KiB and bound the added production payload at 7 KiB, including full build URLs and metadata, while retaining all existing per-file, installation, startup and combined-artifact limits. Validate both ordinary and /play/ entry references, installed-app routing, offline dependencies, and packaged resources. Backend and production state are unaffected, so emulator suites do not apply.",
+      "reason": "Pin only Checkout Session creation to the API version that supports the existing card-only request. Exercise the installed Stripe SDK's outgoing HTTP version header and form body, unchanged idempotency and order persistence, price/session validation, signed webhook guards and no unpaid credits. The selected emulator covers authoritative Firestore transactions, lost-response recovery, concurrent retries/fulfillment, client and owner isolation, expiry and unchanged playable wallets; browser checks cover recovery of the same order after failed creation at desktop and landscape-mobile sizes. No frontend, rules, release contract, build inputs, other callables or gameplay logic changes.",
       "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-pwa-entry-routing.js"
+        "tools/test-crown-payments.js",
+        "tools/validate-crown-payments-browser.js",
+        "functions/test/emulator-crown-payments.js"
       ]
     }
   ]
