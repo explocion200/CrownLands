@@ -342,7 +342,17 @@ const troopsHelmetArtworkBudget = 8 * 1024;
 if (fs.statSync(path.join(dist, "assets/optimized/troops-helmet-192x192-8c144647d31b.webp")).size > troopsHelmetArtworkBudget) {
   throw new Error("The shared troops helmet exceeds its 8 KiB artwork allowance.");
 }
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget;
+// Live checkout, support and payment policies add 6,348 normalized source bytes.
+// Bound that increment to 8 KiB, including full production commit URLs/metadata.
+// No new artwork or libraries; existing install-cache and combined caps still apply.
+const liveCrownPurchaseBudget = 8 * 1024;
+const paymentUiBytes = ["crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (paymentUiBytes > 14 * 1024) throw new Error("Crown checkout presentation exceeds its 14 KiB budget.");
+const paymentPolicyBytes = ["support.html", "privacy.html", "terms.html"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (paymentPolicyBytes > 34 * 1024) throw new Error("Payment support and policy pages exceed their 34 KiB budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

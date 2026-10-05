@@ -46,6 +46,17 @@
       ],
       "reason": "Record confirmed support email, manual refund review and worldwide availability, distinct live implementation/activation status, operator review workflow and merchant-tax/credentials/webhook release prerequisites. No independent runtime behavior; implementation dependencies are covered above.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Measured live checkout/transport/return and support/terms/privacy growth is 6,348 normalized bytes. Reproduced Netlify failure using full 40-character COMMIT_REF; reserve an 8 KiB feature allowance and bound checkout to 14 KiB and payment policy pages to 34 KiB. Preserve entry, offline cache, assets and combined artifact limits; validate production outputs and public-page content.",
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-public-site-content.js"
+      ]
     }
   ]
 }
