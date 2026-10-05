@@ -1,89 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7a440f33e350ed6798e2d04c0c386fb198e183b6",
+  "baseCommit": "fd6060fd838ac0202bfee2512fbb1b99a9b030ef",
   "coverage": [
     {
-      "paths": [
-        "functions/index.js",
-        "functions/test/emulator-scouting-veil.js",
-        "tools/validate-scout-economy.js",
-        "tools/validate-authoritative-army-orders.js"
-      ],
-      "reason": "Scout eligibility gates and selective production checkpoints share economy projection, main-city repair, route selection, arrival returns, Veil, receipts and Tower membership. Verify read avoidance/replays, projected source clocks without double production, deferred defender production, unchanged ordinary collection and travel/combat authority.",
+      "paths": ["game.js", "tools/validate-owned-city-cross-map-sync.js", "tools/validate-incoming-threats-browser.js"],
+      "reason": "Incoming target resolution shares opaque Core city identity, region-scoped ownership caches, private incoming movements, march normalization and threat presentation. Exercise real lookup and HUD/panel delivery for unloaded maps with and without roster snapshots, preserve unknown intelligence, exclude other rulers/unknown IDs/returning and arrived marches, and protect Locate identity, focus, countdowns and removal at desktop and landscape sizes. Existing subscription/rules checks protect the private authoritative projection consumed by the client; server gameplay and push delivery are unchanged.",
       "tests": [
-        "tools/validate-scout-economy.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-welcome-back-summary.js",
-        "tools/validate-transaction-retries.js",
-        "tools/validate-responsive-scout-routing.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-world-travel.js"
-      ]
-    },
-    {
-      "paths": [
-        "game.js",
-        "marches-activity-ui.js",
-        "styles.css",
-        "tools/validate-march-frame-performance-browser.js",
-        "tools/validate-pending-army-departures.js"
-      ],
-      "reason": "Position shells and crowded roster cadence share pending reconciliation, route clocks, viewport culling, pointer hit areas, selection stacking, map camera motion and profile/modal visibility. Exercise exact movement and cleanup, live UI, retired skin privacy, chat/camera responsiveness, and frame recovery at desktop and landscape sizes.",
-      "tests": [
-        "tools/validate-march-frame-performance-browser.js",
-        "tools/validate-pending-army-departures.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-map-chat-responsiveness-browser.js",
-        "tools/validate-map-ui-responsiveness-browser.js",
-        "tools/validate-halloween-troop-skin-browser.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-notification-system.js",
+        "tools/validate-live-subscription-scope.js",
+        "tools/validate-realtime-health.js",
         "tools/validate-performance-bottlenecks.js",
-        "tools/validate-stability-regressions.js"
+        "functions/test/emulator-army-listener-rules.js"
       ]
     },
     {
-      "paths": [
-        "index.html",
-        "optional-ui-styles.js",
-        "service-worker.js",
-        "tools/validate-optional-ui-scripts-browser.js"
-      ],
-      "reason": "Optional style groups share script loading, failed-load retry, host ownership and the existing modal render gates. Verify zero optional startup downloads and fully styled Gear, Quests, Achievements, Daily Login and Battle Reports on desktop/mobile. Versioned shell resources and moved Marches helpers retain asset/build budgets and production packaging.",
+      "paths": ["index.html", "service-worker.js"],
+      "reason": "Version the changed game entrypoint and service-worker cache together so refreshed clients receive the fix. Verify production packaging, matching shell references and unchanged startup/per-file asset budgets.",
       "tests": [
-        "tools/validate-optional-ui-scripts-browser.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/stability-log-summary.js",
-        "tools/validate-stability-log-summary.js"
-      ],
-      "reason": "Read-only aggregate diagnostics must retain economy phases and scout route counters in structured/text logs while rejecting private/unrecognized fields and retaining failure classification.",
-      "tests": [
-        "tools/validate-stability-log-summary.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md"
-      ],
-      "reason": "Dated implementation and local measurement record distinguishes measured browser gains from unverified physical-device and production latency outcomes; introduces no runtime behavior.",
-      "tests": []
-    },
-    {
-      "paths": [
-        "skins-ui.css",
-        "tools/validate-halloween-city-skin-browser.js"
-      ],
-      "reason": "A wildcard bat pause selector invalidated all map descendants on camera changes. Restrict it to animated flight/wing nodes and protect full/reduced/off preferences, camera pause/resume, stable city art, ownership and previews at desktop/landscape sizes. Recheck shared skin packaging and asset budgets.",
-      "tests": [
-        "tools/validate-halloween-city-skin-browser.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-notification-system.js"
       ]
     }
   ]

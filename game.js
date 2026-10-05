@@ -20760,17 +20760,21 @@ function getIncomingArmyTargetSnapshot(attack = {}) {
   const targetOwnerUid = String(attack.targetOwnerUid || "").trim();
   const isPrivateTargetView = attack.viewerAccess === "target"
     || Boolean(currentUid && targetOwnerUid === currentUid);
-  const loadedTarget = getArmyTargetById(targetId);
+  const candidate = getArmyTargetById(targetId);
+  const loadedTarget = candidate && (!attack.targetRegionId || getCityRegionId(candidate) === normalizeRegionId(attack.targetRegionId)) ? candidate : null;
   const activeLoadedTarget = loadedTarget && getCityRegionId(loadedTarget) === getActiveMapRegionId()
     ? loadedTarget
     : null;
-  // The active-map snapshot wins below. Avoid rebuilding the entire owned-city
-  // roster for every visible incoming march when it cannot affect the result.
+  // Preserve region identity without scanning the roster for active-map targets.
   const cachedOwnedTarget = activeLoadedTarget || attack.targetType === "camp"
     ? null
-    : getOwnedCitySnapshotById(targetId);
+    : getOwnedCitySnapshotById(targetId, attack.targetRegionId);
   const target = activeLoadedTarget || cachedOwnedTarget || loadedTarget
-    || (attack.targetType === "camp" ? null : getPlayableBaseCityById(targetId));
+    || (attack.targetType === "camp" ? null : getPlayableBaseCityById(targetId))
+    || (isPrivateTargetView && attack.targetType !== "camp" && attack.targetType !== "tower"
+      && attack.targetRegionId && getKnownCityId(targetId, attack.targetRegionId)
+      ? { id: targetId, name: attack.toName || "Your city", regionId: attack.targetRegionId }
+      : null);
   if (!target) return null;
 
   const targetIsOwned = target.owner === "player"
