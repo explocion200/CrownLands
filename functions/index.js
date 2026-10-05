@@ -60,6 +60,10 @@ const { createCrownPaymentsService } = require("./crown-payments-service");
 const { createCrownPaymentsWebhook } = require("./crown-payments-http");
 const stripeCrownTestKey = defineSecret("STRIPE_CROWNS_TEST_SECRET_KEY");
 const stripeCrownTestWebhookSecret = defineSecret("STRIPE_CROWNS_TEST_WEBHOOK_SECRET");
+const { createLiveCrownPaymentsService } = require("./crown-live-payments-service");
+const { createLiveCrownPaymentsWebhook } = require("./crown-live-payments-http");
+const stripeCrownLiveKey = defineSecret("STRIPE_CROWNS_LIVE_SECRET_KEY");
+const stripeCrownLiveWebhookSecret = defineSecret("STRIPE_CROWNS_LIVE_WEBHOOK_SECRET");
 const COMMON_GEAR = require("./common-gear.js");
 const DAILY_LOGIN = require("./dailyLoginRewards.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
@@ -35758,7 +35762,7 @@ function crownPaymentHandler(action) {
     catch (error) {
       const safeCodes = ["invalid-argument", "failed-precondition", "not-found", "resource-exhausted", "permission-denied"];
       if (safeCodes.includes(error.code)) throw new HttpsError(error.code, error.message);
-      throw new HttpsError("unavailable", "Crown test checkout could not be checked. Retry the same order.");
+      throw new HttpsError("unavailable", "Crown checkout could not be checked. Retry the same order.");
     }
   };
 }
@@ -35771,4 +35775,23 @@ exports.stripeCrownTestWebhook = onRequest({ ...crownPaymentOptions, secrets: [s
     return Stripe.webhooks.constructEvent(body, signature, stripeCrownTestWebhookSecret.value());
   },
   reconcile: sessionId => crownPayments.reconcile(sessionId),
+}));
+
+function crownLiveStripe() {
+  const key = stripeCrownLiveKey.value();
+  if (!/^sk_live_[a-zA-Z0-9]+$/.test(key || "")) throw new HttpsError("failed-precondition", "Crown purchases are not configured.");
+  const Stripe = require("stripe");
+  return new Stripe(key, { maxNetworkRetries: 2, timeout: 15000 });
+}
+const liveCrownPayments = createLiveCrownPaymentsService({ db, stripe: crownLiveStripe });
+exports.getLiveCrownPaymentCatalog = firebaseOnCall(crownPaymentOptions, crownPaymentHandler(uid => liveCrownPayments.catalog(uid)));
+exports.createLiveCrownCheckout = firebaseOnCall({ ...crownPaymentOptions, secrets: [stripeCrownLiveKey] }, crownPaymentHandler((uid, data) => liveCrownPayments.create(uid, data)));
+exports.getLiveCrownCheckoutStatus = firebaseOnCall({ ...crownPaymentOptions, secrets: [stripeCrownLiveKey] }, crownPaymentHandler((uid, data) => liveCrownPayments.status(uid, data.orderId)));
+exports.stripeCrownLiveWebhook = onRequest({ ...crownPaymentOptions, secrets: [stripeCrownLiveKey, stripeCrownLiveWebhookSecret] }, createLiveCrownPaymentsWebhook({
+  verify: (body, signature) => {
+    const Stripe = require("stripe");
+    return Stripe.webhooks.constructEvent(body, signature, stripeCrownLiveWebhookSecret.value());
+  },
+  reconcile: sessionId => liveCrownPayments.reconcile(sessionId),
+  review: event => liveCrownPayments.review(event),
 }));
