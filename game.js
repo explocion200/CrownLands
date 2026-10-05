@@ -159,6 +159,7 @@ const HUD_RENDER_INTERVAL_MS = 250;
 const HUD_STATUS_RENDER_INTERVAL_MS = 1000;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const ARMY_RENDER_INTERVAL_MS = 140;
+const CROWDED_ARMY_RENDER_INTERVAL_MS = 400;
 const CITY_DYNAMIC_TEXT_INTERVAL_MS = 600;
 const PERFORMANCE_PANEL_SAMPLE_MS = 500;
 const CROWDED_MAP_CITY_THRESHOLD = 70;
@@ -22346,6 +22347,10 @@ function getPathMetrics(points) {
 }
 
 let lastFrameFailureLogTime = -Infinity;
+function isMapPresentationVisible() {
+  return !document.hidden && !profileScreen.classList.contains("open") && !modal.open;
+}
+
 function frame(now) {
   try {
     const rawDt = (now - lastFrameTime) / 1000;
@@ -22422,8 +22427,8 @@ function frame(now) {
     kingPowerRenderFrameCacheActive = true;
     kingPowerRenderFrameCache = null;
     if (state) {
-      if (!document.hidden && !profileScreen.classList.contains("open") && !modal.open) {
-        if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) renderArmies();
+      if (isMapPresentationVisible()) {
+        if (hasRenderableArmyWork() && now - lastArmyRenderTime > getArmyRenderIntervalMs()) renderArmies();
         renderVisibleArmyMotion(now);
       }
       if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
@@ -22438,7 +22443,7 @@ function frame(now) {
         lastHudStatusRenderTime = now;
         renderHudStatusPanels();
       }
-      if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
+      if (isMapPresentationVisible() && now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
         lastRenderTime = now;
         renderPaths();
         renderCities();
@@ -28800,6 +28805,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHolding
 function updateVisibleCityDynamicText(targetIds = null) {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
+  const mapVisible = isMapPresentationVisible();
   const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
   if (campInfoCountdown) {
     const camp = getCampTargetById(campInfoCountdown.dataset.campInfoCountdown);
@@ -28829,10 +28835,15 @@ function updateVisibleCityDynamicText(targetIds = null) {
     if (targetIds && !targetIds.has(node.dataset.campId)) return;
     const camp = getCampTargetById(node.dataset.campId);
     if (!camp) return;
+    // Settlement stays active when a screen covers the map; only presentation pauses.
+    if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
+    if (!mapVisible) return;
     const statusText = getRewardCampStatusText(camp);
-    node.setAttribute("aria-label", `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+    const label = `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`;
+    if (node.getAttribute("aria-label") !== label) node.setAttribute("aria-label", label);
     if (String(camp.campType || "") === "deed") {
-      node.style.setProperty("--deed-hold-progress", `${getRewardCampHoldProgress(camp) * 100}%`);
+      const progress = `${getRewardCampHoldProgress(camp) * 100}%`;
+      if (node.style.getPropertyValue("--deed-hold-progress") !== progress) node.style.setProperty("--deed-hold-progress", progress);
       node.classList.toggle("deed-contested", camp.state === "contested");
     }
     const timer = node.querySelector(".gold-camp-active-timer");
@@ -28841,14 +28852,15 @@ function updateVisibleCityDynamicText(targetIds = null) {
       timer.hidden = !camp.ownerUid;
       const status = timer.querySelector("small");
       const value = timer.querySelector("strong");
-      if (status) status.textContent = camp.state === "contested" ? "Contested" : "Active";
-      if (value) value.textContent = camp.payoutPending
+      const statusText = camp.state === "contested" ? "Contested" : "Active";
+      if (status && status.textContent !== statusText) status.textContent = statusText;
+      const valueText = camp.payoutPending
         ? countdown > 0 ? formatDuration(countdown) : "Payout ready"
         : "Securing";
+      if (value && value.textContent !== valueText) value.textContent = valueText;
     }
-    if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
   });
-  cityLayer.querySelectorAll(".city-node").forEach(node => {
+  if (mapVisible) cityLayer.querySelectorAll(".city-node").forEach(node => {
     if (targetIds && !targetIds.has(node.dataset.cityId)) return;
     const city = cityById(node.dataset.cityId);
     if (!city) return;
@@ -31005,7 +31017,8 @@ function updateArmyTokenNavigationSelection() {
     token.classList.toggle("selected", selected);
     const expanded = String(selected);
     if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
-    const { navigation } = getArmyTokenParts(token);
+    const { navigation, position } = getArmyTokenParts(token);
+    position.classList.toggle("selected", selected);
     if (navigation) navigation.hidden = !selected;
   });
 }
@@ -31076,42 +31089,6 @@ async function focusArmyEndpoint(tokenId, endpointKind = "to") {
   });
 }
 
-function createArmyTokenElement(attack) {
-  const token = document.createElement("div");
-  token.dataset.armyTokenId = getArmyTokenId(attack);
-  token.setAttribute("role", "button");
-  token.setAttribute("tabindex", "0");
-  token.setAttribute("aria-expanded", "false");
-  token.innerHTML = `
-    <span class="army-token-icon"></span>
-    <strong class="army-token-count"></strong>
-    <small class="army-token-time"></small>
-    <span class="army-token-nav" hidden>
-      <button type="button" data-army-endpoint="from" title="Go to march origin" aria-label="Go to march origin"><span aria-hidden="true">${renderCrownlandsIcon("back")}</span><small>From</small></button>
-      <button type="button" data-army-endpoint="to" title="Go to march destination" aria-label="Go to march destination"><span aria-hidden="true">${renderCrownlandsIcon("forward")}</span><small>To</small></button>
-    </span>`;
-  getArmyTokenParts(token);
-  token.addEventListener("click", event => {
-    event.stopPropagation();
-    if (suppressMapClick || token.dataset.endpointInteractionDisabled === "true") return;
-    const endpointButton = event.target.closest("[data-army-endpoint]");
-    if (endpointButton) {
-      focusArmyEndpoint(token.dataset.armyTokenId, endpointButton.dataset.armyEndpoint);
-      return;
-    }
-    selectedArmyTokenId = selectedArmyTokenId === token.dataset.armyTokenId
-      ? ""
-      : token.dataset.armyTokenId;
-    updateArmyTokenNavigationSelection();
-  });
-  token.addEventListener("keydown", event => {
-    if (event.target !== token || (event.key !== "Enter" && event.key !== " ")) return;
-    event.preventDefault();
-    token.click();
-  });
-  return token;
-}
-
 function updateArmyTokenElement(token, attack, targetCity, endpointInteractionDisabled = false) {
   const clanAlly = isCurrentClanmateArmy(attack);
   const ownerClass = isPersonalArmy(attack)
@@ -31121,6 +31098,7 @@ function updateArmyTokenElement(token, attack, targetCity, endpointInteractionDi
       : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
   const selected = !endpointInteractionDisabled && getArmyTokenId(attack) === selectedArmyTokenId;
+  getArmyTokenParts(token).position.classList.toggle("selected", selected);
   const marchClass = clanAlly && isHostileClanMarch(attack) ? " clan-attack" : "";
   const className = `army-token ${ownerClass}${marchClass}${attack.serverPending ? " pending-order" : ""}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
   if (token.className !== className) token.className = className;
@@ -31210,6 +31188,12 @@ function renderArmies(force = false) {
   return withKingPowerRenderFrameCache(() => renderArmiesUncached(force));
 }
 
+function getArmyRenderIntervalMs() {
+  // Position stays at display cadence. Dense maps need fewer roster/label scans;
+  // explicit receipt, camera-settle and selection renders still bypass this gate.
+  return mapFrame.classList.contains("crowded-map") ? CROWDED_ARMY_RENDER_INTERVAL_MS : ARMY_RENDER_INTERVAL_MS;
+}
+
 function renderArmiesUncached(force = false) {
   if (!state) return;
   if (isCameraInteractionActive()) {
@@ -31217,7 +31201,7 @@ function renderArmiesUncached(force = false) {
     return;
   }
   const now = performance.now();
-  if (!force && now - lastArmyRenderTime < ARMY_RENDER_INTERVAL_MS) return;
+  if (!force && now - lastArmyRenderTime < getArmyRenderIntervalMs()) return;
   lastArmyRenderTime = now;
   const visibleBounds = getVisibleWorldBounds(240);
   const activeRegionId = getActiveMapRegionId();
@@ -31248,7 +31232,7 @@ function renderArmiesUncached(force = false) {
     if (!token) {
       token = createArmyTokenElement(attack);
       armyTokenCache.set(tokenId, token);
-      fragment.appendChild(token);
+      fragment.appendChild(getArmyTokenParts(token).position);
     }
     updateArmyTokenElement(token, attack, to, endpointInteractionDisabled);
     const previous = visibleArmyMotion.get(tokenId);
@@ -31265,7 +31249,7 @@ function renderArmiesUncached(force = false) {
   if (fragment.childNodes.length) armyLayer.appendChild(fragment);
   for (const [tokenId, token] of armyTokenCache) {
     if (visibleArmyTokenIds.has(tokenId)) continue;
-    token.remove();
+    getArmyTokenParts(token).position.remove();
     armyTokenCache.delete(tokenId);
     visibleArmyMotion.delete(tokenId);
   }
@@ -31306,7 +31290,9 @@ function renderVisibleArmyMotion(now = performance.now()) {
     const parts = getArmyTokenParts(motion.token);
     if (parts.x === x && parts.y === y) continue;
     parts.x = x; parts.y = y;
-    motion.token.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+    // Only this lightweight shell changes at display cadence. Keeping movement
+    // off the styled token avoids recalculating its owner/label/pseudo rules.
+    parts.position.style.transform = `translate(${x}px, ${y}px)`;
   }
 }
 

@@ -14,7 +14,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   try {
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(target => target.type === "page").webSocketDebuggerUrl);
-    await Promise.all(["Page.enable", "Runtime.enable"].map(method => client.send(method)));
+    await Promise.all(["Page.enable", "Runtime.enable", "Network.enable"].map(method => client.send(method)));
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const ev = async expression => {
       const result = await client.send("Runtime.evaluate", {expression, awaitPromise: true, returnByValue: true});
@@ -30,9 +30,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await close();
       const startup = await ev(`(() => {
         const deferred = [...document.querySelectorAll('[data-optional-ui-script]')].map(entry => new URL(entry.dataset.src, document.baseURI).href);
-        return {deferred:deferred.length, downloaded:performance.getEntriesByType('resource').filter(entry => deferred.includes(entry.name)).map(entry => entry.name)};
+        const styles = [...document.querySelectorAll('link[data-optional-ui-style]')].map(entry => entry.href);
+        return {deferred:deferred.length, styles:styles.length, downloaded:performance.getEntriesByType('resource').filter(entry => [...deferred,...styles].includes(entry.name)).map(entry => entry.name)};
       })()`);
       assert.equal(startup.deferred, 17); assert.deepEqual(startup.downloaded, []);
+      assert.equal(startup.styles, 17, "All optional screen styles must remain deferred at startup");
       const dailyStatus = dailyModel.status(dailyModel.sync({}).state);
       await ev(`dailyLoginRewardStatus=normalizeDailyLoginRewardStatus(${JSON.stringify(dailyStatus)});dailyLoginRewardStatusLoading=false;dailyLoginRewardClaimInFlight=false`);
       const screens = [
@@ -42,15 +44,25 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         ...["quests", "achievements", "rewards"].map(id => [id,
           `modal.className='modal daily-login-reward-modal'; modal.showModal(); activeDailyRewardModalTab=${JSON.stringify(id)}; renderDailyLoginRewardModal()`,
           `Boolean(window.${id === "quests" ? "CrownlandsQuestsUI" : id === "achievements" ? "CrownlandsAchievementsUI" : "CrownlandsDailyLoginUI"})`]),
+        ["battle-report", "state.battleReports=[{id:'qa-battle',type:'attack',outcome:'victory',cityId:state.cities[0].id,cityName:'Test battle',cityLevel:1,createdAtMs:Date.now(),sentTroops:100,troopCount:80,summary:'Victory'}];showBattleReportDetail('qa-battle')", "Boolean(modalBody.querySelector('.report-shell'))"],
       ];
       for (const [name, open, loaded] of screens) {
+        const retryStyles = name === "quests" && width === 1440;
+        if (retryStyles) await client.send("Network.setBlockedURLs", {urls:["*quests-ui.css*"]});
         await ev(open);
+        if (retryStyles) {
+          await ready("Boolean(modalBody.querySelector('.optional-ui-loading button:not([hidden])'))");
+          await client.send("Network.setBlockedURLs", {urls:[]});
+          await ev("modalBody.querySelector('.optional-ui-loading button').click()");
+        }
         await ready(`modal.open && (${loaded}) && !modalBody.querySelector('.optional-ui-loading')`);
+        const style = ["treasury", "barracks", "gatehouse", "royal-stables"].includes(name) ? name + "-gear" : name === "rewards" ? "daily-login" : name;
+        assert(await ev(`(() => {const link=document.querySelector('link[data-optional-ui-style="${style}"]');return link?.dataset.ready==='true' && Boolean(link.sheet)})()`), name + " rendered before its stylesheet loaded");
         await ev("Promise.all(document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getTiming().iterations)).map(animation => animation.finished.catch(() => {})))");
         const bounds = await ev("(() => {const r=modal.getBoundingClientRect();return {fits:r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1,overflow:modal.scrollWidth>modal.clientWidth+1};})()");
         assert(bounds.fits && !bounds.overflow, JSON.stringify({width, name, bounds}));
         results.push({width, height, name, passed: true});
-        if (["quests", "help"].includes(name)) fs.writeFileSync(path.join(artifacts, `${width}-${name}.png`), Buffer.from((await client.send("Page.captureScreenshot", {format: "png"})).data, "base64"));
+        if (["quests", "help", "treasury", "rewards"].includes(name)) fs.writeFileSync(path.join(artifacts, `${width}-${name}.png`), Buffer.from((await client.send("Page.captureScreenshot", {format: "png"})).data, "base64"));
         await close();
       }
     }

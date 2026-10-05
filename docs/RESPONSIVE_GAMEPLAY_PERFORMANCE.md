@@ -1,5 +1,32 @@
 # Responsive gameplay performance review
 
+## Gameplay health follow-up (October 4, 2026)
+
+`codex/gameplay-smoothness` starts at `7a440f33e350ed6798e2d04c0c386fb198e183b6` (PR #451). This update is authorized for implementation and PR review only. It has not been merged or deployed. The read-only current-realm check confirmed `main-realm-2026-10`, `realm-2026-10`, `shard_0001`, with the existing `core-expansion-v1` release contract.
+
+The health audit found long scout transaction tails and repeated style recalculation on crowded maps. Automatic scouts now omit Tower/garrison reads when authoritative clan membership cannot qualify. Launches defer unrelated optional production checkpoints; city departures checkpoint their deducted, projected balance atomically. City scout settlement checkpoints its source/target even below the routine interval, retaining mandatory main-city repairs and all projected kingdom production, reports, protections and receipts. Routine economy collection still checkpoints the kingdom. Shared profile reads/writes remain; production latency improvement must be measured after an authorized deployment.
+
+March motion now updates a lightweight position shell. The existing token retains labels, hit areas, accessibility, selection and endpoint controls. Crowded maps scan the roster/labels every 400 ms instead of 140 ms; exact route-clock motion continues each display frame, and forced renders remain immediate. Covered-map route/city drawing pauses while settlement and visible dialog updates continue. Unchanged camp labels/progress avoid repeated writes. Token construction lives in the already-loaded Marches presentation module, retaining existing entrypoint budgets.
+
+A follow-up pan/zoom trace identified `.halloween-city-bats *` as a whole-subtree style invalidation trigger when camera state changed, including maps without visible bats. Those pause rules now name only the animated flight and wing elements. Camera pause/resume and reduced/off preferences remain intact; the browser regression suite prohibits the wildcard from returning.
+
+Eight optional screen stylesheets (310,970 source bytes) load when their existing script group opens: four Gear screens, Daily Login, Quests, Achievements and Battle Report details. Startup avoids those eight requests. This is source payload, not compressed production transfer savings. Shared loading, retry and stale-view ownership remain in place. The log parser now retains the already-emitted economy-preparation phase and route-evaluation/pruning counts without private payloads.
+
+Local dense-march comparison used 120 orders, 80 visible tokens, identical mocked server authority, the base/current rendering functions, and a 144 Hz Windows Chrome host. Both retired-skin preference values exercise today's default renderer. Four-second samples are diagnostic, not device guarantees:
+
+| Emulated profile | Base average FPS | Updated average FPS | Base / updated p95 frame time |
+| --- | --- | --- | --- |
+| Desktop, normal CPU | 136–137 | 138–139 | 7.1 / 7.1 ms |
+| Landscape, normal CPU, DPR 2 | 134–137 | 137 | 7.1–7.2 / 7.1 ms |
+| Desktop, 4× CPU slowdown | 14–19 | 45–55 | 139–160 / 35–49 ms |
+| Landscape, 4× CPU slowdown, DPR 2 | 10–11 | 41–48 | 139–146 / 49–63 ms |
+
+Dense throttled style time fell about 80%. Spikes remain above a 33 ms frame budget, so this does not establish a consistent 30 FPS floor on physical phones. The A/B rendering test uses current screen styles in both versions; it isolates rendering changes and is not a startup A/B test. Local receipts and screenshots are under ignored `release-artifacts/march-frame-performance/`; the original audit and diagnostic traces are under `release-artifacts/health-check-2026-10-04/`.
+
+The final repeated heavy map profiles also exercised actual pointer pan, wheel zoom, City Info and map switching. At 4× CPU slowdown, scenario C (150 cities/100 marches) changed from 37/9.3/7.7 FPS idle/pan/zoom to 44.6/10.9/15.3; scenario E (50/100) changed from 64.9/42.3/2.3 to 73.2/42.4/51.9. These single samples vary, especially the original extreme E zoom stall. The standard map fixture uses local economy simulation, unlike the server-authority dense-march comparison above. Neither repeat raised a browser exception or duplicated subscriptions (18 active listeners). C's final 167 ms p95 zoom frames remain a large-crowd limitation. Receipts are `after-matrix/final-heavy-map.json` and `final-harness.cjs` under the health-check directory; no benchmark thresholds were relaxed.
+
+Regression coverage checks subpixel route accuracy, pending-to-confirmed movement, culling cleanup, selection/clicks, covered-map resume, optional stylesheet failure/retry, desktop/landscape screen layout, and asset budgets. Selected emulators cover scouting/Veil/replay and production accounting, Tower origins, world travel and concurrent economy operations. `validation-plan.json` records the exact selected gates; PR checks establish their final outcome. Physical-phone verification and live scout/economy p95 measurements remain release follow-up work.
+
 ## Scope
 
 `codex/responsive-gameplay-performance` starts from main `61bc30a4d846f1779cfb81299e4887ccb8db5245` (PR #254). The user authorized all ten proposed performance areas, internal review, normal PR merge, and production deployment after checks. The current `core-expansion-v1` release contract is unchanged. This update changes client presentation and scheduling; it does not alter backend gameplay, world topology, costs, cooldowns, routes, permissions, or intended travel time.

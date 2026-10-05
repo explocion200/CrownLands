@@ -13836,10 +13836,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
         ...patch,
       };
     }
-    const shouldCheckpointCity = !timestampToMs(city.productionUpdatedAtMs)
+    const requiredCheckpoint = (options.checkpointRequiredRefs || []).some(ref => ref?.path === entry.ref.path);
+    const shouldCheckpointCity = requiredCheckpoint || !timestampToMs(city.productionUpdatedAtMs)
       || nowMs - lastProductionAtMs >= ECONOMY_CITY_CHECKPOINT_MS;
     if (shouldCheckpointCity) {
-      productionCityPatches.push({ ref: entry.ref, city, patch });
+      (requiredCheckpoint ? cityPatches : productionCityPatches).push({ ref: entry.ref, city, patch });
     }
   });
   const sharedCheckpointWriteBudget = options.sharedCheckpointWriteBudget;
@@ -26091,13 +26092,11 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
     : [];
 
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [targetSnap, armySnap, playerSnap, launchRateSnap, ...towerAndGarrisonSnaps] = await Promise.all([
+    const [targetSnap, armySnap, playerSnap, launchRateSnap] = await Promise.all([
       transaction.get(targetRef),
       transaction.get(armyRef),
       transaction.get(playerRef),
       transaction.get(launchRateRef),
-      ...towerRefs.map(ref => transaction.get(ref)),
-      ...garrisonRefs.map(ref => transaction.get(ref)),
     ]);
     if (armySnap.exists) {
       const existing = { id: armySnap.id, ...armySnap.data() };
@@ -26125,6 +26124,9 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
     const economy = await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
+      // Project the entire kingdom, but only persist the chosen departure city.
+      // Routine collection retains responsibility for optional checkpoints.
+      checkpointWriteBudget: 0,
     }));
     const profile = economy.profileAfter || (playerSnap.exists ? playerSnap.data() || {} : {});
     const clanId = safeString(profile.clanId, 128);
@@ -26136,6 +26138,9 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
       : [null, null];
     const clanActive = Boolean(clanSnap?.exists && clanSnap.data()?.status === "active");
     const member = memberSnap?.exists ? memberSnap.data() || {} : null;
+    const towerAndGarrisonSnaps = clanActive && HOLDING_TOWERS.isEligibleMember(member, nowMs, clanId)
+      ? await Promise.all([...towerRefs, ...garrisonRefs].map(ref => transaction.get(ref)))
+      : [];
 
     const targetOwnerUid = targetType === "tower" ? "" : getOwnerUid(target);
     if (targetOwnerUid === uid) {
@@ -26318,7 +26323,9 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
       }
     } else {
       const troopFloat = Math.max(0, safeNumber(source.troopFloat, source.troops) - 1);
-      const patch = { troops: source.troops - 1, troopFloat };
+      // The deducted balance includes projected production; advance its clock
+      // atomically so the next collection cannot produce that interval twice.
+      const patch = { troops: source.troops - 1, troopFloat, productionUpdatedAtMs: nowMs };
       economy.cityPatches.push({ ref: source.ref, city: source, patch });
       cityUpdates.push({ id: source.id, regionId: source.regionId, ...patch });
     }
@@ -28521,18 +28528,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const attackerProfileSnap = participantProfiles.get(attackerUid)?.snap || null;
     const defenderProfileSnap = defenderUid ? participantProfiles.get(defenderUid)?.snap || null : null;
     const settlementCheckpointWriteBudget = {
-      remaining: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+      remaining: army.kind === "scout" ? 0 : ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
     };
     const hasDistinctDefenderEconomy = Boolean(defenderUid && defenderUid !== attackerUid);
     const settlementParticipantCheckpointWriteBudget = hasDistinctDefenderEconomy
-      ? Math.floor(ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET / 2)
-      : ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET;
+      ? Math.floor(settlementCheckpointWriteBudget.remaining / 2)
+      : settlementCheckpointWriteBudget.remaining;
     const attackerEconomy = attackerUid
       ? await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, attackerUid, nowMs, {
         profileRef: attackerProfileEntry.ref,
         profileSnap: attackerProfileEntry.snap,
         checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
         sharedCheckpointWriteBudget: settlementCheckpointWriteBudget,
+        // A scout can return to its source or join a newly owned target. Keep
+        // those projected balances checkpointed even below the routine interval.
+        checkpointRequiredRefs: army.kind === "scout"
+          ? (defenderUid === attackerUid ? [sourceRef, targetRef] : [sourceRef]).filter(Boolean)
+          : [],
         checkpointPriorityRefs: defenderUid === attackerUid
           ? [sourceRef, targetRef]
           : [sourceRef],
@@ -28546,6 +28558,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           profileSnap: defenderProfileEntry.snap,
           checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
           sharedCheckpointWriteBudget: settlementCheckpointWriteBudget,
+          checkpointRequiredRefs: army.kind === "scout" ? [targetRef].filter(Boolean) : [],
           checkpointPriorityRefs: [targetRef],
         }))
       : null;

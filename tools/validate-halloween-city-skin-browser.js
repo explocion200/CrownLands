@@ -4,6 +4,9 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+assert.doesNotMatch(fs.readFileSync(path.resolve(__dirname, "../skins-ui.css"), "utf8"),
+  /\.halloween-city-bats\s*\*/,
+  "A wildcard bat selector invalidates the entire map when camera/motion state changes");
 
 async function checkCityArt() {
   const assert = (value, message) => { if (!value) throw Error(message); };
@@ -100,6 +103,16 @@ async function checkCityArt() {
   const closeupBat = cityLayer.querySelector(`[data-city-id="${regular[4].id}"] .halloween-bat`);
   assert(closeupBat?.getBoundingClientRect().width >= 10, "Map bats must be visible at city zoom");
   assert(getComputedStyle(closeupBat.parentElement).animationPlayState === "running", "Map bats did not resume after camera movement");
+  for (const guard of ["camera-moving", "zooming"]) {
+    mapFrame.classList.add(guard);
+    try {
+      for (const animated of closeupBat.closest(".halloween-city-bats").querySelectorAll(".halloween-bat-flight,.halloween-bat-wing")) {
+        assert(getComputedStyle(animated).animationPlayState === "paused", `${guard} did not pause a bat animation`);
+        assert(getComputedStyle(animated).willChange === "auto", `${guard} retained an animated bat layer`);
+      }
+    } finally { mapFrame.classList.remove(guard); }
+  }
+  assert(getComputedStyle(closeupBat.parentElement).animationPlayState === "running", "Map bats did not resume after CSS camera guards");
   return { stages, mapCities: ownedNodes.length, motion: "full/reduced/off passed", fallback: "passed", ownership: "own/remote/capture/default passed" };
 }
 
