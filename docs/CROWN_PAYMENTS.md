@@ -1,6 +1,6 @@
 # Stripe Crown checkout foundation
 
-The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox while keeping checkout disabled, then confirmed the first pack: **1,000 Crowns for US$4.99**. That offer is configured in the sandbox; live payments remain unapproved and the cosmetics-only rule is unchanged.
+The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. Checkout is now enabled only for that account; live payments remain unapproved and the cosmetics-only rule is unchanged.
 
 ## Current behavior
 
@@ -18,7 +18,7 @@ The October 4, 2026 request selected Stripe for future Crown purchases and appro
 - The Crownlands Stripe sandbox is connected to Firebase project `crown-land-b15e0`. Its test API key authenticated against the selected Stripe account. The test key and webhook signing secret are stored in Secret Manager under the names below; no credential values belong in this document or the repository.
 - Only `getCrownPaymentCatalog`, `createCrownCheckout`, `getCrownCheckoutStatus` and `stripeCrownTestWebhook` were deployed from merged source commit `83424189a3e82bf8cf2a02dcecbe1c207b72b0c1`. All four were verified `ACTIVE` on Node.js 22 at `2026-10-05T19:23:19Z`, with the required secret versions bound. Existing functions and the authoritative current-realm pointer matched the pre-deployment baseline.
 - The active sandbox webhook sends exactly the four Checkout events listed below to `https://us-central1-crown-land-b15e0.cloudfunctions.net/stripeCrownTestWebhook`. Its event API version is `2026-08-26.dahlia`; this does not change the account-wide API version. Server-side Stripe requests use the existing SDK's `2026-09-30.endive` version, which authenticated successfully.
-- `serverConfig/crownPayments` exists with `enabled: false`, `mode: "test"` and an empty `testerUids` array. Its initial empty pack list now contains the owner-approved offer below. **Checkout remains disabled.** No designated testers, purchase orders or wallet credits were created by this setup.
+- `serverConfig/crownPayments` was initially created disabled with empty pack and tester lists. It now contains the approved offer below and is enabled for one owner-designated tester under the later authorization recorded below. Its mode remains `"test"`.
 - The three callables rejected unauthenticated requests with HTTP 401. The webhook rejected an invalid signature with HTTP 400 and accepted a signed probe without Crown-order metadata with HTTP 200 (`Ignored`). This verifies the deployed handler and signing-secret binding; an actual Stripe-generated delivery and complete sandbox purchase are still unverified.
 - The focused payment unit and desktop/landscape-mobile browser checks passed. The deployment's runtime-data and manifest checks and its 29 callable authentication-guard probes also passed. The original implementation's required GitHub checks passed in PR #444; no runtime code changed for this connection.
 
@@ -26,9 +26,16 @@ The October 4, 2026 request selected Stripe for future Crown purchases and appro
 
 - **1,000 Crowns for US$4.99**, a one-time purchase. The server pack ID is `crowns_1000`, with `crowns: 1000`, `amountMinor: 499` and `currency: "usd"`.
 - Stripe sandbox product `prod_crownlands_test_1000_usd_499` and Price `price_1UNHy7KuUcvmAfUIaLSRGoLk` were created for this offer. The price is active, one-time, per-unit and `livemode: false`; it is stored in the private server pack configuration.
-- Verification at `2026-10-05T19:54:40Z` confirmed the Stripe amount/currency match the saved pack and the existing runtime accepts its shape. The disabled configuration returns no payment catalog, its tester list remains empty, and the current-realm pointer was unchanged. No function deployment was needed for this pack configuration.
+- Pack-creation verification at `2026-10-05T19:54:40Z` confirmed the Stripe amount/currency match the saved pack and the existing runtime accepts its shape. Checkout was still disabled at that point, with no payment catalog or testers; the current-realm pointer was unchanged. No function deployment was needed for this pack configuration.
 - Halloween City remains **600 Crowns**. One 1,000-Crown pack would cover that skin with 400 Crowns left, once live payments are separately implemented and authorized. Sandbox purchases only credit the separate test wallet and cannot fund skin purchases.
-- Designating a tester, enabling sandbox checkout and completing an actual test purchase remain pending. This pricing approval does not enable live payments or establish refund/dispute terms. Local operational evidence is saved under `release-artifacts/crown-payments/pack-verification.json` (ignored, not committed).
+- This pricing approval does not enable live payments or establish refund/dispute terms. Local operational evidence is saved under `release-artifacts/crown-payments/pack-verification.json` (ignored, not committed).
+
+## Designated sandbox tester — October 5, 2026
+
+- The owner supplied the game account to enable for the first sandbox purchase. Its ruler name resolved to exactly one account in the authoritative current realm. The UID is stored only in the private `testerUids` configuration, not in documentation or PRs.
+- At `2026-10-05T20:11:19Z`, configuration read-back verified `enabled: true`, `mode: "test"`, exactly that one tester and the approved 1,000-Crown / US$4.99 pack. The existing runtime accepted the designated account and excluded other accounts. The update used an exact document-version precondition and changed only `enabled` and `testerUids`.
+- The current-realm pointer and playable cosmetic wallet were unchanged. No test order or test-wallet credit existed at this verification. No function deployment was required. Local evidence is `release-artifacts/crown-payments/tester-verification.json` (ignored, not committed; no credentials or raw account identifiers).
+- A signed-in browser checkout and actual Stripe sandbox payment remain unverified. Testing must use Stripe test payment details and verify fulfillment in the separate test wallet; real purchases and playable Crown credits remain unavailable.
 
 ## Account and sandbox setup
 
@@ -36,7 +43,7 @@ The October 4, 2026 request selected Stripe for future Crown purchases and appro
 2. The approved 1,000-Crown / US$4.99 one-time, per-unit Price is configured in Stripe's sandbox/test environment. Additional packs require owner confirmation; test-fixture prices are not approved commercial offers. Supported initial currencies are USD, EUR, GBP, CAD and AUD, all represented in minor units.
 3. The test secret key is stored as Firebase Secret Manager secret `STRIPE_CROWNS_TEST_SECRET_KEY`, and the webhook signing secret as `STRIPE_CROWNS_TEST_WEBHOOK_SECRET`. Use the provider/hosting secret tools for future updates; never paste secrets into chat, source files or PRs. The server accepts only `sk_test_` keys.
 4. The `stripeCrownTestWebhook` HTTPS endpoint is deployed and registered in the same Stripe sandbox for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`. Its signing secret is securely configured. For local integration, Stripe CLI forwarding has its own signing secret.
-5. Once the owner designates test accounts and authorizes a sandbox purchase, update `serverConfig/crownPayments` privately with `enabled: true`, `mode: "test"` and the approved `testerUids`, preserving the configured pack. Each pack requires `id`, `priceId`, `crowns`, `amountMinor` and lowercase `currency`. The October 5 connection and pack configuration leave checkout disabled.
+5. The owner-designated account is configured privately in `serverConfig/crownPayments` with `enabled: true`, `mode: "test"` and the approved pack. Each pack requires `id`, `priceId`, `crowns`, `amountMinor` and lowercase `currency`. Additional testers or offers require owner authorization. The designated tester must sign in to use Shop → Skins → Test Crown checkout.
 6. Test successful, declined, cancelled and expired checkout; disconnect/retry; duplicate webhook delivery; and sign-out/account switching. Verify test receipts and the unchanged playable Crown wallet. Automated fixtures mock Stripe; an actual Stripe sandbox payment remains required.
 
 ## Before any live launch
