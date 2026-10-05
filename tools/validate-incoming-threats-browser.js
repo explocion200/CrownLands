@@ -42,6 +42,40 @@ async function main() {
       await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0"});
       await ready('window.__CROWNLANDS_BENCHMARK__?.getStatus().status === "ready"');
       await delay(300);
+      // Exercise live movement normalization and target resolution before the
+      // presentation-only fixtures replace getIncomingAttacks below.
+      const delivered = await evaluate(`(() => {
+        __CROWNLANDS_BENCHMARK__.closeModal();
+        const home=playerCities()[0], region=[...REGION_CATALOG_SUMMARIES_BY_ID.keys()].find(id=>id!==getActiveMapRegionId());
+        const remote={...home,id:"core_ffffffffffffffffff",name:"Remote Watch",regionId:region,startPool:region,islandId:getOnlineIslandId(region),troops:321,troopFloat:321};
+        window.__incomingSavedRoster=onlineOwnedCitiesCache;
+        onlineOwnedCitiesCache=[remote];
+        state.attacks=[];onlineArmiesByIsland.clear();
+        const now=Date.now(), uid=getCurrentOnlineUid();
+        const movements=["attack","scout"].map((kind,i)=>({id:"incoming-delivery-"+i,kind,status:"active",ownerUid:"incoming-fixture-rival",ownerName:"Rival",
+          viewerAccess:"target",targetOwnerUid:uid,targetType:"city",fromId:home.id,sourceRegionId:getCityRegionId(home),toId:remote.id,toName:remote.name,targetRegionId:region,
+          launchedAtMs:now,total:120+i*30,arrivesAtMs:now+(120+i*30)*1000,troops:kind==="scout"?1:null,troopVisibility:kind==="scout"?"exact":"estimate",troopEstimateMin:100,troopEstimateMax:1000}));
+        applyOnlineArmies(movements,PLAYER_RELEVANT_ARMIES_CACHE_KEY);updateIncomingAttackUi();showIncomingAttacksModal();
+        const incoming=getIncomingAttacks();
+        window.__incomingRemoteIdentity={id:remote.id,region};
+        return {count:incoming.length,visible:!incomingAttackBtn.hidden,hud:incomingAttackCount.textContent,rows:modalBody.querySelectorAll(".threat-row").length,
+          targetTroops:incoming[0]?.target.troops,targetRegion:incoming[0]?.target.regionId,expectedRegion:region,unloaded:getPlayableBaseCityById(remote.id)===null};
+      })()`);
+      assert.deepEqual(delivered,{count:2,visible:true,hud:"2",rows:2,targetTroops:321,targetRegion:delivered.expectedRegion,expectedRegion:delivered.expectedRegion,unloaded:true});
+      await evaluate('onlineOwnedCitiesCache=[];updateIncomingAttackUi();toast.classList.remove("visible")');
+      assert.equal(await evaluate('getIncomingAttacks().length'),2,"Alerts vanished before the owned-city snapshot arrived");
+      assert.equal(await evaluate('modalBody.querySelectorAll(".pending-note").length'),2);
+      assert.equal(await evaluate('modalBody.querySelectorAll(".city-stats").length'),0,"Pending alerts invented city intelligence");
+      await screenshot("unloaded-map-"+width);
+      assert(await evaluate(`(async()=>{
+        const original=focusBattleReportTarget;let located;
+        focusBattleReportTarget=async(id,region)=>{located={id,region};return false;};
+        try {await focusIncomingAttackCity(__incomingRemoteIdentity.id,__incomingRemoteIdentity.region);}
+        finally {focusBattleReportTarget=original;}
+        return located?.id===__incomingRemoteIdentity.id&&located?.region===__incomingRemoteIdentity.region&&modal.open;
+      })()`),"An unloaded incoming target lost its recorded map during Locate");
+      await evaluate('applyOnlineArmies([],PLAYER_RELEVANT_ARMIES_CACHE_KEY);updateIncomingAttackUi();onlineOwnedCitiesCache=window.__incomingSavedRoster');
+      assert(await evaluate('incomingAttackBtn.hidden && !modal.open'),"Removed incoming movements left a stale alert or panel");
       await evaluate(`(() => {
         __CROWNLANDS_BENCHMARK__.closeModal();
         const target=playerCities()[0], original=getIncomingAttacks();
@@ -118,7 +152,7 @@ async function main() {
       assert(await evaluate('modalBody.textContent.includes("The watch is quiet")'));
       await evaluate('updateIncomingAttackUi()');
       assert.equal(await evaluate('modal.open'),false);
-      checks.push({width,height,...metrics});
+      checks.push({width,height,delivered,...metrics});
       console.log("Incoming Threats runtime passed at "+width+"x"+height);
     }
     assert.deepEqual(errors,[]);

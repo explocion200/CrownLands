@@ -50,6 +50,8 @@ const context = {
   getActiveMapRegionId: () => regions[0],
   getCityRegionId: city => city?.regionId || regions[0],
   cityById: id => context.state.cities.find(city => city.id === id),
+  getArmyTargetById: id => context.state.cities.find(city => city.id === id),
+  getBattleReportOwnerName: () => "Rival",
   playerCities: () => context.state.cities.filter(city => city.owner === "player"),
   resolvePlayerIdentityForUid: () => null,
   getCityTroopFallback: () => 0,
@@ -77,6 +79,7 @@ for (const name of [
   "getOwnedCitySnapshotById", "getOwnedCitySnapshotForUpgrade",
   "getCityListRowKey", "resetCityListSessionOrder", "reconcileCityListSessionOrder",
   "applyServerCityUpdateToOwnedCache", "getIncomingUpgradeBlockers",
+  "getIncomingArmyTargetSnapshot", "getIncomingAttacks",
 ]) vm.runInContext(functionSource(game, name), context);
 vm.runInContext(functionSource(controller, "getCityUpgradeActionKey"), context);
 
@@ -105,6 +108,49 @@ assert.deepEqual(
 );
 
 const offMap = roster[1];
+// Current Core city IDs are opaque: incoming alerts must carry their region
+// through the real lookup, even while that map's base-city data is unloaded.
+armies = [{ id: "off-map-alert", kind: "attack", toId: offMap.id,
+  targetRegionId: offMap.regionId, targetOwnerUid: "fixture-player",
+  viewerAccess: "target", owner: "enemy", ownerUid: "rival", remaining: 30 }];
+assert.equal(context.getIncomingAttacks().length, 1,
+  "An incoming attack disappeared although its off-map city is in the owned roster.");
+assert.equal(context.getIncomingAttacks()[0].target.troops, offMap.troops);
+assert.equal(context.getIncomingAttacks()[0].target.regionId, offMap.regionId);
+context.state.cities.push({ ...offMap, regionId: regions[0], islandId: context.getOnlineIslandId(regions[0]), troops: 999 });
+assert.equal(context.getIncomingAttacks()[0].target.regionId, offMap.regionId,
+  "A loaded city with the same ID on another map replaced the incoming target.");
+assert.equal(context.getIncomingAttacks()[0].target.troops, offMap.troops);
+context.state.cities.pop();
+const incomingRoster = context.onlineOwnedCitiesCache;
+context.onlineOwnedCitiesCache = [];
+for (const kind of ["attack", "scout"]) {
+  armies[0].kind = kind;
+  const incoming = context.getIncomingAttacks();
+  assert.equal(incoming.length, 1, "A private alert must survive before the off-map roster arrives.");
+  assert.equal(incoming[0].target.incomingSnapshotPending, true);
+  assert.equal(incoming[0].target.troops, undefined, "Unloaded city intelligence must stay unknown.");
+}
+armies[0].viewerAccess = "public";
+armies[0].targetOwnerUid = "another-player";
+assert.equal(context.getIncomingAttacks().length, 0, "Other rulers' private targets must not be inferred.");
+armies[0].targetOwnerUid = "fixture-player";
+armies[0].viewerAccess = "target";
+armies[0].toId = "not-a-known-city";
+assert.equal(context.getIncomingAttacks().length, 0, "An unknown city ID must not invent an incoming target.");
+armies[0].toId = offMap.id;
+for (const targetType of ["camp", "tower"]) {
+  armies[0].targetType = targetType;
+  assert.equal(context.getIncomingAttacks().length, 0, "City fallback must not invent other holding types.");
+}
+armies[0].targetType = "city";
+armies[0].returning = true;
+assert.equal(context.getIncomingAttacks().length, 0, "Returning scouts must not raise an alert.");
+armies[0].returning = false;
+armies[0].remaining = 0;
+assert.equal(context.getIncomingAttacks().length, 0, "Arrived scouts must not retain an alert.");
+context.onlineOwnedCitiesCache = incomingRoster;
+armies = [];
 assert.equal(context.applyServerCityUpdateToOwnedCache({
   id: offMap.id, regionId: offMap.regionId, ownerUid: offMap.ownerUid, level: 60,
 }), true);
