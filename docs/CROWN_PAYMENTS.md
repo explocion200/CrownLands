@@ -1,6 +1,6 @@
 # Stripe Crown payments
 
-The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. Checkout is now enabled only for that account; live payments remain unapproved and the cosmetics-only rule is unchanged.
+The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. Checkout is now enabled only for that account; live release remains pending and the cosmetics-only rule is unchanged.
 
 ## Live purchase implementation — October 5, 2026
 
