@@ -75,14 +75,15 @@
   87.5% { transform:translate(30%,-16%) rotate(14deg) scale(.88); }
 }
 @keyframes halloweenBatFlap { from { transform:scaleY(.35) rotate(-6deg); } to { transform:scaleY(1) rotate(6deg); } }
-html[data-animation-mode="reduced"] .halloween-city-bats *,
-html[data-animation-mode="off"] .halloween-city-bats *,
-.map-frame.camera-moving .halloween-city-bats *,
-.map-frame.zooming .halloween-city-bats * { animation-play-state:paused!important; will-change:auto!important; }
+/* Named animation nodes keep camera changes from invalidating the whole map. */
+html[data-animation-mode="reduced"] .halloween-city-bats :is(.halloween-bat-flight,.halloween-bat-wing),
+html[data-animation-mode="off"] .halloween-city-bats :is(.halloween-bat-flight,.halloween-bat-wing),
+.map-frame.camera-moving .halloween-city-bats :is(.halloween-bat-flight,.halloween-bat-wing),
+.map-frame.zooming .halloween-city-bats :is(.halloween-bat-flight,.halloween-bat-wing) { animation-play-state:paused!important; will-change:auto!important; }
 .map-frame.low-zoom .halloween-city-bats,
 .map-frame.crowded-map .halloween-city-bats { display:none; }
 @media(prefers-reduced-motion:reduce) {
-  html:not([data-animation-mode="full"]) .halloween-city-bats * { animation-play-state:paused!important; will-change:auto!important; }
+  html:not([data-animation-mode="full"]) .halloween-city-bats :is(.halloween-bat-flight,.halloween-bat-wing) { animation-play-state:paused!important; will-change:auto!important; }
 }
 @media(max-height:600px),(max-width:1000px) {
   .skin-city-preview { width:44px; height:44px; }

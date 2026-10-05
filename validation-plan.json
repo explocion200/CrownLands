@@ -73,6 +73,18 @@
       ],
       "reason": "Dated implementation and local measurement record distinguishes measured browser gains from unverified physical-device and production latency outcomes; introduces no runtime behavior.",
       "tests": []
+    },
+    {
+      "paths": [
+        "skins-ui.css",
+        "tools/validate-halloween-city-skin-browser.js"
+      ],
+      "reason": "A wildcard bat pause selector invalidated all map descendants on camera changes. Restrict it to animated flight/wing nodes and protect full/reduced/off preferences, camera pause/resume, stable city art, ownership and previews at desktop/landscape sizes. Recheck shared skin packaging and asset budgets.",
+      "tests": [
+        "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ]
     }
   ]
 }
