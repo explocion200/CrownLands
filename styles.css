@@ -3153,6 +3153,18 @@ input {
 .wheel-regroup { left: var(--wheel-extra-left, -50px); top: var(--wheel-extra-top, 10px); }
 .wheel-info { left: var(--wheel-info-left, 76px); bottom: var(--wheel-info-bottom, 0); }
 
+.army-position {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  z-index: 20;
+  pointer-events: none;
+  contain: layout style;
+  will-change: transform;
+}
+.army-position.selected { z-index: 28; }
+.army-position > .army-token { position: relative; will-change: auto; }
 .army-token {
   position: absolute;
   min-width: 44px;

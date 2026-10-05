@@ -29,7 +29,7 @@ async function main() {
     updateOnlineArmySyncBadge: noop, normalizeTimestampMs: Number, clamp: (n, a, b) => Math.min(b, Math.max(a, n)),
     worldToMapPoint: p => p, getActiveMapRegionId: () => "map",
     getActiveMapBounds: () => ({left:0,top:0}), zoom:1, window:{devicePixelRatio:1},
-    getArmyTokenParts: token => token.parts ||= {},
+    getArmyTokenParts: token => token.parts ||= {position:{style:{}}},
     getMissionPointAtProgress: (_army, progress, segments) => {
       assert(segments, "Per-frame motion must reuse discovered route geometry");
       return { regionId: segments[0].regionId, point: { x: progress * 100, y: 0 } };
@@ -88,8 +88,9 @@ async function main() {
   const army = { launchedAtMs: clock, arrivesAtMs: clock + 1000 };
   const motion = { token, army, segments: [{ regionId: "map" }], correction: null };
   context.visibleArmyMotion.set("canonical", motion);
-  context.renderVisibleArmyMotion(); const start = token.style.transform;
-  clock += 16; context.renderVisibleArmyMotion(); assert.notEqual(token.style.transform, start, "Motion remained at label cadence");
+  context.renderVisibleArmyMotion(); const start = token.parts.position.style.transform;
+  clock += 16; context.renderVisibleArmyMotion(); assert.notEqual(token.parts.position.style.transform, start, "Motion remained at label cadence");
+  assert.equal(token.style.transform, undefined, "Motion invalidated the styled token instead of its shell");
   motion.correction = { from:{x:-10,y:0}, startedAt:clock };
   context.renderVisibleArmyMotion(); assert.equal(motion.point.x,-10,"Accepted snapshot flashed before its blend");
   clock += 75; context.renderVisibleArmyMotion();

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20261004-halloween-transition-draft-r1";
+const CACHE_VERSION = "20261004-gameplay-smoothness-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -45,7 +45,7 @@ const STATIC_CACHE_URLS = [
   "/skills-ledger-ui.css?v=20260913-skills-ledger-r1",
   "/settings-ledger-ui.css?v=20260913-settings-ledger-r1",
   "/assets/icons/settings-ledger.svg",
-  "/styles.css?v=20261004-halloween-transition-draft-r1",
+  "/styles.css?v=20261004-gameplay-smoothness-r1",
   "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
@@ -96,8 +96,9 @@ const STATIC_CACHE_URLS = [
   "/city-list-ui.css?v=20260909-city-list-r1",
   "/city-details-ui.js?v=20260909-city-details-r1",
   "/modal-ui.js?v=20260915-modal-lifecycle-r1",
-  "/optional-ui-styles.js?v=20260924-deferred-styles-r1",
-  "/game.js?v=20261003-halloween-map-decorations-r3",
+  "/marches-activity-ui.js?v=20261004-gameplay-smoothness-r1",
+  "/optional-ui-styles.js?v=20261004-gameplay-smoothness-r1",
+  "/game.js?v=20261004-gameplay-smoothness-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

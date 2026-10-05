@@ -1,17 +1,17 @@
 "use strict";
 const assert = require("node:assert/strict");
 const { operationTiming } = require("./stability-log-summary.js");
-const expected = { requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, transaction: 120 } };
+const expected = { requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, economyPreparation: 65, transaction: 120 } };
 assert.deepEqual(operationTiming({jsonPayload: {...expected, privateField: "do not export"}}),expected);
-const text="crownlands_operation { operation: 'sendArmyOrder', privateField: 'do not export', requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, transaction: 120 } }";
+const text="crownlands_operation { operation: 'sendArmyOrder', privateField: 'do not export', requestDurationMs: 250.5, transactionAttempts: 2, phaseDurationMs: { documentReads: 100, economyPreparation: 65, transaction: 120 } }";
 assert.deepEqual(operationTiming({textPayload:text}),expected);
 assert.deepEqual(operationTiming({jsonPayload:{message:text}}),expected);
 assert.equal(operationTiming({textPayload:"unrelated requestDurationMs: 12"}),null);
 assert.equal(operationTiming({textPayload:"crownlands_operation { outcome: 'ok' }"}),null);
 assert.equal(JSON.stringify(operationTiming({textPayload:text})).includes("privateField"),false);
-const scout = {scoutStage:"launch",scoutSourceType:"tower",scoutTargetType:"city",scoutBatchSize:1,scoutOriginCandidates:12,routeCacheHits:1404,routeCacheMisses:0};
+const scout = {scoutStage:"launch",scoutSourceType:"tower",scoutTargetType:"city",scoutBatchSize:1,scoutOriginCandidates:12,scoutOriginRoutes:3,scoutOriginsPruned:9,routeCacheHits:1404,routeCacheMisses:0};
 assert.deepEqual(operationTiming({jsonPayload:{...expected,...scout,ownerUid:"private",scoutReport:{troops:123}}}),{...expected,...scout});
-assert.deepEqual(operationTiming({textPayload:text.slice(0,-1)+", scoutStage: 'launch', scoutSourceType: 'tower', scoutTargetType: 'city', scoutBatchSize: 1, scoutOriginCandidates: 12, routeCacheHits: 1404, routeCacheMisses: 0 }"}),{...expected,...scout});
+assert.deepEqual(operationTiming({textPayload:text.slice(0,-1)+", scoutStage: 'launch', scoutSourceType: 'tower', scoutTargetType: 'city', scoutBatchSize: 1, scoutOriginCandidates: 12, scoutOriginRoutes: 3, scoutOriginsPruned: 9, routeCacheHits: 1404, routeCacheMisses: 0 }"}),{...expected,...scout});
 assert.deepEqual(operationTiming({jsonPayload:{...expected,scoutStage:"private",scoutSourceType:"player-id",scoutBatchSize:Infinity}}),expected);
 console.log("Stability log parsing passed: structured/text timings, missing evidence, and allowlisted fields.");
 

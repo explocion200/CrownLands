@@ -31,7 +31,11 @@ function loadOptionalUiScript(entry) {
 }
 
 function ensureOptionalUiScripts(names, host, onReady) {
-  return ensureOptionalUiResources([], Array.isArray(names) ? names : [names], host, onReady);
+  const groups = Array.isArray(names) ? names : [names];
+  const sheets = [...document.querySelectorAll("link[data-optional-ui-style]")]
+    .filter(entry => groups.includes(entry.dataset.optionalUiGroup || entry.dataset.optionalUiStyle))
+    .map(entry => entry.dataset.optionalUiStyle);
+  return ensureOptionalUiResources(sheets, groups, host, onReady);
 }
 function loadOptionalUiStyle(name) {
   const link = document.querySelector(`link[data-optional-ui-style="${name}"]`);

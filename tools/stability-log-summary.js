@@ -1,5 +1,5 @@
 "use strict";
-const PHASES = ["realmContext", "worldValidation", "documentReads", "routePlanning", "transaction"];
+const PHASES = ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction"];
 function scoutTiming(entry) {
   const payload = entry.jsonPayload || {};
   const text = String(entry.textPayload || payload.message || "");
@@ -10,7 +10,7 @@ function scoutTiming(entry) {
     const value = payload[key] || text.match(new RegExp("\\b" + key + "\\s*:\\s*['\"]([^'\"]+)['\"]"))?.[1];
     if (values.includes(value)) result[key] = value;
   }
-  for (const key of ["scoutBatchSize", "scoutOriginCandidates", "routeCacheHits", "routeCacheMisses"]) {
+  for (const key of ["scoutBatchSize", "scoutOriginCandidates", "scoutOriginRoutes", "scoutOriginsPruned", "routeCacheHits", "routeCacheMisses"]) {
     const value = typeof payload[key] === "number" ? payload[key]
       : Number(text.match(new RegExp("\\b" + key + "\\s*:\\s*(\\d+)"))?.[1] ?? NaN);
     if (Number.isFinite(value) && value >= 0) result[key] = Math.min(100000, Math.floor(value));

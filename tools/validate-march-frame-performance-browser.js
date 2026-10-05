@@ -15,7 +15,11 @@ function precisionChecks() {
   for (const testZoom of [.4, 1.1, 2.5]) {
     zoom = testZoom; centerOnWorldPoint({ x:qa.cx, y:qa.cy }); qa.clock = qa.now; const token = qa.render();
     const observer = new MutationObserver(() => {});
-    observer.observe(token, { attributes: true, attributeFilter: ["style"] });
+    const position = getArmyTokenParts(token).position;
+    check(position?.parentElement === armyLayer && token.parentElement === position, "March shell is detached");
+    observer.observe(position, { attributes: true, attributeFilter: ["style"] });
+    const tokenObserver = new MutationObserver(() => {});
+    tokenObserver.observe(token, { attributes:true, attributeFilter:["style"] });
     for (let n = 1; n <= 144; n++) {
       qa.clock = qa.now + n * 1000 / 144;
       renderVisibleArmyMotion();
@@ -30,6 +34,8 @@ function precisionChecks() {
     check(count < 144 / 2, "Slow marches must avoid redundant style writes at every zoom");
     renderVisibleArmyMotion(); renderVisibleArmyMotion();
     check(observer.takeRecords().length === 0, "Unchanged position must not rewrite transforms");
+    check(tokenObserver.takeRecords().length === 0, "Motion must not invalidate the styled token");
+    tokenObserver.disconnect();
     observer.disconnect();
   }
   zoom = savedZoom; centerOnWorldPoint({ x:qa.cx, y:qa.cy }); qa.clock = qa.now;
@@ -47,20 +53,35 @@ function precisionChecks() {
   motion.segments = [{ regionId: "other-region", points:[{x:0,y:0},{x:100,y:0}],length:100 }];
   renderVisibleArmyMotion(); check(token.hidden,"March leaving this region must hide");
   qa.render(); check(!token.hidden,"March entering this region must show");
+  token.click();
+  check(getArmyTokenParts(token).position.classList.contains("selected"), "Selection must raise the complete march shell");
+  check(!getArmyTokenParts(token).navigation.hidden, "Selected march lost its navigation controls");
+  const rect = token.getBoundingClientRect();
+  check(rect.width >= 44 * zoom && rect.height > 0, "March lost its hit area");
+  const center = {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2};
+  check(document.elementFromPoint(center.x, center.y)?.closest(".army-token") === token, "March is not clickable at its rendered position");
+  selectedArmyTokenId = ""; updateArmyTokenNavigationSelection();
+  onlineArmies = []; renderArmies(true);
+  check(!armyLayer.querySelector(".army-position"), "Culled marches left orphan position shells");
+  qa.render();
   return { sampledFrames:432, transformWrites:writes, maxDevicePixelError:largestError };
 }
 
 async function coveredChecks() {
   const wait = ms => new Promise(resolve => setTimeout(resolve,ms));
-  const original = renderVisibleArmyMotion; let calls = 0;
+  const original = renderVisibleArmyMotion, originalCities = renderCities, originalPaths = renderPaths;
+  let calls = 0, mapCalls = 0;
   renderVisibleArmyMotion = (...args) => { calls++; return original(...args); };
+  renderCities = (...args) => { mapCalls++; return originalCities(...args); };
+  renderPaths = (...args) => { mapCalls++; return originalPaths(...args); };
   try {
     for (const cover of ["profile", "modal", "hidden"]) {
       if (cover === "profile") profileScreen.classList.add("open");
       if (cover === "modal") modal.showModal();
       if (cover === "hidden") Object.defineProperty(document,"hidden",{configurable:true,value:true});
-      calls = 0; await wait(350);
+      calls = 0; mapCalls = 0; lastRenderTime = 0; await wait(350);
       if (calls !== 0) throw Error("Covered map still updates troop positions: " + cover);
+      if (mapCalls !== 0) throw Error("Covered map still redraws cities/routes: " + cover);
       profileScreen.classList.remove("open"); modal.close(); delete document.hidden;
       __troopQA.clock += 1000;
       for (let n=0;n<20&&!calls;n++) await wait(100);
@@ -70,7 +91,7 @@ async function coveredChecks() {
       if (Math.abs(motion.point.x-exact.x)>1e-9) throw Error("Resume must catch up to the current clock");
     }
     return { profile:true, modal:true, hidden:true, resumesAtCurrentPosition:true };
-  } finally { renderVisibleArmyMotion = original; profileScreen.classList.remove("open"); modal.close(); delete document.hidden; }
+  } finally { renderVisibleArmyMotion = original; renderCities = originalCities; renderPaths = originalPaths; profileScreen.classList.remove("open"); modal.close(); delete document.hidden; }
 }
 
 async function main() {
@@ -81,7 +102,7 @@ async function main() {
   if (baseline) {
     // Optional local comparison only; CI has no dependency on historical Git objects.
     const source = execFileSync("git",["show",baseline+":game.js"],{cwd:root,encoding:"utf8",maxBuffer:8*1024*1024});
-    baselineSource = ["frame","updateArmyTokenElement","renderArmiesUncached","renderVisibleArmyMotion"].map(name => {
+    baselineSource = ["frame","getArmyTokenParts","createArmyTokenElement","updateArmyTokenNavigationSelection","updateArmyTokenElement","renderArmiesUncached","renderVisibleArmyMotion"].map(name => {
       const start = source.indexOf("function "+name+"("), end = source.indexOf("\nfunction ",start+1);
       assert(start>=0 && end>start,"Missing baseline function " + name);
       return source.slice(start,end);
@@ -97,11 +118,13 @@ async function main() {
     client.on("Runtime.consoleAPICalled",e=>{if(e.type==="warning"||e.type==="error"){const message=e.args.map(a=>a.description||a.value).join(" ");errors.push(message);console.error(message);}});
     const evaluate=async expression=>{const r=await client.send("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
     const metrics=async()=>Object.fromEntries((await client.send("Performance.getMetrics")).metrics.map(m=>[m.name,m.value]));
-    const load=async()=>{
+    const load=async(version="current")=>{
       await client.send("Emulation.setCPUThrottlingRate",{rate:1});
       await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0"});
       for(let n=0;n<400&&!await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");n++)await delay(100);
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status"),"ready");
+      await evaluate("armyLayer.replaceChildren();armyTokenCache.clear();visibleArmyMotion.clear()");
+      if(version!=="current") await evaluate(baselineSource);
       await evaluate("("+setup.toString()+")()"); await delay(500);
       // This fixture defaults to legacy local economy. Isolate the production online
       // render path identically in both versions; all network APIs remain local mocks.
@@ -113,12 +136,16 @@ async function main() {
       const precision=await evaluate("("+precisionChecks.toString()+")()");
       const covered=await evaluate("("+coveredChecks.toString()+")()");
       checks.push({width,height,dpr,precision,covered});
+      const dense = await evaluate("("+crowded.toString()+")(false)");
+      assert.equal(await evaluate("armyLayer.querySelectorAll('.army-position').length"),dense.rendered);
+      assert.equal(await evaluate("getArmyRenderIntervalMs()"),400,"Crowded maps must reduce roster scans without throttling motion");
+      const screenshot = await client.send("Page.captureScreenshot",{format:"png"});
+      fs.writeFileSync(path.join(out,`dense-${width}.png`),Buffer.from(screenshot.data,"base64"));
       // Optional A/B measurements use identical content, authority, camera and CPU.
       // Preserve real crowded-map safeguards instead of forcing animation on.
       if (!baseline) continue;
       for (const rate of [1,4]) for (const skin of [false,true]) for (const version of [baseline,"current"]) {
-        await load();
-        if(version!=="current") await evaluate(baselineSource);
+        await load(version);
         await evaluate("cosmeticState=COSMETIC_CATALOG.normalize({owned:{halloween_troops:true}})");
         const population=await evaluate("("+crowded.toString()+")("+skin+")");
         await delay(500); await client.send("Emulation.setCPUThrottlingRate",{rate}); await delay(250);

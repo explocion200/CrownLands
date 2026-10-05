@@ -251,7 +251,18 @@ async function main() {
   );
 
   // Expiration is exclusive: a timestamp equal to or behind server time allows re-scouting.
+  const deferredCity = candidates.find(doc => doc.id !== targetRef.id && !doc.data().ownerUid);
+  assert(deferredCity, "The fixture needs an unrelated production city.");
+  const deferredCheckpointMs = Date.now() - 60 * 60_000;
+  const sourceCheckpointMs = Date.now() - 5 * 60_000;
   await Promise.all([
+    sourceRef.set({ troops: 100, troopFloat: 100, productionUpdatedAtMs: sourceCheckpointMs }, { merge: true }),
+    deferredCity.ref.set({
+      owner: "player", ownerKind: "player", ownerUid: defender.uid,
+      isMainCity: false, level: 1, troops: 100, troopFloat: 100,
+      productionUpdatedAtMs: deferredCheckpointMs, regionId,
+      worldId: realm.worldId, resetGeneration: realm.resetGeneration,
+    }, { merge: true }),
     targetRef.set({
       owner: "player",
       ownerKind: "player",
@@ -271,6 +282,17 @@ async function main() {
     regionId,
   }));
   assert(expiryLaunch.movement?.id === expiryArmyId, "Scouting did not resume when Veil expired.");
+  assert(expiryLaunch.movement.fromId === sourceRef.id, "The expected closest scout city was not selected.");
+  const departure = (await sourceRef.get()).data();
+  assert(departure.productionUpdatedAtMs > sourceCheckpointMs, "Scout deduction did not checkpoint projected production.");
+  // Infer the unchanged fixture's rate from the first interval, then collect a
+  // second time. Re-crediting the five-minute interval would exceed this bound.
+  const productionPerMs = (departure.troopFloat - 99) / (departure.productionUpdatedAtMs - sourceCheckpointMs);
+  const collected = await callFunction("collectEconomy", attacker.token);
+  const projected = collected.cityUpdates?.find(city => city.id === sourceRef.id);
+  assert(projected, "Collection did not return the source's projected production.");
+  const expectedFloat = departure.troopFloat + productionPerMs * (projected.productionUpdatedAtMs - departure.productionUpdatedAtMs);
+  assert(Math.abs(projected.troopFloat - expectedFloat) < 0.01, "Collection duplicated or lost scout departure production.");
 
   // A Veil activated while a scout is traveling must still block intel at arrival and return the scout once.
   await Promise.all([
@@ -292,6 +314,13 @@ async function main() {
   assert(resolvedArmy.status === "resolved", "The in-flight Veil army was not marked resolved.");
   assert(resolvedArmy.result?.blocked === "veil_of_silence", "The canonical army omitted its Veil result.");
   const sourceAfterVeiledResolution = (await sourceRef.get()).data() || {};
+  assert(sourceAfterVeiledResolution.productionUpdatedAtMs > departure.productionUpdatedAtMs,
+    "A returned scout must checkpoint its projected balance below the routine interval.");
+  assert((await deferredCity.ref.get()).data().productionUpdatedAtMs === deferredCheckpointMs,
+    "Scout arrival checkpointed an unrelated defender city.");
+  const defenderCollection = await callFunction("collectEconomy", defender.token);
+  const deferredProduction = defenderCollection.cityUpdates?.find(city => city.id === deferredCity.id);
+  assert(deferredProduction?.troopFloat > 100, "Deferring a checkpoint lost the unrelated city's production.");
   assert(Number(resolvedArmy.result?.returned) === 1, "The canonical Veil result did not return exactly one scout.");
   assert(
     Number(sourceAfterVeiledResolution.troops) >= Number(sourceAfterExpiryLaunch.troops) + 1,

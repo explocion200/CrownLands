@@ -152,8 +152,8 @@ assert.match(server, /cityPatches\.push\([\s\S]*?\.\.\.mandatoryCheckpoints,[\s\
 const settlementStart = server.indexOf("async function resolveArmyOrderById");
 const settlementEnd = server.indexOf("function getScheduledArmyTarget", settlementStart);
 const settlementSource = server.slice(settlementStart, settlementEnd);
-assert.match(settlementSource, /const settlementCheckpointWriteBudget\s*=\s*\{[\s\S]*?remaining:\s*ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET/);
-assert.match(settlementSource, /Math\.floor\(ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET \/ 2\)/,
+assert.match(settlementSource, /remaining:\s*army.kind === "scout" \? 0 : ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET/);
+assert.match(settlementSource, /Math\.floor\(settlementCheckpointWriteBudget.remaining \/ 2\)/,
   "Distinct attacker and defender economies must each reserve half of the settlement checkpoint budget.");
 assert.match(settlementSource, /checkpointWriteBudget:\s*settlementParticipantCheckpointWriteBudget[\s\S]*?sharedCheckpointWriteBudget:\s*settlementCheckpointWriteBudget[\s\S]*?checkpointPriorityRefs:/,
   "Army settlement must share one bounded checkpoint budget and prioritize source/target cities.");
