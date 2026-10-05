@@ -1,27 +1,51 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "83424189a3e82bf8cf2a02dcecbe1c207b72b0c1",
+  "baseCommit": "dea2c822b0ee9dce4c027729adbdee67d30a9cac",
   "coverage": [
+    {
+      "paths": [
+        "functions/crown-live-payments.js",
+        "functions/crown-live-payments-service.js",
+        "functions/crown-live-payments-http.js",
+        "functions/index.js",
+        "functions/test/emulator-crown-live-payments.js",
+        "tools/test-crown-live-payments.js"
+      ],
+      "reason": "Separate live payment authority, authenticated callables and signed webhooks require quote/mode/tax/terms checks, atomic wallet fulfillment, concurrent duplicate events, isolation from sandbox, retries, expiry, manual review, Firestore rules and auth. The shared cosmetics wallet is exercised concurrently with real cosmetic-service spending and pickup normalization; existing cosmetics and sandbox suites cover affected shared index/auth and wallet dependencies.",
+      "tests": [
+        "tools/test-crown-live-payments.js",
+        "tools/test-crown-payments.js",
+        "tools/validate-cosmetics.js",
+        "functions/test/emulator-crown-live-payments.js",
+        "functions/test/emulator-crown-payments.js",
+        "functions/test/emulator-cosmetics.js"
+      ]
+    },
+    {
+      "paths": [
+        "cosmetics-client.js",
+        "crown-payments-ui.js",
+        "crown-payment-return.html",
+        "index.html",
+        "tools/validate-crown-payments-browser.js",
+        "support.html",
+        "terms.html",
+        "privacy.html"
+      ],
+      "reason": "Hosted live/test checkout selection, payment support and policy links, verified status, interrupted checkout recovery, wrong-mode boundaries, browser storage and account-switch isolation. Desktop/landscape-mobile exercise the actual Shop and changed support/terms/privacy sections, while cosmetic transport regressions and public-site structure/link checks cover unchanged dependencies.",
+      "tests": [
+        "tools/validate-crown-payments-browser.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-public-site-content.js"
+      ]
+    },
     {
       "paths": [
         "docs/CROWN_PAYMENTS.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the authorized sandbox connection, approved 1,000-Crown / US$4.99 offer, uniquely resolved designated tester, excluded other accounts and unchanged playable wallet/current realm. Document the precise Stripe API cause, compatibility repair, verified single-function deployment, safely retained failed receipt and successful signed-in sandbox payment. Provider/session and Firestore read-back proved automatic webhook fulfillment before any status call, exactly one 1,000-Crown test credit, unchanged playable wallet and no extra credit after repeated status checks and a signed completion-event replay. Documentation does not change gameplay, skin pricing or UI; its runtime dependency is covered by the payment-service entry below.",
+      "reason": "Record confirmed support email, manual refund review and worldwide availability, distinct live implementation/activation status, operator review workflow and merchant-tax/credentials/webhook release prerequisites. No independent runtime behavior; implementation dependencies are covered above.",
       "tests": []
-    },
-    {
-      "paths": [
-        "functions/crown-payments-service.js",
-        "functions/test/emulator-crown-payments.js",
-        "tools/test-crown-payments.js"
-      ],
-      "reason": "Pin only Checkout Session creation to the API version that supports the existing card-only request. Exercise the installed Stripe SDK's outgoing HTTP version header and form body, unchanged idempotency and order persistence, price/session validation, signed webhook guards and no unpaid credits. The selected emulator covers authoritative Firestore transactions, lost-response recovery, concurrent retries/fulfillment, client and owner isolation, expiry and unchanged playable wallets; browser checks cover recovery of the same order after failed creation at desktop and landscape-mobile sizes. No frontend, rules, release contract, build inputs, other callables or gameplay logic changes.",
-      "tests": [
-        "tools/test-crown-payments.js",
-        "tools/validate-crown-payments-browser.js",
-        "functions/test/emulator-crown-payments.js"
-      ]
     }
   ]
 }

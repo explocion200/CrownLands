@@ -1,4 +1,4 @@
-/* Stripe sandbox checkout: this module never changes the game's Crown wallet. */
+/* Hosted Crown checkout: all currency changes come from server wallet snapshots. */
 (function (root) {
   "use strict";
   let current = null;
@@ -14,7 +14,7 @@
   }
   function remember(session) {
     try {
-      const key = `crownlands-stripe-test:${session.uid}`;
+      const key = `crownlands-stripe-${session.mode || "test"}:${session.uid}`;
       if (session.request) sessionStorage.setItem(key, JSON.stringify(session.request)); else sessionStorage.removeItem(key);
     } catch { /* Server order status remains recoverable if browser storage is unavailable. */ }
   }
@@ -24,7 +24,7 @@
       host.replaceChildren();
       if (!session.enabled) continue;
       const button = document.createElement("button");
-      button.type = "button"; button.dataset.crownCheckout = ""; button.textContent = "Test Crown checkout";
+      button.type = "button"; button.dataset.crownCheckout = ""; button.textContent = session.mode === "live" ? "Buy Crowns" : "Test Crown checkout";
       button.addEventListener("click", () => { if (current === session) open(session); });
       host.append(button);
     }
@@ -33,17 +33,19 @@
     if (current !== session || !session.dialog) return;
     const order = session.order, pending = session.request || (order && !terminal(order));
     const selected = session.selected || session.packs[0]?.id;
-    const message = order?.status === "confirmed" ? `Test payment confirmed: ${order.crowns} test Crowns recorded. Your playable Crown balance is unchanged.`
-      : order?.status === "expired" ? "This test checkout expired. No new test Crowns were credited by this check."
+    const live = session.mode === "live";
+    const message = order?.reviewRequired ? "This payment needs manual review. Contact crownlandsmail@gmail.com with your order reference."
+      : order?.status === "confirmed" ? (live ? `Payment confirmed: ${order.crowns.toLocaleString()} Crowns delivered to your account.` : `Test payment confirmed: ${order.crowns} test Crowns recorded. Your playable Crown balance is unchanged.`)
+      : order?.status === "expired" ? (live ? "This checkout expired. No Crowns were credited by this check." : "This test checkout expired. No new test Crowns were credited by this check.")
       : order ? "Payment has not been confirmed. Check its status or continue the same checkout." : "";
-    session.dialog.innerHTML = `<header><h2>Buy Crowns — test checkout</h2><button type="button" data-crown-close aria-label="Close Crown checkout">Close</button></header>
-      <p class="crown-test-notice">Sandbox only. No real money is charged and no usable Crowns are granted.</p>
+    session.dialog.innerHTML = `<header><h2>${live ? "Buy Crowns" : "Buy Crowns — test checkout"}</h2><button type="button" data-crown-close aria-label="Close Crown checkout">Close</button></header>
+      ${live ? `<p class="crown-purchase-notice">One-time purchase. The displayed US-dollar price includes any applicable tax. Crowns cannot be transferred or exchanged for money.</p><p>Refund requests are reviewed manually. Contact <a href="mailto:crownlandsmail@gmail.com">crownlandsmail@gmail.com</a>. Read our <a href="https://playcrownlands.com/terms.html#crown-purchases" target="_blank" rel="noopener">purchase terms</a> and <a href="https://playcrownlands.com/privacy.html#payments" target="_blank" rel="noopener">privacy policy</a>.</p>` : `<p class="crown-test-notice">Sandbox only. No real money is charged and no usable Crowns are granted.</p>`}
       <p>Crowns are for cosmetics. Checkout opens in a separate tab so you can return to your game.</p>
-      <label>Test Crown pack<select data-crown-pack ${pending || session.busy ? "disabled" : ""}>${session.packs.map(pack => `<option value="${escape(pack.id)}" ${pack.id === selected ? "selected" : ""}>${pack.crowns.toLocaleString()} Crowns — ${escape(money(pack))}</option>`).join("")}</select></label>
-      ${order ? `<p class="crown-order-reference">Test order: ${escape(order.orderId)}</p>` : ""}
+      <label>${live ? "Crown pack" : "Test Crown pack"}<select data-crown-pack ${pending || session.busy ? "disabled" : ""}>${session.packs.map(pack => `<option value="${escape(pack.id)}" ${pack.id === selected ? "selected" : ""}>${pack.crowns.toLocaleString()} Crowns — ${escape(money(pack))}</option>`).join("")}</select></label>
+      ${order ? `<p class="crown-order-reference">${live ? "Order" : "Test order"}: ${escape(order.orderId)}</p>` : ""}
       <p role="status" aria-live="polite">${escape(session.error || message)}</p>
-      <footer>${terminal(order) ? '<button type="button" data-crown-again>Choose another test pack</button>'
-        : `<button type="button" data-crown-pay ${session.busy || !session.packs.length ? "disabled" : ""}>${session.busy ? "Checking…" : pending ? "Continue test checkout" : "Open Stripe test checkout"}</button>`}
+      <footer>${terminal(order) ? `<button type="button" data-crown-again>Choose another ${live ? "" : "test "}pack</button>`
+        : `<button type="button" data-crown-pay ${session.busy || !session.packs.length ? "disabled" : ""}>${session.busy ? "Checking…" : pending ? (live ? "Continue checkout" : "Continue test checkout") : (live ? "Open Stripe checkout" : "Open Stripe test checkout")}</button>`}
       ${order ? `<button type="button" data-crown-check ${session.busy ? "disabled" : ""}>Check payment status</button>` : ""}</footer>`;
     session.dialog.querySelector("[data-crown-close]").onclick = () => session.dialog.close();
     session.dialog.querySelector("[data-crown-pack]").onchange = event => { session.selected = event.target.value; };
@@ -56,7 +58,7 @@
   function open(session) {
     if (!session.dialog) {
       session.dialog = document.createElement("dialog"); session.dialog.className = "crown-payments-dialog";
-      session.dialog.setAttribute("aria-label", "Buy Crowns test checkout"); document.body.append(session.dialog);
+      session.dialog.setAttribute("aria-label", session.mode === "live" ? "Buy Crowns" : "Buy Crowns test checkout"); document.body.append(session.dialog);
     }
     render(session); session.dialog.showModal();
   }
@@ -70,12 +72,13 @@
     const popup = window.open("about:blank", "_blank");
     if (!popup) { session.error = "Allow a new tab for Stripe checkout, then retry."; render(session); return; }
     popup.opener = null;
-    popup.document.title = "Opening Stripe test checkout";
-    popup.document.body.textContent = "Opening Stripe test checkout…";
+    popup.document.title = "Opening Stripe checkout";
+    popup.document.body.textContent = "Opening Stripe checkout…";
     session.busy = true; session.error = ""; render(session);
     try {
       const result = await session.api.createCrownCheckout(session.request);
       if (current !== session) { popup.close(); return; }
+      if (result.order?.mode !== session.mode) throw Error("The checkout mode changed. Reopen the game before buying.");
       session.order = result.order;
       session.selected = result.order.packId;
       if (terminal(session.order)) { session.request = null; remember(session); }
@@ -108,6 +111,7 @@
     try {
       const result = await session.api.getCrownCheckoutStatus({ orderId: session.order.orderId });
       if (current !== session) return;
+      if (result.order?.mode !== session.mode) throw Error("The checkout mode changed. Reopen the game before buying.");
       session.order = result.order;
       if (terminal(session.order)) { session.request = null; remember(session); }
     } catch (error) { if (current === session) session.error = error.message || "Payment status is unavailable. Please retry."; }
@@ -117,22 +121,36 @@
     if (!host) return;
     reset(uid);
     if (!current || !api?.getCrownPaymentCatalog) return;
-    const session = current; session.api = api; session.roots.add(host); refreshButtons(session);
+    const session = current; session.roots.add(host); refreshButtons(session);
     if (session.loaded) return;
+    session.api = api;
     session.loaded = true;
-    void api.getCrownPaymentCatalog().then(result => {
-      if (current !== session) return;
-      session.enabled = result.enabled === true && result.mode === "test";
+    void (async () => {
+      if (api.getLiveCrownPaymentCatalog) {
+        try {
+          const live = await api.getLiveCrownPaymentCatalog();
+          if (current !== session) return null;
+          if (live.enabled === true && live.mode === "live") {
+            session.api = { getCrownPaymentCatalog: api.getLiveCrownPaymentCatalog, createCrownCheckout: api.createLiveCrownCheckout, getCrownCheckoutStatus: api.getLiveCrownCheckoutStatus };
+            return live;
+          }
+        } catch { /* Older deployments can still offer designated sandbox checkout. */ }
+      }
+      return api.getCrownPaymentCatalog();
+    })().then(result => {
+      if (current !== session || !result) return;
+      session.mode = result.mode;
+      session.enabled = result.enabled === true && ["test", "live"].includes(result.mode);
       session.packs = session.enabled ? result.packs : [];
       session.order = result.latestOrder || null;
       if (session.order) session.selected = session.order.packId;
       if (session.order && !terminal(session.order)) session.request = requestFor(session.order);
       else if (!session.order) {
-        try { session.request = JSON.parse(sessionStorage.getItem(`crownlands-stripe-test:${uid}`) || "null"); } catch { /* Ignore corrupt browser storage. */ }
+        try { session.request = JSON.parse(sessionStorage.getItem(`crownlands-stripe-${session.mode}:${uid}`) || "null"); } catch { /* Ignore corrupt browser storage. */ }
       }
       if (terminal(session.order)) { session.request = null; remember(session); }
       refreshButtons(session);
-    }).catch(() => { /* Unconfigured or old deployments keep the test-only control hidden. Retry next account session. */ });
+    }).catch(() => { /* Unconfigured or old deployments keep the checkout control hidden. Retry next account session. */ });
   }
   root.CrownlandsCrownPaymentsUI = Object.freeze({ mount, reset });
 })(globalThis);

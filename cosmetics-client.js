@@ -8,6 +8,9 @@
   async function getCrownPaymentCatalog() { return callServerFunction("getCrownPaymentCatalog", {}); }
   async function createCrownCheckout(payload) { return callServerFunction("createCrownCheckout", payload); }
   async function getCrownCheckoutStatus(payload) { return callServerFunction("getCrownCheckoutStatus", payload); }
+  async function getLiveCrownPaymentCatalog() { return callServerFunction("getLiveCrownPaymentCatalog", {}); }
+  async function createLiveCrownCheckout(payload) { return callServerFunction("createLiveCrownCheckout", payload); }
+  async function getLiveCrownCheckoutStatus(payload) { return callServerFunction("getLiveCrownCheckoutStatus", payload); }
   function subscribeCosmetics(handlers = {}) {
     if (!client.db || !client.user?.uid) return () => {};
     const { doc } = client.modules.firestore;
@@ -33,6 +36,6 @@
   async function reserveHarvestBonusSpawn(payload = {}) {
     return callServerFunction("reserveHarvestBonusSpawn", payload);
   }
-    return { getCrownPaymentCatalog, createCrownCheckout, getCrownCheckoutStatus, reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
+    return { getLiveCrownPaymentCatalog, createLiveCrownCheckout, getLiveCrownCheckoutStatus, getCrownPaymentCatalog, createCrownCheckout, getCrownCheckoutStatus, reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
   } };
 })(globalThis);

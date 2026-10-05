@@ -1,8 +1,30 @@
-# Stripe Crown checkout foundation
+# Stripe Crown payments
 
 The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. Checkout is now enabled only for that account; live payments remain unapproved and the cosmetics-only rule is unchanged.
 
-## Current behavior
+## Live purchase implementation — October 5, 2026
+
+The owner confirmed **crownlandsmail@gmail.com**, **manual refund review**, and **worldwide availability** wherever Stripe and applicable law permit. The live Stripe catalog already contains product `prod_VO5htwh5By5rlu` and one-time USD 499 price `price_1UNJVfKuUcvmAfUIi5775Efd`. Creating that product did not enable checkout. The support email was saved and read back in the live Stripe Dashboard on October 5.
+
+### Architecture and payment authority
+
+- Three new authenticated callables (`getLiveCrownPaymentCatalog`, `createLiveCrownCheckout`, `getLiveCrownCheckoutStatus`) use `serverConfig/crownLivePayments`. Separate secret bindings are `STRIPE_CROWNS_LIVE_SECRET_KEY` and `STRIPE_CROWNS_LIVE_WEBHOOK_SECRET`. No credential values belong in this repository.
+- `crownPaymentOrders/{orderId}` stores permanent account-bound receipts. `players/{uid}/crownPayments/state` stores the latest order outside the cosmetics normalization path. A verified live purchase atomically increments only Crowns and revision in `players/{uid}/cosmetics/state`, preserving ownership, equipped skins and daily pickups. Sandbox collections and credentials remain separate.
+- Browser inputs cannot supply Stripe prices or Crown grants. The sole approved quote is 1,000 Crowns / USD 499. Paid sessions must match the order, price, amount, currency, quantity, live mode, metadata, terms acceptance and completed tax calculation. Card-only creation retains the verified Dahlia API contract, account-bound idempotency and interrupted-checkout recovery. Wallet updates use the existing server snapshot subscription.
+- To preserve the displayed US$4.99 total, the implementation requires a Stripe price with **inclusive** tax behavior and uses automatic tax. The existing catalog price's tax behavior was previously unspecified: merchant setup must set/verify the price behavior and product classification before launch. No tax registration, paid Tax subscription or liability declaration was submitted. Stripe Tax configuration and required registrations must be reviewed by the merchant; automatic tax does not substitute for registration.
+- Refund requests arrive by private email. An authorized operator issues an approved refund in Stripe. The application never issues cash refunds or automatically revokes currency or skins. `stripeCrownLiveWebhook` records refund/dispute events once in `crownPaymentReviews/{eventId}`, ties them to the original payment and flags the order for review. It stores provider IDs, event type, status and timestamps, not full payloads, card details, email or address. Cases received before fulfillment hold delivery. Delivered purchases remain delivered until an explicitly authorized manual resolution; automatic spent-Crown recovery is not approved.
+- Operators review pending records alongside the original Stripe payment, customer request and order. Record each decision and separately authorized correction; clear an order's review flag only after all associated cases are resolved. Preserve event history. Stripe's Dashboard remains the source for cash outcomes and dispute deadlines; a pending event is not proof a refund succeeded. Replayed events do not reopen a resolved event record or repeat a grant.
+- Subscribe the live webhook to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `refund.created`, `refund.updated`, `refund.failed`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, and `charge.dispute.funds_reinstated`. Signatures and direct-account live mode are mandatory; failed reconciliation returns 500 for retry.
+
+### Launch configuration and remaining work
+
+Live configuration is absent/disabled by default. The browser cannot enable it. The service requires `enabled`, `launchApproved` and `taxReviewed` all true, plus `mode: "live"`, `refundPolicy: "manual_review"`, `countryPolicy: "worldwide"`, `supportEmail: "crownlandsmail@gmail.com"`, and the single approved pack in `packs` with `id: "crowns_1000"`, `crowns: 1000`, `amountMinor: 499`, `currency: "usd"` and the verified live price ID. No country allowlist is applied; provider and legal restrictions still apply.
+
+Before launch: complete merchant Tax setup and review registrations/classification, securely bind live credentials, configure/verify the signed live webhook, run selected CI and hosted checkout verification, publish the purchase/support/privacy pages and new client/backend, then enable live configuration under release approval. The new four functions and website changes have **not been deployed** by this update. Never test a live payment without the payer's explicit authorization. Existing sandbox purchase and decline/cancel/interruption/expiry checks are complete; live-path emulator/browser tests use fixtures and do not create real charges.
+
+Sources: [Stripe tax setup and registrations](https://docs.stripe.com/tax/checkout/page), [Stripe refund events](https://docs.stripe.com/refunds#refund-events). October 5 current-realm read-back confirmed `main-realm-2026-10` / `realm-2026-10`, shared realm `shard_0001`, release `crownlands-2026-10-03-city-wall-midpoint-v4`. No realm or production wallet data was changed.
+
+## Existing sandbox behavior
 
 - Shop → Skins displays **Test Crown checkout** only for accounts explicitly listed in the server's sandbox configuration. Other accounts see the existing shop.
 - A selected pack opens Stripe-hosted Checkout in a new tab. The game remains open. The return page instructs the tester to return to the game and check the order; a redirect never grants currency.
