@@ -7,7 +7,7 @@
         "docs/CROWN_PAYMENTS.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the authorized sandbox connection, approved 1,000-Crown / US$4.99 offer, uniquely resolved designated tester, configuration read-back, excluded other accounts and unchanged playable wallet/current realm. Document the first signed-in creation failure, precise Stripe API cause, compatibility repair and verified unpaid provider probe without claiming completed fulfillment. Documentation does not change gameplay, skin pricing or UI; its runtime dependency is covered by the payment-service entry below. Actual payment verification remains explicit operational work.",
+      "reason": "Record the authorized sandbox connection, approved 1,000-Crown / US$4.99 offer, uniquely resolved designated tester, excluded other accounts and unchanged playable wallet/current realm. Document the precise Stripe API cause, compatibility repair, verified single-function deployment, safely retained failed receipt and successful signed-in sandbox payment. Provider/session and Firestore read-back proved automatic webhook fulfillment before any status call, exactly one 1,000-Crown test credit, unchanged playable wallet and no extra credit after repeated status checks and a signed completion-event replay. Documentation does not change gameplay, skin pricing or UI; its runtime dependency is covered by the payment-service entry below.",
       "tests": []
     },
     {
