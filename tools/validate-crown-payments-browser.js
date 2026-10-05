@@ -139,6 +139,15 @@ async function main() {
         await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
         await client.send("Page.navigate", { url: `${address.url}/${page.file}#${page.section}` });
         await wait(`!!document.getElementById(${JSON.stringify(page.section)}) && document.readyState === 'complete'`);
+        await evaluate(`(async () => {
+          await document.fonts.ready;
+          const target = document.getElementById(${JSON.stringify(page.section)});
+          const headerHeight = document.querySelector('.site-header').getBoundingClientRect().height;
+          window.scrollTo({ top: window.scrollY + target.getBoundingClientRect().top - headerHeight - 12, behavior: 'instant' });
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        })()`);
+        const sectionBounds = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).getBoundingClientRect().toJSON()`);
+        assert(sectionBounds.top >= 0 && sectionBounds.top < viewport.height / 2, "Payment policy heading is visible in the capture");
         const section = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).textContent`);
         assert(section.includes("crownlandsmail@gmail.com"));
         assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Payment policy has no horizontal overflow");
