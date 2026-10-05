@@ -324,6 +324,13 @@ const halloweenMapFeatureBudget = 64 * 1024;
 // Bound its artwork at 32 KiB and reserve 4 KiB for theme/style/URL integration;
 // existing entry, offline-shell, prepared-world and total artifact caps stay fixed.
 const halloweenMapTransitionBudget = 36 * 1024;
+// The articulated flock adds 4.4 KiB of CSS and ~1.6 KiB of manager/entry code.
+// Bound that increment at 7 KiB, including full production build URLs and
+// artifact metadata. Artwork, startup, offline-shell and combined caps stay fixed.
+const animatedMapBatsBudget = 7 * 1024;
+if (fs.statSync(path.join(dist, "map-transition-bats.css")).size > 5 * 1024) {
+  throw new Error("Animated map bat styles exceed their 5 KiB allowance.");
+}
 const halloweenTransitionTiles = files.filter(file => /^map-transition-halloween-.*\.webp$/.test(path.basename(file)));
 if (halloweenTransitionTiles.length !== 1 || fs.statSync(halloweenTransitionTiles[0]).size > 32 * 1024) {
   throw new Error("Halloween transition must ship exactly one tile below 32 KiB.");
@@ -335,7 +342,7 @@ const troopsHelmetArtworkBudget = 8 * 1024;
 if (fs.statSync(path.join(dist, "assets/optimized/troops-helmet-192x192-8c144647d31b.webp")).size > troopsHelmetArtworkBudget) {
   throw new Error("The shared troops helmet exceeds its 8 KiB artwork allowance.");
 }
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + troopsHelmetArtworkBudget;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

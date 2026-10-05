@@ -24,7 +24,7 @@
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Ship and precache the dedicated bat stylesheet with matching versioned entry URLs and a refreshed service-worker cache. Require it in production, cap its payload at 5 KiB and retain all existing per-file, installation, startup and total-artifact limits. Validate both ordinary and /play/ entry references, installed-app routing, offline dependencies, and packaged resources. Backend and production state are unaffected, so emulator suites do not apply.",
+      "reason": "Ship and precache the dedicated bat stylesheet with matching versioned entry URLs and a refreshed service-worker cache. Require it in production, cap its payload at 5 KiB and bound the added production payload at 7 KiB, including full build URLs and metadata, while retaining all existing per-file, installation, startup and combined-artifact limits. Validate both ordinary and /play/ entry references, installed-app routing, offline dependencies, and packaged resources. Backend and production state are unaffected, so emulator suites do not apply.",
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js",
