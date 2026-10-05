@@ -10,7 +10,7 @@
         "tools/validate-animation-system.js",
         "tools/validate-halloween-map-transition-browser.js"
       ],
-      "reason": "The October presentation adds a temporary bounded flock to the shared map-transition foreground. Cover shared animation lifecycle and seasonal boundaries, valid directional flight and continuing wingbeats, real current-Core neighbor/return navigation, desktop and landscape-mobile appearance, retained clouds, missing-art cover, reduced/off motion, early finish, supersession, repeated cleanup, timeout recovery and switching Off during flight. Preview controls exercise the same runtime. No world data, multiplayer authority or gameplay rules change.",
+      "reason": "The October presentation adds a temporary bounded flock to the shared map-transition foreground. Cover shared animation lifecycle and seasonal boundaries, valid directional flight and continuing wingbeats, real current-Core neighbor/return navigation, desktop and landscape-mobile appearance, retained clouds, missing-art cover, reduced/off motion, early finish, supersession, repeated cleanup, timeout recovery and switching Off during flight. Preview controls exercise the same runtime, with fitted landscape frames in portrait side panels and resizing between desktop and landscape-mobile sizes. No world data, multiplayer authority or gameplay rules change.",
       "tests": [
         "tools/validate-animation-system.js",
         "tools/validate-halloween-map-transition-browser.js"

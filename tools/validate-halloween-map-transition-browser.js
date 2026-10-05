@@ -136,18 +136,29 @@ async function main() {
     assert.equal((await inspect()).opacity, 1);
     await evaluate("halloweenTransition.finish()"); await wait("!isMapInteractionBlocked()");
     await client.send("Network.setBlockedURLs", { urls: [] });
+    const previewSizes = [];
     await client.send("Page.navigate", { url: address.url + "/docs/art-sources/halloween-map-transition/preview.html" });
     await wait("!document.getElementById('play').disabled");
-    await evaluate("document.getElementById('hold').click()");
-    await wait("document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition?.handle.element.dataset.theme==='halloween'");
-    assert.equal(await evaluate("document.getElementById('hold').textContent"), "Reveal map");
-    await evaluate("document.getElementById('hold').click()");
-    await wait("!document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition");
+    // The preview must fit a landscape game inside portrait side panels without hiding the game's real orientation guard.
+    for (const [width, height] of [[858, 1244], [400, 800], [1440, 900], [844, 390]]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+      await wait(`(()=>{const frame=document.getElementById('game'),viewport=document.getElementById('viewport'),rect=frame.getBoundingClientRect(),bounds=viewport.getBoundingClientRect(),gameWidth=Math.max(844,viewport.clientWidth),gameHeight=Math.max(390,Math.min(viewport.clientHeight,gameWidth*9/16));return innerWidth===${width} && innerHeight===${height} && frame.contentWindow.innerWidth===gameWidth && Math.abs(frame.contentWindow.innerHeight-gameHeight)<1 && frame.contentWindow.innerWidth>frame.contentWindow.innerHeight && rect.left>=bounds.left-1 && rect.right<=bounds.right+1 && rect.top>=bounds.top-1 && rect.bottom<=bounds.bottom+1})()`);
+      const dimensions = await evaluate(`(()=>{const frame=document.getElementById('game'),runtime=frame.contentWindow;return {width:runtime.innerWidth,height:runtime.innerHeight,warning:runtime.getComputedStyle(runtime.document.querySelector('.rotate-warning')).display}})()`);
+      assert.equal(dimensions.warning, "none", "Preview must not show the game's portrait warning");
+      await evaluate("document.getElementById('hold').click()");
+      await wait("document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition?.handle.element.dataset.phase==='loading'");
+      assert.equal(await evaluate("document.getElementById('hold').textContent"), "Reveal map");
+      assert.equal(await evaluate("document.getElementById('game').contentDocument.querySelectorAll('.crownlands-map-bat').length"), dimensions.width < 900 ? 6 : 10);
+      await screenshot(`preview-${width}x${height}.png`);
+      await evaluate("document.getElementById('hold').click()");
+      await wait("!document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition");
+      previewSizes.push({ width, height, game: dimensions, fitted: true, controls: true });
+    }
     await evaluate("document.getElementById('theme').value='clouds';document.getElementById('play').click()");
     await wait("document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition?.handle.element.dataset.theme==='clouds'");
     await wait("!document.getElementById('game').contentWindow.CrownlandsAnimations.mapTransition");
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(output, "validation.json"), JSON.stringify({ results, missingArtFallback: true, previewControls: true, errors }, null, 2) + "\n");
+    fs.writeFileSync(path.join(output, "validation.json"), JSON.stringify({ results, missingArtFallback: true, previewControls: true, previewSizes, errors }, null, 2) + "\n");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { if (!await waitForProcessExit(browser.browserProcess)) { browser.browserProcess.kill(); await waitForProcessExit(browser.browserProcess); } await removeBrowserProfile(browser.profilePath); }
