@@ -1,28 +1,34 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "fd6060fd838ac0202bfee2512fbb1b99a9b030ef",
+  "baseCommit": "4c080e9590b91e81f7d4b7db8a6ed1f0e1e7228e",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-owned-city-cross-map-sync.js", "tools/validate-incoming-threats-browser.js"],
-      "reason": "Incoming target resolution shares opaque Core city identity, region-scoped ownership caches, private incoming movements, march normalization and threat presentation. Exercise real lookup and HUD/panel delivery for unloaded maps with and without roster snapshots, preserve unknown intelligence, exclude other rulers/unknown IDs/returning and arrived marches, and protect Locate identity, focus, countdowns and removal at desktop and landscape sizes. Existing subscription/rules checks protect the private authoritative projection consumed by the client; server gameplay and push delivery are unchanged.",
+      "paths": [
+        "animation-manager.js",
+        "map-transition-bats.css",
+        "docs/art-sources/halloween-map-transition/preview.html",
+        "tools/validate-animation-system.js",
+        "tools/validate-halloween-map-transition-browser.js"
+      ],
+      "reason": "The October presentation adds a temporary bounded flock to the shared map-transition foreground. Cover shared animation lifecycle and seasonal boundaries, valid directional flight and continuing wingbeats, real current-Core neighbor/return navigation, desktop and landscape-mobile appearance, retained clouds, missing-art cover, reduced/off motion, early finish, supersession, repeated cleanup, timeout recovery and switching Off during flight. Preview controls exercise the same runtime. No world data, multiplayer authority or gameplay rules change.",
       "tests": [
-        "tools/validate-owned-city-cross-map-sync.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-notification-system.js",
-        "tools/validate-live-subscription-scope.js",
-        "tools/validate-realtime-health.js",
-        "tools/validate-performance-bottlenecks.js",
-        "functions/test/emulator-army-listener-rules.js"
+        "tools/validate-animation-system.js",
+        "tools/validate-halloween-map-transition-browser.js"
       ]
     },
     {
-      "paths": ["index.html", "service-worker.js"],
-      "reason": "Version the changed game entrypoint and service-worker cache together so refreshed clients receive the fix. Verify production packaging, matching shell references and unchanged startup/per-file asset budgets.",
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Ship and precache the dedicated bat stylesheet with matching versioned entry URLs and a refreshed service-worker cache. Require it in production, cap its payload at 5 KiB and retain all existing per-file, installation, startup and total-artifact limits. Validate both ordinary and /play/ entry references, installed-app routing, offline dependencies, and packaged resources. Backend and production state are unaffected, so emulator suites do not apply.",
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js",
-        "tools/validate-notification-system.js"
+        "tools/validate-pwa-entry-routing.js"
       ]
     }
   ]

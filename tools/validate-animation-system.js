@@ -20,7 +20,7 @@ const managerSource = read("animation-manager.js");
 const gameSource = read("game.js");
 const firebaseClientSource = read("firebaseClient.js");
 const indexSource = read("index.html");
-const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("map-transition-bats.css")}`;
 const serverSource = read("functions/index.js");
 const serviceWorkerSource = read("service-worker.js");
 const buildSource = read("tools/build-production-client.js");
@@ -466,6 +466,8 @@ for (const [date, expected] of seasonalCases) {
   const seasonal = animations.beginMapTransition({ root: transitionRoot, stage: transitionStage });
   assert.equal(seasonal.element.dataset.theme, expected, `Automatic theme at ${date}`);
   assert.equal(seasonal.element.children.length, 5, "Seasonal artwork must reuse the existing five transition parts.");
+  const foreground = seasonal.element.children.at(-1);
+  assert.equal(foreground.children.length, expected === "halloween" ? 10 : 0, "Only October full motion allocates a bounded flock.");
   seasonal.cancel("seasonal-validator");
 }
 delete sandbox.Date;
@@ -476,6 +478,7 @@ for (const mode of ["full", "reduced", "off"]) {
   else {
     assert.equal(seasonal.element.dataset.theme, "halloween");
     assert.equal(animations.mapTransition.record.transitionCoverDuration, mode === "reduced" ? 140 : 420);
+    assert.equal(seasonal.element.children.at(-1).children.length, mode === "reduced" ? 0 : 10, "Reduced motion must skip bat allocation.");
     seasonal.cancel("seasonal-mode-validator");
     assert(!transitionStage.classList.contains("is-transitioning"), "Seasonal cancellation must restore map interaction.");
   }

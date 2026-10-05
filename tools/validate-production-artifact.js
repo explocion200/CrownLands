@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "map-transition-bats.css",
   "assets/optimized/map-transition-halloween-512x512-85e000346b96.webp",
   "assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp",
   "assets/optimized/halloween-map-layouts-v3.json",

@@ -36,7 +36,7 @@ async function main() {
     const begin = async (theme, direction = "east") => evaluate(`window.halloweenTransition = CrownlandsAnimations.beginMapTransition({root:mapFrame,stage:mapTransitionStage,theme:${JSON.stringify(theme)},direction:${JSON.stringify(direction)}});true`);
     const inspect = () => evaluate(`(()=>{
       const element=halloweenTransition.element, mist=element.querySelector('.crownlands-map-transition__part--mist');
-      const parts=[...element.children];
+      const parts=[...element.children],bats=[...element.querySelectorAll('.crownlands-map-bat')];
       return {theme:element.dataset.theme,phase:element.dataset.phase,parts:parts.length,
         blocked:isMapInteractionBlocked(),opacity:Number(getComputedStyle(mist).opacity),
         background:getComputedStyle(mist).backgroundImage,
@@ -44,6 +44,9 @@ async function main() {
         filters:parts.slice(-2).map(part=>getComputedStyle(part).filter),
         blend:parts.slice(-2).map(part=>getComputedStyle(part).mixBlendMode),
         shown:parts.slice(-2).map(part=>getComputedStyle(part).display!=='none'),
+        bats:bats.length, wings:element.querySelectorAll('.crownlands-map-bat__left,.crownlands-map-bat__right').length,
+        batTransforms:bats.map(bat=>getComputedStyle(bat).transform),
+        wingTransforms:bats.map(bat=>getComputedStyle(bat.querySelector('.crownlands-map-bat__left')).transform),
         clickThrough:parts.every(part=>getComputedStyle(part).pointerEvents==='none')};
     })()`);
     const screenshot = async name => {
@@ -53,21 +56,26 @@ async function main() {
     for (const [width, height] of [[1440, 900], [844, 390]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: height < 600 ? 2 : 1, mobile: height < 600 });
       await load();
-      // Decode the same single shared tile the two artwork layers use.
-      const asset = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../docs/art-sources/halloween-map-transition/asset.json"), "utf8"));
-      const texture = await evaluate(`(async()=>{const image=new Image();image.src=${JSON.stringify(asset.output)};await image.decode();return {width:image.naturalWidth,height:image.naturalHeight}})()`);
-      assert.equal(texture.width, 512); assert.equal(texture.height, 512);
       const directions = [];
       for (const direction of ["east", "west", "north", "south"]) {
         await begin("halloween", direction);
-        if (direction === "east") { await delay(200); await screenshot(`cover-${width}.png`); }
-        await delay(650);
+        await delay(160);
+        const flight = await evaluate(`(()=>{const bat=halloweenTransition.element.querySelector('.crownlands-map-bat');const matrix=new DOMMatrix(getComputedStyle(bat).transform);return {x:matrix.m41,y:matrix.m42}})()`);
+        const axis = ["east", "west"].includes(direction) ? "x" : "y";
+        assert(flight[axis] * (["east", "south"].includes(direction) ? 1 : -1) > 0, "Bats must enter from the selected map direction");
+        if (direction === "east") await screenshot(`cover-${width}.png`);
+        await delay(500);
         const held = await inspect();
         assert.equal(held.theme, "halloween"); assert.equal(held.parts, 5); assert(held.blocked && held.clickThrough);
         assert.equal(held.opacity, 1, "A slow map load must stay fully covered");
-        assert(held.art.every(art => art.includes("map-transition-halloween-512x512-")), "Both layers must use the Halloween tile");
-        assert.deepEqual(held.filters, ["none", "none"], "Cloud tinting must not wash out the painted bats");
-        assert.deepEqual(held.blend, ["normal", "normal"], "Painted bats must retain their dark outlines");
+        assert.equal(held.bats, width < 900 ? 6 : 10, "Keep a bounded flock with fewer bats on mobile");
+        assert.equal(held.wings, held.bats * 2, "Every bat needs independently flapping wings");
+        assert(held.art[0].includes("map-transition-halloween-512x512-") && held.art[1] === "none", "Keep faint painted atmosphere behind the animated foreground");
+        assert.deepEqual(held.filters, ["none", "none"], "Theme filters must not wash out the bats");
+        assert.deepEqual(held.blend, ["normal", "normal"], "The flock must retain its dark silhouette");
+        assert(held.batTransforms.every(transform => transform.startsWith("matrix")), "Directional bat flight must use valid transforms");
+        await delay(65);
+        assert.notDeepEqual((await inspect()).wingTransforms, held.wingTransforms, "Bats must keep flapping while a slow map loads");
         if (direction === "east") await screenshot(`held-${width}.png`);
         await evaluate("halloweenTransition.finish()");
         await wait("halloweenTransition.element.dataset.phase==='entering'");
@@ -78,10 +86,12 @@ async function main() {
       await begin("clouds"); await delay(500);
       const clouds = await inspect();
       assert(clouds.art.every(art => art.includes("map-transition-clouds-448x448-")), "Original clouds must remain usable");
+      assert.equal(clouds.bats, 0, "The retained cloud transition must not allocate a flock");
       await evaluate("halloweenTransition.cancel('cloud-review');CrownlandsAnimations.setMode('reduced',{persist:false})");
       await begin("halloween");
       await wait("getComputedStyle(halloweenTransition.element.querySelector('.crownlands-map-transition__part--mist')).opacity==='1'");
       const reduced = await inspect(); assert.equal(reduced.opacity, 1); assert.deepEqual(reduced.shown, [false, false]);
+      assert.equal(reduced.bats, 0, "Reduced motion must not create any bats");
       const reducedAnimations = await evaluate("halloweenTransition.element.getAnimations({subtree:true}).map(animation=>animation.animationName)");
       assert.deepEqual(reducedAnimations, ["crownlandsMapReducedCover"], "Reduced motion must use only a stationary veil fade");
       await evaluate("halloweenTransition.finish()");
@@ -98,7 +108,25 @@ async function main() {
       assert.equal(await evaluate("isMapInteractionBlocked()"), false);
       await evaluate("for(let i=0;i<30;i++){const handle=CrownlandsAnimations.beginMapTransition({root:mapFrame,stage:mapTransitionStage,theme:'halloween'});handle.cancel('repeat')} ");
       assert.equal(await evaluate("mapFrame.querySelectorAll('.crownlands-map-transition').length"), 0);
-      results.push({ width, height, texture, directions, cloudsRetained: true, reducedMotion: true, off: true, earlyFinish: true, supersede: true, repeatCleanup: true });
+      // Exercise the real current-Core navigation path, including its map-picker direction.
+      const navigation = await evaluate(`(async()=>{
+        const themes=[],manager=CrownlandsAnimations,original=manager.getMapTransitionTheme;
+        manager.getMapTransitionTheme=()=> 'halloween';
+        const unsubscribe=manager.on('effectstart',event=>{if(event.type==='map-transition')themes.push(manager.mapTransition.handle.element.dataset.theme)});
+        try{return {...await __CROWNLANDS_BENCHMARK__.switchNeighborAndReturn(),themes};}
+        finally{unsubscribe();manager.getMapTransitionTheme=original;}
+      })()`);
+      assert(navigation.neighborResult && navigation.returnResult, "Current Core navigation must complete in both directions");
+      assert.deepEqual(navigation.themes, ["halloween", "halloween"]);
+      assert.equal(await evaluate("isMapInteractionBlocked() || !!mapFrame.querySelector('.crownlands-map-bat')"), false);
+      // A lost completion must recover through the existing watchdog.
+      await evaluate("CrownlandsAnimations.beginMapTransition({root:mapFrame,stage:mapTransitionStage,theme:'halloween',watchdogMs:500})");
+      await wait("!isMapInteractionBlocked() && !mapFrame.querySelector('.crownlands-map-bat')");
+      await begin("halloween");
+      await evaluate("CrownlandsAnimations.setMode('off',{persist:false})");
+      assert.equal(await evaluate("isMapInteractionBlocked() || !!mapFrame.querySelector('.crownlands-map-bat')"), false);
+      await evaluate("CrownlandsAnimations.setMode('full',{persist:false})");
+      results.push({ width, height, directions, navigation, cloudsRetained: true, reducedMotion: true, off: true, earlyFinish: true, supersede: true, repeatCleanup: true, watchdog: true, midflightOff: true });
       console.log(`PASS ${width}x${height}: four directions, slow/fast cover, retained clouds, reduced/off, supersede and cleanup.`);
     }
     // Missing seasonal artwork cannot strand navigation: the opaque veil is independent.
