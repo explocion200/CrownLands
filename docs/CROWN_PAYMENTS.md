@@ -35,7 +35,14 @@ The October 4, 2026 request selected Stripe for future Crown purchases and appro
 - The owner supplied the game account to enable for the first sandbox purchase. Its ruler name resolved to exactly one account in the authoritative current realm. The UID is stored only in the private `testerUids` configuration, not in documentation or PRs.
 - At `2026-10-05T20:11:19Z`, configuration read-back verified `enabled: true`, `mode: "test"`, exactly that one tester and the approved 1,000-Crown / US$4.99 pack. The existing runtime accepted the designated account and excluded other accounts. The update used an exact document-version precondition and changed only `enabled` and `testerUids`.
 - The current-realm pointer and playable cosmetic wallet were unchanged. No test order or test-wallet credit existed at this verification. No function deployment was required. Local evidence is `release-artifacts/crown-payments/tester-verification.json` (ignored, not committed; no credentials or raw account identifiers).
-- A signed-in browser checkout and actual Stripe sandbox payment remain unverified. Testing must use Stripe test payment details and verify fulfillment in the separate test wallet; real purchases and playable Crown credits remain unavailable.
+- The designated account signed in and the deployed game displayed the approved pack. Its first creation attempt saved a recoverable order, but Stripe rejected the unsupported API parameter described below before creating a payment session. No test Crowns were credited; a completed payment remains unverified.
+
+## Checkout API compatibility
+
+- The installed Stripe 23 SDK defaults to `2026-09-30.endive`, which rejects the existing `payment_method_types: ["card"]` Checkout parameter. The first designated-account request returned HTTP 400 for that exact parameter.
+- Pin only Checkout Session creation to `2026-08-26.dahlia`, preserving this sandbox's card-only offer, saved order parameters and idempotency key. Other Stripe operations keep the installed SDK default; the webhook already uses Dahlia. This targeted compatibility fix does not change account-wide Stripe settings or payment methods.
+- The regression test exercises the actual installed SDK and asserts the outgoing version header, card-only body, stable idempotency key and unpaid-order behavior. The emulator suite also checks the request contract alongside transaction/retry isolation.
+- A separate provider probe successfully created a card-only, US$4.99 sandbox session with the pinned version and immediately expired it unpaid. It had no Crown-order metadata or game order and could not grant Crowns. Evidence is `release-artifacts/crown-payments/checkout-contract-probe.json` (ignored, not committed). This verifies request compatibility, not payment fulfillment. Deployment of the fix and a successful signed-in payment remain pending.
 
 ## Account and sandbox setup
 

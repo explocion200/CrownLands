@@ -7,8 +7,21 @@
         "docs/CROWN_PAYMENTS.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the owner-authorized Stripe sandbox connection, four deployed payment functions, secure credentials/webhook, approved 1,000-Crown pack for US$4.99 and subsequent activation for one designated tester. The complete branch diff changes documentation only; runtime code, game UI, skin pricing and gameplay dependencies are unchanged, so no new runtime, browser or emulator suite applies. Operational verification separately checked Stripe account authentication, webhook subscription/signatures, active endpoints/secret bindings, unauthenticated callable rejection and unchanged existing functions/current realm. The approved sandbox Price was validated against the saved pack using the existing validatePrice/configFor functions. Tester activation resolved exactly one current-realm account, used an exact document-version precondition, and verified a one-account allowlist, unchanged pack, exclusion of other accounts and unchanged playable wallet. Existing focused payment unit/browser checks and deployment checks passed; a signed-in real sandbox purchase remains explicitly unverified.",
+      "reason": "Record the authorized sandbox connection, approved 1,000-Crown / US$4.99 offer, uniquely resolved designated tester, configuration read-back, excluded other accounts and unchanged playable wallet/current realm. Document the first signed-in creation failure, precise Stripe API cause, compatibility repair and verified unpaid provider probe without claiming completed fulfillment. Documentation does not change gameplay, skin pricing or UI; its runtime dependency is covered by the payment-service entry below. Actual payment verification remains explicit operational work.",
       "tests": []
+    },
+    {
+      "paths": [
+        "functions/crown-payments-service.js",
+        "functions/test/emulator-crown-payments.js",
+        "tools/test-crown-payments.js"
+      ],
+      "reason": "Pin only Checkout Session creation to the API version that supports the existing card-only request. Exercise the installed Stripe SDK's outgoing HTTP version header and form body, unchanged idempotency and order persistence, price/session validation, signed webhook guards and no unpaid credits. The selected emulator covers authoritative Firestore transactions, lost-response recovery, concurrent retries/fulfillment, client and owner isolation, expiry and unchanged playable wallets; browser checks cover recovery of the same order after failed creation at desktop and landscape-mobile sizes. No frontend, rules, release contract, build inputs, other callables or gameplay logic changes.",
+      "tests": [
+        "tools/test-crown-payments.js",
+        "tools/validate-crown-payments-browser.js",
+        "functions/test/emulator-crown-payments.js"
+      ]
     }
   ]
 }
