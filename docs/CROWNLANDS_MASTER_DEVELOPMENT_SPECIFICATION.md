@@ -1127,7 +1127,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 - The user requested payment support for buying Crowns and selected Stripe while creating a merchant account. The existing cosmetics-only, non-transferable Crown wallet and seasonal persistence rules remain in force.
 - Prepare hosted checkout and server-verified, replay-safe purchase receipts in Stripe test mode. Test payments must not add playable Crowns. Pack quantities/prices, selling currency and live refund/dispute policy remain unconfirmed; do not treat test fixtures as approved offers.
-- The initial implementation is restricted to designated test accounts and disabled until securely configured. Live payments require a separate implementation/release approval, completed merchant setup and verified sandbox checkout. Status: `IN DEVELOPMENT`; not deployed. Setup and remaining launch work: [Crown payments](./CROWN_PAYMENTS.md).
+- The initial implementation is restricted to designated test accounts. On October 5, 2026, the user authorized connecting the Stripe sandbox only, with checkout kept disabled. The four sandbox payment functions were deployed from merged commit `83424189a3e82bf8cf2a02dcecbe1c207b72b0c1`; test credentials, webhook configuration, endpoint authentication and webhook signatures were verified. The private configuration has no packs or testers and remains disabled. Status: `SANDBOX CONNECTED — CHECKOUT DISABLED`; an actual Stripe sandbox purchase is still unverified. Live payments require separate implementation/release approval, completed merchant setup and verified sandbox checkout. Evidence and remaining launch work: [Crown payments](./CROWN_PAYMENTS.md).
 
 ### Monetization
 
