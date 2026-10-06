@@ -10,7 +10,8 @@
   function reset(uid) {
     if (current?.uid === uid) return;
     current?.dialog?.remove();
-    current = uid ? { uid, roots: new Set(), loaded: false, busy: false, packs: [], error: "", order: null, request: null } : null;
+    for (const host of current?.roots || []) host.textContent = uid ? "Loading Crown packs…" : "Sign in to buy Crowns.";
+    current = uid ? { uid, roots: new Set(), loaded: false, loading: true, busy: false, packs: [], error: "", order: null, request: null } : null;
   }
   function remember(session) {
     try {
@@ -22,11 +23,20 @@
     for (const host of session.roots) {
       if (!host.isConnected) { session.roots.delete(host); continue; }
       host.replaceChildren();
-      if (!session.enabled) continue;
-      const button = document.createElement("button");
-      button.type = "button"; button.dataset.crownCheckout = ""; button.textContent = session.mode === "live" ? "Buy Crowns" : "Test Crown checkout";
-      button.addEventListener("click", () => { if (current === session) open(session); });
-      host.append(button);
+      if (!session.enabled || !session.packs.length) {
+        host.innerHTML = `<p role="status">${session.loading ? "Loading Crown packs…" : "Crown purchases are currently unavailable."}</p>`;
+        continue;
+      }
+      for (const pack of session.packs) {
+        const card = document.createElement("article"); card.className = "crown-pack";
+        card.innerHTML = `<img src="assets/optimized/crown-coin-96x96-34224e7d7fb4.webp" width="96" height="96" alt="Crowns" draggable="false"><h2>${escape(pack.crowns.toLocaleString())} Crowns</h2><p>${session.mode === "live" ? "One-time purchase · Cosmetics only" : "Sandbox only · No usable Crowns"}</p><strong class="crown-pack-price">${escape(money(pack))} ${escape(pack.currency.toUpperCase())}</strong><button type="button" data-crown-checkout>${session.mode === "live" ? "Buy" : "Test checkout"}</button>`;
+        card.querySelector("button").addEventListener("click", () => {
+          if (current !== session) return;
+          if (!session.request && (!session.order || terminal(session.order))) session.selected = pack.id;
+          open(session);
+        });
+        host.append(card);
+      }
     }
   }
   function render(session) {
@@ -120,11 +130,14 @@
   function mount(host, { uid, api }) {
     if (!host) return;
     reset(uid);
-    if (!current || !api?.getCrownPaymentCatalog) return;
-    const session = current; session.roots.add(host); refreshButtons(session);
-    if (session.loaded) return;
+    if (!current || !api?.getCrownPaymentCatalog) {
+      host.textContent = !uid ? "Sign in to buy Crowns." : "Crown purchases are currently unavailable.";
+      return;
+    }
+    const session = current, mounted = session.roots.has(host); session.roots.add(host);
+    if (session.loaded) { if (!mounted) refreshButtons(session); return; }
     session.api = api;
-    session.loaded = true;
+    session.loaded = true; session.loading = true; refreshButtons(session);
     void (async () => {
       if (api.getLiveCrownPaymentCatalog) {
         try {
@@ -139,6 +152,7 @@
       return api.getCrownPaymentCatalog();
     })().then(result => {
       if (current !== session || !result) return;
+      session.loading = false;
       session.mode = result.mode;
       session.enabled = result.enabled === true && ["test", "live"].includes(result.mode);
       session.packs = session.enabled ? result.packs : [];
@@ -150,7 +164,10 @@
       }
       if (terminal(session.order)) { session.request = null; remember(session); }
       refreshButtons(session);
-    }).catch(() => { /* Unconfigured or old deployments keep the checkout control hidden. Retry next account session. */ });
+    }).catch(() => {
+      if (current !== session) return;
+      session.loading = false; session.loaded = false; refreshButtons(session);
+    });
   }
   root.CrownlandsCrownPaymentsUI = Object.freeze({ mount, reset });
 })(globalThis);

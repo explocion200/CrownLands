@@ -20,7 +20,7 @@
 #modal.shop-modal:not(.rewarded-ad-confirmation-modal) [hidden]{display:none!important}
 #modal.shop-modal:not(.rewarded-ad-confirmation-modal){width:min(1200px,calc(100vw - 24px))!important;height:min(790px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;margin:auto!important;padding:5px!important;overflow:hidden!important;border:1px solid #766346!important;border-radius:2px!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important}
 #modal.shop-modal:not(.rewarded-ad-confirmation-modal)::backdrop{background:#23281e65!important}
-#modal.shop-modal .rs-shop-shell{height:100%!important;display:grid!important;grid-template-rows:82px minmax(0,1fr)!important;border:1px solid var(--line)!important}
+#modal.shop-modal .rs-shop-shell{height:100%!important;display:grid!important;grid-template-rows:82px 62px minmax(0,1fr)!important;border:1px solid var(--line)!important}
 #modal.shop-modal .rs-shop-header{display:flex!important;align-items:center!important;gap:14px!important;padding:12px 20px!important;border-bottom:1px solid var(--line)!important;background:#e9dcb483!important}
 #modal.shop-modal .rs-shop-seal{width:45px!important;height:51px!important;display:grid!important;place-items:center!important;border:1px solid #9e895e!important;background:#d5bd7933!important;color:#66593b!important}
 #modal.shop-modal .rs-shop-seal svg{width:32px!important;height:32px!important}
@@ -30,16 +30,16 @@
 #modal.shop-modal .rs-gold-balance strong{display:flex!important;gap:8px!important;align-items:center!important;justify-content:flex-end!important;font:25px Georgia!important;color:#524026!important;margin-top:3px!important;font-variant-numeric:tabular-nums!important}
 #modal.shop-modal .rs-gold-balance img{width:25px!important;height:25px!important}
 #modal.shop-modal .rs-ink-icon{width:24px!important;height:24px!important;stroke:currentColor!important;fill:none!important;stroke-width:1.35!important;stroke-linecap:round!important;stroke-linejoin:round!important;flex:none!important}
-#modal.shop-modal .rs-shop-body{min-height:0!important;display:grid!important;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)!important;background:radial-gradient(ellipse at 35% 40%,#fff8df77,transparent 68%)!important}
-#modal.shop-modal .rs-shop-catalog{min-width:0!important;min-height:0!important;display:grid!important;grid-template-rows:62px 48px minmax(0,1fr) 46px!important;padding:0 22px 8px!important;border-right:1px solid var(--line)!important}
-#modal.shop-modal #royalShopSections{display:flex!important;gap:6px!important;padding-top:12px!important;border-bottom:1px solid var(--line)!important}
+#modal.shop-modal .rs-shop-body{height:100%!important;min-height:0!important;display:grid!important;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)!important;background:radial-gradient(ellipse at 35% 40%,#fff8df77,transparent 68%)!important}
+#modal.shop-modal .rs-shop-catalog{min-width:0!important;min-height:0!important;display:grid!important;grid-template-rows:48px minmax(0,1fr) 46px!important;padding:0 22px 8px!important;border-right:1px solid var(--line)!important}
+#modal.shop-modal #royalShopSections{display:flex!important;gap:6px!important;padding:12px 22px 0!important;border-bottom:1px solid var(--line)!important}
 #modal.shop-modal #royalShopSections button{min-width:44px!important;min-height:44px!important;flex:1!important;border:1px solid transparent!important;border-bottom:0!important;background:transparent!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;font-size:13px!important;color:#77664a!important}
 #modal.shop-modal #royalShopSections button[aria-selected=true]{background:#e1d1a6!important;border-color:#b4a078!important;color:#423b29!important;box-shadow:inset 0 2px #8e7546!important}
 #modal.shop-modal #royalShopSections button span{font-size:10px!important;min-width:19px!important;padding:2px 5px!important;border:1px solid #b9a57b!important;color:#766447!important;background:#f0e3c755!important}
 #modal.shop-modal .rs-catalog-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
 #modal.shop-modal .rs-catalog-heading h2{font:18px Georgia!important;margin:0!important}
 #modal.shop-modal .rs-catalog-heading>span{font-size:10px!important;color:#77694f!important;font-variant-numeric:tabular-nums!important}
-#modal.shop-modal #royalShopCatalogPanel{min-height:0!important;overflow:hidden!important}
+#modal.shop-modal #royalShopCatalogPanel,#modal.shop-modal .rs-shop-items-panel{min-height:0!important;overflow:hidden!important}
 #modal.shop-modal #royalShopItemGrid{height:100%!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:11px!important}
 #modal.shop-modal .rs-item-tile{position:relative!important;display:grid!important;grid-template-rows:minmax(0,1fr) auto auto!important;gap:7px!important;justify-items:center!important;min-width:0!important;min-height:44px!important;padding:18px 8px 13px!important;border:1px solid #c2b08a!important;background:linear-gradient(145deg,#eee0bd,#e8d7ad)!important;box-shadow:inset 0 0 0 3px #f4e8c755!important;color:#4e4432!important}
 #modal.shop-modal .rs-item-tile::before{content:""!important;position:absolute!important;inset:6px!important;border:1px solid #bca27633!important;pointer-events:none!important}
@@ -87,7 +87,7 @@
 #modal.shop-modal .rs-reward-caption{font-size:11px!important;line-height:1.5!important;text-align:center!important;color:#7b6847!important}
 #modal.shop-modal .rs-reward-tile .rs-tile-price{font-size:13px!important;color:var(--moss)!important}
 
-@media(orientation:landscape) and (max-height:550px){#modal.shop-modal .rs-shop-shell{grid-template-rows:52px minmax(0,1fr)!important}
+@media(orientation:landscape) and (max-height:550px){#modal.shop-modal .rs-shop-shell{grid-template-rows:52px 48px minmax(0,1fr)!important}
 #modal.shop-modal .rs-shop-header{padding:4px 10px!important;gap:9px!important}
 #modal.shop-modal .rs-shop-seal{width:32px!important;height:36px!important}
 #modal.shop-modal .rs-shop-seal svg{width:24px!important;height:24px!important}
@@ -97,8 +97,8 @@
 #modal.shop-modal .rs-gold-balance strong{font-size:20px!important;gap:5px!important;margin-top:0!important}
 #modal.shop-modal .rs-gold-balance img{width:20px!important;height:20px!important}
 #modal.shop-modal .rs-shop-body{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)!important}
-#modal.shop-modal .rs-shop-catalog{padding:0 10px 3px!important;grid-template-rows:48px 26px minmax(0,1fr) 25px!important}
-#modal.shop-modal #royalShopSections{padding-top:4px!important;gap:3px!important}
+#modal.shop-modal .rs-shop-catalog{padding:0 10px 3px!important;grid-template-rows:26px minmax(0,1fr) 25px!important}
+#modal.shop-modal #royalShopSections{padding:4px 10px 0!important;gap:3px!important}
 #modal.shop-modal #royalShopSections button{font-size:11px!important;gap:7px!important}
 #modal.shop-modal #royalShopSections button span{font-size:9px!important;padding:1px 4px!important;min-width:17px!important}
 #modal.shop-modal .rs-catalog-heading h2{font-size:14px!important}
@@ -141,8 +141,8 @@
 #modal.shop-modal .rs-reward-caption{font-size:10px!important;line-height:1.3!important}
 #modal.shop-modal .rs-reward-tile .rs-tile-price{font-size:10px!important}
 }
-@media(orientation:landscape) and (max-width:650px){#modal.shop-modal .rs-shop-catalog{padding-inline:6px!important;grid-template-rows:46px 23px minmax(0,1fr) 24px!important}
-#modal.shop-modal #royalShopSections{padding-top:2px!important}
+@media(orientation:landscape) and (max-width:650px){#modal.shop-modal .rs-shop-catalog{padding-inline:6px!important;grid-template-rows:23px minmax(0,1fr) 24px!important}
+#modal.shop-modal #royalShopSections{padding:2px 6px 0!important}
 #modal.shop-modal #royalShopSections button{font-size:10px!important}
 #modal.shop-modal .rs-catalog-heading h2{font-size:12px!important}
 #modal.shop-modal .rs-catalog-heading>span{font-size:8px!important}
@@ -181,12 +181,12 @@
 #modal.shop-modal .rs-reward-caption{font-size:9px!important}
 #modal.shop-modal .rs-reward-tile .rs-tile-price{font-size:9px!important}
 }
-@media(orientation:landscape) and (max-height:350px){#modal.shop-modal .rs-shop-shell{grid-template-rows:48px minmax(0,1fr)!important}
+@media(orientation:landscape) and (max-height:350px){#modal.shop-modal .rs-shop-shell{grid-template-rows:48px 46px minmax(0,1fr)!important}
 #modal.shop-modal .rs-shop-header{padding-block:2px!important}
 #modal.shop-modal .rs-shop-seal{height:32px!important}
 #modal.shop-modal .rs-shop-heading h1{font-size:21px!important}
 #modal.shop-modal .rs-shop-heading p{font-size:8px!important}
-#modal.shop-modal .rs-shop-catalog{grid-template-rows:46px 23px minmax(0,1fr) 22px!important}
+#modal.shop-modal .rs-shop-catalog{grid-template-rows:23px minmax(0,1fr) 22px!important}
 #modal.shop-modal .rs-item-name{font-size:10px!important;min-height:23px!important}
 #modal.shop-modal .rs-tile-art img{max-height:38px!important}
 #modal.shop-modal .rs-tile-price{font-size:8px!important}

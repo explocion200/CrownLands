@@ -44,6 +44,15 @@ function fixture(mode = "test") {
   cosmeticCategory = "all"; cosmeticSelected = "halloween_city"; cosmeticOpenShopRequested = true; showShopModal();
 }
 
+function shopFrame() {
+  return [".rs-shop-shell", ".rs-shop-header", ".rs-shop-heading h1", ".rs-shop-seal", "#royalShopSections", "#royalShopCatalogPanel", "#closeModalBtn", ...["provisions", "skins", "crowns", "rewards"].map(id => `[data-rs-section="${id}"]`)].map(selector => {
+    const node = modal.querySelector(selector), rect = node.getBoundingClientRect(), style = getComputedStyle(node);
+    return { selector, x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      fontFamily: style.fontFamily, fontSize: style.fontSize, lineHeight: style.lineHeight,
+      label: node.hasAttribute("data-rs-section") ? node.textContent : null };
+  });
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..");
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
@@ -86,6 +95,51 @@ async function main() {
     for (const mode of ["test", "live"]) for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
       await evaluate(`(${fixture.toString()})(${JSON.stringify(mode)})`);
+      await wait("!!document.querySelector('[data-skins-mode=shop]')");
+      assert.equal(await evaluate("document.querySelectorAll('[data-skin-earn],[data-crown-payments]').length"), 0, "Skins no longer hosts earning or checkout buttons");
+      assert.deepEqual(await evaluate("[...document.querySelectorAll('[data-rs-section]')].map(tab => tab.dataset.rsSection)"), ["provisions", "skins", "crowns", "rewards"]);
+      await evaluate("document.fonts.ready");
+      await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");
+      let commonFrame;
+      for (const section of ["provisions", "skins", "crowns", "rewards"]) {
+        await click(`[data-rs-section="${section}"]`);
+        const frame = await evaluate(`(${shopFrame.toString()})()`);
+        if (commonFrame) assert.deepEqual(frame, commonFrame, `${section} must preserve the same Shop frame, header, tabs and typography at ${viewport.width}`);
+        else commonFrame = frame;
+        assert.equal(await evaluate("modal.querySelector('.rs-shop-heading p').textContent"), "The royal market");
+        assert(await evaluate("(() => { const balance = modal.querySelector('[data-shop-balance]'); balance.textContent = 'stale'; patchRoyalShopSelection(); return balance.textContent === formatNumber(getProjectedGold()); })()"), "Gold balance refreshes on every tab");
+        if (mode === "live") {
+          await evaluate("Promise.all([...modal.querySelectorAll('img')].map(img => img.decode()))");
+          fs.writeFileSync(path.join(output, `shared-shop-${section}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+        }
+      }
+      await click('[data-rs-section="crowns"]');
+      await wait("!!document.querySelector('[data-crown-checkout]')");
+      assert(await evaluate("(() => { const button = document.querySelector('[data-crown-checkout]'); button.focus(); refreshCosmeticPanels(); return button === document.activeElement && button.isConnected; })()"), "Wallet refreshes preserve the offer and keyboard focus");
+      await click('[data-rs-section="crowns"]');
+      assert.equal(await evaluate("crownQA.calls.length"), 0, "Opening the tab must not create an order");
+      assert.equal(await evaluate("document.querySelector('.crown-pack h2').textContent"), "1,000 Crowns");
+      assert.equal(await evaluate("document.querySelector('.crown-pack-price').textContent"), "$4.99 USD");
+      assert.equal(await evaluate("document.querySelector('[data-crown-checkout]').textContent"), mode === "live" ? "Buy" : "Test checkout");
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-crown-checkout]')).color"), "rgb(255, 255, 255)", "Shop styles preserve the Buy button's readable contrast");
+      await evaluate("document.querySelector('.crown-pack img').decode()");
+      assert(await evaluate("document.querySelector('.crown-pack img').naturalWidth > 0"), "Existing Crown art loads");
+      for (const [key, selected] of [["ArrowLeft", "skins"], ["ArrowRight", "crowns"], ["End", "rewards"], ["ArrowRight", "provisions"], ["ArrowLeft", "rewards"], ["Home", "provisions"]]) {
+        await evaluate(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(key)}, bubbles: true }))`);
+        assert.equal(await evaluate("document.activeElement.dataset.rsSection"), selected, "Four-tab keyboard selection and focus");
+        assert.equal(await evaluate("modal.querySelector('[role=tabpanel]').getAttribute('aria-labelledby')"), `royalShopTab-${selected}`);
+      }
+      await click('[data-rs-section="crowns"]');
+      await wait("!!document.querySelector('[data-crown-checkout]')");
+      await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");
+      const packLayout = await evaluate(`(() => {
+        const panel = document.querySelector('.crown-shop'), card = document.querySelector('.crown-pack'), r = card.getBoundingClientRect(), button = card.querySelector('button').getBoundingClientRect();
+        return { inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight,
+          noOverflow: panel.scrollWidth <= panel.clientWidth + 1 && panel.scrollHeight <= panel.clientHeight + 1,
+          buttonWidth: button.width, buttonHeight: button.height };
+      })()`);
+      assert(packLayout.inside && packLayout.noOverflow && packLayout.buttonWidth >= 44 && packLayout.buttonHeight >= 44, JSON.stringify(packLayout));
+      fs.writeFileSync(path.join(output, `buy-crowns-${mode}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
       await click("[data-crown-checkout]");
       await evaluate('CrownlandsCrownPaymentsUI.mount(document.querySelector("[data-crown-payments]"), { uid: "owner", api: crownQA.api })');
       if (mode === "test") assert(await evaluate("document.querySelector('.crown-test-notice').textContent.includes('Sandbox only.')"));
@@ -127,17 +181,23 @@ async function main() {
       assert.equal(await evaluate("crownQA.popups.at(-1).url"), undefined);
       await evaluate("crownQA.badUrl = null; crownQA.defer = true");
       await click("[data-crown-pay]"); await wait("!!crownQA.resolve");
-      await evaluate('CrownlandsCrownPaymentsUI.reset("other-account"); document.querySelector("[data-crown-payments]").replaceChildren(); crownQA.resolve()');
+      await evaluate('CrownlandsCrownPaymentsUI.reset("other-account"); crownQA.resolve()');
+      assert.equal(await evaluate("document.querySelectorAll('[data-crown-checkout]').length"), 0, "Account changes clear the previous account's offer");
       await wait("crownQA.popups.at(-1).closed === true");
       assert.equal(await evaluate("document.querySelectorAll('.crown-payments-dialog').length"), 0, "Account changes remove purchase details and reject late responses");
       await evaluate('crownQA.enabled = false; CrownlandsCrownPaymentsUI.mount(document.querySelector("[data-crown-payments]"), { uid: "other-account", api: crownQA.api })');
+      await wait("document.querySelector('[data-crown-payments]').textContent.includes('currently unavailable')");
       assert.equal(await evaluate("document.querySelectorAll('[data-crown-checkout]').length"), 0);
+      await evaluate('CrownlandsCrownPaymentsUI.mount(document.querySelector("[data-crown-payments]"), { uid: "", api: crownQA.api })');
+      assert.equal(await evaluate("document.querySelector('[data-crown-payments]').textContent"), "Sign in to buy Crowns.");
       await evaluate("modal.close()");
     }
     for (const page of [{ file: "support.html", section: "private-support" }, { file: "terms.html", section: "crown-purchases" }, { file: "privacy.html", section: "payments" }]) {
       for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
         await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
-        await client.send("Page.navigate", { url: `${address.url}/${page.file}#${page.section}` });
+        // Position the section after fonts load; a URL fragment can trigger a
+        // late browser scroll that races the explicit screenshot positioning.
+        await client.send("Page.navigate", { url: `${address.url}/${page.file}` });
         await wait(`!!document.getElementById(${JSON.stringify(page.section)}) && document.readyState === 'complete'`);
         await evaluate(`(async () => {
           await document.fonts.ready;
@@ -147,7 +207,7 @@ async function main() {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         })()`);
         const sectionBounds = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).getBoundingClientRect().toJSON()`);
-        assert(sectionBounds.top >= 0 && sectionBounds.top < viewport.height / 2, "Payment policy heading is visible in the capture");
+        assert(sectionBounds.top >= 0 && sectionBounds.top < viewport.height / 2, `Payment policy heading is visible: ${page.file} ${viewport.width} ${JSON.stringify(sectionBounds)}`);
         const section = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).textContent`);
         assert(section.includes("crownlandsmail@gmail.com"));
         assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Payment policy has no horizontal overflow");
@@ -156,7 +216,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log("Crown checkout browser passed in the real Shop at desktop and landscape mobile: live/test disclosure, manual review, support links, blocked popup, lost response, same-order retry, pending/confirmed status, unchanged wallet, hostile URL and account-switch isolation.");
+    console.log("Crown checkout browser passed at desktop and landscape mobile: consistent four-tab Shop frame/header/navigation, server-priced Crown card, keyboard tabs, removed Earn Crowns, live/test disclosure, manual review, blocked popup, same-order recovery, status, unchanged wallet, hostile URL and account-switch isolation.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }

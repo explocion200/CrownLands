@@ -1,62 +1,41 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "dea2c822b0ee9dce4c027729adbdee67d30a9cac",
+  "baseCommit": "b253beb7c4d0d4ff40dbb2044ed49b3d425eeab0",
   "coverage": [
     {
       "paths": [
-        "functions/crown-live-payments.js",
-        "functions/crown-live-payments-service.js",
-        "functions/crown-live-payments-http.js",
-        "functions/index.js",
-        "functions/test/emulator-crown-live-payments.js",
-        "tools/test-crown-live-payments.js"
-      ],
-      "reason": "Separate live payment authority, authenticated callables and signed webhooks require quote/mode/tax/terms checks, atomic wallet fulfillment, concurrent duplicate events, isolation from sandbox, retries, expiry, manual review, Firestore rules and auth. The shared cosmetics wallet is exercised concurrently with real cosmetic-service spending and pickup normalization; existing cosmetics and sandbox suites cover affected shared index/auth and wallet dependencies.",
-      "tests": [
-        "tools/test-crown-live-payments.js",
-        "tools/test-crown-payments.js",
-        "tools/validate-cosmetics.js",
-        "functions/test/emulator-crown-live-payments.js",
-        "functions/test/emulator-crown-payments.js",
-        "functions/test/emulator-cosmetics.js"
-      ]
-    },
-    {
-      "paths": [
-        "cosmetics-client.js",
+        "shop-ui.js",
+        "skins-ui.js",
+        "skins-ui.css",
         "crown-payments-ui.js",
-        "crown-payment-return.html",
+        "crown-payments-ui.css",
         "index.html",
         "tools/validate-crown-payments-browser.js",
-        "support.html",
-        "terms.html",
-        "privacy.html"
+        "shop-ui.css"
       ],
-      "reason": "Hosted live/test checkout selection, payment support and policy links, verified status, interrupted checkout recovery, wrong-mode boundaries, browser storage and account-switch isolation. Desktop/landscape-mobile exercise the actual Shop and changed support/terms/privacy sections, while cosmetic transport regressions and public-site structure/link checks cover unchanged dependencies.",
+      "reason": "Move Crown purchases from Skins into a dedicated adjacent Shop tab and remove the shared Earn Crowns button. Unify the frame, market header, Gold balance, count badges and full-width tab bar across Provisions, Skins, Buy Crowns and Free boosts. Compare frame/header/tab geometry and typography across all four tabs, and exercise Gold balance updates on each tab. Exercise real Shop navigation and four-tab keyboard focus, server-provided pack quantity/price, existing artwork, live/test purchase review, order recovery/status, account isolation, unavailable/sign-out states, wallet refresh focus and desktop/landscape card layout. Stabilize the existing payment-policy captures by positioning each section after font loading without a competing URL-fragment scroll. Existing Shop tests cover provision buying and rewarded-ad dependencies; cosmetics tests cover the changed shared skin-panel layout, purchase/equip and Profile views. Server authority and contracts are unchanged.",
       "tests": [
         "tools/validate-crown-payments-browser.js",
-        "tools/validate-cosmetics-browser.js",
-        "tools/validate-public-site-content.js"
+        "tools/validate-shop-browser.js",
+        "tools/validate-cosmetics-browser.js"
       ]
-    },
-    {
-      "paths": [
-        "docs/CROWN_PAYMENTS.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record confirmed support email, manual refund review and worldwide availability, distinct live implementation/activation status, operator review workflow and merchant-tax/credentials/webhook release prerequisites. No independent runtime behavior; implementation dependencies are covered above.",
-      "tests": []
     },
     {
       "paths": [
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Measured live checkout/transport/return and support/terms/privacy growth is 6,348 normalized bytes. Reproduced Netlify failure using full 40-character COMMIT_REF; reserve an 8 KiB feature allowance and bound checkout to 14 KiB and payment policy pages to 34 KiB. Preserve entry, offline cache, assets and combined artifact limits; validate production outputs and public-page content.",
+      "reason": "Bound the new Crown Shop presentation to a 4 KiB source-growth allowance and 18 KiB combined payment UI cap while reusing the existing Crown icon. Production validation and shared asset budgets check entry resources, optional Shop resources, cache/versioning and total build limits.",
       "tests": [
         "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-public-site-content.js"
+        "tools/validate-asset-performance-budgets.js"
       ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "reason": "Record the owner-confirmed Buy Crowns tab, icon/pack/price/Buy presentation and Earn Crowns removal and the shared four-tab Shop frame; retain established pickup rewards. No independent runtime tests apply to this design note; its implementation and dependencies are covered above.",
+      "tests": []
     }
   ]
 }
