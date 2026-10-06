@@ -1,87 +1,60 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cc337b977ea174dafab3382836fba0b60732407f",
+  "baseCommit": "996fb9a2095fac6c66cd567fd91a45fde84b2ce5",
   "coverage": [
     {
       "paths": [
-        "battle-report-detail-ui.js",
-        "camp-details-ui.js",
-        "clan-ledger-ui.css",
-        "clan-tower-buildings-ui.js",
-        "clan-tower-details-ui.js",
-        "engineers-workshop-ui.js",
+        "modal-ui.js",
+        "interface-theme.css"
+      ],
+      "reason": "Use the existing overlay observer to pause only covered HUD decoration. Cover native/dynamic dialogs, nested overlays, close/removal/reopen, motion preferences and onboarding/lifecycle integration. Clock, live alerts, gameplay and authoritative synchronization are unchanged; no backend emulator suite applies.",
+      "tests": [
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-ui-refresh-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ]
+    },
+    {
+      "paths": [
         "game.js",
-        "help-handbook-content.js",
-        "kingdom-ledgers-ui.js",
-        "marches-activity-ui.js",
-        "objectives-activity-ui.js",
-        "rallies-activity-ui.js",
-        "reinforcements-activity-ui.js",
-        "scout-report-ui.js",
-        "skills-ledger-ui.css",
-        "stronghold-details-ui.js",
-        "troop-orders-ui.js"
+        "player-profile-ui.js",
+        "skins-ui.js"
       ],
-      "reason": "Replace only shared skill-image URLs across all 17 active presentation files, including conditional/template paths and CSS backgrounds, and preserve raster aspect ratio in skill cards. Check approved asset identity and all eight real skill cards at desktop and landscape-mobile sizes; exercise order power, report and scout renderers that reuse the art. No mechanics or server-authoritative code changes. Complete the existing reinforcement renderer export comment for three helpers already called by game.js; origin/main has the same missing-export lint errors, and this metadata correction changes no runtime behavior.",
+      "reason": "Retain unchanged Profile production/achievement nodes and Skills/navigation state, and patch real data changes in place, including the production detail dialog and exact City Details troop formatting. Cover identity/focus, live skill eligibility, Gold/production/garrison updates, achievement badges and dependent profile/clan/skin navigation at desktop and landscape-mobile sizes. Numeric rules, timers and server authority are unchanged.",
       "tests": [
-        "tools/validate-skill-artwork-browser.js",
-        "tools/validate-military-ui.js",
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-scout-report-ui.js"
-      ]
-    },
-    {
-      "paths": [
-        "assets/icons/skills/atlas-v1/fieldMedics.webp",
-        "assets/icons/skills/atlas-v1/guildCharters.webp",
-        "assets/icons/skills/atlas-v1/marchOrders.webp",
-        "assets/icons/skills/atlas-v1/royalGranaries.webp",
-        "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp",
-        "assets/icons/skills/atlas-v1/stoneworks.webp",
-        "assets/icons/skills/atlas-v1/swordmastery.webp",
-        "assets/icons/skills/atlas-v1/taxStewardship.webp",
-        "docs/art-sources/skill-atlas-icons/fieldMedics.png",
-        "docs/art-sources/skill-atlas-icons/guildCharters.png",
-        "docs/art-sources/skill-atlas-icons/manifest.json",
-        "docs/art-sources/skill-atlas-icons/marchOrders.png",
-        "docs/art-sources/skill-atlas-icons/royalGranaries.png",
-        "docs/art-sources/skill-atlas-icons/shieldwallDiscipline.png",
-        "docs/art-sources/skill-atlas-icons/stoneworks.png",
-        "docs/art-sources/skill-atlas-icons/swordmastery.png",
-        "docs/art-sources/skill-atlas-icons/taxStewardship.png"
-      ],
-      "reason": "Preserve the eight approved PNG master bytes and final prompts and export the matching 320px transparent versioned WebP images. Verify source/runtime SHA-256, decoding and alpha, all active URL consumers, runtime payload budgets and production packaging exclusion of masters.",
-      "tests": [
-        "tools/validate-skill-artwork-browser.js",
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "tools/validate-ui-refresh-browser.js",
+        "tools/validate-city-details-browser.js",
         "tools/validate-asset-performance-budgets.js"
       ]
     },
     {
       "paths": [
-        "tools/generate-release-manifest.js",
-        "tools/validate-asset-performance-budgets.js"
+        "city-details-ui.js"
       ],
-      "reason": "Include nested versioned emblems in the client release fingerprint using binary-safe WebP hashing and bound only the new lazy icon payload. Validate production artifacts and unchanged login/install budgets; no server contracts or emulator behavior change.",
+      "reason": "Reuse the existing operation text patcher for passive city stat/wall content instead of comparing browser-normalized HTML strings; avoid unchanged upgrade attributes. Cover retained nodes, full garrison counts, upgrades/projections/Gold limits, repair/ownership handling and shared modal refresh dependencies.",
       "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-skill-artwork-browser.js"
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-city-details-browser.js",
+        "tools/validate-ui-refresh-browser.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-skill-artwork-browser.js"
+        "tools/validate-ui-stutter-browser.js"
       ],
-      "reason": "Execute the added isolated actual-game regression for the shared painted-icon references, complete source and delivery hashes, decoded alpha, CSS header and undistorted desktop/landscape skill cards.",
+      "reason": "Execute the new actual-game regression for stable Skills/Profile/City content, live values/eligibility, six covered screens, nested/dynamic dialogs and Full/Reduced/Off preferences at three viewport sizes. Isolated benchmark services never access production accounts.",
       "tests": [
-        "tools/validate-skill-artwork-browser.js"
+        "tools/validate-ui-stutter-browser.js"
       ]
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/skill-atlas-icons/README.md"
+        "docs/visual-qa/ui-refresh-stutter/README.md"
       ],
-      "reason": "Record the owner-confirmed art direction and asset provenance, packaging, versioning and lazy-load behavior. Documentation only; runtime and asset dependencies are covered by the above groups.",
+      "reason": "Record the reproduced UI causes, bounded fix, controlled browser evidence, focused regression coverage and release status. Documentation only; runtime dependencies are covered above.",
       "tests": []
     }
   ]

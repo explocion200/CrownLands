@@ -15,10 +15,10 @@
     const gold = selectedProduction === "gold", summary = snapshot.summary;
     const base = safeNumber(gold ? summary.baseGoldProductionPerHour : summary.baseTroopProductionPerHour);
     const total = Math.max(base, safeNumber(gold ? summary.goldProductionPerHour : summary.troopProductionPerHour));
-    $("profileProductionTitle").textContent = `${gold ? "Gold" : "Troops"} production`;
-    $("profileProductionBase").textContent = `${snapshot.format(base)}/h`;
-    $("profileProductionBonus").textContent = `+${snapshot.format(total - base)}/h`;
-    $("profileProductionTotal").textContent = `${snapshot.format(total)}/h`;
+    setTextIfChanged($("profileProductionTitle"), `${gold ? "Gold" : "Troops"} production`);
+    setTextIfChanged($("profileProductionBase"), `${snapshot.format(base)}/h`);
+    setTextIfChanged($("profileProductionBonus"), `+${snapshot.format(total - base)}/h`);
+    setTextIfChanged($("profileProductionTotal"), `${snapshot.format(total)}/h`);
   }
 
   function openProduction(kind) {
@@ -53,22 +53,30 @@
     $("profileScreen")?.classList.toggle("large-values", [summary.kingPower, summary.gold, summary.troops, summary.goldProductionPerHour, summary.troopProductionPerHour].some(value => String(data.format(safeNumber(value))).length > 9));
     const xp = safeNumber(data.xp), required = Math.max(1, safeNumber(data.xpRequired));
     const track = $("profileXpTrack");
-    track?.setAttribute("aria-valuemin", "0"); track?.setAttribute("aria-valuemax", String(required)); track?.setAttribute("aria-valuenow", String(Math.min(xp, required)));
+    setAttrIfChanged(track, "aria-valuemin", 0); setAttrIfChanged(track, "aria-valuemax", required); setAttrIfChanged(track, "aria-valuenow", Math.min(xp, required));
     const complete = Math.min(40, safeNumber(data.completed));
-    $("profileAchievementHero").textContent = String(complete);
-    $("profileAchievementFill").style.width = `${complete / 40 * 100}%`;
-    $("profileAchievementTrack").setAttribute("aria-valuemin", "0");
-    $("profileAchievementTrack").setAttribute("aria-valuemax", "40");
-    $("profileAchievementTrack").setAttribute("aria-valuenow", String(complete));
+    setTextIfChanged($("profileAchievementHero"), complete);
+    const fill = $("profileAchievementFill"), width = `${complete / 40 * 100}%`;
+    if (fill.style.width !== width) fill.style.width = width;
+    setAttrIfChanged($("profileAchievementTrack"), "aria-valuemin", 0);
+    setAttrIfChanged($("profileAchievementTrack"), "aria-valuemax", 40);
+    setAttrIfChanged($("profileAchievementTrack"), "aria-valuenow", complete);
     const button = $("profileViewAchievementsBtn"), count = safeNumber(data.claimable);
     if (button) {
-      button.replaceChildren();
-      const label = document.createElement("span"); label.textContent = "View Achievements"; button.append(label);
-      if (count) { const badge = document.createElement("span"); badge.className = "ready-count"; badge.textContent = `${count} Ready`; button.append(badge); }
-      button.setAttribute("aria-label", `View Achievements${count ? ` · ${count} Ready` : ""}`);
+      let label = button.querySelector("[data-achievement-label]");
+      if (!label) {
+        label = document.createElement("span"); label.dataset.achievementLabel = "";
+        label.textContent = "View Achievements"; button.replaceChildren(label);
+      }
+      let badge = button.querySelector(".ready-count");
+      if (count) {
+        if (!badge) { badge = document.createElement("span"); badge.className = "ready-count"; button.append(badge); }
+        setTextIfChanged(badge, `${count} Ready`);
+      } else badge?.remove();
+      setAttrIfChanged(button, "aria-label", `View Achievements${count ? ` · ${count} Ready` : ""}`);
     }
     for (const [kind, total] of [["Gold", summary.goldProductionPerHour], ["Troop", summary.troopProductionPerHour]]) {
-      $("profile" + kind + "ProductionBtn")?.setAttribute("aria-label", `${kind === "Gold" ? "Gold" : "Troops"} production: ${data.format(safeNumber(total))} per hour. View base and included bonus.`);
+      setAttrIfChanged($("profile" + kind + "ProductionBtn"), "aria-label", `${kind === "Gold" ? "Gold" : "Troops"} production: ${data.format(safeNumber(total))} per hour. View base and included bonus.`);
     }
     renderProduction();
   }
