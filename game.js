@@ -27634,20 +27634,21 @@ function renderProfileScreen() {
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
 
   if (profileNameText) {
-    profileNameText.textContent = state.playerName;
-    profileNameText.classList.add("player-name-link");
-    profileNameText.dataset.playerProfileUid = getCurrentOnlineUid();
-    profileNameText.setAttribute("role", "button");
-    profileNameText.tabIndex = 0;
-    profileNameText.setAttribute("aria-label", `View ${state.playerName}'s profile`);
+    setTextIfChanged(profileNameText, state.playerName);
+    profileNameText.classList.toggle("player-name-link", true);
+    setAttrIfChanged(profileNameText, "data-player-profile-uid", getCurrentOnlineUid());
+    setAttrIfChanged(profileNameText, "role", "button");
+    setAttrIfChanged(profileNameText, "tabindex", 0);
+    setAttrIfChanged(profileNameText, "aria-label", `View ${state.playerName}'s profile`);
   }
-  if (profileLevelText) profileLevelText.textContent = `Level ${formatNumber(state.character.level)}`;
-  if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
-  if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
-  if (profileKingPowerStat) profileKingPowerStat.textContent = formatNumber(summary.kingPower);
-  if (profileCitiesStat) profileCitiesStat.textContent = formatNumber(summary.cities);
-  if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
-  if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);
+  setTextIfChanged(profileLevelText, `Level ${formatNumber(state.character.level)}`);
+  setTextIfChanged(profileXpLabel, `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`);
+  const xpWidth = `${Math.round(xpProgress * 100)}%`;
+  if (profileXpFill && profileXpFill.style.width !== xpWidth) profileXpFill.style.width = xpWidth;
+  setTextIfChanged(profileKingPowerStat, formatNumber(summary.kingPower));
+  setTextIfChanged(profileCitiesStat, formatNumber(summary.cities));
+  setTextIfChanged(profileGoldStat, formatNumber(summary.gold));
+  setTextIfChanged(profileTroopsStat, formatNumber(summary.troops));
   if (profileGoldProductionStat) {
     renderProfileProductionStat(
       profileGoldProductionStat,
@@ -27665,23 +27666,23 @@ function renderProfileScreen() {
     );
   }
   if (profileAchievementCompleted) {
-    profileAchievementCompleted.textContent = `${seasonalAchievementState?.completedCount || 0} / 40`;
+    setTextIfChanged(profileAchievementCompleted, `${seasonalAchievementState?.completedCount || 0} / 40`);
   }
   if (profileAchievementClaimed) {
-    profileAchievementClaimed.textContent = `${seasonalAchievementState?.claimedCount || 0} / 40`;
+    setTextIfChanged(profileAchievementClaimed, `${seasonalAchievementState?.claimedCount || 0} / 40`);
   }
   if (profileAchievementRemaining) {
-    profileAchievementRemaining.textContent = seasonalAchievementState?.seasonEndsAtMs
+    setTextIfChanged(profileAchievementRemaining, seasonalAchievementState?.seasonEndsAtMs
       ? formatSeasonRemaining()
-      : supportsSeasonalAchievements() ? "Loading…" : "Unavailable";
+      : supportsSeasonalAchievements() ? "Loading…" : "Unavailable");
   }
   if (profileViewAchievementsBtn) {
     const claimable = getSeasonalAchievementClaimableCount();
-    profileViewAchievementsBtn.disabled = !supportsSeasonalAchievements();
+    profileViewAchievementsBtn.toggleAttribute("disabled", !supportsSeasonalAchievements());
     profileViewAchievementsBtn.classList.toggle("has-alert", claimable > 0);
-    profileViewAchievementsBtn.textContent = claimable > 0
+    if (!window.CrownlandsPlayerProfileUI) setTextIfChanged(profileViewAchievementsBtn, claimable > 0
       ? `View Achievements · ${claimable} Ready`
-      : "View Achievements";
+      : "View Achievements");
   }
   FlagRenderer.render(profileKingdomFlag, state.flag, {
     stableKey: getCurrentOnlineUid() || state.playerName,
@@ -27965,15 +27966,15 @@ function updateProfileSkillState() {
   setTextIfChanged(skillsView.querySelector("[data-skill-hero-level]"), formatNumber(state.character.level));
   const syncStatus = skillsView.querySelector("[data-skill-sync-status]");
   if (syncStatus) {
-    syncStatus.hidden = !syncing;
+    setHiddenIfChanged(syncStatus, !syncing);
     setTextIfChanged(syncStatus, activeSkillSpendBatch ? "Syncing with the realm…" : "Preparing skill update…");
   }
   const resetCopy = skillsView.querySelector("[data-skill-reset-copy]");
   setTextIfChanged(resetCopy, `Free. Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.`);
   const resetPanel = skillsView.querySelector(".profile-skill-reset");
-  if (resetPanel) resetPanel.hidden = editingPreset;
+  setHiddenIfChanged(resetPanel, editingPreset);
   const resetButton = skillsView.querySelector("#resetSkillsBtn");
-  if (resetButton) resetButton.disabled = editingPreset || skillActionInFlight || syncing || spentPoints < 1;
+  resetButton?.toggleAttribute("disabled", editingPreset || skillActionInFlight || syncing || spentPoints < 1);
   SKILL_ORDER.forEach(skill => {
     const config = SKILL_CONFIG[skill];
     const level = normalizeSkillUpgradeLevel(skill, displayedUpgrades[skill]);
@@ -27993,14 +27994,14 @@ function updateProfileSkillState() {
     setTextIfChanged(row?.querySelector("[data-skill-next]"), capped ? "Mastered" : `Next +${Math.min((level + 1) * config.percentPerLevel, config.maxPercent)}%`);
     row?.classList.toggle("capped", capped);
     if (button) {
-      button.disabled = skillActionInFlight || (editingPreset && syncing) || points < nextPointCost || capped;
-      button.setAttribute("aria-label", capped
+      button.toggleAttribute("disabled", skillActionInFlight || (editingPreset && syncing) || points < nextPointCost || capped);
+      setAttrIfChanged(button, "aria-label", capped
         ? `${config.label} is at maximum level`
         : `Add one ${config.label} level for ${nextPointCost} skill ${nextPointCost === 1 ? "point" : "points"}`);
     }
     if (decrementButton) {
-      decrementButton.disabled = skillActionInFlight || (editingPreset && syncing) || level < 1;
-      decrementButton.setAttribute("aria-label", level < 1
+      decrementButton.toggleAttribute("disabled", skillActionInFlight || (editingPreset && syncing) || level < 1);
+      setAttrIfChanged(decrementButton, "aria-label", level < 1
         ? `${config.label} is at level zero`
         : `Remove one ${config.label} level and refund ${refundPointCost} skill ${refundPointCost === 1 ? "point" : "points"}`);
     }
@@ -28856,7 +28857,10 @@ function updateVisibleCityDynamicText(targetIds = null) {
     if (!city) return;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const visibleTroops = getVisibleCityGarrisonTroops(city, scoutReport);
-    value.textContent = visibleTroops === undefined ? "Unknown" : (isStronghold(city) ? formatLedgerNumber : formatNumber)(visibleTroops);
+    // The City Details ledger uses full counts. Avoid briefly writing a compact
+    // count that patchCityDetailsPanel would immediately replace below.
+    const format = value.dataset.cdValue === "troops" ? cityDetailsNumber : isStronghold(city) ? formatLedgerNumber : formatNumber;
+    setTextIfChanged(value, visibleTroops === undefined ? "Unknown" : format(visibleTroops));
   });
   if (typeof patchCityDetailsPanel === "function") patchCityDetailsPanel();
   patchCityRallyAssemblyPanels();
@@ -40574,13 +40578,17 @@ function renderProfileProductionStat(element, baseValue, totalValue, suffix = ""
   const base = Math.max(0, Math.floor(Number(baseValue) || 0));
   const total = Math.max(base, Math.floor(Number(totalValue) || 0));
   const bonus = Math.max(0, total - base);
-  const totalText = document.createElement("span");
-  const bonusText = document.createElement("span");
-  totalText.className = "profile-production-total";
-  totalText.textContent = `${formatNumber(total)}${suffix}`;
-  bonusText.className = "profile-production-bonus";
-  bonusText.textContent = `(+${formatNumber(bonus)}${suffix})`;
-  element.replaceChildren(totalText, bonusText);
+  let totalText = element.querySelector(".profile-production-total");
+  let bonusText = element.querySelector(".profile-production-bonus");
+  if (!totalText || !bonusText) {
+    totalText = document.createElement("span");
+    bonusText = document.createElement("span");
+    totalText.className = "profile-production-total";
+    bonusText.className = "profile-production-bonus";
+    element.replaceChildren(totalText, bonusText);
+  }
+  setTextIfChanged(totalText, `${formatNumber(total)}${suffix}`);
+  setTextIfChanged(bonusText, `(+${formatNumber(bonus)}${suffix})`);
 }
 
 function getCityStatBonusSources(stats = {}, statType = "") {

@@ -2110,6 +2110,13 @@ input[type="range"] {
   animation: operationDispatchPulse 1.35s ease-in-out infinite;
 }
 
+/* Read overlay visibility once per transition instead of a page-wide :has()
+   selector. Timers and notifications still update while their motion pauses. */
+html.game-ui-open :is(.incoming-attack-btn.active, .outgoing-attack-btn.active,
+  .citadel-assault-countdown.imminent, .daily-login-reward-btn.is-claimable .daily-login-reward-icon) {
+  animation-play-state: paused !important;
+}
+
 @keyframes operationDispatchPulse {
   0%, 100% { filter: brightness(.97); box-shadow: inset 0 -3px 0 rgba(0,0,0,.24), 0 5px 10px rgba(0,0,0,.3); }
   50% { filter: brightness(1.08); box-shadow: inset 0 -2px 0 rgba(0,0,0,.2), 0 6px 12px rgba(0,0,0,.36); }

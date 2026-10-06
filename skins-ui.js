@@ -397,28 +397,28 @@ function updateCosmeticProfileNavigation() {
   window.CrownlandsPlayerProfileUI?.setOverview(activeProfileTab === "profile" && Boolean(flagEditorView?.hidden));
   const showingSkins = activeProfileTab === "skins";
   profileScreen.classList.toggle("skins-active", showingSkins);
-  document.getElementById("skinsView").hidden = !showingSkins;
+  setHiddenIfChanged(document.getElementById("skinsView"), !showingSkins);
   document.getElementById("skinsTabBtn").classList.toggle("active", showingSkins);
-  document.getElementById("skinsTabBtn").setAttribute("aria-selected", String(showingSkins));
+  setAttrIfChanged(document.getElementById("skinsTabBtn"), "aria-selected", showingSkins);
   const showingSkills = activeProfileTab === "skills";
   const showingSettings = activeProfileTab === "settings";
   const showingClan = activeProfileTab === "clan";
-  if (profileScreenTitle) profileScreenTitle.textContent = showingSkins ? "Skins" : showingSettings ? "Settings" : showingSkills ? "Skills" : showingClan ? "Clan" : "Profile";
+  setTextIfChanged(profileScreenTitle, showingSkins ? "Skins" : showingSettings ? "Settings" : showingSkills ? "Skills" : showingClan ? "Clan" : "Profile");
   if (profileTabBtn) {
     profileTabBtn.classList.toggle("active", !showingSkins && !showingSkills && !showingSettings && !showingClan);
-    profileTabBtn.setAttribute("aria-selected", String(!showingSkins && !showingSkills && !showingSettings && !showingClan));
+    setAttrIfChanged(profileTabBtn, "aria-selected", !showingSkins && !showingSkills && !showingSettings && !showingClan);
   }
   if (clanTabBtn) {
     clanTabBtn.classList.toggle("active", showingClan);
-    clanTabBtn.setAttribute("aria-selected", String(showingClan));
+    setAttrIfChanged(clanTabBtn, "aria-selected", showingClan);
   }
   if (skillsTabBtn) {
     skillsTabBtn.classList.toggle("active", showingSkills);
-    skillsTabBtn.setAttribute("aria-selected", String(showingSkills));
+    setAttrIfChanged(skillsTabBtn, "aria-selected", showingSkills);
   }
   if (settingsTabBtn) {
     settingsTabBtn.classList.toggle("active", showingSettings);
-    settingsTabBtn.setAttribute("aria-selected", String(showingSettings));
+    setAttrIfChanged(settingsTabBtn, "aria-selected", showingSettings);
   }
 }
 

@@ -187,14 +187,14 @@ function patchCityDetailsPanel(initialRender = false) {
   const values = getCityDetailsValues(city);
   root.querySelectorAll("[data-cd-value]").forEach(element => {
     const value = values[element.dataset.cdValue];
-    if (value !== undefined && element.innerHTML !== value) element.innerHTML = value;
+    if (value !== undefined && element.innerHTML !== value && !patchOperationModalText(element, value)) element.innerHTML = value;
   });
   const art = root.querySelector("[data-cd-art]");
   if (art.getAttribute("src") !== values.art) art.setAttribute("src", values.art);
   const fortification = root.querySelector(".cd-fortification");
   const fortificationMarkup = renderCityFortificationStatus(city, getCityStats(city));
   // This block contains only passive wall/repair information, never controls.
-  if (fortification && fortification.innerHTML !== fortificationMarkup) fortification.innerHTML = fortificationMarkup;
+  if (fortification && fortification.innerHTML !== fortificationMarkup && !patchOperationModalText(fortification, fortificationMarkup)) fortification.innerHTML = fortificationMarkup;
   const amount = Math.min(2, Math.max(0, Number(root.dataset.cdAmount) || 0));
   const option = optionState.options[amount];
   const pending = getPendingCityUpgradeCount(city, optionState.regionId);
@@ -209,10 +209,10 @@ function patchCityDetailsPanel(initialRender = false) {
     const node = root.querySelector(selector);
     if (node.textContent !== text) node.textContent = text;
   };
-  root.querySelectorAll("[data-cd-amount]").forEach(candidate => candidate.setAttribute("aria-pressed", String(Number(candidate.dataset.cdAmount) === amount)));
-  button.disabled = !affordable;
-  button.dataset.cityUpgradeMode = option.mode;
-  button.dataset.cityUpgradeLevels = String(levels);
+  root.querySelectorAll("[data-cd-amount]").forEach(candidate => setAttrIfChanged(candidate, "aria-pressed", Number(candidate.dataset.cdAmount) === amount));
+  button.toggleAttribute("disabled", !affordable);
+  setAttrIfChanged(button, "data-city-upgrade-mode", option.mode);
+  setAttrIfChanged(button, "data-city-upgrade-levels", levels);
   put("#cdUpgradeHint", levels > 0 ? `Level ${formatNumber(optionState.currentLevel)} → ${formatNumber(optionState.currentLevel + levels)} · +${formatNumber(levels)} level${levels === 1 ? "" : "s"}` : `Level ${formatNumber(optionState.currentLevel)} · No affordable levels`);
   put("[data-cd-upgrade-label]", failed && affordable ? "Retry upgrade" : `Upgrade${levels > 0 ? ` to level ${formatNumber(optionState.currentLevel + levels)}` : " city"}`);
   put("[data-cd-cost]", Number.isFinite(cost) ? cityDetailsNumber(cost) : "—");
@@ -228,7 +228,7 @@ function patchCityDetailsPanel(initialRender = false) {
     status = "disabled";
     title = Number.isFinite(cost) && cost > optionState.availableGold ? `Need ${cityDetailsNumber(cost - optionState.availableGold)} more gold` : "Upgrade unavailable";
   }
-  root.dataset.cdStatus = status;
+  setAttrIfChanged(root, "data-cd-status", status);
   put("[data-cd-feedback-title]", title);
   put("[data-cd-feedback-balance]", recovery ? "Refreshing confirmed balance…" : `${pending ? "After reservations" : confirmed && !failed ? "Remaining" : "Available"}: ${cityDetailsNumber(optionState.availableGold)} gold`);
   const iconNode = root.querySelector("[data-cd-feedback-icon]");

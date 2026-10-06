@@ -298,11 +298,27 @@ function updateOnboardingMapTipVisibility() {
 }
 
 function observeOnboardingOverlays(onChange) {
-  const observer = new MutationObserver(onChange);
-  document.querySelectorAll("dialog").forEach(dialog => {
-    observer.observe(dialog, { attributes: true, attributeFilter: ["open"] });
-  });
+  const observedDialogs = new WeakSet();
+  const update = () => {
+    // Covered HUD pulses repaint the backdrop behind every open screen. Keep
+    // live counters running, but suspend this decorative motion until closing.
+    document.documentElement.classList.toggle("game-ui-open", Boolean(
+      document.querySelector("dialog[open]")
+      || document.getElementById("profileScreen")?.classList.contains("open")
+      || document.getElementById("setupScreen")?.classList.contains("visible")
+    ));
+    document.querySelectorAll("dialog").forEach(dialog => {
+      if (observedDialogs.has(dialog)) return;
+      observedDialogs.add(dialog);
+      observer.observe(dialog, { attributes: true, attributeFilter: ["open"] });
+    });
+    onChange();
+  };
+  const observer = new MutationObserver(update);
+  // Nested confirmation/production dialogs are created on demand.
+  observer.observe(document.body, { childList: true });
   document.querySelectorAll("#profileScreen, #toast, #setupScreen").forEach(panel => {
     observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
   });
+  update();
 }
