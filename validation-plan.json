@@ -1,23 +1,10 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "730182e31ab2801ba5f4537e1342facbb1a3fe08",
+  "baseCommit": "8572f2959d5e12218f37599db48debf9acc6e745",
   "coverage": [
     {
-      "paths": [
-        "troop-orders-ui.css",
-        "tools/validate-troop-selection-browser.js"
-      ],
-      "reason": "Fit the shared desktop troop-order shell's height to its rendered contents at the existing width, bounded by the viewport, while preserving compact/mobile sizing and fixed actions. Exercise real Attack, Transfer and Reinforce views with known scout intelligence, shield warnings, eligible Swift controls and both reinforcement limits; require full details without scrolling or large unused space inside or outside the detail panel at 1440x900 and 1920x1080, and reachable content with visible actions at smaller laptop and landscape-mobile sizes. Retain exact-input, availability, route-refresh, dispatch-guard and Rally checks. Tower orders share this CSS shell, so their existing desktop/mobile parity and interaction validator is an affected dependency. Production build and artifact gates cover stylesheet packaging. No authoritative rules, backend source or production data change; no emulator suite applies.",
-      "tests": [
-        "tools/validate-troop-selection-browser.js",
-        "tools/validate-clan-tower-orders-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record the user's confirmed desktop order-window presentation request, viewport bounds, full-information acceptance sizes, short-screen scrolling and pending-release status. The CSS and shared browser validators in the preceding coverage group verify the described behavior; the specification itself needs no additional executable test.",
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "reason": "Record the user-authorized, verified web release of PR #464, exact merged build/publication identity, staged and three-host public asset parity, passed layout/release checks, unchanged backend compatibility, and the secondary itch.io channel's preceding build. Update the confirmed desktop sizing rule to LIVE — WEB. Documentation only; no runtime source, production configuration or data changes. Existing successful implementation checks and saved deployment evidence support this record; no additional runtime or emulator suite applies.",
       "tests": []
     }
   ]
