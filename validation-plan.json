@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "390ed49899da47a3f39e39d431b16386aeb57ffe",
+  "baseCommit": "a07b67582f9ce0f1112022ee45069c9f33b72856",
   "coverage": [
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record verified PR #460 deployment, active-realm score conversion, source/artifact parity, passed validation, channel limits and release evidence. Resolve the superseded King Power test-gap wording. Documentation only; runtime code and release configuration are unchanged, and no additional executable tests or emulator suites apply.",
+      "reason": "Record the authorized itch.io package/upload and weekly devlog publication, source/backend compatibility, focused packaging/browser checks, and the concrete platform-hosting blocker. Documentation only; no runtime, balance, production configuration or authoritative backend source changes. No additional executable or emulator suites apply.",
       "tests": []
     }
   ]
