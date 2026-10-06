@@ -66,7 +66,23 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Four knight-order city skins
+### Current verified web release — Troop-only King Power
+
+The user-authorized merge and deployment of [PR #460](https://github.com/explocion200/CrownLands/pull/460), from `codex/king-power-troops-only`, is verified at build `390ed49899da47a3f39e39d431b16386aeb57ffe`. Version 13 King Power is exclusively the complete controlled troop count × 2. Existing action/economy transactions and pushed stats snapshots maintain the score; production keeps its existing lazy settlement and 120-second refresh. No scoring polling timer was added.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game and both game hosts | `LIVE — WEB`; Netlify production deploy `6ac50b7be98ca00007cad7a6`, published October 6, 2026 at `15:18:15.268 UTC` (11:18 a.m. Eastern). The game entry, client, manifest, release configuration and service worker match the merged artifact on the primary `/play/` route, `crownland.netlify.app` and `game.playcrownlands.com`. The existing manual publication hold remains enabled. |
+| Firebase backend | All 139 existing Node.js 22 Functions are ACTIVE with the merged scoring source and manifest. Each deployment source-hash group was verified from its stored source archive; no older scoring group remains. The initial quota/internal-error failures were resolved by retrying the 11 remaining functions. All six affected authentication guards and the post-deployment 29-callable access audit passed. |
+| Active realm | Release `crownlands-2026-10-03-city-wall-midpoint-v4`, world `main-realm-2026-10`, generation `realm-2026-10`, shard `shard_0001`; current pointer and `core-expansion-v1` release configuration verified. Realm identity, Firestore rules and indexes were retained. |
+| Current score conversion | The existing authoritative rebuild converted all 54 current-realm player projections and refreshed 1,089 city and five march identity projections, with zero Main City repairs. Transaction-consistent verification found player/global/Kingdom leaderboard scores equal to twice the complete troop totals. Two clan aggregate mismatches were reconciled from their guarded current rosters and stats; all three active clan boards and 24 members then matched, including four preserved inactive zero-score members. Archived profiles and final-season standings were excluded. |
+| Required validation | Static validation, Multiplayer emulator validation and Validate passed in [run 37477361115](https://github.com/explocion200/CrownLands/actions/runs/37477361115). All 24 selected local checks and 15 affected multiplayer suites passed. The season balance audit, production artifact checks, deployed-source parity and callable-access checks passed. |
+| Public production smoke | Nineteen artifact/content comparisons passed across the three game entry/runtime hosts. Game-host guides match the new rule after normalizing Netlify's anchor-only pretty-URL processing; the separately maintained primary website guides were not republished by this game release. Live signed-out startup and scoring arithmetic passed at 1440×900, 844×390 and 568×320, including zero troops and zero infrastructure power. No production battle or purchase was used for smoke testing. |
+| itch.io | Client not republished or verified for this release; shared backend updated. Troop-only client delivery is verified as `LIVE — WEB` only. |
+
+Sanitized release evidence is retained locally under `release-artifacts/king-power/deployment/`. Local `main` was synchronized and verified at the implementation build before deployment. Existing Camp tier thresholds, protection/XP policies and earned rewards were retained; lower scores can change Camp reward tiers, so observed payout balance remains a release-monitoring consideration.
+
+### October 6 four knight-order city skins release
 
 The authorized deployment of [PR #458](https://github.com/explocion200/CrownLands/pull/458), from `codex/knight-order-city-skins`, is verified at build `d21f6579c3b36e4f150e064f05cab930c597aa6f`. Templar Dawnwatch, Hospitaller Night Sanctuary, Teutonic Frost Citadel and Santiago Emberward each cost 600 Crowns, include all five established city appearances and use bounded medieval animation outside the walls.
 
@@ -1344,7 +1360,7 @@ See [implementation and verification notes](visual-qa/leaderboard-podium/README.
 
 ### Approved troop-only King Power — October 6, 2026
 
-**Status: confirmed; implementation version 13 in development, pending validation, merge and separately authorized deployment.** This rule supersedes the earlier replacement-production and defensive-power formula below.
+**Status: `LIVE — WEB` with the shared Firebase backend, verified October 6, 2026 at build `390ed498...`; current-realm player and clan scores converted. The itch.io client was not republished.** This rule supersedes the earlier replacement-production and defensive-power formula below.
 
 - King Power is exclusively **total controlled troops × 2**. Count city/royal-holding and occupied Camp garrisons, active non-rally marches, stationed reinforcements, committed rally troops and personally owned Tower garrisons once, across the current realm. Duplicate march mirrors and rally movement copies must not double-count troops. Preserve current world, generation, shard and ownership guards.
 - Moving troops among these locations preserves the complete score. Production/rewards add two power per credited troop; casualties and other actual troop removals subtract two. City levels, walls, VP, Gold, production rates, objectives, skills, gear and timed items have no direct score contribution. Their existing production and combat effects continue. Keep numeric overflow guards.
@@ -1837,7 +1853,7 @@ Confirmed by the user on September 21, 2026: ordinary changes test changed or ad
 
 ### Verified test gap
 
-`tools/validate-king-power.js` hardcodes three troops per city progression point in its local calculation, while executable economy configuration uses ten. The validator can therefore disagree with live King Power replacement-power calculation and must be corrected with the implementation work. Reset emulator coverage also codifies clan reset and does not cover the confirmed Common Gear/clan persistence policy.
+The historical replacement-power validator mismatch (three versus ten troops per city progression point) was resolved by PR #460: the approved version 13 score has no replacement-production contribution, and the affected validators assert exact troop-only power and zero infrastructure power. Reset emulator coverage also codifies clan reset and does not cover the confirmed Common Gear/clan persistence policy.
 
 ### Release acceptance
 
@@ -2028,7 +2044,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Common Gear reset persistence | Earlier reset initializer created an empty Gear state | Superseded by the explicit Common Gear persistence helper and reset-emulator coverage; production verification is scheduled with the reset |
 | Clan reset persistence | Earlier reset path omitted clan identity and generation rollover | Superseded by transactional clan identity/roster/role migration with failure-safe and concurrency emulator coverage |
 | War Drums production bonus | Codex audit summary said 5%; executable config says 30% while server fallback is 5% | Repository fact is 30% at `27105ae...`; exact production runtime parity remains **NEEDS VERIFICATION** |
-| King Power replacement-power validator | Validator hardcodes three troops per progression point; executable config uses ten | Executable implementation uses ten; validator is stale technical debt |
+| King Power replacement-power validator | Historical validator/config mismatch under the superseded infrastructure formula | Resolved by PR #460 and the October 6 troop-only release; replacement and defensive power are zero, with validated two-power-per-troop accounting |
 | City-upgrade XP warnings | Earlier model required a preview and confirmation before rebuilt-level suppression | Superseded by silent suppression and direct replay-safe submission; XP progression remains authoritative but city-upgrade XP messaging is hidden |
 | Season leaderboard history | Current rankings are generation-scoped and no final lock/archive exists | Active rankings reset; final Kingdom Top 100 and Clan leaderboard must persist as read-only archives. Implementation is `PLANNED`. |
 
@@ -2070,6 +2086,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 6, 2026 — King Power release verification
+
+- Recorded the authorized PR #460 merge, exact web/backend build, active October Core realm and retained publication hold.
+- Recorded conversion and verification of all 54 current player scores and three active clan rankings, with historical records excluded.
+- Verified the 24 local checks, 15 selected emulator suites, season balance audit, exact backend source, public game assets and desktop/landscape startup; itch.io remains unrepublished.
+- Marked version 13 troop-only King Power live on web and resolved the obsolete replacement-power validator conflict.
 
 ## v1.37 — September 6, 2026
 
