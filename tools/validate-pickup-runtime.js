@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const source = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
+const source = ["game.js", "pickup-placement.js"].map(file => fs.readFileSync(path.join(__dirname, "..", file), "utf8")).join("\n");
 
 function extract(name) {
   const start = source.indexOf(`function ${name}(`);

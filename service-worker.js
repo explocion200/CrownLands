@@ -79,6 +79,7 @@ const STATIC_CACHE_URLS = [
   "/crown-payments-ui.css?v=stripe-test-r1",
   "/knight-city-effects.js?v=knight-orders-r1",
   "/skins-ui.js?v=knight-orders-r1",
+  "/pickup-placement.js?v=20261006-open-center-r1",
   "/cosmetics-client.js?v=halloween-v1",
   "/skins-ui.css?v=knight-orders-r1",
   "/functions/playerFlagConfig.js?v=20260825-player-flags-audit-r1",

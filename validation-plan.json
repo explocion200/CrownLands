@@ -3,9 +3,14 @@
   "baseCommit": "ebc9425bf29f6bfdf137cf729e08e90ac0f444cb",
   "coverage": [
     {
-      "paths": ["game.js"],
+      "paths": ["game.js", "pickup-placement.js"],
       "reason": "Randomize bounded central pickup placement and exclude static/seasonal scenery, canonical and relocated city/skin footprints, Camps, landmarks and Tower compounds on the verified core-expansion-v1 release. Revalidate saved locations using cached render/art inputs, preserve invalid reservations for same-map repair, and defer pending seasonal layouts. Exercise Gold, troop and Crown interactions, failed/blocked placement, session guards, 25 Core maps, generated templates, maximum-stage artwork, desktop/landscape geometry and the affected shared city-render reconciliation. Timing, raw-production rewards and account limits retain existing regression coverage.",
       "tests": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js", "tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations.js", "tools/validate-halloween-map-decorations-browser.js", "tools/validate-city-map-reconciliation-browser.js"]
+    },
+    {
+      "paths": ["index.html", "service-worker.js", "tools/build-production-client.js"],
+      "reason": "Load the extracted pickup clearance helpers before the game runtime, ship the module in both generated game entries and retain it in the offline shell. Keep the existing game.js and aggregate asset budgets unchanged. Production artifact/reference and performance-budget gates validate packaging; isolated pickup browser tests exercise startup and helper resolution with the module loaded from the real entry.",
+      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js", "tools/validate-pickup-browser.js"]
     },
     {
       "paths": ["functions/index.js", "functions/test/emulator-cosmetics.js"],
