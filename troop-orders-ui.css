@@ -51,6 +51,10 @@
 
 }
 #modal.troop-slider-modal{width:min(1100px,calc(100vw - 24px)) !important;height:min(620px,calc(100dvh - 24px)) !important}
+/* Desktop orders need room for the full selector, information panels and warnings. */
+@media(min-height:601px) and (min-width:1001px){
+#modal.troop-slider-modal{width:min(1280px,calc(100vw - 24px)) !important;height:min(900px,calc(100dvh - 24px)) !important}
+}
 #modal.troop-slider-modal .window-header{gap:13px !important;min-height:73px !important}
 #modal.troop-slider-modal .heading-art{width:40px !important;height:43px !important;object-fit:contain !important}
 #modal.troop-slider-modal .order-kind{margin-left:auto !important;color:var(--muted) !important;font:15px Georgia,serif !important}
