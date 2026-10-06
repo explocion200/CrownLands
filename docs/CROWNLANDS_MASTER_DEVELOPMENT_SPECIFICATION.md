@@ -66,7 +66,22 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Approved troops helmet artwork
+### Current verified web release — Four knight-order city skins
+
+The authorized deployment of [PR #458](https://github.com/explocion200/CrownLands/pull/458), from `codex/knight-order-city-skins`, is verified at build `d21f6579c3b36e4f150e064f05cab930c597aa6f`. Templar Dawnwatch, Hospitaller Night Sanctuary, Teutonic Frost Citadel and Santiago Emberward each cost 600 Crowns, include all five established city appearances and use bounded medieval animation outside the walls.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game and both game hosts | `LIVE — WEB`; Netlify production deploy `6ac474910af8860008283d3f`, published October 6, 2026 at `04:21:59.228 UTC` (12:21 a.m. Eastern). Release manifest, game entry and service worker identify the merged build on `playcrownlands.com`, `crownland.netlify.app` and `game.playcrownlands.com`. Catalog, painter and UI sources match the merged files; all twenty artwork hashes match on all three hosts. The manual publication hold remains enabled. |
+| Firebase backend | `purchaseCosmetic`, `equipCosmetic`, `collectHarvestBonus` and `reserveHarvestBonusSpawn` were updated before `getCosmeticsState` advertised the new offers. All five are ACTIVE on Node.js 22 with source hash `de020abc8baad743f77e05cba5c19bf53053784f`. Downloaded deployed source confirms the exact build and catalog/service/index/release configuration. The other 134 functions retain their baseline revisions and source metadata. All five authentication guards and the deployment hook's 29 callable-access checks passed. |
+| Active realm | Release `crownlands-2026-10-03-city-wall-midpoint-v4`, world `main-realm-2026-10`, generation `realm-2026-10`, shard `shard_0001`; identity unchanged. Configured live world topology remains `core-expansion-v1`. No world, rules, indexes or gameplay records were edited for this deployment. |
+| Required validation | Static validation, Multiplayer emulator validation and Validate passed in [run 37411998371](https://github.com/explocion200/CrownLands/actions/runs/37411998371). Nine focused validators, production artifact/asset budgets and affected purchase/ownership/pickup emulator coverage passed. Local desktop/landscape stress tests used 60 cities under 4× CPU slowdown, with bounded slots and no material measured frame-time regression. These are tested Chromium conditions, not a physical-device guarantee. |
+| Production interaction limits | Public artifact and callable-access smoke passed. The signed-in Shop check remains pending because the existing browser session had signed out and Google redirect did not restore it. No production cosmetic purchase or Apply was performed; those transactions passed in the emulator. |
+| itch.io | Client not republished or verified for this release; shared backend updated. Knight-order skin delivery is verified as `LIVE — WEB` only. |
+
+Sanitized deployment evidence is retained locally under `release-artifacts/knight-order-city-skins/deployment/`. Local `main` was clean and synchronized at the implementation build before deployment; later documentation-only descendants do not alter this published runtime.
+
+### October 4 approved troops helmet artwork release
 
 The authorized release of [PR #449](https://github.com/explocion200/CrownLands/pull/449), from `codex/troops-helmet-artwork`, is verified at build `af766bd731c764b9c0d9de86a1c72c916563b20d`. The approved painted steel helmet replaces 27 generic troop, garrison, production and Barracks icon references across 18 active presentation files. Shared sprites, reports, holdings, rewards, troop orders, profiles and Inner Castle use the same transparent image. Existing explicit reward art, officer equipment, troop bundles, army/scout tokens and heraldry retain their roles. Troop values, combat, progression and server authority are unchanged.
 
@@ -240,6 +255,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Four 600-Crown knight-order city skins with five stages and bounded medieval outskirts | Verified web/backend build `d21f6579...` from PR #458 | Shared backend updated; client not republished | `LIVE — WEB`; artifact and callable smoke passed, signed-in Shop verification pending |
 | Approved painted steel troops helmet across troop, garrison, production and Barracks presentation | Verified in web build `af766bd7...` from PR #449 | Not republished; existing publication hold retained | `LIVE — WEB`; exact image and affected assets verified on all game hosts, with desktop/mobile browser checks |
 | Approved antique Gold coin artwork across currency presentation and default Gold particles | Verified in web build `5c595a93...` from PR #447 | Not republished; existing publication hold retained | `LIVE — WEB`; exact image and affected assets verified on all game hosts, with desktop/mobile browser checks |
 | Royal Peace Shield activation confirmation in the Item Bag | Verified in web build `218dd880...` from PR #445 | Not republished; existing publication hold retained | `LIVE — WEB`; synthetic production UI checks passed, authenticated item consumption remains untested |
@@ -1120,7 +1136,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Add Templar Dawnwatch, Hospitaller Night Sanctuary, Teutonic Frost Citadel and Santiago Emberward to Shop → Skins for **600 Crowns each**. Each unlock includes all five existing appearance stages: levels 1–24, 25–49, 50–74, 75–99 and 100+. These nonseasonal orders are available year-round; Halloween retains its October sale window.
 - Preserve permanent ownership, free switching through Profile → Skins → Apply, server-authoritative prices and receipts, purchase without auto-equip, current-owner appearance across regular cities, and visibility to other players. Strongholds and gameplay stats remain unchanged.
 - Use the approved paintings and medieval activity outside the walls: standards, patrols, campfires, smoke and birds, with snow for Teutonic cities. Runtime artwork must be optimized and loaded only when used. Share the existing city-animation budget, pause during camera movement and behind overlays, omit distant/crowded effects, and respect reduced/off motion settings. Validate desktop and landscape-mobile performance before merge.
-- **Status:** approved for implementation and merge; production deployment not yet verified. Artwork and runtime validation are recorded in [the knight-order city notes](visual-qa/knight-order-city-skins/README.md).
+- **Status:** `LIVE — WEB` as of October 6, 2026 at build `d21f6579...`; exact backend/web deployment verified. Signed-in Shop smoke remains pending; purchases and Apply passed in the emulator. Artwork, performance and deployment details are recorded in [the knight-order city notes](visual-qa/knight-order-city-skins/README.md).
 
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 

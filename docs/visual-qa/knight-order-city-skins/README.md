@@ -60,4 +60,14 @@ node tools/validate-skin-motion-browser.js
 
 ## Rollout
 
-The frontend waits for `getCosmeticsState.availableOfferIds` before exposing the four new offers. An older backend continues showing its supported Halloween offer. Deploy the updated `purchaseCosmetic`, `equipCosmetic` and `collectHarvestBonus` before `getCosmeticsState` advertises availability; Crown pickups must use the new catalog to retain equipped knight appearances. Deploy `reserveHarvestBonusSpawn` with the same catalog for consistent pickup reads. Then deploy `getCosmeticsState` with the validated client to activate sales. Push/merge authorization does not by itself verify production backend deployment. No production deployment is claimed by these notes.
+The frontend waits for `getCosmeticsState.availableOfferIds` before exposing the four new offers. An older backend continues showing its supported Halloween offer. Deploy the updated `purchaseCosmetic`, `equipCosmetic` and `collectHarvestBonus` before `getCosmeticsState` advertises availability; Crown pickups must use the new catalog to retain equipped knight appearances. Deploy `reserveHarvestBonusSpawn` with the same catalog for consistent pickup reads. Then deploy `getCosmeticsState` with the validated client to activate sales. Push/merge alone does not verify deployment; the authorized production result is recorded below.
+
+## Verified production deployment — October 6, 2026
+
+The owner authorized deployment after PR #458 merged. Web build `d21f6579c3b36e4f150e064f05cab930c597aa6f` was published through Netlify deploy `6ac474910af8860008283d3f` at `04:21:59.228 UTC` (12:21 a.m. Eastern), with the manual publication hold retained. The manifest, game entry and service worker match on all three game hosts; catalog/painter/UI source and all twenty artwork hashes match the merged files.
+
+The five functions named above are ACTIVE on Node.js 22 with shared source hash `de020abc8baad743f77e05cba5c19bf53053784f`. The four purchase/equip/pickup functions deployed first, followed by catalog advertisement. The downloaded source package contains the exact merged build and matching runtime sources. The other 134 function revisions and October realm identity remained unchanged. All five callable authentication guards and the deployment hook's 29 callable-access checks passed.
+
+The required GitHub checks passed in run `37411998371`. Exact-source emulator coverage includes the four 600-Crown purchases, replay/ownership/Apply and Crown pickup preservation. No production purchase or Apply was made. The final signed-in Shop check remains pending: the old session was signed out, and Google redirect did not restore it. Physical-device performance and itch.io client parity remain unverified.
+
+Deployment receipts are retained locally in `release-artifacts/knight-order-city-skins/deployment/`. This release is **LIVE — WEB**; the preceding rollout instructions describe the dependency order for future deployments.
