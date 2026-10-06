@@ -125,6 +125,12 @@ async function main() {
       const url = address.url + '/docs/visual-qa/inner-city-estate/index.html?scene=' + scene;
       await client.send('Page.navigate', { url }); await wait(expected => location.href === expected && document.readyState === 'complete' && !!window.estatePreview, url); await evaluate(() => Promise.all([...document.images].map(i => i.decode())));
       assert.equal(await count('[data-estate-site]'), 20); if (scene !== 'initial') assert.equal(await count('[data-site-state="' + scene + '"]'), 20);
+      if (scene === 'completed') {
+        const activity = await evaluate(() => estatePreview.debug().assignments);
+        for (const guard of activity.filter(a => a.row === 1)) assert.deepEqual(guard.to, [61, 37.5], 'Guards must patrol the completed Barracks');
+        assert.deepEqual(activity.find(a => a.row === 2).to, [60, 52.5], 'Couriers must visit the completed Royal Stables');
+        const cart = activity.find(a => a.row === 3); assert.deepEqual(cart.from, [69, 66.5]); assert.deepEqual(cart.to, [87, 73], 'Deliveries connect completed Storehouse and Wagon Yard');
+      }
       await screenshot('fixture-' + scene + '.png');
     }
     assert.deepEqual(errors, []);

@@ -258,11 +258,16 @@
       ...roads.filter(r=>r.buildingKey&&siteStates[r.buildingKey]==="completed"&&r.buildingKey!=="gatehouse").map(r=>r.points),
     ];
     const workSites=buildings.filter(b=>siteStates[b.key]==="constructing").slice(0,2);
+    const serviceRoad=key=>roads.find(r=>r.buildingKey===key).points;
+    const tradeSite=["storehouse","wagon-yard","market"].find(key=>siteStates[key]==="completed");
+    const deliveryRoute=siteStates.storehouse==="completed"&&siteStates["wagon-yard"]==="completed"
+      ?[...serviceRoad("storehouse")].reverse().concat(roads.find(r=>r.id==="circuit-11").points,serviceRoad("wagon-yard"))
+      :tradeSite?serviceRoad(tradeSite):routes[1];
     const actors=Array.from({length:14},(_,i)=>{
       const element=document.createElement("div");element.className="estate-actor"+(i>=12?" estate-mounted":"");element.innerHTML='<span></span>';actorsRoot.append(element);
       const row=i<10?0:i<12?1:i===12?2:3;
       const worker=i>=8&&i<10?workSites[i-8]:null;
-      const route=worker?[[worker.hotspot.left+worker.footprint.width*.3,worker.hotspot.top+worker.footprint.height*.25],[worker.hotspot.left+worker.footprint.width*.4,worker.hotspot.top+worker.footprint.height*.25]]:i===12?roads.find(r=>r.buildingKey==="royal-stables").points:i===13?routes[1]:routes[i%routes.length];
+      const route=worker?[[worker.hotspot.left+worker.footprint.width*.3,worker.hotspot.top+worker.footprint.height*.25],[worker.hotspot.left+worker.footprint.width*.4,worker.hotspot.top+worker.footprint.height*.25]]:row===1&&siteStates.barracks==="completed"?serviceRoad("barracks"):i===12?siteStates["royal-stables"]==="completed"?serviceRoad("royal-stables"):routes[1]:i===13?deliveryRoute:routes[i%routes.length];
       return {element,sprite:element.firstElementChild,row,route,offset:i*157,speed:i===12?24:i===13?14:11+i%3};
     });
     function paintActors(time) {
@@ -287,7 +292,7 @@
     return {
       select, zoom, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
-      debug:()=>({camera:{...camera},siteStates:{...siteStates},actors:actors.length,mode,animationRunning:Boolean(raf),destroyed}),
+      debug:()=>({camera:{...camera},siteStates:{...siteStates},actors:actors.length,assignments:actors.map(a=>({row:a.row,from:a.route[0],to:a.route.at(-1)})),mode,animationRunning:Boolean(raf),destroyed}),
       destroy(){if(destroyed)return;destroyed=true;cancelAnimationFrame(raf);raf=0;abort.abort();resize.disconnect();unsubscribe?.();actorsRoot.replaceChildren();},
     };
   }
