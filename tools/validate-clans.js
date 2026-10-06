@@ -32,7 +32,8 @@ function requires(source, pattern, message) {
   assert.match(source, pattern, message);
 }
 
-requires(server, /CLAN_UNLOCK_LEVEL\s*=\s*10/, "Clan unlock must be Hero Level 10.");
+assert.doesNotMatch(server, /CLAN_UNLOCK_LEVEL|assertClanUnlocked/, "Clan creation, joining and applications must have no Hero-level gate.");
+assert.doesNotMatch(client, /Clans? unlocks? at (?:Hero )?Level|Raise your Hero to Level 10 to create or join a clan/, "The clan menu and HUD must be available at every Hero level.");
 requires(server, /CLAN_CREATE_GOLD_COST\s*=\s*100_000/, "Clan creation must cost 100,000 gold.");
 requires(server, /CLAN_NAME_CHANGE_GOLD_COST\s*=\s*500_000/, "Clan renaming must cost 500,000 gold.");
 requires(server, /CLAN_NAME_CHANGE_COOLDOWN_MS\s*=\s*7\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan renaming must have a seven-day cooldown.");

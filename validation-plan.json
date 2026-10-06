@@ -1,35 +1,40 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ebc9425bf29f6bfdf137cf729e08e90ac0f444cb",
+  "baseCommit": "906783e95cafa24f1d8fa1544bb97a5567786949",
   "coverage": [
     {
-      "paths": ["game.js", "pickup-placement.js"],
-      "reason": "Randomize bounded central pickup placement and exclude static/seasonal scenery, canonical and relocated city/skin footprints, Camps, landmarks and Tower compounds on the verified core-expansion-v1 release. Revalidate saved locations using cached render/art inputs, preserve invalid reservations for same-map repair, and defer pending seasonal layouts. Exercise Gold, troop and Crown interactions, failed/blocked placement, session guards, 25 Core maps, generated templates, maximum-stage artwork, desktop/landscape geometry and the affected shared city-render reconciliation. Timing, raw-production rewards and account limits retain existing regression coverage.",
-      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js", "tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations.js", "tools/validate-halloween-map-decorations-browser.js", "tools/validate-city-map-reconciliation-browser.js"]
+      "paths": ["game.js"],
+      "reason": "Remove the Hero-level lock from clan discovery, creation and existing-member views and the shared HUD label/signature. Check actual menu/action dispatch at Levels 1, 9, 10 and 257 at desktop and landscape sizes, retained capacity/application/departure restrictions, and notification/role/session/heraldry dependencies of the HUD.",
+      "tests": ["tools/validate-clans.js", "tools/validate-clan-level-access-browser.js", "tools/validate-clan-notifications-browser.js"]
     },
     {
-      "paths": ["index.html", "service-worker.js", "tools/build-production-client.js"],
-      "reason": "Load the extracted pickup clearance helpers before the game runtime, ship the module in both generated game entries and retain it in the offline shell. Keep the existing game.js and aggregate asset budgets unchanged. Production artifact/reference and performance-budget gates validate packaging; isolated pickup browser tests exercise startup and helper resolution with the module loaded from the real entry.",
-      "tests": ["tools/validate-production-artifact.js", "tools/validate-asset-performance-budgets.js", "tools/validate-pickup-browser.js"]
+      "paths": ["functions/index.js"],
+      "reason": "Remove only the Hero-level admission guard from creation, open joining, applications and approval acceptance through the shared join transaction. Emulator calls verify Level 1 creation and approval acceptance, joins at Levels 1/9/10, application replay, cost, capacity, role authorization, existing membership, departure cooldown, current realm and authentication. Economy settlement, clan identity and membership transaction implementations are preserved.",
+      "tests": ["tools/validate-clans.js", "functions/test/emulator-clan-level-access.js"]
     },
     {
-      "paths": ["functions/index.js", "functions/test/emulator-cosmetics.js"],
-      "reason": "Allow the existing authenticated reservation relocation transaction to move an obstructed pickup within its current map; identical coordinates remain a no-op. Emulator coverage verifies all three types preserve identity, expiry, wallet, daily allowance and cooldown through duplicate/concurrent and stale relocation requests, while existing raw-production reward and collection-rejection checks run. The active Core cosmetics suite covers Crown collection/purchase concurrency, rotation and account entitlements consumed by this shared transaction. No world topology, archived maps, production records or API inventory is changed.",
-      "tests": ["functions/test/emulator-harvest-pickup-rewards.js", "functions/test/emulator-cosmetics.js"]
+      "paths": ["tools/validate-clans.js"],
+      "reason": "Replace the superseded Level 10 source assertion with the confirmed unrestricted clan-access contract and execute the existing clan structural/security checks.",
+      "tests": ["tools/validate-clans.js"]
     },
     {
-      "paths": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js"],
-      "reason": "Replace the fixed-center expectation with randomized in-zone assertions and add direct regressions for city/skin and generated-template scenery exclusions, cached safety, pending layouts, bounded blocked searches and same-map client relocation without duplicate requests or lost deadlines. Execute both edited validators.",
-      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js"]
+      "paths": ["tools/validate-deferred-ui-styles.js"],
+      "reason": "Repair the stale optional-stylesheet count in the shared validator required by the clan gate: unchanged origin/main already ships 13 ungrouped optional styles, while this dependency still expected nine. Run its loader/retry/session/offline checks without changing runtime styles or packaging.",
+      "tests": ["tools/validate-deferred-ui-styles.js"]
     },
     {
-      "paths": ["tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations-browser.js"],
-      "reason": "Extend isolated actual-game browser checks to all three pickup types, random positions on all 25 Core maps, seasonal layouts and generated templates, maximum-stage city artwork and independent rendered image/hit-area overlap checks at desktop and landscape sizes. Verify unchanged renders do not rescan placement and retain screenshot evidence; release only the validator's isolated browser session and profile after completion.",
-      "tests": ["tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations-browser.js"]
+      "paths": ["tools/validate-clan-level-access-browser.js"],
+      "reason": "Run the added isolated actual-game browser regression for clan entry, discovery, creation, joining/application service dispatch and low-level member access at desktop and landscape-mobile sizes.",
+      "tests": ["tools/validate-clan-level-access-browser.js"]
+    },
+    {
+      "paths": ["functions/test/emulator-clan-level-access.js"],
+      "reason": "Execute the added local-emulator-only callable regression for unrestricted Hero-level clan admission and preserved authoritative eligibility rules.",
+      "tests": ["functions/test/emulator-clan-level-access.js"]
     },
     {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "reason": "Record the user's confirmed random open central pickup rule for Gold, troops and Crowns, including scenery clearance, preserved saved reservations and five-second blocked retry. Mark implementation in development; this documentation does not claim merge or deployment and introduces no separate runtime dependencies.",
+      "reason": "Record the user's confirmed all-level clan access rule, superseding the implemented Level 10 gate and preserving other eligibility rules. Mark in development without claiming deployment; documentation adds no runtime dependencies.",
       "tests": []
     }
   ]
