@@ -200,6 +200,15 @@
       "tests": [
         "functions/test/emulator-battle-report-gear-effects.js"
       ]
+    },
+    {
+      "paths": [
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Keep the former-clan expiry fixture at comparable troop-only kingdom power after its other city changes owner. Publish real defender troop counts and assert an ordinary launch so independent King Power raid protection does not mask the capture-expiry assertion; preserve all authorization and former-clan protection cases. Check that temporary production exclusions still affect credited troops while adding zero replacement power and publishing exactly twice those troops.",
+      "tests": [
+        "functions/test/emulator-combat-authorization.js"
+      ]
     }
   ]
 }

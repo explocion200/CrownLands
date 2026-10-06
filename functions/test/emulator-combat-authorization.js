@@ -492,7 +492,8 @@ async function troopProductionCases() {
     assert.deepEqual(result.currentUser.troopProduction25Exclusion, exclusion, "Client request bypassed trusted policy");
     const city = (await ref.get()).data(), stats = (await db.doc(`players/${actor.uid}/stats/global`).get()).data();
     assert.equal(stats.baseTroopPerHour, expired ? 19034 : 15227);
-    assert.equal(stats.baseReplacementPower, (expired ? 19034 : 15227) * 12);
+    assert.equal(stats.baseReplacementPower, 0, "Production must not add direct King Power");
+    assert.equal(stats.kingPower, stats.totalTroops * 2, "Credited troops must determine King Power");
     const end = city.productionUpdatedAtMs;
     const oldMs = expired ? expiresAtMs - startedAt : end - startedAt;
     const newMs = expired ? end - expiresAtMs : 0;
@@ -702,7 +703,14 @@ async function formerClanCases() {
   }
   assert.equal((await clientRead(leader, profileRef(leaver).path)).status, 403);
   // Capture uses arrival time: a protected dispatch can conquer after expiry.
+  // Keep kingdom power comparable after otherCity changed owners, so this
+  // checks former-clan expiry without independent King Power raid protection.
+  await db.doc(`islands/${claims[1].islandId}/cities/${claims[1].cityId}`).update({
+    troops: 100_000, troopFloat: 100_000, productionUpdatedAtMs: Date.now(),
+  });
+  await call("collectEconomy", leaver);
   const expiring = await call("sendArmyOrder", leader, order(source, target, 10_000));
+  assert(!expiring.movement.attackProtection, "Expiry fixture must launch an ordinary attack");
   await weakTarget();
   await profileRef(leaver).update({ formerClanCityProtection: { ...second,
     attackers: second.attackers.map(row => ({ ...row, expiresAtMs: Date.now() - 1 })) } });
