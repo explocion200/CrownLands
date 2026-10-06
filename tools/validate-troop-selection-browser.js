@@ -105,13 +105,16 @@ const artifacts = path.resolve(__dirname, "../release-artifacts/troop-selection-
         const details=await evaluate(`(()=>{
           const body=modalBody.querySelector('.order-body'), bounds=body.getBoundingClientRect(), dialog=modal.getBoundingClientRect(), actions=document.getElementById('troopSliderConfirm').getBoundingClientRect();
           const panels=[...body.querySelectorAll('.order-route,.force-column,.attack-power-sheet,#troopSliderPreview,.transfer-card,.order-note')].filter(p=>p.getClientRects().length);
-          return {dialog:{width:dialog.width,height:dialog.height},body:{height:body.clientHeight,content:body.scrollHeight},horizontalOverflow:body.scrollWidth>body.clientWidth+1,allVisible:panels.every(p=>{const r=p.getBoundingClientRect();return r.top>=bounds.top-1&&r.bottom<=bounds.bottom+1;}),footerVisible:actions.top>=0&&actions.bottom<=innerHeight&&actions.height>=44};
+          return {dialog:{width:dialog.width,height:dialog.height,unusedSpace:dialog.bottom-modalBody.querySelector('.report-shell').getBoundingClientRect().bottom},body:{height:body.clientHeight,content:body.scrollHeight,unusedSpace:bounds.bottom-body.lastElementChild.getBoundingClientRect().bottom},horizontalOverflow:body.scrollWidth>body.clientWidth+1,allVisible:panels.every(p=>{const r=p.getBoundingClientRect();return r.top>=bounds.top-1&&r.bottom<=bounds.bottom+1;}),footerVisible:actions.top>=0&&actions.bottom<=innerHeight&&actions.height>=44};
         })()`);
         layouts.push({width,height,kind,...details});
         fs.writeFileSync(path.join(artifacts,'layouts.json'),JSON.stringify(layouts,null,2));
         fs.writeFileSync(path.join(artifacts,`${width}-${kind}-full.png`),Buffer.from((await client.send("Page.captureScreenshot",{format:"png"})).data,"base64"));
         assert(details.footerVisible&&!details.horizontalOverflow,JSON.stringify({width,height,kind,details}));
-        if(width>1000&&height>=900) assert(details.allVisible&&details.body.content<=details.body.height+1,'Full desktop order information must fit without scrolling: '+JSON.stringify({width,height,kind,details}));
+        if(width>1000&&height>=900) {
+          assert(details.allVisible&&details.body.content<=details.body.height+1,'Full desktop order information must fit without scrolling: '+JSON.stringify({width,height,kind,details}));
+          assert(details.body.unusedSpace<=32&&details.dialog.unusedSpace<=16,'Desktop orders should fit their contents without a large empty area: '+JSON.stringify({width,height,kind,details}));
+        }
         // Short screens retain a scrollable body without moving the action buttons.
         await evaluate("modalBody.querySelector('.order-body').scrollTop=modalBody.querySelector('.order-body').scrollHeight");
         assert(await evaluate(`(()=>{const body=modalBody.querySelector('.order-body'),last=body.lastElementChild,footer=document.getElementById('troopSliderConfirm');return last.getBoundingClientRect().bottom<=body.getBoundingClientRect().bottom+1&&footer.getBoundingClientRect().bottom<=innerHeight;})()`),"All details must remain reachable above the fixed actions.");
