@@ -59,6 +59,22 @@ async function main() {
     };
     const selectEffects = value => evaluate(`document.querySelector('#effects').value = ${JSON.stringify(value)}; document.querySelector('#effects').dispatchEvent(new Event('change'))`);
     const snapshot = () => evaluate("document.querySelector('canvas').toDataURL()");
+    const outsideEffects = () => evaluate(`(() => {
+      const canvas = document.querySelector('canvas'), city = document.querySelector('.city');
+      const c = canvas.getBoundingClientRect(), b = city.getBoundingClientRect(), ratio = canvas.width / c.width;
+      const left = (b.left-c.left)*ratio, right = (b.right-c.left)*ratio, top = (b.top-c.top)*ratio, bottom = (b.bottom-c.top)*ratio;
+      const pixels = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+      let count = 0, hash = 2166136261;
+      for (let y=0; y<canvas.height; y++) for (let x=0; x<canvas.width; x++) {
+        // Exclude the canvas edge fade as well as the whole artwork rectangle.
+        if (x<c.width*ratio*.1 || x>canvas.width*.9 || y<canvas.height*.12 || y>canvas.height*.9) continue;
+        if (x>=left && x<=right && y>=top && y<=bottom) continue;
+        const offset = (y*canvas.width+x)*4;
+        if (pixels[offset+3]>12) count++;
+        hash = Math.imul(hash ^ pixels[offset+3], 16777619) >>> 0;
+      }
+      return { count, hash };
+    })()`);
     const capture = async (name, fullPage = false) => {
       const height = await evaluate("document.documentElement.scrollHeight");
       const width = await evaluate("innerWidth");
@@ -78,6 +94,10 @@ async function main() {
         assert(await evaluate("[...document.querySelectorAll('button,select')].every(e => e.getBoundingClientRect().height >= 44)"), "Touch targets stay at least 44px tall");
         assert(await evaluate("(() => { const c = document.querySelector('.city').getBoundingClientRect(), s = document.querySelector('.stage').getBoundingClientRect(); return Math.abs(c.width-c.height)<1 && c.left>=s.left && c.right<=s.right+1 && c.top>=s.top && c.bottom<=s.bottom+1; })()"), "Complete square art fits its stage");
         assert(await evaluate("(() => { const image=document.querySelector('.art'), c=document.createElement('canvas'); c.width=image.naturalWidth; c.height=image.naturalHeight; const ctx=c.getContext('2d'); ctx.drawImage(image,0,0); return ctx.getImageData(0,0,1,1).data[3]===0; })()"), "Transparent city corner");
+        const outerFrame = await outsideEffects();
+        assert(outerFrame.count > 20, `${order} visibly paints beyond the entire city artwork at ${viewport.width}px`);
+        await settle();
+        assert.notEqual((await outsideEffects()).hash, outerFrame.hash, `${order} outer effects move`);
       }
       await click('[data-order-choice="teutonic"]');
       await evaluate("document.querySelector('.stage').scrollIntoView({block:'center'})");
@@ -97,6 +117,10 @@ async function main() {
       await selectEffects("full");
       await click('[data-view="scale"]'); await settle();
       assert.equal(await evaluate("document.querySelector('.city').getBoundingClientRect().width"), 160);
+      for (const order of orders) {
+        await click(`[data-order-choice="${order}"]`); await settle();
+        assert((await outsideEffects()).count > 20, `${order} outer effects survive 160px city scaling`);
+      }
       await click('[data-view="compare"]'); await settle();
       assert.equal(await evaluate("document.querySelectorAll('.skin-card').length"), 4);
       assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Compare stays within viewport");
@@ -110,7 +134,7 @@ async function main() {
     await wait("document.readyState === 'complete' && document.documentElement.dataset.effects === 'subtle'");
     assert.equal(await evaluate("document.querySelector('#effects').value"), "subtle", "Reduced motion defaults to static effects");
     assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(failed, []);
-    console.log("Four-order preview passed: transparent art, all choices, desktop/landscape/portrait fit, animated/pause/subtle/off effects, comparison, 160px city scale, reduced motion, no external requests or runtime errors.");
+    console.log("Four-order preview passed: transparent art, all choices, desktop/landscape/portrait fit, moving effects beyond every city artwork, animated/pause/subtle/off effects, comparison, 160px city scale with outer effects, reduced motion, no external requests or runtime errors.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }

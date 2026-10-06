@@ -20,7 +20,7 @@ effects.value = preference.matches ? "subtle" : "full";
 root.dataset.effects = effects.value;
 document.getElementById("orders").innerHTML = SKINS.map(skin => `<button type="button" class="order-button" data-order-choice="${skin.id}" aria-pressed="${skin.id === selected}"><img src="art/${skin.id}.png" alt="" width="68" height="78"><span><strong>${skin.order}</strong><small>${skin.tagline}</small></span></button>`).join("");
 function card(skin) {
-  return `<article class="skin-card" data-order="${skin.id}" aria-label="${skin.order}: ${skin.name}"><div class="card-top"><span>${skin.order}</span><span>City skin concept</span></div><div class="stage"><div class="city"><div class="aura"></div><div class="ground-glow"></div><img class="art" src="art/${skin.id}.png" alt="${skin.order} fortified city"><img class="light-sweep" src="art/${skin.id}.png" alt="" aria-hidden="true">${skin.gates.map(([x,y], index) => `<span class="gate-glow ${index ? "second" : ""}" style="--x:${x}%;--y:${y}%" aria-hidden="true"></span>`).join("")}<canvas aria-hidden="true"></canvas></div><span class="scale-label">160 px · City-marker preview</span></div><div class="card-copy"><h2>${skin.name}</h2><p>${skin.description}</p><div class="effect-tags">${skin.effects.map(effect => `<span>${effect}</span>`).join("")}</div></div></article>`;
+  return `<article class="skin-card" data-order="${skin.id}" aria-label="${skin.order}: ${skin.name}"><div class="card-top"><span>${skin.order}</span><span>City skin concept</span></div><div class="stage"><div class="city"><div class="aura"></div><div class="ground-glow"></div><img class="art" src="art/${skin.id}.png" alt="${skin.order} fortified city"><img class="light-sweep" src="art/${skin.id}.png" alt="" aria-hidden="true">${skin.gates.map(([x,y], index) => `<span class="gate-glow ${index ? "second" : ""}" style="--x:${x}%;--y:${y}%" aria-hidden="true"></span>`).join("")}</div><canvas aria-hidden="true"></canvas><span class="scale-label">160 px · City-marker preview</span></div><div class="card-copy"><h2>${skin.name}</h2><p>${skin.description}</p><div class="effect-tags">${skin.effects.map(effect => `<span>${effect}</span>`).join("")}</div></div></article>`;
 }
 function random(index, salt) { const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453; return value - Math.floor(value); }
 const observer = new IntersectionObserver(entries => {
@@ -29,12 +29,18 @@ const observer = new IntersectionObserver(entries => {
 });
 const sizeObserver = new ResizeObserver(entries => {
   for (const entry of entries) {
-    const scene = scenes.find(item => item.canvas === entry.target);
+    const scene = scenes.find(item => item.canvas === entry.target || item.city === entry.target);
     if (!scene) continue;
-    scene.width = entry.contentRect.width; scene.height = entry.contentRect.height;
-    const ratio = Math.min(devicePixelRatio || 1, 2);
-    scene.canvas.width = Math.round(scene.width * ratio); scene.canvas.height = Math.round(scene.height * ratio);
-    scene.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (entry.target === scene.canvas) {
+      scene.width = entry.contentRect.width; scene.height = entry.contentRect.height;
+      const ratio = Math.min(devicePixelRatio || 1, 2);
+      scene.canvas.width = Math.round(scene.width * ratio); scene.canvas.height = Math.round(scene.height * ratio);
+      scene.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    // The stage owns the effects; measure the city separately to keep gate
+    // emitters attached while particles travel beyond the artwork's bounds.
+    const cityBounds = scene.city.getBoundingClientRect(), canvasBounds = scene.canvas.getBoundingClientRect();
+    scene.size = cityBounds.width; scene.left = cityBounds.left - canvasBounds.left; scene.top = cityBounds.top - canvasBounds.top;
     draw(scene, elapsed);
   }
 });
@@ -45,9 +51,9 @@ function render() {
   document.querySelectorAll("[data-view]").forEach(button => { if (button.tagName === "BUTTON") button.setAttribute("aria-pressed", String(button.dataset.view === view)); });
   showcase.innerHTML = (view === "compare" ? SKINS : SKINS.filter(skin => skin.id === selected)).map(card).join("");
   showcase.querySelectorAll(".skin-card").forEach(element => {
-    const canvas = element.querySelector("canvas");
-    scenes.push({ canvas, context: canvas.getContext("2d"), skin: SKINS.find(skin => skin.id === element.dataset.order), visible: true, width: 0, height: 0 });
-    observer.observe(canvas); sizeObserver.observe(canvas);
+    const canvas = element.querySelector("canvas"), city = element.querySelector(".city");
+    scenes.push({ canvas, city, context: canvas.getContext("2d"), skin: SKINS.find(skin => skin.id === element.dataset.order), visible: true, width: 0, height: 0, size: 0, left: 0, top: 0 });
+    observer.observe(canvas); sizeObserver.observe(canvas); sizeObserver.observe(city);
   });
   schedule();
 }
@@ -60,42 +66,57 @@ function spark(ctx, x, y, radius, alpha, color, star) {
   if (star) { ctx.strokeStyle = `rgba(${color},.65)`; ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(x - radius * 3, y); ctx.lineTo(x + radius * 3, y); ctx.moveTo(x, y - radius * 3); ctx.lineTo(x, y + radius * 3); ctx.stroke(); }
 }
 function draw(scene, time) {
-  const { context: ctx, width: w, height: h, skin } = scene;
+  const { context: ctx, width: w, height: h, size, left, top, skin } = scene;
   ctx.clearRect(0, 0, w, h);
-  if (!w || !h || effects.value === "off") return;
+  if (!w || !h || !size || effects.value === "off") return;
   const t = effects.value === "subtle" ? 1.5 : time;
-  const size = Math.min(w, h), left = (w - size) / 2, top = (h - size) / 2;
+  const minX = -left / size, minY = -top / size, spanX = w / size, spanY = h / size;
   ctx.save(); ctx.translate(left, top); ctx.globalCompositeOperation = "lighter";
-  const count = effects.value === "subtle" ? 7 : skin.id === "teutonic" ? 48 : 34;
+  const count = effects.value === "subtle" ? 7 : skin.id === "teutonic" ? 80 : 60;
   for (let i = 0; i < count; i++) {
     const phase = random(i, 1), speed = .07 + random(i, 2) * .065, life = (t * speed + phase) % 1;
     let x, y, alpha = Math.sin(life * Math.PI) * (.4 + random(i, 3) * .55);
-    const radius = Math.max(.65, size / 540 * (.65 + random(i, 4) * 1.2));
+    const radius = Math.max(.9, size / 480 * (1 + random(i, 4) * 1.5));
     if (skin.id === "teutonic") {
-      x = (random(i, 5) + life * .22 + Math.sin(t * .6 + i) * .025) % 1;
-      y = life; alpha *= .82;
+      x = minX + ((random(i, 5) + life * .3 + Math.sin(t * .6 + i) * .035) % 1) * spanX;
+      y = minY + life * spanY; alpha *= .82;
     } else if (skin.id === "hospitaller") {
       const angle = t * (.15 + random(i, 4) * .15) + phase * Math.PI * 2;
-      x = .5 + Math.cos(angle) * (.25 + random(i, 5) * .22);
-      y = .48 + Math.sin(angle) * .32 + Math.sin(t * .2 + i) * .07;
+      x = .5 + Math.cos(angle) * (.48 + random(i, 5) * .22);
+      y = .5 + Math.sin(angle) * .49 + Math.sin(t * .2 + i) * .07;
     } else {
       const gate = skin.gates[i % 2];
-      x = gate[0] / 100 + Math.sin(life * 6 + i) * (.02 + life * .12);
-      y = gate[1] / 100 - life * (.45 + random(i, 5) * .3);
-      if (skin.id === "santiago") x += Math.sin(life * 8 + t * .25) * life * .15;
+      const side = i % 2 ? 1 : -1;
+      x = gate[0] / 100 + side * life * .9 + Math.sin(life * 6 + i) * .065;
+      y = gate[1] / 100 - life * (.6 + random(i, 5) * .4);
+      if (i % 3 === 0) x = gate[0] / 100 + Math.sin(life * 6 + i) * (.02 + life * .12);
+      if (skin.id === "santiago" && i % 3 !== 0) {
+        const angle = life * 5 + t * .32 + phase * Math.PI * 2;
+        x = .5 + Math.cos(angle) * (.36 + life * .43);
+        y = .72 - life * .48 + Math.sin(angle) * .35;
+      }
     }
-    spark(ctx, x * size, y * size, radius, alpha, skin.color.join(","), i % 7 === 0);
+    const color = skin.id === "santiago" && i % 3 === 1 ? "255,86,62" : skin.color.join(",");
+    spark(ctx, x * size, y * size, radius, alpha, color, i % 7 === 0);
   }
-  // Delicate moving wind / sanctuary trails, confined to the city silhouette area.
+  // Wind and luminous arcs cross the open space around the city walls.
   if (["teutonic", "hospitaller", "santiago"].includes(skin.id) && effects.value === "full") {
     for (let trail = 0; trail < 3; trail++) {
       const phase = (t * .07 + trail / 3) % 1;
-      ctx.globalAlpha = Math.sin(phase * Math.PI) * .22;
-      ctx.strokeStyle = `rgb(${skin.color.join(",")})`; ctx.lineWidth = Math.max(.5, size / 650);
+      ctx.globalAlpha = Math.sin(phase * Math.PI) * .34;
+      ctx.strokeStyle = `rgb(${skin.color.join(",")})`; ctx.lineWidth = Math.max(.7, size / 500);
       ctx.beginPath();
-      for (let step = 0; step <= 36; step++) {
-        const x = .04 + step / 36 * .88;
-        const y = .68 - phase * .4 + Math.sin(x * 6 + t * .4 + trail) * .045;
+      for (let step = 0; step <= 48; step++) {
+        const progress = step / 48;
+        let x, y;
+        if (skin.id === "teutonic") {
+          x = minX + progress * spanX;
+          y = .85 - phase * .85 + Math.sin(progress * 6 + t * .4 + trail) * .075;
+        } else {
+          const angle = progress * Math.PI * 1.2 + t * .24 + trail * 2.1;
+          x = .5 + Math.cos(angle) * (.59 + trail * .045);
+          y = .53 + Math.sin(angle) * (.41 + trail * .025);
+        }
         if (!step) ctx.moveTo(x * size, y * size); else ctx.lineTo(x * size, y * size);
       }
       ctx.stroke();
