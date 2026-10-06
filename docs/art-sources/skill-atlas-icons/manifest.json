@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "artSet": "atlas-v1",
+  "approvedDate": "2026-10-06",
+  "generationMode": "built-in image generation",
+  "draftRevision": 4,
+  "export": {
+    "resampling": "Lanczos",
+    "format": "WebP",
+    "quality": 85,
+    "method": 6,
+    "size": [
+      320,
+      320
+    ],
+    "transparent": true
+  },
+  "assets": [
+    {
+      "id": "swordmastery",
+      "label": "Swordmastery",
+      "subject": "One medieval steel arming sword, blade upright at a slight diagonal, brass crossguard and pommel, wrapped dark brown leather grip, laid over a modest folded olive war pennant with one small burgundy fabric accent. The sword is dominant and unmistakable; show attack mastery with a single beautiful forged weapon, not two crossed weapons.",
+      "source": "docs/art-sources/skill-atlas-icons/swordmastery.png",
+      "sourceSha256": "fdf8abcb97d44bc70835b5e30714c7ad3de153125b19cc566d25bb62fef96a39",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/swordmastery.webp",
+      "runtimeSha256": "9a13aaf889f691615a701aa863d7c9b80b0c414ef3eccfb989dccfd33fa98d88",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 22382,
+      "prompt": "Use case: stylized-concept. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1 is ONLY a style reference, not an edit target. Faithfully match its illustrated medieval atlas art: thin, confident, slightly imperfect dark brown ink contour lines, fine etched hatching, subdued watercolor/gouache washes with paper-grain texture INSIDE the painted object, muted olive and ochre, warm brown, pale stone, dull slate steel, restrained burgundy. Small forms should look painted by the same artist as the supplied castle and villages. Clear readable silhouette and simplified internal detail for display at 48–64 px; no luminous fantasy effects, no glossy 3D rendering, no saturated colors, no photorealism, no thick cartoon outlines, no ornamental border or circular badge. Soft even daylight with modest painted shadows, slightly elevated three-quarter view. One centered, tightly composed isolated emblem filling about 80% of a square canvas with 10% clear margin, entire subject visible without cropping. Actual transparent background, no backdrop, no white or parchment rectangle, no cast shadow outside the emblem. No text, lettering, numbers, watermark or logo.\nSkill: Swordmastery. Meaning: outgoing attack power.\nSubject: One medieval steel arming sword, blade upright at a slight diagonal, brass crossguard and pommel, wrapped dark brown leather grip, laid over a modest folded olive war pennant with one small burgundy fabric accent. The sword is dominant and unmistakable; show attack mastery with a single beautiful forged weapon, not two crossed weapons."
+    },
+    {
+      "id": "shieldwallDiscipline",
+      "label": "Shieldwall Discipline",
+      "subject": "Three adult soldiers with longer natural legs, smaller heads and realistically scaled shields in a defensive formation.",
+      "source": "docs/art-sources/skill-atlas-icons/shieldwallDiscipline.png",
+      "sourceSha256": "c82ef101e54354bc670fde1c0f5bf06c0df992709a39178ede877ff6606beebc",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp",
+      "runtimeSha256": "1f44bf741d6f2581f8f10820877b94e7b6d3bb7258c6941283b8957471ac4cf0",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 27054,
+      "prompt": "Use case: precise-object-edit. Asset type: Crown Lands skill icon draft.\nImage 1: uploaded medieval atlas, PRIMARY STYLE REFERENCE. Image 2: shieldwall draft, supporting reference for colors and subject only. The second image's anatomy and layout must be replaced.\nRedraw THREE adult medieval human soldiers in a defensive formation. The user rejected the squat proportions. The group must be visibly TALLER THAN IT IS WIDE, with slender natural adult bodies. Each man has the proportions of a real tall adult standing upright: a small head, normal torso, long thighs and long shins, seven-and-a-half to eight anatomical head heights tall. Helmets must be SMALL and fitted to normal heads. Do not copy the second image's huge heads, huge shields, large boots or short-legged figures.\nCRITICAL SCALE: each shield is only about ONE THIRD of its soldier's full standing height. Each soldier's long legs extend from hips at about the midpoint of his full height to feet at the bottom, with visible upper thighs, knees, shins and normal-sized boots. Shields must end at the UPPER THIGH, far above the knees; not at the knees or shins. Heads and helmets small enough to read as adult humans with realistic full-body proportions.\nThree men standing upright shoulder to shoulder, center slightly forward, all looking toward one threat, feet firmly braced with only a slight knee bend. They hold THREE medium-sized heater shields together as an overlapping defensive line at chest-to-upper-thigh height. Left shield muted olive, middle restrained burgundy, right ochre; worn painted wood, dull iron rims and rivets. Their shoulders, arms, belts, lower tunics, upper thighs and long legs remain visible. Simple tunics, subtle chainmail neck/sleeves, steel helmets, practical brown boots. Exactly three men, three shields, six legs. No deep crouch or attack pose.\nComposition: a taller, narrower whole group centered on a square transparent canvas, generous space to either side, about 80 percent canvas height and 60 percent width. Do not spread the men across the entire square. All heads and boots fully visible. The natural full-height silhouette and adult proportions take priority over large shield details.\nMatch the original atlas art: delicate dark-brown ink contours and fine etched hatching, subdued watercolor/gouache washes, paper-grain texture inside painted forms, muted earth tones, restrained olive/burgundy/ochre/slate. Hand-painted illustration with simple readable silhouettes, not chunky cartoon character art, not photorealism or 3D. Genuine transparent background. No scenery, ground, lettering, labels, frame, magic glow or watermark."
+    },
+    {
+      "id": "stoneworks",
+      "label": "Stoneworks",
+      "subject": "A compact miniature section of pale weathered stone city wall with broad crenellations, a square defensive corner tower and a short adjoining rampart, closely matching the castle masonry in the reference. A modest slate-roof cap on one tower only, brown ink block joints and subtle moss. Emphasize solid reinforced masonry rather than an entire sprawling castle.",
+      "source": "docs/art-sources/skill-atlas-icons/stoneworks.png",
+      "sourceSha256": "31f44f53ac55a8ec6114226d2c15cb72346f6723606e13461816c9b7fb034de5",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/stoneworks.webp",
+      "runtimeSha256": "ed10b9411df538f1bec70842ace3e22e41874048df8244f1ef2c132664737d04",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 29392,
+      "prompt": "Use case: stylized-concept. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1 is ONLY a style reference, not an edit target. Faithfully match its illustrated medieval atlas art: thin, confident, slightly imperfect dark brown ink contour lines, fine etched hatching, subdued watercolor/gouache washes with paper-grain texture INSIDE the painted object, muted olive and ochre, warm brown, pale stone, dull slate steel, restrained burgundy. Small forms should look painted by the same artist as the supplied castle and villages. Clear readable silhouette and simplified internal detail for display at 48–64 px; no luminous fantasy effects, no glossy 3D rendering, no saturated colors, no photorealism, no thick cartoon outlines, no ornamental border or circular badge. Soft even daylight with modest painted shadows, slightly elevated three-quarter view. One centered, tightly composed isolated emblem filling about 80% of a square canvas with 10% clear margin, entire subject visible without cropping. Actual transparent background, no backdrop, no white or parchment rectangle, no cast shadow outside the emblem. No text, lettering, numbers, watermark or logo.\nSkill: Stoneworks.\nSubject: A compact miniature section of pale weathered stone city wall with broad crenellations, a square defensive corner tower and a short adjoining rampart, closely matching the castle masonry in the reference. A modest slate-roof cap on one tower only, brown ink block joints and subtle moss. Emphasize solid reinforced masonry rather than an entire sprawling castle."
+    },
+    {
+      "id": "taxStewardship",
+      "label": "Tax Stewardship",
+      "subject": "A small medieval iron-bound oak tax chest with its lid open, a restrained pile of antique ochre gold coins inside and a few larger coins at the base. A small closed parchment account ledger sits beside the chest with a burgundy tie, without lettering. The strongbox and coins dominate the silhouette; no crowns, gem treasure, overflowing pirate loot or modern money.",
+      "source": "docs/art-sources/skill-atlas-icons/taxStewardship.png",
+      "sourceSha256": "587ab831f10a5ac5bc1b6ebc535545de3c699572c987b8f2897ce4d476464ec0",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/taxStewardship.webp",
+      "runtimeSha256": "d7366a5afd6df08b7323d4b36b6b2054af1921d8284dadc6c7751dbd49d1277a",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 32378,
+      "prompt": "Use case: stylized-concept. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1 is ONLY a style reference, not an edit target. Faithfully match its illustrated medieval atlas art: thin, confident, slightly imperfect dark brown ink contour lines, fine etched hatching, subdued watercolor/gouache washes with paper-grain texture INSIDE the painted object, muted olive and ochre, warm brown, pale stone, dull slate steel, restrained burgundy. Small forms should look painted by the same artist as the supplied castle and villages. Clear readable silhouette and simplified internal detail for display at 48–64 px; no luminous fantasy effects, no glossy 3D rendering, no saturated colors, no photorealism, no thick cartoon outlines, no ornamental border or circular badge. Soft even daylight with modest painted shadows, slightly elevated three-quarter view. One centered, tightly composed isolated emblem filling about 80% of a square canvas with 10% clear margin, entire subject visible without cropping. Actual transparent background, no backdrop, no white or parchment rectangle, no cast shadow outside the emblem. No text, lettering, numbers, watermark or logo.\nSkill: Tax Stewardship.\nSubject: A small medieval iron-bound oak tax chest with its lid open, a restrained pile of antique ochre gold coins inside and a few larger coins at the base. A small closed parchment account ledger sits beside the chest with a burgundy tie, without lettering. The strongbox and coins dominate the silhouette; no crowns, gem treasure, overflowing pirate loot or modern money."
+    },
+    {
+      "id": "royalGranaries",
+      "label": "Royal Granaries",
+      "subject": "Soldiers relaxing and eating outside the granary.",
+      "source": "docs/art-sources/skill-atlas-icons/royalGranaries.png",
+      "sourceSha256": "a054dfa76ebb97c47b25d9966f014cc16e05596fd9aaec4aced8ffa1965fe9be",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/royalGranaries.webp",
+      "runtimeSha256": "d674e56d10ba8d19d4bfdb4927c966951bc43c5b9a01516f8c9a1d65d1529cf4",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 36692,
+      "prompt": "Edit the Royal Granaries skill icon.\nInput image 1: the existing granary icon, EDIT TARGET. Input image 2: the original medieval atlas, STYLE REFERENCE.\nPreserve the recognizable half-timber granary, its ochre thatched roof, pale plaster, dark timber, stone supports, grain sacks and wheat, and the same hand-inked watercolor illustration style. Add three medieval soldiers relaxing and sharing a simple meal outside the granary, prominently in the foreground: two seated on a low wooden bench beside a small plain wooden table eating bread and food from wooden bowls, and one standing casually beside them holding a bowl. Simple dull-steel open-faced helmets, olive and burgundy tunics, brown leather boots; natural readable seated and standing poses. Their weapons are not in use. Make the soldiers large enough to be clearly visible in a small skill icon, with distinct silhouettes and visibly occupied hands; no crowded tiny figures. The building stays identifiable behind them. Recompose/scale the existing granary slightly to make room for the people, table and a small compact earth-colored ground patch only beneath this group. Entire emblem fits comfortably within the square canvas with clear margins, no cropped people or roof.\nFaithfully retain the source's thin dark-brown ink outlines, etched hatching, muted olive/ochre/brown/pale stone/slate/burgundy colors, watercolor/gouache paper-grain texture inside painted forms, and slightly elevated three-quarter perspective. This is a skill icon, not a landscape. Genuine transparent background and clean alpha edges. No text, lettering, frame, logo, modern objects, theatrical glow or glossy 3D treatment."
+    },
+    {
+      "id": "guildCharters",
+      "label": "Guild Charters",
+      "subject": "A single cream parchment guild charter unfurled partway, with gently curled ends, a large burgundy wax seal on short ribbon tails at its lower edge, and one modest brown feather quill crossing behind it. Use a clear elegant rolled-paper silhouette. Parchment is blank apart from a few faint unlabeled horizontal ink strokes suggesting a document; no readable writing, runes, coat of arms or decorative border.",
+      "source": "docs/art-sources/skill-atlas-icons/guildCharters.png",
+      "sourceSha256": "5e07f4b2afe0062f6fbf7ea03aec3d30bfe0b9050ec1f64b26aa5eb07a02accc",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/guildCharters.webp",
+      "runtimeSha256": "2f34ca402b85a4c06d7725864dd97312414c7a9ff7a8607f9a90d360ae677a2f",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 24344,
+      "prompt": "Use case: stylized-concept. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1 is ONLY a style reference, not an edit target. Faithfully match its illustrated medieval atlas art: thin, confident, slightly imperfect dark brown ink contour lines, fine etched hatching, subdued watercolor/gouache washes with paper-grain texture INSIDE the painted object, muted olive and ochre, warm brown, pale stone, dull slate steel, restrained burgundy. Small forms should look painted by the same artist as the supplied castle and villages. Clear readable silhouette and simplified internal detail for display at 48–64 px; no luminous fantasy effects, no glossy 3D rendering, no saturated colors, no photorealism, no thick cartoon outlines, no ornamental border or circular badge. Soft even daylight with modest painted shadows, slightly elevated three-quarter view. One centered, tightly composed isolated emblem filling about 80% of a square canvas with 10% clear margin, entire subject visible without cropping. Actual transparent background, no backdrop, no white or parchment rectangle, no cast shadow outside the emblem. No text, lettering, numbers, watermark or logo.\nSkill: Guild Charters.\nSubject: A single cream parchment guild charter unfurled partway, with gently curled ends, a large burgundy wax seal on short ribbon tails at its lower edge, and one modest brown feather quill crossing behind it. Use a clear elegant rolled-paper silhouette. Parchment is blank apart from a few faint unlabeled horizontal ink strokes suggesting a document; no readable writing, runes, coat of arms or decorative border."
+    },
+    {
+      "id": "marchOrders",
+      "label": "March Orders",
+      "subject": "A horse's head surging forward, with its mane and reins streaming behind.",
+      "source": "docs/art-sources/skill-atlas-icons/marchOrders.png",
+      "sourceSha256": "9ea93857a3def42008e82278f9db70fdcebbafd1025ccb6049692372d59547cf",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/marchOrders.webp",
+      "runtimeSha256": "a21aa338787d570a4f333f92c25bb0683fbbc2773278124463caef6559b28e04",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 28432,
+      "prompt": "Use case: precise-object-edit. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1: current horse-head icon, EDIT TARGET. Input image 2: original medieval atlas, STYLE REFERENCE.\nPrimary request: the horse needs to look IN MOTION. Keep this a horse-head-only emblem, with a short neck base, and redraw its pose to clearly convey forward travel at a gallop. The bay horse reaches its head dynamically forward toward the left, neck slanting back to the right, muzzle slightly down and forward, nostrils flared, ears alert. Replace the calm upright portrait silhouette with a strong forward diagonal. The dark mane is swept backward toward the right in several bold wind-blown flowing locks; forelock and bridle reins also sweep backward, visibly responding to movement. Suggest speed through the natural pose, wind in its mane and flowing reins. Keep the subject crisp and anatomically correct.\nPreserve the bay-brown coat, dark mane, white forehead blaze, brown leather bridle and dull brass fittings. Only the head and a short neck base; no torso, shoulder, legs, rider, saddle, tail or scenery. All ears, muzzle and mane tips visible inside the canvas. This is a static painted icon with an energetic pose.\nFaithfully retain the uploaded atlas's hand-painted medieval style: thin confident slightly imperfect dark-brown ink contours, fine hatching, muted watercolor/gouache and paper-grain texture inside the painted subject, subdued warm brown/ochre/slate colors, soft even daylight. Clear silhouette readable at 32, 48 and 64 pixels. Centered in a square canvas with comfortable margins, fills about 80 percent. Actual transparent background and clean alpha edges. No cartoon speed streaks, blur, glowing effects, lettering, border, badge, watermark, photorealism, glossy 3D treatment or saturated colors."
+    },
+    {
+      "id": "fieldMedics",
+      "label": "Field Medics",
+      "subject": "A compact weathered brown leather medieval healer's satchel, flap partly open, with a rolled cream linen bandage and a small muted olive medicinal herb sprig visible. A pale linen dressing is folded beside the base. Simple brass buckle, ink-hatched leather and cloth folds. Clear humane healing-supply silhouette; no modern red cross, syringes, pills, blood or skulls.",
+      "source": "docs/art-sources/skill-atlas-icons/fieldMedics.png",
+      "sourceSha256": "5fc838b6cd0e8a1338049dbe288a8d0aa7324ef8a172d5a4a979160ccc77099c",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "runtime": "assets/icons/skills/atlas-v1/fieldMedics.webp",
+      "runtimeSha256": "f57958f89a85e0b6307bae9df98827c7fabac234279cef8e589f68d58f93e7e0",
+      "runtimeSize": [
+        320,
+        320
+      ],
+      "runtimeBytes": 29054,
+      "prompt": "Use case: stylized-concept. Asset type: Crown Lands medieval strategy game skill icon draft.\nInput image 1 is ONLY a style reference, not an edit target. Faithfully match its illustrated medieval atlas art: thin, confident, slightly imperfect dark brown ink contour lines, fine etched hatching, subdued watercolor/gouache washes with paper-grain texture INSIDE the painted object, muted olive and ochre, warm brown, pale stone, dull slate steel, restrained burgundy. Small forms should look painted by the same artist as the supplied castle and villages. Clear readable silhouette and simplified internal detail for display at 48–64 px; no luminous fantasy effects, no glossy 3D rendering, no saturated colors, no photorealism, no thick cartoon outlines, no ornamental border or circular badge. Soft even daylight with modest painted shadows, slightly elevated three-quarter view. One centered, tightly composed isolated emblem filling about 80% of a square canvas with 10% clear margin, entire subject visible without cropping. Actual transparent background, no backdrop, no white or parchment rectangle, no cast shadow outside the emblem. No text, lettering, numbers, watermark or logo.\nSkill: Field Medics.\nSubject: A compact weathered brown leather medieval healer's satchel, flap partly open, with a rolled cream linen bandage and a small muted olive medicinal herb sprig visible. A pale linen dressing is folded beside the base. Simple brass buckle, ink-hatched leather and cloth folds. Clear humane healing-supply silhouette; no modern red cross, syringes, pills, blood or skulls."
+    }
+  ]
+}

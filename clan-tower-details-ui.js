@@ -2,7 +2,7 @@
   "use strict";
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
   const num = value => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString();
-  const icons = {wall:"assets/icons/skills/stoneworks.svg",gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",troops:"assets/optimized/troops-helmet-192x192-8c144647d31b.webp",march:"assets/icons/troop-orders/marching-banner.svg",veil:"assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp"};
+  const icons = {wall:"assets/icons/skills/atlas-v1/stoneworks.webp",gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",troops:"assets/optimized/troops-helmet-192x192-8c144647d31b.webp",march:"assets/icons/troop-orders/marching-banner.svg",veil:"assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp"};
   const icon = key => `<img src="${icons[key]}" alt="">`;
   const known = value => value !== null && value !== undefined && Number.isFinite(Number(value));
   const clockText = (end, now) => {if(!known(end))return '—';const s=Math.max(0,Math.ceil((Number(end)-now)/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;};

@@ -32,7 +32,8 @@ function hashFiles(files) {
     hash.update("\0");
     // Git may check out text as CRLF on Windows while CI uses LF. Source hashes
     // are diagnostics, so make them stable across deployment environments.
-    hash.update(fs.readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n"));
+    const contents = fs.readFileSync(absolutePath);
+    hash.update(/\.webp$/i.test(absolutePath) ? contents : contents.toString("utf8").replace(/\r\n/g, "\n"));
     hash.update("\0");
   }
   return hash.digest("hex");
@@ -88,7 +89,8 @@ function createManifest() {
     "skills-ledger-ui.css",
     "clan-ledger-ui.css",
     "settings-ledger-ui.css", "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg", "assets/icons/settings-ledger.svg",
-    ...fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg")).map(name => `assets/icons/skills/${name}`),
+    ...listFiles(path.join(root, "assets/icons/skills"), file => /\.(?:svg|webp)$/.test(file))
+      .map(file => path.relative(root, file).replace(/\\/g, "/")),
     "assets/icons/reward-daily-login-r1.svg", "assets/icons/reward-daily-quests-r1.svg", "assets/icons/reward-achievements-r1.svg",
     "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "common-gear.js", "common-gear-ui.js", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",

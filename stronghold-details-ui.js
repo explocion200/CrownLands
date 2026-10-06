@@ -46,7 +46,7 @@
     details.append(benefits);
     const strength = create('div', 'strength-overview');
     const defenseNotes = [];
-    for (const [field, icon] of [['troops', 'assets/optimized/troops-helmet-192x192-8c144647d31b.webp'], ['estimate', 'assets/icons/skills/shieldwallDiscipline.svg']]) {
+    for (const [field, icon] of [['troops', 'assets/optimized/troops-helmet-192x192-8c144647d31b.webp'], ['estimate', 'assets/icons/skills/atlas-v1/shieldwallDiscipline.webp']]) {
       const value = take(field);
       if (!value) continue;
       value.querySelectorAll('small').forEach(note => { defenseNotes.push(note); note.remove(); });
