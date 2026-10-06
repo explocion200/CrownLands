@@ -140,14 +140,12 @@ async function main() {
     db.doc(`players/${attacker.uid}`).set({
       gear: attackerGear,
       upgrades: { swordmastery: 10, fieldMedics: 25 },
-      kingPower: 100_000,
       itemEffects: { shieldExpiresAtMs: 0 },
       economyUpdatedAtMs: nowMs,
     }, { merge: true }),
     db.doc(`players/${defender.uid}`).set({
       gear: defenderGear,
       upgrades: { shieldwallDiscipline: 10, stoneworks: 10, fieldMedics: 10 },
-      kingPower: 100_000,
       itemEffects: { shieldExpiresAtMs: 0 },
       economyUpdatedAtMs: nowMs,
     }, { merge: true }),
@@ -184,6 +182,10 @@ async function main() {
     }, { merge: true }),
   ]);
 
+  // Direct fixture writes bypass the normal troop/stat transaction. Publish the
+  // seeded armies before quoting protection under the troop-only power rule.
+  await callFunction("collectEconomy", defender.token);
+  await callFunction("collectEconomy", attacker.token);
   const armyId = `battle_gear_${crypto.randomBytes(6).toString("hex")}`;
   const launch = await callFunction("sendArmyOrder", attacker.token, {
     sourceRegionId: regionId,
@@ -205,6 +207,7 @@ async function main() {
     },
   });
   assert(launch.movement?.id === armyId, "The battle-report test attack did not launch.");
+  assert(!launch.movement.attackProtection, "The ordinary recovery fixture unexpectedly became a protected attack.");
   await db.doc(`players/${attacker.uid}`).update({ "upgrades.swordmastery": 50, "upgrades.fieldMedics": 0, gear: createEquippedGear([
     { buildingId: "barracks", slot: "weapon", rarity: "legendary" },
     { buildingId: "barracks", slot: "necklace", rarity: "legendary" },

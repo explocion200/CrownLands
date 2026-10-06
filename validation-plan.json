@@ -191,6 +191,15 @@
       "tests": [
         "tools/validate-weaker-kingdom-protection.js"
       ]
+    },
+    {
+      "paths": [
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ],
+      "reason": "The recovery fixture directly seeds troop data and must settle/publish those troops before protection is quoted. Use real troop-only power instead of arbitrary profile scores; retain all departure recovery, gear, casualty and replay assertions and assert the initial attack stays ordinary.",
+      "tests": [
+        "functions/test/emulator-battle-report-gear-effects.js"
+      ]
     }
   ]
 }
