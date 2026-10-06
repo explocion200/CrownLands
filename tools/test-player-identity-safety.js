@@ -23,6 +23,7 @@ function firebaseHarness() {
   const window = { CROWNLANDS_REALM_CONFIG: { resetGeneration: "realm-test", worldId: "main-test" },
     CrownlandsPlayerFlags: flags, addEventListener() {}, dispatchEvent() {} };
   const context = { window, console, URL, URLSearchParams, Map, Set, Date, Promise, navigator: {} };
+  vm.runInNewContext(read("cosmetics-client.js"), context);
   const source = read("firebaseClient.js").replace(/\n  init\(\);\n\}\)\(\);\s*$/, "\nwindow.clientForTest = client;\n})();");
   vm.runInNewContext(source, context);
   const client = window.clientForTest;

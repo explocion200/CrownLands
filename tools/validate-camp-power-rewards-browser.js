@@ -34,7 +34,7 @@ async function main() {
       usesServerEconomyAuthority=()=>true;
       const original=getOnlineApi();
       getOnlineApi=()=>({...original,isSignedIn:()=>true,loadRewardCampProgress:async()=>({date:currentUtcDateKey(),count:0})});
-      window.setCampPowerFixture=(power)=>{state.globalStats={uid:getCurrentOnlineUid(),version:12,worldId:ONLINE_WORLD_ID,
+      window.setCampPowerFixture=(power)=>{state.globalStats={uid:getCurrentOnlineUid(),version:13,worldId:ONLINE_WORLD_ID,
         resetGeneration:RESET_GENERATION,kingPower:power,baseGoldPerHour:100000,baseTroopPerHour:100000,
         goldPerHour:999999,troopPerHour:999999,updatedAtMs:Date.now()};};
     })()`);

@@ -16,10 +16,10 @@ function extract(source, name) {
 const shared = { ECONOMY_CONFIG: config, safeNumber: (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback };
 const backend = vm.createContext({ ...shared });
 vm.runInContext(extract(server, "getRewardCampPowerTier") + extract(server, "getRewardCampDailyReward"), backend);
-const frontend = vm.createContext({ ...shared, state: { globalStats: { uid: "ruler", version: 12, kingPower: 1,
+const frontend = vm.createContext({ ...shared, state: { globalStats: { uid: "ruler", version: 13, kingPower: 1,
   baseGoldPerHour: 123457, baseTroopPerHour: 234567, goldPerHour: 999999, troopPerHour: 999999 } },
   usesServerEconomyAuthority: () => true, hasUsableGlobalStats: value => Boolean(value),
-  getCurrentOnlineUid: () => "ruler", KING_POWER_AUTHORITY_VERSION: 12,
+  getCurrentOnlineUid: () => "ruler", KING_POWER_AUTHORITY_VERSION: 13,
   normalizeGlobalStatsSnapshot: value => value });
 for (const name of ["getRewardCampPowerTier", "getCurrentRewardCampPowerTier", "getRewardCampEstimatedRewards"]) {
   vm.runInContext(extract(client, name), frontend);
@@ -50,7 +50,7 @@ for (const invalid of [undefined, null, -1, NaN, Infinity, 1.5, "500", Number.MA
   assert.equal(backend.getRewardCampPowerTier(invalid), null);
   assert.equal(frontend.getRewardCampPowerTier(invalid), null);
 }
-for (const stats of [null, {version:11,kingPower:1}, {version:12}, {version:12,uid:"other",kingPower:1}]) {
+for (const stats of [null, {version:11,kingPower:1}, {version:13}, {version:13,uid:"other",kingPower:1}]) {
   frontend.state.globalStats = stats;
   assert.equal(frontend.getCurrentRewardCampPowerTier(), null);
   assert.equal(frontend.getRewardCampEstimatedRewards({ dailyRewards:[20000] }).length, 0);

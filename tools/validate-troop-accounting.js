@@ -23,8 +23,8 @@ const safeNumber = (value, fallback = 0) => Number.isFinite(Number(value)) ? Num
 const sandbox = {
   Map, Number, Date, Math, console, exports: {},
   safeString: (value, length = 999) => String(value || "").slice(0, length), safeNumber,
-  RESET_GENERATION: realm.resetGeneration, ONLINE_WORLD_ID: realm.worldId, GLOBAL_PLAYER_STATS_VERSION: 12,
-  KING_POWER_ARMY_TROOP_VALUE: 2, KING_POWER_AUTHORITY_VERSION: 12,
+  RESET_GENERATION: realm.resetGeneration, ONLINE_WORLD_ID: realm.worldId, GLOBAL_PLAYER_STATS_VERSION: 13,
+  KING_POWER_ARMY_TROOP_VALUE: 2, KING_POWER_AUTHORITY_VERSION: 13,
   FieldValue: { serverTimestamp: () => "timestamp" },
   getCurrentRealmShardId: () => realm.realmShardId,
   isHoldingTowerWorldActive: () => true,
@@ -55,6 +55,22 @@ const baseline = snapshot();
 assert.equal(baseline.armyPower, 1125 * 2, "All six troop categories must contribute once.");
 assert.equal(baseline.towerTroopPower, 800);
 assert.equal(baseline.kingPower, baseline.armyPower + baseline.replacementPower + baseline.defensivePower);
+assert.equal(baseline.kingPower, 2250);
+assert.equal(baseline.baseKingPower, baseline.kingPower);
+for (const field of ["replacementPower", "defensivePower", "baseReplacementPower", "baseDefensivePower",
+  "cityPower", "kingPowerBonus", "territoryPower", "economicPower", "troopProductionPower", "fortificationPower", "strongholdPower"]) {
+  assert.equal(baseline[field], 0, `${field} must not contribute to troop-only King Power.`);
+}
+for (const troops of [0, 1, 1000, 10000000]) {
+  assert.equal(snapshot({ cityEntries: [{ city: { ...city, troops, level: 100, walls: 9000000 } }],
+    heldCamps: [], activeArmies: [], profile: { ...profile, towerGarrisonTroops: 0,
+      stationedReinforcementTroops: 0, committedRallyTroops: 0 },
+    bonuses: { troopBonusPercent: 100, cityDefenseBonusPercent: 100 } }).kingPower, troops * 2);
+}
+assert.equal(snapshot({ cityEntries: [{ city: { ...city, troops: 150 } }] }).kingPower,
+  baseline.kingPower + 100, "Producing or rewarding 50 troops must add exactly 100 power.");
+assert.equal(snapshot({ activeArmies: [{ ...march, troops: 225 }] }).kingPower,
+  baseline.kingPower - 150, "Losing 75 troops must subtract exactly 150 power.");
 assert.equal(snapshot({ profile: { ...profile, towerGarrisonResetGeneration: "old-season" } }).armyPower, 725 * 2);
 assert.equal(snapshot({ profile: { ...profile, towerGarrisonTroops: -20 } }).totalTowerTroops, 0);
 assert.equal(snapshot({ profile: { ...profile, towerGarrisonTroops: 400.9 } }).totalTowerTroops, 400);
@@ -100,10 +116,15 @@ const lostCamp = sandbox.createPreparedEconomyStatsSnapshot(economy, {}, {
   statsCampPatches: [{ ref: campRef, camp, patch: { holderUid: "enemy", currentGarrison: 100 } }],
 });
 assert.equal(lostCamp.totalCampTroops, 0, "A captured Camp must leave the former holder's total immediately.");
+assert.equal(lostCamp.kingPower, baseline.kingPower - 400);
+for (const moved of [departing, cityTransfer, arriving, campArrival]) {
+  assert.equal(moved.kingPower, baseline.kingPower, "Moving troops must conserve the entire King Power score.");
+}
 
 // Run the client normalizer and summary, so newly counted troops survive the response boundary.
 vm.runInContext(between(client, "function normalizeGlobalStatsSnapshot(", "\nfunction "), sandbox);
 vm.runInContext(between(client, "function getKingdomSummary(", "\nfunction "), sandbox);
+vm.runInContext(between(client, "function getKingPower(", "\nfunction "), sandbox);
 sandbox.normalizePowerValue = value => Math.max(0, Math.floor(Number(value) || 0));
 sandbox.getCurrentOnlineUid = () => "owner";
 sandbox.getKnownCityId = id => id || "";
@@ -111,8 +132,20 @@ sandbox.normalizeTimestampMs = value => Number(value) || 0;
 sandbox.timestampToMs = sandbox.normalizeTimestampMs;
 sandbox.getGlobalStatsSnapshot = () => sandbox.normalizeGlobalStatsSnapshot(baseline);
 sandbox.hasUsableGlobalStats = () => true;
-sandbox.state = { gold: 0 };
+sandbox.state = { gold: 0, cities: [] };
+sandbox.kingPowerRenderFrameCacheActive = false;
+sandbox.kingPowerCalculationInProgress = false;
 assert.equal(sandbox.getKingdomSummary().troops, 1125, "The Kingdom summary must retain Tower, reinforcement and rally troops.");
+assert.equal(sandbox.getKingdomSummary().kingPower, 2250);
+sandbox.getGlobalStatsSnapshot = () => sandbox.normalizeGlobalStatsSnapshot({ ...baseline, version: 12,
+  kingPower: 999999, baseKingPower: 888888 });
+assert.equal(sandbox.getKingdomSummary().kingPower, 2250, "Old published scores must migrate from troop totals.");
+sandbox.getGlobalStatsSnapshot = () => sandbox.normalizeGlobalStatsSnapshot({ ...baseline, totalTroops: 0,
+  totalMarchingTroops: 0, totalReinforcementTroops: 0, totalRallyTroops: 0, totalTowerTroops: 0,
+  kingPower: 0 });
+assert.equal(sandbox.getKingPower(), 0, "A real zero must replace the previous positive cache.");
+assert.equal(sandbox.getKingdomSummary().baseKingPower, 0);
+sandbox.getGlobalStatsSnapshot = () => sandbox.normalizeGlobalStatsSnapshot(baseline);
 
 // Exercise both repair paths against a transaction-only query adapter. A simulated
 // conflict discards the first attempt, moves troops, and requires fresh reads before publication.
@@ -173,6 +206,8 @@ async function main() {
     assert.equal(stats.totalCityTroops, 20);
     assert.equal(stats.totalCampTroops, 200, "Identity repair must retain Camp troops.");
     assert.equal(stats.armyPower, baseline.armyPower, "Repair must preserve total troop power across movement.");
+    assert.equal(stats.kingPower, baseline.kingPower, "A conflicted transaction must publish only the committed troop score.");
+    assert.equal(written.get("board/owner").kingPower, stats.kingPower);
     assert.equal(written.get("board/owner").totalTowerTroops, 400);
     assert.equal(written.get("board/owner").totalMilitaryTroops, 1125);
   }

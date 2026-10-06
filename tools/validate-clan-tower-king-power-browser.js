@@ -40,7 +40,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         renderProfileScreen(); profileTroopsStat.scrollIntoView({block:'nearest'});
         const rect=profileTroopsStat.getBoundingClientRect();
         return {power:profileKingPowerStat.textContent, troops:profileTroopsStat.textContent,
-          expectedPower:formatNumber(2120000),expectedTroops:formatNumber(1000000), summary:getKingdomSummary(),
+          expectedPower:formatNumber(2000000),expectedTroops:formatNumber(1000000), summary:getKingdomSummary(),
           visible:rect.width>0&&rect.height>0&&rect.left>=0&&rect.right<=innerWidth&&rect.top>=0&&rect.bottom<=innerHeight,
           fits:document.documentElement.scrollWidth<=innerWidth};
       })()`);
@@ -50,6 +50,16 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const shot=await client.send("Page.captureScreenshot", {format:"png"});
       const output=path.resolve(__dirname,"../release-artifacts/clan-tower-king-power"); fs.mkdirSync(output,{recursive:true});
       fs.writeFileSync(path.join(output,`${width}x${height}.png`),Buffer.from(shot.data,"base64"));
+      const empty = await evaluate(`(() => {
+        const previous=state.globalStats;
+        state.globalStats={...previous,kingPower:0,baseKingPower:0,totalTroops:0,totalMarchingTroops:0,
+          totalTowerTroops:0,totalRallyTroops:0,totalReinforcementTroops:0};
+        renderProfileScreen();
+        const result={summary:getKingdomSummary(),power:profileKingPowerStat.textContent,expected:formatNumber(0)};
+        state.globalStats=previous;renderProfileScreen();return result;
+      })()`);
+      assert.equal(empty.summary.troops,0);assert.equal(empty.summary.kingPower,0);
+      assert.equal(empty.power,empty.expected,"An empty kingdom revived its previous positive power.");
     }
     assert.deepEqual(errors,[]);
     console.log("Clan Tower troop and King Power profile values passed at desktop and landscape-mobile sizes.");

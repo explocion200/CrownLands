@@ -19,7 +19,7 @@ function extract(source, name) {
 const identity = { worldId: "current-core", resetGeneration: "current-season", realmShardId: "shared" };
 const context = vm.createContext({
   RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
-  GLOBAL_PLAYER_STATS_VERSION: 11, KING_POWER_ARMY_TROOP_VALUE: 2,
+  GLOBAL_PLAYER_STATS_VERSION: 13, KING_POWER_ARMY_TROOP_VALUE: 2,
   safeString: (value, max) => String(value ?? "").slice(0, max),
   safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   getOwnerUid: value => value.ownerUid,
@@ -53,6 +53,7 @@ function snapshot({ city = 1000, tower = 0, marching = 0, rally = 0, reinforceme
   });
 }
 const base = snapshot();
+assert.equal(base.kingPower, 2000);
 const stationed = snapshot({city: 600, tower: 400});
 assert.equal(stationed.kingPower, base.kingPower, "Stationing troops in a Clan Tower must not remove their King Power.");
 assert.equal(stationed.totalTowerTroops, 400);
@@ -79,13 +80,16 @@ for (const tower of [-1, NaN, Infinity]) assert.equal(snapshot({tower}).totalTow
 assert.equal(snapshot({tower: 4.9}).totalTowerTroops, 4);
 assert.equal(snapshot({tower: Number.MAX_SAFE_INTEGER}).armyPower, Number.MAX_SAFE_INTEGER);
 
-const display = vm.createContext({client: {user: {uid: "owner"}}, state: {gold: 10},
-  hasUsableGlobalStats: () => true, KING_POWER_AUTHORITY_VERSION: 11,
+const display = vm.createContext({client: {user: {uid: "owner"}}, state: {gold: 10, cities: []},
+  hasUsableGlobalStats: () => true, KING_POWER_AUTHORITY_VERSION: 13, KING_POWER_ARMY_TROOP_VALUE: 2,
+  kingPowerRenderFrameCacheActive: false, kingPowerCalculationInProgress: false,
   getCurrentOnlineUid: () => "owner", normalizeRegionId: value => value,
   getKnownCityId: value => value || "", getRegionIdFromOnlineIslandId: () => "core",
   normalizeTimestampMs: value => Number(value) || 0,
   normalizePowerValue: value => Math.max(0, Math.floor(Number(value) || 0))});
-vm.runInContext([extract(client, "timestampToMs"), extract(client, "cleanGlobalStats"), extract(game, "normalizeGlobalStatsSnapshot"), extract(game, "getKingdomSummary")].join("\n"), display);
+vm.runInContext([extract(client, "timestampToMs"), extract(client, "cleanGlobalStats"), extract(game, "normalizeGlobalStatsSnapshot"),
+  extract(game, "getTroopKingPower"), extract(game, "getTotalMilitaryTroopsFromGlobalStats"),
+  extract(game, "getKingPower"), extract(game, "getKingdomSummary")].join("\n"), display);
 const cleaned = display.normalizeGlobalStatsSnapshot(display.cleanGlobalStats(stationed));
 assert.equal(cleaned.totalTowerTroops, 400);
 display.getGlobalStatsSnapshot = () => cleaned;

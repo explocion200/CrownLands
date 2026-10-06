@@ -169,6 +169,14 @@ async function main() {
     Array.from({ length: 6 }, () => invokeFunction("collectEconomy", user.token))
   );
   assert(economyResults.every(result => result.ok), "Concurrent economy collection returned an error.");
+  for (const result of economyResults) {
+    const stats = result.result.globalStats;
+    assert(stats?.version === 13, "Collection did not return the troop-only King Power version.");
+    assert(stats.kingPower === stats.totalMilitaryTroops * 2,
+      "Concurrent production settlement published power inconsistent with its committed troop total.");
+    assert(stats.replacementPower === 0 && stats.defensivePower === 0,
+      "Production or walls leaked into the published power.");
+  }
   const [profileAfterEconomy, cityAfterEconomy] = await Promise.all([profileRef.get(), cityRef.get()]);
   const collectedGold = Number(profileAfterEconomy.data()?.goldFloat || profileAfterEconomy.data()?.gold || 0);
   const collectedTroops = Number(cityAfterEconomy.data()?.troopFloat || cityAfterEconomy.data()?.troops || 0);

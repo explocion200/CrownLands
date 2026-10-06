@@ -48,7 +48,6 @@ const s = vm.createContext({ TROOP_PRODUCTION_POLICY: policy, Date: class extend
   CITY_LEVEL_STATS: { victoryPointsBase: 6, victoryPointsPerLevel: 4, victoryPointsExponent: 1.35,
     victoryPointsExponentScale: 2, troopProductionPerVictoryPoint: factor },
   WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT: 30, ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT: 50,
-  KING_POWER_REPLACEMENT_HOURS: 12, KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT: 0.25,
   safeNumber: (v, fallback = 0) => Number.isFinite(Number(v)) ? Number(v) : fallback,
   safeString: v => String(v || ""), clampCityLevel: v => Math.max(1, Math.floor(Number(v) || 1)),
   isStronghold: city => city.kind === "stronghold", isRewardCamp: city => city.kind === "camp",
@@ -75,8 +74,10 @@ for (const [level, oldRate, newRate] of [[1,129,162],[25,2811,3514],[100,15227,1
   assert.equal(s.getLevelUpTroopReward(level, window, end), newRate * 54);
   const oldPower = s.getCityInfrastructurePowerComponents(city, {}, window, now);
   const newPower = s.getCityInfrastructurePowerComponents(city, {}, window, end);
-  assert.equal(oldPower.replacementPower, oldRate * 12);
-  assert.equal(newPower.replacementPower, newRate * 12);
+  assert.equal(oldPower.replacementPower, 0);
+  assert.equal(newPower.replacementPower, 0);
+  assert.equal(oldPower.sustainableTroopPerHour, oldRate);
+  assert.equal(newPower.sustainableTroopPerHour, newRate);
   assert.equal(oldPower.defensivePower, newPower.defensivePower);
 }
 const reward = s.applyXpToCharacter({ level: 99, xp: 0, skillPoints: 0 }, 200, window, now);

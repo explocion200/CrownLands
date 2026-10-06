@@ -1240,9 +1240,7 @@ const CITY_LEVEL_STATS = {
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
-const KING_POWER_REPLACEMENT_HOURS = 12;
-const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 12;
+const KING_POWER_AUTHORITY_VERSION = 13;
 const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
 
 const SKILL_CONFIG = {
@@ -8495,7 +8493,7 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     worldId: String(raw.worldId || ""),
     resetGeneration: String(raw.resetGeneration || ""),
     version: Math.max(0, Math.floor(Number(raw.version) || 0)),
-    kingPower: normalizePowerValue(raw.kingPower),
+    kingPower: Number.isFinite(raw.kingPower) && raw.kingPower >= 0 ? normalizePowerValue(raw.kingPower) : null,
     baseKingPower: normalizePowerValue(raw.baseKingPower ?? raw.kingPower),
     kingPowerBonus: normalizePowerValue(raw.kingPowerBonus),
     totalCities: Math.max(0, Math.floor(Number(raw.totalCities) || 0)),
@@ -8646,21 +8644,15 @@ function getTroopKingPower(troops = 0) {
   return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
 }
 
-function getCityInfrastructureKingPowerComponents(city, options = {}) {
-  if (!city) return { replacementPower: 0, defensivePower: 0 };
-  const troopCount = Math.max(0, Math.floor(Number(city.troops) || 0));
-  const stats = getCityStats(city, {
-    includeSkillBoosts: false,
-    includeStrongholdBoosts: options.includeStrongholdBoosts !== false,
-    includeTimedItemBoosts: false,
-  });
-  const replacementPower = Math.max(0, Math.floor(
-    stats.troopProductionPerHour * KING_POWER_REPLACEMENT_HOURS
-  ));
-  const defensivePower = Math.max(0, Math.floor(
-    Math.max(0, stats.totalDefense - troopCount) * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
-  ));
-  return { replacementPower, defensivePower };
+function getTotalMilitaryTroopsFromGlobalStats(stats = {}) {
+  return [stats.totalTroops, stats.totalMarchingTroops, stats.totalReinforcementTroops,
+    stats.totalRallyTroops, stats.totalTowerTroops].reduce((total, value) => Math.min(
+    Number.MAX_SAFE_INTEGER, total + Math.max(0, Math.floor(Number(value) || 0))
+  ), 0);
+}
+
+function getCityInfrastructureKingPowerComponents() {
+  return { replacementPower: 0, defensivePower: 0 };
 }
 
 function getCityInfrastructureKingPower(city) {
@@ -8670,7 +8662,7 @@ function getCityInfrastructureKingPower(city) {
 
 function getCityPowerFloor(city) {
   if (!city) return 0;
-  return getCityInfrastructureKingPower(city) + getTroopKingPower(city.troops);
+  return getTroopKingPower(city.troops);
 }
 
 function getCityOwnerKingPowerSnapshot(city) {
@@ -8710,7 +8702,7 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
 
 async function ensureAuthoritativeCityOwnerKingPower(city) {
   const existingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
-  if (existingPower > 0 || !city || city.owner !== "enemy") return existingPower;
+  if (getAuthoritativeEnemyPowerBandSnapshot(city) || !city || city.owner !== "enemy") return existingPower;
   const ownerUid = String(city.ownerUid || "").trim();
   const api = getOnlineApi();
   if (!ownerUid || !api?.isSignedIn?.()) return 0;
@@ -8725,7 +8717,7 @@ async function ensureAuthoritativeCityOwnerKingPower(city) {
       rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
       changed = applyCanonicalPlayerIdentityToRecord(city) || changed;
       const leaderboardPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
-      if (leaderboardPower > 0) {
+      if (getAuthoritativeEnemyPowerBandSnapshot(city)) {
         if (changed) renderCities(true);
         return leaderboardPower;
       }
@@ -8761,10 +8753,11 @@ function getEnemyCityPowerBand(
   defenderKingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city)
 ) {
   if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
+  if (arguments.length < 3 && (!getAuthoritativePlayerPowerBandSnapshot()
+    || !getAuthoritativeEnemyPowerBandSnapshot(city))) return "unknown";
   const attackerPower = normalizePowerValue(playerKingPower);
   const defenderPower = normalizePowerValue(defenderKingPower);
-  if (attackerPower <= 0 || defenderPower <= 0) return "unknown";
-  if (getAttackProtectionMode(attackerPower / defenderPower, attackerPower) !== "normal") return "protected";
+  if (getAttackProtectionMode(attackerPower / Math.max(1, defenderPower), attackerPower) !== "normal") return "protected";
   if (defenderPower > attackerPower) return "overpowering";
   return "in-range";
 }
@@ -8774,7 +8767,7 @@ function getAuthoritativePlayerPowerBandSnapshot() {
   const power = normalizePowerValue(stats?.kingPower);
   const version = Math.max(0, Math.floor(Number(stats?.version) || 0));
   const updatedAtMs = normalizeTimestampMs(stats?.updatedAtMs);
-  if (power <= 0 || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
+  if (!Number.isFinite(stats?.kingPower) || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
   return {
     power,
     updatedAtMs,
@@ -8787,7 +8780,7 @@ function getAuthoritativeEnemyPowerBandSnapshot(city) {
   const power = normalizePowerValue(identity?.kingPower);
   const version = Math.max(0, Math.floor(Number(identity?.kingPowerVersion) || 0));
   const updatedAtMs = normalizeTimestampMs(identity?.updatedAtMs);
-  if (!identity?.authoritative || power <= 0 || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
+  if (!identity?.authoritative || !Number.isFinite(identity.kingPower) || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
   return {
     power,
     updatedAtMs,
@@ -8862,9 +8855,9 @@ function getStableEnemyCityPowerBand(city, nowMs = Date.now()) {
   const attackerSnapshot = getAuthoritativePlayerPowerBandSnapshot();
   const defenderSnapshot = getAuthoritativeEnemyPowerBandSnapshot(city);
   const snapshotsAreComplete = Boolean(
-    normalizePowerValue(attackerSnapshot?.power) > 0
+    attackerSnapshot
     && normalizeTimestampMs(attackerSnapshot?.updatedAtMs) > 0
-    && normalizePowerValue(defenderSnapshot?.power) > 0
+    && defenderSnapshot
     && normalizeTimestampMs(defenderSnapshot?.updatedAtMs) > 0
   );
   if (!snapshotsAreComplete) {
@@ -12994,7 +12987,7 @@ function applyServerCityUpdates(cityUpdates = [], options = {}) {
       city.owner = ownerUid && currentUid && ownerUid === currentUid ? "player" : ownerUid ? "enemy" : "neutral";
       city.ownerName = ownerIdentity?.displayName || update.ownerName || "";
       city.ownerFlag = ownerIdentity?.flag || update.ownerFlag || null;
-      city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(update.ownerKingPower);
+      city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower ?? update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       city.ownerClanId = ownerUid ? String(update.ownerClanId ?? city.ownerClanId ?? "") : "";
       city.ownerClanName = ownerUid ? String(update.ownerClanName ?? city.ownerClanName ?? "") : "";
@@ -13930,11 +13923,12 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
   const uid = String(raw.uid || raw.ownerUid || raw.id || fallbackUid || "").trim();
   if (!uid) return null;
   const mainRegionId = String(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId) || "").trim();
+  const rawKingPower = raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower;
   return {
     uid,
     displayName: cleanName(raw.playerName || raw.displayName || raw.ownerName || raw.name || "") || "",
     flag: normalizeFlag(raw.flag || raw.ownerFlag, uid),
-    kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
+    kingPower: Number.isFinite(rawKingPower) && rawKingPower >= 0 ? normalizePowerValue(rawKingPower) : null,
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     mainCityId: getKnownCityId(raw.mainCityId, mainRegionId),
     mainRegionId,
@@ -14264,6 +14258,7 @@ function getPlayerIdentitySignature(identity) {
     identity.displayName || "",
     getFlagSignature(identity.flag),
     normalizePowerValue(identity.kingPower),
+    Number.isFinite(identity.kingPower) ? 1 : 0,
     Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0)),
     identity.mainCityId || "",
     identity.mainRegionId || "",
@@ -14448,7 +14443,7 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   const nextFlag = identity.flag || record.ownerFlag || null;
   const nextPower = identity.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION
     ? normalizePowerValue(identity.kingPower)
-    : normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
+    : normalizePowerValue(identity.kingPower ?? record.ownerKingPower);
   const nextPowerVersion = Math.max(
     Math.max(0, Math.floor(Number(record.kingPowerVersion) || 0)),
     Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0))
@@ -14529,7 +14524,7 @@ function queuePlayerIdentityLookupForRecords(records = []) {
     const recordUpdatedAtMs = normalizeTimestampMs(record?.kingPowerUpdatedAtMs)
       || normalizeTimestampMs(record?.updatedAtMs)
       || timestampToMs(record?.updatedAt);
-    if (recordKingPowerVersion >= KING_POWER_AUTHORITY_VERSION && recordKingPower > 0 && (
+    if (recordKingPowerVersion >= KING_POWER_AUTHORITY_VERSION && Number.isFinite(record.ownerKingPower ?? record.kingPower) && (
       !cached?.authoritative
       || (
         recordKingPower !== normalizePowerValue(cached.kingPower)
@@ -18418,7 +18413,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerUid,
       ownerName: identity.displayName || record.ownerName || "",
       ownerFlag: identity.flag || record.ownerFlag || null,
-      ownerKingPower: normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower),
+      ownerKingPower: normalizePowerValue(identity.kingPower ?? record.ownerKingPower),
       ownerShieldExpiresAtMs: normalizeTimestampMs(record.ownerShieldExpiresAtMs),
       hasPlayerOwner: true,
     };
@@ -18433,7 +18428,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerUid: fallbackUid,
       ownerName: identity.displayName || record.ownerName || state?.playerName || "",
       ownerFlag: identity.flag || record.ownerFlag || state?.flag || null,
-      ownerKingPower: normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower) || getKingPower(),
+      ownerKingPower: normalizePowerValue(identity.kingPower ?? record.ownerKingPower ?? getKingPower()),
       ownerShieldExpiresAtMs: getActivePeaceShieldExpiresAtMs(),
       hasPlayerOwner: Boolean(fallbackUid),
     };
@@ -18514,7 +18509,7 @@ function toOnlineCityState(city) {
     ? city.owner === "player" ? state.flag : ownerIdentity?.flag || city.ownerFlag || null
     : null;
   const ownerKingPower = hasPlayerOwner
-    ? city.owner === "player" ? getKingPower() : normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(city.ownerKingPower)
+    ? city.owner === "player" ? getKingPower() : normalizePowerValue(ownerIdentity?.kingPower ?? city.ownerKingPower)
     : 0;
   const ownerShieldExpiresAtMs = hasPlayerOwner
     ? isStronghold(city) ? 0 : city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
@@ -19295,7 +19290,7 @@ function normalizeOnlineArmyMovement(raw) {
     ownerUid,
     ownerName: ownerIdentity?.displayName || raw.ownerName || "",
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
-    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
+    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower ?? raw.ownerKingPower),
     eventKind: String(raw.eventKind || ""),
     waveId: String(raw.waveId || ""),
     kind: effectiveKind,
@@ -20690,7 +20685,7 @@ function getRenderableRemoteArmy(army) {
     renderableRemoteArmyCache.set(army, renderable);
   }
   const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
-  const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
+  const ownerKingPower = normalizePowerValue(identity?.kingPower ?? army.ownerKingPower);
   Object.assign(renderable, army, {
     owner: resolveOnlineArmyOwner(army),
     ownerName: identity?.displayName || army.ownerName || "",
@@ -21071,7 +21066,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     ownerUid: ownerUid || null,
     ownerName: ownerIdentity?.displayName || raw.ownerName || state?.playerName || "",
     ownerFlag,
-    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
+    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower ?? raw.ownerKingPower),
     ownerShieldExpiresAtMs: isStronghold(raw) || isStronghold(base) ? 0 : normalizeTimestampMs(raw.ownerShieldExpiresAtMs),
     regionId,
     startPool: raw.startPool || base.startPool || regionId,
@@ -24771,7 +24766,7 @@ function getPlayerMarchingTroops() {
 
 function getCityKingPower(city) {
   if (!city || city.owner !== "player") return 0;
-  return getCityInfrastructureKingPower(city) + getTroopKingPower(city.troops);
+  return getTroopKingPower(city.troops);
 }
 
 function getCachedKingPowerFallback() {
@@ -24780,14 +24775,15 @@ function getCachedKingPowerFallback() {
   const cachedIdentityPower = Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
     ? normalizePowerValue(cachedIdentity?.kingPower)
     : 0;
-  return Math.max(0, normalizePowerValue(lastComputedKingPower), cachedIdentityPower);
+  return cachedIdentity?.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION
+    ? cachedIdentityPower : normalizePowerValue(lastComputedKingPower);
 }
 
 function getCurrentPlayerIdentityKingPower(fallback = 0) {
   if (currentPlayerIdentityKingPowerOverride !== null) {
     return normalizePowerValue(currentPlayerIdentityKingPowerOverride);
   }
-  return getKingPower() || normalizePowerValue(fallback);
+  return state && Array.isArray(state.cities) ? getKingPower() : normalizePowerValue(fallback);
 }
 
 function getKingPower() {
@@ -24796,8 +24792,10 @@ function getKingPower() {
     return kingPowerRenderFrameCache;
   }
   const globalStats = getGlobalStatsSnapshot();
-  if (hasUsableGlobalStats(globalStats) && globalStats.version >= KING_POWER_AUTHORITY_VERSION) {
-    lastComputedKingPower = normalizePowerValue(globalStats.kingPower);
+  // v12 already has all five aggregate buckets (cities and Camps share totalTroops).
+  // Derive from that persisted snapshot while old published scores migrate to v13.
+  if (hasUsableGlobalStats(globalStats) && globalStats.version >= 12) {
+    lastComputedKingPower = getTroopKingPower(getTotalMilitaryTroopsFromGlobalStats(globalStats));
     if (kingPowerRenderFrameCacheActive) kingPowerRenderFrameCache = lastComputedKingPower;
     return lastComputedKingPower;
   }
@@ -24805,13 +24803,12 @@ function getKingPower() {
   kingPowerCalculationInProgress = true;
   try {
     const ownedCities = getAllOwnedCitiesForDisplay();
-    const infrastructurePower = ownedCities.reduce((total, city) => total + getCityInfrastructureKingPower(city), 0);
     const stationedTroops = ownedCities.reduce(
       (total, city) => total + Math.max(0, Math.floor(Number(city.troops) || 0)),
       0
     );
     const totalTroops = stationedTroops + getPlayerMarchingTroops();
-    lastComputedKingPower = Math.max(0, Math.floor(infrastructurePower + getTroopKingPower(totalTroops)));
+    lastComputedKingPower = getTroopKingPower(totalTroops);
     if (kingPowerRenderFrameCacheActive) kingPowerRenderFrameCache = lastComputedKingPower;
     return lastComputedKingPower;
   } finally {
@@ -24823,18 +24820,10 @@ function getKingdomSummary() {
   const globalStats = getGlobalStatsSnapshot();
   if (hasUsableGlobalStats(globalStats)) {
     return {
-      kingPower: globalStats.version >= KING_POWER_AUTHORITY_VERSION
-        ? normalizePowerValue(globalStats.kingPower)
-        : getKingPower(),
-      baseKingPower: globalStats.version >= KING_POWER_AUTHORITY_VERSION
-        ? normalizePowerValue(globalStats.baseKingPower ?? globalStats.kingPower)
-        : getKingPower(),
+      kingPower: getKingPower(),
+      baseKingPower: getKingPower(),
       cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
-      troops: Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalReinforcementTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalRallyTroops) || 0))
-        + Math.max(0, Math.floor(Number(globalStats.totalTowerTroops) || 0))),
+      troops: getTotalMilitaryTroopsFromGlobalStats(globalStats),
       gold: Math.floor(Number(state.gold) || 0),
       baseGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseGoldPerHour) || 0)),
       untimedGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.untimedGoldPerHour ?? globalStats.baseGoldPerHour) || 0)),
@@ -24848,13 +24837,9 @@ function getKingdomSummary() {
   const regularCities = cities.filter(city => !isStronghold(city));
   const marchingTroops = getPlayerMarchingTroops();
   const cityStats = cities.map(city => getCityStats(city));
-  const baseInfrastructurePower = cities.reduce((total, city) => {
-    const components = getCityInfrastructureKingPowerComponents(city, { includeStrongholdBoosts: false });
-    return total + components.replacementPower + components.defensivePower;
-  }, 0);
-  const baseKingPower = Math.max(0, Math.floor(baseInfrastructurePower + getTroopKingPower(
+  const baseKingPower = getTroopKingPower(
     cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops)
-  )));
+  );
   return {
     kingPower: getKingPower(),
     baseKingPower,
