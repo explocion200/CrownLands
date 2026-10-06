@@ -75,6 +75,7 @@ const required = [
 ];
 const forbidden = [
   "docs/art-sources/login",
+  "docs/art-sources/inner-city-estate", "docs/visual-qa/inner-city-estate",
   "docs/visual-qa/crowns-currency/art",
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
   "assets/castles", "assets/inner-castle", "assets/optimized/manifest.json",
@@ -362,7 +363,22 @@ if (paymentUiBytes > 18 * 1024) throw new Error("Crown checkout presentation exc
 const paymentPolicyBytes = ["support.html", "privacy.html", "terms.html"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (paymentPolicyBytes > 34 * 1024) throw new Error("Payment support and policy pages exceed their 34 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget;
+// The fixed-site estate adds 1,078,739 bytes of lazy raster/SVG art and less
+// than 38 KiB of scene code/styles. Bound this feature independently; retain
+// the existing entry, installation-cache, prepared-world and combined caps.
+const estateArtBudget = 1088 * 1024;
+const estateArtFiles = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/inner-city-estate/"));
+if (estateArtFiles.length !== 25 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
+  throw new Error("Estate must ship its 25 runtime art files within 1088 KiB.");
+}
+const estateModuleBudget = 40 * 1024;
+if (["inner-city-estate.js", "inner-city-estate.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > estateModuleBudget) {
+  throw new Error("Estate renderer and styles exceed their 40 KiB budget.");
+}
+if (fs.readFileSync(path.join(dist, "service-worker.js"), "utf8").includes("assets/inner-city-estate/")) {
+  throw new Error("Estate artwork must load on entry to the estate, outside installation precaching.");
+}
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

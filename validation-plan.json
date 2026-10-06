@@ -73,13 +73,15 @@
       "paths": [
         "tools/build-production-client.js",
         "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Package and fingerprint the estate renderer and every runtime WebP/SVG. Run the production artifact validator against the built client, with required registry state art, source exclusion and shell consistency. The preparation pipeline also runs runtime-data parity, release generation and asset performance budgets. Preserve all existing atlas and live-world delivery inputs.",
+      "reason": "Package and fingerprint the estate renderer and every runtime WebP/SVG. Run the production artifact validator against the built client, with required registry state art, source exclusion and shell consistency. The preparation pipeline also runs runtime-data parity, release generation and asset performance budgets. Preserve all existing atlas and live-world delivery inputs. Bound the 25 lazy estate art files at 1088 KiB and renderer/styles at 40 KiB, retaining the existing install/login/combined caps. Account for the superseded hub and six preserved detail previews in the optimized-art reference audit.",
       "tests": [
         "tools/validate-production-artifact.js",
         "tools/validate-inner-city-estate.js",
-        "tools/test-shell-cache-assertions.js"
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-asset-performance-budgets.js"
       ]
     },
     {

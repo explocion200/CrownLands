@@ -2044,6 +2044,7 @@ function openInnerCastle(cityId, returnCityId = cityId) {
     return;
   }
   if (!modal.open) modal.showModal();
+  innerCastleEstateView?.fit();
   modalBody.querySelector(".estate-viewport")?.focus({ preventScroll: true });
 }
 
