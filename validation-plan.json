@@ -22,7 +22,7 @@
         "stronghold-details-ui.js",
         "troop-orders-ui.js"
       ],
-      "reason": "Replace only shared skill-image URLs across all 17 active presentation files, including conditional/template paths and CSS backgrounds, and preserve raster aspect ratio in skill cards. Check approved asset identity and all eight real skill cards at desktop and landscape-mobile sizes; exercise order power, report and scout renderers that reuse the art. No mechanics or server-authoritative code changes.",
+      "reason": "Replace only shared skill-image URLs across all 17 active presentation files, including conditional/template paths and CSS backgrounds, and preserve raster aspect ratio in skill cards. Check approved asset identity and all eight real skill cards at desktop and landscape-mobile sizes; exercise order power, report and scout renderers that reuse the art. No mechanics or server-authoritative code changes. Complete the existing reinforcement renderer export comment for three helpers already called by game.js; origin/main has the same missing-export lint errors, and this metadata correction changes no runtime behavior.",
       "tests": [
         "tools/validate-skill-artwork-browser.js",
         "tools/validate-military-ui.js",

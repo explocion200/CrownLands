@@ -1,5 +1,5 @@
 /* Approved Reinforcements presentation. Existing server return actions remain authoritative. */
-/* exported renderReinforcementsActivityHeader, renderReinforcementsActivityFooter, captureReinforcementsActivityView, bindReinforcementsActivityView, setReinforcementActivityError, getReinforcementActivityError */
+/* exported renderReinforcementsActivityHeader, renderReinforcementsActivityFooter, captureReinforcementsActivityView, bindReinforcementsActivityView, setReinforcementActivityError, getReinforcementActivityError, renderReinforcementsPanelView, renderTravelingSupportView, renderStationedSupportView */
 const reinforcementActivityErrors = new Map();
 function setReinforcementActivityError(id, message = "") {
   const key = `${getCurrentOnlineUid()}:${id}`;
