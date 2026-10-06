@@ -4,57 +4,107 @@
   "coverage": [
     {
       "paths": [
-        "modal-ui.js",
-        "interface-theme.css"
+        "assets/inner-city-estate/actors.webp",
+        "assets/inner-city-estate/alehouse.webp",
+        "assets/inner-city-estate/barracks.webp",
+        "assets/inner-city-estate/builders-yard.webp",
+        "assets/inner-city-estate/construction.svg",
+        "assets/inner-city-estate/farmstead.webp",
+        "assets/inner-city-estate/foresters-lodge.webp",
+        "assets/inner-city-estate/gatehouse.webp",
+        "assets/inner-city-estate/granary.webp",
+        "assets/inner-city-estate/great-hall.webp",
+        "assets/inner-city-estate/guild-master.webp",
+        "assets/inner-city-estate/market.webp",
+        "assets/inner-city-estate/mill-sails.svg",
+        "assets/inner-city-estate/mine.webp",
+        "assets/inner-city-estate/quarry.webp",
+        "assets/inner-city-estate/royal-stables.webp",
+        "assets/inner-city-estate/sawmill.webp",
+        "assets/inner-city-estate/smithy.webp",
+        "assets/inner-city-estate/storehouse.webp",
+        "assets/inner-city-estate/surveyed-plot.svg",
+        "assets/inner-city-estate/terrain.webp",
+        "assets/inner-city-estate/treasury.webp",
+        "assets/inner-city-estate/wagon-yard.webp",
+        "assets/inner-city-estate/windmill.webp",
+        "assets/inner-city-estate/workshop.webp",
+        "docs/art-sources/inner-city-estate/actors.png",
+        "docs/art-sources/inner-city-estate/art-record.json",
+        "docs/art-sources/inner-city-estate/buildings.png",
+        "docs/art-sources/inner-city-estate/prompts.json",
+        "docs/art-sources/inner-city-estate/terrain.png",
+        "docs/art-sources/inner-city-estate/windmill-body.png"
       ],
-      "reason": "Use the existing overlay observer to pause only covered HUD decoration. Cover native/dynamic dialogs, nested overlays, close/removal/reopen, motion preferences and onboarding/lifecycle integration. Clock, live alerts, gameplay and authoritative synchronization are unchanged; no backend emulator suite applies.",
+      "reason": "Add a painted estate terrain, transparent building sprites and an eight-frame inhabitant atlas. Verify exact raster provenance, cross-platform SVG hashes, alpha, delivery sizes, every fixed footprint and the three independently rendered construction states. The browser decodes all art in the actual renderer; mandatory production build checks packaging and unchanged client performance budgets. Source masters and prompts stay out of production.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-ui-refresh-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js"
       ]
     },
     {
       "paths": [
+        "docs/visual-qa/inner-city-estate/index.html",
+        "inner-city-estate.css",
+        "inner-city-estate.js"
+      ],
+      "reason": "Replace the compact overview with the connected 20-site estate scene and isolated review fixtures. Validate approved coordinates and road connectivity, cottage/road/plot clearance, constant-distance movement, desktop and two landscape sizes, 44px targets, directory access, mouse/touch/keyboard controls, full fit, zoom clamps, motion modes, background pausing and scene disposal. Shared modal styling and the gear round trip are exercised in the real game.",
+      "tests": [
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "common-gear-ui.js",
         "game.js",
-        "player-profile-ui.js",
-        "skins-ui.js"
+        "index.html",
+        "service-worker.js"
       ],
-      "reason": "Retain unchanged Profile production/achievement nodes and Skills/navigation state, and patch real data changes in place, including the production detail dialog and exact City Details troop formatting. Cover identity/focus, live skill eligibility, Gold/production/garrison updates, achievement badges and dependent profile/clan/skin navigation at desktop and landscape-mobile sizes. Numeric rules, timers and server authority are unchanged.",
+      "reason": "Integrate the scene with existing Main City and Profile entry, ownership guards, Back/Close/Escape focus restoration, gear actions and new-gear indicators. Preserve gear authority, rewards, original preview art and bonuses while keeping camera and selection across gear screens. Verify renderer load order and shell cache parity. No server-authoritative progression, construction, resources or champion actions change.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-ui-refresh-browser.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-inner-castle.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/test-shell-cache-assertions.js"
       ]
     },
     {
       "paths": [
-        "city-details-ui.js"
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Reuse the existing operation text patcher for passive city stat/wall content instead of comparing browser-normalized HTML strings; avoid unchanged upgrade attributes. Cover retained nodes, full garrison counts, upgrades/projections/Gold limits, repair/ownership handling and shared modal refresh dependencies.",
+      "reason": "Package and fingerprint the estate renderer and every runtime WebP/SVG. Run the production artifact validator against the built client, with required registry state art, source exclusion and shell consistency. The preparation pipeline also runs runtime-data parity, release generation and asset performance budgets. Preserve all existing atlas and live-world delivery inputs.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-ui-refresh-browser.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/test-shell-cache-assertions.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-ui-stutter-browser.js"
+        "tools/validate-common-gear.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-city-estate.js"
       ],
-      "reason": "Execute the new actual-game regression for stable Skills/Profile/City content, live values/eligibility, six covered screens, nested/dynamic dialogs and Full/Reduced/Off preferences at three viewport sizes. Isolated benchmark services never access production accounts.",
+      "reason": "Execute the updated existing integration guards and the new structural/actual-game estate regressions. The common-gear check includes the extracted renderer in its source boundary; browser fixtures are private and cannot mutate saved progression. These tests verify the changed shared modal and equipment dependencies rather than unrelated game systems.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js"
+        "tools/validate-common-gear.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-city-estate.js"
       ]
     },
     {
       "paths": [
-        "docs/visual-qa/ui-refresh-stutter/README.md"
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/art-sources/inner-city-estate/README.md",
+        "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record the reproduced UI causes, bounded fix, controlled browser evidence, focused regression coverage and release status. Documentation only; runtime dependencies are covered above.",
+      "reason": "Record the explicitly approved estate layout, presentation-only scope, fixed plots, road and animation standards, art provenance and review instructions in the Master Specification, Art Bible and source/review readmes. Documentation has no runtime behavior; its associated implementation and asset dependencies are tested above.",
       "tests": []
     }
   ]

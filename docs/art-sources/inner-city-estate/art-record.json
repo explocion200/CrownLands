@@ -37,7 +37,8 @@
     {
       "path": "assets/inner-city-estate/construction.svg",
       "bytes": 856,
-      "sha256": "3c3c4f122ff04b24d5f26d98fc4e6a020eaab23a15c3a1a8771e3edf0b8c3dcb"
+      "sha256": "3c3c4f122ff04b24d5f26d98fc4e6a020eaab23a15c3a1a8771e3edf0b8c3dcb",
+      "hashEncoding": "utf8-lf"
     },
     {
       "path": "assets/inner-city-estate/farmstead.webp",
@@ -98,7 +99,8 @@
     {
       "path": "assets/inner-city-estate/mill-sails.svg",
       "bytes": 612,
-      "sha256": "65231ef64b515e74b94f72a1d60834f2e9ca9bf071a970e870c74db758988f61"
+      "sha256": "65231ef64b515e74b94f72a1d60834f2e9ca9bf071a970e870c74db758988f61",
+      "hashEncoding": "utf8-lf"
     },
     {
       "path": "assets/inner-city-estate/mine.webp",
@@ -151,7 +153,8 @@
     {
       "path": "assets/inner-city-estate/surveyed-plot.svg",
       "bytes": 492,
-      "sha256": "9b42134bc0d5dbdf78d29a612a3f9c1506773a53061279a6a3011bf54726aed6"
+      "sha256": "9b42134bc0d5dbdf78d29a612a3f9c1506773a53061279a6a3011bf54726aed6",
+      "hashEncoding": "utf8-lf"
     },
     {
       "path": "assets/inner-city-estate/terrain.webp",

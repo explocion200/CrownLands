@@ -45,7 +45,11 @@ const atlas=fs.readFileSync(path.join(root,"assets/inner-city-estate/actors.webp
 for(const file of ["terrain.webp",...estate.buildings.map(b=>b.key+".webp")]){const buffer=fs.readFileSync(path.join(root,"assets/inner-city-estate",file));assert.equal(buffer.toString("ascii",8,12),"WEBP");assert(buffer.length<(file==="terrain.webp"?400000:50000),"Estate image exceeds budget: "+file);}
 const source=fs.readFileSync(path.join(root,"inner-city-estate.js"),"utf8");assert.doesNotMatch(source,/\b(?:fetch|localStorage|saveGame|callServer)\s*[.(]/,"Visual estate must not write player progression or call the server");
 const provenance=JSON.parse(fs.readFileSync(path.join(root,"docs/art-sources/inner-city-estate/art-record.json"),"utf8"));
-for(const entry of [...provenance.runtime,...provenance.sources])assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root,entry.path))).digest("hex"),entry.sha256,"Artwork differs from reviewed provenance: "+entry.path);
+for(const entry of [...provenance.runtime,...provenance.sources]){
+  const bytes=fs.readFileSync(path.join(root,entry.path));
+  const canonical=entry.hashEncoding==="utf8-lf"?bytes.toString("utf8").replace(/\r\n/g,"\n"):bytes;
+  assert.equal(crypto.createHash("sha256").update(canonical).digest("hex"),entry.sha256,"Artwork differs from reviewed provenance: "+entry.path);
+}
 assert.equal(provenance.runtime.find(entry=>entry.path.endsWith("terrain.webp")).width,1448);
 assert.equal(provenance.runtime.find(entry=>entry.path.endsWith("terrain.webp")).height,1086);
 for(const entry of provenance.runtime.filter(entry=>entry.path.endsWith(".webp")&&!entry.path.endsWith("terrain.webp")))assert.equal(entry.hasAlpha,true,"Sprite alpha must be preserved: "+entry.path);

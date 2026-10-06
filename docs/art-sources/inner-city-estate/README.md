@@ -7,6 +7,6 @@ Created with the built-in `image_gen.imagegen` tool for the approved October 6, 
 - `actors.png`: untouched 1774×887 transparent eight-frame/four-row atlas. Runtime `actors.webp` is 1024×512 at quality 78 / alpha quality 85, preserving its eight-column/four-row frame layout.
 - `windmill-body.png`: transparent edit of the Windmill cell with its sails removed. Trim and transparent 256×256 fitting match the other building sprites. Wooden sails are the separate native SVG rotating layer.
 
-Sharp performs only atlas extraction, transparent trimming, resizing and WebP encoding. The source generations remain intact. Survey stakes, scaffolding, road geometry, walls and wooden sails are native scene assets. Runtime files live in `assets/inner-city-estate/`. `art-record.json` records the exact source/runtime hashes and dimensions.
+Sharp performs only atlas extraction, transparent trimming, resizing and WebP encoding. The source generations remain intact. Survey stakes, scaffolding, road geometry, walls and wooden sails are native scene assets. Runtime files live in `assets/inner-city-estate/`. `art-record.json` records the source/runtime hashes and dimensions. Raster hashes cover exact bytes; the three textual SVG hashes use UTF-8 with LF line endings so Windows and Linux checkouts agree.
 
 The complete prompts are retained in `prompts.json`. Runtime assets do not depend on a file under the Codex generated-image directory. Raw sources, prompts and review controls are excluded from the production package.
