@@ -1,0 +1,191 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { createHash } = require("node:crypto");
+const { CdpClient } = require("./map-benchmark/cdp-client");
+const { createMapBenchmarkServer } = require("./map-benchmark/server");
+const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
+
+async function main() {
+  const root = path.resolve(__dirname, "..");
+  const directory = "docs/visual-qa/knight-order-city-skins";
+  const orders = ["templar", "hospitaller", "teutonic", "santiago"];
+  const prompts = JSON.parse(fs.readFileSync(path.join(root, directory, "prompts.json"), "utf8"));
+  const progression = JSON.parse(fs.readFileSync(path.join(root, directory, "progression-prompts.json"), "utf8"));
+  const ranges = ["1–24", "25–49", "50–74", "75–99", "100+"];
+  assert.deepEqual(prompts.assets.map(asset => asset.slug), orders);
+  assert.equal(progression.assets.length, 16);
+  assert.equal(new Set(progression.assets.map(asset => `${asset.slug}-${asset.stage}`)).size, 16);
+  assert.deepEqual(fs.readFileSync(path.join(root, directory, "art/encampment.webp")),
+    fs.readFileSync(path.join(root, "assets/optimized/camp-troops-384x384-2f712333e891.webp")), "Reuse existing painted camp art without alteration");
+  const paintings = new Set();
+  for (const order of orders) for (let stage = 1; stage <= 5; stage++) {
+    const file = `art/${order}${stage === 5 ? "" : `-stage-${stage}`}.png`;
+    if (stage < 5) {
+      const prompt = progression.assets.find(asset => asset.slug === order && asset.stage === stage);
+      assert(prompt, `Prompt exists for ${order} stage ${stage}`);
+      assert.equal(prompt.file, file);
+      assert.equal(prompt.levelRange, ranges[stage - 1]);
+    }
+    const png = fs.readFileSync(path.join(root, directory, file));
+    assert.equal(png.subarray(1, 4).toString(), "PNG");
+    assert.equal(png[25], 6, "City art must retain RGBA transparency");
+    assert(png.readUInt32BE(16) >= 1024 && png.readUInt32BE(20) >= 1024);
+    paintings.add(createHash("sha256").update(png).digest("hex"));
+  }
+  assert.equal(paintings.size, 20, "Every order and growth stage has distinct artwork");
+  const executable = [process.env.CHROME_PATH, process.env.CROWNLANDS_CHROME_PATH,
+    "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
+  assert(executable, "Chromium is required");
+  const server = createMapBenchmarkServer(), address = await server.listen();
+  const output = path.join(root, "release-artifacts/knight-order-city-skins");
+  fs.mkdirSync(output, { recursive: true });
+  let browser, client;
+  const errors = [], external = [], failed = [];
+  try {
+    browser = await startBrowserSession(executable);
+    client = await CdpClient.connect(browser.targets.find(target => target.type === "page").webSocketDebuggerUrl);
+    await client.send("Runtime.enable"); await client.send("Page.enable"); await client.send("Network.enable");
+    client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
+    client.on("Network.requestWillBeSent", event => { if (!event.request.url.startsWith(address.url) && /^https?:/.test(event.request.url)) external.push(event.request.url); });
+    client.on("Network.responseReceived", event => { if (event.response.status >= 400 && !event.response.url.endsWith("/favicon.ico")) failed.push(event.response.url); });
+    const evaluate = async expression => {
+      const result = await client.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+      if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+      return result.result.value;
+    };
+    const wait = async expression => {
+      for (let attempt = 0; attempt < 160; attempt++) {
+        if (await evaluate(expression)) return;
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      throw Error("Timed out: " + expression);
+    };
+    const settle = () => evaluate("new Promise(resolve => setTimeout(resolve, 180))");
+    const click = async selector => {
+      const point = await evaluate(`(() => {
+        const element = document.querySelector(${JSON.stringify(selector)});
+        element.scrollIntoView({ block: "center", behavior: "instant" });
+        const r = element.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        if (!element.contains(hit)) throw Error("Obscured control: " + element.outerHTML);
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      })()`);
+      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", button: "left", clickCount: 1, ...point });
+      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...point });
+    };
+    const selectEffects = value => evaluate(`document.querySelector('#effects').value = ${JSON.stringify(value)}; document.querySelector('#effects').dispatchEvent(new Event('change'))`);
+    const snapshot = () => evaluate("document.querySelector('canvas').toDataURL()");
+    const outsideEffects = () => evaluate(`(() => {
+      const canvas = document.querySelector('canvas'), city = document.querySelector('.city');
+      const c = canvas.getBoundingClientRect(), b = city.getBoundingClientRect(), ratio = canvas.width / c.width;
+      const left = (b.left-c.left)*ratio, right = (b.right-c.left)*ratio, top = (b.top-c.top)*ratio, bottom = (b.bottom-c.top)*ratio;
+      const pixels = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+      let count = 0, hash = 2166136261;
+      for (let y=0; y<canvas.height; y++) for (let x=0; x<canvas.width; x++) {
+        // Exclude the canvas edge fade as well as the whole artwork rectangle.
+        if (x<c.width*ratio*.1 || x>canvas.width*.9 || y<canvas.height*.12 || y>canvas.height*.9) continue;
+        if (x>=left && x<=right && y>=top && y<=bottom) continue;
+        const offset = (y*canvas.width+x)*4;
+        if (pixels[offset+3]>12) count++;
+        hash = Math.imul(hash ^ pixels[offset+3], 16777619) >>> 0;
+      }
+      return { count, hash };
+    })()`);
+    const capture = async (name, fullPage = false) => {
+      const height = await evaluate("document.documentElement.scrollHeight");
+      const width = await evaluate("innerWidth");
+      const options = fullPage ? { captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 } } : {};
+      fs.writeFileSync(path.join(output, name + ".png"), Buffer.from((await client.send("Page.captureScreenshot", { format: "png", ...options })).data, "base64"));
+    };
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 390, height: 844 }]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      await client.send("Page.navigate", { url: `${address.url}/${directory}/index.html` });
+      await wait("document.readyState === 'complete' && !!document.querySelector('canvas')");
+      for (const order of orders) for (let level = 1; level <= 5; level++) {
+        await click(`[data-order-choice="${order}"]`);
+        await click(`button[data-level="${level}"]`);
+        await wait(`document.querySelector('.skin-card').dataset.order === ${JSON.stringify(order)} && document.querySelector('.art').complete`);
+        await evaluate("Promise.all([...document.images].map(image => image.decode()))");
+        assert.equal(await evaluate("Number(document.querySelector('.skin-card').dataset.level)"), level);
+        assert.equal(await evaluate("document.querySelector('.art').getAttribute('src')"), `art/${order}${level === 5 ? "" : `-stage-${level}`}.png`);
+        assert.equal(await evaluate("document.querySelector('button[data-level][aria-pressed=true]').dataset.level"), String(level));
+        assert((await evaluate("document.querySelector('.level-caption').textContent")).includes(ranges[level - 1]));
+        assert.equal(await evaluate("document.querySelector('.encampment').naturalWidth"), 384, "Painted camp loads");
+        assert.equal(await evaluate("document.querySelectorAll('.aura,.ground-glow,.light-sweep').length"), 0, "Abstract magical overlays are removed");
+        await settle();
+        assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "No horizontal overflow at " + viewport.width);
+        assert(await evaluate("[...document.querySelectorAll('button,select')].every(e => e.getBoundingClientRect().height >= 44)"), "Touch targets stay at least 44px tall");
+        assert(await evaluate("(() => { const c = document.querySelector('.city').getBoundingClientRect(), s = document.querySelector('.stage').getBoundingClientRect(); return Math.abs(c.width-c.height)<1 && c.left>=s.left && c.right<=s.right+1 && c.top>=s.top && c.bottom<=s.bottom+1; })()"), "Complete square art fits its stage");
+        assert(await evaluate("(() => { const image=document.querySelector('.art'), c=document.createElement('canvas'); c.width=image.naturalWidth; c.height=image.naturalHeight; const ctx=c.getContext('2d'); ctx.drawImage(image,0,0); return ctx.getImageData(0,0,1,1).data[3]===0; })()"), "Transparent city corner");
+        const outerFrame = await outsideEffects();
+        assert(outerFrame.count > 20, `${order} visibly paints beyond the entire city artwork at ${viewport.width}px`);
+        await settle();
+        assert.notEqual((await outsideEffects()).hash, outerFrame.hash, `${order} outer effects move`);
+      }
+      await click('[data-order-choice="teutonic"]');
+      await evaluate("document.querySelector('.stage').scrollIntoView({block:'center'})");
+      await settle();
+      const moving = await snapshot(); await settle();
+      assert.notEqual(await snapshot(), moving, "Full effects animate");
+      await click("#pause"); await settle();
+      const paused = await snapshot(); await settle();
+      assert.equal(await snapshot(), paused, "Pause freezes particles");
+      assert(await evaluate("document.querySelector('.skin-card').getAnimations({subtree:true}).every(animation => animation.playState === 'paused')"), "Pause freezes CSS light effects");
+      await click("#pause");
+      await selectEffects("subtle"); await settle();
+      const subtle = await snapshot(); await settle();
+      assert.equal(await snapshot(), subtle, "Subtle effects are static");
+      assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.encampment')).display"), "none", "Subtle retains the camp scenery");
+      await selectEffects("off");
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('canvas')).display"), "none");
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('.encampment')).display"), "none", "Off shows the painted city alone");
+      await selectEffects("full");
+      await click('[data-view="scale"]'); await settle();
+      assert.equal(await evaluate("document.querySelector('.city').getBoundingClientRect().width"), 160);
+      for (const order of orders) {
+        await click(`[data-order-choice="${order}"]`); await settle();
+        assert((await outsideEffects()).count > 20, `${order} outer effects survive 160px city scaling`);
+      }
+      await click('[data-view="compare"]'); await settle();
+      assert.equal(await evaluate("document.querySelectorAll('.skin-card').length"), 4);
+      assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Compare stays within viewport");
+      if (viewport.width === 1440) { await evaluate("scrollTo(0,0)"); await capture("compare-desktop", true); }
+      await click('[data-view="growth"]');
+      for (const order of orders) {
+        await click(`[data-order-choice="${order}"]`);
+        await evaluate("Promise.all([...document.images].map(image => image.decode()))");
+        await settle();
+        assert.deepEqual(await evaluate("[...document.querySelectorAll('.skin-card')].map(card => Number(card.dataset.level))"), [1, 2, 3, 4, 5]);
+        assert(await evaluate(`[...document.querySelectorAll('.skin-card')].every(card => card.dataset.order === ${JSON.stringify(order)})`));
+        assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Growth stays within viewport");
+        if (viewport.width === 1440 || order === "templar") {
+          await evaluate("scrollTo(0,0)"); await capture(`growth-${order}-${viewport.width}`, true);
+        }
+      }
+      await click('button[data-level="1"]');
+      assert.equal(await evaluate("document.querySelector('.workspace').dataset.view"), "inspect", "Choosing a level from Growth opens its inspection");
+      // Native keyboard activation must select a level, too.
+      await evaluate("document.querySelector('button[data-level=\"3\"]').focus()");
+      assert.equal(await evaluate("document.activeElement.dataset.level"), "3", "Level button receives keyboard focus");
+      await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13 });
+      await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+      await wait("document.querySelector('.skin-card').dataset.level === '3'");
+      assert.equal(await evaluate("document.querySelector('.skin-card').dataset.level"), "3");
+      await click('[data-view="inspect"]'); await click('[data-order-choice="santiago"]');
+      await evaluate("document.querySelector('.stage').scrollIntoView({block:'center'})"); await settle();
+      await capture("inspect-" + viewport.width);
+    }
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    await client.send("Page.reload");
+    await wait("document.readyState === 'complete' && document.documentElement.dataset.effects === 'subtle'");
+    assert.equal(await evaluate("document.querySelector('#effects').value"), "subtle", "Reduced motion defaults to static effects");
+    assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(failed, []);
+    console.log("Twenty-stage preview passed: distinct transparent art and prompt mappings, all order/level choices, five-stage Growth view, keyboard selection, reused painted camps, desktop/landscape/portrait fit, medieval motion beyond every city artwork, pause/subtle/off controls, comparison, 160px city scale, reduced motion, no external requests or runtime errors.");
+  } finally {
+    if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
+    if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }
+    await server.close();
+  }
+}
+main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,0 +1,225 @@
+{
+  "quality": 0.82,
+  "assets": [
+    {
+      "order": "templar",
+      "stage": 1,
+      "path": "assets/optimized/knight-templar-stage-1-512x512-409ca09d8cb6.webp",
+      "sha256": "409ca09d8cb6da984e570c4eed364efb106be45fa6f43792658ffc48e1e97823",
+      "bytes": 75078,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/templar-stage-1.png",
+      "sourceSha256": "d5bbbe5f6257204e7eac93c969575a622b7678edaa6fd13c154ba8c7e3cb0307"
+    },
+    {
+      "order": "templar",
+      "stage": 2,
+      "path": "assets/optimized/knight-templar-stage-2-512x512-e264499c3afc.webp",
+      "sha256": "e264499c3afc3e15037751c829dcf036f3eeab2249c12740128c4450249b876c",
+      "bytes": 82564,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/templar-stage-2.png",
+      "sourceSha256": "abae8898176f99aee4ad7db98e9d85111f2133bed7c0590e8b18e8cb97097bd0"
+    },
+    {
+      "order": "templar",
+      "stage": 3,
+      "path": "assets/optimized/knight-templar-stage-3-512x512-0115c1eefef1.webp",
+      "sha256": "0115c1eefef1643b1f5547965f727495e1ed89a28e9da25646856f2a12aed843",
+      "bytes": 75870,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/templar-stage-3.png",
+      "sourceSha256": "3968d1d0fedbd55ee2497a063cea40e426ac70d77e3c9ebb39eb78e9057491ef"
+    },
+    {
+      "order": "templar",
+      "stage": 4,
+      "path": "assets/optimized/knight-templar-stage-4-512x512-ab4f3f1fe8ea.webp",
+      "sha256": "ab4f3f1fe8eab07f134e51dd9007cc30fe8e23f233b7f4b54b00e1917a80046d",
+      "bytes": 78854,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/templar-stage-4.png",
+      "sourceSha256": "debae33e4584ebf340b3e1d24dac4df6afc2d1ff7c16cf8e236052a8730be305"
+    },
+    {
+      "order": "templar",
+      "stage": 5,
+      "path": "assets/optimized/knight-templar-stage-5-512x512-6c937fb5dd73.webp",
+      "sha256": "6c937fb5dd73c15fe77e2f8a51983331592b8fde76e6172c970ff130d65fcc35",
+      "bytes": 80566,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/templar.png",
+      "sourceSha256": "67c0a6102b500d1f86123109d0f5390d94caf20965055aa7831e6e3800581542"
+    },
+    {
+      "order": "hospitaller",
+      "stage": 1,
+      "path": "assets/optimized/knight-hospitaller-stage-1-512x512-3a9264a121a4.webp",
+      "sha256": "3a9264a121a469a00f7d6b6b2607a26109320cb6fed18b8c270031e4899bc674",
+      "bytes": 69118,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-1.png",
+      "sourceSha256": "efbdabe95b0cee95965fc94702dd06a7c21a5bd70f91070f7c77c7c9bf6d09e7"
+    },
+    {
+      "order": "hospitaller",
+      "stage": 2,
+      "path": "assets/optimized/knight-hospitaller-stage-2-512x512-519bc14b3369.webp",
+      "sha256": "519bc14b3369544f437eaf935146ff393d14b78d505f170f6b4ef77929213874",
+      "bytes": 79992,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-2.png",
+      "sourceSha256": "c0964e4f20b1a62ece78744f879328c66fe850aec3c4725533c569e4e4e7bd27"
+    },
+    {
+      "order": "hospitaller",
+      "stage": 3,
+      "path": "assets/optimized/knight-hospitaller-stage-3-512x512-2739a30429f1.webp",
+      "sha256": "2739a30429f1a860603b7b99ed253375b0cae46bcb9028920c8d1e087194527b",
+      "bytes": 83714,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-3.png",
+      "sourceSha256": "f2ae27709218ba222a393ec7c60e9d5df3d9c689ec8a8981bdf426f00e39c875"
+    },
+    {
+      "order": "hospitaller",
+      "stage": 4,
+      "path": "assets/optimized/knight-hospitaller-stage-4-512x512-ce95a385579c.webp",
+      "sha256": "ce95a385579c74b0dfcd465339f2e0d7f73ef67db840847bd360a980b048fb93",
+      "bytes": 83300,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-4.png",
+      "sourceSha256": "a4a31641d56fdcbc00e1018ba3b4d25b5e630184b62e785bab4124e3bcb83a88"
+    },
+    {
+      "order": "hospitaller",
+      "stage": 5,
+      "path": "assets/optimized/knight-hospitaller-stage-5-512x512-effa304fe7d9.webp",
+      "sha256": "effa304fe7d928f3136d39aa7e4c0526a39e4beaecc74d19751a2ce444880f81",
+      "bytes": 91162,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/hospitaller.png",
+      "sourceSha256": "ceb7d4f3d6b224cc5db1676900e0a9d4ff11bb43d580dbd1fe774af477d23b2e"
+    },
+    {
+      "order": "teutonic",
+      "stage": 1,
+      "path": "assets/optimized/knight-teutonic-stage-1-512x512-b487846b8b97.webp",
+      "sha256": "b487846b8b97da286c3505404adcfbb835f5487d779389b2bda465b970d1f4d7",
+      "bytes": 75804,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-1.png",
+      "sourceSha256": "18ee23049b48c76411c4d5bf3289650b1aab4cf5889426946a43d62017881437"
+    },
+    {
+      "order": "teutonic",
+      "stage": 2,
+      "path": "assets/optimized/knight-teutonic-stage-2-512x512-5fbc3236bbe3.webp",
+      "sha256": "5fbc3236bbe3c73c67a17bfa201dffa8c5c11afce257873cc7d4f638029349ea",
+      "bytes": 72814,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-2.png",
+      "sourceSha256": "2c46e82df6880bb22968736f7686f11e54678aaff56ac604a02458bc169bdceb"
+    },
+    {
+      "order": "teutonic",
+      "stage": 3,
+      "path": "assets/optimized/knight-teutonic-stage-3-512x512-169151f7f9a5.webp",
+      "sha256": "169151f7f9a531c3478ec0ca51ade7979c610681d07d0bcd2585702e9cc76837",
+      "bytes": 80996,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-3.png",
+      "sourceSha256": "796b92c61b0dd50b79738f282dffd4be22a0fbff996a857f21d2192200c2a0eb"
+    },
+    {
+      "order": "teutonic",
+      "stage": 4,
+      "path": "assets/optimized/knight-teutonic-stage-4-512x512-7028e5e010b1.webp",
+      "sha256": "7028e5e010b1e225918c54348dc79c434ef6a5cb7c6971d660815b352af542e2",
+      "bytes": 80006,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-4.png",
+      "sourceSha256": "fbbdc4d56adf5ee89568d3dd9adeced18a7e832f642fcb3b53d049c182a680f4"
+    },
+    {
+      "order": "teutonic",
+      "stage": 5,
+      "path": "assets/optimized/knight-teutonic-stage-5-512x512-745a9e298839.webp",
+      "sha256": "745a9e2988394a507f9b0e3a5f2a39efb1032d575afc26e765c79278fe402549",
+      "bytes": 84216,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/teutonic.png",
+      "sourceSha256": "ecdeeff4735cd52fe674e76c2304df49e327ad5bcdcdb4ea985252ea2ed46b66"
+    },
+    {
+      "order": "santiago",
+      "stage": 1,
+      "path": "assets/optimized/knight-santiago-stage-1-512x512-207dd501a4e3.webp",
+      "sha256": "207dd501a4e3574640e1464477df082583812362f02d0ae6aca51f7d96a12946",
+      "bytes": 68084,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/santiago-stage-1.png",
+      "sourceSha256": "df2460cb91fb5831cb222399ffac5270b4ea360eb811c5e2de21cb014e5fffb5"
+    },
+    {
+      "order": "santiago",
+      "stage": 2,
+      "path": "assets/optimized/knight-santiago-stage-2-512x512-fdec4e770d18.webp",
+      "sha256": "fdec4e770d188655bfd15985af2b40b1a96bcd6ecd9a89aeb47b5d10d55f0843",
+      "bytes": 78874,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/santiago-stage-2.png",
+      "sourceSha256": "45c366733e93c4e7f634752313c8ea65491197f652ddef25b30e824a5144c4e9"
+    },
+    {
+      "order": "santiago",
+      "stage": 3,
+      "path": "assets/optimized/knight-santiago-stage-3-512x512-d1e97cc3a763.webp",
+      "sha256": "d1e97cc3a76366269f7dbd8a4e26865b470bdd840df2f866e666641dd3086071",
+      "bytes": 84308,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/santiago-stage-3.png",
+      "sourceSha256": "bc46fd248115c900da5f23fad49bfb27c37e1dc43f95c02f2d24d1d5c7e539c7"
+    },
+    {
+      "order": "santiago",
+      "stage": 4,
+      "path": "assets/optimized/knight-santiago-stage-4-512x512-307a24bb1668.webp",
+      "sha256": "307a24bb16683660928e3e14ec0277f6741b3b978fdbe0fa409c91998edb6913",
+      "bytes": 82290,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/santiago-stage-4.png",
+      "sourceSha256": "7a9a1bde21afa978b1cf8077d7cff85554cd8f47becba7a2878acfdd0c1e8556"
+    },
+    {
+      "order": "santiago",
+      "stage": 5,
+      "path": "assets/optimized/knight-santiago-stage-5-512x512-ede2f94d9e67.webp",
+      "sha256": "ede2f94d9e6704f5930524121f7159ac76aec9bced0e9fc12d75fb4f50012a8d",
+      "bytes": 89580,
+      "width": 512,
+      "height": 512,
+      "source": "docs/visual-qa/knight-order-city-skins/art/santiago.png",
+      "sourceSha256": "b126b5d076ab5318503df0799b7f8d4b8414fb29f5b9e525dfaa0a8eb213935b"
+    }
+  ]
+}

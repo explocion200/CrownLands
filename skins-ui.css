@@ -46,6 +46,20 @@
 .skin-stage-picker { display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin:4px 0 10px; }
 .skins-panel .skin-stage-picker button { padding:6px 7px; min-height:32px; font-size:11px; }
 .halloween-city-bats { position:absolute; inset:0; pointer-events:none; --bat-phase:-1.3s; }
+.knight-city-effects { position:absolute; inset:-20%; pointer-events:none; contain:layout style; }
+.knight-city-effects canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.knight-city-effects:not([data-skin-motion="active"]) canvas { visibility:hidden; }
+.knight-camp { position:absolute; left:1.4286%; top:60%; height:auto; pointer-events:none; }
+.skin-detail-content>.skin-city-preview:has(.knight-city-effects) { width:min(70%,180px); margin:30px auto; }
+@media (max-height:500px) {
+  /* Preserve a readable city preview when the shared Shop frame is short. */
+  #modal.shop-modal .skins-body { flex:1 0 200px; min-height:200px; }
+  #modal.shop-modal .skin-detail { padding:6px; gap:4px; }
+  #modal.shop-modal .skin-detail-content>.skin-city-preview:has(.knight-city-effects) { width:90px; margin:18px auto; }
+}
+.city-node:is([data-city-skin="templar_city"],[data-city-skin="hospitaller_city"],[data-city-skin="teutonic_city"],[data-city-skin="santiago_city"]) .city-castle { filter:none; }
+html[data-animation-mode="off"] .knight-city-effects,
+.map-frame:is(.low-zoom,.crowded-map) .knight-city-effects { display:none; }
 /* Shadow the still city image so bat motion does not repaint the whole castle. */
 .city-node[data-city-skin="halloween_city"] .city-castle { filter:none; }
 .city-node[data-city-skin="halloween_city"] .city-art { filter:drop-shadow(0 5px 5px rgba(0,0,0,.35)); }

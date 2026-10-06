@@ -16,6 +16,70 @@
         4: "assets/optimized/halloween-city-stage-4-512x512-62288da1de9d.webp",
         5: "assets/optimized/halloween-city-stage-5-512x512-66fd4698ab6b.webp",
       } },
+    {
+      "id": "templar_city",
+      "category": "city",
+      "name": "Templar Dawnwatch",
+      "order": "templar",
+      "price": 600,
+      "placeholder": false,
+      "description": "Five city stages with waving standards, patrols and campfires outside the walls. Permanent ownership and free switching. Apply in My Skins to change all your regular cities, visible to every player.",
+      "assets": {
+        "1": "assets/optimized/knight-templar-stage-1-512x512-409ca09d8cb6.webp",
+        "2": "assets/optimized/knight-templar-stage-2-512x512-e264499c3afc.webp",
+        "3": "assets/optimized/knight-templar-stage-3-512x512-0115c1eefef1.webp",
+        "4": "assets/optimized/knight-templar-stage-4-512x512-ab4f3f1fe8ea.webp",
+        "5": "assets/optimized/knight-templar-stage-5-512x512-6c937fb5dd73.webp"
+      }
+    },
+    {
+      "id": "hospitaller_city",
+      "category": "city",
+      "name": "Hospitaller Night Sanctuary",
+      "order": "hospitaller",
+      "price": 600,
+      "placeholder": false,
+      "description": "Five city stages with waving standards, patrols and campfires outside the walls. Permanent ownership and free switching. Apply in My Skins to change all your regular cities, visible to every player.",
+      "assets": {
+        "1": "assets/optimized/knight-hospitaller-stage-1-512x512-3a9264a121a4.webp",
+        "2": "assets/optimized/knight-hospitaller-stage-2-512x512-519bc14b3369.webp",
+        "3": "assets/optimized/knight-hospitaller-stage-3-512x512-2739a30429f1.webp",
+        "4": "assets/optimized/knight-hospitaller-stage-4-512x512-ce95a385579c.webp",
+        "5": "assets/optimized/knight-hospitaller-stage-5-512x512-effa304fe7d9.webp"
+      }
+    },
+    {
+      "id": "teutonic_city",
+      "category": "city",
+      "name": "Teutonic Frost Citadel",
+      "order": "teutonic",
+      "price": 600,
+      "placeholder": false,
+      "description": "Five city stages with waving standards, patrols and campfires outside the walls. Permanent ownership and free switching. Apply in My Skins to change all your regular cities, visible to every player.",
+      "assets": {
+        "1": "assets/optimized/knight-teutonic-stage-1-512x512-b487846b8b97.webp",
+        "2": "assets/optimized/knight-teutonic-stage-2-512x512-5fbc3236bbe3.webp",
+        "3": "assets/optimized/knight-teutonic-stage-3-512x512-169151f7f9a5.webp",
+        "4": "assets/optimized/knight-teutonic-stage-4-512x512-7028e5e010b1.webp",
+        "5": "assets/optimized/knight-teutonic-stage-5-512x512-745a9e298839.webp"
+      }
+    },
+    {
+      "id": "santiago_city",
+      "category": "city",
+      "name": "Santiago Emberward",
+      "order": "santiago",
+      "price": 600,
+      "placeholder": false,
+      "description": "Five city stages with waving standards, patrols and campfires outside the walls. Permanent ownership and free switching. Apply in My Skins to change all your regular cities, visible to every player.",
+      "assets": {
+        "1": "assets/optimized/knight-santiago-stage-1-512x512-207dd501a4e3.webp",
+        "2": "assets/optimized/knight-santiago-stage-2-512x512-fdec4e770d18.webp",
+        "3": "assets/optimized/knight-santiago-stage-3-512x512-d1e97cc3a763.webp",
+        "4": "assets/optimized/knight-santiago-stage-4-512x512-307a24bb1668.webp",
+        "5": "assets/optimized/knight-santiago-stage-5-512x512-ede2f94d9e67.webp"
+      }
+    },
   ].map(item => Object.freeze({ placeholder: true, ...item, assets: Object.freeze(item.assets || {}) })));
   const OFFERS = ITEMS;
   const PICKUP_TYPES = Object.freeze(["gold", "troops", "crowns"]);
@@ -48,7 +112,8 @@
     if (!offer) fail("invalid-argument", "Choose a cosmetic from the catalog.");
     const missing = (offer.itemIds || [offer.id]).filter(id => !state.owned[id]);
     const price = Math.round(missing.reduce((sum, id) => sum + item(id).price, 0) * (offer.itemIds ? 0.8 : 1));
-    return { offerId, catalogVersion: VERSION, missing, price, ...availability(now) };
+    const sale = offer.order ? { onSale: true, startsAtMs: 0, endsAtMs: null } : availability(now);
+    return { offerId, catalogVersion: VERSION, missing, price, ...sale };
   }
   function purchase(state, request, now = Date.now()) {
     const offer = quote(request.offerId, state, now);

@@ -5,8 +5,21 @@ const C = require("../functions/cosmetics");
 const flags = require("../functions/playerFlagConfig");
 const october = Date.UTC(2026, 9, 1), november = Date.UTC(2026, 10, 1);
 const state = C.normalize({ crowns: 1500 });
-assert.deepEqual(C.ITEMS.map(item => item.id), ["halloween_city"]);
-assert.deepEqual(C.OFFERS.map(item => item.id), ["halloween_city"]);
+const knightIds = ["templar_city", "hospitaller_city", "teutonic_city", "santiago_city"];
+assert.deepEqual(C.ITEMS.map(item => item.id), ["halloween_city", ...knightIds]);
+assert.deepEqual(C.OFFERS.map(item => item.id), ["halloween_city", ...knightIds]);
+for (const id of knightIds) {
+  assert.equal(C.item(id).price, 600);
+  for (const date of [Date.UTC(2026, 0, 1), october, november]) {
+    const result = C.purchase(state, { offerId: id, expectedPrice: 600, catalogVersion: C.VERSION }, date);
+    assert.equal(result.state.crowns, 900);
+    assert.equal(result.state.equipped.city, "");
+    assert.equal(C.normalize(C.equip(result.state, "city", id)).equipped.city, id);
+    assert.throws(() => C.purchase(result.state, { offerId: id, expectedPrice: 0, catalogVersion: C.VERSION }, date), /already own/);
+    assert.throws(() => C.purchase(state, { offerId: id, expectedPrice: 599, catalogVersion: C.VERSION }, date), /offer changed/);
+    assert.throws(() => C.equip(C.normalize(), "city", id), /do not own/);
+  }
+}
 assert.deepEqual(Object.keys(C.CATEGORIES), ["city"]);
 const bought = C.purchase(state, { offerId: "halloween_city", expectedPrice: 600, catalogVersion: 1 }, october);
 assert.equal(bought.state.crowns, 900);
@@ -59,6 +72,23 @@ const citySkin = C.item("halloween_city");
 assert.equal(citySkin.placeholder, false, "Approved city art must replace the placeholder");
 assert.deepEqual(Object.keys(citySkin.assets), ["1", "2", "3", "4", "5"]);
 const crypto = require("node:crypto");
+const knightAssets = JSON.parse(fs.readFileSync(path.join(root, "docs/visual-qa/knight-order-city-skins/runtime-assets.json"), "utf8")).assets;
+assert.equal(knightAssets.length, 20);
+assert.equal(new Set(knightAssets.map(asset => asset.sha256)).size, 20);
+for (const order of knightIds) {
+  let total = 0;
+  for (let stage = 1; stage <= 5; stage++) {
+    const asset = knightAssets.find(asset => asset.order + "_city" === order && asset.stage === stage);
+    assert.equal(C.item(order).assets[stage], asset.path);
+    const bytes = fs.readFileSync(path.join(root, asset.path)); total += bytes.length;
+    assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"), asset.sha256);
+    assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root, asset.source))).digest("hex"), asset.sourceSha256);
+    assert.equal(bytes.toString("ascii", 8, 16), "WEBPVP8X");
+    assert(bytes[20] & 0x10, "Knight art retains alpha");
+    assert.equal(bytes.readUIntLE(24, 3) + 1, 512); assert.equal(bytes.readUIntLE(27, 3) + 1, 512);
+  }
+  assert(total < 512 * 1024, `${order} exceeds its five-stage art budget`);
+}
 const provenance = JSON.parse(fs.readFileSync(path.join(root, "docs/visual-qa/halloween-city-skin/assets.json"), "utf8"));
 let skinBytes = 0;
 for (const entry of provenance) {

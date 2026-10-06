@@ -25,6 +25,7 @@ async function main(){
  const claim=await call("claimStartingCity",owner.token,{playerName:"Skin tester"});
  const profileRef=db.doc(`players/${owner.uid}`),walletRef=db.doc(`players/${owner.uid}/cosmetics/state`);
  assert.equal((await call("getCosmeticsState",owner.token)).state.crowns,0);
+ assert.deepEqual((await call("getCosmeticsState",owner.token)).availableOfferIds,C.OFFERS.map(item=>item.id),"Deployed backend advertises supported offers");
  await assert.rejects(call("purchaseCosmetic",owner.token,{offerId:"unknown",expectedPrice:0,catalogVersion:1,requestId:"test_callable_offer"}),/catalog/);
  const regionId=claim.regionId||claim.mainRegionId,today=new Date().toISOString().slice(0,10);
  async function pickup(id,type="crowns"){
@@ -113,6 +114,28 @@ async function main(){
  const ownerProfile=(await profileRef.get()).data();
  const ownedPatch={flag:flags.toStoredFlag({...ownerProfile.flag,symbol:"halloween-bat"},owner.uid),identityRevision:ownerProfile.identityRevision+1};
  assert.equal((await rest(owner,`players/${owner.uid}${mask}`,"PATCH",{fields:fields(ownedPatch)})).status,200,"Existing saved flag identities remain compatible with ownership rules");
+ // Every knight order is a permanent 600-Crown unlock, including outside October.
+ await walletRef.set(C.normalize({crowns:2400}));
+ for(const id of ["templar_city","hospitaller_city","teutonic_city","santiago_city"]){
+   const request={offerId:id,expectedPrice:600,catalogVersion:C.VERSION,requestId:"knight_buy_"+id};
+   const before=(await walletRef.get()).data().crowns;
+   await assert.rejects(call("equipCosmetic",stranger.token,{category:"city",itemId:id,expectedRevision:0,requestId:"unowned_"+id}),/do not own/);
+   await assert.rejects(service.purchase(owner.uid,{...request,expectedPrice:1,requestId:"underpay_"+id},Date.UTC(2026,10,15)),/offer changed/);
+   await Promise.all([service.purchase(owner.uid,request,Date.UTC(2026,10,15)),service.purchase(owner.uid,request,Date.UTC(2026,10,15))]);
+   const bought=(await walletRef.get()).data();assert.equal(bought.crowns,before-600);assert(bought.owned[id]);
+   assert.notEqual(bought.equipped.city,id,"Purchase cannot auto-equip");
+   await assert.rejects(service.purchase(owner.uid,{...request,expectedPrice:0,requestId:"duplicate_"+id},Date.UTC(2026,10,15)),/already own/);
+   await call("equipCosmetic",owner.token,{category:"city",itemId:id,expectedRevision:bought.revision,requestId:"knight_apply_"+id});
+   const publicData=await (await rest(stranger,`playerCosmetics/${owner.uid}`)).json();
+   assert.equal(publicData.fields.equipped.mapValue.fields.city.stringValue,id);
+ }
+ assert.equal((await walletRef.get()).data().crowns,0);
+ assert.equal(Object.keys((await walletRef.get()).data().owned).length,4);
+ await call("collectHarvestBonus",owner.token,await pickup("knight_pickup_after_apply"));
+ const afterPickup=(await walletRef.get()).data();
+ assert.equal(afterPickup.crowns,1);
+ assert.equal(afterPickup.equipped.city,"santiago_city","Crown pickup preserves the new equipped city");
+ assert.equal(Object.keys(afterPickup.owned).length,4,"Crown pickup preserves all knight entitlements");
  assert.deepEqual(Object.keys((await service.publicRef(owner.uid).get()).data()).sort(),["equipped","revision"]);
  console.log("Cosmetics emulator passed: atomic Crown claims, duplicate receipts, daily cap across resets, rotation skipping, purchase replay, retired offer/equip rejection, preserved entitlements, city equipment, flag preservation and private/write-protected account data.");
 }
