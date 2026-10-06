@@ -28,6 +28,31 @@ async function main(){
  assert.deepEqual((await call("getCosmeticsState",owner.token)).availableOfferIds,C.OFFERS.map(item=>item.id),"Deployed backend advertises supported offers");
  await assert.rejects(call("purchaseCosmetic",owner.token,{offerId:"unknown",expectedPrice:0,catalogVersion:1,requestId:"test_callable_offer"}),/catalog/);
  const regionId=claim.regionId||claim.mainRegionId,today=new Date().toISOString().slice(0,10);
+ for (const type of ["gold", "troops", "crowns"]) {
+   const savedBonus={id:`obstructed-${type}`,type,regionId,x:500,y:500,createdAtMs:Date.now()-10_000};
+   const savedDeadline=Date.now()+60_000;
+   await profileRef.set({harvestBonuses:[savedBonus],harvestNextSpawnAtMs:savedDeadline,harvestSpawnTimer:60},{merge:true});
+   const payload={relocateActive:true,activeBonusId:savedBonus.id,type,regionId,
+     bonus:{...savedBonus,id:"cannot-replace-identity",type:type==="gold"?"troops":"gold",x:650,y:550}};
+   const moved=await call("reserveHarvestBonusSpawn",owner.token,payload);
+   assert(moved.relocated===true&&moved.spawned===false,`${type}: same-map obstruction was not repaired`);
+   const stored=moved.currentUser.harvestBonuses;
+   assert(stored.length===1&&stored[0].id===savedBonus.id&&stored[0].type===type
+     &&stored[0].createdAtMs===savedBonus.createdAtMs&&stored[0].x===650&&stored[0].y===550,
+     `${type}: relocation changed identity, reward, expiry, or destination`);
+   assert.equal(moved.currentUser.harvestNextSpawnAtMs,savedDeadline,`${type}: relocation restarted the cooldown`);
+   const repetitions=await Promise.all([call("reserveHarvestBonusSpawn",owner.token,payload),call("reserveHarvestBonusSpawn",owner.token,payload)]);
+   for(const repeated of repetitions){
+     assert(repeated.relocated===false&&repeated.reason==="active-pickup-current-map",`${type}: unchanged location did not remain idempotent`);
+     assert.deepEqual(repeated.currentUser.harvestBonuses,stored,`${type}: duplicate relocation replaced the pickup`);
+     assert.deepEqual(repeated.currentUser.daily,moved.currentUser.daily,`${type}: relocation consumed daily allowance`);
+     assert.deepEqual(repeated.cosmetics,moved.cosmetics,`${type}: relocation changed the Crown wallet`);
+     assert.equal(repeated.currentUser.harvestNextSpawnAtMs,savedDeadline,`${type}: duplicate relocation changed the deadline`);
+   }
+   const stale=await call("reserveHarvestBonusSpawn",owner.token,{...payload,activeBonusId:"superseded-pickup"});
+   assert.equal(stale.reason,"active-pickup-changed",`${type}: stale relocation was accepted`);
+   assert.deepEqual(stale.currentUser.harvestBonuses,stored,`${type}: stale relocation changed a different pickup`);
+ }
  async function pickup(id,type="crowns"){
    await profileRef.set({daily:{date:today,harvestedGoldBonuses:0,harvestedTroopBonuses:0,harvestedBonuses:0},harvestBonuses:[{id,type,regionId,x:1000,y:1000,createdAtMs:Date.now()}]},{merge:true});
    return {bonusId:id,type,regionId,daily:{date:today,harvestedCrownBonuses:0}};

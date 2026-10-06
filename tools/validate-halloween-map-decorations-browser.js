@@ -66,7 +66,34 @@ async function main() {
         assert(check.decodedBytes <= 768 * 1024, `${id}: decoded decoration textures exceed the existing three-sprite 256px budget`);
         assert.equal(check.missing, 0); assert.equal(check.animations, 0); assert.equal(check.overlaps, 0, `${id}: decoration covers scenery or maximum city art`);
         assert(check.clicks); assert.equal(check.layers, 1);
-        traversal.push({ id, ...check });
+        const pickups = await evaluate(`(() => {
+          state.harvestBonuses=[];
+          let seed=12345;
+          const random=Math.random;
+          Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/0x100000000);
+          const points=[];
+          try {
+            for(let i=0;i<20;i++) {
+              const point=createHarvestBonusPoint(getActiveMapRegionId());
+              if(!point)throw Error('No open central position on '+getActiveMapRegionId());
+              state.harvestBonuses=[createHarvestBonusRecord(getActiveMapRegionId(),['gold','troops','crowns'][i%3],point)];
+              renderHarvestBonuses();
+              const pickup=harvestLayer.querySelector('.harvest-bonus-node');
+              if(!pickup)throw Error('New pickup was hidden');
+              const rect=pickup.getBoundingClientRect();
+              const obstacles=[...cityLayer.querySelectorAll('.city-castle,.stronghold-building,.holding-tower-node,.camp-node'),...mapBg.querySelectorAll('.illustrated-map-scenery img')];
+              for(const obstacle of obstacles) {
+                const box=obstacle.getBoundingClientRect();
+                if(rect.left<box.right&&rect.right>box.left&&rect.top<box.bottom&&rect.bottom>box.top)throw Error('Pickup hit area overlaps artwork on '+getActiveMapRegionId());
+              }
+              if([...mapBg.querySelectorAll('.halloween-map-decorations img')].some(image=>image.hidden))throw Error('Pickup required hiding seasonal scenery');
+              points.push(point);state.harvestBonuses=[];
+            }
+            if(new Set(points.map(p=>p.x+','+p.y)).size<10)throw Error('Pickup positions were not random');
+            return {placements:points.length,random:true,artworkOverlaps:0};
+          } finally {Math.random=random;state.harvestBonuses=[];renderHarvestBonuses();}
+        })()`);
+        traversal.push({ id, ...check, pickups });
       }
       const behavior = await evaluate(`(async()=>{
         const assert=(ok,message)=>{if(!ok)throw Error(message)};

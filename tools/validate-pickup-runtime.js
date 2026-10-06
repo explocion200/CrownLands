@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const source = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
+const source = ["game.js", "pickup-placement.js"].map(file => fs.readFileSync(path.join(__dirname, "..", file), "utf8")).join("\n");
 
 function extract(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -35,6 +35,7 @@ function fixture(type = "gold") {
     canHarvestBonusType: () => true,
     getAllActiveHarvestBonuses: () => context.state.harvestBonuses,
     getActiveMapRegionId: () => "region-0001",
+    isHarvestBonusPlacementSafe: () => true,
     getNextAvailableHarvestBonusType: () => "gold",
     hasAnyActiveHarvestBonus: () => context.state.harvestBonuses.length > 0,
     getHarvestSpawnDelaySeconds: () => 0,
@@ -243,6 +244,7 @@ async function run() {
   await check("nearest valid placement stops further terrain checks", () => {
     let checks = 0;
     const context = {
+      isHalloweenMapSeason: () => false,
       HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
       HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
       HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
@@ -259,6 +261,9 @@ async function run() {
     const art = {scenery:[{x:100,y:100,w:40,h:60}],landmarks:[{x:400,y:150,width:200,height:300}]};
     const context = {
       HARVEST_BONUS_LAND_CLEARANCE: 64,
+      state: { cities: [] },
+      getPlayableBaseCitiesByRegion: () => [],
+      getHarvestBonusSeasonalArtBounds: () => [],
       normalizeRegionId: value => value,
       getIllustratedMapPresentation: region => region === "current" ? art : null,
       islandImagePointToWorld: (_, point) => ({x:1000+point.x*2,y:2000+point.y*2}),
@@ -274,6 +279,93 @@ async function run() {
     }
     assert.equal(context.isHarvestBonusClearOfMapArt(1200,2600,bounds),true,"Clear central space was rejected.");
     assert.equal(context.isHarvestBonusClearOfMapArt(1305,2200,bounds),true,"Scenery clearance did not end outside the full pickup footprint.");
+  });
+  await check("seasonal exclusions inherit the active New Lands template and reject malformed art", () => {
+    const context = {
+      isHalloweenMapSeason: () => true,
+      halloweenMapLayouts: { assets: [{ src: "assets/optimized/halloween-map-pumpkins-abcdef123456.webp", w: 40, h: 30 }],
+        maps: { template: [[0, 100, 200], [9, 5, 5], [0, NaN, 10]] } },
+      REGION_CATALOG_SUMMARIES_BY_ID: new Map([["generated", { templateRegionId: "template" }]]),
+      islandImagePointToWorld: (_, point) => ({ x: point.x * 2, y: point.y * 2 }),
+    };
+    vm.createContext(context); vm.runInContext(extract("getHarvestBonusSeasonalArtBounds"), context);
+    assert.deepEqual(JSON.parse(JSON.stringify(context.getHarvestBonusSeasonalArtBounds("generated"))), [{ left: 200, top: 400, right: 280, bottom: 460 }]);
+    context.isHalloweenMapSeason = () => false;
+    assert.equal(context.getHarvestBonusSeasonalArtBounds("generated").length, 0);
+  });
+  await check("city exclusions cover unloaded canonical markers, live relocation, and skin outskirts", () => {
+    const context = {
+      normalizeRegionId: value => value, getIllustratedMapPresentation: () => null,
+      islandImagePointToWorld: (_, point) => point, WORLD_HOLDING_TOWERS: [],
+      getHarvestBonusSeasonalArtBounds: () => [], HARVEST_BONUS_LAND_CLEARANCE: 64,
+      getCityRegionId: city => city.regionId, isStronghold: city => city.kind === "stronghold",
+      getPlayableBaseCitiesByRegion: () => [{regionId:"current",x:100,y:100}],
+      state: {cities:[{regionId:"current",x:500,y:500},{regionId:"other",x:800,y:800}]},
+    };
+    vm.createContext(context); vm.runInContext(extract("getHarvestBonusMapArtBounds")+"\n"+extract("isHarvestBonusClearOfMapArt"),context);
+    const bounds=context.getHarvestBonusMapArtBounds("current");
+    assert.equal(bounds.length,2);
+    assert.equal(context.isHarvestBonusClearOfMapArt(100,100,bounds),false,"Unloaded canonical city was ignored");
+    assert.equal(context.isHarvestBonusClearOfMapArt(620,620,bounds),false,"Pickup corner overlaps a relocated city's skin outskirts");
+    assert.equal(context.isHarvestBonusClearOfMapArt(800,800,bounds),true,"Another map's city blocked the current map");
+  });
+  await check("placement waits for pending seasonal artwork and bounds a blocked search", () => {
+    let checks=0;
+    const context={isHalloweenMapSeason:()=>true,halloweenMapLayouts:null,halloweenMapLayoutPromise:{},
+      normalizeRegionId:value=>value,getHarvestBonusMapArtBounds:()=>[],getIslandMapBounds:()=>({left:0,top:0,width:1000,height:800}),
+      HARVEST_BONUS_CENTER_SEARCH_FRACTIONS:[0.15,0.25,0.35],HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE:300,
+      HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE:Math.PI*(3-Math.sqrt(5)),isValidHarvestBonusPoint:()=>{checks++;return false;}};
+    vm.createContext(context);vm.runInContext(extract("createHarvestBonusPoint"),context);
+    assert.equal(context.createHarvestBonusPoint("current"),null);
+    assert.equal(checks,0,"Pending art caused a speculative placement");
+    context.halloweenMapLayouts={};
+    assert.equal(context.createHarvestBonusPoint("current"),null);
+    assert.equal(checks,900,"Blocked search exceeded its fixed attempt budget");
+  });
+  await check("saved placement safety is cached until map artwork or city geometry changes", () => {
+    let checks = 0;
+    const context = {
+      normalizeRegionId: value => value, isHalloweenMapSeason: () => true,
+      halloweenMapLayouts: {}, halloweenMapLayoutPromise: null, cityRenderSignature: "cities-one",
+      state: {}, harvestBonusPlacementValidation: null, HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
+      getIslandMapBounds: () => ({ left: 0, top: 0, width: 1000, height: 800 }),
+      isValidHarvestBonusPoint: (...args) => { checks++; assert.equal(args[4], "saved"); return checks === 1; },
+    };
+    vm.createContext(context); vm.runInContext(extract("isHarvestBonusPlacementSafe"), context);
+    const bonus = { id: "saved", regionId: "active", x: 520, y: 420 };
+    for (let i = 0; i < 1000; i++) assert(context.isHarvestBonusPlacementSafe(bonus));
+    assert.equal(checks, 1, "Idle pickup refresh rescans the map");
+    context.cityRenderSignature = "cities-moved";
+    assert.equal(context.isHarvestBonusPlacementSafe(bonus), false);
+    assert.equal(checks, 2);
+    context.halloweenMapLayouts = {};
+    assert.equal(context.isHarvestBonusPlacementSafe(bonus), false);
+    assert.equal(checks, 3);
+    assert.equal(context.isHarvestBonusPlacementSafe({ ...bonus, x: 950 }), false, "Saved off-center pickup escaped repair");
+  });
+  for (const type of ["gold", "troops", "crowns"]) await check(`${type} obstructed same-map reservation moves once and preserves its identity`, async () => {
+    const f = fixture(type), calls = [];
+    f.context.isHarvestBonusPlacementSafe = () => false;
+    f.context.createHarvestBonusPoint = () => ({ x: 600, y: 450 });
+    f.context.getOnlineApi = () => ({ reserveHarvestBonusSpawn: data => { calls.push(data); return new Promise(() => {}); } });
+    f.context.updateServerHarvestBonuses();
+    f.context.updateServerHarvestBonuses();
+    await Promise.resolve();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].relocateActive, true);
+    assert.deepEqual(JSON.parse(JSON.stringify(calls[0].bonus)), { ...f.bonus, x: 600, y: 450 });
+    assert.equal(f.context.state.harvestNextSpawnAtMs, 1);
+  });
+  await check("an obstructed saved pickup retries after five seconds without losing its reservation", () => {
+    const f = fixture();
+    f.context.isHarvestBonusPlacementSafe = () => false;
+    f.context.createHarvestBonusPoint = () => null;
+    const started = Date.now();
+    f.context.updateServerHarvestBonuses();
+    assert(f.context.harvestRelocationRetryAtMs >= started + 5000);
+    assert.equal(f.context.state.harvestBonuses[0].id, f.bonus.id);
+    assert.equal(f.context.state.harvestNextSpawnAtMs, 1);
+    assert.equal(f.stats.reservations, 0);
   });
   assert.equal(failures.length, 0, `${failures.length} pickup regressions failed`);
 }
