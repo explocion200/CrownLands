@@ -252,7 +252,7 @@ assert.match(createPointSource, /HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE/, "Eac
 assert.match(createPointSource, /\(attempt \+ 0\.5\) \/ HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE/, "Each center search zone must distribute attempts across its full radius.");
 assert.doesNotMatch(createPointSource, /OwnedCity|owned city|anchors/, "New pickup placement must not depend on an owned-city anchor.");
 assert.doesNotMatch(pruneSource, /NearOwnedCity|OwnedCity/, "Cleanup must not delete centered or legacy pickups merely because they are away from an owned city.");
-assert.match(pruneSource, /isHarvestBonusTerrainSafePoint/, "Cleanup must retain terrain safety validation.");
+assert.doesNotMatch(pruneSource, /isHarvestBonusTerrainSafePoint/, "Obstructed active pickups must be repaired without deleting the reservation.");
 
 const mapEditorContext = { window: {} };
 vm.createContext(mapEditorContext);
@@ -269,6 +269,7 @@ const currentMapBounds = Object.fromEntries(currentMaps.map(map => {
   }];
 }));
 const centerPlacementContext = {
+  isHalloweenMapSeason: () => false,
   HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
   HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
   HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
@@ -280,10 +281,14 @@ const centerPlacementContext = {
 vm.createContext(centerPlacementContext);
 vm.runInContext(createPointSource, centerPlacementContext);
 for (const map of currentMaps) {
-  const point = centerPlacementContext.createHarvestBonusPoint(map.id);
   const bounds = currentMapBounds[map.id];
-  assert.equal(point.x, bounds.left + bounds.width / 2, `${map.id} did not choose its own horizontal map center.`);
-  assert.equal(point.y, bounds.top + bounds.height / 2, `${map.id} did not choose its own vertical map center.`);
+  const points = Array.from({ length: 20 }, () => centerPlacementContext.createHarvestBonusPoint(map.id));
+  for (const point of points) {
+    assert(Number.isInteger(point.x) && Number.isInteger(point.y), "Saved pickup coordinates must already be rounded.");
+    assert(Math.hypot(point.x - bounds.left - bounds.width / 2, point.y - bounds.top - bounds.height / 2)
+      <= Math.min(bounds.width, bounds.height) * 0.15 + 1, `${map.id} escaped its unobstructed central zone.`);
+  }
+  assert(new Set(points.map(point => `${point.x},${point.y}`)).size > 10, `${map.id} repeatedly chose one fixed point.`);
 }
 
 let randomSeed = 0x5f3759df;
@@ -301,6 +306,7 @@ const deterministicMath = {
   },
 };
 const obstructedCenterContext = {
+  isHalloweenMapSeason: () => false,
   getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,
@@ -322,6 +328,7 @@ assert.ok(expandedDistance >= 140 && expandedDistance <= 170, "An obstructed cen
 assert.ok(expandedDistance <= 800 * 0.25, "Center placement expanded beyond the second search zone unnecessarily.");
 
 const thirdZoneContext = {
+  isHalloweenMapSeason: () => false,
   getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,
@@ -343,6 +350,7 @@ assert.ok(thirdZoneDistance >= 225 && thirdZoneDistance <= 255, "An obstructed c
 assert.ok(thirdZoneDistance > 800 * 0.25 && thirdZoneDistance <= 800 * 0.35, "The third-zone fallback escaped the 35% center boundary.");
 
 const noSafePointContext = {
+  isHalloweenMapSeason: () => false,
   getHarvestBonusMapArtBounds: () => [],
   Math: deterministicMath,
   Number,

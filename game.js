@@ -2416,6 +2416,8 @@ let renderedMapRegionId = "";
 let renderedMapBoundsSignature = "";
 let mapImageSwapToken = 0;
 let halloweenMapLayoutPromise = null;
+let halloweenMapLayouts = null;
+let harvestBonusPlacementValidation = null;
 let interactionRenderLockUntil = 0;
 let cameraInteractionSettleTimer = null;
 let deferredMapRenderPending = false;
@@ -5719,6 +5721,7 @@ async function loadHalloweenMapLayouts() {
       .then(data => {
         if (data?.schemaVersion !== 2 || data.topology !== "core-expansion-v1" || data.width !== 1448 || data.height !== 1086
           || !Array.isArray(data.assets) || !data.maps) throw new Error("Invalid decoration layout");
+        halloweenMapLayouts = data;
         return data;
       })
       .catch(() => { halloweenMapLayoutPromise = null; return null; })
@@ -5739,7 +5742,7 @@ async function renderHalloweenMapDecorations(regionId, swapToken) {
   layer.className = "illustrated-map-scenery halloween-map-decorations";
   layer.dataset.regionId = regionId;
   layer.setAttribute("aria-hidden", "true");
-  const reserved = getHarvestBonusMapArtBounds(regionId);
+  const reserved = getHarvestBonusMapArtBounds(regionId, false);
   // Layouts reserve every canonical city at its maximum stage. Also cover live
   // positions, so a stale layout cannot decorate a relocated city.
   for (const city of state?.cities || []) {
@@ -5772,6 +5775,23 @@ async function renderHalloweenMapDecorations(regionId, swapToken) {
   mapBg.querySelector(".halloween-map-decorations")?.remove();
   mapBg.append(layer);
   refreshHalloweenDecorationVisibility();
+  renderHarvestBonuses();
+}
+
+function getHarvestBonusSeasonalArtBounds(regionId) {
+  if (!isHalloweenMapSeason() || !halloweenMapLayouts) return [];
+  const summary = REGION_CATALOG_SUMMARIES_BY_ID.get(regionId);
+  const placements = halloweenMapLayouts.maps[regionId] || halloweenMapLayouts.maps[summary?.templateRegionId];
+  if (!Array.isArray(placements)) return [];
+  return placements.slice(0, 24).flatMap(placement => {
+    if (!Array.isArray(placement)) return [];
+    const [assetIndex, x, y] = placement, asset = halloweenMapLayouts.assets[assetIndex];
+    if (!asset || !/^assets\/optimized\/halloween-map-[a-z]+-[a-f0-9]{12}\.webp$/.test(asset.src)
+      || ![x, y, asset.w, asset.h].every(Number.isFinite) || asset.w <= 0 || asset.h <= 0) return [];
+    const start = islandImagePointToWorld(regionId, { x, y });
+    const end = islandImagePointToWorld(regionId, { x: x + asset.w, y: y + asset.h });
+    return [{ left: start.x, top: start.y, right: end.x, bottom: end.y }];
+  });
 }
 
 function refreshHalloweenDecorationVisibility() {
@@ -5934,6 +5954,9 @@ function renderHarvestBonuses() {
   const activeRegionId = getActiveMapRegionId();
   const daily = ensureDailyCaptureTracker();
   getActiveHarvestBonuses(activeRegionId).forEach(bonus => {
+    // Keep an obstructed saved pickup out of the artwork until its existing
+    // reservation is moved to a clear position (without granting another one).
+    if (!isHarvestBonusPlacementSafe(bonus)) return;
     const type = normalizeHarvestBonusType(bonus.type);
     const remaining = getHarvestBonusRemaining(type, daily);
     const label = type === "crowns" ? "Crown pickup: 1 Crown" : type === "troops" ? "troop bonus" : "gold bonus";
@@ -22656,17 +22679,12 @@ function enforceHarvestBonusActiveLimit(bonuses) {
 function pruneExpiredHarvestBonuses() {
   if (!state) return;
   const now = Math.max(0, Number(state.gameSeconds) || 0);
-  const activeRegionId = getActiveMapRegionId();
   const before = state.harvestBonuses?.length || 0;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses)
     .filter(bonus => (
       (bonus.createdAtMs
         ? Date.now() - bonus.createdAtMs <= HARVEST_BONUS_EXPIRE_SECONDS * 1000
         : now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS)
-      && (
-        normalizeRegionId(bonus.regionId) !== activeRegionId
-        || isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
-      )
     ));
   state.harvestBonuses = enforceHarvestBonusActiveLimit(state.harvestBonuses);
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
@@ -22704,8 +22722,9 @@ function isHarvestBonusFarFromTransitions(x, y, regionId) {
     .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_TRANSITION_CLEARANCE);
 }
 
-function isHarvestBonusFarFromOtherPickups(x, y, regionId) {
+function isHarvestBonusFarFromOtherPickups(x, y, regionId, ignoredBonusId = "") {
   return getActiveHarvestBonuses(regionId)
+    .filter(bonus => bonus.id !== ignoredBonusId)
     .every(bonus => Math.hypot(bonus.x - x, bonus.y - y) >= HARVEST_BONUS_PICKUP_CLEARANCE);
 }
 
@@ -22748,7 +22767,7 @@ function isHarvestBonusTerrainSafePoint(x, y, regionId) {
   return true;
 }
 
-function getHarvestBonusMapArtBounds(regionId) {
+function getHarvestBonusMapArtBounds(regionId, includePickupExclusions = true) {
   const activeRegionId = normalizeRegionId(regionId);
   const art = getIllustratedMapPresentation(activeRegionId);
   const rectangles = [];
@@ -22761,12 +22780,21 @@ function getHarvestBonusMapArtBounds(regionId) {
     addImageRect(item.x - item.w / 2, item.y - item.h / 2, item.w, item.h);
   }
   for (const item of art?.landmarks || []) addImageRect(item.x, item.y, item.width, item.height);
+  // Include canonical positions even before every city snapshot is loaded, and
+  // live positions after a relocation. Reserve maximum city/skin artwork.
+  for (const city of includePickupExclusions ? [...getPlayableBaseCitiesByRegion(activeRegionId), ...(state?.cities || [])] : []) {
+    if (getCityRegionId(city) !== activeRegionId || isStronghold(city)) continue;
+    // City markers use world/map pixels, whereas registered scenery uses image
+    // pixels. Do not scale the marker footprint with the background artwork.
+    rectangles.push({ left: city.x - 60, top: city.y - 72, right: city.x + 60, bottom: city.y + 60 });
+  }
   for (const tower of WORLD_HOLDING_TOWERS) {
     if (normalizeRegionId(tower.regionId) !== activeRegionId) continue;
     const left = tower.visualX - tower.width * tower.anchorX;
     const top = tower.visualY - tower.width * tower.anchorY;
     rectangles.push({ left: left - tower.width * .2, top, right: left + tower.width * 1.2, bottom: top + tower.width * 1.65 });
   }
+  if (includePickupExclusions) rectangles.push(...getHarvestBonusSeasonalArtBounds(activeRegionId));
   return rectangles;
 }
 
@@ -22777,39 +22805,57 @@ function isHarvestBonusClearOfMapArt(x, y, rectangles) {
     || y + padding < rect.top || y - padding > rect.bottom);
 }
 
-function isValidHarvestBonusPoint(x, y, regionId, mapArtBounds = null) {
+function isValidHarvestBonusPoint(x, y, regionId, mapArtBounds = null, ignoredBonusId = "") {
   const activeRegionId = normalizeRegionId(regionId);
   if (!isHarvestBonusClearOfMapArt(x, y, mapArtBounds || getHarvestBonusMapArtBounds(activeRegionId))) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCamps(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromTransitions(x, y, activeRegionId)) return false;
-  if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId, ignoredBonusId)) return false;
   return true;
+}
+
+function isHarvestBonusPlacementSafe(bonus) {
+  const regionId = normalizeRegionId(bonus.regionId);
+  const pendingArt = isHalloweenMapSeason() && !halloweenMapLayouts && Boolean(halloweenMapLayoutPromise);
+  const key = `${regionId}|${bonus.id}|${bonus.x}|${bonus.y}|${cityRenderSignature}|${isHalloweenMapSeason()}|${pendingArt}`;
+  if (harvestBonusPlacementValidation?.state === state
+    && harvestBonusPlacementValidation.key === key
+    && harvestBonusPlacementValidation.layouts === halloweenMapLayouts) return harvestBonusPlacementValidation.safe;
+  const bounds = getIslandMapBounds(regionId);
+  const distance = Math.hypot(bonus.x - bounds.left - bounds.width / 2, bonus.y - bounds.top - bounds.height / 2);
+  const safe = !pendingArt && distance <= Math.min(bounds.width, bounds.height) * Math.max(...HARVEST_BONUS_CENTER_SEARCH_FRACTIONS) + 1
+    && isValidHarvestBonusPoint(bonus.x, bonus.y, regionId, null, bonus.id);
+  harvestBonusPlacementValidation = { state, key, layouts: halloweenMapLayouts, safe };
+  return safe;
 }
 
 function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
+  // Optional scenery loads asynchronously. Wait for its layout so a pickup
+  // cannot be reserved in a spot a decoration is about to occupy.
+  if (isHalloweenMapSeason() && !halloweenMapLayouts && halloweenMapLayoutPromise) return null;
   const bounds = getIslandMapBounds(activeRegionId);
   const mapArtBounds = getHarvestBonusMapArtBounds(activeRegionId);
   const center = {
     x: Math.round(bounds.left + bounds.width / 2),
     y: Math.round(bounds.top + bounds.height / 2),
   };
-  if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId, mapArtBounds)) return center;
-
   const shortestDimension = Math.max(1, Math.min(bounds.width, bounds.height));
   for (const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS) {
     const maximumRadius = shortestDimension * fraction;
     const angleOffset = Math.random() * Math.PI * 2;
+    const radiusOffset = Math.random();
     for (let attempt = 0; attempt < HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE; attempt += 1) {
       const angle = angleOffset + attempt * HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
-      const radiusFraction = (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;
+      const radiusFraction = (radiusOffset + (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE) % 1;
       const radius = maximumRadius * Math.sqrt(radiusFraction);
       const x = Math.round(center.x + Math.cos(angle) * radius);
       const y = Math.round(center.y + Math.sin(angle) * radius);
       if (!isValidHarvestBonusPoint(x, y, activeRegionId, mapArtBounds)) continue;
-      // Increasing radii make this the closest valid candidate in the zone.
+      // Randomize position within the central zone; stop at the first clear
+      // candidate instead of testing every position or falling back under art.
       return { x, y };
     }
   }
@@ -22879,7 +22925,7 @@ function updateServerHarvestBonuses() {
   const activeBonus = getAllActiveHarvestBonuses()[0] || null;
   if (activeBonus) {
     const activeRegionId = getActiveMapRegionId();
-    if (normalizeRegionId(activeBonus.regionId) === activeRegionId) {
+    if (normalizeRegionId(activeBonus.regionId) === activeRegionId && isHarvestBonusPlacementSafe(activeBonus)) {
       harvestRelocationRetryAtMs = 0;
       return;
     }
@@ -22965,7 +23011,8 @@ function updateHarvestBonuses() {
   const activeBonus = getAllActiveHarvestBonuses()[0] || null;
   if (activeBonus) {
     const activeRegionId = getActiveMapRegionId();
-    if (normalizeRegionId(activeBonus.regionId) !== activeRegionId && Date.now() >= harvestRelocationRetryAtMs) {
+    if ((normalizeRegionId(activeBonus.regionId) !== activeRegionId || !isHarvestBonusPlacementSafe(activeBonus))
+      && Date.now() >= harvestRelocationRetryAtMs) {
       const point = createHarvestBonusPoint(activeRegionId);
       if (point) {
         state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses).map(bonus => (
@@ -28925,6 +28972,7 @@ function renderCitiesUncached(force = false) {
     return;
   }
   cityRenderSignature = signature;
+  renderHarvestBonuses();
 
   mapFrame.querySelectorAll(".scout-nearby-radius, .regroup-radius, .city-action-wheel, .gold-camp-action-wheel")
     .forEach(node => node.remove());

@@ -16026,7 +16026,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
       const candidate = createHarvestBonusFromPayload(data, uid, nowMs);
       if (!candidate) throw new HttpsError("invalid-argument", "Pickup respawn location is invalid.");
       const targetRegionId = requireKnownWorldRegionId(candidate.regionId);
-      if (targetRegionId === activeBonus.regionId) {
+      if (targetRegionId === activeBonus.regionId && candidate.x === activeBonus.x && candidate.y === activeBonus.y) {
         return writeProfileState({ reason: "active-pickup-current-map" });
       }
       const relocatedBonus = {

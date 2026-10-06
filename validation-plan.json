@@ -1,10 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "8572f2959d5e12218f37599db48debf9acc6e745",
+  "baseCommit": "ebc9425bf29f6bfdf137cf729e08e90ac0f444cb",
   "coverage": [
     {
+      "paths": ["game.js"],
+      "reason": "Randomize bounded central pickup placement and exclude static/seasonal scenery, canonical and relocated city/skin footprints, Camps, landmarks and Tower compounds on the verified core-expansion-v1 release. Revalidate saved locations using cached render/art inputs, preserve invalid reservations for same-map repair, and defer pending seasonal layouts. Exercise Gold, troop and Crown interactions, failed/blocked placement, session guards, 25 Core maps, generated templates, maximum-stage artwork, desktop/landscape geometry and the affected shared city-render reconciliation. Timing, raw-production rewards and account limits retain existing regression coverage.",
+      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js", "tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations.js", "tools/validate-halloween-map-decorations-browser.js", "tools/validate-city-map-reconciliation-browser.js"]
+    },
+    {
+      "paths": ["functions/index.js", "functions/test/emulator-cosmetics.js"],
+      "reason": "Allow the existing authenticated reservation relocation transaction to move an obstructed pickup within its current map; identical coordinates remain a no-op. Emulator coverage verifies all three types preserve identity, expiry, wallet, daily allowance and cooldown through duplicate/concurrent and stale relocation requests, while existing raw-production reward and collection-rejection checks run. The active Core cosmetics suite covers Crown collection/purchase concurrency, rotation and account entitlements consumed by this shared transaction. No world topology, archived maps, production records or API inventory is changed.",
+      "tests": ["functions/test/emulator-harvest-pickup-rewards.js", "functions/test/emulator-cosmetics.js"]
+    },
+    {
+      "paths": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js"],
+      "reason": "Replace the fixed-center expectation with randomized in-zone assertions and add direct regressions for city/skin and generated-template scenery exclusions, cached safety, pending layouts, bounded blocked searches and same-map client relocation without duplicate requests or lost deadlines. Execute both edited validators.",
+      "tests": ["tools/validate-harvest-pickups.js", "tools/validate-pickup-runtime.js"]
+    },
+    {
+      "paths": ["tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations-browser.js"],
+      "reason": "Extend isolated actual-game browser checks to all three pickup types, random positions on all 25 Core maps, seasonal layouts and generated templates, maximum-stage city artwork and independent rendered image/hit-area overlap checks at desktop and landscape sizes. Verify unchanged renders do not rescan placement and retain screenshot evidence; release only the validator's isolated browser session and profile after completion.",
+      "tests": ["tools/validate-pickup-browser.js", "tools/validate-halloween-map-decorations-browser.js"]
+    },
+    {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "reason": "Record the user-authorized, verified web release of PR #464, exact merged build/publication identity, staged and three-host public asset parity, passed layout/release checks, unchanged backend compatibility, and the secondary itch.io channel's preceding build. Update the confirmed desktop sizing rule to LIVE — WEB. Documentation only; no runtime source, production configuration or data changes. Existing successful implementation checks and saved deployment evidence support this record; no additional runtime or emulator suite applies.",
+      "reason": "Record the user's confirmed random open central pickup rule for Gold, troops and Crowns, including scenery clearance, preserved saved reservations and five-second blocked retry. Mark implementation in development; this documentation does not claim merge or deployment and introduces no separate runtime dependencies.",
       "tests": []
     }
   ]

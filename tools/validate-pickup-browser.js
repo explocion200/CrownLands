@@ -6,15 +6,17 @@ async function verifyPickupMapClearance(evaluate) {
     const original={region:getActiveMapRegionId(),cities:state.cities,bonuses:state.harvestBonuses,random:Math.random};
     const results=[];
     try {
+      if(isHalloweenMapSeason()) await loadHalloweenMapLayouts();
       for(const region of REGION_CATALOG.regions.filter(region=>region.permanentCore)) {
         await ensureRegionDefinitionLoaded(region.id);
         centerOnRegion(region.id);
-        state.cities=getPlayableBaseCitiesByRegion(region.id).map(createNeutralCityFromBase);
+        state.cities=getPlayableBaseCitiesByRegion(region.id).map(base=>({...createNeutralCityFromBase(base),level:150}));
         state.harvestBonuses=[];
         const bounds=getIslandMapBounds(region.id),art=getIllustratedMapPresentation(region.id);
         let seed=12345;
         Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/0x100000000);
         const points=Array.from({length:20},()=>createHarvestBonusPoint(region.id));
+        if(new Set(points.filter(Boolean).map(point=>point.x+','+point.y)).size<10)throw Error('Pickup positions are not randomized on '+region.id);
         for(const point of points) {
           if(!point)throw Error('No clear central pickup position on '+region.id);
           if(Math.hypot(point.x-bounds.left-bounds.width/2,point.y-bounds.top-bounds.height/2)>Math.min(bounds.width,bounds.height)*0.35+1)throw Error('Pickup escaped the central search area');
@@ -23,6 +25,12 @@ async function verifyPickupMapClearance(evaluate) {
           const boxes=[...(art?.scenery||[]).map(item=>({x:item.x-item.w/2,y:item.y-item.h/2,width:item.w,height:item.h})),...(art?.landmarks||[])];
           for(const box of boxes) {
             if(image.x+px>=box.x&&image.x-px<=box.x+box.width&&image.y+py>=box.y&&image.y-py<=box.y+box.height)throw Error('Pickup overlaps map art on '+region.id);
+          }
+          const summary=REGION_CATALOG_SUMMARIES_BY_ID.get(region.id);
+          const seasonal=isHalloweenMapSeason()?(halloweenMapLayouts?.maps[region.id]||halloweenMapLayouts?.maps[summary?.templateRegionId]||[]):[];
+          for(const [assetIndex,x,y] of seasonal) {
+            const asset=halloweenMapLayouts.assets[assetIndex];
+            if(image.x+px>=x&&image.x-px<=x+asset.w&&image.y+py>=y&&image.y-py<=y+asset.h)throw Error('Pickup overlaps seasonal decoration on '+region.id);
           }
           if(!isHarvestBonusFarFromCities(point.x,point.y,region.id)||!isHarvestBonusFarFromCamps(point.x,point.y,region.id))throw Error('Pickup overlaps a structure on '+region.id);
         }
@@ -95,13 +103,23 @@ async function verifyPickupInteractions(client, evaluate, baselinePlacement = "n
     renderHarvestBonuses();centerOnWorldPoint(qa.bonus,region);updateCameraTransform();
     qa.node=harvestLayer.querySelector('.harvest-bonus-node');
     qa.node.focus();
-    for(let i=0;i<30;i++) renderHarvestBonuses();
+    const valid=isValidHarvestBonusPoint;let placementChecks=0;
+    isValidHarvestBonusPoint=(...args)=>{placementChecks++;return valid(...args);};
+    try {for(let i=0;i<30;i++) renderHarvestBonuses();}
+    finally {isValidHarvestBonusPoint=valid;}
     const stable=qa.node===harvestLayer.querySelector('.harvest-bonus-node') && document.activeElement===qa.node;
     const rect=qa.node.getBoundingClientRect();
-    return {stable,x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+    return {stable,placementChecks,x:rect.left+rect.width/2,y:rect.top+rect.height/2};
   })()`);
   try {
     assert(position.stable, "Routine renders replaced the pickup button or keyboard focus.");
+    assert.equal(position.placementChecks,0,"Unchanged renders rescanned pickup placement.");
+    const fs=require("node:fs"),path=require("node:path");
+    const directory=path.resolve(__dirname,"../release-artifacts/pickup-open-center-clearance");
+    fs.mkdirSync(directory,{recursive:true});
+    const viewport=await evaluate("innerWidth+'x'+innerHeight");
+    const shot=await client.send("Page.captureScreenshot",{format:"png"});
+    fs.writeFileSync(path.join(directory,`${viewport}-${bonusType}.png`),Buffer.from(shot.data,"base64"));
     await client.send("Input.dispatchMouseEvent", {type:"mousePressed",x:position.x,y:position.y,button:"left",clickCount:1});
     await evaluate("renderHarvestBonuses()");
     await client.send("Input.dispatchMouseEvent", {type:"mouseReleased",x:position.x,y:position.y,button:"left",clickCount:1});
@@ -165,7 +183,7 @@ if (require.main === module) (async () => {
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"),"ready");
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
       console.log(JSON.stringify({viewport:viewport.name,clearance:await verifyPickupMapClearance(evaluate)}));
-      for (const bonusType of ["gold", "troops"]) {
+      for (const bonusType of ["gold", "troops", "crowns"]) {
         const result={viewport:viewport.name,...await verifyPickupInteractions(client,evaluate,baseline,baselineMap,bonusType)};
         results.push(result);console.log(JSON.stringify(result));
       }
@@ -173,8 +191,8 @@ if (require.main === module) (async () => {
     const output=path.join(__dirname,"../release-artifacts/performance/pickup-interactions.json");
     fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(results,null,2)+"\n");
   } finally {
-    if(client)await client.send("Browser.close").catch(()=>{});
-    if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}
+    if(client){await client.send("Browser.close").catch(()=>{});client.close();}
+    if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}
     await server.close();
   }
 })().catch(error=>{console.error(error);process.exitCode=1;});
