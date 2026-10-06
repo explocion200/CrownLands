@@ -129,6 +129,7 @@ function medievalBird(ctx, x, y, t, phase) {
 
 function drawMedievalOutskirts(ctx, skin, t, width, height, citySize, left, top) {
   const scale = citySize / 400;
+  const tier = skin.stage || 5, patrolCount = Math.ceil(tier / 2);
   ctx.save(); ctx.translate(left, top); ctx.scale(scale, scale);
   for (const [x, y, rx, ry] of [[190, 413, 225, 21], [-10, 327, 22, 8], [407, 369, 26, 42]]) {
     ctx.save(); ctx.translate(x, y); ctx.scale(rx, ry);
@@ -137,20 +138,21 @@ function drawMedievalOutskirts(ctx, skin, t, width, height, citySize, left, top)
     ctx.fillStyle = ground; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
   }
   medievalStandard(ctx, skin.id, -10, 327, t, -1, .5);
-  medievalStandard(ctx, skin.id, 408, 342, t, 1, 2.4);
-  // Existing painted camp: left=-18%, top=64%, width=42%; its fire is
+  if (tier >= 3) medievalStandard(ctx, skin.id, 408, 342, t, 1, 2.4);
+  // Existing painted camp: left=-18%, top=64%; its fire is
   // anchored to the source illustration at (45%, 71.5%).
-  const fireX = -72 + 168 * .45, fireY = 256 + 168 * .715;
+  const campWidth = 400 * (skin.camp || .42);
+  const fireX = -72 + campWidth * .45, fireY = 256 + campWidth * .715;
   medievalSmoke(ctx, fireX, fireY - 7, t, .1, .8);
   medievalFire(ctx, fireX, fireY, t, .65);
   medievalSmoke(ctx, 403, 378, t, .4, .75);
   medievalFire(ctx, 403, 383, t + .8, .8, true);
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < patrolCount; i++) {
     const phase = t * .18 + i * .48, travel = Math.sin(phase);
     const x = 185 + travel * 144, y = 412 + Math.cos(phase) * 4 + i * 4;
     medievalGuard(ctx, skin.id, x, y, t, i * 2, Math.cos(phase) >= 0 ? 1 : -1, skin.id === "hospitaller");
   }
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < patrolCount; i++) {
     const phase = t * .15 + i * .5;
     medievalBird(ctx, 200 + Math.sin(phase) * 175, -10 + Math.cos(phase) * 9 + i * 8, t, i);
   }

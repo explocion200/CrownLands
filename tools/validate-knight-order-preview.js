@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { createHash } = require("node:crypto");
 const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
@@ -11,15 +12,29 @@ async function main() {
   const directory = "docs/visual-qa/knight-order-city-skins";
   const orders = ["templar", "hospitaller", "teutonic", "santiago"];
   const prompts = JSON.parse(fs.readFileSync(path.join(root, directory, "prompts.json"), "utf8"));
+  const progression = JSON.parse(fs.readFileSync(path.join(root, directory, "progression-prompts.json"), "utf8"));
+  const ranges = ["1–24", "25–49", "50–74", "75–99", "100+"];
   assert.deepEqual(prompts.assets.map(asset => asset.slug), orders);
+  assert.equal(progression.assets.length, 16);
+  assert.equal(new Set(progression.assets.map(asset => `${asset.slug}-${asset.stage}`)).size, 16);
   assert.deepEqual(fs.readFileSync(path.join(root, directory, "art/encampment.webp")),
     fs.readFileSync(path.join(root, "assets/optimized/camp-troops-384x384-2f712333e891.webp")), "Reuse existing painted camp art without alteration");
-  for (const order of orders) {
-    const png = fs.readFileSync(path.join(root, directory, "art", order + ".png"));
+  const paintings = new Set();
+  for (const order of orders) for (let stage = 1; stage <= 5; stage++) {
+    const file = `art/${order}${stage === 5 ? "" : `-stage-${stage}`}.png`;
+    if (stage < 5) {
+      const prompt = progression.assets.find(asset => asset.slug === order && asset.stage === stage);
+      assert(prompt, `Prompt exists for ${order} stage ${stage}`);
+      assert.equal(prompt.file, file);
+      assert.equal(prompt.levelRange, ranges[stage - 1]);
+    }
+    const png = fs.readFileSync(path.join(root, directory, file));
     assert.equal(png.subarray(1, 4).toString(), "PNG");
     assert.equal(png[25], 6, "City art must retain RGBA transparency");
     assert(png.readUInt32BE(16) >= 1024 && png.readUInt32BE(20) >= 1024);
+    paintings.add(createHash("sha256").update(png).digest("hex"));
   }
+  assert.equal(paintings.size, 20, "Every order and growth stage has distinct artwork");
   const executable = [process.env.CHROME_PATH, process.env.CROWNLANDS_CHROME_PATH,
     "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
   assert(executable, "Chromium is required");
@@ -87,10 +102,15 @@ async function main() {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
       await client.send("Page.navigate", { url: `${address.url}/${directory}/index.html` });
       await wait("document.readyState === 'complete' && !!document.querySelector('canvas')");
-      for (const order of orders) {
+      for (const order of orders) for (let level = 1; level <= 5; level++) {
         await click(`[data-order-choice="${order}"]`);
+        await click(`button[data-level="${level}"]`);
         await wait(`document.querySelector('.skin-card').dataset.order === ${JSON.stringify(order)} && document.querySelector('.art').complete`);
         await evaluate("Promise.all([...document.images].map(image => image.decode()))");
+        assert.equal(await evaluate("Number(document.querySelector('.skin-card').dataset.level)"), level);
+        assert.equal(await evaluate("document.querySelector('.art').getAttribute('src')"), `art/${order}${level === 5 ? "" : `-stage-${level}`}.png`);
+        assert.equal(await evaluate("document.querySelector('button[data-level][aria-pressed=true]').dataset.level"), String(level));
+        assert((await evaluate("document.querySelector('.level-caption').textContent")).includes(ranges[level - 1]));
         assert.equal(await evaluate("document.querySelector('.encampment').naturalWidth"), 384, "Painted camp loads");
         assert.equal(await evaluate("document.querySelectorAll('.aura,.ground-glow,.light-sweep').length"), 0, "Abstract magical overlays are removed");
         await settle();
@@ -131,6 +151,27 @@ async function main() {
       assert.equal(await evaluate("document.querySelectorAll('.skin-card').length"), 4);
       assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Compare stays within viewport");
       if (viewport.width === 1440) { await evaluate("scrollTo(0,0)"); await capture("compare-desktop", true); }
+      await click('[data-view="growth"]');
+      for (const order of orders) {
+        await click(`[data-order-choice="${order}"]`);
+        await evaluate("Promise.all([...document.images].map(image => image.decode()))");
+        await settle();
+        assert.deepEqual(await evaluate("[...document.querySelectorAll('.skin-card')].map(card => Number(card.dataset.level))"), [1, 2, 3, 4, 5]);
+        assert(await evaluate(`[...document.querySelectorAll('.skin-card')].every(card => card.dataset.order === ${JSON.stringify(order)})`));
+        assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Growth stays within viewport");
+        if (viewport.width === 1440 || order === "templar") {
+          await evaluate("scrollTo(0,0)"); await capture(`growth-${order}-${viewport.width}`, true);
+        }
+      }
+      await click('button[data-level="1"]');
+      assert.equal(await evaluate("document.querySelector('.workspace').dataset.view"), "inspect", "Choosing a level from Growth opens its inspection");
+      // Native keyboard activation must select a level, too.
+      await evaluate("document.querySelector('button[data-level=\"3\"]').focus()");
+      assert.equal(await evaluate("document.activeElement.dataset.level"), "3", "Level button receives keyboard focus");
+      await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13 });
+      await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+      await wait("document.querySelector('.skin-card').dataset.level === '3'");
+      assert.equal(await evaluate("document.querySelector('.skin-card').dataset.level"), "3");
       await click('[data-view="inspect"]'); await click('[data-order-choice="santiago"]');
       await evaluate("document.querySelector('.stage').scrollIntoView({block:'center'})"); await settle();
       await capture("inspect-" + viewport.width);
@@ -140,7 +181,7 @@ async function main() {
     await wait("document.readyState === 'complete' && document.documentElement.dataset.effects === 'subtle'");
     assert.equal(await evaluate("document.querySelector('#effects').value"), "subtle", "Reduced motion defaults to static effects");
     assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(failed, []);
-    console.log("Four-order preview passed: transparent city art, reused painted camps, no abstract overlays, all choices, desktop/landscape/portrait fit, medieval motion beyond every city artwork, pause/subtle/off controls, comparison, 160px city scale with outer scenery, reduced motion, no external requests or runtime errors.");
+    console.log("Twenty-stage preview passed: distinct transparent art and prompt mappings, all order/level choices, five-stage Growth view, keyboard selection, reused painted camps, desktop/landscape/portrait fit, medieval motion beyond every city artwork, pause/subtle/off controls, comparison, 160px city scale, reduced motion, no external requests or runtime errors.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }

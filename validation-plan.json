@@ -14,9 +14,26 @@
         "docs/visual-qa/knight-order-city-skins/art/santiago.png",
         "tools/validate-knight-order-preview.js",
         "docs/visual-qa/knight-order-city-skins/medieval-effects.js",
-        "docs/visual-qa/knight-order-city-skins/art/encampment.webp"
+        "docs/visual-qa/knight-order-city-skins/art/encampment.webp",
+        "docs/visual-qa/knight-order-city-skins/progression-prompts.json",
+        "docs/visual-qa/knight-order-city-skins/art/templar-stage-1.png",
+        "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-1.png",
+        "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-1.png",
+        "docs/visual-qa/knight-order-city-skins/art/santiago-stage-1.png",
+        "docs/visual-qa/knight-order-city-skins/art/templar-stage-2.png",
+        "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-2.png",
+        "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-2.png",
+        "docs/visual-qa/knight-order-city-skins/art/santiago-stage-2.png",
+        "docs/visual-qa/knight-order-city-skins/art/templar-stage-3.png",
+        "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-3.png",
+        "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-3.png",
+        "docs/visual-qa/knight-order-city-skins/art/santiago-stage-3.png",
+        "docs/visual-qa/knight-order-city-skins/art/templar-stage-4.png",
+        "docs/visual-qa/knight-order-city-skins/art/hospitaller-stage-4.png",
+        "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-4.png",
+        "docs/visual-qa/knight-order-city-skins/art/santiago-stage-4.png"
       ],
-      "reason": "Standalone concept gallery outside the production game build. The focused browser validator checks four city identities, RGBA transparency, unchanged reuse and loading of the existing painted camp, and removal of abstract magical overlays. It exercises all controls, comparison and 160px marker views, desktop/landscape/portrait layout and touch targets, actual moving pixels beyond every artwork rectangle, stage-to-city alignment, and Full/Pause/Subtle/Off behavior for the medieval scene. Visual review covers cloth standards, campfires and smoke, order-colored patrols, birds, natural snow, and their surrounding placement. Reduced motion, local-only requests and runtime error checks cover the new shared medieval-effects renderer and its gallery integration. Existing isolated Chromium and loopback server helpers are reused unchanged. The source camp art and production game are unmodified. No catalog, purchase/equip authority, player data, map runtime, release contract or server changes; emulator suites are not applicable. Required build checks guard the unchanged production artifact.",
+      "reason": "Standalone concept gallery outside the production game build. The focused browser validator checks all 20 distinct city paintings, prompt-to-stage asset mappings, all order and level choices, RGBA transparency, unchanged painted camp reuse, and removal of abstract overlays. It exercises five-stage Growth views, keyboard level selection, comparison and 160px marker views, desktop/landscape/portrait layout and touch targets, moving pixels beyond every city artwork, stage-to-city alignment, and Full/Pause/Subtle/Off behavior. Visual review covers architectural growth, heraldic consistency, standards, campfire placement as camps grow, patrol counts, birds and natural snow. Reduced motion, local-only requests and runtime error checks cover the shared medieval-effects renderer and gallery integration. Existing isolated Chromium and loopback server helpers are reused unchanged. Source camp art and production game are unmodified. No catalog, purchase/equip authority, player data, map runtime, release contract or server changes; emulator suites are not applicable. Required build checks guard the unchanged production artifact.",
       "tests": [
         "tools/validate-knight-order-preview.js"
       ]

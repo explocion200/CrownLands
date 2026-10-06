@@ -13,12 +13,13 @@
   <main>
     <header class="page-header">
       <div><p class="eyebrow">Crown Lands · City skin concepts</p><h1>The Four Orders</h1></div>
-      <span class="preview-label">Animated art preview</span>
+      <span class="preview-label">4 orders · 20 animated stages</span>
     </header>
     <div class="toolbar">
       <div class="view-controls" role="group" aria-label="Preview view">
         <button data-view="inspect" aria-pressed="true">Inspect</button>
         <button data-view="compare" aria-pressed="false">Compare four</button>
+        <button data-view="growth" aria-pressed="false">Growth</button>
         <button data-view="scale" aria-pressed="false">City scale</button>
       </div>
       <div class="motion-controls">
@@ -26,6 +27,7 @@
         <button id="pause" aria-pressed="false">Pause motion</button>
       </div>
     </div>
+    <div class="level-picker"><span>City level</span><div id="levels" role="group" aria-label="City level range"></div></div>
     <div class="workspace" data-view="inspect">
       <nav id="orders" aria-label="Choose a city skin"></nav>
       <section id="showcase" aria-label="Animated city previews"></section>
