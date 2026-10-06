@@ -8,7 +8,7 @@ function fixture() {
   let now = 1000000, scope = "player:realm:session", renders = 0;
   const s = {
     Date: { now: () => now }, console: { warn: noop }, window: { setTimeout: noop },
-    state: {}, KING_POWER_AUTHORITY_VERSION: 12, ENEMY_POWER_BAND_STABILIZE_MS: 3000,
+    state: {}, KING_POWER_AUTHORITY_VERSION: 13, ENEMY_POWER_BAND_STABILIZE_MS: 3000,
     ATTACK_PROTECTION_POWER_ANCHORS: vm.runInNewContext(/const ATTACK_PROTECTION_POWER_ANCHORS = ([\s\S]*?);/.exec(clientSource)[1]),
     PLAYER_IDENTITY_CACHE_STALE_MS: 300000, PLAYER_IDENTITY_LOOKUP_BATCH_SIZE: 30,
     playerIdentityCache: new Map(), enemyPowerBandCache: new Map(), playerIdentityLookupMisses: new Map(),
@@ -25,20 +25,20 @@ function fixture() {
     renderCities: () => renders++, renderPaths: noop, renderArmies: noop,
     updateIncomingAttackUi: noop, updateOutgoingAttackUi: noop,
     withTimeout: promise => promise,
-    stats: { kingPower: 300000, version: 12, updatedAtMs: now },
+    stats: { kingPower: 300000, version: 13, updatedAtMs: now },
   };
   vm.createContext(s);
-  for (const name of ["getAttackProtectionThresholds", "getAttackProtectionMode", "getEnemyCityPowerBand", "getAuthoritativePlayerPowerBandSnapshot", "getAuthoritativeEnemyPowerBandSnapshot", "clearEnemyPowerBandPending", "getStableEnemyCityPowerBand", "getEnemyCityPowerBandLabel", "normalizePlayerIdentity", "getPlayerIdentitySignature", "shouldReplacePlayerIdentity", "rememberPlayerIdentity", "rememberPlayerIdentities", "refreshMissingPlayerPowerIdentities", "refreshQueuedPlayerIdentities"]) {
+  for (const name of ["getAttackProtectionThresholds", "getAttackProtectionMode", "getEnemyCityPowerBand", "getAuthoritativePlayerPowerBandSnapshot", "getAuthoritativeEnemyPowerBandSnapshot", "ensureAuthoritativeCityOwnerKingPower", "clearEnemyPowerBandPending", "getStableEnemyCityPowerBand", "getEnemyCityPowerBandLabel", "normalizePlayerIdentity", "getPlayerIdentitySignature", "shouldReplacePlayerIdentity", "rememberPlayerIdentity", "rememberPlayerIdentities", "refreshMissingPlayerPowerIdentities", "refreshQueuedPlayerIdentities"]) {
     vm.runInContext((clientSource.includes(`async function ${name}(`) ? "async " : "") + extractFunction(clientSource, name), s);
   }
   return { s, advance: ms => now += ms, changeSession: () => scope += ":new", renders: () => renders };
 }
-const row = (uid, power, version = 12, updatedAtMs = 1000000) => ({ uid, kingPower: power, kingPowerVersion: version, updatedAtMs });
+const row = (uid, power, version = 13, updatedAtMs = 1000000) => ({ uid, kingPower: power, kingPowerVersion: version, updatedAtMs });
 async function main() {
   const f = fixture(), { s } = f, city = { owner: "enemy", ownerUid: "weak" };
   assert.equal(s.getStableEnemyCityPowerBand(city), "unknown", "Missing power was falsely advertised as in range");
   assert.match(s.getEnemyCityPowerBandLabel("unknown"), /not yet verified/);
-  for (const [own, enemy, band] of [[299999,100000,"in-range"],[300000,100000,"protected"],[399999,100000,"protected"],[400000,100000,"protected"],[100000,100000,"in-range"],[100000,100001,"overpowering"],[0,100000,"unknown"],[100000,0,"unknown"]]) {
+  for (const [own, enemy, band] of [[299999,100000,"in-range"],[300000,100000,"protected"],[399999,100000,"protected"],[400000,100000,"protected"],[100000,100000,"in-range"],[100000,100001,"overpowering"],[0,100000,"overpowering"],[100000,0,"protected"],[0,0,"in-range"]]) {
     assert.equal(s.getEnemyCityPowerBand(city, own, enemy), band);
   }
   s.rememberPlayerIdentity(row("weak", 900000, 11), { force: true });
@@ -49,14 +49,30 @@ async function main() {
   s.stats.kingPower = 400000;
   s.getStableEnemyCityPowerBand(city);
   assert.match(s.getEnemyCityPowerBandLabel("protected", city), /raid only/);
-  s.stats = { kingPower: 50000, version: 12, updatedAtMs: 1000100 };
+  s.stats = { kingPower: 50000, version: 13, updatedAtMs: 1000100 };
   assert.equal(s.getStableEnemyCityPowerBand(city), "protected");
   f.advance(2999); assert.equal(s.getStableEnemyCityPowerBand(city), "protected");
   f.advance(1); assert.equal(s.getStableEnemyCityPowerBand(city), "overpowering");
-  s.stats = { kingPower: 900000, version: 12, updatedAtMs: 999999 };
+  s.stats = { kingPower: 900000, version: 13, updatedAtMs: 999999 };
   assert.equal(s.getStableEnemyCityPowerBand(city), "overpowering", "Older power snapshot reverted a confirmed band");
   assert.equal(s.getStableEnemyCityPowerBand({ ...city, ally: true }), "");
   assert.equal(s.getStableEnemyCityPowerBand({ ...city, kind: "stronghold" }), "");
+
+  const empty = fixture(), z = empty.s;
+  z.rememberPlayerIdentity(row("empty", 0), { force: true });
+  assert.equal(z.getStableEnemyCityPowerBand({ ...city, ownerUid: "empty" }), "protected");
+  z.stats.kingPower = 0;
+  assert(z.getAuthoritativePlayerPowerBandSnapshot(), "Confirmed zero player power must remain available.");
+  assert(z.getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: "empty" }));
+  z.getOnlineApi = () => { throw Error("Confirmed zero must not perform another power lookup."); };
+  assert.equal(await z.ensureAuthoritativeCityOwnerKingPower({ ...city, ownerUid: "empty" }), 0);
+  z.stats.kingPower = undefined;
+  assert.equal(z.getAuthoritativePlayerPowerBandSnapshot(), null);
+  for (const power of [undefined, null, -1, NaN, Infinity]) {
+    z.rememberPlayerIdentity(row("missing", power), { force: true });
+    assert.equal(z.getAuthoritativeEnemyPowerBandSnapshot({ ownerUid: "missing" }), null,
+      "Normalizing missing/invalid power must not create a confirmed zero.");
+  }
 
   const queued = fixture(), q = queued.s, waiting = [], calls = [];
   q.playerIdentityLookupQueue = new Set(["one", "two", "three", "valid"]);

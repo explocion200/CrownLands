@@ -406,8 +406,6 @@ const DEMO_ATTACK_TIERS = [
   { minRatio: DEMO_ATTACK_MIN_POWER_RATIO, label: "Demo Attack", troopCapPercent: 50, attackPowerPercent: 50, travelMultiplier: 1.6 },
 ];
 const KING_POWER_ARMY_TROOP_VALUE = 2;
-const KING_POWER_REPLACEMENT_HOURS = 12;
-const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
@@ -528,7 +526,7 @@ const CLAN_QUEST_REWARDS = Object.freeze([
 ]);
 const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
-const GLOBAL_PLAYER_STATS_VERSION = 12;
+const GLOBAL_PLAYER_STATS_VERSION = 13;
 const PLAYER_IDENTITY_SYNC_VERSION = 2;
 const MAIN_CITY_ASSIGNMENT_VERSION = 3;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -4537,44 +4535,27 @@ function getTroopKingPower(troops = 0) {
 }
 
 function getCityInfrastructurePowerComponents(city = {}, bonuses = {}, troopProduction25Exclusion = null, nowMs = Date.now()) {
-  // Camp troops already count as army power; combat bonuses do not add infrastructure.
+  // Compatibility breakdown fields stay zero. Production creates troops when settled;
+  // production rates and combat defense never contribute directly to King Power.
   if (!city || isRewardCamp(city)) {
     return { replacementPower: 0, defensivePower: 0, sustainableTroopPerHour: 0 };
   }
-  const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const production = getCityProductionStats(city, {}, bonuses, {
     troopProduction25Exclusion, nowMs,
     includeWarDrums: false,
     includeRoyalTaxDecree: false,
   });
-  const defense = getCityStats(city, null, bonuses);
   const sustainableTroopPerHour = Math.max(0, safeNumber(production.troopProductionPerHour, 0));
-  const defensiveAdvantage = Math.max(0, safeNumber(defense.totalDefense, 0) - troopCount);
   return {
-    replacementPower: Math.min(
-      Number.MAX_SAFE_INTEGER,
-      Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS)
-    ),
-    defensivePower: Math.min(
-      Number.MAX_SAFE_INTEGER,
-      Math.floor(defensiveAdvantage * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT)
-    ),
+    replacementPower: 0,
+    defensivePower: 0,
     sustainableTroopPerHour,
   };
 }
 
-function getCityInfrastructurePower(city = {}, bonuses = {}) {
-  const components = getCityInfrastructurePowerComponents(city, bonuses);
-  return Math.min(
-    Number.MAX_SAFE_INTEGER,
-    Math.max(0, Math.floor(safeNumber(components.replacementPower, 0)))
-      + Math.max(0, Math.floor(safeNumber(components.defensivePower, 0)))
-  );
-}
-
 function getCityPowerFloor(city = {}) {
   if (!city) return 0;
-  return getCityInfrastructurePower(city) + getTroopKingPower(city.troops);
+  return getTroopKingPower(city.troops);
 }
 
 function playerGlobalStatsRef(uid = "") {
@@ -4751,10 +4732,10 @@ function createGlobalStatsSnapshot({
   let totalCampTroops = 0;
   let totalCityLevels = 0;
   let totalVictoryPoints = 0;
-  let replacementPower = 0;
-  let defensivePower = 0;
-  let baseReplacementPower = 0;
-  let baseDefensivePower = 0;
+  const replacementPower = 0;
+  const defensivePower = 0;
+  const baseReplacementPower = 0;
+  const baseDefensivePower = 0;
   let sustainableTroopPerHour = 0;
   let goldPerHour = 0;
   let troopPerHour = 0;
@@ -4772,13 +4753,8 @@ function createGlobalStatsSnapshot({
     const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
     const stats = getCityProductionStats(city, profileForStats, resolvedBonuses, { nowMs });
     const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses, profile.troopProduction25Exclusion, nowMs);
-    const basePowerComponents = getCityInfrastructurePowerComponents(city, {}, profile.troopProduction25Exclusion, nowMs);
     totalCityTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
-    replacementPower += powerComponents.replacementPower;
-    defensivePower += powerComponents.defensivePower;
-    baseReplacementPower += basePowerComponents.replacementPower;
-    baseDefensivePower += basePowerComponents.defensivePower;
     sustainableTroopPerHour += powerComponents.sustainableTroopPerHour;
     goldPerHour += Math.max(0, safeNumber(stats.goldProductionPerHour, 0));
     troopPerHour += Math.max(0, safeNumber(stats.troopProductionPerHour, 0));
@@ -4802,11 +4778,7 @@ function createGlobalStatsSnapshot({
     const islandId = safeString(camp.islandId || entry.ref?.parent?.parent?.id, 160);
     if (!isCurrentWorldIslandId(islandId)) return;
     const troopCount = Math.max(0, Math.floor(safeNumber(camp.troops, 0)));
-    const powerComponents = getCityInfrastructurePowerComponents(camp, resolvedBonuses);
-    const basePowerComponents = getCityInfrastructurePowerComponents(camp, {});
     totalCampTroops += troopCount;
-    defensivePower += powerComponents.defensivePower;
-    baseDefensivePower += basePowerComponents.defensivePower;
   });
 
   const marchingById = new Map();
@@ -4838,17 +4810,10 @@ function createGlobalStatsSnapshot({
     cityTroopPower + campTroopPower + reinforcementTroopPower + rallyTroopPower + towerTroopPower
   );
   const marchingPower = getTroopKingPower(totalMarchingTroops);
-  replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
-  defensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(defensivePower)));
-  baseReplacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(baseReplacementPower)));
-  baseDefensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(baseDefensivePower)));
   sustainableTroopPerHour = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(sustainableTroopPerHour)));
-  const cityPower = Math.min(Number.MAX_SAFE_INTEGER, replacementPower + defensivePower);
-  const kingPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(armyPower + cityPower)));
-  const baseKingPower = Math.min(
-    Number.MAX_SAFE_INTEGER,
-    Math.max(0, Math.floor(armyPower + baseReplacementPower + baseDefensivePower))
-  );
+  const cityPower = 0;
+  const kingPower = armyPower;
+  const baseKingPower = kingPower;
   const character = normalizeCharacterProgress(profileForStats.character);
 
   return {
@@ -4980,29 +4945,7 @@ function getPowerValue(...values) {
 }
 
 function getLegacyGlobalStatsKingPower(stats = {}) {
-  if (!stats || typeof stats !== "object") return 0;
-  const totalCities = Math.max(0, Math.floor(safeNumber(stats.totalCities, stats.cityCount)));
-  const totalLevels = Math.max(totalCities, Math.floor(safeNumber(stats.totalCityLevels, totalCities)));
-  const stationedTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)))
-    + Math.max(0, Math.floor(safeNumber(stats.totalReinforcementTroops, 0)));
-  const totalTroops = stationedTroops + Math.max(0, Math.floor(safeNumber(stats.totalMarchingTroops, 0)));
-  const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
-  const baseWalls = totalCities > 0 ? getBaseCityWalls(averageLevel) * totalCities : 0;
-  const sustainableTroopPerHour = Math.max(0, Math.floor(
-    safeNumber(stats.totalVictoryPoints, 0) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint
-  ));
-  const replacementPower = Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS);
-  const objectiveDefensePercent = getObjectiveTroopDefenseBonusPercent(stats);
-  const baseTroopDefense = stationedTroops * BASE_TROOP_DEFENSE_POWER;
-  const defensiveAdvantage = baseWalls
-    + Math.max(0, baseTroopDefense - stationedTroops)
-    + baseTroopDefense * objectiveDefensePercent / 100;
-  const defensivePower = Math.floor(
-    Math.max(0, defensiveAdvantage) * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
-  );
-  return Math.max(0, Math.floor(
-    getTroopKingPower(totalTroops) + replacementPower + defensivePower
-  ));
+  return getTroopKingPower(getTotalMilitaryTroopsFromGlobalStats(stats));
 }
 
 function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, globalStats = {}, city = {}, fallback = 0 } = {}) {
@@ -5010,29 +4953,31 @@ function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, globalStats = 
     {
       version: Math.max(0, Math.floor(safeNumber(globalStats.version, 0))),
       power: Math.max(0, Math.floor(safeNumber(globalStats.kingPower, 0))),
+      hasPower: Number.isFinite(globalStats.kingPower) && globalStats.kingPower >= 0,
       updatedAtMs: Math.max(0, timestampToMs(globalStats.updatedAtMs || globalStats.updatedAt)),
     },
     {
       version: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))),
       power: Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))),
+      hasPower: Number.isFinite(leaderboard.kingPower) && leaderboard.kingPower >= 0,
       updatedAtMs: Math.max(0, timestampToMs(leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs)),
     },
     {
       version: Math.max(0, Math.floor(safeNumber(profile.kingPowerVersion, 0))),
       power: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
+      hasPower: Number.isFinite(profile.kingPower) && profile.kingPower >= 0,
       updatedAtMs: Math.max(0, timestampToMs(profile.kingPowerUpdatedAtMs)),
     },
   ]
-    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION && candidate.power > 0);
+    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION && candidate.hasPower);
   if (authoritativeCandidates.length) return authoritativeCandidates[0].power;
 
-  const legacyGlobalPower = getLegacyGlobalStatsKingPower(globalStats);
-  if (legacyGlobalPower > 0) return legacyGlobalPower;
+  // Reuse a persisted troop snapshot during migration, never an old-formula score.
+  // A known empty army is a valid zero and must beat stale positive projections.
+  if (Number.isFinite(globalStats.totalTroops)) return getLegacyGlobalStatsKingPower(globalStats);
 
   const serverPower = getPowerValue(
-    safeNumber(profile.kingPowerVersion, 0) > 0 ? 0 : profile.kingPower,
-    safeNumber(leaderboard.kingPowerVersion, 0) > 0 ? 0 : leaderboard.kingPower,
-    safeNumber(city.kingPowerVersion, 0) > 0 ? 0 : city.ownerKingPower,
+    safeNumber(city.kingPowerVersion, 0) >= GLOBAL_PLAYER_STATS_VERSION ? city.ownerKingPower : 0,
     getCityPowerFloor(city)
   );
   return serverPower > 0 ? serverPower : getPowerValue(fallback);
@@ -17288,7 +17233,7 @@ exports.getCombatPlayerIdentity = onCall({
   let leaderboard = leaderboardSnap.exists ? leaderboardSnap.data() || {} : {};
   const needsRebuild = !leaderboardSnap.exists
     || Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))) < GLOBAL_PLAYER_STATS_VERSION
-    || Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))) <= 0;
+    || !Number.isFinite(leaderboard.kingPower) || leaderboard.kingPower < 0;
 
   if (needsRebuild) {
     const profileSnap = await db.doc(`players/${targetUid}`).get();
@@ -33347,7 +33292,7 @@ function getRewardCampPowerTier(kingPower) {
     weakMaxPower: rules.weakMaxPower, middleMaxPower: rules.middleMaxPower };
 }
 
-async function readRewardCampPowerTier(transaction, uid, profile, cityEntries, nowMs) {
+async function readRewardCampPowerTier(transaction, uid, profile, cityEntries, nowMs, statsContext = null) {
   if (profile.resetGeneration !== RESET_GENERATION || profile.worldId !== ONLINE_WORLD_ID || !cityEntries.length) {
     throw new HttpsError("failed-precondition", "Current kingdom power is unavailable. Retry the camp reward.");
   }
@@ -33367,6 +33312,15 @@ async function readRewardCampPowerTier(transaction, uid, profile, cityEntries, n
   });
   const tier = getRewardCampPowerTier(stats.kingPower);
   if (!tier) throw new HttpsError("unavailable", "Current kingdom power is unavailable. Retry the camp reward.");
+  if (statsContext) {
+    statsContext.economy = {
+      uid, profileAfter: profile, cityEntries, cityPatches: [],
+      globalStatsRef: playerGlobalStatsRef(uid),
+      activeArmies: createActiveArmiesFromSnapshot(uid, armies),
+      heldCamps: createHeldCampEntriesFromSnapshot(uid, camps),
+      bonuses: combinePlayerObjectiveBonuses(uid, cityEntries, benefits?.exists ? benefits.data() : null),
+    };
+  }
   return tier;
 }
 
@@ -33609,12 +33563,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const claimsRef = config.objectiveStatsId
       ? db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`)
       : null;
-    const productionCitiesQuery = !isDeedCamp && !isRelicCamp
-      ? db.collectionGroup("cities")
+    const productionCitiesQuery = db.collectionGroup("cities")
         .where("ownerUid", "==", holderUid)
         .where("resetGeneration", "==", RESET_GENERATION)
-        .where("worldId", "==", ONLINE_WORLD_ID)
-      : null;
+        .where("worldId", "==", ONLINE_WORLD_ID);
     const playerSnap = await transaction.get(playerRef);
     const claimsSnap = claimsRef ? await transaction.get(claimsRef) : null;
     const productionCitiesSnap = productionCitiesQuery ? await transaction.get(productionCitiesQuery) : null;
@@ -33624,7 +33576,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       && rawClaimData.worldId === ONLINE_WORLD_ID
       && (!rawClaimData.realmShardId || rawClaimData.realmShardId === getCurrentRealmShardId())
       ? rawClaimData : {};
-    const baseProductionRates = productionCitiesSnap
+    const baseProductionRates = !isDeedCamp && !isRelicCamp
       ? getRewardedAdBaseRates({
         uid: holderUid,
         profileAfter: player,
@@ -33635,11 +33587,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const priorClaims = claimData.date === today
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
       : 0;
-    const powerTier = productionCitiesSnap
-      ? await readRewardCampPowerTier(transaction, holderUid, player,
-        createOwnedCityEntriesFromSnapshot(holderUid, productionCitiesSnap), nowMs)
-      : null;
-    const powerReward = powerTier ? {
+    const statsContext = {};
+    const powerTier = await readRewardCampPowerTier(transaction, holderUid, player,
+      createOwnedCityEntriesFromSnapshot(holderUid, productionCitiesSnap), nowMs, statsContext);
+    const powerReward = !isDeedCamp && !isRelicCamp ? {
       ...powerTier,
       baseHours: config.rewardHours[priorClaims] || 0,
       effectiveHours: (config.rewardHours[priorClaims] || 0) * powerTier.multiplier,
@@ -33747,10 +33698,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         ownerUid: holderUid,
         ownerName: normalizePlayerName(player.playerName || camp.holderName, "Ruler"),
         ownerFlag: player.flag || camp.holderFlag || null,
-        ownerKingPower: Math.max(0, Math.floor(safeNumber(
-          player.globalStats?.kingPower,
-          safeNumber(player.kingPower, 0)
-        ))),
+        ownerKingPower: Math.min(Number.MAX_SAFE_INTEGER, powerTier.kingPower + getTroopKingPower(rewardedTroops)),
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kingPowerUpdatedAtMs: nowMs,
         kind: "transfer",
         campReturn: true,
         campId: camp.id,
@@ -33838,6 +33788,21 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(campRef, campPatch, { merge: true });
+    // Publish the post-reward troop snapshot in the payout transaction. Reuse its
+    // reads so retries cannot duplicate troops and no post-commit rescan is needed.
+    const stats = writeGlobalStatsFromEconomy(transaction, statsContext.economy, {}, [
+      ...(mainCityPatch ? [{ ref: troopRewardDestinationRef, city: troopRewardDestination, patch: mainCityPatch }] : []),
+      ...(deedCityPatch ? [{ ref: deedCityAward.ref, city: deedCityAward.city, patch: deedCityPatch }] : []),
+    ], {
+      nowMs,
+      statsCampPatches: [{ ref: campRef, camp, patch: campPatch }],
+      addActiveArmies: returnArmy ? [returnArmy] : [],
+    });
+    transaction.set(playerRef, {
+      kingPower: stats.kingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kingPowerUpdatedAtMs: stats.updatedAtMs,
+    }, { merge: true });
     writeOwnershipChangeEvent(transaction, {
       eventId: `camp_payout_${camp.id}_${payoutAtMs}`,
       targetType: "camp",
@@ -34018,6 +33983,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       returnArrivesAtMs: returnArmy?.arrivesAtMs || 0,
       movement: returnArmy,
       rewardedTroops,
+      globalStats: globalStatsForClient(stats),
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
       cityUpdates: [deedCityPatch, mainCityPatch].filter(Boolean),
       currentUser: callerUid === holderUid && (config.rewardType === "gold" || rewardedShopItems || rewardedGear)
@@ -34070,10 +34036,6 @@ async function recoverPendingDeedCity(receiptRef, nowMs = Date.now()) {
 
 async function resolveRewardCampPayoutAndStats(campRef, nowMs = Date.now(), callerUid = "") {
   const result = await resolveRewardCampPayoutByRef(campRef, nowMs, callerUid);
-  if (["paid", "no-eligible-city", "daily-limit"].includes(result?.status) && result.holderUid) {
-    const rebuilt = await rebuildGlobalStatsForPlayer(result.holderUid);
-    if (callerUid === result.holderUid) result.globalStats = rebuilt.stats;
-  }
   return result;
 }
 

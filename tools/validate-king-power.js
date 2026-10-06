@@ -9,12 +9,8 @@ const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
-const balanceCalculator = require(path.join(root, "battle-guide-calculations.js")).create(economyConfig);
 const constantNames = [
   "KING_POWER_ARMY_TROOP_VALUE",
-  "KING_POWER_REPLACEMENT_HOURS",
-  "KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT",
 ];
 
 function readConstant(source, name) {
@@ -26,7 +22,7 @@ function readConstant(source, name) {
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `Missing ${name}.`);
-  const bodyStart = source.indexOf("{", start);
+  const bodyStart = source.indexOf(") {", start) + 2;
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     if (source[index] === "{") depth += 1;
@@ -54,7 +50,7 @@ assert.doesNotMatch(profileRenderSource, /formatBaseAndBonusStat|profileKingPowe
   "The player profile must not append a bonus suffix or Power explanation.");
 assert.doesNotMatch(htmlSource, /profilePowerInfoBtn|profileKingPowerBreakdown|profileKingPowerStrongholdBonus/,
   "The player profile still exposes a Power explanation control.");
-if (serverVersion !== clientVersion || serverVersion !== 12) {
+if (serverVersion !== clientVersion || serverVersion !== 13) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
@@ -74,12 +70,9 @@ const militaryFormula = serverSource.slice(
   serverSource.indexOf("function getTroopKingPower"),
   serverSource.indexOf("function playerGlobalStatsRef")
 );
-if (!militaryFormula.includes("getCityProductionStats(city, {}, bonuses")) {
-  throw new Error("King Power replacement capacity is not skill-neutral.");
-}
-if (!militaryFormula.includes("getCityStats(city, null, bonuses)")) {
-  throw new Error("King Power defense is not skill-neutral.");
-}
+assert.doesNotMatch(militaryFormula, /getCityStats\(/, "King Power must not evaluate combat defense.");
+assert.doesNotMatch(serverSource + clientSource, /KING_POWER_REPLACEMENT_HOURS|KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT/,
+  "Old infrastructure multipliers must not remain active.");
 if (/gold|taxStewardship|royalGranaries|stoneworks|warDrumsExpiresAtMs/i.test(militaryFormula)) {
   throw new Error("A skill, item, or gold input leaked into the King Power formula.");
 }
@@ -163,17 +156,10 @@ assert.equal(individualBonuses.marchSpeedBonusPercent, 8);
 assert.equal(individualBonuses.cityDefenseBonusPercent, 8);
 
 function cityMilitaryComponents(level, troops, bonuses = {}) {
-  const sustainableTroopPerHour = balanceCalculator.getTroopsPerHour(level)
-    * (1 + (bonuses.troop || 0) / 100);
-  const replacementPower = Math.floor(sustainableTroopPerHour * config.KING_POWER_REPLACEMENT_HOURS);
-  const walls = balanceCalculator.getBaseWall(level);
-  const troopDefense = Math.floor(troops * 1.30 * (1 + (bonuses.defense || 0) / 100));
-  const totalDefense = walls + troopDefense;
-  const defensivePower = Math.floor(
-    Math.max(0, totalDefense - troops) * config.KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
-  );
-  return { replacementPower, defensivePower };
+  return strongholdContext.getCityInfrastructureKingPowerComponents({ level, troops }, bonuses);
 }
+
+vm.runInContext(extractFunction(clientSource, "getCityInfrastructureKingPowerComponents"), strongholdContext);
 
 function kingdomPower(cities, marchingTroops = 0, campTroops = 0) {
   const stationedTroops = cities.reduce((total, city) => total + city.troops, campTroops);
@@ -240,15 +226,10 @@ const base = cityMilitaryComponents(75, 1_000_000);
 const training = cityMilitaryComponents(75, 1_000_000, { troop: 15 });
 const defense = cityMilitaryComponents(75, 1_000_000, { defense: 15 });
 const crown = cityMilitaryComponents(75, 1_000_000, { troop: 10, defense: 8 });
-if (training.replacementPower <= base.replacementPower || training.defensivePower !== base.defensivePower) {
-  throw new Error("Training Stronghold must affect replacement capacity only.");
-}
-if (defense.defensivePower <= base.defensivePower || defense.replacementPower !== base.replacementPower) {
-  throw new Error("Defense Stronghold must affect defense only.");
-}
-if (crown.replacementPower <= base.replacementPower || crown.defensivePower <= base.defensivePower) {
-  throw new Error("Crown Citadel must affect both military components.");
-}
+[base, training, defense, crown].forEach(components => {
+  assert.equal(components.replacementPower, 0);
+  assert.equal(components.defensivePower, 0);
+});
 
 console.log(
   `Validated King Power v${serverVersion}: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `

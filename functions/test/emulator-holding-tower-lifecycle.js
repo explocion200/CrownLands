@@ -65,7 +65,7 @@ async function assertTroopPower(actor) {
     const sum = (snapshot, field, filter = () => true) => snapshot.docs.filter(current).filter(filter)
       .reduce((total, doc) => total + Math.max(0, Math.floor(Number(doc.data()[field]) || 0)), 0);
     const stats = statsSnap.data(), profile = profileSnap.data();
-    assert.equal(stats.version, 12);
+    assert.equal(stats.version, 13);
     // Economy snapshots include production between the five-minute city checkpoints.
     assert(stats.totalCityTroops >= sum(cities, "troops"), "Saved stats omitted owned-city troops.");
     assert.equal(stats.totalCampTroops, sum(camps, "currentGarrison"), "Saved stats omitted held Camp troops.");
@@ -75,7 +75,9 @@ async function assertTroopPower(actor) {
     const total = stats.totalCityTroops + stats.totalCampTroops + stats.totalMarchingTroops + stats.totalTowerTroops
       + (profile.stationedReinforcementTroops || 0) + (profile.committedRallyTroops || 0);
     assert.equal(stats.armyPower, total * 2, "Troops stopped contributing two power each.");
-    assert.equal(stats.kingPower, stats.armyPower + stats.replacementPower + stats.defensivePower);
+    assert.equal(stats.kingPower, stats.totalMilitaryTroops * 2);
+    assert.equal(stats.replacementPower, 0);
+    assert.equal(stats.defensivePower, 0);
     assert.equal(profile.kingPower, stats.kingPower);
   });
 }
@@ -114,7 +116,9 @@ async function main() {
     assert.equal(stats.totalTowerTroops, expectedTowerTroops, "Tower troops were omitted from authoritative stats.");
     const militaryTroops = stats.totalTroops + stats.totalMarchingTroops + stats.totalReinforcementTroops + stats.totalRallyTroops + expectedTowerTroops;
     assert.equal(stats.armyPower, militaryTroops * 2, "A troop was omitted or counted twice in King Power.");
-    assert.equal(stats.kingPower, stats.armyPower + stats.replacementPower + stats.defensivePower);
+    assert.equal(stats.kingPower, stats.totalMilitaryTroops * 2);
+    assert.equal(stats.replacementPower, 0);
+    assert.equal(stats.defensivePower, 0);
     assert.equal(profile.kingPower, stats.kingPower);
     assert.equal(board.kingPower, stats.kingPower);
     assert.equal(board.totalTowerTroops, expectedTowerTroops);

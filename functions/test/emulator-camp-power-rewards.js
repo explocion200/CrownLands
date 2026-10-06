@@ -73,6 +73,11 @@ async function main() {
         await seed(type,troops,index);await hold(camp,actor,claim);
         const result=await call("resolveRewardCampPayout",actor,{campId:camp.id,regionId:camp.regionId});
         assert.equal(result.status,"paid");assert.equal(result.powerReward.tier,tier);
+        assert.equal(result.globalStats.version,13);
+        assert.equal(result.globalStats.kingPower,result.globalStats.totalMilitaryTroops*2);
+        assert.equal((await profile.get()).data().kingPower,result.globalStats.kingPower);
+        assert.equal(result.globalStats.replacementPower,0);
+        assert.equal(result.globalStats.defensivePower,0);
         if(type==="gold"&&tier==="weak"&&index===0)weakFixturePower=result.powerReward.kingPower;
         assert.equal(result.powerReward.multiplier,multiplier);
         const schedule=config.camps[type].rewardSchedule[index];
@@ -112,8 +117,8 @@ async function main() {
     assert.equal(result.reward, rate * 6, "Camp troop payout did not follow account exclusion expiry");
   }
   // Leave 50k power of headroom, then cross the boundary with the troop reward.
-  // City soldiers contribute 2 army power plus 0.075 infrastructure power each.
-  const nearBoundaryTroops=5000+Math.floor((7813452-50000-weakFixturePower)/2.075);
+  // Every soldier contributes exactly 2 power, independently of city development.
+  const nearBoundaryTroops=5000+Math.floor((7813452-50000-weakFixturePower)/2);
   await seed("troops",nearBoundaryTroops,3);await hold(warband,actor,claim);
   const crossing=await call("resolveRewardCampPayout",actor,{campId:warband.id,regionId:warband.regionId});
   assert.equal(crossing.powerReward.tier,"weak","The reward must use power before granting troops");

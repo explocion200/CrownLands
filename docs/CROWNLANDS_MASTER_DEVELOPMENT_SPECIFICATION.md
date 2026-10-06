@@ -332,7 +332,7 @@ Status describes implementation and deployment state. It does not replace the di
 | Raw production | Base production used for scaling before temporary items, Gear, skills, objectives, or similar bonuses unless a rule explicitly says otherwise. Exact calculation scope must be configuration-backed. |
 | Common Gear | Persistent officer equipment currently available at Common rarity. |
 | Bag item / consumable | A normal consumable item held in the player’s Bag. These do not persist across seasons. |
-| King Power | The ranking measure for individual kingdoms and aggregate clan strength. The `origin/main` implementation uses version 11; exact production runtime parity remains **NEEDS VERIFICATION**. |
+| King Power | The ranking measure for individual kingdoms and aggregate clan strength. The October 6, 2026 confirmed rule is total controlled troop count × 2; see Section 13 for snapshot, migration and release requirements. |
 | Season | A competitive period intended to end in a controlled reset and persistence process. Current cadence is not yet confirmed. |
 | Reset | A controlled transition that clears normal world progression while preserving only explicitly allowlisted data. |
 
@@ -1342,7 +1342,20 @@ See [implementation and verification notes](visual-qa/leaderboard-podium/README.
 - Historical leaderboard records do not directly contribute power, resources, eligibility, or progression in later seasons. The confirmed October 1 Camp balance exception permits aggregate historical power benchmarks to inform fixed reward thresholds; each player's current power determines their tier, without carrying over their historical score or rank.
 - The older `PLANNED` archive status is superseded by the season-rewards implementation above. The website presentation remains in development; this move does not alter stored final results.
 
-### Verified `origin/main` implementation
+### Approved troop-only King Power — October 6, 2026
+
+**Status: confirmed; implementation version 13 in development, pending validation, merge and separately authorized deployment.** This rule supersedes the earlier replacement-production and defensive-power formula below.
+
+- King Power is exclusively **total controlled troops × 2**. Count city/royal-holding and occupied Camp garrisons, active non-rally marches, stationed reinforcements, committed rally troops and personally owned Tower garrisons once, across the current realm. Duplicate march mirrors and rally movement copies must not double-count troops. Preserve current world, generation, shard and ownership guards.
+- Moving troops among these locations preserves the complete score. Production/rewards add two power per credited troop; casualties and other actual troop removals subtract two. City levels, walls, VP, Gold, production rates, objectives, skills, gear and timed items have no direct score contribution. Their existing production and combat effects continue. Keep numeric overflow guards.
+- A confirmed zero troop count means zero King Power. Missing, old-version or unavailable enemy scores remain unverified until authoritative repair; zero must neither revive an older positive cache nor repeatedly request a repair.
+- Derive power from the same committed troop snapshot used by existing economy/action transactions. The client consumes the existing global-stats subscription. Production remains lazily settled through existing player actions and the normal 120-second economy refresh, with fractional accrual retained; there is no new per-second polling or kingdom scan. A pending production estimate is not an additional committed army.
+- Camp payouts publish reward troops, returning marches, the emptied Camp and player/global/leaderboard power in one transaction, reusing its reads. Determine the Camp reward tier before crediting that reward. Delayed/repeated clan events reconcile against current membership and current published stats; clan projections remain asynchronous.
+- Existing attack-protection thresholds/caps, XP multipliers, retaliation rules, daily safe-target selection, Camp tier cutoffs/multipliers and ranking/reward rules remain unchanged. Their power inputs now use troop-only scores. Map classifications, public profiles and Kingdom/Clan standings can consequently change. Zero-score kingdoms remain ineligible for the existing positive-score personal season rewards.
+- Preserve saved launch/attack-protection commitments, already earned awards and historical final standings. Do not reinterpret old-season data using the new formula.
+- A coordinated release must update backend and client versions and rebuild only current-realm published player/clan scores using the existing guarded repair/reconciliation paths. Old own-player v12 troop snapshots can supply the new arithmetic while scores migrate; old enemy score projections cannot authorize a classification. Deployment and any production rebuild require separate explicit authorization and verification. Until migration finishes, published standings can contain old scores and must not be represented as fully converted.
+
+### Historical verified implementation (superseded King Power formula)
 
 - King Power uses implementation version 11.
 - Every controlled troop contributes 2 power. The count includes city and Camp garrisons, marching troops, stationed reinforcements, and committed rally troops, with implementation safeguards against double-counting.
