@@ -12,7 +12,7 @@
         "index.html",
         "tools/validate-crown-payments-browser.js"
       ],
-      "reason": "Move Crown purchases from Skins into a dedicated adjacent Shop tab and remove the shared Earn Crowns button. Exercise real Shop navigation and four-tab keyboard focus, server-provided pack quantity/price, existing artwork, live/test purchase review, order recovery/status, account isolation, unavailable/sign-out states, wallet refresh focus and desktop/landscape card layout. Existing Shop tests cover provision buying and rewarded-ad dependencies; cosmetics tests cover the changed shared skin-panel layout, purchase/equip and Profile views. Server authority and contracts are unchanged.",
+      "reason": "Move Crown purchases from Skins into a dedicated adjacent Shop tab and remove the shared Earn Crowns button. Exercise real Shop navigation and four-tab keyboard focus, server-provided pack quantity/price, existing artwork, live/test purchase review, order recovery/status, account isolation, unavailable/sign-out states, wallet refresh focus and desktop/landscape card layout. Stabilize the existing payment-policy captures by positioning each section after font loading without a competing URL-fragment scroll. Existing Shop tests cover provision buying and rewarded-ad dependencies; cosmetics tests cover the changed shared skin-panel layout, purchase/equip and Profile views. Server authority and contracts are unchanged.",
       "tests": [
         "tools/validate-crown-payments-browser.js",
         "tools/validate-shop-browser.js",

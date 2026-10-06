@@ -171,7 +171,9 @@ async function main() {
     for (const page of [{ file: "support.html", section: "private-support" }, { file: "terms.html", section: "crown-purchases" }, { file: "privacy.html", section: "payments" }]) {
       for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
         await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
-        await client.send("Page.navigate", { url: `${address.url}/${page.file}#${page.section}` });
+        // Position the section after fonts load; a URL fragment can trigger a
+        // late browser scroll that races the explicit screenshot positioning.
+        await client.send("Page.navigate", { url: `${address.url}/${page.file}` });
         await wait(`!!document.getElementById(${JSON.stringify(page.section)}) && document.readyState === 'complete'`);
         await evaluate(`(async () => {
           await document.fonts.ready;
@@ -181,7 +183,7 @@ async function main() {
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         })()`);
         const sectionBounds = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).getBoundingClientRect().toJSON()`);
-        assert(sectionBounds.top >= 0 && sectionBounds.top < viewport.height / 2, "Payment policy heading is visible in the capture");
+        assert(sectionBounds.top >= 0 && sectionBounds.top < viewport.height / 2, `Payment policy heading is visible: ${page.file} ${viewport.width} ${JSON.stringify(sectionBounds)}`);
         const section = await evaluate(`document.getElementById(${JSON.stringify(page.section)}).textContent`);
         assert(section.includes("crownlandsmail@gmail.com"));
         assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "Payment policy has no horizontal overflow");
