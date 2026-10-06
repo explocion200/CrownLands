@@ -1,0 +1,73 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "cpuThrottle": 4,
+      "cities": 60,
+      "visible": 40,
+      "offscreen": 20,
+      "game": {
+        "purchases": 4,
+        "equips": 4,
+        "stages": 20,
+        "mapCities": 10
+      },
+      "samples": [
+        {
+          "mode": "off",
+          "frameP95Ms": 5.699999999999818,
+          "taskMs": 84.72300000000001,
+          "paintCalls": 0,
+          "paintMeanMs": 0,
+          "active": 0,
+          "canvasBytes": 240
+        },
+        {
+          "mode": "full",
+          "frameP95Ms": 5.600000000000364,
+          "taskMs": 397.6620000000001,
+          "paintCalls": 196,
+          "paintMeanMs": 0.8505101994592317,
+          "active": 4,
+          "canvasBytes": 1048800
+        }
+      ]
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "cpuThrottle": 4,
+      "cities": 60,
+      "visible": 40,
+      "offscreen": 20,
+      "game": {
+        "purchases": 4,
+        "equips": 4,
+        "stages": 20,
+        "mapCities": 10
+      },
+      "samples": [
+        {
+          "mode": "off",
+          "frameP95Ms": 5.600000000000364,
+          "taskMs": 89.71200000000002,
+          "paintCalls": 0,
+          "paintMeanMs": 0,
+          "active": 0,
+          "canvasBytes": 240
+        },
+        {
+          "mode": "full",
+          "frameP95Ms": 5.699999999999818,
+          "taskMs": 328.648,
+          "paintCalls": 150,
+          "paintMeanMs": 0.8320000012715657,
+          "active": 3,
+          "canvasBytes": 786660
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

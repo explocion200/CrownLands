@@ -9,13 +9,14 @@ function fixture() {
   qa.wallet=C.normalize({crowns:2000}); cosmeticUid=uid; cosmeticState=qa.wallet;
   cosmeticOffset=Date.UTC(2026,9,12)-Date.now();
   getCurrentOnlineUid=()=>uid; saveGame=()=>{}; syncPlayerIdentityToAllOwnedCities=async()=>{};
-  qa.api={getUser:()=>({uid}),getCosmeticsState:async()=>({state:qa.wallet,serverNowMs:Date.UTC(2026,9,12)}),purchaseCosmetic:async request=>{
+  qa.api={getUser:()=>({uid}),getCosmeticsState:async()=>({state:qa.wallet,serverNowMs:Date.UTC(2026,9,12),availableOfferIds:C.OFFERS.map(item=>item.id)}),purchaseCosmetic:async request=>{
     qa.requests.push(request); const old=qa.receipts.get(request.requestId);
     if(old)return {state:qa.wallet,receipt:old,replayed:true};
     const result=C.purchase(qa.wallet,request,Date.UTC(2026,9,12)); qa.wallet=result.state;qa.receipts.set(request.requestId,result.receipt);qa.purchases++;
     if(qa.mode==="lost"){qa.mode="ok";throw Error("Connection lost after purchase");} return result;
   },equipCosmetic:async request=>{qa.equips++;qa.wallet=C.equip(qa.wallet,request.category,request.itemId);return{state:qa.wallet};}};
   getOnlineApi=()=>qa.api;
+  applyCosmeticResult({state:qa.wallet,availableOfferIds:C.OFFERS.map(item=>item.id)});
   const city=state.cities.find(city=>city.owner==="player"); if(city)city.ownerUid=uid;
   cosmeticCategory="all";cosmeticSelected="halloween_city";cosmeticOpenShopRequested=true;showShopModal();
 }
@@ -94,7 +95,7 @@ async function main(){
   assert.equal(await evaluate('__skinQA.requests[0].requestId===__skinQA.requests[1].requestId'),true);
   assert.equal(await evaluate('cosmeticState.crowns'),1400);assert.equal(await evaluate('cosmeticState.equipped.city'),"");
   assert.equal(await evaluate('document.getElementById("crownsBalance").title'),"1,400 Crowns","Confirmed spending must update the map counter");
-  assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=shop] [data-skin-select]")].map(n=>n.dataset.skinSelect)'),['halloween_city']);
+  assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-skins-mode=shop] [data-skin-select]")].map(n=>n.dataset.skinSelect)'),['halloween_city','templar_city','hospitaller_city','teutonic_city','santiago_city']);
   const appearances = await evaluate(`(${appearanceChecks.toString()})()`);
   assert.equal(appearances.own,'halloween_city');assert.equal(appearances.stronghold,'');assert.equal(appearances.captured,'');
   assert.equal(appearances.remote,'halloween_city');assert.deepEqual(appearances.before,appearances.after);

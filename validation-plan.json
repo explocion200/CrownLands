@@ -33,17 +33,99 @@
         "docs/visual-qa/knight-order-city-skins/art/teutonic-stage-4.png",
         "docs/visual-qa/knight-order-city-skins/art/santiago-stage-4.png"
       ],
-      "reason": "Standalone concept gallery outside the production game build. The focused browser validator checks all 20 distinct city paintings, prompt-to-stage asset mappings, all order and level choices, RGBA transparency, unchanged painted camp reuse, and removal of abstract overlays. It exercises five-stage Growth views, keyboard level selection, comparison and 160px marker views, desktop/landscape/portrait layout and touch targets, moving pixels beyond every city artwork, stage-to-city alignment, and Full/Pause/Subtle/Off behavior. Visual review covers architectural growth, heraldic consistency, standards, campfire placement as camps grow, patrol counts, birds and natural snow. Reduced motion, local-only requests and runtime error checks cover the shared medieval-effects renderer and gallery integration. Existing isolated Chromium and loopback server helpers are reused unchanged. Source camp art and production game are unmodified. No catalog, purchase/equip authority, player data, map runtime, release contract or server changes; emulator suites are not applicable. Required build checks guard the unchanged production artifact.",
+      "reason": "The standalone gallery reviews all twenty original paintings and five level ranges before production optimization. Its browser validator checks order/stage mappings, transparent assets, outside-wall medieval scenery, camp provenance, growth/comparison/160px views, keyboard controls and desktop/landscape/portrait layouts, including Full/Pause/Subtle/Off and reduced motion. The runtime adapter uses the same drawing routines and is separately covered below. Source PNGs and gallery files remain excluded from production.",
       "tests": [
         "tools/validate-knight-order-preview.js"
       ]
     },
     {
       "paths": [
-        "docs/visual-qa/knight-order-city-skins/README.md"
+        "docs/visual-qa/knight-order-city-skins/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Document the owner-confirmed previews-first scope, local viewing instructions, visual identities, generated-art provenance, motion controls and future integration boundary. No additional runtime test applies to prose; the companion gallery is exercised above.",
+      "reason": "Document the owner-confirmed four permanent 600-Crown skins, five established progression appearances, free Apply, runtime performance controls and rollout boundary. Prose does not execute; catalog, ownership, stage mapping and deployment capability behavior are exercised by the integration groups below.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/build-knight-city-assets.js",
+        "docs/visual-qa/knight-order-city-skins/runtime-assets.json",
+        "assets/optimized/knight-templar-stage-1-512x512-409ca09d8cb6.webp",
+        "assets/optimized/knight-templar-stage-2-512x512-e264499c3afc.webp",
+        "assets/optimized/knight-templar-stage-3-512x512-0115c1eefef1.webp",
+        "assets/optimized/knight-templar-stage-4-512x512-ab4f3f1fe8ea.webp",
+        "assets/optimized/knight-templar-stage-5-512x512-6c937fb5dd73.webp",
+        "assets/optimized/knight-hospitaller-stage-1-512x512-3a9264a121a4.webp",
+        "assets/optimized/knight-hospitaller-stage-2-512x512-519bc14b3369.webp",
+        "assets/optimized/knight-hospitaller-stage-3-512x512-2739a30429f1.webp",
+        "assets/optimized/knight-hospitaller-stage-4-512x512-ce95a385579c.webp",
+        "assets/optimized/knight-hospitaller-stage-5-512x512-effa304fe7d9.webp",
+        "assets/optimized/knight-teutonic-stage-1-512x512-b487846b8b97.webp",
+        "assets/optimized/knight-teutonic-stage-2-512x512-5fbc3236bbe3.webp",
+        "assets/optimized/knight-teutonic-stage-3-512x512-169151f7f9a5.webp",
+        "assets/optimized/knight-teutonic-stage-4-512x512-7028e5e010b1.webp",
+        "assets/optimized/knight-teutonic-stage-5-512x512-745a9e298839.webp",
+        "assets/optimized/knight-santiago-stage-1-512x512-207dd501a4e3.webp",
+        "assets/optimized/knight-santiago-stage-2-512x512-fdec4e770d18.webp",
+        "assets/optimized/knight-santiago-stage-3-512x512-d1e97cc3a763.webp",
+        "assets/optimized/knight-santiago-stage-4-512x512-307a24bb1668.webp",
+        "assets/optimized/knight-santiago-stage-5-512x512-ede2f94d9e67.webp"
+      ],
+      "reason": "The isolated Chromium encoder creates the twenty lazy-loaded runtime WebPs from the reviewed masters. Unit validation verifies every source/output hash, catalog path, unique stage, WebP alpha and dimensions, and per-order byte budget. Browser integration decodes all stages in the game; artifact validation verifies shipping and exclusion from install precaching. The encoder reuses existing isolated browser/server helpers without changing them.",
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-knight-city-browser.js",
+        "tools/validate-production-artifact.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/cosmetics.js",
+        "functions/cosmetics-service.js",
+        "functions/test/emulator-cosmetics.js"
+      ],
+      "reason": "Shared client/server catalog adds four 600-Crown offers and the load response advertises backend support. Unit tests cover prices, ownership, seasons and all stage assets. Emulator coverage exercises authoritative transactions, concurrent idempotent receipts, wrong-price/unowned/duplicate rejection, balances, explicit Apply and public equipment visibility while preserving Halloween availability, retired entitlements, pickup claims and private-data rules. Browser tests cover rollout gating and four purchases/Apply actions using the same catalog. The shared collectHarvestBonus callable must retain every knight entitlement and equipped skin after Crown collection; the emulator explicitly covers this dependency. Live Crown checkout only merges balance/revision fields and is unchanged.",
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-knight-city-browser.js",
+        "functions/test/emulator-cosmetics.js"
+      ]
+    },
+    {
+      "paths": [
+        "skins-ui.js",
+        "skins-ui.css",
+        "knight-city-effects.js",
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-knight-city-browser.js",
+        "docs/visual-qa/knight-order-city-skins/runtime-performance.json"
+      ],
+      "reason": "Shared Shop/My Skins/map rendering adds knight previews and bounded canvas motion alongside Halloween. Browser checks cover all four prices/purchases, explicit Apply, twenty stages and boundary levels, owner/capture/default/stronghold/missing-art behavior, old-backend offer gating, desktop and short landscape layouts and existing retry/flag behavior. Existing Halloween and motion suites guard shared scheduler/regression dependencies. The 60-city stress fixture measures Off versus Full under 4x CPU slowdown, slots, paint frequency, buffer bytes, camera/overlay/visibility/preferences/offscreen stop-resume and removing the final layer. Checked-in results are local evidence, not a universal phone performance guarantee.",
+      "tests": [
+        "tools/validate-cosmetics.js",
+        "tools/validate-cosmetics-browser.js",
+        "tools/validate-knight-city-browser.js",
+        "tools/validate-halloween-city-skin-browser.js",
+        "tools/validate-skin-motion-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The game entry loads the bounded painter before the skins UI, and cache revisions ship the updated catalog/renderer. Build and artifact checks ensure runtime modules and twenty WebPs ship while source galleries stay out, with explicit module/art budgets and no new art precache. Shared asset-budget and PWA-routing checks guard shell size, cache consistency and installed entry behavior; the real-game browser test proves load order and runtime integration.",
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-knight-city-browser.js"
+      ]
     }
   ]
 }

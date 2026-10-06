@@ -18,7 +18,7 @@ function createCosmeticsService({ db, HttpsError, runTransaction, assertCurrentP
   }
   async function load(uid, now = Date.now()) {
     const snap = await stateRef(uid).get();
-    return { state: translate(() => C.normalize(snap.exists ? snap.data() : {})), serverNowMs: now, catalogVersion: C.VERSION };
+    return { state: translate(() => C.normalize(snap.exists ? snap.data() : {})), serverNowMs: now, catalogVersion: C.VERSION, availableOfferIds: C.OFFERS.map(offer => offer.id) };
   }
   async function purchase(uid, request, now = Date.now()) {
     const id = operationId(request.requestId), signature = JSON.stringify([request.offerId, request.expectedPrice, request.catalogVersion]);

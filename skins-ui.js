@@ -9,25 +9,46 @@ const cosmeticOwnerAppearances = new Map(), cosmeticNeededOwners = new Map();
 const cosmeticFailedCityArt = new Set();
 let cosmeticPreviewStage = 5;
 let cosmeticMotion = null;
+// Older backends only sell Halloween. Reveal new offers after the deployed
+// service advertises them, so a frontend-first rollout cannot sell invalid IDs.
+let cosmeticAvailableOffers = new Set(["halloween_city"]);
 const cosmeticNow = () => Date.now() + cosmeticOffset;
 const cosmeticRequestId = () => `skin_${globalThis.crypto.randomUUID().replaceAll("-", "")}`;
 
 function createCosmeticMotion() {
-  const layers = new Map(); let frame = 0;
+  const layers = new Map(); let frame = 0, paintFrame = 0, lastPaint = 0;
+  let activeKnights = [];
+  const knightEffects = globalThis.CrownlandsKnightCityEffects;
+  function paint(now) {
+    paintFrame = 0;
+    if (document.hidden || !activeKnights.length) return;
+    if (now - lastPaint >= 50) {
+      for (const [layer, info] of activeKnights) if (layer.isConnected) knightEffects.paint(layer, now / 1000, info.preview);
+      lastPaint = now;
+    }
+    paintFrame = requestAnimationFrame(paint);
+  }
   function refresh() {
     cancelAnimationFrame(frame); frame = 0;
+    cancelAnimationFrame(paintFrame); paintFrame = 0; activeKnights = [];
     const covered = document.getElementById("profileScreen")?.classList.contains("open") || document.getElementById("modal")?.open;
+    const mode = document.documentElement.dataset.animationMode;
+    const still = mode === "off" || mode === "reduced" || (mode !== "full" && matchMedia("(prefers-reduced-motion: reduce)").matches);
     // Keep compositor layers bounded even when many owned cities share a skin.
     let mapSlots = innerWidth <= 1000 ? 3 : 4, previewSlots = 1;
     for (const [layer, info] of layers) {
-      if (!layer.isConnected) { observer?.unobserve(layer); layers.delete(layer); continue; }
-      const eligible = !document.hidden && info.visible && (info.preview || !covered);
+      if (!layer.isConnected) { observer?.unobserve(layer); knightEffects?.release(layer); layers.delete(layer); continue; }
+      const knight = layer.classList.contains("knight-city-effects");
+      const blocked = !info.preview && layer.closest(".map-frame:is(.camera-moving,.zooming,.crowded-map,.low-zoom)");
+      const eligible = !document.hidden && info.visible && (info.preview || !covered) && (!knight || (!still && !blocked));
       const active = eligible && (info.preview ? previewSlots-- > 0 : mapSlots-- > 0);
       const value = active ? "active" : "idle";
       if (layer.dataset.skinMotion !== value) layer.dataset.skinMotion = value;
+      if (knight) { if (active) activeKnights.push([layer, info]); else knightEffects.release(layer); }
     }
+    if (activeKnights.length) paintFrame = requestAnimationFrame(paint);
   }
-  function schedule() { if (!frame && layers.size) frame = requestAnimationFrame(refresh); }
+  function schedule() { if (!frame && (layers.size || activeKnights.length)) frame = requestAnimationFrame(refresh); }
   const observer = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries => {
     for (const entry of entries) { const info = layers.get(entry.target); if (info) info.visible = entry.isIntersecting && entry.intersectionRatio > 0; }
     schedule();
@@ -39,6 +60,12 @@ function createCosmeticMotion() {
   for (const id of ["profileScreen", "modal"]) {
     const root = document.getElementById(id); if (root) mutations.observe(root, { attributes: true, attributeFilter: ["class", "open"] });
   }
+  // Attribute observers stop the painter on camera/motion changes; the frame
+  // loop never scans the map or queries element bounds.
+  const map = document.getElementById("mapFrame");
+  if (map) mutations.observe(map, { attributes: true, attributeFilter: ["class"] });
+  mutations.observe(document.documentElement, { attributes: true, attributeFilter: ["data-animation-mode"] });
+  matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", schedule);
   mutations.observe(document.body, { childList: true });
   document.addEventListener("visibilitychange", refresh);
   window.addEventListener("resize", schedule, { passive: true });
@@ -47,7 +74,7 @@ function createCosmeticMotion() {
       if (layers.has(layer)) return;
       layers.set(layer, { preview, visible: false }); observer?.observe(layer); schedule();
     },
-    forget(layer) { if (layer) { observer?.unobserve(layer); layers.delete(layer); schedule(); } },
+    forget(layer) { if (layer) { observer?.unobserve(layer); knightEffects?.release(layer); layers.delete(layer); schedule(); } },
     schedule,
   };
 }
@@ -55,6 +82,7 @@ function createCosmeticMotion() {
 function removeCosmeticBats(layer) { cosmeticMotion?.forget(layer); layer?.remove(); }
 
 function applyCosmeticResult(result) {
+  if (Array.isArray(result?.availableOfferIds)) cosmeticAvailableOffers = new Set(result.availableOfferIds);
   const raw = result?.cosmetics || result?.state;
   if (raw && (!cosmeticState || Number(raw.revision) >= cosmeticState.revision)) cosmeticState = COSMETIC_CATALOG.normalize(raw);
   if (result?.serverNowMs) cosmeticOffset = result.serverNowMs - Date.now();
@@ -70,6 +98,7 @@ function syncCosmeticsSession() {
   cosmeticOwnerAppearances.clear(); cosmeticNeededOwners.clear(); cosmeticOwnerSignature = "";
   cosmeticFailedCityArt.clear();
   cosmeticPendingPurchase = null;
+  cosmeticAvailableOffers = new Set(["halloween_city"]);
   renderCosmeticHud();
   if (!uid) return;
   try { cosmeticPendingPurchase = JSON.parse(sessionStorage.getItem(`crownlands-cosmetic-purchase:${uid}`) || "null"); } catch { /* Storage may be unavailable. */ }
@@ -143,6 +172,7 @@ function applyCosmeticCityNode(node, city) {
         cosmeticFailedCityArt.add(art);
         image.src = fallback;
         removeCosmeticBats(castle?.querySelector(".halloween-city-bats"));
+        removeCosmeticBats(castle?.querySelector(".knight-city-effects"));
       } : null;
       image.src = target;
     }
@@ -158,6 +188,15 @@ function applyCosmeticCityNode(node, city) {
     }
     (cosmeticMotion ||= createCosmeticMotion()).watch(castle.querySelector(".halloween-city-bats"));
   } else removeCosmeticBats(bats);
+  const order = COSMETIC_CATALOG.item(skin)?.order;
+  const outskirts = castle?.querySelector(".knight-city-effects");
+  if (order && availableArt && image && castle) {
+    if (!outskirts || outskirts.dataset.knightOrder !== order || Number(outskirts.dataset.knightStage) !== stage) {
+      removeCosmeticBats(outskirts);
+      castle.insertAdjacentHTML("beforeend", globalThis.CrownlandsKnightCityEffects.markup(order, stage));
+    }
+    (cosmeticMotion ||= createCosmeticMotion()).watch(castle.querySelector(".knight-city-effects"));
+  } else removeCosmeticBats(outskirts);
 }
 
 function cosmeticBats(stage) {
@@ -171,21 +210,21 @@ function cosmeticBats(stage) {
 }
 
 function cosmeticStagePicker(item) {
-  if (item?.id !== "halloween_city" && item?.id !== "default_city") return "";
+  if (item?.category !== "city") return "";
   return `<div class="skin-stage-picker" role="group" aria-label="Preview city level">${["1–24", "25–49", "50–74", "75–99", "100+"].map((label, index) => `<button type="button" data-skin-stage="${index + 1}" aria-pressed="${cosmeticPreviewStage === index + 1}" aria-label="Preview levels ${label}">${label}</button>`).join("")}</div>`;
 }
 
 function cosmeticPreview(item, detail = false) {
-  if (item?.id === "halloween_city" || item?.id === "default_city") {
+  if (item?.category === "city") {
     const stage = detail ? cosmeticPreviewStage : 5;
     const halloween = item.id === "halloween_city";
-    return `<span class="skin-city-preview" aria-hidden="true"><img src="${halloween ? item.assets[stage] : getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : ""}</span>`;
+    return `<span class="skin-city-preview" aria-hidden="true"><img src="${item.assets?.[stage] || getCastleAsset(stage)}" alt="" draggable="false" decoding="async" data-skin-preview-art data-skin-preview-stage="${stage}">${detail && halloween ? cosmeticBats(stage) : detail && item.order ? globalThis.CrownlandsKnightCityEffects.markup(item.order, stage) : ""}</span>`;
   }
   return "";
 }
 
 function cosmeticChoices(mode) {
-  if (mode === "shop") return COSMETIC_CATALOG.OFFERS;
+  if (mode === "shop") return COSMETIC_CATALOG.OFFERS.filter(item => cosmeticAvailableOffers.has(item.id));
   const defaults = [{ id: "default_city", category: "city", name: "Default City", free: true, description: "The original city appearance at every level. Restore it across all your regular cities for free, whenever you want." }];
   return [...defaults, ...COSMETIC_CATALOG.ITEMS.filter(item => cosmeticState?.owned[item.id])];
 }
@@ -212,7 +251,7 @@ function renderSkinsPanel(mode = "shop") {
   const applyButton = `<button type="button" class="skin-primary" data-skin-action ${disabled ? "disabled" : ""}>${cosmeticBusy ? "Saving…" : action}</button>`;
   return `<section class="skins-panel" data-skins-mode="${mode}" aria-label="${library ? "My skins" : "Skin shop"}">
     <header class="skins-heading"><div><p>${library ? "Your collection" : "The royal wardrobe"}</p><h2>${library ? "My Skins" : "City Skins"}</h2></div><div class="skins-wallet"><strong>${cosmeticState ? cosmeticState.crowns.toLocaleString("en-US") : "—"} Crowns</strong><span>Crown pickups: ${cosmeticState ? COSMETIC_CATALOG.countToday(cosmeticState, cosmeticNow()) : "—"} / 20 today</span></div></header>
-    <p class="skins-notice">${library ? "Select a skin, then press Apply. Switching is free." : `Permanent cosmetics · Free switching · ${sale.onSale ? "Sale ends November 1 at 00:00 UTC" : "Returns October 1 at 00:00 UTC"}.`}</p>
+    <p class="skins-notice">${library ? "Select a skin, then press Apply. Switching is free." : `Permanent cosmetics · Free switching · ${selected?.order ? "Knight orders available all year" : sale.onSale ? "Halloween sale ends November 1 at 00:00 UTC" : "Halloween returns October 1 at 00:00 UTC"}.`}</p>
     <nav class="skins-filters" aria-label="Skin categories">${categories.map(([id,label]) => `<button type="button" data-skin-category="${id}" aria-pressed="${id === activeCategory}">${label}</button>`).join("")}</nav>
     ${feedback ? `<p class="skins-feedback" role="status">${escapeHtml(feedback)} <button type="button" data-skin-reload>${cosmeticPendingPurchase ? "Check Purchase" : "Retry"}</button></p>` : ""}
     ${!cosmeticUid ? '<p role="status">Sign in to load your permanent collection.</p>' : !cosmeticState && !cosmeticError ? '<p role="status">Loading your collection…</p>' : ""}
@@ -224,7 +263,7 @@ function renderSkinsPanel(mode = "shop") {
 function bindSkinsPanel(root) {
   if (!root) return;
   cosmeticMotion?.schedule();
-  root.querySelectorAll(".skin-detail .halloween-city-bats").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
+  root.querySelectorAll(".skin-detail :is(.halloween-city-bats,.knight-city-effects)").forEach(layer => (cosmeticMotion ||= createCosmeticMotion()).watch(layer, true));
   const mode = root.dataset.skinsMode;
   root.querySelectorAll("[data-skin-stage]").forEach(button => button.addEventListener("click", () => {
     cosmeticPreviewStage = Number(button.dataset.skinStage); refreshCosmeticPanels();
@@ -234,6 +273,7 @@ function bindSkinsPanel(root) {
       image.onerror = null;
       image.src = getCastleAsset(Number(image.dataset.skinPreviewStage));
       removeCosmeticBats(image.parentElement.querySelector(".halloween-city-bats"));
+      removeCosmeticBats(image.parentElement.querySelector(".knight-city-effects"));
     };
   });
   root.querySelectorAll("[data-skin-category]").forEach(button => button.addEventListener("click", () => { cosmeticCategory = button.dataset.skinCategory; cosmeticConfirmation = null; refreshCosmeticPanels(); }));

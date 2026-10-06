@@ -1115,6 +1115,13 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Add two visible flapping bats circling smaller city stages and three around the two larger stages. Keep the movement restrained, preserve map hit areas and labels, and respect reduced/off animation preferences. Pause decorative motion during camera movement; crowded and distant views may omit the bats to preserve map readability and performance.
 - Missing city art uses the standard stage image without changing ownership or the equipped choice. This replaces the city placeholder only. **Status:** approved for implementation; not yet verified deployed.
 
+#### Approved knight-order city skins — October 5, 2026
+
+- Add Templar Dawnwatch, Hospitaller Night Sanctuary, Teutonic Frost Citadel and Santiago Emberward to Shop → Skins for **600 Crowns each**. Each unlock includes all five existing appearance stages: levels 1–24, 25–49, 50–74, 75–99 and 100+. These nonseasonal orders are available year-round; Halloween retains its October sale window.
+- Preserve permanent ownership, free switching through Profile → Skins → Apply, server-authoritative prices and receipts, purchase without auto-equip, current-owner appearance across regular cities, and visibility to other players. Strongholds and gameplay stats remain unchanged.
+- Use the approved paintings and medieval activity outside the walls: standards, patrols, campfires, smoke and birds, with snow for Teutonic cities. Runtime artwork must be optimized and loaded only when used. Share the existing city-animation budget, pause during camera movement and behind overlays, omit distant/crowded effects, and respect reduced/off motion settings. Validate desktop and landscape-mobile performance before merge.
+- **Status:** approved for implementation and merge; production deployment not yet verified. Artwork and runtime validation are recorded in [the knight-order city notes](visual-qa/knight-order-city-skins/README.md).
+
 #### Approved Crowns counter and pickup presentation — October 1, 2026
 
 - Show the permanent Crowns wallet directly beneath Gold under the player profile. Both counters share a burgundy panel treatment, width, aligned icons and amounts. Crowns use the approved muted purple coin with an antique silver rim and a pale crown; Gold uses the approved antique Gold coin described below.

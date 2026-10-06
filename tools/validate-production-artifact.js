@@ -11,7 +11,7 @@ const required = [
   "assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp",
   "assets/optimized/halloween-map-layouts-v3.json",
   "crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html",
-  "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js",
+  "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js", "knight-city-effects.js",
   "assets/optimized/crown-coin-96x96-34224e7d7fb4.webp",
   "assets/optimized/pickup-crowns-192x192-d4a7a7bc335c.webp",
   "login-screen.css",
@@ -296,10 +296,11 @@ const battleItemReportingBudget = 8 * 1024;
 // Explicit Apply and bounded visible-only motion bring the normalized modules
 // to 57,104 bytes. Add 2 KiB to the prior 54 KiB cap; artwork is unchanged.
 // City-only catalog removes the troop renderer and premium flag/bundle UI.
-const cosmeticModuleBudget = 56 * 1024;
-const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js"]
+// Four catalog entries and the bounded canvas painter add less than 24 KiB.
+const cosmeticModuleBudget = 80 * 1024;
+const cosmeticModuleBytes = ["skins-ui.js", "skins-ui.css", "cosmetics-client.js", "functions/cosmetics.js", "knight-city-effects.js"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
-if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 56 KiB budget.");
+if (cosmeticModuleBytes > cosmeticModuleBudget) throw new Error("Cosmetic catalog, transport and presentation exceed their 80 KiB budget.");
 // Five transparent city stages total 491,870 bytes and load only when used.
 const halloweenCityArtBudget = 512 * 1024;
 const halloweenCityArtPaths = Object.values(require(path.join(dist, "functions/cosmetics.js")).item("halloween_city").assets);
@@ -316,7 +317,12 @@ for (const file of files) {
   const entry = { path: path.relative(dist, file).replace(/\\/g, "/") };
   if (/^(?:troop-skins|city-flag-skins)\.(?:js|css)$/.test(entry.path) || /^assets\/optimized\/halloween-(?:troops|flag-frame)-/.test(entry.path)) throw new Error("Retired cosmetic shipped: " + entry.path);
 }
-const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget;
+const knightCityArtBudget = 4 * 512 * 1024;
+const knightCityArtPaths = require(path.join(dist, "functions/cosmetics.js")).ITEMS.filter(item => item.order).flatMap(item => Object.values(item.assets));
+if (knightCityArtPaths.length !== 20) throw new Error("Knight orders require all twenty stage assets.");
+if (knightCityArtPaths.reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > knightCityArtBudget) throw new Error("Knight city art exceeds its 2 MiB lazy-load budget.");
+if (knightCityArtPaths.some(file => fs.readFileSync(path.join(dist, "service-worker.js"), "utf8").includes(file))) throw new Error("Knight art must not be install-precached.");
+const cosmeticFeatureBudget = cosmeticModuleBudget + 8 * 1024 + currencyArtBudget + halloweenCityArtBudget + knightCityArtBudget;
 // Seven Halloween props and layouts add 59,111 bytes; shell hooks stay under 5 KiB.
 // Bound the combined feature below 64 KiB; retain the install-cache/frame limits.
 const halloweenMapFeatureBudget = 64 * 1024;

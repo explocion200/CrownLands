@@ -12,7 +12,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 const rootFiles = [
   "map-transition-bats.css",
   "crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html",
-  "skins-ui.js", "skins-ui.css", "cosmetics-client.js",
+  "skins-ui.js", "skins-ui.css", "cosmetics-client.js", "knight-city-effects.js",
   "main-screen-art-ui.css",
   "infirmary-ui.js", "infirmary-ui.css",
   "clan-treasury-ui.js", "clan-treasury-ui.css",

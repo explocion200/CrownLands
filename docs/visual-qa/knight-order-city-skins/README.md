@@ -1,6 +1,6 @@
 # The Four Orders — animated city concepts
 
-Owner request: four animated city skins inspired by the Templars, Hospitallers, Teutonic Knights and Santiago, each with all five growth appearances. The owner chose **animated previews first**. The collection contains 20 city paintings outside the game and Shop catalog; prices, availability and production integration have not been selected.
+Owner request: four animated city skins inspired by the Templars, Hospitallers, Teutonic Knights and Santiago, each with all five growth appearances. After reviewing the 20 paintings, the owner requested game performance validation and **600 Crowns per skin**, then push and merge. Each permanent unlock includes all five stages; switching remains free and requires Apply.
 
 ## Open the preview
 
@@ -40,4 +40,24 @@ node tools/validate-knight-order-preview.js
 
 The focused browser validator covers all 20 distinct assets and their prompt mappings, all order/level choices, transparent corners, unchanged camp-art reuse and loading, removal of abstract overlay elements, desktop 1440×900, landscape 844×390, portrait 390×844, moving pixels outside every artwork rectangle, outer effects at 160px city scale, motion controls, comparison, five-stage Growth views, keyboard stage selection, reduced-motion default, and absence of external requests/runtime errors. Screenshots are written to ignored `release-artifacts/knight-order-city-skins/` for visual inspection.
 
-This directory is not an input to the production web build. No city ownership, purchase, equip, Crown balance, release contract, live-world data, or Master Specification rule is changed. Before a game release, approved designs still need optimized runtime assets, integration with the existing cosmetic motion budget and level mapping, approved catalog terms and release validation.
+## Runtime integration and performance
+
+The gallery and source PNGs in this directory remain outside the production web build. `tools/build-knight-city-assets.js` encodes 20 transparent 512×512 WebPs into `assets/optimized/`; `runtime-assets.json` records paths, sizes and source/output hashes. The set totals 1,597,190 bytes, with each five-stage order below 512 KiB. These images are requested only when used and are excluded from service-worker install precaching. Existing camp art is reused.
+
+The game catalog offers each order for 600 Crowns year-round, retaining Halloween's October-only sale. Server transactions still control balances, purchases, replay protection and Apply. Public equipped appearances follow current city owners and stages; default, capture, missing art and strongholds retain their established behavior. No world data, seasonal reset or payment behavior changes.
+
+`knight-city-effects.js` adapts the approved scenery to the existing cosmetic scheduler. Halloween and knight cities share four map slots on desktop and three at widths ≤1000px, with one selected detail preview. One shared painter runs at most 20fps, with no per-frame layout reads. Map canvases are capped at 256×256 and the selected preview at 384×384; inactive buffers shrink to 1×1. Camera movement, zooming, low/crowded zoom, covered maps, offscreen layers, hidden pages and reduced/off preferences stop painting. Thumbnails are static; removing the last skin stops the loop.
+
+```sh
+node tools/validate-cosmetics.js
+node tools/validate-knight-city-browser.js
+node tools/validate-cosmetics-browser.js
+node tools/validate-halloween-city-skin-browser.js
+node tools/validate-skin-motion-browser.js
+```
+
+`runtime-performance.json` records a local 60-city stress test (40 visible, 20 offscreen) under 4× CPU slowdown. Desktop and landscape-mobile checks compare the same scene with effects Off and Full, bound active canvases, paint frequency, memory and per-city paint duration, then verify every stop/resume condition. The real game fixture also covers four purchases and Apply actions, all twenty stage mappings, current/remote ownership and missing-art recovery. These measurements cover tested desktop Chromium conditions, not every physical phone or live network condition. Emulator coverage checks concurrent receipts, exact prices, permanent ownership and public Apply for all four orders.
+
+## Rollout
+
+The frontend waits for `getCosmeticsState.availableOfferIds` before exposing the four new offers. An older backend continues showing its supported Halloween offer. Deploy the updated `purchaseCosmetic`, `equipCosmetic` and `collectHarvestBonus` before `getCosmeticsState` advertises availability; Crown pickups must use the new catalog to retain equipped knight appearances. Deploy `reserveHarvestBonusSpawn` with the same catalog for consistent pickup reads. Then deploy `getCosmeticsState` with the validated client to activate sales. Push/merge authorization does not by itself verify production backend deployment. No production deployment is claimed by these notes.
