@@ -177,7 +177,15 @@
         const collision=boxes.some((p,j)=>j!==i&&Math.abs(p.x-boxes[i].x)<46&&Math.abs(p.y-boxes[i].y)<46);
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
-      districtTargets.forEach((target,i)=>{const d=districts[i];target.hidden=camera.zoom>=2.5||!locate(target,d.x,d.y);});
+      const viewportBox=viewport.getBoundingClientRect(), controls=host.querySelector(".estate-camera-controls").getBoundingClientRect();
+      districtTargets.forEach((target,i)=>{
+        const d=districts[i];target.hidden=camera.zoom>=2.5||!locate(target,d.x,d.y);
+        if(target.hidden)return;
+        const r=target.getBoundingClientRect();
+        if(r.left<controls.right+8&&r.right>controls.left-8&&r.top<controls.bottom+8&&r.bottom>controls.top-8){
+          target.style.left=Math.min(viewportBox.width-r.width/2-8,controls.right-viewportBox.left+r.width/2+8)+"px";
+        }
+      });
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "996fb9a2095fac6c66cd567fd91a45fde84b2ce5",
+  "baseCommit": "cf2c7ffe8f2806a264ca0222fed55ab9cc15c163",
   "coverage": [
     {
       "paths": [
@@ -48,7 +48,7 @@
         "inner-city-estate.css",
         "inner-city-estate.js"
       ],
-      "reason": "Replace the compact overview with the connected 20-site estate scene and isolated review fixtures. Validate approved coordinates and road connectivity, cottage/road/plot clearance, constant-distance movement, desktop and two landscape sizes, 44px targets, directory access, mouse/touch/keyboard controls, full fit, zoom clamps, motion modes, background pausing and scene disposal. Shared modal styling and the gear round trip are exercised in the real game.",
+      "reason": "Replace the compact overview with the connected 20-site estate scene and isolated review fixtures. Validate approved coordinates and road connectivity, cottage/road/plot clearance, constant-distance movement, desktop and two landscape sizes, 44px targets, directory access, mouse/touch/keyboard controls, full fit, zoom clamps, motion modes, background pausing and scene disposal. Shared modal styling and the gear round trip are exercised in the real game. Keep every overview district target clear of the camera toolbar on small landscape screens; click all seven districts at each size. Rerun against the current shared modal observer and background HUD pause changes from main.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"

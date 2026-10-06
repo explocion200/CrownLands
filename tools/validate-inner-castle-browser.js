@@ -69,7 +69,9 @@ async function main() {
       assert(await evaluate(() => !!document.querySelector('[data-estate-directory-building="treasury"] .estate-new')), 'New gear must appear in the building directory');
       const moving = await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')); await delay(150);
       assert.notEqual(await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')), moving, 'Full mode must move inhabitants');
-      await click('[data-estate-district="city"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5); await click('[data-estate-fit]');
+      for (const district of await evaluate(() => CrownlandsEstate.districts.map(d => d.key))) {
+        await click('[data-estate-district="' + district + '"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5); await click('[data-estate-fit]');
+      }
       for (const key of keys) {
         await click('[data-estate-directory-toggle]');
         const selector = '[data-estate-directory-building="' + key + '"]';
