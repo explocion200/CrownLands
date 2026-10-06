@@ -90,7 +90,7 @@ function getActivityRallyIdentity(rally) {
 }
 
 function renderRalliesActivityHeader() {
-  return `<header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><div class="carried-items"><span>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall Horns <strong>${formatMarchesNumber(getProjectedInventoryCount(RECALL_HORN_ITEM_ID))}</strong></span></span></div><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>`;
+  return `<header class="window-header"><img class="heading-art" src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><div class="carried-items"><span>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall Horns <strong>${formatMarchesNumber(getProjectedInventoryCount(RECALL_HORN_ITEM_ID))}</strong></span></span></div><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>`;
 }
 
 function renderRalliesActivityFooter() {

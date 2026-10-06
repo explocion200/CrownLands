@@ -26816,13 +26816,13 @@ function renderClanOverviewPanel(canLead = false) {
           <button type="button" class="shield-button" data-public-clan-id="${escapeHtml(clanSnapshot.id || state.clanId)}" aria-label="View ${escapeHtml(clanSnapshot.name || "Clan")} public clan profile">${renderClanHeraldry(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}</button>
         </div><div class="identity-copy"><p class="eyebrow">Your clan · ${clanRoleLabel(state.clanRole)}</p><h3 class="clan-name">${renderClanIdentityLink({ clanId: clanSnapshot.id || state.clanId, clanName: clanSnapshot.name, clanTag: clanSnapshot.tag, className: "clan-hero-name", display: "name" })}</h3><span class="clan-tag">[${escapeHtml(clanSnapshot.tag || "")}]</span></div></div>
         <div class="description-scroll" tabindex="0" aria-label="Clan description"><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p><div class="flourish" aria-hidden="true"><span></span>◆<span></span></div></div>
-        ${canLead ? `<div class="leader-actions" aria-label="Leader clan management"><button type="button" data-clan-action="edit-shield"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt="">Edit Heraldry</button><button type="button" data-clan-action="rename-clan"><img src="assets/icons/skills/guildCharters.svg" alt="">Rename Clan</button></div>` : '<p class="member-note">Your clan’s banner in the realm</p>'}
+        ${canLead ? `<div class="leader-actions" aria-label="Leader clan management"><button type="button" data-clan-action="edit-shield"><img src="assets/icons/skills/atlas-v1/shieldwallDiscipline.webp" alt="">Edit Heraldry</button><button type="button" data-clan-action="rename-clan"><img src="assets/icons/skills/atlas-v1/guildCharters.webp" alt="">Rename Clan</button></div>` : '<p class="member-note">Your clan’s banner in the realm</p>'}
       </section>
       <section class="clan-ledger" aria-label="Clan activity overview">
         <div class="clan-totals"><div class="power-total">${renderCrownlandsIcon("flag-crown")}<div><h2>Clan Power</h2><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong></div></div><div class="member-total"><span>Members</span><strong>${clanSnapshot.memberCount || 0}<small> / 30</small></strong></div></div>
         <header class="activity-heading"><h2>Clan affairs</h2><span>The strength of your house</span></header>
         <div class="activity-scroll" tabindex="0" aria-label="Clan activity shortcuts"><div class="activity-grid">
-          <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/marchOrders.svg" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card conquest" data-clan-action="section" data-clan-section="rewards" data-clan-reward="conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="${CLAN_QUEST_MAX_CAPTURES}" aria-valuenow="${Math.min(captureCount, CLAN_QUEST_MAX_CAPTURES)}"><i style="width:${Math.min(100,captureCount / CLAN_QUEST_MAX_CAPTURES * 100)}%"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
@@ -26975,7 +26975,7 @@ function renderClanRallyPanel() {
   return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
     <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
     <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies from a map objective. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
-    ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/marchOrders.svg" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
+    ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
   </section>`;
 }
 
@@ -33202,8 +33202,8 @@ function mountStrongholdDetails(city) {
   const crown = isCrownCitadel(city);
   const kind = crown ? "crown" : isTrainingStronghold(city) ? "training" : isSpeedStronghold(city) ? "movement" : isDefenseStronghold(city) ? "defense" : "gold";
   const icon = crown ? "assets/icons/reward-achievements-r1.svg" : {
-    training: "assets/optimized/troops-helmet-192x192-8c144647d31b.webp", movement: "assets/icons/skills/marchOrders.svg",
-    defense: "assets/icons/skills/shieldwallDiscipline.svg", gold: "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",
+    training: "assets/optimized/troops-helmet-192x192-8c144647d31b.webp", movement: "assets/icons/skills/atlas-v1/marchOrders.webp",
+    defense: "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp", gold: "assets/optimized/gold-coin-192x192-f2620b39eb0d.webp",
   }[kind];
   const crownBenefits = [
     ["Base gold", CROWN_CITADEL_GOLD_BONUS_PERCENT], ["Base troops", CROWN_CITADEL_TROOP_BONUS_PERCENT],
@@ -37383,7 +37383,7 @@ function skillRow(key) {
   const config = SKILL_CONFIG[key];
   return `
     <div class="skill-row" data-skill-row="${key}">
-      <img class="skill-emblem" src="assets/icons/skills/${key}.svg" alt="">
+      <img class="skill-emblem" src="assets/icons/skills/atlas-v1/${key}.webp" alt="">
       <h4 data-skill-level>${escapeHtml(config.label)}</h4>
       <p class="skill-description">${escapeHtml(config.description)}</p>
       <div class="skill-values"><strong><span data-skill-percent></span> <small>/ ${config.maxPercent}% cap</small></strong><span data-skill-rank></span></div>
@@ -38064,9 +38064,9 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
 function renderReinforcementOperationPanel(entries = []) {
   const currentUid = getCurrentOnlineUid();
   const groups = [
-    { id: "traveling", title: "Traveling", description: "Friendly support currently marching.", icon: "assets/icons/skills/marchOrders.svg", entries: entries.filter(entry => !entry.stationed) },
+    { id: "traveling", title: "Traveling", description: "Friendly support currently marching.", icon: "assets/icons/skills/atlas-v1/marchOrders.webp", entries: entries.filter(entry => !entry.stationed) },
     { id: "allies", title: "Stationed with allies", description: "Your troops defending clan holdings.", icon: "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", entries: entries.filter(entry => entry.stationed && entry.ownerUid === currentUid) },
-    { id: "defending", title: "Defending your holdings", description: "Clan troops held in your cities and objectives.", icon: "assets/icons/skills/shieldwallDiscipline.svg", entries: entries.filter(entry => entry.stationed && entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid) },
+    { id: "defending", title: "Defending your holdings", description: "Clan troops held in your cities and objectives.", icon: "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp", entries: entries.filter(entry => entry.stationed && entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid) },
   ];
   const count = groups.reduce((total, group) => total + group.entries.length, 0);
   return renderReinforcementsPanelView(groups, count, "Stationed troops remain at their destination until recalled, sent home, invalidated, or lost in battle.");
@@ -38119,7 +38119,7 @@ function renderMarchesOperationPanel(marches) {
   const timing = first?.serverPending ? first.serverRetrying ? "Checking" : "Sending" : first?.isResolving ? first.kind === "scout" ? "Receiving report…" : "Resolving" : first ? formatDuration(first.remaining) : "";
   return `<div class="marches-panel"><section class="march-summary" aria-label="March summary"><div class="summary-copy"><h3>${marches.length ? `${formatMarchesNumber(marches.length)} ${marches.length === 1 ? "march" : "marches"} underway` : "Your armies are at rest"}</h3><p>${escapeHtml(marches.length ? formatOutgoingMissionSummary(marches) : "No active troop marches")}</p></div>${first ? `<div class="summary-next"><span>${pendingLabel}</span><strong>${timing}</strong></div>` : ""}</section>
     <div class="column-labels" aria-hidden="true"><span>Order</span><span>Origin &amp; destination</span><span>Force</span><span>Arrival</span><span>Commands</span></div>
-    <div class="march-list" tabindex="0" aria-label="Active marches">${marches.length ? marches.map(renderOutgoingAttackCard).join("") : '<div class="empty-state"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active troop marches</h3><p>Armies, scouts, transfers and returning troops will appear here when they are on the move.</p><button data-close-marches type="button">Return to map</button></div>'}</div></div>`;
+    <div class="march-list" tabindex="0" aria-label="Active marches">${marches.length ? marches.map(renderOutgoingAttackCard).join("") : '<div class="empty-state"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active troop marches</h3><p>Armies, scouts, transfers and returning troops will appear here when they are on the move.</p><button data-close-marches type="button">Return to map</button></div>'}</div></div>`;
 }
 
 function formatHeldCampReward(camp) {
@@ -38273,7 +38273,7 @@ function renderOutgoingAttackCard(mission) {
   const timing = mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? mission.kind === "scout" ? "Receiving report…" : "Resolving" : formatDuration(mission.remaining);
   const timingNote = mission.serverPending ? mission.serverRetrying ? "Checking the same order" : "Order being sent" : mission.isResolving ? "Arrived · awaiting result" : isReturning || isCampReturn ? "Until return" : "Until arrival";
   const emblem = isReturning || isCampReturn ? renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))
-    : isTransfer && !isReinforcement ? '<img src="assets/icons/skills/marchOrders.svg" alt="">'
+    : isTransfer && !isReinforcement ? '<img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt="">'
     : renderBattleReportLedgerIcon(isScout ? "scout" : isReinforcement ? "defense" : isRallyJoin ? "realm" : "attack");
   return `<article class="march-row ${kind}${fullTroops.length > 8 ? " wide-force" : ""}" aria-label="${escapeHtml(missionLabel)} to ${escapeHtml(targetName)}">
     <div class="march-kind">${emblem}<strong>${missionLabel}</strong></div>

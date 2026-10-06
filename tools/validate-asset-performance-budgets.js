@@ -97,9 +97,22 @@ assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledge
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 118 * 1024,
 "Chat and reward ledger shell files exceed their 118 KiB budget.");
-const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills"));
-assert.equal(skillEmblemFiles.length, 8, "Skills must ship exactly eight approved emblems.");
+const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg"));
+assert.equal(skillEmblemFiles.length, 8, "Keep the eight legacy skill emblems available to older clients.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
+// Approved painted emblems are 320px transparent WebP, loaded only by views
+// that display them. Keep both their per-file and combined payload bounded;
+// the service-worker installation and login-preload limits are unchanged.
+const paintedSkillFiles = fs.readdirSync(path.join(root, "assets/icons/skills/atlas-v1"));
+assert.equal(paintedSkillFiles.length, 8, "Ship exactly eight approved atlas skill emblems.");
+let paintedSkillBytes = 0;
+for (const name of paintedSkillFiles) {
+  assert(name.endsWith(".webp"), "Only delivery WebP files belong in the skill atlas.");
+  const bytes = statBytes(`assets/icons/skills/atlas-v1/${name}`);
+  assert(bytes <= 40 * 1024, `${name} exceeds its 40 KiB painted-emblem budget.`);
+  paintedSkillBytes += bytes;
+}
+assert(paintedSkillBytes <= 240 * 1024, "The eight painted skill emblems exceed their combined 240 KiB budget.");
 // Approved compact rows and persistent side-by-side development add scoped CSS
 // to the existing files, with no new requests, art, or runtime JavaScript.
 // Bound the two presentation sources by an additional 8 KiB in total; keep the

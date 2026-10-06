@@ -4,7 +4,7 @@
   const sprite = "assets/icons/battle-reports-ledger-r1.svg";
   const assets = {
     troops:"assets/optimized/troops-helmet-192x192-8c144647d31b.webp", gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp", xp:"assets/icons/reward-achievements-r1.svg",
-    sword:"assets/icons/skills/swordmastery.svg", shield:"assets/icons/skills/shieldwallDiscipline.svg", wall:"assets/icons/skills/stoneworks.svg",
+    sword:"assets/icons/skills/atlas-v1/swordmastery.webp", shield:"assets/icons/skills/atlas-v1/shieldwallDiscipline.webp", wall:"assets/icons/skills/atlas-v1/stoneworks.webp",
     attackGear:"assets/optimized/gear-barracks-chest-192x192-3c118f02d53d.webp", defenseGear:"assets/optimized/gear-gatehouse-chest-192x192-1e72532be259.webp",
     chest:"assets/optimized/item-common-gear-box-192x192-d31500be5747.webp"
   };

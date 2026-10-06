@@ -1,40 +1,87 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "906783e95cafa24f1d8fa1544bb97a5567786949",
+  "baseCommit": "cc337b977ea174dafab3382836fba0b60732407f",
   "coverage": [
     {
-      "paths": ["game.js"],
-      "reason": "Remove the Hero-level lock from clan discovery, creation and existing-member views and the shared HUD label/signature. Check actual menu/action dispatch at Levels 1, 9, 10 and 257 at desktop and landscape sizes, retained capacity/application/departure restrictions, and notification/role/session/heraldry dependencies of the HUD.",
-      "tests": ["tools/validate-clans.js", "tools/validate-clan-level-access-browser.js", "tools/validate-clan-notifications-browser.js"]
+      "paths": [
+        "battle-report-detail-ui.js",
+        "camp-details-ui.js",
+        "clan-ledger-ui.css",
+        "clan-tower-buildings-ui.js",
+        "clan-tower-details-ui.js",
+        "engineers-workshop-ui.js",
+        "game.js",
+        "help-handbook-content.js",
+        "kingdom-ledgers-ui.js",
+        "marches-activity-ui.js",
+        "objectives-activity-ui.js",
+        "rallies-activity-ui.js",
+        "reinforcements-activity-ui.js",
+        "scout-report-ui.js",
+        "skills-ledger-ui.css",
+        "stronghold-details-ui.js",
+        "troop-orders-ui.js"
+      ],
+      "reason": "Replace only shared skill-image URLs across all 17 active presentation files, including conditional/template paths and CSS backgrounds, and preserve raster aspect ratio in skill cards. Check approved asset identity and all eight real skill cards at desktop and landscape-mobile sizes; exercise order power, report and scout renderers that reuse the art. No mechanics or server-authoritative code changes.",
+      "tests": [
+        "tools/validate-skill-artwork-browser.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-scout-report-ui.js"
+      ]
     },
     {
-      "paths": ["functions/index.js"],
-      "reason": "Remove only the Hero-level admission guard from creation, open joining, applications and approval acceptance through the shared join transaction. Emulator calls verify Level 1 creation and approval acceptance, joins at Levels 1/9/10, application replay, cost, capacity, role authorization, existing membership, departure cooldown, current realm and authentication. Economy settlement, clan identity and membership transaction implementations are preserved.",
-      "tests": ["tools/validate-clans.js", "functions/test/emulator-clan-level-access.js"]
+      "paths": [
+        "assets/icons/skills/atlas-v1/fieldMedics.webp",
+        "assets/icons/skills/atlas-v1/guildCharters.webp",
+        "assets/icons/skills/atlas-v1/marchOrders.webp",
+        "assets/icons/skills/atlas-v1/royalGranaries.webp",
+        "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp",
+        "assets/icons/skills/atlas-v1/stoneworks.webp",
+        "assets/icons/skills/atlas-v1/swordmastery.webp",
+        "assets/icons/skills/atlas-v1/taxStewardship.webp",
+        "docs/art-sources/skill-atlas-icons/fieldMedics.png",
+        "docs/art-sources/skill-atlas-icons/guildCharters.png",
+        "docs/art-sources/skill-atlas-icons/manifest.json",
+        "docs/art-sources/skill-atlas-icons/marchOrders.png",
+        "docs/art-sources/skill-atlas-icons/royalGranaries.png",
+        "docs/art-sources/skill-atlas-icons/shieldwallDiscipline.png",
+        "docs/art-sources/skill-atlas-icons/stoneworks.png",
+        "docs/art-sources/skill-atlas-icons/swordmastery.png",
+        "docs/art-sources/skill-atlas-icons/taxStewardship.png"
+      ],
+      "reason": "Preserve the eight approved PNG master bytes and final prompts and export the matching 320px transparent versioned WebP images. Verify source/runtime SHA-256, decoding and alpha, all active URL consumers, runtime payload budgets and production packaging exclusion of masters.",
+      "tests": [
+        "tools/validate-skill-artwork-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ]
     },
     {
-      "paths": ["tools/validate-clans.js"],
-      "reason": "Replace the superseded Level 10 source assertion with the confirmed unrestricted clan-access contract and execute the existing clan structural/security checks.",
-      "tests": ["tools/validate-clans.js"]
+      "paths": [
+        "tools/generate-release-manifest.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Include nested versioned emblems in the client release fingerprint using binary-safe WebP hashing and bound only the new lazy icon payload. Validate production artifacts and unchanged login/install budgets; no server contracts or emulator behavior change.",
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-skill-artwork-browser.js"
+      ]
     },
     {
-      "paths": ["tools/validate-deferred-ui-styles.js"],
-      "reason": "Repair the stale optional-stylesheet count in the shared validator required by the clan gate: unchanged origin/main already ships 13 ungrouped optional styles, while this dependency still expected nine. Run its loader/retry/session/offline checks without changing runtime styles or packaging.",
-      "tests": ["tools/validate-deferred-ui-styles.js"]
+      "paths": [
+        "tools/validate-skill-artwork-browser.js"
+      ],
+      "reason": "Execute the added isolated actual-game regression for the shared painted-icon references, complete source and delivery hashes, decoded alpha, CSS header and undistorted desktop/landscape skill cards.",
+      "tests": [
+        "tools/validate-skill-artwork-browser.js"
+      ]
     },
     {
-      "paths": ["tools/validate-clan-level-access-browser.js"],
-      "reason": "Run the added isolated actual-game browser regression for clan entry, discovery, creation, joining/application service dispatch and low-level member access at desktop and landscape-mobile sizes.",
-      "tests": ["tools/validate-clan-level-access-browser.js"]
-    },
-    {
-      "paths": ["functions/test/emulator-clan-level-access.js"],
-      "reason": "Execute the added local-emulator-only callable regression for unrestricted Hero-level clan admission and preserved authoritative eligibility rules.",
-      "tests": ["functions/test/emulator-clan-level-access.js"]
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "reason": "Record the user's confirmed all-level clan access rule, superseding the implemented Level 10 gate and preserving other eligibility rules. Mark in development without claiming deployment; documentation adds no runtime dependencies.",
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/art-sources/skill-atlas-icons/README.md"
+      ],
+      "reason": "Record the owner-confirmed art direction and asset provenance, packaging, versioning and lazy-load behavior. Documentation only; runtime and asset dependencies are covered by the above groups.",
       "tests": []
     }
   ]
