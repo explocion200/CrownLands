@@ -25378,7 +25378,6 @@ function getClanFriendlyBlockReason(target) {
 
 function renderClanHudAccess() {
   if (!clanHudBtn || !clanHudIcon || !state) return;
-  const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   const hasClan = Boolean(state.clanId);
   const activeClan = clanSnapshot?.id === state.clanId ? clanSnapshot : null;
   const clanName = activeClan?.name || state.clanName || "Clan";
@@ -25394,7 +25393,6 @@ function renderClanHudAccess() {
     rallyCount ? `${rallyCount} active ${rallyCount === 1 ? "rally" : "rallies"}` : "",
   ].filter(Boolean).join(", ");
   const signature = [
-    heroLevel < 10 ? "locked" : "unlocked",
     state.clanId || "",
     clanName,
     clanTag,
@@ -25418,11 +25416,9 @@ function renderClanHudAccess() {
   clanTabBtn?.setAttribute("aria-label", `Clan${notificationLabel ? `, ${notificationLabel}` : ""}`);
   clanHudBtn.setAttribute(
     "aria-label",
-    heroLevel < 10
-      ? "Clan unlocks at Hero Level 10"
-      : hasClan
-        ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}${notificationLabel ? `, ${notificationLabel}` : ""}`
-        : "Find a clan"
+    hasClan
+      ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}${notificationLabel ? `, ${notificationLabel}` : ""}`
+      : "Find a clan"
   );
   clanHudIcon.innerHTML = renderClanHeraldry(
     shield,
@@ -27147,11 +27143,6 @@ function renderClanViewContent() {
   const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
   clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
-  const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
-  if (heroLevel < 10) {
-    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">${renderCrownlandsIcon("clan")}</span><h3>Clans unlock at Level 10</h3><p>Raise your Hero to Level 10 to create or join a clan.</p><strong>Level ${heroLevel} / 10</strong></section>`;
-    return;
-  }
   if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length && !clanContent.querySelector(".clan-browser")) || (state?.clanId && !clanSnapshot)) {
     clanContent.innerHTML = `<section class="clan-empty"><h3>Loading clans…</h3></section>`;
     return;

@@ -501,7 +501,6 @@ const INACTIVITY_POLICY_MODE = safeString(REALM_CONFIG.inactivityPolicyMode, 16)
   ? "audit"
   : "enforce";
 const GAME_SERVER_HEARTBEAT_MODEL_VERSION = 2;
-const CLAN_UNLOCK_LEVEL = 10;
 const CLAN_CREATE_GOLD_COST = 100_000;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -20282,13 +20281,6 @@ function clanGiftActivityForClient(value = {}) {
   };
 }
 
-function assertClanUnlocked(profile = {}) {
-  const level = Math.max(1, Math.floor(safeNumber(profile?.character?.level, 1)));
-  if (level < CLAN_UNLOCK_LEVEL) {
-    throw new HttpsError("failed-precondition", `Clans unlock at Hero Level ${CLAN_UNLOCK_LEVEL}.`);
-  }
-}
-
 function getClanJoinCooldownUntilMs(profile = {}) {
   const untilMs = Math.max(0, timestampToMs(profile.clanJoinCooldownUntilMs));
   const changedAtMs = Math.max(0, timestampToMs(profile.clanIdentityUpdatedAtMs));
@@ -20652,7 +20644,6 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
     if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const profile = profileSnap.data() || {};
     assertCurrentClanActorProfile(profile);
-    assertClanUnlocked(profile);
     assertNoClan(profile, nowMs);
     assertPersistentClanIdentityAvailable(persistentNameSnap, { label: "name" });
     assertPersistentClanIdentityAvailable(persistentTagSnap, { label: "tag" });
@@ -20927,7 +20918,6 @@ async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clan
   const clan = clanSnap.data() || {};
   assertCurrentClanActorProfile(profile);
   assertCurrentClan(clan);
-  assertClanUnlocked(profile);
   assertNoClan(profile, nowMs, applicationRef ? clanId : "");
   if (clan.status !== "active") throw new HttpsError("failed-precondition", "That clan is no longer active.");
   if (clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) >= CLAN_MEMBER_LIMIT) {
@@ -20993,7 +20983,6 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     const clan = clanSnap.data() || {};
     assertCurrentClanActorProfile(profile);
     assertCurrentClan(clan);
-    assertClanUnlocked(profile);
     assertNoClan(profile, nowMs, clanId);
     if (clan.admissionMode !== "approval") throw new HttpsError("failed-precondition", "That clan is open to direct joining.");
     if (clan.status !== "active" || clan.memberCount >= CLAN_MEMBER_LIMIT) throw new HttpsError("failed-precondition", "That clan cannot accept applications.");
