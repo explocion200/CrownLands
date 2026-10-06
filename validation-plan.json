@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "a07b67582f9ce0f1112022ee45069c9f33b72856",
+  "baseCommit": "730182e31ab2801ba5f4537e1342facbb1a3fe08",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/itch-page-2026-10-06/README.md"
       ],
-      "reason": "Record the authorized verified itch.io release and weekly blog publication on both itch.io and the primary website, exact source/backend compatibility, complete public artifact parity and focused browser/live-site checks. Documentation only; no runtime, balance, production configuration or authoritative backend source changes. No additional executable or emulator suites apply.",
+      "reason": "Record the authorized itch.io cover and current-gameplay gallery refresh, image-generation prompt, original-capture provenance and verified public image hashes/order. Documentation only; the marketing files remain ignored release evidence outside the production client. No gameplay, backend, runtime assets, installed icons, build configuration or shared executable dependencies change, so no runtime or emulator tests apply. Validate all six published image dimensions and exact SHA-256 parity, confirm the old gallery is absent and visually inspect the public desktop/landscape gallery.",
       "tests": []
     }
   ]

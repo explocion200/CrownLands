@@ -66,6 +66,16 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
+### October 6 itch.io cover and current gameplay gallery — verified
+
+The user authorized creating a new itch.io cover and replacing the previous gallery with current gameplay. The [public Crownlands project](https://crownlands.itch.io/crownlands) now uses illustrated crown-and-castle cover image `30603128` and exactly five new gameplay images, in order: campaign map `30603134`, Main City management `30603131`, Inner Castle `30603315`, officer equipment `30603132`, and current city skins `30603383`. All six old gallery images were removed.
+
+The cover was created with the built-in image-generation tool and exported as a 1408×1117 JPEG to fit the editor's observed 3 MB limit. The five 1920×950 gallery files are unchanged browser captures from the authenticated current game at `https://playcrownlands.com/play/`, build `390ed49899da47a3f39e39d431b16386aeb57ffe`. Chat was hidden and no account email, private messages or report contents were captured. Read-only navigation showed the current interface; no purchase, upgrade, battle, reward claim or equipment change was performed.
+
+The final public page was saved at October 6, 2026, 17:16 UTC. At 17:17:13 UTC, all six full-resolution public image files matched the upload sources byte-for-byte and by SHA-256; gallery order, distinctness, old-image absence and loaded previews passed. Desktop reading and the existing horizontal gallery at landscape-mobile 844×390 were inspected. The existing manually sized 1280×720 game embed still makes the mobile document wider than its viewport; this media refresh did not alter that page layout. The browser viewport override was reset after inspection.
+
+Prompt, file hashes, original-capture provenance, public image URLs and retained local evidence are documented in [the itch page media notes](visual-qa/itch-page-2026-10-06/README.md). The selected browser-play ZIP remains upload `19600336`; AI disclosure still identifies Graphics and Code. This publication changes itch.io store media only. Installed-game icons, the published gameplay build, backend, realm and website blog retain the preceding verified releases.
+
 ### October 6 itch.io release and weekly dev blog — verified
 
 The user authorized updating itch.io and publishing the past week's dev blog on both itch.io and the Crownlands website. The former itch publication hold is lifted for this update. The package comes from the exact verified October 6 web build `390ed49899da47a3f39e39d431b16386aeb57ffe`; it adds no gameplay change or production-data migration.
@@ -2105,6 +2115,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 6, 2026 — itch.io cover and current gameplay gallery
+
+- Published a new illustrated cover and replaced all six old gallery images with five distinct captures from live build `390ed498...`: map, city management, Inner Castle, officer gear and current skins.
+- Verified exact public byte/SHA-256 parity for the cover and all five captures, final gallery order and old-image absence. Inspected desktop and landscape gallery reading; recorded the existing wide mobile embed layout.
+- Retained the full generation prompt, master/export hashes, original captures and source backups. The refresh changes store media only; the selected playable upload, gameplay build, installed icons and backend are unchanged.
 
 ## October 6, 2026 — itch.io release and weekly dev blog
 
