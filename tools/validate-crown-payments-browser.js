@@ -44,6 +44,15 @@ function fixture(mode = "test") {
   cosmeticCategory = "all"; cosmeticSelected = "halloween_city"; cosmeticOpenShopRequested = true; showShopModal();
 }
 
+function shopFrame() {
+  return [".rs-shop-shell", ".rs-shop-header", ".rs-shop-heading h1", ".rs-shop-seal", "#royalShopSections", "#royalShopCatalogPanel", "#closeModalBtn", ...["provisions", "skins", "crowns", "rewards"].map(id => `[data-rs-section="${id}"]`)].map(selector => {
+    const node = modal.querySelector(selector), rect = node.getBoundingClientRect(), style = getComputedStyle(node);
+    return { selector, x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+      fontFamily: style.fontFamily, fontSize: style.fontSize, lineHeight: style.lineHeight,
+      label: node.hasAttribute("data-rs-section") ? node.textContent : null };
+  });
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..");
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
@@ -89,6 +98,21 @@ async function main() {
       await wait("!!document.querySelector('[data-skins-mode=shop]')");
       assert.equal(await evaluate("document.querySelectorAll('[data-skin-earn],[data-crown-payments]').length"), 0, "Skins no longer hosts earning or checkout buttons");
       assert.deepEqual(await evaluate("[...document.querySelectorAll('[data-rs-section]')].map(tab => tab.dataset.rsSection)"), ["provisions", "skins", "crowns", "rewards"]);
+      await evaluate("document.fonts.ready");
+      await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");
+      let commonFrame;
+      for (const section of ["provisions", "skins", "crowns", "rewards"]) {
+        await click(`[data-rs-section="${section}"]`);
+        const frame = await evaluate(`(${shopFrame.toString()})()`);
+        if (commonFrame) assert.deepEqual(frame, commonFrame, `${section} must preserve the same Shop frame, header, tabs and typography at ${viewport.width}`);
+        else commonFrame = frame;
+        assert.equal(await evaluate("modal.querySelector('.rs-shop-heading p').textContent"), "The royal market");
+        assert(await evaluate("(() => { const balance = modal.querySelector('[data-shop-balance]'); balance.textContent = 'stale'; patchRoyalShopSelection(); return balance.textContent === formatNumber(getProjectedGold()); })()"), "Gold balance refreshes on every tab");
+        if (mode === "live") {
+          await evaluate("Promise.all([...modal.querySelectorAll('img')].map(img => img.decode()))");
+          fs.writeFileSync(path.join(output, `shared-shop-${section}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+        }
+      }
       await click('[data-rs-section="crowns"]');
       await wait("!!document.querySelector('[data-crown-checkout]')");
       assert(await evaluate("(() => { const button = document.querySelector('[data-crown-checkout]'); button.focus(); refreshCosmeticPanels(); return button === document.activeElement && button.isConnected; })()"), "Wallet refreshes preserve the offer and keyboard focus");
@@ -192,7 +216,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log("Crown checkout browser passed at desktop and landscape mobile: dedicated Buy Crowns tab, server-priced Crown card, keyboard tabs, removed Earn Crowns, live/test disclosure, manual review, blocked popup, same-order recovery, status, unchanged wallet, hostile URL and account-switch isolation.");
+    console.log("Crown checkout browser passed at desktop and landscape mobile: consistent four-tab Shop frame/header/navigation, server-priced Crown card, keyboard tabs, removed Earn Crowns, live/test disclosure, manual review, blocked popup, same-order recovery, status, unchanged wallet, hostile URL and account-switch isolation.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }

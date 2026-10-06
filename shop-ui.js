@@ -51,17 +51,18 @@ function renderRoyalShopCard(item, rewards = false) {
   return `<button class="rs-item-tile ${rewards ? "rs-reward-tile" : ""}" ${rewards ? `data-rs-reward="${item.id}"` : `data-shop-item="${escapeHtml(item.id)}" data-shop-select="${escapeHtml(item.id)}"`} type="button" role="option" aria-selected="${selected}" tabindex="${selected ? "0" : "-1"}" aria-label="${escapeHtml(item.label)}${rewards ? "" : `, ${royalShopExact(price)} Gold`}"><span class="rs-tile-art">${renderItemIcon(item)}</span><span class="rs-item-name">${escapeHtml(item.label)}</span>${rewards ? `<span class="rs-reward-caption">${escapeHtml(item.description)}</span><span class="rs-tile-price rewarded-ad-availability">${escapeHtml(getRewardedAdAvailability().text)}</span>` : `<span class="rs-tile-price" data-rs-card-price title="${royalShopExact(price)} Gold">${royalShopMoney(price)}</span>`}</button>`;
 }
 
-function renderRoyalShopTabs(counts = false) {
+function renderRoyalShopTabs() {
   const tabs = [["provisions", "Provisions", getSelectableShopItemIds().length], ["skins", "Skins", COSMETIC_CATALOG.ITEMS.length], ["crowns", "Buy Crowns"], ["rewards", "Free boosts", REWARDED_AD_ITEMS.length]];
-  return '<nav id="royalShopSections" role="tablist" aria-label="Shop sections">' + tabs.map(([id, label, count]) => `<button id="royalShopTab-${id}" data-rs-section="${id}" type="button" role="tab" aria-selected="${id === royalShopSection}" tabindex="${id === royalShopSection ? 0 : -1}" aria-controls="royalShopCatalogPanel">${label}${counts && count !== undefined ? ` <span>${count}</span>` : ""}</button>`).join("") + '</nav>';
+  return '<nav id="royalShopSections" role="tablist" aria-label="Shop sections">' + tabs.map(([id, label, count]) => `<button id="royalShopTab-${id}" data-rs-section="${id}" type="button" role="tab" aria-selected="${id === royalShopSection}" tabindex="${id === royalShopSection ? 0 : -1}" aria-controls="royalShopCatalogPanel">${label}${count !== undefined ? ` <span>${count}</span>` : ""}</button>`).join("") + '</nav>';
 }
 
 function renderRoyalShopPanel() {
-  if (["skins", "crowns"].includes(royalShopSection)) return `<div class="rs-shop-shell skin-shop-shell"><header class="rs-shop-header"><div class="rs-shop-heading"><h1>Shop</h1></div></header>${renderRoyalShopTabs()}<div id="royalShopCatalogPanel" role="tabpanel" aria-labelledby="royalShopTab-${royalShopSection}">${royalShopSection === "skins" ? renderSkinsPanel("shop") : '<section class="crown-shop" aria-label="Crown packs"><div data-crown-payments><p role="status">Loading Crown packs…</p></div></section>'}</div></div>`;
   const rewards = royalShopSection === "rewards";
   const items = rewards ? REWARDED_AD_ITEMS : [...(COMMON_GEAR ? [COMMON_GEAR_BOX_ITEM] : []), ...SHOP_ITEMS];
-  return `<div class="rs-shop-shell"><header class="rs-shop-header"><span class="rs-shop-seal" aria-hidden="true">${royalShopIcon("store")}</span><div class="rs-shop-heading"><p>The royal market</p><h1>Shop</h1></div><div class="rs-gold-balance"><span>Gold available</span><strong><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span data-shop-balance title="${royalShopExact(getProjectedGold())} Gold">${formatNumber(getProjectedGold())}</span></strong></div><span class="rs-close-space" aria-hidden="true"></span></header>
-    <div class="rs-shop-body"><section class="rs-shop-catalog" data-section="${royalShopSection}" aria-label="Shop catalog">${renderRoyalShopTabs(true)}<div class="rs-catalog-heading"><h2>${rewards ? "Free .5h Boosts" : "The royal stores"}</h2><span>${rewards ? "Optional advertisements" : items.length + " provisions"}</span></div><div id="royalShopCatalogPanel" role="tabpanel" aria-labelledby="royalShopTab-${royalShopSection}"><div id="royalShopItemGrid" class="shop-items" role="listbox" aria-label="${rewards ? "Optional rewards" : "Shop items"}">${items.map(item => renderRoyalShopCard(item, rewards)).join("")}${rewards ? "" : `<div class="rs-tile-empty" aria-hidden="true">${royalShopIcon("bag")}<span>For your realm</span></div>`}</div></div><footer class="rs-catalog-footer"><span>${rewards ? "One shared 30-minute cooldown" : "Purchased items go to your Bag"}</span><span>${rewards ? "Daily reset · 00:00 UTC" : "One item per purchase"}</span></footer></section>${renderRoyalShopSelection()}</div></div>`;
+  const content = royalShopSection === "skins" ? renderSkinsPanel("shop")
+    : royalShopSection === "crowns" ? '<section class="crown-shop" aria-label="Crown packs"><div data-crown-payments><p role="status">Loading Crown packs…</p></div></section>'
+    : `<div class="rs-shop-body"><section class="rs-shop-catalog" data-section="${royalShopSection}" aria-label="Shop catalog"><div class="rs-catalog-heading"><h2>${rewards ? "Free .5h Boosts" : "The royal stores"}</h2><span>${rewards ? "Optional advertisements" : items.length + " provisions"}</span></div><div class="rs-shop-items-panel"><div id="royalShopItemGrid" class="shop-items" role="listbox" aria-label="${rewards ? "Optional rewards" : "Shop items"}">${items.map(item => renderRoyalShopCard(item, rewards)).join("")}${rewards ? "" : `<div class="rs-tile-empty" aria-hidden="true">${royalShopIcon("bag")}<span>For your realm</span></div>`}</div></div><footer class="rs-catalog-footer"><span>${rewards ? "One shared 30-minute cooldown" : "Purchased items go to your Bag"}</span><span>${rewards ? "Daily reset · 00:00 UTC" : "One item per purchase"}</span></footer></section>${renderRoyalShopSelection()}</div>`;
+  return `<div class="rs-shop-shell"><header class="rs-shop-header"><span class="rs-shop-seal" aria-hidden="true">${royalShopIcon("store")}</span><div class="rs-shop-heading"><p>The royal market</p><h1>Shop</h1></div><div class="rs-gold-balance"><span>Gold available</span><strong><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span data-shop-balance title="${royalShopExact(getProjectedGold())} Gold">${formatNumber(getProjectedGold())}</span></strong></div><span class="rs-close-space" aria-hidden="true"></span></header>${renderRoyalShopTabs()}<div id="royalShopCatalogPanel" role="tabpanel" aria-labelledby="royalShopTab-${royalShopSection}">${content}</div></div>`;
 }
 
 function bindRoyalShopAction() {
@@ -76,8 +77,11 @@ function bindRoyalShopAction() {
 }
 
 function patchRoyalShopSelection() {
+  if (!modal.open || !modal.classList.contains("shop-modal") || modal.classList.contains("rewarded-ad-confirmation-modal")) return;
+  const balance = modalBody.querySelector("[data-shop-balance]");
+  if (balance) { balance.title = royalShopExact(getProjectedGold()) + " Gold"; setTextIfChanged(balance, formatNumber(getProjectedGold())); }
   const current = modalBody.querySelector(".rs-shop-selection");
-  if (!current || !modal.open || !modal.classList.contains("shop-modal") || modal.classList.contains("rewarded-ad-confirmation-modal")) return;
+  if (!current) return;
   const model = getRoyalShopSelection();
   if (!model) return;
   if (current.dataset.selectedShopItem !== model.item.id) {
@@ -95,8 +99,6 @@ function patchRoyalShopSelection() {
     const title = royalShopExact(model.purchase.price) + " Gold";
     if (price.title !== title) { price.title = title; price.innerHTML = royalShopMoney(model.purchase.price); }
   }
-  const balance = modalBody.querySelector("[data-shop-balance]");
-  if (balance) { balance.title = royalShopExact(getProjectedGold()) + " Gold"; setTextIfChanged(balance, formatNumber(getProjectedGold())); }
   modalBody.querySelectorAll("[data-shop-select]").forEach(card => {
     const price = getShopPurchaseState(card.dataset.shopSelect)?.price;
     const well = card.querySelector("[data-rs-card-price]");

@@ -10,9 +10,10 @@
         "crown-payments-ui.js",
         "crown-payments-ui.css",
         "index.html",
-        "tools/validate-crown-payments-browser.js"
+        "tools/validate-crown-payments-browser.js",
+        "shop-ui.css"
       ],
-      "reason": "Move Crown purchases from Skins into a dedicated adjacent Shop tab and remove the shared Earn Crowns button. Exercise real Shop navigation and four-tab keyboard focus, server-provided pack quantity/price, existing artwork, live/test purchase review, order recovery/status, account isolation, unavailable/sign-out states, wallet refresh focus and desktop/landscape card layout. Stabilize the existing payment-policy captures by positioning each section after font loading without a competing URL-fragment scroll. Existing Shop tests cover provision buying and rewarded-ad dependencies; cosmetics tests cover the changed shared skin-panel layout, purchase/equip and Profile views. Server authority and contracts are unchanged.",
+      "reason": "Move Crown purchases from Skins into a dedicated adjacent Shop tab and remove the shared Earn Crowns button. Unify the frame, market header, Gold balance, count badges and full-width tab bar across Provisions, Skins, Buy Crowns and Free boosts. Compare frame/header/tab geometry and typography across all four tabs, and exercise Gold balance updates on each tab. Exercise real Shop navigation and four-tab keyboard focus, server-provided pack quantity/price, existing artwork, live/test purchase review, order recovery/status, account isolation, unavailable/sign-out states, wallet refresh focus and desktop/landscape card layout. Stabilize the existing payment-policy captures by positioning each section after font loading without a competing URL-fragment scroll. Existing Shop tests cover provision buying and rewarded-ad dependencies; cosmetics tests cover the changed shared skin-panel layout, purchase/equip and Profile views. Server authority and contracts are unchanged.",
       "tests": [
         "tools/validate-crown-payments-browser.js",
         "tools/validate-shop-browser.js",
@@ -33,7 +34,7 @@
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the owner-confirmed Buy Crowns tab, icon/pack/price/Buy presentation and Earn Crowns removal; retain established pickup rewards. No independent runtime tests apply to this design note; its implementation and dependencies are covered above.",
+      "reason": "Record the owner-confirmed Buy Crowns tab, icon/pack/price/Buy presentation and Earn Crowns removal and the shared four-tab Shop frame; retain established pickup rewards. No independent runtime tests apply to this design note; its implementation and dependencies are covered above.",
       "tests": []
     }
   ]
