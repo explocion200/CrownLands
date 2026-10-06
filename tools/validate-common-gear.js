@@ -156,7 +156,7 @@ const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=treasury-gear-ledger-r1/, "The equipment stylesheet must load with the approved Treasury cache token.");
 assert.match(clientIndex, /common-gear-ui\.js\?v=[^"\s]+[\s\S]*game\.js\?v=[^"\s]+/, "The versioned equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
-const game = `${read("game.js")}\n${gearUi}`;
+const game = `${read("game.js")}\n${gearUi}\n${read("inner-city-estate.js")}`;
 assert.match(game, /Common Gear Box/);
 assert.match(game, /common-gear-building-shell/);
 assert.match(game, /data-gear-merge/);

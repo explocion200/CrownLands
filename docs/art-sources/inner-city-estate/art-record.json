@@ -1,0 +1,227 @@
+{
+  "generator": "Built-in image_gen.imagegen",
+  "generatedAt": "2026-10-06",
+  "runtime": [
+    {
+      "path": "assets/inner-city-estate/actors.webp",
+      "bytes": 153774,
+      "sha256": "c41706b7f4365ee7c18ece8ffa926942cfe410718f9dd0da8d2149694a860177",
+      "width": 1024,
+      "height": 512,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/alehouse.webp",
+      "bytes": 25494,
+      "sha256": "475b93e89766d2938b4dfde964a09d0b59d3ec7b0c831e88589ea4e4c09fc0a1",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/barracks.webp",
+      "bytes": 24908,
+      "sha256": "d9bb4007697e22112a48ea7d6c03e4b43628684886a0d4117654cfa92f49c67c",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/builders-yard.webp",
+      "bytes": 31382,
+      "sha256": "2e59719b5a17c3608e7e5debdb1b30d8ab4aa83ca1c31daed07c836de3ecb892",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/construction.svg",
+      "bytes": 856,
+      "sha256": "3c3c4f122ff04b24d5f26d98fc4e6a020eaab23a15c3a1a8771e3edf0b8c3dcb"
+    },
+    {
+      "path": "assets/inner-city-estate/farmstead.webp",
+      "bytes": 30534,
+      "sha256": "458aa23a199175577f406a7360ead989b33230b3039b30d09745512f3ca5472e",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/foresters-lodge.webp",
+      "bytes": 29410,
+      "sha256": "65b64a338d41cb09540c718d5f373a683dec9a057e96d134430b57e044f47638",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/gatehouse.webp",
+      "bytes": 30060,
+      "sha256": "4f375dc4418be3b7fdff73c90c35b84ec3702fde7bd7f32ae75737af102565a1",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/granary.webp",
+      "bytes": 27894,
+      "sha256": "f309884772a2122ed2f36fb6368567b546ea1b860e35232ca59af1ea6ec3eedd",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/great-hall.webp",
+      "bytes": 26796,
+      "sha256": "5b5d4b9214fbee5d9b2d1e899217045d1e58bd8b9fdb99c8cf6330f70bd6affa",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/guild-master.webp",
+      "bytes": 27746,
+      "sha256": "9425d263555940caa26f0a6abbcb5ece9e821fd151ffc86d88d1ac0718046548",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/market.webp",
+      "bytes": 33828,
+      "sha256": "67a33add0df26ae4deef96456f8f63cd02c50f8e6824b52d9c84787c527b3abe",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/mill-sails.svg",
+      "bytes": 612,
+      "sha256": "65231ef64b515e74b94f72a1d60834f2e9ca9bf071a970e870c74db758988f61"
+    },
+    {
+      "path": "assets/inner-city-estate/mine.webp",
+      "bytes": 30196,
+      "sha256": "bc07357eb3340ca46025a8b638544f65c97df1a9da718fbfdaeaed570fe38e44",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/quarry.webp",
+      "bytes": 34106,
+      "sha256": "bb2691e39d717e63905ccbc7d6a8e5b5922c8a43ebcfd5590737a2edf4b80a42",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/royal-stables.webp",
+      "bytes": 30948,
+      "sha256": "94268864579feb2178faef7ef5c1f16d1a51ece270150db4ffd536a3c68bb18e",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/sawmill.webp",
+      "bytes": 28458,
+      "sha256": "b3e8ea3cb8fcacca79c4d60794c0fa46054b0ebc306b2447a4d5b6f5677958c4",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/smithy.webp",
+      "bytes": 27544,
+      "sha256": "a25ce837f7f58ebd1b84968bba61b3a5dcb20918b94038990f767e3996619316",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/storehouse.webp",
+      "bytes": 31468,
+      "sha256": "ade319d1e4c07db628d01bbc22b1cc27f263179e5b976e0fd78a57501484e7a6",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/surveyed-plot.svg",
+      "bytes": 492,
+      "sha256": "9b42134bc0d5dbdf78d29a612a3f9c1506773a53061279a6a3011bf54726aed6"
+    },
+    {
+      "path": "assets/inner-city-estate/terrain.webp",
+      "bytes": 338160,
+      "sha256": "ea1cf238ba67c2afbb33329deb15351244c360a97aa59e04d28f082022b210b6",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "assets/inner-city-estate/treasury.webp",
+      "bytes": 32560,
+      "sha256": "12f17bfb63f2ac6ad020c55f0613ba9ce3cb1c1a5979bcbc075e4c52c61820de",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/wagon-yard.webp",
+      "bytes": 30302,
+      "sha256": "dd90eeec16a8b63f19636145f430288a0754a56288cafed128c1aa3bedd642c2",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/windmill.webp",
+      "bytes": 24392,
+      "sha256": "a63fb4b3ec58628f7f685bf8dc2b0dec1b2f1682ae10b68c1cf5d0fdc87ba3b4",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    },
+    {
+      "path": "assets/inner-city-estate/workshop.webp",
+      "bytes": 26816,
+      "sha256": "657a5d8b55389e41c5da1115d5e213913732c86198ff9dfdc3545092f96bed90",
+      "width": 256,
+      "height": 256,
+      "hasAlpha": true
+    }
+  ],
+  "sources": [
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain.png",
+      "sha256": "6b156cb075e248dbc9ca32f3624d6a446af11daee33a2ab326bd651394ed325d",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/buildings.png",
+      "sha256": "34d9af5263c0cd85c56863e3dbd8d8321d514b6ec3b8a41e54f93e7568c1f4ea",
+      "width": 1402,
+      "height": 1122,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/actors.png",
+      "sha256": "0a9cbec4b2e35fdf088ef9f7a14fa1f116a45e713faae8ec031263a0ae7b4e05",
+      "width": 1774,
+      "height": 887,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/windmill-body.png",
+      "sha256": "67ace81665334ff3885e3b6897b3ae0c0a9353b0e58116d558ce11e3b3a8bd56",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true
+    }
+  ]
+}
