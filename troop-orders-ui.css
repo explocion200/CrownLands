@@ -51,6 +51,12 @@
 
 }
 #modal.troop-slider-modal{width:min(1100px,calc(100vw - 24px)) !important;height:min(620px,calc(100dvh - 24px)) !important}
+/* Fit desktop orders to their contents; constrain the body on shorter screens. */
+@media(min-height:601px) and (min-width:1001px){
+#modal.troop-slider-modal{height:fit-content !important;max-height:calc(100dvh - 24px) !important}
+#modal.troop-slider-modal>.modal-card,#modal.troop-slider-modal #modalBody,#modal.troop-slider-modal .report-shell{height:auto !important}
+#modal.troop-slider-modal .report-shell{max-height:calc(100dvh - 36px) !important}
+}
 #modal.troop-slider-modal .window-header{gap:13px !important;min-height:73px !important}
 #modal.troop-slider-modal .heading-art{width:40px !important;height:43px !important;object-fit:contain !important}
 #modal.troop-slider-modal .order-kind{margin-left:auto !important;color:var(--muted) !important;font:15px Georgia,serif !important}
