@@ -39,7 +39,8 @@
 #skinsView { min-height:0; height:100%; overflow:hidden; }
 #profileScreen .profile-tabs { grid-template-columns:repeat(5,minmax(52px,1fr)); }
 #modal.shop-modal .rs-shop-shell.skin-shop-shell { grid-template-rows:52px 48px minmax(0,1fr)!important; }
-#modal.shop-modal .skin-shop-shell>.skins-panel { height:100%; max-height:none; min-height:0; }
+#modal.shop-modal .skin-shop-shell .skins-panel { height:100%; max-height:none; min-height:0; }
+#modal.shop-modal .skin-shop-shell #royalShopSections { padding-top:0!important; }
 .shop-modal .skins-panel { max-height:calc(100dvh - 180px); }
 .skin-city-preview { display:block; position:relative; width:64px; height:64px; flex:none; pointer-events:none; }
 .skin-city-preview>img { display:block; width:100%; height:100%; object-fit:contain; }

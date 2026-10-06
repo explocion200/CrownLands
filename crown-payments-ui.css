@@ -6,7 +6,14 @@
 .crown-payments-dialog select { display:block; width:100%; margin-top:6px; }
 .crown-payments-dialog label,.crown-payments-dialog select { color:#30281f; }
 .crown-payments-dialog select:disabled { color:#30281f !important; opacity:1; }
-.skins-wallet [data-crown-checkout] { min-height:44px; }
+#modal.shop-modal .crown-shop { height:100%; overflow:auto; padding:24px; background:radial-gradient(ellipse at top,#eee2f0aa,transparent 70%); }
+#modal.shop-modal [data-crown-payments] { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
+#modal.shop-modal .crown-pack { width:min(100%,320px); display:grid; justify-items:center; gap:14px; padding:28px; border:1px solid #a593ac; border-radius:8px; background:#fff9ee; box-shadow:0 4px 12px #30281f14; text-align:center; }
+#modal.shop-modal .crown-pack img { width:96px; height:96px; object-fit:contain; }
+#modal.shop-modal .crown-pack h2 { margin:0; font:26px Georgia,serif!important; }
+#modal.shop-modal .crown-pack p { margin:0; font-size:12px; line-height:1.5; }
+#modal.shop-modal .crown-pack-price { font-size:23px!important; font-variant-numeric:tabular-nums!important; }
+#modal.shop-modal .crown-pack [data-crown-checkout] { width:100%; min-height:44px; border:1px solid #44254e; border-radius:5px; color:#fff!important; background:#5d386c!important; padding:10px 18px; font-size:16px!important; font-weight:600!important; }
 .crown-payments-dialog button:not(:disabled) { cursor:pointer; }
 .crown-payments-dialog button:disabled { opacity:.6; }
 .crown-payments-dialog :focus-visible { outline:3px solid #70518b; outline-offset:2px; }
@@ -14,3 +21,12 @@
 .crown-payments-dialog .crown-test-notice { padding:10px; border:1px solid #94729e; background:#e8dbee; font-weight:650; }
 .crown-payments-dialog .crown-order-reference { overflow-wrap:anywhere; font-size:12px; }
 @media (max-height:500px) { .crown-payments-dialog { padding:12px; font-size:14px; } .crown-payments-dialog p { margin:8px 0; } }
+@media (max-height:500px) {
+  #modal.shop-modal .crown-shop { padding:12px; }
+  #modal.shop-modal .crown-pack { width:min(100%,490px); grid-template-columns:96px minmax(0,1fr) 110px; gap:8px 16px; padding:18px; }
+  #modal.shop-modal .crown-pack img { grid-row:1 / 4; }
+  #modal.shop-modal .crown-pack h2 { font-size:23px!important; }
+  #modal.shop-modal .crown-pack p { grid-column:2; grid-row:2 / 4; align-self:start; }
+  #modal.shop-modal .crown-pack-price { grid-column:3; grid-row:1; font-size:20px!important; }
+  #modal.shop-modal [data-crown-checkout] { grid-column:3; grid-row:2 / 4; align-self:center; }
+}
