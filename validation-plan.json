@@ -12,9 +12,11 @@
         "docs/visual-qa/knight-order-city-skins/art/hospitaller.png",
         "docs/visual-qa/knight-order-city-skins/art/teutonic.png",
         "docs/visual-qa/knight-order-city-skins/art/santiago.png",
-        "tools/validate-knight-order-preview.js"
+        "tools/validate-knight-order-preview.js",
+        "docs/visual-qa/knight-order-city-skins/medieval-effects.js",
+        "docs/visual-qa/knight-order-city-skins/art/encampment.webp"
       ],
-      "reason": "Standalone concept gallery and generated transparent art, outside the production game build. The focused browser validator checks four art identities and RGBA transparency, image loading, all selection controls, comparison and 160px marker views, responsive desktop/landscape/portrait geometry and touch targets, Full/Pause/Subtle/Off animation behavior, actual moving pixels beyond each artwork rectangle across all three viewports and visible outer effects at 160px scale, responsive stage-to-city emitter alignment, reduced-motion default, and absence of backend/external requests or runtime exceptions. The existing isolated Chromium launcher and loopback fixture server are reused without changes. No live cosmetic catalog, purchase/equip authority, player data, map runtime, release contract, or server behavior changes; emulator coverage is not applicable. The required build independently guards the unchanged production artifact.",
+      "reason": "Standalone concept gallery outside the production game build. The focused browser validator checks four city identities, RGBA transparency, unchanged reuse and loading of the existing painted camp, and removal of abstract magical overlays. It exercises all controls, comparison and 160px marker views, desktop/landscape/portrait layout and touch targets, actual moving pixels beyond every artwork rectangle, stage-to-city alignment, and Full/Pause/Subtle/Off behavior for the medieval scene. Visual review covers cloth standards, campfires and smoke, order-colored patrols, birds, natural snow, and their surrounding placement. Reduced motion, local-only requests and runtime error checks cover the new shared medieval-effects renderer and its gallery integration. Existing isolated Chromium and loopback server helpers are reused unchanged. The source camp art and production game are unmodified. No catalog, purchase/equip authority, player data, map runtime, release contract or server changes; emulator suites are not applicable. Required build checks guard the unchanged production artifact.",
       "tests": [
         "tools/validate-knight-order-preview.js"
       ]

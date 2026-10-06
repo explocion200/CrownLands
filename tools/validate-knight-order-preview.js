@@ -12,6 +12,8 @@ async function main() {
   const orders = ["templar", "hospitaller", "teutonic", "santiago"];
   const prompts = JSON.parse(fs.readFileSync(path.join(root, directory, "prompts.json"), "utf8"));
   assert.deepEqual(prompts.assets.map(asset => asset.slug), orders);
+  assert.deepEqual(fs.readFileSync(path.join(root, directory, "art/encampment.webp")),
+    fs.readFileSync(path.join(root, "assets/optimized/camp-troops-384x384-2f712333e891.webp")), "Reuse existing painted camp art without alteration");
   for (const order of orders) {
     const png = fs.readFileSync(path.join(root, directory, "art", order + ".png"));
     assert.equal(png.subarray(1, 4).toString(), "PNG");
@@ -89,6 +91,8 @@ async function main() {
         await click(`[data-order-choice="${order}"]`);
         await wait(`document.querySelector('.skin-card').dataset.order === ${JSON.stringify(order)} && document.querySelector('.art').complete`);
         await evaluate("Promise.all([...document.images].map(image => image.decode()))");
+        assert.equal(await evaluate("document.querySelector('.encampment').naturalWidth"), 384, "Painted camp loads");
+        assert.equal(await evaluate("document.querySelectorAll('.aura,.ground-glow,.light-sweep').length"), 0, "Abstract magical overlays are removed");
         await settle();
         assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "No horizontal overflow at " + viewport.width);
         assert(await evaluate("[...document.querySelectorAll('button,select')].every(e => e.getBoundingClientRect().height >= 44)"), "Touch targets stay at least 44px tall");
@@ -112,8 +116,10 @@ async function main() {
       await selectEffects("subtle"); await settle();
       const subtle = await snapshot(); await settle();
       assert.equal(await snapshot(), subtle, "Subtle effects are static");
+      assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.encampment')).display"), "none", "Subtle retains the camp scenery");
       await selectEffects("off");
       assert.equal(await evaluate("getComputedStyle(document.querySelector('canvas')).display"), "none");
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('.encampment')).display"), "none", "Off shows the painted city alone");
       await selectEffects("full");
       await click('[data-view="scale"]'); await settle();
       assert.equal(await evaluate("document.querySelector('.city').getBoundingClientRect().width"), 160);
@@ -134,7 +140,7 @@ async function main() {
     await wait("document.readyState === 'complete' && document.documentElement.dataset.effects === 'subtle'");
     assert.equal(await evaluate("document.querySelector('#effects').value"), "subtle", "Reduced motion defaults to static effects");
     assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(failed, []);
-    console.log("Four-order preview passed: transparent art, all choices, desktop/landscape/portrait fit, moving effects beyond every city artwork, animated/pause/subtle/off effects, comparison, 160px city scale with outer effects, reduced motion, no external requests or runtime errors.");
+    console.log("Four-order preview passed: transparent city art, reused painted camps, no abstract overlays, all choices, desktop/landscape/portrait fit, medieval motion beyond every city artwork, pause/subtle/off controls, comparison, 160px city scale with outer scenery, reduced motion, no external requests or runtime errors.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }
