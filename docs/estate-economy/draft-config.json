@@ -278,6 +278,7 @@
       "gold1": 100,
       "minutes1": 6,
       "factor": 1,
+      "permanent": true,
       "requires1": [],
       "weights": {
         "timber": 1.3,
@@ -290,6 +291,7 @@
       "gold1": 150,
       "minutes1": 8,
       "factor": 1.25,
+      "permanent": true,
       "requires1": [
         "alehouse"
       ],

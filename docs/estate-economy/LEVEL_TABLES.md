@@ -2,7 +2,7 @@
 
 PROPOSED arithmetic; this file does not configure gameplay. Generated with `node tools/validate-estate-economy-draft.js --write`.
 
-Materials = ceil(units × resource weight × building factor × permanence factor). Use the building weights in draft-config.json; permanence factor is 2 for the four officer buildings and 1 otherwise. Level 1 has only its fixed Gold construction fee. Gold hours below are multiplied by raw Main City Gold/hour, building factor and permanence factor, then rounded up. Minutes below are before those factors and the Builders' Yard reduction.
+Materials = ceil(units × resource weight × building factor × permanence factor). Use the building weights in draft-config.json; permanence factor is 2 for the six permanent buildings (four officers, Guild Master and Alehouse) and 1 for the fourteen seasonal buildings. Level 1 has only its fixed Gold construction fee. Gold hours below are multiplied by raw Main City Gold/hour, building factor and permanence factor, then rounded up. Minutes below are before those factors and the Builders' Yard reduction.
 
 | Target level | Production multiplier | Material units | Newly available construction input | Base Gold hours | Base minutes | Storehouse / material | Granary / food type |
 |---:|---:|---:|---|---:|---:|---:|---:|
@@ -109,7 +109,7 @@ Materials = ceil(units × resource weight × building factor × permanence facto
 
 ## Exact weights for all twenty buildings
 
-These weights complete the formula above for every target level. Inactive stage families have zero charge. The officer permanence factor doubles material, Gold and time requirements; existing starter buildings are granted without a retroactive bill.
+These weights complete the formula above for every target level. Inactive stage families have zero charge. The proposed permanence factor doubles material, Gold and time requirements for all six permanent buildings; existing starter buildings are granted without a retroactive bill.
 
 | Building | L1 Gold | Base factor | Permanence factor | Timber | Stone | Planks | Iron | Tools | Grain | Food |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -118,8 +118,8 @@ These weights complete the formula above for every target level. Inactive stage 
 | Barracks | 150 | 1 | 2 | 0.9 | 1.1 | 0.65 | 0.45 | 0.12 | 0 | 0 |
 | Gatehouse | 175 | 1 | 2 | 0.5 | 1.6 | 0.65 | 0.45 | 0.12 | 0 | 0 |
 | Royal Stables | 150 | 1 | 2 | 1.3 | 0.7 | 0.65 | 0.45 | 0.12 | 0 | 0.15 |
-| Alehouse | 100 | 1 | 1 | 1.3 | 0.7 | 0.65 | 0.45 | 0.12 | 0 | 0.2 |
-| Guild Master | 150 | 1.25 | 1 | 1 | 1 | 0.65 | 0.45 | 0.12 | 0 | 0.3 |
+| Alehouse | 100 | 1 | 2 | 1.3 | 0.7 | 0.65 | 0.45 | 0.12 | 0 | 0.2 |
+| Guild Master | 150 | 1.25 | 2 | 1 | 1 | 0.65 | 0.45 | 0.12 | 0 | 0.3 |
 | Forester’s Lodge | 75 | 0.8 | 1 | 1.2 | 0.6 | 0.65 | 0.25 | 0.2 | 0 | 0 |
 | Quarry | 75 | 0.8 | 1 | 0.8 | 0.7 | 0.65 | 0.6 | 0.18 | 0 | 0 |
 | Mine | 90 | 0.8 | 1 | 1.2 | 0.6 | 0.65 | 0.6 | 0.2 | 0 | 0 |
