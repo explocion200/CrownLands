@@ -18,6 +18,15 @@ async function main() {
     session = await startBrowserSession(executable);
     client = await CdpClient.connect(session.targets.find(t => t.type === 'page').webSocketDebuggerUrl);
     await Promise.all([client.send('Page.enable'), client.send('Runtime.enable')]);
+    const deliveredEstate = fs.readFileSync(path.join(root, 'dist/inner-city-estate.js')).toString('base64');
+    let deliveredRequests = 0;
+    client.on('Fetch.requestPaused', async event => {
+      try {
+        await client.send('Fetch.fulfillRequest', { requestId: event.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/javascript' }], body: deliveredEstate });
+        deliveredRequests++;
+      } catch (error) { errors.push('Estate delivery: ' + error.message); }
+    });
+    await client.send('Fetch.enable', { patterns: [{ urlPattern: '*inner-city-estate.js*' }] });
     await client.send('Page.bringToFront');
     client.on('Runtime.exceptionThrown', e => errors.push(e.exceptionDetails.exception?.description || e.exceptionDetails.text));
     const evaluate = async (fn, arg) => {
@@ -426,6 +435,7 @@ async function main() {
       await assertNameplates();
       await screenshot('city-levels-'+width+'x'+height+'.png');
     }
+    assert(deliveredRequests > 0, 'Browser checks must exercise the delivered estate script');
     assert.deepEqual(errors, []);
     console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; Back to Realm via mouse/touch/keyboard preserves the realm camera and disposes the estate; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping 44px targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
   } finally {

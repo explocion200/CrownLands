@@ -66,6 +66,23 @@
         "tools/validate-inner-city-estate.js",
         "tools/validate-production-artifact.js"
       ]
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-production-artifact.js",
+        "functions/package.json",
+        "functions/pnpm-lock.yaml",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "reason": "The resource counters exceeded the existing 40 KiB estate script/style budget. Add one pinned development-only minifier, preserve existing dependency versions, and minify only the delivered estate script without expression optimization. Keep readable sources and the existing payload cap. Check public API and immutable registry parity against the production artifact, then run the entire estate interaction suite with that delivered script intercepted into the browser. The dependency fixture checks affected existing production dependency resolution; no functions gameplay, authority, emulator or world topology changes. Pin the same minifier in root tooling for the existing Netlify build and functions tooling for the existing CI installation; resolve either installed toolchain without changing release commands.",
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/test-functions-dependencies.js"
+      ]
     }
   ]
 }

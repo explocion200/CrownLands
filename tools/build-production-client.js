@@ -4,6 +4,8 @@ const { spawnSync } = require("node:child_process");
 const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
 
 const root = path.resolve(__dirname, "..");
+// Netlify installs root tooling; the classified CI gate installs functions tooling.
+const { minify_sync } = require(require.resolve("terser", { paths: [root, path.join(root, "functions")] }));
 const output = path.join(root, "dist");
 if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.sep}`)) {
   throw new Error("Refusing to replace an unsafe production output path.");
@@ -70,7 +72,11 @@ function copy(relativeSource, relativeDestination = relativeSource) {
   // Ship the same text bytes from Windows and Linux checkouts. Normalize only
   // the output; keep source files and binary assets untouched.
   if (/\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(source)) {
-    fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n"), "utf8");
+    let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
+    // Keep the expanded estate UI within its existing delivery budget. Only
+    // remove whitespace/comments and shorten local names; do not optimize code.
+    if (relativeSource === "inner-city-estate.js") text = minify_sync(text, { compress: false, mangle: true, format: { comments: false } }).code + "\n";
+    fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }
 

@@ -42,6 +42,7 @@
     "audit:request-counts": "node tools/read-stability-request-counts.js"
   },
   "devDependencies": {
-    "playwright": "1.63.0"
+    "playwright": "1.63.0",
+    "terser": "5.51.2"
   }
 }
