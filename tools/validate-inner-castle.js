@@ -90,19 +90,19 @@ const BUILDINGS = [
   {
     key: "royal-stables",
     label: "Royal Stables",
-    role: "Movement / march speed",
+    role: "Permanent building progression unlocks the next Cavalry Master Gear set. Building levels and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-royal-stables"),
   },
   {
     key: "alehouse",
     label: "Alehouse",
-    role: "Morale / recovery / small boosts",
+    role: "Recruit champions for the Guild Master. Higher levels offer stronger recruits, faster quest recovery and better preparation meals.",
     artSrc: optimizedAsset("inner-castle-alehouse"),
   },
   {
     key: "treasury",
     label: "Treasury",
-    role: "Gold storage / gold production",
+    role: "Permanent building progression unlocks the next Master of Coin Gear set. Building levels and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-treasury"),
   },
   {
@@ -114,13 +114,13 @@ const BUILDINGS = [
   {
     key: "barracks",
     label: "Barracks",
-    role: "Troop production / military strength",
+    role: "Permanent building progression unlocks the next War Captain Gear set. Building levels and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-barracks"),
   },
   {
     key: "gatehouse",
     label: "Gatehouse",
-    role: "City defense / wall strength",
+    role: "Permanent building progression unlocks the next Defensive Commander Gear set. Building levels and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-gatehouse"),
   },
 ];
@@ -356,7 +356,7 @@ assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must n
 assert.match(cleanupSource, /suspendInnerCastleEstate\(\)/, "Close must dispose the estate.");
 assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /suspendInnerCastleEstate\(\)/, "Equipment must pause the estate.");
 assert.match(renderSource, /newMarkers: state\?\.gear\?\.newMarkers/, "Gear markers must use existing state.");
-assert.match(indexSource, /inner-city-estate\.css\?v=20261007-estate-r7/, "The estate stylesheet must load with a version.");
+assert.match(indexSource, /inner-city-estate\.css\?v=20261007-estate-labels-r1/, "The estate stylesheet must load with a version.");
 assert.ok(read("tools/build-production-client.js").includes('"inner-city-estate.css"'), "Production must include the estate stylesheet.");
 for (const building of [{key: "royal-bailey", source: "inner-castle-hub"}, ...BUILDINGS.map(building => ({key: building.key, source: building.key}))]) {
   assert.ok(fs.readFileSync(path.join(root, "assets/inner-castle", building.source + ".png"))

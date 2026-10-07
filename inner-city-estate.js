@@ -6,6 +6,7 @@
 })(typeof globalThis === "undefined" ? this : globalThis, function () {
   "use strict";
   const WIDTH = 1448, HEIGHT = 1086;
+  const MAX_LEVEL = 100;
   const ASSETS = "assets/inner-city-estate/";
   // Decorative outpainting fills wide-screen gutters; the playable map and
   // approved center retain their original 1448 x 1086 coordinates and camera.
@@ -29,12 +30,12 @@
     "royal-stables": "inner-castle-royal-stables-512x512-5a9290514dbd.webp",
   };
   const definitions = [
-    ["treasury", "Treasury", 39, 33, "city", 7, 7, "Gold storage / gold production"],
+    ["treasury", "Treasury", 39, 33, "city", 7, 7, "Permanent building progression unlocks the next Master of Coin Gear set. Building levels and earned unlocks survive season restarts."],
     ["great-hall", "Great Hall", 50, 31, "city", 9, 10, "Ruler power / kingdom upgrades"],
-    ["barracks", "Barracks", 61, 34, "city", 7, 7, "Troop production / military strength"],
-    ["alehouse", "Alehouse", 40, 46, "city", 7, 7, "Morale / recovery / small boosts"],
-    ["gatehouse", "Gatehouse", 50, 60, "city", 10.5, 10.5, "City defense / wall strength"],
-    ["royal-stables", "Royal Stables", 60, 48, "city", 10, 9, "Movement / march speed"],
+    ["barracks", "Barracks", 61, 34, "city", 7, 7, "Permanent building progression unlocks the next War Captain Gear set. Building levels and earned unlocks survive season restarts."],
+    ["alehouse", "Alehouse", 40, 46, "city", 7, 7, "Recruit champions for the Guild Master. Higher levels offer stronger recruits, faster quest recovery and better preparation meals."],
+    ["gatehouse", "Gatehouse", 50, 60, "city", 10.5, 10.5, "Permanent building progression unlocks the next Defensive Commander Gear set. Building levels and earned unlocks survive season restarts."],
+    ["royal-stables", "Royal Stables", 60, 48, "city", 10, 9, "Permanent building progression unlocks the next Cavalry Master Gear set. Building levels and earned unlocks survive season restarts."],
     ["guild-master", "Guild Master", 40, 54, "city", 7, 7, "Manage champions, form quest parties and review expedition reports."],
     ["quarry", "Quarry", 29, 18, "quarry", 10, 8, "Gather stone for buildings and fortifications."],
     ["mine", "Mine", 73, 19, "mine", 9, 9, "Extract iron ore for equipment and crafted components."],
@@ -47,11 +48,11 @@
     ["farmstead", "Farmstead", 18, 79, "farmland", 10, 8, "Grow and harvest crops for the settlement."],
     ["granary", "Granary", 29, 87, "farmland", 6, 7, "Store grain and protect the city’s food reserves."],
     ["storehouse", "Storehouse", 69, 63, "trade", 8, 7, "Store timber, stone, ore and finished goods."],
-    ["wagon-yard", "Wagon Yard", 87, 69, "trade", 10, 8, "Organize freight wagons, deliveries and caravans."],
-    ["market", "Market", 83, 44, "trade", 9, 8, "Trade materials and manage merchant contracts."],
+    ["wagon-yard", "Wagon Yard", 87, 69, "trade", 10, 8, "Purchase building supplies with Crowns."],
+    ["market", "Market", 83, 44, "trade", 9, 8, "Purchase food supplies with Crowns."],
   ];
   const buildings = Object.freeze(definitions.map(([key, label, x, y, district, width, height, role], index) => Object.freeze({
-    key, label, role, district,
+    key, label, role, district, maxLevel: MAX_LEVEL,
     hotspot: Object.freeze({ left: x, top: y }),
     footprint: Object.freeze({ width, height }),
     artSize: Object.freeze({ width:spriteSizes[index][0], height:spriteSizes[index][1] }),
@@ -117,6 +118,17 @@
   function createStates(fixture = null) {
     return Object.fromEntries(buildings.map(b => [b.key, states.includes(fixture?.[b.key]) ? fixture[b.key] : b.initialState]));
   }
+  // Display the starting estate until authoritative construction progression is
+  // introduced. Optional levels support review fixtures; they never write state.
+  function createLevels(siteStates, levels = {}) {
+    return Object.fromEntries(buildings.map(b => {
+      const level = levels?.[b.key];
+      return [b.key, siteStates[b.key] === "unbuilt" ? 0 : Number.isInteger(level) && level >= 1 && level <= MAX_LEVEL ? level : 1];
+    }));
+  }
+  function levelText(state, level) {
+    return state === "unbuilt" ? "Not built" : (state === "constructing" ? "Building · " : "") + "Lv. " + level;
+  }
   const cottages=Object.freeze([
     [35,39,3,4],[43.8,26.5,3,4],[56,30,3,4],[64,41,3,4],[63,56,3,4],[35,51,3,4],[45.2,45.3,3,4],[53.3,46,3,4],[91,43,3,4],[92,50,3,4],[76.5,39,3,4],
     [34.5,43.5,1.8,2.8],[35,46.5,1.8,2.8],[44.5,33,1.8,2.8],[55.5,34.2,1.8,2.8],[58,28,1.8,2.8],[61.5,27.5,1.8,2.8],[66.5,45,1.8,2.8],[66,49.2,1.8,2.8],[56.5,56,1.8,2.8],[60,57,1.8,2.8],
@@ -126,7 +138,7 @@
       <img ${siteState === "completed" ? `class="estate-building-art" style="width:${b.artSize.width}px;height:${b.artSize.height}px;--estate-art-offset-x:${b.artOffsetX}px;--estate-art-offset:${b.artOffsetY}px"` : 'class="estate-plot-art"'} src="${b.artByState[siteState]}" alt="" draggable="false">
       </div>`;
   }
-  function shell(options, siteStates) {
+  function shell(options, siteStates, siteLevels) {
     return `<section class="estate-shell" aria-labelledby="estateTitle">
       <header class="estate-header"><button type="button" data-inner-castle-back>‹ <span>Back to City Details</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
       <div class="estate-viewport" tabindex="0" aria-label="City estate map. Drag to pan; use zoom controls or arrow keys to explore.">
@@ -136,8 +148,9 @@
           ${terrainTiles.map(t=>`<img class="estate-terrain-detail" data-terrain-tile="${t.key}" style="left:${t.x}px;top:${t.y}px;width:${t.width}px;height:${t.height}px;--fade-left:${t.x ? 24 : 0}px;--fade-right:${t.x ? 0 : 24}px;--fade-top:${t.y ? 24 : 0}px;--fade-bottom:${t.y ? 0 : 24}px" alt="" draggable="false" hidden>`).join("")}
           </div>${buildings.map(b=>siteMarkup(b,siteStates[b.key])).join("")}
         </div>
-        <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
-        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${siteStates[b.key]==="completed" ? "Complete" : siteStates[b.key]==="constructing" ? "Building" : "Plot"}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
+        <div class="estate-nameplates" aria-hidden="true">${buildings.map(b=>`<div class="estate-nameplate" data-estate-nameplate="${b.key}" hidden><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small></div>`).join("")}</div>
+        <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}, ${levelText(siteStates[b.key],siteLevels[b.key])}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)} · ${levelText(siteStates[b.key],siteLevels[b.key])}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
+        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
         <aside class="estate-detail" id="estateDetail" aria-label="Selected building" hidden><button type="button" class="estate-detail-close" data-estate-detail-close aria-label="Close building details">×</button><div data-estate-detail-copy aria-live="polite"></div></aside>
         <div class="estate-camera-controls"><button type="button" data-estate-zoom="out" aria-label="Zoom out">−</button><output aria-label="Map zoom" data-estate-zoom-label>100%</output><button type="button" data-estate-zoom="in" aria-label="Zoom in">+</button><button type="button" data-estate-fit>Fit Estate</button></div><p class="estate-map-hint">Drag to explore · Select a district to look closer</p>
       </div></section>`;
@@ -159,13 +172,15 @@
   }
   function mount(host, options = {}) {
     const siteStates = createStates(options.fixture);
-    host.innerHTML = shell(options,siteStates);
+    const siteLevels = createLevels(siteStates,options.levels);
+    host.innerHTML = shell(options,siteStates,siteLevels);
     const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
     let selected=options.selectedKey || "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
+    const nameplates=[...host.querySelectorAll("[data-estate-nameplate]")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
@@ -225,10 +240,36 @@
           target.style.left=Math.min(viewportBox.width-r.width/2-8,controls.right-viewportBox.left+r.width/2+8)+"px";
         }
       });
+      host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
+      placeNameplates(tx,ty,scale,width,height,viewportBox);
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
-      host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
+    }
+    function placeNameplates(tx,ty,scale,width,height,viewportBox) {
+      const rect=(left,top,w,h)=>({left,top,right:left+w,bottom:top+h});
+      const overlaps=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
+      const artBoxes=buildings.map(b=>{
+        const completed=siteStates[b.key]==="completed";
+        const w=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,h=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
+        return rect(tx+visualLeft(b)*WIDTH/100*scale-w/2,ty+visualTop(b)*HEIGHT/100*scale-h/2,w,h);
+      });
+      const occupied=[...host.querySelectorAll('.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls,.estate-district:not([hidden])>span')].filter(e=>!e.hidden).map(e=>{
+        const r=e.getBoundingClientRect();return rect(r.left-viewportBox.left,r.top-viewportBox.top,r.width,r.height);
+      });
+      // Measure all labels together before positioning; text remains sharp and
+      // the same readable screen-pixel size throughout the camera range.
+      nameplates.forEach(label=>{label.hidden=false;label.style.visibility="hidden";});
+      const sizes=nameplates.map(label=>({w:label.offsetWidth,h:label.offsetHeight}));
+      const order=buildings.map((b,i)=>i).sort((a,b)=>(buildings[b].key===selected)-(buildings[a].key===selected));
+      for(const i of order){
+        const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2;
+        const candidates=[rect(cx-w/2,art.bottom+5,w,h),rect(cx-w/2,art.top-h-5,w,h),rect(art.right+5,cy-h/2,w,h),rect(art.left-w-5,cy-h/2,w,h)];
+        const placement=candidates.find(r=>r.left>=6&&r.top>=6&&r.right<=width-6&&r.bottom<=height-6&&!artBoxes.some(a=>overlaps(r,a))&&!occupied.some(a=>overlaps(r,a)));
+        label.hidden=!placement;
+        targets[i].dataset.hasNameplate=String(!!placement);
+        if(placement){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
+      }
     }
     function zoom(value,clientX,clientY) {
       const rect=viewport.getBoundingClientRect(), px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
@@ -241,7 +282,7 @@
       const s=siteStates[b.key],gearRole=s==="completed"&&options.onGear?options.gearRoles?.[b.key]:null;
       detail.hidden=!camera.detailOpen;
       detail.querySelector(":scope > [data-manage-common-gear]")?.remove();
-      detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
+      detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><p class="estate-level-caption">${levelText(s,siteLevels[b.key])}${s==="unbuilt"?"":" / "+MAX_LEVEL}</p><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}
       targets.forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.innerCastleBuilding===selected)));
@@ -259,7 +300,7 @@
         // before it runs and leave the disposed DOM alone afterward.
         options.onGear(key);return;
       }
-      paint();renderDetail();
+      renderDetail();paint();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }
     listen(shellElement,"click",event=>{
@@ -271,8 +312,8 @@
       if(d){const district=districts.find(v=>v.key===d.dataset.estateDistrict);camera.zoom=2.5;camera.x=district.x*WIDTH/100;camera.y=district.y*HEIGHT/100;camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
       const z=event.target.closest("[data-estate-zoom]");if(z)zoom(camera.zoom+(z.dataset.estateZoom==="in"?.5:-.5));
       if(event.target.closest("[data-estate-fit]")){camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;camera.detailOpen=false;renderDetail();paint();}
-      if(event.target.closest("[data-estate-detail-close]")){camera.detailOpen=false;renderDetail();viewport.focus({preventScroll:true});}
-      if(event.target.closest("[data-estate-directory-toggle]")){camera.directoryOpen=!camera.directoryOpen;directory.hidden=!camera.directoryOpen;event.target.closest("button").setAttribute("aria-expanded",String(camera.directoryOpen));if(camera.directoryOpen)directory.querySelector("button").focus({preventScroll:true});}
+      if(event.target.closest("[data-estate-detail-close]")){camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
+      if(event.target.closest("[data-estate-directory-toggle]")){camera.directoryOpen=!camera.directoryOpen;directory.hidden=!camera.directoryOpen;event.target.closest("button").setAttribute("aria-expanded",String(camera.directoryOpen));if(camera.directoryOpen)directory.querySelector("button").focus({preventScroll:true});paint();}
       if(event.target.closest("[data-inner-castle-back]"))options.onBack?.();
     });
     listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
@@ -301,10 +342,10 @@
     return {
       select, zoom, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
-      debug:()=>({camera:{...camera},siteStates:{...siteStates},actors:0,mode:"still",animationRunning:false,destroyed}),
+      debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
       destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }
-  return Object.freeze({width:WIDTH,height:HEIGHT,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,samplePath,mount});
+  return Object.freeze({width:WIDTH,height:HEIGHT,maxLevel:MAX_LEVEL,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,createLevels,samplePath,mount});
 });

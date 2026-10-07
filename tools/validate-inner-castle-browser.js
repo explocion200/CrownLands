@@ -11,7 +11,7 @@ async function main() {
   const executable = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
   assert(executable, 'Set CHROME_PATH to a Chromium browser');
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const errors = [], out = path.join(root, 'release-artifacts/inner-city-estate');
+  const errors = [], out = path.join(root, 'release-artifacts/estate-building-labels');
   fs.mkdirSync(out, { recursive: true });
   let session, client;
   try {
@@ -51,6 +51,25 @@ async function main() {
       const capture = await client.send('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(path.join(out, file), Buffer.from(capture.data, 'base64'));
     };
+    const assertNameplates = async () => {
+      const report = await evaluate(() => {
+        const viewport=document.querySelector('.estate-viewport').getBoundingClientRect();
+        const labels=[...document.querySelectorAll('.estate-nameplate:not([hidden])')].map(e=>({key:e.dataset.estateNameplate,box:e.getBoundingClientRect().toJSON(),pointer:getComputedStyle(e).pointerEvents,font:parseFloat(getComputedStyle(e).fontSize)}));
+        const art=[...document.querySelectorAll('.estate-site>img')].map(e=>e.getBoundingClientRect().toJSON());
+        const controls=[...document.querySelectorAll('.estate-camera-controls,.estate-directory:not([hidden]),.estate-detail:not([hidden])')].map(e=>e.getBoundingClientRect().toJSON());
+        return {viewport:viewport.toJSON(),labels,art,controls};
+      });
+      assert(report.labels.length>0,'The visible estate must show building name/level captions');
+      const overlaps=(a,b)=>a.left<b.right-.5&&a.right>b.left+.5&&a.top<b.bottom-.5&&a.bottom>b.top+.5;
+      report.labels.forEach((label,i)=>{
+        assert(label.font>=10,'Names must stay readable in screen pixels');
+        assert.equal(label.pointer,'none','Captions must not intercept map or touch gestures');
+        assert(label.box.left>=report.viewport.left && label.box.right<=report.viewport.right && label.box.top>=report.viewport.top && label.box.bottom<=report.viewport.bottom,'Caption must stay within the viewport: '+label.key);
+        for(const other of report.labels.slice(i+1))assert(!overlaps(label.box,other.box),'Captions overlap: '+label.key+' / '+other.key);
+        for(const art of report.art)assert(!overlaps(label.box,art),'Caption covers building artwork: '+label.key);
+        for(const control of report.controls)assert(!overlaps(label.box,control),'Caption covers estate UI: '+label.key);
+      });
+    };
     const dismissGear = async (method, width) => {
       if (method === 'escape') return press('Escape', 27);
       if (method === 'backdrop') {
@@ -87,6 +106,10 @@ async function main() {
         return left.left<=v.left+.6 && left.right>=w.left+2 && right.left<=w.right-2 && right.right>=v.right-.6 && left.top<=v.top+.6 && left.bottom>=v.bottom-.6;
       }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
+      await assertNameplates();
+      assert.equal(await count('[data-estate-nameplate]'),20);
+      assert.equal(await text('[data-estate-directory-building="treasury"] small'),'Lv. 1');
+      assert.equal(await text('[data-estate-directory-building="quarry"] small'),'Not built');
       assert(await evaluate(() => !!document.querySelector('[data-estate-directory-building="treasury"] .estate-new')), 'New gear must appear in the building directory');
       assert.equal(await count('.estate-actor, .estate-roads, .estate-wall, .estate-mill-sails'),0,'Estate uses cohesive painted terrain without vector overlays or ambient actors');
       assert.equal(await evaluate(()=>document.querySelector('.estate-world').getAnimations({subtree:true}).length),0,'Still estate has no ambient CSS animation');
@@ -125,6 +148,7 @@ async function main() {
         assert(await evaluate(() => [...document.querySelectorAll('.estate-site')].every(s => ['none', 'normal'].includes(getComputedStyle(s, '::after').content))), 'Selecting a site must not draw a dotted plot boundary');
         const targets = await evaluate(() => [...document.querySelectorAll('.estate-building-target')].filter(e => !e.hidden).map(e => e.getBoundingClientRect().toJSON()));
         for (let i = 0; i < targets.length; i++) { assert(targets[i].width >= 44 && targets[i].height >= 44); for (let j = i + 1; j < targets.length; j++) assert(targets[i].right <= targets[j].left || targets[j].right <= targets[i].left || targets[i].bottom <= targets[j].top || targets[j].bottom <= targets[i].top, 'Map targets overlap'); }
+        await assertNameplates();
       }
       // Physical map clicks/taps use the same direct entry as directory buttons.
       for (const key of gearKeys) {
@@ -333,8 +357,31 @@ async function main() {
         }
       }
     }
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      const url=address.url+'/docs/visual-qa/inner-city-estate/index.html?scene=completed&levels=milestones&estateUi=1&visualMarches=0';
+      await client.send('Page.navigate',{url});
+      await wait(()=>document.documentElement?.dataset.estateQa==='ready');
+      await wait(()=>Number(getComputedStyle(modal).opacity)>=.99);
+      const levels=await evaluate(()=>innerCastleEstateView.debug().siteLevels);
+      const keys=await evaluate(()=>CrownlandsEstate.buildings.map(b=>b.key));
+      keys.forEach((key,i)=>assert.equal(levels[key],[1,25,50,75,100][i%5]));
+      await assertNameplates();
+      await screenshot('levels-'+width+'x'+height+'.png');
+      await evaluate(()=>innerCastleEstateView.select('gatehouse'));
+      assert.equal(await text('.estate-level-caption'),'Lv. 100 / 100');
+      await click('[data-estate-detail-close]');
+      await assertNameplates();
+      await click('[data-inner-castle-building="gatehouse"]');
+      await wait(()=>!!document.querySelector('[data-gear-back]'));
+      await evaluate(()=>Promise.all(modal.querySelector('.modal-card').getAnimations().map(a=>a.finished.catch(()=>{}))));
+      await click('[data-gear-back]');
+      assert.deepEqual(await evaluate(()=>innerCastleEstateView.debug().siteLevels),levels,'Gear return must retain review levels');
+      await assertNameplates();
+      await screenshot('city-levels-'+width+'x'+height+'.png');
+    }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and three landscape sizes; painted phone/ultrawide gutters, unchanged 1448x1086 map and lazy scenery; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 32 Back returns plus 36 X/touch/Escape/backdrop returns preserve camera/selection/focus; native close requests, stale gear responses, forced close and ownership guards; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, estate/unrelated-modal cleanup, Profile entry and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping 44px targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

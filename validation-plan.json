@@ -1,21 +1,44 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "96f30194939c843b0814afdee4eff210ed3b515e",
+  "baseCommit": "bb8c2c7a053be5818cbb207852d00c94ac552806",
   "coverage": [
     {
-      "paths": ["game.js", "firebaseClient.js", "tools/validate-home-navigation-browser.js", "tools/validate-realm-refresh.js"],
-      "reason": "Fix Home rejecting an open map during overlapping realm discovery: propagate force to the real Firebase adapter, start a fresh request without allowing an older completion to clear it, and retain the newest authoritative expansion revision within the same generation/world. The new real-adapter and state-handler tests reproduce the original failure and cover ordinary request sharing, overlap cleanup, retry, session cancellation, partial responses and lower revision in a new realm. The real-game Home browser checks desktop and landscape-mobile clicks, forced freshness, delayed responses, repeated taps, session changes, newer navigation, genuinely closed maps and warm navigation. Cover shared realm/reset contracts, session admission, map discovery/loading and the map picker; selected server emulator suites verify authoritative activation and generation isolation. Current production pointer was read-only verified as realm-2026-10/main-realm-2026-10/shard_0001 with all 56 New Lands open, matching the core-expansion-v1 release. No rules, server implementation, production data, archived world or release contract change.",
+      "paths": [
+        "inner-city-estate.js",
+        "inner-city-estate.css",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/map-benchmark/estate-qa-runtime.js",
+        "docs/visual-qa/inner-city-estate/index.html",
+        "tools/validate-inner-castle.js"
+      ],
+      "reason": "Add sharp screen-pixel name/level captions to the approved estate, avoiding artwork, other captions, district labels, controls and open panels through pan/zoom and resize. Display initial built Level 1, surveyed Not built and construction status; validate optional review levels 1-100 without client writes. Cover all twenty directory selections at desktop and three landscape sizes, unchanged nonoverlapping 44px targets and keyboard/touch navigation, real four-officer equipment entry/return and disposal, mixed-level fixtures across equipment returns, malformed level handling, unchanged fixed art/road reservations and production exclusion of loopback fixtures. No construction, resource spending, server implementation, multiplayer rule or reset persistence is implemented, so no server emulator suite is affected.",
       "tests": [
-        "tools/validate-realm-refresh.js",
-        "tools/validate-home-navigation-browser.js",
-        "tools/validate-login-session-behavior.js",
-        "tools/validate-reset-release.js",
-        "tools/validate-core-expansion-release.js",
-        "tools/validate-map-loading-browser.js",
-        "tools/validate-map-picker-input.js",
-        "functions/test/emulator-core-expansion-state.js",
-        "functions/test/emulator-realm-shard-isolation.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-production-artifact.js"
       ]
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js"
+      ],
+      "reason": "Version only estate JS/CSS references and invalidate the application cache for changed labels; retain unrelated script versions and offline cache policies. Check shell/index cache parity and production inclusion, lazy imagery and installation budgets.",
+      "tests": [
+        "tools/test-shell-cache-assertions.js",
+        "tools/validate-production-artifact.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/visual-qa/inner-city-estate/README.md"
+      ],
+      "reason": "Record owner-confirmed Level 100 maximum, Gold-only initial construction, Crown supply catalogs, permanent progression for four Gear buildings and Alehouse recruitment/recovery/meals. Explicitly revise the cosmetics-only policy and persistence allowlist while marking gameplay as planned. Document label layout, initial presentation, optional review levels and no publication claim. Records add no executable gameplay; costs, recipes, milestones and backend work remain unresolved, so gameplay/reset emulator tests do not apply.",
+      "tests": []
     }
   ]
 }

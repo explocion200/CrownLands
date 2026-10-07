@@ -13,9 +13,10 @@
     const scene = ["initial", "completed", "constructing"].includes(query.get("scene")) ? query.get("scene") : "initial";
     const renderer = window.CrownlandsEstate;
     const fixture = scene === "initial" ? null : Object.fromEntries(renderer.buildings.map(b => [b.key, scene]));
+    const levels = query.get("levels") === "milestones" ? Object.fromEntries(renderer.buildings.map((b,i) => [b.key,[1,25,50,75,100][i%5]])) : null;
     // Each real Back action remounts the same development scene and controls.
     window.CrownlandsEstate = Object.freeze({ ...renderer, mount(host, options) {
-      const view = renderer.mount(host, { ...options, fixture });
+      const view = renderer.mount(host, { ...options, fixture, levels });
       window.estatePreview = view;
       const controls = document.createElement("div");
       controls.id = "fixtureControls";

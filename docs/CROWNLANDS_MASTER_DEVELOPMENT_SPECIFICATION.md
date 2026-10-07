@@ -1191,7 +1191,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Shop → Skins offers Halloween City for 600 Crowns. Profile → Skins offers owned city skins and Default City with separate selection and **Apply**. Purchases unlock a city skin without equipping it and never enter the consumable Bag.
 - Remove troop, flag-border, paid flag-icon and bundle choices from Shop/Profile. The flag editor retains its normal free symbols; existing saved flag designs remain compatible. Map troops and city flags use their standard markers, even if an old equipped appearance record names a retired cosmetic.
 - Reject new purchases and Apply requests for retired cosmetics on the server, including stale clients. Preserve Crown balances, ownership records and purchase receipts; this update performs no bulk account migration or automatic refunds. Historical purchase retries retain their existing receipt protection. A normal city Apply publishes the city selection and empty legacy troop/border fields.
-- Crowns purchase cosmetics only; no gameplay benefit, resource conversion, player transfers or trading. Daily Missions and their existing Common Gear Box completion reward grant no Crowns. Earn Crowns through the map pickups specified in Section 6.
+- Crowns purchase cosmetic city skins. **October 7 confirmed extension:** the estate Wagon Yard will sell building supplies for Crowns and the Market will sell food supplies for Crowns. This explicitly supersedes the cosmetics-only/no-resource-conversion restriction for these two supply catalogs; prices, quantities, limits and gameplay implementation remain `PLANNED`, as specified in Section 16. Player transfers and player-to-player Crown trading remain prohibited. Daily Missions and their existing Common Gear Box completion reward grant no Crowns. Earn Crowns through the map pickups specified in Section 6.
 - Halloween City sales recur October 1 at 00:00 UTC through November 1 at 00:00 UTC, exclusive. Ownership and free switching remain permanent. Show the exact cost and resulting balance before purchase; reject stale quotes and never charge again for owned items or replayed purchases.
 - City skins follow the current owner across all regular cities, including captured cities, and remain visible to all players. Strongholds and other objectives retain their art. Keep independently changing ownership/King Power marker colors, player heraldry, city levels, hit areas and intelligence rules intact.
 - Wallets, ownership and purchase/collection receipts remain permanent private account records outside seasonal profiles. Only equipped appearance data is public. Server transactions control rewards, pricing and equipment; duplicate claims and season changes cannot restore a spent Crown allowance.
@@ -1222,7 +1222,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 
 #### Stripe Crown purchases — confirmed October 4, 2026
 
-- The user requested payment support for buying Crowns and selected Stripe while creating a merchant account. The existing cosmetics-only, non-transferable Crown wallet and seasonal persistence rules remain in force.
+- The user requested payment support for buying Crowns and selected Stripe while creating a merchant account. The permanent, non-transferable Crown wallet and seasonal persistence rules remain in force; the October 7 estate supply extension is planned separately from payment setup.
 - Prepare hosted checkout and server-verified, replay-safe purchase receipts in Stripe test mode. Test payments must not add playable Crowns. On October 5, 2026, the user confirmed the first one-time pack: **1,000 Crowns for US$4.99**. Halloween City remains 600 Crowns. Additional packs and live refund/dispute policy remain unconfirmed; do not treat test fixtures as approved offers.
 - The initial implementation is restricted to designated test accounts. On October 5, 2026, the user authorized connecting the Stripe sandbox, initially with checkout disabled, then designated one game account for the first sandbox purchase. The four sandbox payment functions were deployed from merged commit `83424189a3e82bf8cf2a02dcecbe1c207b72b0c1`; test credentials, webhook configuration, endpoint authentication and webhook signatures were verified. The private configuration enables only the designated account for the approved 1,000-Crown / US$4.99 sandbox pack. A signed-in hosted test payment was verified complete and paid at `2026-10-05T20:28:01Z`; automatic webhook fulfillment credited exactly 1,000 test Crowns before manual status checks. Repeated status checks and a signed completion-event replay added no duplicate credit, and the playable wallet remained unchanged. Status: `SANDBOX PURCHASE VERIFIED — ONE TESTER ENABLED`. Live payments require separate implementation/release approval, completed merchant setup and remaining provider failure-scenario tests. Evidence and remaining launch work: [Crown payments](./CROWN_PAYMENTS.md).
 - The first signed-in sandbox attempt exposed a Stripe API compatibility failure before payment: the installed SDK's Endive version rejects the existing card-only Checkout parameter. Checkout creation now pins the supported Dahlia contract, retaining the sandbox's payment methods and order protection. Only `createCrownCheckout` was updated from commit `6208eb0f3e7d4952adb2a85a57e4d504a78b9eaa` and verified active on October 5; all other functions and the current-realm pointer were unchanged. The original provider-cached failed attempt was retained as an expired receipt after proving it had no Stripe session; a fresh in-game order completed the successful test.
@@ -1230,7 +1230,7 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 #### Live Crown purchase setup — confirmed October 5, 2026
 
 - The owner requested live purchase setup and confirmed **crownlandsmail@gmail.com** for private support, **manual review** of refunds, and **all countries allowed**, subject to Stripe availability and applicable law. The approved pack remains **1,000 Crowns for US$4.99**; Halloween City remains 600 Crowns.
-- Add a separate live Checkout path that credits the permanent playable cosmetics wallet only after server verification of a completed, paid Stripe order. Keep sandbox keys, orders, webhooks and test wallets separate. Repeated or concurrent payment notifications must not credit twice, and concurrent cosmetic purchases or map pickups must retain their balances and receipts.
+- Add a separate live Checkout path that credits the permanent playable Crown wallet only after server verification of a completed, paid Stripe order. Keep sandbox keys, orders, webhooks and test wallets separate. Repeated or concurrent payment notifications must not credit twice, and concurrent cosmetic purchases or map pickups must retain their balances and receipts.
 - Purchase support and refund requests use the private support email. Requests require manual review; this approval does not establish an automatic refund entitlement, automatic Crown deductions, removal of owned skins, negative Crown balances or a spent-Crowns recovery rule. Refund and dispute notifications are retained for manual handling. A case received before fulfillment requires review before delivery.
 - Prepare purchase, refund and payment-privacy information and distinguish live checkout from sandbox checkout. Worldwide availability does not establish that tax registrations or other merchant obligations are complete.
 - The owner confirmed a dedicated **Buy Crowns** Shop tab immediately after **Skins**. Show the existing Crown coin artwork, the server-provided pack quantity and US-dollar price, and a **Buy** button that opens the existing purchase review and hosted checkout. Remove **Earn Crowns** from the shared skin panels and move Crown purchases out of the Skins tab. Crown map pickups and their established rewards remain unchanged.
@@ -1499,6 +1499,7 @@ The persistence allowlist is explicit. The following are intended to persist acr
 12. Unopened Common Gear Boxes
 13. Read-only final-season Kingdom Top 100 and Clan leaderboard archives
 14. Crown balances, owned cosmetic skins, equipped selections, purchase/collection receipts and the current UTC-day Crown pickup allowance
+15. Treasury, Barracks, Gatehouse and Royal Stables estate building levels and their earned Gear-set unlocks — confirmed October 7, 2026; persistence implementation is `PLANNED` and distinct from the existing Gear reset helper
 
 Authentication and active-session data may carry forward as technical account state. They are not part of the player-facing persistence allowlist and confer no seasonal progression.
 
@@ -1552,6 +1553,7 @@ The reset path uses explicit Common Gear and clan persistence helpers around `cr
 | Owned Common Gear | Persist | Preserved through the explicit Gear reset helper | Matches design in source and emulator coverage |
 | Equipped Common Gear | Persist | Preserved with normalized slot state | Matches design in source and emulator coverage |
 | Common Gear levels/upgrades/progression | Persist | Instance and upgrade state is preserved | Matches design in source and emulator coverage |
+| Treasury, Barracks, Gatehouse and Royal Stables estate levels/Gear-set unlocks | Persist | No authoritative estate building progression or reset persistence exists yet | `PLANNED` — confirmed October 7 |
 | Unopened Common Gear Boxes | Persist | Box count is preserved | Matches design in source and emulator coverage |
 | Normal Bag consumables | Reset | Counts reset to zero; effects and purchase cooldowns reset | Matches design in source |
 | Hero progression and skill presets | Reset | Hero returns to Level 1/XP 0/skill points 0; skill upgrades and presets return to defaults | Matches design in source |
@@ -1647,6 +1649,21 @@ Twenty permanent sites retain their positions and finished footprints through al
 - This is presentation only: new building roles are marked planned. It adds no costs, resource generation, timers, construction queue, saved building progression or champion quest rules. Review fixtures for initial, completed and construction scenes are development-only and excluded from production.
 
 Status: `LIVE — WEB` in verified build `36b889f9fb8e0320a6e3de7418359ddcf4a72ca8`, including the approved estate from PR #472, background coverage from PR #473 and equipment dismissal from PR #474. Public artifacts and controlled production-runtime checks passed; authenticated and physical-device review remain manual. itch.io was not republished for this estate update. Development review: [Estate visual draft](./visual-qa/inner-city-estate/README.md).
+
+### Confirmed estate economy direction and labels — October 7, 2026
+
+**Gameplay status: `PLANNED`.** The following owner decisions extend the presentation-only estate into a construction economy. Recording them does not establish working construction, supply purchases, champion recruitment, Gear gates or seasonal persistence.
+
+- All twenty estate buildings have a maximum of **Level 100**. This supersedes the unconfirmed ten-level proposal and does not cap regular world-city levels or Gear item levels.
+- Constructing any building at Level 1 requires **Gold only**. Subsequent building upgrades require gathered estate materials. Exact Gold/material amounts, production rates, recipes, timers, queue rules and level curves remain open balance decisions; the earlier proposed percentages are not approved for ninety-nine upgrades.
+- **Wagon Yard:** purchase building supplies with the existing permanent **Crowns** currency. **Market:** purchase food supplies with Crowns. These replace the earlier proposed delivery/merchant-exchange emphasis and explicitly revise Section 10's cosmetics-only restriction for these supply purchases. Supply pack contents, prices, purchase limits and refund/overflow handling remain undefined; no playable spending endpoint is added by the label update.
+- **Treasury, Barracks, Gatehouse and Royal Stables:** building progression unlocks the next Gear set for the corresponding officer. Their building levels and earned Gear-set unlocks are long-term account progression and survive season restarts. This replaces the proposed passive building-level Gold/troop/wall/march bonuses. Existing item upgrade prices, matching-copy requirements, bonuses, equipped items and earned Gear progression remain governed by Section 11. The meaning of Gear sets, required building milestones and handling of already-earned higher tiers must be defined before enforcing gates; do not retroactively revoke equipment.
+- **Alehouse:** higher levels provide stronger champions available for recruitment into the Guild Master's roster, faster champion recovery between quests and better preparation meals. Champion tiers, recruitment fees, offers, recovery curves and meal effects remain to be designed.
+- Other estate systems have not been added to the permanent account allowlist. The default seasonal-world reset policy remains in force unless separately changed.
+- Display a compact parchment **building name and level** beside each structure, preferably beneath its base and above it when space is clearer. Keep text in screen pixels through zoom; avoid covering building art, neighboring captions, district labels, controls and open panels. Dense or offscreen captions may defer to the directory and focused/hovered target, preserving all twenty sites and existing 44px targets. The directory and building detail also show level/status. Unbuilt sites say **Not built** and construction sites identify the construction state instead of implying completion.
+- Until authoritative construction progression is introduced, the live renderer's six existing completed sites display their starting **Level 1** and fourteen surveyed plots remain unbuilt. Optional review levels through 100 are local presentation inputs only, not saved progression or gameplay grants. The development-only milestone fixture is excluded from production.
+
+**Label implementation status: `IN DEVELOPMENT`** on `codex/estate-building-labels`. Approved artwork, fixed centers, camera bounds and equipment entry/return behavior remain as specified above; publication must be verified separately.
 
 ### Confirmed Treasury equipment presentation
 
@@ -2176,6 +2193,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 7, 2026 — Estate progression decisions and building labels
+
+- Confirmed Level 100 maximum for all twenty estate buildings, Gold-only initial construction and materials for subsequent upgrades.
+- Confirmed Crown building supplies at Wagon Yard and Crown food supplies at Market, explicitly superseding the cosmetics-only restriction for those planned catalogs.
+- Confirmed permanent levels/Gear-set unlocks for Treasury, Barracks, Gatehouse and Royal Stables, and Alehouse recruitment quality, quest recovery and preparation meals. Gameplay gates, costs and persistence remain planned.
+- Added name/level captions, initial Level 1 presentation and development-only milestone review without changing artwork, construction state, resource balances, Gear or backend persistence.
 
 ## October 7, 2026 — Inner Castle web release verification
 
