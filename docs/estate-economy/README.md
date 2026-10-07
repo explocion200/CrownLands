@@ -4,7 +4,7 @@ Status: **PROPOSED BALANCE, October 7, 2026.** The owner confirmed the twenty fi
 
 This update adds the resource ledger and design documentation. It does **not** implement gathering, spending, construction, saved levels, champion quests, shop catalogs or new equipment gates. Production shows actual available Gold/Crowns and unavailable material balances as a dash; the local review displays explicitly labeled sample balances. Existing artwork, fixed plots, twenty-building directory, camera, Back to Realm and equipment returns remain intact.
 
-Read [all 100 level rows](LEVEL_TABLES.md), [the arithmetic and session review](BALANCE_REVIEW.md) and [the reproducible design inputs](draft-config.json). Run `node tools/audit-estate-economy-draft.js --write` to reproduce the level/review documents. Those files are development documents, excluded from production configuration.
+Read [all 100 level rows](LEVEL_TABLES.md), [the arithmetic and session review](BALANCE_REVIEW.md) and [the reproducible design inputs](draft-config.json). Run `node tools/validate-estate-economy-draft.js --write` to reproduce the level/review documents. Those files are development documents, excluded from production configuration.
 
 ## 1. The player loop
 

@@ -54,7 +54,7 @@
     },
     {
       "paths": [
-        "tools/audit-estate-economy-draft.js",
+        "tools/validate-estate-economy-draft.js",
         "docs/estate-economy/draft-config.json",
         "docs/estate-economy/README.md",
         "docs/estate-economy/LEVEL_TABLES.md",
@@ -62,7 +62,7 @@
       ],
       "reason": "Development-only proposed estate design and a reproducible arithmetic/session/reset model. Check all 20 building definitions, all 100 cost/production/capacity rows, prerequisites without cycles, recipe conservation, prior-level storage affordability, offline queue/slot bounds, three daily visits, explicit monthly resets and Crown production-hour caps. Require generated level and balance evidence to match the current inputs. Gold, quest/meal sinks, acquisition, human behavior and full payment fairness remain stated limitations. No backend configuration or player records are changed, so no new emulator suite is applicable. Also verify monotonic Gold fees and report explicit single-city funding lower bounds separately from the affordable-Gold construction simulation.",
       "tests": [
-        "tools/audit-estate-economy-draft.js",
+        "tools/validate-estate-economy-draft.js",
         "tools/validate-inner-city-estate.js",
         "tools/validate-production-artifact.js"
       ]

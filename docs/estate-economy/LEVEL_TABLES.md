@@ -1,6 +1,6 @@
 # Estate draft — all 100 levels
 
-PROPOSED arithmetic; this file does not configure gameplay. Generated with `node tools/audit-estate-economy-draft.js --write`.
+PROPOSED arithmetic; this file does not configure gameplay. Generated with `node tools/validate-estate-economy-draft.js --write`.
 
 Materials = ceil(units × resource weight × building factor × permanence factor). Use the building weights in draft-config.json; permanence factor is 2 for the four officer buildings and 1 otherwise. Level 1 has only its fixed Gold construction fee. Gold hours below are multiplied by raw Main City Gold/hour, building factor and permanence factor, then rounded up. Minutes below are before those factors and the Builders' Yard reduction.
 

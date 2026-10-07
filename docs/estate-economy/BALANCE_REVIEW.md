@@ -1,6 +1,6 @@
 # Estate economy draft — arithmetic review
 
-PROPOSED, not live balance. Reproduce with `node tools/audit-estate-economy-draft.js --write`. No player data was used.
+PROPOSED, not live balance. Reproduce with `node tools/validate-estate-economy-draft.js --write`. No player data was used.
 
 ## Production and upgrade demand
 
