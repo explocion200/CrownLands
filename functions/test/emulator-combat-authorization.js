@@ -304,6 +304,7 @@ async function main() {
   await formerClanCases();
   await stagedWallCases();
   await troopProductionCases();
+  await linkedAccountCases();
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {
@@ -720,4 +721,156 @@ async function formerClanCases() {
   assert.equal((await cityRef(target).get()).data().ownerUid, leader.uid, "Expiry still prevented capture");
   console.log("Former-clan capture protection passed: leave/kick/disband, 24-hour snapshots, normal damage/casualties/XP/Shield effects, victories without capture, survivor returns, no conquest mission credit or retaliation grant, Tower and retaliation attacks, converted support/Rally returns, clan switching, outsiders/objectives/new owners, expiry in transit, replay and Firestore authority.");
 }
+async function linkedAccountCases() {
+  const linked = require("../linked-account-policy"), actors = await Promise.all([user("Linked A"), user("Linked B"), user("Unrelated")]);
+  const claims = [];
+  for (const actor of actors) {
+    const claim = await call("claimStartingCity", actor, { playerName: actor.label }); claims.push(claim);
+    await profileRef(actor).set({ itemEffects: { shieldExpiresAtMs: 0 } }, { merge: true });
+    await db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`).update({ troops: 1_000_000, troopFloat: 1_000_000,
+      ownerShieldExpiresAtMs: 0, productionUpdatedAtMs: Date.now() });
+  }
+  const [a, b, other] = actors, region = claims[0].regionId || claims[0].mainRegionId;
+  const occupied = new Set((await db.collection(`islands/${islandId(region)}/cities`).get()).docs.filter(doc => doc.data().isMainCity).map(doc => doc.id));
+  const seeds = layout.maps.find(map => map.id === region).cities.filter(city => !occupied.has(city.id) && city.kind !== "stronghold");
+  const source = await seedCity({ ...seeds[0], regionId: region }, a, 100_000);
+  const target = await seedCity({ ...seeds[1], regionId: region }, b, 1000);
+  const pairRef = db.doc(linked.confirmedPath(a.uid, b.uid));
+  const sharedRef = db.doc(`realmSecurity/${identity.resetGeneration}/accountPairs/${linked.pairId(a.uid, b.uid)}`);
+  const resetTarget = async owner => {
+    await cityRef(target).set({ ...target, ownerUid: owner.uid, ownerName: owner.label, troops: 1000, troopFloat: 1000,
+      level: 1, ownerShieldExpiresAtMs: 0, productionUpdatedAtMs: Date.now() });
+    await cityRef(source).update({ troops: 100_000, troopFloat: 100_000, productionUpdatedAtMs: Date.now() });
+    await Promise.all([a, b, other].map(actor => call("collectEconomy", actor)));
+  };
+  const preview = { fromId: source.id, toId: target.id, sourceRegionId: region, targetRegionId: region, requestedTroops: 20_000 };
+  async function verifyVictory(movement, patch = {}) {
+    const priorEvents = (await db.collection(`realmEvents/${identity.resetGeneration}--${identity.realmShardId}/ownershipChanges`).where("targetId", "==", target.id).get()).size;
+    await db.doc(`armies/${movement.id}`).set(patch, { merge: true });
+    const result = await resolve(a, movement);
+    assert.equal(result.outcome, "victory"); assert.equal(result.cityCaptured, false);
+    assert.equal(result.captureBlockedReason, "linked_account_capture"); assert(result.returned > 0);
+    const city = (await cityRef(target).get()).data(); assert.equal(city.ownerUid, b.uid); assert.equal(city.level, 1);
+    const report = result.reports.find(row => row.type === "attack");
+    assert.equal(report.captureBlockedReason, "linked_account_capture"); assert(report.xpAwarded > 0);
+    assert(report.attackerLosses > 0 && report.defenderLosses > 0);
+    const defense = (await db.doc(`players/${b.uid}/serverReports/${movement.id}_defense_${b.uid}`).get()).data();
+    assert.equal(defense.outcome, "held"); assert.equal(defense.cityCaptured, false);
+    assert.equal(defense.captureBlockedReason, "linked_account_capture");
+    assert.equal((await db.collection(`realmEvents/${identity.resetGeneration}--${identity.realmShardId}/ownershipChanges`).where("targetId", "==", target.id).get()).size, priorEvents);
+    const mission = await db.collection("dailyMissionEvents").where("eventId", "==", `battle_resolved_${movement.id}_${a.uid}`).get();
+    assert.equal(mission.docs[0].data().cityCaptured, false);
+    assert.equal((await grants(b).get()).size, 0);
+    const audit = await db.doc(`${linked.ROOT}/captureAudit/${linked.hash(`${identity.resetGeneration}\n${movement.id}`)}`).get();
+    assert(audit.exists); assert.equal(audit.data().expiresAtMs - audit.data().occurredAtMs, linked.AUDIT_MS);
+    const returnRef = movement.sourceType === "tower"
+      ? db.doc(`holdingTowers/${movement.fromId}/garrison/${a.uid}`) : cityRef(source);
+    const sourceAfter = (await returnRef.get()).data().troops;
+    await call("resolveArmyOrder", a, { armyId: movement.id, routeRegionIds: movement.routeRegionIds });
+    assert.equal((await returnRef.get()).data().troops, sourceAfter, "Duplicate victory returned troops twice");
+  }
+  await resetTarget(b);
+  await pairRef.set({ active: true, pairUids: [a.uid, b.uid] });
+  assert.equal((await call("previewArmyProtection", a, preview)).captureRestriction.expiresAtMs, null);
+  for (const patch of [{}, { kind: "transfer", launchKind: "transfer" }, { rallyReturn: true, rallyReturnAttack: true }]) {
+    await resetTarget(b);
+    const handoffRef = db.doc(`realmSecurity/${identity.resetGeneration}/antiHandoffPairs/${linked.hash(`anti-handoff-v2\n${b.uid}\n${a.uid}`)}`);
+    const exhaustedEvents = Array.from({ length: 7 }, (_, i) => ({ neutralClaimEventId: `prior-${i}`,
+      fromUid: b.uid, toUid: a.uid, atMs: Date.now() - 10_000 + i, targetKey: "test" }));
+    if (!Object.keys(patch).length) {
+      await handoffRef.set({ events: exhaustedEvents });
+      await cityRef(target).update({ neutralClaimEventId: "linked-new-claim", neutralClaimedByUid: b.uid,
+        neutralClaimedAtMs: Date.now() - 1000, neutralClaimSource: "attack", neutralClaimPolicyVersion: 2 });
+    }
+    const dispatch = await call("sendArmyOrder", a, order(source, target, 20_000));
+    assert(!dispatch.antiFarmPolicy.blocked); assert.equal(dispatch.captureRestriction.expiresAtMs, null);
+    await verifyVictory(dispatch.movement, patch);
+    if (!Object.keys(patch).length) {
+      assert.deepEqual((await handoffRef.get()).data().events, exhaustedEvents, "A non-capture changed the Anti-Handoff counter");
+      await handoffRef.delete();
+    }
+  }
+  // Reverse captures use the same symmetric pair, independently of the attacker.
+  const reverseSource = await seedCity({ ...seeds[2], regionId: region }, b, 100_000);
+  await cityRef(source).update({ troops: 1000, troopFloat: 1000, productionUpdatedAtMs: Date.now() });
+  await Promise.all([a, b].map(actor => call("collectEconomy", actor)));
+  const reverse = await resolve(b, (await call("sendArmyOrder", b, order(reverseSource, source, 20_000))).movement);
+  assert.equal(reverse.outcome, "victory"); assert.equal(reverse.cityCaptured, false);
+  assert.equal((await cityRef(source).get()).data().ownerUid, a.uid);
+  // A Tower origin uses its own garrison for preview and returns, with the
+  // identical capture-only guard and no change to objective capture rules.
+  await resetTarget(b);
+  const towers = require("../holding-towers"), tower = towers.TOWERS[2], clanId = `linked_clan_${randomUUID()}`;
+  await db.doc(`clans/${clanId}`).set({ ...identity, status: "active", leaderUid: a.uid, name: "Linked test", tag: "LT", memberCount: 1 });
+  await db.doc(`clans/${clanId}/members/${a.uid}`).set({ ...identity, clanId, uid: a.uid, role: "leader", status: "active", joinedAtMs: Date.now() - 172_800_000 });
+  await profileRef(a).set({ clanId, clanRole: "leader", towerGarrisonTroops: 40_000, towerGarrisonResetGeneration: identity.resetGeneration }, { merge: true });
+  await db.doc(`holdingTowers/${tower.id}`).set({ ...towers.createNeutralTowerState(tower.id, Date.now()), ...identity, ownerKind: "clan", clanId });
+  await db.doc(`holdingTowers/${tower.id}/garrison/${a.uid}`).set({ ...identity, towerId: tower.id, clanId, uid: a.uid, troops: 40_000 });
+  const towerPreview = await call("previewArmyProtection", a, { ...preview, fromId: tower.id, sourceRegionId: tower.regionId, sourceType: "tower" });
+  assert.equal(towerPreview.captureRestriction.expiresAtMs, null);
+  const towerDispatch = await call("sendHoldingTowerArmyOrder", a, { ...order(tower, target, 20_000), sourceType: "tower", targetType: "city" });
+  assert.equal(towerDispatch.captureRestriction.expiresAtMs, null);
+  await verifyVictory(towerDispatch.movement);
+  await profileRef(a).set({ clanId: "", clanRole: "" }, { merge: true });
+  // A new link appearing in transit must be applied at arrival.
+  await pairRef.delete(); await resetTarget(b);
+  const inTransit = await call("sendArmyOrder", a, order(source, target, 20_000));
+  assert.equal(inTransit.captureRestriction, null);
+  await pairRef.set({ active: true, pairUids: [b.uid, a.uid] }); await verifyVictory(inTransit.movement);
+  // Removing a permanent pair during transit restores capture eligibility.
+  await resetTarget(b);
+  const removedInTransit = await call("sendArmyOrder", a, order(source, target, 20_000));
+  await pairRef.delete();
+  assert.equal((await resolve(a, removedInTransit.movement)).cityCaptured, true);
+  await grants(b).get().then(snapshot => Promise.all(snapshot.docs.map(doc => doc.ref.delete())));
+  await resetTarget(b);
+  await sharedRef.set({ sharedInstallationLastSeenAtMs: Date.now(), sharedInstallationExpiresAtMs: Date.now() + linked.WINDOW_MS });
+  await verifyVictory((await call("sendArmyOrder", a, order(source, target, 20_000))).movement);
+  await sharedRef.delete(); await resetTarget(b);
+  const fp = linked.fingerprint("192.0.2.42", "emulator-only-linked-account-key-never-used-in-production");
+  const observation = uid => db.doc(`${linked.accountPath(uid)}/networkObservations/${fp}`);
+  for (const actor of [a, b]) await observation(actor.uid).set({ fingerprint: fp, lastSeenAtMs: Date.now(), expiresAtMs: Date.now() + linked.WINDOW_MS });
+  await verifyVictory((await call("sendArmyOrder", a, order(source, target, 20_000))).movement);
+  // Refreshing A cannot prolong B's expired history; a capture launched while
+  // linked can succeed after B's observation expires.
+  await resetTarget(b);
+  const expiresInTransit = await call("sendArmyOrder", a, order(source, target, 20_000));
+  await observation(b.uid).update({ lastSeenAtMs: Date.now() - linked.WINDOW_MS - 1 });
+  assert.equal((await call("previewArmyProtection", a, preview)).captureRestriction, null);
+  assert.equal((await resolve(a, expiresInTransit.movement)).cityCaptured, true);
+  // Current-owner lookup must not carry a stale restriction to an unrelated ruler.
+  await resetTarget(b); await pairRef.set({ active: true, pairUids: [a.uid, b.uid] });
+  const changesOwner = await call("sendArmyOrder", a, order(source, target, 20_000));
+  await cityRef(target).update({ ownerUid: other.uid, ownerName: other.label });
+  assert.equal((await resolve(a, changesOwner.movement)).cityCaptured, true);
+  assert.equal((await clientRead(a, pairRef.path)).status, 403);
+  assert.equal((await clientPatch(a, pairRef.path, "active", "forged")).status, 403);
+  await deny("probeLinkedAccountIngress", a, { suffixLength: 1, expectedIp: "192.0.2.42" }, /Administrator/);
+  // Accepted admission also registers installations without a separate client registration call.
+  const installationId = `installation-${randomUUID()}`;
+  for (const actor of [b, other]) await call("joinGameServer", actor, { serverId: (await call("getRealmInfo", actor)).serverId, sessionId: `session-${randomUUID()}`,
+    activateSession: true, installationId });
+  const admittedPair = await db.doc(`realmSecurity/${identity.resetGeneration}/accountPairs/${linked.pairId(b.uid, other.uid)}`).get();
+  assert(admittedPair.exists); assert(admittedPair.data().sharedInstallationExpiresAtMs > Date.now());
+  const service = linked.createService({ db, secret: () => "emulator-only-linked-account-key-never-used-in-production" });
+  const request = { headers: { "x-forwarded-for": "192.0.2.77, 192.0.2.254" } };
+  await db.doc(`${linked.ROOT}/configuration/ipIngress`).set({ enabled: true, verified: true, suffixLength: 2 });
+  await Promise.all([service.observe(a.uid, request), service.observe(b.uid, request)]);
+  const decision = await db.runTransaction(transaction => service.read(transaction, a.uid, b.uid, 0, Date.now()));
+  assert(decision.signals.includes("shared-ip"));
+  const many = Array.from({ length: 40 }, (_, i) => `shared-network-test-${i}`);
+  await Promise.all(many.map(uid => service.observe(uid, request)));
+  assert((await db.runTransaction(transaction => service.read(transaction, many[0], many.at(-1), 0, Date.now()))).restriction);
+  assert(!(await db.doc(linked.confirmedPath(many[0], many.at(-1))).get()).exists, "Shared networks created permanent account pairs");
+  // Concurrent admission and capture reads serialize through account guards.
+  await Promise.all([service.observe(other.uid, request), db.runTransaction(transaction => service.read(transaction, a.uid, other.uid, 0, Date.now()))]);
+  assert((await db.runTransaction(transaction => service.read(transaction, a.uid, other.uid, 0, Date.now()))).restriction);
+  const expired = db.doc(`${linked.accountPath("expired-test")}/networkObservations/expired`);
+  await expired.set({ fingerprint: "expired", lastSeenAtMs: Date.now() - linked.WINDOW_MS - 1, expiresAtMs: Date.now() - 1 });
+  await service.cleanup(Date.now()); assert(!(await expired.get()).exists);
+  assert((await observation(a.uid).get()).exists, "Cleanup deleted eligible network evidence");
+  await db.doc(`${linked.ROOT}/configuration/ipIngress`).delete(); await pairRef.delete();
+  console.log("Linked-account captures passed: permanent, device and IP restrictions, normal victories/XP/casualties, converted support and hostile rally returns, no ownership/conquest/retaliation effects, in-transit changes, expiry, current owners, replay, accepted installation admission, concurrent observations and private rules.");
+}
+
 main().catch(error => { console.error(error); process.exitCode = 1; });

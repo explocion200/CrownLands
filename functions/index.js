@@ -75,6 +75,13 @@ const CORE_EXPANSION = require("./coreExpansionTopology.js");
 const HOLDING_TOWERS = require("./holding-towers.js");
 const CLAN_BUILDINGS = HOLDING_TOWERS.BUILDINGS;
 const ANTI_HANDOFF = require("./anti-handoff-policy.js");
+const LINKED_ACCOUNTS = require("./linked-account-policy.js");
+const linkedAccountIpKey = defineSecret("LINKED_ACCOUNT_IP_HMAC_KEY");
+const linkedAccountIpSecrets = process.env.FUNCTIONS_EMULATOR === "true" ? [] : [linkedAccountIpKey];
+function getLinkedAccountIpKey() {
+  return process.env.FUNCTIONS_EMULATOR === "true"
+    ? "emulator-only-linked-account-key-never-used-in-production" : linkedAccountIpKey.value();
+}
 const COMBAT_AUTHORIZATION = require("./combat-authorization.js");
 const FORMER_CLAN_PROTECTION = require("./former-clan-protection.js");
 const RALLY_STAGING = require("./rally-staging.js");
@@ -137,6 +144,10 @@ function safeConfigString(value, fallback = "") {
 admin.initializeApp();
 
 const db = getFirestore();
+const linkedAccountService = LINKED_ACCOUNTS.createService({ db,
+  secret: getLinkedAccountIpKey,
+  unavailable: () => new HttpsError("unavailable", "Network verification is unavailable. Try again shortly."),
+});
 const cosmeticService = createCosmeticsService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry, assertCurrentPlayerProfile, normalizeFlag: normalizeServerFlag });
 const messaging = getMessaging();
 
@@ -8340,6 +8351,11 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
     defenderUid,
     nowMs,
   });
+  const regularCity = ANTI_HANDOFF.isRegularCity(target, targetType);
+  const captureDecision = regularCity
+    ? await linkedAccountService.read(transaction, attackerUid, defenderUid,
+      sharedDecision.policy.blocked ? sharedDecision.policy.blockedUntilMs : 0, nowMs)
+    : { restriction: null, signals: [] };
   const handoffPairData = handoffPairSnap?.exists ? handoffPairSnap.data() || {} : {};
   const rapidHandoff = ANTI_HANDOFF.evaluateAntiHandoff({
     pairData: handoffPairData,
@@ -8349,7 +8365,7 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
     toUid: attackerUid,
     atMs: handoffAtMs,
   });
-  const rapidPolicy = rapidHandoff.blocked
+  const rapidPolicy = rapidHandoff.blocked && !captureDecision.restriction
     ? createAntiFarmPolicy(true, "rapid-neutral-handoff-limit", rapidHandoff.nextSlotAtMs, {
       count: rapidHandoff.count,
       limit: rapidHandoff.limit,
@@ -8357,8 +8373,9 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
       policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
     })
     : createAntiFarmPolicy();
-  const policy = sharedDecision.policy.blocked ? sharedDecision.policy : rapidPolicy;
-  const internalReason = sharedDecision.policy.blocked
+  const sharedAttackBlocked = sharedDecision.policy.blocked && !regularCity;
+  const policy = sharedAttackBlocked ? sharedDecision.policy : rapidPolicy;
+  const internalReason = sharedAttackBlocked
     ? sharedDecision.internalReason
     : rapidHandoff.blocked ? "rapid-neutral-handoff-limit" : "";
   if (policy.blocked) {
@@ -8391,6 +8408,8 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
   }
   return {
     pairRef,
+    captureDecision,
+    captureRestriction: captureDecision.restriction,
     pairData,
     handoffPairRef,
     handoffPairData,
@@ -9035,8 +9054,9 @@ function makeReport({
     cityLevel: targetType === "camp" ? 0 : clampCityLevel(city?.level || 1),
     troopCount: Math.max(0, Math.floor(safeNumber(troopCount, city?.troops || 0))),
     sentTroops: Math.max(0, Math.floor(safeNumber(sentTroops, 0))),
-    ...(result.success && result.captureBlockedReason === "former_clan_protection"
-      ? { captureBlockedReason: "former_clan_protection" } : {}),
+    ...(result.success && result.captureBlockedReason
+      ? { captureBlockedReason: result.captureBlockedReason, captureRestriction: result.captureRestriction || null } : {}),
+    ...(typeof result.cityCaptured === "boolean" ? { cityCaptured: result.cityCaptured } : {}),
     survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
     defendersLeft: Math.max(0, Math.floor(safeNumber(result.defendersLeft, 0))),
     attackerLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
@@ -9849,10 +9869,11 @@ function createDetailedBattleSnapshot({
         breachRequired: false,
         maxDefenderLossPercent: 100,
       };
-  if (result.captureBlockedReason === "former_clan_protection") {
-    combatRule.id = "former_clan_protection";
+  if (["former_clan_protection", "linked_account_capture"].includes(result.captureBlockedReason)) {
+    combatRule.id = result.captureBlockedReason;
+    combatRule.captureRestriction = result.captureRestriction || null;
     combatRule.captureAllowed = false;
-    combatRule.captureProtectedUntilMs = result.captureProtectedUntilMs;
+    combatRule.captureProtectedUntilMs = result.captureProtectedUntilMs || 0;
   }
   return {
     battleId,
@@ -15242,16 +15263,8 @@ exports.getRealmInfo = timedCallable(
   }
 );
 
-exports.registerGameInstallation = timedCallable(
-  "registerGameInstallation",
-  { region: "us-central1", maxInstances: 20, invoker: "public" },
-  async request => {
-    const uid = requireAuth(request);
-    const installationId = safeString(request.data?.installationId, 160);
-    if (!/^[a-zA-Z0-9_-]{20,160}$/.test(installationId)) {
-      throw new HttpsError("invalid-argument", "This game installation could not be registered.");
-    }
-    const nowMs = Date.now();
+async function registerInstallationForPlayer(uid, installationId, nowMs = Date.now()) {
+  if (!/^[a-zA-Z0-9_-]{20,160}$/.test(installationId)) throw new HttpsError("invalid-argument", "This game installation could not be registered.");
     const installationHash = antiFarmHash(installationId);
     const installationRef = antiFarmInstallationRef(installationHash);
     const accountRef = antiFarmAccountRef(uid);
@@ -15332,13 +15345,32 @@ exports.registerGameInstallation = timedCallable(
         });
       });
     });
-    return {
-      ok: true,
-      registeredAtMs: nowMs,
-      nextRefreshAtMs: nowMs + 6 * 60 * 60 * 1000,
-    };
+  return { ok: true, registeredAtMs: nowMs, nextRefreshAtMs: nowMs + 6 * 60 * 60 * 1000 };
+}
+
+exports.registerGameInstallation = timedCallable("registerGameInstallation", { region: "us-central1", maxInstances: 20, invoker: "public", secrets: linkedAccountIpSecrets }, async request => {
+  const uid = requireAuth(request);
+  await linkedAccountService.observe(uid, request.rawRequest);
+  return registerInstallationForPlayer(uid, safeString(request.data?.installationId, 160));
+});
+
+// Read-only deployment probe. Its caller must already have an administrator
+// claim; no request can enable IP collection or modify the security policy.
+exports.probeLinkedAccountIngress = onCall({ region: "us-central1", maxInstances: 2,
+  invoker: "public", secrets: linkedAccountIpSecrets }, async request => {
+  requireAuth(request, { allowRealmMismatch: true });
+  if (!(request.auth.token.admin === true || request.auth.token.developer === true)) {
+    throw new HttpsError("permission-denied", "Administrator access required.");
   }
-);
+  const suffixLength = Number(request.data?.suffixLength);
+  const ip = LINKED_ACCOUNTS.ingressIp(request.rawRequest, { verified: true, suffixLength });
+  if (!ip || !LINKED_ACCOUNTS.normalizeIp(request.data?.expectedIp)) {
+    throw new HttpsError("failed-precondition", "The trusted ingress candidate could not be verified.");
+  }
+  const key = getLinkedAccountIpKey();
+  return { fingerprint: LINKED_ACCOUNTS.fingerprint(ip, key), suffixLength,
+    matchesExpected: LINKED_ACCOUNTS.fingerprint(ip, key) === LINKED_ACCOUNTS.fingerprint(request.data.expectedIp, key) };
+});
 
 async function cleanupExpiredAntiFarmInstallations(nowMs = Date.now()) {
   const [installationSnap, accountSnap, handoffPairSnap, handoffAuditSnap] = await Promise.all([
@@ -15383,12 +15415,12 @@ exports.joinGameServer = timedCallable("joinGameServer", {
   region: "us-central1",
   maxInstances: 20,
   concurrency: 80,
-  invoker: "public",
+  invoker: "public", secrets: linkedAccountIpSecrets,
 }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
-  return joinGameServerForPlayer({
+  const result = await joinGameServerForPlayer({
     uid,
     sessionId: requireGameServerSessionId(data.sessionId),
     displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
@@ -15399,18 +15431,28 @@ exports.joinGameServer = timedCallable("joinGameServer", {
     } : null,
     nowMs: Date.now(),
   });
+  if (result.status === "active") {
+    await linkedAccountService.observe(uid, request.rawRequest);
+    const acceptedInstallationId = safeString(result.activeSession?.installationId, 160);
+    if (/^[a-zA-Z0-9_-]{20,160}$/.test(acceptedInstallationId)) {
+      await registerInstallationForPlayer(uid, acceptedInstallationId);
+    }
+  }
+  return result;
 });
 
-exports.heartbeatGameServer = timedCallable("heartbeatGameServer", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.heartbeatGameServer = timedCallable("heartbeatGameServer", { region: "us-central1", maxInstances: 20, invoker: "public", secrets: linkedAccountIpSecrets }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
-  return heartbeatGameServerForPlayer({
+  const result = await heartbeatGameServerForPlayer({
     uid,
     sessionId: requireGameServerSessionId(data.sessionId),
     displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
     nowMs: Date.now(),
   });
+  if (result.status === "active") await linkedAccountService.observe(uid, request.rawRequest);
+  return result;
 });
 
 exports.leaveGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
@@ -24125,8 +24167,9 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   return result;
 });
 
-exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public", secrets: linkedAccountIpSecrets }, async request => {
   const uid = requireAuth(request);
+  await linkedAccountService.observe(uid, request.rawRequest);
   const data = request.data || {};
   const [sourceRegionId, targetRegionId] = await requireActiveWorldRegionIds([
     data.sourceRegionId || data.fromRegionId,
@@ -24134,11 +24177,13 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
   ]);
   const fromId = safeString(data.fromId, 96);
   const toId = safeString(data.toId, 96);
+  const sourceIsTower = data.sourceType === "tower";
   const targetType = data.targetType === "camp" ? "camp" : "city";
   if (!fromId || !toId || fromId === toId) {
     throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
   }
-  if (!getServerWorldTargetIds(sourceRegionId).has(fromId)) {
+  if (!(sourceIsTower ? HOLDING_TOWERS.getTowerDefinition(fromId)?.regionId === sourceRegionId
+    : getServerWorldTargetIds(sourceRegionId).has(fromId))) {
     throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
   }
   const allowedTargetIds = targetType === "camp"
@@ -24148,7 +24193,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
   }
 
-  const sourceRef = cityRefForRegion(sourceRegionId, fromId);
+  const sourceRef = sourceIsTower ? holdingTowerRef(fromId) : cityRefForRegion(sourceRegionId, fromId);
   const targetRef = targetType === "camp"
     ? campRefForRegion(targetRegionId, toId)
     : cityRefForRegion(targetRegionId, toId);
@@ -24167,11 +24212,25 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       throw new HttpsError("not-found", "The source or destination was not found.");
     }
     let source = { id: sourceSnap.id, ...sourceSnap.data() };
+    if (sourceIsTower) {
+      const profile = playerSnap.data() || {};
+      const clanId = safeString(profile.clanId, 128);
+      source = normalizeCurrentHoldingTower(sourceSnap, fromId, nowMs);
+      const [memberSnap, garrisonSnap] = await Promise.all([
+        clanId ? transaction.get(db.doc(`clans/${clanId}/members/${uid}`)) : Promise.resolve(null),
+        transaction.get(holdingTowerGarrisonRef(fromId, uid)),
+      ]);
+      if (!clanId || source.clanId !== clanId || !memberSnap?.exists) throw new HttpsError("permission-denied", "Only current owner-clan members may preview this Holding Tower origin.");
+      assertHoldingTowerMemberEligible(memberSnap.data(), nowMs, clanId);
+      const garrison = garrisonSnap.data() || {};
+      source.troops = isCurrentHoldingTowerGarrison(garrison, fromId, clanId) ? Math.max(0, safeNumber(garrison.troops, 0)) : 0;
+    }
     const target = targetType === "camp"
       ? getRewardCampCombatTarget({ id: targetSnap.id, regionId: targetRegionId, ...targetSnap.data() })
       : { id: targetSnap.id, regionId: targetRegionId, ...targetSnap.data() };
     if (!target) throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
-    if (getOwnerUid(source) !== uid) {
+    if (sourceIsTower ? !(source.ownerUid === uid || source.clanId === playerSnap.data()?.clanId)
+      : getOwnerUid(source) !== uid) {
       throw new HttpsError("permission-denied", "You can only preview attacks from your own city.");
     }
 
@@ -24194,6 +24253,12 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
     const captureProtectedUntilMs = formerClanCityCaptureProtectedUntil(uid, defenderProfile, target, targetType, nowMs);
+    const previewPair = ANTI_HANDOFF.isRegularCity(target, targetType) && targetOwnerUid && targetOwnerUid !== uid
+      ? await transaction.get(antiFarmPairRef(uid, targetOwnerUid)) : null;
+    const previewShared = evaluateAntiFarmPairData({ pairData: previewPair?.data() || {}, attackerUid: uid, defenderUid: targetOwnerUid, nowMs });
+    const captureDecision = ANTI_HANDOFF.isRegularCity(target, targetType)
+      ? await linkedAccountService.read(transaction, uid, targetOwnerUid, previewShared.policy.blockedUntilMs, nowMs)
+      : { restriction: null };
     const defenseContext = await getAuthoritativeDefensePackages(transaction, {
       target,
       targetType,
@@ -24253,10 +24318,12 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       attackProtection: protectionPreview,
       retaliation: retaliation?.record || null,
+      captureRestriction: captureDecision.restriction,
       combatForecast: createCombatForecast({
         attackerProfile,
         target,
         captureProtectedUntilMs,
+        captureRestriction: captureDecision.restriction,
         troops: effectiveTroops,
         attackProtection: protectionPreview,
         attackCombatSnapshot,
@@ -24509,6 +24576,7 @@ function normalizeCombatForecast(raw = null) {
     version: COMBAT_FORECAST_VERSION,
     status,
     captureProtectedUntilMs: Math.max(0, safeNumber(raw.captureProtectedUntilMs, 0)),
+    captureRestriction: raw.captureRestriction || null,
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, BASE_TROOP_ATTACK_POWER)),
     swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
     swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
@@ -24560,6 +24628,7 @@ function createCombatForecast({
   attackerProfile = {},
   target = {},
   captureProtectedUntilMs = 0,
+  captureRestriction = null,
   troops = 1,
   attackProtection = null,
   attackCombatSnapshot = null,
@@ -24572,6 +24641,7 @@ function createCombatForecast({
     version: COMBAT_FORECAST_VERSION,
     status: intel.status,
     captureProtectedUntilMs,
+    captureRestriction,
     attackPowerPerTroop: snapshot?.attackPowerPerTroop || BASE_TROOP_ATTACK_POWER,
     swordmasteryLevel: snapshot?.swordmasteryLevel || 0,
     swordmasteryPercent: snapshot?.swordmasteryPercent || 0,
@@ -24614,7 +24684,7 @@ function createCombatForecast({
     effectiveTroops,
     attackPower: result.attackPower,
     powerRatio: result.ratio,
-    expectedOutcome: result.success && captureProtectedUntilMs > nowMs ? "victory_no_capture" : getCombatForecastOutcome(result),
+    expectedOutcome: result.success && (captureRestriction?.blocked || captureProtectedUntilMs > nowMs) ? "victory_no_capture" : getCombatForecastOutcome(result),
     estimatedSurvivors: result.survivors,
     estimatedDefendersLeft: result.defendersLeft,
     estimatedAttackerLosses: result.attackerLosses,
@@ -26313,9 +26383,10 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
 
 exports.sendHoldingTowerArmyOrder = timedCallable(
   "sendHoldingTowerArmyOrder",
-  { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" },
+  { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public", secrets: linkedAccountIpSecrets },
   async request => {
     const uid = requireAuth(request);
+    await linkedAccountService.observe(uid, request.rawRequest);
     assertHoldingTowerWorldActive();
     const nowMs = Date.now();
     const order = normalizeArmyPayload(request.data || {}, uid);
@@ -26656,7 +26727,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         defenderUid: targetOwnerUid, attackerUid: uid, movement, source, target,
       }), nowMs);
       return {
-        ok: true,
+        ok: true, captureRestriction: antiFarmContext.captureRestriction || null,
         peaceShieldDeactivated,
         movement,
         sourceTower: sourceType === "tower" ? { id: source.id, ownTroops: availableTroops - troops } : null,
@@ -26680,9 +26751,10 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
   memory: "512MiB",
   minInstances: 1,
   maxInstances: 20,
-  invoker: "public",
+  invoker: "public", secrets: linkedAccountIpSecrets,
 }, async request => {
   const uid = requireAuth(request);
+  await linkedAccountService.observe(uid, request.rawRequest);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
 
@@ -27073,6 +27145,10 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
         handoffAtMs: arrivesAtMs,
       });
     }
+    if (launchCombatForecast && antiFarmContext.captureRestriction) {
+      launchCombatForecast.captureRestriction = antiFarmContext.captureRestriction;
+      if (launchCombatForecast.expectedOutcome === "capture") launchCombatForecast.expectedOutcome = "victory_no_capture";
+    }
     if (antiFarmContext.policy.blocked) {
       return {
         ok: false,
@@ -27282,7 +27358,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       acceptedTroops: troops,
       adjustedByProtection,
       ...(resolvedKind === "attack"
-        ? { antiFarmPolicy: antiFarmContext.policy }
+        ? { antiFarmPolicy: antiFarmContext.policy, captureRestriction: antiFarmContext.captureRestriction || null }
         : {}),
       movement,
       sourceCity: {
@@ -29150,6 +29226,16 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
         pairState: normalizeAntiFarmPairState({}, nowMs),
       };
+    // Hostile support/rally returns can reach regular-city combat without the
+    // ordinary handoff precheck. Read their capture guard before any writes.
+    if (!antiFarmContext.captureDecision && effectiveKind === "attack"
+        && ANTI_HANDOFF.isRegularCity(target, targetType) && defenderUid && defenderUid !== attackerUid) {
+      const pairSnap = await transaction.get(antiFarmPairRef(attackerUid, defenderUid));
+      const shared = evaluateAntiFarmPairData({ pairData: pairSnap.data() || {}, attackerUid, defenderUid, nowMs });
+      antiFarmContext.captureDecision = await linkedAccountService.read(transaction, attackerUid, defenderUid,
+        shared.policy.blockedUntilMs, nowMs);
+      antiFarmContext.captureRestriction = antiFarmContext.captureDecision.restriction;
+    }
     // Firestore transactions require every combat read to finish before this
     // slot-release write; doing it above left converted support permanently active.
     if (shouldReleaseClanReinforcementTarget) {
@@ -31165,11 +31251,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const captureProtectedUntilMs = formerClanCityCaptureProtectedUntil(
       attackerUid, defenderProfile, target, targetType, nowMs
     );
-    if (captureProtectedUntilMs) {
+    const linkedCaptureDecision = antiFarmContext.captureDecision || { restriction: null, signals: [] };
+    const captureRestriction = linkedCaptureDecision.restriction;
+    if (captureRestriction) {
+      result.captureBlockedReason = "linked_account_capture";
+      result.captureRestriction = captureRestriction;
+    } else if (captureProtectedUntilMs) {
       result.captureBlockedReason = "former_clan_protection";
       result.captureProtectedUntilMs = captureProtectedUntilMs;
     }
-    const cityCaptured = result.success && !captureProtectedUntilMs;
+    const cityCaptured = result.success && !captureProtectedUntilMs && !captureRestriction;
+    result.cityCaptured = Boolean(cityCaptured);
     const dailyMissionTargetCategory = getDailyMissionTargetCategory(target, "city");
     if (convertedReinforcement) {
       enqueueDailyMissionEvent(transaction, {
@@ -31309,9 +31401,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     finalizeLevelUpReward(attackerProgress, attackerLevelTroopReward);
     if (defenderProgress) finalizeLevelUpReward(defenderProgress, defenderLevelTroopReward);
 
-    if (result.breachCompleted || (result.success && captureProtectedUntilMs)) {
+    if (result.breachCompleted || (result.success && (captureProtectedUntilMs || captureRestriction))) {
       const nonCaptureOutcome = result.success ? "victory" : "breach";
-      const captureProtectionSummary = captureProtectedUntilMs
+      if (result.success && captureRestriction) linkedAccountService.audit(transaction, {
+        armyId, attackerUid, defenderUid, targetKey: getAntiFarmTargetKey(target, targetType, targetRegionId),
+        decision: linkedCaptureDecision, nowMs, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION,
+      });
+      const captureProtectionSummary = captureRestriction
+        ? " Linked-account protection prevents city capture. Battle rewards and casualties apply normally."
+        : captureProtectedUntilMs
         ? ` Former-clan protection prevents capture for another ${formatAntiFarmDuration(captureProtectedUntilMs - nowMs)}.`
         : "";
       const targetPatch = {
@@ -31466,6 +31564,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       markResolved({
         kind: "attack",
+        cityCaptured: Boolean(cityCaptured),
         outcome: nonCaptureOutcome,
         captureBlockedReason: result.captureBlockedReason || "",
         survivors: result.survivors,
@@ -31478,6 +31577,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ok: true,
         status: "resolved",
         kind: "attack",
+        cityCaptured: Boolean(cityCaptured),
         outcome: nonCaptureOutcome,
         captureBlockedReason: result.captureBlockedReason || "",
         returned: returnedArmy.returned,
@@ -31731,6 +31831,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       markResolved({
         kind: "attack",
+        cityCaptured: Boolean(cityCaptured),
         outcome: "victory",
         survivors: result.survivors,
         attackerLosses: result.attackerLosses,
@@ -31740,6 +31841,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ok: true,
         status: "resolved",
         kind: "attack",
+        cityCaptured: Boolean(cityCaptured),
         outcome: "victory",
         reports: reportsForCaller(),
         ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
@@ -31887,6 +31989,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     markResolved({
       kind: "attack",
+      cityCaptured: false,
       outcome: result.raidCompleted ? "raid" : "defeat",
       defendersLeft: result.defendersLeft,
       attackerLosses: result.attackerLosses,
@@ -31896,6 +31999,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ok: true,
       status: "resolved",
       kind: "attack",
+      cityCaptured: false,
       outcome: result.raidCompleted ? "raid" : "defeat",
       reports: reportsForCaller(),
       ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
@@ -35394,6 +35498,7 @@ exports.cleanupAntiFarmInstallations = onSchedule({
   memory: "256MiB",
 }, async () => {
   const result = await cleanupExpiredAntiFarmInstallations(Date.now());
+  result.linkedAccounts = await linkedAccountService.cleanup(Date.now());
   console.log("Expired Crownlands anti-abuse records cleaned", result);
 });
 

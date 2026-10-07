@@ -222,10 +222,12 @@ contains(server, /const ANTI_FARM_POLICY_VERSION = 2/,
   "The combined anti-abuse schema was not advanced to v2.");
 contains(server, /ANTI_FARM_INSTALLATION_RETENTION_MS = 30 \* 24 \* 60 \* 60 \* 1000/,
   "The independent shared-installation retention changed.");
-contains(server, /registerGameInstallation[\s\S]*?sharedInstallationLastSeenAtMs:[\s\S]*?sharedInstallationExpiresAtMs:/,
+contains(server, /registerInstallationForPlayer[\s\S]*?sharedInstallationLastSeenAtMs:[\s\S]*?sharedInstallationExpiresAtMs:/,
   "Shared-installation protection is no longer persisted independently.");
 contains(server, /evaluateAntiFarmPairData[\s\S]*?sharedInstallationUntilMs[\s\S]*?linked-account-activity/,
-  "Shared-installation attacks are no longer blocked.");
+  "Shared-installation protection is no longer evaluated.");
+contains(server, /const sharedAttackBlocked = sharedDecision\.policy\.blocked && !regularCity/,
+  "Regular-city capture-only protection changed objective attack eligibility.");
 contains(rules, /match \/realmSecurity\/\{resetId\}\/\{document=\*\*\}[\s\S]*?allow read, create, update, delete: if false/,
   "Private anti-abuse records are not denied to clients.");
 
