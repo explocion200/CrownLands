@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-10-03-city-wall-midpoint-v4",
+  "releaseId": "crownlands-2026-10-06-linked-account-capture-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "8767c34c43b07711aa37fce61b39a6c6394c7cdbf1127627803a91697747455a",
+  "apiContractHash": "637489cef89975fd10483831aeb70298f7243fab39db343ed5c062386c4d312c",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

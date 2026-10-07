@@ -294,7 +294,15 @@ async function main() {
     }, { merge: true });
   }
 
-  const targetRegionId = "new-lands-l01-p013";
+  // Spawns are unbiased across the reset pool. A fixed destination can be
+  // nearby, so select the farthest active first-ring map for the uncapped test.
+  const layout = require("../core-expansion-world-layout.json");
+  const sourceMap = layout.maps.find(map => map.id === claim.mainRegionId);
+  assert(sourceMap, "The claimed starting map is missing from the canonical layout.");
+  const firstLayerIds = new Set(topology.getFirstLayerRegionIds());
+  const distanceSquared = map => (map.region.x - sourceMap.region.x) ** 2 + (map.region.y - sourceMap.region.y) ** 2;
+  const targetRegionId = layout.maps.filter(map => firstLayerIds.has(map.id))
+    .sort((a, b) => distanceSquared(b) - distanceSquared(a) || a.id.localeCompare(b.id))[0].id;
   const targetIsland = await callFunction("ensureMainIsland", secondSession.token, {
     regionId: targetRegionId,
     ...clientIdentity,

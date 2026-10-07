@@ -1,61 +1,116 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "996fb9a2095fac6c66cd567fd91a45fde84b2ce5",
+  "baseCommit": "cf2c7ffe8f2806a264ca0222fed55ab9cc15c163",
   "coverage": [
     {
       "paths": [
-        "modal-ui.js",
-        "interface-theme.css"
+        "functions/index.js",
+        "functions/linked-account-policy.js"
       ],
-      "reason": "Use the existing overlay observer to pause only covered HUD decoration. Cover native/dynamic dialogs, nested overlays, close/removal/reopen, motion preferences and onboarding/lifecycle integration. Clock, live alerts, gameplay and authoritative synchronization are unchanged; no backend emulator suite applies.",
+      "reason": "Server-only rolling IP observations and permanent symmetric pairs are checked before regular-city arrival writes, including converted support and hostile Rally returns. Verify both directions, transit expiry and changed owners/links, casualties/rewards, survivor returns, no capture effects, replay, private records, accepted installation admission and concurrent guards. Preserve former-clan combat, objective/Rally eligibility, Anti-Handoff v2 cancellation/refunds, Tower origins and sessions.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-ui-refresh-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-linked-accounts.js",
+        "tools/validate-self-farming-prevention.js",
+        "tools/validate-former-clan-protection.js",
+        "tools/validate-combat-authorization.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-login-session-behavior.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-anti-handoff-v2.js",
+        "functions/test/emulator-first-time-onboarding.js",
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ]
     },
     {
       "paths": [
-        "game.js",
-        "player-profile-ui.js",
-        "skins-ui.js"
+        "game.js"
       ],
-      "reason": "Retain unchanged Profile production/achievement nodes and Skills/navigation state, and patch real data changes in place, including the production detail dialog and exact City Details troop formatting. Cover identity/focus, live skill eligibility, Gold/production/garrison updates, achievement badges and dependent profile/clan/skin navigation at desktop and landscape-mobile sizes. Numeric rules, timers and server authority are unchanged.",
+      "reason": "Expose capture-only restrictions through the authoritative forecast and accepted orders; retain permanent null expiry and distinguish victory from capture in both reports and sound feedback. Exercise the actual warning and full-report renderer with desktop and landscape-mobile CSS, alongside forecast, former-clan presentation, military and battle-report regressions.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-ui-refresh-browser.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-linked-accounts.js",
+        "tools/validate-linked-account-browser.js",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-combat-forecast.js",
+        "tools/validate-former-clan-protection.js",
+        "tools/validate-military-ui.js",
+        "tools/validate-authoritative-army-orders.js"
       ]
     },
     {
       "paths": [
-        "city-details-ui.js"
+        "firestore.indexes.json"
       ],
-      "reason": "Reuse the existing operation text patcher for passive city stat/wall content instead of comparing browser-normalized HTML strings; avoid unchanged upgrade attributes. Cover retained nodes, full garrison counts, upgrades/projections/Gold limits, repair/ownership handling and shared modal refresh dependencies.",
+      "reason": "Index the private observation expiration field for collection-group cleanup. Verify the private service and Firestore transactions/rules in the combat emulator. Temporary evidence uses timestamp eligibility and update-version deletion guards; clients receive no security access.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-city-details-browser.js",
-        "tools/validate-ui-refresh-browser.js"
+        "tools/validate-linked-accounts.js",
+        "functions/test/emulator-combat-authorization.js"
       ]
     },
     {
       "paths": [
-        "tools/validate-ui-stutter-browser.js"
+        "tools/linked-account-admin-api.js",
+        "tools/admin-linked-accounts.js",
+        "tools/verify-linked-account-ingress.js",
+        "tools/audit-linked-city-feeding.js"
       ],
-      "reason": "Execute the new actual-game regression for stable Skills/Profile/City content, live values/eligibility, six covered screens, nested/dynamic dialogs and Full/Reduced/Off preferences at three viewport sizes. Isolated benchmark services never access production accounts.",
+      "reason": "Validate exact identity/version-bound plans, symmetric confirm/removal, two-network verification receipts, four mocked HTTPS spoof checks, private output boundaries and Firestore encoding. Audit fixtures cover current holdings, five-day baselines, directed/retained ranks, intermediary/neutral paths with or without existing identity evidence and ranked route candidates and duplicate/conflicting/missing chains with evidence timing. A read-only production report was separately reconciled against the current realm; tests do not apply production changes.",
       "tests": [
-        "tools/validate-ui-stutter-browser.js"
+        "tools/validate-linked-accounts.js"
       ]
     },
     {
       "paths": [
-        "docs/visual-qa/ui-refresh-stutter/README.md"
+        "functions/release-config.json",
+        "release-config.js"
       ],
-      "reason": "Record the reproduced UI causes, bounded fix, controlled browser evidence, focused regression coverage and release status. Documentation only; runtime dependencies are covered above.",
+      "reason": "Coordinate client/backend release and contract identifiers for captureRestriction/cityCaptured while preserving monthly Core topology. Verify release/reset alignment and actual stale-client admission gates; implementation does not deploy.",
+      "tests": [
+        "tools/validate-coordinated-release.js",
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-coordinated-release.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/test/emulator-combat-authorization.js"
+      ],
+      "reason": "Execute new actual callable/arrival regressions in the current-realm combat fixture: permanent/IP/installation protection, reverse attacks, Tower origin previews/orders, changed owners/restrictions, converted movements, private rules, normal rewards and replay. Retain existing retaliation, wall, former-clan and objective/Rally assertions.",
+      "tests": [
+        "functions/test/emulator-combat-authorization.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-linked-accounts.js",
+        "tools/validate-linked-account-browser.js",
+        "tools/validate-self-farming-prevention.js",
+        "tools/validate-combat-forecast.js"
+      ],
+      "reason": "Execute all affected validators, including actual desktop/mobile preview and report presentation, mocked trusted-ingress verification, private service failures and audit methodology. Update source assertions for capture-only regular cities while retaining shared-installation objective cancellation and Anti-Handoff v2 behavior.",
+      "tests": [
+        "tools/validate-linked-accounts.js",
+        "tools/validate-linked-account-browser.js",
+        "tools/validate-self-farming-prevention.js",
+        "tools/validate-combat-forecast.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/LINKED_ACCOUNT_CITY_CAPTURE_OPERATIONS.md"
+      ],
+      "reason": "Document the confirmed rules, accepted network/installation limitations, prospective IP activation gate, reviewed account-link workflow, audit evidence interpretation and authorization/deployment boundaries. Corresponding runtime groups cover the implementation; documentation needs no separate executable test.",
       "tests": []
+    },
+    {
+      "paths": [
+        "functions/test/emulator-first-time-onboarding.js"
+      ],
+      "reason": "Keep the affected session-admission and real long-route regression meaningful for every unbiased spawn. Select a distant active first-ring destination from the canonical layout instead of assuming a fixed target is more than 30 minutes away. Preserve the original duration, route-authority, admission and replay assertions; no gameplay route rule changes.",
+      "tests": [
+        "functions/test/emulator-first-time-onboarding.js"
+      ]
     }
   ]
 }

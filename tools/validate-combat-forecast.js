@@ -231,7 +231,7 @@ Object.assign(sandbox, {
   formatNumber: value => String(value),
   escapeHtml: value => String(value).replace(/[<>&"]/g, ""),
 });
-for (const name of ["normalizeCombatFortificationSnapshot", "normalizeCombatForecast", "renderBattleForecastChanges"]) {
+for (const name of ["normalizeCombatFortificationSnapshot", "normalizeLinkedCaptureRestriction", "normalizeCombatForecast", "renderBattleForecastChanges"]) {
   vm.runInContext(readFunction(clientSource, name), sandbox);
 }
 const forecastReport = { type: "attack", launchCombatForecast: {

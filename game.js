@@ -9155,6 +9155,12 @@ function normalizeCombatFortificationSnapshot(raw = null) {
   };
 }
 
+function normalizeLinkedCaptureRestriction(raw = null) {
+  if (raw?.blocked !== true || raw.reason !== "linked_account_capture") return null;
+  return { blocked: true, reason: "linked_account_capture",
+    expiresAtMs: raw.expiresAtMs === null ? null : Math.max(0, Number(raw.expiresAtMs) || 0) };
+}
+
 function normalizeCombatForecast(raw = null) {
   if (!raw || typeof raw !== "object" || Number(raw.version) !== COMBAT_FORECAST_VERSION) return null;
   const status = ["scouted", "unavailable", "expired", "owner_changed"].includes(raw.status)
@@ -9164,6 +9170,7 @@ function normalizeCombatForecast(raw = null) {
     version: COMBAT_FORECAST_VERSION,
     status,
     captureProtectedUntilMs: Math.max(0, Number(raw.captureProtectedUntilMs) || 0),
+    captureRestriction: normalizeLinkedCaptureRestriction(raw.captureRestriction),
     attackPowerPerTroop: Math.max(0, Number(raw.attackPowerPerTroop) || BASE_TROOP_ATTACK_POWER),
     swordmasteryLevel: Math.max(0, Math.floor(Number(raw.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(raw.swordmasteryPercent) || 0),
@@ -10816,7 +10823,9 @@ function normalizeBattleReports(reports) {
         scoutDisclosure: normalizeDefenderScoutDisclosure(report.scoutDisclosure),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
-        captureBlockedReason: report.captureBlockedReason === "former_clan_protection" ? "former_clan_protection" : "",
+        captureBlockedReason: ["former_clan_protection", "linked_account_capture"].includes(report.captureBlockedReason) ? report.captureBlockedReason : "",
+        cityCaptured: typeof report.cityCaptured === "boolean" ? report.cityCaptured : undefined,
+        captureRestriction: normalizeLinkedCaptureRestriction(report.captureRestriction),
         xpAwarded: count(report.xpAwarded),
         goldAwarded: count(report.goldAwarded),
         troopsAwarded: count(report.troopsAwarded),
@@ -13119,7 +13128,8 @@ function applyServerArmyResult(result = null, options = {}) {
   if (
     newestPlayerReport?.type === "attack"
     && newestPlayerReport.outcome === "victory"
-    && result.captureBlockedReason !== "former_clan_protection"
+    && !["former_clan_protection", "linked_account_capture"].includes(result.captureBlockedReason)
+    && result.cityCaptured !== false
     && !resultTargetIsCamp
   ) {
     const capturedCity = cityById(newestPlayerReport.cityId);
@@ -31622,6 +31632,7 @@ async function loadAttackProtectionPreview(source, target) {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
       fromId: source.id,
+      sourceType: isHoldingTowerTarget(source) ? "tower" : "city",
       toId: target.id,
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
@@ -32280,8 +32291,11 @@ function updateTroopOrderPreview(source, target, route, { orderKind, amount, att
     return;
   }
 
-  const captureProtected = Number(combatForecast?.captureProtectedUntilMs) > Date.now();
-  const captureNotice = captureProtected
+  const linkedCapture = normalizeLinkedCaptureRestriction(combatForecast?.captureRestriction);
+  const captureProtected = Boolean(linkedCapture) || Number(combatForecast?.captureProtectedUntilMs) > Date.now();
+  const captureNotice = linkedCapture
+    ? "Battle allowed; city capture restricted by linked-account protection. Checked again on arrival."
+    : captureProtected
     ? "Former-clan protection: attacks allowed; city capture blocked for 24 hours after departure. Checked again on arrival."
     : "";
   const report = getScoutReportForTarget(target);
@@ -39116,7 +39130,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
   const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
   const rawCombatRule = value.combatRule && typeof value.combatRule === "object" ? value.combatRule : {};
-  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid", "former_clan_protection"]
+  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid", "former_clan_protection", "linked_account_capture"]
     .includes(rawCombatRule.id)
     ? rawCombatRule.id
     : "normal_capture";
@@ -39260,6 +39274,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
       id: combatRuleId,
       captureAllowed: rawCombatRule.captureAllowed !== false,
       captureProtectedUntilMs: Math.max(0, Number(rawCombatRule.captureProtectedUntilMs) || 0),
+      captureRestriction: normalizeLinkedCaptureRestriction(rawCombatRule.captureRestriction),
       breachRequired: rawCombatRule.breachRequired === true,
       maxDefenderLossPercent: Math.max(0, Number(rawCombatRule.maxDefenderLossPercent) || 0),
     },
@@ -39604,7 +39619,7 @@ function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", re
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") {
     return "The Citadel Legion returned the holding to neutral control";
   }
-  if (snapshot.combatRule?.id === "former_clan_protection" && snapshot.outcome === "victory") {
+  if (["former_clan_protection", "linked_account_capture"].includes(snapshot.combatRule?.id) && snapshot.outcome === "victory") {
     return viewerRole === "attacker" ? "Your side won — city ownership unchanged" : "Opponent won — you keep the city";
   }
   if (snapshot.combatRule?.id === "protected_raid") return "Protected raid completed — no capture";
@@ -39647,6 +39662,7 @@ function renderRallyParticipantResults(snapshot = null) {
 }
 
 function getBattleRuleLabel(snapshot = null) {
+  if (snapshot?.combatRule?.id === "linked_account_capture") return "Linked-account protection — battle allowed; city capture restricted";
   if (snapshot?.combatRule?.id === "former_clan_protection") return "Former-clan protection — attacks allowed, city capture disabled for 24 hours";
   if (snapshot?.combatRule?.id === "clan_tower_raid") return "One Clan Tower per clan — attack allowed, capture disabled";
   if (snapshot?.target?.targetType === "camp") return Number(snapshot.defenseCombatVersion) >= DEFENSE_COMBAT_VERSION
@@ -39735,7 +39751,7 @@ function renderBattleRewards(report = null) {
 }
 
 function getLegacyBattleResultLabel(report = null) {
-  if (report?.captureBlockedReason === "former_clan_protection") {
+  if (["former_clan_protection", "linked_account_capture"].includes(report?.captureBlockedReason)) {
     return report.type === "defense" ? "Opponent won — you keep the city" : "Your side won — city ownership unchanged";
   }
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
