@@ -1,13 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "36b889f9fb8e0320a6e3de7418359ddcf4a72ca8",
+  "baseCommit": "96f30194939c843b0814afdee4eff210ed3b515e",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Documentation-only release record required by the specification after the authorized PR 474 publication. Cross-check build/deploy/time, all three hosts, 51 staged and 153 public artifact comparisons, twenty controlled runtime returns, anonymous startup and unchanged backend identity against sanitized deployment records. Update current snapshot, estate status, channel matrix and change log without changing gameplay or design. Explicitly retain the authenticated/physical-device test gap and unreleased itch channel. No executable, artwork, dependency or server change; no runtime or emulator test applies to this prose.",
-      "tests": []
+      "paths": ["game.js", "firebaseClient.js", "tools/validate-home-navigation-browser.js", "tools/validate-realm-refresh.js"],
+      "reason": "Fix Home rejecting an open map during overlapping realm discovery: propagate force to the real Firebase adapter, start a fresh request without allowing an older completion to clear it, and retain the newest authoritative expansion revision within the same generation/world. The new real-adapter and state-handler tests reproduce the original failure and cover ordinary request sharing, overlap cleanup, retry, session cancellation, partial responses and lower revision in a new realm. The real-game Home browser checks desktop and landscape-mobile clicks, forced freshness, delayed responses, repeated taps, session changes, newer navigation, genuinely closed maps and warm navigation. Cover shared realm/reset contracts, session admission, map discovery/loading and the map picker; selected server emulator suites verify authoritative activation and generation isolation. Current production pointer was read-only verified as realm-2026-10/main-realm-2026-10/shard_0001 with all 56 New Lands open, matching the core-expansion-v1 release. No rules, server implementation, production data, archived world or release contract change.",
+      "tests": [
+        "tools/validate-realm-refresh.js",
+        "tools/validate-home-navigation-browser.js",
+        "tools/validate-login-session-behavior.js",
+        "tools/validate-reset-release.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-map-loading-browser.js",
+        "tools/validate-map-picker-input.js",
+        "functions/test/emulator-core-expansion-state.js",
+        "functions/test/emulator-realm-shard-isolation.js"
+      ]
     }
   ]
 }

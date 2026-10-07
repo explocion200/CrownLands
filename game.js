@@ -99,6 +99,7 @@ const STATIC_ACTIVE_WORLD_REGION_IDS = new Set(CORE_EXPANSION_TOPOLOGY_ACTIVE
       .filter(Boolean)
   : WORLD_REGION_IDS);
 let ACTIVE_WORLD_REGION_IDS = new Set(STATIC_ACTIVE_WORLD_REGION_IDS);
+let appliedCoreExpansionState = null;
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = CORE_EXPANSION_TOPOLOGY_ACTIVE
@@ -2991,12 +2992,21 @@ function registerCoreExpansionRegions(regions = []) {
 }
 
 function applyCoreExpansionRealmState(realm = null) {
-  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return;
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return null;
+  const realmScope = [realm?.resetGeneration || RESET_GENERATION, realm?.worldId || ONLINE_WORLD_ID].join(":");
+  const previousExpansion = appliedCoreExpansionState?.realmScope === realmScope
+    ? appliedCoreExpansionState.expansion
+    : null;
+  if (!Array.isArray(realm?.coreExpansion?.activeRegionIds)) return previousExpansion;
+  const revision = Math.max(0, Math.floor(Number(realm.coreExpansion.revision) || 0));
+  // Concurrent Home and subscription checks can finish in the opposite order.
+  if (previousExpansion && revision < Math.max(0, Math.floor(Number(previousExpansion.revision) || 0))) {
+    return previousExpansion;
+  }
   const previousRegionSignature = [...ACTIVE_WORLD_REGION_IDS].sort().join("|");
   const regionsChanged = registerCoreExpansionRegions(realm?.coreExpansion?.regions || []);
-  const dynamicRegionIds = Array.isArray(realm?.coreExpansion?.activeRegionIds)
-    ? realm.coreExpansion.activeRegionIds.map(normalizeRegionId).filter(Boolean)
-    : [];
+  const dynamicRegionIds = realm.coreExpansion.activeRegionIds.map(normalizeRegionId).filter(Boolean);
+  appliedCoreExpansionState = { realmScope, expansion: realm.coreExpansion };
   ACTIVE_WORLD_REGION_IDS = new Set([
     ...STATIC_ACTIVE_WORLD_REGION_IDS,
     ...dynamicRegionIds,
@@ -3008,6 +3018,7 @@ function applyCoreExpansionRealmState(realm = null) {
       renderIslandSwitcherModalContent();
     }
   }
+  return realm.coreExpansion;
 }
 
 function getRegionLabel(regionId) {
@@ -17139,7 +17150,7 @@ async function verifyRealmCompatibility(api, { force = false, requestScope = nul
   }
   const requestStartedAtMs = Date.now();
   const realm = await withTimeout(
-    api.getRealmInfo(),
+    api.getRealmInfo({ force }),
     10000,
     "The Crownlands server version check is taking too long."
   );
@@ -17166,7 +17177,7 @@ async function verifyRealmCompatibility(api, { force = false, requestScope = nul
   const priorResetGeneration = RESET_GENERATION;
   const priorWorldId = ONLINE_WORLD_ID;
   applyVerifiedRealmIdentity(realm);
-  applyCoreExpansionRealmState(realm);
+  const coreExpansion = applyCoreExpansionRealmState(realm);
   const releaseMatches = String(realm?.releaseId || "") === APP_RELEASE_ID;
   const generationMatches = String(realm?.resetGeneration || "") === RESET_GENERATION;
   const worldMatches = String(realm?.worldId || "") === ONLINE_WORLD_ID;
@@ -17200,8 +17211,8 @@ async function verifyRealmCompatibility(api, { force = false, requestScope = nul
     clanQuestServerClockOffsetMs = serverTimeMs - Math.round((requestStartedAtMs + responseReceivedAtMs) / 2);
   }
   activeClanQuestPeriod = getCurrentClanQuestPeriod();
-  verifiedRealmInfo = realm;
-  return realm;
+  verifiedRealmInfo = coreExpansion ? { ...realm, coreExpansion } : realm;
+  return verifiedRealmInfo;
 }
 
 function resolveMainCityRecoveryResult(result = null) {

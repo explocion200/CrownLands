@@ -47,13 +47,14 @@ async function main() {
         Object.assign(state.online,{mainCityId:city.id,mainRegionId:homeRegion.id,mainIslandId:getOnlineIslandId(homeRegion.id)});
         const api={...getOnlineApi()}, original=api.getRealmInfo;
         getOnlineApi=()=>api;
-        window.homeQa={homeRegion:homeRegion.id,cityId:city.id,origin:getActiveMapRegionId(),calls:0,mode:'open',release:null};
-        api.getRealmInfo=async()=>{
+        window.homeQa={homeRegion:homeRegion.id,cityId:city.id,origin:getActiveMapRegionId(),calls:0,mode:'open',release:null,stalePending:false};
+        api.getRealmInfo=async(options={})=>{
           homeQa.calls++;
           if(homeQa.mode==='fail')throw Error('Fixture connection failed');
           const realm=await original();
           if(homeQa.mode==='defer')await new Promise(resolve=>homeQa.release=resolve);
-          return {...realm,coreExpansion:{revision:99,activeRegionIds:homeQa.mode==='closed'?[]:[homeQa.homeRegion],regions:[]}};
+          const closed=homeQa.mode==='closed'||(homeQa.stalePending&&!options.force);
+          return {...realm,coreExpansion:{revision:closed?98:99,activeRegionIds:closed?[]:[homeQa.homeRegion],regions:[]}};
         };
         updateMainCityReturnButton();
       })()`);
@@ -89,6 +90,33 @@ async function main() {
         homeQa.mode='closed';await returnToMainCity();
         if(getActiveMapRegionId()!==homeQa.origin || isWorldRegionRuntimeActive(homeQa.homeRegion) || !toast.textContent.includes('has not opened yet'))throw Error('Home bypassed server map activation');
         return true;
+      })()`);
+
+      await load();
+      const forcedFresh = await evaluate(`(async () => {
+        homeQa.stalePending=true;
+        await returnToMainCity();
+        if(getActiveMapRegionId()!==homeQa.homeRegion || selectedSourceId!==homeQa.cityId)throw Error('Home reused an older pending realm response');
+        return true;
+      })()`);
+
+      await load();
+      await evaluate(`(async () => {
+        const api=getOnlineApi(), original=api.getRealmInfo;
+        api.getRealmInfo=async()=>{
+          const realm=await original({force:true});
+          await new Promise(resolve=>homeQa.release=resolve);
+          return {...realm,coreExpansion:{revision:98,activeRegionIds:[],regions:[]}};
+        };
+        homeQa.pending=verifyRealmCompatibility(api,{force:true});
+      })()`);
+      await wait("typeof homeQa.release === 'function'");
+      await evaluate(`(async () => {
+        applyCoreExpansionRealmState({resetGeneration:RESET_GENERATION,worldId:ONLINE_WORLD_ID,coreExpansion:{revision:99,activeRegionIds:[homeQa.homeRegion],regions:[]}});
+        homeQa.release();await homeQa.pending;
+        if(!isWorldRegionRuntimeActive(homeQa.homeRegion) || verifiedRealmInfo.coreExpansion.revision!==99)throw Error('An older response replaced newer home-map availability or metadata');
+        await returnToMainCity();
+        if(getActiveMapRegionId()!==homeQa.homeRegion || selectedSourceId!==homeQa.cityId || homeQa.calls!==1)throw Error('Home failed after an out-of-order realm response');
       })()`);
 
       await load();
@@ -135,7 +163,7 @@ async function main() {
         if(getActiveMapRegionId()!==homeQa.homeRegion || selectedSourceId!==homeQa.cityId || homeQa.calls!==0)throw Error('Already-known Home navigation added a realm request');
         return true;
       })()`);
-      results.push({ width, height, recovered, failureRecovery, closed, repeatedTaps:true, staleSession, newerNavigation, warm });
+      results.push({ width, height, recovered, failureRecovery, closed, forcedFresh, delayedExpansion:true, repeatedTaps:true, staleSession, newerNavigation, warm });
       console.log(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, [], "Unexpected browser errors");
