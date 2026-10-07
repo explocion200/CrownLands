@@ -1572,19 +1572,21 @@
     return callServerFunction("getCombatPlayerIdentity", { uid: playerId, includePublicProfile: true });
   }
 
-  async function getRealmInfo() {
-    if (client.realmInfoPromise) return client.realmInfoPromise;
-    client.realmInfoPromise = callServerFunction("getRealmInfo", {
+  async function getRealmInfo({ force = false } = {}) {
+    if (client.realmInfoPromise && !force) return client.realmInfoPromise;
+    // A forced expansion check must be sampled after the action that needs it.
+    const request = callServerFunction("getRealmInfo", {
       releaseId: APP_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
     }).then(result => {
-      applyRealmIdentity(result);
+      if (client.realmInfoPromise === request) applyRealmIdentity(result);
       return result;
     }).finally(() => {
-      client.realmInfoPromise = null;
+      if (client.realmInfoPromise === request) client.realmInfoPromise = null;
     });
-    return client.realmInfoPromise;
+    client.realmInfoPromise = request;
+    return request;
   }
 
   function subscribeCoreExpansionState(handlers = {}) {
