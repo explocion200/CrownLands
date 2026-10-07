@@ -54,4 +54,6 @@ Defaults are five days and at least 36 regular cities, including a player's Main
 
 The report includes current holdings and acquisition records, starting/end counts, net growth, directed transfers across all players, retained cities, possible intermediary/neutral routes and prevented captures. Names include Main Cities where available. Present-day signals are explicitly labeled `current-state`; prevented-capture audits use `recorded-at-resolution`. Neither current shared IPs nor similar names prove historical common control. Missing acquisitions, conflicting duplicate events and broken chains are disclosed; incomplete or inconsistent history withholds baseline metrics. The report writes no production data.
 
+Intermediary and neutral routes appear even without an existing account link. Directed route candidates are ranked by transfer-chain count and retained cities; ordinary wars can produce the same patterns, so these are review leads. Current identity signals are attached separately rather than required for inclusion.
+
 The existing daily cleanup removes expired temporary network observations and 90-day capture audits with update-version preconditions, so a concurrent refresh cannot be deleted. Confirmed pairs and their administration trail remain until explicit administrative action. Security collections remain denied to all game clients.

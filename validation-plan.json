@@ -54,7 +54,7 @@
         "tools/verify-linked-account-ingress.js",
         "tools/audit-linked-city-feeding.js"
       ],
-      "reason": "Validate exact identity/version-bound plans, symmetric confirm/removal, two-network verification receipts, four mocked HTTPS spoof checks, private output boundaries and Firestore encoding. Audit fixtures cover current holdings, five-day baselines, directed/retained ranks, intermediary/neutral paths and duplicate/conflicting/missing chains with evidence timing. A read-only production report was separately reconciled against the current realm; tests do not apply production changes.",
+      "reason": "Validate exact identity/version-bound plans, symmetric confirm/removal, two-network verification receipts, four mocked HTTPS spoof checks, private output boundaries and Firestore encoding. Audit fixtures cover current holdings, five-day baselines, directed/retained ranks, intermediary/neutral paths with or without existing identity evidence and ranked route candidates and duplicate/conflicting/missing chains with evidence timing. A read-only production report was separately reconciled against the current realm; tests do not apply production changes.",
       "tests": [
         "tools/validate-linked-accounts.js"
       ]

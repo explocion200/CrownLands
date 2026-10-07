@@ -57,7 +57,7 @@ function buildReport({ cities, events, names = new Map(), links = () => [], audi
         acquiredWithinWindow: Boolean(latest && latest.afterOwnerUid === uid && latest.createdAtMs >= startMs) };
     }),
   }));
-  const direct = new Map(), routes = [];
+  const direct = new Map(), routes = [], routeCandidates = new Map();
   for (const history of byCity.values()) {
     const recent = history.filter(event => event.createdAtMs >= startMs);
     for (const event of recent) {
@@ -73,12 +73,20 @@ function buildReport({ cities, events, names = new Map(), links = () => [], audi
       if (!receiver) continue;
       for (let start = 0; start < end; start++) {
         const origin = recent[start].beforeOwnerUid;
-        const signals = origin && origin !== receiver ? links(origin, receiver) : [];
-        if (!signals.length) continue;
+        if (!origin || origin === receiver) continue;
+        const signals = links(origin, receiver);
         const path = [origin, ...recent.slice(start, end + 1).map(event => event.afterOwnerUid)];
+        const retained = cityMap.get(key(recent[end])).ownerUid === receiver && history.at(-1) === recent[end];
         routes.push({ city: cityMap.get(key(recent[end])).name || recent[end].targetId, region: recent[end].regionId,
           route: path.map(label), throughNeutral: path.includes(""), currentLinkSignals: signals,
-          linkEvidenceTiming: "current-state", reviewOnly: true, retained: cityMap.get(key(recent[end])).ownerUid === receiver });
+          startedAt: new Date(recent[start].createdAtMs).toISOString(), endedAt: new Date(recent[end].createdAtMs).toISOString(),
+          linkEvidenceTiming: "current-state", reviewOnly: true, retained });
+        const candidateId = `${origin}\n${receiver}`;
+        const candidate = routeCandidates.get(candidateId) || { from: label(origin), to: label(receiver),
+          count: 0, cities: new Set(), retained: new Set(), currentLinkSignals: signals, reviewOnly: true };
+        candidate.count++; candidate.cities.add(key(recent[end]));
+        if (retained) candidate.retained.add(key(recent[end]));
+        routeCandidates.set(candidateId, candidate);
       }
     }
   }
@@ -87,6 +95,8 @@ function buildReport({ cities, events, names = new Map(), links = () => [], audi
     directTransfers: [...direct.values()].map(row => ({ ...row, retained: row.retained.size }))
       .sort((a, b) => b.count - a.count || b.retained - a.retained),
     possibleRoutes: routes.sort((a, b) => Number(b.retained) - Number(a.retained)),
+    routeCandidates: [...routeCandidates.values()].map(row => ({ ...row, cities: row.cities.size, retained: row.retained.size }))
+      .sort((a, b) => b.count - a.count || b.retained - a.retained),
     preventedCaptures: audits.filter(row => row.occurredAtMs >= startMs && row.occurredAtMs <= endMs).map(row => ({
       attacker: label(row.attackerUid), defender: label(row.defenderUid), target: row.targetKey,
       occurredAt: new Date(row.occurredAtMs).toISOString(), recordedSignals: row.signals, linkEvidenceTiming: "recorded-at-resolution" })),

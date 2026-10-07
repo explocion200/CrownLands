@@ -77,6 +77,11 @@ assert.equal(report.players[0].startingCities, 39); assert.equal(report.players[
 assert.equal(report.possibleRoutes.length, 2); assert(report.possibleRoutes.some(route => route.throughNeutral));
 assert(report.directTransfers.some(row => row.from === "One" && row.to === "Two" && row.count === 1 && row.retained === 1));
 assert.equal(report.players[0].holdings.length, 36);
+const unlinkedRoutes = buildReport({ ...auditInput, links: () => [] });
+assert.equal(unlinkedRoutes.possibleRoutes.length, 2, "Review routes must not require existing identity evidence");
+assert(unlinkedRoutes.possibleRoutes.some(route => route.throughNeutral));
+assert(unlinkedRoutes.routeCandidates.some(row => row.from === "One" && row.to === "Two" && row.count === 2 && row.retained === 2));
+assert(unlinkedRoutes.possibleRoutes.every(route => route.currentLinkSignals.length === 0 && route.reviewOnly));
 assert(!JSON.stringify(report).includes('"fingerprint"'));
 const broken = buildReport({ ...auditInput, events: [...auditEvents, event("wrong-owner", 1, "b", "a", 200)] });
 assert.equal(broken.dataQuality.brokenChains, 1); assert.equal(broken.players[0].startingCities, null);
