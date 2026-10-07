@@ -139,6 +139,7 @@ async function main() {
         await evaluate(()=>Promise.all([...document.querySelectorAll('.estate-world img[src]')].map(i=>i.decode())));
         assert(await evaluate(()=>[...document.querySelectorAll('.estate-terrain-detail:not([hidden])')].every(i=>i.naturalWidth>=1400&&i.naturalHeight>=1000)),'Zoom must render decoded native close-up terrain');
         assert(await evaluate(()=>[...document.querySelectorAll('.estate-building-art')].every(i=>i.naturalWidth/i.width>=3.2&&i.naturalHeight/i.height>=3.2)),'Zoom keeps at least 3.2x source detail for completed buildings');
+        assert(await evaluate(()=>{const image=document.querySelector('[data-estate-site="gatehouse"] .estate-building-art').getBoundingClientRect(),target=document.querySelector('[data-inner-castle-building="gatehouse"]'),box=target.getBoundingClientRect();return !target.hidden&&Math.abs(image.left+image.width/2-box.left-box.width/2)<.6&&Math.abs(image.top+image.height/2-box.top-box.height/2)<.6;}),'Gatehouse click target must follow the aligned visible artwork');
         await screenshot('gatehouse-zoom-4x.png');
         await evaluate(()=>{estatePreview.select('great-hall');estatePreview.zoom(4);document.querySelector('[data-estate-detail-close]').click();});
         await evaluate(()=>Promise.all([...document.querySelectorAll('.estate-world img[src]')].map(i=>i.decode())));

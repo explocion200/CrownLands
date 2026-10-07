@@ -160,6 +160,7 @@
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
+    const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
     function paint() {
       if(destroyed) return;
@@ -179,9 +180,9 @@
         if(visible&&!image.getAttribute("src"))image.src=t.src;
       });
       const locate=(element,x,y)=>{const sx=tx+x*WIDTH/100*scale,sy=ty+y*HEIGHT/100*scale;element.style.left=sx+"px";element.style.top=sy+"px";return sx>=22&&sy>=22&&sx<=width-22&&sy<=height-22;};
-      const boxes=buildings.map(b=>({x:tx+b.hotspot.left*WIDTH/100*scale,y:ty+b.hotspot.top*HEIGHT/100*scale}));
+      const boxes=buildings.map(b=>({x:tx+b.hotspot.left*WIDTH/100*scale,y:ty+visualTop(b)*HEIGHT/100*scale}));
       targets.forEach((target,i)=>{
-        const b=buildings[i], visible=locate(target,b.hotspot.left,b.hotspot.top);
+        const b=buildings[i], visible=locate(target,b.hotspot.left,visualTop(b));
         const collision=boxes.some((p,j)=>j!==i&&Math.abs(p.x-boxes[i].x)<46&&Math.abs(p.y-boxes[i].y)<46);
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
@@ -228,7 +229,7 @@
       const b=buildings.find(b=>b.key===key);if(!b)return;
       selected=key;camera.detailOpen=true;camera.directoryOpen=false;directory.hidden=true;
       host.querySelector("[data-estate-directory-toggle]").setAttribute("aria-expanded","false");
-      if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=b.hotspot.left*WIDTH/100;camera.y=b.hotspot.top*HEIGHT/100;}
+      if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=b.hotspot.left*WIDTH/100;camera.y=visualTop(b)*HEIGHT/100;}
       options.onSelect?.(key);paint();renderDetail();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }

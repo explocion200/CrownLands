@@ -87,6 +87,6 @@ assert.deepEqual(webpSize(fs.readFileSync(path.join(root,normalMap.mapAsset))),[
 for(const tile of estate.terrainTiles){const art=provenance.runtime.find(entry=>entry.path===tile.src);assert(art.width/tile.width>=1.9&&art.height/tile.height>=1.9,'Native close-up terrain must contain more detail than the overview');assert(tile.x>=0&&tile.y>=0&&tile.x+tile.width<=estate.width&&tile.y+tile.height<=estate.height);}
 const css=fs.readFileSync(path.join(root,'inner-city-estate.css'),'utf8');
 assert.doesNotMatch(css,/will-change\s*:\s*transform/,'Do not magnify a cached overview raster at higher zoom');
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r3'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r4'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
 console.log("PASS: 20 fixed plots, centered ground and reserved offsets, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");
