@@ -6,6 +6,8 @@ This update adds the resource ledger and design documentation. It does **not** i
 
 Read [all 2,000 building-level rows](LEVEL_TABLES.md), [the arithmetic and timing review](BALANCE_REVIEW.md) and [the reproducible design inputs](draft-config.json). Run `node tools/validate-estate-economy-draft.js --write` to reproduce the level/review documents. Those files are development documents, excluded from production configuration.
 
+**Reward review: not ready for gameplay acceptance.** The [independent reward and shared-account audit](REWARD_REVIEW.md) finds empty officer/shop levels, a late Hall cap with no reward, slow early progression, tier incentives that favor Common quests, excessive potential quest income and a champion XP curve that does not yet support the intended long-term training. Passing arithmetic checks does not resolve those issues. The report includes proposed remedies and reproducible whole-account cohorts; confirmed Gear rules and the 2,000 proposed prices remain unchanged pending a revised reward design.
+
 ## 1. The player loop
 
 Construct the raw-material sites with Gold and collect Timber/Stone/Ore/Grain. Build the processing chain for Planks, Iron, Tools and Food. Develop production, storage and the Builders' Yard, deposit resources toward chosen projects and build permanent equipment/guild milestones. The whole estate develops across realm seasons; it is no longer a city rebuilt monthly. Spend Food on champions and meals while retaining enough supply for construction. Realm Gold and world progression follow their existing separate seasonal rules.

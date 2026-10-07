@@ -60,6 +60,21 @@ async function main() {
       const capture = await client.send('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(path.join(out, file), Buffer.from(capture.data, 'base64'));
     };
+    const assertDistrictGeography = async () => {
+      const result = await evaluate(() => {
+        const world=document.querySelector('.estate-world').getBoundingClientRect();
+        const cityX=world.left+world.width*.5,cityY=world.top+world.height*.43;
+        const boxes=[...document.querySelectorAll('[data-estate-district]')].map(e=>({key:e.dataset.estateDistrict,hidden:e.hidden,...e.getBoundingClientRect().toJSON()}));
+        return {cityX,cityY,boxes};
+      });
+      assert.equal(result.boxes.filter(b=>!b.hidden).length,7,'Fit Estate must retain all district controls: '+JSON.stringify(result.boxes));
+      for(const b of result.boxes){
+        if(b.key==='city')assert(Math.abs((b.left+b.right)/2-result.cityX)<24&&Math.abs((b.top+b.bottom)/2-result.cityY)<24,'City label must stay over the city');
+        if(['quarry','woodland','crafts','farmland'].includes(b.key))assert(b.right<result.cityX,'Western district label crossed to eastern scenery: '+b.key);
+        if(['mine','trade'].includes(b.key))assert(b.left>result.cityX,'Eastern district label crossed to western scenery: '+b.key);
+        for(const other of result.boxes.filter(o=>o.key!==b.key))assert(b.right<=other.left||b.left>=other.right||b.bottom<=other.top||b.top>=other.bottom,'District hit targets overlap');
+      }
+    };
     const assertNameplates = async () => {
       const report = await evaluate(() => {
         const viewport=document.querySelector('.estate-viewport').getBoundingClientRect();
@@ -121,6 +136,7 @@ async function main() {
         return left.left<=v.left+.6 && left.right>=w.left+2 && right.left<=w.right-2 && right.right>=v.right-.6 && left.top<=v.top+.6 && left.bottom>=v.bottom-.6;
       }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
+      await assertDistrictGeography();
       assert.equal(await count('[data-estate-resource]'),10);
       assert.equal(await text('[data-estate-resource="timber"] dd'),'—','Production must not present draft materials as owned');
       assert.equal(await text('[data-estate-resource="gold"] dd'),await evaluate(()=>CrownlandsEstate.formatResource(Math.floor(getProjectedGold()))));
@@ -245,7 +261,14 @@ async function main() {
       await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
       await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 50, y: gestureY, id: 1 }, { x: 120, y: gestureY, id: 2 }] });
       await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 30, y: gestureY, id: 1 }, { x: 160, y: gestureY, id: 2 }] });
-      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 1), 'Pinch must zoom'); await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 1), 'Pinch must zoom');
+      await click('[data-estate-fit]');
+      const districtBox=await box('[data-estate-district="city"]'),cx=districtBox.x+districtBox.width/2,cy=districtBox.y+districtBox.height/2;
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:cx-10,y:cy,id:1},{x:cx+10,y:cy,id:2}]});
+      await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:cx-20,y:cy,id:1},{x:cx+20,y:cy,id:2}]});
+      await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      assert(Math.abs(await evaluate(()=>innerCastleEstateView.snapshot().zoom)-2)<.02,'Pinching a district label must zoom without activating it');
+      await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
       await click('[data-estate-fit]'); await evaluate(() => document.querySelector('.estate-viewport').focus());
       await press('+', 187); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1.5);
       const keyboardY = await evaluate(() => innerCastleEstateView.snapshot().y); await press('ArrowDown', 40); assert.notEqual(await evaluate(() => innerCastleEstateView.snapshot().y), keyboardY);
@@ -423,6 +446,7 @@ async function main() {
       keys.forEach((key,i)=>assert.equal(levels[key],[1,25,50,75,100][i%5]));
       await assertNameplates();
       await screenshot('levels-'+width+'x'+height+'.png');
+      await assertDistrictGeography();
       await evaluate(()=>innerCastleEstateView.select('gatehouse'));
       assert.equal(await text('.estate-level-caption'),'Lv. 100 / 100');
       await click('[data-estate-detail-close]');

@@ -270,16 +270,13 @@
           const south=ty+(b.hotspot.top+b.footprint.height/2)*HEIGHT/100*scale;
           target.style.top=Math.max(parseFloat(target.style.top),south+label.height/2+6)+"px";
         }
-        const r=target.getBoundingClientRect();
-        if(r.left<controls.right+8&&r.right>controls.left-8&&r.top<controls.bottom+8&&r.bottom>controls.top-8){
-          target.style.left=Math.min(viewportBox.width-r.width/2-8,controls.right-viewportBox.left+r.width/2+8)+"px";
-        }
       });
       // The resource ledger reduces map height on small screens. Keep district
       // buttons apart, using the nearby painted scenery when the center is tight.
       const districtObstacles=[controls,...[...host.querySelectorAll('.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>e.getBoundingClientRect())].map(r=>({left:r.left-viewportBox.left,top:r.top-viewportBox.top,right:r.right-viewportBox.left,bottom:r.bottom-viewportBox.top}));
       const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
-      const districtPriority=['quarry','mine','farmland','city','woodland','crafts','trade'];
+      const districtPriority=['city','quarry','mine','woodland','crafts','farmland','trade'];
+      const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
         const r=target.getBoundingClientRect(),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
@@ -289,16 +286,24 @@
           offsets.push({dx,dy,distance:dx*dx+dy*dy});
         }
         offsets.sort((a,b)=>a.distance-b.distance);
-        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left-viewportBox.left+dx,right:r.right-viewportBox.left+dx,top:r.top-viewportBox.top+dy,bottom:r.bottom-viewportBox.top+dy,dx,dy})).find(box=>box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
+        const key=target.dataset.estateDistrict;
+        const geographic=box=>{
+          if(key==='city')return Math.abs(x+box.dx-cityX)<24&&Math.abs(y+box.dy-cityY)<24;
+          if(['quarry','woodland','crafts','farmland'].includes(key)&&box.right>cityX-4)return false;
+          if(['mine','trade'].includes(key)&&box.left<cityX+4)return false;
+          if(key==='woodland'&&y+box.dy>cityY-24)return false;
+          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY;
+        };
+        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left-viewportBox.left+dx,right:r.right-viewportBox.left+dx,top:r.top-viewportBox.top+dy,bottom:r.bottom-viewportBox.top+dy,dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
         let position=findPosition();
         if(!position){
-          for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=24)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=24){
+          for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=8)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=12){
             if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
             const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
           }
           offsets.sort((a,b)=>a.distance-b.distance);position=findPosition();
         }
-        if(position){target.style.left=x+position.dx+'px';target.style.top=y+position.dy+'px';districtObstacles.push(position);}
+        if(position){target.style.left=x+position.dx+'px';target.style.top=y+position.dy+'px';districtObstacles.push(position);}else target.hidden=true;
       });
       host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
       placeNameplates(tx,ty,scale,width,height,viewportBox);
@@ -368,7 +373,7 @@
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }
     listen(shellElement,"click",event=>{
-      if(suppressClick&&!event.target.closest("button")){suppressClick=false;return;}
+      if(suppressClick&&event.detail>0&&(!event.target.closest("button")||event.target.closest("[data-estate-district],[data-inner-castle-building]"))){suppressClick=false;return;}
       suppressClick=false;
       const b=event.target.closest("[data-inner-castle-building],[data-estate-directory-building]");
       if(b){select(b.dataset.innerCastleBuilding||b.dataset.estateDirectoryBuilding,true,true);return;}
@@ -382,18 +387,25 @@
     });
     listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
     listen(viewport,"pointerdown",event=>{
-      if(event.button!==0||event.target.closest("button,.estate-detail,.estate-directory"))return;
-      gestureMoved=false;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});viewport.setPointerCapture(event.pointerId);
+      if(event.button!==0||event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls"))return;
+      const target=event.target.closest("[data-estate-district],[data-inner-castle-building]");
+      if(event.target.closest("button")&&!target)return;
+      if(!pointers.size){gestureMoved=false;suppressClick=false;}
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY});
+      if(!target)viewport.setPointerCapture(event.pointerId);
+      if(pointers.size===2){gestureMoved=true;for(const id of pointers.keys())viewport.setPointerCapture(id);}
     });
     listen(viewport,"pointermove",event=>{
       const old=pointers.get(event.pointerId);if(!old)return;
-      const oldPoints=[...pointers.values()];pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});const next=[...pointers.values()];
-      if(Math.hypot(event.clientX-old.x,event.clientY-old.y)>2)gestureMoved=true;
+      const oldPoints=[...pointers.values()];pointers.set(event.pointerId,{...old,x:event.clientX,y:event.clientY});const next=[...pointers.values()];
+      if(Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>4)gestureMoved=true;
+      if(!gestureMoved)return;
+      for(const id of pointers.keys())if(!viewport.hasPointerCapture(id))viewport.setPointerCapture(id);
       if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2);}
       else {camera.x-=(event.clientX-old.x)/(fit*camera.zoom);camera.y-=(event.clientY-old.y)/(fit*camera.zoom);paint();}
     });
-    const endPointer=event=>{pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
-    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>pointers.delete(event.pointerId));
+    const endPointer=event=>{if(!pointers.has(event.pointerId))return;pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
+    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>{if(event.target===viewport)pointers.delete(event.pointerId);});
     listen(viewport,"keydown",event=>{
       if(event.target!==viewport)return;
       const delta=70/(fit*camera.zoom);
