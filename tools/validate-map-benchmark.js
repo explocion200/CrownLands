@@ -160,6 +160,13 @@ async function validateBenchmarkServerAssetBase() {
     const gameResponse = await fetch(`${address.url}/__benchmark__/game.js?scenario=A&pickupQa=true`);
     assert.equal(gameResponse.status, 200, "The benchmark game bundle was not served.");
     assert.match(await gameResponse.text(), /installCrownlandsPickupQaRuntime/, "The loopback bundle did not include pickup QA diagnostics.");
+    const estatePath = `${address.url}/docs/visual-qa/inner-city-estate/index.html?scene=completed`;
+    const artworkSource = await (await fetch(estatePath)).text();
+    assert.doesNotMatch(artworkSource, /__benchmark__\/mock-firebase/, "The ordinary art fixture must stay standalone.");
+    const equipmentSource = await (await fetch(`${estatePath}&estateUi=1`)).text();
+    assert.match(equipmentSource, /<base id="crownlandsBase" href="\/" \/>/, "The real-UI fixture must resolve the game's assets from the root.");
+    assert.match(equipmentSource, /__benchmark__\/mock-firebase/, "The real-UI fixture must use synthetic backend state.");
+    assert.doesNotMatch(equipmentSource, /src="firebaseClient\.js/, "The equipment preview must not load the production Firebase client.");
 
     const heavyFixture = createFixture("C");
     const heavyRegion = heavyFixture.mapData.maps.find(map => map.id === heavyFixture.primaryRegionId);

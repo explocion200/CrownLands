@@ -389,6 +389,7 @@ The full estate supersedes the former compact Royal Bailey and six hanging-sign 
 - Defer characters and ambient motion during this visual pass. The Windmill is a complete still sprite; no separate sails, CSS machinery effects or actor atlas ship. Full, Reduced and Off all display the still estate. Keep functional labels and controls readable in desktop and small landscape views, using nonoverlapping 44px targets and the building directory.
 - Guild Master is visually a guild lodge with a noticeboard and burgundy standard. Other buildings retain their practical medieval cues: ledgers at Treasury, shields at Barracks, barrels at Alehouse, horses and tack at Stables, portcullis at Gatehouse, fieldstone extraction at Quarry and timber-supported tunnel at Mine.
 - Six existing square building previews remain unchanged: 1254 × 1254 source masters, 512 × 512 optimized derivatives. Treasury and officer equipment art rules remain in their respective sections.
+- Selection refinement, confirmed October 7: do not draw dotted plot boundaries over the painted estate. Keep hover/selected names and visible keyboard focus on accessible targets. The four completed equipment buildings open their existing officer screens directly when activated.
 
 Source masters and prompts: [Estate art sources](./art-sources/inner-city-estate/README.md). Review fixtures are excluded from production: [Estate visual QA](./visual-qa/inner-city-estate/README.md).
 

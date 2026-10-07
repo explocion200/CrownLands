@@ -83,7 +83,7 @@
         "inner-city-estate.css",
         "inner-city-estate.js"
       ],
-      "reason": "Render the 20-site estate at normal regional-map dimensions without repeated soil sprites, geometric road/wall overlays or ambient actors/loops. Test fixed centers, footprint clearance, connected road graph, all selections at desktop and two landscape sizes, 44px targets, mouse/touch/keyboard camera controls and gear round trips. Check building target offsets against the actual Gatehouse cutout, centered freestanding art and visible native tiles at 4x. Full/Reduced/Off and hidden/covered scenes remain still; input/resize listeners dispose safely. Review all three art fixtures.",
+      "reason": "Render the 20-site estate at normal regional-map dimensions without repeated soil sprites, geometric road/wall overlays or ambient actors/loops. Test fixed centers, footprint clearance, connected road graph, all selections at desktop and two landscape sizes, 44px targets, mouse/touch/keyboard camera controls and gear round trips. Check building target offsets against the actual Gatehouse cutout, centered freestanding art and visible native tiles at 4x. Full/Reduced/Off and hidden/covered scenes remain still; input/resize listeners dispose safely. Review all three art fixtures. October 7 activation refinement removes dotted plot outlines and opens the four completed gear buildings directly from map/directory targets. Actual mouse, touch and keyboard checks cover the real officer UIs, selected-target focus and 24 camera-preserving returns; construction fixtures must not open gear.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
@@ -96,7 +96,7 @@
         "index.html",
         "service-worker.js"
       ],
-      "reason": "Integrate the scene with existing Main City and Profile entry, ownership guards, Back/Close/Escape focus restoration, gear actions and new-gear indicators. Preserve gear authority, rewards, original preview art and bonuses while keeping camera and selection across gear screens. Verify renderer load order and shell cache parity. No server-authoritative progression, construction, resources or champion actions change.",
+      "reason": "Integrate the scene with existing Main City and Profile entry, ownership guards, Back/Close/Escape focus restoration, gear actions and new-gear indicators. Preserve gear authority, rewards, original preview art and bonuses while keeping camera and selection across gear screens. Verify renderer load order and shell cache parity. No server-authoritative progression, construction, resources or champion actions change. Direct entry focuses the officer slot; Back returns focus to the selected visible map target. Cache keys change with renderer and gear UI.",
       "tests": [
         "tools/validate-inner-castle.js",
         "tools/validate-common-gear.js",
@@ -124,14 +124,16 @@
         "tools/validate-common-gear.js",
         "tools/validate-inner-castle-browser.js",
         "tools/validate-inner-castle.js",
-        "tools/validate-inner-city-estate.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-map-benchmark.js"
       ],
-      "reason": "Execute the updated existing integration guards and the new structural/actual-game estate regressions. The common-gear check includes the extracted renderer in its source boundary; browser fixtures are private and cannot mutate saved progression. These tests verify the changed shared modal and equipment dependencies rather than unrelated game systems. Validate active-topology catalog and actual map dimensions, integrated ground, contextual gate offsets and native zoom artwork.",
+      "reason": "Execute the updated existing integration guards and the new structural/actual-game estate regressions. The common-gear check includes the extracted renderer in its source boundary; browser fixtures are private and cannot mutate saved progression. These tests verify the changed shared modal and equipment dependencies rather than unrelated game systems. Validate active-topology catalog and actual map dimensions, integrated ground, contextual gate offsets and native zoom artwork. Validate the changed development server routes, root-relative assets and synthetic Firebase isolation for the equipment preview.",
       "tests": [
         "tools/validate-common-gear.js",
         "tools/validate-inner-castle-browser.js",
         "tools/validate-inner-castle.js",
-        "tools/validate-inner-city-estate.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-map-benchmark.js"
       ]
     },
     {
@@ -141,7 +143,7 @@
         "docs/art-sources/inner-city-estate/README.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record the explicitly confirmed fixed estate layout and cohesive painted-art revision, normal regional-map size, common building scale, preserved gameplay scope and deferred ambient motion. Retain generation prompts, provenance and private review instructions. Documentation is covered through its associated scene/art tests; it has no server behavior. Record the requested plot alignment, Gatehouse reservation and native/lazy zoom detail corrections. The latest confirmed direction replaces separate soil with integrated terrain ground and paints then extracts the square-tower Gatehouse from the actual wall junction.",
+      "reason": "Record the explicitly confirmed fixed estate layout and cohesive painted-art revision, normal regional-map size, common building scale, preserved gameplay scope and deferred ambient motion. Retain generation prompts, provenance and private review instructions. Documentation is covered through its associated scene/art tests; it has no server behavior. Record the requested plot alignment, Gatehouse reservation and native/lazy zoom detail corrections. The latest confirmed direction replaces separate soil with integrated terrain ground and paints then extracts the square-tower Gatehouse from the actual wall junction. Record the explicitly confirmed direct equipment entry and removal of dotted selection outlines, plus isolated real-UI preview instructions.",
       "tests": []
     },
     {
@@ -155,6 +157,18 @@
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/estate-qa-runtime.js",
+        "tools/map-benchmark/server.js"
+      ],
+      "reason": "Development-only, query-gated real game preview reuses the loopback synthetic backend, mounts the chosen estate art fixture, and retains it on equipment Back. Test ordinary standalone artwork and interactive routes, fixture switching, all four real equipment screens and construction guards. Validate shared server asset bases, deterministic scenario reuse and production backend isolation. Neither runtime nor source art is shipped to players.",
+      "tests": [
+        "tools/validate-map-benchmark.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-production-artifact.js"
       ]
     }
   ]

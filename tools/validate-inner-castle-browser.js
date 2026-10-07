@@ -55,6 +55,7 @@ async function main() {
     await wait(() => window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready');
     await evaluate(() => { window.__CROWNLANDS_BENCHMARK__.closeModal(); state.gear = normalizeCommonGearState(state.gear); });
     const keys = await evaluate(() => INNER_CASTLE_BUILDINGS.map(b => b.key));
+    const gearKeys = await evaluate(() => Object.keys(COMMON_GEAR.BUILDINGS));
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       await evaluate(() => { state.gear.newMarkers.treasury = true; openInnerCastle(getMainCityReference().id); CrownlandsAnimations.setMode('full'); });
@@ -77,28 +78,64 @@ async function main() {
         await click('[data-estate-directory-toggle]');
         const selector = '[data-estate-directory-building="' + key + '"]';
         await evaluate(s => document.querySelector(s).scrollIntoView({ block: 'nearest' }), selector);
-        const r = await box(selector); assert(r.height >= 44 && r.width >= 44); await click(selector);
+        const r = await box(selector); assert(r.height >= 44 && r.width >= 44);
+        await evaluate(() => { window.previousEstateView = innerCastleEstateView; });
+        await click(selector);
         assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), key);
-        assert.equal(await text('.estate-detail h3'), await evaluate(k => getInnerCastleBuilding(k).label, key));
+        if (gearKeys.includes(key)) {
+          await wait(() => !!document.querySelector('[data-gear-back]'));
+          assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), key, 'Directory activation must open the matching equipment UI directly');
+          assert.equal(await count('[data-gear-slot]'), 8, 'The actual officer screen must expose all eight slots');
+          assert(await evaluate(() => document.activeElement.matches('[data-gear-slot]')), 'Direct gear entry must focus a slot');
+          const before = await evaluate(() => innerCastleEstateCamera);
+          assert.equal(before.detailOpen, false, 'Direct equipment entry must not restore the description panel');
+          assert(await evaluate(() => previousEstateView.debug().destroyed && innerCastleEstateView === null), 'Gear must dispose the estate scene');
+          await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
+          if (width === 1440) await screenshot('gear-' + key + '.png');
+          await click('[data-gear-back]');
+          assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), before, 'Gear return must preserve camera');
+          assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), key);
+          assert(await evaluate(k => !state.gear.newMarkers[k], key), 'Viewing gear clears its marker');
+          assert(await evaluate(k => document.activeElement.dataset.innerCastleBuilding === k, key), 'Back must focus the selected map target');
+        } else {
+          assert.equal(await text('.estate-detail h3'), await evaluate(k => getInnerCastleBuilding(k).label, key));
+          assert.equal(await text('.estate-building-status'), 'Function planned');
+          assert.equal(await count('[data-manage-common-gear]'), 0);
+        }
+        assert(await evaluate(() => [...document.querySelectorAll('.estate-site')].every(s => ['none', 'normal'].includes(getComputedStyle(s, '::after').content))), 'Selecting a site must not draw a dotted plot boundary');
         const targets = await evaluate(() => [...document.querySelectorAll('.estate-building-target')].filter(e => !e.hidden).map(e => e.getBoundingClientRect().toJSON()));
         for (let i = 0; i < targets.length; i++) { assert(targets[i].width >= 44 && targets[i].height >= 44); for (let j = i + 1; j < targets.length; j++) assert(targets[i].right <= targets[j].left || targets[j].right <= targets[i].left || targets[i].bottom <= targets[j].top || targets[j].bottom <= targets[i].top, 'Map targets overlap'); }
-        if (await count('[data-manage-common-gear]')) {
-          const gear = await box('[data-manage-common-gear]'), panel = await box('.estate-detail'); assert(gear.y + gear.height <= panel.y + panel.height + 1, 'Manage Gear must stay visible');
-          const before = await evaluate(() => { window.previousEstateView = innerCastleEstateView; return innerCastleEstateView.snapshot(); });
-          await click('[data-manage-common-gear]'); await wait(() => !!document.querySelector('[data-gear-back]'));
-          await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
-          assert(await evaluate(() => previousEstateView.debug().destroyed && innerCastleEstateView === null), 'Gear must dispose scene animation');
-          await click('[data-gear-back]'); assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), before, 'Gear return must preserve camera'); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), key); assert(await evaluate(k => !state.gear.newMarkers[k], key), 'Viewing gear clears its marker');
-        } else assert.equal(await text('.estate-building-status'), 'Function planned');
       }
-      await click('[data-estate-detail-close]');
+      // Physical map clicks/taps use the same direct entry as directory buttons.
+      for (const key of gearKeys) {
+        await evaluate(k => innerCastleEstateView.select(k), key);
+        await click('[data-estate-detail-close]');
+        const before = await evaluate(() => innerCastleEstateView.snapshot());
+        const selector = '[data-inner-castle-building="' + key + '"]';
+        if (width === 568) {
+          await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+          const r = await box(selector), x = r.x + r.width / 2, y = r.y + r.height / 2;
+          await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+          await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        } else await click(selector);
+        await wait(() => !!document.querySelector('[data-gear-back]'));
+        assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), key, 'Map activation must open matching gear');
+        await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
+        await click('[data-gear-back]');
+        assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), before);
+      }
+      await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
       await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: 120, deltaX: 0, deltaY: -200 }); await delay(100);
       assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 2.5));
       const before = await evaluate(() => innerCastleEstateView.snapshot());
-      await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 45, y: 120, button: 'left', clickCount: 1 });
-      for (let i = 1; i <= 8; i++) await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45 + 100 * i / 8, y: 120 + 25 * i / 8, buttons: 1 });
+      // Move before pressing, including after touch emulation, so the browser
+      // processes any pending release of its previous implicit pointer capture.
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45, y: 120, buttons: 0 });
+      await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 45, y: 120, button: 'left', buttons: 1, clickCount: 1 });
+      for (let i = 1; i <= 8; i++) { await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45 + 100 * i / 8, y: 120 + 25 * i / 8, button: 'left', buttons: 1 }); await delay(16); }
       await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 145, y: 145, button: 'left', clickCount: 1 });
-      const after = await evaluate(() => innerCastleEstateView.snapshot()); assert(before.x !== after.x || before.y !== after.y, 'Dragging must pan');
+      const after = await evaluate(() => innerCastleEstateView.snapshot()); assert(before.x !== after.x || before.y !== after.y, 'Dragging must pan: ' + JSON.stringify({ width, before, after }));
       await evaluate(() => innerCastleEstateView.zoom(99)); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 4);
       await click('[data-estate-fit]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1);
       await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
@@ -120,7 +157,7 @@ async function main() {
     }
     assert(await evaluate(() => { const city = getMainCityReference(); return canEnterInnerCastle(city) && !canEnterInnerCastle(null) && !canEnterInnerCastle({ ...city, owner: 'enemy' }) && !canEnterInnerCastle({ ...city, owner: 'neutral' }) && !canEnterInnerCastle({ ...city, id: 'not-main-city', isMainCity: false, mainCity: false }); }));
     assert(await evaluate(() => { const cities = state.cities, cache = onlineOwnedCitiesCache, main = { ...getMainCityReference() }; try { onlineOwnedCitiesCache = [...cache, main]; state.cities = cities.filter(c => c.id !== main.id); openProfileInnerCastle(); return modal.open && modal.dataset.innerCastleCityId === main.id; } finally { state.cities = cities; onlineOwnedCitiesCache = cache; } }));
-    await click('[data-estate-directory-toggle]'); await evaluate(() => document.querySelector('[data-estate-directory-building="barracks"]').focus()); await press('Enter', 13); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), 'barracks'); await press('Escape', 27); await wait(() => !modal.open && innerCastleEstateView === null);
+    await click('[data-estate-directory-toggle]'); await evaluate(() => document.querySelector('[data-estate-directory-building="barracks"]').focus()); await press('Enter', 13); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), 'barracks'); await wait(() => !!document.querySelector('[data-gear-back]')); assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), 'barracks'); await press('Escape', 27); await wait(() => !modal.open && innerCastleEstateView === null);
     await client.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
     for (const scene of ['initial', 'completed', 'constructing']) {
       const url = address.url + '/docs/visual-qa/inner-city-estate/index.html?scene=' + scene;
@@ -146,8 +183,30 @@ async function main() {
         await screenshot('city-zoom-4x.png');
       }
     }
+    for (const scene of ['completed', 'constructing']) {
+      const url = address.url + '/docs/visual-qa/inner-city-estate/index.html?scene=' + scene + '&estateUi=1&visualMarches=0';
+      await client.send('Page.navigate', { url });
+      await wait(expected => location.href === expected && document.readyState === 'complete' && document.documentElement?.dataset.estateQa === 'ready', url);
+      await wait(() => Number(getComputedStyle(modal).opacity) >= .99);
+      assert.equal(await count('[data-site-state="' + scene + '"]'), 20);
+      for (const key of gearKeys) {
+        await click('[data-estate-directory-toggle]');
+        await click('[data-estate-directory-building="' + key + '"]');
+        if (scene === 'completed') {
+          await wait(() => !!document.querySelector('[data-gear-back]'));
+          assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), key);
+          assert.equal(await count('[data-gear-slot]'), 8, 'Preview must use the real eight-slot equipment screen');
+          await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
+          await click('[data-gear-back]');
+          assert.equal(await count('[data-site-state="completed"]'), 20, 'Gear Back must keep the development fixture');
+        } else {
+          assert.equal(await text('.estate-detail .estate-eyebrow'), 'Under construction');
+          assert.equal(await count('[data-manage-common-gear], [data-gear-back]'), 0, 'Construction sites cannot open equipment');
+        }
+      }
+    }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and two landscape sizes, complete overview, nonoverlapping 44px targets, visible gear actions and 12 camera-preserving gear returns, drag/wheel/pinch, zoom clamps, still scene in every animation mode, no overlay roads or actors, Back/focus/Close/Escape cleanup, ownership guard, off-map Profile and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and two landscape sizes; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 24 camera/focus-preserving gear returns; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, Back/Close/Escape cleanup, ownership/Profile entry and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

@@ -1834,6 +1834,8 @@ function bindCommonGearScreen(viewModel) {
       commonGearPendingFocusSelector = "";
       commonGearViewRequestId += 1;
       renderInnerCastle(cityId);
+      const selectedTarget = modalBody.querySelector(`[data-inner-castle-building="${innerCastleSelectedBuildingKey}"]:not([hidden])`);
+      (selectedTarget || modalBody.querySelector(".estate-viewport"))?.focus({ preventScroll: true });
       return;
     }
     if (event.target.closest?.("[data-gear-equip]")) {
@@ -1922,6 +1924,7 @@ function showCommonGearBuilding(buildingId) {
   commonGearMergeConfirmOpen = false;
   state.gear = normalizeCommonGearState(state.gear);
   state.gear.newMarkers[buildingId] = false;
+  commonGearPendingFocusSelector = `[data-gear-slot="${selectedCommonGearSlot}"]`;
   const requestId = ++commonGearViewRequestId;
   const viewState = state, viewSession = getCommonGearActionScope();
   getOnlineApi()?.viewCommonGearBuilding?.({ buildingId }).then(result => {

@@ -216,7 +216,7 @@
     }
     function renderDetail() {
       const b=buildings.find(b=>b.key===selected);if(!b)return;
-      const s=siteStates[b.key],gearRole=options.gearRoles?.[b.key];
+      const s=siteStates[b.key],gearRole=s==="completed"&&options.onGear?options.gearRoles?.[b.key]:null;
       detail.hidden=!camera.detailOpen;
       detail.querySelector(":scope > [data-manage-common-gear]")?.remove();
       detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
@@ -224,21 +224,27 @@
       if(manage){detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}
       targets.forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.innerCastleBuilding===selected)));
       host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
-      host.querySelectorAll("[data-estate-site]").forEach(s=>s.classList.toggle("is-selected",camera.detailOpen&&s.dataset.estateSite===selected));
     }
-    function select(key, focus=true) {
+    function select(key, focus=true, openBuilding=false) {
       const b=buildings.find(b=>b.key===key);if(!b)return;
       selected=key;camera.detailOpen=true;camera.directoryOpen=false;directory.hidden=true;
       host.querySelector("[data-estate-directory-toggle]").setAttribute("aria-expanded","false");
       if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=visualLeft(b)*WIDTH/100;camera.y=visualTop(b)*HEIGHT/100;}
-      options.onSelect?.(key);paint();renderDetail();
+      options.onSelect?.(key);
+      if(openBuilding&&siteStates[key]==="completed"&&options.gearRoles?.[key]&&typeof options.onGear==="function"){
+        camera.detailOpen=false;paint();renderDetail();
+        // The equipment callback replaces this scene. Save selection/camera
+        // before it runs and leave the disposed DOM alone afterward.
+        options.onGear(key);return;
+      }
+      paint();renderDetail();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }
     listen(shellElement,"click",event=>{
       if(suppressClick&&!event.target.closest("button")){suppressClick=false;return;}
       suppressClick=false;
       const b=event.target.closest("[data-inner-castle-building],[data-estate-directory-building]");
-      if(b)select(b.dataset.innerCastleBuilding||b.dataset.estateDirectoryBuilding);
+      if(b){select(b.dataset.innerCastleBuilding||b.dataset.estateDirectoryBuilding,true,true);return;}
       const d=event.target.closest("[data-estate-district]");
       if(d){const district=districts.find(v=>v.key===d.dataset.estateDistrict);camera.zoom=2.5;camera.x=district.x*WIDTH/100;camera.y=district.y*HEIGHT/100;camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
       const z=event.target.closest("[data-estate-zoom]");if(z)zoom(camera.zoom+(z.dataset.estateZoom==="in"?.5:-.5));
