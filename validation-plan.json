@@ -4,11 +4,10 @@
   "coverage": [
     {
       "paths": [
-        "assets/inner-city-estate/actors.webp",
         "assets/inner-city-estate/alehouse.webp",
         "assets/inner-city-estate/barracks.webp",
         "assets/inner-city-estate/builders-yard.webp",
-        "assets/inner-city-estate/construction.svg",
+        "assets/inner-city-estate/construction.webp",
         "assets/inner-city-estate/farmstead.webp",
         "assets/inner-city-estate/foresters-lodge.webp",
         "assets/inner-city-estate/gatehouse.webp",
@@ -16,14 +15,13 @@
         "assets/inner-city-estate/great-hall.webp",
         "assets/inner-city-estate/guild-master.webp",
         "assets/inner-city-estate/market.webp",
-        "assets/inner-city-estate/mill-sails.svg",
         "assets/inner-city-estate/mine.webp",
         "assets/inner-city-estate/quarry.webp",
         "assets/inner-city-estate/royal-stables.webp",
         "assets/inner-city-estate/sawmill.webp",
         "assets/inner-city-estate/smithy.webp",
         "assets/inner-city-estate/storehouse.webp",
-        "assets/inner-city-estate/surveyed-plot.svg",
+        "assets/inner-city-estate/surveyed-plot.webp",
         "assets/inner-city-estate/terrain.webp",
         "assets/inner-city-estate/treasury.webp",
         "assets/inner-city-estate/wagon-yard.webp",
@@ -31,12 +29,21 @@
         "assets/inner-city-estate/workshop.webp",
         "docs/art-sources/inner-city-estate/actors.png",
         "docs/art-sources/inner-city-estate/art-record.json",
+        "docs/art-sources/inner-city-estate/buildings-cohesive-v2.png",
         "docs/art-sources/inner-city-estate/buildings.png",
+        "docs/art-sources/inner-city-estate/cohesive-v2-prompts.json",
+        "docs/art-sources/inner-city-estate/gatehouse-connectors-v2.png",
+        "docs/art-sources/inner-city-estate/layout-guide.png",
+        "docs/art-sources/inner-city-estate/layout-guide.svg",
+        "docs/art-sources/inner-city-estate/plots-cohesive-v2.png",
         "docs/art-sources/inner-city-estate/prompts.json",
+        "docs/art-sources/inner-city-estate/reference-style.png",
+        "docs/art-sources/inner-city-estate/sprite-sizes.json",
+        "docs/art-sources/inner-city-estate/terrain-cohesive-v2.png",
         "docs/art-sources/inner-city-estate/terrain.png",
         "docs/art-sources/inner-city-estate/windmill-body.png"
       ],
-      "reason": "Add a painted estate terrain, transparent building sprites and an eight-frame inhabitant atlas. Verify exact raster provenance, cross-platform SVG hashes, alpha, delivery sizes, every fixed footprint and the three independently rendered construction states. The browser decodes all art in the actual renderer; mandatory production build checks packaging and unchanged client performance budgets. Source masters and prompts stay out of production.",
+      "reason": "Deliver a cohesive 1448x1086 painted estate with integrated roads, walls and decorative town details, matching transparent building/state art, and common physical building scale. Verify source/runtime hashes, alpha, natural 2x dimensions, every fixed reservation and three visual states. The browser decodes and renders the actual art. Sources and the uploaded style reference remain excluded from production; the 1088 KiB lazy-art cap is unchanged.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
@@ -48,7 +55,7 @@
         "inner-city-estate.css",
         "inner-city-estate.js"
       ],
-      "reason": "Replace the compact overview with the connected 20-site estate scene and isolated review fixtures. Validate approved coordinates and road connectivity, cottage/road/plot clearance, constant-distance movement, desktop and two landscape sizes, 44px targets, directory access, mouse/touch/keyboard controls, full fit, zoom clamps, motion modes, background pausing and scene disposal. Shared modal styling and the gear round trip are exercised in the real game. Keep every overview district target clear of the camera toolbar on small landscape screens; click all seven districts at each size. Rerun against the current shared modal observer and background HUD pause changes from main. Verify completed-building activity keeps guards on the Barracks approach, couriers at Royal Stables and a delivery cart between completed Storehouse and Wagon Yard; surveyed sites do not receive dedicated service activity.",
+      "reason": "Render the 20-site estate at the normal regional-map dimensions with no geometric road/wall overlays or ambient actors/loops. Test fixed coordinates, footprint clearance, connected layout graph, desktop and two small landscape sizes, 44px targets, all directory/district selections, mouse/touch/keyboard camera controls and gear round trips. Overview extraction labels stay clear of art at every viewport size. Full/Reduced/Off and hidden/covered scenes remain still; input/resize listeners dispose safely. Review all three rendered art fixtures.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
@@ -73,10 +80,10 @@
       "paths": [
         "tools/build-production-client.js",
         "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Package and fingerprint the estate renderer and every runtime WebP/SVG. Run the production artifact validator against the built client, with required registry state art, source exclusion and shell consistency. The preparation pipeline also runs runtime-data parity, release generation and asset performance budgets. Preserve all existing atlas and live-world delivery inputs. Bound the 25 lazy estate art files at 1088 KiB and renderer/styles at 40 KiB, retaining the existing install/login/combined caps. Account for the superseded hub and six preserved detail previews in the optimized-art reference audit.",
+      "reason": "Package and fingerprint all 23 lazy WebP estate assets and the renderer/styles while excluding source art and development fixtures. Validate complete state-art inclusion, production packaging, release/runtime parity and unchanged install/login/combined caps. Bound art at 1088 KiB and scene module/styles at 40 KiB. Preserve normal map and optimized legacy detail-preview delivery.",
       "tests": [
         "tools/validate-production-artifact.js",
         "tools/validate-inner-city-estate.js",
@@ -106,8 +113,19 @@
         "docs/art-sources/inner-city-estate/README.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record the explicitly approved estate layout, presentation-only scope, fixed plots, road and animation standards, art provenance and review instructions in the Master Specification, Art Bible and source/review readmes. Documentation has no runtime behavior; its associated implementation and asset dependencies are tested above.",
+      "reason": "Record the explicitly confirmed fixed estate layout and cohesive painted-art revision, normal regional-map size, common building scale, preserved gameplay scope and deferred ambient motion. Retain generation prompts, provenance and private review instructions. Documentation is covered through its associated scene/art tests; it has no server behavior.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/build-estate-art.js",
+        "tools/create-estate-layout-guide.js"
+      ],
+      "reason": "Development utilities regenerate the registry-based placement guide and encode reviewed imagegen sources without repainting or changing per-building scale. Verify their emitted runtime art, provenance and registry dimensions through estate structural and rendered browser checks. Sharp is provided by the bundled workspace runtime; these utilities and raw assets are not shipped to players.",
+      "tests": [
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js"
+      ]
     }
   ]
 }

@@ -60,15 +60,16 @@ async function main() {
       await evaluate(() => { state.gear.newMarkers.treasury = true; openInnerCastle(getMainCityReference().id); CrownlandsAnimations.setMode('full'); });
       await wait(() => document.querySelector('.estate-world').getBoundingClientRect().width > 0);
       await evaluate(() => Promise.all([...document.querySelectorAll('.estate-world img')].map(i => i.decode())));
-      await delay(100);
+      await wait(()=>Number(getComputedStyle(modal).opacity)>=.99);
       const initial = await evaluate(() => { const v = document.querySelector('.estate-viewport').getBoundingClientRect(), w = document.querySelector('.estate-world').getBoundingClientRect(), m = modal.getBoundingClientRect(); return { v: v.toJSON(), w: w.toJSON(), m: m.toJSON(), debug: innerCastleEstateView.debug(), scroll: modalBody.scrollHeight - modalBody.clientHeight }; });
-      assert.equal(initial.debug.camera.zoom, 1); assert.equal(initial.debug.actors, 14); assert.equal(initial.debug.animationRunning, true); assert(initial.scroll <= 1);
+      assert.equal(initial.debug.camera.zoom, 1); assert.equal(initial.debug.actors, 0); assert.equal(initial.debug.animationRunning, false); assert(initial.scroll <= 1);
       assert(Math.abs(initial.m.width - width) < 1 && Math.abs(initial.m.height - height) < 1, 'Estate must fill viewport');
       assert(initial.w.left >= initial.v.left - 1 && initial.w.right <= initial.v.right + 1 && initial.w.top >= initial.v.top - 1 && initial.w.bottom <= initial.v.bottom + 1, 'Fit must show whole estate: ' + JSON.stringify(initial));
       await screenshot('initial-' + width + 'x' + height + '.png');
       assert(await evaluate(() => !!document.querySelector('[data-estate-directory-building="treasury"] .estate-new')), 'New gear must appear in the building directory');
-      const moving = await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')); await delay(150);
-      assert.notEqual(await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')), moving, 'Full mode must move inhabitants');
+      assert.equal(await count('.estate-actor, .estate-roads, .estate-wall, .estate-mill-sails'),0,'Estate uses cohesive painted terrain without vector overlays or ambient actors');
+      assert.equal(await evaluate(()=>document.querySelector('.estate-world').getAnimations({subtree:true}).length),0,'Still estate has no ambient CSS animation');
+      assert(await evaluate(()=>['quarry','mine'].every(key=>{const label=document.querySelector('[data-estate-district="'+key+'"] span').getBoundingClientRect(),art=document.querySelector('[data-estate-site="'+key+'"] img').getBoundingClientRect();return label.top>=art.bottom+5;})),'Overview extraction labels must not cover site art at any viewport size');
       for (const district of await evaluate(() => CrownlandsEstate.districts.map(d => d.key))) {
         await click('[data-estate-district="' + district + '"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5); await click('[data-estate-fit]');
       }
@@ -109,10 +110,10 @@ async function main() {
       const keyboardY = await evaluate(() => innerCastleEstateView.snapshot().y); await press('ArrowDown', 40); assert.notEqual(await evaluate(() => innerCastleEstateView.snapshot().y), keyboardY);
       await press('0', 48); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1);
       await evaluate(() => CrownlandsAnimations.setMode('reduced')); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
-      const still = await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')); await delay(150); assert.equal(await evaluate(() => document.querySelector('.estate-actor').getAttribute('style')), still, 'Reduced mode must remain still');
+      assert.equal(await count('.estate-actor'),0,'Reduced mode must not allocate deferred inhabitants');
       await evaluate(() => CrownlandsAnimations.setMode('off')); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
       await evaluate(() => { CrownlandsAnimations.setMode('full'); Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); }); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
-      await evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), true);
+      await evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
       await evaluate(() => { window.previousEstateView = innerCastleEstateView; showCityInfoModal(getMainCityReference().id); document.querySelector('#enterInnerCastleBtn').click(); });
       await click('[data-inner-castle-back]'); assert(await evaluate(() => modal.dataset.cityInfoId === getMainCityReference().id && document.activeElement.id === 'enterInnerCastleBtn'));
       await evaluate(() => openInnerCastle(getMainCityReference().id)); await click('#closeModalBtn'); await wait(() => !modal.open && innerCastleEstateView === null); assert(await evaluate(() => !modal.classList.contains('bailey-modal') && !modal.dataset.innerCastleCityId));
@@ -125,16 +126,12 @@ async function main() {
       const url = address.url + '/docs/visual-qa/inner-city-estate/index.html?scene=' + scene;
       await client.send('Page.navigate', { url }); await wait(expected => location.href === expected && document.readyState === 'complete' && !!window.estatePreview, url); await evaluate(() => Promise.all([...document.images].map(i => i.decode())));
       assert.equal(await count('[data-estate-site]'), 20); if (scene !== 'initial') assert.equal(await count('[data-site-state="' + scene + '"]'), 20);
-      if (scene === 'completed') {
-        const activity = await evaluate(() => estatePreview.debug().assignments);
-        for (const guard of activity.filter(a => a.row === 1)) assert.deepEqual(guard.to, [61, 37.5], 'Guards must patrol the completed Barracks');
-        assert.deepEqual(activity.find(a => a.row === 2).to, [60, 52.5], 'Couriers must visit the completed Royal Stables');
-        const cart = activity.find(a => a.row === 3); assert.deepEqual(cart.from, [69, 66.5]); assert.deepEqual(cart.to, [87, 73], 'Deliveries connect completed Storehouse and Wagon Yard');
-      }
+      assert.equal(await evaluate(()=>estatePreview.debug().actors),0);
+      if (scene === 'completed') assert(await evaluate(()=>[...document.querySelectorAll('.estate-building-art')].every(image=>{const a=image.getBoundingClientRect(),p=image.parentElement.getBoundingClientRect();return a.left>=p.left-.6&&a.right<=p.right+.6&&a.top>=p.top-.6&&a.bottom<=p.bottom+.6;})),'Common-scale artwork stays within its reserved plot');
       await screenshot('fixture-' + scene + '.png');
     }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and two landscape sizes, complete overview, nonoverlapping 44px targets, visible gear actions and 12 camera-preserving gear returns, drag/wheel/pinch, zoom clamps, Full/Reduced/Off, background pause, Back/focus/Close/Escape cleanup, ownership guard, off-map Profile and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and two landscape sizes, complete overview, nonoverlapping 44px targets, visible gear actions and 12 camera-preserving gear returns, drag/wheel/pinch, zoom clamps, still scene in every animation mode, no overlay roads or actors, Back/focus/Close/Escape cleanup, ownership guard, off-map Profile and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

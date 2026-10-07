@@ -33,7 +33,7 @@ const required = [
   "player-journey.js", "player-journey.css",
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css", "inner-city-estate.css", "inner-city-estate.js",
-  "assets/inner-city-estate/terrain.webp", "assets/inner-city-estate/actors.webp", "assets/inner-city-estate/mill-sails.svg",
+  "assets/inner-city-estate/terrain.webp",
   ...new Set(require("../inner-city-estate").buildings.flatMap(building => Object.values(building.artByState))),
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
@@ -363,13 +363,13 @@ if (paymentUiBytes > 18 * 1024) throw new Error("Crown checkout presentation exc
 const paymentPolicyBytes = ["support.html", "privacy.html", "terms.html"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (paymentPolicyBytes > 34 * 1024) throw new Error("Payment support and policy pages exceed their 34 KiB budget.");
-// The fixed-site estate adds 1,078,739 bytes of lazy raster/SVG art and less
+// The cohesive fixed-site estate delivers lazy painted raster art and less
 // than 38 KiB of scene code/styles. Bound this feature independently; retain
 // the existing entry, installation-cache, prepared-world and combined caps.
 const estateArtBudget = 1088 * 1024;
 const estateArtFiles = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/inner-city-estate/"));
-if (estateArtFiles.length !== 25 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
-  throw new Error("Estate must ship its 25 runtime art files within 1088 KiB.");
+if (estateArtFiles.length !== 23 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
+  throw new Error("Estate must ship its 23 runtime art files within 1088 KiB.");
 }
 const estateModuleBudget = 40 * 1024;
 if (["inner-city-estate.js", "inner-city-estate.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > estateModuleBudget) {

@@ -32,6 +32,7 @@ for(const b of estate.buildings){
   const approaches=estate.roads.filter(r=>r.buildingKey===b.key);assert(approaches.length,b.key+" needs a road");
   assert(approaches.some(r=>r.points.some((p,i)=>i&&Math.abs((p[0]-r.points[i-1][0])*(b.entrance[1]-r.points[i-1][1])-(p[1]-r.points[i-1][1])*(b.entrance[0]-r.points[i-1][0]))<1e-7&&b.entrance[0]>=Math.min(p[0],r.points[i-1][0])-1e-7&&b.entrance[0]<=Math.max(p[0],r.points[i-1][0])+1e-7&&b.entrance[1]>=Math.min(p[1],r.points[i-1][1])-1e-7&&b.entrance[1]<=Math.max(p[1],r.points[i-1][1])+1e-7)),b.key+" entrance must meet its road");
   const a=box(b);assert(a.left>=0&&a.right<=100&&a.top>=0&&a.bottom<=100);
+  assert(b.artSize.width<=b.footprint.width*estate.width/100 && b.artSize.height<=b.footprint.height*estate.height/100,b.key+' art must fit its fixed reservation at the shared scale');
   for(const other of estate.buildings){if(b.key===other.key)continue;const c=box(other);assert(a.right<=c.left||a.left>=c.right||a.bottom<=c.top||a.top>=c.bottom,b.key+" footprint overlaps "+other.key);}
   for(const r of estate.roads){if(r.buildingKey===b.key)continue;for(let i=1;i<r.points.length;i++)assert(!intersects(r.points[i-1],r.points[i],a),r.id+" cuts through "+b.key);}
   for(const asset of Object.values(b.artByState)){assert(fs.existsSync(path.join(root,asset)),"Missing state art "+asset);}
@@ -41,9 +42,12 @@ for(const cottage of estate.cottages){const a=box(cottage);for(const b of estate
 assert.equal(estate.createStates({treasury:"invalid"}).treasury,"completed");assert.equal(estate.createStates({treasury:"constructing"}).treasury,"constructing");assert.equal(initial.treasury,"completed","Fixtures must not mutate defaults");
 const straight=[[0,0],[10,0]],distance=estate.width*.1;
 assert(Math.abs(estate.samplePath(straight,10).x-10)<1e-8);assert(Math.abs(estate.samplePath(straight,distance+10).x-(distance-10))<1e-8);assert.equal(estate.samplePath(straight,distance+10).facing,-1);
-const atlas=fs.readFileSync(path.join(root,"assets/inner-city-estate/actors.webp"));assert.equal(atlas.toString("ascii",0,4),"RIFF");assert(atlas.length<200000,"Keep ambient atlas small");
-for(const file of ["terrain.webp",...estate.buildings.map(b=>b.key+".webp")]){const buffer=fs.readFileSync(path.join(root,"assets/inner-city-estate",file));assert.equal(buffer.toString("ascii",8,12),"WEBP");assert(buffer.length<(file==="terrain.webp"?400000:50000),"Estate image exceeds budget: "+file);}
+for(const file of ["terrain.webp","surveyed-plot.webp","construction.webp",...estate.buildings.map(b=>b.key+".webp")]){const buffer=fs.readFileSync(path.join(root,"assets/inner-city-estate",file));assert.equal(buffer.toString("ascii",8,12),"WEBP");assert(buffer.length<(file==="terrain.webp"?450000:50000),"Estate image exceeds budget: "+file);}
 const source=fs.readFileSync(path.join(root,"inner-city-estate.js"),"utf8");assert.doesNotMatch(source,/\b(?:fetch|localStorage|saveGame|callServer)\s*[.(]/,"Visual estate must not write player progression or call the server");
+assert.doesNotMatch(source,/requestAnimationFrame|estate-roads|estate-wall|estate-actor|estate-mill-sails/,'Still cohesive scene has no vector roads/walls or ambient animation work');
+const sizes=JSON.parse(fs.readFileSync(path.join(root,'docs/art-sources/inner-city-estate/sprite-sizes.json'),'utf8'));
+assert.equal(sizes.mapPixelScale,.30);
+for(const b of estate.buildings)assert.deepEqual([b.artSize.width,b.artSize.height],sizes.sizes[b.key],'Registry must preserve reviewed physical art size');
 const provenance=JSON.parse(fs.readFileSync(path.join(root,"docs/art-sources/inner-city-estate/art-record.json"),"utf8"));
 for(const entry of [...provenance.runtime,...provenance.sources]){
   const bytes=fs.readFileSync(path.join(root,entry.path));
@@ -53,6 +57,7 @@ for(const entry of [...provenance.runtime,...provenance.sources]){
 assert.equal(provenance.runtime.find(entry=>entry.path.endsWith("terrain.webp")).width,1448);
 assert.equal(provenance.runtime.find(entry=>entry.path.endsWith("terrain.webp")).height,1086);
 for(const entry of provenance.runtime.filter(entry=>entry.path.endsWith(".webp")&&!entry.path.endsWith("terrain.webp")))assert.equal(entry.hasAlpha,true,"Sprite alpha must be preserved: "+entry.path);
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r1'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+for(const b of estate.buildings){const art=provenance.runtime.find(e=>e.path===b.artByState.completed);assert.deepEqual([art.width/2,art.height/2],[b.artSize.width,b.artSize.height],'Use 2x artwork without stretching building proportions');}
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r2'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
-console.log("PASS: 20 approved fixed plots, distinct nonoverlapping footprints, connected south-facing approaches, roads clear of other plots, six initial buildings, isolated fixtures, shared movement geometry, compact artwork and production asset inclusion.");
+console.log("PASS: 20 approved fixed plots, nonoverlapping reservations, connected south-facing layout, six initial buildings, isolated fixtures, common physical scale and unstretched 2x sprites, painted construction states, no ambient loops/overlay roads, compact artwork and production asset inclusion.");

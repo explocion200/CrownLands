@@ -1,209 +1,184 @@
 {
-  "generator": "Built-in image_gen.imagegen",
-  "generatedAt": "2026-10-06",
+  "generator": "built-in image_gen.imagegen",
+  "generatedAt": "2026-10-07T00:15:38.223Z",
+  "reference": "docs/art-sources/inner-city-estate/reference-style.png",
   "runtime": [
     {
-      "path": "assets/inner-city-estate/actors.webp",
-      "bytes": 153774,
-      "sha256": "c41706b7f4365ee7c18ece8ffa926942cfe410718f9dd0da8d2149694a860177",
-      "width": 1024,
-      "height": 512,
-      "hasAlpha": true
-    },
-    {
       "path": "assets/inner-city-estate/alehouse.webp",
-      "bytes": 25494,
-      "sha256": "475b93e89766d2938b4dfde964a09d0b59d3ec7b0c831e88589ea4e4c09fc0a1",
-      "width": 256,
-      "height": 256,
+      "sha256": "e73b9948197528a8c7f7838efc914df14125b72023317b32dc325dfdb31f57be",
+      "width": 144,
+      "height": 112,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/barracks.webp",
-      "bytes": 24908,
-      "sha256": "d9bb4007697e22112a48ea7d6c03e4b43628684886a0d4117654cfa92f49c67c",
-      "width": 256,
-      "height": 256,
+      "sha256": "26b3fb25cd1663ae88003eb72a860d71c8d09024e7c9106d998d5157b94800dd",
+      "width": 180,
+      "height": 116,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/builders-yard.webp",
-      "bytes": 31382,
-      "sha256": "2e59719b5a17c3608e7e5debdb1b30d8ab4aa83ca1c31daed07c836de3ecb892",
-      "width": 256,
-      "height": 256,
+      "sha256": "89fbeaf520285623354aa916c1ad622305d4f0deb42a5b5068c75898ea13f9d9",
+      "width": 234,
+      "height": 93,
       "hasAlpha": true
     },
     {
-      "path": "assets/inner-city-estate/construction.svg",
-      "bytes": 856,
-      "sha256": "3c3c4f122ff04b24d5f26d98fc4e6a020eaab23a15c3a1a8771e3edf0b8c3dcb",
-      "hashEncoding": "utf8-lf"
+      "path": "assets/inner-city-estate/construction.webp",
+      "sha256": "11df72c51c765787152407d26c860d61a1af7e33bf0135ad6c946073a989666f",
+      "width": 288,
+      "height": 172,
+      "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/farmstead.webp",
-      "bytes": 30534,
-      "sha256": "458aa23a199175577f406a7360ead989b33230b3039b30d09745512f3ca5472e",
-      "width": 256,
-      "height": 256,
+      "sha256": "4e6cf467593d4bef5587f6e4bcae6831ea8db959f789be3484311c7dfd784dba",
+      "width": 236,
+      "height": 121,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/foresters-lodge.webp",
-      "bytes": 29410,
-      "sha256": "65b64a338d41cb09540c718d5f373a683dec9a057e96d134430b57e044f47638",
-      "width": 256,
-      "height": 256,
+      "sha256": "2c3bd7ec587918bb9c521648e606bd75c106b2e3c6fc5ea20b24b914ecaa2cd0",
+      "width": 118,
+      "height": 110,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/gatehouse.webp",
-      "bytes": 30060,
-      "sha256": "4f375dc4418be3b7fdff73c90c35b84ec3702fde7bd7f32ae75737af102565a1",
-      "width": 256,
-      "height": 256,
+      "sha256": "6a2fda485b9fbd04b24f8c4eea9229af8eeabe3abd3ad63f705a7785a5d6e5e3",
+      "width": 215,
+      "height": 118,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/granary.webp",
-      "bytes": 27894,
-      "sha256": "f309884772a2122ed2f36fb6368567b546ea1b860e35232ca59af1ea6ec3eedd",
-      "width": 256,
-      "height": 256,
+      "sha256": "d92ecc5a07a1da6b3cfc76f34bd978d5a7fff7d86a3fb10adeaafc5e5bef39a1",
+      "width": 137,
+      "height": 104,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/great-hall.webp",
-      "bytes": 26796,
-      "sha256": "5b5d4b9214fbee5d9b2d1e899217045d1e58bd8b9fdb99c8cf6330f70bd6affa",
-      "width": 256,
-      "height": 256,
+      "sha256": "98abffa820d7a26d54dfdc6e6dcfddfdf1c8c76aec2d88572ecf647f5906fdf7",
+      "width": 186,
+      "height": 182,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/guild-master.webp",
-      "bytes": 27746,
-      "sha256": "9425d263555940caa26f0a6abbcb5ece9e821fd151ffc86d88d1ac0718046548",
-      "width": 256,
-      "height": 256,
+      "sha256": "cda7abaf4ade3fe28abf00cd5f9b1c75b747b21450005d98f607c9f6ee1aa6a7",
+      "width": 148,
+      "height": 125,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/market.webp",
-      "bytes": 33828,
-      "sha256": "67a33add0df26ae4deef96456f8f63cd02c50f8e6824b52d9c84787c527b3abe",
-      "width": 256,
-      "height": 256,
+      "sha256": "5d23fda968b0cba58ae6291c65931a254067bc742b3c1271449f4ccc0f031252",
+      "width": 150,
+      "height": 90,
       "hasAlpha": true
     },
     {
-      "path": "assets/inner-city-estate/mill-sails.svg",
-      "bytes": 612,
-      "sha256": "65231ef64b515e74b94f72a1d60834f2e9ca9bf071a970e870c74db758988f61",
-      "hashEncoding": "utf8-lf"
-    },
-    {
       "path": "assets/inner-city-estate/mine.webp",
-      "bytes": 30196,
-      "sha256": "bc07357eb3340ca46025a8b638544f65c97df1a9da718fbfdaeaed570fe38e44",
-      "width": 256,
-      "height": 256,
+      "sha256": "1de4a38d7393609a80f15a8de0ff3aef444fedb2a9983188a6d42a44d9125dc6",
+      "width": 168,
+      "height": 116,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/quarry.webp",
-      "bytes": 34106,
-      "sha256": "bb2691e39d717e63905ccbc7d6a8e5b5922c8a43ebcfd5590737a2edf4b80a42",
-      "width": 256,
-      "height": 256,
+      "sha256": "8f65d5809188d1a1e681fb2920112fb5bc11bd5e2fbce0a9bb036d4f93f8cc16",
+      "width": 188,
+      "height": 110,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/royal-stables.webp",
-      "bytes": 30948,
-      "sha256": "94268864579feb2178faef7ef5c1f16d1a51ece270150db4ffd536a3c68bb18e",
-      "width": 256,
-      "height": 256,
+      "sha256": "acecd25bd249b47a28438512fe1d958c7948bfcc5d4b29dceeab6c64cf27dc44",
+      "width": 224,
+      "height": 115,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/sawmill.webp",
-      "bytes": 28458,
-      "sha256": "b3e8ea3cb8fcacca79c4d60794c0fa46054b0ebc306b2447a4d5b6f5677958c4",
-      "width": 256,
-      "height": 256,
+      "sha256": "5c8b1153c40819ed070ffdef2be42f3a72090e0fac09189dd9380b3879e7c2f8",
+      "width": 211,
+      "height": 125,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/smithy.webp",
-      "bytes": 27544,
-      "sha256": "a25ce837f7f58ebd1b84968bba61b3a5dcb20918b94038990f767e3996619316",
-      "width": 256,
-      "height": 256,
+      "sha256": "01b53eaadab6f4488c896a579c920e30b73b305362a5ea55b70f721a6429385f",
+      "width": 143,
+      "height": 121,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/storehouse.webp",
-      "bytes": 31468,
-      "sha256": "ade319d1e4c07db628d01bbc22b1cc27f263179e5b976e0fd78a57501484e7a6",
-      "width": 256,
-      "height": 256,
+      "sha256": "5589dbe25526263ce4c3e46cbeb23fe13f9ea699d319554cc98ffe6021692c22",
+      "width": 167,
+      "height": 91,
       "hasAlpha": true
     },
     {
-      "path": "assets/inner-city-estate/surveyed-plot.svg",
-      "bytes": 492,
-      "sha256": "9b42134bc0d5dbdf78d29a612a3f9c1506773a53061279a6a3011bf54726aed6",
-      "hashEncoding": "utf8-lf"
+      "path": "assets/inner-city-estate/surveyed-plot.webp",
+      "sha256": "59145890723bd19773300613c4d14510101b26d94dfc016f5e51a59d488e9f2f",
+      "width": 288,
+      "height": 172,
+      "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/terrain.webp",
-      "bytes": 338160,
-      "sha256": "ea1cf238ba67c2afbb33329deb15351244c360a97aa59e04d28f082022b210b6",
+      "sha256": "5b739fd135f8e1caa353e33d0663387b5c8242fa43ce860fd478f91343b349bf",
       "width": 1448,
       "height": 1086,
       "hasAlpha": false
     },
     {
       "path": "assets/inner-city-estate/treasury.webp",
-      "bytes": 32560,
-      "sha256": "12f17bfb63f2ac6ad020c55f0613ba9ce3cb1c1a5979bcbc075e4c52c61820de",
-      "width": 256,
-      "height": 256,
+      "sha256": "f9c167fc492a7123d0df1513f4cf7b4725a183b70350fa691a45fbec5bb1b19c",
+      "width": 151,
+      "height": 127,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/wagon-yard.webp",
-      "bytes": 30302,
-      "sha256": "dd90eeec16a8b63f19636145f430288a0754a56288cafed128c1aa3bedd642c2",
-      "width": 256,
-      "height": 256,
+      "sha256": "ee7a57144227b2382d6447002dc0c7c14e67430e4c2acfce13adacf755d68cb6",
+      "width": 205,
+      "height": 94,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/windmill.webp",
-      "bytes": 24392,
-      "sha256": "a63fb4b3ec58628f7f685bf8dc2b0dec1b2f1682ae10b68c1cf5d0fdc87ba3b4",
-      "width": 256,
-      "height": 256,
+      "sha256": "7a8c8d08d0fbfb13a79b26c2c708c2926bd9f0e034064c823344134520be694a",
+      "width": 106,
+      "height": 145,
       "hasAlpha": true
     },
     {
       "path": "assets/inner-city-estate/workshop.webp",
-      "bytes": 26816,
-      "sha256": "657a5d8b55389e41c5da1115d5e213913732c86198ff9dfdc3545092f96bed90",
-      "width": 256,
-      "height": 256,
+      "sha256": "c1659cdd63e0fbe79dceb0057ce62a7be905b031f9ff441079e59c2fca6bd972",
+      "width": 145,
+      "height": 107,
       "hasAlpha": true
     }
   ],
   "sources": [
     {
-      "path": "docs/art-sources/inner-city-estate/terrain.png",
-      "sha256": "6b156cb075e248dbc9ca32f3624d6a446af11daee33a2ab326bd651394ed325d",
-      "width": 1448,
-      "height": 1086,
-      "hasAlpha": false
+      "path": "docs/art-sources/inner-city-estate/actors.png",
+      "sha256": "0a9cbec4b2e35fdf088ef9f7a14fa1f116a45e713faae8ec031263a0ae7b4e05",
+      "width": 1774,
+      "height": 887,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/buildings-cohesive-v2.png",
+      "sha256": "a8d55c090078a806b1f0ecca9f63077baccd1c5b554141e6defd67a8f2a2228a",
+      "width": 1619,
+      "height": 971,
+      "hasAlpha": true
     },
     {
       "path": "docs/art-sources/inner-city-estate/buildings.png",
@@ -213,11 +188,69 @@
       "hasAlpha": true
     },
     {
-      "path": "docs/art-sources/inner-city-estate/actors.png",
-      "sha256": "0a9cbec4b2e35fdf088ef9f7a14fa1f116a45e713faae8ec031263a0ae7b4e05",
-      "width": 1774,
-      "height": 887,
+      "path": "docs/art-sources/inner-city-estate/cohesive-v2-prompts.json",
+      "sha256": "67a6a9aa03467b91c7e796450bad159a7aa30ecd637a347f9464d1c6ccd2f05e",
+      "hashEncoding": "utf8-lf"
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/gatehouse-connectors-v2.png",
+      "sha256": "3d4f2e2422144aa707ed0e60894cd17ba0302835749d5c1fe945e765042b7114",
+      "width": 1536,
+      "height": 1024,
       "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/layout-guide.png",
+      "sha256": "56bcefe3fd6110d6ad744db932dfcf2684df9e77309baec76ef151a52b05f63e",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/layout-guide.svg",
+      "sha256": "a696260766b370c7dafdaf15907cdec20e8a6401279b01d2a0671eddb3cd3edd",
+      "hashEncoding": "utf8-lf",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/plots-cohesive-v2.png",
+      "sha256": "5d4b002c56f203d0ce8fbad922ee72f07593b601c3b0d8208b6e2be12cfbcc05",
+      "width": 1920,
+      "height": 819,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/prompts.json",
+      "sha256": "ca408febccdf11830cd6069bf1f99f03c06f12529584973d1f9539be64321f39",
+      "hashEncoding": "utf8-lf"
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/reference-style.png",
+      "sha256": "95180cab51d698334d943bbf6ed5ac3fd4f4787cf3a08e9d5b9b8f02de890fd7",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/sprite-sizes.json",
+      "sha256": "ee586cda3302b7fd9bd5d10a21db780a807747212adba31a1e2119bb1c312ebc",
+      "hashEncoding": "utf8-lf"
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain-cohesive-v2.png",
+      "sha256": "c098196ecd5c4ab9140db35bdb0d5bd5ff37c450fd9a3d049cd4a1f94c266a3c",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain.png",
+      "sha256": "6b156cb075e248dbc9ca32f3624d6a446af11daee33a2ab326bd651394ed325d",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
     },
     {
       "path": "docs/art-sources/inner-city-estate/windmill-body.png",
