@@ -32,7 +32,10 @@ const required = [
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
   "player-journey.js", "player-journey.css",
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
-  "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
+  "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css", "inner-city-estate.css", "inner-city-estate.js",
+  "assets/inner-city-estate/terrain.webp",
+  ...require("../inner-city-estate").terrainTiles.map(tile=>tile.src),
+  ...new Set(require("../inner-city-estate").buildings.flatMap(building => Object.values(building.artByState))),
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
   "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
@@ -73,6 +76,7 @@ const required = [
 ];
 const forbidden = [
   "docs/art-sources/login",
+  "docs/art-sources/inner-city-estate", "docs/visual-qa/inner-city-estate",
   "docs/visual-qa/crowns-currency/art",
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
   "assets/castles", "assets/inner-castle", "assets/optimized/manifest.json",
@@ -360,7 +364,24 @@ if (paymentUiBytes > 18 * 1024) throw new Error("Crown checkout presentation exc
 const paymentPolicyBytes = ["support.html", "privacy.html", "terms.html"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (paymentPolicyBytes > 34 * 1024) throw new Error("Payment support and policy pages exceed their 34 KiB budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget;
+// Native building detail, integrated terrain ground and four zoom-only paintings
+// need a bounded 4 MiB lazy-art allowance. Login/install, prepared-world and
+// the combined production caps remain unchanged; no art is installation cached.
+const estateArtBudget = 4096 * 1024;
+const estateArtFiles = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/inner-city-estate/"));
+if (estateArtFiles.length !== 27 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
+  throw new Error("Estate must ship its 27 runtime art files within 4096 KiB.");
+}
+const overviewArtFiles=estateArtFiles.filter(file=>!path.basename(file).startsWith('terrain-detail-'));
+if(overviewArtFiles.reduce((sum,file)=>sum+fs.statSync(file).size,0)>1600*1024)throw new Error('Estate overview artwork exceeds 1600 KiB; detail must remain lazy.');
+const estateModuleBudget = 40 * 1024;
+if (["inner-city-estate.js", "inner-city-estate.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > estateModuleBudget) {
+  throw new Error("Estate renderer and styles exceed their 40 KiB budget.");
+}
+if (fs.readFileSync(path.join(dist, "service-worker.js"), "utf8").includes("assets/inner-city-estate/")) {
+  throw new Error("Estate artwork must load on entry to the estate, outside installation precaching.");
+}
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

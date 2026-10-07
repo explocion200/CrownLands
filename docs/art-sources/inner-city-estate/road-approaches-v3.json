@@ -1,0 +1,10 @@
+{
+  "description": "Reviewed painted road endpoints in logical 1448x1086 coordinates. Blue-guide paths extend each spur to the fixed southern entrance; not runtime vector art.",
+  "starts": {
+    "treasury": [567, 418], "great-hall": [731, 399], "barracks": [891, 419], "alehouse": [735, 551],
+    "royal-stables": [735, 605], "guild-master": [735, 644], "quarry": [415, 227], "mine": [1057, 245],
+    "foresters-lodge": [283, 419], "sawmill": [350, 554], "smithy": [391, 749], "workshop": [726, 791],
+    "builders-yard": [640, 965], "windmill": [208, 734], "farmstead": [260, 916], "granary": [422, 992],
+    "storehouse": [1017, 746], "wagon-yard": [1280, 800], "market": [1307, 556]
+  }
+}

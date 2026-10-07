@@ -176,7 +176,8 @@ function createMapBenchmarkServer() {
       send(response, 200, createVisualQaShell(requestUrl), "text/html; charset=utf-8");
       return;
     }
-    if (requestUrl.pathname === "/" || requestUrl.pathname === "/__benchmark__/") {
+    if (requestUrl.pathname === "/" || requestUrl.pathname === "/__benchmark__/"
+      || (requestUrl.pathname === "/docs/visual-qa/inner-city-estate/index.html" && requestUrl.searchParams.get("estateUi") === "1")) {
       send(response, 200, createBenchmarkIndex(scenarioId, fixture), "text/html; charset=utf-8");
       return;
     }
@@ -209,6 +210,7 @@ function createMapBenchmarkServer() {
       gameSource += fs.readFileSync(path.join(__dirname, "injected-runtime.js"), "utf8");
       gameSource += fs.readFileSync(path.join(__dirname, "pickup-qa-runtime.js"), "utf8");
       gameSource += fs.readFileSync(path.join(__dirname, "ledgers-qa-runtime.js"), "utf8");
+      gameSource += fs.readFileSync(path.join(__dirname, "estate-qa-runtime.js"), "utf8");
       send(response, 200, gameSource, "text/javascript; charset=utf-8");
       return;
     }
