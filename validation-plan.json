@@ -12,7 +12,7 @@
         "docs/visual-qa/inner-city-estate/index.html",
         "tools/validate-inner-castle.js"
       ],
-      "reason": "Show tight single-line name/level captions only at district zoom (2.5x and above), matching district clicks. Verify overview and intermediate zoom contain no individual captions, every district reveals captions, and Fit Estate/zoom-out hide them again. Preserve collision handling around artwork and controls, screen-pixel readability, all twenty directory selections at desktop and three landscape sizes, unchanged 44px targets, keyboard/touch navigation, four real Gear entry/return paths and lifecycle, mixed levels through 100, malformed level handling and approved art/roads. Optional review levels never write state. No construction, Crown spending, server or reset implementation changes, so no emulator suite is affected. The renamed estate Back action closes to the underlying realm, restores map focus, retains realm/camera and disposes the scene. Test City Details/Profile entry and mouse, touch and keyboard exits alongside existing equipment round trips.",
+      "reason": "Show tight single-line name/level captions only at district zoom (2.5x and above), matching district clicks. Verify overview and intermediate zoom contain no individual captions, every district reveals captions, and Fit Estate/zoom-out hide them again. Preserve collision handling around artwork and controls, screen-pixel readability, all twenty directory selections at desktop and three landscape sizes, unchanged 44px targets, keyboard/touch navigation, four real Gear entry/return paths and lifecycle, mixed levels through 100, malformed level handling and approved art/roads. Optional review levels never write state. No construction, Crown spending, server or reset implementation changes, so no emulator suite is affected. The renamed estate Back action closes to the underlying realm, restores map focus, retains realm/camera and disposes the scene. Test City Details/Profile entry and mouse, touch and keyboard exits alongside existing equipment round trips. Add the centered resource ledger and sharp exact-value/status presentation, unknown-versus-zero handling, two-row small-screen layout, separate district hit areas, resized-map pan/wheel/pinch coordinates and labeled synthetic fixture balances. Preserve art, footprints and camera. Verify live Gold/Crown HUD observation, refresh and scene disposal without polling or new resource authority.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle.js",
@@ -24,7 +24,7 @@
       "paths": [
         "common-gear-ui.js"
       ],
-      "reason": "Change only the estate Back callback to close the shared dialog and focus the existing realm map. Preserve access guards, cleanup, Gear dismissal and upgrade actions. Validate shared modal lifecycle and Common Gear dependencies; no server-authoritative actions or world generation changes.",
+      "reason": "Change only the estate Back callback to close the shared dialog and focus the existing realm map. Preserve access guards, cleanup, Gear dismissal and upgrade actions. Validate shared modal lifecycle and Common Gear dependencies; no server-authoritative actions or world generation changes. Currency getters use the existing projected Gold and loaded cosmetics wallet; subscribe only to existing HUD mutations and disconnect on scene disposal. Preserve equipment actions, ownership guards and returns.",
       "tests": [
         "tools/validate-inner-castle.js",
         "tools/validate-inner-castle-browser.js",
@@ -37,7 +37,7 @@
         "index.html",
         "service-worker.js"
       ],
-      "reason": "Version estate JS/CSS and the changed shared Gear UI reference, and invalidate the application cache. Check shell/index cache parity and production inclusion, lazy imagery and installation budgets; retain unrelated script versions and offline cache policies.",
+      "reason": "Version estate JS/CSS and the changed shared Gear UI reference, and invalidate the application cache. Check shell/index cache parity and production inclusion, lazy imagery and installation budgets; retain unrelated script versions and offline cache policies. Refresh the shared Gear UI/estate URLs and cache for the resource ledger.",
       "tests": [
         "tools/test-shell-cache-assertions.js",
         "tools/validate-production-artifact.js"
@@ -49,8 +49,23 @@
         "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record owner-confirmed Level 100 maximum, Gold-only initial construction, Crown supply catalogs, permanent progression for four Gear buildings and Alehouse recruitment/recovery/meals. Explicitly revise the cosmetics-only policy and persistence allowlist while marking gameplay as planned. Document label layout, initial presentation, optional review levels and no publication claim. Records add no executable gameplay; costs, recipes, milestones and backend work remain unresolved, so gameplay/reset emulator tests do not apply. Record the owner-requested Back to Realm navigation refinement as in development, preserving equipment returns and current realm/camera. Document the artwork-only fixture exit separately from the real-UI realm exit.",
+      "reason": "Record owner-confirmed Level 100 maximum, Gold-only initial construction, Crown supply catalogs, permanent progression for four Gear buildings and Alehouse recruitment/recovery/meals. Explicitly revise the cosmetics-only policy and persistence allowlist while marking gameplay as planned. Document label layout, initial presentation, optional review levels and no publication claim. Records add no executable gameplay; costs, recipes, milestones and backend work remain unresolved, so gameplay/reset emulator tests do not apply. Record the owner-requested Back to Realm navigation refinement as in development, preserving equipment returns and current realm/camera. Document the artwork-only fixture exit separately from the real-UI realm exit. Record the explicitly confirmed use of existing rarity tiers, the requested centered counters and links to the proposed economy; do not promote generated balance values to confirmed policy.",
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/audit-estate-economy-draft.js",
+        "docs/estate-economy/draft-config.json",
+        "docs/estate-economy/README.md",
+        "docs/estate-economy/LEVEL_TABLES.md",
+        "docs/estate-economy/BALANCE_REVIEW.md"
+      ],
+      "reason": "Development-only proposed estate design and a reproducible arithmetic/session/reset model. Check all 20 building definitions, all 100 cost/production/capacity rows, prerequisites without cycles, recipe conservation, prior-level storage affordability, offline queue/slot bounds, three daily visits, explicit monthly resets and Crown production-hour caps. Require generated level and balance evidence to match the current inputs. Gold, quest/meal sinks, acquisition, human behavior and full payment fairness remain stated limitations. No backend configuration or player records are changed, so no new emulator suite is applicable. Also verify monotonic Gold fees and report explicit single-city funding lower bounds separately from the affordable-Gold construction simulation.",
+      "tests": [
+        "tools/audit-estate-economy-draft.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-production-artifact.js"
+      ]
     }
   ]
 }

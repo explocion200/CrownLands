@@ -2023,6 +2023,12 @@ function renderInnerCastle(cityId) {
     camera: innerCastleEstateCamera,
     gearRoles: roles,
     newMarkers: state?.gear?.newMarkers,
+    getResources: () => ({ gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),
+    subscribeResources: update => {
+      const observer = new MutationObserver(update);
+      [goldText, document.getElementById("crownsBalance")].filter(Boolean).forEach(element => observer.observe(element, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label"] }));
+      return () => observer.disconnect();
+    },
     animationManager: window.CrownlandsAnimations,
     onSelect: key => { innerCastleSelectedBuildingKey = key; },
     onGear: key => showCommonGearBuilding(key),

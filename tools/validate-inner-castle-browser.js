@@ -112,6 +112,16 @@ async function main() {
         return left.left<=v.left+.6 && left.right>=w.left+2 && right.left<=w.right-2 && right.right>=v.right-.6 && left.top<=v.top+.6 && left.bottom>=v.bottom-.6;
       }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
+      assert.equal(await count('[data-estate-resource]'),10);
+      assert.equal(await text('[data-estate-resource="timber"] dd'),'—','Production must not present draft materials as owned');
+      assert.equal(await text('[data-estate-resource="gold"] dd'),await evaluate(()=>CrownlandsEstate.formatResource(Math.floor(getProjectedGold()))));
+      assert(await evaluate(()=>{
+        const bar=document.querySelector('.estate-resources').getBoundingClientRect(),header=document.querySelector('.estate-header').getBoundingClientRect(),viewport=document.querySelector('.estate-viewport').getBoundingClientRect();
+        return Math.abs(bar.left+bar.right-header.left-header.right)<1&&bar.top>=header.bottom-.6&&bar.bottom<=viewport.top+.6&&[...document.querySelectorAll('[data-estate-resource]')].every(e=>{const r=e.getBoundingClientRect();return r.left>=bar.left&&r.right<=bar.right+.6&&r.top>=bar.top&&r.bottom<=bar.bottom+.6&&e.scrollWidth<=e.clientWidth+1;});
+      }),'All ten counters must be centered, readable and outside the map at every viewport');
+      await evaluate(()=>{ window.estateResourceGoldText=goldText.textContent; window.estateResourceGold=state.gold; state.gold+=10000; goldText.textContent='resource update probe'; });
+      await wait(()=>document.querySelector('[data-estate-resource="gold"] dd').textContent===CrownlandsEstate.formatResource(Math.floor(getProjectedGold())));
+      await evaluate(()=>{state.gold=estateResourceGold;goldText.textContent=estateResourceGoldText;});
       await assertNameplates();
       assert.equal(await count('[data-estate-nameplate]'),20);
       assert.equal(await text('[data-estate-directory-building="treasury"] small'),'Lv. 1');
@@ -210,21 +220,22 @@ async function main() {
         }
       }
       await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
-      await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: 120, deltaX: 0, deltaY: -200 }); await delay(100);
+      const gestureY=(await box('.estate-viewport')).top+40;
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: gestureY, deltaX: 0, deltaY: -200 }); await delay(100);
       assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 2.5));
       const before = await evaluate(() => innerCastleEstateView.snapshot());
       // Move before pressing, including after touch emulation, so the browser
       // processes any pending release of its previous implicit pointer capture.
-      await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45, y: 120, buttons: 0 });
-      await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 45, y: 120, button: 'left', buttons: 1, clickCount: 1 });
-      for (let i = 1; i <= 8; i++) { await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45 + 100 * i / 8, y: 120 + 25 * i / 8, button: 'left', buttons: 1 }); await delay(16); }
-      await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 145, y: 145, button: 'left', clickCount: 1 });
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45, y: gestureY, buttons: 0 });
+      await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 45, y: gestureY, button: 'left', buttons: 1, clickCount: 1 });
+      for (let i = 1; i <= 8; i++) { await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45 + 100 * i / 8, y: gestureY + 25 * i / 8, button: 'left', buttons: 1 }); await delay(16); }
+      await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 145, y: gestureY+25, button: 'left', clickCount: 1 });
       const after = await evaluate(() => innerCastleEstateView.snapshot()); assert(before.x !== after.x || before.y !== after.y, 'Dragging must pan: ' + JSON.stringify({ width, before, after }));
       await evaluate(() => innerCastleEstateView.zoom(99)); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 4);
       await click('[data-estate-fit]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1);
       await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-      await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 50, y: 120, id: 1 }, { x: 120, y: 120, id: 2 }] });
-      await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 30, y: 120, id: 1 }, { x: 160, y: 120, id: 2 }] });
+      await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 50, y: gestureY, id: 1 }, { x: 120, y: gestureY, id: 2 }] });
+      await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 30, y: gestureY, id: 1 }, { x: 160, y: gestureY, id: 2 }] });
       await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 1), 'Pinch must zoom'); await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
       await click('[data-estate-fit]'); await evaluate(() => document.querySelector('.estate-viewport').focus());
       await press('+', 187); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1.5);
@@ -393,6 +404,10 @@ async function main() {
       const url=address.url+'/docs/visual-qa/inner-city-estate/index.html?scene=completed&levels=milestones&estateUi=1&visualMarches=0';
       await client.send('Page.navigate',{url});
       await wait(()=>document.documentElement?.dataset.estateQa==='ready');
+      assert.equal(await text('[data-estate-resource="gold"] dd'),'2.5M');
+      assert.equal(await text('[data-estate-resource="timber"] dd'),'1.2K');
+      assert.equal(await text('[data-estate-resource="tools"] dd'),'48');
+      assert.equal(await evaluate(()=>document.querySelector('.estate-resources').getAttribute('aria-label')),'Economy preview balances');
       await wait(()=>Number(getComputedStyle(modal).opacity)>=.99);
       const levels=await evaluate(()=>innerCastleEstateView.debug().siteLevels);
       const keys=await evaluate(()=>CrownlandsEstate.buildings.map(b=>b.key));

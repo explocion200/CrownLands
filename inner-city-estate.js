@@ -7,6 +7,26 @@
   "use strict";
   const WIDTH = 1448, HEIGHT = 1086;
   const MAX_LEVEL = 100;
+  const resources = Object.freeze([
+    ["gold","Gold",'<circle cx="12" cy="12" r="8"/><path d="m7 9 2 3 3-5 3 5 2-3-1 7H8Z"/>'],
+    ["crowns","Crowns",'<path d="m3 7 4 4 5-6 5 6 4-4-2 12H5Z M5 16h14"/>'],
+    ["timber","Timber",'<path d="m5 16 10-10 4 4-10 10Z M3 12l10-10 4 4 M8 5l4 4"/><ellipse cx="7" cy="18" rx="3" ry="2"/>'],
+    ["stone","Stone",'<path d="m3 16 4-9 9-3 5 10-5 6H6Z M7 7l6 7 8 0 M13 14l-7 6"/>'],
+    ["ore","Iron Ore",'<path d="m3 17 5-10 7-3 6 10-4 7H7Z M8 7l5 5-4 5 M13 12l5-3 M13 12l4 9"/>'],
+    ["grain","Grain",'<path d="M12 22V4 M12 8C4 8 4 3 5 2c5 0 7 3 7 6Zm0 5C4 13 4 8 5 7c5 0 7 3 7 6Zm0-3c8 0 8-5 7-6-5 0-7 3-7 6Zm0 7c8 0 8-5 7-6-5 0-7 3-7 6Z"/>'],
+    ["planks","Planks",'<path d="m3 5 15-2 3 5-15 2Z M3 11l15-2 3 5-15 2Z M3 17l15-2 3 5-15 2Z M7 5l7-1 M7 12l7-1 M7 18l7-1"/>'],
+    ["iron","Iron",'<path d="m3 15 4-7h10l4 7-4 5H7Z M7 8l3 7h11 M10 15l-3 5"/>'],
+    ["tools","Tools",'<path d="m5 3 7 7-3 3-7-7Z M11 11l10 10 M19 3l2 5-7 7-3-3 7-7Z M11 15l-6 6"/>'],
+    ["food","Food",'<path d="M3 14c0-6 18-6 18 0v5H3Z M7 9V5h10v4 M7 13l2 3 M12 12l2 3 M17 13l2 3"/>'],
+  ].map(([key,label,icon])=>Object.freeze({key,label,icon})));
+  function resourceValue(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  function formatResource(value) {
+    if(value===null)return "—";
+    const unit=value>=1e12?[1e12,"T"]:value>=1e9?[1e9,"B"]:value>=1e6?[1e6,"M"]:value>=1e3?[1e3,"K"]:null;
+    return unit ? (Math.floor(value/unit[0]*10)/10).toLocaleString("en-US")+unit[1] : value.toLocaleString("en-US");
+  }
   const ASSETS = "assets/inner-city-estate/";
   // Decorative outpainting fills wide-screen gutters; the playable map and
   // approved center retain their original 1448 x 1086 coordinates and camera.
@@ -141,6 +161,7 @@
   function shell(options, siteStates, siteLevels) {
     return `<section class="estate-shell" aria-labelledby="estateTitle">
       <header class="estate-header"><button type="button" data-inner-castle-back aria-label="Back to Realm">‹ <span>Back to Realm</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
+      <dl class="estate-resources" aria-label="${options.resourcePreview ? "Economy preview balances" : "Estate resources"}">${resources.map(r=>`<div class="estate-resource" data-estate-resource="${r.key}" tabindex="0"><dt><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${r.icon}</svg><span>${r.label}</span></dt><dd data-estate-resource-value>—</dd></div>`).join("")}</dl>${options.resourcePreview ? '<p class="estate-resource-preview">Economy preview · Sample balances</p>' : ""}
       <div class="estate-viewport" tabindex="0" aria-label="City estate map. Drag to pan; use zoom controls or arrow keys to explore.">
         <div class="estate-world" aria-hidden="true">
           ${scenery.map(s=>`<img class="estate-scenery" data-estate-scenery="${s.key}" alt="" draggable="false" hidden>`).join("")}
@@ -186,6 +207,20 @@
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
+    function updateResources() {
+      if(destroyed)return;
+      const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
+      resources.forEach(r=>{
+        const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
+        const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
+        element.querySelector("dd").textContent=formatResource(value);
+        element.setAttribute("aria-label",label);element.title=label;
+      });
+    }
+    updateResources();
+    const stopResourceUpdates=options.subscribeResources?.(updateResources);
+    listen(shellElement,"focusin",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
+    listen(shellElement,"pointerover",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
     function paint() {
       if(destroyed) return;
       const width=viewport.clientWidth,height=viewport.clientHeight;
@@ -239,6 +274,31 @@
         if(r.left<controls.right+8&&r.right>controls.left-8&&r.top<controls.bottom+8&&r.bottom>controls.top-8){
           target.style.left=Math.min(viewportBox.width-r.width/2-8,controls.right-viewportBox.left+r.width/2+8)+"px";
         }
+      });
+      // The resource ledger reduces map height on small screens. Keep district
+      // buttons apart, using the nearby painted scenery when the center is tight.
+      const districtObstacles=[controls,...[...host.querySelectorAll('.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>e.getBoundingClientRect())].map(r=>({left:r.left-viewportBox.left,top:r.top-viewportBox.top,right:r.right-viewportBox.left,bottom:r.bottom-viewportBox.top}));
+      const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
+      const districtPriority=['quarry','mine','farmland','city','woodland','crafts','trade'];
+      [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
+        if(target.hidden)return;
+        const r=target.getBoundingClientRect(),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
+        const offsets=[];
+        for(const dy of [0,48,-48,96,-96])for(const dx of [0,48,-48,96,-96,144,-144,192,-192,240,-240]){
+          if(dy<0&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
+          offsets.push({dx,dy,distance:dx*dx+dy*dy});
+        }
+        offsets.sort((a,b)=>a.distance-b.distance);
+        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left-viewportBox.left+dx,right:r.right-viewportBox.left+dx,top:r.top-viewportBox.top+dy,bottom:r.bottom-viewportBox.top+dy,dx,dy})).find(box=>box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
+        let position=findPosition();
+        if(!position){
+          for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=24)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=24){
+            if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
+            const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
+          }
+          offsets.sort((a,b)=>a.distance-b.distance);position=findPosition();
+        }
+        if(position){target.style.left=x+position.dx+'px';target.style.top=y+position.dy+'px';districtObstacles.push(position);}
       });
       host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
       placeNameplates(tx,ty,scale,width,height,viewportBox);
@@ -344,12 +404,12 @@
     const resize=new ResizeObserver(paint);resize.observe(viewport);
     renderDetail();paint();
     return {
-      select, zoom, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
+      select, zoom, updateResources, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
       debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
-      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();},
+      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();stopResourceUpdates?.();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }
-  return Object.freeze({width:WIDTH,height:HEIGHT,maxLevel:MAX_LEVEL,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,createLevels,samplePath,mount});
+  return Object.freeze({width:WIDTH,height:HEIGHT,maxLevel:MAX_LEVEL,resources,resourceValue,formatResource,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,createLevels,samplePath,mount});
 });

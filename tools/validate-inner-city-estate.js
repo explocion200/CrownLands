@@ -42,6 +42,10 @@ for(const b of estate.buildings){
 }
 const initial=estate.createStates();assert.equal(Object.values(initial).filter(s=>s==="completed").length,6);assert.equal(Object.values(initial).filter(s=>s==="unbuilt").length,14);
 assert.equal(estate.maxLevel,100);
+assert.equal(estate.resources.length,10);
+assert.equal(new Set(estate.resources.map(r=>r.key)).size,10);
+assert.equal(estate.formatResource(0),"0");assert.equal(estate.formatResource(1250),"1.2K");assert.equal(estate.formatResource(2500000),"2.5M");assert.equal(estate.formatResource(null),"—");
+for(const value of [-1,1.5,NaN,Infinity,"100",{},Number.MAX_SAFE_INTEGER+1])assert.equal(estate.resourceValue(value),null,"Unverified or malformed balances must not manufacture spendable resources");
 assert(estate.buildings.every(b=>b.maxLevel===100));
 const initialLevels=estate.createLevels(initial);
 assert.equal(initialLevels.treasury,1);assert.equal(initialLevels.quarry,0);
@@ -117,6 +121,6 @@ for(const side of estate.scenery){
   assert.equal(art.hasAlpha,false,'Surrounding scenery must cover the flat gutter');
   assert.equal(art.width/side.width,art.height/side.height,'Do not stretch painted scenery');
 }
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-labels-r3'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-resources-r1'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
 console.log("PASS: 20 fixed plots, integrated terrain ground and contextual Gatehouse placement, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");
