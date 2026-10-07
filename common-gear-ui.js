@@ -2027,12 +2027,10 @@ function renderInnerCastle(cityId) {
     onSelect: key => { innerCastleSelectedBuildingKey = key; },
     onGear: key => showCommonGearBuilding(key),
     onBack: () => {
-      const originCityId = modal.dataset.innerCastleReturnCityId || modal.dataset.innerCastleCityId;
       clearInnerCastleModalState();
-      if (originCityId && cityById(originCityId)) {
-        showCityInfoModal(originCityId);
-        modalBody.querySelector("#enterInnerCastleBtn")?.focus();
-      } else if (modal.open) modal.close();
+      if (modal.open) modal.close();
+      mapFrame.tabIndex = -1;
+      mapFrame.focus({ preventScroll: true });
     },
   });
   return true;

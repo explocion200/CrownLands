@@ -140,7 +140,7 @@
   }
   function shell(options, siteStates, siteLevels) {
     return `<section class="estate-shell" aria-labelledby="estateTitle">
-      <header class="estate-header"><button type="button" data-inner-castle-back>‹ <span>Back to City Details</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
+      <header class="estate-header"><button type="button" data-inner-castle-back aria-label="Back to Realm">‹ <span>Back to Realm</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
       <div class="estate-viewport" tabindex="0" aria-label="City estate map. Drag to pan; use zoom controls or arrow keys to explore.">
         <div class="estate-world" aria-hidden="true">
           ${scenery.map(s=>`<img class="estate-scenery" data-estate-scenery="${s.key}" alt="" draggable="false" hidden>`).join("")}

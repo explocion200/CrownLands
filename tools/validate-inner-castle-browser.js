@@ -235,12 +235,30 @@ async function main() {
       await evaluate(() => CrownlandsAnimations.setMode('off')); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
       await evaluate(() => { CrownlandsAnimations.setMode('full'); Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); }); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
       await evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }); assert.equal(await evaluate(() => innerCastleEstateView.debug().animationRunning), false);
-      await evaluate(() => { window.previousEstateView = innerCastleEstateView; showCityInfoModal(getMainCityReference().id); document.querySelector('#enterInnerCastleBtn').click(); });
-      await click('[data-inner-castle-back]'); assert(await evaluate(() => modal.dataset.cityInfoId === getMainCityReference().id && document.activeElement.id === 'enterInnerCastleBtn'));
+      await evaluate(() => { showCityInfoModal(getMainCityReference().id); document.querySelector('#enterInnerCastleBtn').click(); window.previousEstateView = innerCastleEstateView; });
+      assert.equal(await evaluate(() => document.querySelector('[data-inner-castle-back]').getAttribute('aria-label')), 'Back to Realm');
+      assert.equal(await text('[data-inner-castle-back] span'), 'Back to Realm');
+      const realmView = await evaluate(() => ({ region: getActiveMapRegionId(), camera: { ...camera }, zoom }));
+      if (width === 1440) {
+        await evaluate(() => document.querySelector('[data-inner-castle-back]').focus());
+        await press('Enter', 13);
+      } else if (width === 568) {
+        const r = await box('[data-inner-castle-back]');
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+        await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: r.x + r.width / 2, y: r.y + r.height / 2, id: 1 }] });
+        await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+      } else await click('[data-inner-castle-back]');
+      await wait(() => !modal.open && innerCastleEstateView === null);
+      assert(await evaluate(() => !modal.dataset.cityInfoId && !modal.dataset.innerCastleCityId && !innerCastleEstateCamera && document.activeElement === mapFrame && previousEstateView.debug().destroyed), 'Back to Realm must dispose the estate and focus the map');
+      assert.deepEqual(await evaluate(() => ({ region: getActiveMapRegionId(), camera: { ...camera }, zoom })), realmView, 'Back to Realm must retain the active realm and map camera');
       await evaluate(() => openInnerCastle(getMainCityReference().id)); await click('#closeModalBtn'); await wait(() => !modal.open && innerCastleEstateView === null); assert(await evaluate(() => !modal.classList.contains('bailey-modal') && !modal.dataset.innerCastleCityId));
     }
     assert(await evaluate(() => { const city = getMainCityReference(); return canEnterInnerCastle(city) && !canEnterInnerCastle(null) && !canEnterInnerCastle({ ...city, owner: 'enemy' }) && !canEnterInnerCastle({ ...city, owner: 'neutral' }) && !canEnterInnerCastle({ ...city, id: 'not-main-city', isMainCity: false, mainCity: false }); }));
     assert(await evaluate(() => { const cities = state.cities, cache = onlineOwnedCitiesCache, main = { ...getMainCityReference() }; try { onlineOwnedCitiesCache = [...cache, main]; state.cities = cities.filter(c => c.id !== main.id); openProfileInnerCastle(); return modal.open && modal.dataset.innerCastleCityId === main.id; } finally { state.cities = cities; onlineOwnedCitiesCache = cache; } }));
+    await click('[data-inner-castle-back]');
+    assert(await evaluate(() => !modal.open && !innerCastleEstateView && !profileScreen.classList.contains('open') && document.activeElement === mapFrame), 'Profile estate entry must also return to the realm');
+    await evaluate(() => openProfileInnerCastle());
     await click('[data-estate-directory-toggle]'); await evaluate(() => document.querySelector('[data-estate-directory-building="barracks"]').focus()); await press('Enter', 13); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), 'barracks'); await wait(() => !!document.querySelector('[data-gear-back]')); assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), 'barracks');
     const keyboardCamera = await evaluate(() => innerCastleEstateCamera);
     await press('Escape', 27);
@@ -394,7 +412,7 @@ async function main() {
       await screenshot('city-levels-'+width+'x'+height+'.png');
     }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping 44px targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; Back to Realm via mouse/touch/keyboard preserves the realm camera and disposes the estate; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping 44px targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

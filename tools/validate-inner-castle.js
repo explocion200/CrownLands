@@ -289,7 +289,7 @@ assert.match(cityInfoSource, /Enter Inner Castle<\/button>/, "The Inner Castle C
 assert.match(
   extractFunction(gameSource, "bindCityDetailsPanel"),
   /openInnerCastle\(mainCity\.id, city\.id\)/,
-  "The shortcut must open the player's Main City and retain the inspected city for Back."
+  "The shortcut must open the player's Main City from the inspected city."
 );
 
 const openSource = extractFunction(gameSource, "openInnerCastle");
@@ -302,8 +302,9 @@ assert.match(openSource, /querySelector\("\.estate-viewport"\)\?\.focus/, "Openi
 const renderSource = extractFunction(gameSource, "renderInnerCastle");
 const previewSource = read("inner-city-estate.js");
 assert.match(renderSource, /CrownlandsEstate\.mount/, "The hub must mount its layered estate.");
-assert.match(renderSource, /showCityInfoModal\(originCityId\)/, "Back must restore inspected city details.");
-assert.match(renderSource, /querySelector\("#enterInnerCastleBtn"\)\?\.focus/, "Back must restore focus.");
+assert.doesNotMatch(renderSource, /showCityInfoModal/, "Back to Realm must not reopen city details.");
+assert.match(renderSource, /mapFrame\.focus\(\{ preventScroll: true \}\)/, "Back to Realm must restore keyboard focus to the map.");
+assert.match(previewSource, /data-inner-castle-back aria-label="Back to Realm">‹ <span>Back to Realm<\/span>/, "The realm button needs its visible and accessible name.");
 assert.match(previewSource, /aria-live="polite"/, "Selection must be announced.");
 assert.match(previewSource, /data-manage-common-gear/, "Supported buildings must retain gear access.");
 assert.match(previewSource, /Function planned/, "Future functions must remain explicitly planned.");
@@ -356,7 +357,7 @@ assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must n
 assert.match(cleanupSource, /suspendInnerCastleEstate\(\)/, "Close must dispose the estate.");
 assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /suspendInnerCastleEstate\(\)/, "Equipment must pause the estate.");
 assert.match(renderSource, /newMarkers: state\?\.gear\?\.newMarkers/, "Gear markers must use existing state.");
-assert.match(indexSource, /inner-city-estate\.css\?v=20261007-estate-labels-r2/, "The estate stylesheet must load with a version.");
+assert.match(indexSource, /inner-city-estate\.css\?v=20261007-estate-labels-r3/, "The estate stylesheet must load with a version.");
 assert.ok(read("tools/build-production-client.js").includes('"inner-city-estate.css"'), "Production must include the estate stylesheet.");
 for (const building of [{key: "royal-bailey", source: "inner-castle-hub"}, ...BUILDINGS.map(building => ({key: building.key, source: building.key}))]) {
   assert.ok(fs.readFileSync(path.join(root, "assets/inner-castle", building.source + ".png"))
