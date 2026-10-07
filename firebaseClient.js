@@ -1574,13 +1574,10 @@
 
   async function getRealmInfo({ force = false } = {}) {
     if (client.realmInfoPromise && !force) return client.realmInfoPromise;
-    // A forced expansion check must be sampled after the action that needs it.
     const request = callServerFunction("getRealmInfo", {
-      releaseId: APP_RELEASE_ID,
-      resetGeneration: RESET_GENERATION,
-      worldId: ONLINE_WORLD_ID,
+      releaseId: APP_RELEASE_ID, resetGeneration: RESET_GENERATION, worldId: ONLINE_WORLD_ID,
     }).then(result => {
-      if (client.realmInfoPromise === request) applyRealmIdentity(result);
+      applyRealmIdentity(result);
       return result;
     }).finally(() => {
       if (client.realmInfoPromise === request) client.realmInfoPromise = null;
