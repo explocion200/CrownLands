@@ -1,62 +1,46 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d376078e6c60a06f98e67ada055b370b260a5eff",
+  "baseCommit": "3054350d3b85cded18425efd60fe7f55e63ac358",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "inner-city-estate.css",
-        "docs/visual-qa/inner-city-estate/index.html",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js"
-      ],
-      "reason": "Extend only the visual background into fitted landscape gutters. Preserve 1448x1086 coordinates, approved building centers, connected roads, gate alignment, scene state, camera bounds, controls and all equipment entry/return behavior. Test desktop and three landscape sizes, phone/ultrawide coverage, noninteractive scenery, lazy load when gutters exist, hiding at close-up zoom, ResizeObserver updates, pan/pinch/keyboard controls and 32 real gear round trips. Read all source/runtime provenance and verify unchanged active-map dimensions.",
-      "tests": [
-        "tools/validate-inner-city-estate.js",
+        "common-gear-ui.js",
+        "game.js",
         "tools/validate-inner-castle-browser.js",
+        "tools/validate-treasury-gear-browser.js",
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-gatehouse-gear-browser.js",
+        "tools/validate-royal-stables-gear-browser.js"
+      ],
+      "reason": "Route user X, native cancel/Escape and backdrop dismissal through the existing gear Back return, guarded by actual equipment context and Main City access. Preserve camera, selection, focus, origin and view-request invalidation. Actual-game tests cover all four officer screens at desktop and three landscape sizes, touch X, 36 dismissal returns, 32 existing Back returns, stale view responses, native requestClose, direct programmatic cleanup, ownership loss and unrelated modal dismissal. The four affected officer validators retain upgrade confirmation Escape/focus, authoritative action stubs and Treasury portrait disposal. Shared modal lifecycle validation covers ordinary X/Escape, queued native close events and same-turn successor dialogs. Shared Common Gear and castle validators retain data, access and client-action invariants. No server-authoritative logic, saved data or artwork changes, so emulator suites do not apply.",
+      "tests": [
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-treasury-gear-browser.js",
+        "tools/validate-barracks-gear-browser.js",
+        "tools/validate-gatehouse-gear-browser.js",
+        "tools/validate-royal-stables-gear-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-common-gear.js",
         "tools/validate-inner-castle.js"
       ]
     },
     {
       "paths": [
-        "assets/inner-city-estate/terrain-surround-east.webp",
-        "assets/inner-city-estate/terrain-surround-west.webp",
-        "docs/art-sources/inner-city-estate/surround-outpaint-guide-v5.png",
-        "docs/art-sources/inner-city-estate/terrain-surround-v5.png",
-        "docs/art-sources/inner-city-estate/surround-v5-prompts.json",
-        "docs/art-sources/inner-city-estate/art-record.json",
-        "tools/build-estate-surround.js"
-      ],
-      "reason": "Deliver only imagegen outpainted side strips from the exact centered guide and record generation prompts, crop dimensions, native aspect ratios and hashes. The encoder touches only these new assets and retains original source/runtime metadata. Verify all 27 approved artwork hashes remain unchanged during review; retain the existing 1600 KiB overview and 4096 KiB total caps. Actual screenshots check joins, no duplicated city, miniature scale and the complete unchanged playable estate. Source masters, guide, recipe and encoder remain outside production.",
-      "tests": [
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
         "index.html",
-        "service-worker.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-production-artifact.js"
+        "service-worker.js"
       ],
-      "reason": "Version the changed estate JS/CSS and shell cache so existing installations receive the background extension. Verify cache parity, original Main City/Profile access and authoritative equipment dependencies. Production inclusion now requires the two additional lazy scenery images; update the image count without raising any payload, installation, login or combined production limits. No server-authoritative data, construction progression or gear rules change, so emulator suites do not apply.",
+      "reason": "Version the two changed browser scripts and shared shell cache so installed clients receive the navigation fix. Keep unchanged estate art and renderer versions. Check shell version parity and production inclusion/build boundaries.",
       "tests": [
         "tools/test-shell-cache-assertions.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-production-artifact.js"
       ]
     },
     {
       "paths": [
-        "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/inner-city-estate/README.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Document the explicitly requested background-only coverage refinement, preserved 1448x1086 map and artwork, decorative noninteractive countryside, approved source/encoding records, unchanged budgets and updated wide-phone review route. No gameplay or release rules change. Associated runtime, art and browser tests cover the implementation; prose itself needs no separate runtime test.",
+      "reason": "Record the user-confirmed equipment dismissal behavior and actual desktop/landscape review coverage. No new gameplay, costs or release policy. Runtime tests listed above verify the documented return and cleanup behavior; prose requires no separate executable test.",
       "tests": []
     }
   ]

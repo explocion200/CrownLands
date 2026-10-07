@@ -42118,7 +42118,9 @@ window.addEventListener("storage", event => {
   }
 });
 if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
-closeModalBtn.addEventListener("click", () => modal.close());
+closeModalBtn.addEventListener("click", () => {
+  if (!returnToInnerCastleFromGear()) modal.close();
+});
 document.addEventListener("click", event => {
   const playerName = event.target.closest?.("[data-player-profile-uid]");
   if (playerName) {
@@ -42157,17 +42159,27 @@ modal.addEventListener("click", event => {
   if (event.target !== modal) return;
   event.preventDefault();
   event.stopPropagation();
-  modal.close();
+  if (!returnToInnerCastleFromGear()) modal.close();
 });
-modal.addEventListener("cancel", event => {
-  if (!commonGearMergeConfirmOpen || !modal.classList.contains("common-gear-building-modal")) return;
+function handleEquipmentModalCancel(event) {
+  if (!modal.classList.contains("common-gear-building-modal")) return;
   event.preventDefault();
-  commonGearMergeConfirmOpen = false;
-  const buildingId = modal.dataset.commonGearBuildingId || "";
-  if (buildingId) {
-    commonGearPendingFocusSelector = "[data-gear-merge]";
-    renderCommonGearBuilding(buildingId);
+  if (commonGearMergeConfirmOpen) {
+    commonGearMergeConfirmOpen = false;
+    const buildingId = modal.dataset.commonGearBuildingId || "";
+    if (buildingId) {
+      commonGearPendingFocusSelector = "[data-gear-merge]";
+      renderCommonGearBuilding(buildingId);
+    }
+    return;
   }
+  if (!returnToInnerCastleFromGear()) modal.close();
+}
+modal.addEventListener("cancel", handleEquipmentModalCancel);
+modal.addEventListener("keydown", event => {
+  // Handle the key before native dismissal so this same dialog's restored
+  // estate cannot consume a second close request from the equipment Escape.
+  if (event.key === "Escape" && !event.defaultPrevented) handleEquipmentModalCancel(event);
 });
 document.addEventListener("pointerdown", event => {
   if (!profileScreen?.classList.contains("open") || modal.open || flagDiscardDialog?.open || document.getElementById("profileProductionDialog")?.open) return;

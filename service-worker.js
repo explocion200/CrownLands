@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20261007-estate-r7";
+const CACHE_VERSION = "20261007-gear-close-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -102,7 +102,7 @@ const STATIC_CACHE_URLS = [
   "/modal-ui.js?v=20260915-modal-lifecycle-r1",
   "/marches-activity-ui.js?v=20261004-gameplay-smoothness-r1",
   "/optional-ui-styles.js?v=20261004-gameplay-smoothness-r1",
-  "/game.js?v=20261006-estate-r2",
+  "/game.js?v=20261007-gear-close-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

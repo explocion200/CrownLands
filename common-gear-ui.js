@@ -1825,17 +1825,7 @@ function bindCommonGearScreen(viewModel) {
       return;
     }
     if (event.target.closest?.("[data-gear-back]")) {
-      const cityId = modal.dataset.innerCastleCityId || state.mainCityId;
-      delete modal.dataset.commonGearBuildingId;
-      modal.classList.remove("common-gear-building-modal");
-      modal.classList.add("inner-castle-modal");
-      commonGearMergeConfirmOpen = false;
-      commonGearBagFilterOpen = false;
-      commonGearPendingFocusSelector = "";
-      commonGearViewRequestId += 1;
-      renderInnerCastle(cityId);
-      const selectedTarget = modalBody.querySelector(`[data-inner-castle-building="${innerCastleSelectedBuildingKey}"]:not([hidden])`);
-      (selectedTarget || modalBody.querySelector(".estate-viewport"))?.focus({ preventScroll: true });
+      if (!returnToInnerCastleFromGear()) modal.close();
       return;
     }
     if (event.target.closest?.("[data-gear-equip]")) {
@@ -1861,6 +1851,24 @@ function bindCommonGearScreen(viewModel) {
       void runCommonGearAction(viewModel.buildingId, "merge", selectedCommonGearInstanceId, viewModel.upgradeGold);
     }
   });
+}
+
+function returnToInnerCastleFromGear() {
+  const buildingId = modal.dataset.commonGearBuildingId;
+  if (!modal.open || !state || !COMMON_GEAR?.BUILDINGS?.[buildingId] || !isCommonGearBuildingOpen(buildingId)) return false;
+  const cityId = modal.dataset.innerCastleCityId || state.mainCityId;
+  if (!canEnterInnerCastle(getInnerCastleCity(cityId))) return false;
+  delete modal.dataset.commonGearBuildingId;
+  modal.classList.remove("common-gear-building-modal");
+  modal.classList.add("inner-castle-modal");
+  commonGearMergeConfirmOpen = false;
+  commonGearBagFilterOpen = false;
+  commonGearPendingFocusSelector = "";
+  commonGearViewRequestId += 1;
+  renderInnerCastle(cityId);
+  const selectedTarget = modalBody.querySelector(`[data-inner-castle-building="${innerCastleSelectedBuildingKey}"]:not([hidden])`);
+  (selectedTarget || modalBody.querySelector(".estate-viewport"))?.focus({ preventScroll: true });
+  return true;
 }
 
 function renderCommonGearBuilding(buildingId) {

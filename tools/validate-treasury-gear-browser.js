@@ -158,8 +158,10 @@ async function main() {
       await click('[data-gear-back]');
     }
     await evaluate("renderCommonGearBuilding('treasury')"); await paint(); await click('#closeModalBtn');
-    await wait('!modal.open');
+    await wait("modal.open && !!innerCastleEstateView && !modal.dataset.commonGearBuildingId");
     await wait('disposeTreasuryGearPortrait===null');
+    await click('#closeModalBtn');
+    await wait('!modal.open');
     assert.equal(errors.length,0,JSON.stringify(errors));
     fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));
     console.log('PASS: Treasury runtime, 25 desktop/landscape states, sprite decoding/containment, animation settings/system preference/visibility/error fallback/cleanup, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close and other-officer isolation.');
