@@ -102,6 +102,15 @@
       ],
       "reason": "Document the confirmed rules, accepted network/installation limitations, prospective IP activation gate, reviewed account-link workflow, audit evidence interpretation and authorization/deployment boundaries. Corresponding runtime groups cover the implementation; documentation needs no separate executable test.",
       "tests": []
+    },
+    {
+      "paths": [
+        "functions/test/emulator-first-time-onboarding.js"
+      ],
+      "reason": "Keep the affected session-admission and real long-route regression meaningful for every unbiased spawn. Select a distant active first-ring destination from the canonical layout instead of assuming a fixed target is more than 30 minutes away. Preserve the original duration, route-authority, admission and replay assertions; no gameplay route rule changes.",
+      "tests": [
+        "functions/test/emulator-first-time-onboarding.js"
+      ]
     }
   ]
 }
