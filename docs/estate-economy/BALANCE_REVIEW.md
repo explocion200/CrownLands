@@ -1,51 +1,50 @@
-# Estate economy draft — arithmetic review
+# Persistent estate — arithmetic and timing review
 
-PROPOSED, not live balance. Reproduce with `node tools/validate-estate-economy-draft.js --write`. No player data was used.
+PROPOSED values; no live player data. Reproduce with node tools/validate-estate-economy-draft.js --write. Previous seasonal rebuilding and all-twenty completion estimates are superseded.
 
-## Production and upgrade demand
+## Focused building reference
 
-All processors run continuously at the same level as extractors. Net rates deduct Timber, Ore, Grain, Planks and Iron used by recipes. A portfolio wave means one upgrade for each of all twenty buildings, including the six proposed double-cost permanent buildings. Stock waiting time is max(demand/net output); it excludes stored inventory, jobs, Gold, quests and differing factory levels.
+Each row runs one building from L1 to L100 with one available construction slot, affordable Gold, zero starting materials, immediate voluntary deposits and 50% of each resource's net production. The Builders' Yard uses its own completed level for its self-upgrade discount; other rows compare Yard 1 and 100. Supporting production/storage uses the fixed band reference level (13 / 38 / 63 / 88). That infrastructure is an external assumption: these runs do not build or pay for it. Ten-minute ticks preserve stock through construction and season boundaries. Gathering continues during timers and reference storage caps apply. The other 50% is outside this model. No quests, Crown deliveries, missed visits or competing projects are modeled.
 
-| Level | Timber/h | Stone/h | Ore/h | Grain/h | Planks/h | Iron/h | Tools/h | Food/h | Material wait for one portfolio wave |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 44.0 | 80.0 | 12.0 | 32.0 | 16.0 | 12.0 | 4.0 | 24.0 | 0.00h |
-| 10 | 107.4 | 195.2 | 29.3 | 78.1 | 39.0 | 29.3 | 9.8 | 58.6 | 1.30h |
-| 25 | 213.0 | 387.2 | 58.1 | 154.9 | 77.4 | 58.1 | 19.4 | 116.2 | 3.49h |
-| 50 | 389.0 | 707.2 | 106.1 | 282.9 | 141.4 | 106.1 | 35.4 | 212.2 | 5.62h |
-| 75 | 565.0 | 1027.2 | 154.1 | 410.9 | 205.4 | 154.1 | 51.4 | 308.2 | 8.34h |
-| 100 | 741.0 | 1347.2 | 202.1 | 538.9 | 269.4 | 202.1 | 67.4 | 404.2 | 11.67h |
+The working timer proposal treats the 1 / 3 / 6 / 10 seasons as approximate total progression targets. This checks the combined collection/construction effect, not two durations added together. Rounding and the final construction step can finish slightly beyond a nominal boundary. Exact timer allocation is proposed; a fixed resource bill is not a calendar lock.
 
-## Construction/stock simulation
+| Building | L25 days | L50 days | L75 days | L100 days | L100 with Builders 100 |
+|---|---:|---:|---:|---:|---:|
+| Great Hall | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Treasury | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Barracks | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Gatehouse | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Royal Stables | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Alehouse | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Guild Master | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Forester’s Lodge | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Quarry | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Mine | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Farmstead | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Storehouse | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Granary | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Sawmill | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Smithy | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Workshop | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Windmill | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Builders’ Yard | 30.24 | 90.57 | 180.88 | 301.16 | 301.16 |
+| Wagon Yard | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
+| Market | 30.26 | 90.65 | 181.08 | 301.53 | 301.08 |
 
-Ten-minute ticks, all sites already L1, zero initial stocks, auto factories, capacity limits, one active job per building, 1/2/3 building slots at Builders' Yard 1/10/50, a Hall+5 ceiling for seasonal buildings and no seasonal Hall ceiling for permanent buildings. Balanced/seasonal-first policies make decisions every tick. Three-visits policies use the seasonal-first priority, confirm prepaid batches of up to five levels only every eight hours, and hold at most thirty jobs; queued jobs run offline without another payment. Every cost is spent when queued. Gold is assumed affordable; no quests, Crown supplies, recruiting, meals, startup or missed visits are modeled. The monthly-reset variant clears stocks and unfinished jobs and returns all fourteen seasonal sites to L1 every thirty days, retaining completed levels of all six permanent buildings. It abstracts rebuilding L1 sites and old-generation refund handling; production must use six starter buildings for new accounts, retain a constructed Guild Master as a seventh completed site for returning guild owners, and reject prepaid jobs crossing a reset. Other policies run uninterrupted. These are design estimates, not measured player completion promises. Milestones are first reach dates from the model start; the monthly-reset first seasonal-100 milestone is not a claim of preserving those levels. The three-visits result exposes the difference between arithmetic affordability and practical session pacing.
+## Checks
 
-| Policy | Hall 25 / 50 / 75 / 100 (days) | All seasonal 25 / 50 / 75 / 100 (days) | All 20 at 100 (days) |
-|---|---|---|---:|
-| balanced | 3.41 / 10.92 / 20.22 / 34.31 | 3.58 / 11.30 / 20.60 / 34.86 | 34.86 |
-| seasonal-first | 2.02 / 6.47 / 12.96 / 23.35 | 2.11 / 6.70 / 13.19 / 23.76 | 32.06 |
-| three-visits | 3.49 / 8.49 / 16.24 / 27.01 | 4.13 / 9.54 / 16.53 / 27.08 | 35.22 |
-| three-visits-monthly-reset | 3.49 / 8.49 / 16.24 / 27.01 | 4.13 / 9.54 / 16.53 / 27.08 | 56.25 |
+- All twenty registry buildings persist. First-build prerequisites are acyclic, and Level 1 is Gold-only.
+- All 100 levels have positive whole nondecreasing material/Gold bills and timers. Individual bills sum exactly to band totals; inputs enter at their stated levels.
+- Each band matches its 1 / 2 / 3 / 4-season resource budget within 0.001 season of rounding. Combined focused timing stays within two days of each nominal cumulative target.
+- Factory input/output conservation holds at all 100 matched levels. Matched storage retains at least 24 hours of gross Timber/Grain; uneven infrastructure still requires testing.
+- Draft ledger fixtures for all twenty sites cover partial deposits, costs above starter storage, invalid/insufficient/excess amounts, atomic rejection, replayed receipts, stale-generation writes, retained loose stocks, deposits, champions and expeditions, retained funded jobs and once-only completion. These are design fixtures, not implemented backend tests.
 
-## Gold funding constraint
+## Limits and next validation
 
-At a constant raw Main City rate of 285 Gold/hour, these totals sum the separately rounded Level 2 through target-level fees. They exclude first builds, recruiting, quests, Gear crafting, world upgrades and rebuilding after resets. The last two columns are Gold-only funding lower bounds, with all Main City income allocated to the estate. Gold accrues while materials/jobs advance, so do not add these days to the construction model. Higher kingdom income can fund projects sooner; spending only half of a single Main City's income doubles these lower bounds. Changing Main City level also changes future quotes and requires a time-varying funding model.
-
-| Target across buildings | 14 seasonal Gold | All 20 Gold | Seasonal funding at 1 Main City income (days) | All 20 funding at 1 Main City income (days) |
-|---:|---:|---:|---:|---:|
-| 25 | 10,027 | 19,227 | 1.47 | 2.81 |
-| 50 | 36,038 | 69,236 | 5.27 | 10.12 |
-| 75 | 86,270 | 165,906 | 12.61 | 24.26 |
-| 100 | 169,131 | 325,403 | 24.73 | 47.57 |
-
-The funding table is a separate lower bound; the material/queue estimates assume affordable Gold and cannot establish newcomer pacing while normal world progression competes for that income. The intended reward is useful selected milestones, not compulsory maximuming of every site. Validate low-income cohorts and tune Gold fees before shipping; the affordable-Gold simulation is a construction estimate only.
-
-## Checks and limits
-
-- All twenty registries match; the four officer buildings, Guild Master and Alehouse persist, leaving fourteen seasonal buildings. No Level 1 prerequisite cycle exists, and Level 1 needs no crafted input.
-- Costs and production are monotonic through all 100 levels. Every single upgrade fits previous-level storage. Matched-level storage holds at least 24 hours of gross Timber/Grain production; heavily uneven levels can still fill earlier.
-- Factory recipes leave positive net output in every resource. Input-starved or output-full processors stop consuming inputs in the model.
-- Crown supplies share one production-hour equivalent per UTC day, at most 4.17% of 24-hour output for the selected material under the quoted reference rate. This is a local-material bound, not a measured PvP fairness result or total progress guarantee.
-- Full monthly maximum across every seasonal building is not a required objective. Compare the simulation against 30 days and tune progression before shipping; a seasonal-first strategy is faster for seasonal systems while all six permanent building tracks carry between resets.
-- Existing two-copy Gear rules still require 1,048,576 Common L1 equivalents for one Legendary L1 piece. Building milestones alone do not solve acquisition. New higher-tier drops or targeted-copy sources require a separately confirmed Gear decision; existing items and earned access must be grandfathered.
-- Champion XP, recovery, retained recruitment and quest rewards are not simulated. Permanent parties with three slots need separate fresh-season and multi-season tests against rebuilt supply chains; the current XP curve is unvalidated and may train carried recruits too quickly.
-- These checks establish arithmetic consistency only. Human playtesting must measure Gold competition, quest/meal sinks, return frequency, decision fatigue, perceived rewards and monthly restart appeal. No claim that the whole economy is validated is made.
+- Supporting infrastructure is not free. Twenty buildings cannot each independently spend the same 50% of an account's production. Projects share stocks and construction slots; no completion date for the full twenty-building estate is claimed.
+- The production references assume a developed supply chain. A building supplied by weaker factories takes longer; saved advanced factories and stockpiles can fund a lower building faster. Prices never chase player income.
+- Bootstrap, Gold competition, the Hall ceiling, actual visits, storage congestion, unused feedstocks, quests and paid supply concentration require a combined account simulation and playtesting. Table rows are individual reference tracks, not fresh-account promises.
+- All estate queues, stocks, expedition rewards, recovery deadlines, shop receipts and limits carry. Migration must settle elapsed work once; it must not reset daily allowances or refresh recruitment. World Gold, world cities and Hero progression retain their existing realm reset rules.
+- Persistent factories create veteran advantages. Estate materials and champion expeditions currently propose no direct world troop, wall or city-production bonuses. Officer Gear follows existing rules; cross-season fairness still needs review.
+- Champion XP pacing may be too fast for this building horizon. Existing two-copy Gear progression requires 1,048,576 Common L1 equivalents per Legendary L1 item. Slower buildings do not solve acquisition or champion balance.
+- Arithmetic and draft persistence checks pass. Full gameplay balance and production persistence are not implemented or validated by this document.

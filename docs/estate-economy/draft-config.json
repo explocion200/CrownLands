@@ -3,13 +3,7 @@
   "maxLevel": 100,
   "seasonDays": 30,
   "productionGrowth": 0.16,
-  "permanentCostFactor": 2,
   "referenceGoldPerHour": 285,
-  "upgradeMinutes": [
-    1,
-    0.45,
-    0.0105
-  ],
   "upgradeGoldHours": [
     0.05,
     0.003,
@@ -69,10 +63,6 @@
     {
       "min": 2,
       "max": 10,
-      "units": [
-        2,
-        0.3
-      ],
       "active": [
         "timber",
         "stone",
@@ -83,10 +73,6 @@
     {
       "min": 11,
       "max": 25,
-      "units": [
-        4,
-        0.4
-      ],
       "active": [
         "timber",
         "stone",
@@ -98,10 +84,6 @@
     {
       "min": 26,
       "max": 50,
-      "units": [
-        8,
-        0.7
-      ],
       "active": [
         "timber",
         "stone",
@@ -114,10 +96,6 @@
     {
       "min": 51,
       "max": 75,
-      "units": [
-        18,
-        1
-      ],
       "active": [
         "timber",
         "stone",
@@ -131,10 +109,6 @@
     {
       "min": 76,
       "max": 100,
-      "units": [
-        36,
-        1.35
-      ],
       "active": [
         "timber",
         "stone",
@@ -225,7 +199,9 @@
       "weights": {
         "timber": 0.8,
         "stone": 1.4
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "treasury",
@@ -234,7 +210,8 @@
       "factor": 1,
       "permanent": true,
       "requires1": [],
-      "weights": {}
+      "weights": {},
+      "goldFactor": 2
     },
     {
       "key": "barracks",
@@ -246,7 +223,8 @@
       "weights": {
         "timber": 0.9,
         "stone": 1.1
-      }
+      },
+      "goldFactor": 2
     },
     {
       "key": "gatehouse",
@@ -258,7 +236,8 @@
       "weights": {
         "timber": 0.5,
         "stone": 1.6
-      }
+      },
+      "goldFactor": 2
     },
     {
       "key": "royal-stables",
@@ -271,7 +250,8 @@
         "timber": 1.3,
         "stone": 0.7,
         "food": 0.15
-      }
+      },
+      "goldFactor": 2
     },
     {
       "key": "alehouse",
@@ -284,7 +264,8 @@
         "timber": 1.3,
         "stone": 0.7,
         "food": 0.2
-      }
+      },
+      "goldFactor": 2
     },
     {
       "key": "guild-master",
@@ -297,7 +278,8 @@
       ],
       "weights": {
         "food": 0.3
-      }
+      },
+      "goldFactor": 2
     },
     {
       "key": "foresters-lodge",
@@ -310,7 +292,9 @@
         "stone": 0.6,
         "iron": 0.25,
         "tools": 0.2
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "quarry",
@@ -323,7 +307,9 @@
         "stone": 0.7,
         "iron": 0.6,
         "tools": 0.18
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "mine",
@@ -336,7 +322,9 @@
         "stone": 0.6,
         "iron": 0.6,
         "tools": 0.2
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "farmstead",
@@ -352,7 +340,9 @@
         "tools": 0.16,
         "grain": 0.2,
         "food": 0.1
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "storehouse",
@@ -366,7 +356,9 @@
         "planks": 0.8,
         "iron": 0.25,
         "tools": 0.1
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "granary",
@@ -381,7 +373,9 @@
         "iron": 0.25,
         "tools": 0.1,
         "grain": 0.15
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "sawmill",
@@ -395,7 +389,9 @@
         "timber": 1.4,
         "stone": 0.5,
         "tools": 0.2
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "smithy",
@@ -411,7 +407,9 @@
         "stone": 1.3,
         "iron": 0.55,
         "tools": 0.16
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "workshop",
@@ -428,7 +426,9 @@
         "planks": 0.9,
         "iron": 0.5,
         "tools": 0.1
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "windmill",
@@ -443,7 +443,9 @@
         "stone": 0.6,
         "planks": 1,
         "iron": 0.35
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "builders-yard",
@@ -457,7 +459,9 @@
         "planks": 0.8,
         "iron": 0.3,
         "tools": 0.2
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "wagon-yard",
@@ -470,7 +474,9 @@
         "stone": 0.6,
         "planks": 1,
         "tools": 0.15
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     },
     {
       "key": "market",
@@ -485,7 +491,42 @@
         "iron": 0.3,
         "tools": 0.1,
         "food": 0.2
-      }
+      },
+      "permanent": true,
+      "goldFactor": 1
     }
-  ]
+  ],
+  "progression": {
+    "status": "PROPOSED quantities/timers; all twenty estate buildings and estate state persist. Owner-confirmed individual cumulative 1/3/6/10-season targets at 50% production.",
+    "costVersion": "persistent-estate-draft-3",
+    "productionShare": 0.5,
+    "withinBandGrowth": 0.1,
+    "constructionShare": 0.2,
+    "bands": [
+      {
+        "min": 2,
+        "max": 25,
+        "seasons": 1,
+        "referenceProducerLevel": 13
+      },
+      {
+        "min": 26,
+        "max": 50,
+        "seasons": 2,
+        "referenceProducerLevel": 38
+      },
+      {
+        "min": 51,
+        "max": 75,
+        "seasons": 3,
+        "referenceProducerLevel": 63
+      },
+      {
+        "min": 76,
+        "max": 100,
+        "seasons": 4,
+        "referenceProducerLevel": 88
+      }
+    ]
+  }
 }
