@@ -145,6 +145,8 @@ async function main() {
       await click('[data-gear-back]');
     }
     await evaluate("renderCommonGearBuilding('gatehouse')"); await paint(); await click('#closeModalBtn');
+    await wait("modal.open && !!innerCastleEstateView && !modal.dataset.commonGearBuildingId");
+    await click('#closeModalBtn');
     await wait('!modal.open');
     assert.equal(errors.length,0,JSON.stringify(errors));
     fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));

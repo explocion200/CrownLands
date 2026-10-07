@@ -51,6 +51,21 @@ async function main() {
       const capture = await client.send('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(path.join(out, file), Buffer.from(capture.data, 'base64'));
     };
+    const dismissGear = async (method, width) => {
+      if (method === 'escape') return press('Escape', 27);
+      if (method === 'backdrop') {
+        const r = await box('#modal');
+        assert(r.left > 5 && r.top > 5, 'Desktop backdrop must be outside equipment');
+        await client.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 5, y: 5, button: 'left', clickCount: 1 });
+        await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 5, y: 5, button: 'left', clickCount: 1 });
+      } else if (width === 568) {
+        const r = await box('#closeModalBtn');
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+        await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: r.x + r.width / 2, y: r.y + r.height / 2, id: 1 }] });
+        await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+      } else await click('#closeModalBtn');
+    };
     await client.send('Page.navigate', { url: address.url + '/__benchmark__/?scenario=A&visualMarches=0' });
     await wait(() => window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready');
     await evaluate(() => { window.__CROWNLANDS_BENCHMARK__.closeModal(); state.gear = normalizeCommonGearState(state.gear); });
@@ -129,6 +144,33 @@ async function main() {
         await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
         await click('[data-gear-back]');
         assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), before);
+        for (const method of width === 1440 ? ['close', 'escape', 'backdrop'] : ['close', 'escape']) {
+          await click(selector);
+          await wait(() => !!document.querySelector('[data-gear-back]'));
+          assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), key);
+          await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
+          if (width === 1440 && key === 'treasury' && method === 'escape') {
+            await click('[data-gear-bag-select]');
+            await press('Escape', 27);
+            assert(await evaluate(() => modal.open && modal.dataset.commonGearBuildingId === 'treasury'), 'Filter Escape must stay in equipment');
+          }
+          await dismissGear(method, width);
+          try {
+            await wait(() => modal.open && !!innerCastleEstateView && !modal.dataset.commonGearBuildingId);
+          } catch (error) {
+            await screenshot('equipment-dismiss-failure.png');
+            throw new Error(JSON.stringify({ width, key, method, status: await evaluate(() => ({ open: modal.open, classes: modal.className, building: modal.dataset.commonGearBuildingId, estate: !!innerCastleEstateView, focus: document.activeElement?.outerHTML.slice(0, 160) })) }) + '\n' + error.message);
+          }
+          assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), before, method + ' must restore camera for ' + key);
+          assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), key);
+          assert(await evaluate(k => document.activeElement.dataset.innerCastleBuilding === k, key), method + ' must restore selected building focus');
+          assert.equal(await count('.estate-viewport'), 1, 'Dismissal remounts exactly one estate');
+          assert.equal(await evaluate(() => innerCastleEstateView.debug().actors), 0);
+          if (width === 844 && key === 'gatehouse' && method === 'close') {
+            await evaluate(() => Promise.all([...document.querySelectorAll('.estate-world img[src]')].map(i => i.decode())));
+            await screenshot('equipment-close-return-844x390.png');
+          }
+        }
       }
       await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
       await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: 120, deltaX: 0, deltaY: -200 }); await delay(100);
@@ -162,8 +204,56 @@ async function main() {
     }
     assert(await evaluate(() => { const city = getMainCityReference(); return canEnterInnerCastle(city) && !canEnterInnerCastle(null) && !canEnterInnerCastle({ ...city, owner: 'enemy' }) && !canEnterInnerCastle({ ...city, owner: 'neutral' }) && !canEnterInnerCastle({ ...city, id: 'not-main-city', isMainCity: false, mainCity: false }); }));
     assert(await evaluate(() => { const cities = state.cities, cache = onlineOwnedCitiesCache, main = { ...getMainCityReference() }; try { onlineOwnedCitiesCache = [...cache, main]; state.cities = cities.filter(c => c.id !== main.id); openProfileInnerCastle(); return modal.open && modal.dataset.innerCastleCityId === main.id; } finally { state.cities = cities; onlineOwnedCitiesCache = cache; } }));
-    await click('[data-estate-directory-toggle]'); await evaluate(() => document.querySelector('[data-estate-directory-building="barracks"]').focus()); await press('Enter', 13); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), 'barracks'); await wait(() => !!document.querySelector('[data-gear-back]')); assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), 'barracks'); await press('Escape', 27); await wait(() => !modal.open && innerCastleEstateView === null);
+    await click('[data-estate-directory-toggle]'); await evaluate(() => document.querySelector('[data-estate-directory-building="barracks"]').focus()); await press('Enter', 13); assert.equal(await evaluate(() => innerCastleSelectedBuildingKey), 'barracks'); await wait(() => !!document.querySelector('[data-gear-back]')); assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), 'barracks');
+    const keyboardCamera = await evaluate(() => innerCastleEstateCamera);
+    await press('Escape', 27);
+    await wait(() => modal.open && !!innerCastleEstateView);
+    assert.deepEqual(await evaluate(() => innerCastleEstateView.snapshot()), keyboardCamera);
+    assert(await evaluate(() => document.activeElement.dataset.innerCastleBuilding === 'barracks'));
+    await press('Escape', 27); await wait(() => !modal.open && innerCastleEstateView === null);
     await client.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    // A delayed synthetic view response must not reopen equipment after dismissal.
+    await evaluate(() => {
+      window.estateOriginalApi = getOnlineApi;
+      getOnlineApi = () => ({ viewCommonGearBuilding: () => new Promise(resolve => { window.resolveEstateGearView = resolve; }) });
+      openInnerCastle(getMainCityReference().id);
+      innerCastleEstateView.select('gatehouse');
+      document.querySelector('[data-estate-detail-close]').click();
+    });
+    await click('[data-inner-castle-building="gatehouse"]');
+    await wait(() => !!document.querySelector('[data-gear-back]'));
+    await click('#closeModalBtn');
+    await evaluate(() => {
+      window.returnedEstateView = innerCastleEstateView;
+      window.returnedEstateGear = JSON.stringify(state.gear);
+      resolveEstateGearView({ gear: COMMON_GEAR.createDefaultState() });
+      getOnlineApi = estateOriginalApi;
+    });
+    await delay(100);
+    assert(await evaluate(() => modal.open && innerCastleEstateView === returnedEstateView && JSON.stringify(state.gear) === returnedEstateGear && !modal.dataset.commonGearBuildingId), 'Obsolete gear response must not replace returned estate or gear');
+    // Native close requests return from equipment; forced close still disposes it.
+    await click('[data-inner-castle-building="gatehouse"]');
+    await wait(() => !!document.querySelector('[data-gear-back]'));
+    await evaluate(() => modal.requestClose());
+    await wait(() => modal.open && !!innerCastleEstateView);
+    await click('[data-inner-castle-building="gatehouse"]');
+    await wait(() => !!document.querySelector('[data-gear-back]'));
+    await evaluate(() => modal.close());
+    assert(await evaluate(() => !modal.open && !innerCastleEstateView && !innerCastleEstateCamera && !modal.dataset.innerCastleCityId && !modal.dataset.commonGearBuildingId), 'Programmatic session cleanup must still close equipment');
+    // An ownership change must not allow dismissal to reopen a forbidden estate.
+    await evaluate(() => { openInnerCastle(getMainCityReference().id); innerCastleEstateView.select('gatehouse'); document.querySelector('[data-estate-detail-close]').click(); });
+    await click('[data-inner-castle-building="gatehouse"]');
+    await wait(() => !!document.querySelector('[data-gear-back]'));
+    await evaluate(() => { window.estateGuardCity = getInnerCastleCity(modal.dataset.innerCastleCityId); window.estateGuardOwner = estateGuardCity.owner; estateGuardCity.owner = 'enemy'; });
+    await click('#closeModalBtn');
+    assert(await evaluate(() => !modal.open && !innerCastleEstateView && !modal.dataset.innerCastleCityId), 'Lost Main City ownership must close normally');
+    await evaluate(() => { estateGuardCity.owner = estateGuardOwner; });
+    for (const method of ['close', 'escape', 'backdrop']) {
+      await evaluate(() => showCityInfoModal(getMainCityReference().id));
+      await wait(() => Number(getComputedStyle(modal).opacity) >= .99 && !document.querySelector('.optional-ui-loading'));
+      await dismissGear(method, 1440);
+      await wait(() => !modal.open && !innerCastleEstateView);
+    }
     for (const scene of ['initial', 'completed', 'constructing']) {
       const url = address.url + '/docs/visual-qa/inner-city-estate/index.html?scene=' + scene;
       await client.send('Page.navigate', { url }); await wait(expected => location.href === expected && document.readyState === 'complete' && !!window.estatePreview, url); await evaluate(() => Promise.all([...document.images].filter(i=>i.getAttribute('src')).map(i => i.decode())));
@@ -235,8 +325,8 @@ async function main() {
           assert.equal(await evaluate(() => modal.dataset.commonGearBuildingId), key);
           assert.equal(await count('[data-gear-slot]'), 8, 'Preview must use the real eight-slot equipment screen');
           await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
-          await click('[data-gear-back]');
-          assert.equal(await count('[data-site-state="completed"]'), 20, 'Gear Back must keep the development fixture');
+          await click(key === 'gatehouse' ? '#closeModalBtn' : '[data-gear-back]');
+          assert.equal(await count('[data-site-state="completed"]'), 20, 'Gear return must keep the development fixture');
         } else {
           assert.equal(await text('.estate-detail .estate-eyebrow'), 'Under construction');
           assert.equal(await count('[data-manage-common-gear], [data-gear-back]'), 0, 'Construction sites cannot open equipment');
@@ -244,7 +334,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and three landscape sizes; painted phone/ultrawide gutters, unchanged 1448x1086 map and lazy scenery; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 32 camera/focus-preserving gear returns; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, Back/Close/Escape cleanup, ownership/Profile entry and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and three landscape sizes; painted phone/ultrawide gutters, unchanged 1448x1086 map and lazy scenery; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 32 Back returns plus 36 X/touch/Escape/backdrop returns preserve camera/selection/focus; native close requests, stale gear responses, forced close and ownership guards; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, estate/unrelated-modal cleanup, Profile entry and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

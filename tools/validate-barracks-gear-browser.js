@@ -149,6 +149,8 @@ async function main() {
       await click('[data-gear-back]');
     }
     await evaluate("renderCommonGearBuilding('barracks')"); await paint(); await click('#closeModalBtn');
+    await wait("modal.open && !!innerCastleEstateView && !modal.dataset.commonGearBuildingId");
+    await click('#closeModalBtn');
     await wait('!modal.open');
     await evaluate("modal.showModal();Promise.all(modal.getAnimations().map(a=>a.finished.catch(()=>{})))");
     // Exercise every officer/rarity with genuine promotion previews and decoded result art.
