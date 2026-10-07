@@ -1,0 +1,42 @@
+{
+  "generator": "built-in image_gen.imagegen",
+  "generatedAt": "2026-10-07",
+  "source": "assets/inner-city-estate/terrain.webp",
+  "guide": "surround-outpaint-guide-v5.png",
+  "prompt": "Precise background outpainting edit. Image 1 is the exact 3:1 output canvas, 3258 x 1086 pixels, with the complete approved 1448 x 1086 game terrain already embedded at x=905, y=0. The light gray LEFT and RIGHT rectangles are missing scenery. Fill ONLY those two gray rectangles. Preserve every existing pixel, location, size and shape of the central painted rectangle; never redraw, crop, rescale or shift its walls, roads, cottages, rocks, fields or trees. The central rectangle must occupy the exact same bounds in the output, 44.4444 percent of the total canvas width, beginning at 27.7778 percent width. This is an outpainting job, not a new composition.\nContinue the pixels along each vertical boundary perfectly so NO vertical line, color jump or rectangular join can be seen. At left, seamlessly continue dense olive forest across the left edge and continue ochre farmland across the lower left edge, with rocky hills at the top. At right, seamlessly continue olive meadows with scattered matching trees and weathered rocks and upper-right hills. New trees and rocks must be exactly the same miniature scale and fine umber ink/painted shading as their immediate neighbors in the central image. Match the reference's matte subdued olive, moss, ochre and warm pale stone colors and upper-left daylight.\nDo not add buildings, walls, roads, plots, river, water, characters, labels, symbols, horizon, vignette, UI or decorative borders. Only landscape in the two missing strips. The original center has been approved and may not change. Output the same complete 3:1 canvas.",
+  "output": "terrain-surround-v5.png",
+  "delivery": "Only the outpainted sides and a 35px outer-edge blend are used. The approved 1448 x 1086 terrain, all buildings, roads, walls, positions, close-up tiles and camera remain unchanged. The generated center is discarded.",
+  "crops": {
+    "west": {
+      "left": 0,
+      "top": 0,
+      "width": 626,
+      "height": 724
+    },
+    "east": {
+      "left": 1546,
+      "top": 0,
+      "width": 625,
+      "height": 724
+    }
+  },
+  "logical": {
+    "west": {
+      "left": -904.25,
+      "top": 0,
+      "width": 939,
+      "height": 1086
+    },
+    "east": {
+      "left": 1414.75,
+      "top": 0,
+      "width": 937.5,
+      "height": 1086
+    }
+  },
+  "webpQuality": 80,
+  "unselectedTrial": {
+    "prompt": "Use case: precise-object-edit (outpainting only).\nAsset type: Crownlands medieval strategy-game estate scenery backdrop.\nEdit target: the supplied 1448 x 1086 terrain image. Preserve this entire original 4:3 image intact in the CENTER, at the same scale, perspective and proportions. Extend the canvas only to the LEFT and RIGHT to make a very wide 3:1 panorama, ideally 3456 x 1152 with the supplied image occupying the centered 1536 x 1152 region. Do not crop the original top or bottom. Change only the newly added lateral scenery. The original center must stay pixel-aligned and visually unchanged.\nLeft extension: naturally continue the western dense olive woodland, the northern rocky hills, and the southern ochre farmland straight across the old left edge, with matching ground texture and miniature tree scale.\nRight extension: naturally continue the eastern open olive meadows, scattered trees, scrub and weathered boulders, and northern rocky hills straight across the old right edge. Keep this as surrounding countryside.\nStyle: precisely match the reference's thin umber ink outlines, matte painted shading, olive and moss grass, ochre fields, warm pale gray rocks, elevated tiny-map perspective and soft upper-left daylight. Detailed hand-painted miniature scenery, no horizon.\nInvariants: do not redesign, move, enlarge, remove or add anything inside the original center. Do not add a second city, walls, buildings, building plots, roads, landmarks, river, lake, text, labels, borders, vignettes, UI, people or symbols in the extensions. Continue the existing edge terrain seamlessly, with no obvious rectangular seams. No blur. Deliver one opaque wide landscape image.",
+    "reason": "An unframed outpaint shifted the scenery around the approved edges. Replaced by the exact centered canvas guide."
+  }
+}

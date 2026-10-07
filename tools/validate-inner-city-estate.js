@@ -46,7 +46,7 @@ assert.equal(estate.createStates({treasury:"invalid"}).treasury,"completed");ass
 const straight=[[0,0],[10,0]],distance=estate.width*.1;
 assert(Math.abs(estate.samplePath(straight,10).x-10)<1e-8);assert(Math.abs(estate.samplePath(straight,distance+10).x-(distance-10))<1e-8);assert.equal(estate.samplePath(straight,distance+10).facing,-1);
 const runtimeFiles=fs.readdirSync(path.join(root,'assets/inner-city-estate'));
-assert.equal(runtimeFiles.length,27);
+assert.equal(runtimeFiles.length,29);
 assert(!runtimeFiles.includes('plot-ground.webp'),'Site ground belongs to the terrain, not a repeated soil sprite');
 let allBytes=0,overviewBytes=0;
 for(const file of runtimeFiles){const buffer=fs.readFileSync(path.join(root,"assets/inner-city-estate",file));assert.equal(buffer.toString("ascii",8,12),"WEBP");const detail=file.startsWith('terrain-detail-');assert(buffer.length<(detail?650*1024:file==='terrain.webp'?500*1024:128*1024),"Estate image exceeds budget: "+file);allBytes+=buffer.length;if(!detail)overviewBytes+=buffer.length;}
@@ -98,6 +98,14 @@ assert.deepEqual(webpSize(fs.readFileSync(path.join(root,normalMap.mapAsset))),[
 for(const tile of estate.terrainTiles){const art=provenance.runtime.find(entry=>entry.path===tile.src);assert(art.width/tile.width>=1.9&&art.height/tile.height>=1.9,'Native close-up terrain must contain more detail than the overview');assert(tile.x>=0&&tile.y>=0&&tile.x+tile.width<=estate.width&&tile.y+tile.height<=estate.height);}
 const css=fs.readFileSync(path.join(root,'inner-city-estate.css'),'utf8');
 assert.doesNotMatch(css,/will-change\s*:\s*transform/,'Do not magnify a cached overview raster at higher zoom');
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-r6'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const surroundRecipe=JSON.parse(fs.readFileSync(path.join(root,'docs/art-sources/inner-city-estate/surround-v5-prompts.json'),'utf8'));
+for(const side of estate.scenery){
+  const art=provenance.runtime.find(entry=>entry.path===side.src),crop=surroundRecipe.crops[side.key],logical=surroundRecipe.logical[side.key];
+  assert.deepEqual(webpSize(fs.readFileSync(path.join(root,side.src))),[crop.width,crop.height]);
+  assert.deepEqual([side.x,side.width,side.height],[logical.left,logical.width,logical.height]);
+  assert.equal(art.hasAlpha,false,'Surrounding scenery must cover the flat gutter');
+  assert.equal(art.width/side.width,art.height/side.height,'Do not stretch painted scenery');
+}
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-r7'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
 console.log("PASS: 20 fixed plots, integrated terrain ground and contextual Gatehouse placement, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");

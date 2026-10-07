@@ -22,6 +22,8 @@
 .estate-header>div{flex:1;min-width:0}.estate-header p{font-size:11px;color:#635943!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.estate-header h2{font:23px/1.1 Georgia,serif}.estate-header [data-inner-castle-back]{white-space:nowrap}.estate-header [data-estate-directory-toggle] span{display:inline-block;margin-left:4px;color:#6a604b;font-size:12px}.estate-close-space{width:44px;flex:none}
 .estate-viewport{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#79864a;touch-action:none;cursor:grab;overscroll-behavior:contain}.estate-viewport:active{cursor:grabbing}
 .estate-world{position:absolute;left:0;top:0;width:1448px;height:1086px;transform-origin:0 0;pointer-events:none}
+.estate-ground{position:absolute;inset:0;z-index:0}.estate-world.has-scenery .estate-ground{mask-image:linear-gradient(to right,transparent,#000 32px,#000 calc(100% - 32px),transparent)}
+.estate-scenery{position:absolute;top:0;z-index:-1;object-fit:cover;pointer-events:none;user-select:none}.estate-scenery[data-estate-scenery=west]{object-position:right center}.estate-scenery[data-estate-scenery=east]{object-position:left center}
 .estate-terrain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;user-select:none}
 .estate-terrain-detail{position:absolute;pointer-events:none;z-index:1;user-select:none;mask-image:linear-gradient(to right,transparent,#000 var(--fade-left),#000 calc(100% - var(--fade-right)),transparent),linear-gradient(to bottom,transparent,#000 var(--fade-top),#000 calc(100% - var(--fade-bottom)),transparent);mask-composite:intersect}
 .estate-terrain-detail[hidden]{display:none}
