@@ -57,12 +57,18 @@ async function main() {
         const labels=[...document.querySelectorAll('.estate-nameplate:not([hidden])')].map(e=>({key:e.dataset.estateNameplate,box:e.getBoundingClientRect().toJSON(),pointer:getComputedStyle(e).pointerEvents,font:parseFloat(getComputedStyle(e).fontSize)}));
         const art=[...document.querySelectorAll('.estate-site>img')].map(e=>e.getBoundingClientRect().toJSON());
         const controls=[...document.querySelectorAll('.estate-camera-controls,.estate-directory:not([hidden]),.estate-detail:not([hidden])')].map(e=>e.getBoundingClientRect().toJSON());
-        return {viewport:viewport.toJSON(),labels,art,controls};
+        return {viewport:viewport.toJSON(),labels,art,controls,zoom:innerCastleEstateView.snapshot().zoom};
       });
+      if(report.zoom<2.5){
+        assert.equal(report.labels.length,0,'Overview and intermediate zoom must show district labels only');
+        assert.equal(await count('[data-estate-nameplate][hidden]'),20);
+        return;
+      }
       assert(report.labels.length>0,'The visible estate must show building name/level captions');
       const overlaps=(a,b)=>a.left<b.right-.5&&a.right>b.left+.5&&a.top<b.bottom-.5&&a.bottom>b.top+.5;
       report.labels.forEach((label,i)=>{
         assert(label.font>=10,'Names must stay readable in screen pixels');
+        assert(label.box.height<=22,'Zoomed captions must be compact single-line strips');
         assert.equal(label.pointer,'none','Captions must not intercept map or touch gestures');
         assert(label.box.left>=report.viewport.left && label.box.right<=report.viewport.right && label.box.top>=report.viewport.top && label.box.bottom<=report.viewport.bottom,'Caption must stay within the viewport: '+label.key);
         for(const other of report.labels.slice(i+1))assert(!overlaps(label.box,other.box),'Captions overlap: '+label.key+' / '+other.key);
@@ -115,8 +121,15 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelector('.estate-world').getAnimations({subtree:true}).length),0,'Still estate has no ambient CSS animation');
       assert(await evaluate(()=>['quarry','mine'].every(key=>{const label=document.querySelector('[data-estate-district="'+key+'"] span').getBoundingClientRect(),art=document.querySelector('[data-estate-site="'+key+'"] img').getBoundingClientRect();return label.top>=art.bottom+5;})),'Overview extraction labels must not cover site art at any viewport size');
       for (const district of await evaluate(() => CrownlandsEstate.districts.map(d => d.key))) {
-        await click('[data-estate-district="' + district + '"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5); await click('[data-estate-fit]');
+        await click('[data-estate-district="' + district + '"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5);
+        await assertNameplates();
+        if(width===844 && ['city','crafts','farmland'].includes(district))await screenshot('district-'+district+'-'+width+'x'+height+'.png');
+        await click('[data-estate-fit]');
+        await assertNameplates();
       }
+      await evaluate(()=>innerCastleEstateView.zoom(2.49));await assertNameplates();
+      await evaluate(()=>innerCastleEstateView.zoom(2.5));await assertNameplates();
+      await click('[data-estate-fit]');await assertNameplates();
       for (const key of keys) {
         await click('[data-estate-directory-toggle]');
         const selector = '[data-estate-directory-building="' + key + '"]';

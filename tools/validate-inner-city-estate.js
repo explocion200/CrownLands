@@ -117,6 +117,6 @@ for(const side of estate.scenery){
   assert.equal(art.hasAlpha,false,'Surrounding scenery must cover the flat gutter');
   assert.equal(art.width/side.width,art.height/side.height,'Do not stretch painted scenery');
 }
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-labels-r1'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-labels-r2'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
 console.log("PASS: 20 fixed plots, integrated terrain ground and contextual Gatehouse placement, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");

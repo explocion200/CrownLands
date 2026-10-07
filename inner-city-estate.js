@@ -247,8 +247,12 @@
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
     }
     function placeNameplates(tx,ty,scale,width,height,viewportBox) {
+      if(camera.zoom<2.5){
+        nameplates.forEach((label,i)=>{label.hidden=true;targets[i].dataset.hasNameplate="false";});
+        return;
+      }
       const rect=(left,top,w,h)=>({left,top,right:left+w,bottom:top+h});
-      const overlaps=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
+      const overlaps=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
       const artBoxes=buildings.map(b=>{
         const completed=siteStates[b.key]==="completed";
         const w=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,h=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
@@ -264,7 +268,7 @@
       const order=buildings.map((b,i)=>i).sort((a,b)=>(buildings[b].key===selected)-(buildings[a].key===selected));
       for(const i of order){
         const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2;
-        const candidates=[rect(cx-w/2,art.bottom+5,w,h),rect(cx-w/2,art.top-h-5,w,h),rect(art.right+5,cy-h/2,w,h),rect(art.left-w-5,cy-h/2,w,h)];
+        const candidates=[rect(cx-w/2,art.bottom+3,w,h),rect(cx-w/2,art.top-h-3,w,h),rect(art.right+3,cy-h/2,w,h),rect(art.left-w-3,cy-h/2,w,h)];
         const placement=candidates.find(r=>r.left>=6&&r.top>=6&&r.right<=width-6&&r.bottom<=height-6&&!artBoxes.some(a=>overlaps(r,a))&&!occupied.some(a=>overlaps(r,a)));
         label.hidden=!placement;
         targets[i].dataset.hasNameplate=String(!!placement);
