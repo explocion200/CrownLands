@@ -9,7 +9,7 @@
   const ASSETS = "assets/inner-city-estate/";
   // One physical scale (.30 map pixels per source-atlas pixel). Preserve each
   // building's natural silhouette; fitting every sprite to a square breaks scale.
-  const spriteSizes = [[75.5,63.5],[93,91],[90,58],[72,56],[128,55.5],[112,57.5],[74,62.5],[94,55],[84,58],[59,55],[105.5,62.5],[71.5,60.5],[72.5,53.5],[117,46.5],[53,72.5],[118,60.5],[68.5,52],[83.5,45.5],[102.5,47],[75,45]];
+  const spriteSizes = [[75.5,63.5],[93,91],[90,58],[72,56],[140.2624309392265,57.80386740331492],[112,57.5],[74,62.5],[94,55],[84,58],[59,55],[105.5,62.5],[71.5,60.5],[72.5,53.5],[117,46.5],[53,72.5],[118,60.5],[68.5,52],[83.5,45.5],[102.5,47],[75,45]];
   // Overlapping close-up paintings retain the same logical map coordinates.
   // Only visible tiles are requested when the camera exceeds overview density.
   const terrainTiles = Object.freeze([
@@ -28,7 +28,7 @@
     ["great-hall", "Great Hall", 50, 31, "city", 9, 10, "Ruler power / kingdom upgrades"],
     ["barracks", "Barracks", 61, 34, "city", 7, 7, "Troop production / military strength"],
     ["alehouse", "Alehouse", 40, 46, "city", 7, 7, "Morale / recovery / small boosts"],
-    ["gatehouse", "Gatehouse", 50, 60, "city", 9, 9.5, "City defense / wall strength"],
+    ["gatehouse", "Gatehouse", 50, 60, "city", 10.5, 10.5, "City defense / wall strength"],
     ["royal-stables", "Royal Stables", 60, 48, "city", 10, 9, "Movement / march speed"],
     ["guild-master", "Guild Master", 40, 54, "city", 7, 7, "Manage champions, form quest parties and review expedition reports."],
     ["quarry", "Quarry", 29, 18, "quarry", 10, 8, "Gather stone for buildings and fortifications."],
@@ -50,8 +50,9 @@
     hotspot: Object.freeze({ left: x, top: y }),
     footprint: Object.freeze({ width, height }),
     artSize: Object.freeze({ width:spriteSizes[index][0], height:spriteSizes[index][1] }),
-    // Gate masonry meets the southern wall's ground line within its reservation.
-    artOffsetY: key === "gatehouse" ? 23.5 : 0,
+    // Offsets recover the exact cutout location in the painted wall junction.
+    artOffsetX: key === "gatehouse" ? 5.697513812154739 : 0,
+    artOffsetY: key === "gatehouse" ? 27.180386740331528 : 0,
     entrance: Object.freeze([x, y + height / 2]),
     initialState: oldArt[key] ? "completed" : "unbuilt",
     artSrc: oldArt[key] ? "assets/optimized/" + oldArt[key] : ASSETS + key + ".webp",
@@ -69,7 +70,7 @@
   const junctions = {
     south: [50, 100], hub: [50, 70], sw: [43, 65], ws: [33, 65], wm: [30, 54], saw: [29, 49], wn: [29, 39], nw: [34, 23], nm: [49, 18], ne: [68, 24], en: [74, 34], em: [75, 53], es: [78, 67], wagon: [78, 73], se: [78, 75], sm: [63, 76],
     an: [24, 70], aw: [12, 74], asw: [12, 85], as: [29, 93], ase: [50, 92], ae: [53, 81],
-    gateOut: [50, 65], gateIn: [50, 55], square: [50, 43], hall: [50, 36],
+    gateOut: [50, 65.5], gateIn: [50, 54.5], square: [50, 43], hall: [50, 36],
   };
   const roads = [];
   function road(id, from, to, bends = [], buildingKey = "") {
@@ -93,7 +94,7 @@
   farm.slice(1).forEach((to, i) => road("farm-" + i, farm[i], to));
   const spurs = {
     treasury: ["square", [[44, 39]]], barracks: ["square", [[56, 40]]], alehouse: ["square", [[46, 49.5]]],
-    "royal-stables": ["gateIn", [[54, 54]]], "guild-master": ["square", [[46, 52], [44, 58.5], [40, 58.5]]],
+    "royal-stables": ["gateIn", [[54, 54]]], "guild-master": ["square", [[46, 52], [44, 54], [44, 58.5], [40, 58.5]]],
     quarry: ["nw", [[29, 23]]], mine: ["ne", [[73, 24]]], "foresters-lodge": ["wn", [[17, 39]]], sawmill: ["saw", []],
     smithy: ["ws", [[27, 65]]], workshop: ["hub", [[43, 74], [37, 74]]], "builders-yard": ["ase", [[43, 90]]],
     windmill: ["an", [[12, 70]]], farmstead: ["asw", [[18, 85]]], granary: ["as", []],
@@ -117,8 +118,7 @@
   ].map(([x,y,width,height],i)=>Object.freeze({key:"cottage-"+i,hotspot:Object.freeze({left:x,top:y}),footprint:Object.freeze({width,height})})));
   function siteMarkup(b, siteState) {
     return `<div class="estate-site" data-estate-site="${b.key}" data-site-state="${siteState}" style="left:${b.hotspot.left}%;top:${b.hotspot.top}%;width:${b.footprint.width}%;height:${b.footprint.height}%;z-index:${Math.round((b.hotspot.top+b.footprint.height/2)*100)}">
-      ${b.key !== "gatehouse" ? `<img class="estate-site-ground" src="${ASSETS}plot-ground.webp" alt="" draggable="false">` : ""}
-      <img ${siteState === "completed" ? `class="estate-building-art" style="width:${b.artSize.width}px;height:${b.artSize.height}px;--estate-art-offset:${b.artOffsetY}px"` : 'class="estate-plot-art"'} src="${b.artByState[siteState]}" alt="" draggable="false">
+      <img ${siteState === "completed" ? `class="estate-building-art" style="width:${b.artSize.width}px;height:${b.artSize.height}px;--estate-art-offset-x:${b.artOffsetX}px;--estate-art-offset:${b.artOffsetY}px"` : 'class="estate-plot-art"'} src="${b.artByState[siteState]}" alt="" draggable="false">
       </div>`;
   }
   function shell(options, siteStates) {
@@ -160,6 +160,7 @@
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
+    const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
     function paint() {
@@ -180,9 +181,9 @@
         if(visible&&!image.getAttribute("src"))image.src=t.src;
       });
       const locate=(element,x,y)=>{const sx=tx+x*WIDTH/100*scale,sy=ty+y*HEIGHT/100*scale;element.style.left=sx+"px";element.style.top=sy+"px";return sx>=22&&sy>=22&&sx<=width-22&&sy<=height-22;};
-      const boxes=buildings.map(b=>({x:tx+b.hotspot.left*WIDTH/100*scale,y:ty+visualTop(b)*HEIGHT/100*scale}));
+      const boxes=buildings.map(b=>({x:tx+visualLeft(b)*WIDTH/100*scale,y:ty+visualTop(b)*HEIGHT/100*scale}));
       targets.forEach((target,i)=>{
-        const b=buildings[i], visible=locate(target,b.hotspot.left,visualTop(b));
+        const b=buildings[i], visible=locate(target,visualLeft(b),visualTop(b));
         const collision=boxes.some((p,j)=>j!==i&&Math.abs(p.x-boxes[i].x)<46&&Math.abs(p.y-boxes[i].y)<46);
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
@@ -229,7 +230,7 @@
       const b=buildings.find(b=>b.key===key);if(!b)return;
       selected=key;camera.detailOpen=true;camera.directoryOpen=false;directory.hidden=true;
       host.querySelector("[data-estate-directory-toggle]").setAttribute("aria-expanded","false");
-      if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=b.hotspot.left*WIDTH/100;camera.y=visualTop(b)*HEIGHT/100;}
+      if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=visualLeft(b)*WIDTH/100;camera.y=visualTop(b)*HEIGHT/100;}
       options.onSelect?.(key);paint();renderDetail();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }

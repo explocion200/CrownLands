@@ -16,9 +16,9 @@ const bounds = [
   [10,765,427,206], [438,765,251,206], [690,787,301,184], [996,783,343,188], [1338,777,281,194],
 ];
 async function main() {
-  await sharp(path.join(sources, 'terrain-entrances-v3.png')).webp({quality:85}).toFile(path.join(output,'terrain.webp'));
+  await sharp(path.join(sources, 'terrain-integrated-v4.png')).webp({quality:85}).toFile(path.join(output,'terrain.webp'));
   for(const tile of estate.terrainTiles) {
-    await sharp(path.join(sources,'terrain-detail-'+tile.key+'-v3.png')).webp({quality:85}).toFile(path.join(output,'terrain-detail-'+tile.key+'.webp'));
+    await sharp(path.join(sources,'terrain-detail-'+tile.key+'-v4.png')).webp({quality:85}).toFile(path.join(output,'terrain-detail-'+tile.key+'.webp'));
   }
   const sizes = {};
   for (let i=0;i<estate.buildings.length;i++) {
@@ -32,12 +32,11 @@ async function main() {
     if(key !== 'gatehouse') await sharp(trimmed).webp({quality:95,alphaQuality:100}).toFile(path.join(output,key+'.webp'));
     sizes[key]=[w/2,h/2];
   }
-  // South-facing, symmetric gate with wings that turn back into the city wall.
-  const gate=await sharp(path.join(sources,'gatehouse-junction-v3.png')).trim({threshold:4}).png().toBuffer();
-  await sharp(gate).resize({width:512}).webp({quality:95,alphaQuality:100}).toFile(path.join(output,'gatehouse.webp'));
-  sizes.gatehouse=[128,55.5];
-  fs.writeFileSync(path.join(sources,'sprite-sizes.json'), JSON.stringify({mapPixelScale:.30,delivery:'native source pixels; gate 4x',bounds,sizes},null,2)+'\n');
-  await sharp(path.join(sources,'plot-ground-v3.png')).trim({threshold:4}).resize(720,432,{fit:'fill'}).webp({quality:85,alphaQuality:100}).toFile(path.join(output,'plot-ground.webp'));
+  // Exact masonry pixels extracted from a gate painted into this map's wall.
+  const placement=JSON.parse(fs.readFileSync(path.join(sources,'gate-placement-v4.json'),'utf8'));
+  await sharp(path.join(sources,'gatehouse-extracted-v4.png')).webp({quality:95,alphaQuality:100}).toFile(path.join(output,'gatehouse.webp'));
+  sizes.gatehouse=[placement.artSize.width,placement.artSize.height];
+  fs.writeFileSync(path.join(sources,'sprite-sizes.json'), JSON.stringify({mapPixelScale:.30,delivery:'native source pixels; gate extracted at contextual map scale',bounds,sizes},null,2)+'\n');
   const plots = path.join(sources,'plots-cohesive-v2.png');
   const pm = await sharp(plots).metadata();
   for (const [i,key] of ['surveyed-plot','construction'].entries()) {

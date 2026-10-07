@@ -35,6 +35,7 @@ for(const b of estate.buildings){
   const a=box(b);assert(a.left>=0&&a.right<=100&&a.top>=0&&a.bottom<=100);
   assert(b.artSize.width<=b.footprint.width*estate.width/100 && b.artSize.height<=b.footprint.height*estate.height/100,b.key+' art must fit its fixed reservation at the shared scale');
   assert(Math.abs(b.artOffsetY)+b.artSize.height/2<=b.footprint.height*estate.height/200,b.key+' masonry/ground offset must remain inside its reservation');
+  assert(Math.abs(b.artOffsetX)+b.artSize.width/2<=b.footprint.width*estate.width/200,b.key+' horizontal wall offset must remain inside its reservation');
   for(const other of estate.buildings){if(b.key===other.key)continue;const c=box(other);assert(a.right<=c.left||a.left>=c.right||a.bottom<=c.top||a.top>=c.bottom,b.key+" footprint overlaps "+other.key);}
   for(const r of estate.roads){if(r.buildingKey===b.key)continue;for(let i=1;i<r.points.length;i++)assert(!intersects(r.points[i-1],r.points[i],a),r.id+" cuts through "+b.key);}
   for(const asset of Object.values(b.artByState)){assert(fs.existsSync(path.join(root,asset)),"Missing state art "+asset);}
@@ -45,16 +46,26 @@ assert.equal(estate.createStates({treasury:"invalid"}).treasury,"completed");ass
 const straight=[[0,0],[10,0]],distance=estate.width*.1;
 assert(Math.abs(estate.samplePath(straight,10).x-10)<1e-8);assert(Math.abs(estate.samplePath(straight,distance+10).x-(distance-10))<1e-8);assert.equal(estate.samplePath(straight,distance+10).facing,-1);
 const runtimeFiles=fs.readdirSync(path.join(root,'assets/inner-city-estate'));
-assert.equal(runtimeFiles.length,28);
+assert.equal(runtimeFiles.length,27);
+assert(!runtimeFiles.includes('plot-ground.webp'),'Site ground belongs to the terrain, not a repeated soil sprite');
 let allBytes=0,overviewBytes=0;
 for(const file of runtimeFiles){const buffer=fs.readFileSync(path.join(root,"assets/inner-city-estate",file));assert.equal(buffer.toString("ascii",8,12),"WEBP");const detail=file.startsWith('terrain-detail-');assert(buffer.length<(detail?650*1024:file==='terrain.webp'?500*1024:128*1024),"Estate image exceeds budget: "+file);allBytes+=buffer.length;if(!detail)overviewBytes+=buffer.length;}
 assert(allBytes<=4096*1024,'Zoom artwork must stay inside the bounded 4 MiB lazy budget');
 assert(overviewBytes<=1600*1024,'Overview must not absorb the zoom-only payload');
 const source=fs.readFileSync(path.join(root,"inner-city-estate.js"),"utf8");assert.doesNotMatch(source,/\b(?:fetch|localStorage|saveGame|callServer)\s*[.(]/,"Visual estate must not write player progression or call the server");
 assert.doesNotMatch(source,/requestAnimationFrame|estate-roads|estate-wall|estate-actor|estate-mill-sails/,'Still cohesive scene has no vector roads/walls or ambient animation work');
+assert.doesNotMatch(source,/estate-site-ground|plot-ground\.webp/,'Do not overlay repeated soil shapes on the integrated terrain');
 const sizes=JSON.parse(fs.readFileSync(path.join(root,'docs/art-sources/inner-city-estate/sprite-sizes.json'),'utf8'));
 assert.equal(sizes.mapPixelScale,.30);
 for(const b of estate.buildings)assert.deepEqual([b.artSize.width,b.artSize.height],sizes.sizes[b.key],'Registry must preserve reviewed physical art size');
+const gatePlacement=JSON.parse(fs.readFileSync(path.join(root,'docs/art-sources/inner-city-estate/gate-placement-v4.json'),'utf8'));
+const gate=estate.buildings.find(b=>b.key==='gatehouse'),context=gatePlacement.context,extraction=gatePlacement.extraction;
+assert.deepEqual(gate.artSize,gatePlacement.artSize,'Gate cutout must retain contextual proportions');
+assert.deepEqual([gate.artOffsetX,gate.artOffsetY],[gatePlacement.artOffset.x,gatePlacement.artOffset.y]);
+const contextualScale=context.width/gatePlacement.canvas.width;
+assert(Math.abs(contextualScale-context.height/gatePlacement.canvas.height)<1e-8,'Context crop must not distort the masonry');
+assert(Math.abs(gate.hotspot.left*estate.width/100+gate.artOffsetX-gate.artSize.width/2-context.x-extraction.left*contextualScale)<1e-8,'Gate left edge must recover its painted wall location');
+assert(Math.abs(gate.hotspot.top*estate.height/100+gate.artOffsetY-gate.artSize.height/2-context.y-extraction.top*contextualScale)<1e-8,'Gate top edge must recover its painted wall location');
 const provenance=JSON.parse(fs.readFileSync(path.join(root,"docs/art-sources/inner-city-estate/art-record.json"),"utf8"));
 for(const entry of [...provenance.runtime,...provenance.sources]){
   const bytes=fs.readFileSync(path.join(root,entry.path));
@@ -87,6 +98,6 @@ assert.deepEqual(webpSize(fs.readFileSync(path.join(root,normalMap.mapAsset))),[
 for(const tile of estate.terrainTiles){const art=provenance.runtime.find(entry=>entry.path===tile.src);assert(art.width/tile.width>=1.9&&art.height/tile.height>=1.9,'Native close-up terrain must contain more detail than the overview');assert(tile.x>=0&&tile.y>=0&&tile.x+tile.width<=estate.width&&tile.y+tile.height<=estate.height);}
 const css=fs.readFileSync(path.join(root,'inner-city-estate.css'),'utf8');
 assert.doesNotMatch(css,/will-change\s*:\s*transform/,'Do not magnify a cached overview raster at higher zoom');
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r4'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261006-estate-r5'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
-console.log("PASS: 20 fixed plots, centered ground and reserved offsets, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");
+console.log("PASS: 20 fixed plots, integrated terrain ground and contextual Gatehouse placement, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");

@@ -356,7 +356,7 @@ assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must n
 assert.match(cleanupSource, /suspendInnerCastleEstate\(\)/, "Close must dispose the estate.");
 assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /suspendInnerCastleEstate\(\)/, "Equipment must pause the estate.");
 assert.match(renderSource, /newMarkers: state\?\.gear\?\.newMarkers/, "Gear markers must use existing state.");
-assert.match(indexSource, /inner-city-estate\.css\?v=20261006-estate-r4/, "The estate stylesheet must load with a version.");
+assert.match(indexSource, /inner-city-estate\.css\?v=20261006-estate-r5/, "The estate stylesheet must load with a version.");
 assert.ok(read("tools/build-production-client.js").includes('"inner-city-estate.css"'), "Production must include the estate stylesheet.");
 for (const building of [{key: "royal-bailey", source: "inner-castle-hub"}, ...BUILDINGS.map(building => ({key: building.key, source: building.key}))]) {
   assert.ok(fs.readFileSync(path.join(root, "assets/inner-castle", building.source + ".png"))

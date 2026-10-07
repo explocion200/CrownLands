@@ -128,9 +128,9 @@ async function main() {
       assert.equal(await count('[data-estate-site]'), 20); if (scene !== 'initial') assert.equal(await count('[data-site-state="' + scene + '"]'), 20);
       assert.equal(await evaluate(()=>estatePreview.debug().actors),0);
       if (scene === 'completed') assert(await evaluate(()=>[...document.querySelectorAll('.estate-building-art')].every(image=>{const a=image.getBoundingClientRect(),p=image.parentElement.getBoundingClientRect();return a.left>=p.left-.6&&a.right<=p.right+.6&&a.top>=p.top-.6&&a.bottom<=p.bottom+.6;})),'Common-scale artwork stays within its reserved plot');
-      assert.equal(await count('.estate-site-ground'),19,'Every freestanding plot has its own centered painted ground; the gate meets masonry');
+      assert.equal(await count('.estate-site-ground'),0,'Ground is painted into the terrain without repeated soil overlays');
       if(scene==='completed'){
-        assert(await evaluate(()=>[...document.querySelectorAll('.estate-site-ground')].every(ground=>{const g=ground.getBoundingClientRect(),a=ground.parentElement.querySelector('.estate-building-art').getBoundingClientRect();return Math.abs(g.left+g.width/2-a.left-a.width/2)<.6&&Math.abs(g.top+g.height/2-a.top-a.height/2)<.6;})),'Completed buildings must be centered on their actual painted land');
+        assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-site]:not([data-estate-site="gatehouse"]) .estate-building-art')].every(image=>{const a=image.getBoundingClientRect(),p=image.parentElement.getBoundingClientRect();return Math.abs(p.left+p.width/2-a.left-a.width/2)<.6&&Math.abs(p.top+p.height/2-a.top-a.height/2)<.6;})),'Freestanding buildings retain the approved plot centers over their painted ground');
         assert.equal(await count('.estate-terrain-detail[src]'),0,'Overview must not request close-up tiles at 1x display density');
       }
       await screenshot('fixture-' + scene + '.png');

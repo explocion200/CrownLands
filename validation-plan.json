@@ -16,7 +16,6 @@
         "assets/inner-city-estate/guild-master.webp",
         "assets/inner-city-estate/market.webp",
         "assets/inner-city-estate/mine.webp",
-        "assets/inner-city-estate/plot-ground.webp",
         "assets/inner-city-estate/quarry.webp",
         "assets/inner-city-estate/royal-stables.webp",
         "assets/inner-city-estate/sawmill.webp",
@@ -35,12 +34,19 @@
         "docs/art-sources/inner-city-estate/actors.png",
         "docs/art-sources/inner-city-estate/alignment-v3-prompts.json",
         "docs/art-sources/inner-city-estate/art-record.json",
+        "docs/art-sources/inner-city-estate/building-bases-guide-v4.png",
         "docs/art-sources/inner-city-estate/buildings-cohesive-v2.png",
         "docs/art-sources/inner-city-estate/buildings.png",
         "docs/art-sources/inner-city-estate/cohesive-v2-prompts.json",
+        "docs/art-sources/inner-city-estate/gate-context-guide-v4.png",
+        "docs/art-sources/inner-city-estate/gate-context-painted-v4.png",
+        "docs/art-sources/inner-city-estate/gate-extraction-mask-v4.svg",
         "docs/art-sources/inner-city-estate/gate-junction-guide-v3.png",
+        "docs/art-sources/inner-city-estate/gate-placement-v4.json",
         "docs/art-sources/inner-city-estate/gatehouse-connectors-v2.png",
+        "docs/art-sources/inner-city-estate/gatehouse-extracted-v4.png",
         "docs/art-sources/inner-city-estate/gatehouse-junction-v3.png",
+        "docs/art-sources/inner-city-estate/integrated-v4-prompts.json",
         "docs/art-sources/inner-city-estate/layout-guide.png",
         "docs/art-sources/inner-city-estate/layout-guide.svg",
         "docs/art-sources/inner-city-estate/plot-ground-v3.png",
@@ -52,14 +58,20 @@
         "docs/art-sources/inner-city-estate/terrain-aligned-v3.png",
         "docs/art-sources/inner-city-estate/terrain-cohesive-v2.png",
         "docs/art-sources/inner-city-estate/terrain-detail-ne-v3.png",
+        "docs/art-sources/inner-city-estate/terrain-detail-ne-v4.png",
         "docs/art-sources/inner-city-estate/terrain-detail-nw-v3.png",
+        "docs/art-sources/inner-city-estate/terrain-detail-nw-v4.png",
         "docs/art-sources/inner-city-estate/terrain-detail-se-v3.png",
+        "docs/art-sources/inner-city-estate/terrain-detail-se-v4.png",
         "docs/art-sources/inner-city-estate/terrain-detail-sw-v3.png",
+        "docs/art-sources/inner-city-estate/terrain-detail-sw-v4.png",
         "docs/art-sources/inner-city-estate/terrain-entrances-v3.png",
+        "docs/art-sources/inner-city-estate/terrain-integrated-v4.png",
+        "docs/art-sources/inner-city-estate/terrain-yard-study-v4.png",
         "docs/art-sources/inner-city-estate/terrain.png",
         "docs/art-sources/inner-city-estate/windmill-body.png"
       ],
-      "reason": "Deliver centered fixed-site earth and native 3.2x+ building art, a Gatehouse fitted to the southern wall, and bounded visible lazy close-up terrain. Verify source/runtime hashes, alpha, unchanged logical 1448x1086 dimensions against an actual active-topology map, state footprints and aspect ratios. All 28 runtime images stay within 4096 KiB and overview/site artwork within 1600 KiB, outside install caching.",
+      "reason": "Deliver ground painted at actual building bases in the terrain, original Gatehouse masonry extracted from its in-map wall painting, native 3.2x+ sprites and four bounded visible lazy close-up tiles. Verify original contextual placement, source/runtime hashes, alpha, unchanged logical 1448x1086 dimensions against an actual active-topology map, state footprints and aspect ratios. All 27 runtime images stay within 4096 KiB and overview/site artwork within 1600 KiB, outside install caching.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
@@ -71,7 +83,7 @@
         "inner-city-estate.css",
         "inner-city-estate.js"
       ],
-      "reason": "Render the 20-site estate at the normal regional-map dimensions with no geometric road/wall overlays or ambient actors/loops. Test fixed coordinates, footprint clearance, connected layout graph, desktop and two small landscape sizes, 44px targets, all directory/district selections, mouse/touch/keyboard camera controls and gear round trips. Overview extraction labels stay clear of art at every viewport size. Full/Reduced/Off and hidden/covered scenes remain still; input/resize listeners dispose safely. Review all three rendered art fixtures. Regress completed-art centering and visible-only native detail tiles at 4x; avoid forcing a cached overview raster during zoom.",
+      "reason": "Render the 20-site estate at normal regional-map dimensions without repeated soil sprites, geometric road/wall overlays or ambient actors/loops. Test fixed centers, footprint clearance, connected road graph, all selections at desktop and two landscape sizes, 44px targets, mouse/touch/keyboard camera controls and gear round trips. Check building target offsets against the actual Gatehouse cutout, centered freestanding art and visible native tiles at 4x. Full/Reduced/Off and hidden/covered scenes remain still; input/resize listeners dispose safely. Review all three art fixtures.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"
@@ -99,7 +111,7 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Package and fingerprint all 28 lazy WebP images and renderer/styles while excluding source art and development fixtures. Validate complete art inclusion, release/runtime parity and unchanged install/login/combined caps. Bound total art at 4096 KiB, overview/site art at 1600 KiB and scene code/styles at 40 KiB.",
+      "reason": "Package and fingerprint all 27 lazy WebP images and renderer/styles while excluding source art and development fixtures. Validate complete art inclusion, release/runtime parity and unchanged install/login/combined caps. Bound total art at 4096 KiB, overview/site art at 1600 KiB and scene code/styles at 40 KiB.",
       "tests": [
         "tools/validate-production-artifact.js",
         "tools/validate-inner-city-estate.js",
@@ -114,7 +126,7 @@
         "tools/validate-inner-castle.js",
         "tools/validate-inner-city-estate.js"
       ],
-      "reason": "Execute the updated existing integration guards and the new structural/actual-game estate regressions. The common-gear check includes the extracted renderer in its source boundary; browser fixtures are private and cannot mutate saved progression. These tests verify the changed shared modal and equipment dependencies rather than unrelated game systems. Validate active-topology catalog and actual map dimensions, site centering, offsets and native zoom artwork.",
+      "reason": "Execute the updated existing integration guards and the new structural/actual-game estate regressions. The common-gear check includes the extracted renderer in its source boundary; browser fixtures are private and cannot mutate saved progression. These tests verify the changed shared modal and equipment dependencies rather than unrelated game systems. Validate active-topology catalog and actual map dimensions, integrated ground, contextual gate offsets and native zoom artwork.",
       "tests": [
         "tools/validate-common-gear.js",
         "tools/validate-inner-castle-browser.js",
@@ -129,16 +141,17 @@
         "docs/art-sources/inner-city-estate/README.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record the explicitly confirmed fixed estate layout and cohesive painted-art revision, normal regional-map size, common building scale, preserved gameplay scope and deferred ambient motion. Retain generation prompts, provenance and private review instructions. Documentation is covered through its associated scene/art tests; it has no server behavior. Record the requested plot alignment, Gatehouse reservation and native/lazy zoom detail corrections.",
+      "reason": "Record the explicitly confirmed fixed estate layout and cohesive painted-art revision, normal regional-map size, common building scale, preserved gameplay scope and deferred ambient motion. Retain generation prompts, provenance and private review instructions. Documentation is covered through its associated scene/art tests; it has no server behavior. Record the requested plot alignment, Gatehouse reservation and native/lazy zoom detail corrections. The latest confirmed direction replaces separate soil with integrated terrain ground and paints then extracts the square-tower Gatehouse from the actual wall junction.",
       "tests": []
     },
     {
       "paths": [
         "tools/build-estate-art.js",
         "tools/create-estate-layout-guide.js",
-        "tools/create-estate-road-guide.js"
+        "tools/create-estate-road-guide.js",
+        "tools/extract-estate-gate.js"
       ],
-      "reason": "Development utilities regenerate the registry-based placement guide and encode reviewed imagegen sources without repainting or changing per-building scale. Verify their emitted runtime art, provenance and registry dimensions through estate structural and rendered browser checks. Sharp is provided by the bundled workspace runtime; these utilities and raw assets are not shipped to players.",
+      "reason": "Development utilities regenerate the registry-based placement guide and encode reviewed imagegen sources without repainting or changing per-building scale. Verify their emitted runtime art, provenance and registry dimensions through estate structural and rendered browser checks. Sharp is provided by the bundled workspace runtime; these utilities and raw assets are not shipped to players. Gate extraction masks the selected painting without redrawing its RGB pixels, retaining the exact cutout coordinates for placement.",
       "tests": [
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js"

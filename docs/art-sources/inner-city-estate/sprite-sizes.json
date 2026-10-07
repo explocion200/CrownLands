@@ -1,6 +1,6 @@
 {
   "mapPixelScale": 0.3,
-  "delivery": "native source pixels; gate 4x",
+  "delivery": "native source pixels; gate extracted at contextual map scale",
   "bounds": [
     [
       15,
@@ -141,8 +141,8 @@
       56
     ],
     "gatehouse": [
-      128,
-      55.5
+      140.2624309392265,
+      57.80386740331492
     ],
     "royal-stables": [
       112,

@@ -34,7 +34,6 @@ const required = [
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css", "inner-city-estate.css", "inner-city-estate.js",
   "assets/inner-city-estate/terrain.webp",
-  "assets/inner-city-estate/plot-ground.webp",
   ...require("../inner-city-estate").terrainTiles.map(tile=>tile.src),
   ...new Set(require("../inner-city-estate").buildings.flatMap(building => Object.values(building.artByState))),
   "treasury-gear-ui.js", "treasury-gear-ui.css",
@@ -365,13 +364,13 @@ if (paymentUiBytes > 18 * 1024) throw new Error("Crown checkout presentation exc
 const paymentPolicyBytes = ["support.html", "privacy.html", "terms.html"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (paymentPolicyBytes > 34 * 1024) throw new Error("Payment support and policy pages exceed their 34 KiB budget.");
-// Native building detail, centered ground art and four zoom-only paintings
+// Native building detail, integrated terrain ground and four zoom-only paintings
 // need a bounded 4 MiB lazy-art allowance. Login/install, prepared-world and
 // the combined production caps remain unchanged; no art is installation cached.
 const estateArtBudget = 4096 * 1024;
 const estateArtFiles = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/inner-city-estate/"));
-if (estateArtFiles.length !== 28 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
-  throw new Error("Estate must ship its 28 runtime art files within 4096 KiB.");
+if (estateArtFiles.length !== 27 || estateArtFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0) > estateArtBudget) {
+  throw new Error("Estate must ship its 27 runtime art files within 4096 KiB.");
 }
 const overviewArtFiles=estateArtFiles.filter(file=>!path.basename(file).startsWith('terrain-detail-'));
 if(overviewArtFiles.reduce((sum,file)=>sum+fs.statSync(file).size,0)>1600*1024)throw new Error('Estate overview artwork exceeds 1600 KiB; detail must remain lazy.');

@@ -1,6 +1,6 @@
 {
   "generator": "built-in image_gen.imagegen",
-  "generatedAt": "2026-10-07T01:39:46.737Z",
+  "generatedAt": "2026-10-07T03:14:51.410Z",
   "reference": "docs/art-sources/inner-city-estate/reference-style.png",
   "runtime": [
     {
@@ -47,9 +47,9 @@
     },
     {
       "path": "assets/inner-city-estate/gatehouse.webp",
-      "sha256": "83e715e8f5df5d95ed4083cfe8f10a63ce29b6b303c7f2b60c2795de3f4dafd7",
-      "width": 512,
-      "height": 222,
+      "sha256": "7995dbe0f360f35c09df218e95b9aaeb537856c86981ff58d16bc37b1dcb4fbc",
+      "width": 677,
+      "height": 279,
       "hasAlpha": true
     },
     {
@@ -85,13 +85,6 @@
       "sha256": "32412535eb2572ad1182f4eacc2b18f410d370ec8d3b21f73c0924d09ede6b98",
       "width": 280,
       "height": 193,
-      "hasAlpha": true
-    },
-    {
-      "path": "assets/inner-city-estate/plot-ground.webp",
-      "sha256": "deaaccfe24447424f1fecbf9ece9f4a5513389be3e53f96e0c90bcf323243949",
-      "width": 720,
-      "height": 432,
       "hasAlpha": true
     },
     {
@@ -138,35 +131,35 @@
     },
     {
       "path": "assets/inner-city-estate/terrain-detail-ne.webp",
-      "sha256": "a61bfb88ac56365498d02d837516ac36e184147ad899f1f39927ed1561709719",
-      "width": 1439,
-      "height": 1093,
+      "sha256": "faf587ec692bd21a1bbb67bd0001d6931b9d0270e1d43d20d6330d3a3af11221",
+      "width": 1440,
+      "height": 1092,
       "hasAlpha": false
     },
     {
       "path": "assets/inner-city-estate/terrain-detail-nw.webp",
-      "sha256": "f545f25e9eaaa83594a189846410796380db9eb7710033cd5249f92a95b7f1b0",
-      "width": 1439,
-      "height": 1093,
+      "sha256": "d200f5a47beeafcb14abacecbf88008400314767b128d159eeed32cb90bb7f36",
+      "width": 1440,
+      "height": 1092,
       "hasAlpha": false
     },
     {
       "path": "assets/inner-city-estate/terrain-detail-se.webp",
-      "sha256": "72fe87a0dbd17fccf042b8e7d525056ff619717c2c12897e85716f2dda85b7a1",
+      "sha256": "fe29fd3c850ee9c1c6f7dbad4ef206e794982a988d5cf911e41456e994d8e04b",
       "width": 1440,
       "height": 1092,
       "hasAlpha": false
     },
     {
       "path": "assets/inner-city-estate/terrain-detail-sw.webp",
-      "sha256": "ee688e5523c64477081959b0cc6578d8c1d67acd0a719b36a7845b46e1b6e837",
-      "width": 1440,
+      "sha256": "47acbbe2c0ce273f0e1c08cef53c737eba156fa2c88f0c1205928078dec26cf7",
+      "width": 1441,
       "height": 1092,
       "hasAlpha": false
     },
     {
       "path": "assets/inner-city-estate/terrain.webp",
-      "sha256": "96087c0b96fc9aef00b3a539274046f7e25077619451ebf8a65879a120c32837",
+      "sha256": "f959994f82f2b954c28a519d68054cb624b7e82a759cd34c1227f8695ffd720b",
       "width": 1448,
       "height": 1086,
       "hasAlpha": false
@@ -214,6 +207,13 @@
       "hashEncoding": "utf8-lf"
     },
     {
+      "path": "docs/art-sources/inner-city-estate/building-bases-guide-v4.png",
+      "sha256": "fdb4b2702b7c7c5e5372451807d4483e0f24c9293b2bd9546a21ebb7865ee7d7",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": true
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/buildings-cohesive-v2.png",
       "sha256": "a8d55c090078a806b1f0ecca9f63077baccd1c5b554141e6defd67a8f2a2228a",
       "width": 1619,
@@ -233,6 +233,28 @@
       "hashEncoding": "utf8-lf"
     },
     {
+      "path": "docs/art-sources/inner-city-estate/gate-context-guide-v4.png",
+      "sha256": "a1952c93e939ff53938d4d674e9489a153891c19d5e6a3085919fb0bbad5a9e0",
+      "width": 1200,
+      "height": 900,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/gate-context-painted-v4.png",
+      "sha256": "402272422e1bba98f28c216d42807d704a0ed1b5263e612140dee3f836ad26cd",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/gate-extraction-mask-v4.svg",
+      "sha256": "0b10e282559762c679cc2a29b356f7f4ee28bf1c100c70f33663d551e088fb6f",
+      "hashEncoding": "utf8-lf",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": true
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/gate-junction-guide-v3.png",
       "sha256": "117e3328ebe1eec38ca9232ed20c06c4365169fc9b0fb928694585763273463c",
       "width": 130,
@@ -240,10 +262,22 @@
       "hasAlpha": false
     },
     {
+      "path": "docs/art-sources/inner-city-estate/gate-placement-v4.json",
+      "sha256": "4375fea83a23ea7f4230afc8b8351c4dce3b5dbb61272f5923e57f6afef12da3",
+      "hashEncoding": "utf8-lf"
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/gatehouse-connectors-v2.png",
       "sha256": "3d4f2e2422144aa707ed0e60894cd17ba0302835749d5c1fe945e765042b7114",
       "width": 1536,
       "height": 1024,
+      "hasAlpha": true
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/gatehouse-extracted-v4.png",
+      "sha256": "606add8d86a21deda02929af382cbadeae4162fc747509a1dee5a6d5c742f41e",
+      "width": 677,
+      "height": 279,
       "hasAlpha": true
     },
     {
@@ -254,15 +288,20 @@
       "hasAlpha": true
     },
     {
+      "path": "docs/art-sources/inner-city-estate/integrated-v4-prompts.json",
+      "sha256": "afcbbc434b5562f361b954f71cc7fb88eabece58ade9f6437320433029926e3a",
+      "hashEncoding": "utf8-lf"
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/layout-guide.png",
-      "sha256": "bb7fd666cd7394582ce1610269a83fb7b54df7daf615531c8449ee096ed4d45c",
+      "sha256": "b8b4cd190107d5570c6454043ac196322eb507bd7a667fbb045b9ffdc7b5b674",
       "width": 1448,
       "height": 1086,
       "hasAlpha": true
     },
     {
       "path": "docs/art-sources/inner-city-estate/layout-guide.svg",
-      "sha256": "5cd583103d2994ea23502f62a2b0ac77e5a9e3373e658390a0dc82e9d9e84be4",
+      "sha256": "f4a62465e253b4f81509bda3ac36ed8a50b08263fe8e62e2b26aebdb94807412",
       "hashEncoding": "utf8-lf",
       "width": 1448,
       "height": 1086,
@@ -301,7 +340,7 @@
     },
     {
       "path": "docs/art-sources/inner-city-estate/sprite-sizes.json",
-      "sha256": "05a8209739bfd53474e6b19b0d7334a3a94891af655f1bf7af6e4a0ab0c9d90d",
+      "sha256": "fe7410c87b2dba5027ad4ac8f62e8bffd6996c578a1e6d40ff5fd91b2e2836f4",
       "hashEncoding": "utf8-lf"
     },
     {
@@ -326,6 +365,13 @@
       "hasAlpha": false
     },
     {
+      "path": "docs/art-sources/inner-city-estate/terrain-detail-ne-v4.png",
+      "sha256": "e2737e033747e2d6942a851c071f06db09ab22ebabab9b7e25daab179ca74c53",
+      "width": 1440,
+      "height": 1092,
+      "hasAlpha": false
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/terrain-detail-nw-v3.png",
       "sha256": "16da3ab2757ac7ab77973289e2cab0e4071c6e8e747963b147087e79fc8c8d68",
       "width": 1439,
@@ -333,8 +379,22 @@
       "hasAlpha": false
     },
     {
+      "path": "docs/art-sources/inner-city-estate/terrain-detail-nw-v4.png",
+      "sha256": "aa9fafa6d7cd54f91f145f351e140f5761897c8e974af88e377918441ddb745d",
+      "width": 1440,
+      "height": 1092,
+      "hasAlpha": false
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/terrain-detail-se-v3.png",
       "sha256": "8ff7db65f4164282e14ad3c2fdb8bdf197e0de303975431d92b03b7301af2b3c",
+      "width": 1440,
+      "height": 1092,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain-detail-se-v4.png",
+      "sha256": "f7686e86a5e0843544ba37d2c47c79c80be068a836e91c03214ecbd4532499a1",
       "width": 1440,
       "height": 1092,
       "hasAlpha": false
@@ -347,8 +407,29 @@
       "hasAlpha": false
     },
     {
+      "path": "docs/art-sources/inner-city-estate/terrain-detail-sw-v4.png",
+      "sha256": "e7ea202669c69ca1eeb4082f763fc6559e36b646d13b416a43025ae09b4e67e1",
+      "width": 1441,
+      "height": 1092,
+      "hasAlpha": false
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/terrain-entrances-v3.png",
       "sha256": "961ed4ade46e8518d687668e7120134f3e18996d0456c7ae22c2809cd30f7831",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain-integrated-v4.png",
+      "sha256": "ebde6e8b3e567e73693d27423cd539d7aa559c44ef549e633c08c440303f88b5",
+      "width": 1448,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/terrain-yard-study-v4.png",
+      "sha256": "beba6ec7bd752d106eaea0e5e9584e53d04171a172b7dd0c08b1106a3c0e62d5",
       "width": 1448,
       "height": 1086,
       "hasAlpha": false
