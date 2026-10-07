@@ -56,7 +56,7 @@ async function main() {
     await evaluate(() => { window.__CROWNLANDS_BENCHMARK__.closeModal(); state.gear = normalizeCommonGearState(state.gear); });
     const keys = await evaluate(() => INNER_CASTLE_BUILDINGS.map(b => b.key));
     const gearKeys = await evaluate(() => Object.keys(COMMON_GEAR.BUILDINGS));
-    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+    for (const [width, height] of [[1440, 900], [1280, 590], [844, 390], [568, 320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       await evaluate(() => { state.gear.newMarkers.treasury = true; openInnerCastle(getMainCityReference().id); CrownlandsAnimations.setMode('full'); });
       await wait(() => document.querySelector('.estate-world').getBoundingClientRect().width > 0);
@@ -66,6 +66,11 @@ async function main() {
       assert.equal(initial.debug.camera.zoom, 1); assert.equal(initial.debug.actors, 0); assert.equal(initial.debug.animationRunning, false); assert(initial.scroll <= 1);
       assert(Math.abs(initial.m.width - width) < 1 && Math.abs(initial.m.height - height) < 1, 'Estate must fill viewport');
       assert(initial.w.left >= initial.v.left - 1 && initial.w.right <= initial.v.right + 1 && initial.w.top >= initial.v.top - 1 && initial.w.bottom <= initial.v.bottom + 1, 'Fit must show whole estate: ' + JSON.stringify(initial));
+      assert(await evaluate(() => {
+        const v=document.querySelector('.estate-viewport').getBoundingClientRect(),w=document.querySelector('.estate-world').getBoundingClientRect();
+        const [left,right]=[...document.querySelectorAll('.estate-scenery')].map(i=>i.getBoundingClientRect());
+        return left.left<=v.left+.6 && left.right>=w.left+2 && right.left<=w.right-2 && right.right>=v.right-.6 && left.top<=v.top+.6 && left.bottom>=v.bottom-.6;
+      }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
       assert(await evaluate(() => !!document.querySelector('[data-estate-directory-building="treasury"] .estate-new')), 'New gear must appear in the building directory');
       assert.equal(await count('.estate-actor, .estate-roads, .estate-wall, .estate-mill-sails'),0,'Estate uses cohesive painted terrain without vector overlays or ambient actors');
@@ -172,7 +177,40 @@ async function main() {
       }
       await screenshot('fixture-' + scene + '.png');
       if(scene==='completed'){
+        // Match the supplied wide-phone view while retaining the entire 4:3 map.
+        for(const [width,height] of [[1280,590],[2400,590]]){
+          await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+          await wait(()=>{
+            const v=document.querySelector('.estate-viewport').getBoundingClientRect(),w=document.querySelector('.estate-world').getBoundingClientRect();
+            return Math.abs(w.height-v.height)<.6 && Math.abs(w.left+w.right-v.left-v.right)<1 && [...document.querySelectorAll('.estate-scenery')].every(i=>!i.hidden&&i.complete&&i.naturalWidth>0);
+          });
+          const coverage=await evaluate(()=>({
+            v:document.querySelector('.estate-viewport').getBoundingClientRect().toJSON(),w:document.querySelector('.estate-world').getBoundingClientRect().toJSON(),
+            s:[...document.querySelectorAll('.estate-scenery')].map(i=>i.getBoundingClientRect().toJSON()),
+            ground:[document.querySelector('.estate-ground').clientWidth,document.querySelector('.estate-ground').clientHeight],
+          }));
+          assert(coverage.w.left>=coverage.v.left-.6 && coverage.w.right<=coverage.v.right+.6 && coverage.s[0].left<=coverage.v.left+.6 && coverage.s[1].right>=coverage.v.right-.6 && coverage.ground[0]===1448 && coverage.ground[1]===1086,'Phone and ultrawide scenery must fill the screen without changing the map size or crop: '+JSON.stringify({width,...coverage}));
+          await screenshot('fixture-completed-'+width+'x'+height+'.png');
+        }
+        await client.send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+        // A naturally fitting viewport must not fetch scenery just to mount it.
+        await evaluate(()=>{
+          estatePreview.destroy();
+          document.querySelector('#modalBody').innerHTML='';
+          document.querySelector('#modalBody').style.width='600px';
+          document.querySelector('#modalBody').style.height='500px';
+          window.estatePreview=CrownlandsEstate.mount(document.querySelector('#modalBody'),{cityName:'Crownlands',fixture:Object.fromEntries(CrownlandsEstate.buildings.map(b=>[b.key,'completed']))});
+          const v=document.querySelector('.estate-viewport');v.style.flex='none';v.style.width='600px';v.style.height='450px';
+        });
+        await wait(()=>!document.querySelector('.estate-world').classList.contains('has-scenery'));
+        assert.equal(await count('.estate-scenery[src]'),0,'A 4:3 viewport must not request unused outpainting');
+        await evaluate(()=>{
+          const v=document.querySelector('.estate-viewport');v.style.width='';v.style.height='';v.style.flex='';
+          document.querySelector('#modalBody').style.width='';document.querySelector('#modalBody').style.height='';
+        });
+        await wait(()=>[...document.querySelectorAll('.estate-scenery')].every(i=>!i.hidden&&i.complete&&i.naturalWidth>0));
         await evaluate(()=>{estatePreview.select('gatehouse');estatePreview.zoom(4);document.querySelector('[data-estate-detail-close]').click();});
+        assert.equal(await count('.estate-scenery:not([hidden])'),0,'Close-up views hide the unused scenic sides');
         await evaluate(()=>Promise.all([...document.querySelectorAll('.estate-world img[src]')].map(i=>i.decode())));
         assert(await evaluate(()=>[...document.querySelectorAll('.estate-terrain-detail:not([hidden])')].every(i=>i.naturalWidth>=1400&&i.naturalHeight>=1000)),'Zoom must render decoded native close-up terrain');
         assert(await evaluate(()=>[...document.querySelectorAll('.estate-building-art')].every(i=>i.naturalWidth/i.width>=3.2&&i.naturalHeight/i.height>=3.2)),'Zoom keeps at least 3.2x source detail for completed buildings');
@@ -206,7 +244,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and two landscape sizes; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 24 camera/focus-preserving gear returns; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, Back/Close/Escape cleanup, ownership/Profile entry and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and three landscape sizes; painted phone/ultrawide gutters, unchanged 1448x1086 map and lazy scenery; no dotted plot selections; four real equipment UIs open directly through directory, mouse map clicks, landscape touch taps and keyboard; 32 camera/focus-preserving gear returns; real-UI preview and construction guards; nonoverlapping 44px targets, drag/wheel/pinch, zoom clamps, still scene, Back/Close/Escape cleanup, ownership/Profile entry and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

@@ -158,6 +158,20 @@
       "hasAlpha": false
     },
     {
+      "path": "assets/inner-city-estate/terrain-surround-east.webp",
+      "sha256": "6065193f8f4eb7601f1899235c18a332ff44d34df12abd53d505ecadbd044eb8",
+      "width": 625,
+      "height": 724,
+      "hasAlpha": false
+    },
+    {
+      "path": "assets/inner-city-estate/terrain-surround-west.webp",
+      "sha256": "75e32834c6136a71ae99a760805239507f649dd9556d036c1060bb41d271fb59",
+      "width": 626,
+      "height": 724,
+      "hasAlpha": false
+    },
+    {
       "path": "assets/inner-city-estate/terrain.webp",
       "sha256": "f959994f82f2b954c28a519d68054cb624b7e82a759cd34c1227f8695ffd720b",
       "width": 1448,
@@ -344,6 +358,18 @@
       "hashEncoding": "utf8-lf"
     },
     {
+      "path": "docs/art-sources/inner-city-estate/surround-outpaint-guide-v5.png",
+      "sha256": "67a9e14e81cc3ecd76687b66c3c2939e216ebdb3952c8f5c1cdfdd7d43cf4813",
+      "width": 3258,
+      "height": 1086,
+      "hasAlpha": false
+    },
+    {
+      "path": "docs/art-sources/inner-city-estate/surround-v5-prompts.json",
+      "sha256": "53ad17769100ad0623718e5689b3108ea343c9834e56173adc5f37883954250c",
+      "hashEncoding": "utf8-lf"
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/terrain-aligned-v3.png",
       "sha256": "ae8e2d6b882ea5edf9f02da8e180ab7cf9699238e99c136bfb7618f1ca1e7ef6",
       "width": 1448,
@@ -428,6 +454,13 @@
       "hasAlpha": false
     },
     {
+      "path": "docs/art-sources/inner-city-estate/terrain-surround-v5.png",
+      "sha256": "0543c10cd8f2d5b95288c73c14df71a287c92ec5e7b47438e1384b077e8b3baa",
+      "width": 2171,
+      "height": 724,
+      "hasAlpha": false
+    },
+    {
       "path": "docs/art-sources/inner-city-estate/terrain-yard-study-v4.png",
       "sha256": "beba6ec7bd752d106eaea0e5e9584e53d04171a172b7dd0c08b1106a3c0e62d5",
       "width": 1448,
@@ -448,5 +481,6 @@
       "height": 1254,
       "hasAlpha": true
     }
-  ]
+  ],
+  "updatedAt": "2026-10-07T13:03:56.461Z"
 }

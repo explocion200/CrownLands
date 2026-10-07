@@ -7,6 +7,11 @@
   "use strict";
   const WIDTH = 1448, HEIGHT = 1086;
   const ASSETS = "assets/inner-city-estate/";
+  // Decorative outpainting fills wide-screen gutters; the playable map and
+  // approved center retain their original 1448 x 1086 coordinates and camera.
+  const scenery = Object.freeze([
+    ["west",-904.25,939], ["east",1414.75,937.5],
+  ].map(([key,x,width])=>Object.freeze({key,x,width,height:HEIGHT,src:ASSETS+"terrain-surround-"+key+".webp"})));
   // One physical scale (.30 map pixels per source-atlas pixel). Preserve each
   // building's natural silhouette; fitting every sprite to a square breaks scale.
   const spriteSizes = [[75.5,63.5],[93,91],[90,58],[72,56],[140.2624309392265,57.80386740331492],[112,57.5],[74,62.5],[94,55],[84,58],[59,55],[105.5,62.5],[71.5,60.5],[72.5,53.5],[117,46.5],[53,72.5],[118,60.5],[68.5,52],[83.5,45.5],[102.5,47],[75,45]];
@@ -125,9 +130,11 @@
     return `<section class="estate-shell" aria-labelledby="estateTitle">
       <header class="estate-header"><button type="button" data-inner-castle-back>‹ <span>Back to City Details</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
       <div class="estate-viewport" tabindex="0" aria-label="City estate map. Drag to pan; use zoom controls or arrow keys to explore.">
-        <div class="estate-world" aria-hidden="true"><img class="estate-terrain" src="${ASSETS}terrain.webp" alt="" draggable="false">
+        <div class="estate-world" aria-hidden="true">
+          ${scenery.map(s=>`<img class="estate-scenery" data-estate-scenery="${s.key}" alt="" draggable="false" hidden>`).join("")}
+          <div class="estate-ground"><img class="estate-terrain" src="${ASSETS}terrain.webp" alt="" draggable="false">
           ${terrainTiles.map(t=>`<img class="estate-terrain-detail" data-terrain-tile="${t.key}" style="left:${t.x}px;top:${t.y}px;width:${t.width}px;height:${t.height}px;--fade-left:${t.x ? 24 : 0}px;--fade-right:${t.x ? 0 : 24}px;--fade-top:${t.y ? 24 : 0}px;--fade-bottom:${t.y ? 0 : 24}px" alt="" draggable="false" hidden>`).join("")}
-          ${buildings.map(b=>siteMarkup(b,siteStates[b.key])).join("")}
+          </div>${buildings.map(b=>siteMarkup(b,siteStates[b.key])).join("")}
         </div>
         <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
         <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${siteStates[b.key]==="completed" ? "Complete" : siteStates[b.key]==="constructing" ? "Building" : "Plot"}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
@@ -160,6 +167,7 @@
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
+    const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
@@ -175,6 +183,20 @@
       // Re-rasterize at the current scale; a promoted overview layer otherwise
       // magnifies its cached low-density pixels even with native detail images.
       world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+      const gutter=Math.max(0,(width-WIDTH*scale)/(2*scale)),sceneryVisible=gutter>.5;
+      world.classList.toggle("has-scenery",sceneryVisible);
+      sceneryImages.forEach((image,i)=>{
+        const s=scenery[i];
+        image.hidden=!sceneryVisible;
+        // Anchor to the map edge. Extra-wide displays crop only the scenery,
+        // never stretch the city or change its fitted view and hit targets.
+        const extra=Math.max(0,gutter-(i ? s.x+s.width-WIDTH : -s.x));
+        const sceneWidth=s.width+extra;
+        image.style.left=(s.x-(i ? 0 : extra))+"px";
+        image.style.width=sceneWidth+"px";
+        image.style.height=HEIGHT+"px";
+        if(sceneryVisible&&!image.getAttribute("src"))image.src=s.src;
+      });
       tileImages.forEach((image,i)=>{
         const t=terrainTiles[i],visible=scale*(rootDevicePixelRatio())>1.05 && tx+(t.x+t.width)*scale>0 && tx+t.x*scale<width && ty+(t.y+t.height)*scale>0 && ty+t.y*scale<height;
         image.hidden=!visible;
@@ -284,5 +306,5 @@
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }
-  return Object.freeze({width:WIDTH,height:HEIGHT,buildings,cottages,districts,roads,junctions,terrainTiles,states,createStates,samplePath,mount});
+  return Object.freeze({width:WIDTH,height:HEIGHT,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,samplePath,mount});
 });
