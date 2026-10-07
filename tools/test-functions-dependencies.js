@@ -6,6 +6,20 @@ const path = require("node:path");
 // Resolve the production dependency chain, not a separate test-only URI copy.
 const functionsRequire = createRequire(path.resolve(__dirname, "../functions/package.json"));
 const frameworkRequire = createRequire(functionsRequire.resolve("@google-cloud/functions-framework"));
+const callableRequire = createRequire(functionsRequire.resolve("firebase-functions"));
+for (const parent of [frameworkRequire, callableRequire]) {
+  const expressRequire = createRequire(parent.resolve("express"));
+  const proxyAddress = expressRequire("proxy-addr");
+  const shortMapped = proxyAddress.compile(["::ffff:10.0.0.0/8"]);
+  assert.equal(shortMapped("198.51.100.7"), false, "A short IPv6 prefix must not trust arbitrary IPv4 clients.");
+  assert.equal(proxyAddress.compile(["::/1"])("198.51.100.7"), false);
+  const correctlyMapped = proxyAddress.compile(["::ffff:10.0.0.0/104"]);
+  assert.equal(correctlyMapped("10.2.3.4"), true);
+  assert.equal(correctlyMapped("198.51.100.7"), false);
+  const remoteAddress = "198.51.100.7";
+  assert.equal(proxyAddress({ socket: { remoteAddress }, connection: { remoteAddress }, headers: { "x-forwarded-for": "10.2.3.4" } }, shortMapped), remoteAddress,
+    "An untrusted client must not spoof the request address through X-Forwarded-For.");
+}
 const eventsRequire = createRequire(frameworkRequire.resolve("cloudevents"));
 const ajvRequire = createRequire(eventsRequire.resolve("ajv"));
 const uri = ajvRequire("fast-uri");
@@ -59,6 +73,27 @@ const multipart = spawnSync(process.execPath, ["-e", `
 `, adminRequire.resolve("@fastify/busboy")], { encoding: "utf8", timeout: 5000, windowsHide: true });
 assert.equal(multipart.error, undefined, "Multipart parsing must finish within its isolated deadline.");
 assert.equal(multipart.status, 0, multipart.stderr || "Multipart parsing failed.");
+const malformedDisposition = spawnSync(process.execPath, ["-e", `
+  const assert = require('node:assert/strict');
+  const Busboy = require(process.argv[1]);
+  let completed = 0;
+  for (const parameter of ['name', 'filename']) for (const code of [10, 13]) {
+    const parser = new Busboy({ headers: { 'content-type': 'multipart/form-data; boundary=test' } });
+    const fields = [];
+    parser.on('field', (name, value) => fields.push([name, value]));
+    parser.on('file', () => { throw new Error('Malformed filename must not reach the application'); });
+    parser.on('error', error => { throw error; });
+    parser.on('finish', () => { assert.deepEqual(fields, [['health', 'ok']]); completed++; });
+    const value = 'bad' + String.fromCharCode(code) + 'name';
+    const disposition = parameter === 'name'
+      ? 'name="' + value + '"' : 'name="upload"; filename="' + value + '"';
+    parser.end('--test\\r\\nContent-Disposition: form-data; ' + disposition + '\\r\\n\\r\\nbad\\r\\n'
+      + '--test\\r\\nContent-Disposition: form-data; name="health"\\r\\n\\r\\nok\\r\\n--test--\\r\\n');
+  }
+  process.on('exit', () => assert.equal(completed, 4, 'Every malformed parameter fixture must finish.'));
+`, adminRequire.resolve("@fastify/busboy")], { encoding: "utf8", timeout: 5000, windowsHide: true });
+assert.equal(malformedDisposition.error, undefined, "Malformed multipart parameters must finish within their deadline.");
+assert.equal(malformedDisposition.status, 0, malformedDisposition.stderr || "Multipart CR/LF rejection failed.");
 
 const rimrafRequire = createRequire(gaxRequire.resolve("rimraf"));
 const globRequire = createRequire(rimrafRequire.resolve("glob"));
@@ -83,4 +118,4 @@ const decoded = HTTP.toEvent(message);
 assert.equal(decoded.id, event.id);
 assert.deepEqual(decoded.data, event.data);
 assert.throws(() => new CloudEvent({ id: "invalid", source: "/tests/dependencies" }));
-console.log("Validated production URI, TLS certificate and multipart parser security fixes, schema references, and CloudEvent round trips.");
+console.log("Validated production URI, proxy trust/address spoofing, TLS certificate and multipart parser/CRLF security fixes, schema references, and CloudEvent round trips.");

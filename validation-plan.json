@@ -74,14 +74,29 @@
         "functions/package.json",
         "functions/pnpm-lock.yaml",
         "package.json",
-        "pnpm-lock.yaml"
+        "pnpm-lock.yaml",
+        "tools/estate-delivery.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "The resource counters exceeded the existing 40 KiB estate script/style budget. Add one pinned development-only minifier, preserve existing dependency versions, and minify only the delivered estate script without expression optimization. Keep readable sources and the existing payload cap. Check public API and immutable registry parity against the production artifact, then run the entire estate interaction suite with that delivered script intercepted into the browser. The dependency fixture checks affected existing production dependency resolution; no functions gameplay, authority, emulator or world topology changes. Pin the same minifier in root tooling for the existing Netlify build and functions tooling for the existing CI installation; resolve either installed toolchain without changing release commands.",
+      "reason": "The resource counters exceeded the existing 40 KiB estate script/style budget. Add one pinned development-only minifier, preserve unrelated dependency versions, and minify only the delivered estate script without expression optimization. Keep readable sources and the existing payload cap. Check public API and immutable registry parity against the production artifact, then run the entire estate interaction suite with that delivered script intercepted into the browser. The dependency fixture checks affected existing production dependency resolution; no functions gameplay, authority, emulator or world topology changes. Pin the same minifier in root tooling for the existing Netlify build and functions tooling for the existing CI installation; resolve either installed toolchain without changing release commands. The installation-cache check counts the same generated estate bytes as production using one shared build helper, retaining the existing installation limit. The user separately approved proxy-addr 2.0.8 and Busboy 3.2.2 security patches; their focused dependency and authenticated callable/emulator coverage appears below.",
       "tests": [
         "tools/validate-production-artifact.js",
         "tools/validate-inner-city-estate.js",
         "tools/validate-inner-castle-browser.js",
+        "tools/test-functions-dependencies.js",
+        "tools/validate-asset-performance-budgets.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/pnpm-workspace.yaml",
         "tools/test-functions-dependencies.js"
+      ],
+      "reason": "The user explicitly approved the two production dependency audit fixes. Raise only Busboy to 3.2.2 and proxy-addr to 2.0.8, and exercise the real Express paths under the Functions framework/callable runtime plus the Admin Firestore multipart dependency. Verify malformed CR/LF parameters are rejected, valid fields finish, correctly mapped proxy subnets still work and spoofed forwarded addresses stay untrusted. Select real HTTP authenticated callable and economy-concurrency emulator smoke suites for the patched transport dependencies; no gameplay rules or production records change.",
+      "tests": [
+        "tools/test-functions-dependencies.js",
+        "functions/test/emulator-email-auth.js",
+        "functions/test/emulator-economy-concurrency.js"
       ]
     }
   ]

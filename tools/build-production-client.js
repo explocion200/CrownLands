@@ -2,10 +2,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
+const { minifyEstate } = require("./estate-delivery");
 
 const root = path.resolve(__dirname, "..");
-// Netlify installs root tooling; the classified CI gate installs functions tooling.
-const { minify_sync } = require(require.resolve("terser", { paths: [root, path.join(root, "functions")] }));
 const output = path.join(root, "dist");
 if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.sep}`)) {
   throw new Error("Refusing to replace an unsafe production output path.");
@@ -75,7 +74,7 @@ function copy(relativeSource, relativeDestination = relativeSource) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
     // Keep the expanded estate UI within its existing delivery budget. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (relativeSource === "inner-city-estate.js") text = minify_sync(text, { compress: false, mangle: true, format: { comments: false } }).code + "\n";
+    if (relativeSource === "inner-city-estate.js") text = minifyEstate(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }
