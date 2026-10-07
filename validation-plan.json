@@ -1,46 +1,12 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3054350d3b85cded18425efd60fe7f55e63ac358",
+  "baseCommit": "36b889f9fb8e0320a6e3de7418359ddcf4a72ca8",
   "coverage": [
     {
       "paths": [
-        "common-gear-ui.js",
-        "game.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-treasury-gear-browser.js",
-        "tools/validate-barracks-gear-browser.js",
-        "tools/validate-gatehouse-gear-browser.js",
-        "tools/validate-royal-stables-gear-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Route user X, native cancel/Escape and backdrop dismissal through the existing gear Back return, guarded by actual equipment context and Main City access. Preserve camera, selection, focus, origin and view-request invalidation. Actual-game tests cover all four officer screens at desktop and three landscape sizes, touch X, 36 dismissal returns, 32 existing Back returns, stale view responses, native requestClose, direct programmatic cleanup, ownership loss and unrelated modal dismissal. The four affected officer validators retain upgrade confirmation Escape/focus, authoritative action stubs and Treasury portrait disposal. Shared modal lifecycle validation covers ordinary X/Escape, queued native close events and same-turn successor dialogs. Shared Common Gear and castle validators retain data, access and client-action invariants. No server-authoritative logic, saved data or artwork changes, so emulator suites do not apply.",
-      "tests": [
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-treasury-gear-browser.js",
-        "tools/validate-barracks-gear-browser.js",
-        "tools/validate-gatehouse-gear-browser.js",
-        "tools/validate-royal-stables-gear-browser.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-inner-castle.js"
-      ]
-    },
-    {
-      "paths": [
-        "index.html",
-        "service-worker.js"
-      ],
-      "reason": "Version the two changed browser scripts and shared shell cache so installed clients receive the navigation fix. Keep unchanged estate art and renderer versions. Check shell version parity and production inclusion/build boundaries.",
-      "tests": [
-        "tools/test-shell-cache-assertions.js",
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/inner-city-estate/README.md"
-      ],
-      "reason": "Record the user-confirmed equipment dismissal behavior and actual desktop/landscape review coverage. No new gameplay, costs or release policy. Runtime tests listed above verify the documented return and cleanup behavior; prose requires no separate executable test.",
+      "reason": "Documentation-only release record required by the specification after the authorized PR 474 publication. Cross-check build/deploy/time, all three hosts, 51 staged and 153 public artifact comparisons, twenty controlled runtime returns, anonymous startup and unchanged backend identity against sanitized deployment records. Update current snapshot, estate status, channel matrix and change log without changing gameplay or design. Explicitly retain the authenticated/physical-device test gap and unreleased itch channel. No executable, artwork, dependency or server change; no runtime or emulator test applies to this prose.",
       "tests": []
     }
   ]

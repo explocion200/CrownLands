@@ -66,7 +66,23 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Content-sized desktop troop orders
+### Current verified web release — Inner Castle equipment dismissal
+
+The user-authorized merge and web deployment of [PR #474](https://github.com/explocion200/CrownLands/pull/474), from `codex/gear-close-to-inner-castle`, is verified at build `36b889f9fb8e0320a6e3de7418359ddcf4a72ca8`. Closing Treasury, Barracks, Gatehouse or Royal Stables equipment through X, touch, Escape/native cancel or the backdrop returns to the Inner Castle with its camera, selected building and keyboard focus preserved. Upgrade-confirmation Escape stays in equipment; closing the estate itself exits normally.
+
+| Channel / validation | Verified result |
+|---|---|
+| Primary web game and both game hosts | **`LIVE — WEB`**; Netlify deploy `6ac65329585c0d00091bacd5`, published October 7 at `14:16:29.988 UTC` (10:16 a.m. Eastern). The primary `/play/` entry, `crownland.netlify.app` and `game.playcrownlands.com` match the merged release. The existing manual publication hold remains enabled. |
+| Release gates | Node 22 syntax/ESLint, production artifact and asset budgets, all ten focused validators, and required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37633255630`](https://github.com/explocion200/CrownLands/actions/runs/37633255630). No server-authoritative change required an emulator suite. |
+| Public artifact verification | All 51 staged files and all 153 comparisons across the three public hosts passed, covering the entry, estate artwork, four officer screens, changed runtime, styles, manifest, release configuration and service worker. |
+| Runtime smoke | The exact verified production runtime passed twenty X/touch/Escape/backdrop equipment returns in the isolated synthetic realm at 1440 × 900 and 844 × 390, preserving camera, selection and focus. Public anonymous startup at the primary `/play/` entry loaded the exact build and changed scripts with no runtime exceptions. |
+| Backend | Release ID `crownlands-2026-10-06-linked-account-capture-v1`, contract hash `637489cef89975fd10483831aeb70298f7243fab39db343ed5c062386c4d312c`, server source hash `010e15912d8c3112f9e8e5354b18b3658d64423bdba53ab0581d0d8340ab529e` and 140-callable manifest match the preceding published web release. No backend or production-data deployment occurred. |
+| itch.io | Not republished for this web update; this estate release is verified as `LIVE — WEB` only. |
+| Remaining manual review | Authenticated production equipment interactions and physical-device/system-back behavior were not exercised. Synthetic actions never submitted production gear mutations, orders or account creation. |
+
+Sanitized staging, publication, public-file comparisons, production-runtime smoke and screenshots are retained under `release-artifacts/gear-close/deployment/`. Local `main` was clean, synchronized with `origin/main` at the implementation build and verified with equal hashes and divergence `0 0` before publication. The approved 1448 × 1086 estate, buildings, walls and background coverage remain unchanged.
+
+### Previous verified web release — Content-sized desktop troop orders
 
 The user-authorized merge and web deployment of [PR #464](https://github.com/explocion200/CrownLands/pull/464), from `codex/desktop-troop-order-window-space`, is verified at build `8572f2959d5e12218f37599db48debf9acc6e745`. Desktop Attack, Transfer and Reinforce retain their existing width of up to 1100 pixels and fit the window height to their displayed information. Shorter screens retain scrolling above fixed action buttons; compact/mobile sizing remains in place.
 
@@ -302,6 +318,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Illustrated twenty-site Inner Castle estate, fitted background coverage and equipment dismissal restoring its camera/selection/focus | Verified web build `36b889f9...` from PR #474, including the estate and background changes from PRs #472–473 | Not republished or verified for this estate update | `LIVE — WEB`; 153 public artifact comparisons, twenty production-runtime fixture returns and public anonymous startup passed; authenticated/physical-device review remains manual |
 | Version 13 King Power: complete controlled troops × 2 | Verified web/backend build `390ed498...`, including current score conversion | Exact same-build upload `19600336`, manifest/file parity and six public startup cases verified | `LIVE — ALL PUBLISHED CHANNELS`; shared backend and public client verified |
 | October 6 weekly client catch-up (including knight skins, approved Gold/troop artwork and Shield confirmations) | Included in verified build `390ed498...` | 1,000-file ZIP and actual public iframe verified; six cold/reload cases passed | `LIVE — ALL PUBLISHED CHANNELS` |
 | Four 600-Crown knight-order city skins with five stages and bounded medieval outskirts | Verified web/backend build `d21f6579...` from PR #458 | Included in exact verified upload `19600336` | `LIVE — ALL PUBLISHED CHANNELS`; artifact and callable smoke passed, signed-in Shop verification pending |
@@ -1629,7 +1646,7 @@ Twenty permanent sites retain their positions and finished footprints through al
 - Background coverage refinement, confirmed October 7: preserve the approved city, buildings, walls, roads, controls and entire fitted estate. The background and playable coordinates remain 1448 × 1086, matching normal game maps. Replace flat olive side gutters on wide landscape screens with matching decorative woodland, hills, fields and meadow scenery. These extensions contain no additional sites or gameplay area and do not enlarge the camera bounds. They load only when the fitted map leaves side space and disappear from close-up views that fill it. Blend only the outer terrain edges; retain the approved center artwork and native zoom detail.
 - This is presentation only: new building roles are marked planned. It adds no costs, resource generation, timers, construction queue, saved building progression or champion quest rules. Review fixtures for initial, completed and construction scenes are development-only and excluded from production.
 
-Status: `IN DEVELOPMENT` on `codex/tiny-city-estate-alignment`, continuing the approved estate draft from a clean current-main base. The user approved this layout and requested implementation. Merge and deployment need separate authorization; this entry does not establish a live release. Review: [Estate visual draft](./visual-qa/inner-city-estate/README.md).
+Status: `LIVE — WEB` in verified build `36b889f9fb8e0320a6e3de7418359ddcf4a72ca8`, including the approved estate from PR #472, background coverage from PR #473 and equipment dismissal from PR #474. Public artifacts and controlled production-runtime checks passed; authenticated and physical-device review remain manual. itch.io was not republished for this estate update. Development review: [Estate visual draft](./visual-qa/inner-city-estate/README.md).
 
 ### Confirmed Treasury equipment presentation
 
@@ -2159,6 +2176,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 7, 2026 — Inner Castle web release verification
+
+- Recorded the authorized PR #474 merge and web publication, exact build/deploy/time, retained manual publication hold and unchanged backend identity.
+- Recorded 51 staged files, 153 public comparisons, twenty controlled equipment returns using the published runtime and anonymous primary-domain startup. Authenticated and physical-device checks remain manual.
+- Updated the estate status and Release Channel Matrix to `LIVE — WEB`; itch.io was not republished. No gameplay or artwork rule changed.
 
 ## October 6, 2026 — itch.io release and weekly dev blog
 
