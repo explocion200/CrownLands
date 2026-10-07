@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gameSource = `${read("game.js")}\n${read("common-gear-ui.js")}\n${read("city-details-ui.js")}`;
 const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
-const baileyStyles = read("inner-castle-ui.css");
+const baileyStyles = read("inner-city-estate.css");
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
 const serverSource = read("functions/index.js");
@@ -223,30 +223,14 @@ function requireLiteral(source, field, value, message) {
   assert.match(source, pattern, message);
 }
 
-const hubStatement = extractConstantStatement(gameSource, "INNER_CASTLE_HUB_ART_SRC");
-assert.ok(hubStatement.includes(JSON.stringify(HUB_ART_SRC)), "The Inner Castle hub must use the approved asset path.");
-
 const registrySource = extractConstantStatement(gameSource, "INNER_CASTLE_BUILDINGS");
-assert.equal(
-  (registrySource.match(/\bkey\s*:/g) || []).length,
-  BUILDINGS.length,
-  "The Inner Castle registry must contain exactly six buildings."
-);
-for (const building of BUILDINGS) {
-  const entryStart = registrySource.search(new RegExp(`\\bkey\\s*:\\s*["']${escapeRegExp(building.key)}["']`));
-  assert.ok(entryStart >= 0, `Missing ${building.label} from the Inner Castle registry.`);
-  const nextKey = registrySource.slice(entryStart + 1).search(/\bkey\s*:/);
-  const entrySource = registrySource.slice(
-    entryStart,
-    nextKey >= 0 ? entryStart + 1 + nextKey : registrySource.length
-  );
-  requireLiteral(entrySource, "label", building.label, `${building.label} has the wrong display label.`);
-  requireLiteral(entrySource, "role", building.role, `${building.label} has the wrong placeholder role.`);
-  requireLiteral(entrySource, "artSrc", building.artSrc, `${building.label} has the wrong card-art path.`);
-  assert.match(entrySource, /\bhotspot\s*:/, `${building.label} is missing hotspot coordinates.`);
-  const expectedHotspot = HOTSPOTS.get(building.key);
-  assert.match(entrySource, new RegExp(`\\bleft\\s*:\\s*${expectedHotspot.left}\\b`), `${building.label} left hotspot drifted.`);
-  assert.match(entrySource, new RegExp(`\\btop\\s*:\\s*${expectedHotspot.top}\\b`), `${building.label} top hotspot drifted.`);
+assert.match(registrySource, /window\.CrownlandsEstate\.buildings/, "The hub must use the fixed estate registry.");
+const estate = require("../inner-city-estate");
+assert.equal(estate.buildings.length, 20);
+for (const previous of BUILDINGS) {
+  const current = estate.buildings.find(building => building.key === previous.key);
+  assert.equal(current.role, previous.role, previous.label + " description changed");
+  assert.equal(current.artSrc, previous.artSrc, previous.label + " preview art changed");
 }
 
 for (const standard of ART_STANDARDS) {
@@ -314,41 +298,15 @@ assert.match(openSource, /delete modal\.dataset\.cityInfoId/, "Opening the Inner
 assert.match(openSource, /modal\.dataset\.innerCastleCityId\s*=\s*city\.id/, "Opening the Inner Castle must retain a separate originating city ID.");
 assert.match(openSource, /modal\.classList\.add\(["']inner-castle-modal["']\)/, "Opening the Inner Castle must enable its expanded modal layout.");
 assert.match(openSource, /renderInnerCastle\(city\.id\)/, "Opening the Inner Castle must render its hub.");
-assert.match(
-  openSource,
-  /querySelector\(["']\[data-inner-castle-building\]\[aria-pressed=[^)]*\)[\s\S]*?\.focus\(\)/,
-  "Opening the Inner Castle must move focus to the selected building hotspot."
-);
-
+assert.match(openSource, /querySelector\("\.estate-viewport"\)\?\.focus/, "Opening the estate must focus its map.");
 const renderSource = extractFunction(gameSource, "renderInnerCastle");
-const previewSource = extractFunction(gameSource, "renderInnerCastlePreview");
-assert.match(renderSource, /Inner Castle/, "The Inner Castle title is missing.");
-assert.match(renderSource, /aria-live=["']polite["']/, "The building preview must announce selection changes.");
-assert.match(renderSource, /aria-pressed=/, "Building hotspots must expose their selected state.");
-assert.match(renderSource, /data-inner-castle-back/, "The hub must provide a Back to City Details action.");
-assert.match(renderSource, /Back to City Details/, "The hub back action has the wrong label.");
-assert.match(renderSource, /showCityInfoModal\((?:cityId|originCityId)\)/, "The hub back action must restore the originating city details.");
-assert.match(
-  renderSource,
-  /querySelector\(["']#enterInnerCastleBtn["']\)\?\.focus\(\)/,
-  "Returning to city details must restore focus to the Inner Castle entry action."
-);
-
-const signStart = renderSource.indexOf('class="bailey-pin"');
-const titleStart = renderSource.indexOf('class="bailey-pin-name"', signStart);
-const titleEnd = renderSource.indexOf("</span>", titleStart);
-const alertStart = renderSource.indexOf('class="bailey-alert"', titleEnd);
-assert.ok(signStart >= 0 && titleStart > signStart && titleEnd > titleStart && alertStart > titleEnd,
-  "New-gear badges must remain siblings of the real-text hanging sign labels.");
-assert.match(renderSource, /INNER_CASTLE_SIGN_FRAME/, "The hub must render the approved decorative hanging signs.");
-assert.match(renderSource, /bailey-directory/, "Desktop must retain its six-building directory.");
-assert.doesNotMatch(renderSource, /Explore the Royal Bailey|Building functions and upgrades will arrive/,
-  "The removed future-update announcement must not return.");
-assert.match(previewSource, /bailey-building-image-space[\s\S]*bailey-building-copy[\s\S]*bailey-manage/,
-  "The preview must stack the illustration, existing information, then Manage Gear.");
-
-assert.match(previewSource, /data-manage-common-gear/, "Supported Inner Castle buildings must open their Common Gear screen.");
-assert.match(previewSource, /Not yet available/, "Great Hall and Alehouse must remain explicitly unavailable.");
+const previewSource = read("inner-city-estate.js");
+assert.match(renderSource, /CrownlandsEstate\.mount/, "The hub must mount its layered estate.");
+assert.match(renderSource, /showCityInfoModal\(originCityId\)/, "Back must restore inspected city details.");
+assert.match(renderSource, /querySelector\("#enterInnerCastleBtn"\)\?\.focus/, "Back must restore focus.");
+assert.match(previewSource, /aria-live="polite"/, "Selection must be announced.");
+assert.match(previewSource, /data-manage-common-gear/, "Supported buildings must retain gear access.");
+assert.match(previewSource, /Function planned/, "Future functions must remain explicitly planned.");
 
 assert.match(stylesSource, /\.profile-inner-castle-actions\s*\{[\s\S]*?justify-content:\s*center;[\s\S]*?\}/, "The Profile Inner Castle action must be centered below the stats.");
 assert.match(stylesSource, /\.profile-inner-castle-btn\s*\{(?=[^}]*width:\s*min\(220px, 72%\))(?=[^}]*min-height:\s*40px)(?=[^}]*text-transform:\s*uppercase)[^}]*\}/s, "The Profile Inner Castle button must remain a compact medieval control.");
@@ -392,37 +350,14 @@ for (const [label, source] of [["browser economy config", browserEconomySource],
   assert.doesNotMatch(source, /inner[\s_-]*castle/i, `${label} must not contain presentation-only Inner Castle data.`);
 }
 
-assert.match(baileyStyles, /#modal\.bailey-modal button\s*\{[^}]*min-height: 44px;[^}]*min-width: 44px;/,
-  "All hub controls must retain at least 44px touch targets.");
-assert.match(baileyStyles, /\.bailey-pin\s*\{[^}]*left: var\(--x\); top: var\(--y\);/,
-  "Building signs must use the registry's fixed percentage anchors.");
-assert.match(baileyStyles, /\.bailey-scene\s*\{[^}]*aspect-ratio: 4\/3;/,
-  "The approved Bailey must retain its full 4:3 composition.");
-assert.match(baileyStyles, /button:focus-visible\s*\{[^}]*outline:/,
-  "Keyboard focus must remain visible on hub controls.");
-assert.match(baileyStyles, /\.bailey-pin \.bailey-pin-name\s*\{[^}]*color: #fff0ce !important;/,
-  "Hanging sign lettering must retain its light-on-dark contrast.");
-assert.match(baileyStyles, /\.bailey-pin\[aria-pressed=true\]\s*\{[^}]*--sign-board: #752f35;/,
-  "Selected hanging signs must retain their burgundy state.");
-assert.match(baileyStyles, /\.bailey-alert\s*\{[^}]*top: 0; right: 0;/,
-  "New-gear markers must remain inside the sign target and outside its label.");
-assert.match(baileyStyles, /#innerCastlePreview:has\(\.bailey-manage\)\s*\{[^}]*grid-template-rows: auto minmax\(0,1fr\) auto 44px;/,
-  "Mobile landscape must reserve visible space for Manage Gear before sizing the illustration.");
-assert.match(baileyStyles, /@media \(orientation: landscape\) and \(max-height: 550px\)/,
-  "Short landscape must use the approved compact layout.");
-assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must not introduce a portrait game layout.");
-const arrangeSource = extractFunction(gameSource, "arrangeInnerCastleControls");
-assert.match(arrangeSource, /insertBefore\(back,/, "Mobile landscape must move Back into the header.");
-assert.match(arrangeSource, /footer\.append\(back\)/, "Desktop must restore the same Back control to the footer.");
-assert.match(arrangeSource, /classList\.contains\("bailey-modal"\)/, "Viewport changes must not alter unrelated modals.");
-assert.match(cleanupSource, /classList\.remove\([^)]*"bailey-modal"/, "Closing the hub must remove its isolated theme.");
-assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /classList\.remove\([^)]*"bailey-modal"/,
-  "Opening equipment must remove the hub theme from the shared dialog.");
-assert.match(renderSource, /state\?\.gear\?\.newMarkers\?\.\[building\.key\][\s\S]*bailey-alert/,
-  "Hanging sign notifications must use the existing gear state.");
-assert.match(indexSource, /inner-castle-ui\.css\?v=20260910-inner-castle-r1/, "The approved hub stylesheet must be loaded by the game.");
-assert.ok(read("tools/build-production-client.js").includes('"inner-castle-ui.css"'),
-  "The production artifact must include the isolated hub stylesheet.");
+assert.match(baileyStyles, /min-height:44px;min-width:44px/, "Estate controls must retain touch target sizes.");
+assert.match(baileyStyles, /button:focus-visible/, "Keyboard focus must remain visible.");
+assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must not introduce portrait gameplay.");
+assert.match(cleanupSource, /suspendInnerCastleEstate\(\)/, "Close must dispose the estate.");
+assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /suspendInnerCastleEstate\(\)/, "Equipment must pause the estate.");
+assert.match(renderSource, /newMarkers: state\?\.gear\?\.newMarkers/, "Gear markers must use existing state.");
+assert.match(indexSource, /inner-city-estate\.css\?v=20261006-estate-r2/, "The estate stylesheet must load with a version.");
+assert.ok(read("tools/build-production-client.js").includes('"inner-city-estate.css"'), "Production must include the estate stylesheet.");
 for (const building of [{key: "royal-bailey", source: "inner-castle-hub"}, ...BUILDINGS.map(building => ({key: building.key, source: building.key}))]) {
   assert.ok(fs.readFileSync(path.join(root, "assets/inner-castle", building.source + ".png"))
     .equals(fs.readFileSync(path.join(root, "docs/visual-qa/inner-castle-overview/art", building.key + "-ink-wash-v1.png"))),
@@ -465,4 +400,4 @@ assert.match(
   "The Inner Castle validator is not registered in the Functions test chain."
 );
 
-console.log("Validated the six-building Inner Castle hub, Profile Overview entry, approved hanging signs, landscape control placement, intact source artwork, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");
+console.log("Validated the expanded estate integration, preserved Profile and city entry, intact preview artwork, four authoritative gear screens, lifecycle disposal, focus restoration and asset delivery.");

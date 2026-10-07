@@ -1588,16 +1588,45 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 
 The approved troops icon is a frontal medieval helmet with worn steel, a broad dark brim, two eye slots, an angular face guard, subtle brass rivets and a transparent background. Use the same image across shared troop statistics, production, rewards, reports, troop orders, city and objective panels, Barracks icon controls, and default troop reward particles. Retain existing icon sizes, accessible labels and explicit reward artwork. Map army/scout tokens, heraldry, troop pickup bundles, officers and equippable item illustrations retain their existing designs. Troop counts, production, combat, progression and server authority are unchanged. The approved source and prompt are retained in `docs/visual-qa/troops-helmet/`; the 192 × 192 WebP is recorded as `troops-helmet` in `assets/optimized/manifest.json`. Approval and integration do not establish a live deployment.
 
-### Confirmed Inner Castle overview presentation
+### Confirmed Inner Castle estate presentation — October 6, 2026
 
-- The approved overview uses parchment, muted moss, dark ink, and medieval engraved symbols. Desktop pairs the full Royal Bailey scene and six-building directory with a selected-building pane; the window is capped at 1040 × 790 pixels and fits the viewport.
-- The Royal Bailey and all six interiors follow the approved illustrated map direction: thin umber outlines, restrained hatching, pale stone, ochre timber, olive vegetation, burgundy pennants, and subtle paper texture. Source artwork remains intact; the browser uses optimized WebP derivatives.
-- The six decorative hanging signs retain their established percentage anchors: Treasury 19/24, Great Hall 50/20, Barracks 81/25, Alehouse 19/57, Gatehouse 50/75, and Royal Stables 81/58. Labels remain accessible HTML text over decorative SVG boards; touch targets remain at least 44 pixels high.
-- Mobile landscape places Back to City Details in the top bar beside Close. It shows the full 4:3 Bailey and a right-hand pane with the building name, centered square illustration, existing information, then Manage Gear where available. Image size yields to text and action space so the information and Manage Gear are visible without scrolling at the reviewed landscape sizes. Desktop restores the same Back control to its footer. Portrait is not a design target.
-- The generic future-update announcement is removed. Treasury, Barracks, Gatehouse, and Royal Stables retain their existing officer gear actions and new-gear indicators. Great Hall and Alehouse retain their descriptions and Not yet available status. This presentation introduces no new building functions, upgrades, costs, or progression.
-- Existing entry rules remain: only owned-city details show the shortcut, it opens the player's Main City, and Back returns to the inspected city. The Profile shortcut continues to support an off-map Main City. Equipment subpanels and server authority are unchanged.
+The approved estate supersedes the compact six-building Royal Bailey overview and its old hanging-sign anchors. It opens as a full-screen 4:3 illustrated estate with the entire map fitted, a small inhabited walled city in the middle third, northern rocky hills, western woodland and southern farmland. This estate has no river. All buildings face south. Thin umber outlines, painted shading, olive grass, ochre timber, pale stone and burgundy pennants follow the user-provided illustrated atlas reference.
 
-Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction and runtime integration were confirmed on 10 September 2026. Merge and deployment require separate authorization and verification. Review and validation details: [Inner Castle overview](./visual-qa/inner-castle-overview/README.md).
+Twenty permanent sites retain their positions and finished footprints through all visual states. The existing Treasury, Great Hall, Barracks, Alehouse, Gatehouse and Royal Stables begin completed. Guild Master and thirteen outer buildings begin as surveyed plots. Gatehouse, Royal Stables and Wagon Yard are distinct structures. Cottages, gardens and service yards provide decorative town life.
+
+| Building | Center: left / top percent | District |
+|---|---|---|
+| Treasury | 39 / 33 | city |
+| Great Hall | 50 / 31 | city |
+| Barracks | 61 / 34 | city |
+| Alehouse | 40 / 46 | city |
+| Gatehouse | 50 / 60 | city |
+| Royal Stables | 60 / 48 | city |
+| Guild Master | 40 / 54 | city |
+| Quarry | 29 / 18 | quarry |
+| Mine | 73 / 19 | mine |
+| Forester’s Lodge | 17 / 33 | woodland |
+| Sawmill | 23 / 45 | woodland |
+| Smithy | 27 / 61 | crafts |
+| Workshop | 37 / 70 | crafts |
+| Builders’ Yard | 43 / 83 | farmland |
+| Windmill | 12 / 64 | farmland |
+| Farmstead | 18 / 79 | farmland |
+| Granary | 29 / 87 | farmland |
+| Storehouse | 69 / 63 | trade |
+| Wagon Yard | 87 / 69 | trade |
+| Market | 83 / 44 | trade |
+
+- Connected roads exist before construction. The royal road enters from the south, passes through the Gatehouse and reaches the square and Great Hall; the outer circuit connects extraction, woodland, crafts and trade; a farm lane serves southern agriculture and construction. Every functional site has a south-facing approach.
+- Mouse/touch dragging pans; wheel/pinch, keyboard and explicit controls zoom from the fitted overview to 4×. Camera bounds stay within the estate. District targets zoom into a quarter when individual 44px building targets would overlap. A collapsible directory reaches all twenty sites. Selected, hovered and focused buildings expose their names.
+- Cohesive artwork revision, confirmed October 6: use the same 1448 × 1086 canvas as a normal regional map. Terrain, worn dirt roads, weathered walls, decorative cottages and gardens are painted together in one opaque illustration. Roads have natural bends, ruts and grassy shoulders; geometric road and masonry overlays are removed. The fixed road graph remains the development layout guide. Finished buildings use matching transparent artwork at a common physical scale, preserving natural proportions instead of fitting every building into an equal-sized icon. The Great Hall remains tallest; the Gatehouse has short wall connectors, and the Royal Stables and Wagon Yard retain distinct silhouettes.
+- Placement and zoom correction, requested October 6: keep all twenty approved centers. Render each site's matching earth clearing with the plot, rather than baking offset clearings into the terrain. Center completed artwork within its reservation. The Gatehouse reserves 9% × 9.5% of the map around its unchanged 50 / 60 center; its 128 × 55.5 logical-pixel artwork sits 23.5 logical pixels south of that center so its masonry meets the southern wall's ground line. Preserve native building detail at at least 3.2× logical density. Four overlapping close-up terrain tiles load only when visible camera density requires them, without changing the 1448 × 1086 logical canvas. Avoid caching the transformed world as a fitted-resolution bitmap. Validate estate dimensions against the active topology catalog and an actual regional map asset.
+- Unbuilt sites show painted earth, stakes, rope and a small blank timber sign; construction shows matching foundations, scaffolding and supplies; completed sites show finished buildings and service yards. These building-state layers stay independent and within the same twenty reserved footprints. Names appear through the accessible map targets, directory and selection panel.
+- Character animation and other ambient movement are deferred for this visual pass at the user's direction. The estate is still in Full, Reduced and Off modes, allocates no ambient actors and schedules no animation loop. Camera input remains interactive. Closing or covering the estate disposes its input/resize listeners; returning from equipment recreates the scene with its previous camera and selection.
+- Main City and Profile access, off-map Main City resolution, Back to the inspected city, keyboard focus, existing four gear screens and new-gear markers remain authoritative. Returning from gear restores the selected building and camera.
+- This is presentation only: new building roles are marked planned. It adds no costs, resource generation, timers, construction queue, saved building progression or champion quest rules. Review fixtures for initial, completed and construction scenes are development-only and excluded from production.
+
+Status: `IN DEVELOPMENT` on `codex/tiny-city-estate-alignment`, continuing the approved estate draft from a clean current-main base. The user approved this layout and requested implementation. Merge and deployment need separate authorization; this entry does not establish a live release. Review: [Estate visual draft](./visual-qa/inner-city-estate/README.md).
 
 ### Confirmed Treasury equipment presentation
 

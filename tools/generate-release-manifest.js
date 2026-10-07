@@ -92,7 +92,7 @@ function createManifest() {
     ...listFiles(path.join(root, "assets/icons/skills"), file => /\.(?:svg|webp)$/.test(file))
       .map(file => path.relative(root, file).replace(/\\/g, "/")),
     "assets/icons/reward-daily-login-r1.svg", "assets/icons/reward-daily-quests-r1.svg", "assets/icons/reward-achievements-r1.svg",
-    "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "common-gear.js", "common-gear-ui.js", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "audio-manager.js",
+    "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "common-gear.js", "common-gear-ui.js", "inner-city-estate.js", "inner-city-estate.css", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",
     "treasury-gear-ui.js", "treasury-gear-ui.css",
     "barracks-gear-ui.js", "barracks-gear-ui.css",
@@ -107,6 +107,7 @@ function createManifest() {
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
     "region-catalog.js", "functions/world-travel-network.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
     "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg",
+    ...fs.readdirSync(path.join(root, "assets/inner-city-estate")).filter(name => /\.(?:webp|svg)$/.test(name)).map(name => `assets/inner-city-estate/${name}`),
   ].map(relativePath => path.join(root, relativePath));
 
   const indexSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");

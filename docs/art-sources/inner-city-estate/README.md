@@ -1,0 +1,20 @@
+# Estate artwork sources
+
+The October 6 estate revisions use the built-in `image_gen.imagegen` tool and the user's uploaded atlas illustration, retained as `reference-style.png`. Thin brown outlines, matte painted shading, olive grass, ochre timber, warm pale stone and burgundy details guide the artwork. Character animation is deferred.
+
+The selected placement and zoom revision uses these inputs:
+
+- `terrain-aligned-v3.png`: intermediate 1448 × 1086 painting with the offset baked-in site clearings removed.
+- `terrain-entrances-v3.png`: selected 1448 × 1086 overview, including painted approach refinements. Terrain, worn curved roads, weathered walls, decorative cottages and gardens stay together. Runtime `terrain.webp` uses WebP quality 85 and the same logical dimensions as normal regional maps.
+- `terrain-detail-{nw,ne,sw,se}-v3.png`: four native close-up paintings generated from crops of the selected overview. Each covers a 748 × 567 logical region, with 48px overlap and roughly 1.9× source density. Runtime detail tiles retain those source pixels at WebP quality 85; visible tiles load only when camera density requires them. They add painted detail without enlarging the map's logical extent.
+- `plot-ground-v3.png`: matching transparent earth clearing. Its 720 × 432 runtime derivative is centered on each non-Gatehouse reservation, independent of the terrain. All visual states share the fixed plot. Completed building art is centered on this ground rather than anchored to its bottom edge.
+- `buildings-cohesive-v2.png`: unchanged transparent building atlas. Reviewed extraction bounds preserve whole towers, sails and service yards. Each atlas pixel represents .30 logical-map pixels; exports now retain native pixels at WebP quality 95, providing at least 3.2× density. Natural logical dimensions remain recorded in `sprite-sizes.json`.
+- `gate-junction-guide-v3.png` and `gatehouse-junction-v3.png`: exact terrain junction reference and selected transparent Gatehouse edit. Two round towers, an open portcullis and short masonry wings meet the painted wall. Its 512 × 222 runtime image renders at 128 × 55.5 logical pixels, offset 23.5px south inside the 9% × 9.5% reservation at the original 50 / 60 center. The gate road stays centered through the arch.
+- `plots-cohesive-v2.png`: unchanged painted surveyed and construction sources. Their runtime derivatives now retain more detail at 600 × 360, WebP quality 95, and fit the fixed reservation in either state.
+- `layout-guide.svg` / `layout-guide.png`: registry-derived development placement guide, updated for the Gatehouse reservation. These guides are not runtime art.
+
+[build-estate-art.js](../../../tools/build-estate-art.js) performs extraction, transparent trimming, resizing, WebP encoding and provenance recording with Sharp. It does not paint artwork. Use the bundled Node dependency path for Sharp; no client dependency was added. [create-estate-layout-guide.js](../../../tools/create-estate-layout-guide.js) regenerates the reference SVG. [create-estate-road-guide.js](../../../tools/create-estate-road-guide.js) uses `road-approaches-v3.json` to produce development-only approach repair guides in the ignored review directory.
+
+[alignment-v3-prompts.json](./alignment-v3-prompts.json) retains the selected ground, close-up, plot and Gatehouse prompts. [cohesive-v2-prompts.json](./cohesive-v2-prompts.json) retains the atlas and construction-state prompts. `art-record.json` records hashes and dimensions for source inputs and all 28 runtime images; text hashes use canonical UTF-8/LF. Runtime assets are under `assets/inner-city-estate/`, outside installation precaching. The overview and site art budget is 1600 KiB; all estate art, including lazy close-ups, is bounded at 4096 KiB. Sources, references, prompts, utilities and review controls stay out of the production client.
+
+The original sources and superseded `terrain-cohesive-v2.png` / `gatehouse-connectors-v2.png` remain archived. Their old actor atlas, SVG placeholders, geometric walls/roads and separate rotating sails are unused. The current renderer has no ambient actors or animation loop.

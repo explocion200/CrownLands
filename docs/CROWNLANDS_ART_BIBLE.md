@@ -372,54 +372,33 @@ Daily rewards should feel like a royal calendar, household ledger, or steward's 
 
 ## Inner Castle
 
-The Inner Castle is a coherent royal compound. Treasury, Great Hall, Barracks, Alehouse, Gatehouse, Royal Stables, and hub must share stone culture, timber, roof materials, lighting, camera, and decorative language. Each building remains functionally distinct.
+The Inner Castle estate is a coherent small town and royal compound. Treasury, Great Hall, Barracks, Alehouse, Gatehouse, Royal Stables and Guild Master share masonry, timber, roof materials, lighting and heraldry. Thirteen outer sites occupy purposeful woodland, extraction, crafts, farming and trade districts.
 
-### Inner Castle Standards
+### Inner Castle Standards — estate approved October 6, 2026
 
-The Inner Castle is a ruler's working royal bailey, not a menu collage. Future Inner Castle artwork must look like rooms and structures inside one prosperous Crownlands castle complex.
+The full estate supersedes the former compact Royal Bailey and six hanging-sign anchors. Keep the archived Bailey source and six existing interior previews intact; only the overview layout is migrated.
 
-Canonical dimensions:
+- Composition and logical map: 1448 × 1086, 4:3, with no horizon. Fit the entire estate initially and support pan/zoom up to 4×.
+- Paint terrain in fine umber ink and subdued gouache/watercolor: olive and moss grass, ochre fields and timber, pale warm-gray stone, slate roofs, burgundy pennants and soft daylight from the upper left. Keep all layers in the same elevated strategy-map perspective. This estate has no river.
+- A small inhabited town occupies roughly the middle third, enclosed by irregular stone walls. The Great Hall is the tallest landmark. Cottages, gardens, lanes and service yards make the center lived-in; forest, northern hills and southern fields frame the estate.
+- Twenty building sites have the approved fixed centers and south-facing entrances recorded in the Master Specification and estate registry. Reserve finished footprints at the surveyed stage. Gatehouse, Royal Stables and Wagon Yard must have distinct silhouettes and functions.
+- Cohesion revision, confirmed October 6: terrain, roads, walls, decorative cottages and gardens form one opaque 1448 × 1086 painted ground plate. Use worn curved dirt lanes, irregular shoulders and weathered masonry in the same fine-ink palette; remove geometric road/wall overlays. The registry and shared road graph provide the development placement guide.
+- Placement correction, requested October 6: remove baked-in site clearings and render matching transparent earth with each fixed plot, so the clearing and building share a center. Completed sprites preserve their natural aspect ratios and a common physical scale of .30 map pixels per source-atlas pixel, delivered from native source pixels at at least 3.2× density. Keep the lodge modest, service yards broad and the Great Hall tallest. Painted surveyed and construction sprites share the same fixed reservations.
+- The Gatehouse uses two small round towers, an open portcullis and short masonry wings. Render it at 128 × 55.5 logical pixels, offset 23.5 logical pixels south within its 9% × 9.5% reservation at the unchanged 50 / 60 center. Match its foundation line to the painted wall and keep the road centered through the arch. This supersedes the previous 59px connector sprite.
+- Zoom detail comes from native building exports and four overlapping, matching close-up terrain paintings at roughly 1.9× logical density. Load only visible detail tiles when camera density requires them, with soft internal seams. Retain the 1448 × 1086 overview and logical map extent; disable forced overview-resolution compositing so zoom rerasterizes the artwork. Verify that logical dimensions match the active map catalog and a shipped regional image.
+- Defer characters and ambient motion during this visual pass. The Windmill is a complete still sprite; no separate sails, CSS machinery effects or actor atlas ship. Full, Reduced and Off all display the still estate. Keep functional labels and controls readable in desktop and small landscape views, using nonoverlapping 44px targets and the building directory.
+- Guild Master is visually a guild lodge with a noticeboard and burgundy standard. Other buildings retain their practical medieval cues: ledgers at Treasury, shields at Barracks, barrels at Alehouse, horses and tack at Stables, portcullis at Gatehouse, fieldstone extraction at Quarry and timber-supported tunnel at Mine.
+- Six existing square building previews remain unchanged: 1254 × 1254 source masters, 512 × 512 optimized derivatives. Treasury and officer equipment art rules remain in their respective sections.
 
-- Hub source master: 1448x1086 opaque PNG.
-- Hub optimized runtime derivative: 1280x960 opaque WebP.
-- Building scene source masters: 1254x1254 opaque PNG.
-- Building optimized runtime derivatives: 512x512 opaque WebP.
-- Hub runtime frame: 4:3 scene with existing hotspot percentages.
-- Building runtime frame: square preview art inside the Inner Castle tray.
+Source masters and prompts: [Estate art sources](./art-sources/inner-city-estate/README.md). Review fixtures are excluded from production: [Estate visual QA](./visual-qa/inner-city-estate/README.md).
 
-Hub layout and safe zones:
 
-- Preserve the six hotspot zones unless the UI is deliberately migrated: Treasury 19%/24%, Great Hall 50%/20%, Barracks 81%/25%, Alehouse 19%/57%, Gatehouse 50%/75%, Royal Stables 81%/58%.
-- Keep the central courtyard visually open enough for compact hotspot labels.
-- Do not place faces, key props, or the only readable function cue directly beneath hotspot plaques.
 
-Camera and composition:
+Existing preview and interior rules retained:
 
-- Hub: slightly elevated strategy-game view over a royal inner ward, about 35-45 degrees, same broad direction as the map-object family.
-- Building scenes: consistent three-quarter location previews. Interiors may use room-corner perspective, but must share lens feel, human scale, masonry, timber, and exposure.
-- Avoid mixing isometric tokens, cinematic low-angle paintings, flat front elevations, and unrelated interior concept art in the same family.
-
-Lighting:
-
-- Hub and exterior views use soft daylight with realistic shadows.
-- Interiors use daylight through windows plus restrained hearth or candle light.
-- Avoid strong orange fantasy glow, glowing treasure, magical rim light, blue/purple haze, and perfect spotlighting.
-
-Material and heraldry:
-
-- Dominant masonry is warm gray Crownlands fieldstone and dressed stone, visibly related across every scene.
-- Timber is aged oak: beams, doors, furniture, stalls, racks, and roof structures should share craft language.
-- Roof and visible exterior structures use clay tile, wood shingles, and practical repaired roofing, not glossy blue fantasy roofs.
-- Heraldry uses restrained burgundy, faded blue, ochre, cream, and moss cloth with stitching, fading, and hand-painted marks.
-
-Functional identity:
-
-- Treasury: ledgers, scales, chests, locks, clerks, guards, and wax seals; restrained coins only.
-- Great Hall: dais, long tables, hearth, tapestries, banners, narrow windows, carved wood.
-- Barracks: racks, shields, spears, armor maintenance, benches, bunks or yard access, soldiers.
-- Alehouse: benches, trestle tables, barrels, hearth, mugs, food, workers and retainers.
-- Gatehouse: oak gate, portcullis, chains, alarm bell, guard room, wall tools, supplies.
-- Royal Stables: horses, stalls, tack, saddles, hay, troughs, stable hands, courier gear.
+- Keep a consistent three-quarter camera, human scale and natural exposure for square building previews. Do not mix cinematic low angles with the strategy overview family.
+- Use warm gray fieldstone, dressed stone and aged oak; practical repaired roofs; restrained burgundy, faded blue, ochre, cream and moss heraldry. Avoid glossy fantasy roofs, magical rim light and glowing treasure.
+- Interiors use daylight through windows with restrained hearth/candle light. Great Hall retains its dais, long tables, tapestries and hearth; Treasury retains ledgers, scales, locks and wax seals; Barracks retains racks, spears, armor maintenance and bunks; Alehouse retains barrels, benches, mugs and food; Gatehouse retains chains, alarm bell, portcullis and wall tools; Stables retain tack, hay, troughs and courier equipment.
 
 Officer inheritance:
 

@@ -26,7 +26,7 @@ const rootFiles = [
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "battle-reports-guide.html", "clans-rallies-guide.html",
   "common-gear.js", "common-gear-ui.css", "common-gear-ui.js", "economy-config.js", "firebase-config.js",
-  "daily-rewards.css", "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
+  "daily-rewards.css", "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css", "inner-city-estate.css", "inner-city-estate.js",
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
   "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
@@ -88,6 +88,7 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
+copyDirectoryFiles("assets/inner-city-estate", relativePath => /\.(?:webp|svg)$/i.test(relativePath));
 copyDirectoryFiles("assets/clan-buildings", relativePath => relativePath.endsWith(".webp"));
 copy("assets/flag-symbols/runtime.svg");
 copyDirectoryFiles("assets/clan-heraldry", relativePath => /(?:manifest\.json|charges-(?:full|micro)\.svg)$/i.test(relativePath));

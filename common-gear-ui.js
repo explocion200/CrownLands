@@ -1864,6 +1864,7 @@ function bindCommonGearScreen(viewModel) {
 function renderCommonGearBuilding(buildingId) {
   const building = COMMON_GEAR?.BUILDINGS?.[buildingId];
   if (!building || !state) return false;
+  suspendInnerCastleEstate();
   const existingBag = modal.dataset.commonGearBuildingId === buildingId
     ? modalBody.querySelector("[data-gear-bag-scroll]")
     : null;
@@ -1969,38 +1970,19 @@ const INNER_CASTLE_ICON_DRAWINGS = {
 };
 function renderInnerCastleIcon(key) { return `<svg class="bailey-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${INNER_CASTLE_ICON_DRAWINGS[key] || ""}</svg>`; }
 
-// Keep one Back control, moving it into the header on short landscape screens.
-let innerCastleLandscapeQuery = null;
-function arrangeInnerCastleControls() {
-  if (!modal.classList.contains("bailey-modal")) return;
-  const back = modalBody.querySelector("[data-inner-castle-back]");
-  const footer = modalBody.querySelector(".bailey-footer");
-  if (!back || !footer) return;
-  if (innerCastleLandscapeQuery.matches) {
-    modalBody.querySelector(".bailey-header").insertBefore(back, modalBody.querySelector(".bailey-close-space"));
-  } else {
-    footer.append(back);
-  }
-  footer.hidden = innerCastleLandscapeQuery.matches;
-}
+let innerCastleEstateView = null;
+let innerCastleEstateCamera = null;
 
-function renderInnerCastlePreview(building) {
-  if (!building) return "";
-  const gearBuilding = COMMON_GEAR?.BUILDINGS?.[building.key];
-  return `<div class="bailey-building-heading"><span class="bailey-eyebrow">Selected building</span><h3>${renderInnerCastleIcon(building.key)}${escapeHtml(building.label)}</h3></div>
-    <div class="bailey-building-image-space"><img class="bailey-building-art" src="${building.artSrc}" alt="${escapeHtml(building.label)} artwork" decoding="async" draggable="false"></div>
-    <div class="bailey-building-copy"><p class="bailey-role">${escapeHtml(building.role)}</p>
-    <p class="bailey-status${gearBuilding?.characterRole ? " available" : ""}">${gearBuilding?.characterRole ? `${escapeHtml(gearBuilding?.characterRole)} gear and bonuses` : "Not yet available"}</p>
-    ${state?.gear?.newMarkers?.[building.key] ? '<p class="bailey-new-note"><b aria-hidden="true">!</b> New gear</p>' : ""}</div>
-    ${gearBuilding?.characterRole ? `<button type="button" class="bailey-manage" data-manage-common-gear="${building.key}">Manage Gear <span aria-hidden="true">→</span></button>` : ""}`;
-}
-function bindInnerCastlePreviewActions() {
-  modalBody.querySelector("[data-manage-common-gear]")?.addEventListener("click", event => {
-    showCommonGearBuilding(event.currentTarget.dataset.manageCommonGear);
-  });
+function suspendInnerCastleEstate() {
+  if (!innerCastleEstateView) return;
+  innerCastleEstateCamera = innerCastleEstateView.snapshot();
+  innerCastleEstateView.destroy();
+  innerCastleEstateView = null;
 }
 
 function clearInnerCastleModalState() {
+  suspendInnerCastleEstate();
+  innerCastleEstateCamera = null;
   innerCastleSelectedBuildingKey = "";
   delete modal.dataset.innerCastleCityId;
   delete modal.dataset.innerCastleReturnCityId;
@@ -2013,62 +1995,34 @@ function clearInnerCastleModalState() {
 }
 
 function selectInnerCastleBuilding(buildingKey) {
-  if (!modal.classList.contains("inner-castle-modal")) return;
-  const building = getInnerCastleBuilding(buildingKey);
-  if (!building) return;
-  innerCastleSelectedBuildingKey = building.key;
-  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
-    const selected = button.dataset.innerCastleBuilding === building.key;
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-pressed", selected ? "true" : "false");
-  });
-  const preview = modalBody.querySelector("#innerCastlePreview");
-  if (preview) {
-    preview.innerHTML = renderInnerCastlePreview(building);
-    if (innerCastleLandscapeQuery?.matches) preview.closest(".bailey-detail-tray").scrollTop = 0;
-  }
-  bindInnerCastlePreviewActions();
+  if (!modal.classList.contains("inner-castle-modal") || !getInnerCastleBuilding(buildingKey)) return;
+  innerCastleEstateView?.select(buildingKey);
 }
-
-/* Officer equipment rendering and actions live in common-gear-ui.js. */
 
 function renderInnerCastle(cityId) {
   const city = getInnerCastleCity(cityId);
   if (!canEnterInnerCastle(city)) return false;
-  const selectedBuilding = getInnerCastleBuilding(innerCastleSelectedBuildingKey)
-    || getInnerCastleBuilding("great-hall")
-    || INNER_CASTLE_BUILDINGS[0];
-  innerCastleSelectedBuildingKey = selectedBuilding.key;
-  modalTitle.textContent = `${city.name} — Inner Castle`;
+  suspendInnerCastleEstate();
+  modalTitle.textContent = city.name + " — Inner Castle";
   modal.classList.add("bailey-modal");
-  modalBody.innerHTML = `<section class="bailey-shell" aria-labelledby="baileyTitle">
-    <header class="bailey-header"><div class="bailey-seal">${renderInnerCastleIcon("great-hall")}</div><div><p>${escapeHtml(city.name)} <span>· Main City</span></p><h2 id="baileyTitle">Inner Castle</h2></div><span class="bailey-close-space" aria-hidden="true"></span></header>
-    <div class="bailey-content"><section class="bailey-overview" aria-labelledby="baileySceneTitle">
-      <div class="bailey-section-heading"><h3 id="baileySceneTitle">The Royal Bailey</h3><span>Select a building</span></div>
-      <div class="bailey-map-space"><div class="bailey-scene"><img src="${INNER_CASTLE_HUB_ART_SRC}" alt="The Royal Bailey inside ${escapeHtml(city.name)}" draggable="false">
-      ${INNER_CASTLE_BUILDINGS.map(building => `<button class="bailey-pin" type="button" data-inner-castle-building="${building.key}" aria-label="Preview ${escapeHtml(building.label)}${state?.gear?.newMarkers?.[building.key] ? "; new gear" : ""}" aria-controls="innerCastlePreview" aria-pressed="${building.key === selectedBuilding.key}" style="--x:${building.hotspot.left}%;--y:${building.hotspot.top}%">${INNER_CASTLE_SIGN_FRAME}<span class="bailey-pin-name">${escapeHtml(building.label)}</span>${state?.gear?.newMarkers?.[building.key] ? '<b class="bailey-alert" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div></div>
-      <nav class="bailey-directory" aria-label="Inner Castle buildings">${INNER_CASTLE_BUILDINGS.map((building, index) => `<button type="button" data-inner-castle-building="${building.key}" aria-controls="innerCastlePreview" aria-pressed="${building.key === selectedBuilding.key}"><span class="bailey-number" aria-hidden="true">${["I", "II", "III", "IV", "V", "VI"][index]}</span>${renderInnerCastleIcon(building.key)}<span class="bailey-label">${escapeHtml(building.label)}</span>${state?.gear?.newMarkers?.[building.key] ? '<b class="bailey-directory-alert" aria-label="New gear">!</b>' : ""}</button>`).join("")}</nav>
-    </section><aside class="bailey-detail-tray" aria-label="Selected building preview"><div id="innerCastlePreview" aria-live="polite" aria-atomic="true">${renderInnerCastlePreview(selectedBuilding)}</div></aside></div>
-    <footer class="bailey-footer"><button type="button" data-inner-castle-back><span aria-hidden="true">←</span> Back to City Details</button></footer>
-  </section>`;
-  if (!innerCastleLandscapeQuery) {
-    innerCastleLandscapeQuery = window.matchMedia("(orientation: landscape) and (max-height: 550px)");
-    innerCastleLandscapeQuery.addEventListener("change", arrangeInnerCastleControls);
-  }
-  arrangeInnerCastleControls();
-  bindInnerCastlePreviewActions();
-
-  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
-    button.addEventListener("click", () => selectInnerCastleBuilding(button.dataset.innerCastleBuilding));
-  });
-  modalBody.querySelector("[data-inner-castle-back]")?.addEventListener("click", () => {
-    const originCityId = modal.dataset.innerCastleReturnCityId || modal.dataset.innerCastleCityId;
-    clearInnerCastleModalState();
-    if (originCityId && cityById(originCityId)) {
-      showCityInfoModal(originCityId);
-      modalBody.querySelector("#enterInnerCastleBtn")?.focus();
-    }
-    else if (modal.open) modal.close();
+  const roles = Object.fromEntries(Object.entries(COMMON_GEAR.BUILDINGS).map(([key, value]) => [key, value.characterRole]));
+  innerCastleEstateView = window.CrownlandsEstate.mount(modalBody, {
+    cityName: city.name,
+    selectedKey: innerCastleSelectedBuildingKey,
+    camera: innerCastleEstateCamera,
+    gearRoles: roles,
+    newMarkers: state?.gear?.newMarkers,
+    animationManager: window.CrownlandsAnimations,
+    onSelect: key => { innerCastleSelectedBuildingKey = key; },
+    onGear: key => showCommonGearBuilding(key),
+    onBack: () => {
+      const originCityId = modal.dataset.innerCastleReturnCityId || modal.dataset.innerCastleCityId;
+      clearInnerCastleModalState();
+      if (originCityId && cityById(originCityId)) {
+        showCityInfoModal(originCityId);
+        modalBody.querySelector("#enterInnerCastleBtn")?.focus();
+      } else if (modal.open) modal.close();
+    },
   });
   return true;
 }
@@ -2090,9 +2044,8 @@ function openInnerCastle(cityId, returnCityId = cityId) {
     return;
   }
   if (!modal.open) modal.showModal();
-  modalBody
-    .querySelector('[data-inner-castle-building][aria-pressed="true"]')
-    ?.focus();
+  innerCastleEstateView?.fit();
+  modalBody.querySelector(".estate-viewport")?.focus({ preventScroll: true });
 }
 
 function getCommonGearBoxShopPrice() {

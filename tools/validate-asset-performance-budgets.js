@@ -443,7 +443,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [read("home.html"), read("guides.html"), read("world.html"), indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), read("royal-stables-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+const appReferenceSource = [read("home.html"), read("guides.html"), read("world.html"), indexSource, gameSource, commonGearUiScriptSource, read("inner-city-estate.js"), read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), read("royal-stables-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
 // These retained comparison masters were superseded by the already-shipped HUD art.
 const replacedHudArt = {
   "hud-leaderboard": "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
@@ -453,6 +453,7 @@ const replacedHudArt = {
 let optimizedBytes = 0;
 let sourceBytes = 0;
 const countedSourceMasters = new Set();
+const estateBuildings = require("../inner-city-estate").buildings;
 for (const asset of manifest.assets) {
   const sourcePath = path.join(root, asset.source);
   const outputPath = path.join(root, asset.output);
@@ -486,6 +487,10 @@ for (const asset of manifest.assets) {
         ? gameSource.includes('icon: "assets/icons/reward-achievements-r1.svg"')
       : replacedHudArt[asset.id]
         ? indexSource.includes(replacedHudArt[asset.id]) && fs.existsSync(path.join(root, replacedHudArt[asset.id]))
+      : asset.id === "inner-castle-hub"
+        ? appReferenceSource.includes("assets/inner-city-estate/") && !appReferenceSource.includes(asset.output)
+      : asset.id.startsWith("inner-castle-")
+        ? estateBuildings.some(building => building.artSrc === asset.output)
       : appReferenceSource.includes(asset.output),
     `${asset.id} was generated but the shipped client does not reference ${asset.output}.`
   );
