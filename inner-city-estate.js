@@ -6,6 +6,27 @@
 })(typeof globalThis === "undefined" ? this : globalThis, function () {
   "use strict";
   const WIDTH = 1448, HEIGHT = 1086;
+  const MAX_LEVEL = 100;
+  const resources = Object.freeze([
+    ["gold","Gold",'<circle cx="12" cy="12" r="8"/><path d="m7 9 2 3 3-5 3 5 2-3-1 7H8Z"/>'],
+    ["crowns","Crowns",'<path d="m3 7 4 4 5-6 5 6 4-4-2 12H5Z M5 16h14"/>'],
+    ["timber","Timber",'<path d="m5 16 10-10 4 4-10 10Z M3 12l10-10 4 4 M8 5l4 4"/><ellipse cx="7" cy="18" rx="3" ry="2"/>'],
+    ["stone","Stone",'<path d="m3 16 4-9 9-3 5 10-5 6H6Z M7 7l6 7 8 0 M13 14l-7 6"/>'],
+    ["ore","Iron Ore",'<path d="m3 17 5-10 7-3 6 10-4 7H7Z M8 7l5 5-4 5 M13 12l5-3 M13 12l4 9"/>'],
+    ["grain","Grain",'<path d="M12 22V4 M12 8C4 8 4 3 5 2c5 0 7 3 7 6Zm0 5C4 13 4 8 5 7c5 0 7 3 7 6Zm0-3c8 0 8-5 7-6-5 0-7 3-7 6Zm0 7c8 0 8-5 7-6-5 0-7 3-7 6Z"/>'],
+    ["planks","Planks",'<path d="m3 5 15-2 3 5-15 2Z M3 11l15-2 3 5-15 2Z M3 17l15-2 3 5-15 2Z M7 5l7-1 M7 12l7-1 M7 18l7-1"/>'],
+    ["iron","Iron",'<path d="m3 15 4-7h10l4 7-4 5H7Z M7 8l3 7h11 M10 15l-3 5"/>'],
+    ["tools","Tools",'<path d="m5 3 7 7-3 3-7-7Z M11 11l10 10 M19 3l2 5-7 7-3-3 7-7Z M11 15l-6 6"/>'],
+    ["food","Food",'<path d="M3 14c0-6 18-6 18 0v5H3Z M7 9V5h10v4 M7 13l2 3 M12 12l2 3 M17 13l2 3"/>'],
+  ].map(([key,label,icon])=>Object.freeze({key,label,icon})));
+  function resourceValue(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  }
+  function formatResource(value) {
+    if(value===null)return "—";
+    const unit=value>=1e12?[1e12,"T"]:value>=1e9?[1e9,"B"]:value>=1e6?[1e6,"M"]:value>=1e3?[1e3,"K"]:null;
+    return unit ? (Math.floor(value/unit[0]*10)/10).toLocaleString("en-US")+unit[1] : value.toLocaleString("en-US");
+  }
   const ASSETS = "assets/inner-city-estate/";
   // Decorative outpainting fills wide-screen gutters; the playable map and
   // approved center retain their original 1448 x 1086 coordinates and camera.
@@ -29,12 +50,12 @@
     "royal-stables": "inner-castle-royal-stables-512x512-5a9290514dbd.webp",
   };
   const definitions = [
-    ["treasury", "Treasury", 39, 33, "city", 7, 7, "Gold storage / gold production"],
+    ["treasury", "Treasury", 39, 33, "city", 7, 7, "Permanent building progression unlocks the next Master of Coin Gear set. Building levels and earned unlocks survive season restarts."],
     ["great-hall", "Great Hall", 50, 31, "city", 9, 10, "Ruler power / kingdom upgrades"],
-    ["barracks", "Barracks", 61, 34, "city", 7, 7, "Troop production / military strength"],
-    ["alehouse", "Alehouse", 40, 46, "city", 7, 7, "Morale / recovery / small boosts"],
-    ["gatehouse", "Gatehouse", 50, 60, "city", 10.5, 10.5, "City defense / wall strength"],
-    ["royal-stables", "Royal Stables", 60, 48, "city", 10, 9, "Movement / march speed"],
+    ["barracks", "Barracks", 61, 34, "city", 7, 7, "Permanent building progression unlocks the next War Captain Gear set. Building levels and earned unlocks survive season restarts."],
+    ["alehouse", "Alehouse", 40, 46, "city", 7, 7, "Recruit champions for the Guild Master. Higher levels offer stronger recruits, faster quest recovery and better preparation meals."],
+    ["gatehouse", "Gatehouse", 50, 60, "city", 10.5, 10.5, "Permanent building progression unlocks the next Defensive Commander Gear set. Building levels and earned unlocks survive season restarts."],
+    ["royal-stables", "Royal Stables", 60, 48, "city", 10, 9, "Permanent building progression unlocks the next Cavalry Master Gear set. Building levels and earned unlocks survive season restarts."],
     ["guild-master", "Guild Master", 40, 54, "city", 7, 7, "Manage champions, form quest parties and review expedition reports."],
     ["quarry", "Quarry", 29, 18, "quarry", 10, 8, "Gather stone for buildings and fortifications."],
     ["mine", "Mine", 73, 19, "mine", 9, 9, "Extract iron ore for equipment and crafted components."],
@@ -47,11 +68,11 @@
     ["farmstead", "Farmstead", 18, 79, "farmland", 10, 8, "Grow and harvest crops for the settlement."],
     ["granary", "Granary", 29, 87, "farmland", 6, 7, "Store grain and protect the city’s food reserves."],
     ["storehouse", "Storehouse", 69, 63, "trade", 8, 7, "Store timber, stone, ore and finished goods."],
-    ["wagon-yard", "Wagon Yard", 87, 69, "trade", 10, 8, "Organize freight wagons, deliveries and caravans."],
-    ["market", "Market", 83, 44, "trade", 9, 8, "Trade materials and manage merchant contracts."],
+    ["wagon-yard", "Wagon Yard", 87, 69, "trade", 10, 8, "Purchase building supplies with Crowns."],
+    ["market", "Market", 83, 44, "trade", 9, 8, "Purchase food supplies with Crowns."],
   ];
   const buildings = Object.freeze(definitions.map(([key, label, x, y, district, width, height, role], index) => Object.freeze({
-    key, label, role, district,
+    key, label, role, district, maxLevel: MAX_LEVEL,
     hotspot: Object.freeze({ left: x, top: y }),
     footprint: Object.freeze({ width, height }),
     artSize: Object.freeze({ width:spriteSizes[index][0], height:spriteSizes[index][1] }),
@@ -117,6 +138,17 @@
   function createStates(fixture = null) {
     return Object.fromEntries(buildings.map(b => [b.key, states.includes(fixture?.[b.key]) ? fixture[b.key] : b.initialState]));
   }
+  // Display the starting estate until authoritative construction progression is
+  // introduced. Optional levels support review fixtures; they never write state.
+  function createLevels(siteStates, levels = {}) {
+    return Object.fromEntries(buildings.map(b => {
+      const level = levels?.[b.key];
+      return [b.key, siteStates[b.key] === "unbuilt" ? 0 : Number.isInteger(level) && level >= 1 && level <= MAX_LEVEL ? level : 1];
+    }));
+  }
+  function levelText(state, level) {
+    return state === "unbuilt" ? "Not built" : (state === "constructing" ? "Building · " : "") + "Lv. " + level;
+  }
   const cottages=Object.freeze([
     [35,39,3,4],[43.8,26.5,3,4],[56,30,3,4],[64,41,3,4],[63,56,3,4],[35,51,3,4],[45.2,45.3,3,4],[53.3,46,3,4],[91,43,3,4],[92,50,3,4],[76.5,39,3,4],
     [34.5,43.5,1.8,2.8],[35,46.5,1.8,2.8],[44.5,33,1.8,2.8],[55.5,34.2,1.8,2.8],[58,28,1.8,2.8],[61.5,27.5,1.8,2.8],[66.5,45,1.8,2.8],[66,49.2,1.8,2.8],[56.5,56,1.8,2.8],[60,57,1.8,2.8],
@@ -126,9 +158,10 @@
       <img ${siteState === "completed" ? `class="estate-building-art" style="width:${b.artSize.width}px;height:${b.artSize.height}px;--estate-art-offset-x:${b.artOffsetX}px;--estate-art-offset:${b.artOffsetY}px"` : 'class="estate-plot-art"'} src="${b.artByState[siteState]}" alt="" draggable="false">
       </div>`;
   }
-  function shell(options, siteStates) {
+  function shell(options, siteStates, siteLevels) {
     return `<section class="estate-shell" aria-labelledby="estateTitle">
-      <header class="estate-header"><button type="button" data-inner-castle-back>‹ <span>Back to City Details</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
+      <header class="estate-header"><button type="button" data-inner-castle-back aria-label="Back to Realm">‹ <span>Back to Realm</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
+      <dl class="estate-resources" aria-label="${options.resourcePreview ? "Economy preview balances" : "Estate resources"}">${resources.map(r=>`<div class="estate-resource" data-estate-resource="${r.key}" tabindex="0"><dt><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${r.icon}</svg><span>${r.label}</span></dt><dd data-estate-resource-value>—</dd></div>`).join("")}</dl>${options.resourcePreview ? '<p class="estate-resource-preview">Economy preview · Sample balances</p>' : ""}
       <div class="estate-viewport" tabindex="0" aria-label="City estate map. Drag to pan; use zoom controls or arrow keys to explore.">
         <div class="estate-world" aria-hidden="true">
           ${scenery.map(s=>`<img class="estate-scenery" data-estate-scenery="${s.key}" alt="" draggable="false" hidden>`).join("")}
@@ -136,8 +169,9 @@
           ${terrainTiles.map(t=>`<img class="estate-terrain-detail" data-terrain-tile="${t.key}" style="left:${t.x}px;top:${t.y}px;width:${t.width}px;height:${t.height}px;--fade-left:${t.x ? 24 : 0}px;--fade-right:${t.x ? 0 : 24}px;--fade-top:${t.y ? 24 : 0}px;--fade-bottom:${t.y ? 0 : 24}px" alt="" draggable="false" hidden>`).join("")}
           </div>${buildings.map(b=>siteMarkup(b,siteStates[b.key])).join("")}
         </div>
-        <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
-        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${siteStates[b.key]==="completed" ? "Complete" : siteStates[b.key]==="constructing" ? "Building" : "Plot"}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
+        <div class="estate-nameplates" aria-hidden="true">${buildings.map(b=>`<div class="estate-nameplate" data-estate-nameplate="${b.key}" hidden><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small></div>`).join("")}</div>
+        <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}, ${levelText(siteStates[b.key],siteLevels[b.key])}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)} · ${levelText(siteStates[b.key],siteLevels[b.key])}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
+        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
         <aside class="estate-detail" id="estateDetail" aria-label="Selected building" hidden><button type="button" class="estate-detail-close" data-estate-detail-close aria-label="Close building details">×</button><div data-estate-detail-copy aria-live="polite"></div></aside>
         <div class="estate-camera-controls"><button type="button" data-estate-zoom="out" aria-label="Zoom out">−</button><output aria-label="Map zoom" data-estate-zoom-label>100%</output><button type="button" data-estate-zoom="in" aria-label="Zoom in">+</button><button type="button" data-estate-fit>Fit Estate</button></div><p class="estate-map-hint">Drag to explore · Select a district to look closer</p>
       </div></section>`;
@@ -159,18 +193,34 @@
   }
   function mount(host, options = {}) {
     const siteStates = createStates(options.fixture);
-    host.innerHTML = shell(options,siteStates);
+    const siteLevels = createLevels(siteStates,options.levels);
+    host.innerHTML = shell(options,siteStates,siteLevels);
     const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
     let selected=options.selectedKey || "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
+    const nameplates=[...host.querySelectorAll("[data-estate-nameplate]")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
+    function updateResources() {
+      if(destroyed)return;
+      const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
+      resources.forEach(r=>{
+        const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
+        const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
+        element.querySelector("dd").textContent=formatResource(value);
+        element.setAttribute("aria-label",label);element.title=label;
+      });
+    }
+    updateResources();
+    const stopResourceUpdates=options.subscribeResources?.(updateResources);
+    listen(shellElement,"focusin",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
+    listen(shellElement,"pointerover",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
     function paint() {
       if(destroyed) return;
       const width=viewport.clientWidth,height=viewport.clientHeight;
@@ -220,15 +270,75 @@
           const south=ty+(b.hotspot.top+b.footprint.height/2)*HEIGHT/100*scale;
           target.style.top=Math.max(parseFloat(target.style.top),south+label.height/2+6)+"px";
         }
-        const r=target.getBoundingClientRect();
-        if(r.left<controls.right+8&&r.right>controls.left-8&&r.top<controls.bottom+8&&r.bottom>controls.top-8){
-          target.style.left=Math.min(viewportBox.width-r.width/2-8,controls.right-viewportBox.left+r.width/2+8)+"px";
-        }
       });
+      // The resource ledger reduces map height on small screens. Keep district
+      // buttons apart, using the nearby painted scenery when the center is tight.
+      const districtObstacles=[controls,...[...host.querySelectorAll('.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>e.getBoundingClientRect())].map(r=>({left:r.left-viewportBox.left,top:r.top-viewportBox.top,right:r.right-viewportBox.left,bottom:r.bottom-viewportBox.top}));
+      const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
+      const districtPriority=['city','quarry','mine','woodland','crafts','farmland','trade'];
+      const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
+      [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
+        if(target.hidden)return;
+        const r=target.getBoundingClientRect(),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
+        const offsets=[];
+        for(const dy of [0,48,-48,96,-96])for(const dx of [0,48,-48,96,-96,144,-144,192,-192,240,-240]){
+          if(dy<0&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
+          offsets.push({dx,dy,distance:dx*dx+dy*dy});
+        }
+        offsets.sort((a,b)=>a.distance-b.distance);
+        const key=target.dataset.estateDistrict;
+        const geographic=box=>{
+          if(key==='city')return Math.abs(x+box.dx-cityX)<24&&Math.abs(y+box.dy-cityY)<24;
+          if(['quarry','woodland','crafts','farmland'].includes(key)&&box.right>cityX-4)return false;
+          if(['mine','trade'].includes(key)&&box.left<cityX+4)return false;
+          if(key==='woodland'&&y+box.dy>cityY-24)return false;
+          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY;
+        };
+        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left-viewportBox.left+dx,right:r.right-viewportBox.left+dx,top:r.top-viewportBox.top+dy,bottom:r.bottom-viewportBox.top+dy,dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
+        let position=findPosition();
+        if(!position){
+          for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=8)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=12){
+            if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
+            const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
+          }
+          offsets.sort((a,b)=>a.distance-b.distance);position=findPosition();
+        }
+        if(position){target.style.left=x+position.dx+'px';target.style.top=y+position.dy+'px';districtObstacles.push(position);}else target.hidden=true;
+      });
+      host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
+      placeNameplates(tx,ty,scale,width,height,viewportBox);
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
-      host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
+    }
+    function placeNameplates(tx,ty,scale,width,height,viewportBox) {
+      if(camera.zoom<2.5){
+        nameplates.forEach((label,i)=>{label.hidden=true;targets[i].dataset.hasNameplate="false";});
+        return;
+      }
+      const rect=(left,top,w,h)=>({left,top,right:left+w,bottom:top+h});
+      const overlaps=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
+      const artBoxes=buildings.map(b=>{
+        const completed=siteStates[b.key]==="completed";
+        const w=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,h=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
+        return rect(tx+visualLeft(b)*WIDTH/100*scale-w/2,ty+visualTop(b)*HEIGHT/100*scale-h/2,w,h);
+      });
+      const occupied=[...host.querySelectorAll('.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls,.estate-district:not([hidden])>span')].filter(e=>!e.hidden).map(e=>{
+        const r=e.getBoundingClientRect();return rect(r.left-viewportBox.left,r.top-viewportBox.top,r.width,r.height);
+      });
+      // Measure all labels together before positioning; text remains sharp and
+      // the same readable screen-pixel size throughout the camera range.
+      nameplates.forEach(label=>{label.hidden=false;label.style.visibility="hidden";});
+      const sizes=nameplates.map(label=>({w:label.offsetWidth,h:label.offsetHeight}));
+      const order=buildings.map((b,i)=>i).sort((a,b)=>(buildings[b].key===selected)-(buildings[a].key===selected));
+      for(const i of order){
+        const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2;
+        const candidates=[rect(cx-w/2,art.bottom+3,w,h),rect(cx-w/2,art.top-h-3,w,h),rect(art.right+3,cy-h/2,w,h),rect(art.left-w-3,cy-h/2,w,h)];
+        const placement=candidates.find(r=>r.left>=6&&r.top>=6&&r.right<=width-6&&r.bottom<=height-6&&!artBoxes.some(a=>overlaps(r,a))&&!occupied.some(a=>overlaps(r,a)));
+        label.hidden=!placement;
+        targets[i].dataset.hasNameplate=String(!!placement);
+        if(placement){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
+      }
     }
     function zoom(value,clientX,clientY) {
       const rect=viewport.getBoundingClientRect(), px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
@@ -241,7 +351,7 @@
       const s=siteStates[b.key],gearRole=s==="completed"&&options.onGear?options.gearRoles?.[b.key]:null;
       detail.hidden=!camera.detailOpen;
       detail.querySelector(":scope > [data-manage-common-gear]")?.remove();
-      detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
+      detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><p class="estate-level-caption">${levelText(s,siteLevels[b.key])}${s==="unbuilt"?"":" / "+MAX_LEVEL}</p><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}
       targets.forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.innerCastleBuilding===selected)));
@@ -259,11 +369,11 @@
         // before it runs and leave the disposed DOM alone afterward.
         options.onGear(key);return;
       }
-      paint();renderDetail();
+      renderDetail();paint();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }
     listen(shellElement,"click",event=>{
-      if(suppressClick&&!event.target.closest("button")){suppressClick=false;return;}
+      if(suppressClick&&event.detail>0&&(!event.target.closest("button")||event.target.closest("[data-estate-district],[data-inner-castle-building]"))){suppressClick=false;return;}
       suppressClick=false;
       const b=event.target.closest("[data-inner-castle-building],[data-estate-directory-building]");
       if(b){select(b.dataset.innerCastleBuilding||b.dataset.estateDirectoryBuilding,true,true);return;}
@@ -271,24 +381,31 @@
       if(d){const district=districts.find(v=>v.key===d.dataset.estateDistrict);camera.zoom=2.5;camera.x=district.x*WIDTH/100;camera.y=district.y*HEIGHT/100;camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
       const z=event.target.closest("[data-estate-zoom]");if(z)zoom(camera.zoom+(z.dataset.estateZoom==="in"?.5:-.5));
       if(event.target.closest("[data-estate-fit]")){camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;camera.detailOpen=false;renderDetail();paint();}
-      if(event.target.closest("[data-estate-detail-close]")){camera.detailOpen=false;renderDetail();viewport.focus({preventScroll:true});}
-      if(event.target.closest("[data-estate-directory-toggle]")){camera.directoryOpen=!camera.directoryOpen;directory.hidden=!camera.directoryOpen;event.target.closest("button").setAttribute("aria-expanded",String(camera.directoryOpen));if(camera.directoryOpen)directory.querySelector("button").focus({preventScroll:true});}
+      if(event.target.closest("[data-estate-detail-close]")){camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
+      if(event.target.closest("[data-estate-directory-toggle]")){camera.directoryOpen=!camera.directoryOpen;directory.hidden=!camera.directoryOpen;event.target.closest("button").setAttribute("aria-expanded",String(camera.directoryOpen));if(camera.directoryOpen)directory.querySelector("button").focus({preventScroll:true});paint();}
       if(event.target.closest("[data-inner-castle-back]"))options.onBack?.();
     });
     listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
     listen(viewport,"pointerdown",event=>{
-      if(event.button!==0||event.target.closest("button,.estate-detail,.estate-directory"))return;
-      gestureMoved=false;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});viewport.setPointerCapture(event.pointerId);
+      if(event.button!==0||event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls"))return;
+      const target=event.target.closest("[data-estate-district],[data-inner-castle-building]");
+      if(event.target.closest("button")&&!target)return;
+      if(!pointers.size){gestureMoved=false;suppressClick=false;}
+      pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY});
+      if(!target)viewport.setPointerCapture(event.pointerId);
+      if(pointers.size===2){gestureMoved=true;for(const id of pointers.keys())viewport.setPointerCapture(id);}
     });
     listen(viewport,"pointermove",event=>{
       const old=pointers.get(event.pointerId);if(!old)return;
-      const oldPoints=[...pointers.values()];pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});const next=[...pointers.values()];
-      if(Math.hypot(event.clientX-old.x,event.clientY-old.y)>2)gestureMoved=true;
+      const oldPoints=[...pointers.values()];pointers.set(event.pointerId,{...old,x:event.clientX,y:event.clientY});const next=[...pointers.values()];
+      if(Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>4)gestureMoved=true;
+      if(!gestureMoved)return;
+      for(const id of pointers.keys())if(!viewport.hasPointerCapture(id))viewport.setPointerCapture(id);
       if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2);}
       else {camera.x-=(event.clientX-old.x)/(fit*camera.zoom);camera.y-=(event.clientY-old.y)/(fit*camera.zoom);paint();}
     });
-    const endPointer=event=>{pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
-    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>pointers.delete(event.pointerId));
+    const endPointer=event=>{if(!pointers.has(event.pointerId))return;pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
+    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>{if(event.target===viewport)pointers.delete(event.pointerId);});
     listen(viewport,"keydown",event=>{
       if(event.target!==viewport)return;
       const delta=70/(fit*camera.zoom);
@@ -299,12 +416,12 @@
     const resize=new ResizeObserver(paint);resize.observe(viewport);
     renderDetail();paint();
     return {
-      select, zoom, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
+      select, zoom, updateResources, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
-      debug:()=>({camera:{...camera},siteStates:{...siteStates},actors:0,mode:"still",animationRunning:false,destroyed}),
-      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();},
+      debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
+      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();stopResourceUpdates?.();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }
-  return Object.freeze({width:WIDTH,height:HEIGHT,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,samplePath,mount});
+  return Object.freeze({width:WIDTH,height:HEIGHT,maxLevel:MAX_LEVEL,resources,resourceValue,formatResource,buildings,cottages,districts,roads,junctions,terrainTiles,scenery,states,createStates,createLevels,samplePath,mount});
 });

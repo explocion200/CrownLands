@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const assert = require("node:assert/strict");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
@@ -379,6 +380,13 @@ const estateModuleBudget = 40 * 1024;
 if (["inner-city-estate.js", "inner-city-estate.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > estateModuleBudget) {
   throw new Error("Estate renderer and styles exceed their 40 KiB budget.");
 }
+const sourceEstate = require("../inner-city-estate"), builtEstate = require(path.join(dist, "inner-city-estate.js"));
+assert.deepEqual(Object.keys(builtEstate).sort(), Object.keys(sourceEstate).sort(), "Delivered estate must preserve its public API");
+for (const key of ["width", "height", "maxLevel", "resources", "buildings", "cottages", "districts", "roads", "junctions", "terrainTiles", "scenery", "states"]) {
+  assert.deepEqual(builtEstate[key], sourceEstate[key], "Minification changed estate metadata: " + key);
+}
+assert.deepEqual(builtEstate.createStates(), sourceEstate.createStates());
+assert.deepEqual(builtEstate.createLevels(builtEstate.createStates()), sourceEstate.createLevels(sourceEstate.createStates()));
 if (fs.readFileSync(path.join(dist, "service-worker.js"), "utf8").includes("assets/inner-city-estate/")) {
   throw new Error("Estate artwork must load on entry to the estate, outside installation precaching.");
 }

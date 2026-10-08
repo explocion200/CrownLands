@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
+const { minifyEstate } = require("./estate-delivery");
 
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "dist");
@@ -70,7 +71,11 @@ function copy(relativeSource, relativeDestination = relativeSource) {
   // Ship the same text bytes from Windows and Linux checkouts. Normalize only
   // the output; keep source files and binary assets untouched.
   if (/\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(source)) {
-    fs.writeFileSync(destination, fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n"), "utf8");
+    let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
+    // Keep the expanded estate UI within its existing delivery budget. Only
+    // remove whitespace/comments and shorten local names; do not optimize code.
+    if (relativeSource === "inner-city-estate.js") text = minifyEstate(text);
+    fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }
 

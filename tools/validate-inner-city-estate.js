@@ -41,6 +41,21 @@ for(const b of estate.buildings){
   for(const asset of Object.values(b.artByState)){assert(fs.existsSync(path.join(root,asset)),"Missing state art "+asset);}
 }
 const initial=estate.createStates();assert.equal(Object.values(initial).filter(s=>s==="completed").length,6);assert.equal(Object.values(initial).filter(s=>s==="unbuilt").length,14);
+assert.equal(estate.maxLevel,100);
+assert.equal(estate.resources.length,10);
+assert.equal(new Set(estate.resources.map(r=>r.key)).size,10);
+assert.equal(estate.formatResource(0),"0");assert.equal(estate.formatResource(1250),"1.2K");assert.equal(estate.formatResource(2500000),"2.5M");assert.equal(estate.formatResource(null),"—");
+for(const value of [-1,1.5,NaN,Infinity,"100",{},Number.MAX_SAFE_INTEGER+1])assert.equal(estate.resourceValue(value),null,"Unverified or malformed balances must not manufacture spendable resources");
+assert(estate.buildings.every(b=>b.maxLevel===100));
+const initialLevels=estate.createLevels(initial);
+assert.equal(initialLevels.treasury,1);assert.equal(initialLevels.quarry,0);
+const levelFixture={treasury:100,barracks:25,"royal-stables":101,gatehouse:-1,alehouse:1.5,"great-hall":"50",quarry:75};
+const reviewedLevels=estate.createLevels(initial,levelFixture);
+assert.equal(reviewedLevels.treasury,100);assert.equal(reviewedLevels.barracks,25);
+for(const key of ["royal-stables","gatehouse","alehouse","great-hall"])assert.equal(reviewedLevels[key],1,'Malformed levels must not manufacture progression');
+assert.equal(reviewedLevels.quarry,0,'An unbuilt plot cannot display a completed level');
+assert.equal(estate.createLevels(initial,null).treasury,1);
+assert.equal(initialLevels.treasury,1,'Review levels must not mutate initial levels');
 for(const cottage of estate.cottages){const a=box(cottage);for(const b of estate.buildings){const c=box(b);assert(a.right<=c.left||a.left>=c.right||a.bottom<=c.top||a.top>=c.bottom,cottage.key+" overlaps "+b.key);}for(const r of estate.roads)for(let i=1;i<r.points.length;i++)assert(!intersects(r.points[i-1],r.points[i],a),r.id+" cuts through "+cottage.key);}
 assert.equal(estate.createStates({treasury:"invalid"}).treasury,"completed");assert.equal(estate.createStates({treasury:"constructing"}).treasury,"constructing");assert.equal(initial.treasury,"completed","Fixtures must not mutate defaults");
 const straight=[[0,0],[10,0]],distance=estate.width*.1;
@@ -106,6 +121,6 @@ for(const side of estate.scenery){
   assert.equal(art.hasAlpha,false,'Surrounding scenery must cover the flat gutter');
   assert.equal(art.width/side.width,art.height/side.height,'Do not stretch painted scenery');
 }
-const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-r7'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
+const index=fs.readFileSync(path.join(root,"index.html"),"utf8");assert(index.includes('inner-city-estate.css?v=20261007-estate-resources-r1'));assert(index.indexOf('src="inner-city-estate.js')<index.indexOf('src="game.js'));
 const build=fs.readFileSync(path.join(root,"tools/build-production-client.js"),"utf8");assert(build.includes('"inner-city-estate.js"'));assert(build.includes('copyDirectoryFiles("assets/inner-city-estate"'));
 console.log("PASS: 20 fixed plots, integrated terrain ground and contextual Gatehouse placement, connected layout graph, six initial buildings, actual active-topology map dimensions, native 3.2x+ sprites, bounded lazy detail tiles, painted construction states, no ambient loops/overlay roads and production inclusion.");
