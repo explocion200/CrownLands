@@ -60,6 +60,20 @@ async function main() {
       const capture = await client.send('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(path.join(out, file), Buffer.from(capture.data, 'base64'));
     };
+    const assertFixedDistricts = async () => {
+      const report=await evaluate(()=>{
+        const world=document.querySelector('.estate-world').getBoundingClientRect();
+        return ['quarry','woodland'].map(key=>{
+          const target=document.querySelector('[data-estate-district="'+key+'"]'),label=target.querySelector('span').getBoundingClientRect();
+          const plot=document.querySelector('[data-estate-site="'+(key==='quarry'?'quarry':'sawmill')+'"]').getBoundingClientRect();
+          return {key,hidden:target.hidden,label:label.toJSON(),bottom:plot.bottom,x:world.left+world.width*(key==='quarry'?.29:.19)};
+        });
+      });
+      for(const item of report.filter(item=>!item.hidden)){
+        assert(Math.abs((item.label.left+item.label.right)/2-item.x)<1,'District must stay on its fixed western map anchor: '+item.key);
+        assert(Math.abs(item.label.top-item.bottom-6)<1,'District must stay beneath its own plot, without vertical drift: '+item.key);
+      }
+    };
     const assertDistrictGeography = async () => {
       const result = await evaluate(() => {
         const world=document.querySelector('.estate-world').getBoundingClientRect();
@@ -74,6 +88,7 @@ async function main() {
         if(['mine','trade'].includes(b.key))assert(b.left>result.cityX,'Eastern district label crossed to western scenery: '+b.key);
         for(const other of result.boxes.filter(o=>o.key!==b.key))assert(b.right<=other.left||b.left>=other.right||b.bottom<=other.top||b.top>=other.bottom,'District hit targets overlap');
       }
+      await assertFixedDistricts();
     };
     const assertNameplates = async () => {
       const report = await evaluate(() => {
@@ -147,6 +162,16 @@ async function main() {
       }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
       await assertDistrictGeography();
+      await evaluate(()=>innerCastleEstateView.zoom(1.5));await assertFixedDistricts();
+      for(const resizedWidth of [width-20,width]){
+        await client.send('Emulation.setDeviceMetricsOverride',{width:resizedWidth,height,deviceScaleFactor:1,mobile:false});
+        await evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        await assertFixedDistricts();
+      }
+      await evaluate(()=>document.querySelector('.estate-viewport').focus());await press('ArrowDown',40);await assertFixedDistricts();
+      await click('[data-estate-directory-toggle]');await assertFixedDistricts();
+      await click('[data-estate-directory-toggle]');await assertFixedDistricts();
+      await click('[data-estate-fit]');await assertDistrictGeography();
       assert.equal(await count('[data-estate-resource]'),10);
       assert.equal(await text('[data-estate-resource="timber"] dd'),'—','Production must not present draft materials as owned');
       assert.equal(await text('[data-estate-resource="gold"] dd'),await evaluate(()=>CrownlandsEstate.formatResource(Math.floor(getProjectedGold()))));
