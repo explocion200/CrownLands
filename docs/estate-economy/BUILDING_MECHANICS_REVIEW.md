@@ -1,6 +1,6 @@
 # Inner Castle building and mechanics review
 
-Reviewed October 8, 2026 on `codex/estate-building-mechanics-polish`, against the approved Master Specification, deployed estate rules and current client. This review and its service-screen fixes are pending merge and release. They preserve the approved economy, artwork, fixed positions and map controls.
+Reviewed October 8, 2026 on `codex/estate-building-mechanics-polish`, against the approved Master Specification, deployed estate rules and current client. This review and its service-screen fixes are **LIVE — WEB** from [PR #493](https://github.com/explocion200/CrownLands/pull/493), verified at build `50a795d98beb55c276f2c1c55ff02778bb6db4a4`, Netlify deploy `6ac820fc75ca410008642d8b`, published October 8 at `23:05:43.010 UTC`. All three required GitHub checks, 55 staged and 165 public-file comparisons, exact staged desktop/landscape service interactions and public startup passed; [Master Specification FM-2](../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md#fm-2-current-production-snapshot) records the full evidence. They preserve the approved economy, artwork, fixed positions and map controls.
 
 ## What every building contributes
 

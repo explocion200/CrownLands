@@ -8,7 +8,7 @@ All twenty buildings and eight material stocks persist across seasons, along wit
 
 ## Buildings and progression
 
-The [building mechanics review](BUILDING_MECHANICS_REVIEW.md) explains all twenty roles, their level rewards, the construction loop and the current service-screen polish. That follow-up is pending merge and release; it does not change the approved costs, timers or persistence.
+The [building mechanics review](BUILDING_MECHANICS_REVIEW.md) explains all twenty roles, their level rewards, the construction loop and the current service-screen polish. That follow-up is **LIVE — WEB** from [PR #493](https://github.com/explocion200/CrownLands/pull/493) at build `50a795d98beb55c276f2c1c55ff02778bb6db4a4`, Netlify deploy `6ac820fc75ca410008642d8b`, published October 8 at `23:05:43.010 UTC`. Exact staged service interactions at three sizes and public delivery/startup passed; the Master Specification records full evidence. Approved costs, timers and persistence are unchanged. itch.io was not republished; authenticated production, physical-device and long-term pacing review remain manual.
 
 All buildings cap at Level 100. The six original structures are granted at Level 1 once; fourteen surveyed plots start unbuilt. First construction is Gold-only. Every later upgrade uses gathered materials and Gold. Other buildings may fund targets only at or below the **completed Great Hall level**; the Hall has no building-level dependency. Completed benefits remain active throughout upgrades.
 
