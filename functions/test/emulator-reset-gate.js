@@ -1739,7 +1739,7 @@ async function main() {
   const clanApplicantLoginAtMs = Date.now() - 45_000;
   await Promise.all([
     clanLeaderRef.set({
-      character: { level: 9, xp: 0, skillPoints: 8 },
+      character: { level: 1, xp: 0, skillPoints: 0 },
       gold: 100_000,
       goldFloat: 100_000,
       economyUpdatedAtMs: Date.now(),
@@ -1752,24 +1752,8 @@ async function main() {
       activeSession: { loginAtMs: clanApplicantLoginAtMs },
     }, { merge: true }),
   ]);
-  let lockedClanError = null;
-  try {
-    await callFunction("createClan", clanLeader.token, {
-      name: "Application Gate",
-      tag: "APGT",
-      description: "Exercises approval applications in the release gate.",
-      admissionMode: "approval",
-    });
-  } catch (error) {
-    lockedClanError = error;
-  }
-  assert(
-    /Clans unlock at Hero Level 10/.test(String(lockedClanError?.message || "")),
-    `A Level 9 player was not blocked from creating a clan: ${String(lockedClanError?.message || "no error")}`
-  );
-  await clanLeaderRef.set({
-    character: { level: 10, xp: 0, skillPoints: 9 },
-  }, { merge: true });
+  // October 6 policy removed the Hero-level gate. Keep creation, application,
+  // permissions and reset coverage without reintroducing the retired rule.
   const createdClan = await callFunction("createClan", clanLeader.token, {
     name: "Application Gate",
     tag: "APGT",
@@ -1777,7 +1761,7 @@ async function main() {
     admissionMode: "approval",
   });
   const applicationClanId = createdClan?.clan?.id;
-  assert(applicationClanId, "The clan application gate could not create its approval clan.");
+  assert(applicationClanId, "A Level 1 ruler could not create an approval clan under the current policy.");
   const clanLeaderMemberSnapshot = await db.doc(`clans/${applicationClanId}/members/${clanLeader.uid}`).get();
   assert(
     clanLeaderMemberSnapshot.data()?.lastLoginAtMs === clanLeaderLoginAtMs,

@@ -24,9 +24,10 @@
       "paths": [
         "functions/index.js",
         "firestore.rules",
-        "functions/test/emulator-economy-concurrency.js"
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Connect four authenticated estate routes to existing seasonal Gold authority and shared Crown wallet; apply migrated officer promotion gates without changing two-copy mechanics, receipts or fees. Cover shared currency concurrency, cosmetics ownership/spending, release/profile guards and reset initialization in their existing integration suites in addition to the new active-topology estate emulator.",
+      "reason": "Connect four authenticated estate routes to existing seasonal Gold authority and shared Crown wallet; apply migrated officer promotion gates without changing two-copy mechanics, receipts or fees. Cover shared currency concurrency, cosmetics ownership/spending, release/profile guards and reset initialization in their existing integration suites in addition to the new active-topology estate emulator. Align only the shared clan assertion in the reset fixture with the existing October 6 Level 1 access policy; keep all original reset/currency/membership checks selected. No world topology, legacy data or clan runtime changes. The estate suite additionally enters the active monthly realm through claimStartingCity and verifies permanent state, paid jobs, champion records and receipts survive the seasonal Gold reset.",
       "tests": [
         "functions/test/emulator-estate-economy.js",
         "functions/test/emulator-economy-concurrency.js",

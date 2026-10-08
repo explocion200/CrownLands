@@ -178,6 +178,29 @@ async function main() {
   assert.deepEqual((await stateRef.get()).data(), persistent);
   for (const collection of ["estateQuotes", "estateReceipts", "estateContracts", "estateChampions"])
     assert.equal((await rest(owner, `players/${owner.uid}/${collection}/forged_record`, "PATCH")).status, 403);
+  // Exercise real monthly admission, not just a direct replacement of the
+  // seasonal parent. Permanent children must survive initialization unchanged.
+  const returning = await user(), returningRef = db.doc(`players/${returning.uid}`);
+  await returningRef.set({ displayName: "Returning estate", playerName: "Returning estate", gold: 900000, goldFloat: 900000,
+    resetGeneration: previous, worldId: "main-" + previous, realmShardId: "shard_0001", gear: G.createDefaultState(),
+    character: { level: 20, xp: 0, skillPoints: 19 } });
+  const retained = structuredClone(beforeReset);
+  const paidJob = { ...E.baseQuote(retained, "quarry", 25, 285), id: "permanent_paid_job", status: "paused", fundedAtMs: Date.now() };
+  retained.jobs.push(paidJob); delete retained.deposits.quarry;
+  const championRecord = { id: "permanent_champion", name: "Retained champion", quality: 1, level: 12, xp: 7,
+    active: true, questId: "", recoveryUntilMs: Date.now() + E.HOUR, acquiredAtMs: Date.now() - E.HOUR };
+  retained.activeChampionIds = [championRecord.id];
+  const persistentRecords = { "estate/state": retained, "estateChampions/permanent_champion": championRecord,
+    "estateContracts/permanent_paid_job": paidJob, "estateReceipts/permanent_receipt": { requestId: "permanent_receipt", acceptedAtMs: Date.now() } };
+  for (const [path, data] of Object.entries(persistentRecords)) await returningRef.collection(path.split("/")[0]).doc(path.split("/")[1]).set(data);
+  await call("claimStartingCity", returning, { playerName: "Returning estate" });
+  const newProfile = (await returningRef.get()).data();
+  assert.equal(newProfile.resetGeneration, realm.resetGeneration); assert.equal(newProfile.worldId, realm.worldId);
+  assert.equal(newProfile.gold, 100, "Season entry resets realm Gold independently from estate credit");
+  for (const [path, data] of Object.entries(persistentRecords)) assert.deepEqual((await db.doc(returningRef.path + "/" + path).get()).data(), data);
+  const returned = await call("getEstateState", returning);
+  assert.equal(returned.estate.jobs[0].id, paidJob.id); assert.equal(returned.estate.jobs[0].status, "paused");
+  assert.equal(returned.champions[championRecord.id].level, 12); assert.equal(returned.champions[championRecord.id].xp, 7);
   console.log("Estate emulator passed: real Gold authority, current realm guards, durable receipts, two devices, persistence, migration, Gear, champions, quests, shared Crown cap and write rules.");
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
