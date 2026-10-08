@@ -79,21 +79,31 @@ async function main() {
       const report = await evaluate(() => {
         const viewport=document.querySelector('.estate-viewport').getBoundingClientRect();
         const labels=[...document.querySelectorAll('.estate-nameplate:not([hidden])')].map(e=>({key:e.dataset.estateNameplate,box:e.getBoundingClientRect().toJSON(),pointer:getComputedStyle(e).pointerEvents,font:parseFloat(getComputedStyle(e).fontSize)}));
-        const art=[...document.querySelectorAll('.estate-site>img')].map(e=>e.getBoundingClientRect().toJSON());
+        const art=[...document.querySelectorAll('.estate-site>img')].map(e=>({key:e.parentElement.dataset.estateSite,...e.getBoundingClientRect().toJSON()}));
         const controls=[...document.querySelectorAll('.estate-camera-controls,.estate-directory:not([hidden]),.estate-detail:not([hidden])')].map(e=>e.getBoundingClientRect().toJSON());
-        return {viewport:viewport.toJSON(),labels,art,controls,zoom:innerCastleEstateView.snapshot().zoom};
+        const fallbacks=[...document.querySelectorAll('.estate-building-target>span')].map(e=>({key:e.parentElement.dataset.innerCastleBuilding,box:e.getBoundingClientRect().toJSON()})).filter(e=>e.box.width>0);
+        const panelOpen=!!document.querySelector('.estate-directory:not([hidden]),.estate-detail:not([hidden])');
+        return {viewport:viewport.toJSON(),labels,art,controls,fallbacks,panelOpen,zoom:innerCastleEstateView.snapshot().zoom};
       });
       if(report.zoom<2.5){
         assert.equal(report.labels.length,0,'Overview and intermediate zoom must show district labels only');
         assert.equal(await count('[data-estate-nameplate][hidden]'),20);
         return;
       }
-      assert(report.labels.length>0,'The visible estate must show building name/level captions');
+      assert(report.labels.length>0||report.panelOpen,'The unobstructed district must show building name/level captions');
+      for(const label of report.fallbacks){
+        const building=report.art.find(art=>art.key===label.key);
+        assert(Math.abs(label.box.top-building.bottom-3)<=1.25,'Hover/focus text must stay beneath its building: '+label.key);
+        assert(Math.abs((label.box.left+label.box.right-building.left-building.right)/2)<=1.25,'Hover/focus text must stay centered: '+label.key);
+      }
       const overlaps=(a,b)=>a.left<b.right-.5&&a.right>b.left+.5&&a.top<b.bottom-.5&&a.bottom>b.top+.5;
       report.labels.forEach((label,i)=>{
         assert(label.font>=10,'Names must stay readable in screen pixels');
         assert(label.box.height<=22,'Zoomed captions must be compact single-line strips');
         assert.equal(label.pointer,'none','Captions must not intercept map or touch gestures');
+        const building=report.art.find(art=>art.key===label.key);
+        assert(Math.abs(label.box.top-building.bottom-3)<1,'Caption must stay beneath its building: '+label.key);
+        assert(Math.abs((label.box.left+label.box.right-building.left-building.right)/2)<1,'Caption must stay centered on its building: '+label.key);
         assert(label.box.left>=report.viewport.left && label.box.right<=report.viewport.right && label.box.top>=report.viewport.top && label.box.bottom<=report.viewport.bottom,'Caption must stay within the viewport: '+label.key);
         for(const other of report.labels.slice(i+1))assert(!overlaps(label.box,other.box),'Captions overlap: '+label.key+' / '+other.key);
         for(const art of report.art)assert(!overlaps(label.box,art),'Caption covers building artwork: '+label.key);
@@ -248,6 +258,7 @@ async function main() {
       const gestureY=(await box('.estate-viewport')).top+40;
       await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: gestureY, deltaX: 0, deltaY: -200 }); await delay(100);
       assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 2.5));
+      await assertNameplates();
       const before = await evaluate(() => innerCastleEstateView.snapshot());
       // Move before pressing, including after touch emulation, so the browser
       // processes any pending release of its previous implicit pointer capture.
@@ -256,7 +267,9 @@ async function main() {
       for (let i = 1; i <= 8; i++) { await client.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 45 + 100 * i / 8, y: gestureY + 25 * i / 8, button: 'left', buttons: 1 }); await delay(16); }
       await client.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 145, y: gestureY+25, button: 'left', clickCount: 1 });
       const after = await evaluate(() => innerCastleEstateView.snapshot()); assert(before.x !== after.x || before.y !== after.y, 'Dragging must pan: ' + JSON.stringify({ width, before, after }));
+      await assertNameplates();
       await evaluate(() => innerCastleEstateView.zoom(99)); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 4);
+      await assertNameplates();
       await click('[data-estate-fit]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 1);
       await client.send('Emulation.setTouchEmulationEnabled', { enabled: true });
       await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 50, y: gestureY, id: 1 }, { x: 120, y: gestureY, id: 2 }] });
