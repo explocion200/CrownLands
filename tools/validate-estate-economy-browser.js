@@ -334,6 +334,9 @@ async function main() {
       await wait(()=>document.querySelector('[data-economy-action="claimCommission"]')?.disabled===false);
       assert.equal(await evaluate(()=>!!innerCastleEstateView),false,'Commission readiness refresh must keep Gear open and the map suspended');
       await click('[data-economy-action="close"]');
+      // The native dialog close event restores the replacement opener in a
+      // later browser task; dispatching the click is not that completion signal.
+      await wait(()=>!document.querySelector('.estate-economy-dialog').open&&document.activeElement.dataset.estateOfficerManage==='treasury');
       assert.equal(await evaluate(()=>document.activeElement.dataset.estateOfficerManage),'treasury','Refresh replaces the Gear opener; Close focuses its current equivalent');
       await click("[data-gear-back]");
       await wait(()=>!!innerCastleEstateView);
