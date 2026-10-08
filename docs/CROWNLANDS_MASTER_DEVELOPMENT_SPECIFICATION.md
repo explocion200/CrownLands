@@ -66,7 +66,19 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Fixed western district labels
+### Current verified web release — External building upgrades
+
+The authorized merge and coordinated backend/web deployment of [PR #485](https://github.com/explocion200/CrownLands/pull/485), from `codex/estate-map-upgrades-no-queue`, is verified at build `b000ba0f9eac589406d2b815a6cea251487b1417`. Every estate building has a separate map/directory requirements action. Players deposit materials toward that building, then explicitly start its next single level after full material credit, enough Gold and a free builder. New batches and queues are rejected by the server. Existing paid work retains its saved terms and pause/resume rights. Interiors retain their services and officer commissions; prices, timers, rewards, artwork and fixed captions are unchanged.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac7d33e656c520008e41a30`, published October 8 at `17:42:21.867 UTC` (1:42 p.m. Eastern). All 54 staged-file and 162 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`. The manual publication hold remains enabled.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37815523137`](https://github.com/explocion200/CrownLands/actions/runs/37815523137). Seven selected local validators, production artifact and asset budgets passed. The exact staged runtime passed at 1440×900, 844×390 and 568×320: all twenty external upgrade actions, partial/full deposits, no new queues, busy builders, lost-acknowledgment retry, keyboard/touch input, camera, construction artwork, resource ledgers, Gear services and cleanup. Public anonymous startup passed at desktop and landscape-mobile sizes without uncaught errors.
+- **Backend:** all 144 functions are active on Node.js 22. Deployed source archives match all 56 checked runtime files and the merged manifest in each of six deployment source groups. Release ID remains `crownlands-2026-10-08-estate-economy-v1`; contract remains `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`. Server fingerprint is `b44708b2d69f25282b7eb78272d4e04e6286fef9a2d325130cb39459355106f5`; client fingerprint is `0a0e50531d3bfe081ce624797e01ce65c32872cfcb0e5b480ef7a72f3baa738d`. Postdeploy callable-access checks and eight targeted authentication-guard probes passed.
+- **Realm and rules:** read-only verification retained ready `realm-2026-10 / main-realm-2026-10 / shard_0001`. Published Firestore rules match the repository and were not redeployed; indexes, realm configuration and player records received no manual migration or reset.
+- **Limits:** itch.io was not republished. Signed-in production gameplay and physical-device feel remain manual checks. Synthetic interaction tests submitted no production gameplay actions. Manual starts can leave builders idle between visits; the shared-account review documents this pacing effect without changing material or timer budgets.
+
+Sanitized evidence is retained under `release-artifacts/estate-map-upgrades/deployment/`. Before deployment, local `main` and `origin/main` were clean and equal to the merged build, with divergence `0 0`.
+
+### Previous verified web release — Fixed western district labels
 
 The authorized merge and web deployment of [PR #483](https://github.com/explocion200/CrownLands/pull/483), from `codex/estate-fixed-western-districts`, is verified at build `75a5829d3077432ad44cc486bc37a80d273e6de5`. Quarry Hills and Woodland stay anchored beneath their actual quarry and forestry sites through pan, zoom and resize. Obstructed labels hide instead of relocating into decorative scenery. The layout keeps all seven district controls separate on small landscape screens and avoids offsets left by the opening transition. Existing building captions, district destinations, artwork, economy and equipment returns are retained.
 
@@ -1683,7 +1695,7 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 
 ### Confirmed external building upgrades — October 8, 2026
 
-**Status: `IN DEVELOPMENT — NOT DEPLOYED`.** This owner-confirmed follow-up supersedes new construction batches and upgrade queues from the preceding estate release. Keep permanent deposits; each building exposes a separate Upgrade requirements button on the estate map and in the building directory. Interior service and Gear screens no longer contain construction controls. Preserve fixed bottom name/level captions, artwork, camera and equipment returns.
+**Status: `LIVE — WEB`**, verified October 8 at build `b000ba0f9eac589406d2b815a6cea251487b1417` from PR #485; see FM-2 for coordinated deployment evidence and manual-review limits. This owner-confirmed follow-up supersedes new construction batches and upgrade queues from the preceding estate release. Keep permanent deposits; each building exposes a separate Upgrade requirements button on the estate map and in the building directory. Interior service and Gear screens no longer contain construction controls. Preserve fixed bottom name/level captions, artwork, camera and equipment returns.
 
 - Show the next target's materials, required/deposited/remaining/available amounts, Gold, timer and current/next benefit. Players may deposit positive whole units toward that building only; deposits survive seasons and do not start work automatically. They remain nonrefundable and nontransferable.
 - Only the next single level may start. Enable Upgrade after its entire material bill is deposited, with enough authoritative Gold, a free builder and the existing prerequisites satisfied. Charge Gold once when the player confirms; consume the credited deposit once without deducting the same materials again. First construction remains Gold-only.
@@ -2287,6 +2299,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 UTC — External building upgrade release verification
+
+- Recorded authorized PR #485 merge and coordinated backend/web publication at `b000ba0f9eac589406d2b815a6cea251487b1417`, Netlify deploy `6ac7d33e656c520008e41a30`, published `17:42:21.867 UTC`.
+- Verified all required CI gates, 144 active Node 22 functions and their exact source archives, unchanged rules/current realm, 54 staged and 162 public file comparisons, staged desktop/mobile deposit/start interactions and public startup.
+- Retained the manual web publication hold, legacy paid work and all existing costs/rewards. itch.io was not republished; signed-in production play and physical-device review remain manual.
 
 ## October 8, 2026 — External upgrades with permanent deposits
 
