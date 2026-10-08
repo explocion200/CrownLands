@@ -90,7 +90,7 @@ const BUILDINGS = [
   {
     key: "royal-stables",
     label: "Royal Stables",
-    role: "Permanent building progression unlocks the next Cavalry Master Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Unlock Cavalry Master Gear rarity tiers and shorten material-funded commissions. Existing Gear and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-royal-stables"),
   },
   {
@@ -102,25 +102,25 @@ const BUILDINGS = [
   {
     key: "treasury",
     label: "Treasury",
-    role: "Permanent building progression unlocks the next Master of Coin Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Unlock Master of Coin Gear rarity tiers and shorten material-funded commissions. Existing Gear and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-treasury"),
   },
   {
     key: "great-hall",
     label: "Great Hall",
-    role: "Ruler power / kingdom upgrades",
+    role: "Sets the maximum level of every other estate building. Complete a Hall upgrade before starting that level elsewhere.",
     artSrc: optimizedAsset("inner-castle-great-hall"),
   },
   {
     key: "barracks",
     label: "Barracks",
-    role: "Permanent building progression unlocks the next War Captain Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Unlock War Captain Gear rarity tiers and shorten material-funded commissions. Existing Gear and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-barracks"),
   },
   {
     key: "gatehouse",
     label: "Gatehouse",
-    role: "Permanent building progression unlocks the next Defensive Commander Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Unlock Defensive Commander Gear rarity tiers and shorten material-funded commissions. Existing Gear and earned unlocks survive season restarts.",
     artSrc: optimizedAsset("inner-castle-gatehouse"),
   },
 ];

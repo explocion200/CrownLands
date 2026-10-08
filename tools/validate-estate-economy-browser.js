@@ -4,6 +4,7 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const E = require("../functions/estate-economy");
+const S = require("../functions/estate-services");
 const root = path.resolve(__dirname, "..");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function main() {
@@ -73,15 +74,15 @@ async function main() {
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
           const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
           // server deadline instead of mixing it with the host's wall clock.
           if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
           estate.serverNowMs=serverNowMs;
-          estate.recruitOffers={offers:[]};
-          return{estate,champions:{},serverNowMs};
+          estate.recruitOffers=__estateTest.offers||{offers:[]};
+          return{estate,champions:__estateTest.champions||{},serverNowMs};
         };
         const receipts=new Map(),issued=new Map();
         window.__estateTestApi={
@@ -90,6 +91,7 @@ async function main() {
             const s=__estateTest.state;
             let value;
             if(input.action==="deposit")value={...input,target:s.levels[input.building]+1,nonrefundable:true};
+            else if(input.action==="processor")value={...input};
             else {
               if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
               if(input.count!==1)throw Error("Upgrades cannot be queued.");
@@ -124,7 +126,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,benefitsAt1:E.snapshot(E.initial(estate.settledAtMs),estate.settledAtMs).benefits});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -150,6 +152,7 @@ async function main() {
       await evaluate(()=>{for(const e of document.querySelectorAll('[data-economy-deposit]'))e.value=e.dataset.economyDeposit==="stone"?100:0;});
       await click('[data-economy-action="deposit"]');
       await wait(()=>!!document.querySelector("[data-economy-permanent]"));
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('Quarry → Level 25')),'Permanent credit review names its exact building and target');
       await click('[data-economy-action="confirm"]');
       assert.equal(await evaluate(()=>__estateTest.commits.length),0,"Unconfirmed permanent credit cannot submit");
       await click("[data-economy-permanent]");
@@ -162,6 +165,7 @@ async function main() {
       await wait(()=>!!document.querySelector("[data-economy-permanent]"));
       await evaluate(()=>innerCastleEconomy.refresh());
       await click('[data-economy-action="cancelReview"]');
+      await wait(()=>document.querySelector('.estate-economy-content')?.getAttribute('aria-busy')==='false');
       assert(await evaluate(()=>!!document.querySelector('[data-economy-deposit="stone"]')));
       await click('[data-economy-action="deposit"]');
       await wait(()=>!!document.querySelector("[data-economy-permanent]"));
@@ -178,7 +182,7 @@ async function main() {
       await click("[data-economy-permanent]");
       await click('[data-economy-action="confirm"]');
       await wait(()=>document.querySelector('[role="alert"]')?.textContent.includes("Connection interrupted"));
-      await click("[data-economy-permanent]");
+      assert(await evaluate(()=>document.querySelector('[data-economy-permanent]').checked),'A failed request retains the accepted credit terms for the same retry');
       await click('[data-economy-action="confirm"]');
       await wait(()=>innerCastleEconomy.snapshot().estate.jobs.length===1);
       const ids=await evaluate(()=>__estateTest.commits.filter(x=>x.action==="fund").map(x=>x.requestId));assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
@@ -449,12 +453,122 @@ async function main() {
       await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
       await wait(()=>!document.querySelector(".estate-economy-dialog").open);
       assert(await evaluate(()=>modal.open));
+      // Service polish uses the actual runtime UI and server rule fixtures,
+      // including locks, recipes, bench controls and refresh-safe form drafts.
+      await evaluate(()=>{
+        const s=__estateTest.state;s.levels['guild-master']=1;s.levels.alehouse=1;s.levels['wagon-yard']=1;
+        s.benefits.alehouse=__estateTest.benefitsAt1.alehouse;
+        s.activeChampionIds=['champion_one','champion_two','champion_busy'];
+        __estateTest.champions=Object.fromEntries(s.activeChampionIds.map((id,i)=>[id,{id,name:'Champion '+(i+1),quality:0,level:1,xp:0,questId:i===2?'quest_busy':'',recoveryUntilMs:0}]));
+        __estateTest.offers={offers:[{id:'offer_one',name:'Common Champion',quality:0,level:1,claimed:false}]};
+        innerCastleEconomy.building('guild-master');
+      });
+      await wait(()=>document.querySelector('[data-economy-tier]')&&!document.querySelector('[data-economy-tier]').disabled);
+      assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-tier]').options].map(o=>o.disabled)),[0,1,2,3,4].map(tier=>tier>E.rarityIndex(1)));
+      assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-meal]').options].map(o=>o.disabled)),S.MEALS.map(meal=>meal.level>1));
+      assert(await evaluate(()=>document.querySelector('[data-economy-action="bench"][data-id="champion_busy"]').disabled));
+      await evaluate(()=>{
+        for(const e of document.querySelectorAll('[data-economy-champion]:not(:disabled)'))e.click();
+        const hours=document.querySelector('[data-economy-hours]');hours.value='8';hours.dispatchEvent(new Event('change',{bubbles:true}));
+        document.querySelector('[data-economy-resource]').value='stone';
+        document.querySelector('[data-economy-action="bench"][data-id="champion_two"]').focus();
+      });
+      assert(await evaluate(()=>document.querySelector('[data-economy-party-status]').textContent.includes('Selected 2 champions · Power 2')));
+      await evaluate(()=>innerCastleEconomy.refresh());
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-hours]').value),'8');
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-resource]').value),'stone');
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-champion]:checked').length),2);
+      assert.equal(await evaluate(()=>document.activeElement.dataset.id),'champion_two','Refresh restores the exact row control, not the first Bench button');
+      assert(await evaluate(()=>[...document.querySelectorAll('.estate-economy-champion')].every(row=>!row.querySelector('label button'))),'Bench buttons must not toggle party checkboxes');
+      assert(await evaluate(()=>[...document.querySelectorAll('.estate-economy-champion')].every(row=>{
+        const a=row.querySelector('label').getBoundingClientRect(),b=row.querySelector('button').getBoundingClientRect();
+        return a.height>=44&&b.height>=44&&a.right<=b.left;
+      })),'Party selection and Bench controls need separate touch targets');
+      const guildCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'guild-services-'+width+'.png'),Buffer.from(guildCapture.data,'base64'));
+      // A champion becoming unavailable is removed from the selected party.
+      await evaluate(()=>{__estateTest.champions.champion_two.questId='quest_new';return innerCastleEconomy.refresh();});
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-champion]:checked').length),1);
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>innerCastleEconomy.building('alehouse'));
+      await wait(()=>document.querySelector('.estate-economy-content').textContent.includes('Power 1'));
+      await evaluate(()=>document.querySelector('[data-economy-action="recruit"]').scrollIntoView({block:'center'}));
+      const serviceCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'recruit-services-'+width+'.png'),Buffer.from(serviceCapture.data,'base64'));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>innerCastleEconomy.building('wagon-yard'));
+      await wait(()=>document.querySelector('[data-economy-pack]')&&!document.querySelector('[data-economy-pack]').disabled);
+      assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-pack]').options].map(o=>o.disabled)),[false,true,true]);
+      assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-resource]').options].map(o=>o.disabled)),[false,false,false,true,true,true]);
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-storage-list button').length),6);
+      await click('[data-economy-action="ledger"][data-id="timber"]');
+      assert.equal(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent),'Timber ledger');
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        const s=__estateTest.state;s.supplyUsage={day:new Date(innerCastleEconomy.now()).toISOString().slice(0,10),hours:1};
+        innerCastleEconomy.building('market');
+      });
+      await wait(()=>document.querySelector('[data-economy-action="supply"]')?.disabled===true);
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-storage-list button').length),2);
+      assert(await evaluate(()=>[...document.querySelector('[data-economy-pack]').options].every(o=>o.disabled)));
+      await click('[data-economy-action="close"]');
+      for(const [level,materialLocks,packLocks] of [[25,[false,false,false,false,false,true],[false,true,true]],[34,[false,false,false,false,false,true],[false,false,true]],[50,[false,false,false,false,false,false],[false,false,true]],[100,[false,false,false,false,false,false],[false,false,false]]]){
+        const rules=E.initial(0);for(const key in rules.levels)rules.levels[key]=100;rules.levels['wagon-yard']=level;
+        const locked=(resource,hours)=>{try{S.supplyQuote(rules,resource,hours,0);return false;}catch{return true;}};
+        assert.deepEqual(['timber','stone','ore','planks','iron','tools'].map(key=>locked(key,.25)),materialLocks,'UI material unlocks must match authoritative supply quotes');
+        assert.deepEqual([.25,.5,1].map(hours=>locked('timber',hours)),packLocks,'UI delivery unlocks must match authoritative supply quotes');
+        await evaluate(level=>{
+          __estateTest.state.levels['wagon-yard']=level;__estateTest.state.supplyUsage={day:'',hours:0};innerCastleEconomy.building('wagon-yard');
+        },level);
+        await wait(()=>document.querySelector('[data-economy-pack]')&&!document.querySelector('[data-economy-pack]').disabled);
+        assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-resource]').options].map(o=>o.disabled)),materialLocks);
+        assert.deepEqual(await evaluate(()=>[...document.querySelector('[data-economy-pack]').options].map(o=>o.disabled)),packLocks);
+        await click('[data-economy-action="close"]');
+      }
+      await evaluate(()=>{__estateTest.state.levels['guild-master']=100;__estateTest.state.levels.alehouse=100;innerCastleEconomy.building('guild-master');});
+      await wait(()=>document.querySelector('[data-economy-tier]')&&!document.querySelector('[data-economy-tier]').disabled);
+      assert(await evaluate(()=>[...document.querySelector('[data-economy-tier]').options,...document.querySelector('[data-economy-meal]').options].every(o=>!o.disabled)));
+      await evaluate(()=>{const e=document.querySelector('[data-economy-tier]');e.value='4';e.dispatchEvent(new Event('change',{bubbles:true}));});
+      assert(await evaluate(()=>document.querySelector('[data-economy-party-status]').textContent.includes('4 champions and 600 power')));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>innerCastleEconomy.building('sawmill'));
+      await wait(()=>document.querySelector('[data-economy-reserve="timber"]')&&!document.querySelector('[data-economy-reserve="timber"]').disabled);
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('Recipe per unit: 2 Timber')));
+      await evaluate(()=>{const e=document.querySelector('[data-economy-reserve="timber"]');e.value='123';e.focus();return innerCastleEconomy.refresh();});
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-reserve="timber"]').value),'123');
+      assert.equal(await evaluate(()=>document.activeElement.dataset.economyReserve),'timber');
+      await click('[data-economy-action="reserves"]');
+      await wait(()=>!!document.querySelector('[data-economy-action="cancelReview"]'));
+      await click('[data-economy-action="cancelReview"]');
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-reserve="timber"]').value),'123','Back from review preserves the draft');
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        const s=__estateTest.state;s.commissions.treasury={rarity:'common',name:'Helm',completesAtMs:Date.now()+3600000};
+        innerCastleEconomy.building('treasury');
+      });
+      await wait(()=>document.querySelector('[data-economy-action="claimCommission"]')?.disabled===true);
+      await evaluate(()=>{__estateTest.state.commissions.treasury.completesAtMs=Date.now()-1;return innerCastleEconomy.refresh();});
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="claimCommission"]').disabled),false,'Completed commissions become claimable');
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{__estateTest.state.levels.sawmill=0;innerCastleEconomy.resource('planks');});
+      await wait(()=>document.querySelector('[data-economy-action="source"]'));
+      await click('[data-economy-action="source"]');
+      await wait(()=>document.querySelector('.estate-economy-content').textContent.includes('after Level 1 completes'));
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="processor"],[data-economy-action="reserves"]').length),0,'Ledger navigation cannot expose unbuilt services');
+      await click('[data-economy-action="close"]');
+      const dailyLoads=await evaluate(()=>{
+        const data=innerCastleEconomy.snapshot(),s=data.estate;
+        s.projection={stock:s.stock,net:{},untilMs:null};s.jobs=[];s.quests=[];s.commissions={};
+        data.serverNowMs=(Math.floor(innerCastleEconomy.now()/86400000)+1)*86400000-250;data.receivedAtMs=Date.now();
+        innerCastleEconomy.visibilityChanged();return __estateTest.loads;
+      });
+      await wait(loads=>__estateTest.loads===loads+1,dailyLoads);
       await evaluate(()=>{clearInnerCastleModalState();modal.close();});
       assert.equal(await evaluate(()=>document.querySelectorAll(".estate-economy-dialog").length),0);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers,.estate-construction-note').length),0,'Estate teardown removes all timer elements');
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: curved construction arcs/countdowns, zero-production ticking without polling, fixed top anchors through pan/zoom/resize, authoritative completion, paused work, hidden-scene pause, directory fallback, Gear timer cleanup; city-style Upgrade left / Enter right, all 20 menus, deposits, confirmation/retry, camera, keyboard/touch and focus return.");
+    console.log("Estate desktop/landscape UI passed: all 20 sites, construction/deposits/retry, map/normal actions, camera/keyboard/touch, timer lifecycle; service unlocks, party power, busy champions, recruitment, storage ledgers, shared supply allowance, recipes, refresh/review form and exact-row focus preservation, unbuilt service guard and commission readiness.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

@@ -6,6 +6,9 @@
     || root.CrownlandsEstate.resources.find(r => r.key === key)?.label || key;
   const duration = ms => ms < 3600000 ? Math.ceil(ms / 60000) + " min" : number(ms / 3600000) + " hours";
   const list = amounts => Object.entries(amounts || {}).filter(([, v]) => v).map(([k, v]) => number(v) + " " + label(k)).join(" · ") || "None";
+  const qualities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"], milestones = [1, 25, 50, 75, 100];
+  const tierAt = level => milestones.reduce((tier, milestone, i) => level >= milestone ? i : tier, 0);
+  const power = champion => Math.floor(champion.level * (1 + .25 * champion.quality));
   function constructionTimers(host) {
     const viewport = host.querySelector(".estate-viewport"), layer = document.createElement("div");
     layer.className = "estate-construction-timers";
@@ -126,6 +129,7 @@
     document.body.append(dialog);
     let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
     let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null;
+    let renderedView = null, renderedQuote = null, formDraft = null, reviewDraft = null;
     const current = () => !destroyed && options.scope() === scope;
     const now = () => data ? data.serverNowMs + Math.max(0, Date.now() - data.receivedAtMs) : Date.now();
     function balances() {
@@ -160,6 +164,8 @@
       const upcoming = [...Object.values(data.estate.commissions).map(c => c.completesAtMs), ...Object.values(data.champions).map(c => c.recoveryUntilMs)].filter(t => Number.isFinite(t) && t > now());
       times.push(...upcoming);
       if (Number.isFinite(data.estate.projection?.untilMs)) times.push(data.estate.projection.untilMs);
+      if (["alehouse", "guild-master", "market", "wagon-yard"].some(key => data.estate.levels[key]))
+        times.push((Math.floor(now() / 86400000) + 1) * 86400000);
       if (times.length) deadlineTimer = setTimeout(() => refresh(), Math.min(2147483647, Math.max(100, Math.min(...times) - now() + 100)));
     }
     async function refresh() {
@@ -198,12 +204,13 @@
         const result = await api.getEstateQuote(input);
         if (!current()) return;
         accept(result);
-        if (dialog.open && view === reviewedView) { quote = result.quote; pending = null; }
+        if (dialog.open && view === reviewedView) { quote = result.quote; pending = null; reviewDraft = null; }
       });
     }
     function open(next) {
       if (!current()) return;
       view = next; quote = null; pending = null; upgradeBill = null; error = "";
+      formDraft = null; reviewDraft = null;
       if (!dialog.open) { opener = document.activeElement; dialog.showModal(); }
       render(); refresh();
     }
@@ -212,19 +219,29 @@
       const producer = Object.values(s.resources).find(r => r.source === key);
       const commission = s.commissions[key];
       let body = `<p class="estate-economy-kicker">Permanent estate · Level ${level} / 100</p>
-        <p>${escape(s.benefits[key].current)}</p>`;
+        <p>${escape(root.CrownlandsEstate.buildings.find(b => b.key === key)?.role)}</p>
+        <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>`;
+      if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Upgrade button to review construction.</p>";
       if (producer) {
-        body += `<article><h3>Production</h3><p>${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
+        body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} production</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
           <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
+        if (Object.keys(producer.inputs || {}).length) body += `<p><b>Recipe per unit:</b> ${escape(list(producer.inputs))}. Inputs are consumed only while processing can produce output.</p>`;
         if (["sawmill", "smithy", "workshop", "windmill"].includes(key))
           body += button("processor", s.processors[key] === false ? "Resume processing" : "Pause processing")
             + `<p>Keep these amounts available for building. Reserves apply to every factory using the material.</p>${Object.keys(producer.inputs || {}).map(k=>`<label>${label(k)} reserve<input type="number" min="0" max="${s.resources[k].capacity}" step="1" value="${s.reserves[k]||0}" data-economy-reserve="${k}"></label>`).join("")}`
             + button("reserves", "Review reserves");
       }
+      if (["storehouse", "granary", "wagon-yard", "market"].includes(key)) {
+        const food = ["granary", "market"].includes(key);
+        body += `<article><h3>Storage</h3><p>Each material has its own capacity. Deposits are separate; existing stock is never discarded.</p><div class="estate-storage-list">${Object.entries(s.resources).filter(([k]) => ["grain", "food"].includes(k) === food).map(([k, r]) =>
+          button("ledger", `${escape(label(k))}<br>${number(r.available)} / ${number(r.capacity)}`, `data-id="${k}"`)).join("")}</div></article>`;
+      }
+      if (key === "great-hall") body += "<p>Only completed Hall levels unlock other building upgrades. Materials may be deposited into the next eligible project; work begins after your explicit confirmation.</p>";
+      if (key === "builders-yard") body += `<p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. A new builder arrives at Level 10 and another at Level 50. Time reductions apply to new contracts; paid work keeps its accepted timer.</p>`;
       if (root.COMMON_GEAR?.BUILDINGS?.[key] || ["treasury", "barracks", "gatehouse", "royal-stables"].includes(key)) {
-        body += `<article><h3>Officer commissions</h3><p>Choose one item family. Its rarity follows this building’s completed level; existing Gear remains yours.</p>`;
+        body += `<article><h3>Officer commissions</h3><p>Choose one item family. Its rarity follows this building’s completed level; existing Gear remains yours. Common / Uncommon / Rare / Epic / Legendary unlock at Levels 1 / 25 / 50 / 75 / 100. Each order returns one Level 1 item; review its materials and timer before spending.</p>`;
         if (commission) body += `<p>${escape(commission.rarity)} ${escape(commission.name)} · ${commission.completesAtMs > now() ? duration(commission.completesAtMs - now()) + " remaining" : "Ready to claim"}</p>`
-          + button("claimCommission", "Claim commissioned Gear");
+          + button("claimCommission", "Claim commissioned Gear", commission.completesAtMs > now() ? "disabled" : "");
         else {
           const families = options.gear.DEFINITIONS.filter(d => d.buildingId === key && d.rarity === "common");
           body += `<label>Item family<select data-economy-family>${families.map(d => `<option value="${d.familyKey}">${escape(d.gearName)}</option>`).join("")}</select></label>` + button("commission", "Review commission");
@@ -233,33 +250,43 @@
       }
       if (key === "alehouse") {
         body += `<article><h3>Today’s champions</h3><p>Three stable offers each UTC day. Every recruit stays yours across seasons; a full active roster sends new recruits to your bench.</p>
-          ${s.recruitOffers.offers.map(o => `<p>${escape(o.name)} · Level ${o.level} ${o.claimed ? "· Recruited" : button("recruit", "Review recruit", `data-id="${o.id}"`)}</p>`).join("")}</article>`;
+          ${!s.levels["guild-master"] ? "<p>Construct the Guild Master to unlock recruitment.</p>" : ""}
+          ${s.recruitOffers.offers.map(o => `<p>${escape(o.name)} · Level ${o.level} · Power ${power(o)} ${o.claimed ? "· Recruited" : button("recruit", "Review recruit", `data-id="${o.id}"`)}</p>`).join("")}
+          <p>Recruitment quality improves at Levels 1 / 25 / 50 / 75 / 100. Review a recruit’s seasonal Gold fee before spending. Preparation meals unlock at Alehouse Levels 10, 25 and 50; select them when planning an expedition at the Guild Master.</p></article>`;
       }
       if (key === "guild-master") {
-        body += `<article><h3>Active champions</h3>${s.activeChampionIds.map(id => {
+        const roster = 6 + Math.floor(18 * (level - 1) / 99), party = level >= 50 ? 4 : level >= 25 ? 3 : 2, parties = level >= 60 ? 3 : level >= 25 ? 2 : 1;
+        const unlockedTier = Math.min(tierAt(level), tierAt(s.levels.alehouse));
+        body += `<article><h3>Active champions · ${s.activeChampionIds.length} / ${roster}</h3><p>Select up to ${party} idle champions. Each tier requires a minimum party and power. Questing and recovering champions stay active until ready.</p>${s.activeChampionIds.map(id => {
           const c = data.champions[id]; if (!c) return "";
-          return `<label class="estate-economy-champion"><input type="checkbox" data-economy-champion value="${id}" ${c.questId || c.recoveryUntilMs > now() ? "disabled" : ""}>
-            ${escape(c.name)} · Lv. ${c.level} · ${number(c.xp)} XP ${c.questId ? "· On quest" : c.recoveryUntilMs > now() ? "· Recovering " + duration(c.recoveryUntilMs - now()) : ""}
-            ${button("bench", "Bench", `data-id="${id}"`)}</label>`;
+          const unavailable = c.questId || c.recoveryUntilMs > now();
+          return `<div class="estate-economy-champion"><label><input type="checkbox" data-economy-champion value="${id}" ${unavailable ? "disabled" : ""}>
+            <span>${escape(c.name)} · ${qualities[c.quality]} · Lv. ${c.level} · Power ${power(c)} · ${number(c.xp)} XP ${c.questId ? "· On quest" : c.recoveryUntilMs > now() ? "· Recovering " + duration(c.recoveryUntilMs - now()) : ""}</span></label>
+            ${button("bench", "Bench", `data-id="${id}" ${unavailable ? "disabled" : ""}`)}</div>`;
         }).join("") || "<p>Recruit champions at the Alehouse to form a party.</p>"}
           ${button("benchList", "Browse permanent champion bench")}
-          ${bench.filter(c => !s.activeChampionIds.includes(c.id)).map(c => `<p>${escape(c.name)} · Lv. ${c.level} ${button("activate", "Make active", `data-id="${c.id}"`)}</p>`).join("")}
+          ${bench.filter(c => !s.activeChampionIds.includes(c.id)).map(c => `<p>${escape(c.name)} · ${qualities[c.quality]} · Lv. ${c.level} · Power ${power(c)} ${button("activate", "Make active", `data-id="${c.id}" ${s.activeChampionIds.length >= roster || c.questId || c.recoveryUntilMs > now() ? "disabled" : ""}`)}</p>`).join("")}
           ${cursor ? button("moreBench", "Next page") : ""}</article>
-          <article><h3>Expeditions</h3><div class="estate-economy-actions">
-          <label>Tier<select data-economy-tier>${["Common","Uncommon","Rare","Epic","Legendary"].map((name,i)=>`<option value="${i}">${name}</option>`).join("")}</select></label>
+          <article><h3>Expeditions · ${s.quests.length} / ${parties} parties</h3><p>Quest tiers require both the Guild Master and Alehouse at Levels 1 / 25 / 50 / 75 / 100. Construct the Farmstead and Windmill for Food. Shared daily reward budget remaining: ${number(Math.max(0, 2.4 - (s.questUsage.day === new Date(now()).toISOString().slice(0,10) ? s.questUsage.hours : 0)))} / 2.4 resource hours.</p><div class="estate-economy-actions">
+          <label>Tier<select data-economy-tier>${qualities.map((name,i)=>`<option value="${i}" ${i > unlockedTier ? "disabled" : ""}>${name}${i > unlockedTier ? " · Both buildings Lv. " + milestones[i] : ""}</option>`).join("")}</select></label>
           <label>Duration<select data-economy-hours><option value="2">2 hours</option><option value="4">4 hours</option><option value="8">8 hours</option></select></label>
           <label>Reward<select data-economy-resource>${["timber","stone","ore","planks","iron","tools"].map(k=>`<option value="${k}">${label(k)}</option>`).join("")}</select></label>
           <label>Split with<select data-economy-resource-second><option value="">Keep one material</option>${["timber","stone","ore","planks","iron","tools"].map(k=>`<option value="${k}">${label(k)}</option>`).join("")}</select></label>
-          <label>Meal<select data-economy-meal><option value="none">No meal</option><option value="bread">Trail bread</option><option value="stew">Hearty stew</option><option value="feast">Guild feast</option></select></label>
-          ${button("quest", "Review expedition")}</div>
+          <label>Meal<select data-economy-meal><option value="none">No meal</option>${[["bread", "Trail bread", 10], ["stew", "Hearty stew", 25], ["feast", "Guild feast", 50]].map(([id,name,min]) => `<option value="${id}" ${s.levels.alehouse < min ? "disabled" : ""}>${name} · Alehouse Lv. ${min}</option>`).join("")}</select></label>
+          ${button("quest", "Review expedition", s.quests.length >= parties || s.quests.length + s.parcels.length >= 6 ? "disabled" : "")}</div><p data-economy-party-status role="status"></p>
           ${s.quests.map(q=>`<p>Tier ${q.tier+1} expedition · ${duration(Math.max(0,q.completesAtMs-now()))} remaining · ${escape(list(q.rewards))}</p>`).join("")}
           ${s.parcels.map(p=>`<p>${escape(list(p.rewards))} ${button("claimParcel","Claim what fits",`data-id="${escape(p.id)}"`)}</p>`).join("")}</article>`;
       }
-      if (key === "market" || key === "wagon-yard")
-        body += `<article><h3>Optional Crown supplies</h3><p>Shared limit: one production hour per UTC day across both shops. Free gathering is always available.</p>
-          <div class="estate-economy-actions"><label>Material<select data-economy-resource>${(key==="market"?["grain","food"]:["timber","stone","ore","planks","iron","tools"]).map(k=>`<option value="${k}">${label(k)}</option>`).join("")}</select></label>
-          <label>Delivery<select data-economy-pack><option value=".25">¼ hour · 5 Crowns</option><option value=".5">½ hour · 10 Crowns</option><option value="1">1 hour · 20 Crowns</option></select></label>
-          ${button("supply","Review delivery")}</div></article>`;
+      if (key === "market" || key === "wagon-yard") {
+        const used = s.supplyUsage.day === new Date(now()).toISOString().slice(0,10) ? s.supplyUsage.hours : 0, maxPack = .25 + .75 * (level - 1) / 99;
+        body += `<article><h3>Optional Crown supplies</h3><p>Shared daily allowance remaining: ${number(Math.max(0, 1-used))} / 1 production hour across both shops. A completed material supply chain and space for the entire pack are required. Free gathering is always available.</p>
+          <div class="estate-economy-actions"><label>Material<select data-economy-resource>${(key==="market"?["grain","food"]:["timber","stone","ore","planks","iron","tools"]).map(k=>{
+            const min = ["planks","iron"].includes(k) ? 25 : k === "tools" ? 50 : 1;
+            return `<option value="${k}" ${level < min ? "disabled" : ""}>${label(k)}${level < min ? " · Wagon Yard Lv. " + min : ""}</option>`;
+          }).join("")}</select></label>
+          <label>Delivery<select data-economy-pack>${[[.25,"¼",1],[.5,"½",34],[1,"1",100]].map(([hours,name,min])=>`<option value="${hours}" ${hours > maxPack + 1e-10 || hours + used > 1 + 1e-10 ? "disabled" : ""}>${name} hour · ${hours*20} Crowns${hours > maxPack + 1e-10 ? " · Lv. " + min : hours + used > 1 + 1e-10 ? " · Daily limit" : ""}</option>`).join("")}</select></label>
+          ${button("supply","Review delivery", used + .25 > 1 + 1e-10 ? "disabled" : "")}</div></article>`;
+      }
       return body;
     }
     function upgradeBody(key) {
@@ -272,7 +299,7 @@
       if (level >= 100) return body + "<p>Maximum building level reached.</p>";
       if (s.constructionPolicy !== "deposit-then-start") return body + "<p>Building upgrades are waiting for the matching server update. Refresh shortly.</p>";
       const bill = upgradeBill;
-      if (!bill) return body + "<p>Loading requirements. If unavailable, refresh to request them again.</p>";
+      if (!bill) return body + (error ? "<p>Resolve the condition above, then refresh to review this building’s requirements.</p>" : "<p>Loading requirements. If unavailable, refresh to request them again.</p>");
       const remaining = Object.values(bill.remaining).some(v => v > 0), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
       const gold = options.gold?.() ?? data.gold, affordable = Number.isFinite(gold) && gold >= bill.gold;
       const amounts = Object.entries(bill.materials);
@@ -290,6 +317,7 @@
     function reviewBody() {
       const q = quote.value;
       return `<p class="estate-economy-kicker">Review before committing</p>
+        ${q.action === "deposit" ? `<p><b>Permanent deposit:</b> ${escape(label(q.building))} → Level ${q.target}. This credit belongs only to that building and target.</p>` : ""}
         ${q.jobs ? q.jobs.map(j => `<p>${label(j.building)} → Level ${j.target} · ${duration(j.durationMs)}<br>Bill: ${escape(list(j.materials))}<br>Already deposited: ${escape(list(j.deposited))}</p>`).join("") : ""}
         ${q.materials || q.amounts ? `<p><b>Additional materials:</b> ${escape(list(q.materials || q.amounts))}</p>` : ""}
         ${q.gold ? `<p><b>Gold:</b> ${number(q.gold)}</p>` : ""}
@@ -308,8 +336,29 @@
         <p class="estate-economy-muted">This quote is valid for five minutes and until the estate changes.</p>
         <div class="estate-economy-actions">${button("confirm",pending ? "Retry same request" : "Confirm")}${button("cancelReview","Back")}</div>`;
     }
+    function partyStatus() {
+      const status = dialog.querySelector("[data-economy-party-status]");
+      if (!status || !data) return;
+      const tier = Number(dialog.querySelector("[data-economy-tier]").value), ids = [...dialog.querySelectorAll("[data-economy-champion]:checked")].map(el => el.value);
+      const total = ids.reduce((n, id) => n + power(data.champions[id]), 0);
+      status.textContent = `Selected ${ids.length} champions · Power ${total}. ${qualities[tier]} requires at least ${[2,2,3,4,4][tier]} champions and ${[2,60,160,320,600][tier]} power. Review shows the exact Food cost, rewards, XP retained and recovery before you spend.`;
+    }
+    const controlId = el => JSON.stringify([el.tagName, el.type, el.dataset, el.matches("[data-economy-champion]") ? el.value : ""]);
+    function saveForm() {
+      return {
+        fields: [...dialog.querySelectorAll("input,select")].map(el => ({ id:controlId(el), value:el.value, checked:el.checked })),
+        focus: dialog.contains(document.activeElement) && document.activeElement.matches("button,input,select")
+          ? controlId(document.activeElement) : (renderedQuote ? reviewDraft : formDraft)?.focus,
+        scroll: dialog.querySelector(".estate-economy-content")?.scrollTop || 0,
+      };
+    }
     function render() {
       if (!current() || !dialog.open || !view) return;
+      if (renderedView === view) {
+        if (!renderedQuote) formDraft = saveForm();
+        else if (renderedQuote === quote) reviewDraft = saveForm();
+      }
+      const draft = quote ? reviewDraft : formDraft;
       const title = label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · Upgrade" : "");
       let body = "<p>Loading your permanent estate…</p>";
       if (data) {
@@ -323,12 +372,23 @@
             ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
         } else body = buildingBody(view.key);
       }
-      const focused = dialog.contains(document.activeElement) ? document.activeElement?.dataset.economyAction : "";
       dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
         <div class="estate-economy-content" aria-busy="${busy}">${error ? `<p role="alert" class="estate-economy-error">${escape(error)}</p>` : ""}${body}</div>
         <footer>Buildings, materials, paid work and champions stay through every season. ${data ? "Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}</footer>`;
+      for (const el of dialog.querySelectorAll("input,select")) {
+        const saved = draft?.fields.find(field => field.id === controlId(el));
+        if (!saved || el.disabled) continue;
+        if (el.type === "checkbox") el.checked = saved.checked;
+        else if (el.tagName === "SELECT") { if ([...el.options].some(o => o.value === saved.value && !o.disabled)) el.value = saved.value; }
+        else el.value = saved.value === "" ? "" : el.type === "number" ? Math.max(Number(el.min || 0), Math.min(Number(el.max || Infinity), Number(saved.value))) : saved.value;
+      }
+      partyStatus();
       dialog.querySelectorAll("button,select,input").forEach(el => { if (busy && !["close"].includes(el.dataset.economyAction)) el.disabled = true; });
-      if (focused) dialog.querySelector(`[data-economy-action="${focused}"]`)?.focus({preventScroll:true});
+      const focused = [...dialog.querySelectorAll("button,select,input")].find(el => controlId(el) === draft?.focus && !el.disabled);
+      focused?.focus({preventScroll:true});
+      if (!draft && quote) dialog.querySelector('[data-economy-action="confirm"]')?.focus({preventScroll:true});
+      if (draft) dialog.querySelector(".estate-economy-content").scrollTop = draft.scroll;
+      renderedView = view; renderedQuote = quote;
     }
     dialog.addEventListener("click", async event => {
       const target = event.target.closest("[data-economy-action]"); if (!target) return;
@@ -337,8 +397,9 @@
       if (action === "close") { dialog.close(); return; }
       if (busy || !current()) return;
       if (action === "refresh") { quote = null; pending = null; await refresh(); return; }
-      if (action === "cancelReview") { quote = null; pending = null; render(); return; }
+      if (action === "cancelReview") { quote = null; pending = null; if (view.type === "upgrade") await refresh(); else render(); return; }
       if (action === "source") { open({type:"building",key:target.dataset.id}); return; }
+      if (action === "ledger") { open({type:"resource",key:target.dataset.id}); return; }
       if (action === "confirm") {
         const accepted = !!dialog.querySelector("[data-economy-permanent]")?.checked;
         if (quote.value.nonrefundable && !accepted) { error = "Confirm the permanent credit terms before continuing."; render(); return; }
@@ -349,7 +410,7 @@
           if (!current()) return;
           accept(result);
           if (result.replayed) accept(await api.getEstateState());
-          if (view === confirmedView) { quote = null; pending = null; await loadUpgrade(); }
+          if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
         }); return;
       }
       if (action === "benchList" || action === "moreBench") {
@@ -375,6 +436,7 @@
       };
       if (inputs[action]) await review(inputs[action]());
     }, {signal:abort.signal});
+    dialog.addEventListener("change",partyStatus,{signal:abort.signal});
     dialog.addEventListener("close",()=>{quote=null;pending=null;opener?.isConnected&&opener.focus({preventScroll:true});},{signal:abort.signal});
     document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible())refresh();},{signal:abort.signal});
     const stop = api.subscribeEstateChanges?.(revision => {
