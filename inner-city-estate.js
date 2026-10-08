@@ -86,9 +86,9 @@
   })));
   const districts = Object.freeze([
     { key: "city", label: "Walled City", x: 50, y: 43 },
-    { key: "quarry", label: "Quarry Hills", x: 29, y: 25 },
+    { key: "quarry", label: "Quarry Hills", x: 29, y: 25, labelAnchor: Object.freeze({ x: 29, y: 22 }) },
     { key: "mine", label: "Iron Ridge", x: 73, y: 26 },
-    { key: "woodland", label: "Woodland", x: 19, y: 40 },
+    { key: "woodland", label: "Woodland", x: 19, y: 40, labelAnchor: Object.freeze({ x: 19, y: 49 }) },
     { key: "crafts", label: "Crafts Quarter", x: 34, y: 65 },
     { key: "farmland", label: "Farmland", x: 27, y: 83 },
     { key: "trade", label: "Trade Quarter", x: 83, y: 56 },
@@ -259,13 +259,20 @@
         const collision=boxes.some((p,j)=>j!==i&&Math.abs(p.x-boxes[i].x)<46&&Math.abs(p.y-boxes[i].y)<46);
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
-      const viewportBox=viewport.getBoundingClientRect(), controls=host.querySelector(".estate-camera-controls").getBoundingClientRect();
+      const viewportBox=viewport.getBoundingClientRect();
       districtTargets.forEach((target,i)=>{
-        const d=districts[i];target.hidden=camera.zoom>=2.5||!locate(target,d.x,d.y);
+        const d=districts[i],anchor=d.labelAnchor||d;target.hidden=camera.zoom>=2.5||!locate(target,anchor.x,anchor.y);
         if(target.hidden)return;
+        if(d.labelAnchor){
+          // The label's top stays six screen pixels below its map anchor.
+          // Keep the existing district center for zooming into its buildings.
+          const labelHeight=parseFloat(getComputedStyle(target.querySelector("span")).height);
+          target.style.top=(parseFloat(target.style.top)+labelHeight/2+6)+"px";
+          return;
+        }
         // Extraction labels stay below their miniature art even when the map
         // shrinks but accessible text retains its screen-pixel size.
-        if(d.key==="quarry"||d.key==="mine"){
+        if(d.key==="mine"){
           const b=buildings.find(b=>b.key===d.key),label=target.querySelector("span").getBoundingClientRect();
           const south=ty+(b.hotspot.top+b.footprint.height/2)*HEIGHT/100*scale;
           target.style.top=Math.max(parseFloat(target.style.top),south+label.height/2+6)+"px";
@@ -273,13 +280,26 @@
       });
       // The resource ledger reduces map height on small screens. Keep district
       // buttons apart, using the nearby painted scenery when the center is tight.
-      const districtObstacles=[controls,...[...host.querySelectorAll('.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>e.getBoundingClientRect())].map(r=>({left:r.left-viewportBox.left,top:r.top-viewportBox.top,right:r.right-viewportBox.left,bottom:r.bottom-viewportBox.top}));
+      // Layout coordinates avoid measuring the modal's opening transform, which
+      // can otherwise leave districts offset after the transition finishes.
+      const districtObstacles=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>({left:e.offsetLeft,top:e.offsetTop,right:e.offsetLeft+e.offsetWidth,bottom:e.offsetTop+e.offsetHeight}));
       const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
-      const districtPriority=['city','quarry','mine','woodland','crafts','farmland','trade'];
+      // Fit the southernmost label before crafts, which has more room above it.
+      const districtPriority=['quarry','woodland','city','mine','farmland','crafts','trade'];
       const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
-        const r=target.getBoundingClientRect(),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
+        const style=getComputedStyle(target),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
+        const r={width:parseFloat(style.width),height:parseFloat(style.height)};
+        r.left=x-r.width/2;r.top=y-r.height/2;r.right=r.left+r.width;r.bottom=r.top+r.height;
+        if(districts.find(d=>d.key===target.dataset.estateDistrict).labelAnchor){
+          const fixed={left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+          // Never search for a new location for an anchored district. Panels
+          // and viewport edges may occlude it; the directory remains available.
+          target.hidden=fixed.left<4||fixed.right>width-4||fixed.top<4||fixed.bottom>height-4||districtObstacles.some(other=>overlap(fixed,other));
+          if(!target.hidden)districtObstacles.push(fixed);
+          return;
+        }
         const offsets=[];
         for(const dy of [0,48,-48,96,-96])for(const dx of [0,48,-48,96,-96,144,-144,192,-192,240,-240]){
           if(dy<0&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
@@ -292,11 +312,22 @@
           if(['quarry','woodland','crafts','farmland'].includes(key)&&box.right>cityX-4)return false;
           if(['mine','trade'].includes(key)&&box.left<cityX+4)return false;
           if(key==='woodland'&&y+box.dy>cityY-24)return false;
-          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY;
+          // At the smallest landscape size, allow the southern controls' upper
+          // halves alongside the square while keeping their centers near it.
+          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY-(width<640?r.height/2:0);
         };
-        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left-viewportBox.left+dx,right:r.right-viewportBox.left+dx,top:r.top-viewportBox.top+dy,bottom:r.bottom-viewportBox.top+dy,dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
+        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left+dx,right:r.right+dx,top:r.top+dy,bottom:r.bottom+dy,dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
         let position=findPosition();
         if(!position){
+          // Include obstacle edges so narrow landscape views can use the small
+          // gaps between fixed districts and controls without moving the anchors.
+          const clearance=3.1; // Match the three-pixel collision gap, allowing for rounding.
+          const xs=[r.width/2+4,width-r.width/2-4,x,...districtObstacles.flatMap(o=>[o.left-r.width/2-clearance,o.right+r.width/2+clearance])];
+          const ys=[r.height/2+4,height-r.height/2-4,y,cityY,...districtObstacles.flatMap(o=>[o.top-r.height/2-clearance,o.bottom+r.height/2+clearance])];
+          for(const cy of ys)for(const cx of xs){
+            if(cy<y&&['quarry','mine'].includes(key))continue;
+            const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy});
+          }
           for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=8)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=12){
             if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
             const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
