@@ -332,12 +332,15 @@
       const sizes=nameplates.map(label=>({w:label.offsetWidth,h:label.offsetHeight}));
       const order=buildings.map((b,i)=>i).sort((a,b)=>(buildings[b].key===selected)-(buildings[a].key===selected));
       for(const i of order){
-        const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2;
-        const candidates=[rect(cx-w/2,art.bottom+3,w,h),rect(cx-w/2,art.top-h-3,w,h),rect(art.right+3,cy-h/2,w,h),rect(art.left-w-3,cy-h/2,w,h)];
-        const placement=candidates.find(r=>r.left>=6&&r.top>=6&&r.right<=width-6&&r.bottom<=height-6&&!artBoxes.some(a=>overlaps(r,a))&&!occupied.some(a=>overlaps(r,a)));
-        label.hidden=!placement;
-        targets[i].dataset.hasNameplate=String(!!placement);
-        if(placement){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
+        const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2;
+        // Keep the caption attached to the building's base. Crowding can hide
+        // it, but must never move it above or beside the building.
+        const placement=rect(cx-w/2,art.bottom+3,w,h);
+        const visible=placement.left>=6&&placement.top>=6&&placement.right<=width-6&&placement.bottom<=height-6&&!artBoxes.some(a=>overlaps(placement,a))&&!occupied.some(a=>overlaps(placement,a));
+        targets[i].style.setProperty("--estate-caption-top",(22+(art.bottom-art.top)/2+3)+"px");
+        label.hidden=!visible;
+        targets[i].dataset.hasNameplate=String(visible);
+        if(visible){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
       }
     }
     function zoom(value,clientX,clientY) {
