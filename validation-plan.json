@@ -1,27 +1,12 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "553bd9d88e5e2977cd0ea5e540dae3e4b92d2337",
+  "baseCommit": "8ebe5abe21b05f24fab7701cc62f4f617c447d74",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "inner-city-estate.css",
-        "tools/validate-inner-castle-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Fix building name/level captions and hover/focus fallback beneath their own artwork while preserving district zoom visibility, collision hiding, camera, fixed art and all twenty targets. Existing browser geometry assertions cover desktop and three landscape sizes, initial/completed/construction fixtures, pan/zoom, directory and gear round trips; anchor assertions prevent above/side relocation. No server or economy-authority changes.",
-      "tests": [
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-estate-economy-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/visual-qa/inner-city-estate/README.md"
-      ],
-      "reason": "Record the explicitly confirmed fixed bottom caption rule, replacing adaptive above/side placement; preserve all gameplay values and distinguish pending visual release from existing live economy.",
+      "reason": "Documentation-only verified release record. Compare merge/deploy IDs, required CI results, exact staged/public artifact hashes, desktop/mobile runtime smoke and unchanged backend contract with retained deployment evidence. No executable, balance, artwork or dependency change; no runtime tests apply.",
       "tests": []
     }
   ]
