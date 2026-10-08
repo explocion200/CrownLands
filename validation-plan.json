@@ -1,15 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "db317e04fe9962e29a3c5fe3c3544e8bb388a77e",
+  "baseCommit": "891b3a34dc7270bb6f13af0550b5c003630f4755",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/README.md"
-      ],
-      "reason": "Documentation-only verified release record. Reconcile PR #491/required CI, published merged build/deploy/time, retained publication hold and compatible backend contract/source, ready current realm and matching rules, 55 staged and 165 public file comparisons, exact-runtime compact map/normal panel desktop/landscape interactions and public startup against retained evidence. No executable, gameplay, artwork or dependency changes; no runtime tests apply.",
-      "tests": []
+      "paths": ["estate-economy-ui.js", "estate-economy-ui.css", "tools/validate-estate-economy-browser.js"],
+      "reason": "Estate service presentation and refresh lifecycle: recipes/storage ledgers, unlock and busy/readiness controls, roster power/selection, shared supply allowance, unbuilt-source guard, deposit target confirmation, refreshed Back requirements, field/consent/scroll/exact-row focus preservation, UTC scheduling and commission deadlines over suspended Gear with replaced-opener focus return. The expanded actual-runtime desktop and two landscape browser fixtures also cover shared estate map actions, construction, deposits/retry, timers and Gear navigation. Existing server-rule tests and arithmetic/reward review verify the approved mechanics this UI describes; authority, prices, balance, persistence and backend sources are unchanged, so no emulator changes are required.",
+      "tests": ["tools/validate-estate-economy-browser.js", "tools/test-estate-economy.js", "tools/validate-estate-reward-review.js", "tools/validate-estate-readiness-proposal.js"]
+    },
+    {
+      "paths": ["inner-city-estate.js", "tools/validate-inner-castle.js"],
+      "reason": "Correct building role copy to match the implemented recipes, Hall ceiling, permanent rarity commissions, storage and individual-start construction. Registry and browser validation cover all twenty fixed plots, roads/art dimensions, map/detail/directory consumers and Gear integration. No anchors, artwork, camera or shared realm controls change.",
+      "tests": ["tools/validate-inner-city-estate.js", "tools/validate-inner-castle.js", "tools/validate-estate-economy-browser.js"]
+    },
+    {
+      "paths": ["docs/estate-economy/README.md", "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md"],
+      "reason": "Document all twenty implemented roles, level rewards and confirmed construction/persistence/allowance rules, concrete pending-release UI repairs, selected verification and shared-account pacing limitations. Rule and cohort tests support the review without changing the authoritative balance or claiming deployment.",
+      "tests": ["tools/test-estate-economy.js", "tools/validate-estate-reward-review.js"]
     }
   ]
 }

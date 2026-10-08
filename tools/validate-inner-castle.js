@@ -90,7 +90,7 @@ const BUILDINGS = [
   {
     key: "royal-stables",
     label: "Royal Stables",
-    role: "Permanent building progression unlocks the next Cavalry Master Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Cavalry Master Gear rarity unlocks and faster commissions. Gear and unlocks persist across seasons.",
     artSrc: optimizedAsset("inner-castle-royal-stables"),
   },
   {
@@ -102,25 +102,25 @@ const BUILDINGS = [
   {
     key: "treasury",
     label: "Treasury",
-    role: "Permanent building progression unlocks the next Master of Coin Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Master of Coin Gear rarity unlocks and faster commissions. Gear and unlocks persist across seasons.",
     artSrc: optimizedAsset("inner-castle-treasury"),
   },
   {
     key: "great-hall",
     label: "Great Hall",
-    role: "Ruler power / kingdom upgrades",
+    role: "Raise other estate buildings to the Hall’s completed level.",
     artSrc: optimizedAsset("inner-castle-great-hall"),
   },
   {
     key: "barracks",
     label: "Barracks",
-    role: "Permanent building progression unlocks the next War Captain Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "War Captain Gear rarity unlocks and faster commissions. Gear and unlocks persist across seasons.",
     artSrc: optimizedAsset("inner-castle-barracks"),
   },
   {
     key: "gatehouse",
     label: "Gatehouse",
-    role: "Permanent building progression unlocks the next Defensive Commander Gear set. Building levels and earned unlocks survive season restarts.",
+    role: "Defensive Commander Gear rarity unlocks and faster commissions. Gear and unlocks persist across seasons.",
     artSrc: optimizedAsset("inner-castle-gatehouse"),
   },
 ];

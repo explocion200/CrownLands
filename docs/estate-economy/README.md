@@ -8,6 +8,8 @@ All twenty buildings and eight material stocks persist across seasons, along wit
 
 ## Buildings and progression
 
+The [building mechanics review](BUILDING_MECHANICS_REVIEW.md) explains all twenty roles, their level rewards, the construction loop and the current service-screen polish. That follow-up is pending merge and release; it does not change the approved costs, timers or persistence.
+
 All buildings cap at Level 100. The six original structures are granted at Level 1 once; fourteen surveyed plots start unbuilt. First construction is Gold-only. Every later upgrade uses gathered materials and Gold. Other buildings may fund targets only at or below the **completed Great Hall level**; the Hall has no building-level dependency. Completed benefits remain active throughout upgrades.
 
 | Building | Initial state or construction | Additional first-build prerequisites | Level 100 service |
