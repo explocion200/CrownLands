@@ -43,11 +43,11 @@ async function main() {
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,commits:[],failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>({estate:structuredClone(__estateTest.state),champions:{},serverNowMs:Date.now()});
         const receipts=new Map();
         window.__estateTestApi={
-          getEstateState:async()=>result(),
+          getEstateState:async()=>{__estateTest.loads++;return result();},
           getEstateQuote:async input=>({...result(),quote:{id:"quote_test_001",value:__estateTest.quotes[input.building],input}}),
           commitEstateAction:async request=>{
             __estateTest.commits.push(request);
@@ -69,6 +69,15 @@ async function main() {
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
+      const loads = await evaluate(() => {
+        const snapshot = innerCastleEconomy.snapshot();
+        snapshot.estate.projection = { stock: { timber:100 }, net:{ timber:60 }, untilMs:snapshot.serverNowMs+3600000 };
+        snapshot.receivedAtMs -= 120000;
+        return __estateTest.loads;
+      });
+      await wait(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent === "102");
+      assert.equal(await evaluate(()=>__estateTest.loads),loads,"Counter updates must not poll the server");
+      await evaluate(()=>innerCastleEconomy.refresh());
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
       await click("[data-estate-manage-building=quarry]");

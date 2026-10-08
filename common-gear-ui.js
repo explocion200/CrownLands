@@ -2037,6 +2037,7 @@ function renderInnerCastle(cityId) {
     innerCastleEconomy=window.CrownlandsEstateEconomy.create({
       api:getOnlineApi,scope:getCommonGearActionScope,gear:COMMON_GEAR,
       visible:()=>!!innerCastleEstateView,
+      tick:()=>innerCastleEstateView?.updateResources(),
       apply:result=>{applyServerEconomyResult(result);if(result.cosmetics)applyCosmeticResult(result);},
       update:result=>{innerCastleEstateView?.updateEstate(result.estate);const key=modal.dataset.commonGearBuildingId;if(key&&isCommonGearBuildingOpen(key))renderCommonGearBuilding(key);},
     });
@@ -2051,7 +2052,7 @@ function renderInnerCastle(cityId) {
     onBuilding: innerCastleEconomy ? key=>innerCastleEconomy.building(key) : null,
     onResource: innerCastleEconomy ? key=>innerCastleEconomy.resource(key) : null,
     newMarkers: state?.gear?.newMarkers,
-    getResources: () => ({ ...innerCastleEconomy?.snapshot()?.estate?.stock, gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),
+    getResources: () => ({ ...innerCastleEconomy?.balances(), gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),
     subscribeResources: update => {
       const observer = new MutationObserver(update);
       [goldText, document.getElementById("crownsBalance")].filter(Boolean).forEach(element => observer.observe(element, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label"] }));

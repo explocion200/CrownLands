@@ -48,6 +48,10 @@ for (let seed = 1; seed <= 40; seed++) {
   for (const key in a.levels) a.levels[key] = Math.floor(next() * 101);
   for (const p of E.C.producers) a.processors[p.building] = next() > .2;
   for (const key of E.KEYS) { a.stock[key] = next() * E.capacity(a, key) * 1.1; a.reserves[key] = Math.floor(next() * E.capacity(a, key) * .3); }
+  const projection = E.snapshot(a, 0).projection, projected = structuredClone(a);
+  const elapsed = Math.min(H, (projection.untilMs ?? 2 * H) / 2);
+  E.settle(projected, elapsed);
+  for (const key of E.KEYS) near(projected.stock[key], projection.stock[key] + projection.net[key] * elapsed / H);
   const b = structuredClone(a);
   E.settle(a, 400 * H);
   for (let t = 1; t <= 100; t++) E.settle(b, 4 * t * H);
@@ -133,4 +137,25 @@ s = all(100); const pack = S.supplyQuote(s, "timber", 1, 0);
 assert.equal(pack.crowns, 20); s.supplyUsage = { day: pack.day, hours: 1 };
 assert.throws(() => S.supplyQuote(s, "grain", .25, 0), /allowance/);
 assert(S.supplyQuote(s, "grain", .25, 24 * H));
-console.log("Estate rules passed: prices, continuous production, storage/reserves, long absences, funded jobs, commissions, quests, XP and shared supplies.");
+async function checkRetriedReadClock() {
+  const { createEstateService } = require("../functions/estate-service");
+  const saved = E.initial(Date.now()), writes = new Map();
+  const transaction = {
+    async get(ref) {
+      if (ref.query) return { size: 0 };
+      const data = ref.path.endsWith("/estate/state") ? saved : {};
+      return { exists: true, ref, data: () => structuredClone(data) };
+    },
+    set(ref, value) { writes.set(ref.path, structuredClone(value)); },
+  };
+  const service = createEstateService({
+    db: { doc: path => ({ path }), collection: () => ({ where: () => ({ limit: () => ({ query: true }) }) }) },
+    HttpsError: Error, runTransaction: action => action(transaction),
+    assertCurrentPlayerProfile() {}, normalizeGear: () => require("../functions/common-gear").createDefaultState(),
+  });
+  const result = await service.load("test_owner", saved.settledAtMs - 1000);
+  assert(result.serverNowMs >= saved.settledAtMs, "A delayed request uses a fresh server settlement clock");
+  assert.equal(writes.get("players/test_owner/estate/state").settledAtMs, result.serverNowMs);
+  assert.deepEqual(result.estate.stock, E.zero(), "Retrying an older read invents no production");
+}
+checkRetriedReadClock().then(() => console.log("Estate rules passed: prices, continuous production, storage/reserves, long absences, funded jobs, commissions, quests, XP, shared supplies and retried server clocks.")).catch(error => { console.error(error); process.exitCode = 1; });

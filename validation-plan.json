@@ -11,7 +11,7 @@
         "functions/test/emulator-estate-economy.js",
         "tools/test-estate-economy.js"
       ],
-      "reason": "Implement approved account-owned permanent estate authority. Independently compare 2,000 prices/timers; verify continuous recipes, storage/reserves, long-absence equivalence, frozen queues/deposits and every changing level benefit. Real callable emulator cases verify exact-once Gold/Crown spending and completion, simultaneous quotes/devices, reserved receipt namespace, owner-only reads/server-only writes, old-realm retries, profile replacement, Gear entitlements/claims, permanent champions, XP/recovery/partial parcels and shared paid allowances. Combined cohorts exercise earned infrastructure with all optional services.",
+      "reason": "Implement approved account-owned permanent estate authority. Independently compare 2,000 prices/timers; verify continuous recipes, storage/reserves, long-absence equivalence, frozen queues/deposits and every changing level benefit. Real callable emulator cases verify exact-once Gold/Crown spending and completion, simultaneous quotes/devices, reserved receipt namespace, owner-only reads/server-only writes, old-realm retries, profile replacement, Gear entitlements/claims, permanent champions, XP/recovery/partial parcels and shared paid allowances. Combined cohorts exercise earned infrastructure with all optional services. Verify delayed/retried reads use a fresh server clock and counter projections match settlement before the next production boundary.",
       "tests": [
         "tools/test-estate-economy.js",
         "tools/validate-estate-economy-draft.js",
@@ -47,7 +47,7 @@
         "tools/validate-common-gear.js",
         "tools/validate-inner-castle.js"
       ],
-      "reason": "Wire authoritative balances, independent construction art, building/resource services, permanent-credit confirmation and same-ID retry. Preserve original Gear routes, camera/selection, new-item indicators and offline art fixtures. Verify desktop and small landscape, touch/mouse/keyboard existing navigation, all twenty targets, nested dismissal, lazy modules and controller/listener/deadline cleanup. Backend integration covers wrappers and cross-account authority; shared Gear validator protects inventory semantics.",
+      "reason": "Wire authoritative balances, independent construction art, building/resource services, permanent-credit confirmation and same-ID retry. Preserve original Gear routes, camera/selection, new-item indicators and offline art fixtures. Verify desktop and small landscape, touch/mouse/keyboard existing navigation, all twenty targets, nested dismissal, lazy modules and controller/listener/deadline cleanup. Backend integration covers wrappers and cross-account authority; shared Gear validator protects inventory semantics. Confirm visible counters advance locally without polling and reuse the view lifecycle for timer disposal.",
       "tests": [
         "tools/validate-estate-economy-browser.js",
         "tools/validate-inner-castle-browser.js",

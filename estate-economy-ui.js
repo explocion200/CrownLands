@@ -12,10 +12,23 @@
     dialog.className = "estate-economy-dialog";
     dialog.setAttribute("aria-labelledby", "estateEconomyTitle");
     document.body.append(dialog);
-    let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0;
+    let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
     let bench = [], cursor = "", error = "", opener = null, refreshPending = false;
     const current = () => !destroyed && options.scope() === scope;
     const now = () => data ? data.serverNowMs + Math.max(0, Date.now() - data.receivedAtMs) : Date.now();
+    function balances() {
+      const projection = data?.estate.projection;
+      if (!projection) return data?.estate.stock;
+      const until = Math.min(now(), projection.untilMs ?? now());
+      const hours = Math.max(0, until - data.serverNowMs) / 3600000;
+      return Object.fromEntries(Object.entries(projection.stock).map(([key, value]) => [key, Math.max(0, Math.floor(value + projection.net[key] * hours + 1e-7))]));
+    }
+    function paintCounters() {
+      clearTimeout(counterTimer);
+      if (!current() || document.hidden || !options.visible() || !data) return;
+      options.tick?.();
+      if (Object.values(data.estate.projection?.net || {}).some(rate => Math.abs(rate) > 1e-7)) counterTimer = setTimeout(paintCounters, 1000);
+    }
     const button = (action, text, attributes = "") => `<button type="button" data-economy-action="${action}" ${attributes}>${text}</button>`;
     function accept(result) {
       if (!current()) return;
@@ -28,10 +41,12 @@
     }
     function schedule() {
       clearTimeout(deadlineTimer);
+      paintCounters();
       if (!current() || document.hidden || !options.visible() || !data) return;
       const times = [...data.estate.jobs.map(j => j.completesAtMs), ...data.estate.quests.map(q => q.completesAtMs)].filter(Number.isFinite);
       const upcoming = [...Object.values(data.estate.commissions).map(c => c.completesAtMs), ...Object.values(data.champions).map(c => c.recoveryUntilMs)].filter(t => Number.isFinite(t) && t > now());
       times.push(...upcoming);
+      if (Number.isFinite(data.estate.projection?.untilMs)) times.push(data.estate.projection.untilMs);
       if (times.length) deadlineTimer = setTimeout(() => refresh(), Math.min(2147483647, Math.max(100, Math.min(...times) - now() + 100)));
     }
     async function refresh() {
@@ -225,13 +240,13 @@
       if (inputs[action]) await review(inputs[action]());
     }, {signal:abort.signal});
     dialog.addEventListener("close",()=>{quote=null;pending=null;opener?.isConnected&&opener.focus({preventScroll:true});},{signal:abort.signal});
-    document.addEventListener("visibilitychange",()=>{if(document.hidden)clearTimeout(deadlineTimer);else if(options.visible())refresh();},{signal:abort.signal});
+    document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible())refresh();},{signal:abort.signal});
     const stop = api.subscribeEstateChanges?.(revision => {
       if (current() && data && revision > data.estate.revision) refresh();
     });
     refresh();
-    return { refresh, snapshot:()=>data, building:key=>open({type:"building",key}), resource:key=>open({type:"resource",key}),
-      visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);dialog.remove();} };
+    return { refresh, balances, snapshot:()=>data, building:key=>open({type:"building",key}), resource:key=>open({type:"resource",key}),
+      visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
   root.CrownlandsEstateEconomy = { create };
 })(window);

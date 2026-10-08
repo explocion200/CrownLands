@@ -27,6 +27,9 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     const [saved, profile, wallet] = await Promise.all([
       tx.get(stateRef(uid)), tx.get(db.doc(`players/${uid}`)), tx.get(db.doc(`players/${uid}/cosmetics/state`)),
     ]);
+    // A transaction may retry after a newer request settled this account. Use
+    // a fresh server clock after the read, rather than the older request start.
+    now = Math.max(now, Date.now());
     if (!profile.exists) E.fail("Enter your kingdom before opening the estate.");
     const state = E.normalize(saved.exists ? saved.data() : null, now), champions = {};
     const before = JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements]);
@@ -56,7 +59,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     if (before !== JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements])) state.revision++;
     if (state.recruitOffers?.day !== S.utcDay(now) || !state.recruitOffers?.offers?.length)
       state.recruitOffers = { day: S.utcDay(now), offers: S.offers(state, now, 285) };
-    return { state, champions, completed, profile, wallet: CROWNS.normalize(wallet.exists ? wallet.data() : {}),
+    return { now, state, champions, completed, profile, wallet: CROWNS.normalize(wallet.exists ? wallet.data() : {}),
       ref: stateRef(uid), walletRef: wallet.ref };
   }
   function save(tx, uid, account) {
@@ -71,6 +74,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
   async function load(uid, now = Date.now()) {
     return translate(() => runTransaction(async tx => {
       const account = await read(tx, uid, now);
+      now = account.now;
       assertCurrentPlayerProfile(account.profile.data());
       save(tx, uid, account);
       return result(account, now);
@@ -143,6 +147,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
       const quoteId = crypto.randomUUID();
       return runTransaction(async tx => {
         const account = await read(tx, uid, now, input.championId ? [input.championId] : []);
+        now = account.now;
         assertCurrentPlayerProfile(account.profile.data());
         let economy = null;
         if (["fund", "recruit"].includes(input.action)) economy = await prepareEconomy(tx, uid, now);
@@ -175,6 +180,8 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
         const used = await tx.get(receiptRef(uid, "quote_" + quoteId));
         if (used.exists) E.fail("That quote has already been accepted. Refresh your estate.");
         const account = await read(tx, uid, now, q.input.championId ? [q.input.championId] : []);
+        now = account.now;
+        if (q.expiresAtMs <= now) E.fail("This quote expired. Review a fresh quote.");
         assertCurrentPlayerProfile(account.profile.data());
         if (q.resetGeneration !== account.profile.data().resetGeneration || q.worldId !== account.profile.data().worldId || q.realmShardId !== (account.profile.data().realmShardId || "legacy"))
           E.fail("Review a new quote in the current realm.");

@@ -287,7 +287,21 @@ function benefit(key, level) {
 }
 function snapshot(state, now) {
   const flow = flows(state);
+  // Rates are valid only until an input reserve, storage cap or construction
+  // deadline changes them. Clients may animate counters within this boundary;
+  // every spend still settles and validates against server state.
+  let horizon = Infinity;
+  for (const key of KEYS) {
+    const rate = flow.net[key], stock = state.stock[key], reserve = state.reserves[key] || 0;
+    if (rate > EPS) {
+      if (stock < capacity(state, key) - EPS) horizon = Math.min(horizon, (capacity(state, key) - stock) / rate * HOUR);
+      if (stock < reserve - EPS) horizon = Math.min(horizon, (reserve - stock) / rate * HOUR);
+    }
+    if (rate < -EPS && stock > reserve + EPS) horizon = Math.min(horizon, (stock - reserve) / -rate * HOUR);
+  }
+  for (const job of state.jobs) if (job.status === "running") horizon = Math.min(horizon, Math.max(0, job.completesAtMs - now));
   return { ...structuredClone(state), serverNowMs: now, version: VERSION, slots: slots(state),
+    projection: { stock: { ...state.stock }, net: flow.net, untilMs: Number.isFinite(horizon) ? now + horizon : null },
     stock: Object.fromEntries(KEYS.map(k => [k, Math.floor(state.stock[k] + EPS)])),
     resources: Object.fromEntries(KEYS.map(k => [k, { available: Math.floor(state.stock[k] + EPS),
       capacity: capacity(state, k), gross: flow.production[k], consumed: flow.consumption[k], net: flow.net[k],
