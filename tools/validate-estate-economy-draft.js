@@ -110,10 +110,14 @@ for(const b of c.buildings)for(const target of [2,25]){
  const saved=structuredClone(s);rollover(s);assert.deepEqual({...s,generation:1},saved);
  deposit(s,first);assert.deepEqual(s.deposited,saved.deposited);assert.throws(()=>deposit(s,{...first,id:"stale"}));
  let serial=0;
+ const supplied=Object.fromEntries(keys.map(key=>[key,(s.stock[key]||0)+(s.deposited[key]||0)]));
  for(const [key,total] of Object.entries(bill))while((s.deposited[key]||0)<total){
-  const amount=Math.min(500,total-(s.deposited[key]||0));s.stock[key]=amount;
+  const amount=Math.min(500,total-(s.deposited[key]||0));
+  const gathered=Math.max(0,amount-(s.stock[key]||0));
+  supplied[key]+=gathered;s.stock[key]=(s.stock[key]||0)+gathered;
   deposit(s,{id:"chunk-"+serial++,generation:2,target,version:p.costVersion,amounts:{[key]:amount}});
  }
+ for(const key of keys)assert.equal((s.stock[key]||0)+(s.deposited[key]||0),supplied[key],"Fixture must not replace unspent stock while funding");
  assert.deepEqual(s.deposited,bill);if(target===25)assert(Object.values(bill).some(v=>v>500));
  assert.throws(()=>deposit(s,{id:"over",generation:2,target,version:p.costVersion,amounts:{[k]:1}}));
  s.job={target,endsAt:120,funding:structuredClone(s.deposited),version:p.costVersion};
