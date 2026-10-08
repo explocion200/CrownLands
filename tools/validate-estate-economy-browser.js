@@ -165,7 +165,8 @@ async function main() {
         __estateTest.state.deposits.quarry={target:q.target,deposited:{...q.materials}};
         __estateTest.overview.quarry={status:'ready',ready:true,reason:'Ready to review and start.',bill:{...q,remaining:{}}};
         __estateTest.state.levels.mine=0;__estateTest.overview.mine={status:'blocked',unbuilt:true,ready:false,reason:'Construct this source.'};
-        __estateTest.state.jobs=[{building:'smithy',target:25,status:'running',startedAtMs:Date.now(),durationMs:3600000,completesAtMs:Date.now()+3600000}];
+        __estateTest.state.levels.smithy=0;
+        __estateTest.state.jobs=[{building:'smithy',target:1,status:'running',startedAtMs:Date.now(),durationMs:3600000,completesAtMs:Date.now()+3600000}];
         __estateTest.overview.smithy={status:'constructing',ready:false,reason:'Finish this project.'};
         return innerCastleEconomy.refresh();
       });

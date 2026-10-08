@@ -253,7 +253,7 @@
         let count=0;
         directory.querySelectorAll(".estate-directory-site").forEach(row=>{
           const key=row.querySelector("[data-estate-directory-building]").dataset.estateDirectoryBuilding, state=data.upgradeOverview?.[key];
-          row.hidden=directoryFilter==="all"?false:directoryFilter==="unbuilt"?!!s.levels[key]:directoryFilter==="constructing"?!s.jobs.some(j=>j.building===key&&j.status==="running"):!state||state.status!==directoryFilter;
+          row.hidden=directoryFilter==="all"?false:directoryFilter==="unbuilt"?!!s.levels[key]||s.jobs.some(j=>j.building===key):directoryFilter==="constructing"?!s.jobs.some(j=>j.building===key&&j.status==="running"):!state||state.status!==directoryFilter;
           if (!row.hidden) count++;
           let note=row.querySelector(".estate-readiness-note");if(!note){note=document.createElement("small");note.className="estate-readiness-note";row.querySelector("[data-estate-directory-building]").append(note);}
           const text=state?.reason||"Refresh Estate for upgrade readiness.";if(note.textContent!==text)note.textContent=text;
