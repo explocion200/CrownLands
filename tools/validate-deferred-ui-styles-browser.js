@@ -47,7 +47,8 @@ async function main() {
       await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
       await ready('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"');
       const deferred = await evaluate('Array.from(document.querySelectorAll("link[data-optional-ui-style]")).map(link => link.href)');
-      assert.equal(deferred.length, 9);
+      assert.equal(deferred.length, 18, "All optional styles, including the four officer screens and estate services, are registered");
+      assert(deferred.some(url => url.includes("estate-economy-ui.css")), "Estate management styles are deferred");
       assert.equal(requests.filter(url => deferred.includes(url)).length, 0, "Optional screens must not download their styles at startup");
       await client.send("Fetch.enable", { patterns: [{ urlPattern: "*help-handbook-ui.css*" }, { urlPattern: "*/shop-ui.css*" }] });
       await evaluate("showHelpModal()");

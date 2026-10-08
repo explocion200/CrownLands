@@ -9,8 +9,8 @@ const index = read("index.html"), worker = read("service-worker.js");
 for (const file of ["index.html", "service-worker.js", "tools/build-production-client.js", "tools/generate-release-manifest.js", "tools/validate-production-artifact.js"]) {
   assert(read(file).includes("optional-ui-styles.js"), `Optional style loader must be included in ${file}`);
 }
-const sheets = [...index.matchAll(/<link rel="crownlands-optional-stylesheet" data-optional-ui-style="([^"]+)" href="([^"]+)"/g)];
-assert.equal(sheets.length, 14);
+const sheets = [...index.matchAll(/<link rel="crownlands-optional-stylesheet" data-optional-ui-style="([^"]+)"[^>]*? href="([^"]+)"/g)];
+assert.equal(sheets.length, 18);
 assert(sheets.some(([, name, href]) => name === "estate-economy" && href.startsWith("estate-economy-ui.css")), "Estate controls must load their own deferred stylesheet");
 for (const [, name, href] of sheets) {
   assert(fs.existsSync(path.join(root, href.split("?")[0])), `${name} is shipped`);

@@ -43,7 +43,9 @@
         "estate-economy-ui.js",
         "estate-economy-ui.css",
         "firebaseClient.js",
-        "tools/validate-estate-economy-browser.js"
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-inner-castle.js"
       ],
       "reason": "Wire authoritative balances, independent construction art, building/resource services, permanent-credit confirmation and same-ID retry. Preserve original Gear routes, camera/selection, new-item indicators and offline art fixtures. Verify desktop and small landscape, touch/mouse/keyboard existing navigation, all twenty targets, nested dismissal, lazy modules and controller/listener/deadline cleanup. Backend integration covers wrappers and cross-account authority; shared Gear validator protects inventory semantics.",
       "tests": [
@@ -62,9 +64,10 @@
         "tools/build-production-client.js",
         "tools/generate-release-manifest.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-deferred-ui-styles.js"
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js"
       ],
-      "reason": "Ship deferred estate management script/style and include them in production artifacts/manifests. Validate loading/late response behavior and 14 optional styles, minified artifact integrity and initial/cache budgets. Permit only the measured Firebase wrapper increase to 161 KiB; retain the 4.28 MiB installation cap and approved artwork. Build is mandatory for this diff.",
+      "reason": "Ship deferred estate management script/style and include them in production artifacts/manifests. Validate loading/late response behavior and 18 optional styles including grouped officer sheets, minified artifact integrity and initial/cache budgets. Permit only the measured Firebase wrapper increase to 161 KiB; retain the 4.28 MiB installation cap and approved artwork. Build is mandatory for this diff.",
       "tests": [
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js",
