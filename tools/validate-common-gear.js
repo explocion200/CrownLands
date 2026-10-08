@@ -244,6 +244,7 @@ const previewTarget = { ...groupedInstances[0], instanceId: "preview_target", is
 const previewDuplicate = { ...groupedInstances[1], instanceId: "preview_duplicate", isEquipped: false };
 const previewContext = {
   COMMON_GEAR: gear,
+  innerCastleEconomy: null,
   formatNumber: value => String(value),
   authoritativeShopPricing: { rawBaseGoldPerHour: 100 },
   state: {
@@ -311,6 +312,19 @@ for (const rate of [null, 0, 1, 48000, 1e12]) {
     assert.equal(preview.canUpgrade, rarity !== "legendary" || level !== 5);
   }
 }
+const promotionTarget = { ...previewTarget, rarity: "common", level: 5 };
+const promotionMaterial = { ...previewDuplicate, rarity: "common", level: 5 };
+const entitlements = { [promotionTarget.buildingId]: 0 };
+previewContext.innerCastleEconomy = { snapshot: () => ({ estate: { entitlements } }) };
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "New promotions require the completed officer milestone");
+assert.match(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).reason, /Level 25/);
+entitlements[promotionTarget.buildingId] = 1;
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, true, "Migrated or completed rarity access permits the original two-copy promotion");
+entitlements[promotionTarget.buildingId] = 0;
+previewContext.state.gear.uncommonGearBoxes = 1;
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, true, "An unopened earned chest preserves access while state synchronizes");
+delete previewContext.state.gear.uncommonGearBoxes;
+previewContext.innerCastleEconomy = null;
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances, upgradeContext\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
 assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances, upgradeContext\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
 assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");

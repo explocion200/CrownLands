@@ -1,5 +1,5 @@
 {
-  "status": "PROPOSED — REVIEW MODEL ONLY; NOT RUNTIME CONFIGURATION",
+  "status": "APPROVED ESTATE ECONOMY — pending gameplay release",
   "maxLevel": 100,
   "seasonDays": 30,
   "productionGrowth": 0.16,
@@ -497,8 +497,8 @@
     }
   ],
   "progression": {
-    "status": "PROPOSED quantities/timers; all twenty estate buildings and estate state persist. Owner-confirmed individual cumulative 1/3/6/10-season targets at 50% production.",
-    "costVersion": "persistent-estate-draft-4",
+    "status": "APPROVED: individual resource-equivalent milestones; implementation pending release",
+    "costVersion": "estate-economy-1",
     "productionShare": 0.5,
     "withinBandGrowth": 0.1,
     "constructionShare": 0.2,
@@ -533,5 +533,79 @@
       "timerMinimumWeight": 0.02,
       "timerRampLevels": 8
     }
-  }
+  },
+  "rules": {
+    "status": "APPROVED DESIGN — October 8, 2026; deployment requires runtime validation",
+    "version": "estate-readiness-proposal-1",
+    "hallLead": 0,
+    "officerCommission": {
+      "baseHours": 168,
+      "hoursAt100": 72,
+      "materialProductionHours": 4,
+      "concurrentPerOfficer": 1,
+      "rarity": "highest completed building milestone; independently preserve grandfathered existing item access",
+      "level": 1,
+      "familyChoice": "one selected family for this officer",
+      "higherRarityAcquisitionExceptionApproved": true
+    },
+    "wagonCapacityBonus": [
+      0,
+      15,
+      8
+    ],
+    "marketCapacityBonus": [
+      0,
+      12,
+      6
+    ],
+    "quest": {
+      "rewardHoursPerElapsedHour": [
+        0.009,
+        0.0135,
+        0.018,
+        0.0225,
+        0.027
+      ],
+      "foodHoursPerElapsedHour": 0.01,
+      "advancedToolHoursPerElapsedHour": 0,
+      "maxMealBonus": 0.12,
+      "sharedHoursPerUtcDay": 2.4,
+      "durations": [
+        2,
+        4,
+        8
+      ],
+      "maxParties": 3
+    },
+    "champion": {
+      "xpCostPerCurrentLevel": 4,
+      "xpPerHour": 20,
+      "tierXpMultipliers": [
+        1,
+        1.1,
+        1.2,
+        1.3,
+        1.4
+      ],
+      "recruitLevelStep": 10,
+      "bankedLevelLimit": 1,
+      "activeRosterMax": 24,
+      "permanentBench": "retain every acquired champion; paginated records outside the active roster"
+    },
+    "fundedJob": {
+      "goldPolicy": "Gold and materials become nonwithdrawable credit bound to the exact building/target/version when a reviewed job is funded. Removing an unstarted job pauses it; resuming never charges again. Credit cannot return to the realm wallet or move to another project.",
+      "oldRealmRetry": "return the existing matching receipt; reject a new spend against an expired realm",
+      "balanceRevision": "honor the funded quote and timer contract; never silently reprice",
+      "completion": "server deadline, once only, across all realms"
+    }
+  },
+  "schemaVersion": 1,
+  "initialCompleted": [
+    "great-hall",
+    "treasury",
+    "barracks",
+    "gatehouse",
+    "royal-stables",
+    "alehouse"
+  ]
 }

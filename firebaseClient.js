@@ -2570,6 +2570,18 @@
     return callServerFunction("purchaseShopItem", { itemId, cost, quantity });
   }
 
+  function subscribeEstateChanges(callback) {
+    if (!client.db || !client.user?.uid) return null;
+    const uid=client.user.uid,{doc}=client.modules.firestore;
+    return subscribeScopedSnapshot(doc(client.db,"players",uid,"estate","state"),snapshot=>{
+      if(client.user?.uid===uid&&!snapshot.metadata?.hasPendingWrites&&snapshot.exists())callback(snapshot.data().revision);
+    },()=>{});
+  }
+  async function getEstateState() { return callServerFunction("getEstateState", {}); }
+  async function getEstateQuote(input) { return callServerFunction("getEstateQuote", { input }); }
+  async function commitEstateAction(data) { return callServerFunction("commitEstateAction", data); }
+  async function getEstateChampions(cursor = "") { return callServerFunction("getEstateChampions", { cursor }); }
+
   async function getCommonGearStatus() {
     return callServerFunction("getCommonGearStatus", {});
   }
@@ -3689,6 +3701,7 @@
     applyRealmIdentity,
     relinquishCity,
     purchaseShopItem,
+    subscribeEstateChanges, getEstateState, getEstateQuote, commitEstateAction, getEstateChampions,
     getCommonGearStatus,
     purchaseCommonGearBox,
     openCommonGearBox,

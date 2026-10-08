@@ -679,6 +679,11 @@ async function main() {
     }
   }
 
+  // This suite retains its existing copy/fee/concurrency scope with earned officer unlocks.
+  // New-account gates and nonrevoking migration are covered by emulator-estate-economy.
+  const estate = require("../estate-economy").initial(Date.now());
+  for (const key in estate.levels) estate.levels[key] = 100;
+  await db.doc(`players/${user.uid}/estate/state`).set(estate);
   const gearStatus = await callFunction("getCommonGearStatus", user.token);
   const gearBoxPrice = Number(gearStatus.shop?.price || 0);
   const expectedGearBoxPrice = getExpectedShopPrice("common_gear_box", gearStatus.shopPricing);

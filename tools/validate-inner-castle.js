@@ -336,13 +336,16 @@ assert.match(
 const featureSource = [guardSource, openSource, renderSource, previewSource, selectSource, cleanupSource].join("\n");
 assert.doesNotMatch(
   featureSource,
-  /\b(?:saveGame|flushOnlineSave|getOnlineApi|callServerFunction|changeMainCity|spendGold|deductGold)\s*\(/,
-  "The Inner Castle overview must not persist state or call economy/server actions."
+  /\b(?:saveGame|flushOnlineSave|callServerFunction|changeMainCity|spendGold|deductGold)\s*\(/,
+  "The Inner Castle overview delegates authority to the estate controller instead of spending or persisting locally."
 );
+assert.match(renderSource, /CrownlandsEstateEconomy\.create/, "Online estates must use the quoted server-authoritative controller");
+assert.match(renderSource, /updateEstate\(result\.estate\)/, "Authoritative changes patch the existing estate view");
+assert.match(cleanupSource, /innerCastleEconomy\?\.destroy\(\)/, "Closing the estate disposes its economy controller");
 assert.doesNotMatch(
   featureSource,
   /\b(?:gold|troops|production|defense|walls|marchSpeed|morale)\s*(?:\+\+|--|[+\-*/]?=)/,
-  "The placeholder Inner Castle must not mutate gameplay stats."
+  "The Inner Castle presentation must not mutate gameplay stats."
 );
 
 assert.match(serverSource, /exports\.equipCommonGear\s*=/, "Inner Castle gear equipment must be server-authoritative.");

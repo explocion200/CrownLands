@@ -1,0 +1,98 @@
+{
+  "status": "PASS: approved arithmetic and transaction-contract fixtures",
+  "gameplayDeploymentReady": false,
+  "reasons": [
+    "Arithmetic evidence alone does not certify release readiness",
+    "Required PR checks, coordinated publication and production smoke verification are separate gates",
+    "Physical-device pacing and touch QA remain manual"
+  ],
+  "proposedChangingUpgrades": [
+    {
+      "key": "great-hall",
+      "changingLevels": 99
+    },
+    {
+      "key": "treasury",
+      "changingLevels": 99
+    },
+    {
+      "key": "barracks",
+      "changingLevels": 99
+    },
+    {
+      "key": "gatehouse",
+      "changingLevels": 99
+    },
+    {
+      "key": "royal-stables",
+      "changingLevels": 99
+    },
+    {
+      "key": "alehouse",
+      "changingLevels": 99
+    },
+    {
+      "key": "guild-master",
+      "changingLevels": 99
+    },
+    {
+      "key": "foresters-lodge",
+      "changingLevels": 99
+    },
+    {
+      "key": "quarry",
+      "changingLevels": 99
+    },
+    {
+      "key": "mine",
+      "changingLevels": 99
+    },
+    {
+      "key": "farmstead",
+      "changingLevels": 99
+    },
+    {
+      "key": "storehouse",
+      "changingLevels": 99
+    },
+    {
+      "key": "granary",
+      "changingLevels": 99
+    },
+    {
+      "key": "sawmill",
+      "changingLevels": 99
+    },
+    {
+      "key": "smithy",
+      "changingLevels": 99
+    },
+    {
+      "key": "workshop",
+      "changingLevels": 99
+    },
+    {
+      "key": "windmill",
+      "changingLevels": 99
+    },
+    {
+      "key": "builders-yard",
+      "changingLevels": 99
+    },
+    {
+      "key": "wagon-yard",
+      "changingLevels": 99
+    },
+    {
+      "key": "market",
+      "changingLevels": 99
+    }
+  ],
+  "maxQuestHoursPerDay": 2.17728,
+  "maxQuestPercent": 9.072000000000001,
+  "championXpTotal": 19800,
+  "championFastestQuestHours": 707.1428571428571,
+  "championDaysAtEightHours": 88.39285714285714,
+  "officerLegendarySetDaysAfterUnlock": 384,
+  "fourCommissionResourceHoursPerDay": 5.333333333333333
+}

@@ -1316,6 +1316,10 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
   const hasMatchingMaterial = duplicateCount >= requirement.duplicates;
   const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= upgradeGold;
   const issues = [];
+  const entitlement = innerCastleEconomy?.snapshot()?.estate?.entitlements?.[instance.buildingId];
+  const earnedTier = Math.max(entitlement || 0, state.gear?.uncommonGearBoxes ? 1 : 0, ...instances.filter(item=>item.buildingId===instance.buildingId).map(item=>COMMON_GEAR.RARITIES.indexOf(item.rarity)));
+  const hasEntitlement = !requirement.promotion || entitlement === undefined || earnedTier >= COMMON_GEAR.RARITIES.indexOf(requirement.nextRarity);
+  if(!hasEntitlement)issues.push("Upgrade this officer building to Level "+[1,25,50,75,100][COMMON_GEAR.RARITIES.indexOf(requirement.nextRarity)]+" to unlock this rarity.");
   if (!hasMatchingMaterial) {
     issues.push(`No matching material. Requires ${requirement.duplicates} matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}; ${duplicateCount} available.`);
     if (!instance.isEquipped && matchingEquippedCount > 0) {
@@ -1331,7 +1335,7 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
     upgradeGold,
     hasMatchingMaterial,
     hasEnoughGold,
-    canUpgrade: hasMatchingMaterial && hasEnoughGold,
+    canUpgrade: hasMatchingMaterial && hasEnoughGold && hasEntitlement,
     reason: issues.join(" "),
   };
 }
@@ -1915,6 +1919,12 @@ function renderCommonGearBuilding(buildingId) {
     </footer>
     ${renderCommonGearMergeConfirmation(viewModel)}
   </section>`;
+  if(innerCastleEconomy){
+    const seal=modalBody.querySelector(".tg-seal");
+    if(seal){const button=document.createElement("button");button.type="button";button.className=seal.className+" estate-officer-management";button.innerHTML=seal.innerHTML;
+      button.title="Building upgrades & commissions";button.setAttribute("aria-label","Manage "+building.name+" building and commissions");button.dataset.estateOfficerManage=buildingId;
+      button.addEventListener("click",()=>innerCastleEconomy?.building(buildingId));seal.replaceWith(button);}
+  }
   bindCommonGearScreen(viewModel);
   bindTreasuryGearPortrait();
   restore();
@@ -1983,17 +1993,21 @@ function renderInnerCastleIcon(key) { return `<svg class="bailey-icon" viewBox="
 
 let innerCastleEstateView = null;
 let innerCastleEstateCamera = null;
+let innerCastleEconomy = null;
 
 function suspendInnerCastleEstate() {
   if (!innerCastleEstateView) return;
   innerCastleEstateCamera = innerCastleEstateView.snapshot();
   innerCastleEstateView.destroy();
   innerCastleEstateView = null;
+  innerCastleEconomy?.visibilityChanged();
 }
 
 function clearInnerCastleModalState() {
   suspendInnerCastleEstate();
   innerCastleEstateCamera = null;
+  innerCastleEconomy?.destroy();
+  innerCastleEconomy = null;
   innerCastleSelectedBuildingKey = "";
   delete modal.dataset.innerCastleCityId;
   delete modal.dataset.innerCastleReturnCityId;
@@ -2016,14 +2030,29 @@ function renderInnerCastle(cityId) {
   suspendInnerCastleEstate();
   modalTitle.textContent = city.name + " — Inner Castle";
   modal.classList.add("bailey-modal");
+  if(getOnlineApi()?.getEstateState && !ensureOptionalUiScripts("estate-economy",modalBody,()=>{
+    if(modal.classList.contains("inner-castle-modal"))renderInnerCastle(cityId);
+  }))return true;
+  if(getOnlineApi()?.getEstateState && window.CrownlandsEstateEconomy && !innerCastleEconomy){
+    innerCastleEconomy=window.CrownlandsEstateEconomy.create({
+      api:getOnlineApi,scope:getCommonGearActionScope,gear:COMMON_GEAR,
+      visible:()=>!!innerCastleEstateView,
+      tick:()=>innerCastleEstateView?.updateResources(),
+      apply:result=>{applyServerEconomyResult(result);if(result.cosmetics)applyCosmeticResult(result);},
+      update:result=>{innerCastleEstateView?.updateEstate(result.estate);const key=modal.dataset.commonGearBuildingId;if(key&&isCommonGearBuildingOpen(key))renderCommonGearBuilding(key);},
+    });
+  }
   const roles = Object.fromEntries(Object.entries(COMMON_GEAR.BUILDINGS).map(([key, value]) => [key, value.characterRole]));
   innerCastleEstateView = window.CrownlandsEstate.mount(modalBody, {
     cityName: city.name,
     selectedKey: innerCastleSelectedBuildingKey,
     camera: innerCastleEstateCamera,
     gearRoles: roles,
+    estate: innerCastleEconomy?.snapshot()?.estate,
+    onBuilding: innerCastleEconomy ? key=>innerCastleEconomy.building(key) : null,
+    onResource: innerCastleEconomy ? key=>innerCastleEconomy.resource(key) : null,
     newMarkers: state?.gear?.newMarkers,
-    getResources: () => ({ gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),
+    getResources: () => ({ ...innerCastleEconomy?.balances(), gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),
     subscribeResources: update => {
       const observer = new MutationObserver(update);
       [goldText, document.getElementById("crownsBalance")].filter(Boolean).forEach(element => observer.observe(element, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-label"] }));
@@ -2039,6 +2068,7 @@ function renderInnerCastle(cityId) {
       mapFrame.focus({ preventScroll: true });
     },
   });
+  innerCastleEconomy?.visibilityChanged();
   return true;
 }
 

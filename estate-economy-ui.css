@@ -1,0 +1,26 @@
+.estate-economy-dialog{box-sizing:border-box;width:min(860px,calc(100vw - 24px));max-height:calc(100dvh - 20px);padding:0;border:3px double #8b7549;background:#eee3bf;color:#352c1c;box-shadow:0 12px 60px #0009;font:16px Georgia,serif;overflow:hidden}
+.estate-economy-dialog::backdrop{background:#1d1b1380}
+.estate-economy-dialog[open]{display:flex;flex-direction:column}
+.estate-economy-dialog header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #ac9667;background:#e5d7ac;flex-shrink:0}
+.estate-economy-dialog header>div{flex:1}.estate-economy-dialog h2{margin:2px 0;font-size:25px}
+.estate-economy-dialog small,.estate-economy-kicker,.estate-economy-muted{color:#746544}
+.estate-economy-content{padding:16px 20px;overflow:auto;overscroll-behavior:contain;min-height:0}
+.estate-economy-dialog article{border-top:1px solid #b8a77c;margin-top:18px;padding-top:12px}
+.estate-economy-dialog h3{margin:4px 0 10px;font-size:20px}
+.estate-economy-dialog p{line-height:1.5;margin:8px 0 14px}
+.estate-economy-dialog button,.estate-economy-dialog select,.estate-economy-dialog input:not([type=checkbox]){min-height:44px;border:1px solid #a08a57;border-radius:3px;color:inherit;background:#f5ebce;padding:8px 12px;font:inherit;max-width:100%;box-sizing:border-box}
+.estate-economy-dialog button{cursor:pointer;margin:3px 0}.estate-economy-dialog button:hover{background:#dfc996}
+.estate-economy-dialog :focus-visible{outline:3px solid #885044;outline-offset:2px}
+.estate-economy-dialog :disabled{opacity:.55;cursor:wait}
+.estate-economy-dialog label{color:#352c1c;display:flex;gap:6px;flex-direction:column;margin:8px 0}
+.estate-economy-actions{display:flex;align-items:end;flex-wrap:wrap;gap:10px}
+.estate-economy-benefits{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.estate-economy-benefits p{background:#e4d5a8;padding:12px;margin:0}
+.estate-economy-dialog .estate-economy-commit,.estate-economy-dialog .estate-economy-champion{flex-direction:row;align-items:center;gap:12px;line-height:1.5;padding:8px;border:1px solid #b5a077}
+.estate-economy-dialog input[type=checkbox]{width:24px;height:24px;min-width:24px;accent-color:#824332}
+.estate-economy-champion button{margin-left:auto}
+.estate-economy-error{background:#f0c9b4;color:#7e2f20;padding:12px;border:1px solid #b87054}
+.estate-economy-dialog footer{padding:10px 16px;border-top:1px solid #b8a77c;font-size:12px;color:#746544;flex-shrink:0}
+.estate-officer-management{min-height:44px;padding:7px 10px;border:1px solid #a08a57;background:#eee3bf;color:#352c1c;cursor:pointer}
+@media(max-height:500px){.estate-economy-dialog header{padding:6px 12px}.estate-economy-dialog h2{font-size:20px}.estate-economy-content{padding:10px 14px}.estate-economy-dialog footer{padding:5px 12px}}
+@media(max-width:520px){.estate-economy-benefits{grid-template-columns:1fr}.estate-economy-dialog{width:calc(100vw - 12px)}.estate-economy-dialog header{flex-wrap:wrap}.estate-economy-dialog h2{font-size:21px}.estate-economy-champion{flex-wrap:wrap}}
