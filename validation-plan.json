@@ -1,15 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "50a795d98beb55c276f2c1c55ff02778bb6db4a4",
+  "baseCommit": "11374d09c794ce7c5925021821e8f9abe2db7751",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/estate-economy/README.md",
-        "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md"
+        "estate-economy-ui.js",
+        "estate-economy-ui.css",
+        "common-gear-ui.js",
+        "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Documentation-only record of authorized PR #493 merge and verified web publication, retained sanitized CI/staged/public/browser/backend/rules/realm evidence and manual limits. Updates current snapshot, channel matrix and pending review status without changing approved gameplay, runtime or artwork. Exact release evidence was checked before writing; no runtime test or production rebuild applies to documentary edits. The published artifact remains the separately verified merged implementation.",
-      "tests": []
+      "reason": "Implement seven owner-approved estate management improvements: overview and explicit project/reward navigation, district-preserving server-readiness filters and keyboard entry, actionable production blockers, existing unlock previews, confirmed completion feedback without refitting artwork, champion/recruit/expedition/XP cards, and account-device guide dismissal. Browser validation covers desktop and two short landscape views plus existing all-site map/deposit/start/retry/timer/Gear/focus/lifecycle behavior. Shared Gear validation protects existing officer screens; registry validation checks unchanged fixed artwork geometry. No balance, asset or construction-authority changes.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-city-estate.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/estate-economy.js",
+        "functions/estate-service.js",
+        "functions/index.js",
+        "firebaseClient.js",
+        "tools/test-estate-economy.js",
+        "functions/test/emulator-estate-economy.js"
+      ],
+      "reason": "Optional includeUpgradeOverview forwards through the existing authenticated callable and reuses actual construction quotes with prepared Main City Gold; no quote documents, deposits or contracts are created. Ordinary reads retain their existing lightweight path. Unit tests cover exact bill parity, immutable state, funded credit, Hall/source prerequisites, Gold, builders, legacy paid work, max level and delayed clocks. Estate emulator covers callable integration, authorization/season persistence, deposits/start/transactions/legacy/services, no extra spend quotes and the optional path. Shared economy concurrency and coordinated-release emulators cover currency settlement and current-realm compatibility affected by opting into prepared economy. Client browser tests cover forwarding and display; shared instant economy validation guards unrelated client spending wrappers.",
+      "tests": [
+        "tools/test-estate-economy.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-estate-economy-browser.js",
+        "functions/test/emulator-estate-economy.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-coordinated-release.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/README.md"
+      ],
+      "reason": "Record the owner-confirmed seven-feature presentation rules, optional authoritative readiness semantics and device preference, retaining approved economy and LIVE release history. Pending release is explicitly separated from current deployment. Documentation assertions are reviewed against rule/unit/browser behavior; no arithmetic rebalance or new source artwork applies.",
+      "tests": [
+        "tools/test-estate-economy.js",
+        "tools/validate-estate-economy-browser.js"
+      ]
     }
   ]
 }

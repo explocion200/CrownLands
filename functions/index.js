@@ -35807,7 +35807,7 @@ exports.resolveDueRewardCampPayouts = onSchedule({
 
 // Estate authority is account-owned. Matching accepted retries are reconciled
 // before realm compatibility checks; new spending always validates current scope.
-exports.getEstateState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.load(requireAuth(request)));
+exports.getEstateState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.load(requireAuth(request), Date.now(), request.data?.includeUpgradeOverview === true));
 exports.getEstateQuote = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.quote(requireAuth(request), request.data?.input));
 exports.commitEstateAction = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.execute(
   requireAuth(request, { allowRealmMismatch: true }), request.data || {}, () => requireCompatibleClient(request.data || {})));

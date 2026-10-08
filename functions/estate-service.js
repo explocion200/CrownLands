@@ -71,13 +71,16 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     return { ok: true, estate: E.snapshot(account.state, now), champions: account.champions,
       crowns: account.wallet.crowns, cosmetics: account.wallet, serverNowMs: now };
   }
-  async function load(uid, now = Date.now()) {
+  async function load(uid, now = Date.now(), includeUpgradeOverview = false) {
     return translate(() => runTransaction(async tx => {
       const account = await read(tx, uid, now);
       now = account.now;
       assertCurrentPlayerProfile(account.profile.data());
+      const economy = includeUpgradeOverview ? await prepareEconomy(tx, uid, now) : null;
+      const upgradeOverview = economy ? E.upgradeOverview(account.state, economy.goldFloat, rawMainGoldRate(economy)) : null;
       save(tx, uid, account);
-      return result(account, now);
+      if (economy) writeEconomy(tx, economy);
+      return { ...(economy ? economyResponse(economy) : {}), ...result(account, now), ...(upgradeOverview ? { upgradeOverview } : {}) };
     }));
   }
   function validateInput(input) {

@@ -2577,7 +2577,7 @@
       if(client.user?.uid===uid&&!snapshot.metadata?.hasPendingWrites&&snapshot.exists())callback(snapshot.data().revision);
     },()=>{});
   }
-  async function getEstateState() { return callServerFunction("getEstateState", {}); }
+  async function getEstateState(includeUpgradeOverview = false) { return callServerFunction("getEstateState", { includeUpgradeOverview: includeUpgradeOverview === true }); }
   async function getEstateQuote(input) { return callServerFunction("getEstateQuote", { input }); }
   async function commitEstateAction(data) { return callServerFunction("commitEstateAction", data); }
   async function getEstateChampions(cursor = "") { return callServerFunction("getEstateChampions", { cursor }); }

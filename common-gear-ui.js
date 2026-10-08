@@ -2035,7 +2035,7 @@ function renderInnerCastle(cityId) {
   }))return true;
   if(getOnlineApi()?.getEstateState && window.CrownlandsEstateEconomy && !innerCastleEconomy){
     innerCastleEconomy=window.CrownlandsEstateEconomy.create({
-      api:getOnlineApi,scope:getCommonGearActionScope,gear:COMMON_GEAR,gold:()=>Math.max(0,Math.floor(getProjectedGold())),
+      api:getOnlineApi,scope:getCommonGearActionScope,preferenceScope:()=>getCurrentOnlineUid(),gear:COMMON_GEAR,gold:()=>Math.max(0,Math.floor(getProjectedGold())),
       visible:()=>!!innerCastleEstateView,
       tick:()=>innerCastleEstateView?.updateResources(),
       apply:result=>{applyServerEconomyResult(result);if(result.cosmetics)applyCosmeticResult(result);},
@@ -2049,7 +2049,7 @@ function renderInnerCastle(cityId) {
     camera: innerCastleEstateCamera,
     gearRoles: roles,
     estate: innerCastleEconomy?.snapshot()?.estate,
-    actions: innerCastleEconomy ? window.CrownlandsEstateEconomy.mapActions(renderCrownlandsIcon) : null,
+    actions: innerCastleEconomy ? window.CrownlandsEstateEconomy.mapActions(renderCrownlandsIcon, innerCastleEconomy) : null,
     now: () => innerCastleEconomy?.now(),
     onBuilding: innerCastleEconomy ? key=>innerCastleEconomy.building(key) : null,
     onUpgrade: innerCastleEconomy ? key=>innerCastleEconomy.upgrade(key) : null,
