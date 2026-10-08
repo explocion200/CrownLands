@@ -1,25 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "4b8b20f9320ff935e980cec6d5a30689ba1ef44a",
+  "baseCommit": "75a5829d3077432ad44cc486bc37a80d273e6de5",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js"
-      ],
-      "reason": "Fix Quarry Hills and Woodland to geographic label anchors while retaining district camera destinations. Validate map geometry and production-delivered rendering, fixed positions through zoom/pan/panels, seven separate district controls at desktop and small landscape sizes, twenty building selections, existing captions, gear returns and scene cleanup. No server-authoritative behavior changes or emulator suites apply.",
-      "tests": [
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js"
-      ]
-    },
-    {
-      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/visual-qa/inner-city-estate/README.md"
       ],
-      "reason": "Record the owner's confirmed fixed western district-label refinement and review procedure, explicitly pending release. Documentation reviewed against the implementation; no separate runtime tests apply.",
+      "reason": "Documentation-only verified release record. Compare merge/deploy IDs, required CI results, exact staged/public artifact hashes, delivered estate interactions and public desktop/mobile startup with retained deployment evidence. No executable, gameplay, artwork or dependency change; no runtime tests apply.",
       "tests": []
     }
   ]
