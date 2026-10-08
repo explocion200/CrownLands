@@ -75,6 +75,8 @@ Gold for target L≥2 is ceil(G × (0.05 + 0.003L + 0.00007L²) × building fact
 
 ## Deposits and individual upgrades
 
+**Presentation follow-up, confirmed October 8 — IMPLEMENTED — PENDING RELEASE, not deployed:** selecting an online building stays on the estate. Upgrade uses the city map's gold hex on the left; Enter is on the right and opens that building's services or its existing officer Gear screen. The selected building's map pair appears at district zoom when space permits, with the same left/right actions in details and the Buildings directory. Enter becomes available at completed Level 1 and remains available during later upgrades. Returning preserves camera/selection. This replaces direct Gear entry on selection and the prior parchment up-arrow appearance; deposit rules and prices remain unchanged.
+
 A material deposit is credit for one building’s next level and price version. Quote required/deposited/remaining amounts, accept positive whole units only, and reject overpayment. Credit can exceed ordinary storage capacity. There is one partial next-level project per building; a building with already funded work cannot open another partial deposit project.
 
 Open the separate up-arrow on the map, the selected-site Upgrade requirements button, or the matching directory action. The panel shows current/next benefits, required/deposited/remaining materials, available stock, Gold and duration. Deposit any available positive whole amount toward this one building. Each accepted deposit atomically removes that stock and adds permanent credit. The player explicitly accepts that payments are **nonrefundable and nontransferable**.

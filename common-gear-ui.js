@@ -2049,6 +2049,7 @@ function renderInnerCastle(cityId) {
     camera: innerCastleEstateCamera,
     gearRoles: roles,
     estate: innerCastleEconomy?.snapshot()?.estate,
+    actions: innerCastleEconomy ? window.CrownlandsEstateEconomy.mapActions(renderCrownlandsIcon) : null,
     onBuilding: innerCastleEconomy ? key=>innerCastleEconomy.building(key) : null,
     onUpgrade: innerCastleEconomy ? key=>innerCastleEconomy.upgrade(key) : null,
     onResource: innerCastleEconomy ? key=>innerCastleEconomy.resource(key) : null,

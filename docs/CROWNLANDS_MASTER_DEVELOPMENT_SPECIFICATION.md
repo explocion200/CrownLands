@@ -1705,6 +1705,8 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 
 ### Confirmed Inner Castle estate presentation — October 6, 2026
 
+**Action layout refinement, confirmed October 8, 2026 — `IMPLEMENTED — PENDING RELEASE` on `codex/estate-upgrade-enter-buttons`:** selecting an online estate building stays on the estate. Show **Upgrade on the left** using the city map's gold arrow-up hex button, and **Enter on the right** using the matching movement hex button. Enter opens that building's services, or the existing Gear screen for Treasury, Barracks, Gatehouse and Royal Stables. This supersedes direct equipment entry on building selection for the online estate. Use 64px controls; expose the pair beside the selected building at district zoom when both fit without covering art, labels or controls. Retain the same left/right actions in selected-site details and all twenty directory rows as the crowded-screen fallback. Enter is unavailable before Level 1 completes, but remains available during later upgrades. Preserve camera/selection on menu return, fixed bottom captions and the existing deposit-then-start rules. This presentation follow-up is not yet deployed; the preceding verified release remains the live baseline.
+
 The approved estate supersedes the compact six-building Royal Bailey overview and its old hanging-sign anchors. It opens as a full-screen 4:3 illustrated estate with the entire map fitted, a small inhabited walled city in the middle third, northern rocky hills, western woodland and southern farmland. This estate has no river. All buildings face south. Thin umber outlines, painted shading, olive grass, ochre timber, pale stone and burgundy pennants follow the user-provided illustrated atlas reference.
 
 Twenty permanent sites retain their positions and finished footprints through all visual states. The existing Treasury, Great Hall, Barracks, Alehouse, Gatehouse and Royal Stables begin completed. Guild Master and thirteen outer buildings begin as surveyed plots. Gatehouse, Royal Stables and Wagon Yard are distinct structures. Cottages, gardens and service yards provide decorative town life.
@@ -2299,6 +2301,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 — Left Upgrade and right Enter estate controls
+
+- Confirmed the shared city-style gold Upgrade button on the left and matching Enter on the right, with map, selected-site and directory access.
+- Online building selection now stays outside; Enter opens services or the appropriate officer Gear UI. Preserve deposits, explicit starts, no new queues, fixed captions and camera returns.
+- Implemented on `codex/estate-upgrade-enter-buttons`, with desktop and landscape browser validation. Required PR checks and authorized deployment remain pending.
 
 ## October 8, 2026 UTC — External building upgrade release verification
 

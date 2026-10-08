@@ -399,6 +399,8 @@ The full estate supersedes the former compact Royal Bailey and six hanging-sign 
 
 Source masters and prompts: [Estate art sources](./art-sources/inner-city-estate/README.md). Review fixtures are excluded from production: [Estate visual QA](./visual-qa/inner-city-estate/README.md).
 
+- Action refinement, confirmed October 8; **IMPLEMENTED — PENDING RELEASE**, not deployed: replace the separate parchment up-arrow with the shared city map's 64px gold arrow-up hex, labeled Upgrade, on the left; use a matching blue-gray forward hex, labeled Enter, on the right. Show this pair for the selected building at district zoom only when both fit clear of artwork, captions and controls. Keep Upgrade/Enter in the same left/right order in selected-site details and all twenty directory rows. Selection stays outside in the online estate; Enter opens its services or officer Gear. Disabled Enter uses the shared muted treatment until Level 1 completes. The name/level remains at its fixed bottom anchor. This supersedes the earlier arrow appearance and online direct-Gear selection rule, with no art, terrain or building-position changes.
+
 
 
 Existing preview and interior rules retained:
