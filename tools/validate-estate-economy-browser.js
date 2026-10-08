@@ -126,7 +126,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,benefitsAt1:E.snapshot(E.initial(estate.settledAtMs),estate.settledAtMs).benefits});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -464,7 +464,7 @@ async function main() {
       // including locks, recipes, bench controls and refresh-safe form drafts.
       await evaluate(()=>{
         const s=__estateTest.state;s.levels['guild-master']=1;s.levels.alehouse=1;s.levels['wagon-yard']=1;
-        s.benefits.alehouse=__estateTest.benefitsAt1.alehouse;
+        for(const key of ['guild-master','alehouse','wagon-yard'])s.benefits[key]=__estateTest.benefitsAt1[key];
         s.activeChampionIds=['champion_one','champion_two','champion_busy'];
         __estateTest.champions=Object.fromEntries(s.activeChampionIds.map((id,i)=>[id,{id,name:'Champion '+(i+1),quality:0,level:1,xp:0,questId:i===2?'quest_busy':'',recoveryUntilMs:0}]));
         __estateTest.offers={offers:[{id:'offer_one',name:'Common Champion',quality:0,level:1,claimed:false}]};
