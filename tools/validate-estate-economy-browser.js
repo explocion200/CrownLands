@@ -44,7 +44,14 @@ async function main() {
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
         window.__estateTest={state:payload.snapshot,quotes:payload.quotes,commits:[],loads:0,failOnce:true,scope:"estate-test"};
-        const result=()=>({estate:structuredClone(__estateTest.state),champions:{},serverNowMs:Date.now()});
+        const result=()=>{
+          const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
+          // The benchmark uses a fixed browser epoch. Rebase the synthetic
+          // server deadline instead of mixing it with the host's wall clock.
+          if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
+          estate.serverNowMs=serverNowMs;
+          return{estate,champions:{},serverNowMs};
+        };
         const receipts=new Map();
         window.__estateTestApi={
           getEstateState:async()=>{__estateTest.loads++;return result();},
@@ -75,7 +82,7 @@ async function main() {
         snapshot.receivedAtMs -= 120000;
         return __estateTest.loads;
       });
-      await wait(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent === "102");
+      await wait(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent === "102").catch(async error=>{throw Error(error.message+"\nCounter diagnostics: "+JSON.stringify(await evaluate(()=>({hidden:document.hidden,view:!!innerCastleEstateView,balances:innerCastleEconomy.balances(),counter:document.querySelector('[data-estate-resource="timber"] dd').textContent,loads:__estateTest.loads,projection:innerCastleEconomy.snapshot().estate.projection}))));});
       assert.equal(await evaluate(()=>__estateTest.loads),loads,"Counter updates must not poll the server");
       await evaluate(()=>innerCastleEconomy.refresh());
       await evaluate(()=>innerCastleEstateView.select("quarry"));
