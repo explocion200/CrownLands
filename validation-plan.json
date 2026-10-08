@@ -1,24 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ef0f206d5a7d25c33f998a7681cdd3b14c30f353",
+  "baseCommit": "786781dd1dab50bce4f14e034835d8e3015e5a7f",
   "coverage": [
-    {
-      "paths": ["action-buttons.css", "tools/validate-objective-action-buttons.js"],
-      "reason": "Estate actions join the existing shared city hex selector without changing its specificity or semantic tokens. Validate city/objective styling and the estate's real computed colors, geometry and input behavior.",
-      "tests": ["tools/validate-objective-action-buttons.js", "tools/validate-estate-economy-browser.js"]
-    },
-    {
-      "paths": ["inner-city-estate.js", "common-gear-ui.js", "estate-economy-ui.js", "estate-economy-ui.css", "tools/validate-estate-economy-browser.js"],
-      "reason": "Validate selecting versus entering, Upgrade-left/Enter-right placement at desktop and two landscape sizes, all 20 services, four Gear screens, directory access, unbuilt/constructing states, persistent keyboard focus, deposits/manual starts and cleanup. Recheck shared estate camera, labels, artwork, navigation and Gear integration; production packaging enforces the unchanged base renderer budget. No server, rules, costs or saved-state change needs emulator coverage.",
-      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-inner-city-estate.js", "tools/validate-inner-castle.js", "tools/validate-inner-castle-browser.js", "tools/validate-common-gear.js"]
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record the user-confirmed action layout and explicit online selection-rule supersession separately from the verified live baseline. Documentation adds no economy or balance changes; manually reconcile wording with implemented controls and release status.",
+      "reason": "Documentation-only verified release record. Reconcile PR/CI, published commit/deploy/time, unchanged backend contract/source, retained publication hold, 55 staged and 165 public file hashes and exact-runtime desktop/mobile smoke against retained evidence. No executable, gameplay, artwork or dependency change; no runtime tests apply.",
       "tests": []
     }
   ]

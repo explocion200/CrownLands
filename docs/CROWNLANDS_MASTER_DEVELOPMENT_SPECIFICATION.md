@@ -66,7 +66,18 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — External building upgrades
+### Current verified web release — City-style estate Upgrade and Enter
+
+The authorized merge and web deployment of [PR #487](https://github.com/explocion200/CrownLands/pull/487), from `codex/estate-upgrade-enter-buttons`, is verified at build `786781dd1dab50bce4f14e034835d8e3015e5a7f`. Selecting a building stays on the estate. Upgrade appears on the left in the city map's gold hex style; Enter appears on the right and opens services or the appropriate officer Gear screen. Both actions retain 64px targets with selected-site and directory access. Unbuilt sites disable Enter; later upgrades retain completed services. Fixed bottom captions, permanent deposits and explicit single-level starts are preserved.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac7e5700533f200083bd1c9`, published October 8 at `18:52:18.200 UTC` (2:52 p.m. Eastern). All 55 staged-file and 165 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`. The manual publication hold remains enabled.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37825498131`](https://github.com/explocion200/CrownLands/actions/runs/37825498131). Six selected local validators, the production artifact and asset budgets passed; no server change required emulator suites. The exact staged runtime passed at 1440×900, 844×390 and 568×320: all twenty menus and external upgrades, four Gear destinations/returns, left/right geometry and city styling, deposits/no queues, busy builders, lost-acknowledgment retry, keyboard/touch, focus returns and cleanup. Public anonymous startup passed at desktop and landscape-mobile sizes without uncaught errors.
+- **Backend retained:** release ID `crownlands-2026-10-08-estate-economy-v1`, contract `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`, server fingerprint `b44708b2d69f25282b7eb78272d4e04e6286fef9a2d325130cb39459355106f5` and 144-callable manifest match the preceding verified release. Backend/rules source is unchanged from that release. Functions, rules, indexes, realm configuration and player records were not redeployed or modified. The client fingerprint is `9b2c89ba072e0c052f16f3bc4630f772f48f24947647da7fff445565a2ddd320`.
+- **Limits:** itch.io was not republished. Signed-in production play and physical-device review remain manual. Synthetic interactions used isolated fixtures and submitted no production gameplay actions. Economy costs, timers and rewards are unchanged.
+
+Sanitized evidence is retained under `release-artifacts/estate-action-buttons/deployment/`. Before publication, local `main` and `origin/main` were clean and equal to the merged build, with divergence `0 0`.
+
+### Previous verified web release — External building upgrades
 
 The authorized merge and coordinated backend/web deployment of [PR #485](https://github.com/explocion200/CrownLands/pull/485), from `codex/estate-map-upgrades-no-queue`, is verified at build `b000ba0f9eac589406d2b815a6cea251487b1417`. Every estate building has a separate map/directory requirements action. Players deposit materials toward that building, then explicitly start its next single level after full material credit, enough Gold and a free builder. New batches and queues are rejected by the server. Existing paid work retains its saved terms and pause/resume rights. Interiors retain their services and officer commissions; prices, timers, rewards, artwork and fixed captions are unchanged.
 
@@ -385,6 +396,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| City-style estate Upgrade-left and Enter-right controls | Verified web build `786781d...` from PR #487; selecting stays outside and Enter opens services/Gear | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, all twenty menu/upgrade paths, desktop/mobile startup and preserved backend identity verified |
 | Permanent twenty-building Inner Castle economy, materials, construction/deposits/queues, Gear commissions and rarity gates, champions/quests/meals and Crown supplies | Verified web/backend/rules build `a4cd346...` from PR #479 | Not republished; no estate-economy client verification | `LIVE — WEB`; five emulator suites, exact deployed sources/rules, 162 public-file comparisons and affected runtime smoke passed. Authenticated production, physical-device and long-term pacing review remain manual |
 | Illustrated twenty-site Inner Castle estate, fixed western district labels, district-zoom building captions, resource counters, Back to Realm and preserved equipment returns | Verified web build `75a5829...` from PR #483; Quarry Hills and Woodland retain geographic anchors, while building captions remain beneath their artwork | Not republished for this estate update | `LIVE — WEB`; 162 public-file comparisons, delivered district/caption geometry and navigation, and desktop/mobile startup passed; existing economy backend retained |
 | Version 13 King Power: complete controlled troops × 2 | Verified web/backend build `390ed498...`, including current score conversion | Exact same-build upload `19600336`, manifest/file parity and six public startup cases verified | `LIVE — ALL PUBLISHED CHANNELS`; shared backend and public client verified |
@@ -1705,7 +1717,7 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 
 ### Confirmed Inner Castle estate presentation — October 6, 2026
 
-**Action layout refinement, confirmed October 8, 2026 — `IMPLEMENTED — PENDING RELEASE` on `codex/estate-upgrade-enter-buttons`:** selecting an online estate building stays on the estate. Show **Upgrade on the left** using the city map's gold arrow-up hex button, and **Enter on the right** using the matching movement hex button. Enter opens that building's services, or the existing Gear screen for Treasury, Barracks, Gatehouse and Royal Stables. This supersedes direct equipment entry on building selection for the online estate. Use 64px controls; expose the pair beside the selected building at district zoom when both fit without covering art, labels or controls. Retain the same left/right actions in selected-site details and all twenty directory rows as the crowded-screen fallback. Enter is unavailable before Level 1 completes, but remains available during later upgrades. Preserve camera/selection on menu return, fixed bottom captions and the existing deposit-then-start rules. This presentation follow-up is not yet deployed; the preceding verified release remains the live baseline.
+**Action layout refinement, confirmed October 8, 2026 — `LIVE — WEB` at verified build `786781dd1dab50bce4f14e034835d8e3015e5a7f` from PR #487:** selecting an online estate building stays on the estate. Show **Upgrade on the left** using the city map's gold arrow-up hex button, and **Enter on the right** using the matching movement hex button. Enter opens that building's services, or the existing Gear screen for Treasury, Barracks, Gatehouse and Royal Stables. This supersedes direct equipment entry on building selection for the online estate. Use 64px controls; expose the pair beside the selected building at district zoom when both fit without covering art, labels or controls. Retain the same left/right actions in selected-site details and all twenty directory rows as the crowded-screen fallback. Enter is unavailable before Level 1 completes, but remains available during later upgrades. Preserve camera/selection on menu return, fixed bottom captions and the existing deposit-then-start rules. See FM-2 for publication, staged/public verification and manual-review limits.
 
 The approved estate supersedes the compact six-building Royal Bailey overview and its old hanging-sign anchors. It opens as a full-screen 4:3 illustrated estate with the entire map fitted, a small inhabited walled city in the middle third, northern rocky hills, western woodland and southern farmland. This estate has no river. All buildings face south. Thin umber outlines, painted shading, olive grass, ochre timber, pale stone and burgundy pennants follow the user-provided illustrated atlas reference.
 
@@ -2302,11 +2314,17 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 # Appendix D — Change Log
 
+## October 8, 2026 UTC — Estate action-button release verification
+
+- Recorded authorized PR #487 merge and verified web publication at `786781dd1dab50bce4f14e034835d8e3015e5a7f`, Netlify deploy `6ac7e5700533f200083bd1c9`, published `18:52:18.200 UTC`.
+- Verified required CI, 55 staged and 165 public file matches, all twenty menu/upgrade paths at desktop and landscape sizes, and public startup. Retained the existing backend and manual publication hold.
+- Updated the action layout, Art Bible and economy guide to LIVE — WEB. itch.io was not republished; signed-in production play and physical-device checks remain manual.
+
 ## October 8, 2026 — Left Upgrade and right Enter estate controls
 
 - Confirmed the shared city-style gold Upgrade button on the left and matching Enter on the right, with map, selected-site and directory access.
 - Online building selection now stays outside; Enter opens services or the appropriate officer Gear UI. Preserve deposits, explicit starts, no new queues, fixed captions and camera returns.
-- Implemented on `codex/estate-upgrade-enter-buttons`, with desktop and landscape browser validation. Required PR checks and authorized deployment remain pending.
+- Implemented on `codex/estate-upgrade-enter-buttons`, merged as PR #487 and verified published to web at `786781d...`; see the release-verification entry above.
 
 ## October 8, 2026 UTC — External building upgrade release verification
 
