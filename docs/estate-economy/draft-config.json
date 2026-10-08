@@ -498,7 +498,7 @@
   ],
   "progression": {
     "status": "PROPOSED quantities/timers; all twenty estate buildings and estate state persist. Owner-confirmed individual cumulative 1/3/6/10-season targets at 50% production.",
-    "costVersion": "persistent-estate-draft-3",
+    "costVersion": "persistent-estate-draft-4",
     "productionShare": 0.5,
     "withinBandGrowth": 0.1,
     "constructionShare": 0.2,
@@ -527,6 +527,11 @@
         "seasons": 4,
         "referenceProducerLevel": 88
       }
-    ]
+    ],
+    "onboarding": {
+      "materialExponent": 2,
+      "timerMinimumWeight": 0.02,
+      "timerRampLevels": 8
+    }
   }
 }

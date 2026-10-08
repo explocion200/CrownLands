@@ -1,6 +1,6 @@
 # Estate reward and whole-account review
 
-Review date: October 7, 2026. **The implemented presentation can pass validation while the proposed economy still fails reward readiness.** No live estate economy or player data is exercised here. This report audits the existing draft; recommendations below do not silently change approved gameplay or the cost tables.
+Review date: October 8, 2026 UTC (draft 4 onboarding revision). **The implemented presentation can pass validation while the proposed economy still fails reward readiness.** No live estate economy or player data is exercised here. This report audits the existing draft; recommendations below do not silently change approved gameplay or the cost tables.
 
 Reproduce with `node tools/validate-estate-reward-review.js --write`. The existing economy validator independently reproduces the source level tables. This second review consumes those exact 2,000 prices and checks effective benefits, shared-account production, visits, storage, prerequisites, material conservation and reward incentives.
 
@@ -8,7 +8,7 @@ Reproduce with `node tools/validate-estate-reward-review.js --write`. The existi
 
 1. **Officer buildings have 95 upgrades each without a new usable benefit.** Their four rarity gates are useful destinations, but a progress bar alone does not satisfy useful rewards at every step. Existing two-copy Gear rules are confirmed and must not be replaced. Legendary L1 still represents 1,048,576 Common L1 equivalents if built entirely from Common copies; existing Uncommon acquisition changes the mix but does not establish attainable late-tier rewards. Propose a separate, approved per-level reward/acquisition track and test actual drop supply before enforcing building gates.
 
-2. **A fresh account does not have the supporting factories assumed by the 1/3/6/10-season calibration.** The first paid material upgrades can take several days at Level 1 production. Funding all twenty buildings competes for the same stock. The full-account cohorts below replace any implication that a fresh estate follows twenty independent reference tracks. Decide whether the target remains a developed-estate resource equivalent or whether an onboarding cost ramp and revised allocation are needed; preserve total band budgets if redistributing early bills.
+2. **Early material bills have been repaired in draft 4, but supporting factories still have to be earned.** The squared first-band ramp brings every Level 2 bill below one hour of half-share Level 1 net output, retaining every material-band total and the 1/3/6/10-season reference. Funding all twenty buildings still competes for the same stock. The shared-account cohorts below include actual infrastructure, so they must not be described as twenty independent reference tracks. Sparse visits without funded queues can still delay progression; their modeled outcomes are policy examples, not an offline guarantee.
 
 3. **Most shop levels give no effective benefit.** With only 0.25/0.5/1-hour presets, the increasing per-order cap changes ordinary offers only at Levels 34 and 100. A Level 1 player can already buy four quarter-hour packs for the same 20 Crowns/day as Level 100. Raising the cap only reduces clicks. A custom quantity would remove rounding gaps but would not make ten seasons of investment valuable. Recommend meaningful earned catalog/value or estate-service benefits, including a reason for free players to upgrade; retain the shared purchase cap and obtain approval for any changed paid advantage.
 
@@ -61,23 +61,23 @@ At each visit, build/upgrade the lowest-level eligible site, breaking ties in fa
 
 | Visits/day | All 20 first built, day | All 20 at 25, day | All 20 at 50, day | All 20 at 75, day | All 20 at 100, day |
 |---|---:|---:|---:|---:|---:|
-| 3 | 4.34 | 264.92 | 712.1 | 1,372.92 | 2,249.38 |
-| 1 | 13.01 | 353.25 | 801.43 | 1,462.59 | 2,338.71 |
+| 3 | 4.34 | 215.96 | 664.1 | 1,324.59 | 2,201.38 |
+| 1 | 13.01 | 362.29 | 811.43 | 1,471.59 | 2,347.71 |
 
 | Cohort / day | Hall | Treasury | Forester | Quarry | Storehouse | Builders' Yard | Lowest / highest building |
 |---|---:|---:|---:|---:|---:|---:|---|
 | 3 visits / 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 / 1 |
-| 3 visits / 7 | 1 | 1 | 2 | 2 | 1 | 1 | 1 / 2 |
-| 3 visits / 30 | 2 | 2 | 3 | 3 | 3 | 2 | 2 / 3 |
-| 3 visits / 90 | 6 | 5 | 6 | 6 | 6 | 6 | 5 / 6 |
-| 3 visits / 180 | 14 | 14 | 15 | 15 | 14 | 14 | 14 / 15 |
-| 3 visits / 300 | 26 | 26 | 27 | 27 | 27 | 27 | 26 / 27 |
+| 3 visits / 7 | 1 | 1 | 2 | 2 | 2 | 1 | 1 / 2 |
+| 3 visits / 30 | 5 | 5 | 5 | 5 | 5 | 5 | 4 / 5 |
+| 3 visits / 90 | 14 | 14 | 15 | 15 | 15 | 14 | 14 / 15 |
+| 3 visits / 180 | 22 | 22 | 23 | 23 | 23 | 23 | 22 / 23 |
+| 3 visits / 300 | 29 | 28 | 29 | 29 | 29 | 29 | 28 / 29 |
 | 1 visits / 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 / 1 |
 | 1 visits / 7 | 1 | 1 | 1 | 1 | 1 | 0 | 0 / 1 |
-| 1 visits / 30 | 1 | 1 | 2 | 2 | 2 | 2 | 1 / 2 |
-| 1 visits / 90 | 4 | 4 | 5 | 5 | 5 | 4 | 4 / 5 |
-| 1 visits / 180 | 9 | 8 | 9 | 9 | 9 | 9 | 8 / 9 |
-| 1 visits / 300 | 19 | 19 | 20 | 20 | 20 | 20 | 19 / 20 |
+| 1 visits / 30 | 2 | 2 | 2 | 2 | 2 | 2 | 1 / 2 |
+| 1 visits / 90 | 5 | 5 | 5 | 5 | 5 | 5 | 4 / 5 |
+| 1 visits / 180 | 9 | 9 | 10 | 10 | 10 | 9 | 9 / 10 |
+| 1 visits / 300 | 20 | 20 | 21 | 21 | 21 | 21 | 20 / 21 |
 
 These cohorts use 100% of available materials for estate building. Keeping half for other activities, choosing a different construction order, pausing processors, queuing funded work or adding quests changes the outcome. No date here is a hard wait requirement or an account-wide promise. Stored inventory and factories carry through every simulated rollover. Material and Gold conservation are asserted across the full run.
 
@@ -87,26 +87,26 @@ Assume all sources/processors are already Level 1, empty stock, an available slo
 
 | Building | Material wait for Level 2, hours |
 |---|---:|
-| Great Hall | 83.43 |
-| Treasury | 83.43 |
-| Barracks | 83.43 |
-| Gatehouse | 83.43 |
-| Royal Stables | 83.41 |
-| Alehouse | 83.41 |
-| Guild Master | 83.43 |
-| Forester’s Lodge | 83.41 |
-| Quarry | 83.41 |
-| Mine | 83.41 |
-| Farmstead | 83.41 |
-| Storehouse | 83.43 |
-| Granary | 83.41 |
-| Sawmill | 83.41 |
-| Smithy | 83.43 |
-| Workshop | 83.43 |
-| Windmill | 83.41 |
-| Builders’ Yard | 83.43 |
-| Wagon Yard | 83.41 |
-| Market | 83.41 |
+| Great Hall | 0.45 |
+| Treasury | 0.45 |
+| Barracks | 0.45 |
+| Gatehouse | 0.45 |
+| Royal Stables | 0.45 |
+| Alehouse | 0.45 |
+| Guild Master | 0.45 |
+| Forester’s Lodge | 0.45 |
+| Quarry | 0.45 |
+| Mine | 0.45 |
+| Farmstead | 0.45 |
+| Storehouse | 0.45 |
+| Granary | 0.45 |
+| Sawmill | 0.45 |
+| Smithy | 0.45 |
+| Workshop | 0.45 |
+| Windmill | 0.45 |
+| Builders’ Yard | 0.45 |
+| Wagon Yard | 0.45 |
+| Market | 0.45 |
 
 ## Quest and supply checks
 
@@ -125,7 +125,7 @@ These are ceiling scenarios using enough rested champions, immediate claiming, s
 ## Recommended acceptance criteria
 
 - Show a real current/next benefit on every paid level. Officer sub-milestone rewards, late Hall rewards and shop utility need explicit designs before claiming this passes.
-- Keep the approved 1/3/6/10-season per-building resource direction. Reconcile a shared-account cohort, an early-session cost ramp and quest income with that direction before freezing prices. Exact recommendations remain proposals; this review does not alter the existing 2,000 bills.
+- Keep the approved 1/3/6/10-season per-building resource direction. Draft 4 repairs the early-session cost ramp without changing band budgets; combine funded queues and bounded quest income before freezing final prices. READINESS_PLAN.md contains explicit proposed repairs for the remaining findings; it does not enable gameplay.
 - Give every quest tier a reason to choose it after champion XP is capped. Cap total quest contribution to the construction budget; maintain an affordable Food reserve and a free no-meal option.
 - Tie champion training and recruitment head starts to a separately chosen multi-season horizon. Do not silently change settled officer Gear copy rules or grant new world combat bonuses.
 - Before gameplay release, implement and test authoritative material settlement, deposits, costs, queues, replay-safe completion, cross-season migration, champion actions and shop spending. The current estate UI is presentation, not that backend.

@@ -1,13 +1,43 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d84754fc1f92fb45f89e6518b0672f6bbca49d29",
+  "baseCommit": "b7739e67c513c9ea71f9c0621066b4cc5b691558",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/estate-economy/draft-config.json",
+        "docs/estate-economy/LEVEL_TABLES.md",
+        "docs/estate-economy/BALANCE_REVIEW.md",
+        "tools/validate-estate-economy-draft.js"
       ],
-      "reason": "Record verified, user-authorized PR #477 web and Firebase deployment using retained public-artifact, backend-source, authentication-guard and desktop/mobile smoke evidence. Update only the release snapshot/channel matrix and implemented estate presentation status; keep construction economy and proposed balance explicitly unimplemented. Documentation only: no runtime, dependency, gameplay, realm, rules, generated release, or build changes, so no additional static or emulator suite applies.",
-      "tests": []
+      "reason": "Revise only proposed early cost/timer allocation: preserve all eighty material-band totals and 6/12/18/24 construction-day totals while giving Level 2 an affordable starter bill. Verify exact sums, whole positive monotonic prices/timers through band transitions, unchanged Gold-only first builds, first-upgrade duration floor, sub-hour starter material waits, all twenty reference milestones and both small/over-capacity deposit replay/reset/completion fixtures. These files remain review-only and are not runtime prices; no production backend, player data, world topology or release contract changes.",
+      "tests": [
+        "tools/validate-estate-economy-draft.js",
+        "tools/validate-estate-reward-review.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/estate-economy/README.md",
+        "docs/estate-economy/REWARD_REVIEW.md",
+        "tools/validate-estate-reward-review.js"
+      ],
+      "reason": "Refresh the independent audit and whole-account cohorts using the revised exact prices, actual infrastructure, storage, Gold, visit cadence and earned builder slots. Retain conservation and five-minute stability checks and explicitly report remaining baseline reward gaps. Distinguish the deployed presentation, current draft prices and separate unapproved reward proposals; no gameplay balance acceptance or deployment claim.",
+      "tests": [
+        "tools/validate-estate-economy-draft.js",
+        "tools/validate-estate-reward-review.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/estate-economy/READINESS_PLAN.md",
+        "docs/estate-economy/READINESS_RESULTS.json",
+        "docs/estate-economy/readiness-proposal.json",
+        "tools/validate-estate-readiness-proposal.js"
+      ],
+      "reason": "Turn ten observed readiness gaps into a concrete review candidate without changing approved Gear policy or the Master Specification. Verify candidate level benefits, integer quest quotes (including the ceil-rounded Tool-fee trap), bounded shared quest income, champion XP/cap behavior, commission demand/copy timing and funded-job conservation/replay/deadline/season fixtures. Generated results explicitly keep gameplayDeploymentReady false. New rarity acquisition, Hall/storage benefits and irreversible job funding require design decisions; actual backend, mixed-account/queue simulation and emulator validation remain required before gameplay release. No live authority or UI code changes, so no emulator or browser suite is affected.",
+      "tests": [
+        "tools/validate-estate-readiness-proposal.js"
+      ]
     }
   ]
 }
