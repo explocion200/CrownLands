@@ -47,6 +47,23 @@ async function main() {
         });
       }, selector), 'Compact estate actions must retain readable labels and touch targets: ' + selector);
     };
+    const normalActions = async selector => {
+      assert(await evaluate(s => {
+        const buttons = [...document.querySelectorAll(s)];
+        return buttons.length === 2 && buttons.every(e => {
+          const b = e.getBoundingClientRect(), style = getComputedStyle(e);
+          const panel = e.closest('.estate-directory,.estate-detail').getBoundingClientRect();
+          const text = document.createRange(); text.selectNodeContents(e);
+          const r = text.getBoundingClientRect();
+          return !e.classList.contains('cl-action-button') && !e.querySelector('.wheel-icon')
+            && e.textContent === (e.dataset.estateUpgrade ? 'Upgrade' : 'Enter')
+            && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) >= 3
+            && parseFloat(style.fontSize) >= 12 && b.width >= 44 && b.height >= 44
+            && b.left >= panel.left && b.right <= panel.right
+            && text.getClientRects().length === 1 && r.left >= b.left + 2 && r.right <= b.right - 2;
+        });
+      }, selector), 'Estate panel actions must use readable normal buttons with touch targets: ' + selector);
+    };
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
@@ -363,7 +380,7 @@ async function main() {
       // Every map site has a directory action, even when its small-screen map arrow is crowded.
       await click('[data-estate-directory-toggle]');
       for(const building of E.C.buildings){
-        await compactActions('.estate-directory-site:has([data-estate-directory-building="'+building.key+'"]) > .estate-site-action');
+        await normalActions('.estate-directory-site:has([data-estate-directory-building="'+building.key+'"]) > .estate-site-action');
         assert(await evaluate(key=>{
           const row=document.querySelector('[data-estate-directory-building="'+key+'"]').parentElement;
           const left=row.querySelector('[data-estate-upgrade]').getBoundingClientRect(),middle=row.querySelector('[data-estate-directory-building]').getBoundingClientRect(),right=row.querySelector('[data-estate-enter]').getBoundingClientRect();
@@ -381,7 +398,7 @@ async function main() {
         await click('[data-estate-directory-toggle]');
         await click('[data-estate-directory-building="'+building.key+'"]');
         assert(await evaluate(()=>!!innerCastleEstateView&&!document.querySelector('.estate-economy-dialog').open),'Selecting a building must stay on the estate');
-        await compactActions('.estate-detail .estate-site-action');
+        await normalActions('.estate-detail .estate-site-action');
         if(building.key==='mine'){
           const capture=await client.send('Page.captureScreenshot',{format:'png'});
           fs.writeFileSync(path.join(output,'selected-actions-'+width+'.png'),Buffer.from(capture.data,'base64'));
