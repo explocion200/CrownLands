@@ -403,6 +403,8 @@ Source masters and prompts: [Estate art sources](./art-sources/inner-city-estate
 
 
 
+- Curved construction timers, confirmed October 8; **IMPLEMENTED — PENDING RELEASE**: center a restrained ochre-gold arc six screen pixels above the construction artwork, with an umber outline, pale parchment track and small tabular countdown tucked beneath the curve. Fill left to right from the accepted duration/deadline. Keep a 40px height and constant 88px overview / 112px district width. Never move the fixed bottom name/level caption or cover structures, action hexes, district labels or panels; hide crowded/offscreen timers and retain the Buildings directory countdown. A full arc says Finishing… until server confirmation replaces construction art. This is functional progress, independent of the still estate's ambient-animation preference. No new raster art or map-position changes.
+
 Existing preview and interior rules retained:
 
 - Keep a consistent three-quarter camera, human scale and natural exposure for square building previews. Do not mix cinematic low angles with the strategy overview family.

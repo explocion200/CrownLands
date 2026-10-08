@@ -81,7 +81,7 @@ async function main() {
             }else{
               if(Object.values(q.materials).some(v=>v>0))throw Error("Deposit all required materials.");
               if(s.jobs.length>=s.slots)throw Error("All builders are busy.");
-              s.jobs.push({...q.jobs[0],id:request.requestId,status:"running",completesAtMs:Date.now()+600000});delete s.deposits[q.building];
+              s.jobs.push({...q.jobs[0],id:request.requestId,status:"running",startedAtMs:Date.now(),durationMs:600000,completesAtMs:Date.now()+600000});delete s.deposits[q.building];
             }
             s.revision++;receipts.set(request.requestId,{action:q.action});
             if(q.action==="fund"&&__estateTest.failOnce){__estateTest.failOnce=false;throw Error("Connection interrupted. Retry the same request.");}
@@ -156,6 +156,128 @@ async function main() {
       await click('[data-economy-action="close"]');
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),camera);
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-site="quarry"]').dataset.siteState),"constructing");
+      // Saved deadlines drive the curved arc independently of material production.
+      assert.equal(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"]').getAttribute('aria-valuenow')),'0');
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-note:not([hidden])').length),1);
+      const timerLoads=await evaluate(()=>{
+        const s=innerCastleEconomy.snapshot();
+        __estateTimerJob=structuredClone(__estateTest.state.jobs[0]);
+        s.estate.projection.net=Object.fromEntries(Object.keys(s.estate.projection.stock).map(k=>[k,0]));innerCastleEconomy.visibilityChanged();
+        s.receivedAtMs-=300000;return __estateTest.loads;
+      });
+      await wait(()=>document.querySelector('[data-estate-construction="quarry"]').getAttribute('aria-valuenow')==='50');
+      assert.equal(await evaluate(()=>__estateTest.loads),timerLoads,'Construction ticks must not poll the server');
+      assert(await evaluate(()=>{
+        const gauge=document.querySelector('[data-estate-construction="quarry"]');
+        return Math.abs(+gauge.querySelector('.estate-timer-fill').style.strokeDashoffset-50)<1
+          && /^(4:5\d|5:00)$/.test(gauge.querySelector('[data-estate-time-left]').textContent)
+          && gauge.getAttribute('aria-valuetext').includes('remaining')
+          && document.querySelector('[data-inner-castle-building="quarry"]').getAttribute('aria-describedby')==='estateConstructionNote-quarry';
+      }),'Arc, countdown and accessible target must agree');
+      await click('[data-estate-detail-close]');
+      const timerLayout=()=>{
+        const gauge=document.querySelector('[data-estate-construction="quarry"]');
+        if(gauge.hidden)throw Error('Selected construction timer must fit above the building');
+        const b=gauge.getBoundingClientRect(),art=document.querySelector('[data-estate-site="quarry"] img').getBoundingClientRect();
+        if(Math.abs((b.left+b.right-art.left-art.right)/2)>.5||Math.abs(art.top-b.bottom-6)>.5)throw Error('Timer lost fixed top anchor');
+        if(b.width!==112||b.height!==40)throw Error('Timer must retain readable screen size');
+        for(const e of document.querySelectorAll('.estate-site>img,.estate-nameplate:not([hidden]),.estate-upgrade-targets button:not([hidden]),.estate-camera-controls')){
+          const r=e.getBoundingClientRect();if(b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top)throw Error('Construction timer overlaps artwork or a control');
+        }
+        const caption=document.querySelector('[data-estate-nameplate="quarry"]');
+        if(!caption.hidden&&caption.getBoundingClientRect().top<art.bottom)throw Error('Timer moved the bottom building caption');
+        return b.toJSON();
+      };
+      await evaluate(timerLayout);
+      const timerCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'construction-timer-'+width+'.png'),Buffer.from(timerCapture.data,'base64'));
+      await evaluate(()=>innerCastleEstateView.zoom(3));await evaluate(timerLayout);
+      await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+      await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+      await evaluate(timerLayout);
+      await client.send('Emulation.setDeviceMetricsOverride',{width:width-20,height:height-10,deviceScaleFactor:1,mobile:false});
+      await delay(150);await evaluate(timerLayout);
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await delay(150);
+      // Long contracts remain compact; the last minute shows individual seconds.
+      assert.deepEqual(await evaluate(()=>{
+        const s=innerCastleEconomy.snapshot(),job=s.estate.jobs[0],clock=innerCastleEconomy.now();
+        const texts=[];
+        for(const ms of [176400000,3720000,9000]){
+          job.durationMs=ms;job.completesAtMs=clock+ms;innerCastleEstateView.updateResources();
+          texts.push(document.querySelector('[data-estate-construction="quarry"] [data-estate-time-left]').textContent);
+        }
+        job.durationMs=__estateTimerJob.durationMs;job.completesAtMs=__estateTimerJob.completesAtMs;
+        innerCastleEstateView.updateResources();return texts;
+      }),['2d 1h','1h 2m','0:09']);
+      // A client reaching zero cannot grant a level or remove scaffolding.
+      await evaluate(()=>{innerCastleEconomy.snapshot().receivedAtMs-=600000;innerCastleEstateView.updateResources();});
+      assert(await evaluate(()=>{
+        const gauge=document.querySelector('[data-estate-construction="quarry"]');
+        return gauge.getAttribute('aria-valuenow')==='100'&&gauge.querySelector('span').textContent==='Finishing…'
+          &&innerCastleEstateView.debug().siteLevels.quarry===24&&innerCastleEstateView.debug().siteStates.quarry==='constructing';
+      }),'Deadline waits for authoritative completion');
+      await evaluate(()=>{__estateTest.state.jobs=[];__estateTest.state.levels.quarry=25;return innerCastleEconomy.refresh();});
+      assert(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"]').hidden
+        &&document.querySelector('#estateConstructionNote-quarry').hidden&&innerCastleEstateView.debug().siteStates.quarry==='completed'));
+      // Waiting legacy work has a directory status, never a running progress arc.
+      await evaluate(()=>{
+        __estateTest.state.levels.quarry=24;__estateTest.state.jobs=[{...__estateTimerJob,status:'paused',completesAtMs:null}];
+        return innerCastleEconomy.refresh();
+      });
+      assert(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"]').hidden
+        &&document.querySelector('#estateConstructionNote-quarry').textContent==='Paid work · Paused'));
+      await evaluate(()=>{__estateTest.state.jobs=[structuredClone(__estateTimerJob)];return innerCastleEconomy.refresh();});
+      // Hidden scenes stop the shared tick loop, then resume from server time.
+      const beforeHidden=await evaluate(()=>{
+        Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+        innerCastleEconomy.snapshot().receivedAtMs-=120000;
+        return document.querySelector('[data-estate-construction="quarry"] [data-estate-time-left]').textContent;
+      });
+      await delay(1100);
+      assert.equal(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"] [data-estate-time-left]').textContent),beforeHidden);
+      await evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+      await wait(()=>innerCastleEconomy.snapshot().receivedAtMs>Date.now()-1000);
+      await click('[data-estate-fit]');
+      assert(await evaluate(()=>[...document.querySelectorAll('.estate-construction-timer:not([hidden])')].every(e=>{
+        const b=e.getBoundingClientRect(),v=document.querySelector('.estate-viewport').getBoundingClientRect();
+        return b.width===88&&b.left>=v.left&&b.right<=v.right&&b.top>=v.top&&b.bottom<=v.bottom;
+      })),'Overview timers remain compact and in bounds');
+      await click('[data-estate-directory-toggle]');
+      await evaluate(()=>document.querySelector('[data-estate-directory-building="quarry"]').scrollIntoView({block:'center'}));
+      assert(await evaluate(()=>{
+        const note=document.querySelector('#estateConstructionNote-quarry'),entry=document.querySelector('[data-estate-directory-building="quarry"]');
+        return !note.hidden&&note.textContent.includes('left')&&entry.getAttribute('aria-describedby')===note.id;
+      }),'Directory exposes the countdown when the map is crowded');
+      await click('[data-estate-directory-toggle]');
+      await evaluate(()=>innerCastleEstateView.select('quarry'));
+      // Every registry site can display a running contract, including first builds.
+      // Three concurrent jobs use independent progress and collision-safe placement.
+      await evaluate(()=>{
+        const jobs=innerCastleEconomy.snapshot().estate.jobs;
+        const sample=[{...__estateTimerJob,building:'quarry'},
+          {...__estateTimerJob,building:'mine',durationMs:1200000},
+          {...__estateTimerJob,building:'foresters-lodge',durationMs:1800000}];
+        const snapshot={...innerCastleEconomy.snapshot().estate,jobs:sample};
+        innerCastleEstateView.updateEstate(snapshot);
+        const values=sample.map(j=>+document.querySelector('[data-estate-construction="'+j.building+'"]').getAttribute('aria-valuenow'));
+        if(values[1]!==50||values[2]!==67)throw Error('Concurrent arcs must use each accepted duration');
+        for(const building of CrownlandsEstate.buildings){
+          innerCastleEstateView.updateEstate({...snapshot,jobs:[{...__estateTimerJob,building:building.key}]});
+          innerCastleEstateView.select(building.key);document.querySelector('[data-estate-detail-close]').click();
+          const gauge=document.querySelector('[data-estate-construction="'+building.key+'"]');
+          const note=document.querySelector('#estateConstructionNote-'+building.key);
+          if(gauge.getAttribute('aria-label')!==building.label+' construction to Level 25'||note.hidden)throw Error('Missing timer for '+building.key);
+          if(!gauge.hidden){
+            const g=gauge.getBoundingClientRect(),art=document.querySelector('[data-estate-site="'+building.key+'"] img').getBoundingClientRect();
+            if(Math.abs(art.top-g.bottom-6)>.5||Math.abs((g.left+g.right-art.left-art.right)/2)>.5)throw Error('Wrong timer anchor for '+building.key);
+          }
+        }
+        innerCastleEstateView.updateEstate({...snapshot,levels:{...snapshot.levels,mine:0},jobs:[{...__estateTimerJob,building:'mine',target:1}]});
+        if(document.querySelector('[data-estate-construction="mine"]').getAttribute('aria-label')!=='Mine construction to Level 1'
+          ||!document.querySelector('[data-estate-enter="mine"]').disabled)throw Error('First-build timer cannot enable Enter before completion');
+        innerCastleEstateView.updateEstate({...snapshot,jobs});innerCastleEstateView.select('quarry');
+      });
       await click('[data-estate-resource="timber"]');
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Timber ledger");
       assert(await evaluate(()=>document.querySelector(".estate-economy-dialog").textContent.includes("Factory inputs")));
@@ -166,6 +288,7 @@ async function main() {
       assert(await evaluate(()=>!!innerCastleEstateView),'Map selection must not enter Gear');
       await click('.estate-detail [data-estate-enter="treasury"]');
       await wait(()=>!!document.querySelector("[data-estate-officer-manage]"));
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers').length),0,'Gear disposes the timer layer');
       await click("[data-estate-officer-manage]");
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Treasury");
       assert(await evaluate(()=>document.querySelector(".estate-economy-dialog").textContent.includes("Officer commissions")));
@@ -173,6 +296,8 @@ async function main() {
       await click('[data-economy-action="close"]');
       await click("[data-gear-back]");
       await wait(()=>!!innerCastleEstateView);
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers').length),1,'Gear return mounts one timer layer');
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-note').length),20,'Gear return does not accumulate countdown notes');
       assert.equal(await evaluate(()=>innerCastleEstateView.debug().siteStates.quarry),"constructing");
       await evaluate(()=>innerCastleEstateView.select("mine"));
       await click('[data-estate-detail-close]');
@@ -293,9 +418,10 @@ async function main() {
       assert(await evaluate(()=>modal.open));
       await evaluate(()=>{clearInnerCastleModalState();modal.close();});
       assert.equal(await evaluate(()=>document.querySelectorAll(".estate-economy-dialog").length),0);
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers,.estate-construction-note').length),0,'Estate teardown removes all timer elements');
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: city-style Upgrade left / Enter right, all 20 menus and external upgrade actions, partial/full deposits, no queues, busy builders, confirmation, lost-ack retry, camera, construction artwork, ledgers, Gear services, keyboard/touch, focus return and cleanup.");
+    console.log("Estate desktop/landscape UI passed: curved construction arcs/countdowns, zero-production ticking without polling, fixed top anchors through pan/zoom/resize, authoritative completion, paused work, hidden-scene pause, directory fallback, Gear timer cleanup; city-style Upgrade left / Enter right, all 20 menus, deposits, confirmation/retry, camera, keyboard/touch and focus return.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

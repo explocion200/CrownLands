@@ -38,3 +38,9 @@
 .estate-directory:has(.estate-site-action){width:340px;max-width:calc(100% - 20px);box-sizing:border-box}
 .estate-directory-site{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 #modal.bailey-modal .estate-directory-site>[data-estate-directory-building]{flex:1;min-width:0;flex-wrap:wrap;margin:0;overflow-wrap:anywhere}
+.estate-construction-timers{position:absolute;inset:0;pointer-events:none;z-index:3}
+.estate-construction-timer{position:absolute;height:40px;pointer-events:none;text-align:center;filter:drop-shadow(0 1px 2px #332b2566)}
+.estate-construction-timer svg{display:block;width:100%;height:40px;overflow:visible;fill:none}
+.estate-construction-timer path{stroke-linecap:round}.estate-timer-edge{stroke:#4c3a24;stroke-width:9}.estate-timer-track{stroke:#efe0b5;stroke-width:6}.estate-timer-fill{stroke:#b98326;stroke-width:5;stroke-dasharray:100;stroke-dashoffset:100}
+#modal.bailey-modal .estate-construction-timer>span{position:absolute;left:50%;top:24px;transform:translateX(-50%);padding:2px 5px;border:1px solid #a28c64;border-radius:2px;background:#f0e4c7f2;color:#332e23!important;font:600 10px/1.1 "Segoe UI",Arial,sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
+#modal.bailey-modal .estate-directory button>.estate-construction-note{flex-basis:100%;font-size:10px;color:#6b4b21;line-height:1.3;white-space:normal}

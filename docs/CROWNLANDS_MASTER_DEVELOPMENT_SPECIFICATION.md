@@ -1715,6 +1715,14 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 - Honor previously purchased contracts with their saved targets, prices, timers, completion order and pause/resume rights. Do not delete, refund, reprice or recharge those legacy commitments. Retain once-only action receipts across resets.
 - Level 100 caps, material budgets, production, benefits, Hall gates and construction durations are unchanged. The [economy guide](estate-economy/README.md) and regenerated [shared-account review](estate-economy/REWARD_REVIEW.md) describe manual starts and visit-dependent pacing. Deploy matching backend and client together after authorization; the new panel waits for the server's deposit-then-start policy signal.
 
+### Curved building construction timers — confirmed October 8, 2026
+
+**Status: `IMPLEMENTED — PENDING RELEASE`.** Display a curved progress bar centered six screen pixels above each building's construction artwork, with its remaining time tucked below the arc. Fill left to right from the accepted construction duration and server-synchronized completion deadline. Use compact days/hours or hours/minutes for long projects and minutes/seconds for the final hour. Update once per second through the estate's existing resource-display loop, including when production is stopped; do not add per-building animation loops or server polling.
+
+- Keep the timer's readable screen size through pan, zoom and resize: 88px wide in the overview, 112px at district zoom, 40px tall. Keep name/level captions fixed below the building and retain the approved Upgrade-left/Enter-right actions. Hide an obstructed or offscreen timer rather than relocating it; its countdown remains available in the Buildings directory and accessible target description.
+- Show running construction only. Partial deposits and unstarted legacy work do not fill an arc; legacy waiting/paused contracts retain a directory status. Separate concurrent jobs use their own saved duration/deadline. At zero show a full arc and **Finishing…**, retaining the current completed level and construction art until the authoritative snapshot confirms completion.
+- Stop display ticking while the estate is closed, replaced by Gear or the document is hidden. Resume from the synchronized clock; remove timer elements and descriptions on scene disposal. This changes presentation only: no costs, build durations, builder slots, queue rules, resource balances, persistence or rewards change. Deployment and signed-in physical-device review remain pending.
+
 ### Confirmed Inner Castle estate presentation — October 6, 2026
 
 **Action layout refinement, confirmed October 8, 2026 — `LIVE — WEB` at verified build `786781dd1dab50bce4f14e034835d8e3015e5a7f` from PR #487:** selecting an online estate building stays on the estate. Show **Upgrade on the left** using the city map's gold arrow-up hex button, and **Enter on the right** using the matching movement hex button. Enter opens that building's services, or the existing Gear screen for Treasury, Barracks, Gatehouse and Royal Stables. This supersedes direct equipment entry on building selection for the online estate. Use 64px controls; expose the pair beside the selected building at district zoom when both fit without covering art, labels or controls. Retain the same left/right actions in selected-site details and all twenty directory rows as the crowded-screen fallback. Enter is unavailable before Level 1 completes, but remains available during later upgrades. Preserve camera/selection on menu return, fixed bottom captions and the existing deposit-then-start rules. See FM-2 for publication, staged/public verification and manual-review limits.
@@ -2313,6 +2321,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 — Curved construction progress above buildings
+
+- Added the owner-requested curved timer/countdown above running estate construction, anchored independently of the fixed bottom name/level caption and existing Upgrade/Enter controls.
+- Reused accepted job deadlines and the shared visible-estate tick loop; kept authoritative completion, directory fallback, hidden-scene pausing and scene cleanup. Recorded the visual treatment in the Art Bible and economy guide. This presentation update is pending release; the verified live estate remains unchanged.
 
 ## October 8, 2026 UTC — Estate action-button release verification
 
