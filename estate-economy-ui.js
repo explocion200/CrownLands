@@ -159,7 +159,7 @@
     function schedule() {
       clearTimeout(deadlineTimer);
       paintCounters();
-      if (!current() || document.hidden || !options.visible() || !data) return;
+      if (!current() || document.hidden || (!options.visible() && !dialog.open) || !data) return;
       const times = [...data.estate.jobs.map(j => j.completesAtMs), ...data.estate.quests.map(q => q.completesAtMs)].filter(Number.isFinite);
       const upcoming = [...Object.values(data.estate.commissions).map(c => c.completesAtMs), ...Object.values(data.champions).map(c => c.recoveryUntilMs)].filter(t => Number.isFinite(t) && t > now());
       times.push(...upcoming);
@@ -437,8 +437,12 @@
       if (inputs[action]) await review(inputs[action]());
     }, {signal:abort.signal});
     dialog.addEventListener("change",partyStatus,{signal:abort.signal});
-    dialog.addEventListener("close",()=>{quote=null;pending=null;opener?.isConnected&&opener.focus({preventScroll:true});},{signal:abort.signal});
-    document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible())refresh();},{signal:abort.signal});
+    dialog.addEventListener("close",()=>{
+      quote=null;pending=null;
+      const target=opener?.isConnected?opener:[...document.querySelectorAll("[data-estate-officer-manage]")].find(el=>el.dataset.estateOfficerManage===opener?.dataset.estateOfficerManage);
+      target?.focus({preventScroll:true});schedule();
+    },{signal:abort.signal});
+    document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible()||dialog.open)refresh();},{signal:abort.signal});
     const stop = api.subscribeEstateChanges?.(revision => {
       if (current() && data && revision > data.estate.revision) refresh();
     });

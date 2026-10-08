@@ -49,6 +49,7 @@ Every building, loose material, fractional stock, deposit, ongoing estate timer 
 - Preserve inputs, party selections, accepted consent, scroll position and the exact keyboard control across ordinary refreshes. Preserve service drafts when returning from review; discard them after a successful commit. Newly unavailable champions are deselected, and numeric drafts respect refreshed deposit limits.
 - Name the exact building and next level in permanent deposit confirmation. Refresh upgrade requirements on Back from review; show a useful prerequisite failure instead of an endless loading message.
 - Refresh at a UTC-day boundary for daily services even when no construction or production boundary is pending. Reuse the existing deadline scheduler and hidden-scene cleanup; no new polling loop.
+- Allow deadline settlement while an officer’s commission window is open over Gear, keeping the map suspended. Closing restores focus to the current commission opener even if a Gear refresh replaced its element, and stops hidden-scene deadlines again.
 
 ## Validation and remaining review limits
 

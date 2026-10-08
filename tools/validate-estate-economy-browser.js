@@ -327,7 +327,14 @@ async function main() {
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Treasury");
       assert(await evaluate(()=>document.querySelector(".estate-economy-dialog").textContent.includes("Officer commissions")));
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0,"Interiors contain services only");
+      await evaluate(()=>{
+        __estateTest.state.commissions.treasury={rarity:'common',name:'Helm',completesAtMs:Date.now()+250};
+        return innerCastleEconomy.refresh();
+      });
+      await wait(()=>document.querySelector('[data-economy-action="claimCommission"]')?.disabled===false);
+      assert.equal(await evaluate(()=>!!innerCastleEstateView),false,'Commission readiness refresh must keep Gear open and the map suspended');
       await click('[data-economy-action="close"]');
+      assert.equal(await evaluate(()=>document.activeElement.dataset.estateOfficerManage),'treasury','Refresh replaces the Gear opener; Close focuses its current equivalent');
       await click("[data-gear-back]");
       await wait(()=>!!innerCastleEstateView);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers').length),1,'Gear return mounts one timer layer');
