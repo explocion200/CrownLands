@@ -1,14 +1,24 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5163ac1b2d4d6b75c9f680ebdab69f90669f59e2",
+  "baseCommit": "79da6a61f8db0adc640c200d5e36193d8e0f4b82",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/README.md"
+        "estate-economy-ui.css",
+        "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Documentation-only verified release record. Reconcile PR #489/CI, published merged commit/deploy/time, retained publication hold, compatible backend contract/source, ready current realm and matching rules, 55 staged and 165 public file comparisons, exact-runtime desktop/landscape timer interactions and public startup against retained evidence. No executable, gameplay, artwork or dependency changes; no runtime tests apply.",
+      "reason": "Reduce only estate Upgrade/Enter hexes to 48px through their scoped shared size variable. The existing map placement reads that variable, while detail/directory flex sizing inherits it. Check single-line label bounds, 44px minimum targets, left/right order, collision handling, mouse/touch/keyboard entry, all twenty directory/details sites, camera/Gear restoration and timer lifecycle at desktop and 844x390/568x320 landscape sizes. Verify the affected shared hex palette/style dependency retains realm/objective behavior. No server-authoritative or economy changes; emulator suites do not apply.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-objective-action-buttons.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md"
+      ],
+      "reason": "Record the user-confirmed estate size refinement as pending release, explicitly superseding its prior 64px rule while preserving verified publication history and economy/timer rules. Review against the scoped CSS and browser layout evidence; no separate documentation runtime test applies.",
       "tests": []
     }
   ]
