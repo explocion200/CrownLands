@@ -1,25 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "79da6a61f8db0adc640c200d5e36193d8e0f4b82",
+  "baseCommit": "db317e04fe9962e29a3c5fe3c3544e8bb388a77e",
   "coverage": [
     {
       "paths": [
-        "estate-economy-ui.css",
-        "estate-economy-ui.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "reason": "Reduce only the selected estate building map hexes to 48px and return details/directory actions to normal parchment text buttons. Check context-specific markup, single-line label bounds, normal panel borders/font and 44px targets, left/right order and all twenty directory/detail actions at desktop and 844x390/568x320 landscape sizes. Exercise deposits, confirmation/retry, menu entry, disabled/unbuilt states, mouse/touch/keyboard activation, camera/Gear restoration and construction timer lifecycle through unchanged action data attributes. Existing map collision placement reads the scoped size variable. Verify the shared city hex dependency remains intact. No server-authoritative/economy changes; emulator suites do not apply.",
-      "tests": [
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-objective-action-buttons.js"
-      ]
-    },
-    {
-      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md"
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/README.md"
       ],
-      "reason": "Record the user-confirmed smaller map buttons and clarified scope: hexes only beside the selected building, with normal details/directory/interior UI buttons. Supersede the prior map size and panel hex styling as pending release while preserving verified publication history and gameplay/timer rules. Review against scoped markup/CSS and browser evidence; no separate documentation runtime test applies.",
+      "reason": "Documentation-only verified release record. Reconcile PR #491/required CI, published merged build/deploy/time, retained publication hold and compatible backend contract/source, ready current realm and matching rules, 55 staged and 165 public file comparisons, exact-runtime compact map/normal panel desktop/landscape interactions and public startup against retained evidence. No executable, gameplay, artwork or dependency changes; no runtime tests apply.",
       "tests": []
     }
   ]
