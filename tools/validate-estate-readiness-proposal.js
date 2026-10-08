@@ -1,5 +1,5 @@
 "use strict";
-// Review-only model. These proposals must not be loaded by a game or backend.
+// Approved arithmetic evidence. Runtime configuration is independently validated.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -26,7 +26,7 @@ function benefit(key, l) {
   throw Error("No proposed reward for " + key);
 }
 assert.equal(p.hallLead, 0);
-assert.equal(p.officerCommission.higherRarityAcquisitionExceptionRequiresApproval, true);
+assert.equal(p.officerCommission.higherRarityAcquisitionExceptionApproved, true);
 const rewardChecks = c.buildings.map(b => {
   for (let l = 2; l <= 100; l++) assert.notDeepEqual(benefit(b.key, l), benefit(b.key, l - 1), b.key + " empty proposed upgrade " + l);
   return { key: b.key, changingLevels: 99 };
@@ -127,9 +127,9 @@ state = { ...state, realm: "dec", gold: 100 };
 state = complete(state, 560);assert.equal(state.level, 2);assert.equal(state.gold, 100);
 assert.strictEqual(complete(state, 999), state);assert.equal(state.completed.length, 1);
 const report = {
-  status: "PASS: proposal arithmetic and transaction-contract fixtures only",
+  status: "PASS: approved arithmetic and transaction-contract fixtures",
   gameplayDeploymentReady: false,
-  reasons: ["Owner decisions still required for new rewards/gates/acquisition", "No authoritative estate backend or persistence implementation", "Combined account/queue/quest simulation and physical-device/account QA remain"],
+  reasons: ["Arithmetic evidence alone does not certify release readiness", "Required PR checks, coordinated publication and production smoke verification are separate gates", "Physical-device pacing and touch QA remain manual"],
   proposedChangingUpgrades: rewardChecks,
   maxQuestHoursPerDay, maxQuestPercent: maxQuestHoursPerDay / 24 * 100,
   championXpTotal: xpTotal, championFastestQuestHours: xpHours, championDaysAtEightHours: xpHours / 8,

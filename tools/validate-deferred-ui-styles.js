@@ -10,7 +10,8 @@ for (const file of ["index.html", "service-worker.js", "tools/build-production-c
   assert(read(file).includes("optional-ui-styles.js"), `Optional style loader must be included in ${file}`);
 }
 const sheets = [...index.matchAll(/<link rel="crownlands-optional-stylesheet" data-optional-ui-style="([^"]+)" href="([^"]+)"/g)];
-assert.equal(sheets.length, 13);
+assert.equal(sheets.length, 14);
+assert(sheets.some(([, name, href]) => name === "estate-economy" && href.startsWith("estate-economy-ui.css")), "Estate controls must load their own deferred stylesheet");
 for (const [, name, href] of sheets) {
   assert(fs.existsSync(path.join(root, href.split("?")[0])), `${name} is shipped`);
   assert(!worker.includes(`"/${href}"`), `${name} must not be downloaded during installation`);

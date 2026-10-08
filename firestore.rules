@@ -293,6 +293,10 @@ service cloud.firestore {
     }
 
     match /players/{uid} {
+      match /{estateCollection}/{recordId} {
+        allow read: if estateCollection in ["estate", "estateChampions", "estateReceipts", "estateQuotes", "estateContracts"] && ownsPlayerDoc(uid);
+        allow write: if false;
+      }
       match /cosmetics/{stateId} {
         allow read: if ownsPlayerDoc(uid);
         allow write: if false;

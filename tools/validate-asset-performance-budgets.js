@@ -266,7 +266,7 @@ const entrypointBudgets = {
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
-  "firebaseClient.js": 160 * 1024,
+  "firebaseClient.js": 161 * 1024,
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,

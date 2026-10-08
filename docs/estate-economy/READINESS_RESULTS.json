@@ -1,10 +1,10 @@
 {
-  "status": "PASS: proposal arithmetic and transaction-contract fixtures only",
+  "status": "PASS: approved arithmetic and transaction-contract fixtures",
   "gameplayDeploymentReady": false,
   "reasons": [
-    "Owner decisions still required for new rewards/gates/acquisition",
-    "No authoritative estate backend or persistence implementation",
-    "Combined account/queue/quest simulation and physical-device/account QA remain"
+    "Arithmetic evidence alone does not certify release readiness",
+    "Required PR checks, coordinated publication and production smoke verification are separate gates",
+    "Physical-device pacing and touch QA remain manual"
   ],
   "proposedChangingUpgrades": [
     {

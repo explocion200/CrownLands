@@ -55,6 +55,7 @@ const {
 } = require("./player-region-spawn.js");
 const COSMETICS = require("./cosmetics.js");
 const { createCosmeticsService } = require("./cosmetics-service.js");
+const { createEstateService } = require("./estate-service");
 const { defineSecret } = require("firebase-functions/params");
 const { createCrownPaymentsService } = require("./crown-payments-service");
 const { createCrownPaymentsWebhook } = require("./crown-payments-http");
@@ -149,6 +150,14 @@ const linkedAccountService = LINKED_ACCOUNTS.createService({ db,
   unavailable: () => new HttpsError("unavailable", "Network verification is unavailable. Try again shortly."),
 });
 const cosmeticService = createCosmeticsService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry, assertCurrentPlayerProfile, normalizeFlag: normalizeServerFlag });
+const estateService = createEstateService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry,
+  assertCurrentPlayerProfile, prepareEconomy: prepareEconomyCollection, writeEconomy: writePreparedEconomy,
+  economyResponse: createEconomyResponse, normalizeGear: normalizeCommonGear,
+  rawMainGoldRate: economy => {
+    const entry = getCanonicalMainCityEntry(economy.profileAfter, economy.cityEntries);
+    return entry ? getMillionLordsPassiveGoldPerHour(clampCityLevel(entry.city.level)) : 285;
+  },
+});
 const messaging = getMessaging();
 
 function normalizeCommonGear(profileOrGear = {}) {
@@ -15130,6 +15139,7 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       });
     }
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
+    const estateGate = requirement.promotion ? await estateService.prepareGearPromotion(transaction, uid, instance.buildingId, requirement.nextRarity, nowMs) : null;
     const resultInstanceId = `cg_up_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
     const upgrade = COMMON_GEAR.consumeUpgradeInputs(gear, instance.instanceId, resultInstanceId, nowMs);
     if (!upgrade) throw new HttpsError("internal", "The gear upgrade could not settle its inventory inputs.");
@@ -15155,6 +15165,7 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       ].slice(-COMMON_GEAR.UPGRADE_RECEIPT_LIMIT);
     }
     gear.updatedAtMs = nowMs;
+    if (estateGate) estateService.save(transaction, uid, estateGate);
     writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
     transaction.update(economy.profileRef, Object.fromEntries(
       upgrade.consumedInstanceIds.map(consumedInstanceId => [
@@ -35793,6 +35804,14 @@ exports.resolveDueRewardCampPayouts = onSchedule({
   });
   console.log("Scheduled reward camp payouts finished", { scanned: due.size, paid, skipped, failed });
 });
+
+// Estate authority is account-owned. Matching accepted retries are reconciled
+// before realm compatibility checks; new spending always validates current scope.
+exports.getEstateState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.load(requireAuth(request)));
+exports.getEstateQuote = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.quote(requireAuth(request), request.data?.input));
+exports.commitEstateAction = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.execute(
+  requireAuth(request, { allowRealmMismatch: true }), request.data || {}, () => requireCompatibleClient(request.data || {})));
+exports.getEstateChampions = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.bench(requireAuth(request), request.data?.cursor || ""));
 
 // Account cosmetics are permanent and never part of seasonal economy initialization.
 exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));

@@ -1,9 +1,9 @@
 (function () {
   window.CROWNLANDS_REALM_CONFIG = Object.freeze({
-  "releaseId": "crownlands-2026-10-06-linked-account-capture-v1",
+  "releaseId": "crownlands-2026-10-08-estate-economy-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "637489cef89975fd10483831aeb70298f7243fab39db343ed5c062386c4d312c",
+  "apiContractHash": "c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

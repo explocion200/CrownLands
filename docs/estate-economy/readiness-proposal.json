@@ -1,5 +1,5 @@
 {
-  "status": "PROPOSED FOR OWNER REVIEW — not game configuration or an approved rule",
+  "status": "APPROVED DESIGN — October 8, 2026; deployment requires runtime validation",
   "version": "estate-readiness-proposal-1",
   "hallLead": 0,
   "officerCommission": {
@@ -10,7 +10,7 @@
     "rarity": "highest completed building milestone; independently preserve grandfathered existing item access",
     "level": 1,
     "familyChoice": "one selected family for this officer",
-    "higherRarityAcquisitionExceptionRequiresApproval": true
+    "higherRarityAcquisitionExceptionApproved": true
   },
   "wagonCapacityBonus": [
     0,

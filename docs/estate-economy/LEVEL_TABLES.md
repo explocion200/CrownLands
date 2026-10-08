@@ -1,6 +1,6 @@
 # Persistent estate — every building and level
 
-Owner-confirmed: all twenty Inner Castle buildings, estate materials and estate progress persist. Each building individually targets cumulative 1 / 3 / 6 / 10 reference seasons at Levels 25 / 50 / 75 / 100, using 50% of production. Exact quantities, reference output and timers are PROPOSED. Regenerate with node tools/validate-estate-economy-draft.js --write. These are review data, not runtime prices.
+Owner-confirmed: all twenty Inner Castle buildings, estate materials and estate progress persist. Each building individually targets cumulative 1 / 3 / 6 / 10 reference seasons at Levels 25 / 50 / 75 / 100, using 50% of production. Quantities, reference output and timers were approved October 8, 2026. Regenerate with node tools/validate-estate-economy-draft.js --write. These tables are checked against the pending-release runtime prices.
 
 ## Reference and calculation
 
@@ -17,7 +17,7 @@ For each material: reference budget = floor(net hourly output at the band refere
 
 Draft 4 redistributes the first band using squared level weights ((target-1)/24)^2, reserving one unit per eligible level before weighted rounding. Later bands retain their 10% linear rise. First-band timers use max(0.02, min(1, (target-2)/8)) weights, also reserving one minute per level. Floor each share and give remaining units to the last eligible levels. Every band total stays exact and bills/timers never decrease, including across bands. Level 1 is Gold-only; Timber/Stone and applicable Grain/Food start at 2, Planks at 11, Iron at 26 and Tools at 51. Ore is indirect feedstock. Initial construction is outside the 99-upgrade target.
 
-Base construction totals 20% of each band's reference duration: 6 / 12 / 18 / 24 days spread across its upgrades. Timers overlap ongoing production; they are not simply added to ten seasons of resource collection. Builders' Yard reduces new timers up to 30%. All buildings use this timing without the former Guild/Hall timer surcharges. Gold retains the earlier separate formula/building factors, paid on starting funded construction; Gold is not an estate material deposit.
+Base construction totals 20% of each band's reference duration: 6 / 12 / 18 / 24 days spread across its upgrades. Timers overlap ongoing production; they are not simply added to ten seasons of resource collection. Builders' Yard reduces new timers up to 30%. All buildings use this timing without the former Guild/Hall timer surcharges. Gold retains the earlier separate formula/building factors, paid when a reviewed permanent contract is funded; Gold is not a refundable estate deposit.
 
 ## 50% resource budget per reference season
 

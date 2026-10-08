@@ -20,6 +20,7 @@ const rootFiles = [
   "clan-treasury-ui.js", "clan-treasury-ui.css",
   "training-grounds-ui.js", "training-grounds-ui.css",
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
+  "estate-economy-ui.js", "estate-economy-ui.css",
   "app-entry.js",
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "player-journey.js", "player-journey.css",
@@ -74,7 +75,7 @@ function copy(relativeSource, relativeDestination = relativeSource) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
     // Keep the expanded estate UI within its existing delivery budget. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (relativeSource === "inner-city-estate.js") text = minifyEstate(text);
+    if (["inner-city-estate.js", "estate-economy-ui.js"].includes(relativeSource)) text = minifyEstate(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }

@@ -4,39 +4,131 @@
   "coverage": [
     {
       "paths": [
-        "docs/estate-economy/draft-config.json",
-        "docs/estate-economy/LEVEL_TABLES.md",
-        "docs/estate-economy/BALANCE_REVIEW.md",
-        "tools/validate-estate-economy-draft.js"
+        "functions/estate-config.json",
+        "functions/estate-economy.js",
+        "functions/estate-services.js",
+        "functions/estate-service.js",
+        "functions/test/emulator-estate-economy.js",
+        "tools/test-estate-economy.js"
       ],
-      "reason": "Revise only proposed early cost/timer allocation: preserve all eighty material-band totals and 6/12/18/24 construction-day totals while giving Level 2 an affordable starter bill. Verify exact sums, whole positive monotonic prices/timers through band transitions, unchanged Gold-only first builds, first-upgrade duration floor, sub-hour starter material waits, all twenty reference milestones and both small/over-capacity deposit replay/reset/completion fixtures. These files remain review-only and are not runtime prices; no production backend, player data, world topology or release contract changes.",
+      "reason": "Implement approved account-owned permanent estate authority. Independently compare 2,000 prices/timers; verify continuous recipes, storage/reserves, long-absence equivalence, frozen queues/deposits and every changing level benefit. Real callable emulator cases verify exact-once Gold/Crown spending and completion, simultaneous quotes/devices, reserved receipt namespace, owner-only reads/server-only writes, old-realm retries, profile replacement, Gear entitlements/claims, permanent champions, XP/recovery/partial parcels and shared paid allowances. Combined cohorts exercise earned infrastructure with all optional services.",
       "tests": [
+        "tools/test-estate-economy.js",
         "tools/validate-estate-economy-draft.js",
-        "tools/validate-estate-reward-review.js"
+        "tools/validate-estate-readiness-proposal.js",
+        "tools/validate-estate-reward-review.js",
+        "functions/test/emulator-estate-economy.js"
       ]
     },
     {
       "paths": [
+        "functions/index.js",
+        "firestore.rules",
+        "functions/test/emulator-economy-concurrency.js"
+      ],
+      "reason": "Connect four authenticated estate routes to existing seasonal Gold authority and shared Crown wallet; apply migrated officer promotion gates without changing two-copy mechanics, receipts or fees. Cover shared currency concurrency, cosmetics ownership/spending, release/profile guards and reset initialization in their existing integration suites in addition to the new active-topology estate emulator.",
+      "tests": [
+        "functions/test/emulator-estate-economy.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "functions/test/emulator-cosmetics.js",
+        "functions/test/emulator-coordinated-release.js",
+        "functions/test/emulator-reset-gate.js",
+        "tools/validate-common-gear.js"
+      ]
+    },
+    {
+      "paths": [
+        "common-gear-ui.js",
+        "inner-city-estate.js",
+        "estate-economy-ui.js",
+        "estate-economy-ui.css",
+        "firebaseClient.js",
+        "tools/validate-estate-economy-browser.js"
+      ],
+      "reason": "Wire authoritative balances, independent construction art, building/resource services, permanent-credit confirmation and same-ID retry. Preserve original Gear routes, camera/selection, new-item indicators and offline art fixtures. Verify desktop and small landscape, touch/mouse/keyboard existing navigation, all twenty targets, nested dismissal, lazy modules and controller/listener/deadline cleanup. Backend integration covers wrappers and cross-account authority; shared Gear validator protects inventory semantics.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-deferred-ui-styles-browser.js",
+        "functions/test/emulator-estate-economy.js"
+      ]
+    },
+    {
+      "paths": [
+        "index.html",
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-deferred-ui-styles.js"
+      ],
+      "reason": "Ship deferred estate management script/style and include them in production artifacts/manifests. Validate loading/late response behavior and 14 optional styles, minified artifact integrity and initial/cache budgets. Permit only the measured Firebase wrapper increase to 161 KiB; retain the 4.28 MiB installation cap and approved artwork. Build is mandatory for this diff.",
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js",
+        "tools/validate-estate-economy-browser.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/release-config.json",
+        "release-config.js"
+      ],
+      "reason": "Advance the synchronized client/server release identity and API contract for estate routes and officer promotion policy. Retain the active monthly shared core-expansion topology and generation rules; validate stale-client release isolation in static, browser and authoritative callable checks. No publication is performed by this PR.",
+      "tests": [
+        "tools/validate-coordinated-release.js",
+        "tools/validate-coordinated-browser.js",
+        "functions/test/emulator-coordinated-release.js",
+        "functions/test/emulator-estate-economy.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/estate-economy/README.md",
-        "docs/estate-economy/REWARD_REVIEW.md",
-        "tools/validate-estate-reward-review.js"
-      ],
-      "reason": "Refresh the independent audit and whole-account cohorts using the revised exact prices, actual infrastructure, storage, Gold, visit cadence and earned builder slots. Retain conservation and five-minute stability checks and explicitly report remaining baseline reward gaps. Distinguish the deployed presentation, current draft prices and separate unapproved reward proposals; no gameplay balance acceptance or deployment claim.",
-      "tests": [
-        "tools/validate-estate-economy-draft.js",
-        "tools/validate-estate-reward-review.js"
-      ]
-    },
-    {
-      "paths": [
         "docs/estate-economy/READINESS_PLAN.md",
         "docs/estate-economy/READINESS_RESULTS.json",
         "docs/estate-economy/readiness-proposal.json",
         "tools/validate-estate-readiness-proposal.js"
       ],
-      "reason": "Turn ten observed readiness gaps into a concrete review candidate without changing approved Gear policy or the Master Specification. Verify candidate level benefits, integer quest quotes (including the ceil-rounded Tool-fee trap), bounded shared quest income, champion XP/cap behavior, commission demand/copy timing and funded-job conservation/replay/deadline/season fixtures. Generated results explicitly keep gameplayDeploymentReady false. New rarity acquisition, Hall/storage benefits and irreversible job funding require design decisions; actual backend, mixed-account/queue simulation and emulator validation remain required before gameplay release. No live authority or UI code changes, so no emulator or browser suite is affected.",
+      "reason": "Record the explicitly approved repair and accurately distinguish pending implementation from deployed presentation. Validate every per-level perk, quest/XP/meal cap, commissioning recipe and funded-contract invariant against accepted parameters. Keep standalone arithmetic evidence separate from required PR checks and verified coordinated release. Document migration, persistence, long-term pacing and manual physical-device/playtest limitations.",
       "tests": [
-        "tools/validate-estate-readiness-proposal.js"
+        "tools/test-estate-economy.js",
+        "tools/validate-estate-readiness-proposal.js",
+        "tools/validate-estate-reward-review.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/estate-economy/draft-config.json",
+        "docs/estate-economy/LEVEL_TABLES.md",
+        "docs/estate-economy/BALANCE_REVIEW.md",
+        "docs/estate-economy/REWARD_REVIEW.md",
+        "tools/validate-estate-economy-draft.js",
+        "tools/validate-estate-reward-review.js"
+      ],
+      "reason": "Preserve all eighty material budgets and 6/12/18/24-day timer bands while repairing starter progression. Reproduce the exact published 2,000 rows and separate focused reference targets from six shared-account simulations using actual runtime production, earned support levels, deposits/queues, reset Gold, visit cadence, quests/meals, commissions and optional Crown supplies. Check conservation, capacity, Hall/slot limits and service allowances without claiming mathematical balance proves player satisfaction.",
+      "tests": [
+        "tools/validate-estate-economy-draft.js",
+        "tools/validate-estate-reward-review.js",
+        "tools/test-estate-economy.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/test/run-emulator-gates.js"
+      ],
+      "reason": "Register the estate suite for the proven active shared core-expansion emulator topology. Preserve selection, reset ordering and safe-update protections; execute the new integration suite and existing selector/pipeline gates.",
+      "tests": [
+        "functions/test/emulator-estate-economy.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js"
       ]
     }
   ]
