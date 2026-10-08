@@ -34,6 +34,36 @@ async function main() {
       await client.send("Input.dispatchMouseEvent",{type:"mousePressed",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
       await client.send("Input.dispatchMouseEvent",{type:"mouseReleased",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
     };
+    const compactActions = async selector => {
+      assert(await evaluate(s => {
+        const buttons = [...document.querySelectorAll(s)];
+        return buttons.length === 2 && buttons.every(e => {
+          const b = e.getBoundingClientRect(), label = e.querySelector('.wheel-action-name');
+          const text = document.createRange(); text.selectNodeContents(label);
+          const r = text.getBoundingClientRect();
+          return b.width === 48 && b.height === 48 && b.width >= 44
+            && text.getClientRects().length === 1 && label.scrollWidth <= label.clientWidth
+            && r.left >= b.left + 2 && r.right <= b.right - 2 && r.top >= b.top + 2 && r.bottom <= b.bottom - 2;
+        });
+      }, selector), 'Compact estate actions must retain readable labels and touch targets: ' + selector);
+    };
+    const normalActions = async selector => {
+      assert(await evaluate(s => {
+        const buttons = [...document.querySelectorAll(s)];
+        return buttons.length === 2 && buttons.every(e => {
+          const b = e.getBoundingClientRect(), style = getComputedStyle(e);
+          const panel = e.closest('.estate-directory,.estate-detail').getBoundingClientRect();
+          const text = document.createRange(); text.selectNodeContents(e);
+          const r = text.getBoundingClientRect();
+          return !e.classList.contains('cl-action-button') && !e.querySelector('.wheel-icon')
+            && e.textContent === (e.dataset.estateUpgrade ? 'Upgrade' : 'Enter')
+            && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) >= 3
+            && parseFloat(style.fontSize) >= 12 && b.width >= 44 && b.height >= 44
+            && b.left >= panel.left && b.right <= panel.right
+            && text.getClientRects().length === 1 && r.left >= b.left + 2 && r.right <= b.right - 2;
+        });
+      }, selector), 'Estate panel actions must use readable normal buttons with touch targets: ' + selector);
+    };
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
@@ -312,7 +342,7 @@ async function main() {
         for(const e of arrows){
           const b=e.getBoundingClientRect();
           const style=getComputedStyle(e),face=getComputedStyle(e,'::before');
-          if(b.width!==64||b.height!==64||!style.clipPath.startsWith('polygon')||!face.backgroundImage.includes('gradient'))throw Error('Estate action lost shared city hex styling');
+          if(b.width!==48||b.height!==48||!style.clipPath.startsWith('polygon')||!face.backgroundImage.includes('gradient'))throw Error('Compact estate action lost shared city hex styling');
           const expected=e.dataset.estateUpgrade?'rgb(42, 25, 7)':'rgb(242, 226, 191)';
           if(getComputedStyle(e.querySelector('.wheel-action-name')).color!==expected)throw Error('Action label lost its contrasting city color');
           if(!e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)))throw Error('Inaccessible map action');
@@ -324,6 +354,7 @@ async function main() {
         const e=arrows[0];e?.focus({preventScroll:true});return e?.dataset.estateUpgrade;
       });
       assert(mapAction,"A district view exposes upgrade buttons on the map");
+      await compactActions('.estate-upgrade-targets button:not([hidden])');
       const mapCapture=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"map-upgrades-"+width+".png"),Buffer.from(mapCapture.data,"base64"));
       assert.equal(await evaluate(()=>document.activeElement?.dataset.estateUpgrade),mapAction,"Map upgrade retains keyboard focus");
@@ -349,6 +380,7 @@ async function main() {
       // Every map site has a directory action, even when its small-screen map arrow is crowded.
       await click('[data-estate-directory-toggle]');
       for(const building of E.C.buildings){
+        await normalActions('.estate-directory-site:has([data-estate-directory-building="'+building.key+'"]) > .estate-site-action');
         assert(await evaluate(key=>{
           const row=document.querySelector('[data-estate-directory-building="'+key+'"]').parentElement;
           const left=row.querySelector('[data-estate-upgrade]').getBoundingClientRect(),middle=row.querySelector('[data-estate-directory-building]').getBoundingClientRect(),right=row.querySelector('[data-estate-enter]').getBoundingClientRect();
@@ -366,6 +398,7 @@ async function main() {
         await click('[data-estate-directory-toggle]');
         await click('[data-estate-directory-building="'+building.key+'"]');
         assert(await evaluate(()=>!!innerCastleEstateView&&!document.querySelector('.estate-economy-dialog').open),'Selecting a building must stay on the estate');
+        await normalActions('.estate-detail .estate-site-action');
         if(building.key==='mine'){
           const capture=await client.send('Page.captureScreenshot',{format:'png'});
           fs.writeFileSync(path.join(output,'selected-actions-'+width+'.png'),Buffer.from(capture.data,'base64'));

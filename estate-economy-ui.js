@@ -77,15 +77,18 @@
       },
     };
   }
-  // Reuse the city's action tokens without adding the online controls to the
-  // base estate renderer's download or making offline artwork fixtures depend on them.
+  // Keep city-style action tokens on the map and normal buttons in panels.
+  // The base estate renderer and offline artwork fixtures do not download these online controls.
   function mapActions(icon) {
     return {
       mountTimers:constructionTimers,
       button(b, action, context, level) {
         const upgrade = action === "upgrade", name = upgrade ? "Upgrade" : "Enter";
         const hint = upgrade ? "upgrade requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
-        return `<button type="button" class="estate-site-action estate-${action}-${context} cl-action-button cl-action-${upgrade ? "level" : "send"}" data-estate-${action}="${b.key}" aria-label="${escape(b.label)} — ${hint}" title="${escape(b.label)} — ${hint}" ${context === "target" ? "hidden" : ""} ${!upgrade && !level ? "disabled" : ""}><span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span></button>`;
+        const onMap = context === "target";
+        const classes = onMap ? ` cl-action-button cl-action-${upgrade ? "level" : "send"}` : "";
+        const content = onMap ? `<span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span>` : name;
+        return `<button type="button" class="estate-site-action estate-${action}-${context}${classes}" data-estate-${action}="${b.key}" aria-label="${escape(b.label)} — ${hint}" title="${escape(b.label)} — ${hint}" ${onMap ? "hidden" : ""} ${!upgrade && !level ? "disabled" : ""}>${content}</button>`;
       },
       sync(host, levels) {
         host.querySelectorAll("[data-estate-enter]").forEach(button => {

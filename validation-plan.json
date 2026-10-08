@@ -1,14 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5163ac1b2d4d6b75c9f680ebdab69f90669f59e2",
+  "baseCommit": "79da6a61f8db0adc640c200d5e36193d8e0f4b82",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/README.md"
+        "estate-economy-ui.css",
+        "estate-economy-ui.js",
+        "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Documentation-only verified release record. Reconcile PR #489/CI, published merged commit/deploy/time, retained publication hold, compatible backend contract/source, ready current realm and matching rules, 55 staged and 165 public file comparisons, exact-runtime desktop/landscape timer interactions and public startup against retained evidence. No executable, gameplay, artwork or dependency changes; no runtime tests apply.",
+      "reason": "Reduce only the selected estate building map hexes to 48px and return details/directory actions to normal parchment text buttons. Check context-specific markup, single-line label bounds, normal panel borders/font and 44px targets, left/right order and all twenty directory/detail actions at desktop and 844x390/568x320 landscape sizes. Exercise deposits, confirmation/retry, menu entry, disabled/unbuilt states, mouse/touch/keyboard activation, camera/Gear restoration and construction timer lifecycle through unchanged action data attributes. Existing map collision placement reads the scoped size variable. Verify the shared city hex dependency remains intact. No server-authoritative/economy changes; emulator suites do not apply.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-objective-action-buttons.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md"
+      ],
+      "reason": "Record the user-confirmed smaller map buttons and clarified scope: hexes only beside the selected building, with normal details/directory/interior UI buttons. Supersede the prior map size and panel hex styling as pending release while preserving verified publication history and gameplay/timer rules. Review against scoped markup/CSS and browser evidence; no separate documentation runtime test applies.",
       "tests": []
     }
   ]
