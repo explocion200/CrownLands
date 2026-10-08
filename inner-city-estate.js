@@ -205,6 +205,7 @@
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
     const nameplates=[...host.querySelectorAll("[data-estate-nameplate]")];
     const upgradeTargets=[...host.querySelectorAll(".estate-upgrade-targets button")];
+    const timers=options.actions?.mountTimers(host);
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
@@ -212,6 +213,7 @@
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
     function updateResources() {
       if(destroyed)return;
+      timers?.update(options.estate,options.now?.());
       const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
       resources.forEach(r=>{
         const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
@@ -341,6 +343,7 @@
       });
       host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
       placeNameplates(tx,ty,scale,width,height,viewportBox);
+      timers?.place(camera.zoom,selected);
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
@@ -398,7 +401,7 @@
         host.querySelector('[data-estate-nameplate="'+b.key+'"] small').textContent=caption;
         host.querySelector('[data-estate-directory-building="'+b.key+'"] small').textContent=caption;
       }
-      options.actions?.sync(host,siteLevels);renderDetail();paint();updateResources();
+      options.actions?.sync(host,siteLevels);renderDetail();updateResources();paint();
     }
     if(options.onResource){
       host.querySelectorAll("[data-estate-resource]").forEach(element=>{
@@ -487,7 +490,7 @@
       select, zoom, updateResources, updateEstate, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
       debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
-      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();stopResourceUpdates?.();},
+      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();stopResourceUpdates?.();timers?.destroy();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }

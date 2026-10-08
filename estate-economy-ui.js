@@ -6,10 +6,82 @@
     || root.CrownlandsEstate.resources.find(r => r.key === key)?.label || key;
   const duration = ms => ms < 3600000 ? Math.ceil(ms / 60000) + " min" : number(ms / 3600000) + " hours";
   const list = amounts => Object.entries(amounts || {}).filter(([, v]) => v).map(([k, v]) => number(v) + " " + label(k)).join(" · ") || "None";
+  function constructionTimers(host) {
+    const viewport = host.querySelector(".estate-viewport"), layer = document.createElement("div");
+    layer.className = "estate-construction-timers";
+    viewport.append(layer);
+    const sites = root.CrownlandsEstate.buildings.map(b => {
+      const gauge = document.createElement("div"), note = document.createElement("small");
+      gauge.className = "estate-construction-timer"; gauge.dataset.estateConstruction = b.key; gauge.hidden = true;
+      gauge.setAttribute("role", "progressbar"); gauge.setAttribute("aria-valuemin", "0"); gauge.setAttribute("aria-valuemax", "100");
+      gauge.innerHTML = '<svg viewBox="0 0 112 40" aria-hidden="true"><path class="estate-timer-edge" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-track" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-fill" d="M7 31 Q56 -13 105 31" pathLength="100"/></svg><span data-estate-time-left></span>';
+      layer.append(gauge);
+      const target = host.querySelector(`[data-inner-castle-building="${b.key}"]`), entry = host.querySelector(`[data-estate-directory-building="${b.key}"]`);
+      note.className = "estate-construction-note"; note.id = "estateConstructionNote-" + b.key; note.hidden = true; entry.append(note);
+      return { b, gauge, note, target, entry, fill:gauge.querySelector(".estate-timer-fill"), text:gauge.querySelector("[data-estate-time-left]"), job:null };
+    });
+    const remainingText = ms => {
+      const seconds = Math.ceil(ms / 1000), minutes = Math.floor(seconds / 60), hours = Math.floor(minutes / 60);
+      if (hours >= 24) return Math.floor(hours / 24) + "d " + hours % 24 + "h";
+      if (hours) return hours + "h " + minutes % 60 + "m";
+      return minutes + ":" + String(seconds % 60).padStart(2, "0");
+    };
+    let destroyed = false;
+    return {
+      update(estate, now) {
+        if (destroyed) return;
+        for (const site of sites) {
+          const job = estate?.jobs.find(j => j.building === site.b.key && j.status === "running");
+          site.job = job && Number.isFinite(job.completesAtMs) && Number.isFinite(job.durationMs) && job.durationMs > 0 ? job : null;
+          const legacy = !site.job && estate?.jobs.find(j => j.building === site.b.key);
+          site.note.hidden = !site.job && !legacy;
+          for (const target of [site.target, site.entry]) {
+            if (!site.note.hidden) target.setAttribute("aria-describedby", site.note.id);
+            else target.removeAttribute("aria-describedby");
+          }
+          if (!site.job) {
+            site.gauge.hidden = true;
+            site.note.textContent = legacy ? "Paid work · " + (legacy.status === "paused" ? "Paused" : "Waiting for builder") : "";
+            continue;
+          }
+          const left = Math.max(0, job.completesAtMs - now), progress = Math.max(0, Math.min(1, 1 - left / job.durationMs));
+          const text = left ? remainingText(left) : "Finishing…";
+          site.fill.style.strokeDashoffset = String(100 * (1 - progress));
+          site.gauge.setAttribute("aria-valuenow", String(Math.round(progress * 100)));
+          site.gauge.setAttribute("aria-label", site.b.label + " construction to Level " + job.target);
+          site.gauge.setAttribute("aria-valuetext", Math.round(progress * 100) + "% complete · " + (left ? text + " remaining" : "Waiting for completion confirmation"));
+          site.gauge.title = site.gauge.getAttribute("aria-label") + " · " + site.gauge.getAttribute("aria-valuetext");
+          site.text.textContent = text; site.note.textContent = "Construction · " + text + (left ? " left" : "");
+        }
+      },
+      place(zoom, selected) {
+        if (destroyed) return;
+        const view = viewport.getBoundingClientRect(), width = zoom < 2.5 ? 88 : 112, height = 40;
+        const rect = e => { const r = e.getBoundingClientRect(); return {left:r.left - view.left, right:r.right - view.left, top:r.top - view.top, bottom:r.bottom - view.top}; };
+        const overlaps = (a,b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;
+        const obstacles = [...host.querySelectorAll('.estate-site>img,.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,.estate-district:not([hidden])>span,.estate-nameplate:not([hidden]),.estate-building-target:not([hidden]),.estate-upgrade-targets button:not([hidden]),#fixtureControls')].filter(e => !e.hidden && e.getClientRects().length).map(rect);
+        for (const site of [...sites].sort((a,b) => (b.b.key === selected) - (a.b.key === selected))) {
+          if (!site.job) continue;
+          const art = rect(host.querySelector(`[data-estate-site="${site.b.key}"]>img`)), cx = (art.left + art.right) / 2;
+          const box = {left:cx - width / 2, right:cx + width / 2, top:art.top - height - 6, bottom:art.top - 6};
+          site.gauge.hidden = box.left < 6 || box.top < 6 || box.right > view.width - 6 || box.bottom > view.height - 6 || obstacles.some(o => overlaps(box,o));
+          if (!site.gauge.hidden) {
+            site.gauge.style.left = box.left + "px"; site.gauge.style.top = box.top + "px"; site.gauge.style.width = width + "px";
+            obstacles.push(box);
+          }
+        }
+      },
+      destroy() {
+        destroyed = true; layer.remove();
+        for (const site of sites) { site.note.remove(); site.target.removeAttribute("aria-describedby"); site.entry.removeAttribute("aria-describedby"); }
+      },
+    };
+  }
   // Reuse the city's action tokens without adding the online controls to the
   // base estate renderer's download or making offline artwork fixtures depend on them.
   function mapActions(icon) {
     return {
+      mountTimers:constructionTimers,
       button(b, action, context, level) {
         const upgrade = action === "upgrade", name = upgrade ? "Upgrade" : "Enter";
         const hint = upgrade ? "upgrade requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
@@ -64,7 +136,8 @@
       clearTimeout(counterTimer);
       if (!current() || document.hidden || !options.visible() || !data) return;
       options.tick?.();
-      if (Object.values(data.estate.projection?.net || {}).some(rate => Math.abs(rate) > 1e-7)) counterTimer = setTimeout(paintCounters, 1000);
+      if (Object.values(data.estate.projection?.net || {}).some(rate => Math.abs(rate) > 1e-7)
+        || data.estate.jobs.some(j => j.status === "running" && j.completesAtMs > now())) counterTimer = setTimeout(paintCounters, 1000);
     }
     const button = (action, text, attributes = "") => `<button type="button" data-economy-action="${action}" ${attributes}>${text}</button>`;
     function accept(result) {
@@ -305,7 +378,7 @@
       if (current() && data && revision > data.estate.revision) refresh();
     });
     refresh();
-    return { refresh, balances, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
+    return { refresh, balances, now, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
       visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
   root.CrownlandsEstateEconomy = { create, mapActions };
