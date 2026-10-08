@@ -1922,7 +1922,7 @@ function renderCommonGearBuilding(buildingId) {
   if(innerCastleEconomy){
     const seal=modalBody.querySelector(".tg-seal");
     if(seal){const button=document.createElement("button");button.type="button";button.className=seal.className+" estate-officer-management";button.innerHTML=seal.innerHTML;
-      button.title="Building upgrades & commissions";button.setAttribute("aria-label","Manage "+building.name+" building and commissions");button.dataset.estateOfficerManage=buildingId;
+      button.title="Officer commissions";button.setAttribute("aria-label",building.name+" officer commissions");button.dataset.estateOfficerManage=buildingId;
       button.addEventListener("click",()=>innerCastleEconomy?.building(buildingId));seal.replaceWith(button);}
   }
   bindCommonGearScreen(viewModel);
@@ -2035,7 +2035,7 @@ function renderInnerCastle(cityId) {
   }))return true;
   if(getOnlineApi()?.getEstateState && window.CrownlandsEstateEconomy && !innerCastleEconomy){
     innerCastleEconomy=window.CrownlandsEstateEconomy.create({
-      api:getOnlineApi,scope:getCommonGearActionScope,gear:COMMON_GEAR,
+      api:getOnlineApi,scope:getCommonGearActionScope,gear:COMMON_GEAR,gold:()=>Math.max(0,Math.floor(getProjectedGold())),
       visible:()=>!!innerCastleEstateView,
       tick:()=>innerCastleEstateView?.updateResources(),
       apply:result=>{applyServerEconomyResult(result);if(result.cosmetics)applyCosmeticResult(result);},
@@ -2050,6 +2050,7 @@ function renderInnerCastle(cityId) {
     gearRoles: roles,
     estate: innerCastleEconomy?.snapshot()?.estate,
     onBuilding: innerCastleEconomy ? key=>innerCastleEconomy.building(key) : null,
+    onUpgrade: innerCastleEconomy ? key=>innerCastleEconomy.upgrade(key) : null,
     onResource: innerCastleEconomy ? key=>innerCastleEconomy.resource(key) : null,
     newMarkers: state?.gear?.newMarkers,
     getResources: () => ({ ...innerCastleEconomy?.balances(), gold: Math.max(0, Math.floor(getProjectedGold())), crowns: cosmeticUid && cosmeticState ? cosmeticState.crowns : null }),

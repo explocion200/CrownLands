@@ -159,6 +159,7 @@
       </div>`;
   }
   function shell(options, siteStates, siteLevels) {
+    const upgradeButton=(b,map=false)=>options.onUpgrade?`<button type="button" class="${map?"estate-upgrade-target":"estate-upgrade-directory"}" data-estate-upgrade="${b.key}" title="${escape(b.label)} — upgrade requirements and deposits" aria-label="${escape(b.label)} upgrade requirements and deposits" ${map?"hidden":""}>↑</button>`:"";
     return `<section class="estate-shell" aria-labelledby="estateTitle">
       <header class="estate-header"><button type="button" data-inner-castle-back aria-label="Back to Realm">‹ <span>Back to Realm</span></button><div><p>${escape(options.cityName)} · Main City</p><h2 id="estateTitle">Inner Castle</h2></div><button type="button" data-estate-directory-toggle aria-expanded="false" aria-controls="estateDirectory">Buildings <span>20</span></button><span class="estate-close-space"></span></header>
       <dl class="estate-resources" aria-label="${options.resourcePreview ? "Economy preview balances" : "Estate resources"}">${resources.map(r=>`<div class="estate-resource" data-estate-resource="${r.key}" tabindex="0"><dt><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${r.icon}</svg><span>${r.label}</span></dt><dd data-estate-resource-value>—</dd></div>`).join("")}</dl>${options.resourcePreview ? '<p class="estate-resource-preview">Economy preview · Sample balances</p>' : ""}
@@ -170,8 +171,9 @@
           </div>${buildings.map(b=>siteMarkup(b,siteStates[b.key])).join("")}
         </div>
         <div class="estate-nameplates" aria-hidden="true">${buildings.map(b=>`<div class="estate-nameplate" data-estate-nameplate="${b.key}" hidden><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small></div>`).join("")}</div>
+        <div class="estate-upgrade-targets">${buildings.map(b=>upgradeButton(b,true)).join("")}</div>
         <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}, ${levelText(siteStates[b.key],siteLevels[b.key])}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)} · ${levelText(siteStates[b.key],siteLevels[b.key])}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
-        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>`).join("")}</section>`).join("")}</nav>
+        <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<div class="estate-directory-site"><button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>${upgradeButton(b)}</div>`).join("")}</section>`).join("")}</nav>
         <aside class="estate-detail" id="estateDetail" aria-label="Selected building" hidden><button type="button" class="estate-detail-close" data-estate-detail-close aria-label="Close building details">×</button><div data-estate-detail-copy aria-live="polite"></div></aside>
         <div class="estate-camera-controls"><button type="button" data-estate-zoom="out" aria-label="Zoom out">−</button><output aria-label="Map zoom" data-estate-zoom-label>100%</output><button type="button" data-estate-zoom="in" aria-label="Zoom in">+</button><button type="button" data-estate-fit>Fit Estate</button></div><p class="estate-map-hint">Drag to explore · Select a district to look closer</p>
       </div></section>`;
@@ -202,6 +204,7 @@
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
     const nameplates=[...host.querySelectorAll("[data-estate-nameplate]")];
+    const upgradeTargets=[...host.querySelectorAll(".estate-upgrade-target")];
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
@@ -344,6 +347,7 @@
     }
     function placeNameplates(tx,ty,scale,width,height,viewportBox) {
       if(camera.zoom<2.5){
+        upgradeTargets.forEach(button=>{button.hidden=true;});
         nameplates.forEach((label,i)=>{label.hidden=true;targets[i].dataset.hasNameplate="false";});
         return;
       }
@@ -373,6 +377,13 @@
         targets[i].dataset.hasNameplate=String(visible);
         if(visible){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
       }
+      const hitBoxes=targets.map((target,i)=>target.hidden?null:rect(tx+visualLeft(buildings[i])*WIDTH/100*scale-22,ty+visualTop(buildings[i])*HEIGHT/100*scale-22,44,44)).filter(Boolean);
+      upgradeTargets.forEach((button,i)=>{
+        const art=artBoxes[i],cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2;
+        const box=rect(Math.max(art.right,cx+22)+6,cy-22,44,44);
+        button.hidden=box.left<6||box.top<6||box.right>width-6||box.bottom>height-6||[...artBoxes,...hitBoxes,...occupied].some(other=>overlaps(box,other));
+        if(!button.hidden){button.style.left=box.left+"px";button.style.top=box.top+"px";occupied.push(box);}
+      });
     }
     function zoom(value,clientX,clientY) {
       const rect=viewport.getBoundingClientRect(), px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
@@ -406,10 +417,14 @@
       const s=siteStates[b.key],gearRole=(s==="completed"||(options.estate&&siteLevels[b.key]>0))&&options.onGear?options.gearRoles?.[b.key]:null;
       detail.hidden=!camera.detailOpen;
       detail.querySelector(":scope > [data-manage-common-gear]")?.remove();
+      detail.querySelector(":scope > [data-estate-upgrade]")?.remove();
       detail.querySelector("[data-estate-detail-copy]").innerHTML=`<p class="estate-eyebrow">${s==="unbuilt"?"Surveyed plot":s==="constructing"?"Under construction":"Completed building"}</p><h3>${escape(b.label)}</h3><p class="estate-level-caption">${levelText(s,siteLevels[b.key])}${s==="unbuilt"?"":" / "+MAX_LEVEL}</p><img src="${s==="completed"?b.artSrc:b.artByState[s]}" alt="${escape(b.label)} ${s==="completed"?"artwork":"site"}" draggable="false"><p>${escape(b.role)}</p><p class="estate-building-status">${gearRole?escape(gearRole)+" gear and bonuses":options.onBuilding?"Permanent estate service":"Function planned"}</p>${gearRole?'<button type="button" class="estate-manage" data-manage-common-gear="'+b.key+'">Manage Gear →</button>':""}`;
       if(options.onBuilding){
-        const action=document.createElement("button");action.type="button";action.className="estate-manage";action.dataset.estateManageBuilding=b.key;action.textContent="Building & services →";
+        const action=document.createElement("button");action.type="button";action.className="estate-manage";action.dataset.estateManageBuilding=b.key;action.textContent="Building services →";
         action.addEventListener("click",()=>options.onBuilding(b.key),{signal});detail.querySelector("[data-estate-detail-copy]").append(action);
+      }
+      if(options.onUpgrade){
+        const action=document.createElement("button");action.type="button";action.className="estate-manage";action.dataset.estateUpgrade=b.key;action.textContent="Upgrade requirements →";detail.append(action);
       }
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}
@@ -434,6 +449,8 @@
     listen(shellElement,"click",event=>{
       if(suppressClick&&event.detail>0&&(!event.target.closest("button")||event.target.closest("[data-estate-district],[data-inner-castle-building]"))){suppressClick=false;return;}
       suppressClick=false;
+      const upgrade=event.target.closest("[data-estate-upgrade]");
+      if(upgrade){options.onUpgrade?.(upgrade.dataset.estateUpgrade);return;}
       const b=event.target.closest("[data-inner-castle-building],[data-estate-directory-building]");
       if(b){select(b.dataset.innerCastleBuilding||b.dataset.estateDirectoryBuilding,true,true);return;}
       const d=event.target.closest("[data-estate-district]");

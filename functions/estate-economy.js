@@ -114,11 +114,12 @@ function baseQuote(state, key, target, rawGoldPerHour) {
     deposited: { ...deposited }, remaining, gold, durationMs: minutes * 60000 };
 }
 function constructionQuote(state, key, count = 1, rawGoldPerHour = 285) {
-  integer(count, 1, 5, "Queue one to five levels.");
+  integer(count, 1, 1, "Start one level at a time; upgrades cannot be queued.");
   if (!Object.hasOwn(BUILDINGS, key)) fail("Unknown estate building.", "invalid-argument");
+  if (state.jobs.length >= 30) fail("Finish previously paid work before starting another building.");
   const existing = state.jobs.filter(job => job.building === key);
-  if (existing.length + count > 5 || state.jobs.length + count > 30) fail("Construction queue is full.");
-  const start = existing.length ? Math.max(...existing.map(job => job.target)) + 1 : state.levels[key] + 1;
+  if (existing.length) fail("Finish this building's paid work before its next upgrade.");
+  const start = state.levels[key] + 1;
   const jobs = Array.from({ length: count }, (_, i) => baseQuote(state, key, start + i, rawGoldPerHour));
   return { action: "fund", building: key, count, jobs, gold: sum(jobs.map(job => job.gold)),
     materials: jobs.reduce((out, job) => { for (const [k, v] of Object.entries(job.remaining)) out[k] = (out[k] || 0) + v; return out; }, {}),
@@ -147,10 +148,18 @@ function deposit(state, key, amounts) {
   for (const [k, value] of Object.entries(amounts)) state.deposits[key].deposited[k] = (quote.deposited[k] || 0) + value;
 }
 function fund(state, quote, requestId, now) {
-  spend(state, quote.materials);
-  quote.jobs.forEach((job, i) => state.jobs.push({ ...job, id: requestId + "_" + i, status: "queued", fundedAtMs: now }));
+  if (quote.count !== 1 || quote.jobs.length !== 1) fail("Upgrades cannot be queued.");
+  const job = quote.jobs[0], key = quote.building;
+  if (job.building !== key || job.target !== state.levels[key] + 1 || state.jobs.some(j => j.building === key))
+    fail("Finish this building's paid work before its next upgrade.");
+  if (state.jobs.filter(j => j.status === "running").length >= slots(state)) fail("All builders are busy. Start this upgrade when a builder is free.");
+  if (state.jobs.length >= 30) fail("Finish previously paid work before starting another building.");
+  const bill = baseQuote(state, key, job.target, 285);
+  if (Object.values(bill.remaining).some(amount => amount > 0)) fail("Deposit all required materials into this building before upgrading.");
+  // New work starts immediately. Retain the settlement path for contracts paid
+  // before queues were retired; those prices, timers and receipts remain valid.
+  state.jobs.push({ ...job, id: requestId + "_0", status: "running", fundedAtMs: now, startedAtMs: now, completesAtMs: now + job.durationMs });
   delete state.deposits[quote.building];
-  startJobs(state, now);
 }
 function startJobs(state, now) {
   let available = slots(state) - state.jobs.filter(job => job.status === "running").length;
@@ -300,7 +309,7 @@ function snapshot(state, now) {
     if (rate < -EPS && stock > reserve + EPS) horizon = Math.min(horizon, (stock - reserve) / -rate * HOUR);
   }
   for (const job of state.jobs) if (job.status === "running") horizon = Math.min(horizon, Math.max(0, job.completesAtMs - now));
-  return { ...structuredClone(state), serverNowMs: now, version: VERSION, slots: slots(state),
+  return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "deposit-then-start", slots: slots(state),
     projection: { stock: { ...state.stock }, net: flow.net, untilMs: Number.isFinite(horizon) ? now + horizon : null },
     stock: Object.fromEntries(KEYS.map(k => [k, Math.floor(state.stock[k] + EPS)])),
     resources: Object.fromEntries(KEYS.map(k => [k, { available: Math.floor(state.stock[k] + EPS),

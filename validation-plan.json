@@ -1,13 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "75a5829d3077432ad44cc486bc37a80d273e6de5",
+  "baseCommit": "dd77277c98b2d7eac360fdb63a385f71b4c443b5",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/inner-city-estate/README.md"
+        "common-gear-ui.js",
+        "estate-economy-ui.js",
+        "estate-economy-ui.css",
+        "inner-city-estate.js",
+        "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Documentation-only verified release record. Compare merge/deploy IDs, required CI results, exact staged/public artifact hashes, delivered estate interactions and public desktop/mobile startup with retained deployment evidence. No executable, gameplay, artwork or dependency change; no runtime tests apply.",
+      "reason": "External map/detail/directory upgrade actions and service-only interiors share estate camera, labels, input handling, deferred delivery and original Gear entry/return. Check all twenty targets at desktop and landscape sizes, keyboard/touch activation, deposit requirements, disabled states, confirmation/retry, camera preservation, cleanup and unchanged art geometry. Production build and asset budgets are automatic gates.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-common-gear.js"
+      ]
+    },
+    {
+      "paths": [
+        "functions/estate-economy.js",
+        "functions/test/emulator-estate-economy.js",
+        "tools/test-estate-economy.js"
+      ],
+      "reason": "Server-authoritative single-level starts require full permanent deposits, Gold and a free builder. Exercise callable transaction rollback, concurrent starts, quote/request replay, season persistence, legacy paid queues and ledger limits; retain price/timer parity and shared production/services settlement. Existing estate emulator covers the affected wallet, Gear, champion, reset and security dependencies without unrelated multiplayer suites.",
+      "tests": [
+        "tools/test-estate-economy.js",
+        "functions/test/emulator-estate-economy.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-estate-reward-review.js",
+        "docs/estate-economy/REWARD_REVIEW.md"
+      ],
+      "reason": "Regenerate and reproduce six actual-runtime shared-account cohorts under manual deposit/start rules, including idle time between visits, competing services, builder occupancy, resource conservation and every completed level's reward. Prices and timer budgets are unchanged.",
+      "tests": ["tools/validate-estate-reward-review.js"]
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/README.md",
+        "docs/estate-economy/READINESS_PLAN.md"
+      ],
+      "reason": "Record the owner's confirmed external-upgrade/no-new-queue decision and legacy paid-work preservation, explicitly pending deployment. Review against implementation and selected behavior tests above; documentation adds no separate runtime behavior or release claim.",
       "tests": []
     }
   ]
