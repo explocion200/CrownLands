@@ -66,7 +66,18 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Compact map actions and normal UI buttons
+### Current verified web release — Inner Castle building service polish
+
+The authorized merge and web deployment of [PR #493](https://github.com/explocion200/CrownLands/pull/493), from `codex/estate-building-mechanics-polish`, is verified at build `50a795d98beb55c276f2c1c55ff02778bb6db4a4`. All twenty building roles describe their implemented benefits. Service screens show ingredient recipes, individual storage, champion power and party requirements, availability and unlocks. Refreshes preserve drafts, consent, scroll and exact-control focus. Deposit review names its building/target, Back refreshes requirements, daily services refresh at the UTC boundary, and open commission windows settle their deadline over suspended Gear with focus restored to the current opener. Approved costs, timers, rewards, persistence, artwork and fixed map positions remain unchanged.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac820fc75ca410008642d8b`, published October 8 at `23:05:43.010 UTC` (7:05 p.m. Eastern). All 55 staged-file and 165 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`. The manual publication hold remains enabled.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37853098246`](https://github.com/explocion200/CrownLands/actions/runs/37853098246). Six selected local rule/arithmetic/cohort/browser/registry/integration validators, syntax/lint, production artifact and asset budgets passed. No server change required emulator suites. The exact staged runtime passed at 1440×900, 844×390 and 568×320: all twenty sites, deposits/retry, map actions, construction timers, Gear returns, service unlocks, party power/busy champions, recipes/storage ledgers, shared supplies, field/consent/focus preservation, UTC refresh and commission readiness/cleanup. Public anonymous startup passed at desktop and landscape-mobile sizes without uncaught errors.
+- **Backend retained:** release ID `crownlands-2026-10-08-estate-economy-v1`, contract `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`, server fingerprint `b44708b2d69f25282b7eb78272d4e04e6286fef9a2d325130cb39459355106f5` and the 144-callable manifest match the preceding verified release. Backend/rules source is unchanged. Read-only checks retained ready `realm-2026-10 / main-realm-2026-10 / shard_0001` and matching published Firestore rules. Functions, rules, indexes, realm configuration and player records were not redeployed or modified. The client fingerprint is `dac5a9160fee7024f69365245c51798954c1c3ee36a347aa18a336efe4e960a6`.
+- **Limits:** itch.io was not republished. Signed-in production play, physical-device review and human long-term pacing remain manual. Synthetic interactions used isolated fixtures and submitted no production gameplay actions. The individual-building reference-season budgets do not promise a complete twenty-building estate in ten seasons; see [the mechanics review](estate-economy/BUILDING_MECHANICS_REVIEW.md).
+
+Sanitized evidence is retained under `release-artifacts/estate-building-mechanics-polish/deployment/`. Before publication, local `main` and `origin/main` were clean and equal to the merged build, with divergence `0 0`.
+
+### Previous verified web release — Compact map actions and normal UI buttons
 
 The authorized merge and web deployment of [PR #491](https://github.com/explocion200/CrownLands/pull/491), from `codex/estate-smaller-action-buttons`, is verified at build `db317e04fe9962e29a3c5fe3c3544e8bb388a77e`. Selecting an estate building shows compact 48px Upgrade-left and Enter-right hex controls beside its artwork when space permits. Details and all twenty directory rows use normal parchment text buttons; building interiors retain normal UI controls. Both styles preserve touch/keyboard access, disabled Enter before Level 1 completion, services/Gear returns and the existing deposit-then-start rules.
 
@@ -418,6 +429,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Inner Castle building service clarity, availability and refresh/deadline preservation | Verified web build `50a795d...` from PR #493 | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime service/deposit/Gear checks and desktop/mobile startup passed; approved economy/backend/realm/rules retained |
 | Compact selected-building map hexes and normal estate UI buttons | Verified web build `db317e0...` from PR #491; 48px map actions and normal details/directory buttons | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime all-site/style/navigation checks and desktop/mobile startup passed; backend/realm/rules retained |
 | Curved construction progress/countdowns above estate buildings | Verified web build `5163ac1...` from PR #489; accepted deadlines and fixed top anchors | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime timer/camera/lifecycle checks and desktop/mobile startup passed; backend/realm/rules retained |
 | City-style estate Upgrade-left and Enter-right controls | Verified web build `786781d...` from PR #487; selecting stays outside and Enter opens services/Gear | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, all twenty menu/upgrade paths, desktop/mobile startup and preserved backend identity verified |
@@ -2347,6 +2359,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 UTC — Building service polish release verification
+
+- Recorded authorized PR #493 merge and verified web publication at `50a795d98beb55c276f2c1c55ff02778bb6db4a4`, Netlify deploy `6ac820fc75ca410008642d8b`, published `23:05:43.010 UTC` (7:05 p.m. Eastern).
+- Required CI, six focused validators, production artifact, 55 staged and 165 public-file comparisons, exact-runtime service/deposit/Gear interactions and public startup passed. Retained the publication hold, backend contract/source, ready October realm and matching Firestore rules.
+- Updated the current snapshot, Release Channel Matrix, economy guide and building mechanics review to `LIVE — WEB`. No approved economy values or artwork changed. itch.io, authenticated production, physical-device and long-term human pacing retain their stated limits.
 
 ## October 8, 2026 UTC — Compact estate action release verification
 
