@@ -50,6 +50,7 @@ async function main() {
           // server deadline instead of mixing it with the host's wall clock.
           if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
           estate.serverNowMs=serverNowMs;
+          estate.recruitOffers={offers:[]};
           return{estate,champions:{},serverNowMs};
         };
         const receipts=new Map(),issued=new Map();
@@ -107,6 +108,7 @@ async function main() {
       assert.equal(await evaluate(()=>__estateTest.loads),loads,"Counter updates must not poll the server");
       await evaluate(()=>innerCastleEconomy.refresh());
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-upgrade-directory').length),20);
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-enter-directory').length),20);
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
@@ -158,7 +160,11 @@ async function main() {
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Timber ledger");
       assert(await evaluate(()=>document.querySelector(".estate-economy-dialog").textContent.includes("Factory inputs")));
       await click('[data-economy-action="close"]');
-      await evaluate(()=>innerCastleEstateView.select("treasury",true,true));
+      await evaluate(()=>innerCastleEstateView.select("treasury"));
+      await click('[data-estate-detail-close]');
+      await click('[data-inner-castle-building="treasury"]');
+      assert(await evaluate(()=>!!innerCastleEstateView),'Map selection must not enter Gear');
+      await click('.estate-detail [data-estate-enter="treasury"]');
       await wait(()=>!!document.querySelector("[data-estate-officer-manage]"));
       await click("[data-estate-officer-manage]");
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Treasury");
@@ -170,12 +176,22 @@ async function main() {
       assert.equal(await evaluate(()=>innerCastleEstateView.debug().siteStates.quarry),"constructing");
       await evaluate(()=>innerCastleEstateView.select("mine"));
       await click('[data-estate-detail-close]');
+      const layoutCapture=await client.send("Page.captureScreenshot",{format:"png"});
+      fs.writeFileSync(path.join(output,"action-layout-"+width+".png"),Buffer.from(layoutCapture.data,"base64"));
       const mapAction=await evaluate(()=>{
-        const arrows=[...document.querySelectorAll('.estate-upgrade-target')].filter(e=>!e.hidden);
+        const arrows=[...document.querySelectorAll('.estate-upgrade-targets button')].filter(e=>!e.hidden);
+        if(arrows.length!==2)throw Error('Selected building must show one Upgrade/Enter pair');
+        const left=arrows[0].getBoundingClientRect(),right=arrows[1].getBoundingClientRect();
+        const art=document.querySelector('[data-estate-site="mine"] img').getBoundingClientRect();
+        if(arrows[0].dataset.estateUpgrade!=="mine"||arrows[1].dataset.estateEnter!=="mine"||left.right>=art.left||right.left<=art.right)throw Error('Upgrade must flank the left and Enter the right');
         for(const e of arrows){
           const b=e.getBoundingClientRect();
-          if(b.width<44||b.height<44||!e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)))throw Error('Inaccessible map upgrade arrow');
-          for(const other of document.querySelectorAll('.estate-building-target:not([hidden]),.estate-nameplate:not([hidden]),.estate-upgrade-target:not([hidden])')){
+          const style=getComputedStyle(e),face=getComputedStyle(e,'::before');
+          if(b.width!==64||b.height!==64||!style.clipPath.startsWith('polygon')||!face.backgroundImage.includes('gradient'))throw Error('Estate action lost shared city hex styling');
+          const expected=e.dataset.estateUpgrade?'rgb(42, 25, 7)':'rgb(242, 226, 191)';
+          if(getComputedStyle(e.querySelector('.wheel-action-name')).color!==expected)throw Error('Action label lost its contrasting city color');
+          if(!e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)))throw Error('Inaccessible map action');
+          for(const other of document.querySelectorAll('.estate-building-target:not([hidden]),.estate-nameplate:not([hidden]),.estate-upgrade-targets button:not([hidden])')){
             if(other===e)continue;const r=other.getBoundingClientRect();
             if(b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top)throw Error('Overlapping map upgrade control');
           }
@@ -192,13 +208,27 @@ async function main() {
       assert(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent.endsWith(' · Upgrade')));
       await click('[data-economy-action="close"]');
       const arrow=await evaluate(key=>document.querySelector('.estate-upgrade-target[data-estate-upgrade="'+key+'"]').getBoundingClientRect().toJSON(),mapAction);
-      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:arrow.x+22,y:arrow.y+22,id:1}]});
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:arrow.x+arrow.width/2,y:arrow.y+arrow.height/2,id:1}]});
       await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
       await click('[data-economy-action="close"]');
+      const beforeEnter=await evaluate(()=>innerCastleEstateView.snapshot());
+      await evaluate(()=>document.querySelector('.estate-enter-target[data-estate-enter="mine"]').focus());
+      await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",code:"Enter",text:"\r",unmodifiedText:"\r",windowsVirtualKeyCode:13});
+      await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",code:"Enter",windowsVirtualKeyCode:13});
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Mine');
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0);
+      await click('[data-economy-action="close"]');
+      assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),beforeEnter);
+      assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),'mine');
       // Every map site has a directory action, even when its small-screen map arrow is crowded.
       await click('[data-estate-directory-toggle]');
       for(const building of E.C.buildings){
+        assert(await evaluate(key=>{
+          const row=document.querySelector('[data-estate-directory-building="'+key+'"]').parentElement;
+          const left=row.querySelector('[data-estate-upgrade]').getBoundingClientRect(),middle=row.querySelector('[data-estate-directory-building]').getBoundingClientRect(),right=row.querySelector('[data-estate-enter]').getBoundingClientRect();
+          return left.right<=middle.left&&middle.right<=right.left;
+        },building.key),'Directory keeps Upgrade left and Enter right');
         await click('.estate-upgrade-directory[data-estate-upgrade="'+building.key+'"]');
         await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
         await wait(()=>document.querySelector('.estate-economy-content')?.getAttribute('aria-busy')==='false');
@@ -206,6 +236,47 @@ async function main() {
         await click('[data-economy-action="close"]');
       }
       await click('[data-estate-directory-toggle]');
+      // Real building selection stays outside; Enter alone opens each menu.
+      for(const building of E.C.buildings){
+        await click('[data-estate-directory-toggle]');
+        await click('[data-estate-directory-building="'+building.key+'"]');
+        assert(await evaluate(()=>!!innerCastleEstateView&&!document.querySelector('.estate-economy-dialog').open),'Selecting a building must stay on the estate');
+        if(building.key==='mine'){
+          const capture=await client.send('Page.captureScreenshot',{format:'png'});
+          fs.writeFileSync(path.join(output,'selected-actions-'+width+'.png'),Buffer.from(capture.data,'base64'));
+        }
+        const before=await evaluate(()=>innerCastleEstateView.snapshot());
+        await click('.estate-detail [data-estate-enter="'+building.key+'"]');
+        if(['treasury','barracks','gatehouse','royal-stables'].includes(building.key)){
+          await wait(()=>!!document.querySelector('[data-gear-back]'));
+          await click('[data-gear-back]');
+          await wait(()=>!!innerCastleEstateView);
+        }else{
+          await wait(key=>document.querySelector('#estateEconomyTitle')?.textContent===CrownlandsEstate.buildings.find(b=>b.key===key).label,building.key);
+          await click('[data-economy-action="close"]');
+          assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),building.key,'Service refresh keeps the Enter opener for keyboard return');
+        }
+        assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),before,'Menu return preserves camera and detail');
+      }
+      await click('[data-estate-directory-toggle]');
+      await click('.estate-enter-directory[data-estate-enter="quarry"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Quarry');
+      await click('[data-economy-action="close"]');
+      await click('[data-estate-directory-toggle]');
+      await evaluate(()=>document.querySelector('.estate-enter-directory[data-estate-enter="treasury"]').scrollIntoView({block:'center'}));
+      const directoryCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'directory-actions-'+width+'.png'),Buffer.from(directoryCapture.data,'base64'));
+      await click('.estate-enter-directory[data-estate-enter="treasury"]');
+      await wait(()=>!!document.querySelector('[data-gear-back]'));
+      await click('[data-gear-back]');
+      await wait(()=>!!innerCastleEstateView);
+      // Unbuilt plots cannot enter; completion enables Enter, including while
+      // an already-completed building is undergoing another upgrade.
+      await evaluate(()=>{__estateTest.state.levels.mine=0;return innerCastleEconomy.refresh();});
+      await evaluate(()=>innerCastleEstateView.select('mine'));
+      assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"]')].every(e=>e.disabled)));
+      await evaluate(()=>{__estateTest.state.levels.mine=24;return innerCastleEconomy.refresh();});
+      assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"],[data-estate-enter="quarry"]')].every(e=>!e.disabled)));
       // Fully credited materials remain ready while the builder is occupied.
       await evaluate(()=>{
         const s=__estateTest.state,q=__estateTest.quotes.mine.jobs[0];s.slots=1;
@@ -224,7 +295,7 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelectorAll(".estate-economy-dialog").length),0);
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: all 20 external upgrade actions, partial/full deposits, no queues, busy builders, confirmation, lost-ack retry, camera, construction artwork, ledgers, Gear services, keyboard and cleanup.");
+    console.log("Estate desktop/landscape UI passed: city-style Upgrade left / Enter right, all 20 menus and external upgrade actions, partial/full deposits, no queues, busy builders, confirmation, lost-ack retry, camera, construction artwork, ledgers, Gear services, keyboard/touch, focus return and cleanup.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

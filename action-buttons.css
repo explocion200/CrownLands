@@ -51,7 +51,7 @@
   --cl-action-disabled-edge: #766951;
 }
 
-:is(.city-wheel-action, .gold-camp-wheel-action).cl-action-button {
+:is(.city-wheel-action, .gold-camp-wheel-action, .estate-site-action).cl-action-button {
   --cl-action-bg: var(--cl-action-info-bg);
   --cl-action-border: var(--cl-action-info-border);
   --cl-action-text: var(--cl-action-info-text);

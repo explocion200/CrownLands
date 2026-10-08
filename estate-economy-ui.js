@@ -6,6 +6,43 @@
     || root.CrownlandsEstate.resources.find(r => r.key === key)?.label || key;
   const duration = ms => ms < 3600000 ? Math.ceil(ms / 60000) + " min" : number(ms / 3600000) + " hours";
   const list = amounts => Object.entries(amounts || {}).filter(([, v]) => v).map(([k, v]) => number(v) + " " + label(k)).join(" · ") || "None";
+  // Reuse the city's action tokens without adding the online controls to the
+  // base estate renderer's download or making offline artwork fixtures depend on them.
+  function mapActions(icon) {
+    return {
+      button(b, action, context, level) {
+        const upgrade = action === "upgrade", name = upgrade ? "Upgrade" : "Enter";
+        const hint = upgrade ? "upgrade requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
+        return `<button type="button" class="estate-site-action estate-${action}-${context} cl-action-button cl-action-${upgrade ? "level" : "send"}" data-estate-${action}="${b.key}" aria-label="${escape(b.label)} — ${hint}" title="${escape(b.label)} — ${hint}" ${context === "target" ? "hidden" : ""} ${!upgrade && !level ? "disabled" : ""}><span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span></button>`;
+      },
+      sync(host, levels) {
+        host.querySelectorAll("[data-estate-enter]").forEach(button => {
+          const key = button.dataset.estateEnter, hint = levels[key] > 0 ? "enter building menu" : "construct this building before entering";
+          button.disabled = !(levels[key] > 0);
+          button.title = label(key) + " — " + hint; button.setAttribute("aria-label", button.title);
+        });
+      },
+      place(buttons, selected, buildings, artBoxes, obstacles, width, height) {
+        const index = buildings.findIndex(b => b.key === selected), art = artBoxes[index];
+        const pair = buttons.filter(b => (b.dataset.estateUpgrade || b.dataset.estateEnter) === selected);
+        if (!art || pair.length !== 2) return;
+        const size = parseFloat(getComputedStyle(pair[0]).getPropertyValue("--cl-action-size")) || 64;
+        const cx = (art.left + art.right) / 2, cy = (art.top + art.bottom) / 2;
+        const caption = pair[0].closest(".estate-viewport").querySelector(`[data-estate-nameplate="${selected}"]`);
+        const spread = Math.max((art.right - art.left) / 2, 22, caption && !caption.hidden ? caption.offsetWidth / 2 : 0);
+        const boxes = [cx - spread - size - 6, cx + spread + 6]
+          .map(left => ({left, right:left + size, top:cy - size / 2, bottom:cy + size / 2}));
+        const clear = boxes.every(box => box.left >= 6 && box.top >= 6 && box.right <= width - 6 && box.bottom <= height - 6
+          && !obstacles.some(o => box.left < o.right + 2 && box.right > o.left - 2 && box.top < o.bottom + 2 && box.bottom > o.top - 2));
+        buttons.forEach(button => {
+          const i = pair.indexOf(button);
+          // Do not briefly hide a focused button on every layout pass.
+          button.hidden = !clear || i < 0;
+          if (!button.hidden) { button.style.left = boxes[i].left + "px"; button.style.top = boxes[i].top + "px"; }
+        });
+      },
+    };
+  }
   function create(options) {
     const scope = options.scope(), api = options.api(), abort = new AbortController();
     const dialog = document.createElement("dialog");
@@ -271,5 +308,5 @@
     return { refresh, balances, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
       visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
-  root.CrownlandsEstateEconomy = { create };
+  root.CrownlandsEstateEconomy = { create, mapActions };
 })(window);
