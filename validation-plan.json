@@ -1,106 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "bb8c2c7a053be5818cbb207852d00c94ac552806",
+  "baseCommit": "d84754fc1f92fb45f89e6518b0672f6bbca49d29",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "inner-city-estate.css",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/map-benchmark/estate-qa-runtime.js",
-        "docs/visual-qa/inner-city-estate/index.html",
-        "tools/validate-inner-castle.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Show tight single-line name/level captions only at district zoom (2.5x and above), matching district clicks. Verify overview and intermediate zoom contain no individual captions, every district reveals captions, and Fit Estate/zoom-out hide them again. Preserve collision handling around artwork and controls, screen-pixel readability, all twenty directory selections at desktop and three landscape sizes, unchanged 44px targets, keyboard/touch navigation, four real Gear entry/return paths and lifecycle, mixed levels through 100, malformed level handling and approved art/roads. Optional review levels never write state. No construction, Crown spending, server or reset implementation changes, so no emulator suite is affected. The renamed estate Back action closes to the underlying realm, restores map focus, retains realm/camera and disposes the scene. Test City Details/Profile entry and mouse, touch and keyboard exits alongside existing equipment round trips. Add the centered resource ledger and sharp exact-value/status presentation, unknown-versus-zero handling, two-row small-screen layout, separate district hit areas, resized-map pan/wheel/pinch coordinates and labeled synthetic fixture balances. Preserve art, footprints and camera. Verify live Gold/Crown HUD observation, refresh and scene disposal without polling or new resource authority. Review follow-up: anchor the Walled City label to its actual center and keep western/eastern district labels on the correct side during small-landscape collision avoidance. Assert all seven fitted district targets remain accessible and nonoverlapping in real/fixture views; preserve the scene, artwork and touch targets. Verify pinch/drag starting on district and building map targets: retain ordinary taps and keyboard activation, capture only after movement or a second touch, suppress gesture clicks, and keep directory/detail/camera controls independent.",
-      "tests": [
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
-        "common-gear-ui.js"
-      ],
-      "reason": "Change only the estate Back callback to close the shared dialog and focus the existing realm map. Preserve access guards, cleanup, Gear dismissal and upgrade actions. Validate shared modal lifecycle and Common Gear dependencies; no server-authoritative actions or world generation changes. Currency getters use the existing projected Gold and loaded cosmetics wallet; subscribe only to existing HUD mutations and disconnect on scene disposal. Preserve equipment actions, ownership guards and returns.",
-      "tests": [
-        "tools/validate-inner-castle.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-modal-lifecycle-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "index.html",
-        "service-worker.js"
-      ],
-      "reason": "Version estate JS/CSS and the changed shared Gear UI reference, and invalidate the application cache. Check shell/index cache parity and production inclusion, lazy imagery and installation budgets; retain unrelated script versions and offline cache policies. Refresh the shared Gear UI/estate URLs and cache for the resource ledger.",
-      "tests": [
-        "tools/test-shell-cache-assertions.js",
-        "tools/validate-production-artifact.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/visual-qa/inner-city-estate/README.md"
-      ],
-      "reason": "Record owner-confirmed Level 100 maximum, Gold-only initial construction, Crown supply catalogs, permanent progression for four Gear buildings and Alehouse recruitment/recovery/meals. Explicitly revise the cosmetics-only policy and persistence allowlist while marking gameplay as planned. Document label layout, initial presentation, optional review levels and no publication claim. Records add no executable gameplay; costs, recipes, milestones and backend work remain unresolved, so gameplay/reset emulator tests do not apply. Record the owner-requested Back to Realm navigation refinement as in development, preserving equipment returns and current realm/camera. Document the artwork-only fixture exit separately from the real-UI realm exit. Record the explicitly confirmed use of existing rarity tiers, the requested centered counters and links to the proposed economy; do not promote generated balance values to confirmed policy. Record the confirmed follow-up: Guild Master, Alehouse and acquired champions persist, giving six permanent buildings and fourteen seasonal sites; keep backend implementation explicitly planned. The final owner correction makes the entire estate permanent: all twenty buildings, materials, deposits, queues and champion activity. Supersede the former six/fourteen split and keep unrelated world Gold/Hero reset rules separate; no runtime persistence implementation.",
+      "reason": "Record verified, user-authorized PR #477 web and Firebase deployment using retained public-artifact, backend-source, authentication-guard and desktop/mobile smoke evidence. Update only the release snapshot/channel matrix and implemented estate presentation status; keep construction economy and proposed balance explicitly unimplemented. Documentation only: no runtime, dependency, gameplay, realm, rules, generated release, or build changes, so no additional static or emulator suite applies.",
       "tests": []
-    },
-    {
-      "paths": [
-        "tools/validate-estate-economy-draft.js",
-        "docs/estate-economy/draft-config.json",
-        "docs/estate-economy/README.md",
-        "docs/estate-economy/LEVEL_TABLES.md",
-        "docs/estate-economy/BALANCE_REVIEW.md",
-        "tools/validate-estate-reward-review.js",
-        "docs/estate-economy/REWARD_REVIEW.md"
-      ],
-      "reason": "Redraft all twenty buildings as persistent with owner-confirmed per-building 1/3/6/10-season resource targets and 50% production allocation. Replace obsolete seasonal/double-material simulations with fixed band budgets, all 2,000 level rows, higher construction timers and focused collection-plus-construction reference runs. Verify recipe conservation, monotonic bills/timers, exact band sums, inputs by level, storage limits and draft partial-deposit/rollover/replay/completion invariants for all twenty sites. Require generated reports to match current inputs. The reference supporting infrastructure is assumed, not granted; full account allocation, Gold, champion and Crown behavior still need simulation/playtesting. This is a review model and documentation only; no player state, gameplay/reset backend or UI implementation changes. Independently audit all effective level benefits, use exact generated prices in full shared-inventory account cohorts with actual producers/storage/prerequisites/Gold/visits, verify recipe/deposit/Gold conservation and five-minute step stability, and expose quest/champion/shop reward gaps. Successful arithmetic validation is not gameplay balance acceptance. The new report is a reproducible review and does not implement unapproved reward or progression changes.",
-      "tests": [
-        "tools/validate-estate-economy-draft.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-estate-reward-review.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js",
-        "functions/package.json",
-        "functions/pnpm-lock.yaml",
-        "package.json",
-        "pnpm-lock.yaml",
-        "tools/estate-delivery.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "The resource counters exceeded the existing 40 KiB estate script/style budget. Add one pinned development-only minifier, preserve unrelated dependency versions, and minify only the delivered estate script without expression optimization. Keep readable sources and the existing payload cap. Check public API and immutable registry parity against the production artifact, then run the entire estate interaction suite with that delivered script intercepted into the browser. The dependency fixture checks affected existing production dependency resolution; no functions gameplay, authority, emulator or world topology changes. Pin the same minifier in root tooling for the existing Netlify build and functions tooling for the existing CI installation; resolve either installed toolchain without changing release commands. The installation-cache check counts the same generated estate bytes as production using one shared build helper, retaining the existing installation limit. The user separately approved proxy-addr 2.0.8 and Busboy 3.2.2 security patches; their focused dependency and authenticated callable/emulator coverage appears below.",
-      "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/test-functions-dependencies.js",
-        "tools/validate-asset-performance-budgets.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/pnpm-workspace.yaml",
-        "tools/test-functions-dependencies.js"
-      ],
-      "reason": "The user explicitly approved the two production dependency audit fixes. Raise only Busboy to 3.2.2 and proxy-addr to 2.0.8, and exercise the real Express paths under the Functions framework/callable runtime plus the Admin Firestore multipart dependency. Verify malformed CR/LF parameters are rejected, valid fields finish, correctly mapped proxy subnets still work and spoofed forwarded addresses stay untrusted. Select real HTTP authenticated callable and economy-concurrency emulator smoke suites for the patched transport dependencies; no gameplay rules or production records change.",
-      "tests": [
-        "tools/test-functions-dependencies.js",
-        "functions/test/emulator-email-auth.js",
-        "functions/test/emulator-economy-concurrency.js"
-      ]
     }
   ]
 }
