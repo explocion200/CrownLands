@@ -66,7 +66,18 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — City-style estate Upgrade and Enter
+### Current verified web release — Curved construction timers
+
+The authorized merge and web deployment of [PR #489](https://github.com/explocion200/CrownLands/pull/489), from `codex/estate-curved-construction-timers`, is verified at build `5163ac1b2d4d6b75c9f680ebdab69f90669f59e2`. Running first builds and upgrades show an ochre-gold arc above their artwork, filling toward completion with remaining time. The arc keeps its screen size and fixed top anchor through pan, zoom and resize; building names/levels remain below. Crowded or offscreen timers retain directory countdowns. At zero, Finishing… waits for authoritative completion.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac7f5fee4ace3000851cac7`, published October 8 at `20:04:36.947 UTC` (4:04 p.m. Eastern). All 55 staged-file and 165 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`. The manual publication hold remains enabled.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37832477572`](https://github.com/explocion200/CrownLands/actions/runs/37832477572). Five selected local validators, production artifact and asset budgets passed; no server change required emulator suites. The exact staged runtime passed at 1440×900, 844×390 and 568×320: all twenty sites, first builds and concurrent jobs, independent arcs/countdowns, stopped-production ticking without polling, fixed top geometry, server-only completion, legacy paused work, hidden-document pausing, directory fallback and Gear/scene cleanup. Existing deposits, explicit starts, left/right actions, services, camera and keyboard/touch returns passed. Public anonymous startup passed at desktop and landscape-mobile sizes without uncaught errors.
+- **Backend retained:** release ID `crownlands-2026-10-08-estate-economy-v1`, contract `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`, server fingerprint `b44708b2d69f25282b7eb78272d4e04e6286fef9a2d325130cb39459355106f5` and 144-callable manifest match the preceding verified release. Backend/rules source is unchanged. Read-only checks retained ready `realm-2026-10 / main-realm-2026-10 / shard_0001` and matching published Firestore rules. Functions, rules, indexes, realm configuration and player records were not redeployed or modified. The client fingerprint is `c1c081d6fe901972565b991d856f076d66e01db6978bf0f5dd4829f9f6fd2c92`.
+- **Limits:** itch.io was not republished. Signed-in production play and physical-device review remain manual. Synthetic interactions used isolated fixtures and submitted no production gameplay actions. Economy costs, timers, persistence and rewards are unchanged.
+
+Sanitized evidence is retained under `release-artifacts/estate-construction-timers/deployment/`. Before publication, local `main` and `origin/main` were clean and equal to the merged build, with divergence `0 0`.
+
+### Previous verified web release — City-style estate Upgrade and Enter
 
 The authorized merge and web deployment of [PR #487](https://github.com/explocion200/CrownLands/pull/487), from `codex/estate-upgrade-enter-buttons`, is verified at build `786781dd1dab50bce4f14e034835d8e3015e5a7f`. Selecting a building stays on the estate. Upgrade appears on the left in the city map's gold hex style; Enter appears on the right and opens services or the appropriate officer Gear screen. Both actions retain 64px targets with selected-site and directory access. Unbuilt sites disable Enter; later upgrades retain completed services. Fixed bottom captions, permanent deposits and explicit single-level starts are preserved.
 
@@ -396,6 +407,7 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Curved construction progress/countdowns above estate buildings | Verified web build `5163ac1...` from PR #489; accepted deadlines and fixed top anchors | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime timer/camera/lifecycle checks and desktop/mobile startup passed; backend/realm/rules retained |
 | City-style estate Upgrade-left and Enter-right controls | Verified web build `786781d...` from PR #487; selecting stays outside and Enter opens services/Gear | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, all twenty menu/upgrade paths, desktop/mobile startup and preserved backend identity verified |
 | Permanent twenty-building Inner Castle economy, materials, construction/deposits/queues, Gear commissions and rarity gates, champions/quests/meals and Crown supplies | Verified web/backend/rules build `a4cd346...` from PR #479 | Not republished; no estate-economy client verification | `LIVE — WEB`; five emulator suites, exact deployed sources/rules, 162 public-file comparisons and affected runtime smoke passed. Authenticated production, physical-device and long-term pacing review remain manual |
 | Illustrated twenty-site Inner Castle estate, fixed western district labels, district-zoom building captions, resource counters, Back to Realm and preserved equipment returns | Verified web build `75a5829...` from PR #483; Quarry Hills and Woodland retain geographic anchors, while building captions remain beneath their artwork | Not republished for this estate update | `LIVE — WEB`; 162 public-file comparisons, delivered district/caption geometry and navigation, and desktop/mobile startup passed; existing economy backend retained |
@@ -1717,11 +1729,11 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 
 ### Curved building construction timers — confirmed October 8, 2026
 
-**Status: `IMPLEMENTED — PENDING RELEASE`.** Display a curved progress bar centered six screen pixels above each building's construction artwork, with its remaining time tucked below the arc. Fill left to right from the accepted construction duration and server-synchronized completion deadline. Use compact days/hours or hours/minutes for long projects and minutes/seconds for the final hour. Update once per second through the estate's existing resource-display loop, including when production is stopped; do not add per-building animation loops or server polling.
+**Status: `LIVE — WEB`**, verified in build `5163ac1b2d4d6b75c9f680ebdab69f90669f59e2` from PR #489; see FM-2 for publication, staged/public checks and manual-review limits. Display a curved progress bar centered six screen pixels above each building's construction artwork, with its remaining time tucked below the arc. Fill left to right from the accepted construction duration and server-synchronized completion deadline. Use compact days/hours or hours/minutes for long projects and minutes/seconds for the final hour. Update once per second through the estate's existing resource-display loop, including when production is stopped; do not add per-building animation loops or server polling.
 
 - Keep the timer's readable screen size through pan, zoom and resize: 88px wide in the overview, 112px at district zoom, 40px tall. Keep name/level captions fixed below the building and retain the approved Upgrade-left/Enter-right actions. Hide an obstructed or offscreen timer rather than relocating it; its countdown remains available in the Buildings directory and accessible target description.
 - Show running construction only. Partial deposits and unstarted legacy work do not fill an arc; legacy waiting/paused contracts retain a directory status. Separate concurrent jobs use their own saved duration/deadline. At zero show a full arc and **Finishing…**, retaining the current completed level and construction art until the authoritative snapshot confirms completion.
-- Stop display ticking while the estate is closed, replaced by Gear or the document is hidden. Resume from the synchronized clock; remove timer elements and descriptions on scene disposal. This changes presentation only: no costs, build durations, builder slots, queue rules, resource balances, persistence or rewards change. Deployment and signed-in physical-device review remain pending.
+- Stop display ticking while the estate is closed, replaced by Gear or the document is hidden. Resume from the synchronized clock; remove timer elements and descriptions on scene disposal. This changes presentation only: no costs, build durations, builder slots, queue rules, resource balances, persistence or rewards change. The web deployment is verified; signed-in production play and physical-device review remain manual.
 
 ### Confirmed Inner Castle estate presentation — October 6, 2026
 
@@ -2321,6 +2333,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 UTC — Curved construction timer release verification
+
+- Recorded authorized PR #489 merge and verified web publication at `5163ac1...`, Netlify deploy `6ac7f5fee4ace3000851cac7`, published `20:04:36.947 UTC`.
+- Required CI, 55 staged and 165 public-file comparisons, exact-runtime timer/camera/lifecycle interactions and public desktop/mobile startup passed. Retained the publication hold and existing backend contract/source, ready October realm and matching Firestore rules.
+- Updated the current snapshot, Release Channel Matrix, timer rule, Art Bible and economy guide to `LIVE — WEB`. itch.io was not republished; authenticated production and physical-device review remain manual.
 
 ## October 8, 2026 — Curved construction progress above buildings
 
