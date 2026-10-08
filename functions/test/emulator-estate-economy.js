@@ -70,7 +70,9 @@ async function main() {
   const mine = await quote({ action: "fund", building: "mine", count: 1 });
   const quarry = await quote({ action: "fund", building: "quarry", count: 1 });
   const competing = await Promise.allSettled([commit(mine), commit(quarry)]);
-  assert.equal(competing.filter(r => r.status === "fulfilled").length, 1, "Stale second-device quote cannot spend");
+  assert.equal(competing.filter(r => r.status === "fulfilled").length, 0, "No work can be queued while the builder is occupied");
+  assert(competing.every(r=>/builders are busy/.test(r.reason.message)));
+  assert.equal((await stateRef.get()).data().jobs.length,1);
   let saved = (await stateRef.get()).data();
   saved.settledAtMs = Date.now() - E.HOUR;
   for (const job of saved.jobs) if (job.status === "running") {
@@ -80,6 +82,10 @@ async function main() {
   assert.equal(loaded.estate.jobs.length, 0); assert.equal(loaded.estate.levels["foresters-lodge"], 1);
   assert(loaded.estate.stock.timber > 0); const completedLevel = loaded.estate.levels["foresters-lodge"];
   await load(); assert.equal((await stateRef.get()).data().levels["foresters-lodge"], completedLevel);
+  const freeQuotes=await Promise.all([quote({action:"fund",building:"mine",count:1}),quote({action:"fund",building:"quarry",count:1})]);
+  const race=await Promise.allSettled(freeQuotes.map(q=>commit(q)));
+  assert.equal(race.filter(r=>r.status==="fulfilled").length,1,"Concurrent starts must claim a free builder only once");
+  assert.equal((await stateRef.get()).data().jobs.length,1);
   // Install a test-only supply chain and validate large partial credit over resets.
   saved = E.initial(Date.now()); for (const key in saved.levels) saved.levels[key] = 24;
   saved.levels["great-hall"] = 25; for (const key of E.KEYS) saved.stock[key] = 500;
@@ -94,6 +100,21 @@ async function main() {
   await assert.rejects(commit(deposit, "new_expired_spend", { clientResetGeneration: "expired-test-realm" }), /Refresh|updated/);
   await profileRef.set(profileBefore);
   loaded = await load(); assert.equal(loaded.estate.deposits.quarry.deposited.stone, 250);
+  assert.equal(loaded.estate.constructionPolicy,"deposit-then-start");
+  await assert.rejects(quote({action:"fund",building:"quarry",count:2}),/one level/);
+  const incomplete=await quote({action:"fund",building:"quarry",count:1});
+  const unpaidState=(await stateRef.get()).data(),unpaidGold=(await profileRef.get()).data().goldFloat;
+  await assert.rejects(commit(incomplete),/Deposit all/);
+  assert.deepEqual((await stateRef.get()).data(),unpaidState);assert.equal((await profileRef.get()).data().goldFloat,unpaidGold);
+  for(const key of E.KEYS)unpaidState.stock[key]=1e6;await stateRef.set(unpaidState);
+  const remaining=Object.fromEntries(Object.entries(incomplete.value.jobs[0].remaining).filter(([,v])=>v>0));
+  await act({action:"deposit",building:"quarry",amounts:remaining});
+  const ready=await quote({action:"fund",building:"quarry",count:1});
+  assert(Object.values(ready.value.materials).every(v=>v===0));
+  const started=await commit(ready,"manual_upgrade_001");assert.equal(started.estate.jobs[0].status,"running");
+  assert.equal(started.estate.deposits.quarry,undefined);
+  assert((await commit(ready,"manual_upgrade_001")).replayed);
+  await assert.rejects(quote({action:"fund",building:"quarry",count:1}),/Finish/);
   // Migration preserves owned higher tiers, consumed upgrade receipts and unopened/pending chests.
   const epic = G.DEFINITIONS.find(d => d.buildingId === "barracks" && d.rarity === "epic");
   const gear = G.createDefaultState();
@@ -201,6 +222,10 @@ async function main() {
   const returned = await call("getEstateState", returning);
   assert.equal(returned.estate.jobs[0].id, paidJob.id); assert.equal(returned.estate.jobs[0].status, "paused");
   assert.equal(returned.champions[championRecord.id].level, 12); assert.equal(returned.champions[championRecord.id].xp, 7);
+  const resume=(await call("getEstateQuote",returning,{input:{action:"pause",jobId:paidJob.id,paused:false}})).quote;
+  const resumed=await call("commitEstateAction",returning,{quoteId:resume.id,requestId:"resume_legacy_paid",acceptPermanentCredit:true});
+  assert.equal(resumed.estate.jobs[0].status,"running");assert.equal(resumed.estate.jobs[0].durationMs,paidJob.durationMs);
+  assert.equal((await returningRef.get()).data().gold,100,"Previously paid work resumes without another Gold payment");
   console.log("Estate emulator passed: real Gold authority, current realm guards, durable receipts, two devices, persistence, migration, Gear, champions, quests, shared Crown cap and write rules.");
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

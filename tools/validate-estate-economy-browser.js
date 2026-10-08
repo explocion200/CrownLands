@@ -36,8 +36,8 @@ async function main() {
     };
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
-    const quotes = Object.fromEntries(E.C.buildings.filter(b => b.key !== "great-hall").map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
-    for (const [width,height] of [[1440,900],[844,390]]) {
+    const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
+    for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/inner-city-estate/index.html?estateUi=1&scene=initial&visualMarches=0"});
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
@@ -52,17 +52,38 @@ async function main() {
           estate.serverNowMs=serverNowMs;
           return{estate,champions:{},serverNowMs};
         };
-        const receipts=new Map();
+        const receipts=new Map(),issued=new Map();
         window.__estateTestApi={
           getEstateState:async()=>{__estateTest.loads++;return result();},
-          getEstateQuote:async input=>({...result(),quote:{id:"quote_test_001",value:__estateTest.quotes[input.building],input}}),
+          getEstateQuote:async input=>{
+            const s=__estateTest.state;
+            let value;
+            if(input.action==="deposit")value={...input,target:s.levels[input.building]+1,nonrefundable:true};
+            else {
+              if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
+              if(input.count!==1)throw Error("Upgrades cannot be queued.");
+              value=structuredClone(__estateTest.quotes[input.building]);
+              const j=value.jobs[0];j.deposited={...s.deposits[input.building]?.deposited};
+              j.remaining=Object.fromEntries(Object.entries(j.materials).map(([k,v])=>[k,v-(j.deposited[k]||0)]));value.materials={...j.remaining};
+            }
+            const quote={id:"quote_test_"+issued.size,value,input};issued.set(quote.id,quote);
+            return{...result(),quote};
+          },
           commitEstateAction:async request=>{
-            __estateTest.commits.push(request);
+            const q=issued.get(request.quoteId).value;
+            __estateTest.commits.push({...request,action:q.action});
             if(receipts.has(request.requestId))return{ok:true,replayed:true,receipt:receipts.get(request.requestId)};
-            const q=__estateTest.quotes.quarry;
-            __estateTest.state.jobs=[{...q.jobs[0],id:request.requestId,status:"running",completesAtMs:Date.now()+600000}];
-            __estateTest.state.revision++;receipts.set(request.requestId,{action:"fund"});
-            if(__estateTest.failOnce){__estateTest.failOnce=false;throw Error("Connection interrupted. Retry the same request.");}
+            const s=__estateTest.state;
+            if(q.action==="deposit"){
+              const credit=s.deposits[q.building]||={target:q.target,deposited:{}};
+              for(const [k,v]of Object.entries(q.amounts)){s.stock[k]-=v;credit.deposited[k]=(credit.deposited[k]||0)+v;}
+            }else{
+              if(Object.values(q.materials).some(v=>v>0))throw Error("Deposit all required materials.");
+              if(s.jobs.length>=s.slots)throw Error("All builders are busy.");
+              s.jobs.push({...q.jobs[0],id:request.requestId,status:"running",completesAtMs:Date.now()+600000});delete s.deposits[q.building];
+            }
+            s.revision++;receipts.set(request.requestId,{action:q.action});
+            if(q.action==="fund"&&__estateTest.failOnce){__estateTest.failOnce=false;throw Error("Connection interrupted. Retry the same request.");}
             return result();
           },
           getEstateChampions:async()=>({champions:[],nextCursor:""}),
@@ -85,21 +106,51 @@ async function main() {
       await wait(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent === "102").catch(async error=>{throw Error(error.message+"\nCounter diagnostics: "+JSON.stringify(await evaluate(()=>({hidden:document.hidden,view:!!innerCastleEstateView,balances:innerCastleEconomy.balances(),counter:document.querySelector('[data-estate-resource="timber"] dd').textContent,loads:__estateTest.loads,projection:innerCastleEconomy.snapshot().estate.projection}))));});
       assert.equal(await evaluate(()=>__estateTest.loads),loads,"Counter updates must not poll the server");
       await evaluate(()=>innerCastleEconomy.refresh());
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-upgrade-directory').length),20);
+      assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
-      await click("[data-estate-manage-building=quarry]");
+      await click('.estate-detail [data-estate-upgrade="quarry"]');
       await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
-      await click('[data-economy-action="fund"]');
+      await wait(()=>!!document.querySelector('[data-economy-deposit="stone"]'));
+      assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled));
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-count]').length),0);
+      await evaluate(()=>{for(const e of document.querySelectorAll('[data-economy-deposit]'))e.value=e.dataset.economyDeposit==="stone"?100:0;});
+      await click('[data-economy-action="deposit"]');
       await wait(()=>!!document.querySelector("[data-economy-permanent]"));
       await click('[data-economy-action="confirm"]');
       assert.equal(await evaluate(()=>__estateTest.commits.length),0,"Unconfirmed permanent credit cannot submit");
+      await click("[data-economy-permanent]");
+      await click('[data-economy-action="confirm"]');
+      await wait(()=>!!document.querySelector('[data-economy-deposit="stone"]'));
+      assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.deposits.quarry.deposited.stone),100);
+      assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled),"Partial credit cannot start");
+      // A state refresh while reviewing must not strand Back on loading requirements.
+      await click('[data-economy-action="deposit"]');
+      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
+      await evaluate(()=>innerCastleEconomy.refresh());
+      await click('[data-economy-action="cancelReview"]');
+      assert(await evaluate(()=>!!document.querySelector('[data-economy-deposit="stone"]')));
+      await click('[data-economy-action="deposit"]');
+      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
+      await click("[data-economy-permanent]");
+      await click('[data-economy-action="confirm"]');
+      await wait(()=>document.querySelector('[data-economy-action="fund"]')?.disabled===false);
+      assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.jobs.length),0,"Deposits never auto-start work");
+      const output=path.join(root,"release-artifacts/estate-economy");fs.mkdirSync(output,{recursive:true});
+      await evaluate(()=>document.querySelector('.estate-upgrade-requirements').scrollIntoView({block:"center"}));
+      const requirements=await client.send("Page.captureScreenshot",{format:"png"});
+      fs.writeFileSync(path.join(output,"upgrade-"+width+".png"),Buffer.from(requirements.data,"base64"));
+      await click('[data-economy-action="fund"]');
+      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
       await click("[data-economy-permanent]");
       await click('[data-economy-action="confirm"]');
       await wait(()=>document.querySelector('[role="alert"]')?.textContent.includes("Connection interrupted"));
       await click("[data-economy-permanent]");
       await click('[data-economy-action="confirm"]');
       await wait(()=>innerCastleEconomy.snapshot().estate.jobs.length===1);
-      const ids=await evaluate(()=>__estateTest.commits.map(x=>x.requestId));assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
+      const ids=await evaluate(()=>__estateTest.commits.filter(x=>x.action==="fund").map(x=>x.requestId));assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0,"Running work cannot queue another level");
       await click('[data-economy-action="close"]');
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),camera);
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-site="quarry"]').dataset.siteState),"constructing");
@@ -112,12 +163,56 @@ async function main() {
       await click("[data-estate-officer-manage]");
       await wait(()=>document.querySelector("#estateEconomyTitle")?.textContent==="Treasury");
       assert(await evaluate(()=>document.querySelector(".estate-economy-dialog").textContent.includes("Officer commissions")));
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0,"Interiors contain services only");
       await click('[data-economy-action="close"]');
       await click("[data-gear-back]");
       await wait(()=>!!innerCastleEstateView);
       assert.equal(await evaluate(()=>innerCastleEstateView.debug().siteStates.quarry),"constructing");
-      const output=path.join(root,"release-artifacts/estate-economy");fs.mkdirSync(output,{recursive:true});
-      await evaluate(()=>innerCastleEconomy.building("quarry"));
+      await evaluate(()=>innerCastleEstateView.select("mine"));
+      await click('[data-estate-detail-close]');
+      const mapAction=await evaluate(()=>{
+        const arrows=[...document.querySelectorAll('.estate-upgrade-target')].filter(e=>!e.hidden);
+        for(const e of arrows){
+          const b=e.getBoundingClientRect();
+          if(b.width<44||b.height<44||!e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)))throw Error('Inaccessible map upgrade arrow');
+          for(const other of document.querySelectorAll('.estate-building-target:not([hidden]),.estate-nameplate:not([hidden]),.estate-upgrade-target:not([hidden])')){
+            if(other===e)continue;const r=other.getBoundingClientRect();
+            if(b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top)throw Error('Overlapping map upgrade control');
+          }
+        }
+        const e=arrows[0];e?.focus({preventScroll:true});return e?.dataset.estateUpgrade;
+      });
+      assert(mapAction,"A district view exposes upgrade buttons on the map");
+      const mapCapture=await client.send("Page.captureScreenshot",{format:"png"});
+      fs.writeFileSync(path.join(output,"map-upgrades-"+width+".png"),Buffer.from(mapCapture.data,"base64"));
+      assert.equal(await evaluate(()=>document.activeElement?.dataset.estateUpgrade),mapAction,"Map upgrade retains keyboard focus");
+      await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",code:"Enter",text:"\r",unmodifiedText:"\r",windowsVirtualKeyCode:13});
+      await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",code:"Enter",windowsVirtualKeyCode:13});
+      await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
+      assert(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent.endsWith(' · Upgrade')));
+      await click('[data-economy-action="close"]');
+      const arrow=await evaluate(key=>document.querySelector('.estate-upgrade-target[data-estate-upgrade="'+key+'"]').getBoundingClientRect().toJSON(),mapAction);
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:arrow.x+22,y:arrow.y+22,id:1}]});
+      await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
+      await click('[data-economy-action="close"]');
+      // Every map site has a directory action, even when its small-screen map arrow is crowded.
+      await click('[data-estate-directory-toggle]');
+      for(const building of E.C.buildings){
+        await click('.estate-upgrade-directory[data-estate-upgrade="'+building.key+'"]');
+        await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
+        await wait(()=>document.querySelector('.estate-economy-content')?.getAttribute('aria-busy')==='false');
+        assert(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent.endsWith(' · Upgrade')));
+        await click('[data-economy-action="close"]');
+      }
+      await click('[data-estate-directory-toggle]');
+      // Fully credited materials remain ready while the builder is occupied.
+      await evaluate(()=>{
+        const s=__estateTest.state,q=__estateTest.quotes.mine.jobs[0];s.slots=1;
+        s.deposits.mine={target:25,deposited:{...q.materials}};innerCastleEconomy.upgrade("mine");
+      });
+      await wait(()=>document.querySelector('[data-economy-upgrade-status]')?.textContent.includes('builder becomes free'));
+      assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled));
       const capture=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"building-"+width+".png"),Buffer.from(capture.data,"base64"));
       // Keyboard dismissal closes only the nested panel.
@@ -129,7 +224,7 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelectorAll(".estate-economy-dialog").length),0);
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: quotes, confirmation, lost-ack retry, camera, construction artwork, ledgers, Gear returns, keyboard and cleanup.");
+    console.log("Estate desktop/landscape UI passed: all 20 external upgrade actions, partial/full deposits, no queues, busy builders, confirmation, lost-ack retry, camera, construction artwork, ledgers, Gear services, keyboard and cleanup.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

@@ -31,33 +31,33 @@ Every one of the 1,980 upgrades changes a usable rule. Actual value depends on s
 
 ## Shared-account cohorts
 
-Start with the actual six Level 1 buildings, fourteen plots, no materials, 100 Gold and 285 raw Main City Gold/hour. Model Gold restarting at 100 every 30 days while all estate state persists. Earn all supporting producers, storage, Hall levels and builder slots. Settle continuous production exactly at storage/reserve boundaries and construction completions. Every cohort uses the same whole-unit runtime prices and nonrefundable funded queues.
+Start with the actual six Level 1 buildings, fourteen plots, no materials, 100 Gold and 285 raw Main City Gold/hour. Model Gold restarting at 100 every 30 days while all estate state persists. Earn all supporting producers, storage, Hall levels and builder slots. Settle continuous production exactly at storage/reserve boundaries and construction completions. Every cohort uses the same whole-unit runtime prices, permanent deposits and individual starts; no new upgrade queues.
 
-At each visit, fund affordable lowest-target work, prioritizing Hall/sources/processing/storage at ties. When no bill fits, keep one next-level deposit project; no future income is spent automatically. Use all available estate materials for these chosen activities. This is a reproducible policy, not optimal play or a forecast for twenty independently funded buildings.
+At each visit, deposit toward affordable lowest-target work, prioritizing Hall/sources/processing/storage at ties. Start one next level only after every material is deposited, with enough Gold and a free builder. Retain one next-level deposit project while gathering or waiting for builders; future income is never spent automatically. Work completed between visits leaves a builder idle until the next visit. Use all available estate materials for these chosen activities. This is a reproducible policy, not optimal play or a forecast for twenty independently funded buildings.
 
 Services cohorts recruit into the active roster, launch the highest eligible eight-hour quests, choose meals only when affordable/valid, retain recovery/XP/parcel deadlines and collect what fits. Commission cohorts fund selected head-family pieces for all four officers when affordable. Claims stop at the real 2,000-item bag limit; this model does not assume free Gear upgrades or Gold sufficient to pay item fees. Crown cohorts assume an external optional budget of at most 20 Crowns/day, with the actual shared supply allowance, level/preset/source/capacity gates. No recurring purchase is automatic gameplay.
 
 | Visits/day | Optional activities | All 20 built, day | All 25 | All 50 | All 75 | All 100 |
 |---:|---|---:|---:|---:|---:|---:|
-| 1 | Construction | 4 | 178 | 628 | 1,289 | 2,166 |
-| 3 | Construction | 1.33 | 175.67 | 624.67 | 1,286 | 2,163.67 |
-| 1 | Quests/meals | 4 | 178 | 623 | 1,273 | 2,130 |
-| 3 | Quests/meals | 1.33 | 174 | 611 | 1,245.67 | 2,069.33 |
-| 3 | Quests/meals + commissions | 1.33 | 181.33 | 637.33 | 1,303.33 | 2,178.33 |
-| 3 | Quests/meals + commissions + Crown supplies | 1.33 | 174.67 | 612 | 1,251.67 | 2,091.67 |
+| 1 | Construction | 14 | 364 | 813 | 1,474 | 2,351 |
+| 3 | Construction | 4.67 | 216 | 665.33 | 1,326.67 | 2,204.33 |
+| 1 | Quests/meals | 14 | 363 | 808 | 1,459 | 2,315 |
+| 3 | Quests/meals | 4.67 | 214.67 | 651.67 | 1,286.67 | 2,110 |
+| 3 | Quests/meals + commissions | 4.67 | 221.33 | 677 | 1,343.33 | 2,218.33 |
+| 3 | Quests/meals + commissions + Crown supplies | 4.67 | 215 | 652.33 | 1,291.67 | 2,132 |
 
 | Cohort | Day 30: lowest / highest | Day 300: lowest / highest | Launched quests | Commissioned pieces claimed | Crowns spent |
 |---|---|---|---:|---:|---:|
-| 1 | 9 / 13 | 30 / 31 | 0 | 0 | 0 |
-| 2 | 10 / 14 | 30 / 31 | 0 | 0 | 0 |
-| 3 | 9 / 13 | 30 / 31 | 5228 | 0 | 0 |
-| 4 | 10 / 14 | 30 / 31 | 13818 | 0 | 0 |
-| 5 | 10 / 13 | 30 / 31 | 14570 | 1946 | 0 |
-| 6 | 10 / 12 | 30 / 31 | 13977 | 1869 | 41,840 |
+| 1 | 1 / 2 | 20 / 21 | 0 | 0 | 0 |
+| 2 | 4 / 5 | 28 / 29 | 0 | 0 | 0 |
+| 3 | 1 / 2 | 20 / 21 | 5102 | 0 | 0 |
+| 4 | 4 / 5 | 28 / 29 | 13734 | 0 | 0 |
+| 5 | 4 / 5 | 28 / 29 | 14500 | 1969 | 0 |
+| 6 | 4 / 5 | 28 / 29 | 13918 | 1891 | 41,380 |
 
 ## Interpreting the results
 
-The approved 1/3/6/10-season targets are per-building material equivalents at 50% reference production, with paid supporting infrastructure. They do not promise that a whole estate reaches 100 in ten calendar seasons. The shared Hall gate, competing construction, supply levels, deposits, queues and optional activities change the actual route. These cohorts spend 100% of materials across their selected estate activities; saving half elsewhere takes longer.
+The approved 1/3/6/10-season targets are per-building material equivalents at 50% reference production, with paid supporting infrastructure. They do not promise that a whole estate reaches 100 in ten calendar seasons. The shared Hall gate, competing construction, supply levels, deposits, visits to start upgrades and optional activities change the actual route. These cohorts spend 100% of materials across their selected estate activities; saving half elsewhere takes longer.
 
 Optional commissions intentionally exchange progression speed for permanent Gear. A free player can earn the same resource chains, storage and construction slots. Crown supplies cannot buy rarity gates, extra builders, champions or timer skips; the modeled throughput is shared across stores. Quests add at most 2.17728 normalized resource-hours/day (9.072% of one resource's daily reference output before recovery/rounding), never that amount for every material. Crown supplies add at most one shared hour/day. These caps bound input; they do not prove PvP fairness or optimal bottleneck value.
 

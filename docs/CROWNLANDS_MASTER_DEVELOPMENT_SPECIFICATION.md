@@ -1681,6 +1681,16 @@ The approved troops icon is a frontal medieval helmet with worn steel, a broad d
 
 Runtime, combined-account simulation and selected emulator validation passed before merge. The matching backend, rules and web client are verified deployed; signed-in production play and human long-term pacing remain manual checks. The approved presentation and Gear entry/return behavior remain unchanged.
 
+### Confirmed external building upgrades — October 8, 2026
+
+**Status: `IN DEVELOPMENT — NOT DEPLOYED`.** This owner-confirmed follow-up supersedes new construction batches and upgrade queues from the preceding estate release. Keep permanent deposits; each building exposes a separate Upgrade requirements button on the estate map and in the building directory. Interior service and Gear screens no longer contain construction controls. Preserve fixed bottom name/level captions, artwork, camera and equipment returns.
+
+- Show the next target's materials, required/deposited/remaining/available amounts, Gold, timer and current/next benefit. Players may deposit positive whole units toward that building only; deposits survive seasons and do not start work automatically. They remain nonrefundable and nontransferable.
+- Only the next single level may start. Enable Upgrade after its entire material bill is deposited, with enough authoritative Gold, a free builder and the existing prerequisites satisfied. Charge Gold once when the player confirms; consume the credited deposit once without deducting the same materials again. First construction remains Gold-only.
+- Do not create new queued work or fund future levels while a building has paid work outstanding. Keep the existing one/two/three builder slots, so separate buildings may start concurrently when slots are free. A fully deposited project waits for the player's explicit start; becoming affordable or freeing a builder never starts it automatically.
+- Honor previously purchased contracts with their saved targets, prices, timers, completion order and pause/resume rights. Do not delete, refund, reprice or recharge those legacy commitments. Retain once-only action receipts across resets.
+- Level 100 caps, material budgets, production, benefits, Hall gates and construction durations are unchanged. The [economy guide](estate-economy/README.md) and regenerated [shared-account review](estate-economy/REWARD_REVIEW.md) describe manual starts and visit-dependent pacing. Deploy matching backend and client together after authorization; the new panel waits for the server's deposit-then-start policy signal.
+
 ### Confirmed Inner Castle estate presentation — October 6, 2026
 
 The approved estate supersedes the compact six-building Royal Bailey overview and its old hanging-sign anchors. It opens as a full-screen 4:3 illustrated estate with the entire map fitted, a small inhabited walled city in the middle third, northern rocky hills, western woodland and southern farmland. This estate has no river. All buildings face south. Thin umber outlines, painted shading, olive grass, ochre timber, pale stone and burgundy pennants follow the user-provided illustrated atlas reference.
@@ -2277,6 +2287,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 — External upgrades with permanent deposits
+
+- Confirmed a separate estate-map requirements/deposit action for every building, with services retained inside.
+- Replaced new batches/queues with one explicitly started next-level upgrade after full material deposits, Gold and builder availability. Existing paid work is preserved.
+- Updated the economy guide, Art Bible, shared-account review and validation for this rule. Implementation is pending PR validation and authorized coordinated deployment; no new live status is claimed.
 
 ## October 8, 2026 UTC — Fixed western district release verification
 

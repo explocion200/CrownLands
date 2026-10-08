@@ -13,7 +13,7 @@
     dialog.setAttribute("aria-labelledby", "estateEconomyTitle");
     document.body.append(dialog);
     let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
-    let bench = [], cursor = "", error = "", opener = null, refreshPending = false;
+    let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null;
     const current = () => !destroyed && options.scope() === scope;
     const now = () => data ? data.serverNowMs + Math.max(0, Date.now() - data.receivedAtMs) : Date.now();
     function balances() {
@@ -53,9 +53,21 @@
       if (!current()) return;
       if (busy) { refreshPending = true; return; }
       busy = true;
-      try { accept(await api.getEstateState()); error = ""; }
+      try { accept(await api.getEstateState()); error = ""; await loadUpgrade(); }
       catch (e) { if (current()) error = e.message || "Estate could not load."; }
-      finally { busy = false; if (current()) render(); }
+      finally {
+        busy = false;
+        if (current()) { render(); if (refreshPending && !quote) { refreshPending = false; refresh(); } }
+      }
+    }
+    async function loadUpgrade() {
+      if (!current() || !dialog.open || view?.type !== "upgrade" || !data || quote) return;
+      upgradeBill = null;
+      const requestedView = view, key = view.key, s = data.estate;
+      if (s.constructionPolicy !== "deposit-then-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key)) return;
+      const result = await api.getEstateQuote({action:"fund",building:key,count:1});
+      if (!current() || !dialog.open || view !== requestedView) return;
+      accept(result); upgradeBill = result.quote.value.jobs[0];
     }
     async function run(action) {
       if (!current() || busy) return;
@@ -68,30 +80,26 @@
       }
     }
     async function review(input) {
+      const reviewedView = view;
       await run(async () => {
         const result = await api.getEstateQuote(input);
         if (!current()) return;
-        accept(result); quote = result.quote; pending = null;
+        accept(result);
+        if (dialog.open && view === reviewedView) { quote = result.quote; pending = null; }
       });
     }
     function open(next) {
       if (!current()) return;
-      view = next; quote = null; pending = null; error = "";
+      view = next; quote = null; pending = null; upgradeBill = null; error = "";
       if (!dialog.open) { opener = document.activeElement; dialog.showModal(); }
       render(); refresh();
     }
     function buildingBody(key) {
-      const s = data.estate, level = s.levels[key], jobs = s.jobs.filter(j => j.building === key), deposit = s.deposits[key];
+      const s = data.estate, level = s.levels[key];
       const producer = Object.values(s.resources).find(r => r.source === key);
       const commission = s.commissions[key];
       let body = `<p class="estate-economy-kicker">Permanent estate · Level ${level} / 100</p>
-        <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
-        <p>Builders: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots} · Funded contracts: ${s.jobs.length} / 30</p>
-        ${jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0, j.completesAtMs - now())) + " remaining" : escape(j.status)}
-          ${j.status === "running" ? "" : button("pause", j.status === "paused" ? "Resume paid work" : "Pause paid work", `data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("")}
-        ${deposit ? `<p>Committed to Level ${deposit.target}: ${escape(list(deposit.deposited))}</p>` : ""}
-        ${level < 100 ? `<div class="estate-economy-actions"><label>Levels to fund <select data-economy-count>${[1,2,3,4,5].map(n => `<option>${n}</option>`).join("")}</select></label>
-          ${button("fund", level ? "Review upgrade" : "Review construction")}${!jobs.length && level ? button("depositForm", "Deposit materials") : ""}</div>` : "<p>Maximum building level reached.</p>"}`;
+        <p>${escape(s.benefits[key].current)}</p>`;
       if (producer) {
         body += `<article><h3>Production</h3><p>${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
           <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
@@ -141,6 +149,31 @@
           ${button("supply","Review delivery")}</div></article>`;
       return body;
     }
+    function upgradeBody(key) {
+      const s = data.estate, level = s.levels[key], jobs = s.jobs.filter(j => j.building === key);
+      let body = `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
+        <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
+        <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>`;
+      if (jobs.length) return body + jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0,j.completesAtMs-now()))+" remaining" : "Previously paid work · "+escape(j.status)}
+        ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before depositing toward its next level.</p>";
+      if (level >= 100) return body + "<p>Maximum building level reached.</p>";
+      if (s.constructionPolicy !== "deposit-then-start") return body + "<p>Building upgrades are waiting for the matching server update. Refresh shortly.</p>";
+      const bill = upgradeBill;
+      if (!bill) return body + "<p>Loading requirements. If unavailable, refresh to request them again.</p>";
+      const remaining = Object.values(bill.remaining).some(v => v > 0), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
+      const gold = options.gold?.() ?? data.gold, affordable = Number.isFinite(gold) && gold >= bill.gold;
+      const amounts = Object.entries(bill.materials);
+      body += `<h3>Requirements for Level ${bill.target}</h3><p>${duration(bill.durationMs)} · ${number(bill.gold)} Gold when you start</p>`;
+      if (amounts.length) body += `<div class="estate-upgrade-requirements"><table><thead><tr><th>Material</th><th>Required</th><th>Deposited</th><th>Still needed</th><th>You have</th><th>Deposit</th></tr></thead><tbody>${amounts.map(([k,v])=>{
+        const max=Math.min(bill.remaining[k],Math.floor(s.stock[k]));
+        return `<tr><th>${escape(label(k))}</th><td>${number(v)}</td><td>${number(bill.deposited[k])}</td><td>${number(bill.remaining[k])}</td><td>${number(s.stock[k])}</td><td><input aria-label="Deposit ${escape(label(k))}" type="number" min="0" max="${max}" step="1" value="${max}" data-economy-deposit="${k}" ${max ? "" : "disabled"}></td></tr>`;
+      }).join("")}</tbody></table></div><p>Deposits belong only to this building’s next level and stay through seasons. They do not start an upgrade automatically.</p>`;
+      else body += "<p>First construction requires Gold only.</p>";
+      const canDeposit=Object.entries(bill.remaining).some(([k,v])=>v>0&&s.stock[k]>=1);
+      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Construct Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
+        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Your upgrade begins only when you confirm."}</p>`;
+      return body;
+    }
     function reviewBody() {
       const q = quote.value;
       return `<p class="estate-economy-kicker">Review before committing</p>
@@ -158,23 +191,18 @@
         ${q.action === "processor" ? `<p>Processing ${q.enabled ? "on" : "paused"}. Shared input reserves: ${escape(list(q.reserves))}.</p>` : ""}
         ${q.action === "roster" ? `<p>Move champion to the ${q.active ? "active roster" : "permanent bench"}.</p>` : ""}
         ${q.action === "pause" ? `<p>${q.paused ? "Pause" : "Resume"} this paid contract. No additional payment.</p>` : ""}
-        ${q.nonrefundable ? '<label class="estate-economy-commit"><input type="checkbox" data-economy-permanent> I understand: payments become permanent credit for this building. No withdrawal, refund or transfer. Unstarted funded work may be paused and resumed free.</label>' : ""}
+        ${q.nonrefundable ? '<label class="estate-economy-commit"><input type="checkbox" data-economy-permanent> I understand: payments belong permanently to this building. No withdrawal, refund or transfer. Starting an upgrade cannot be cancelled.</label>' : ""}
         <p class="estate-economy-muted">This quote is valid for five minutes and until the estate changes.</p>
         <div class="estate-economy-actions">${button("confirm",pending ? "Retry same request" : "Confirm")}${button("cancelReview","Back")}</div>`;
     }
     function render() {
       if (!current() || !dialog.open || !view) return;
-      const title = view.type === "resource" ? label(view.key) + " ledger" : label(view.key);
+      const title = label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · Upgrade" : "");
       let body = "<p>Loading your permanent estate…</p>";
       if (data) {
         if (quote) body = reviewBody();
-        else if (view.type === "deposit") {
-          const credit = view.bill;
-          body = `<p>Credit is bound to ${label(view.key)} Level ${credit.target}. Depositing frees ordinary storage.</p>
-            ${Object.entries(credit.remaining).map(([k,v])=>`<label>${label(k)} — required ${number(credit.materials[k])}, deposited ${number(credit.deposited[k])}, remaining ${number(v)}
-              <input type="number" min="0" max="${Math.min(v,data.estate.stock[k])}" step="1" value="0" data-economy-deposit="${k}"></label>`).join("")}
-            ${button("deposit","Review permanent deposit")}${button("cancelReview","Back")}`;
-        } else if (view.type === "resource") {
+        else if (view.type === "upgrade") body = upgradeBody(view.key);
+        else if (view.type === "resource") {
           const r = data.estate.resources[view.key];
           body = r ? `<div class="estate-economy-benefits"><p><b>Available</b><br>${number(r.available)} / ${number(r.capacity)}</p><p><b>Deposited</b><br>${number(r.reserved)}</p></div>
             <p>${escape(r.status)}</p><p>Gross: ${number(r.gross)}/hour · Factory inputs: ${number(r.consumed)}/hour · Net: ${number(r.net)}/hour</p>
@@ -196,24 +224,19 @@
       if (action === "close") { dialog.close(); return; }
       if (busy || !current()) return;
       if (action === "refresh") { quote = null; pending = null; await refresh(); return; }
-      if (action === "cancelReview") { quote = null; pending = null; view = {type:"building",key}; render(); return; }
+      if (action === "cancelReview") { quote = null; pending = null; render(); return; }
       if (action === "source") { open({type:"building",key:target.dataset.id}); return; }
       if (action === "confirm") {
         const accepted = !!dialog.querySelector("[data-economy-permanent]")?.checked;
         if (quote.value.nonrefundable && !accepted) { error = "Confirm the permanent credit terms before continuing."; render(); return; }
         pending ||= { requestId: crypto.randomUUID(), quoteId: quote.id, acceptPermanentCredit: accepted };
+        const confirmedView = view;
         await run(async () => {
           const result = await api.commitEstateAction(pending);
           if (!current()) return;
-          accept(result); quote = null; pending = null; view = {type:"building",key};
+          accept(result);
           if (result.replayed) accept(await api.getEstateState());
-        }); return;
-      }
-      if (action === "depositForm") {
-        await run(async () => {
-          const result = await api.getEstateQuote({action:"fund",building:key,count:1});
-          if (!current()) return;
-          accept(result); view={type:"deposit",key,bill:result.quote.value.jobs[0]};
+          if (view === confirmedView) { quote = null; pending = null; await loadUpgrade(); }
         }); return;
       }
       if (action === "benchList" || action === "moreBench") {
@@ -223,7 +246,7 @@
         }); return;
       }
       const inputs = {
-        fund:()=>({action,building:key,count:Number(value("[data-economy-count]"))}),
+        fund:()=>({action,building:key,count:1}),
         deposit:()=>({action,building:key,amounts:Object.fromEntries([...dialog.querySelectorAll("[data-economy-deposit]")].filter(x=>Number(x.value)>0).map(x=>[x.dataset.economyDeposit,Number(x.value)]))}),
         processor:()=>({action,building:key,enabled:data.estate.processors[key]===false}),
         reserves:()=>({action:"processor",building:key,enabled:data.estate.processors[key]!==false,reserves:Object.fromEntries([...dialog.querySelectorAll("[data-economy-reserve]")].map(x=>[x.dataset.economyReserve,Number(x.value)]))}),
@@ -245,7 +268,7 @@
       if (current() && data && revision > data.estate.revision) refresh();
     });
     refresh();
-    return { refresh, balances, snapshot:()=>data, building:key=>open({type:"building",key}), resource:key=>open({type:"resource",key}),
+    return { refresh, balances, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
       visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
   root.CrownlandsEstateEconomy = { create };
