@@ -90,13 +90,24 @@ async function main() {
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,buildingRules:payload.buildingRules,prerequisiteEstate:payload.prerequisiteEstate,firstForesterQuote:payload.firstForesterQuote,hallQuoteAt24:payload.hallQuoteAt24,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,buildingRules:payload.buildingRules,producerRules:payload.producerRules,prerequisiteEstate:payload.prerequisiteEstate,firstForesterQuote:payload.firstForesterQuote,hallQuoteAt24:payload.hallQuoteAt24,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
-          const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
+          const estate=structuredClone(__estateTest.state),serverNowMs=Date.now()+(__estateTest.serverAdvanceMs||0);
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
           // server deadline instead of mixing it with the host's wall clock.
           if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
           estate.serverNowMs=serverNowMs;
+          for(const [key,o]of Object.entries(estate.productionOrders||{}))if(o.completesAtMs<=serverNowMs){estate.stock[o.output]+=o.quantity;delete estate.productionOrders[key];}
+          __estateTest.state.stock={...estate.stock};__estateTest.state.productionOrders=structuredClone(estate.productionOrders);
+          for(const [k,r] of Object.entries(estate.resources)) r.available=Math.floor(estate.stock[k]);
+          estate.productionRecipes=Object.fromEntries(__estateTest.producerRules.filter(p=>Object.keys(p.inputs).length).map(p=>{
+            const rate=p.basePerHour*(estate.levels[p.building]?1+.16*(estate.levels[p.building]-1):0),order=estate.productionOrders[p.building];
+            const room=estate.resources[p.output].capacity-estate.stock[p.output]-(order?order.quantity:0);
+            const max=!rate||order?0:Math.max(0,Math.min(Math.floor(room+1e-7),...Object.entries(p.inputs).map(([k,r])=>Math.floor((estate.stock[k]-(estate.reserves[k]||0)+1e-7)/r))));
+            estate.resources[p.output].pendingProduction=order?.quantity||0;estate.resources[p.output].available=estate.stock[p.output];
+            estate.resources[p.output].storageSpace=Math.max(0,room);
+            return[p.building,{building:p.building,output:p.output,inputs:p.inputs,ratePerHour:rate,maxQuantity:max}];
+          }));
           estate.buildingPrerequisites=Object.fromEntries(__estateTest.buildingRules.map(b=>[b.key,estate.levels[b.key]>=100?[]:
             [...(b.key==='great-hall'?[]:[{building:'great-hall',requiredLevel:estate.levels[b.key]+1}]),...b.requires1.map(building=>({building,requiredLevel:1}))]
               .map(row=>({...row,currentLevel:estate.levels[row.building]})).filter(row=>row.currentLevel<row.requiredLevel)]));
@@ -111,7 +122,12 @@ async function main() {
             const s=__estateTest.state;
             let value;
             if(input.action==="deposit")throw Error("Material deposits are no longer available.");
-            if(input.action==="processor")value={...input};
+            if(input.action==="reserves")value={...input};
+            else if(input.action==="produce"){
+              const recipe=result().estate.productionRecipes[input.building];
+              if(!Number.isSafeInteger(input.quantity)||input.quantity<1||input.quantity>recipe.maxQuantity)throw Error('Production quantity is not available.');
+              value={...input,output:recipe.output,materials:Object.fromEntries(Object.entries(recipe.inputs).map(([k,v])=>[k,v*input.quantity])),durationMs:Math.ceil(input.quantity/recipe.ratePerHour*3600000),ratePerHour:recipe.ratePerHour,version:'estate-production-1'};
+            }
             else {
               if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
               if(input.count!==1)throw Error("Upgrades cannot be queued.");
@@ -135,6 +151,13 @@ async function main() {
             }
             if(q.action==='fund'&&__estateTest.rejectFund){const message=__estateTest.rejectFund;__estateTest.rejectFund='';throw Error(message);}
             const s=__estateTest.state;
+            if(q.action==='produce'){
+              if(s.productionOrders[q.building])throw Error('Finish production first.');
+              for(const [k,v]of Object.entries(q.materials))if(s.stock[k]<v)throw Error('Not enough '+k);
+              for(const [k,v]of Object.entries(q.materials))s.stock[k]-=v;
+              s.productionOrders[q.building]={...q,id:request.requestId,status:'running',delivered:0,startedAtMs:Date.now(),completesAtMs:Date.now()+q.durationMs};
+            }
+            if(q.action==='reserves')Object.assign(s.reserves,q.reserves);
             if(q.action==="fund"){
               if(s.jobs.length>=s.slots)throw Error("All builders are busy.");
               for(const [k,v]of Object.entries(q.materials))if(s.stock[k]<v)throw Error("Not enough "+k);
@@ -143,6 +166,7 @@ async function main() {
             }
             s.revision++;receipts.set(request.requestId,{action:q.action});
             if(q.action==="fund"&&__estateTest.failOnce){__estateTest.failOnce=false;throw Error("Connection interrupted. Retry the same request.");}
+            if(q.action==='produce'&&__estateTest.failProductionOnce){__estateTest.failProductionOnce=false;throw Error('Connection interrupted. Retry the same production request.');}
             return result();
           },
           getEstateChampions:async()=>({champions:[],nextCursor:""}),
@@ -152,7 +176,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),buildingRules:E.C.buildings.map(b=>({key:b.key,requires1:b.requires1})),prerequisiteEstate:E.snapshot(prerequisiteEstate,prerequisiteEstate.settledAtMs),firstForesterQuote,hallQuoteAt24,benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),buildingRules:E.C.buildings.map(b=>({key:b.key,requires1:b.requires1})),producerRules:E.C.producers,prerequisiteEstate:E.snapshot(prerequisiteEstate,prerequisiteEstate.settledAtMs),firstForesterQuote,hallQuoteAt24,benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -750,15 +774,101 @@ async function main() {
       await click('[data-economy-action="close"]');
       await evaluate(()=>innerCastleEconomy.building('sawmill'));
       await wait(()=>document.querySelector('[data-economy-reserve="timber"]')&&!document.querySelector('[data-economy-reserve="timber"]').disabled);
-      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('Recipe per unit: 2 Timber')));
+      // All four material recipes are opt-in finite batches, with normal
+      // buttons, native keyboard/touch sliders and refreshed affordability.
+      const productionBefore=await evaluate(()=>structuredClone(__estateTest.state));
+      for(const p of E.C.producers.filter(p=>Object.keys(p.inputs).length)){
+        await evaluate(p=>{
+          const s=__estateTest.state;s.productionOrders={};s.levels[p.building]=1;s.benefits[p.building]=__estateTest.benefitsAt1[p.building];s.stock[p.output]=0;
+          for(const [k,r]of Object.entries(p.inputs)){s.stock[k]=r*20;s.reserves[k]=r*5;}
+          innerCastleEconomy.building(p.building);
+        },p);
+        await wait(()=>document.querySelector('[data-economy-quantity]')&&!document.querySelector('[data-economy-quantity]').disabled);
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').max),'15');
+        assert(await evaluate(()=>!document.querySelector('.estate-production-details').open&&!document.querySelector('.estate-production-reserves').open),'Production task precedes collapsed building and reserve details');
+        assert(await evaluate(()=>document.querySelector('.estate-production-item').compareDocumentPosition(document.querySelector('.estate-production-details'))&Node.DOCUMENT_POSITION_FOLLOWING),'Production appears before building information');
+        assert(await evaluate(()=>{const b=document.querySelector('footer [data-economy-action="produce"]').getBoundingClientRect();return b.height>=44&&b.top>=0&&b.bottom<=innerHeight;}),'Start stays visible on short screens');
+        await click('[data-economy-action="productionStep"][data-step="1"]');
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'2');
+        await click('[data-economy-action="productionStep"][data-step="-1"]');
+        assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="processor"]').length),0,'No automatic On/Resume action is available');
+        const slider=await evaluate(()=>{const e=document.querySelector('[data-economy-quantity]');e.scrollIntoView({block:'center'});e.focus();const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};});
+        assert(slider.height>=44&&slider.width>=100,'Slider must remain usable at small landscape sizes');
+        await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'2');
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity-number]').value),'2');
+        await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:slider.x+slider.width*.65,y:slider.y+slider.height/2,radiusX:2,radiusY:2}]});
+        await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        assert(await evaluate(()=>Number(document.querySelector('[data-economy-quantity]').value)>2),'Touch changes the batch quantity');
+        await click('[data-economy-action="productionMax"]');
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'15');
+        assert(await evaluate(()=>document.querySelector('[data-economy-production-cost]').textContent.includes('30')||document.querySelector('[data-economy-production-cost]').textContent.includes('15')));
+        await evaluate(()=>{const e=document.querySelector('[data-economy-quantity-number]');e.value='10';e.dispatchEvent(new Event('input',{bubbles:true}));e.focus();return innerCastleEconomy.refresh();});
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'10','Refresh retains the chosen amount');
+        assert(await evaluate(()=>document.activeElement.hasAttribute('data-economy-quantity-number')),'Refresh retains quantity focus');
+        await evaluate(p=>{__estateTest.state.stock[Object.keys(p.inputs)[0]]=p.inputs[Object.keys(p.inputs)[0]]*9;return innerCastleEconomy.refresh();},p);
+        assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'4','Refresh clamps the draft to the newly affordable Max');
+        await evaluate(()=>document.querySelector('[data-economy-quantity]').scrollIntoView({block:'center'}));
+        const quantityImage=await client.send('Page.captureScreenshot',{format:'png'});
+        fs.writeFileSync(path.join(output,'production-quantity-'+p.building+'-'+width+'.png'),Buffer.from(quantityImage.data,'base64'));
+        const paidBefore=await evaluate(()=>({stock:structuredClone(__estateTest.state.stock),commits:__estateTest.commits.length}));
+        if(p.building==='sawmill')await evaluate(()=>{__estateTest.failProductionOnce=true;});
+        await click('[data-economy-action="produce"]');
+        if(p.building==='sawmill'){
+          await wait(()=>document.querySelector('[role="alert"]')?.textContent.includes('production request'));
+          await click('[data-economy-action="confirm"]');
+        }
+        await wait(()=>!!document.querySelector('[data-economy-production-progress]'));
+        const actual=await evaluate(p=>({order:__estateTest.state.productionOrders[p.building],stock:structuredClone(__estateTest.state.stock),requests:__estateTest.commits.filter(x=>x.action==='produce')}),p);
+        assert.equal(actual.order.quantity,4);assert.equal(actual.order.durationMs,Math.ceil(4/p.basePerHour*E.HOUR));
+        for(const [k,r]of Object.entries(p.inputs))assert.equal(actual.stock[k],paidBefore.stock[k]-4*r,'Batch ingredients are paid once');
+        assert.equal(actual.stock[p.output],0,'Output waits for the accepted timer');
+        assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="produce"]').length),0,'A running batch cannot be queued or replaced');
+        if(p.building==='sawmill')assert.equal(actual.requests.at(-1).requestId,actual.requests.at(-2).requestId,'Lost-response retry keeps the original payment request');
+        const productionImage=await client.send('Page.captureScreenshot',{format:'png'});
+        fs.writeFileSync(path.join(output,'manual-production-'+p.building+'-'+width+'.png'),Buffer.from(productionImage.data,'base64'));
+        await evaluate(p=>{__estateTest.serverAdvanceMs=__estateTest.state.productionOrders[p.building].completesAtMs-Date.now()+1;return innerCastleEconomy.refresh();},p);
+        await wait(()=>!!document.querySelector('[data-economy-quantity]'));
+        assert.equal(await evaluate(p=>__estateTest.state.stock[p.output],p),4,'Confirmed completion delivers the chosen output once');
+        assert(await evaluate(()=>document.querySelector('.estate-production-completion')?.textContent.includes('4')),'Confirmed completion reports material delivery');
+        await evaluate(()=>{__estateTest.serverAdvanceMs=0;});
+        const commits=await evaluate(()=>__estateTest.commits.length);await evaluate(()=>innerCastleEconomy.refresh());
+        assert.equal(await evaluate(()=>__estateTest.commits.length),commits,'Refresh and completion cannot start another batch');
+        await evaluate(p=>{__estateTest.state.stock[Object.keys(p.inputs)[0]]=0;return innerCastleEconomy.refresh();},p);
+        assert(await evaluate(()=>document.querySelector('[data-economy-quantity]').disabled&&document.querySelector('[data-economy-action="produce"]').disabled),'Max zero disables the slider and Start');
+        assert(await evaluate(p=>!!document.querySelector('.estate-production-blockers [data-economy-action="source"][data-id="'+__estateTest.state.resources[Object.keys(p.inputs)[0]].source+'"]'),p),'Missing ingredients link to their source');
+        const navigationsBefore=await evaluate(()=>__estateTest.commits.length);
+        await click('.estate-production-blockers [data-economy-action="source"]');
+        await wait(()=>!!document.querySelector('[data-economy-action="sourceBack"]'));
+        await click('[data-economy-action="sourceBack"]');
+        await wait(()=>!!document.querySelector('[data-economy-quantity]'));
+        assert.equal(await evaluate(()=>__estateTest.commits.length),navigationsBefore,'Source/Back navigation starts no production and spends nothing');
+        await click('.estate-production-blockers [data-economy-action="productionReserves"]');
+        assert(await evaluate(()=>document.querySelector('.estate-production-details').open&&document.querySelector('.estate-production-reserves').open&&document.activeElement.hasAttribute('data-economy-reserve')),'Protected-material guidance opens and focuses advanced settings');
+        await evaluate(p=>{__estateTest.state.stock[p.output]=__estateTest.state.resources[p.output].capacity;return innerCastleEconomy.refresh();},p);
+        assert(await evaluate(p=>!!document.querySelector('.estate-production-blockers [data-economy-action="source"][data-id="'+(p.output==='food'?'granary':'storehouse')+'"]'),p),'Full output storage links to the right storage building');
+        await click('[data-economy-action="close"]');
+      }
+      await evaluate(s=>{__estateTest.state=s;innerCastleEconomy.building('sawmill');},productionBefore);
+      await wait(()=>document.querySelector('[data-economy-reserve="timber"]')&&!document.querySelector('[data-economy-reserve="timber"]').disabled);
+      await evaluate(()=>{document.querySelector('.estate-production-details').open=true;document.querySelector('.estate-production-reserves').open=true;});
+      assert(await evaluate(()=>document.querySelector('.estate-production-recipe').textContent.includes('2 Timber')));
       await evaluate(()=>{const e=document.querySelector('[data-economy-reserve="timber"]');e.value='123';e.focus();return innerCastleEconomy.refresh();});
       assert.equal(await evaluate(()=>document.querySelector('[data-economy-reserve="timber"]').value),'123');
       assert.equal(await evaluate(()=>document.activeElement.dataset.economyReserve),'timber');
+      assert(await evaluate(()=>document.querySelector('.estate-production-details').open&&document.querySelector('.estate-production-reserves').open),'Refresh preserves both advanced sections');
       await click('[data-economy-action="reserves"]');
       await wait(()=>!!document.querySelector('[data-economy-action="cancelReview"]'));
       await click('[data-economy-action="cancelReview"]');
       assert.equal(await evaluate(()=>document.querySelector('[data-economy-reserve="timber"]').value),'123','Back from review preserves the draft');
       await click('[data-economy-action="close"]');
+      for(const key of ['foresters-lodge','quarry','mine','farmstead']){
+        await evaluate(key=>innerCastleEconomy.building(key),key);
+        await wait(()=>!!document.querySelector('.estate-production-details'));
+        assert(await evaluate(()=>document.querySelector('.estate-production-item').textContent.includes('Gathering automatically')&&!document.querySelector('[data-economy-action="produce"]')),'Raw sources explain automatic gathering without a manual Start');
+        await click('[data-economy-action="close"]');
+      }
       await evaluate(()=>{
         const s=__estateTest.state;s.commissions.treasury={rarity:'common',name:'Helm',completesAtMs:Date.now()+3600000};
         innerCastleEconomy.building('treasury');
@@ -785,7 +895,7 @@ async function main() {
       assert(await evaluate(()=>document.querySelector('.estate-milestone progress').max===10));
       await click('[data-economy-action="close"]');
       await evaluate(()=>{
-        const s=__estateTest.state;s.resources.iron.status='Waiting for inputs or reserves';s.resources.ore.available=0;s.reserves.ore=10;
+        const s=__estateTest.state;s.resources.iron.status='Waiting for inputs or reserves';s.stock.ore=0;s.reserves.ore=10;
         innerCastleEconomy.resource('iron');
       });
       await wait(()=>document.querySelector('.estate-economy-content').textContent.includes('needs usable Iron Ore'));

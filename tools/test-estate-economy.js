@@ -39,7 +39,13 @@ let s = E.initial(0);
 assert.equal(Object.values(s.levels).filter(Boolean).length, 6);
 E.settle(s, H * 24000); assert.deepEqual(s.stock, E.zero());
 s = all(); E.settle(s, 24 * H);
-for (const key of E.KEYS) near(s.stock[key], E.referenceRates(1)[key] * 24);
+for (const p of E.C.producers) near(s.stock[p.output], Object.keys(p.inputs).length ? 0 : p.basePerHour * 24);
+// Existing accounts receive their accrued automatic interval once, then stop.
+const legacyProduction = all(); delete legacyProduction.productionPolicyVersion; delete legacyProduction.productionOrders;
+E.settle(legacyProduction,24*H);
+for(const key of E.KEYS)near(legacyProduction.stock[key],E.referenceRates(1)[key]*24);
+const legacyStock={...legacyProduction.stock};E.settle(legacyProduction,25*H);
+for(const p of E.C.producers)near(legacyProduction.stock[p.output],legacyStock[p.output]+(Object.keys(p.inputs).length?0:p.basePerHour));
 // Long absence and split visits produce the same result; no stock truncation.
 for (let seed = 1; seed <= 40; seed++) {
   let random = seed;
@@ -48,6 +54,10 @@ for (let seed = 1; seed <= 40; seed++) {
   for (const key in a.levels) a.levels[key] = Math.floor(next() * 101);
   for (const p of E.C.producers) a.processors[p.building] = next() > .2;
   for (const key of E.KEYS) { a.stock[key] = next() * E.capacity(a, key) * 1.1; a.reserves[key] = Math.floor(next() * E.capacity(a, key) * .3); }
+  for(const p of E.C.producers.filter(p=>Object.keys(p.inputs).length)){
+    const max=E.productionRecipe(a,p.building).maxQuantity;
+    if(max)E.startProduction(a,E.productionQuote(a,p.building,Math.min(max,8)),"partition_"+p.building,0);
+  }
   const projection = E.snapshot(a, 0).projection, projected = structuredClone(a);
   const elapsed = Math.min(H, (projection.untilMs ?? 2 * H) / 2);
   E.settle(projected, elapsed);
@@ -62,7 +72,8 @@ s.processors.sawmill = false; s.processors.smithy = false;
 E.settle(s, H); assert.equal(s.stock.planks, 100); assert.equal(s.stock.iron, 100);
 s = E.initial(0); s.levels["foresters-lodge"] = 1; s.levels.sawmill = 100; s.reserves.timber = 100;
 E.settle(s, H); near(s.stock.timber, 100); near(s.stock.planks, 0);
-E.settle(s, 2 * H); near(s.stock.timber, 100); near(s.stock.planks, 50);
+E.settle(s, 2 * H); near(s.stock.timber, 200); near(s.stock.planks, 0);
+assert.equal(E.productionRecipe(s,"sawmill").maxQuantity,50,"Manual Max retains protected materials");
 s = all(); s.stock.timber = 1e6; s.processors.sawmill = false; s.processors.smithy = false;
 E.settle(s, 100 * H); assert.equal(s.stock.timber, 1e6);
 // Previously paid queues retain frozen durations and pause/resume rights.

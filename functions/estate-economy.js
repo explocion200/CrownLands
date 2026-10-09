@@ -60,7 +60,7 @@ function initial(now) {
   return {
     schemaVersion: 1, revision: 0, settledAtMs: now,
     levels: Object.fromEntries(C.buildings.map(b => [b.key, C.initialCompleted.includes(b.key) ? 1 : 0])),
-    stock: zero(), processors: {}, reserves: zero(), deposits: {}, jobs: [],
+    stock: zero(), processors: {}, reserves: zero(), deposits: {}, jobs: [], productionOrders: {}, productionPolicyVersion: 1,
     commissions: {}, quests: [], parcels: [], activeChampionIds: [], entitlements: {},
     supplyUsage: { day: "", hours: 0 }, questUsage: { day: "", hours: 0 },
   };
@@ -70,6 +70,17 @@ function normalize(raw, now) {
   if (raw.schemaVersion !== 1) fail("This estate needs a compatible game version.");
   // Never silently clamp/truncate saved property or higher schema data.
   const state = structuredClone(raw);
+  if (state.productionOrders === undefined) state.productionOrders = {};
+  if (state.productionPolicyVersion !== undefined && state.productionPolicyVersion !== 1) fail("This estate needs a compatible production version.");
+  if (!state.productionOrders || typeof state.productionOrders !== "object" || Array.isArray(state.productionOrders)) fail("Invalid production ledger.");
+  for (const [key, order] of Object.entries(state.productionOrders)) {
+    const producer = C.producers.find(p => p.building === key && Object.keys(p.inputs).length);
+    if (!producer || order.building !== key || order.output !== producer.output || !["running", "ready"].includes(order.status)) fail("Invalid production order.");
+    integer(order.quantity, 1, Number.MAX_SAFE_INTEGER, "Invalid production quantity.");
+    integer(order.delivered, 0, order.quantity, "Invalid production delivery.");
+    if (!Number.isFinite(order.durationMs) || order.durationMs <= 0 || !Number.isFinite(order.startedAtMs)
+      || !Number.isFinite(order.completesAtMs) || order.completesAtMs !== order.startedAtMs + order.durationMs) fail("Invalid production timer.");
+  }
   integer(state.revision, 0, Number.MAX_SAFE_INTEGER, "Invalid estate revision.");
   if (!Number.isFinite(state.settledAtMs) || state.settledAtMs < 0 || state.settledAtMs > now) fail("Invalid estate clock.");
   for (const key of Object.keys(BUILDINGS)) integer(state.levels[key], 0, 100, "Invalid saved building level.");
@@ -90,6 +101,46 @@ function capacity(state, key) {
 function slots(state) {
   const level = state.levels["builders-yard"];
   return level >= 50 ? 3 : level >= 10 ? 2 : 1;
+}
+function pendingProduction(state, key) {
+  return sum(Object.values(state.productionOrders || {}).filter(o => o.output === key).map(o => o.quantity - o.delivered));
+}
+function storageSpace(state, key) {
+  return Math.max(0, capacity(state, key) - state.stock[key] - pendingProduction(state, key));
+}
+function productionRecipe(state, building) {
+  const p = C.producers.find(p => p.building === building && Object.keys(p.inputs).length);
+  if (!p) fail("Choose a material-processing building.", "invalid-argument");
+  const ratePerHour = p.basePerHour * multiplier(state.levels[building]);
+  const maxQuantity = !ratePerHour || state.productionOrders?.[building] ? 0 : Math.max(0, Math.min(
+    Math.floor(storageSpace(state, p.output) + EPS),
+    ...Object.entries(p.inputs).map(([k, ratio]) => Math.floor((state.stock[k] - (state.reserves[k] || 0) + EPS) / ratio))));
+  return { building, output: p.output, inputs: { ...p.inputs }, ratePerHour, maxQuantity };
+}
+function productionQuote(state, building, quantity) {
+  const recipe = productionRecipe(state, building);
+  integer(quantity, 1, Number.MAX_SAFE_INTEGER, "Choose a whole production quantity from 1 to Max.");
+  if (!recipe.ratePerHour) fail("Construct this processing building first.");
+  if (state.productionOrders?.[building]) fail("Finish this building’s production before starting another batch.");
+  if (quantity > recipe.maxQuantity) fail("Not enough usable materials or output storage for this batch.");
+  return { action: "produce", building, output: recipe.output, quantity,
+    materials: Object.fromEntries(Object.entries(recipe.inputs).map(([k, ratio]) => [k, ratio * quantity])),
+    durationMs: Math.ceil(quantity / recipe.ratePerHour * HOUR), ratePerHour: recipe.ratePerHour, version: "estate-production-1" };
+}
+function startProduction(state, quote, requestId, now) {
+  const fresh = productionQuote(state, quote.building, quote.quantity);
+  if (JSON.stringify(fresh) !== JSON.stringify(quote)) fail("Production changed. Review the current recipe and time.");
+  spend(state, quote.materials);
+  state.productionOrders ||= {};
+  state.productionOrders[quote.building] = { ...quote, id: requestId, delivered: 0, status: "running", startedAtMs: now, completesAtMs: now + quote.durationMs };
+}
+function deliverProduction(state) {
+  for (const [key, order] of Object.entries(state.productionOrders || {})) {
+    if (order.status !== "ready") continue;
+    const amount = Math.min(order.quantity - order.delivered, Math.max(0, Math.floor(capacity(state, order.output) - state.stock[order.output] + EPS)));
+    state.stock[order.output] += amount; order.delivered += amount;
+    if (order.delivered === order.quantity) delete state.productionOrders[key];
+  }
 }
 function buildingPrerequisites(state, key, target) {
   const building = Object.hasOwn(BUILDINGS, key) ? BUILDINGS[key] : null;
@@ -198,12 +249,14 @@ function pauseJob(state, id, paused, now) {
 // Small bounded flow program: max productive utilization subject to recipe,
 // storage and reserve constraints. Origin is feasible, so a slack basis suffices.
 // Bland's entering/leaving rules keep degenerate full/empty chains deterministic.
-function flows(state) {
+function flows(state, legacy = false) {
   const producers = C.producers, n = producers.length, constraints = [];
   const add = (row, bound) => constraints.push({ row, bound });
   producers.forEach((p, i) => {
     const row = Array(n).fill(0); row[i] = 1;
-    add(row, state.processors[p.building] === false ? 0 : p.basePerHour * multiplier(state.levels[p.building]));
+    // Gathering stays automatic; recipes never consume stocks without an
+    // explicitly paid, finite production batch.
+    add(row, (!legacy && Object.keys(p.inputs).length) || state.processors[p.building] === false ? 0 : p.basePerHour * multiplier(state.levels[p.building]));
   });
   for (const key of KEYS) {
     const net = producers.map(p => (p.output === key ? 1 : 0) - (p.inputs[key] || 0));
@@ -242,11 +295,11 @@ function flows(state) {
   for (const p of producers) for (const [key, ratio] of Object.entries(p.inputs)) consumption[key] += production[p.output] * ratio;
   return { production, consumption, net: Object.fromEntries(KEYS.map(k => [k, production[k] - consumption[k]])) };
 }
-function produceUntil(state, until) {
+function produceUntil(state, until, legacy = false) {
   let remaining = Math.max(0, until - state.settledAtMs) / HOUR;
   for (let steps = 0; remaining > 1e-12; steps++) {
     if (steps > 256) fail("Estate settlement requires support.", "internal");
-    const { net } = flows(state);
+    const { net } = flows(state, legacy);
     let dt = remaining;
     for (const key of KEYS) {
       if (net[key] > EPS && state.stock[key] < capacity(state, key) - EPS)
@@ -268,22 +321,30 @@ function produceUntil(state, until) {
 }
 function settle(state, now, onComplete = () => {}) {
   if (now < state.settledAtMs) fail("Estate time cannot move backwards.");
+  // Honor the old account's accrued interval once, then retire automatic
+  // processing. New estates start in manual mode; migration never starts a batch.
+  const legacy = state.productionPolicyVersion === undefined;
   startJobs(state, state.settledAtMs);
   for (;;) {
     const due = state.jobs.filter(job => job.status === "running" && job.completesAtMs <= now)
       .sort((a, b) => a.completesAtMs - b.completesAtMs);
-    if (!due.length) break;
-    const deadline = due[0].completesAtMs;
-    produceUntil(state, deadline);
+    const production = Object.values(state.productionOrders || {}).filter(o => o.status === "running" && o.completesAtMs <= now);
+    if (!due.length && !production.length) break;
+    const deadline = Math.min(due[0]?.completesAtMs ?? Infinity, ...production.map(o => o.completesAtMs));
+    produceUntil(state, deadline, legacy);
     for (const job of due.filter(job => job.completesAtMs === deadline)) {
       if (state.levels[job.building] !== job.target - 1) fail("Construction target is inconsistent.", "internal");
       state.levels[job.building] = job.target;
       state.jobs = state.jobs.filter(other => other.id !== job.id);
       onComplete({ ...job, status: "completed" });
     }
+    for (const order of production.filter(o => o.completesAtMs === deadline)) order.status = "ready";
+    deliverProduction(state);
     startJobs(state, deadline);
   }
-  produceUntil(state, now);
+  produceUntil(state, now, legacy);
+  deliverProduction(state);
+  state.productionPolicyVersion = 1;
   return state;
 }
 function chainLevel(state, resource, seen = new Set()) {
@@ -326,7 +387,9 @@ function snapshot(state, now) {
     if (rate < -EPS && stock > reserve + EPS) horizon = Math.min(horizon, (stock - reserve) / -rate * HOUR);
   }
   for (const job of state.jobs) if (job.status === "running") horizon = Math.min(horizon, Math.max(0, job.completesAtMs - now));
-  return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "pay-on-start", slots: slots(state),
+  for (const order of Object.values(state.productionOrders || {})) if (order.status === "running") horizon = Math.min(horizon, Math.max(0, order.completesAtMs - now));
+  return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "pay-on-start", productionPolicy: "manual-batches", slots: slots(state),
+    productionRecipes: Object.fromEntries(C.producers.filter(p => Object.keys(p.inputs).length).map(p => [p.building, productionRecipe(state, p.building)])),
     buildingPrerequisites: Object.fromEntries(C.buildings.map(b => [b.key, state.levels[b.key] >= 100 ? []
       : buildingPrerequisites(state, b.key, state.levels[b.key] + 1)])),
     projection: { stock: { ...state.stock }, net: flow.net, untilMs: Number.isFinite(horizon) ? now + horizon : null },
@@ -335,10 +398,15 @@ function snapshot(state, now) {
       capacity: capacity(state, k), gross: flow.production[k], consumed: flow.consumption[k], net: flow.net[k],
       reserved: sum(Object.values(state.deposits).map(project => project.deposited[k] || 0)),
       source: PRODUCERS[k].building, inputs: PRODUCERS[k].inputs,
-      status: !state.levels[PRODUCERS[k].building] ? "Source not built" : state.processors[PRODUCERS[k].building] === false ? "Processing paused" : state.stock[k] >= capacity(state,k)-EPS ? "Storage full" : flow.production[k] < EPS ? "Waiting for inputs or reserves" : "Producing", timeToFullHours: flow.net[k] > EPS ? Math.max(0, capacity(state, k) - state.stock[k]) / flow.net[k] : null }])),
+      pendingProduction: pendingProduction(state, k), storageSpace: storageSpace(state, k),
+      status: !state.levels[PRODUCERS[k].building] ? "Source not built" : Object.keys(PRODUCERS[k].inputs).length
+        ? state.productionOrders?.[PRODUCERS[k].building]?.status === "running" ? "Production in progress"
+          : state.productionOrders?.[PRODUCERS[k].building] ? "Production ready; needs storage" : state.stock[k] >= capacity(state,k)-EPS ? "Storage full" : "Choose production"
+        : state.stock[k] >= capacity(state,k)-EPS ? "Storage full" : "Producing", timeToFullHours: flow.net[k] > EPS ? Math.max(0, capacity(state, k) - state.stock[k]) / flow.net[k] : null }])),
     benefits: Object.fromEntries(C.buildings.map(b => [b.key, { current: benefit(b.key, state.levels[b.key]),
       next: state.levels[b.key] < 100 ? benefit(b.key, state.levels[b.key] + 1) : "Maximum level" }])) };
 }
 module.exports = { C, HOUR, EPS, VERSION, KEYS, BUILDINGS, PRODUCERS, COSTS, MINUTES, zero, fail, integer, multiplier,
   referenceRates, initial, normalize, capacity, slots, buildingPrerequisites, constructionQuote, baseQuote, spend, fund, pauseJob,
+  pendingProduction, storageSpace, productionRecipe, productionQuote, startProduction,
   flows, settle, chainLevel, quoteRate, rarityIndex, benefit, snapshot, upgradeOverview };
