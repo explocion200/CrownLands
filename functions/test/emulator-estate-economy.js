@@ -47,7 +47,7 @@ async function main() {
   await call("claimStartingCity", owner, { playerName: "Estate tester" });
   const profileRef = db.doc(`players/${owner.uid}`), stateRef = db.doc(`players/${owner.uid}/estate/state`);
   const walletRef = db.doc(`players/${owner.uid}/cosmetics/state`);
-  const load = () => call("getEstateState", owner);
+  const load = () => call("getEstateState", owner, { includeUpgradeOverview: true });
   const quote = async input => (await call("getEstateQuote", owner, { input })).quote;
   const commit = (q, requestId = crypto.randomUUID(), extra = {}) => call("commitEstateAction", owner,
     { quoteId: q.id, requestId, acceptPermanentCredit: true, ...extra });
@@ -55,6 +55,12 @@ async function main() {
   let loaded = await load();
   assert.equal(Object.values(loaded.estate.levels).filter(Boolean).length, 6);
   assert.deepEqual(loaded.estate.stock, E.zero());
+  assert.equal(Object.keys(loaded.upgradeOverview).length,20);
+  assert.equal(loaded.upgradeOverview["foresters-lodge"].ready,true);
+  assert.equal(loaded.upgradeOverview.treasury.status,"blocked","Completed Hall level gates readiness");
+  assert.equal(loaded.upgradeOverview["foresters-lodge"].bill.gold,75);
+  assert.equal((await db.collection(`players/${owner.uid}/estateQuotes`).get()).size,0,"Overview creates no spend quotes");
+  assert.equal((await call("getEstateState",owner)).upgradeOverview,undefined,"Ordinary clock refreshes do not prepare realm readiness");
   assert.equal((await rest(owner, `players/${owner.uid}/estate/state`)).status, 200);
   assert.equal((await rest(stranger, `players/${owner.uid}/estate/state`)).status, 403);
   assert.equal((await rest(owner, `players/${owner.uid}/estate/state`, "PATCH")).status, 403);
@@ -73,6 +79,9 @@ async function main() {
   assert.equal(competing.filter(r => r.status === "fulfilled").length, 0, "No work can be queued while the builder is occupied");
   assert(competing.every(r=>/builders are busy/.test(r.reason.message)));
   assert.equal((await stateRef.get()).data().jobs.length,1);
+  loaded=await load();
+  assert.equal(loaded.upgradeOverview["foresters-lodge"].status,"constructing");
+  assert.equal(loaded.upgradeOverview.mine.status,"builders");
   let saved = (await stateRef.get()).data();
   saved.settledAtMs = Date.now() - E.HOUR;
   for (const job of saved.jobs) if (job.status === "running") {

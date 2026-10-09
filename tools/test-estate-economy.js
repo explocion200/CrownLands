@@ -157,9 +157,38 @@ s = all(100); const pack = S.supplyQuote(s, "timber", 1, 0);
 assert.equal(pack.crowns, 20); s.supplyUsage = { day: pack.day, hours: 1 };
 assert.throws(() => S.supplyQuote(s, "grain", .25, 0), /allowance/);
 assert(S.supplyQuote(s, "grain", .25, 24 * H));
+// Overview guidance must agree with actual next-level spending rules and remain
+// a read of state, including Hall gates, paid work and exact permanent credit.
+{
+  const state = rich(all(1)); state.levels["great-hall"] = 2;
+  let overview = E.upgradeOverview(state, 1e9, 285);
+  assert.equal(Object.keys(overview).length, 20);
+  assert.equal(overview.quarry.status, "materials");
+  assert.match(overview.quarry.reason, /available to deposit/);
+  state.deposits.quarry = { target:2, version:E.VERSION, materials:{...E.COSTS.quarry[2]}, deposited:{...E.COSTS.quarry[2]} };
+  const before = JSON.stringify(state);
+  overview = E.upgradeOverview(state, 1e9, 50000);
+  assert.equal(overview.quarry.ready, true);
+  assert.deepEqual(overview.quarry.bill, E.constructionQuote(state,"quarry",1,50000).jobs[0]);
+  assert.equal(JSON.stringify(state), before, "Overview never deposits or funds work");
+  assert.equal(E.upgradeOverview(state,0,285).quarry.status,"gold");
+  assert.throws(()=>E.upgradeOverview(state,NaN,285),/fresh server/);
+  state.jobs.push({building:"mine",status:"running",target:2});
+  overview=E.upgradeOverview(state,1e9,285);
+  assert.equal(overview.quarry.status,"builders");assert.equal(overview.mine.status,"constructing");
+  state.jobs[0].status="paused";assert.equal(E.upgradeOverview(state,1e9,285).mine.status,"paid");
+  state.levels["great-hall"]=1;assert.equal(E.upgradeOverview(state,1e9,285).quarry.status,"blocked");
+  state.levels.workshop=0;state.levels.sawmill=0;
+  overview=E.upgradeOverview(state,1e9,285);assert.equal(overview.workshop.unbuilt,true);assert.equal(overview.workshop.status,"blocked");
+  assert.equal(E.upgradeOverview(all(100),1e9,285).quarry.status,"maximum");
+  state.levels.mine=0;state.jobs=[];assert.equal(E.upgradeOverview(state,1e9,285).mine.ready,true);
+  state.levels["great-hall"]=2;state.stock.stone=0;state.deposits={};
+  assert.match(E.upgradeOverview(state,1e9,285).quarry.reason,/Gather/);
+}
 async function checkRetriedReadClock() {
   const { createEstateService } = require("../functions/estate-service");
   const saved = E.initial(Date.now()), writes = new Map();
+  let prepared = 0;
   const transaction = {
     async get(ref) {
       if (ref.query) return { size: 0 };
@@ -172,10 +201,16 @@ async function checkRetriedReadClock() {
     db: { doc: path => ({ path }), collection: () => ({ where: () => ({ limit: () => ({ query: true }) }) }) },
     HttpsError: Error, runTransaction: action => action(transaction),
     assertCurrentPlayerProfile() {}, normalizeGear: () => require("../functions/common-gear").createDefaultState(),
+    prepareEconomy:async()=>{prepared++;return{goldFloat:100};},writeEconomy(){},economyResponse:()=>({gold:100}),rawMainGoldRate:()=>285,
   });
-  const result = await service.load("test_owner", saved.settledAtMs - 1000);
+  const result = await service.load("test_owner", saved.settledAtMs - 1000, true);
   assert(result.serverNowMs >= saved.settledAtMs, "A delayed request uses a fresh server settlement clock");
   assert.equal(writes.get("players/test_owner/estate/state").settledAtMs, result.serverNowMs);
   assert.deepEqual(result.estate.stock, E.zero(), "Retrying an older read invents no production");
+  assert.equal(result.upgradeOverview.mine.ready,true);
+  assert.equal(result.gold,100);
+  assert.equal(prepared,1);
+  assert.equal((await service.load("test_owner")).upgradeOverview,undefined);
+  assert.equal(prepared,1,"Ordinary estate refreshes never prepare the realm economy");
 }
 checkRetriedReadClock().then(() => console.log("Estate rules passed: prices, continuous production, storage/reserves, long absences, funded jobs, commissions, quests, XP, shared supplies and retried server clocks.")).catch(error => { console.error(error); process.exitCode = 1; });

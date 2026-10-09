@@ -6,6 +6,14 @@
 
 All twenty buildings and eight material stocks persist across seasons, along with fractional production, processor preferences, deposits, paid contracts (including legacy queues), champions, XP, recovery, expeditions, pending rewards and receipts. World Gold remains seasonal. One account has one estate; capturing cities does not duplicate estate factories. Materials add no direct army, wall or world production bonus and are not raid loot.
 
+## Estate management polish
+
+**Approved October 8; IN DEVELOPMENT, pending validation and coordinated release.** The Estate button opens builder/construction/reward status and a dismissible starter checklist. Buildings gains district-preserving filters for readiness, construction, missing material credit and surveyed plots. Server summaries use the existing upgrade quote rules; opening management requests richer readiness, while ordinary estate clock refreshes keep their lightweight path. Every upgrade still needs its separate reviewed confirmation, and reward links never claim automatically.
+
+Production screens/ledgers link to blocked sources, storage or reserve controls. Milestone previews describe existing unlocks. Champion and expedition cards show power, XP/training limits and availability. Server-confirmed level increases produce a brief dismissible header notice and current-visit history without changing the map fit. Guide dismissal is an optional account/device preference that stays separate from gameplay state. Approved economy values, artwork and persistence are unchanged.
+
+The left construction action reads **Build** while the completed level is zero, including during first construction, then **Upgrade** from completed Level 1 onward. Map, directory, selected-site buttons, accessible descriptions and requirements headings use the same wording. First construction remains Gold-only and starts through the existing explicit review.
+
 ## Buildings and progression
 
 The [building mechanics review](BUILDING_MECHANICS_REVIEW.md) explains all twenty roles, their level rewards, the construction loop and the current service-screen polish. That follow-up is **LIVE — WEB** from [PR #493](https://github.com/explocion200/CrownLands/pull/493) at build `50a795d98beb55c276f2c1c55ff02778bb6db4a4`, Netlify deploy `6ac820fc75ca410008642d8b`, published October 8 at `23:05:43.010 UTC`. Exact staged service interactions at three sizes and public delivery/startup passed; the Master Specification records full evidence. Approved costs, timers and persistence are unchanged. itch.io was not republished; authenticated production, physical-device and long-term pacing review remain manual.

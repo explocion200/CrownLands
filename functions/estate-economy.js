@@ -125,6 +125,29 @@ function constructionQuote(state, key, count = 1, rawGoldPerHour = 285) {
     materials: jobs.reduce((out, job) => { for (const [k, v] of Object.entries(job.remaining)) out[k] = (out[k] || 0) + v; return out; }, {}),
     nonrefundable: true };
 }
+// Presentation uses the same next-level quote rules as spending; this creates
+// no quote receipts, deposits or new work.
+function upgradeOverview(state, gold, rawGoldPerHour) {
+  if (!Number.isFinite(gold) || gold < 0) fail("Gold balance requires a fresh server update.");
+  const busy = state.jobs.filter(j => j.status === "running").length >= slots(state);
+  return Object.fromEntries(C.buildings.map(b => {
+    const level = state.levels[b.key], job = state.jobs.find(j => j.building === b.key);
+    if (job) return [b.key, { status: job.status === "running" ? "constructing" : "paid", ready: false, reason: "Finish this building’s paid work first." }];
+    if (level >= 100) return [b.key, { status: "maximum", ready: false, reason: "Maximum level reached." }];
+    try {
+      const bill = constructionQuote(state, b.key, 1, rawGoldPerHour).jobs[0];
+      const missing = Object.values(bill.remaining).some(v => v > 0);
+      const available = Object.entries(bill.remaining).every(([k, v]) => v <= Math.floor(state.stock[k] + EPS));
+      const status = missing ? "materials" : gold < bill.gold ? "gold" : busy ? "builders" : "ready";
+      const reason = missing ? available ? "Materials available to deposit." : "Gather the remaining materials."
+        : status === "gold" ? "More Gold needed." : status === "builders" ? "Waiting for a free builder." : "Ready to review and start.";
+      return [b.key, { status, unbuilt: !level, ready: status === "ready", reason, bill }];
+    } catch (error) {
+      if (!error.code) throw error;
+      return [b.key, { status: "blocked", unbuilt: !level, ready: false, reason: error.message }];
+    }
+  }));
+}
 function spend(state, amounts) {
   if (!amounts || typeof amounts !== "object" || Array.isArray(amounts)) fail("Invalid material amount.", "invalid-argument");
   for (const [key, value] of Object.entries(amounts)) {
@@ -322,4 +345,4 @@ function snapshot(state, now) {
 }
 module.exports = { C, HOUR, EPS, VERSION, KEYS, BUILDINGS, PRODUCERS, COSTS, MINUTES, zero, fail, integer, multiplier,
   referenceRates, initial, normalize, capacity, slots, constructionQuote, baseQuote, spend, deposit, fund, pauseJob,
-  flows, settle, chainLevel, quoteRate, rarityIndex, benefit, snapshot };
+  flows, settle, chainLevel, quoteRate, rarityIndex, benefit, snapshot, upgradeOverview };

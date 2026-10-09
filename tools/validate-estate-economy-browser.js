@@ -57,7 +57,7 @@ async function main() {
           const text = document.createRange(); text.selectNodeContents(e);
           const r = text.getBoundingClientRect();
           return !e.classList.contains('cl-action-button') && !e.querySelector('.wheel-icon')
-            && e.textContent === (e.dataset.estateUpgrade ? 'Upgrade' : 'Enter')
+            && e.textContent === (e.dataset.estateUpgrade ? innerCastleEconomy.snapshot().estate.levels[e.dataset.estateUpgrade] > 0 ? 'Upgrade' : 'Build' : 'Enter')
             && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) >= 3
             && parseFloat(style.fontSize) >= 12 && b.width >= 44 && b.height >= 44
             && b.left >= panel.left && b.right <= panel.right
@@ -68,13 +68,15 @@ async function main() {
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
+    const firstBuildEstate=structuredClone(estate);firstBuildEstate.levels.mine=0;
+    const firstBuildQuote=E.constructionQuote(firstBuildEstate,'mine',1);
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/inner-city-estate/index.html?estateUi=1&scene=initial&visualMarches=0"});
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
           const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
@@ -82,11 +84,11 @@ async function main() {
           if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
           estate.serverNowMs=serverNowMs;
           estate.recruitOffers=__estateTest.offers||{offers:[]};
-          return{estate,champions:__estateTest.champions||{},serverNowMs};
+          return{estate,champions:__estateTest.champions||{},serverNowMs,upgradeOverview:structuredClone(__estateTest.overview)};
         };
         const receipts=new Map(),issued=new Map();
         window.__estateTestApi={
-          getEstateState:async()=>{__estateTest.loads++;return result();},
+          getEstateState:async includeOverview=>{__estateTest.loads++;__estateTest.overviewLoads=(__estateTest.overviewLoads||0)+(includeOverview?1:0);const value=result();if(!includeOverview)delete value.upgradeOverview;return value;},
           getEstateQuote:async input=>{
             const s=__estateTest.state;
             let value;
@@ -126,7 +128,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -141,6 +143,51 @@ async function main() {
       await evaluate(()=>innerCastleEconomy.refresh());
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-upgrade-directory').length),20);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-enter-directory').length),20);
+      assert.equal(await evaluate(()=>__estateTest.overviewLoads||0),0,'Ordinary map refreshes use the lightweight estate path');
+      const output=path.join(root,"release-artifacts/estate-economy");fs.mkdirSync(output,{recursive:true});
+      // Management tools are separate from painted artwork and spending actions.
+      await click('[data-estate-status]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Estate overview');
+      await wait(()=>__estateTest.overviewLoads>0);
+      assert(await evaluate(()=>document.querySelector('.estate-status-totals').textContent.includes('builders free')));
+      await click('[data-economy-action="guide"]');
+      const hidden=await evaluate(()=>!document.querySelector('.estate-starter-guide'));
+      assert.equal(await evaluate(()=>localStorage.getItem('crownlands-estate-guide-v1:'+(getCurrentOnlineUid()||__estateTest.scope))==='dismissed'),hidden);
+      await click('[data-economy-action="guide"]');
+      assert.equal(await evaluate(()=>!!document.querySelector('.estate-starter-guide')),hidden,'The guide can always be reopened');
+      if(!hidden)await click('[data-economy-action="guide"]');
+      assert.equal(await evaluate(()=>document.querySelectorAll('.estate-starter-guide li').length),7);
+      await evaluate(()=>document.querySelector('.estate-economy-content').scrollTop=0);
+      const overviewCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'estate-overview-'+width+'.png'),Buffer.from(overviewCapture.data,'base64'));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        __estateTest.managementBefore={state:structuredClone(__estateTest.state),overview:structuredClone(__estateTest.overview)};
+        const q=__estateTest.quotes.quarry.jobs[0];
+        __estateTest.state.deposits.quarry={target:q.target,deposited:{...q.materials}};
+        __estateTest.overview.quarry={status:'ready',ready:true,reason:'Ready to review and start.',bill:{...q,remaining:{}}};
+        __estateTest.state.levels.mine=0;__estateTest.overview.mine={status:'blocked',unbuilt:true,ready:false,reason:'Construct this source.'};
+        __estateTest.state.levels.smithy=0;
+        __estateTest.state.jobs=[{building:'smithy',target:1,status:'running',startedAtMs:Date.now(),durationMs:3600000,completesAtMs:Date.now()+3600000}];
+        __estateTest.overview.smithy={status:'constructing',ready:false,reason:'Finish this project.'};
+        return innerCastleEconomy.refresh();
+      });
+      await click('[data-estate-directory-toggle]');
+      await wait(()=>!document.querySelector('.estate-directory').hidden&&document.activeElement.matches('[data-estate-filter]'));
+      for(const [filter,expected] of [['ready',['quarry']],['constructing',['smithy']],['unbuilt',['mine']]]){
+        await evaluate(value=>{const e=document.querySelector('[data-estate-filter]');e.value=value;e.dispatchEvent(new Event('change',{bubbles:true}));},filter);
+        assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).map(e=>e.querySelector('[data-estate-directory-building]').dataset.estateDirectoryBuilding)),expected);
+      }
+      await evaluate(()=>{const e=document.querySelector('[data-estate-filter]');e.value='materials';e.dispatchEvent(new Event('change',{bubbles:true}));});
+      assert(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).every(e=>!e.querySelector('[data-estate-directory-building="quarry"],[data-estate-directory-building="mine"],[data-estate-directory-building="smithy"]'))));
+      await evaluate(()=>{
+        __estateTest.state=__estateTest.managementBefore.state;__estateTest.overview=__estateTest.managementBefore.overview;
+        const e=document.querySelector('[data-estate-filter]');e.value='all';e.dispatchEvent(new Event('change',{bubbles:true}));return innerCastleEconomy.refresh();
+      });
+      assert.equal(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).length),20);
+      const managementDirectoryCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'estate-directory-'+width+'.png'),Buffer.from(managementDirectoryCapture.data,'base64'));
+      await click('[data-estate-directory-toggle]');
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
@@ -173,7 +220,6 @@ async function main() {
       await click('[data-economy-action="confirm"]');
       await wait(()=>document.querySelector('[data-economy-action="fund"]')?.disabled===false);
       assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.jobs.length),0,"Deposits never auto-start work");
-      const output=path.join(root,"release-artifacts/estate-economy");fs.mkdirSync(output,{recursive:true});
       await evaluate(()=>document.querySelector('.estate-upgrade-requirements').scrollIntoView({block:"center"}));
       const requirements=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"upgrade-"+width+".png"),Buffer.from(requirements.data,"base64"));
@@ -442,12 +488,36 @@ async function main() {
       await wait(()=>!!document.querySelector('[data-gear-back]'));
       await click('[data-gear-back]');
       await wait(()=>!!innerCastleEstateView);
-      // Unbuilt plots cannot enter; completion enables Enter, including while
-      // an already-completed building is undergoing another upgrade.
-      await evaluate(()=>{__estateTest.state.levels.mine=0;return innerCastleEconomy.refresh();});
+      // First construction says Build in every control and the existing
+      // Gold-only review; only confirmed completion changes it to Upgrade.
+      await evaluate(()=>{
+        __estateTest.beforeBuild={quote:structuredClone(__estateTest.quotes.mine),jobs:structuredClone(__estateTest.state.jobs)};
+        __estateTest.quotes.mine=structuredClone(__estateTest.firstBuildQuote);
+        __estateTest.state.levels.mine=0;return innerCastleEconomy.refresh();
+      });
       await evaluate(()=>innerCastleEstateView.select('mine'));
       assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"]')].every(e=>e.disabled)));
-      await evaluate(()=>{__estateTest.state.levels.mine=24;return innerCastleEconomy.refresh();});
+      const checkBuildLabel=async name=>assert(await evaluate(expected=>[...document.querySelectorAll('[data-estate-upgrade="mine"]')].length===3
+        &&[...document.querySelectorAll('[data-estate-upgrade="mine"]')].every(e=>(e.querySelector('.wheel-action-name')||e).textContent===expected
+          &&e.title.includes(expected.toLowerCase()+' requirements')&&e.getAttribute('aria-label')===e.title),name),'Construction label and accessible descriptions: '+name);
+      await checkBuildLabel('Build');await normalActions('.estate-detail .estate-site-action');
+      await click('.estate-detail [data-estate-upgrade="mine"]');
+      await wait(()=>document.querySelector('[data-economy-action="fund"]')&&!document.querySelector('[data-economy-action="fund"]').disabled);
+      assert.equal(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent),'Mine · Build');
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').textContent),'Build Level 1');
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('First construction requires Gold only.')&&!document.querySelector('[data-economy-deposit]')));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        window.__estateBuildButton=document.querySelector('.estate-detail [data-estate-upgrade="mine"]');__estateBuildButton.focus({preventScroll:true});
+        __estateTest.state.jobs.push({...__estateTest.firstBuildQuote.jobs[0],id:'first_mine_build',status:'running',startedAtMs:Date.now(),completesAtMs:Date.now()+600000});
+        return innerCastleEconomy.refresh();
+      });
+      await checkBuildLabel('Build');
+      assert(await evaluate(()=>innerCastleEstateView.debug().siteStates.mine==='constructing'&&document.activeElement===__estateBuildButton));
+      await evaluate(()=>{__estateTest.state.jobs=structuredClone(__estateTest.beforeBuild.jobs);__estateTest.state.levels.mine=1;return innerCastleEconomy.refresh();});
+      await checkBuildLabel('Upgrade');
+      assert(await evaluate(()=>document.activeElement===__estateBuildButton&&document.querySelector('.estate-detail [data-estate-upgrade="mine"]')===__estateBuildButton),'First completion updates labels without replacing or blurring the control');
+      await evaluate(()=>{__estateTest.state.levels.mine=24;__estateTest.quotes.mine=__estateTest.beforeBuild.quote;return innerCastleEconomy.refresh();});
       assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"],[data-estate-enter="quarry"]')].every(e=>!e.disabled)));
       // Fully credited materials remain ready while the builder is occupied.
       await evaluate(()=>{
@@ -492,8 +562,13 @@ async function main() {
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-economy-champion')].every(row=>!row.querySelector('label button'))),'Bench buttons must not toggle party checkboxes');
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-economy-champion')].every(row=>{
         const a=row.querySelector('label').getBoundingClientRect(),b=row.querySelector('button').getBoundingClientRect();
-        return a.height>=44&&b.height>=44&&a.right<=b.left;
+        return a.height>=44&&b.height>=44&&(a.right<=b.left||a.bottom<=b.top||b.bottom<=a.top);
       })),'Party selection and Bench controls need separate touch targets');
+      await evaluate(()=>{__estateTest.champions.champion_one.xp=10;return innerCastleEconomy.refresh();});
+      assert(await evaluate(()=>{
+        const card=document.querySelector('[data-champion-card="champion_one"]'),bar=card.querySelector('progress');
+        return bar.max===4&&bar.value===4&&card.textContent.includes('10 / 4 XP')&&card.textContent.includes('Extra XP stays banked');
+      }),'Cards retain banked XP while the display bar stops at its level threshold');
       const guildCapture=await client.send('Page.captureScreenshot',{format:'png'});
       fs.writeFileSync(path.join(output,'guild-services-'+width+'.png'),Buffer.from(guildCapture.data,'base64'));
       // A champion becoming unavailable is removed from the selected party.
@@ -573,12 +648,48 @@ async function main() {
         innerCastleEconomy.visibilityChanged();return __estateTest.loads;
       });
       await wait(loads=>__estateTest.loads===loads+1,dailyLoads);
+      await evaluate(()=>{__estateTest.state.jobs=[];__estateTest.state.levels['builders-yard']=9;innerCastleEconomy.building('builders-yard');});
+      await wait(()=>document.querySelector('.estate-milestone')?.textContent.includes('Second builder'));
+      assert(await evaluate(()=>document.querySelector('.estate-milestone progress').max===10));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        const s=__estateTest.state;s.resources.iron.status='Waiting for inputs or reserves';s.resources.ore.available=0;s.reserves.ore=10;
+        innerCastleEconomy.resource('iron');
+      });
+      await wait(()=>document.querySelector('.estate-economy-content').textContent.includes('needs usable Iron Ore'));
+      assert(await evaluate(()=>!!document.querySelector('[data-economy-action="source"][data-id="mine"]')));
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('protected by your shared reserve')));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{__estateTest.state.resources.iron.status='Storage full';innerCastleEconomy.resource('iron');});
+      await wait(()=>!!document.querySelector('[data-economy-action="source"][data-id="storehouse"]'));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{__estateTest.state.resources.planks.status='Source not built';innerCastleEconomy.resource('planks');});
+      await wait(()=>!!document.querySelector('[data-economy-action="upgradeSite"][data-id="sawmill"]'));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        __estateTest.state.levels.quarry=26;__estateTest.state.levels['great-hall']=26;__estateTest.state.commissions.treasury={name:'Helm',completesAtMs:Date.now()-1};
+        __estateTest.state.parcels=[{id:'ready_parcel',rewards:{timber:50}}];return innerCastleEconomy.refresh();
+      });
+      await wait(()=>!document.querySelector('.estate-completion-feedback').hidden);
+      assert(await evaluate(()=>document.querySelector('.estate-completion-feedback').textContent.includes('Quarry Level 26 completed')));
+      await click('.estate-completion-feedback button');
+      await evaluate(()=>innerCastleEconomy.refresh());
+      assert(await evaluate(()=>document.querySelector('.estate-completion-feedback').hidden),'Repeated same-level snapshots never repeat completion feedback');
+      await click('[data-estate-status]');
+      await wait(()=>!!document.querySelector('[data-economy-action="source"][data-id="treasury"]'));
+      assert(await evaluate(()=>document.querySelector('.estate-status-totals').textContent.replace(/\s/g,'').includes('2rewardstoreview')));
+      assert(await evaluate(()=>!!document.querySelector('[data-economy-action="source"][data-id="guild-master"]')));
+      await click('[data-economy-action="source"][data-id="treasury"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Treasury');
+      assert.equal(await evaluate(()=>__estateTest.commits.filter(c=>c.action==='claimCommission').length),0,'Status navigation never claims automatically');
+      await click('[data-economy-action="close"]');
       await evaluate(()=>{clearInnerCastleModalState();modal.close();});
       assert.equal(await evaluate(()=>document.querySelectorAll(".estate-economy-dialog").length),0);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers,.estate-construction-note').length),0,'Estate teardown removes all timer elements');
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-estate-status],[data-estate-filter],.estate-completion-feedback').length),0,'Management layers are cleaned up with the estate');
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: all 20 sites, construction/deposits/retry, map/normal actions, camera/keyboard/touch, timer lifecycle; service unlocks, party power, busy champions, recruitment, storage ledgers, shared supply allowance, recipes, refresh/review form and exact-row focus preservation, unbuilt service guard and commission readiness.");
+    console.log("Estate desktop/landscape UI passed: all 20 sites, deposits/retry, map actions, camera/touch/keyboard, timers/Gear/focus and services; management overview and readiness filters, guide dismissal/reopening, production guidance, milestones, champion cards, lightweight versus rich requests, confirmed completion feedback and cleanup.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

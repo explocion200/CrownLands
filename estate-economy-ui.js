@@ -9,6 +9,7 @@
   const qualities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"], milestones = [1, 25, 50, 75, 100];
   const tierAt = level => milestones.reduce((tier, milestone, i) => level >= milestone ? i : tier, 0);
   const power = champion => Math.floor(champion.level * (1 + .25 * champion.quality));
+  const constructionAction = level => level > 0 ? "Upgrade" : "Build";
   function constructionTimers(host) {
     const viewport = host.querySelector(".estate-viewport"), layer = document.createElement("div");
     layer.className = "estate-construction-timers";
@@ -82,18 +83,29 @@
   }
   // Keep city-style action tokens on the map and normal buttons in panels.
   // The base estate renderer and offline artwork fixtures do not download these online controls.
-  function mapActions(icon) {
+  function mapActions(icon, economy) {
     return {
-      mountTimers:constructionTimers,
+      mountTimers(host) {
+        const timers = constructionTimers(host), management = economy?.mountManagement(host);
+        return { update(...args) { timers.update(...args); management?.update(); }, place:timers.place,
+          destroy() { timers.destroy(); management?.destroy(); } };
+      },
       button(b, action, context, level) {
-        const upgrade = action === "upgrade", name = upgrade ? "Upgrade" : "Enter";
-        const hint = upgrade ? "upgrade requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
+        const upgrade = action === "upgrade", name = upgrade ? constructionAction(level) : "Enter";
+        const hint = upgrade ? name.toLowerCase() + " requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
         const onMap = context === "target";
         const classes = onMap ? ` cl-action-button cl-action-${upgrade ? "level" : "send"}` : "";
         const content = onMap ? `<span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span>` : name;
         return `<button type="button" class="estate-site-action estate-${action}-${context}${classes}" data-estate-${action}="${b.key}" aria-label="${escape(b.label)} — ${hint}" title="${escape(b.label)} — ${hint}" ${onMap ? "hidden" : ""} ${!upgrade && !level ? "disabled" : ""}>${content}</button>`;
       },
       sync(host, levels) {
+        host.querySelectorAll("[data-estate-upgrade]").forEach(button => {
+          const key = button.dataset.estateUpgrade, name = constructionAction(levels[key]);
+          const text = button.querySelector(".wheel-action-name") || button;
+          if (text.textContent !== name) text.textContent = name;
+          button.title = label(key) + " — " + name.toLowerCase() + " requirements and deposits";
+          button.setAttribute("aria-label", button.title);
+        });
         host.querySelectorAll("[data-estate-enter]").forEach(button => {
           const key = button.dataset.estateEnter, hint = levels[key] > 0 ? "enter building menu" : "construct this building before entering";
           button.disabled = !(levels[key] > 0);
@@ -130,6 +142,9 @@
     let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
     let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null;
     let renderedView = null, renderedQuote = null, formDraft = null, reviewDraft = null;
+    let directoryFilter = "all", guideHidden = false, completions = [], feedback = null, management = null, overviewRequested = false;
+    const guideKey = "crownlands-estate-guide-v1:" + (options.preferenceScope?.() || scope);
+    try { guideHidden = localStorage.getItem(guideKey) === "dismissed"; } catch (_) { /* Device preferences are optional. */ }
     const current = () => !destroyed && options.scope() === scope;
     const now = () => data ? data.serverNowMs + Math.max(0, Date.now() - data.receivedAtMs) : Date.now();
     function balances() {
@@ -151,10 +166,119 @@
       if (!current()) return;
       options.apply?.(result);
       if (result.estate) {
-        data = { ...result, receivedAtMs: Date.now() };
+        if (data) for (const [key, level] of Object.entries(result.estate.levels)) {
+          if (level > data.estate.levels[key]) {
+            const note = `${label(key)} Level ${level} completed. ${result.estate.benefits[key].current}.`;
+            completions.unshift(note); completions = completions.slice(0, 5);
+            feedback = { text:note, until:Date.now() + 12000 };
+          }
+        }
+        const overview = result.upgradeOverview || (result.estate.revision === data?.estate.revision ? data?.upgradeOverview : null);
+        data = { ...result, upgradeOverview:overview, receivedAtMs: Date.now() };
         options.update?.(data);
         schedule();
       }
+    }
+    function milestone(key, level) {
+      if (level >= 100) return "";
+      const rows = [[1, "This building’s service becomes available."]];
+      if (["treasury", "barracks", "gatehouse", "royal-stables"].includes(key))
+        milestones.slice(1).forEach((n, i) => rows.push([n, qualities[i+1] + " commissions."]));
+      if (key === "builders-yard") rows.push([10,"Second builder."],[50,"Third builder."]);
+      if (key === "alehouse") rows.push([10,"Trail bread preparation."],[25,"Uncommon recruits and hearty stew."],[50,"Rare recruits and guild feast."],[75,"Epic recruits."],[100,"Legendary recruits."]);
+      if (key === "guild-master") rows.push([25,"Three champions per party and two expeditions; Uncommon quests also need Alehouse 25."],[50,"Four champions per party; Rare quests also need Alehouse 50."],[60,"Three concurrent expeditions."],[75,"Epic quests also need Alehouse 75."],[100,"Legendary quests also need Alehouse 100; champion training reaches Level 100."]);
+      if (key === "wagon-yard") rows.push([25,"Plank and Iron supply packs."],[34,"Half-hour supply packs."],[50,"Tool supply packs."],[100,"One-hour supply packs."]);
+      if (key === "market") rows.push([34,"Half-hour supply packs."],[100,"One-hour supply packs."]);
+      const next = rows.filter(([n]) => n > level).sort((a,b) => a[0]-b[0])[0];
+      return next ? `<aside class="estate-milestone"><b>Next unlock · Level ${next[0]}</b><progress max="${next[0]}" value="${level}" aria-label="${escape(label(key))} progress toward Level ${next[0]}"></progress><p>${escape(next[1])} ${next[0]-level} levels to go.</p></aside>`
+        : `<p class="estate-economy-muted">Every completed level improves this service through Level 100. The next-level benefit is shown in Upgrade requirements.</p>`;
+    }
+    function productionHelp(key) {
+      const s = data.estate, r = s.resources[key];
+      if (!r || r.status === "Producing") return "";
+      if (r.status === "Source not built") return `<p>Construct ${escape(label(r.source))} to begin gathering ${escape(label(key))}. ${button("upgradeSite","Review construction",`data-id="${r.source}"`)}</p>`;
+      if (r.status === "Storage full") {
+        const store = ["grain","food"].includes(key) ? "granary" : "storehouse";
+        return `<p>${escape(label(key))} storage is full. Deposits and services can free space; ${escape(label(store))} expands capacity. ${button("source","Visit "+label(store),`data-id="${store}"`)}</p>`;
+      }
+      if (r.status === "Processing paused") return `<p>Processing is paused by your preference. ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>`;
+      const inputs = Object.keys(r.inputs || {}).filter(k => !s.levels[s.resources[k].source] || s.resources[k].available <= (s.reserves[k] || 0));
+      return inputs.length ? inputs.map(k => `<p>${escape(label(key))} needs usable ${escape(label(k))}. ${s.reserves[k] ? number(s.reserves[k])+" is protected by your shared reserve. " : ""}${button("source","Visit "+label(s.resources[k].source),`data-id="${s.resources[k].source}"`)} ${s.reserves[k] ? button("source","Review processor reserves",`data-id="${r.source}"`) : ""}</p>`).join("")
+        : `<p>Shared processing can be constrained by ingredients, reserves or downstream storage. ${button("source","Review "+label(r.source),`data-id="${r.source}"`)}</p>`;
+    }
+    function championCard(c, active) {
+      const unavailable = c.questId || c.recoveryUntilMs > now(), xpMax = 4*c.level;
+      const status = c.questId ? "Questing" : c.recoveryUntilMs > now() ? "Recovering · "+duration(c.recoveryUntilMs-now()) : "Ready";
+      const identity = `<span><strong>${escape(c.name)}</strong><small>${qualities[c.quality] || "Common"} · Lv. ${c.level} · Power ${power(c)}</small></span>`;
+      return `<div class="estate-economy-champion estate-champion-card" data-champion-card="${escape(c.id)}">
+        ${active ? `<label><input type="checkbox" data-economy-champion value="${escape(c.id)}" ${unavailable ? "disabled" : ""}>${identity}</label>` : identity}
+        <span class="estate-champion-state">${status}</span>
+        ${button(active?"bench":"activate",active?"Bench":"Make active",`data-id="${escape(c.id)}" ${unavailable || (!active && data.estate.activeChampionIds.length >= 6+Math.floor(18*(data.estate.levels["guild-master"]-1)/99)) ? "disabled" : ""}`)}
+        <div class="estate-champion-xp">${c.level >= 100 ? "Maximum champion level" : `<progress max="${xpMax}" value="${Math.min(c.xp,xpMax)}" aria-label="${escape(c.name)} XP progress"></progress>${number(c.xp)} / ${xpMax} XP · Guild training ceiling Lv. ${data.estate.levels["guild-master"]}${c.level >= data.estate.levels["guild-master"] ? " · Extra XP stays banked" : ""}`}</div>
+      </div>`;
+    }
+    function statusBody() {
+      const s = data.estate, working = s.jobs.filter(j=>j.status==="running").length;
+      const claims = Object.entries(s.commissions).filter(([,c])=>c.completesAtMs<=now());
+      let body = `<div class="estate-status-totals"><p><b>${Math.max(0,s.slots-working)} / ${s.slots}</b> builders free</p><p><b>${s.jobs.length}</b> construction projects</p><p><b>${claims.length+s.parcels.length}</b> rewards to review</p></div><p>Use Buildings to filter projects. Readiness uses the latest server quote summary; every start is reviewed and checked again.</p>`;
+      body += `<article><h3>Construction</h3>${s.jobs.map(j=>`<p>${escape(label(j.building))} → Level ${j.target} · ${j.status==="running" ? j.completesAtMs>now()?duration(j.completesAtMs-now())+" remaining":"Finishing…" : "Paid work · "+escape(j.status)} ${button("upgradeSite","View project",`data-id="${j.building}"`)}</p>`).join("") || "<p>No construction running. Deposits start work only after you confirm an upgrade.</p>"}</article>`;
+      body += `<article><h3>Ready to collect</h3>${claims.map(([key,c])=>`<p>${escape(label(key))} · ${escape(c.name)} ${button("source","View commission",`data-id="${key}"`)}</p>`).join("")}${s.parcels.length ? `<p>${s.parcels.length} quest reward parcels · ${button("source","Visit Guild Master",'data-id="guild-master"')}</p>` : ""}${!claims.length&&!s.parcels.length ? "<p>No completed rewards waiting.</p>" : ""}<p>Claiming remains a separate review. Rewards that do not fit stay available.</p></article>`;
+      if (completions.length) body += `<article><h3>Recently completed this visit</h3>${completions.map(n=>`<p>${escape(n)}</p>`).join("")}</article>`;
+      body += `<article><h3>Getting started ${button("guide",guideHidden?"Show guide":"Dismiss guide")}</h3>`;
+      if (!guideHidden) {
+        const steps = [
+          [["foresters-lodge","quarry","mine","farmstead"],"Gather raw materials","Timber, Stone, Iron Ore and Grain feed the estate."],
+          [["storehouse","granary"],"Make room for resources","Each material has its own capacity; existing stocks are retained."],
+          [["sawmill","smithy","workshop"],"Build the crafting chain","2 Timber → Plank; 3 Ore + Timber → Iron; Plank + Iron → Tool."],
+          [["windmill"],"Prepare Food","2 Grain → Food for expeditions and meals."],
+          [["guild-master"],"Open your guild","Recruit at the Alehouse, then activate champions at the Guild Master."],
+        ];
+        body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
+          const missing=keys.filter(k=>!s.levels[k]);
+          return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button, deposit into its next level, then confirm once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+      }
+      return body + "</article>";
+    }
+    function mountManagement(host) {
+      management?.destroy();
+      const localAbort = new AbortController(), header = host.querySelector(".estate-header"), directory = host.querySelector(".estate-directory");
+      const entry = document.createElement("button"); entry.type="button";entry.dataset.estateStatus="";entry.textContent="Estate";
+      header.insertBefore(entry,header.querySelector("[data-estate-directory-toggle]"));
+      const filters = document.createElement("div"); filters.className="estate-directory-filters";
+      filters.innerHTML='<label>Show buildings<select data-estate-filter><option value="all">All buildings</option><option value="ready">Ready to upgrade</option><option value="constructing">Under construction</option><option value="materials">Needs materials</option><option value="unbuilt">Not built</option></select></label><p data-estate-filter-count role="status"></p>';
+      directory.prepend(filters); const select = filters.querySelector("select");select.value=directoryFilter;
+      const empty=document.createElement("p");empty.dataset.estateFilterEmpty="";empty.hidden=true;empty.textContent="No buildings match this filter.";directory.append(empty);
+      const notice=document.createElement("div");notice.className="estate-completion-feedback";notice.hidden=true;notice.setAttribute("role","status");
+      notice.innerHTML='<span></span><button type="button" aria-label="Dismiss completion notice">×</button>';header.querySelector("div").append(notice);
+      let feedbackTimer=0;
+      const update=()=>{
+        if (!data || !current()) return;
+        const s=data.estate, claims=Object.values(s.commissions).filter(c=>c.completesAtMs<=now()).length+s.parcels.length;
+        const title=`Estate overview · ${Math.max(0,s.slots-s.jobs.filter(j=>j.status==="running").length)} builders free · ${claims} rewards waiting`;
+        entry.title=title;entry.setAttribute("aria-label",title);
+        select.querySelectorAll('[value="ready"],[value="materials"]').forEach(option=>option.disabled=!data.upgradeOverview);
+        let count=0;
+        directory.querySelectorAll(".estate-directory-site").forEach(row=>{
+          const key=row.querySelector("[data-estate-directory-building]").dataset.estateDirectoryBuilding, state=data.upgradeOverview?.[key];
+          row.hidden=directoryFilter==="all"?false:directoryFilter==="unbuilt"?!!s.levels[key]||s.jobs.some(j=>j.building===key):directoryFilter==="constructing"?!s.jobs.some(j=>j.building===key&&j.status==="running"):!state||state.status!==directoryFilter;
+          if (!row.hidden) count++;
+          let note=row.querySelector(".estate-readiness-note");if(!note){note=document.createElement("small");note.className="estate-readiness-note";row.querySelector("[data-estate-directory-building]").append(note);}
+          const text=state?.reason||"Refresh Estate for upgrade readiness.";if(note.textContent!==text)note.textContent=text;
+        });
+        directory.querySelectorAll(":scope > section").forEach(section=>section.hidden=![...section.querySelectorAll(".estate-directory-site")].some(row=>!row.hidden));
+        const text=`${count} of 20 buildings${data.upgradeOverview?"":" · Readiness awaiting server update"}`;
+        if(filters.querySelector("p").textContent!==text)filters.querySelector("p").textContent=text;empty.hidden=count!==0;
+        empty.textContent=!data.upgradeOverview&&["ready","materials"].includes(directoryFilter)?"Refresh Estate for current upgrade readiness.":"No buildings match this filter.";
+        clearTimeout(feedbackTimer);notice.hidden=!feedback||feedback.until<=Date.now()||document.hidden;
+        if(!notice.hidden){if(notice.firstElementChild.textContent!==feedback.text)notice.firstElementChild.textContent=feedback.text;notice.title=feedback.text;feedbackTimer=setTimeout(()=>{notice.hidden=true;feedback=null;},Math.max(1,feedback.until-Date.now()));}
+      };
+      entry.addEventListener("click",()=>open({type:"status",key:"estate"}),{signal:localAbort.signal});
+      select.addEventListener("change",()=>{directoryFilter=select.value;update();directory.scrollTop=0;},{signal:localAbort.signal});
+      host.addEventListener("click",event=>{if(event.target.closest("[data-estate-directory-toggle]"))queueMicrotask(()=>{if(!localAbort.signal.aborted&&!directory.hidden){select.focus({preventScroll:true});refresh(true);}});},{signal:localAbort.signal});
+      notice.querySelector("button").addEventListener("click",()=>{feedback=null;notice.hidden=true;clearTimeout(feedbackTimer);entry.focus();},{signal:localAbort.signal});
+      management={update,needsOverview:()=>!directory.hidden,destroy(){localAbort.abort();clearTimeout(feedbackTimer);entry.remove();filters.remove();empty.remove();notice.remove();management=null;}};
+      update();return management;
     }
     function schedule() {
       clearTimeout(deadlineTimer);
@@ -168,11 +292,13 @@
         times.push((Math.floor(now() / 86400000) + 1) * 86400000);
       if (times.length) deadlineTimer = setTimeout(() => refresh(), Math.min(2147483647, Math.max(100, Math.min(...times) - now() + 100)));
     }
-    async function refresh() {
+    async function refresh(includeUpgradeOverview = false) {
       if (!current()) return;
+      overviewRequested ||= includeUpgradeOverview || (dialog.open && view?.type === "status") || management?.needsOverview();
       if (busy) { refreshPending = true; return; }
       busy = true;
-      try { accept(await api.getEstateState()); error = ""; await loadUpgrade(); }
+      const overview = !!overviewRequested; overviewRequested = false;
+      try { accept(await api.getEstateState(overview)); error = ""; await loadUpgrade(); }
       catch (e) { if (current()) error = e.message || "Estate could not load."; }
       finally {
         busy = false;
@@ -220,11 +346,12 @@
       const commission = s.commissions[key];
       let body = `<p class="estate-economy-kicker">Permanent estate · Level ${level} / 100</p>
         <p>${escape(root.CrownlandsEstate.buildings.find(b => b.key === key)?.role)}</p>
-        <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>`;
-      if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Upgrade button to review construction.</p>";
+        <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>` + milestone(key,level);
+      if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Build button to review construction.</p>";
       if (producer) {
         body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} production</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
           <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
+        body += productionHelp(Object.keys(s.resources).find(k=>s.resources[k]===producer));
         if (Object.keys(producer.inputs || {}).length) body += `<p><b>Recipe per unit:</b> ${escape(list(producer.inputs))}. Inputs are consumed only while processing can produce output.</p>`;
         if (["sawmill", "smithy", "workshop", "windmill"].includes(key))
           body += button("processor", s.processors[key] === false ? "Resume processing" : "Pause processing")
@@ -251,21 +378,15 @@
       if (key === "alehouse") {
         body += `<article><h3>Today’s champions</h3><p>Three stable offers each UTC day. Every recruit stays yours across seasons; a full active roster sends new recruits to your bench.</p>
           ${!s.levels["guild-master"] ? "<p>Construct the Guild Master to unlock recruitment.</p>" : ""}
-          ${s.recruitOffers.offers.map(o => `<p>${escape(o.name)} · Level ${o.level} · Power ${power(o)} ${o.claimed ? "· Recruited" : button("recruit", "Review recruit", `data-id="${o.id}"`)}</p>`).join("")}
+          ${s.recruitOffers.offers.map(o => `<div class="estate-expedition-card"><b>${escape(o.name)}</b><p>${qualities[o.quality] || "Common"} · Level ${o.level} · Power ${power(o)} ${o.claimed ? "· Recruited" : ""}</p>${o.claimed ? "" : button("recruit", "Review recruit", `data-id="${escape(o.id)}"`)}</div>`).join("")}
           <p>Recruitment quality improves at Levels 1 / 25 / 50 / 75 / 100. Review a recruit’s seasonal Gold fee before spending. Preparation meals unlock at Alehouse Levels 10, 25 and 50; select them when planning an expedition at the Guild Master.</p></article>`;
       }
       if (key === "guild-master") {
         const roster = 6 + Math.floor(18 * (level - 1) / 99), party = level >= 50 ? 4 : level >= 25 ? 3 : 2, parties = level >= 60 ? 3 : level >= 25 ? 2 : 1;
         const unlockedTier = Math.min(tierAt(level), tierAt(s.levels.alehouse));
-        body += `<article><h3>Active champions · ${s.activeChampionIds.length} / ${roster}</h3><p>Select up to ${party} idle champions. Each tier requires a minimum party and power. Questing and recovering champions stay active until ready.</p>${s.activeChampionIds.map(id => {
-          const c = data.champions[id]; if (!c) return "";
-          const unavailable = c.questId || c.recoveryUntilMs > now();
-          return `<div class="estate-economy-champion"><label><input type="checkbox" data-economy-champion value="${id}" ${unavailable ? "disabled" : ""}>
-            <span>${escape(c.name)} · ${qualities[c.quality]} · Lv. ${c.level} · Power ${power(c)} · ${number(c.xp)} XP ${c.questId ? "· On quest" : c.recoveryUntilMs > now() ? "· Recovering " + duration(c.recoveryUntilMs - now()) : ""}</span></label>
-            ${button("bench", "Bench", `data-id="${id}" ${unavailable ? "disabled" : ""}`)}</div>`;
-        }).join("") || "<p>Recruit champions at the Alehouse to form a party.</p>"}
+        body += `<article><h3>Active champions · ${s.activeChampionIds.length} / ${roster}</h3><p>Select up to ${party} idle champions. Each tier requires a minimum party and power. Questing and recovering champions stay active until ready.</p>${s.activeChampionIds.map(id => data.champions[id] ? championCard(data.champions[id],true) : "").join("") || "<p>Recruit champions at the Alehouse to form a party.</p>"}
           ${button("benchList", "Browse permanent champion bench")}
-          ${bench.filter(c => !s.activeChampionIds.includes(c.id)).map(c => `<p>${escape(c.name)} · ${qualities[c.quality]} · Lv. ${c.level} · Power ${power(c)} ${button("activate", "Make active", `data-id="${c.id}" ${s.activeChampionIds.length >= roster || c.questId || c.recoveryUntilMs > now() ? "disabled" : ""}`)}</p>`).join("")}
+          ${bench.filter(c => !s.activeChampionIds.includes(c.id)).map(c => championCard(c,false)).join("")}
           ${cursor ? button("moreBench", "Next page") : ""}</article>
           <article><h3>Expeditions · ${s.quests.length} / ${parties} parties</h3><p>Quest tiers require both the Guild Master and Alehouse at Levels 1 / 25 / 50 / 75 / 100. Construct the Farmstead and Windmill for Food. Shared daily reward budget remaining: ${number(Math.max(0, 2.4 - (s.questUsage.day === new Date(now()).toISOString().slice(0,10) ? s.questUsage.hours : 0)))} / 2.4 resource hours.</p><div class="estate-economy-actions">
           <label>Tier<select data-economy-tier>${qualities.map((name,i)=>`<option value="${i}" ${i > unlockedTier ? "disabled" : ""}>${name}${i > unlockedTier ? " · Both buildings Lv. " + milestones[i] : ""}</option>`).join("")}</select></label>
@@ -274,8 +395,8 @@
           <label>Split with<select data-economy-resource-second><option value="">Keep one material</option>${["timber","stone","ore","planks","iron","tools"].map(k=>`<option value="${k}">${label(k)}</option>`).join("")}</select></label>
           <label>Meal<select data-economy-meal><option value="none">No meal</option>${[["bread", "Trail bread", 10], ["stew", "Hearty stew", 25], ["feast", "Guild feast", 50]].map(([id,name,min]) => `<option value="${id}" ${s.levels.alehouse < min ? "disabled" : ""}>${name} · Alehouse Lv. ${min}</option>`).join("")}</select></label>
           ${button("quest", "Review expedition", s.quests.length >= parties || s.quests.length + s.parcels.length >= 6 ? "disabled" : "")}</div><p data-economy-party-status role="status"></p>
-          ${s.quests.map(q=>`<p>Tier ${q.tier+1} expedition · ${duration(Math.max(0,q.completesAtMs-now()))} remaining · ${escape(list(q.rewards))}</p>`).join("")}
-          ${s.parcels.map(p=>`<p>${escape(list(p.rewards))} ${button("claimParcel","Claim what fits",`data-id="${escape(p.id)}"`)}</p>`).join("")}</article>`;
+          ${s.quests.map(q=>`<div class="estate-expedition-card"><b>${qualities[q.tier]} expedition</b><p>${q.completesAtMs>now()?duration(q.completesAtMs-now())+" remaining":"Finishing…"} · ${escape(list(q.rewards))}</p><p>${(q.championIds||[]).map(id=>escape(data.champions[id]?.name||"Champion")).join(" · ")}</p></div>`).join("")}
+          ${s.parcels.map(p=>`<div class="estate-expedition-card"><b>Rewards ready</b><p>${escape(list(p.rewards))}</p>${button("claimParcel","Claim what fits",`data-id="${escape(p.id)}"`)}</div>`).join("")}</article>`;
       }
       if (key === "market" || key === "wagon-yard") {
         const used = s.supplyUsage.day === new Date(now()).toISOString().slice(0,10) ? s.supplyUsage.hours : 0, maxPack = .25 + .75 * (level - 1) / 99;
@@ -293,7 +414,7 @@
       const s = data.estate, level = s.levels[key], jobs = s.jobs.filter(j => j.building === key);
       let body = `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
         <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
-        <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>`;
+        <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>` + milestone(key,level);
       if (jobs.length) return body + jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0,j.completesAtMs-now()))+" remaining" : "Previously paid work · "+escape(j.status)}
         ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before depositing toward its next level.</p>";
       if (level >= 100) return body + "<p>Maximum building level reached.</p>";
@@ -310,8 +431,8 @@
       }).join("")}</tbody></table></div><p>Deposits belong only to this building’s next level and stay through seasons. They do not start an upgrade automatically.</p>`;
       else body += "<p>First construction requires Gold only.</p>";
       const canDeposit=Object.entries(bill.remaining).some(([k,v])=>v>0&&s.stock[k]>=1);
-      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Construct Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
-        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Your upgrade begins only when you confirm."}</p>`;
+      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
+        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Construction begins only when you confirm."}</p>`;
       return body;
     }
     function reviewBody() {
@@ -359,17 +480,18 @@
         else if (renderedQuote === quote) reviewDraft = saveForm();
       }
       const draft = quote ? reviewDraft : formDraft;
-      const title = label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · Upgrade" : "");
+      const title = view.type === "status" ? "Estate overview" : label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · " + constructionAction(data?.estate.levels[view.key]) : "");
       let body = "<p>Loading your permanent estate…</p>";
       if (data) {
         if (quote) body = reviewBody();
+        else if (view.type === "status") body = statusBody();
         else if (view.type === "upgrade") body = upgradeBody(view.key);
         else if (view.type === "resource") {
           const r = data.estate.resources[view.key];
           body = r ? `<div class="estate-economy-benefits"><p><b>Available</b><br>${number(r.available)} / ${number(r.capacity)}</p><p><b>Deposited</b><br>${number(r.reserved)}</p></div>
             <p>${escape(r.status)}</p><p>Gross: ${number(r.gross)}/hour · Factory inputs: ${number(r.consumed)}/hour · Net: ${number(r.net)}/hour</p>
             <p>${r.timeToFullHours === null ? "Production is paused, balanced by consumption, or waiting for inputs." : "At this rate, storage fills in " + duration(r.timeToFullHours*3600000) + ". Rates can change at storage boundaries."}</p>
-            ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
+            ${productionHelp(view.key)}${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
         } else body = buildingBody(view.key);
       }
       dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
@@ -400,6 +522,12 @@
       if (action === "cancelReview") { quote = null; pending = null; if (view.type === "upgrade") await refresh(); else render(); return; }
       if (action === "source") { open({type:"building",key:target.dataset.id}); return; }
       if (action === "ledger") { open({type:"resource",key:target.dataset.id}); return; }
+      if (action === "upgradeSite") { open({type:"upgrade",key:target.dataset.id}); return; }
+      if (action === "guide") {
+        guideHidden=!guideHidden;
+        try { if(guideHidden)localStorage.setItem(guideKey,"dismissed");else localStorage.removeItem(guideKey); } catch (_) { /* Optional device preference. */ }
+        render();return;
+      }
       if (action === "confirm") {
         const accepted = !!dialog.querySelector("[data-economy-permanent]")?.checked;
         if (quote.value.nonrefundable && !accepted) { error = "Confirm the permanent credit terms before continuing."; render(); return; }
@@ -410,6 +538,7 @@
           if (!current()) return;
           accept(result);
           if (result.replayed) accept(await api.getEstateState());
+          refreshPending=true;
           if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
         }); return;
       }
@@ -447,8 +576,8 @@
       if (current() && data && revision > data.estate.revision) refresh();
     });
     refresh();
-    return { refresh, balances, now, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
-      visibilityChanged:schedule, destroy(){destroyed=true;abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
+    return { refresh, balances, now, mountManagement, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
+      visibilityChanged:schedule, destroy(){destroyed=true;management?.destroy();abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
   root.CrownlandsEstateEconomy = { create, mapActions };
 })(window);
