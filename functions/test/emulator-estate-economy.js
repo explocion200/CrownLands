@@ -103,10 +103,14 @@ async function main() {
   saved.stock.stone-=250;
   saved.deposits.quarry={target:25,version:"retained-price-v1",materials:legacyBill.materials,deposited:{stone:250}};
   await stateRef.set(saved);
+  // Admission migrates Gear entitlements and advances the estate revision.
+  // An unaccepted legacy quote must bind that canonical revision so this test
+  // reaches deposit retirement rather than the unrelated stale-quote guard.
+  await load();
   const profileBefore = (await profileRef.get()).data(), beforeReset = (await stateRef.get()).data();
   const deposit={id:"legacy_deposit_quote",input:{action:"deposit",building:"quarry",amounts:{stone:250}},
     value:{action:"deposit",building:"quarry",amounts:{stone:250},target:25,nonrefundable:true},
-    expiresAtMs:Date.now()+300000,revision:saved.revision,resetGeneration:profileBefore.resetGeneration,
+    expiresAtMs:Date.now()+300000,revision:beforeReset.revision,resetGeneration:profileBefore.resetGeneration,
     worldId:profileBefore.worldId,realmShardId:profileBefore.realmShardId||"legacy"};
   await db.doc(`players/${owner.uid}/estateQuotes/${deposit.id}`).set(deposit);
   await db.doc(`players/${owner.uid}/estateReceipts/deposit_replay_001`).set({requestId:"deposit_replay_001",quoteId:deposit.id,action:"deposit"});
