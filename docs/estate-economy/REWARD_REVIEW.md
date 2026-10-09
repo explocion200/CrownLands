@@ -1,6 +1,6 @@
 # Approved estate economy — shared-account review
 
-Owner approval: October 8, 2026. Runtime implementation is pending release. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.
+Owner approval: October 8, 2026. Deployment evidence is recorded separately in the Master Specification; this model does not establish release status. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.
 
 ## Rewards at every level
 

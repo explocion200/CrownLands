@@ -70,13 +70,19 @@ async function main() {
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
     const firstBuildEstate=structuredClone(estate);firstBuildEstate.levels.mine=0;
     const firstBuildQuote=E.constructionQuote(firstBuildEstate,'mine',1);
+    const cappedState=E.initial(Date.now());
+    for(const key of Object.keys(cappedState.levels))cappedState.levels[key]=1;
+    cappedState.activeChampionIds=['champion_one','champion_two'];
+    const cappedChampions=Object.fromEntries(cappedState.activeChampionIds.map(id=>[id,{id,name:id==='champion_one'?'Champion 1':'Champion 2',quality:0,level:1,xp:4,questId:'',recoveryUntilMs:0}]));
+    const trainingQuote=S.questQuote(cappedState,{tier:0,hours:2,championIds:cappedState.activeChampionIds,resources:['stone'],meal:'none'},cappedChampions,cappedState.settledAtMs);
+    assert(Object.values(trainingQuote.training).every(t=>t.credited===0));
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/inner-city-estate/index.html?estateUi=1&scene=initial&visualMarches=0"});
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,trainingQuote:payload.trainingQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
           const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
@@ -94,6 +100,7 @@ async function main() {
             let value;
             if(input.action==="deposit")value={...input,target:s.levels[input.building]+1,nonrefundable:true};
             else if(input.action==="processor")value={...input};
+            else if(input.action==="quest")value=structuredClone(__estateTest.trainingQuote);
             else {
               if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
               if(input.count!==1)throw Error("Upgrades cannot be queued.");
@@ -128,7 +135,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,trainingQuote,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -157,6 +164,10 @@ async function main() {
       assert.equal(await evaluate(()=>!!document.querySelector('.estate-starter-guide')),hidden,'The guide can always be reopened');
       if(!hidden)await click('[data-economy-action="guide"]');
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-starter-guide li').length),7);
+      assert(await evaluate(()=>{
+        const step=document.querySelectorAll('.estate-starter-guide li')[5];
+        return step.textContent.includes('Guild Level 1 banks at most 4 XP')&&!!step.querySelector('[data-id="alehouse"]')&&!!step.querySelector('[data-id="guild-master"]');
+      }),'First-party guidance connects recruitment and training limits');
       await evaluate(()=>document.querySelector('.estate-economy-content').scrollTop=0);
       const overviewCapture=await client.send('Page.captureScreenshot',{format:'png'});
       fs.writeFileSync(path.join(output,'estate-overview-'+width+'.png'),Buffer.from(overviewCapture.data,'base64'));
@@ -567,8 +578,15 @@ async function main() {
       await evaluate(()=>{__estateTest.champions.champion_one.xp=10;return innerCastleEconomy.refresh();});
       assert(await evaluate(()=>{
         const card=document.querySelector('[data-champion-card="champion_one"]'),bar=card.querySelector('progress');
-        return bar.max===4&&bar.value===4&&card.textContent.includes('10 / 4 XP')&&card.textContent.includes('Extra XP stays banked');
+        return bar.max===4&&bar.value===4&&card.textContent.includes('10 / 4 XP')&&card.textContent.includes('XP bank full')&&card.textContent.includes('existing XP is retained');
       }),'Cards retain banked XP while the display bar stops at its level threshold');
+      await click('[data-economy-action="quest"]');
+      await wait(()=>document.querySelector('.estate-economy-content').textContent.includes('XP retained:'));
+      assert(await evaluate(()=>{
+        const text=document.querySelector('.estate-economy-content').textContent;
+        return text.includes('Champion 1: 0')&&text.includes('Champion 2: 0')&&text.includes('no room for new XP')&&text.includes('quoted materials')&&text.includes('estate map Upgrade control');
+      }),'A real zero-credit quest quote explains the Guild cap before Food is spent');
+      await click('[data-economy-action="cancelReview"]');
       const guildCapture=await client.send('Page.captureScreenshot',{format:'png'});
       fs.writeFileSync(path.join(output,'guild-services-'+width+'.png'),Buffer.from(guildCapture.data,'base64'));
       // A champion becoming unavailable is removed from the selected party.

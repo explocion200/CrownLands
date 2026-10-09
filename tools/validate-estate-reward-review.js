@@ -82,7 +82,7 @@ function simulate(visits,services=false,commissions=false,crowns=false){
  return{visits,services,commissions,crowns,milestones,snapshots,stats,gearCount,levels:s.levels};
 }
 const accounts=[simulate(1),simulate(3),simulate(1,true),simulate(3,true),simulate(3,true,true),simulate(3,true,true,true)];
-const lines=["# Approved estate economy — shared-account review","","Owner approval: October 8, 2026. Runtime implementation is pending release. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.","",
+const lines=["# Approved estate economy — shared-account review","","Owner approval: October 8, 2026. Deployment evidence is recorded separately in the Master Specification; this model does not establish release status. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.","",
  "## Rewards at every level","","Every one of the 1,980 upgrades changes a usable rule. Actual value depends on supply, demand and player choices; a changed number is not a playtest.","",
  "| Building | Changing upgrades | Level 100 benefit |","|---|---:|---|"];
 for(const key of Object.keys(E.BUILDINGS))lines.push("| "+names[key]+" | 99 | "+E.benefit(key,100)+" |");
