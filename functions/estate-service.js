@@ -32,7 +32,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     now = Math.max(now, Date.now());
     if (!profile.exists) E.fail("Enter your kingdom before opening the estate.");
     const state = E.normalize(saved.exists ? saved.data() : null, now), champions = {};
-    const before = JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements]);
+    const before = JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements, state.productionOrders, state.productionPolicyVersion]);
     const ids = [...new Set([...state.activeChampionIds, ...extraIds])];
     if (ids.length) {
       const records = await tx.getAll(...ids.map(key => championRef(uid, id(key))));
@@ -56,7 +56,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     E.settle(state, now, job => completed.push(job));
     S.settleQuests(state, champions, now);
     for (const building of Object.keys(G.BUILDINGS)) state.entitlements[building] = Math.max(state.entitlements[building], E.rarityIndex(state.levels[building]));
-    if (before !== JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements])) state.revision++;
+    if (before !== JSON.stringify([state.levels, state.jobs, state.quests, state.entitlements, state.productionOrders, state.productionPolicyVersion])) state.revision++;
     if (state.recruitOffers?.day !== S.utcDay(now) || !state.recruitOffers?.offers?.length)
       state.recruitOffers = { day: S.utcDay(now), offers: S.offers(state, now, 285) };
     return { now, state, champions, completed, profile, wallet: CROWNS.normalize(wallet.exists ? wallet.data() : {}),
@@ -86,7 +86,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
   function validateInput(input) {
     if (!input || typeof input !== "object" || Array.isArray(input) || JSON.stringify(input).length > 5000)
       E.fail("Invalid estate action.", "invalid-argument");
-    if (!["fund", "deposit", "processor", "pause", "commission", "claimCommission", "recruit", "roster", "quest", "claimParcel", "supply"].includes(input.action))
+    if (!["fund", "deposit", "processor", "reserves", "produce", "pause", "commission", "claimCommission", "recruit", "roster", "quest", "claimParcel", "supply"].includes(input.action))
       E.fail("Unknown estate action.", "invalid-argument");
     if (input.championId) id(input.championId);
   }
@@ -97,15 +97,17 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
       // Accepted deposit receipts replay before validation; unaccepted old
       // quotes and new deposit requests must not create any more credit.
       case "deposit": E.fail("Material deposits are no longer available. Open Build or Upgrade to start with your resources.");
-      case "processor": {
+      case "processor": E.fail("Automatic processing is no longer available. Choose a quantity and start production in the building.");
+      case "produce": return E.productionQuote(state, input.building, input.quantity);
+      case "reserves": {
         const producer = E.C.producers.find(p => p.building === input.building && Object.keys(p.inputs).length);
-        if (!producer || !state.levels[input.building] || typeof input.enabled !== "boolean") E.fail("Choose a constructed processor.");
+        if (!producer || !state.levels[input.building]) E.fail("Choose a constructed processor.");
         const reserves = input.reserves || {};
         for (const [key, amount] of Object.entries(reserves)) {
           if (!Object.hasOwn(producer.inputs, key)) E.fail("That material is not an input to this processor.");
           E.integer(amount, 0, E.capacity(state, key), "Reserve must fit storage.");
         }
-        return { action: "processor", building: input.building, enabled: input.enabled, reserves };
+        return { action: "reserves", building: input.building, reserves };
       }
       case "pause": {
         const clone = structuredClone(state);
@@ -204,8 +206,8 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
           case "fund":
             E.fund(state, value, requestId, now);
             break;
-          case "processor":
-            state.processors[value.building] = value.enabled;
+          case "produce": E.startProduction(state, value, requestId, now); break;
+          case "reserves":
             Object.assign(state.reserves, value.reserves); break;
           case "pause": E.pauseJob(state, value.jobId, value.paused, now); break;
           case "commission":

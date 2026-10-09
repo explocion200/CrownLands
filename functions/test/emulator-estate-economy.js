@@ -259,6 +259,7 @@ async function main() {
   const retained = structuredClone(beforeReset);
   const paidJob = { ...E.baseQuote(retained, "quarry", 25, 285), id: "permanent_paid_job", status: "paused", fundedAtMs: Date.now() };
   retained.jobs.push(paidJob); delete retained.deposits.quarry;
+  E.startProduction(retained,E.productionQuote(retained,"sawmill",100),"permanent_production_batch",Date.now());
   const championRecord = { id: "permanent_champion", name: "Retained champion", quality: 1, level: 12, xp: 7,
     active: true, questId: "", recoveryUntilMs: Date.now() + E.HOUR, acquiredAtMs: Date.now() - E.HOUR };
   retained.activeChampionIds = [championRecord.id];
@@ -272,11 +273,50 @@ async function main() {
   for (const [path, data] of Object.entries(persistentRecords)) assert.deepEqual((await db.doc(returningRef.path + "/" + path).get()).data(), data);
   const returned = await call("getEstateState", returning);
   assert.equal(returned.estate.jobs[0].id, paidJob.id); assert.equal(returned.estate.jobs[0].status, "paused");
+  assert.equal(returned.estate.productionOrders.sawmill.id,"permanent_production_batch","Paid production survives real monthly admission");
   assert.equal(returned.champions[championRecord.id].level, 12); assert.equal(returned.champions[championRecord.id].xp, 7);
   const resume=(await call("getEstateQuote",returning,{input:{action:"pause",jobId:paidJob.id,paused:false}})).quote;
   const resumed=await call("commitEstateAction",returning,{quoteId:resume.id,requestId:"resume_legacy_paid",acceptPermanentCredit:true});
   assert.equal(resumed.estate.jobs[0].status,"running");assert.equal(resumed.estate.jobs[0].durationMs,paidJob.durationMs);
   assert.equal((await returningRef.get()).data().gold,100,"Previously paid work resumes without another Gold payment");
+  // Manual material batches use the existing authenticated quote/receipt
+  // transaction, without a Gold charge, duplicate debit or automatic repeat.
+  saved=E.initial(Date.now());for(const key in saved.levels)saved.levels[key]=1;
+  for(const p of E.C.producers)saved.processors[p.building]=false;
+  for(const k of E.KEYS)saved.stock[k]=100;
+  await stateRef.set(saved);loaded=await load();assert.equal(loaded.estate.productionPolicy,"manual-batches");
+  assert.equal(loaded.estate.productionRecipes.sawmill.maxQuantity,50);
+  for(const quantity of [0,1.5,51])await assert.rejects(quote({action:"produce",building:"sawmill",quantity}),/whole|quantity|materials|storage/);
+  await assert.rejects(quote({action:"processor",building:"sawmill",enabled:true}),/no longer available/);
+  const batchQuote=await quote({action:"produce",building:"sawmill",quantity:20});
+  const batchGold=(await profileRef.get()).data().goldFloat;
+  const batches=await Promise.all([commit(batchQuote,"manual_batch_001"),commit(batchQuote,"manual_batch_001")]);
+  assert.equal(batches.filter(r=>r.replayed).length,1);
+  saved=(await stateRef.get()).data();assert.equal(saved.stock.timber,60);assert.equal(saved.stock.planks,100);
+  assert.equal(saved.productionOrders.sawmill.quantity,20);assert.equal(saved.productionOrders.sawmill.durationMs,E.HOUR);
+  assert.equal((await profileRef.get()).data().goldFloat,batchGold,"Production pays materials, never realm Gold");
+  await assert.rejects(quote({action:"produce",building:"sawmill",quantity:1}),/Finish/);
+  saved.productionOrders.sawmill.completesAtMs=Date.now()-100;
+  saved.productionOrders.sawmill.startedAtMs=saved.productionOrders.sawmill.completesAtMs-saved.productionOrders.sawmill.durationMs;
+  saved.settledAtMs=saved.productionOrders.sawmill.completesAtMs-1;await stateRef.set(saved);
+  const batchComplete=await Promise.all([load(),load()]);assert(batchComplete.every(r=>r.estate.stock.planks===120));
+  assert(batchComplete.every(r=>!r.estate.productionOrders.sawmill));
+  assert.equal((await load()).estate.stock.timber,60,"Completion and repeated reads cannot start another batch");
+  // Two devices competing for the same Timber can accept only one recipe.
+  saved=(await stateRef.get()).data();saved.stock.timber=20;saved.stock.ore=60;await stateRef.set(saved);
+  const batchRaceQuotes=await Promise.all([quote({action:"produce",building:"sawmill",quantity:10}),quote({action:"produce",building:"smithy",quantity:20})]);
+  const batchRace=await Promise.allSettled(batchRaceQuotes.map((q,i)=>commit(q,"batch_resource_race_"+i)));
+  assert.equal(batchRace.filter(r=>r.status==="fulfilled").length,1);
+  saved=(await stateRef.get()).data();assert.equal(saved.stock.timber,0);assert.equal(Object.keys(saved.productionOrders).length,1);
+  // Legacy automatic accrual is retained once; new actions never turn it on.
+  const legacy=E.initial(Date.now()-E.HOUR);delete legacy.productionPolicyVersion;delete legacy.productionOrders;
+  for(const key in legacy.levels)legacy.levels[key]=1;for(const p of E.C.producers)legacy.processors[p.building]=false;
+  legacy.processors.sawmill=true;legacy.stock.timber=100;legacy.stock.planks=2.25;
+  await stateRef.set(legacy);await load();const migrated=(await stateRef.get()).data();
+  assert(migrated.stock.planks>=22.25&&migrated.stock.planks<22.3);assert.equal(migrated.productionPolicyVersion,1);
+  assert.deepEqual(migrated.productionOrders,{});
+  const again=await load();assert.equal(again.estate.stock.planks,Math.floor(migrated.stock.planks));
+  assert.equal((await stateRef.get()).data().stock.planks,migrated.stock.planks,"Migration does not restart legacy processing");
   console.log("Estate emulator passed: real Gold authority, current realm guards, durable receipts, two devices, persistence, migration, Gear, champions, quests, shared Crown cap and write rules.");
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

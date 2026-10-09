@@ -136,7 +136,7 @@ function claimParcel(state, id) {
   if (!parcel) fail("This parcel has already been claimed.");
   const received = {};
   for (const [key, value] of Object.entries(parcel.rewards)) {
-    const amount = Math.min(value, Math.max(0, Math.floor(E.capacity(state, key) - state.stock[key] + E.EPS)));
+    const amount = Math.min(value, Math.max(0, Math.floor(E.storageSpace(state, key) + E.EPS)));
     if (amount) { state.stock[key] += amount; parcel.rewards[key] -= amount; received[key] = amount; }
   }
   if (!Object.keys(received).length) fail("Make storage space before claiming.");
@@ -153,7 +153,7 @@ function supplyQuote(state, resource, hours, now) {
   if (used + hours > 1 + 1e-10) fail("Today's shared supply allowance is used.");
   const quantity = Math.floor(E.quoteRate(state, resource) * hours);
   if (quantity <= 0) fail("Construct the resource supply chain first.");
-  if (state.stock[resource] + quantity > E.capacity(state, resource) + E.EPS) fail("Make storage space for the full delivery.");
+  if (quantity > E.storageSpace(state, resource) + E.EPS) fail("Make storage space for the full delivery.");
   return { action: "supply", building, resource, hours, quantity, crowns: Math.ceil(hours * 20), day, version: E.VERSION };
 }
 module.exports = { DAY, utcDay, MEALS, commissionQuote, rosterLimit, offers, train, questQuote, launchQuest, settleQuests, claimParcel, supplyQuote };

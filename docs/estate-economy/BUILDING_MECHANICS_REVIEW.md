@@ -4,6 +4,8 @@ Reviewed October 8, 2026 on `codex/estate-building-mechanics-polish`, against th
 
 ## What every building contributes
 
+**October 9 follow-up — IN DEVELOPMENT, NOT DEPLOYED:** Material processors now use player-started quantities rather than automatic recipe consumption. The economy guide and Master Specification record the 1-to-Max controls, fixed paid batches and unchanged capacity rates. The prior release evidence above remains historical; this follow-up requires matching backend/client publication.
+
 | Building | Function | Reward for leveling |
 |---|---|---|
 | Great Hall | Sets every other building’s completed-level ceiling | Every level makes that level available elsewhere; the Hall has no dependency on other building levels |
@@ -17,19 +19,21 @@ Reviewed October 8, 2026 on `codex/estate-building-mechanics-polish`, against th
 | Quarry | Produces Stone | More Stone capacity each level for construction and commissions |
 | Mine | Produces Iron Ore | More ore capacity each level; feeds the Smithy |
 | Farmstead | Produces Grain | More Grain capacity each level; feeds the Windmill and themed construction costs |
-| Sawmill | 2 Timber → 1 Plank | More processing capacity each level; supports construction, commissions and Tools |
-| Smithy | 3 Iron Ore + 1 Timber → 1 Iron | More processing capacity each level; supports construction, commissions and Tools |
-| Workshop | 1 Plank + 1 Iron → 1 Tool | More processing capacity each level for advanced construction and commissions |
-| Windmill | 2 Grain → 1 Food | More processing capacity each level for quests, meals and themed construction |
+| Sawmill | Chosen batches: 2 Timber → 1 Plank | Faster new batches each level; supports construction, commissions and Tools |
+| Smithy | Chosen batches: 3 Iron Ore + 1 Timber → 1 Iron | Faster new batches each level; supports construction, commissions and Tools |
+| Workshop | Chosen batches: 1 Plank + 1 Iron → 1 Tool | Faster new batches each level for advanced construction and commissions |
+| Windmill | Chosen batches: 2 Grain → 1 Food | Faster new batches each level for quests, meals and themed construction |
 | Storehouse | Non-food stock capacity, separately for each material | More free storage every level, without truncating existing stock |
 | Granary | Grain and Food capacity, separately | More free storage every level |
 | Builders’ Yard | Builder availability and time reduction for new contracts | Gradually shorter new contracts; second builder at 10, third at 50; accepted timers stay fixed |
 | Wagon Yard | Additional non-food storage and optional Crown supplies | More free storage every level; Planks/Iron packs at 25, Tools at 50; half-hour packs at 34 and one-hour packs at 100 |
 | Market | Additional Grain/Food storage and optional Crown supplies | More free storage every level; same pack-size progression; shares the Wagon Yard’s daily allowance |
 
-Gross resource/processing capacity increases by 16% of its Level 1 rate per completed level. Actual output respects ingredients, shared input reserves, processor preferences and space. Storage expansions and service milestones are not world-city production or direct combat bonuses. Officer equipment retains its existing effects and two-copy upgrade rules.
+Gross resource/processing capacity increases by 16% of its Level 1 rate per completed level. Raw gathering continues up to storage. Processing requires an explicit quantity and Start production; Max respects ingredients, shared input reserves and space reserved for the output. New building levels shorten new batches; accepted batches keep their timers. Storage expansions and service milestones are not world-city production or direct combat bonuses. Officer equipment retains its existing effects and two-copy upgrade rules.
 
 ## Construction and the economy loop
+
+The numbered construction steps retain the October 8 review context. October 9 replaced new material deposits with direct Build/Upgrade payment; use [the economy guide](README.md#build-and-upgrade) for current construction rules and the pending manual-production follow-up.
 
 1. The six original buildings start at Level 1; the other fourteen need a first Gold-only build. Build raw-material sources, storage and processing chains to begin permanent growth.
 2. Select a plot, then use its external Upgrade button. Review the next level’s required, deposited, remaining and available materials, seasonal Gold, timer and current/next benefit.
@@ -57,4 +61,4 @@ The existing economy-rule tests pass for all 2,000 level rows, continuous produc
 
 Expanded runtime browser checks cover all twenty plots, deposits and retry, exact-target consent, construction timers, Gear returns, locked/unlocked services, party power, busy champions, storage ledgers, recipes, field/focus preservation, commission readiness, unbuilt service guards and the UTC-day refresh. Checks run at 1440×900, 844×390 and 568×320, alongside estate registry/geometry and production-build validation. Required GitHub checks establish PR readiness separately.
 
-The 1 / 3 / 6 / 10 reference-season budgets apply to each building individually at 50% of developed supporting production. They are not a ten-season promise for all twenty buildings sharing an account. The existing shared-account simulation reaches the full Level 100 estate in roughly 2,110–2,351 simulated days across its visit/service cohorts; Gold affordability and the documented cohort assumptions limit that estimate. Quest rewards help modestly, and commissioning competes for the same materials. No costs or timers were changed in this polish pass. Human long-term pacing, authenticated production play and physical-device checks remain necessary before claiming those experiences are verified.
+The 1 / 3 / 6 / 10 reference-season budgets apply to each building individually at 50% of developed supporting production. They are not a ten-season promise for all twenty buildings sharing an account. The updated [shared-account simulation](REWARD_REVIEW.md) explicitly starts manual batches at visits and reaches the full Level 100 estate in roughly 2,121–2,356 simulated days across its visit/service cohorts; Gold affordability and the documented cohort assumptions limit that estimate. Quest rewards help modestly, and commissioning competes for the same materials. No recipe rates, building prices or construction timers changed. Human long-term pacing, authenticated production play and physical-device checks remain necessary before claiming those experiences are verified.

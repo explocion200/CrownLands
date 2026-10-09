@@ -5,6 +5,7 @@
   const label = key => root.CrownlandsEstate.buildings.find(b => b.key === key)?.label
     || root.CrownlandsEstate.resources.find(r => r.key === key)?.label || key;
   const duration = ms => ms < 3600000 ? Math.ceil(ms / 60000) + " min" : number(ms / 3600000) + " hours";
+  const productionDuration = ms => ms < 60000 ? Math.ceil(ms / 1000) + " sec" : duration(ms);
   const list = amounts => Object.entries(amounts || {}).filter(([, v]) => v).map(([k, v]) => number(v) + " " + label(k)).join(" · ") || "None";
   const qualities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"], milestones = [1, 25, 50, 75, 100];
   const tierAt = level => milestones.reduce((tier, milestone, i) => level >= milestone ? i : tier, 0);
@@ -162,7 +163,14 @@
       clearTimeout(counterTimer);
       if (!current() || document.hidden || !options.visible() || !data) return;
       options.tick?.();
+      const order = data.estate.productionOrders?.[view?.key];
+      if (dialog.open && order?.status === "running") {
+        const left = Math.max(0,order.completesAtMs-now()), progress = dialog.querySelector("[data-economy-production-progress]"), text = dialog.querySelector("[data-economy-production-remaining]");
+        if(progress)progress.value=Math.min(100,Math.max(0,100*(1-left/order.durationMs)));
+        if(text)setText(text,left?productionDuration(left)+" remaining":"Finishing…");
+      }
       if (Object.values(data.estate.projection?.net || {}).some(rate => Math.abs(rate) > 1e-7)
+        || Object.values(data.estate.productionOrders || {}).some(o=>o.status==="running"&&o.completesAtMs>now())
         || data.estate.jobs.some(j => j.status === "running" && j.completesAtMs > now())) counterTimer = setTimeout(paintCounters, 1000);
     }
     const button = (action, text, attributes = "") => `<button type="button" data-economy-action="${action}" ${attributes}>${text}</button>`;
@@ -207,8 +215,8 @@
       }
       if (r.status === "Processing paused") return `<p>Processing is paused by your preference. ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>`;
       const inputs = Object.keys(r.inputs || {}).filter(k => !s.levels[s.resources[k].source] || s.resources[k].available <= (s.reserves[k] || 0));
-      return inputs.length ? inputs.map(k => `<p>${escape(label(key))} needs usable ${escape(label(k))}. ${s.reserves[k] ? number(s.reserves[k])+" is protected by your shared reserve. " : ""}${button("source","Visit "+label(s.resources[k].source),`data-id="${s.resources[k].source}"`)} ${s.reserves[k] ? button("source","Review processor reserves",`data-id="${r.source}"`) : ""}</p>`).join("")
-        : `<p>Shared processing can be constrained by ingredients, reserves or downstream storage. ${button("source","Review "+label(r.source),`data-id="${r.source}"`)}</p>`;
+      const help = inputs.map(k => `<p>${escape(label(key))} needs usable ${escape(label(k))}. ${s.reserves[k] ? number(s.reserves[k])+" is protected by your shared reserve. " : ""}${button("source","Visit "+label(s.resources[k].source),`data-id="${s.resources[k].source}"`)} ${s.reserves[k] ? button("source","Review processor reserves",`data-id="${r.source}"`) : ""}</p>`).join("");
+      return `<p>${r.status === "Production in progress" ? "Your chosen batch is running. Output arrives when it finishes; no further batch starts automatically." : r.status === "Production ready; needs storage" ? "Your finished batch is kept safely until storage has room." : "Choose a quantity and start a batch. Ingredients are used only when you start; production never repeats automatically."} ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>` + (r.status === "Production in progress" ? "" : help);
     }
     function championCard(c, active) {
       const unavailable = c.questId || c.recoveryUntilMs > now(), xpMax = 4*c.level;
@@ -234,7 +242,7 @@
           [["foresters-lodge","quarry","mine","farmstead"],"Gather raw materials","Timber, Stone, Iron Ore and Grain feed the estate."],
           [["storehouse","granary"],"Make room for resources","Each material has its own capacity; existing stocks are retained."],
           [["sawmill","smithy","workshop"],"Build the crafting chain","2 Timber → Plank; 3 Ore + Timber → Iron; Plank + Iron → Tool."],
-          [["windmill"],"Prepare Food","2 Grain → Food for expeditions and meals."],
+          [["windmill"],"Prepare Food","Choose a batch at the Windmill: 2 Grain → Food for expeditions and meals."],
           [["guild-master"],"Open your guild","Recruit at the Alehouse, then activate champions at the Guild Master."],
         ];
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
@@ -288,7 +296,7 @@
       clearTimeout(deadlineTimer);
       paintCounters();
       if (!current() || document.hidden || (!options.visible() && !dialog.open) || !data) return;
-      const times = [...data.estate.jobs.map(j => j.completesAtMs), ...data.estate.quests.map(q => q.completesAtMs)].filter(Number.isFinite);
+      const times = [...data.estate.jobs.map(j => j.completesAtMs), ...data.estate.quests.map(q => q.completesAtMs), ...Object.values(data.estate.productionOrders || {}).filter(o=>o.status==="running").map(o=>o.completesAtMs)].filter(Number.isFinite);
       const upcoming = [...Object.values(data.estate.commissions).map(c => c.completesAtMs), ...Object.values(data.champions).map(c => c.recoveryUntilMs)].filter(t => Number.isFinite(t) && t > now());
       times.push(...upcoming);
       if (Number.isFinite(data.estate.projection?.untilMs)) times.push(data.estate.projection.untilMs);
@@ -337,16 +345,48 @@
         if (dialog.open && view === reviewedView) { quote = result.quote; pending = null; reviewDraft = null; }
       });
     }
-    async function commitQuote() {
+    async function commitQuote(input) {
       const confirmedView = view, request = pending;
       await run(async () => {
-        const result = await api.commitEstateAction(request);
+        if (input) {
+          const quoted = await api.getEstateQuote(input);
+          if (!current() || view !== confirmedView || !dialog.open) return;
+          accept(quoted); quote = quoted.quote; reviewDraft = null;
+          pending = { requestId: crypto.randomUUID(), quoteId: quote.id };
+        }
+        const result = await api.commitEstateAction(input ? pending : request);
         if (!current()) return;
         accept(result);
         if (result.replayed) accept(await api.getEstateState());
         refreshPending = true;
         if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
       });
+    }
+    function productionBody(key, producer) {
+      const s = data.estate;
+      if (s.productionPolicy !== "manual-batches") return "<p>Waiting for the matching production service. Refresh before starting a batch.</p>";
+      const recipe = s.productionRecipes[key], order = s.productionOrders[key];
+      if (!recipe) return "";
+      let body = `<article class="estate-production-item" ${order ? 'tabindex="-1" data-economy-production-order' : ""}><h3>Make ${escape(label(recipe.output))}</h3><p><b>Recipe per unit:</b> ${escape(list(recipe.inputs))}. ${number(recipe.ratePerHour)} / hour capacity.</p>`;
+      if (order) {
+        const left = Math.max(0, order.completesAtMs - now());
+        body += `<p><b>${number(order.quantity)} ${escape(label(order.output))}</b> · <span data-economy-production-remaining>${order.status === "ready" ? "Finished; waiting for storage" : left ? productionDuration(left)+" remaining" : "Finishing…"}</span></p><progress max="100" value="${Math.min(100,Math.max(0,100*(1-left/order.durationMs)))}" data-economy-production-progress aria-label="${escape(label(order.output))} production progress"></progress><p>Ingredients paid: ${escape(list(order.materials))}. Output space reserved: ${number(order.quantity-order.delivered)}. This batch continues offline and across seasons; it does not repeat.</p>`;
+      } else {
+        const max = recipe.maxQuantity, disabled = max < 1 ? "disabled" : "";
+        body += `<p>Choose how many to make. Ingredients are paid when you start; the completed batch goes into storage.</p><label class="estate-production-quantity">${escape(label(recipe.output))} quantity · Max ${number(max)}<input type="range" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity aria-label="${escape(label(recipe.output))} quantity" ${disabled}></label><div class="estate-production-controls"><label>Amount<input type="number" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity-number ${disabled}></label>${button("productionMax","Max",disabled)}</div><p data-economy-production-cost></p><p data-economy-production-time></p><div class="estate-economy-actions">${button("produce","Start production",disabled)}</div>${max ? "" : `<p>Gather usable ingredients or make output storage space. Protected material amounts also reduce Max.</p>`}`;
+      }
+      body += `<p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Output space reserved for production: ${number(producer.pendingProduction)}.</p></article><details class="estate-production-reserves"><summary>Protect materials for other uses</summary><p>These shared reserves stay available for building and other services. New batches cannot spend them.</p>${Object.keys(recipe.inputs).map(k=>`<label>${label(k)} reserve<input type="number" min="0" max="${s.resources[k].capacity}" step="1" value="${s.reserves[k]||0}" data-economy-reserve="${k}"></label>`).join("")}${button("reserves","Review reserves")}</details>`;
+      return body + (!order && !recipe.maxQuantity ? productionHelp(recipe.output) : "");
+    }
+    function productionPreview(source) {
+      const slider = dialog.querySelector("[data-economy-quantity]"), numeric = dialog.querySelector("[data-economy-quantity-number]");
+      if (!slider || !numeric) return;
+      const recipe = data.estate.productionRecipes[view.key];
+      const quantity = Math.max(1,Math.min(Number(slider.max),Math.floor(Number((source || slider).value) || 1)));
+      slider.value = numeric.value = quantity;
+      slider.setAttribute("aria-valuetext",number(quantity)+" "+label(recipe.output));
+      setText(dialog.querySelector("[data-economy-production-cost]"),"Required: "+list(Object.fromEntries(Object.entries(recipe.inputs).map(([k,v])=>[k,v*quantity]))));
+      setText(dialog.querySelector("[data-economy-production-time]"),recipe.maxQuantity ? "Time: "+productionDuration(Math.ceil(quantity/recipe.ratePerHour*3600000))+" · Output: "+number(quantity)+" "+label(recipe.output) : "No batch can start with the current materials and storage.");
     }
     function open(next) {
       if (!current()) return;
@@ -364,14 +404,10 @@
         <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>` + milestone(key,level);
       if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Build button to review construction.</p>";
       if (producer) {
-        body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} production</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
+        if (Object.keys(producer.inputs || {}).length) body += productionBody(key, producer);
+        else body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} gathering</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
           <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
-        body += productionHelp(Object.keys(s.resources).find(k=>s.resources[k]===producer));
-        if (Object.keys(producer.inputs || {}).length) body += `<p><b>Recipe per unit:</b> ${escape(list(producer.inputs))}. Inputs are consumed only while processing can produce output.</p>`;
-        if (["sawmill", "smithy", "workshop", "windmill"].includes(key))
-          body += button("processor", s.processors[key] === false ? "Resume processing" : "Pause processing")
-            + `<p>Keep these amounts available for building. Reserves apply to every factory using the material.</p>${Object.keys(producer.inputs || {}).map(k=>`<label>${label(k)} reserve<input type="number" min="0" max="${s.resources[k].capacity}" step="1" value="${s.reserves[k]||0}" data-economy-reserve="${k}"></label>`).join("")}`
-            + button("reserves", "Review reserves");
+        if (!Object.keys(producer.inputs || {}).length) body += productionHelp(Object.keys(s.resources).find(k=>s.resources[k]===producer));
       }
       if (["storehouse", "granary", "wagon-yard", "market"].includes(key)) {
         const food = ["granary", "market"].includes(key);
@@ -468,13 +504,14 @@
         ${q.gold ? `<p><b>Gold:</b> ${number(q.gold)}</p>` : ""}
         ${q.crowns ? `<p><b>Crowns:</b> ${number(q.crowns)} · ${number(q.quantity)} ${label(q.resource)}</p>` : ""}
         ${q.durationMs ? `<p><b>Duration:</b> ${duration(q.durationMs)}</p>` : ""}
+        ${q.action === "produce" ? `<p><b>Output:</b> ${number(q.quantity)} ${escape(label(q.output))}. One batch; no automatic repeat.</p>` : ""}
         ${q.rarity ? `<p>One ${escape(q.rarity)} Level 1 ${escape(q.name)}</p>` : ""}
         ${q.action === "recruit" ? `<p>${escape(q.name)} · Level ${q.level} · Permanent ownership</p>` : ""}
         ${q.food ? `<p><b>Food:</b> ${number(q.food)} · Meal: ${escape(q.meal)}</p>` : ""}
         ${q.rewards ? `<p><b>Rewards:</b> ${escape(list(q.rewards))}<br>Without meal: ${escape(list(q.baseRewards))}<br>Recovery: ${duration(q.recoveryMs)}</p>
           <p>XP retained: ${Object.values(q.training).map(t=>escape(t.champion.name)+": "+number(t.credited)).join(" · ")}</p>` : ""}
         ${q.received ? `<p>Receive now: ${escape(list(q.received))}. Any remainder waits safely.</p>` : ""}
-        ${q.action === "processor" ? `<p>Processing ${q.enabled ? "on" : "paused"}. Shared input reserves: ${escape(list(q.reserves))}.</p>` : ""}
+        ${q.action === "reserves" ? `<p>Shared protected materials: ${escape(list(q.reserves))}.</p>` : ""}
         ${q.action === "roster" ? `<p>Move champion to the ${q.active ? "active roster" : "permanent bench"}.</p>` : ""}
         ${q.action === "pause" ? `<p>${q.paused ? "Pause" : "Resume"} this paid contract. No additional payment.</p>` : ""}
         ${q.nonrefundable ? '<label class="estate-economy-commit"><input type="checkbox" data-economy-permanent> I understand: payments belong permanently to this building. No withdrawal, refund or transfer. Starting an upgrade cannot be cancelled.</label>' : ""}
@@ -492,6 +529,7 @@
     function saveForm() {
       return {
         fields: [...dialog.querySelectorAll("input,select")].map(el => ({ id:controlId(el), value:el.value, checked:el.checked })),
+        reservesOpen: !!dialog.querySelector(".estate-production-reserves")?.open,
         focus: dialog.contains(document.activeElement) && document.activeElement.matches("button,input,select")
           ? controlId(document.activeElement) : (renderedQuote ? reviewDraft : formDraft)?.focus,
         scroll: dialog.querySelector(".estate-economy-content")?.scrollTop || 0,
@@ -516,7 +554,7 @@
           const r = data.estate.resources[view.key];
           body = r ? `<div class="estate-economy-benefits"><p><b>Available</b><br>${number(r.available)} / ${number(r.capacity)}</p><p><b>Previously paid</b><br>${number(r.reserved)}</p></div>
             <p>${escape(r.status)}</p><p>Gross: ${number(r.gross)}/hour · Factory inputs: ${number(r.consumed)}/hour · Net: ${number(r.net)}/hour</p>
-            <p>${r.timeToFullHours === null ? "Production is paused, balanced by consumption, or waiting for inputs." : "At this rate, storage fills in " + duration(r.timeToFullHours*3600000) + ". Rates can change at storage boundaries."}</p>
+            <p>${Object.keys(r.inputs || {}).length ? "Processing requires a player-started batch. Output space reserved: "+number(r.pendingProduction)+"." : r.timeToFullHours === null ? "Gathering is waiting for storage space." : "At this rate, storage fills in " + duration(r.timeToFullHours*3600000) + ". Rates can change at storage boundaries."}</p>
             ${productionHelp(view.key)}${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
         } else body = buildingBody(view.key);
       }
@@ -528,8 +566,10 @@
         if (!saved || el.disabled) continue;
         if (el.type === "checkbox") el.checked = saved.checked;
         else if (el.tagName === "SELECT") { if ([...el.options].some(o => o.value === saved.value && !o.disabled)) el.value = saved.value; }
-        else el.value = saved.value === "" ? "" : el.type === "number" ? Math.max(Number(el.min || 0), Math.min(Number(el.max || Infinity), Number(saved.value))) : saved.value;
+        else el.value = saved.value === "" ? "" : ["number","range"].includes(el.type) ? Math.max(Number(el.min || 0), Math.min(Number(el.max || Infinity), Number(saved.value))) : saved.value;
       }
+      productionPreview();
+      if(draft?.reservesOpen && dialog.querySelector(".estate-production-reserves"))dialog.querySelector(".estate-production-reserves").open=true;
       partyStatus();
       dialog.querySelectorAll("button,select,input").forEach(el => { if (busy && !["close"].includes(el.dataset.economyAction)) el.disabled = true; });
       const focused = [...dialog.querySelectorAll("button,select,input")].find(el => controlId(el) === draft?.focus && !el.disabled);
@@ -571,11 +611,20 @@
         }
         await commitQuote(); return;
       }
+      if (action === "productionMax") {
+        const slider = dialog.querySelector("[data-economy-quantity]");
+        slider.value = slider.max; productionPreview(slider); return;
+      }
+      if (action === "produce") {
+        await commitQuote({action:"produce",building:key,quantity:Number(value("[data-economy-quantity]"))});
+        dialog.querySelector("[data-economy-production-order]")?.focus(); return;
+      }
       if (action === "confirm") {
+        const production = quote.value.action === "produce";
         const accepted = !!dialog.querySelector("[data-economy-permanent]")?.checked;
         if (quote.value.nonrefundable && !accepted) { error = "Confirm the permanent credit terms before continuing."; render(); return; }
         pending ||= { requestId: crypto.randomUUID(), quoteId: quote.id, acceptPermanentCredit: accepted };
-        await commitQuote(); return;
+        await commitQuote(); if(production)dialog.querySelector("[data-economy-production-order]")?.focus(); return;
       }
       if (action === "benchList" || action === "moreBench") {
         await run(async () => {
@@ -584,8 +633,7 @@
         }); return;
       }
       const inputs = {
-        processor:()=>({action,building:key,enabled:data.estate.processors[key]===false}),
-        reserves:()=>({action:"processor",building:key,enabled:data.estate.processors[key]!==false,reserves:Object.fromEntries([...dialog.querySelectorAll("[data-economy-reserve]")].map(x=>[x.dataset.economyReserve,Number(x.value)]))}),
+        reserves:()=>({action,building:key,reserves:Object.fromEntries([...dialog.querySelectorAll("[data-economy-reserve]")].map(x=>[x.dataset.economyReserve,Number(x.value)]))}),
         pause:()=>({action,jobId:target.dataset.id,paused:target.dataset.paused==="true"}),
         commission:()=>({action,building:key,family:value("[data-economy-family]")}),
         claimCommission:()=>({action,building:key}),
@@ -599,6 +647,7 @@
       if (inputs[action]) await review(inputs[action]());
     }, {signal:abort.signal});
     dialog.addEventListener("change",partyStatus,{signal:abort.signal});
+    dialog.addEventListener("input",event=>{if(event.target.matches("[data-economy-quantity],[data-economy-quantity-number]"))productionPreview(event.target);},{signal:abort.signal});
     dialog.addEventListener("close",()=>{
       quote=null;pending=null;
       const target=opener?.isConnected?opener:[...document.querySelectorAll("[data-estate-officer-manage]")].find(el=>el.dataset.estateOfficerManage===opener?.dataset.estateOfficerManage);

@@ -1,14 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "11847639516e7dcef1af5d07e1add779699b95c9",
+  "baseCommit": "5e94efdf4f89966eeb1f372208ec67bcf004d7c7",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/estate-economy/README.md"
+        "functions/estate-economy.js",
+        "functions/estate-service.js",
+        "functions/estate-services.js",
+        "functions/test/emulator-estate-economy.js",
+        "tools/test-estate-economy.js",
+        "tools/test-estate-manual-production.js"
       ],
-      "reason": "Record the authorized PR #504 merge and verified backend/web publication with exact identity, passing CI/staged/public/deployed-source evidence and retained realm/rules/itch/manual limits. Documentation only; no runtime, balance or player-data change. Runtime gates already passed for the identical deployed feature and do not apply again to this release record.",
-      "tests": []
+      "reason": "Player-started finite material batches replace passive recipe consumption. Cover all four recipes/milestone speeds, whole quantities, affordability/protected reserves/output reservations, atomic spending/replay/concurrent resource races, fixed timers/offline/season persistence, safe delayed output and one-time legacy accrual. Shared estate tests retain construction prices, commissions, quests, Crown caps and authoritative wallet boundaries.",
+      "tests": [
+        "tools/test-estate-manual-production.js",
+        "tools/test-estate-economy.js",
+        "functions/test/emulator-estate-economy.js",
+        "functions/test/emulator-economy-concurrency.js"
+      ]
+    },
+    {
+      "paths": [
+        "estate-economy-ui.js",
+        "estate-economy-ui.css",
+        "tools/validate-estate-economy-browser.js"
+      ],
+      "reason": "Processing interiors gain recipes, native 1-to-Max sliders/exact quantities, previews and explicit starts, with bounded progress refresh. Native desktop and two landscape checks cover all four recipes, touch/keyboard input, zero Max, refresh clamping/focus, no repeat/queue and lost-response replay, and preserve all-site construction/prerequisites/Gear/service/lifecycle paths. Shared map/gear and unchanged-refresh checks prevent integration regressions.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-estate-refresh-browser.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-inner-city-estate.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-estate-reward-review.js",
+        "docs/estate-economy/REWARD_REVIEW.md",
+        "docs/estate-economy/README.md",
+        "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "reason": "Record the owner-confirmed manual processing rule as not deployed and regenerate the reproducible shared-account review with deliberate paid batches at visits rather than automatic conversion. Preserve every construction cost/rate and reference-season calibration. Runtime and shared-account checks validate the documented recipes, affordability, persistence and changed calendar assumptions.",
+      "tests": [
+        "tools/validate-estate-reward-review.js",
+        "tools/test-estate-manual-production.js",
+        "tools/test-estate-economy.js"
+      ]
     }
   ]
 }
