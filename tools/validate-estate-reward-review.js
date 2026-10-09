@@ -56,21 +56,15 @@ function simulate(visits,services=false,commissions=false,crowns=false){
     if(affordable(s,q.materials)){E.spend(s,q.materials);s.commissions[building]={...q,id:"commission_"+(++serial),completesAtMs:now+q.durationMs};stats.commissions++;}
    }catch(error){assert(error.code==="failed-precondition");}
   }
-  // Each visit deposits available stock, then explicitly starts funded work
-  // only with a free builder. Installments retain one selected next-level project.
+  // A visit deliberately starts affordable next-level work. Unspent stocks
+  // stay shared until both the full material bill and a free builder are ready.
   for(let attempts=0;attempts<40;attempts++){
    choices=candidates();
-   let q=choices.find(q=>q.building===project);
-   if(!q){project="";q=choices.find(q=>gold>=q.gold&&affordable(s,q.materials));}
-   if(q&&gold>=q.gold&&Object.values(q.materials).every(v=>v===0)&&s.jobs.length<E.slots(s)){
-    gold-=q.gold;E.fund(s,q,"construction_"+(++serial),now);stats.funded++;if(project===q.building)project="";continue;
-   }
-   q=q||choices.find(q=>!s.jobs.some(j=>j.building===q.building));
-   if(q&&q.jobs[0].target>1&&!s.jobs.some(j=>j.building===q.building)){
-    project=q.building;const amounts=Object.fromEntries(Object.entries(q.materials).map(([k,v])=>[k,Math.min(v,Math.floor(s.stock[k]+E.EPS))]).filter(([,v])=>v>0));
-    if(Object.keys(amounts).length){E.deposit(s,project,amounts);continue;}
-   }
-   break;
+   if(s.jobs.length>=E.slots(s))break;
+   const q=choices.find(q=>q.building===project&&gold>=q.gold&&affordable(s,q.materials))
+    ||choices.find(q=>gold>=q.gold&&affordable(s,q.materials));
+   if(!q){project=choices[0]?.building||"";break;}
+   gold-=q.gold;E.fund(s,q,"construction_"+(++serial),now);stats.funded++;if(project===q.building)project="";
   }
   for(const level of [1,25,50,75,100])if(milestones[level]===undefined&&Object.values(s.levels).every(l=>l>=level))milestones[level]=day;
   if([1,7,30,90,180,300].includes(day))snapshots[day]={...s.levels};
@@ -82,20 +76,20 @@ function simulate(visits,services=false,commissions=false,crowns=false){
  return{visits,services,commissions,crowns,milestones,snapshots,stats,gearCount,levels:s.levels};
 }
 const accounts=[simulate(1),simulate(3),simulate(1,true),simulate(3,true),simulate(3,true,true),simulate(3,true,true,true)];
-const lines=["# Approved estate economy — shared-account review","","Owner approval: October 8, 2026. Runtime implementation is pending release. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.","",
+const lines=["# Approved estate economy — shared-account review","","Costs/rewards approved October 8, 2026; direct material payment approved October 9. This follow-up implementation is pending release. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.","",
  "## Rewards at every level","","Every one of the 1,980 upgrades changes a usable rule. Actual value depends on supply, demand and player choices; a changed number is not a playtest.","",
  "| Building | Changing upgrades | Level 100 benefit |","|---|---:|---|"];
 for(const key of Object.keys(E.BUILDINGS))lines.push("| "+names[key]+" | 99 | "+E.benefit(key,100)+" |");
 lines.push("","## Shared-account cohorts","",
- "Start with the actual six Level 1 buildings, fourteen plots, no materials, 100 Gold and 285 raw Main City Gold/hour. Model Gold restarting at 100 every 30 days while all estate state persists. Earn all supporting producers, storage, Hall levels and builder slots. Settle continuous production exactly at storage/reserve boundaries and construction completions. Every cohort uses the same whole-unit runtime prices, permanent deposits and individual starts; no new upgrade queues.","",
- "At each visit, deposit toward affordable lowest-target work, prioritizing Hall/sources/processing/storage at ties. Start one next level only after every material is deposited, with enough Gold and a free builder. Retain one next-level deposit project while gathering or waiting for builders; future income is never spent automatically. Work completed between visits leaves a builder idle until the next visit. Use all available estate materials for these chosen activities. This is a reproducible policy, not optimal play or a forecast for twenty independently funded buildings.","",
+ "Start with the actual six Level 1 buildings, fourteen plots, no materials, 100 Gold and 285 raw Main City Gold/hour. Model Gold restarting at 100 every 30 days while all estate state persists. Earn all supporting producers, storage, Hall levels and builder slots. Settle continuous production exactly at storage/reserve boundaries and construction completions. Every cohort uses the same whole-unit runtime prices, shared persistent stocks and individual starts; no new upgrade queues.","",
+ "At each visit, start affordable lowest-target work, prioritizing Hall/sources/processing/storage at ties. Start one next level only when the full material bill, Gold and a free builder are available. Pay materials and Gold together at that explicit start; otherwise keep unspent shared stocks. Future income is never spent automatically. Work completed between visits leaves a builder idle until the next visit. Use all available estate materials for these chosen activities. This is a reproducible policy, not optimal play or a forecast for twenty independently funded buildings.","",
  "Services cohorts recruit into the active roster, launch the highest eligible eight-hour quests, choose meals only when affordable/valid, retain recovery/XP/parcel deadlines and collect what fits. Commission cohorts fund selected head-family pieces for all four officers when affordable. Claims stop at the real 2,000-item bag limit; this model does not assume free Gear upgrades or Gold sufficient to pay item fees. Crown cohorts assume an external optional budget of at most 20 Crowns/day, with the actual shared supply allowance, level/preset/source/capacity gates. No recurring purchase is automatic gameplay.","",
  "| Visits/day | Optional activities | All 20 built, day | All 25 | All 50 | All 75 | All 100 |","|---:|---|---:|---:|---:|---:|---:|");
 for(const a of accounts)lines.push("| "+a.visits+" | "+(a.services?"Quests/meals"+(a.commissions?" + commissions":"")+(a.crowns?" + Crown supplies":""):"Construction")+" | "+[1,25,50,75,100].map(l=>a.milestones[l]===undefined?">3,600":fmt(a.milestones[l])).join(" | ")+" |");
 lines.push("","| Cohort | Day 30: lowest / highest | Day 300: lowest / highest | Launched quests | Commissioned pieces claimed | Crowns spent |","|---|---|---|---:|---:|---:|");
 for(const [i,a]of accounts.entries())lines.push("| "+(i+1)+" | "+[30,300].map(day=>Math.min(...Object.values(a.snapshots[day]))+" / "+Math.max(...Object.values(a.snapshots[day]))).join(" | ")+" | "+a.stats.quests+" | "+a.gearCount+" | "+fmt(a.stats.crowns)+" |");
 lines.push("","## Interpreting the results","",
- "The approved 1/3/6/10-season targets are per-building material equivalents at 50% reference production, with paid supporting infrastructure. They do not promise that a whole estate reaches 100 in ten calendar seasons. The shared Hall gate, competing construction, supply levels, deposits, visits to start upgrades and optional activities change the actual route. These cohorts spend 100% of materials across their selected estate activities; saving half elsewhere takes longer.","",
+ "The approved 1/3/6/10-season targets are per-building material equivalents at 50% reference production, with paid supporting infrastructure. They do not promise that a whole estate reaches 100 in ten calendar seasons. The shared Hall gate, competing construction, supply levels, storage capacity, visits to start upgrades and optional activities change the actual route. These cohorts spend 100% of materials across their selected estate activities; saving half elsewhere takes longer.","",
  "Optional commissions intentionally exchange progression speed for permanent Gear. A free player can earn the same resource chains, storage and construction slots. Crown supplies cannot buy rarity gates, extra builders, champions or timer skips; the modeled throughput is shared across stores. Quests add at most 2.17728 normalized resource-hours/day (9.072% of one resource's daily reference output before recovery/rounding), never that amount for every material. Crown supplies add at most one shared hour/day. These caps bound input; they do not prove PvP fairness or optimal bottleneck value.","",
  "The champion curve requires 19,800 XP from 1 to 100: at most 28 XP/hour, or 707.14 eligible quest-hours before Guild limits, recovery and party requirements. Recruits start no higher than 10. At a training ceiling, the quote shows only XP that can be retained. Higher quest tiers never lower whole-unit material returns at equal supply/duration, and no Rare+ Tool fee applies.","",
  "One officer's eight-slot Legendary Level 5 set needs 128 Legendary Level 1 commissioned pieces after unlock, or 384 commission-days at Level 100, plus the unchanged two-copy upgrade and fixed Gold fees. Inventory space and claiming matter. Full bags retain pending commissions safely; unused materials are never taxed away.","",

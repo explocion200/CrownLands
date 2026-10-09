@@ -136,10 +136,9 @@ function upgradeOverview(state, gold, rawGoldPerHour) {
     if (level >= 100) return [b.key, { status: "maximum", ready: false, reason: "Maximum level reached." }];
     try {
       const bill = constructionQuote(state, b.key, 1, rawGoldPerHour).jobs[0];
-      const missing = Object.values(bill.remaining).some(v => v > 0);
       const available = Object.entries(bill.remaining).every(([k, v]) => v <= Math.floor(state.stock[k] + EPS));
-      const status = missing ? "materials" : gold < bill.gold ? "gold" : busy ? "builders" : "ready";
-      const reason = missing ? available ? "Materials available to deposit." : "Gather the remaining materials."
+      const status = !available ? "materials" : gold < bill.gold ? "gold" : busy ? "builders" : "ready";
+      const reason = !available ? "Gather the remaining materials."
         : status === "gold" ? "More Gold needed." : status === "builders" ? "Waiting for a free builder." : "Ready to review and start.";
       return [b.key, { status, unbuilt: !level, ready: status === "ready", reason, bill }];
     } catch (error) {
@@ -157,19 +156,6 @@ function spend(state, amounts) {
   }
   for (const [key, value] of Object.entries(amounts)) state.stock[key] = Math.max(0, state.stock[key] - value);
 }
-function deposit(state, key, amounts) {
-  if (!Object.hasOwn(BUILDINGS, key)) fail("Unknown estate building.", "invalid-argument");
-  if (state.jobs.some(job => job.building === key)) fail("This building already has funded work.");
-  const quote = baseQuote(state, key, state.levels[key] + 1, 285);
-  if (!amounts || !Object.keys(amounts).length) fail("Choose materials to deposit.", "invalid-argument");
-  for (const [k, value] of Object.entries(amounts)) {
-    integer(value, 1, Number.MAX_SAFE_INTEGER, "Deposit positive whole units.");
-    if (!Object.hasOwn(quote.remaining, k) || value > quote.remaining[k]) fail("Deposit exceeds this project's remaining bill.");
-  }
-  spend(state, amounts);
-  state.deposits[key] = { target: quote.target, version: quote.version, materials: quote.materials, deposited: quote.deposited };
-  for (const [k, value] of Object.entries(amounts)) state.deposits[key].deposited[k] = (quote.deposited[k] || 0) + value;
-}
 function fund(state, quote, requestId, now) {
   if (quote.count !== 1 || quote.jobs.length !== 1) fail("Upgrades cannot be queued.");
   const job = quote.jobs[0], key = quote.building;
@@ -178,7 +164,9 @@ function fund(state, quote, requestId, now) {
   if (state.jobs.filter(j => j.status === "running").length >= slots(state)) fail("All builders are busy. Start this upgrade when a builder is free.");
   if (state.jobs.length >= 30) fail("Finish previously paid work before starting another building.");
   const bill = baseQuote(state, key, job.target, 285);
-  if (Object.values(bill.remaining).some(amount => amount > 0)) fail("Deposit all required materials into this building before upgrading.");
+  // Saved deposits retain their price version and credit. Charge only the
+  // remaining whole-unit bill, after every start condition has passed.
+  spend(state, bill.remaining);
   // New work starts immediately. Retain the settlement path for contracts paid
   // before queues were retired; those prices, timers and receipts remain valid.
   state.jobs.push({ ...job, id: requestId + "_0", status: "running", fundedAtMs: now, startedAtMs: now, completesAtMs: now + job.durationMs });
@@ -332,7 +320,7 @@ function snapshot(state, now) {
     if (rate < -EPS && stock > reserve + EPS) horizon = Math.min(horizon, (stock - reserve) / -rate * HOUR);
   }
   for (const job of state.jobs) if (job.status === "running") horizon = Math.min(horizon, Math.max(0, job.completesAtMs - now));
-  return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "deposit-then-start", slots: slots(state),
+  return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "pay-on-start", slots: slots(state),
     projection: { stock: { ...state.stock }, net: flow.net, untilMs: Number.isFinite(horizon) ? now + horizon : null },
     stock: Object.fromEntries(KEYS.map(k => [k, Math.floor(state.stock[k] + EPS)])),
     resources: Object.fromEntries(KEYS.map(k => [k, { available: Math.floor(state.stock[k] + EPS),
@@ -344,5 +332,5 @@ function snapshot(state, now) {
       next: state.levels[b.key] < 100 ? benefit(b.key, state.levels[b.key] + 1) : "Maximum level" }])) };
 }
 module.exports = { C, HOUR, EPS, VERSION, KEYS, BUILDINGS, PRODUCERS, COSTS, MINUTES, zero, fail, integer, multiplier,
-  referenceRates, initial, normalize, capacity, slots, constructionQuote, baseQuote, spend, deposit, fund, pauseJob,
+  referenceRates, initial, normalize, capacity, slots, constructionQuote, baseQuote, spend, fund, pauseJob,
   flows, settle, chainLevel, quoteRate, rarityIndex, benefit, snapshot, upgradeOverview };

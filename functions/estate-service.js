@@ -94,10 +94,9 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
     const state = account.state;
     switch (input.action) {
       case "fund": return E.constructionQuote(state, input.building, input.count ?? 1, goldRate);
-      case "deposit": {
-        const clone = structuredClone(state); E.deposit(clone, input.building, input.amounts);
-        return { action: "deposit", building: input.building, amounts: input.amounts, target: state.levels[input.building] + 1, nonrefundable: true };
-      }
+      // Accepted deposit receipts replay before validation; unaccepted old
+      // quotes and new deposit requests must not create any more credit.
+      case "deposit": E.fail("Material deposits are no longer available. Open Build or Upgrade to start with your resources.");
       case "processor": {
         const producer = E.C.producers.find(p => p.building === input.building && Object.keys(p.inputs).length);
         if (!producer || !state.levels[input.building] || typeof input.enabled !== "boolean") E.fail("Choose a constructed processor.");
@@ -205,7 +204,6 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
           case "fund":
             E.fund(state, value, requestId, now);
             break;
-          case "deposit": E.deposit(state, value.building, value.amounts); break;
           case "processor":
             state.processors[value.building] = value.enabled;
             Object.assign(state.reserves, value.reserves); break;

@@ -6,6 +6,8 @@
 
 **October 8 follow-up:** the owner replaced new funded batches/queues with external map upgrade controls, permanent deposits and one explicitly started next level after full deposits, Gold and builder availability. See the current [economy guide](README.md) and Master Specification. This repair record retains the original paid-contract design as history; already purchased work keeps its rights. The regenerated shared-account review now models manual starts and idle builders between visits.
 
+**October 9 follow-up — IN DEVELOPMENT, NOT DEPLOYED:** the owner removed new material deposits. The external requirements panel shows resources, construction time and next-level benefits, with Build/Upgrade and Cancel. Explicit start spends Gold and remaining loose materials together; saved older credit/receipts and funded jobs remain honored. Costs, rewards, builder slots and no-queue rules are unchanged. This historical repair record does not authorize creating new deposits; use the current [economy guide](README.md) and Master Specification.
+
 | Finding | Approved repair | Implementation |
 |---|---|---|
 | First upgrade required days of stock | Squared first-band material allocation; nine-minute Level 2 timer | Exact band totals retained and all 2,000 runtime rows independently compared |

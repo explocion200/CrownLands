@@ -101,8 +101,8 @@ async function main() {
             (__estateTest.quoteRequests ||= []).push(input);
             const s=__estateTest.state;
             let value;
-            if(input.action==="deposit")value={...input,target:s.levels[input.building]+1,nonrefundable:true};
-            else if(input.action==="processor")value={...input};
+            if(input.action==="deposit")throw Error("Material deposits are no longer available.");
+            if(input.action==="processor")value={...input};
             else {
               if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
               if(input.count!==1)throw Error("Upgrades cannot be queued.");
@@ -124,12 +124,10 @@ async function main() {
             }
             if(q.action==='fund'&&__estateTest.rejectFund){const message=__estateTest.rejectFund;__estateTest.rejectFund='';throw Error(message);}
             const s=__estateTest.state;
-            if(q.action==="deposit"){
-              const credit=s.deposits[q.building]||={target:q.target,deposited:{}};
-              for(const [k,v]of Object.entries(q.amounts)){s.stock[k]-=v;credit.deposited[k]=(credit.deposited[k]||0)+v;}
-            }else{
-              if(Object.values(q.materials).some(v=>v>0))throw Error("Deposit all required materials.");
+            if(q.action==="fund"){
               if(s.jobs.length>=s.slots)throw Error("All builders are busy.");
+              for(const [k,v]of Object.entries(q.materials))if(s.stock[k]<v)throw Error("Not enough "+k);
+              for(const [k,v]of Object.entries(q.materials))s.stock[k]-=v;
               s.jobs.push({...q.jobs[0],id:request.requestId,status:"running",startedAtMs:Date.now(),durationMs:600000,completesAtMs:Date.now()+600000});delete s.deposits[q.building];
             }
             s.revision++;receipts.set(request.requestId,{action:q.action});
@@ -212,9 +210,9 @@ async function main() {
       });
       await click('[data-estate-directory-toggle]');
       await wait(()=>!document.querySelector('.estate-directory').hidden&&document.activeElement.matches('[data-estate-filter]'));
-      for(const [filter,expected] of [['ready',['quarry']],['constructing',['smithy']],['unbuilt',['mine']]]){
+      for(const [filter,expected] of [['ready',await evaluate(()=>Object.entries(__estateTest.overview).filter(([,v])=>v.ready).map(([k])=>k))],['constructing',['smithy']],['unbuilt',['mine']]]){
         await evaluate(value=>{const e=document.querySelector('[data-estate-filter]');e.value=value;e.dispatchEvent(new Event('change',{bubbles:true}));},filter);
-        assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).map(e=>e.querySelector('[data-estate-directory-building]').dataset.estateDirectoryBuilding)),expected);
+        assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).map(e=>e.querySelector('[data-estate-directory-building]').dataset.estateDirectoryBuilding).sort()),expected.sort());
       }
       await evaluate(()=>{const e=document.querySelector('[data-estate-filter]');e.value='materials';e.dispatchEvent(new Event('change',{bubbles:true}));});
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-directory-site')].filter(e=>!e.hidden).every(e=>!e.querySelector('[data-estate-directory-building="quarry"],[data-estate-directory-building="mine"],[data-estate-directory-building="smithy"]'))));
@@ -229,38 +227,36 @@ async function main() {
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
+      await evaluate(()=>{__estateTest.state.stock.stone=0;return innerCastleEconomy.refresh();});
       await click('.estate-detail [data-estate-upgrade="quarry"]');
       await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
-      await wait(()=>!!document.querySelector('[data-economy-deposit="stone"]'));
+      await wait(()=>!!document.querySelector('.estate-upgrade-requirements'));
       assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled));
-      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-count]').length),0);
-      await evaluate(()=>{for(const e of document.querySelectorAll('[data-economy-deposit]'))e.value=e.dataset.economyDeposit==="stone"?100:0;});
-      await click('[data-economy-action="deposit"]');
-      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
-      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('Quarry → Level 25')),'Permanent credit review names its exact building and target');
-      await click('[data-economy-action="confirm"]');
-      assert.equal(await evaluate(()=>__estateTest.commits.length),0,"Unconfirmed permanent credit cannot submit");
-      await click("[data-economy-permanent]");
-      await click('[data-economy-action="confirm"]');
-      await wait(()=>!!document.querySelector('[data-economy-deposit="stone"]'));
-      assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.deposits.quarry.deposited.stone),100);
-      assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled),"Partial credit cannot start");
-      // A state refresh while reviewing must not strand Back on loading requirements.
-      await click('[data-economy-action="deposit"]');
-      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
-      await evaluate(()=>innerCastleEconomy.refresh());
-      await click('[data-economy-action="cancelReview"]');
-      await wait(()=>document.querySelector('.estate-economy-content')?.getAttribute('aria-busy')==='false');
-      assert(await evaluate(()=>!!document.querySelector('[data-economy-deposit="stone"]')));
-      await click('[data-economy-action="deposit"]');
-      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
-      await click("[data-economy-permanent]");
-      await click('[data-economy-action="confirm"]');
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-count],[data-economy-deposit],[data-economy-action="deposit"],[data-economy-permanent]').length),0);
+      assert(await evaluate(()=>{const body=document.querySelector('.estate-economy-content');return body.textContent.includes('Requirements for Level 25')&&body.textContent.includes('Next level')&&body.textContent.includes('Gold when you start')&&body.textContent.includes('6.88 hours');}),'Requirements show resources, Gold, time and next benefit');
+      const cancelled=await evaluate(()=>({stock:__estateTest.state.stock,jobs:__estateTest.state.jobs,commits:__estateTest.commits.length}));
+      await click('[data-economy-cancel]');
+      await wait(()=>!document.querySelector('.estate-economy-dialog').open);
+      assert.deepEqual(await evaluate(()=>({stock:__estateTest.state.stock,jobs:__estateTest.state.jobs,commits:__estateTest.commits.length})),cancelled,'Cancel never spends or starts work');
+      assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),camera,'Cancel restores the estate camera');
+      await evaluate(()=>{__estateTest.state.constructionPolicy='deposit-then-start';return innerCastleEconomy.refresh();});
+      await click('.estate-detail [data-estate-upgrade="quarry"]');
+      await wait(()=>document.querySelector('.estate-economy-content')?.textContent.includes('matching server update'));
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-action="deposit"]').length),0,'An old server cannot expose a start or deposit fallback');
+      await closeSheet();
+      await evaluate(()=>{__estateTest.state.constructionPolicy='pay-on-start';__estateTest.state.stock.stone=10000;return innerCastleEconomy.refresh();});
+      await click('.estate-detail [data-estate-upgrade="quarry"]');
       await wait(()=>document.querySelector('[data-economy-action="fund"]')?.disabled===false);
-      assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.jobs.length),0,"Deposits never auto-start work");
-      await evaluate(()=>document.querySelector('.estate-upgrade-requirements').scrollIntoView({block:"center"}));
+      assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.jobs.length),0,'Available resources never auto-start work');
+      assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-requirements thead th')].map(e=>e.textContent)),['Material','Required','You have']);
+      await evaluate(()=>document.querySelector('.estate-economy-actions').scrollIntoView({block:"end"}));
       const requirements=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"upgrade-"+width+".png"),Buffer.from(requirements.data,"base64"));
+      // Previously paid partial credit remains visible and is used once.
+      await evaluate(()=>{const s=__estateTest.state;s.stock.stone-=100;s.deposits.quarry={target:25,deposited:{stone:100}};return innerCastleEconomy.refresh();});
+      await wait(()=>document.querySelector('.estate-upgrade-requirements')?.textContent.includes('Already paid'));
+      assert(await evaluate(()=>!document.querySelector('[data-economy-action="fund"]').disabled));
+      const beforePayment=await evaluate(()=>({stock:{...__estateTest.state.stock},due:{...__estateTest.quotes.quarry.materials,stone:__estateTest.quotes.quarry.materials.stone-100}}));
       const quoteCount=await evaluate(()=>{__estateTest.holdFund=true;return __estateTest.quoteRequests.length;});
       await click('[data-economy-action="fund"]');
       await wait(()=>__estateTest.commits.some(c=>c.action==='fund'));
@@ -275,6 +271,10 @@ async function main() {
       await wait(()=>innerCastleEconomy.snapshot().estate.jobs.length===1);
       const ids=await evaluate(()=>__estateTest.commits.filter(x=>x.action==="fund").map(x=>x.requestId));assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
       assert(await evaluate(()=>{const requests=__estateTest.commits.filter(x=>x.action==='fund');return requests.every(r=>r.acceptPermanentCredit===true)&&requests[0].quoteId===requests[1].quoteId;}),'Lost-acknowledgment retry retains its quote and permanent-credit acceptance');
+      const paidStock=await evaluate(()=>__estateTest.state.stock);
+      for(const [key,value]of Object.entries(beforePayment.stock))assert.equal(paidStock[key],value-(beforePayment.due[key]||0),'Only remaining materials are charged once: '+key);
+      assert.equal(await evaluate(()=>__estateTest.state.deposits.quarry),undefined);
+      assert(await evaluate(()=>__estateTest.quoteRequests.every(q=>q.action!=='deposit')),'No UI path requests deposits');
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0,"Running work cannot queue another level");
       await click('[data-economy-action="close"]');
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),camera);
@@ -744,7 +744,7 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-estate-status],[data-estate-filter],.estate-completion-feedback').length),0,'Management layers are cleaned up with the estate');
     }
     assert.deepEqual(errors,[]);
-    console.log("Estate desktop/landscape UI passed: all 20 sites, deposits/retry, map actions, camera/touch/keyboard, timers/Gear/focus and services; management overview and readiness filters, guide dismissal/reopening, production guidance, milestones, champion cards, lightweight versus rich requests, confirmed completion feedback and cleanup.");
+    console.log("Estate desktop/landscape UI passed: all 20 sites, direct material payment/legacy credit/Cancel/retry, map actions, camera/touch/keyboard, timers/Gear/focus and services; management overview and readiness filters, guide dismissal/reopening, production guidance, milestones, champion cards, lightweight versus rich requests, confirmed completion feedback and cleanup.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}

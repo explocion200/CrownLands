@@ -96,7 +96,7 @@
       },
       button(b, action, context, level) {
         const upgrade = action === "upgrade", name = upgrade ? constructionAction(level) : "Enter";
-        const hint = upgrade ? name.toLowerCase() + " requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
+        const hint = upgrade ? name.toLowerCase() + " requirements" : level > 0 ? "enter building menu" : "construct this building before entering";
         const onMap = context === "target";
         const classes = onMap ? ` cl-action-button cl-action-${upgrade ? "level" : "send"}` : "";
         const content = onMap ? `<span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span>` : name;
@@ -107,7 +107,7 @@
           const key = button.dataset.estateUpgrade, name = constructionAction(levels[key]);
           const text = button.querySelector(".wheel-action-name") || button;
           if (text.textContent !== name) text.textContent = name;
-          button.title = label(key) + " — " + name.toLowerCase() + " requirements and deposits";
+          button.title = label(key) + " — " + name.toLowerCase() + " requirements";
           button.setAttribute("aria-label", button.title);
         });
         host.querySelectorAll("[data-estate-enter]").forEach(button => {
@@ -203,7 +203,7 @@
       if (r.status === "Source not built") return `<p>Construct ${escape(label(r.source))} to begin gathering ${escape(label(key))}. ${button("upgradeSite","Review construction",`data-id="${r.source}"`)}</p>`;
       if (r.status === "Storage full") {
         const store = ["grain","food"].includes(key) ? "granary" : "storehouse";
-        return `<p>${escape(label(key))} storage is full. Deposits and services can free space; ${escape(label(store))} expands capacity. ${button("source","Visit "+label(store),`data-id="${store}"`)}</p>`;
+        return `<p>${escape(label(key))} storage is full. Building upgrades and services can free space; ${escape(label(store))} expands capacity. ${button("source","Visit "+label(store),`data-id="${store}"`)}</p>`;
       }
       if (r.status === "Processing paused") return `<p>Processing is paused by your preference. ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>`;
       const inputs = Object.keys(r.inputs || {}).filter(k => !s.levels[s.resources[k].source] || s.resources[k].available <= (s.reserves[k] || 0));
@@ -240,7 +240,7 @@
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
           const missing=keys.filter(k=>!s.levels[k]);
           return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
-        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button, deposit into its next level, then select Build or Upgrade once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Gather, then build or upgrade</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button to review resources, time and next-level benefits. Start when you have the materials, Gold and a free builder; payment happens together when you start. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
       }
       return body + "</article>";
     }
@@ -313,7 +313,7 @@
       if (!current() || !dialog.open || view?.type !== "upgrade" || !data || quote) return;
       upgradeBill = null; upgradeQuote = null;
       const requestedView = view, key = view.key, s = data.estate;
-      if (s.constructionPolicy !== "deposit-then-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key)) return;
+      if (s.constructionPolicy !== "pay-on-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key)) return;
       const result = await api.getEstateQuote({action:"fund",building:key,count:1});
       if (!current() || !dialog.open || view !== requestedView) return;
       accept(result); upgradeBill = result.quote.value.jobs[0]; upgradeQuote = result.quote;
@@ -375,10 +375,10 @@
       }
       if (["storehouse", "granary", "wagon-yard", "market"].includes(key)) {
         const food = ["granary", "market"].includes(key);
-        body += `<article><h3>Storage</h3><p>Each material has its own capacity. Deposits are separate; existing stock is never discarded.</p><div class="estate-storage-list">${Object.entries(s.resources).filter(([k]) => ["grain", "food"].includes(k) === food).map(([k, r]) =>
+        body += `<article><h3>Storage</h3><p>Each material has its own capacity. Previously paid building credit is separate; existing stock is never discarded.</p><div class="estate-storage-list">${Object.entries(s.resources).filter(([k]) => ["grain", "food"].includes(k) === food).map(([k, r]) =>
           button("ledger", `${escape(label(k))}<br>${number(r.available)} / ${number(r.capacity)}`, `data-id="${k}"`)).join("")}</div></article>`;
       }
-      if (key === "great-hall") body += "<p>Only completed Hall levels unlock other building upgrades. Materials may be deposited into the next eligible project; select Build or Upgrade in its requirements to start work.</p>";
+      if (key === "great-hall") body += "<p>Only completed Hall levels unlock other building upgrades. Gather the required materials, then select Build or Upgrade in its requirements to pay and start work.</p>";
       if (key === "builders-yard") body += `<p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. A new builder arrives at Level 10 and another at Level 50. Time reductions apply to new contracts; paid work keeps its accepted timer.</p>`;
       if (root.COMMON_GEAR?.BUILDINGS?.[key] || ["treasury", "barracks", "gatehouse", "royal-stables"].includes(key)) {
         body += `<article><h3>Officer commissions</h3><p>Choose one item family. Its rarity follows this building’s completed level; existing Gear remains yours. Common / Uncommon / Rare / Epic / Legendary unlock at Levels 1 / 25 / 50 / 75 / 100. Each order returns one Level 1 item; review its materials and timer before spending.</p>`;
@@ -435,30 +435,28 @@
         return body + `<h3>Waiting for Level ${bill.target} start result</h3><p>${duration(bill.durationMs)} · ${number(quote.value.gold)} Gold</p><p>Retry checks this same upgrade request without paying twice.</p>${button("fund", "Retry same upgrade")}`;
       }
       if (jobs.length) return body + jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0,j.completesAtMs-now()))+" remaining" : "Previously paid work · "+escape(j.status)}
-        ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before depositing toward its next level.</p>";
+        ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before its next upgrade.</p>";
       if (level >= 100) return body + "<p>Maximum building level reached.</p>";
-      if (s.constructionPolicy !== "deposit-then-start") return body + "<p>Building upgrades are waiting for the matching server update. Refresh shortly.</p>";
+      if (s.constructionPolicy !== "pay-on-start") return body + "<p>Building upgrades are waiting for the matching server update. Refresh shortly.</p>";
       const bill = upgradeBill;
       if (!bill) return body + (error ? "<p>Resolve the condition above, then refresh to review this building’s requirements.</p>" : "<p>Loading requirements. If unavailable, refresh to request them again.</p>");
-      const remaining = Object.values(bill.remaining).some(v => v > 0), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
+      const materialsReady = Object.entries(bill.remaining).every(([k,v])=>v<=s.stock[k]), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
       const gold = options.gold?.() ?? data.gold, affordable = Number.isFinite(gold) && gold >= bill.gold;
       const amounts = Object.entries(bill.materials);
       body += `<h3>Requirements for Level ${bill.target}</h3><p>${duration(bill.durationMs)} · ${number(bill.gold)} Gold when you start</p>`;
-      if (amounts.length) body += `<div class="estate-upgrade-requirements"><table><thead><tr><th>Material</th><th>Required</th><th>Deposited</th><th>Still needed</th><th>You have</th><th>Deposit</th></tr></thead><tbody>${amounts.map(([k,v])=>{
-        const max=Math.min(bill.remaining[k],Math.floor(s.stock[k]));
-        return `<tr><th>${escape(label(k))}</th><td>${number(v)}</td><td>${number(bill.deposited[k])}</td><td>${number(bill.remaining[k])}</td><td>${number(s.stock[k])}</td><td><input aria-label="Deposit ${escape(label(k))}" type="number" min="0" max="${max}" step="1" value="${max}" data-economy-deposit="${k}" ${max ? "" : "disabled"}></td></tr>`;
-      }).join("")}</tbody></table></div><p>Deposits belong only to this building’s next level and stay through seasons. They do not start an upgrade automatically.</p>`;
+      const hasCredit = Object.values(bill.deposited).some(v=>v>0);
+      if (amounts.length) body += `<div class="estate-upgrade-requirements"><table><thead><tr><th>Material</th><th>Required</th>${hasCredit ? "<th>Already paid</th><th>Due now</th>" : ""}<th>You have</th></tr></thead><tbody>${amounts.map(([k,v])=>
+        `<tr><th>${escape(label(k))}</th><td>${number(v)}</td>${hasCredit ? `<td>${number(bill.deposited[k])}</td><td>${number(bill.remaining[k])}</td>` : ""}<td>${number(s.stock[k])}</td></tr>`
+      ).join("")}</tbody></table></div>${hasCredit ? "<p>Your previously paid materials stay credited to this level. You pay only the amount due now.</p>" : ""}`;
       else body += "<p>First construction requires Gold only.</p>";
-      const canDeposit=Object.entries(bill.remaining).some(([k,v])=>v>0&&s.stock[k]>=1);
-      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
-        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Select Build or Upgrade to pay the shown Gold and begin construction."} Started work cannot be cancelled.</p>`;
+      body += `<div class="estate-economy-actions">${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",!materialsReady||builderBusy||!affordable?"disabled":"")}${button("close","Cancel","data-economy-cancel")}</div>
+        <p data-economy-upgrade-status>${!materialsReady?"Gather the required materials, then refresh to start.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Select Build or Upgrade to pay the shown Gold and materials and begin construction."} Started work cannot be cancelled.</p>`;
       return body;
     }
     function reviewBody() {
       const q = quote.value;
       return `<p class="estate-economy-kicker">Review before committing</p>
-        ${q.action === "deposit" ? `<p><b>Permanent deposit:</b> ${escape(label(q.building))} → Level ${q.target}. This credit belongs only to that building and target.</p>` : ""}
-        ${q.jobs ? q.jobs.map(j => `<p>${label(j.building)} → Level ${j.target} · ${duration(j.durationMs)}<br>Bill: ${escape(list(j.materials))}<br>Already deposited: ${escape(list(j.deposited))}</p>`).join("") : ""}
+        ${q.jobs ? q.jobs.map(j => `<p>${label(j.building)} → Level ${j.target} · ${duration(j.durationMs)}<br>Bill: ${escape(list(j.materials))}<br>Already paid: ${escape(list(j.deposited))}</p>`).join("") : ""}
         ${q.materials || q.amounts ? `<p><b>Additional materials:</b> ${escape(list(q.materials || q.amounts))}</p>` : ""}
         ${q.gold ? `<p><b>Gold:</b> ${number(q.gold)}</p>` : ""}
         ${q.crowns ? `<p><b>Crowns:</b> ${number(q.crowns)} · ${number(q.quantity)} ${label(q.resource)}</p>` : ""}
@@ -507,7 +505,7 @@
         else if (view.type === "upgrade") body = upgradeBody(view.key);
         else if (view.type === "resource") {
           const r = data.estate.resources[view.key];
-          body = r ? `<div class="estate-economy-benefits"><p><b>Available</b><br>${number(r.available)} / ${number(r.capacity)}</p><p><b>Deposited</b><br>${number(r.reserved)}</p></div>
+          body = r ? `<div class="estate-economy-benefits"><p><b>Available</b><br>${number(r.available)} / ${number(r.capacity)}</p><p><b>Previously paid</b><br>${number(r.reserved)}</p></div>
             <p>${escape(r.status)}</p><p>Gross: ${number(r.gross)}/hour · Factory inputs: ${number(r.consumed)}/hour · Net: ${number(r.net)}/hour</p>
             <p>${r.timeToFullHours === null ? "Production is paused, balanced by consumption, or waiting for inputs." : "At this rate, storage fills in " + duration(r.timeToFullHours*3600000) + ". Rates can change at storage boundaries."}</p>
             ${productionHelp(view.key)}${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
@@ -568,7 +566,6 @@
         }); return;
       }
       const inputs = {
-        deposit:()=>({action,building:key,amounts:Object.fromEntries([...dialog.querySelectorAll("[data-economy-deposit]")].filter(x=>Number(x.value)>0).map(x=>[x.dataset.economyDeposit,Number(x.value)]))}),
         processor:()=>({action,building:key,enabled:data.estate.processors[key]===false}),
         reserves:()=>({action:"processor",building:key,enabled:data.estate.processors[key]!==false,reserves:Object.fromEntries([...dialog.querySelectorAll("[data-economy-reserve]")].map(x=>[x.dataset.economyReserve,Number(x.value)]))}),
         pause:()=>({action,jobId:target.dataset.id,paused:target.dataset.paused==="true"}),
