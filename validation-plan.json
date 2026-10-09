@@ -25,7 +25,7 @@
         "estate-economy-ui.css",
         "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Processing interiors gain recipes, native 1-to-Max sliders/exact quantities, previews and explicit starts, with bounded progress refresh. Native desktop and two landscape checks cover all four recipes, touch/keyboard input, zero Max, refresh clamping/focus, no repeat/queue and lost-response replay, and preserve all-site construction/prerequisites/Gear/service/lifecycle paths. Shared map/gear and unchanged-refresh checks prevent integration regressions.",
+      "reason": "Focused processing interiors put the recipe, whole-batch ingredient table, native 1-to-Max slider/exact quantities/step controls and visible footer time/Start first; building speed/benefits and reserves remain collapsed. Native desktop/two landscape checks cover four recipes, touch/keyboard, source trail/Back without spending, zero Max/storage/protected blockers, refresh clamping/focus/expanded details, confirmed delivery notice, no repeat/queue and lost-response replay. Raw sources explain automatic gathering. Shared map/Gear, all-site construction/prerequisites/services/lifecycle and unchanged refresh checks prevent integration regressions.",
       "tests": [
         "tools/validate-estate-economy-browser.js",
         "tools/validate-estate-refresh-browser.js",

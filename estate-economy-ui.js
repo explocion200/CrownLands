@@ -147,6 +147,7 @@
     let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
     let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null, upgradeQuote = null;
     let renderedView = null, renderedQuote = null, formDraft = null, reviewDraft = null;
+    const productionFeedback = {};
     let directoryFilter = "all", guideHidden = false, completions = [], feedback = null, management = null, overviewRequested = false;
     const guideKey = "crownlands-estate-guide-v1:" + (options.preferenceScope?.() || scope);
     try { guideHidden = localStorage.getItem(guideKey) === "dismissed"; } catch (_) { /* Device preferences are optional. */ }
@@ -178,6 +179,11 @@
       if (!current()) return;
       options.apply?.(result);
       if (result.estate) {
+        for (const [key, order] of Object.entries(data?.estate.productionOrders || {})) {
+          if (!result.estate.productionOrders?.[key] && order.completesAtMs <= result.serverNowMs)
+            productionFeedback[key] = `${number(order.quantity - (order.delivered || 0))} ${label(order.output)} added to storage.`;
+        }
+        for (const key of Object.keys(result.estate.productionOrders || {})) delete productionFeedback[key];
         if (data) for (const [key, level] of Object.entries(result.estate.levels)) {
           if (level > data.estate.levels[key]) {
             const note = `${label(key)} Level ${level} completed. ${result.estate.benefits[key].current}.`;
@@ -214,7 +220,7 @@
         return `<p>${escape(label(key))} storage is full. Building upgrades and services can free space; ${escape(label(store))} expands capacity. ${button("source","Visit "+label(store),`data-id="${store}"`)}</p>`;
       }
       if (r.status === "Processing paused") return `<p>Processing is paused by your preference. ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>`;
-      const inputs = Object.keys(r.inputs || {}).filter(k => !s.levels[s.resources[k].source] || s.resources[k].available <= (s.reserves[k] || 0));
+      const inputs = Object.keys(r.inputs || {}).filter(k => !s.levels[s.resources[k].source] || s.resources[k].available - (s.reserves[k] || 0) < r.inputs[k]);
       const help = inputs.map(k => `<p>${escape(label(key))} needs usable ${escape(label(k))}. ${s.reserves[k] ? number(s.reserves[k])+" is protected by your shared reserve. " : ""}${button("source","Visit "+label(s.resources[k].source),`data-id="${s.resources[k].source}"`)} ${s.reserves[k] ? button("source","Review processor reserves",`data-id="${r.source}"`) : ""}</p>`).join("");
       return `<p>${r.status === "Production in progress" ? "Your chosen batch is running. Output arrives when it finishes; no further batch starts automatically." : r.status === "Production ready; needs storage" ? "Your finished batch is kept safely until storage has room." : "Choose a quantity and start a batch. Ingredients are used only when you start; production never repeats automatically."} ${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}</p>` + (r.status === "Production in progress" ? "" : help);
     }
@@ -362,21 +368,36 @@
         if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
       });
     }
+    function productionDetails(key, body, recipe, producer) {
+      const s = data.estate;
+      return `<details class="estate-production-details"><summary>Production details</summary>${body}<p>In storage: ${number(producer.available)} / ${number(producer.capacity)}. Output space held for current production: ${number(producer.pendingProduction)}.</p>${recipe ? `<p>Speed: ${number(recipe.ratePerHour)} ${escape(label(recipe.output))} / hour. Higher completed levels speed up new batches; work already started keeps its timer.</p><details class="estate-production-reserves"><summary>Protect materials for other uses</summary><p>These shared reserves stay available for building and other services. New batches cannot spend them.</p>${Object.keys(recipe.inputs).map(k=>`<label>${label(k)} reserve<input type="number" min="0" max="${s.resources[k].capacity}" step="1" value="${s.reserves[k]||0}" data-economy-reserve="${k}"></label>`).join("")}${button("reserves","Review reserves")}</details>` : ""}</details>`;
+    }
+    function productionBlockers(recipe, producer) {
+      const s = data.estate, rows = [];
+      if (producer.storageSpace < 1) {
+        const store = ["grain","food"].includes(recipe.output) ? "granary" : "storehouse";
+        rows.push(`<p>${escape(label(recipe.output))} storage has no room for a whole unit. Use some or increase capacity. ${button("source","Go to "+label(store),`data-id="${store}"`)}</p>`);
+      }
+      for (const [key, ratio] of Object.entries(recipe.inputs)) if (s.resources[key].available - (s.reserves[key] || 0) < ratio) {
+        rows.push(`<p>Need ${number(ratio)} usable ${escape(label(key))} per unit. ${button("source","Go to "+label(s.resources[key].source),`data-id="${s.resources[key].source}"`)}${s.reserves[key] ? " "+button("productionReserves","Review protected materials",`data-id="${key}"`) : ""}</p>`);
+      }
+      return `<div class="estate-production-blockers">${rows.join("")}</div>`;
+    }
     function productionBody(key, producer) {
       const s = data.estate;
       if (s.productionPolicy !== "manual-batches") return "<p>Waiting for the matching production service. Refresh before starting a batch.</p>";
       const recipe = s.productionRecipes[key], order = s.productionOrders[key];
       if (!recipe) return "";
-      let body = `<article class="estate-production-item" ${order ? 'tabindex="-1" data-economy-production-order' : ""}><h3>Make ${escape(label(recipe.output))}</h3><p><b>Recipe per unit:</b> ${escape(list(recipe.inputs))}. ${number(recipe.ratePerHour)} / hour capacity.</p>`;
+      const uses = {planks:"For building upgrades, Tools and Gear.",iron:"For building upgrades, Tools and Gear.",tools:"For advanced building upgrades and Gear.",food:"For champion quests, meals and building upgrades."};
+      let body = `${productionFeedback[key] ? `<p role="status" class="estate-production-completion">${escape(productionFeedback[key])}</p>` : ""}<article class="estate-production-item" ${order ? 'tabindex="-1" data-economy-production-order' : ""}><div class="estate-production-heading"><h3>Make ${escape(label(recipe.output))}</h3><span>${order ? order.status === "ready" ? "Needs storage" : "Working" : recipe.maxQuantity ? "Ready" : "Needs attention"}</span></div><p class="estate-production-recipe">${escape(list(recipe.inputs))} → 1 ${escape({planks:"Plank",tools:"Tool"}[recipe.output] || label(recipe.output))}</p><p class="estate-production-use">${uses[recipe.output]}</p>`;
       if (order) {
         const left = Math.max(0, order.completesAtMs - now());
-        body += `<p><b>${number(order.quantity)} ${escape(label(order.output))}</b> · <span data-economy-production-remaining>${order.status === "ready" ? "Finished; waiting for storage" : left ? productionDuration(left)+" remaining" : "Finishing…"}</span></p><progress max="100" value="${Math.min(100,Math.max(0,100*(1-left/order.durationMs)))}" data-economy-production-progress aria-label="${escape(label(order.output))} production progress"></progress><p>Ingredients paid: ${escape(list(order.materials))}. Output space reserved: ${number(order.quantity-order.delivered)}. This batch continues offline and across seasons; it does not repeat.</p>`;
+        body += `<p><b>${number(order.quantity)} ${escape(label(order.output))}</b> · <span data-economy-production-remaining>${order.status === "ready" ? "Finished; waiting for storage" : left ? productionDuration(left)+" remaining" : "Finishing…"}</span></p><progress max="100" value="${Math.min(100,Math.max(0,100*(1-left/order.durationMs)))}" data-economy-production-progress aria-label="${escape(label(order.output))} production progress"></progress><p>Added to storage automatically when finished.</p><p class="estate-production-note">Materials used: ${escape(list(order.materials))}. Continues while you are away; this batch will not repeat.</p>${order.status === "ready" ? productionBlockers(recipe,producer) : ""}`;
       } else {
         const max = recipe.maxQuantity, disabled = max < 1 ? "disabled" : "";
-        body += `<p>Choose how many to make. Ingredients are paid when you start; the completed batch goes into storage.</p><label class="estate-production-quantity">${escape(label(recipe.output))} quantity · Max ${number(max)}<input type="range" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity aria-label="${escape(label(recipe.output))} quantity" ${disabled}></label><div class="estate-production-controls"><label>Amount<input type="number" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity-number ${disabled}></label>${button("productionMax","Max",disabled)}</div><p data-economy-production-cost></p><p data-economy-production-time></p><div class="estate-economy-actions">${button("produce","Start production",disabled)}</div>${max ? "" : `<p>Gather usable ingredients or make output storage space. Protected material amounts also reduce Max.</p>`}`;
+        body += `<label class="estate-production-quantity"><span>Quantity <small>Max ${number(max)}</small></span><input type="range" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity aria-label="${escape(label(recipe.output))} quantity" ${disabled}></label><div class="estate-production-controls">${button("productionStep","−",`data-step="-1" aria-label="Make one fewer" ${disabled}`)}<label class="estate-production-amount">Amount<input type="number" min="1" max="${Math.max(1,max)}" step="1" value="1" data-economy-quantity-number ${disabled}></label>${button("productionStep","+",`data-step="1" aria-label="Make one more" ${disabled}`)}<span>${escape(label(recipe.output))}</span>${button("productionMax","Max",disabled)}</div><table class="estate-production-materials" aria-label="Materials for this batch"><thead><tr><th>Material</th><th>Needed</th><th>You have</th></tr></thead><tbody data-economy-production-cost>${Object.keys(recipe.inputs).map(k=>`<tr><th>${escape(label(k))}</th><td data-economy-production-input="${k}"></td><td>${number(s.resources[k].available)}${s.reserves[k] ? `<small>${number(s.reserves[k])} protected</small>` : ""}</td></tr>`).join("")}</tbody></table><p class="estate-production-storage">Storage after finish: <b data-economy-production-storage></b></p>${max ? "" : productionBlockers(recipe,producer)}`;
       }
-      body += `<p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Output space reserved for production: ${number(producer.pendingProduction)}.</p></article><details class="estate-production-reserves"><summary>Protect materials for other uses</summary><p>These shared reserves stay available for building and other services. New batches cannot spend them.</p>${Object.keys(recipe.inputs).map(k=>`<label>${label(k)} reserve<input type="number" min="0" max="${s.resources[k].capacity}" step="1" value="${s.reserves[k]||0}" data-economy-reserve="${k}"></label>`).join("")}${button("reserves","Review reserves")}</details>`;
-      return body + (!order && !recipe.maxQuantity ? productionHelp(recipe.output) : "");
+      return body + "</article>";
     }
     function productionPreview(source) {
       const slider = dialog.querySelector("[data-economy-quantity]"), numeric = dialog.querySelector("[data-economy-quantity-number]");
@@ -385,13 +406,16 @@
       const quantity = Math.max(1,Math.min(Number(slider.max),Math.floor(Number((source || slider).value) || 1)));
       slider.value = numeric.value = quantity;
       slider.setAttribute("aria-valuetext",number(quantity)+" "+label(recipe.output));
-      setText(dialog.querySelector("[data-economy-production-cost]"),"Required: "+list(Object.fromEntries(Object.entries(recipe.inputs).map(([k,v])=>[k,v*quantity]))));
-      setText(dialog.querySelector("[data-economy-production-time]"),recipe.maxQuantity ? "Time: "+productionDuration(Math.ceil(quantity/recipe.ratePerHour*3600000))+" · Output: "+number(quantity)+" "+label(recipe.output) : "No batch can start with the current materials and storage.");
+      for (const [k,v] of Object.entries(recipe.inputs)) setText(dialog.querySelector(`[data-economy-production-input="${k}"]`),number(v*quantity));
+      setText(dialog.querySelector("[data-economy-production-time]"),recipe.maxQuantity ? productionDuration(Math.ceil(quantity/recipe.ratePerHour*3600000)) : "Needs materials or storage");
+      const output = data.estate.resources[recipe.output];
+      setText(dialog.querySelector("[data-economy-production-storage]"),number(output.available+(recipe.maxQuantity?quantity:0))+" / "+number(output.capacity));
+      setText(dialog.querySelector("[data-economy-production-output]"),number(quantity)+" "+label(recipe.output));
     }
     function open(next) {
       if (!current()) return;
       view = next; quote = null; pending = null; upgradeBill = null; upgradeQuote = null; error = "";
-      formDraft = null; reviewDraft = null;
+      formDraft = next.formDraft || null; reviewDraft = null;
       if (!dialog.open) { opener = document.activeElement; dialog.showModal(); }
       render(); refresh();
     }
@@ -404,10 +428,11 @@
         <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>` + milestone(key,level);
       if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Build button to review construction.</p>";
       if (producer) {
-        if (Object.keys(producer.inputs || {}).length) body += productionBody(key, producer);
-        else body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} gathering</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
-          <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
-        if (!Object.keys(producer.inputs || {}).length) body += productionHelp(Object.keys(s.resources).find(k=>s.resources[k]===producer));
+        const recipe = s.productionRecipes?.[key];
+        const kicker = `<p class="estate-economy-kicker">Level ${level} / 100</p>`;
+        if (Object.keys(producer.inputs || {}).length) return kicker + productionBody(key, producer) + productionDetails(key,body,recipe,producer);
+        const resource = Object.keys(s.resources).find(k=>s.resources[k]===producer);
+        return kicker + `<article class="estate-production-item"><h3>${escape(label(resource))}</h3><p>${producer.status === "Storage full" ? "Storage full · gathering waits for space" : "Gathering automatically"}</p><p>${number(producer.gross)} per hour · ${number(producer.available)} / ${number(producer.capacity)} stored.</p><progress max="${producer.capacity}" value="${Math.min(producer.capacity,producer.available)}" aria-label="${escape(label(resource))} storage"></progress><p class="estate-production-note">No production order needed. Gathering continues while you are away and pauses when storage is full.</p>${productionHelp(resource)}</article>` + productionDetails(key,body,null,producer);
       }
       if (["storehouse", "granary", "wagon-yard", "market"].includes(key)) {
         const food = ["granary", "market"].includes(key);
@@ -530,6 +555,7 @@
       return {
         fields: [...dialog.querySelectorAll("input,select")].map(el => ({ id:controlId(el), value:el.value, checked:el.checked })),
         reservesOpen: !!dialog.querySelector(".estate-production-reserves")?.open,
+        productionDetailsOpen: !!dialog.querySelector(".estate-production-details")?.open,
         focus: dialog.contains(document.activeElement) && document.activeElement.matches("button,input,select")
           ? controlId(document.activeElement) : (renderedQuote ? reviewDraft : formDraft)?.focus,
         scroll: dialog.querySelector(".estate-economy-content")?.scrollTop || 0,
@@ -538,7 +564,7 @@
     function render() {
       if (!current() || !dialog.open || !view) return;
       const focusTitle = document.activeElement === dialog.querySelector("#estateEconomyTitle")
-        || (renderedView !== view && Array.isArray(view.trail));
+        || (renderedView !== view && (Array.isArray(view.trail) || Array.isArray(view.sourceTrail)));
       if (renderedView === view) {
         if (!renderedQuote) formDraft = saveForm();
         else if (renderedQuote === quote) reviewDraft = saveForm();
@@ -557,10 +583,12 @@
             <p>${Object.keys(r.inputs || {}).length ? "Processing requires a player-started batch. Output space reserved: "+number(r.pendingProduction)+"." : r.timeToFullHours === null ? "Gathering is waiting for storage space." : "At this rate, storage fills in " + duration(r.timeToFullHours*3600000) + ". Rates can change at storage boundaries."}</p>
             ${productionHelp(view.key)}${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
         } else body = buildingBody(view.key);
+        if(view.sourceTrail?.length)body=`<nav class="estate-production-trail" aria-label="Production sources"><p>${view.sourceTrail.map(site=>escape(label(site.key))).concat(escape(label(view.key))).join(" → ")}</p>${button("sourceBack","Back to "+label(view.sourceTrail.at(-1).key))}</nav>`+body;
       }
+      const recipe = data && view.type === "building" && data.estate.levels[view.key] && !quote && data.estate.productionPolicy === "manual-batches" && !data.estate.productionOrders?.[view.key] ? data.estate.productionRecipes?.[view.key] : null;
       dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle" tabindex="-1">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
         <div class="estate-economy-content" aria-busy="${busy}">${error ? `<p role="alert" class="estate-economy-error">${escape(error)}</p>` : ""}${body}</div>
-        <footer>Buildings, materials, paid work and champions stay through every season. ${data ? "Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}</footer>`;
+        <footer${recipe ? ' class="estate-production-footer"' : ""}>${recipe ? `<div><small>Production time</small><b data-economy-production-time></b><small>Materials used now; output added when finished.</small></div>${button("produce",'Start production · <span data-economy-production-output></span>',recipe.maxQuantity ? "" : "disabled")}` : `Buildings, materials, paid work and champions stay through every season. ${data ? "Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}`}</footer>`;
       for (const el of dialog.querySelectorAll("input,select")) {
         const saved = draft?.fields.find(field => field.id === controlId(el));
         if (!saved || el.disabled) continue;
@@ -569,6 +597,7 @@
         else el.value = saved.value === "" ? "" : ["number","range"].includes(el.type) ? Math.max(Number(el.min || 0), Math.min(Number(el.max || Infinity), Number(saved.value))) : saved.value;
       }
       productionPreview();
+      if((draft?.productionDetailsOpen || draft?.reservesOpen) && dialog.querySelector(".estate-production-details"))dialog.querySelector(".estate-production-details").open=true;
       if(draft?.reservesOpen && dialog.querySelector(".estate-production-reserves"))dialog.querySelector(".estate-production-reserves").open=true;
       partyStatus();
       dialog.querySelectorAll("button,select,input").forEach(el => { if (busy && !["close"].includes(el.dataset.economyAction)) el.disabled = true; });
@@ -587,7 +616,15 @@
       if (busy || !current()) return;
       if (action === "refresh") { quote = null; pending = null; await refresh(); return; }
       if (action === "cancelReview") { quote = null; pending = null; if (view.type === "upgrade") await refresh(); else render(); return; }
-      if (action === "source") { open({type:"building",key:target.dataset.id}); return; }
+      if (action === "source" || action === "sourceBack") {
+        const trail = [...(view.sourceTrail || [])];
+        const site = action === "sourceBack" ? trail.pop() : {type:"building",key:target.dataset.id};
+        if(!site)return;
+        if(action === "source")trail.push({type:view.type,key,formDraft:saveForm()});
+        const selectedOpener = options.selectBuilding?.(site.key);
+        if(selectedOpener)opener=selectedOpener;
+        open({...site,sourceTrail:trail});return;
+      }
       if (action === "ledger") { open({type:"resource",key:target.dataset.id}); return; }
       if (action === "upgradeSite") { open({type:"upgrade",key:target.dataset.id}); return; }
       if (action === "prerequisite" || action === "prerequisiteBack") {
@@ -611,9 +648,14 @@
         }
         await commitQuote(); return;
       }
-      if (action === "productionMax") {
+      if (action === "productionReserves") {
+        dialog.querySelector(".estate-production-details").open = true;
+        dialog.querySelector(".estate-production-reserves").open = true;
+        dialog.querySelector(`[data-economy-reserve="${target.dataset.id}"]`)?.focus(); return;
+      }
+      if (action === "productionMax" || action === "productionStep") {
         const slider = dialog.querySelector("[data-economy-quantity]");
-        slider.value = slider.max; productionPreview(slider); return;
+        slider.value = action === "productionMax" ? slider.max : Number(slider.value) + Number(target.dataset.step); productionPreview(slider); return;
       }
       if (action === "produce") {
         await commitQuote({action:"produce",building:key,quantity:Number(value("[data-economy-quantity]"))});
