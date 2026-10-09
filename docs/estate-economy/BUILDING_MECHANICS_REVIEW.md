@@ -4,7 +4,7 @@ Reviewed October 8, 2026 on `codex/estate-building-mechanics-polish`, against th
 
 ## What every building contributes
 
-**October 9 follow-up — IN DEVELOPMENT, NOT DEPLOYED:** Material processors now use player-started quantities rather than automatic recipe consumption. The economy guide and Master Specification record the 1-to-Max controls, fixed paid batches and unchanged capacity rates. The prior release evidence above remains historical; this follow-up requires matching backend/client publication.
+**October 9 follow-up — LIVE — WEB**, verified at build `101d435ef095abcb392631dca1d28f908839337f` from [PR #506](https://github.com/explocion200/CrownLands/pull/506): Material processors now use player-started quantities rather than automatic recipe consumption. The economy guide and Master Specification record the 1-to-Max controls, fixed paid batches and unchanged capacity rates. The prior release evidence above remains historical; FM-2 records matching backend/Focused web publication, exact staged production checks and remaining signed-in/device limits.
 
 | Building | Function | Reward for leveling |
 |---|---|---|

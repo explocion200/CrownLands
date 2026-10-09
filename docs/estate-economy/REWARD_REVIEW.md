@@ -1,6 +1,6 @@
 # Approved estate economy — shared-account review
 
-Costs/rewards approved October 8, 2026; direct material payment and manual processing approved October 9. The manual-production follow-up is not deployed. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.
+Costs/rewards approved October 8, 2026; direct material payment and manual processing approved October 9. Manual-production and Focused web publication are verified in Master Specification FM-2; itch.io and signed-in/device limits are recorded there. This report uses the actual estate rules, not production player data. Regenerate with node tools/validate-estate-reward-review.js --write.
 
 ## Rewards at every level
 
