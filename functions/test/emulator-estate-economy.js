@@ -95,34 +95,67 @@ async function main() {
   const race=await Promise.allSettled(freeQuotes.map(q=>commit(q)));
   assert.equal(race.filter(r=>r.status==="fulfilled").length,1,"Concurrent starts must claim a free builder only once");
   assert.equal((await stateRef.get()).data().jobs.length,1);
-  // Install a test-only supply chain and validate large partial credit over resets.
+  // Seed pre-release credit/receipts only in the emulator. New deposit actions
+  // and unaccepted old quotes cannot create credit; accepted receipts still replay.
   saved = E.initial(Date.now()); for (const key in saved.levels) saved.levels[key] = 24;
   saved.levels["great-hall"] = 25; for (const key of E.KEYS) saved.stock[key] = 500;
+  const legacyBill=E.baseQuote(saved,"quarry",25,285);
+  saved.stock.stone-=250;
+  saved.deposits.quarry={target:25,version:"retained-price-v1",materials:legacyBill.materials,deposited:{stone:250}};
   await stateRef.set(saved);
-  const deposit = await quote({ action: "deposit", building: "quarry", amounts: { stone: 250 } });
-  await commit(deposit, "deposit_replay_001");
+  // Admission migrates Gear entitlements and advances the estate revision.
+  // An unaccepted legacy quote must bind that canonical revision so this test
+  // reaches deposit retirement rather than the unrelated stale-quote guard.
+  await load();
   const profileBefore = (await profileRef.get()).data(), beforeReset = (await stateRef.get()).data();
+  const deposit={id:"legacy_deposit_quote",input:{action:"deposit",building:"quarry",amounts:{stone:250}},
+    value:{action:"deposit",building:"quarry",amounts:{stone:250},target:25,nonrefundable:true},
+    expiresAtMs:Date.now()+300000,revision:beforeReset.revision,resetGeneration:profileBefore.resetGeneration,
+    worldId:profileBefore.worldId,realmShardId:profileBefore.realmShardId||"legacy"};
+  await db.doc(`players/${owner.uid}/estateQuotes/${deposit.id}`).set(deposit);
+  await db.doc(`players/${owner.uid}/estateReceipts/deposit_replay_001`).set({requestId:"deposit_replay_001",quoteId:deposit.id,action:"deposit"});
   await profileRef.set({ ...profileBefore, gold: 100, goldFloat: 100, resetGeneration: "expired-test-realm" });
   const oldRetry = await commit(deposit, "deposit_replay_001", { clientResetGeneration: "expired-test-realm" });
   assert(oldRetry.replayed); assert.deepEqual((await stateRef.get()).data(), beforeReset);
   assert.equal((await profileRef.get()).data().gold, 100);
   await assert.rejects(commit(deposit, "new_expired_spend", { clientResetGeneration: "expired-test-realm" }), /Refresh|updated/);
   await profileRef.set(profileBefore);
+  await assert.rejects(quote({action:"deposit",building:"quarry",amounts:{stone:1}}),/no longer available/);
+  await assert.rejects(commit(deposit,"unaccepted_old_deposit"),/no longer available/);
+  assert.deepEqual((await stateRef.get()).data(),beforeReset);
+  assert.equal((await db.doc(`players/${owner.uid}/estateReceipts/unaccepted_old_deposit`).get()).exists,false);
   loaded = await load(); assert.equal(loaded.estate.deposits.quarry.deposited.stone, 250);
-  assert.equal(loaded.estate.constructionPolicy,"deposit-then-start");
+  assert.equal(loaded.estate.constructionPolicy,"pay-on-start");
+  assert.equal(loaded.upgradeOverview.quarry.status,"materials");
   await assert.rejects(quote({action:"fund",building:"quarry",count:2}),/one level/);
   const incomplete=await quote({action:"fund",building:"quarry",count:1});
+  assert.equal(incomplete.value.jobs[0].version,"retained-price-v1");
+  assert.equal(incomplete.value.materials.stone,legacyBill.materials.stone-250);
   const unpaidState=(await stateRef.get()).data(),unpaidGold=(await profileRef.get()).data().goldFloat;
-  await assert.rejects(commit(incomplete),/Deposit all/);
+  await assert.rejects(commit(incomplete,"insufficient_materials"),/Not enough/);
   assert.deepEqual((await stateRef.get()).data(),unpaidState);assert.equal((await profileRef.get()).data().goldFloat,unpaidGold);
+  assert.equal((await db.doc(`players/${owner.uid}/estateReceipts/insufficient_materials`).get()).exists,false);
   for(const key of E.KEYS)unpaidState.stock[key]=1e6;await stateRef.set(unpaidState);
-  const remaining=Object.fromEntries(Object.entries(incomplete.value.jobs[0].remaining).filter(([,v])=>v>0));
-  await act({action:"deposit",building:"quarry",amounts:remaining});
+  await profileRef.update({gold:0,goldFloat:0});
+  const noGold=await quote({action:"fund",building:"quarry",count:1});
+  const noGoldState=(await stateRef.get()).data(),noGoldProfile=(await profileRef.get()).data();
+  await assert.rejects(commit(noGold,"insufficient_gold"),/Not enough Gold/);
+  assert.deepEqual((await stateRef.get()).data(),noGoldState);
+  assert.equal((await profileRef.get()).data().goldFloat,noGoldProfile.goldFloat);
+  await profileRef.update({gold:1e12,goldFloat:1e12});
+  loaded=await load();assert.equal(loaded.upgradeOverview.quarry.ready,true,"Loose materials plus old credit enable Upgrade");
   const ready=await quote({action:"fund",building:"quarry",count:1});
-  assert(Object.values(ready.value.materials).every(v=>v===0));
-  const started=await commit(ready,"manual_upgrade_001");assert.equal(started.estate.jobs[0].status,"running");
+  assert(Object.values(ready.value.materials).some(v=>v>0));
+  const stockBefore=(await stateRef.get()).data().stock;
+  const startedRace=await Promise.all([commit(ready,"manual_upgrade_001"),commit(ready,"manual_upgrade_001")]);
+  assert.equal(startedRace.filter(r=>r.replayed).length,1);
+  const started=startedRace.find(r=>!r.replayed);assert.equal(started.estate.jobs[0].status,"running");
   assert.equal(started.estate.deposits.quarry,undefined);
+  for(const key of E.KEYS)assert(Math.abs(started.estate.stock[key]-(stockBefore[key]-(ready.value.materials[key]||0)))<1,
+    "Only due materials are paid once: "+key);
+  const afterStart=(await stateRef.get()).data(),goldAfterStart=(await profileRef.get()).data().goldFloat;
   assert((await commit(ready,"manual_upgrade_001")).replayed);
+  assert.deepEqual((await stateRef.get()).data(),afterStart);assert.equal((await profileRef.get()).data().goldFloat,goldAfterStart);
   await assert.rejects(quote({action:"fund",building:"quarry",count:1}),/Finish/);
   // Migration preserves owned higher tiers, consumed upgrade receipts and unopened/pending chests.
   const epic = G.DEFINITIONS.find(d => d.buildingId === "barracks" && d.rarity === "epic");

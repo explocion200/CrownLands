@@ -78,28 +78,46 @@ assert.equal(s.levels.quarry, 3); assert.equal(events.length, 2);
 const stock = s.stock.stone; E.pauseJob(s, last, false, 100 * H); assert.equal(s.stock.stone, stock);
 E.settle(s, H * 200, job => events.push(job)); assert.equal(s.levels.quarry, 4); assert.equal(events.length, 3);
 E.settle(s, H * 300, job => events.push(job)); assert.equal(events.length, 3);
+// Direct payment preserves older credit and validates the whole bill before spending.
 s = rich(all(1)); s.levels["great-hall"] = 25;
 quote = E.baseQuote(s, "quarry", 2, 285);
-E.deposit(s, "quarry", { stone: quote.materials.stone });
+s.stock.stone -= quote.materials.stone;
+s.deposits.quarry = { target:2, version:"saved-price-version", materials:{...quote.materials}, deposited:{stone:quote.materials.stone} };
 assert.equal(E.constructionQuote(s, "quarry").materials.stone, 0);
-assert.throws(() => E.deposit(s, "quarry", { stone: 1 }), /exceeds/);
-const stone = s.stock.stone;
-assert.throws(()=>E.fund(s,E.constructionQuote(s,"quarry"),"incomplete",0),/Deposit all/);
-const rest=Object.fromEntries(Object.entries(E.constructionQuote(s,"quarry").materials).filter(([,v])=>v>0));
-E.deposit(s,"quarry",rest);
-E.fund(s, E.constructionQuote(s, "quarry"), "deposit_1", 0);
-assert.equal(s.stock.stone, stone); assert.equal(s.deposits.quarry, undefined);
+const creditedStock = {...s.stock}, due = E.constructionQuote(s, "quarry");
+assert.equal(due.jobs[0].version,"saved-price-version");
+s.stock.timber=0;
+const incomplete=structuredClone(s);
+assert.throws(()=>E.fund(s,due,"incomplete",0),/Not enough timber/);
+assert.deepEqual(s,incomplete,"Insufficient resources must retain every stock, legacy credit and job");
+s.stock.timber=creditedStock.timber;
+E.fund(s, E.constructionQuote(s, "quarry"), "credited_start_1", 0);
+for(const key of E.KEYS)near(s.stock[key],creditedStock[key]-(due.materials[key]||0));
+assert.equal(s.deposits.quarry, undefined);
 assert.equal(s.jobs[0].status,"running");assert.equal(s.jobs[0].startedAtMs,0);
 assert.throws(()=>E.constructionQuote(s,"quarry"),/Finish/);
 assert.throws(()=>E.constructionQuote(s,"mine",2),/one level/);
-const other=E.constructionQuote(s,"mine");E.deposit(s,"mine",other.materials);
 const blocked=structuredClone(s);
 assert.throws(()=>E.fund(s,E.constructionQuote(s,"mine"),"no_builder",0),/builders are busy/);
-assert.deepEqual(s,blocked,"An unavailable builder must not consume credit or queue work");
-E.settle(s,s.jobs[0].completesAtMs);assert.equal(s.jobs.length,0,"Deposits must never start work automatically");
-E.fund(s,E.constructionQuote(s,"mine"),"manual_start",s.settledAtMs);
+assert.deepEqual(s,blocked,"An unavailable builder must not consume resources, credit or queue work");
+E.settle(s,s.jobs[0].completesAtMs);assert.equal(s.jobs.length,0,"Affordability and free builders must never auto-start work");
+const manualDue=E.constructionQuote(s,"mine"), beforeManual={...s.stock};
+E.fund(s,manualDue,"manual_start",s.settledAtMs);
+for(const key of E.KEYS)near(s.stock[key],beforeManual[key]-(manualDue.materials[key]||0));
 assert.equal(s.jobs.length,1);assert.equal(s.jobs[0].building,"mine");
-assert.equal(E.snapshot(s,s.settledAtMs).constructionPolicy,"deposit-then-start");
+assert.equal(E.snapshot(s,s.settledAtMs).constructionPolicy,"pay-on-start");
+// Fully paid legacy projects remain payable without new materials.
+const paidLegacy=all(1);paidLegacy.levels["great-hall"]=2;
+paidLegacy.deposits.quarry={target:2,version:E.VERSION,materials:E.COSTS.quarry[2],deposited:E.COSTS.quarry[2]};
+E.fund(paidLegacy,E.constructionQuote(paidLegacy,"quarry"),"fully_credited",0);
+assert.deepEqual(paidLegacy.stock,E.zero());assert.equal(paidLegacy.deposits.quarry,undefined);
+// Normal storage can hold every next-level bill with supporting infrastructure
+// at the previous level; eliminating installment deposits cannot block Level 100.
+for(const building of E.C.buildings)for(let target=2;target<=100;target++){
+ const supporting=all(target-1);supporting.levels["great-hall"]=target;
+ for(const [key,value]of Object.entries(E.baseQuote(supporting,building.key,target,285).materials))
+  assert(value<=E.capacity(supporting,key),building.key+" "+target+" exceeds achievable "+key+" storage");
+}
 const fullLedger=rich(all(50));fullLedger.jobs=Array.from({length:30},(_,i)=>({building:"quarry",target:i+51,status:"paused"}));
 assert.throws(()=>E.constructionQuote(fullLedger,"mine"),/previously paid/);
 const quoteState=rich(all(50));quoteState.levels["great-hall"]=100;
@@ -109,7 +127,7 @@ assert.equal(fullLedger.jobs.length,30,"Legacy paused ledgers must not exceed th
 assert.throws(() => E.constructionQuote(all(1), "quarry"), /Great Hall/);
 // A producer's new rate begins at completion, not at load or funding time.
 s = all(); s.levels["great-hall"] = 10;
-quote = E.constructionQuote(s, "quarry"); rich(s);E.deposit(s,"quarry",quote.materials); E.fund(s, E.constructionQuote(s,"quarry"), "rate_test", 0);
+quote = E.constructionQuote(s, "quarry"); rich(s); E.fund(s, E.constructionQuote(s,"quarry"), "rate_test", 0);
 s.stock = E.zero(); const deadline = s.jobs[0].completesAtMs;
 E.settle(s, H); near(s.stock.stone, 80 * deadline / H + 92.8 * (1 - deadline / H));
 // Commission recipes are fixed and bounded, never altered by pausing production.
@@ -163,8 +181,8 @@ assert(S.supplyQuote(s, "grain", .25, 24 * H));
   const state = rich(all(1)); state.levels["great-hall"] = 2;
   let overview = E.upgradeOverview(state, 1e9, 285);
   assert.equal(Object.keys(overview).length, 20);
-  assert.equal(overview.quarry.status, "materials");
-  assert.match(overview.quarry.reason, /available to deposit/);
+  assert.equal(overview.quarry.status, "ready");
+  assert.match(overview.quarry.reason, /Ready to review/);
   state.deposits.quarry = { target:2, version:E.VERSION, materials:{...E.COSTS.quarry[2]}, deposited:{...E.COSTS.quarry[2]} };
   const before = JSON.stringify(state);
   overview = E.upgradeOverview(state, 1e9, 50000);
