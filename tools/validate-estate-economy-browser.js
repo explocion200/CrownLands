@@ -35,6 +35,16 @@ async function main() {
       await client.send("Input.dispatchMouseEvent",{type:"mousePressed",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
       await client.send("Input.dispatchMouseEvent",{type:"mouseReleased",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
     };
+    const closeSheet = async () => {
+      // close() hides immediately, but its close event restores the opener in
+      // a later browser task. Wait for that event before assigning new focus.
+      await evaluate(() => {
+        __estateTest.sheetClosed = new Promise(resolve =>
+          document.querySelector('.estate-economy-dialog').addEventListener('close',()=>resolve(true),{once:true}));
+      });
+      await click('[data-economy-action="close"]');
+      assert.equal(await evaluate(()=>__estateTest.sheetClosed),true);
+    };
     const compactActions = async selector => {
       assert(await evaluate(s => {
         const buttons = [...document.querySelectorAll(s)];
@@ -438,14 +448,15 @@ async function main() {
       await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:arrow.x+arrow.width/2,y:arrow.y+arrow.height/2,id:1}]});
       await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
-      await click('[data-economy-action="close"]');
+      await closeSheet();
       const beforeEnter=await evaluate(()=>innerCastleEstateView.snapshot());
       await evaluate(()=>document.querySelector('.estate-enter-target[data-estate-enter="mine"]').focus());
+      assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),'mine','Keyboard Enter starts from the intended map control');
       await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",code:"Enter",text:"\r",unmodifiedText:"\r",windowsVirtualKeyCode:13});
       await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",code:"Enter",windowsVirtualKeyCode:13});
       await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Mine');
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0);
-      await click('[data-economy-action="close"]');
+      await closeSheet();
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),beforeEnter);
       assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),'mine');
       // Every map site has a directory action, even when its small-screen map arrow is crowded.

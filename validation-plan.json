@@ -7,7 +7,7 @@
         "estate-economy-ui.js",
         "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Explain existing Guild training bank/cap before Food is spent, retain legacy XP, and link Alehouse recruitment from the guide without adding interior construction controls or changing server rules. Cover real zero-credit quest quotes, excess-XP cards, guide navigation and all existing shared service/map/confirmation lifecycle behavior at three sizes.",
+      "reason": "Explain existing Guild training bank/cap before Food is spent, retain legacy XP, and link Alehouse recruitment from the guide without adding interior construction controls or changing server rules. Cover real zero-credit quest quotes, excess-XP cards, guide navigation and all existing shared service/map/confirmation lifecycle behavior at three sizes. Keyboard transitions explicitly wait for the asynchronous dialog close event and its opener-focus restoration before focusing map Enter, preserving native pointer and keyboard actions.",
       "tests": [
         "tools/validate-estate-economy-browser.js",
         "tools/validate-inner-city-estate.js",
