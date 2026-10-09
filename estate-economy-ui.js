@@ -315,6 +315,7 @@
       overviewRequested ||= includeUpgradeOverview || (dialog.open && view?.type === "status") || management?.needsOverview();
       if (busy) { refreshPending = true; return; }
       busy = true;
+      render();
       const overview = !!overviewRequested; overviewRequested = false;
       try { accept(await api.getEstateState(overview)); error = ""; await loadUpgrade(); }
       catch (e) { if (current()) error = e.message || "Estate could not load."; }
