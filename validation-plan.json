@@ -1,45 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2470f186cfd6adcae1d6de8de57942808948e40f",
+  "baseCommit": "11847639516e7dcef1af5d07e1add779699b95c9",
   "coverage": [
-    {
-      "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "common-gear-ui.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "reason": "Blocked external Build/Upgrade panels gain completed-level prerequisite buttons, map centering/selection, visited chains, Back navigation and focus restoration. Native browser checks at desktop and two landscape sizes exercise mouse, keyboard and touch navigation, branched chains, Hall-level gates, ongoing/completed prerequisites, zero spending, Cancel and unchanged direct-payment/Gear/service/lifecycle paths. Static integration/layout and refresh checks cover the shared estate/gear bridge without broad unrelated suites.",
-      "tests": [
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-estate-refresh-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/estate-economy.js",
-        "functions/test/emulator-estate-economy.js",
-        "tools/test-estate-economy.js"
-      ],
-      "reason": "Snapshot prerequisite metadata and construction validation share canonical completed-level gates. Unit checks preserve exact bills, credits, resource production and no-queue rules, and cover multi-branch dependencies, Hall targets and unfinished prerequisites without mutating saved state. Estate callable and shared-economy concurrency emulators protect authenticated metadata, completion updates, exact quote rejection, atomic wallet/resource spending and retained receipts.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "functions/test/emulator-estate-economy.js",
-        "functions/test/emulator-economy-concurrency.js"
-      ]
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record the owner-confirmed prerequisite navigation as not deployed, its completed-level source of truth and non-spending chain/Back behavior, while preserving the existing live release and balance. Covered by the estate runtime and native browser checks.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "tools/validate-estate-economy-browser.js"
-      ]
+      "reason": "Record the authorized PR #504 merge and verified backend/web publication with exact identity, passing CI/staged/public/deployed-source evidence and retained realm/rules/itch/manual limits. Documentation only; no runtime, balance or player-data change. Runtime gates already passed for the identical deployed feature and do not apply again to this release record.",
+      "tests": []
     }
   ]
 }
