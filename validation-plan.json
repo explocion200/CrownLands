@@ -1,13 +1,39 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f49871ade7b09702541782b011efff820a5cc342",
+  "baseCommit": "3e8ea124c20307b6e919a2a8cd73b3b770b223ab",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/estate-economy/README.md"
+        "inner-city-estate.js",
+        "estate-economy-ui.js"
       ],
-      "reason": "Record only owner-authorized PR #498 merge and verified client-only web publication. Cross-check exact build/deploy/source identities, 55 staged/165 public comparisons, three-size isolated interaction checks, public startup, retained 144 backend sources/revisions and read-only realm/rules evidence. Mark direct-start presentation LIVE — WEB; record independently verified older itch build, prepared six-check ZIP and disconnected publishing browser. Preserve historical releases and pending signed-in/device/PR #497 work. No runtime, balance, asset, dependency or production configuration changes, so additional runtime/emulator validation is not applicable.",
+      "reason": "Avoid repeated resource, timer and management DOM writes and skip building presentation/layout for unchanged levels/states. Cover fresh receipts and exact balances, corrected deadlines, progress/completion, controls/focus, filters, gear integration, full estate services and teardown at desktop and landscape sizes. Shared economy and Gear tests confirm retained presentation contracts; no server or authority implementation changes require emulators.",
+      "tests": [
+        "tools/validate-estate-refresh-browser.js",
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/test-estate-economy.js",
+        "tools/validate-common-gear.js"
+      ]
+    },
+    {
+      "paths": ["main-screen-art-ui.css"],
+      "reason": "Scope the short-landscape timer visibility selector to its existing header/menu siblings. Trace ordinary HUD updates to bound affected elements and test timer/incoming/outgoing visibility transitions. Crowns/HUD integration checks geometry, hit targets, dropdowns and wallet/pickup behavior at desktop and both landscape sizes.",
+      "tests": ["tools/validate-hud-style-invalidation-browser.js", "tools/validate-crowns-hud-browser.js"]
+    },
+    {
+      "paths": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-refresh-browser.js"],
+      "reason": "Execute the added refresh regressions, including unchanged DOM/node/focus checks in both the isolated renderer and real estate management controller, plus changed resource/receipt/construction state and teardown coverage.",
+      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-refresh-browser.js"]
+    },
+    {
+      "paths": ["tools/validate-hud-style-invalidation-browser.js"],
+      "reason": "Execute the Chromium trace regression with measured style-update element counts and alert layout transitions at desktop and landscape sizes, using only the isolated loopback backend.",
+      "tests": ["tools/validate-hud-style-invalidation-browser.js"]
+    },
+    {
+      "paths": ["docs/GAME_HEALTH_REVIEW.md"],
+      "reason": "Record observed root causes, controlled before/after evidence, completed health checks and limitations. No new design decisions or gameplay/release rules are introduced; runtime coverage is selected above.",
       "tests": []
     }
   ]

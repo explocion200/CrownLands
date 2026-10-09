@@ -208,6 +208,10 @@
     const timers=options.actions?.mountTimers(host);
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
+    const resourceRows=resources.map(r=>{
+      const element=host.querySelector(`[data-estate-resource="${r.key}"]`);
+      return {...r,element,valueElement:element.querySelector("dd")};
+    });
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
@@ -215,11 +219,13 @@
       if(destroyed)return;
       timers?.update(options.estate,options.now?.());
       const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
-      resources.forEach(r=>{
-        const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
+      resourceRows.forEach(r=>{
+        const value=resourceValue(balances?.[r.key]),element=r.element;
         const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
-        element.querySelector("dd").textContent=formatResource(value);
-        element.setAttribute("aria-label",label);element.title=label;
+        const text=formatResource(value);
+        if(r.valueElement.textContent!==text)r.valueElement.textContent=text;
+        if(element.getAttribute("aria-label")!==label)element.setAttribute("aria-label",label);
+        if(element.title!==label)element.title=label;
       });
     }
     updateResources();
@@ -392,8 +398,11 @@
     function updateEstate(snapshot) {
       if(destroyed||!snapshot)return;
       options.estate=snapshot;
+      let presentationChanged=false,selectedChanged=false;
       for(const b of buildings){
         const level=snapshot.levels[b.key],state=snapshot.jobs.some(j=>j.building===b.key&&j.status==="running")?"constructing":level?"completed":"unbuilt";
+        if(siteStates[b.key]===state&&siteLevels[b.key]===level)continue;
+        presentationChanged=true;if(b.key===selected)selectedChanged=true;
         if(siteStates[b.key]!==state)host.querySelector('[data-estate-site="'+b.key+'"]').outerHTML=siteMarkup(b,state);
         siteStates[b.key]=state;siteLevels[b.key]=level;
         const caption=levelText(state,level),target=host.querySelector('[data-inner-castle-building="'+b.key+'"]');
@@ -401,7 +410,12 @@
         host.querySelector('[data-estate-nameplate="'+b.key+'"] small').textContent=caption;
         host.querySelector('[data-estate-directory-building="'+b.key+'"] small').textContent=caption;
       }
-      options.actions?.sync(host,siteLevels);renderDetail();updateResources();paint();
+      // Resource and receipt timestamps can change without moving any building.
+      // Keep the live timers current, but retain unchanged controls and layout.
+      if(presentationChanged)options.actions?.sync(host,siteLevels);
+      if(selectedChanged)renderDetail();
+      updateResources();
+      if(presentationChanged)paint();
     }
     if(options.onResource){
       host.querySelectorAll("[data-estate-resource]").forEach(element=>{

@@ -156,6 +156,29 @@ async function main() {
       await wait(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent === "102").catch(async error=>{throw Error(error.message+"\nCounter diagnostics: "+JSON.stringify(await evaluate(()=>({hidden:document.hidden,view:!!innerCastleEstateView,balances:innerCastleEconomy.balances(),counter:document.querySelector('[data-estate-resource="timber"] dd').textContent,loads:__estateTest.loads,projection:innerCastleEconomy.snapshot().estate.projection}))));});
       assert.equal(await evaluate(()=>__estateTest.loads),loads,"Counter updates must not poll the server");
       await evaluate(()=>innerCastleEconomy.refresh());
+      const refreshWrites = await evaluate(() => {
+        const snapshot=innerCastleEconomy.snapshot(),projection=snapshot.estate.projection;
+        const previousUntil=projection.untilMs,previousGold=getProjectedGold,previousSelection=innerCastleSelectedBuildingKey||'great-hall';
+        const observer=new MutationObserver(()=>{});
+        try {
+          projection.untilMs=snapshot.serverNowMs;
+          getProjectedGold=()=>500000;
+          innerCastleEstateView.select('treasury',false);innerCastleEstateView.updateResources();
+          const button=document.querySelector('.estate-detail [data-estate-enter="treasury"]');button.focus();
+          const heading=document.querySelector('[data-estate-detail-copy] h3');
+          observer.observe(modalBody,{subtree:true,attributes:true,childList:true,characterData:true});
+          for(let i=0;i<20;i++)innerCastleEstateView.updateResources();
+          const counters=observer.takeRecords().length;
+          for(let i=0;i<20;i++)innerCastleEstateView.updateEstate(structuredClone(snapshot.estate));
+          return {counters,snapshots:observer.takeRecords().length,
+            detail:heading===document.querySelector('[data-estate-detail-copy] h3'),focused:document.activeElement===button};
+        } finally {
+          observer.disconnect();projection.untilMs=previousUntil;getProjectedGold=previousGold;
+          innerCastleEstateView.select(previousSelection,false);document.querySelector('[data-estate-detail-close]').click();
+          innerCastleEstateView.updateResources();
+        }
+      });
+      assert.deepEqual(refreshWrites,{counters:0,snapshots:0,detail:true,focused:true},'Real estate counters, timers and management preserve unchanged DOM and focus');
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-upgrade-directory').length),20);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-enter-directory').length),20);
       assert.equal(await evaluate(()=>__estateTest.overviewLoads||0),0,'Ordinary map refreshes use the lightweight estate path');

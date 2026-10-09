@@ -21,11 +21,13 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 .profile-crowns .cl-icon{filter:drop-shadow(0 1px 0 #24142599)}
 .profile-stack>.combat-timers{margin-left:-7px}
 /* Keep both march alerts clear of the taller currency/timer stack on short phones. */
+/* Scope timer visibility to the header; body:has() invalidates the whole map
+   when unrelated HUD text changes. The menu is a sibling of this header. */
 @media(orientation:landscape) and (max-height:360px){
- body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])){
+ .top-hud:has(> .profile-stack > #combatTimers:not([hidden])) ~ .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])){
   --cl-operation-button-width:92px;display:grid!important;grid-template-columns:repeat(2,92px);
  }
- body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #incomingAttackBtn{grid-column:1;grid-row:1}
- body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #outgoingAttackBtn{grid-column:2;grid-row:1}
- body:has(#combatTimers:not([hidden])) .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #logBtn{grid-column:1;grid-row:2}
+ .top-hud:has(> .profile-stack > #combatTimers:not([hidden])) ~ .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #incomingAttackBtn{grid-column:1;grid-row:1}
+ .top-hud:has(> .profile-stack > #combatTimers:not([hidden])) ~ .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #outgoingAttackBtn{grid-column:2;grid-row:1}
+ .top-hud:has(> .profile-stack > #combatTimers:not([hidden])) ~ .bottom-nav:has(#incomingAttackBtn:not([hidden])):has(#outgoingAttackBtn:not([hidden])) #logBtn{grid-column:1;grid-row:2}
 }
