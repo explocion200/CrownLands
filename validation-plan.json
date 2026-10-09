@@ -9,7 +9,7 @@
         "common-gear-ui.js",
         "tools/validate-estate-economy-browser.js"
       ],
-      "reason": "Implement seven owner-approved estate management improvements: overview and explicit project/reward navigation, district-preserving server-readiness filters and keyboard entry, actionable production blockers, existing unlock previews, confirmed completion feedback without refitting artwork, champion/recruit/expedition/XP cards, and account-device guide dismissal. Browser validation covers desktop and two short landscape views plus existing all-site map/deposit/start/retry/timer/Gear/focus/lifecycle behavior. Shared Gear validation protects existing officer screens; registry validation checks unchanged fixed artwork geometry. No balance, asset or construction-authority changes.",
+      "reason": "Implement seven owner-approved estate management improvements: overview and explicit project/reward navigation, district-preserving server-readiness filters and keyboard entry, actionable production blockers, existing unlock previews, confirmed completion feedback without refitting artwork, champion/recruit/expedition/XP cards, and account-device guide dismissal. Browser validation covers desktop and two short landscape views plus existing all-site map/deposit/start/retry/timer/Gear/focus/lifecycle behavior. Shared Gear validation protects existing officer screens; registry validation checks unchanged fixed artwork geometry. No balance, asset or construction-authority changes. The confirmed Build/Upgrade refinement uses the authoritative completed level in all three action contexts and accessible labels; browser checks cover Gold-only first-build review, running Level 1 and the in-place focused transition on server-confirmed completion.",
       "tests": [
         "tools/validate-estate-economy-browser.js",
         "tools/validate-common-gear.js",
@@ -42,7 +42,7 @@
         "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record the owner-confirmed seven-feature presentation rules, optional authoritative readiness semantics and device preference, retaining approved economy and LIVE release history. Pending release is explicitly separated from current deployment. Documentation assertions are reviewed against rule/unit/browser behavior; no arithmetic rebalance or new source artwork applies.",
+      "reason": "Record the owner-confirmed seven-feature presentation rules, optional authoritative readiness semantics and device preference, retaining approved economy and LIVE release history. Pending release is explicitly separated from current deployment. Documentation assertions are reviewed against rule/unit/browser behavior; no arithmetic rebalance or new source artwork applies. Record the owner-confirmed Build-before-Level-1 wording as superseding the earlier universal Upgrade label.",
       "tests": [
         "tools/test-estate-economy.js",
         "tools/validate-estate-economy-browser.js"

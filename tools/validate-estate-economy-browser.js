@@ -57,7 +57,7 @@ async function main() {
           const text = document.createRange(); text.selectNodeContents(e);
           const r = text.getBoundingClientRect();
           return !e.classList.contains('cl-action-button') && !e.querySelector('.wheel-icon')
-            && e.textContent === (e.dataset.estateUpgrade ? 'Upgrade' : 'Enter')
+            && e.textContent === (e.dataset.estateUpgrade ? innerCastleEconomy.snapshot().estate.levels[e.dataset.estateUpgrade] > 0 ? 'Upgrade' : 'Build' : 'Enter')
             && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) >= 3
             && parseFloat(style.fontSize) >= 12 && b.width >= 44 && b.height >= 44
             && b.left >= panel.left && b.right <= panel.right
@@ -68,13 +68,15 @@ async function main() {
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
+    const firstBuildEstate=structuredClone(estate);firstBuildEstate.levels.mine=0;
+    const firstBuildQuote=E.constructionQuote(firstBuildEstate,'mine',1);
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/inner-city-estate/index.html?estateUi=1&scene=initial&visualMarches=0"});
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
           const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
@@ -126,7 +128,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -486,12 +488,36 @@ async function main() {
       await wait(()=>!!document.querySelector('[data-gear-back]'));
       await click('[data-gear-back]');
       await wait(()=>!!innerCastleEstateView);
-      // Unbuilt plots cannot enter; completion enables Enter, including while
-      // an already-completed building is undergoing another upgrade.
-      await evaluate(()=>{__estateTest.state.levels.mine=0;return innerCastleEconomy.refresh();});
+      // First construction says Build in every control and the existing
+      // Gold-only review; only confirmed completion changes it to Upgrade.
+      await evaluate(()=>{
+        __estateTest.beforeBuild={quote:structuredClone(__estateTest.quotes.mine),jobs:structuredClone(__estateTest.state.jobs)};
+        __estateTest.quotes.mine=structuredClone(__estateTest.firstBuildQuote);
+        __estateTest.state.levels.mine=0;return innerCastleEconomy.refresh();
+      });
       await evaluate(()=>innerCastleEstateView.select('mine'));
       assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"]')].every(e=>e.disabled)));
-      await evaluate(()=>{__estateTest.state.levels.mine=24;return innerCastleEconomy.refresh();});
+      const checkBuildLabel=async name=>assert(await evaluate(expected=>[...document.querySelectorAll('[data-estate-upgrade="mine"]')].length===3
+        &&[...document.querySelectorAll('[data-estate-upgrade="mine"]')].every(e=>(e.querySelector('.wheel-action-name')||e).textContent===expected
+          &&e.title.includes(expected.toLowerCase()+' requirements')&&e.getAttribute('aria-label')===e.title),name),'Construction label and accessible descriptions: '+name);
+      await checkBuildLabel('Build');await normalActions('.estate-detail .estate-site-action');
+      await click('.estate-detail [data-estate-upgrade="mine"]');
+      await wait(()=>document.querySelector('[data-economy-action="fund"]')&&!document.querySelector('[data-economy-action="fund"]').disabled);
+      assert.equal(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent),'Mine · Build');
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').textContent),'Build Level 1');
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('First construction requires Gold only.')&&!document.querySelector('[data-economy-deposit]')));
+      await click('[data-economy-action="close"]');
+      await evaluate(()=>{
+        window.__estateBuildButton=document.querySelector('.estate-detail [data-estate-upgrade="mine"]');__estateBuildButton.focus({preventScroll:true});
+        __estateTest.state.jobs.push({...__estateTest.firstBuildQuote.jobs[0],id:'first_mine_build',status:'running',startedAtMs:Date.now(),completesAtMs:Date.now()+600000});
+        return innerCastleEconomy.refresh();
+      });
+      await checkBuildLabel('Build');
+      assert(await evaluate(()=>innerCastleEstateView.debug().siteStates.mine==='constructing'&&document.activeElement===__estateBuildButton));
+      await evaluate(()=>{__estateTest.state.jobs=structuredClone(__estateTest.beforeBuild.jobs);__estateTest.state.levels.mine=1;return innerCastleEconomy.refresh();});
+      await checkBuildLabel('Upgrade');
+      assert(await evaluate(()=>document.activeElement===__estateBuildButton&&document.querySelector('.estate-detail [data-estate-upgrade="mine"]')===__estateBuildButton),'First completion updates labels without replacing or blurring the control');
+      await evaluate(()=>{__estateTest.state.levels.mine=24;__estateTest.quotes.mine=__estateTest.beforeBuild.quote;return innerCastleEconomy.refresh();});
       assert(await evaluate(()=>[...document.querySelectorAll('[data-estate-enter="mine"],[data-estate-enter="quarry"]')].every(e=>!e.disabled)));
       // Fully credited materials remain ready while the builder is occupied.
       await evaluate(()=>{

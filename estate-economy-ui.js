@@ -9,6 +9,7 @@
   const qualities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"], milestones = [1, 25, 50, 75, 100];
   const tierAt = level => milestones.reduce((tier, milestone, i) => level >= milestone ? i : tier, 0);
   const power = champion => Math.floor(champion.level * (1 + .25 * champion.quality));
+  const constructionAction = level => level > 0 ? "Upgrade" : "Build";
   function constructionTimers(host) {
     const viewport = host.querySelector(".estate-viewport"), layer = document.createElement("div");
     layer.className = "estate-construction-timers";
@@ -90,14 +91,21 @@
           destroy() { timers.destroy(); management?.destroy(); } };
       },
       button(b, action, context, level) {
-        const upgrade = action === "upgrade", name = upgrade ? "Upgrade" : "Enter";
-        const hint = upgrade ? "upgrade requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
+        const upgrade = action === "upgrade", name = upgrade ? constructionAction(level) : "Enter";
+        const hint = upgrade ? name.toLowerCase() + " requirements and deposits" : level > 0 ? "enter building menu" : "construct this building before entering";
         const onMap = context === "target";
         const classes = onMap ? ` cl-action-button cl-action-${upgrade ? "level" : "send"}` : "";
         const content = onMap ? `<span class="wheel-icon" aria-hidden="true">${icon(upgrade ? "arrow-up" : "forward")}</span><span class="wheel-action-name">${name}</span>` : name;
         return `<button type="button" class="estate-site-action estate-${action}-${context}${classes}" data-estate-${action}="${b.key}" aria-label="${escape(b.label)} — ${hint}" title="${escape(b.label)} — ${hint}" ${onMap ? "hidden" : ""} ${!upgrade && !level ? "disabled" : ""}>${content}</button>`;
       },
       sync(host, levels) {
+        host.querySelectorAll("[data-estate-upgrade]").forEach(button => {
+          const key = button.dataset.estateUpgrade, name = constructionAction(levels[key]);
+          const text = button.querySelector(".wheel-action-name") || button;
+          if (text.textContent !== name) text.textContent = name;
+          button.title = label(key) + " — " + name.toLowerCase() + " requirements and deposits";
+          button.setAttribute("aria-label", button.title);
+        });
         host.querySelectorAll("[data-estate-enter]").forEach(button => {
           const key = button.dataset.estateEnter, hint = levels[key] > 0 ? "enter building menu" : "construct this building before entering";
           button.disabled = !(levels[key] > 0);
@@ -228,7 +236,7 @@
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
           const missing=keys.filter(k=>!s.levels[k]);
           return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
-        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Upgrade button, deposit into its next level, then confirm once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button, deposit into its next level, then confirm once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
       }
       return body + "</article>";
     }
@@ -339,7 +347,7 @@
       let body = `<p class="estate-economy-kicker">Permanent estate · Level ${level} / 100</p>
         <p>${escape(root.CrownlandsEstate.buildings.find(b => b.key === key)?.role)}</p>
         <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>` + milestone(key,level);
-      if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Upgrade button to review construction.</p>";
+      if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Build button to review construction.</p>";
       if (producer) {
         body += `<article><h3>${escape(label(Object.keys(s.resources).find(k => s.resources[k] === producer)))} production</h3><p>${escape(producer.status)} · ${number(producer.gross)} / hour · ${number(producer.net)} net / hour</p>
           <p>Stored ${number(producer.available)} / ${number(producer.capacity)}. Production pauses when there is no room or usable input.</p></article>`;
@@ -423,8 +431,8 @@
       }).join("")}</tbody></table></div><p>Deposits belong only to this building’s next level and stay through seasons. They do not start an upgrade automatically.</p>`;
       else body += "<p>First construction requires Gold only.</p>";
       const canDeposit=Object.entries(bill.remaining).some(([k,v])=>v>0&&s.stock[k]>=1);
-      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Construct Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
-        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Your upgrade begins only when you confirm."}</p>`;
+      body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
+        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Construction begins only when you confirm."}</p>`;
       return body;
     }
     function reviewBody() {
@@ -472,7 +480,7 @@
         else if (renderedQuote === quote) reviewDraft = saveForm();
       }
       const draft = quote ? reviewDraft : formDraft;
-      const title = view.type === "status" ? "Estate overview" : label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · Upgrade" : "");
+      const title = view.type === "status" ? "Estate overview" : label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · " + constructionAction(data?.estate.levels[view.key]) : "");
       let body = "<p>Loading your permanent estate…</p>";
       if (data) {
         if (quote) body = reviewBody();
