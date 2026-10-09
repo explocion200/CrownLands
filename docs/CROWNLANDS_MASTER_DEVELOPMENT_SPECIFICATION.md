@@ -66,6 +66,10 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
+### Inner Castle release-readiness follow-up — IN DEVELOPMENT
+
+The October 9 preparation on `codex/estate-release-readiness` carries the existing Guild training/recruitment clarification from unmerged PR #497 onto current main, preserving the now-approved direct material payment and finite manual production. It explains partial/full next-level XP banks, zero new XP in a capped quest review, retained existing XP and the external Guild Upgrade route. Recruitment guidance links the Alehouse and Guild. This is presentation of the existing training rule; costs, rates, accepted timers, caps and persistence are unchanged. [The current progression journeys](estate-economy/PROGRESSION_PLAYTEST.md) and [playtest/channel record](estate-economy/PLAYTEST_RELEASE_RECORD.md) distinguish isolated models, historical signed-in evidence, pending current-policy gameplay/physical-phone/timed claims and the itch.io catch-up package. This preparation is not merge or deployment evidence; the verified web and itch.io identities below remain authoritative.
+
 ### Current verified web release — Manual production and Focused UI
 
 The authorized merge and coordinated backend/web deployment of [PR #506](https://github.com/explocion200/CrownLands/pull/506), from `codex/estate-manual-production`, is verified at build `101d435ef095abcb392631dca1d28f908839337f`. Sawmill, Smithy, Workshop and Windmill require a chosen quantity and explicit **Start production** for each finite batch. The Focused UI puts the recipe, 1-to-Max slider, exact amount, step controls and **Material / Needed / You have** table first; production time and Start stay visible in the footer on small landscape screens. Building benefits, speed and protected-material settings are collapsed under **Production details**. Raw sources explain **Gathering automatically**. Missing-material and storage links select the supplying site and offer Back without spending.

@@ -1,25 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "101d435ef095abcb392631dca1d28f908839337f",
+  "baseCommit": "bbc59af1848abf7ecf0798a8c26531bb46f8b253",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/estate-economy/README.md",
-        "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md"
-      ],
-      "reason": "Record the authorized PR #506 merge and verified backend/web publication with exact identity, passing CI/staged/public/deployed-source evidence and retained realm/rules/itch/manual limits. Release documents only; no runtime, balance or player-data change.",
-      "tests": []
+      "paths": ["estate-economy-ui.js", "tools/validate-estate-economy-browser.js"],
+      "reason": "Clarify existing Guild XP banks and zero-credit quest reviews, with recruitment/source navigation. Browser fixtures derive their zero-credit quote from shipped services; check partial/full/legacy banks, Cancel without spending, guide links and all shared estate dialogs at desktop and two landscape sizes. Refresh, gear return and finite production remain affected shared UI dependencies. No server rule changes; existing economy/manual-production tests verify the quoted rule and retained current flows.",
+      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-refresh-browser.js", "tools/test-estate-economy.js", "tools/test-estate-manual-production.js", "tools/validate-inner-castle.js"]
     },
     {
-      "paths": [
-        "tools/validate-estate-reward-review.js",
-        "docs/estate-economy/REWARD_REVIEW.md"
-      ],
-      "reason": "Update only the reproducible report publication-status sentence to point to verified FM-2 evidence, preserving every simulated rule/value. Run the generator validator to prove the report remains reproducible; no runtime or emulator tests apply to this documentation status change.",
-      "tests": [
-        "tools/validate-estate-reward-review.js"
-      ]
+      "paths": ["tools/validate-estate-progression-playtest.js", "docs/estate-economy/PROGRESSION_PLAYTEST.md"],
+      "reason": "Earned fresh-account day/week journeys cover actual direct payment, explicit finite batches, Gold affordability, Hall/builders/storage gates, recruitment, quests, Guild XP and accepted commission deadlines. Validate generated results and the related long-term manual-production model. These isolated tests do not change server rules or establish production account/device/reset outcomes; no new emulator suite applies.",
+      "tests": ["tools/validate-estate-progression-playtest.js", "tools/validate-estate-reward-review.js"]
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/estate-economy/README.md", "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md", "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"],
+      "reason": "Record preparation without claiming unpublished changes are live; correct current mechanics to direct construction payment/manual batches; preserve clearly historical signed-in/itch evidence and identify real-time/device/publication gates. Documentation only; runtime behavior is covered above and no backend/rules/emulator changes apply.",
+      "tests": []
     }
   ]
 }
