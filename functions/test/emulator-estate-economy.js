@@ -59,6 +59,13 @@ async function main() {
   assert.equal(loaded.upgradeOverview["foresters-lodge"].ready,true);
   assert.equal(loaded.upgradeOverview.treasury.status,"blocked","Completed Hall level gates readiness");
   assert.equal(loaded.upgradeOverview["foresters-lodge"].bill.gold,75);
+  assert.deepEqual(loaded.estate.buildingPrerequisites.treasury,[{building:"great-hall",requiredLevel:2,currentLevel:1}]);
+  assert.deepEqual(loaded.estate.buildingPrerequisites.workshop,[
+    {building:"sawmill",requiredLevel:1,currentLevel:0},
+    {building:"smithy",requiredLevel:1,currentLevel:0},
+  ]);
+  assert.deepEqual(loaded.estate.buildingPrerequisites.sawmill,[{building:"foresters-lodge",requiredLevel:1,currentLevel:0}]);
+  await assert.rejects(quote({action:"fund",building:"workshop",count:1}),/Construct sawmill first/);
   assert.equal((await db.collection(`players/${owner.uid}/estateQuotes`).get()).size,0,"Overview creates no spend quotes");
   assert.equal((await call("getEstateState",owner)).upgradeOverview,undefined,"Ordinary clock refreshes do not prepare realm readiness");
   assert.equal((await rest(owner, `players/${owner.uid}/estate/state`)).status, 200);
@@ -89,6 +96,8 @@ async function main() {
   }
   await stateRef.set(saved); loaded = await load();
   assert.equal(loaded.estate.jobs.length, 0); assert.equal(loaded.estate.levels["foresters-lodge"], 1);
+  assert.deepEqual(loaded.estate.buildingPrerequisites.sawmill,[],"Completed source removes its prerequisite link");
+  assert.deepEqual(loaded.estate.buildingPrerequisites.smithy,[{building:"mine",requiredLevel:1,currentLevel:0}]);
   assert(loaded.estate.stock.timber > 0); const completedLevel = loaded.estate.levels["foresters-lodge"];
   await load(); assert.equal((await stateRef.get()).data().levels["foresters-lodge"], completedLevel);
   const freeQuotes=await Promise.all([quote({action:"fund",building:"mine",count:1}),quote({action:"fund",building:"quarry",count:1})]);
