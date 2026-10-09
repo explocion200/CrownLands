@@ -35,6 +35,14 @@ async function main() {
       await client.send("Input.dispatchMouseEvent",{type:"mousePressed",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
       await client.send("Input.dispatchMouseEvent",{type:"mouseReleased",x:b.x+b.width/2,y:b.y+b.height/2,button:"left",clickCount:1});
     };
+    const closeSheet = async () => {
+      await evaluate(() => {
+        __estateTest.sheetClosed = new Promise(resolve =>
+          document.querySelector('.estate-economy-dialog').addEventListener('close',()=>resolve(true),{once:true}));
+      });
+      await click('[data-economy-action="close"]');
+      assert.equal(await evaluate(()=>__estateTest.sheetClosed),true);
+    };
     const compactActions = async selector => {
       assert(await evaluate(s => {
         const buttons = [...document.querySelectorAll(s)];
@@ -90,6 +98,7 @@ async function main() {
         window.__estateTestApi={
           getEstateState:async includeOverview=>{__estateTest.loads++;__estateTest.overviewLoads=(__estateTest.overviewLoads||0)+(includeOverview?1:0);const value=result();if(!includeOverview)delete value.upgradeOverview;return value;},
           getEstateQuote:async input=>{
+            (__estateTest.quoteRequests ||= []).push(input);
             const s=__estateTest.state;
             let value;
             if(input.action==="deposit")value={...input,target:s.levels[input.building]+1,nonrefundable:true};
@@ -107,7 +116,13 @@ async function main() {
           commitEstateAction:async request=>{
             const q=issued.get(request.quoteId).value;
             __estateTest.commits.push({...request,action:q.action});
+            if(q.nonrefundable && request.acceptPermanentCredit!==true)throw Error('Permanent credit acceptance is required.');
             if(receipts.has(request.requestId))return{ok:true,replayed:true,receipt:receipts.get(request.requestId)};
+            if(q.action==='fund'&&__estateTest.holdFund){
+              __estateTest.holdFund=false;
+              await new Promise(resolve=>{__estateTest.releaseFund=resolve;});
+            }
+            if(q.action==='fund'&&__estateTest.rejectFund){const message=__estateTest.rejectFund;__estateTest.rejectFund='';throw Error(message);}
             const s=__estateTest.state;
             if(q.action==="deposit"){
               const credit=s.deposits[q.building]||={target:q.target,deposited:{}};
@@ -223,15 +238,20 @@ async function main() {
       await evaluate(()=>document.querySelector('.estate-upgrade-requirements').scrollIntoView({block:"center"}));
       const requirements=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"upgrade-"+width+".png"),Buffer.from(requirements.data,"base64"));
+      const quoteCount=await evaluate(()=>{__estateTest.holdFund=true;return __estateTest.quoteRequests.length;});
       await click('[data-economy-action="fund"]');
-      await wait(()=>!!document.querySelector("[data-economy-permanent]"));
-      await click("[data-economy-permanent]");
-      await click('[data-economy-action="confirm"]');
+      await wait(()=>__estateTest.commits.some(c=>c.action==='fund'));
+      assert(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').disabled&&!document.querySelector('[data-economy-permanent],[data-economy-action="confirm"]')),'Upgrade starts directly without a payment checkbox or confirmation screen');
+      await click('[data-economy-action="fund"]');
+      assert.equal(await evaluate(()=>__estateTest.commits.filter(c=>c.action==='fund').length),1,'Double clicks cannot submit another upgrade');
+      await evaluate(()=>__estateTest.releaseFund());
       await wait(()=>document.querySelector('[role="alert"]')?.textContent.includes("Connection interrupted"));
-      assert(await evaluate(()=>document.querySelector('[data-economy-permanent]').checked),'A failed request retains the accepted credit terms for the same retry');
-      await click('[data-economy-action="confirm"]');
+      assert.equal(await evaluate(()=>__estateTest.quoteRequests.length),quoteCount,'Start submits the exact requirements quote already displayed');
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').textContent),'Retry same upgrade');
+      await click('[data-economy-action="fund"]');
       await wait(()=>innerCastleEconomy.snapshot().estate.jobs.length===1);
       const ids=await evaluate(()=>__estateTest.commits.filter(x=>x.action==="fund").map(x=>x.requestId));assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
+      assert(await evaluate(()=>{const requests=__estateTest.commits.filter(x=>x.action==='fund');return requests.every(r=>r.acceptPermanentCredit===true)&&requests[0].quoteId===requests[1].quoteId;}),'Lost-acknowledgment retry retains its quote and permanent-credit acceptance');
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0,"Running work cannot queue another level");
       await click('[data-economy-action="close"]');
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),camera);
@@ -427,14 +447,15 @@ async function main() {
       await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:arrow.x+arrow.width/2,y:arrow.y+arrow.height/2,id:1}]});
       await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
       await wait(()=>document.querySelector(".estate-economy-dialog")?.open);
-      await click('[data-economy-action="close"]');
+      await closeSheet();
       const beforeEnter=await evaluate(()=>innerCastleEstateView.snapshot());
       await evaluate(()=>document.querySelector('.estate-enter-target[data-estate-enter="mine"]').focus());
+      assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),'mine');
       await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",code:"Enter",text:"\r",unmodifiedText:"\r",windowsVirtualKeyCode:13});
       await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",code:"Enter",windowsVirtualKeyCode:13});
       await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Mine');
       assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="fund"],[data-economy-deposit]').length),0);
-      await click('[data-economy-action="close"]');
+      await closeSheet();
       assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),beforeEnter);
       assert.equal(await evaluate(()=>document.activeElement?.dataset.estateEnter),'mine');
       // Every map site has a directory action, even when its small-screen map arrow is crowded.
@@ -506,10 +527,21 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelector('#estateEconomyTitle').textContent),'Mine · Build');
       assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').textContent),'Build Level 1');
       assert(await evaluate(()=>document.querySelector('.estate-economy-content').textContent.includes('First construction requires Gold only.')&&!document.querySelector('[data-economy-deposit]')));
-      await click('[data-economy-action="close"]');
+      await evaluate(()=>{__estateTest.rejectFund='This quote expired. Review a fresh quote.';});
+      await click('[data-economy-action="fund"]');
+      await wait(()=>document.querySelector('[role="alert"]')?.textContent.includes('quote expired'));
+      assert(await evaluate(()=>!__estateTest.state.jobs.some(j=>j.building==='mine')),'An expired quote cannot start construction');
+      await click('[data-economy-action="refresh"]');
+      await wait(()=>document.querySelector('[data-economy-action="fund"]')?.disabled===false);
+      assert(await evaluate(()=>!__estateTest.state.jobs.some(j=>j.building==='mine')),'Refreshing rejected requirements never starts work automatically');
+      const firstBuildCommits=await evaluate(()=>__estateTest.commits.length);
+      await click('[data-economy-action="fund"]');
+      await wait(()=>__estateTest.state.jobs.some(j=>j.building==='mine'));
+      assert.equal(await evaluate(()=>__estateTest.commits.length),firstBuildCommits+1,'Gold-only first construction starts with one click');
+      assert(await evaluate(()=>!document.querySelector('[data-economy-permanent],[data-economy-action="confirm"]')));
+      await closeSheet();
       await evaluate(()=>{
         window.__estateBuildButton=document.querySelector('.estate-detail [data-estate-upgrade="mine"]');__estateBuildButton.focus({preventScroll:true});
-        __estateTest.state.jobs.push({...__estateTest.firstBuildQuote.jobs[0],id:'first_mine_build',status:'running',startedAtMs:Date.now(),completesAtMs:Date.now()+600000});
         return innerCastleEconomy.refresh();
       });
       await checkBuildLabel('Build');

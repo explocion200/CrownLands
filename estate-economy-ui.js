@@ -140,7 +140,7 @@
     dialog.setAttribute("aria-labelledby", "estateEconomyTitle");
     document.body.append(dialog);
     let data = null, view = null, quote = null, pending = null, busy = false, destroyed = false, deadlineTimer = 0, counterTimer = 0;
-    let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null;
+    let bench = [], cursor = "", error = "", opener = null, refreshPending = false, upgradeBill = null, upgradeQuote = null;
     let renderedView = null, renderedQuote = null, formDraft = null, reviewDraft = null;
     let directoryFilter = "all", guideHidden = false, completions = [], feedback = null, management = null, overviewRequested = false;
     const guideKey = "crownlands-estate-guide-v1:" + (options.preferenceScope?.() || scope);
@@ -221,7 +221,7 @@
       const s = data.estate, working = s.jobs.filter(j=>j.status==="running").length;
       const claims = Object.entries(s.commissions).filter(([,c])=>c.completesAtMs<=now());
       let body = `<div class="estate-status-totals"><p><b>${Math.max(0,s.slots-working)} / ${s.slots}</b> builders free</p><p><b>${s.jobs.length}</b> construction projects</p><p><b>${claims.length+s.parcels.length}</b> rewards to review</p></div><p>Use Buildings to filter projects. Readiness uses the latest server quote summary; every start is reviewed and checked again.</p>`;
-      body += `<article><h3>Construction</h3>${s.jobs.map(j=>`<p>${escape(label(j.building))} → Level ${j.target} · ${j.status==="running" ? j.completesAtMs>now()?duration(j.completesAtMs-now())+" remaining":"Finishing…" : "Paid work · "+escape(j.status)} ${button("upgradeSite","View project",`data-id="${j.building}"`)}</p>`).join("") || "<p>No construction running. Deposits start work only after you confirm an upgrade.</p>"}</article>`;
+      body += `<article><h3>Construction</h3>${s.jobs.map(j=>`<p>${escape(label(j.building))} → Level ${j.target} · ${j.status==="running" ? j.completesAtMs>now()?duration(j.completesAtMs-now())+" remaining":"Finishing…" : "Paid work · "+escape(j.status)} ${button("upgradeSite","View project",`data-id="${j.building}"`)}</p>`).join("") || "<p>No construction running. Select Build or Upgrade in a building’s requirements to start work.</p>"}</article>`;
       body += `<article><h3>Ready to collect</h3>${claims.map(([key,c])=>`<p>${escape(label(key))} · ${escape(c.name)} ${button("source","View commission",`data-id="${key}"`)}</p>`).join("")}${s.parcels.length ? `<p>${s.parcels.length} quest reward parcels · ${button("source","Visit Guild Master",'data-id="guild-master"')}</p>` : ""}${!claims.length&&!s.parcels.length ? "<p>No completed rewards waiting.</p>" : ""}<p>Claiming remains a separate review. Rewards that do not fit stay available.</p></article>`;
       if (completions.length) body += `<article><h3>Recently completed this visit</h3>${completions.map(n=>`<p>${escape(n)}</p>`).join("")}</article>`;
       body += `<article><h3>Getting started ${button("guide",guideHidden?"Show guide":"Dismiss guide")}</h3>`;
@@ -236,7 +236,7 @@
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
           const missing=keys.filter(k=>!s.levels[k]);
           return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
-        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button, deposit into its next level, then confirm once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Deposit, then explicitly start</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button, deposit into its next level, then select Build or Upgrade once materials, Gold and a builder are ready. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
       }
       return body + "</article>";
     }
@@ -307,12 +307,12 @@
     }
     async function loadUpgrade() {
       if (!current() || !dialog.open || view?.type !== "upgrade" || !data || quote) return;
-      upgradeBill = null;
+      upgradeBill = null; upgradeQuote = null;
       const requestedView = view, key = view.key, s = data.estate;
       if (s.constructionPolicy !== "deposit-then-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key)) return;
       const result = await api.getEstateQuote({action:"fund",building:key,count:1});
       if (!current() || !dialog.open || view !== requestedView) return;
-      accept(result); upgradeBill = result.quote.value.jobs[0];
+      accept(result); upgradeBill = result.quote.value.jobs[0]; upgradeQuote = result.quote;
     }
     async function run(action) {
       if (!current() || busy) return;
@@ -333,9 +333,20 @@
         if (dialog.open && view === reviewedView) { quote = result.quote; pending = null; reviewDraft = null; }
       });
     }
+    async function commitQuote() {
+      const confirmedView = view, request = pending;
+      await run(async () => {
+        const result = await api.commitEstateAction(request);
+        if (!current()) return;
+        accept(result);
+        if (result.replayed) accept(await api.getEstateState());
+        refreshPending = true;
+        if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
+      });
+    }
     function open(next) {
       if (!current()) return;
-      view = next; quote = null; pending = null; upgradeBill = null; error = "";
+      view = next; quote = null; pending = null; upgradeBill = null; upgradeQuote = null; error = "";
       formDraft = null; reviewDraft = null;
       if (!dialog.open) { opener = document.activeElement; dialog.showModal(); }
       render(); refresh();
@@ -363,7 +374,7 @@
         body += `<article><h3>Storage</h3><p>Each material has its own capacity. Deposits are separate; existing stock is never discarded.</p><div class="estate-storage-list">${Object.entries(s.resources).filter(([k]) => ["grain", "food"].includes(k) === food).map(([k, r]) =>
           button("ledger", `${escape(label(k))}<br>${number(r.available)} / ${number(r.capacity)}`, `data-id="${k}"`)).join("")}</div></article>`;
       }
-      if (key === "great-hall") body += "<p>Only completed Hall levels unlock other building upgrades. Materials may be deposited into the next eligible project; work begins after your explicit confirmation.</p>";
+      if (key === "great-hall") body += "<p>Only completed Hall levels unlock other building upgrades. Materials may be deposited into the next eligible project; select Build or Upgrade in its requirements to start work.</p>";
       if (key === "builders-yard") body += `<p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. A new builder arrives at Level 10 and another at Level 50. Time reductions apply to new contracts; paid work keeps its accepted timer.</p>`;
       if (root.COMMON_GEAR?.BUILDINGS?.[key] || ["treasury", "barracks", "gatehouse", "royal-stables"].includes(key)) {
         body += `<article><h3>Officer commissions</h3><p>Choose one item family. Its rarity follows this building’s completed level; existing Gear remains yours. Common / Uncommon / Rare / Epic / Legendary unlock at Levels 1 / 25 / 50 / 75 / 100. Each order returns one Level 1 item; review its materials and timer before spending.</p>`;
@@ -415,6 +426,10 @@
       let body = `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
         <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
         <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>` + milestone(key,level);
+      if (pending && quote?.value.action === "fund") {
+        const bill = quote.value.jobs[0];
+        return body + `<h3>Waiting for Level ${bill.target} start result</h3><p>${duration(bill.durationMs)} · ${number(quote.value.gold)} Gold</p><p>Retry checks this same upgrade request without paying twice.</p>${button("fund", "Retry same upgrade")}`;
+      }
       if (jobs.length) return body + jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0,j.completesAtMs-now()))+" remaining" : "Previously paid work · "+escape(j.status)}
         ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before depositing toward its next level.</p>";
       if (level >= 100) return body + "<p>Maximum building level reached.</p>";
@@ -432,7 +447,7 @@
       else body += "<p>First construction requires Gold only.</p>";
       const canDeposit=Object.entries(bill.remaining).some(([k,v])=>v>0&&s.stock[k]>=1);
       body += `<div class="estate-economy-actions">${remaining ? button("deposit","Review deposit",canDeposit?"":"disabled") : ""}${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",remaining||builderBusy||!affordable?"disabled":"")}</div>
-        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Construction begins only when you confirm."}</p>`;
+        <p data-economy-upgrade-status>${remaining?"Deposit all required materials to unlock Upgrade.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Select Build or Upgrade to pay the shown Gold and begin construction."} Started work cannot be cancelled.</p>`;
       return body;
     }
     function reviewBody() {
@@ -483,7 +498,7 @@
       const title = view.type === "status" ? "Estate overview" : label(view.key) + (view.type === "resource" ? " ledger" : view.type === "upgrade" ? " · " + constructionAction(data?.estate.levels[view.key]) : "");
       let body = "<p>Loading your permanent estate…</p>";
       if (data) {
-        if (quote) body = reviewBody();
+        if (quote && quote.value.action !== "fund") body = reviewBody();
         else if (view.type === "status") body = statusBody();
         else if (view.type === "upgrade") body = upgradeBody(view.key);
         else if (view.type === "resource") {
@@ -528,19 +543,19 @@
         try { if(guideHidden)localStorage.setItem(guideKey,"dismissed");else localStorage.removeItem(guideKey); } catch (_) { /* Optional device preference. */ }
         render();return;
       }
+      if (action === "fund") {
+        if (!pending) {
+          if (!upgradeQuote || !upgradeBill) return;
+          quote = upgradeQuote;
+          pending = { requestId: crypto.randomUUID(), quoteId: quote.id, acceptPermanentCredit: true };
+        }
+        await commitQuote(); return;
+      }
       if (action === "confirm") {
         const accepted = !!dialog.querySelector("[data-economy-permanent]")?.checked;
         if (quote.value.nonrefundable && !accepted) { error = "Confirm the permanent credit terms before continuing."; render(); return; }
         pending ||= { requestId: crypto.randomUUID(), quoteId: quote.id, acceptPermanentCredit: accepted };
-        const confirmedView = view;
-        await run(async () => {
-          const result = await api.commitEstateAction(pending);
-          if (!current()) return;
-          accept(result);
-          if (result.replayed) accept(await api.getEstateState());
-          refreshPending=true;
-          if (view === confirmedView) { quote = null; pending = null; formDraft = null; reviewDraft = null; renderedView = null; await loadUpgrade(); }
-        }); return;
+        await commitQuote(); return;
       }
       if (action === "benchList" || action === "moreBench") {
         await run(async () => {
@@ -549,7 +564,6 @@
         }); return;
       }
       const inputs = {
-        fund:()=>({action,building:key,count:1}),
         deposit:()=>({action,building:key,amounts:Object.fromEntries([...dialog.querySelectorAll("[data-economy-deposit]")].filter(x=>Number(x.value)>0).map(x=>[x.dataset.economyDeposit,Number(x.value)]))}),
         processor:()=>({action,building:key,enabled:data.estate.processors[key]===false}),
         reserves:()=>({action:"processor",building:key,enabled:data.estate.processors[key]!==false,reserves:Object.fromEntries([...dialog.querySelectorAll("[data-economy-reserve]")].map(x=>[x.dataset.economyReserve,Number(x.value)]))}),
