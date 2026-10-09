@@ -1,62 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0a519b6644e22cc420bb612de44b788180152c57",
+  "baseCommit": "f7c063eb33c43c583debd334bbc036832955a5cc",
   "coverage": [
-    {
-      "paths": [
-        "estate-economy-ui.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "reason": "External construction panels replace deposit inputs/review with the exact next-level material bill, duration, benefit and Build/Upgrade plus Cancel. Native desktop and two landscape sizes cover affordability, old-server policy gating, preserved old credit, Cancel with no spending, quoted direct starts, duplicate clicks, interrupted receipt retry, directory readiness, timers, services and Gear/camera returns.",
-      "tests": [
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/estate-economy.js",
-        "functions/estate-service.js",
-        "functions/test/emulator-estate-economy.js",
-        "tools/test-estate-economy.js"
-      ],
-      "reason": "Start now atomically debits loose materials alongside shared realm Gold, applying saved versioned credit once; new/unaccepted deposits fail while accepted receipt replay survives resets. Unit rules cover all bills fitting achievable storage, affordability/readiness, no queue and preserved contracts. Selected emulator tests cover real wallet/material transactions, no partial payment on rejection, idempotency, builder races, season persistence, Gear gates and active-realm release admission dependencies.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "functions/test/emulator-estate-economy.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-coordinated-release.js",
-        "tools/validate-coordinated-release.js"
-      ]
-    },
-    {
-      "paths": [
-        "tools/validate-estate-economy-draft.js",
-        "tools/validate-estate-reward-review.js",
-        "docs/estate-economy/BALANCE_REVIEW.md",
-        "docs/estate-economy/REWARD_REVIEW.md"
-      ],
-      "reason": "Progression reports must model deliberate starts with shared stocks rather than new installment deposits. Focused arithmetic retains exact existing 1/3/6/10 resource budgets and timers, accounts for previously approved storage bonuses and achievable supporting levels, and keeps historical credit fixtures. Runtime cohorts earn all supply/storage infrastructure and reach every level without deposit spending; independent readiness validation preserves costs/reward/XP rules.",
-      "tests": [
-        "tools/validate-estate-economy-draft.js",
-        "tools/validate-estate-reward-review.js",
-        "tools/validate-estate-readiness-proposal.js"
-      ]
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/estate-economy/README.md",
         "docs/estate-economy/READINESS_PLAN.md"
       ],
-      "reason": "Record the owner-confirmed removal of new deposits, external requirement/start/Cancel flow, atomic material/Gold payment and preservation of previously accepted credit/receipts and paid work. Mark this implementation not deployed and retain historical release evidence; supporting focused runtime, browser and progression checks validate the documented mechanics.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-estate-economy-draft.js",
-        "tools/validate-estate-reward-review.js"
-      ]
+      "reason": "Record the authorized PR #502 merge and independently verified coordinated six-Function/web publication, deployed source and exact artifact/manifest evidence, three-size estate interactions/startup, retained realm/rules, unchanged itch.io channel and manual limits. Documentation only; no runtime, balance, player rule or deployment configuration changes require new gameplay tests or emulator suites.",
+      "tests": []
     }
   ]
 }
