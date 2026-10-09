@@ -1,26 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c1f124a94fe7d4f78af6886bdad69856708d3b04",
+  "baseCommit": "f49871ade7b09702541782b011efff820a5cc342",
   "coverage": [
-    {
-      "paths": [
-        "estate-economy-ui.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "reason": "Start one quoted estate build/upgrade directly from its existing requirements instead of a second confirmation/checkbox. Preserve the shown quote, server permanent-credit acceptance, once-only retry, busy/double-click guards, deposit review, no queues and rejection without auto-start. Cover Gold-only first builds, deposited upgrades, expired quotes, interrupted response replay and shared modal/map/service lifecycle at desktop and two landscape-mobile sizes. Wait for native dialog close before assigning keyboard focus to remove the known asynchronous opener restoration race.",
-      "tests": [
-        "tools/validate-estate-economy-browser.js",
-        "tools/test-estate-economy.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-inner-city-estate.js"
-      ]
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record the owner-confirmed direct-start presentation rule and unchanged permanent deposit, server payment/retry and no-queue rules. Mark the new behavior pending merge/deployment; no economy values, backend or release-status claims change.",
+      "reason": "Record only owner-authorized PR #498 merge and verified client-only web publication. Cross-check exact build/deploy/source identities, 55 staged/165 public comparisons, three-size isolated interaction checks, public startup, retained 144 backend sources/revisions and read-only realm/rules evidence. Mark direct-start presentation LIVE — WEB; record independently verified older itch build, prepared six-check ZIP and disconnected publishing browser. Preserve historical releases and pending signed-in/device/PR #497 work. No runtime, balance, asset, dependency or production configuration changes, so additional runtime/emulator validation is not applicable.",
       "tests": []
     }
   ]

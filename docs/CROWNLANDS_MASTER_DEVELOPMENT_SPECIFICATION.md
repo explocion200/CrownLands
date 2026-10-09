@@ -66,7 +66,20 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Inner Castle management and Build labels
+### Current verified web release — Direct building starts
+
+The authorized merge and web deployment of [PR #498](https://github.com/explocion200/CrownLands/pull/498), from `codex/estate-upgrade-payment-confirmation`, is verified at build `f49871ade7b09702541782b011efff820a5cc342`. The external requirements panel displays the next target, material credit, Gold, duration and benefits. Selecting **Build Level 1** or **Upgrade to Level N** starts that exact quoted level directly, without a second payment review or checkbox. Material deposits retain their separate permanent-credit review. Duplicate-click guards, original-request replay, authoritative quote rejection and the no-queue rule remain in force. Costs, timers, benefits, persistence, artwork and fixed captions are unchanged.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac85e4543f7880008c31cf9`, published `2026-10-09T03:29:52.391Z` (October 8, 11:29 p.m. Eastern). All 55 staged-file and 165 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`. The manual publication hold remains enabled. The local artifact used Netlify's full commit stamp for exact comparison.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37878173214`](https://github.com/explocion200/CrownLands/actions/runs/37878173214). Four focused validators, Node 22 syntax/lint, runtime synchronization, production artifact and asset budgets passed. Exact staged interaction checks passed at 1440×900, 844×390 and 568×320: direct deposited upgrades and Gold-only first construction, duplicate clicks, expired quote rejection with no automatic retry/start, original-request recovery after a lost response, unchanged deposit consent, all twenty sites, camera/touch/keyboard, timers, Gear returns, services and cleanup. Public anonymous desktop/mobile startup passed without uncaught runtime errors. No server change required new emulator suites.
+- **Backend retained:** all 144 Node.js 22 Functions remain ACTIVE with their exact prepublication source references, hashes and revisions. Four estate callable authentication guards passed. Release ID remains `crownlands-2026-10-08-estate-economy-v1`, contract `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`, server fingerprint `0f18ff66712056e19ad0f4d4ac74459a6519321fbddf33918013d7cbc0ee564c`. The new client fingerprint is `6ad6d40ac46b1c92ba4b1568baba33a63ea1362d160152e5565c7b48915e4acf`.
+- **Realm and rules:** read-only verification retained ready `realm-2026-10 / main-realm-2026-10 / shard_0001` and published Firestore rules SHA-256 `5aeab4b633883e5cb18a913b3f2dea74eafb3a8e8c977c5db95848298864a945`. Functions, rules, indexes, realm configuration and player records were not deployed or edited; no production gameplay orders or data migration were submitted.
+- **itch.io:** its public manifest still identifies upload `19646406` and the preceding verified build `27965d48b00b1067c3e622e222753f5338c8c0a6`. The matching new `crownlands-html5-f49871ade7b0.zip` is prepared with 1,000 files, all active/prepared Core payloads and estate artwork, and all six local cold/reload checks passed. It is **not published**: the Chrome publishing connection is unavailable. ZIP SHA-256 is `4bc2fe68d4bc19871d47d35546c58e4e20e6923a3b19bb59359984ba8a3968b6`. This direct-start change is `LIVE — WEB`, not all channels.
+- **Limits:** staged gameplay used isolated synthetic fixtures; public startup and guard probes were anonymous. Signed-in production starts and physical-phone/system-back checks remain manual. PR #497's Guild XP/pacing follow-up remains separately unmerged and is not included in this release.
+
+Sanitized evidence is retained under `release-artifacts/estate-upgrade-payment-confirmation/deployment/` and the sibling `itch/` directory. Before publication, local `main` and `origin/main` were clean and equal to the merged build with divergence `0 0`.
+
+### Previous verified web release — Inner Castle management and Build labels
 
 The authorized merge and coordinated backend/web deployment of [PR #495](https://github.com/explocion200/CrownLands/pull/495), from `codex/estate-management-polish`, is verified at build `27965d48b00b1067c3e622e222753f5338c8c0a6`. The Estate overview shows builders, projects and rewards with explicit service navigation and a reopenable starter guide. District-preserving directory filters use authoritative upgrade readiness; production help links to sources, storage and reserves. Existing unlock previews, confirmed completion notices and champion/recruit/expedition cards improve management. First construction reads **Build** on the map, in details, in the directory and in accessible descriptions; it changes to **Upgrade** after the server confirms Level 1. Approved costs, timers, rewards, persistence, artwork, fixed captions and explicit deposit/start/claim flows are retained.
 
@@ -439,8 +452,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
+Current direct-start publication and the preceding itch.io build are verified separately in FM-2. Historical follow-up rows retain their original release evidence.
+
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Direct estate Build/Upgrade starts from displayed requirements without a second payment confirmation | Verified web build `f49871a...` from PR #498; backend unchanged | Still preceding upload `19646406` / build `27965d4...`; new ZIP prepared but unpublished | `LIVE — WEB`; 55 staged and 165 public-file comparisons, direct-start/deposit/retry checks at three sizes and public startup passed; all 144 Functions, realm and rules retained |
 | Inner Castle management overview, readiness filters, production guidance, unlock previews, completion notices, champion cards, starter guide and Build/Upgrade wording | Verified web and targeted backend build `27965d4...` from PR #495 | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, three emulator suites, exact staged desktop/mobile interactions and public startup passed; two deployed callables verified, other 142 functions and realm/rules retained |
 | Inner Castle building service clarity, availability and refresh/deadline preservation | Verified web build `50a795d...` from PR #493 | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime service/deposit/Gear checks and desktop/mobile startup passed; approved economy/backend/realm/rules retained |
 | Compact selected-building map hexes and normal estate UI buttons | Verified web build `db317e0...` from PR #491; 48px map actions and normal details/directory buttons | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime all-site/style/navigation checks and desktop/mobile startup passed; backend/realm/rules retained |
@@ -1766,7 +1782,7 @@ Runtime, combined-account simulation and selected emulator validation passed bef
 
 ### Direct building start — confirmed October 8, 2026
 
-**Status: `IN DEVELOPMENT`**, on `codex/estate-upgrade-payment-confirmation`; merge and publication remain separate. The owner requested removal of the payment confirmation when leveling an estate building. This supersedes the extra confirmation screen and permanent-credit checkbox for starting first construction or a later upgrade. The external requirements panel already shows the target, required/deposited/remaining materials, Gold, duration and benefits. Selecting its enabled **Build Level 1** or **Upgrade to Level N** starts that one quoted level directly and accepts its permanent contract terms; retain the visible notice that started work cannot be cancelled.
+**Status: `LIVE — WEB`**, verified at build `f49871ade7b09702541782b011efff820a5cc342` from PR #498; see FM-2 for publication evidence and channel/manual-review limits. The owner requested removal of the payment confirmation when leveling an estate building. This supersedes the extra confirmation screen and permanent-credit checkbox for starting first construction or a later upgrade. The external requirements panel already shows the target, required/deposited/remaining materials, Gold, duration and benefits. Selecting its enabled **Build Level 1** or **Upgrade to Level N** starts that one quoted level directly and accepts its permanent contract terms; retain the visible notice that started work cannot be cancelled.
 
 - Submit the exact server quote displayed in the requirements panel. Keep authoritative affordability, full material credit, prerequisites, free-builder and single-level checks. An expired or changed quote is rejected without starting work; refreshing shows current requirements and still requires a deliberate start click.
 - Disable repeated starts while the request is pending. Recover an interrupted response by retrying the same request ID and quote, retaining the original permanent-credit acceptance and once-only Gold/material-credit consumption. Do not auto-start work on refresh, resource gathering or builder completion.
@@ -2395,6 +2411,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 8, 2026 — Direct building start release verification
+
+- Recorded authorized PR #498 merge and verified web publication at `f49871a...`, Netlify deploy `6ac85e4543f7880008c31cf9`, published October 8 at 11:29 p.m. Eastern (`2026-10-09T03:29:52.391Z`).
+- Required CI, four focused validators, 55 staged and 165 public-file comparisons, exact-runtime direct build/upgrade/deposit/retry checks and public startup passed. Retained all 144 Function sources/revisions, the publication hold, ready October realm and matching Firestore rules.
+- Marked the direct-start refinement `LIVE — WEB`. Prepared and locally verified the matching itch.io ZIP, while recording its unavailable Chrome publishing connection and unchanged public build. Signed-in production starts and physical-device checks remain distinct from isolated browser QA; no economy or artwork values changed.
 
 ## October 8, 2026 UTC — Building service polish release verification
 
