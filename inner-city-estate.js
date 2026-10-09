@@ -218,8 +218,10 @@
       resources.forEach(r=>{
         const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
         const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
-        element.querySelector("dd").textContent=formatResource(value);
-        element.setAttribute("aria-label",label);element.title=label;
+        const text=formatResource(value),valueElement=element.querySelector("dd");
+        if(valueElement.textContent!==text)valueElement.textContent=text;
+        if(element.getAttribute("aria-label")!==label)element.setAttribute("aria-label",label);
+        if(element.title!==label)element.title=label;
       });
     }
     updateResources();
@@ -392,8 +394,11 @@
     function updateEstate(snapshot) {
       if(destroyed||!snapshot)return;
       options.estate=snapshot;
+      let presentationChanged=false,selectedChanged=false;
       for(const b of buildings){
         const level=snapshot.levels[b.key],state=snapshot.jobs.some(j=>j.building===b.key&&j.status==="running")?"constructing":level?"completed":"unbuilt";
+        if(siteStates[b.key]===state&&siteLevels[b.key]===level)continue;
+        presentationChanged=true;if(b.key===selected)selectedChanged=true;
         if(siteStates[b.key]!==state)host.querySelector('[data-estate-site="'+b.key+'"]').outerHTML=siteMarkup(b,state);
         siteStates[b.key]=state;siteLevels[b.key]=level;
         const caption=levelText(state,level),target=host.querySelector('[data-inner-castle-building="'+b.key+'"]');
@@ -401,7 +406,12 @@
         host.querySelector('[data-estate-nameplate="'+b.key+'"] small').textContent=caption;
         host.querySelector('[data-estate-directory-building="'+b.key+'"] small').textContent=caption;
       }
-      options.actions?.sync(host,siteLevels);renderDetail();updateResources();paint();
+      // Resource and receipt timestamps can change without moving any building.
+      // Keep the live timers current, but retain unchanged controls and layout.
+      if(presentationChanged)options.actions?.sync(host,siteLevels);
+      if(selectedChanged)renderDetail();
+      updateResources();
+      if(presentationChanged)paint();
     }
     if(options.onResource){
       host.querySelectorAll("[data-estate-resource]").forEach(element=>{
@@ -421,7 +431,6 @@
       if(options.actions&&!detail.querySelector(".estate-site-actions"))detail.insertAdjacentHTML("beforeend",'<div class="estate-site-actions">'+["upgrade","enter"].map(action=>options.actions.button(b,action,"detail",siteLevels[b.key])).join("")+"</div>");
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){if(options.actions)manage.remove();else{detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}}
-      targets.forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.innerCastleBuilding===selected)));
       host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
     }
     function select(key, focus=true, openBuilding=false) {

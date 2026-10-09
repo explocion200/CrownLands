@@ -10,6 +10,9 @@
   const tierAt = level => milestones.reduce((tier, milestone, i) => level >= milestone ? i : tier, 0);
   const power = champion => Math.floor(champion.level * (1 + .25 * champion.quality));
   const constructionAction = level => level > 0 ? "Upgrade" : "Build";
+  const setText = (element, text) => { if (element.textContent !== text) element.textContent = text; };
+  const setAttribute = (element, name, value) => { if (element.getAttribute(name) !== value) element.setAttribute(name, value); };
+  const setHidden = (element, hidden) => { if (element.hidden !== hidden) element.hidden = hidden; };
   function constructionTimers(host) {
     const viewport = host.querySelector(".estate-viewport"), layer = document.createElement("div");
     layer.className = "estate-construction-timers";
@@ -38,24 +41,25 @@
           const job = estate?.jobs.find(j => j.building === site.b.key && j.status === "running");
           site.job = job && Number.isFinite(job.completesAtMs) && Number.isFinite(job.durationMs) && job.durationMs > 0 ? job : null;
           const legacy = !site.job && estate?.jobs.find(j => j.building === site.b.key);
-          site.note.hidden = !site.job && !legacy;
+          setHidden(site.note, !site.job && !legacy);
           for (const target of [site.target, site.entry]) {
-            if (!site.note.hidden) target.setAttribute("aria-describedby", site.note.id);
+            if (!site.note.hidden) setAttribute(target, "aria-describedby", site.note.id);
             else target.removeAttribute("aria-describedby");
           }
           if (!site.job) {
-            site.gauge.hidden = true;
-            site.note.textContent = legacy ? "Paid work · " + (legacy.status === "paused" ? "Paused" : "Waiting for builder") : "";
+            setHidden(site.gauge, true);
+            setText(site.note, legacy ? "Paid work · " + (legacy.status === "paused" ? "Paused" : "Waiting for builder") : "");
             continue;
           }
           const left = Math.max(0, job.completesAtMs - now), progress = Math.max(0, Math.min(1, 1 - left / job.durationMs));
           const text = left ? remainingText(left) : "Finishing…";
-          site.fill.style.strokeDashoffset = String(100 * (1 - progress));
-          site.gauge.setAttribute("aria-valuenow", String(Math.round(progress * 100)));
-          site.gauge.setAttribute("aria-label", site.b.label + " construction to Level " + job.target);
-          site.gauge.setAttribute("aria-valuetext", Math.round(progress * 100) + "% complete · " + (left ? text + " remaining" : "Waiting for completion confirmation"));
-          site.gauge.title = site.gauge.getAttribute("aria-label") + " · " + site.gauge.getAttribute("aria-valuetext");
-          site.text.textContent = text; site.note.textContent = "Construction · " + text + (left ? " left" : "");
+          const offset = String(100 * (1 - progress));
+          if (site.fill.style.strokeDashoffset !== offset) site.fill.style.strokeDashoffset = offset;
+          setAttribute(site.gauge, "aria-valuenow", String(Math.round(progress * 100)));
+          setAttribute(site.gauge, "aria-label", site.b.label + " construction to Level " + job.target);
+          setAttribute(site.gauge, "aria-valuetext", Math.round(progress * 100) + "% complete · " + (left ? text + " remaining" : "Waiting for completion confirmation"));
+          setAttribute(site.gauge, "title", site.gauge.getAttribute("aria-label") + " · " + site.gauge.getAttribute("aria-valuetext"));
+          setText(site.text, text); setText(site.note, "Construction · " + text + (left ? " left" : ""));
         }
       },
       place(zoom, selected) {
@@ -256,22 +260,22 @@
         if (!data || !current()) return;
         const s=data.estate, claims=Object.values(s.commissions).filter(c=>c.completesAtMs<=now()).length+s.parcels.length;
         const title=`Estate overview · ${Math.max(0,s.slots-s.jobs.filter(j=>j.status==="running").length)} builders free · ${claims} rewards waiting`;
-        entry.title=title;entry.setAttribute("aria-label",title);
-        select.querySelectorAll('[value="ready"],[value="materials"]').forEach(option=>option.disabled=!data.upgradeOverview);
+        setAttribute(entry,"title",title);setAttribute(entry,"aria-label",title);
+        select.querySelectorAll('[value="ready"],[value="materials"]').forEach(option=>{const disabled=!data.upgradeOverview;if(option.disabled!==disabled)option.disabled=disabled;});
         let count=0;
         directory.querySelectorAll(".estate-directory-site").forEach(row=>{
           const key=row.querySelector("[data-estate-directory-building]").dataset.estateDirectoryBuilding, state=data.upgradeOverview?.[key];
-          row.hidden=directoryFilter==="all"?false:directoryFilter==="unbuilt"?!!s.levels[key]||s.jobs.some(j=>j.building===key):directoryFilter==="constructing"?!s.jobs.some(j=>j.building===key&&j.status==="running"):!state||state.status!==directoryFilter;
+          setHidden(row,directoryFilter==="all"?false:directoryFilter==="unbuilt"?!!s.levels[key]||s.jobs.some(j=>j.building===key):directoryFilter==="constructing"?!s.jobs.some(j=>j.building===key&&j.status==="running"):!state||state.status!==directoryFilter);
           if (!row.hidden) count++;
           let note=row.querySelector(".estate-readiness-note");if(!note){note=document.createElement("small");note.className="estate-readiness-note";row.querySelector("[data-estate-directory-building]").append(note);}
           const text=state?.reason||"Refresh Estate for upgrade readiness.";if(note.textContent!==text)note.textContent=text;
         });
-        directory.querySelectorAll(":scope > section").forEach(section=>section.hidden=![...section.querySelectorAll(".estate-directory-site")].some(row=>!row.hidden));
+        directory.querySelectorAll(":scope > section").forEach(section=>setHidden(section,![...section.querySelectorAll(".estate-directory-site")].some(row=>!row.hidden)));
         const text=`${count} of 20 buildings${data.upgradeOverview?"":" · Readiness awaiting server update"}`;
-        if(filters.querySelector("p").textContent!==text)filters.querySelector("p").textContent=text;empty.hidden=count!==0;
-        empty.textContent=!data.upgradeOverview&&["ready","materials"].includes(directoryFilter)?"Refresh Estate for current upgrade readiness.":"No buildings match this filter.";
-        clearTimeout(feedbackTimer);notice.hidden=!feedback||feedback.until<=Date.now()||document.hidden;
-        if(!notice.hidden){if(notice.firstElementChild.textContent!==feedback.text)notice.firstElementChild.textContent=feedback.text;notice.title=feedback.text;feedbackTimer=setTimeout(()=>{notice.hidden=true;feedback=null;},Math.max(1,feedback.until-Date.now()));}
+        setText(filters.querySelector("p"),text);setHidden(empty,count!==0);
+        setText(empty,!data.upgradeOverview&&["ready","materials"].includes(directoryFilter)?"Refresh Estate for current upgrade readiness.":"No buildings match this filter.");
+        clearTimeout(feedbackTimer);setHidden(notice,!feedback||feedback.until<=Date.now()||document.hidden);
+        if(!notice.hidden){setText(notice.firstElementChild,feedback.text);setAttribute(notice,"title",feedback.text);feedbackTimer=setTimeout(()=>{notice.hidden=true;feedback=null;},Math.max(1,feedback.until-Date.now()));}
       };
       entry.addEventListener("click",()=>open({type:"status",key:"estate"}),{signal:localAbort.signal});
       select.addEventListener("change",()=>{directoryFilter=select.value;update();directory.scrollTop=0;},{signal:localAbort.signal});
