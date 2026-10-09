@@ -33,16 +33,16 @@ Gross resource/processing capacity increases by 16% of its Level 1 rate per comp
 
 ## Construction and the economy loop
 
-The numbered construction steps retain the October 8 review context. October 9 replaced new material deposits with direct Build/Upgrade payment; use [the economy guide](README.md#build-and-upgrade) for current construction rules and the pending manual-production follow-up.
+The steps below describe the October 9 direct-payment and manual-production release. Earlier release evidence above retains its historical scope.
 
 1. The six original buildings start at Level 1; the other fourteen need a first Gold-only build. Build raw-material sources, storage and processing chains to begin permanent growth.
-2. Select a plot, then use its external Upgrade button. Review the next level’s required, deposited, remaining and available materials, seasonal Gold, timer and current/next benefit.
-3. Deposit chosen whole units into that exact building and next target. Credit cannot be refunded or transferred, and it survives seasons. A deposit never starts work.
-4. When the full material bill, Gold, prerequisites and a builder are available, review and explicitly start one level. Gold and credit are consumed once. New upgrades cannot be queued; already paid legacy contracts retain their rights and terms.
+2. Select a plot, then use its external Build or Upgrade button. Review required and available materials, seasonal Gold, construction time, current/next benefits and prerequisite links. Cancel returns without payment.
+3. When the outstanding material bill, Gold, completed prerequisites and a builder are available, explicitly start one level. Materials and Gold are paid together once. Previously accepted credit still reduces the bill; no new deposits or upgrade queues are created.
+4. Start finite quantities at each material processor. Its recipe, quantity, bill and production time explain the next output; idle factories wait for another player choice. Raw resources gather automatically. Source/storage links and Back spend nothing.
 5. Existing completed benefits remain active during construction. A server-confirmed completion changes the level and production; a locally expired countdown cannot grant a level.
 6. Turn surplus materials into officer commissions or expedition preparation. Recruit permanent champions at the Alehouse, manage them at the Guild Master and claim rewards into available storage; excess parcel rewards remain claimable.
 
-Every building, loose material, fractional stock, deposit, ongoing estate timer and acquired champion persists. World Gold remains seasonal. Market and Wagon Yard together allow one production-hour supply pack budget per UTC day; quests share their existing 2.4 resource-hour allowance. These allowances do not refresh on a season restart.
+Every building, loose material, fractional stock, legacy paid credit, accepted construction/production order and acquired champion persists. World Gold remains seasonal. Market and Wagon Yard together allow one production-hour supply pack budget per UTC day; quests share their existing 2.4 resource-hour allowance. These allowances do not refresh on a season restart.
 
 ## Concrete presentation fixes
 
@@ -50,15 +50,15 @@ Every building, loose material, fractional stock, deposit, ongoing estate timer 
 - Show production status and ingredient recipes, individual storage totals and direct material-ledger access. Visiting an unbuilt source through a ledger cannot expose its service actions.
 - Explain rarity, meal, quest and supply unlocks. Disable locked tiers, meals, delivery sizes/materials, exhausted daily supplies, unfinished commission claims and unavailable champion transfers.
 - Show champion quality/power, active-roster occupancy, expedition capacity and selected party requirements. Bench buttons are separate from selection labels, so a transfer control does not toggle a party checkbox.
-- Preserve inputs, party selections, accepted consent, scroll position and the exact keyboard control across ordinary refreshes. Preserve service drafts when returning from review; discard them after a successful commit. Newly unavailable champions are deselected, and numeric drafts respect refreshed deposit limits.
-- Name the exact building and next level in permanent deposit confirmation. Refresh upgrade requirements on Back from review; show a useful prerequisite failure instead of an endless loading message.
+- Preserve inputs, party selections, scroll position and the exact keyboard control across ordinary refreshes. Preserve service drafts when returning from review; discard them after a successful commit. Newly unavailable champions are deselected, and production drafts respect refreshed ingredient, reserve and storage limits.
+- Name the exact building and next level in the external requirements panel. Refresh the bill on Back; link unmet prerequisites and show useful failures. Full Guild XP banks explain zero new training before quest payment, while retaining existing excess XP.
 - Refresh at a UTC-day boundary for daily services even when no construction or production boundary is pending. Reuse the existing deadline scheduler and hidden-scene cleanup; no new polling loop.
 - Allow deadline settlement while an officer’s commission window is open over Gear, keeping the map suspended. Closing restores focus to the current commission opener even if a Gear refresh replaced its element, and stops hidden-scene deadlines again.
 
 ## Validation and remaining review limits
 
-The existing economy-rule tests pass for all 2,000 level rows, continuous production, capacity/reserves, long absences, manual starts and legacy work, commissions, quests, champion XP, shared supplies and retry clocks. The reward and arithmetic reviews also pass; none proves player satisfaction.
+The existing economy-rule tests cover all 2,000 level rows, raw gathering, finite manual production and legacy migration, capacity/reserves, long absences, direct construction payment and legacy work, commissions, quests, champion XP, shared supplies and retry clocks. The reward and arithmetic reviews also cover current rules; none proves player satisfaction.
 
-Expanded runtime browser checks cover all twenty plots, deposits and retry, exact-target consent, construction timers, Gear returns, locked/unlocked services, party power, busy champions, storage ledgers, recipes, field/focus preservation, commission readiness, unbuilt service guards and the UTC-day refresh. Checks run at 1440×900, 844×390 and 568×320, alongside estate registry/geometry and production-build validation. Required GitHub checks establish PR readiness separately.
+Runtime browser checks cover all twenty plots, direct payment and retry, prerequisite navigation, construction timers, finite production quantities and visible Start controls, Gear returns, locked/unlocked services, party power, busy champions, XP-bank guidance, storage ledgers, recipes, field/focus preservation, commission readiness, unbuilt service guards and the UTC-day refresh. Checks run at 1440×900, 844×390 and 568×320, alongside estate registry and production-build validation. Required GitHub checks establish PR readiness separately. The [first-day/week journeys](PROGRESSION_PLAYTEST.md) and [channel/playtest record](PLAYTEST_RELEASE_RECORD.md) separate model, historical production and pending real-device evidence.
 
 The 1 / 3 / 6 / 10 reference-season budgets apply to each building individually at 50% of developed supporting production. They are not a ten-season promise for all twenty buildings sharing an account. The updated [shared-account simulation](REWARD_REVIEW.md) explicitly starts manual batches at visits and reaches the full Level 100 estate in roughly 2,121–2,356 simulated days across its visit/service cohorts; Gold affordability and the documented cohort assumptions limit that estimate. Quest rewards help modestly, and commissioning competes for the same materials. No recipe rates, building prices or construction timers changed. Human long-term pacing, authenticated production play and physical-device checks remain necessary before claiming those experiences are verified.

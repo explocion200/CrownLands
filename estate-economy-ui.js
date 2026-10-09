@@ -232,7 +232,7 @@
         ${active ? `<label><input type="checkbox" data-economy-champion value="${escape(c.id)}" ${unavailable ? "disabled" : ""}>${identity}</label>` : identity}
         <span class="estate-champion-state">${status}</span>
         ${button(active?"bench":"activate",active?"Bench":"Make active",`data-id="${escape(c.id)}" ${unavailable || (!active && data.estate.activeChampionIds.length >= 6+Math.floor(18*(data.estate.levels["guild-master"]-1)/99)) ? "disabled" : ""}`)}
-        <div class="estate-champion-xp">${c.level >= 100 ? "Maximum champion level" : `<progress max="${xpMax}" value="${Math.min(c.xp,xpMax)}" aria-label="${escape(c.name)} XP progress"></progress>${number(c.xp)} / ${xpMax} XP · Guild training ceiling Lv. ${data.estate.levels["guild-master"]}${c.level >= data.estate.levels["guild-master"] ? " · Extra XP stays banked" : ""}`}</div>
+        <div class="estate-champion-xp">${c.level >= 100 ? "Maximum champion level" : `<progress max="${xpMax}" value="${Math.min(c.xp,xpMax)}" aria-label="${escape(c.name)} XP progress"></progress>${number(c.xp)} / ${xpMax} XP · Guild training ceiling Lv. ${data.estate.levels["guild-master"]}${c.level >= data.estate.levels["guild-master"] ? c.xp >= xpMax ? " · XP bank full. No new XP can be earned until the Guild Master grows; existing XP is retained. Use its Upgrade control on the estate map." : " · At the Guild limit: extra XP can fill one next-level bank, then training pauses until the Guild Master grows." : ""}`}</div>
       </div>`;
     }
     function statusBody() {
@@ -254,7 +254,7 @@
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
           const missing=keys.filter(k=>!s.levels[k]);
           return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
-        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Activate at least two champions. Check power, Food and recovery before an expedition.</p>${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Gather, then build or upgrade</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button to review resources, time and next-level benefits. Start when you have the materials, Gold and a free builder; payment happens together when you start. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Recruit at least two champions at the Alehouse, then select your active party at the Guild Master. Check power, Food and recovery before an expedition. Guild Level 1 banks at most 4 XP per champion; upgrading the Guild lets training continue.</p>${button("source","Visit Alehouse",'data-id="alehouse"')} ${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Gather, then build or upgrade</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button to review resources, time and next-level benefits. Start when you have the materials, Gold and a free builder; payment happens together when you start. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
       }
       return body + "</article>";
     }
@@ -534,7 +534,8 @@
         ${q.action === "recruit" ? `<p>${escape(q.name)} · Level ${q.level} · Permanent ownership</p>` : ""}
         ${q.food ? `<p><b>Food:</b> ${number(q.food)} · Meal: ${escape(q.meal)}</p>` : ""}
         ${q.rewards ? `<p><b>Rewards:</b> ${escape(list(q.rewards))}<br>Without meal: ${escape(list(q.baseRewards))}<br>Recovery: ${duration(q.recoveryMs)}</p>
-          <p>XP retained: ${Object.values(q.training).map(t=>escape(t.champion.name)+": "+number(t.credited)).join(" · ")}</p>` : ""}
+          <p>XP retained: ${Object.values(q.training).map(t=>escape(t.champion.name)+": "+number(t.credited)).join(" · ")}</p>
+          ${Object.values(q.training).some(t=>t.credited===0&&t.champion.level<100) ? "<p>Some champions have no room for new XP at the Guild training limit. This expedition still gives its quoted materials; raise the Guild Master using its estate map Upgrade control to continue training.</p>" : ""}` : ""}
         ${q.received ? `<p>Receive now: ${escape(list(q.received))}. Any remainder waits safely.</p>` : ""}
         ${q.action === "reserves" ? `<p>Shared protected materials: ${escape(list(q.reserves))}.</p>` : ""}
         ${q.action === "roster" ? `<p>Move champion to the ${q.active ? "active roster" : "permanent bench"}.</p>` : ""}
