@@ -1,6 +1,6 @@
 # Inner Castle playtest and release readiness
 
-Prepared October 9, 2026 on `codex/estate-release-readiness`. This presentation and documentation follow-up is **IN DEVELOPMENT**, not deployed. It carries the useful Guild guidance from unmerged PR #497 onto current main, preserving direct material payment and manual production. The currently verified web build remains `101d435ef095abcb392631dca1d28f908839337f` from PR #506; FM-2 records its deployed backend and client identity.
+Released October 9, 2026 from `codex/estate-release-readiness` in [PR #508](https://github.com/explocion200/CrownLands/pull/508), **LIVE — ALL PUBLISHED CHANNELS** at build `39af6d9480cd330c9bc837e4e9c5f81a0f9d1cdd`. Guild presentation clarifies existing training without changing XP, direct payment or manual production. FM-2 records the matching backend/web identity and itch.io publication; historical signed-in evidence below does not establish current-policy production gameplay.
 
 ## Current checks and release gates
 
@@ -12,9 +12,17 @@ Prepared October 9, 2026 on `codex/estate-release-readiness`. This presentation 
 | Signed-in current policy | The browser is signed in, but its displayed name does not identify the dedicated QA email. Account confirmation is pending before spending. Then verify direct payment/Cancel, one paid finite batch and delivery without repeat, the earlier quest completion/recovery/claim/retry, and an affordable commission. |
 | Timed commission claim | Requires a normally funded order and its actual accepted deadline. Level 1 takes seven days. Do not alter clocks, grant stock or treat a model/emulator claim as a live claim. |
 | Physical phone | Landscape slider/exact amount/Max, visible time/Start, pan/pinch, directory, background/resume, Gear return, X and Android/iOS Back are awaiting user verification. Synthetic browser sizes do not prove physical-device behavior. |
-| itch.io catch-up | Prepare the validated candidate artifact and a 1,000-file HTML5 ZIP, retaining current scripts, estate art and active/prepared Core maps. Upload only after the candidate is merged and matching web/backend identity is verified. Check the actual public iframe and asset parity after publication. Current upload remains `19646406`, build `27965d48b00b1067c3e622e222753f5338c8c0a6`. |
+| itch.io catch-up | Published upload `19662086` at the same merged build as web. Actual Run game iframe observed; all 1,000 files match and six local/six public cold/reload cases pass. Current scripts, estate art and active/prepared Core maps retained; prior uploads preserved. |
 
-Local sanitized preparation receipts and candidate package belong under `release-artifacts/estate-release-readiness/`. Commit identity, CI and artifact checks establish readiness separately. Production spending, physical-device results and release publication must be recorded only when actually performed. Credentials, private account IDs and account exports are excluded.
+Local sanitized receipts belong under `release-artifacts/estate-release-readiness/deployment/`. Credentials, private account IDs and account exports are excluded.
+
+## Verified current publication
+
+- PR #508 merged at `2026-10-09T22:00:15Z`; clean local `main` was fast-forwarded to the merged build and verified equal to `origin/main`, divergence `0 0`. Required Static validation, Multiplayer emulator validation and Validate passed in [run 37993911834](https://github.com/explocion200/CrownLands/actions/runs/37993911834); seven selected local validators and production artifact/budgets passed. No new server-rule emulator suite applied.
+- Exact staged estate UI passed at 1440×900, 844×390 and 568×320, including twenty-site selection, direct payment/Cancel/retry, prerequisite/source Back, timers, Gear round trips, finite production and XP-bank/recruitment guidance. Netlify deploy `6ac963f12ec4390008d70b36` published at `2026-10-09T22:14:10.851Z`; 56 staged/168 public file comparisons and primary-domain anonymous startup at all three sizes passed. Publication hold retained.
+- Only `getRealmInfo` was updated for merged identity. Its archive matches all 56 runtime files and manifest; all 144 Node 22 Functions are ACTIVE and the other 143 source references/hashes/revisions are unchanged. Authentication guard and 29-callable access audit passed. Ready October realm, published rules and player records were retained; no gameplay orders or administrative stock grants were submitted.
+- itch.io selected/saved `crownlands-html5-39af6d9480cd.zip` (60,093,549 bytes; SHA-256 `ce1d33f8e33bc3edeb6e7715f15ad7b6ebb1fb35dfed8840f5ddc28e296ea459`). Actual iframe: `https://html-classic.itch.zone/html/19662086/index.html?v=1791584119`. Public parity at `2026-10-09T22:16:37.319Z` verified 998 byte-exact files and two entry HTML files with only known itch script/newline normalization. Six local and six public cold/reload cases passed at the three sizes, covering sign-in bounds, full merged stamps, upload-relative worker scope and all 81 active/prepared Core paths without runtime/asset failures. Source archives and earlier uploads preserved.
+- Current-policy authenticated production, physical-phone/system-Back, actual accepted commission deadlines and human pacing remain pending. Isolated models and emulator results do not prove these checks. PR #497 was closed as superseded without merging its conflicting older implementation; its branch remains preserved.
 
 ## Historical production evidence — preceding policy
 

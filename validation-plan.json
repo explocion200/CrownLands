@@ -1,20 +1,10 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "bbc59af1848abf7ecf0798a8c26531bb46f8b253",
+  "baseCommit": "39af6d9480cd330c9bc837e4e9c5f81a0f9d1cdd",
   "coverage": [
     {
-      "paths": ["estate-economy-ui.js", "tools/validate-estate-economy-browser.js"],
-      "reason": "Clarify existing Guild XP banks and zero-credit quest reviews, with recruitment/source navigation. Browser fixtures derive their zero-credit quote from shipped services; check partial/full/legacy banks, Cancel without spending, guide links and all shared estate dialogs at desktop and two landscape sizes. Refresh, gear return and finite production remain affected shared UI dependencies. No server rule changes; existing economy/manual-production tests verify the quoted rule and retained current flows.",
-      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-refresh-browser.js", "tools/test-estate-economy.js", "tools/test-estate-manual-production.js", "tools/validate-inner-castle.js"]
-    },
-    {
-      "paths": ["tools/validate-estate-progression-playtest.js", "docs/estate-economy/PROGRESSION_PLAYTEST.md"],
-      "reason": "Earned fresh-account day/week journeys cover actual direct payment, explicit finite batches, Gold affordability, Hall/builders/storage gates, recruitment, quests, Guild XP and accepted commission deadlines. Validate generated results and the related long-term manual-production model. These isolated tests do not change server rules or establish production account/device/reset outcomes; no new emulator suite applies.",
-      "tests": ["tools/validate-estate-progression-playtest.js", "tools/validate-estate-reward-review.js"]
-    },
-    {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/estate-economy/README.md", "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md", "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"],
-      "reason": "Record preparation without claiming unpublished changes are live; correct current mechanics to direct construction payment/manual batches; preserve clearly historical signed-in/itch evidence and identify real-time/device/publication gates. Documentation only; runtime behavior is covered above and no backend/rules/emulator changes apply.",
+      "reason": "Documentation-only record of authorized PR #508 merge and verified backend/web/itch publication. Record exact build, host and upload identities, required CI, targeted source/guard checks, staged/public artifact and browser evidence, retained October realm/rules and pending authenticated/device/timed-claim checks. Update the current channel matrix while retaining historical release scope. No runtime, gameplay, balance, dependencies, assets or backend rules change; deployed artifact tests already passed and no additional runtime/emulator suite applies to this record.",
       "tests": []
     }
   ]
