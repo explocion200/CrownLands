@@ -122,7 +122,11 @@ async function main() {
         };
         const receipts=new Map(),issued=new Map();
         window.__estateTestApi={
-          getEstateState:async includeOverview=>{__estateTest.loads++;__estateTest.overviewLoads=(__estateTest.overviewLoads||0)+(includeOverview?1:0);const value=result();if(!includeOverview)delete value.upgradeOverview;return value;},
+          getEstateState:async includeOverview=>{
+            __estateTest.loads++;__estateTest.overviewLoads=(__estateTest.overviewLoads||0)+(includeOverview?1:0);
+            if(__estateTest.holdState){__estateTest.holdState=false;await new Promise(resolve=>{__estateTest.releaseState=resolve;});}
+            const value=result();if(!includeOverview)delete value.upgradeOverview;return value;
+          },
           getEstateQuote:async input=>{
             (__estateTest.quoteRequests ||= []).push(input);
             const s=__estateTest.state;
@@ -222,6 +226,21 @@ async function main() {
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-upgrade-directory').length),20);
       assert.equal(await evaluate(()=>document.querySelectorAll('.estate-enter-directory').length),20);
       assert.equal(await evaluate(()=>__estateTest.overviewLoads||0),0,'Ordinary map refreshes use the lightweight estate path');
+      // An opening refresh must show the same action lock as its busy guard,
+      // including when the network response has not arrived yet.
+      const openingBefore=await evaluate(()=>({quotes:__estateTest.quoteRequests?.length||0,commits:__estateTest.commits.length}));
+      await evaluate(()=>{__estateTest.holdState=true;innerCastleEconomy.building('guild-master');});
+      await wait(()=>!!__estateTest.releaseState);
+      assert(await evaluate(()=>document.querySelector('.estate-economy-content').getAttribute('aria-busy')==='true'
+        &&[...document.querySelectorAll('.estate-economy-dialog button,.estate-economy-dialog input,.estate-economy-dialog select')]
+          .every(el=>el.dataset.economyAction==='close'?!el.disabled:el.disabled)), 'Opening refresh disables service actions and leaves Close available');
+      await evaluate(()=>document.querySelector('[data-economy-action="quest"]').click());
+      assert.deepEqual(await evaluate(()=>({quotes:__estateTest.quoteRequests?.length||0,commits:__estateTest.commits.length})),openingBefore,'Pending opening cannot submit a quest or payment');
+      await closeSheet();
+      await evaluate(()=>{__estateTest.releaseState();delete __estateTest.releaseState;});
+      await wait(()=>!document.querySelector('.estate-economy-dialog').open);
+      await evaluate(()=>innerCastleEconomy.refresh());
+      assert.equal(await evaluate(()=>document.querySelector('.estate-economy-dialog').open),false,'Late refresh does not reopen a closed service');
       const output=path.join(root,"release-artifacts/estate-economy");fs.mkdirSync(output,{recursive:true});
       // Management tools are separate from painted artwork and spending actions.
       await click('[data-estate-status]');
@@ -828,7 +847,21 @@ async function main() {
         await click('[data-economy-action="productionMax"]');
         assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'15');
         assert(await evaluate(()=>document.querySelector('[data-economy-production-cost]').textContent.includes('30')||document.querySelector('[data-economy-production-cost]').textContent.includes('15')));
-        await evaluate(()=>{const e=document.querySelector('[data-economy-quantity-number]');e.value='10';e.dispatchEvent(new Event('input',{bubbles:true}));e.focus();return innerCastleEconomy.refresh();});
+        const refreshBefore=await evaluate(()=>({quotes:__estateTest.quoteRequests?.length||0,commits:__estateTest.commits.length}));
+        await evaluate(()=>{
+          const e=document.querySelector('[data-economy-quantity-number]');e.value='10';e.dispatchEvent(new Event('input',{bubbles:true}));e.focus();
+          document.querySelector('.estate-production-details').open=true;
+          __estateTest.holdState=true;__estateTest.pendingRefresh=innerCastleEconomy.refresh();
+        });
+        await wait(()=>!!__estateTest.releaseState);
+        assert(await evaluate(()=>document.querySelector('.estate-economy-content').getAttribute('aria-busy')==='true'
+          &&document.querySelector('[data-economy-quantity]').disabled&&document.querySelector('[data-economy-action="produce"]').disabled
+          &&!document.querySelector('[data-economy-action="close"]').disabled),'Delayed background refresh locks batch controls immediately');
+        await evaluate(()=>document.querySelector('[data-economy-action="produce"]').click());
+        assert.deepEqual(await evaluate(()=>({quotes:__estateTest.quoteRequests?.length||0,commits:__estateTest.commits.length})),refreshBefore,'A pending refresh cannot start production');
+        await evaluate(async()=>{__estateTest.releaseState();delete __estateTest.releaseState;await __estateTest.pendingRefresh;});
+        assert(await evaluate(()=>document.querySelector('.estate-economy-content').getAttribute('aria-busy')==='false'
+          &&!document.querySelector('[data-economy-action="produce"]').disabled&&document.querySelector('.estate-production-details').open),'Settled refresh restores actions and expanded details');
         assert.equal(await evaluate(()=>document.querySelector('[data-economy-quantity]').value),'10','Refresh retains the chosen amount');
         assert(await evaluate(()=>document.activeElement.hasAttribute('data-economy-quantity-number')),'Refresh retains quantity focus');
         await evaluate(p=>{__estateTest.state.stock[Object.keys(p.inputs)[0]]=p.inputs[Object.keys(p.inputs)[0]]*9;return innerCastleEconomy.refresh();},p);

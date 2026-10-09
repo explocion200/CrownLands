@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "39af6d9480cd330c9bc837e4e9c5f81a0f9d1cdd",
+  "baseCommit": "50818ca704a295c0c914cad7a76ef7f45ad41ffb",
   "coverage": [
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/estate-economy/README.md", "docs/estate-economy/BUILDING_MECHANICS_REVIEW.md", "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"],
-      "reason": "Documentation-only record of authorized PR #508 merge and verified backend/web/itch publication. Record exact build, host and upload identities, required CI, targeted source/guard checks, staged/public artifact and browser evidence, retained October realm/rules and pending authenticated/device/timed-claim checks. Update the current channel matrix while retaining historical release scope. No runtime, gameplay, balance, dependencies, assets or backend rules change; deployed artifact tests already passed and no additional runtime/emulator suite applies to this record.",
+      "paths": ["estate-economy-ui.js", "tools/validate-estate-economy-browser.js"],
+      "reason": "Render the existing busy state before an asynchronous estate refresh so visible service/production controls match the action guard. Exercise deferred opening and background responses, blocked submissions, Close during loading, late-response cleanup, restored quantity/focus/details and normal actions at desktop and two landscape sizes. Shared map integration and unchanged-refresh performance are covered separately. No authority, prices, timers, schema, API or server behavior changes; no emulator suite applies.",
+      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-refresh-browser.js", "tools/validate-inner-castle.js"]
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"],
+      "reason": "Record owner-authorized current-build signed-in QA using ordinary game controls, exact costs and real accepted deadlines, distinguishing completed live evidence from physical-device/timed-claim limits. Disclose the refresh action-lock repair as not deployed. No new design or balance decision and no additional runtime tests apply to evidence prose.",
       "tests": []
     }
   ]
