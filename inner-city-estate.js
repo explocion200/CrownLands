@@ -208,10 +208,6 @@
     const timers=options.actions?.mountTimers(host);
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
-    const resourceRows=resources.map(r=>{
-      const element=host.querySelector(`[data-estate-resource="${r.key}"]`);
-      return {...r,element,valueElement:element.querySelector("dd")};
-    });
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
@@ -219,11 +215,11 @@
       if(destroyed)return;
       timers?.update(options.estate,options.now?.());
       const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
-      resourceRows.forEach(r=>{
-        const value=resourceValue(balances?.[r.key]),element=r.element;
+      resources.forEach(r=>{
+        const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
         const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
-        const text=formatResource(value);
-        if(r.valueElement.textContent!==text)r.valueElement.textContent=text;
+        const text=formatResource(value),valueElement=element.querySelector("dd");
+        if(valueElement.textContent!==text)valueElement.textContent=text;
         if(element.getAttribute("aria-label")!==label)element.setAttribute("aria-label",label);
         if(element.title!==label)element.title=label;
       });
@@ -435,7 +431,6 @@
       if(options.actions&&!detail.querySelector(".estate-site-actions"))detail.insertAdjacentHTML("beforeend",'<div class="estate-site-actions">'+["upgrade","enter"].map(action=>options.actions.button(b,action,"detail",siteLevels[b.key])).join("")+"</div>");
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){if(options.actions)manage.remove();else{detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}}
-      targets.forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.innerCastleBuilding===selected)));
       host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
     }
     function select(key, focus=true, openBuilding=false) {
