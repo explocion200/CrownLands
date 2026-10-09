@@ -6,6 +6,7 @@
 .estate-economy-dialog small,.estate-economy-kicker,.estate-economy-muted{color:#746544}
 .estate-economy-content{padding:16px 20px;overflow:auto;overscroll-behavior:contain;min-height:0}
 .estate-economy-dialog article{border-top:1px solid #b8a77c;margin-top:18px;padding-top:12px}
+.estate-prerequisite-trail{padding:10px 12px;margin-bottom:12px;border:1px solid #b8a77c;background:#e4d5a8;overflow-wrap:anywhere}.estate-prerequisite-trail p{margin:0 0 6px;font-size:13px}.estate-building-prerequisites article{margin-top:10px;padding-top:8px}
 .estate-economy-dialog h3{margin:4px 0 10px;font-size:20px}
 .estate-economy-dialog p{line-height:1.5;margin:8px 0 14px}
 .estate-economy-dialog button,.estate-economy-dialog select,.estate-economy-dialog input:not([type=checkbox]){min-height:44px;border:1px solid #a08a57;border-radius:3px;color:inherit;background:#f5ebce;padding:8px 12px;font:inherit;max-width:100%;box-sizing:border-box}

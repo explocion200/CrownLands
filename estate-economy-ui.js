@@ -313,7 +313,7 @@
       if (!current() || !dialog.open || view?.type !== "upgrade" || !data || quote) return;
       upgradeBill = null; upgradeQuote = null;
       const requestedView = view, key = view.key, s = data.estate;
-      if (s.constructionPolicy !== "pay-on-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key)) return;
+      if (s.constructionPolicy !== "pay-on-start" || s.levels[key] >= 100 || s.jobs.some(j => j.building === key) || s.buildingPrerequisites?.[key]?.length) return;
       const result = await api.getEstateQuote({action:"fund",building:key,count:1});
       if (!current() || !dialog.open || view !== requestedView) return;
       accept(result); upgradeBill = result.quote.value.jobs[0]; upgradeQuote = result.quote;
@@ -427,7 +427,9 @@
     }
     function upgradeBody(key) {
       const s = data.estate, level = s.levels[key], jobs = s.jobs.filter(j => j.building === key);
-      let body = `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
+      const trail = view.trail || [];
+      let body = (trail.length ? `<nav class="estate-prerequisite-trail" aria-label="Building requirement chain"><p>${[...trail,key].map(k=>escape(label(k))).join(" → ")}</p>${button("prerequisiteBack","Back to "+escape(label(trail.at(-1))))}</nav>` : "")
+        + `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
         <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
         <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>` + milestone(key,level);
       if (pending && quote?.value.action === "fund") {
@@ -438,6 +440,11 @@
         ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before its next upgrade.</p>";
       if (level >= 100) return body + "<p>Maximum building level reached.</p>";
       if (s.constructionPolicy !== "pay-on-start") return body + "<p>Building upgrades are waiting for the matching server update. Refresh shortly.</p>";
+      const prerequisites = s.buildingPrerequisites?.[key] || [];
+      if (prerequisites.length) return body + `<section class="estate-building-prerequisites" aria-label="Required buildings"><h3>Buildings required for Level ${level + 1}</h3>
+        ${prerequisites.map(required=>`<article><p><b>${escape(label(required.building))} · Level ${required.requiredLevel} required</b><br>Completed level: ${required.currentLevel}. Only completed levels count.</p>
+          ${button("prerequisite",constructionAction(required.currentLevel)+" "+escape(label(required.building)),`data-id="${escape(required.building)}"`)}</article>`).join("")}
+        <p>Follow a required building to review its next level and any prerequisites of its own.</p>${button("close","Cancel","data-economy-cancel")}</section>`;
       const bill = upgradeBill;
       if (!bill) return body + (error ? "<p>Resolve the condition above, then refresh to review this building’s requirements.</p>" : "<p>Loading requirements. If unavailable, refresh to request them again.</p>");
       const materialsReady = Object.entries(bill.remaining).every(([k,v])=>v<=s.stock[k]), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
@@ -492,6 +499,8 @@
     }
     function render() {
       if (!current() || !dialog.open || !view) return;
+      const focusTitle = document.activeElement === dialog.querySelector("#estateEconomyTitle")
+        || (renderedView !== view && Array.isArray(view.trail));
       if (renderedView === view) {
         if (!renderedQuote) formDraft = saveForm();
         else if (renderedQuote === quote) reviewDraft = saveForm();
@@ -511,7 +520,7 @@
             ${productionHelp(view.key)}${button("source","Visit "+label(r.source),`data-id="${r.source}"`)}` : "<p>This currency uses your existing " + (view.key==="gold"?"seasonal realm wallet.":"permanent Crown wallet.") + "</p>";
         } else body = buildingBody(view.key);
       }
-      dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
+      dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle" tabindex="-1">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
         <div class="estate-economy-content" aria-busy="${busy}">${error ? `<p role="alert" class="estate-economy-error">${escape(error)}</p>` : ""}${body}</div>
         <footer>Buildings, materials, paid work and champions stay through every season. ${data ? "Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}</footer>`;
       for (const el of dialog.querySelectorAll("input,select")) {
@@ -525,6 +534,7 @@
       dialog.querySelectorAll("button,select,input").forEach(el => { if (busy && !["close"].includes(el.dataset.economyAction)) el.disabled = true; });
       const focused = [...dialog.querySelectorAll("button,select,input")].find(el => controlId(el) === draft?.focus && !el.disabled);
       focused?.focus({preventScroll:true});
+      if (focusTitle) dialog.querySelector("#estateEconomyTitle").focus({preventScroll:true});
       if (!draft && quote) dialog.querySelector('[data-economy-action="confirm"]')?.focus({preventScroll:true});
       if (draft) dialog.querySelector(".estate-economy-content").scrollTop = draft.scroll;
       renderedView = view; renderedQuote = quote;
@@ -540,6 +550,14 @@
       if (action === "source") { open({type:"building",key:target.dataset.id}); return; }
       if (action === "ledger") { open({type:"resource",key:target.dataset.id}); return; }
       if (action === "upgradeSite") { open({type:"upgrade",key:target.dataset.id}); return; }
+      if (action === "prerequisite" || action === "prerequisiteBack") {
+        const trail = [...(view.trail || [])], next = action === "prerequisiteBack" ? trail.pop() : target.dataset.id;
+        if (!root.CrownlandsEstate.buildings.some(b=>b.key===next)) return;
+        if (action === "prerequisite") trail.push(key);
+        const selectedOpener = options.selectBuilding?.(next);
+        if (selectedOpener) opener = selectedOpener;
+        open({type:"upgrade",key:next,trail});return;
+      }
       if (action === "guide") {
         guideHidden=!guideHidden;
         try { if(guideHidden)localStorage.setItem(guideKey,"dismissed");else localStorage.removeItem(guideKey); } catch (_) { /* Optional device preference. */ }

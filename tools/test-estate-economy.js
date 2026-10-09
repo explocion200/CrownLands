@@ -175,6 +175,36 @@ s = all(100); const pack = S.supplyQuote(s, "timber", 1, 0);
 assert.equal(pack.crowns, 20); s.supplyUsage = { day: pack.day, hours: 1 };
 assert.throws(() => S.supplyQuote(s, "grain", .25, 0), /allowance/);
 assert(S.supplyQuote(s, "grain", .25, 24 * H));
+// Prerequisite navigation follows completed-level gates, including branched
+// chains and required buildings whose construction has not finished.
+{
+  const state = E.initial(0), before = JSON.stringify(state);
+  const prerequisites = E.snapshot(state,0).buildingPrerequisites;
+  assert.equal(Object.keys(prerequisites).length,20);
+  assert.deepEqual(prerequisites.workshop,[
+    {building:"sawmill",requiredLevel:1,currentLevel:0},
+    {building:"smithy",requiredLevel:1,currentLevel:0},
+  ]);
+  assert.deepEqual(prerequisites.sawmill,[{building:"foresters-lodge",requiredLevel:1,currentLevel:0}]);
+  assert.deepEqual(prerequisites.smithy,[
+    {building:"mine",requiredLevel:1,currentLevel:0},
+    {building:"foresters-lodge",requiredLevel:1,currentLevel:0},
+  ]);
+  assert.deepEqual(prerequisites["guild-master"],[],"Starter Alehouse satisfies the guild prerequisite");
+  assert.deepEqual(prerequisites["great-hall"],[],"The Hall has no building dependency");
+  assert.equal(JSON.stringify(state),before,"Guidance never changes saved state");
+  assert.throws(()=>E.constructionQuote(state,"workshop"),/Construct sawmill first/);
+  state.levels.sawmill=1;
+  assert.deepEqual(E.snapshot(state,0).buildingPrerequisites.workshop,[{building:"smithy",requiredLevel:1,currentLevel:0}]);
+  const high = all(24);
+  assert.deepEqual(E.snapshot(high,0).buildingPrerequisites.quarry,[{building:"great-hall",requiredLevel:25,currentLevel:24}]);
+  high.jobs=[{building:"great-hall",target:25,status:"running",completesAtMs:H}];
+  assert.equal(E.snapshot(high,0).buildingPrerequisites.quarry[0].currentLevel,24,"Pending Hall levels do not unlock upgrades");
+  assert.throws(()=>E.constructionQuote(high,"quarry"),/Great Hall first/);
+  high.levels["great-hall"]=25;assert.deepEqual(E.snapshot(high,0).buildingPrerequisites.quarry,[]);
+  assert(E.constructionQuote(high,"quarry").jobs[0]);
+  assert(Object.values(E.snapshot(all(100),0).buildingPrerequisites).every(rows=>rows.length===0));
+}
 // Overview guidance must agree with actual next-level spending rules and remain
 // a read of state, including Hall gates, paid work and exact permanent credit.
 {

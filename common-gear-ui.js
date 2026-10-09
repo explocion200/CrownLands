@@ -2037,6 +2037,7 @@ function renderInnerCastle(cityId) {
     innerCastleEconomy=window.CrownlandsEstateEconomy.create({
       api:getOnlineApi,scope:getCommonGearActionScope,preferenceScope:()=>getCurrentOnlineUid(),gear:COMMON_GEAR,gold:()=>Math.max(0,Math.floor(getProjectedGold())),
       visible:()=>!!innerCastleEstateView,
+      selectBuilding:key=>{selectInnerCastleBuilding(key);return modalBody.querySelector(`.estate-detail [data-estate-upgrade="${key}"]`);},
       tick:()=>innerCastleEstateView?.updateResources(),
       apply:result=>{applyServerEconomyResult(result);if(result.cosmetics)applyCosmeticResult(result);},
       update:result=>{innerCastleEstateView?.updateEstate(result.estate);const key=modal.dataset.commonGearBuildingId;if(key&&isCommonGearBuildingOpen(key))renderCommonGearBuilding(key);},

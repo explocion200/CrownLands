@@ -78,19 +78,28 @@ async function main() {
     const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
     const firstBuildEstate=structuredClone(estate);firstBuildEstate.levels.mine=0;
     const firstBuildQuote=E.constructionQuote(firstBuildEstate,'mine',1);
+    const prerequisiteEstate=structuredClone(estate);
+    prerequisiteEstate.levels["great-hall"]=1;
+    for(const key of ['workshop','sawmill','smithy','foresters-lodge','mine'])prerequisiteEstate.levels[key]=0;
+    const firstForesterQuote=E.constructionQuote(prerequisiteEstate,'foresters-lodge',1);
+    const hallAt24=structuredClone(estate);hallAt24.levels['great-hall']=24;
+    const hallQuoteAt24=E.constructionQuote(hallAt24,'great-hall',1);
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
       await client.send("Page.navigate",{url:address.url+"/docs/visual-qa/inner-city-estate/index.html?estateUi=1&scene=initial&visualMarches=0"});
       await wait(()=>document.documentElement?.dataset.estateQa==="ready");
       await evaluate(async payload => {
         await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="inner-city-estate.js?economy-test=1";script.onload=resolve;script.onerror=reject;document.head.append(script);});
-        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,commits:[],loads:0,failOnce:true,scope:"estate-test"};
+        window.__estateTest={state:payload.snapshot,quotes:payload.quotes,firstBuildQuote:payload.firstBuildQuote,overview:payload.overview,benefitsAt1:payload.benefitsAt1,buildingRules:payload.buildingRules,prerequisiteEstate:payload.prerequisiteEstate,firstForesterQuote:payload.firstForesterQuote,hallQuoteAt24:payload.hallQuoteAt24,commits:[],loads:0,failOnce:true,scope:"estate-test"};
         const result=()=>{
           const estate=structuredClone(__estateTest.state),serverNowMs=Date.now();
           // The benchmark uses a fixed browser epoch. Rebase the synthetic
           // server deadline instead of mixing it with the host's wall clock.
           if(Number.isFinite(estate.projection?.untilMs))estate.projection.untilMs+=serverNowMs-estate.serverNowMs;
           estate.serverNowMs=serverNowMs;
+          estate.buildingPrerequisites=Object.fromEntries(__estateTest.buildingRules.map(b=>[b.key,estate.levels[b.key]>=100?[]:
+            [...(b.key==='great-hall'?[]:[{building:'great-hall',requiredLevel:estate.levels[b.key]+1}]),...b.requires1.map(building=>({building,requiredLevel:1}))]
+              .map(row=>({...row,currentLevel:estate.levels[row.building]})).filter(row=>row.currentLevel<row.requiredLevel)]));
           estate.recruitOffers=__estateTest.offers||{offers:[]};
           return{estate,champions:__estateTest.champions||{},serverNowMs,upgradeOverview:structuredClone(__estateTest.overview)};
         };
@@ -106,6 +115,8 @@ async function main() {
             else {
               if(s.jobs.some(j=>j.building===input.building))throw Error("Finish this building's paid work before its next upgrade.");
               if(input.count!==1)throw Error("Upgrades cannot be queued.");
+              const missing=result().estate.buildingPrerequisites[input.building]?.[0];
+              if(missing)throw Error(missing.building==='great-hall'?'Upgrade the Great Hall first.':'Construct '+missing.building+' first.');
               value=structuredClone(__estateTest.quotes[input.building]);
               const j=value.jobs[0];j.deposited={...s.deposits[input.building]?.deposited};
               j.remaining=Object.fromEntries(Object.entries(j.materials).map(([k,v])=>[k,v-(j.deposited[k]||0)]));value.materials={...j.remaining};
@@ -141,7 +152,7 @@ async function main() {
         getOnlineApi=()=>__estateTestApi;
         getCommonGearActionScope=()=>__estateTest.scope;
         clearInnerCastleModalState();openInnerCastle(getMainCityReference().id);
-      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
+      },{snapshot:E.snapshot(estate,estate.settledAtMs),quotes,firstBuildQuote,overview:E.upgradeOverview(estate,1e9,285),buildingRules:E.C.buildings.map(b=>({key:b.key,requires1:b.requires1})),prerequisiteEstate:E.snapshot(prerequisiteEstate,prerequisiteEstate.settledAtMs),firstForesterQuote,hallQuoteAt24,benefitsAt1:Object.fromEntries(E.C.buildings.map(b=>[b.key,{current:E.benefit(b.key,1),next:E.benefit(b.key,2)}]))});
       await wait(()=>!!innerCastleEconomy?.snapshot()?.estate);
       await wait(()=>!!document.querySelector('[data-estate-resource="timber"]'));
       assert.equal(await evaluate(()=>document.querySelector('[data-estate-resource="timber"] dd').textContent),"10K");
@@ -225,6 +236,72 @@ async function main() {
       fs.writeFileSync(path.join(output,'estate-directory-'+width+'.png'),Buffer.from(managementDirectoryCapture.data,'base64'));
       await click('[data-estate-directory-toggle]');
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
+      // Follow both a multi-branch first-build chain and a completed Hall-level
+      // gate through the real controller/map bridge, without spending.
+      const chainBefore=await evaluate(()=>{
+        __estateTest.prerequisiteBefore={state:structuredClone(__estateTest.state),quotes:structuredClone(__estateTest.quotes)};
+        __estateTest.state=structuredClone(__estateTest.prerequisiteEstate);
+        __estateTest.quotes['foresters-lodge']=structuredClone(__estateTest.firstForesterQuote);
+        innerCastleEconomy.upgrade('workshop');
+        return{commits:__estateTest.commits.length,quotes:__estateTest.quoteRequests?.length||0,stock:structuredClone(__estateTest.state.stock)};
+      });
+      await wait(()=>document.querySelector('[data-economy-action="prerequisite"][data-id="sawmill"]')&&!document.querySelector('.estate-economy-content').getAttribute('aria-busy').includes('true'));
+      assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('[data-economy-action="prerequisite"]')].map(b=>[b.dataset.id,b.textContent])),[['sawmill','Build Sawmill'],['smithy','Build Smithy']]);
+      assert(await evaluate(()=>document.querySelector('.estate-building-prerequisites').textContent.includes('Level 1 required')&&document.querySelector('.estate-building-prerequisites').textContent.includes('Completed level: 0')));
+      assert.equal(await evaluate(()=>!!document.querySelector('[data-economy-action="fund"]')),false);
+      assert.equal(await evaluate(()=>__estateTest.quoteRequests?.length||0),chainBefore.quotes,'Known missing prerequisites request no unusable spending quote');
+      await evaluate(()=>document.querySelector('[data-economy-action="prerequisite"][data-id="sawmill"]').scrollIntoView({block:'nearest'}));
+      const chainCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'prerequisites-'+width+'.png'),Buffer.from(chainCapture.data,'base64'));
+      assert(await evaluate(()=>[...document.querySelectorAll('[data-economy-action="prerequisite"]')].every(b=>{const r=b.getBoundingClientRect(),p=b.closest('.estate-economy-content').getBoundingClientRect();return r.width>=44&&r.height>=44&&r.left>=p.left&&r.right<=p.right;})),'Prerequisite buttons fit and retain touch targets');
+      await evaluate(()=>document.querySelector('[data-economy-action="prerequisite"][data-id="sawmill"]').focus());
+      await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',unmodifiedText:'\r',windowsVirtualKeyCode:13});
+      await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Sawmill · Build'&&document.querySelector('[data-economy-action="prerequisite"][data-id="foresters-lodge"]')&&!document.querySelector('.estate-economy-content').getAttribute('aria-busy').includes('true'))
+        .catch(async error=>{throw Error(error.message+"\nChain diagnostics: "+JSON.stringify(await evaluate(()=>({title:document.querySelector('#estateEconomyTitle')?.textContent,selected:innerCastleSelectedBuildingKey,focus:document.activeElement.outerHTML,body:document.querySelector('.estate-economy-content')?.textContent,busy:document.querySelector('.estate-economy-content')?.getAttribute('aria-busy')}))));});
+      assert.equal(await evaluate(()=>innerCastleSelectedBuildingKey),'sawmill');
+      assert(await evaluate(()=>innerCastleEstateView.snapshot().zoom>=2.5&&document.activeElement.id==='estateEconomyTitle'),'Keyboard jump centers the map and announces the new panel');
+      await evaluate(()=>document.querySelector('[data-economy-action="prerequisite"]').scrollIntoView({block:'nearest'}));
+      const tap=await evaluate(()=>{const r=document.querySelector('[data-economy-action="prerequisite"]').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};});
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...tap,id:0}]});
+      await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Forester’s Lodge · Build'&&document.querySelector('[data-economy-action="fund"]')&&!document.querySelector('[data-economy-action="fund"]').disabled);
+      assert.equal(await evaluate(()=>innerCastleSelectedBuildingKey),'foresters-lodge');
+      assert(await evaluate(()=>document.querySelector('.estate-prerequisite-trail').textContent.includes('Workshop → Sawmill → Forester’s Lodge')));
+      assert.equal(await evaluate(()=>document.querySelector('[data-economy-action="fund"]').textContent),'Build Level 1');
+      await click('[data-economy-action="prerequisiteBack"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Sawmill · Build'&&!!document.querySelector('[data-economy-action="prerequisite"]'));
+      await click('[data-economy-action="prerequisiteBack"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Workshop · Build'&&document.querySelectorAll('[data-economy-action="prerequisite"]').length===2);
+      await closeSheet();
+      assert.equal(await evaluate(()=>document.activeElement.dataset.estateUpgrade),'workshop','Cancel returns focus to the selected building on the estate');
+      await evaluate(()=>{
+        __estateTest.state=structuredClone(__estateTest.prerequisiteBefore.state);
+        __estateTest.quotes=structuredClone(__estateTest.prerequisiteBefore.quotes);
+        __estateTest.state.levels['great-hall']=24;
+        __estateTest.quotes['great-hall']=structuredClone(__estateTest.hallQuoteAt24);
+        innerCastleEconomy.upgrade('quarry');
+      });
+      await wait(()=>!!document.querySelector('[data-economy-action="prerequisite"][data-id="great-hall"]')&&!document.querySelector('.estate-economy-content').getAttribute('aria-busy').includes('true'));
+      assert(await evaluate(()=>document.querySelector('.estate-building-prerequisites').textContent.includes('Great Hall · Level 25 required')&&document.querySelector('.estate-building-prerequisites').textContent.includes('Completed level: 24')));
+      await click('[data-economy-action="prerequisite"]');
+      await wait(()=>document.querySelector('[data-economy-action="fund"]')?.textContent==='Upgrade to Level 25'&&!document.querySelector('[data-economy-action="fund"]').disabled);
+      await click('[data-economy-action="prerequisiteBack"]');
+      await wait(()=>!!document.querySelector('[data-economy-action="prerequisite"]'));
+      await evaluate(()=>{__estateTest.state.jobs=[{building:'great-hall',target:25,status:'running',startedAtMs:Date.now(),durationMs:3600000,completesAtMs:Date.now()+3600000}];return innerCastleEconomy.refresh();});
+      assert(await evaluate(()=>!!document.querySelector('[data-economy-action="prerequisite"]')),'Running prerequisite levels do not unlock the requested building');
+      await click('[data-economy-action="prerequisite"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Great Hall · Upgrade'&&document.querySelector('.estate-economy-content').textContent.includes('remaining'));
+      assert.equal(await evaluate(()=>!!document.querySelector('[data-economy-action="fund"]')),false,'Following running work never offers a second start');
+      await click('[data-economy-action="prerequisiteBack"]');
+      await wait(()=>!!document.querySelector('[data-economy-action="prerequisite"]'));
+      await evaluate(()=>{__estateTest.state.jobs=[];__estateTest.state.levels['great-hall']=25;return innerCastleEconomy.refresh();});
+      await wait(()=>!!document.querySelector('[data-economy-action="fund"]'));
+      assert.equal(await evaluate(()=>document.querySelectorAll('[data-economy-action="prerequisite"]').length),0,'Confirmed prerequisite completion removes the blocker');
+      assert.equal(await evaluate(()=>__estateTest.commits.length),chainBefore.commits,'Prerequisite navigation never starts or pays for work');
+      assert.deepEqual(await evaluate(()=>__estateTest.state.stock),chainBefore.stock);
+      await closeSheet();
+      await evaluate(()=>{__estateTest.state=__estateTest.prerequisiteBefore.state;__estateTest.quotes=__estateTest.prerequisiteBefore.quotes;return innerCastleEconomy.refresh();});
       await evaluate(()=>innerCastleEstateView.select("quarry"));
       const camera = await evaluate(()=>innerCastleEstateView.snapshot());
       await evaluate(()=>{__estateTest.state.stock.stone=0;return innerCastleEconomy.refresh();});

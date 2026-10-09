@@ -91,13 +91,19 @@ function slots(state) {
   const level = state.levels["builders-yard"];
   return level >= 50 ? 3 : level >= 10 ? 2 : 1;
 }
-function checkBuilding(state, key, target) {
+function buildingPrerequisites(state, key, target) {
   const building = Object.hasOwn(BUILDINGS, key) ? BUILDINGS[key] : null;
   if (!building) fail("Unknown estate building.", "invalid-argument");
   integer(target, 1, 100, "Building level must be 1–100.");
-  if (key !== "great-hall" && target > state.levels["great-hall"]) fail("Upgrade the Great Hall first.");
-  for (const required of building.requires1) if (!state.levels[required]) fail("Construct " + required + " first.");
-  return building;
+  const required = key === "great-hall" ? [] : [{ building: "great-hall", requiredLevel: target }];
+  required.push(...building.requires1.map(building => ({ building, requiredLevel: 1 })));
+  return required.map(row => ({ ...row, currentLevel: state.levels[row.building] }))
+    .filter(row => row.currentLevel < row.requiredLevel);
+}
+function checkBuilding(state, key, target) {
+  const missing = buildingPrerequisites(state, key, target)[0];
+  if (missing) fail(missing.building === "great-hall" ? "Upgrade the Great Hall first." : "Construct " + missing.building + " first.");
+  return BUILDINGS[key];
 }
 function baseQuote(state, key, target, rawGoldPerHour) {
   const b = checkBuilding(state, key, target);
@@ -321,6 +327,8 @@ function snapshot(state, now) {
   }
   for (const job of state.jobs) if (job.status === "running") horizon = Math.min(horizon, Math.max(0, job.completesAtMs - now));
   return { ...structuredClone(state), serverNowMs: now, version: VERSION, constructionPolicy: "pay-on-start", slots: slots(state),
+    buildingPrerequisites: Object.fromEntries(C.buildings.map(b => [b.key, state.levels[b.key] >= 100 ? []
+      : buildingPrerequisites(state, b.key, state.levels[b.key] + 1)])),
     projection: { stock: { ...state.stock }, net: flow.net, untilMs: Number.isFinite(horizon) ? now + horizon : null },
     stock: Object.fromEntries(KEYS.map(k => [k, Math.floor(state.stock[k] + EPS)])),
     resources: Object.fromEntries(KEYS.map(k => [k, { available: Math.floor(state.stock[k] + EPS),
@@ -332,5 +340,5 @@ function snapshot(state, now) {
       next: state.levels[b.key] < 100 ? benefit(b.key, state.levels[b.key] + 1) : "Maximum level" }])) };
 }
 module.exports = { C, HOUR, EPS, VERSION, KEYS, BUILDINGS, PRODUCERS, COSTS, MINUTES, zero, fail, integer, multiplier,
-  referenceRates, initial, normalize, capacity, slots, constructionQuote, baseQuote, spend, fund, pauseJob,
+  referenceRates, initial, normalize, capacity, slots, buildingPrerequisites, constructionQuote, baseQuote, spend, fund, pauseJob,
   flows, settle, chainLevel, quoteRate, rarityIndex, benefit, snapshot, upgradeOverview };
