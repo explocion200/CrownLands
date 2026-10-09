@@ -1,52 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "11374d09c794ce7c5925021821e8f9abe2db7751",
+  "baseCommit": "27965d48b00b1067c3e622e222753f5338c8c0a6",
   "coverage": [
-    {
-      "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "common-gear-ui.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "reason": "Implement seven owner-approved estate management improvements: overview and explicit project/reward navigation, district-preserving server-readiness filters and keyboard entry, actionable production blockers, existing unlock previews, confirmed completion feedback without refitting artwork, champion/recruit/expedition/XP cards, and account-device guide dismissal. Browser validation covers desktop and two short landscape views plus existing all-site map/deposit/start/retry/timer/Gear/focus/lifecycle behavior. Shared Gear validation protects existing officer screens; registry validation checks unchanged fixed artwork geometry. No balance, asset or construction-authority changes. The confirmed Build/Upgrade refinement uses the authoritative completed level in all three action contexts and accessible labels; browser checks cover Gold-only first-build review, running Level 1 and the in-place focused transition on server-confirmed completion.",
-      "tests": [
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-inner-city-estate.js"
-      ]
-    },
-    {
-      "paths": [
-        "functions/estate-economy.js",
-        "functions/estate-service.js",
-        "functions/index.js",
-        "firebaseClient.js",
-        "tools/test-estate-economy.js",
-        "functions/test/emulator-estate-economy.js"
-      ],
-      "reason": "Optional includeUpgradeOverview forwards through the existing authenticated callable and reuses actual construction quotes with prepared Main City Gold; no quote documents, deposits or contracts are created. Ordinary reads retain their existing lightweight path. Unit tests cover exact bill parity, immutable state, funded credit, Hall/source prerequisites, Gold, builders, legacy paid work, max level and delayed clocks. Estate emulator covers callable integration, authorization/season persistence, deposits/start/transactions/legacy/services, no extra spend quotes and the optional path. Shared economy concurrency and coordinated-release emulators cover currency settlement and current-realm compatibility affected by opting into prepared economy. Client browser tests cover forwarding and display; shared instant economy validation guards unrelated client spending wrappers.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-estate-economy-browser.js",
-        "functions/test/emulator-estate-economy.js",
-        "functions/test/emulator-economy-concurrency.js",
-        "functions/test/emulator-coordinated-release.js"
-      ]
-    },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/CROWNLANDS_ART_BIBLE.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record the owner-confirmed seven-feature presentation rules, optional authoritative readiness semantics and device preference, retaining approved economy and LIVE release history. Pending release is explicitly separated from current deployment. Documentation assertions are reviewed against rule/unit/browser behavior; no arithmetic rebalance or new source artwork applies. Record the owner-confirmed Build-before-Level-1 wording as superseding the earlier universal Upgrade label.",
-      "tests": [
-        "tools/test-estate-economy.js",
-        "tools/validate-estate-economy-browser.js"
-      ]
+      "reason": "Record only the verified owner-authorized PR #495 merge and coordinated targeted backend/web deployment. All dates, IDs, source hashes, function counts, realm/rules identity and 55/165 artifact comparisons were cross-checked against sanitized release receipts, exact deployed source archives, successful staged/runtime/public smoke, and passing CI run 37863415157. Mark the seven management features and Build-before-Level-1 wording LIVE — WEB, retaining historical releases and signed-in/physical-device/itch/long-term limits. No runtime, gameplay, balance, assets, dependencies or production configuration changes; no additional runtime or emulator suites apply to these documentation-only changes.",
+      "tests": []
     }
   ]
 }
