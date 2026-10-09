@@ -2,8 +2,28 @@
 
 Base: `3e8ea124c20307b6e919a2a8cd73b3b770b223ab` (main through PR #499).
 Branch: `codex/game-health-performance-review`.
-This is source and isolated-browser evidence; the changes require a separately
-authorized and verified deployment.
+PR [#500](https://github.com/explocion200/CrownLands/pull/500) is merged and its
+owner-authorized web deployment is verified at build
+`74645db3f91693ac1239d8509acd29e2071a1c4f`. The measurements below remain source
+and isolated-browser evidence, rather than production frame-rate claims.
+
+## Verified web publication
+
+Netlify deploy `6ac8706c706414000862f1b1` was published on October 9, 2026 at
+`04:44:26.782 UTC`. The manual publication hold remains enabled. All 56 staged
+file comparisons and 168 public comparisons across the primary `/play/` entry
+and both game hosts matched the merged artifact, including the changed runtime
+scripts and HUD stylesheet. Exact staged estate interactions and both performance
+regressions passed; public anonymous startup passed at desktop and landscape
+sizes without uncaught errors. Required GitHub checks passed in
+[run 37883732613](https://github.com/explocion200/CrownLands/actions/runs/37883732613).
+
+The release contract, server fingerprint and 144-callable manifest match the
+preceding web release; no backend or production data was changed. itch.io was
+not republished and its public manifest still identifies build `27965d4...`.
+Publication evidence is retained locally under
+`release-artifacts/game-health-performance-review/deployment/` and recorded in
+[the Master Specification](CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md).
 
 ## Corrections
 
@@ -102,5 +122,6 @@ before the runtime corrections; the focused regressions cover their final state.
   subsystems only with explicit dependency coverage; a broad rewrite would make
   these focused fixes harder to verify.
 - Authenticated production play, real Firebase latency, physical phones and
-  release-channel parity require separate verification. Nothing was merged,
-  deployed or written to production by this review.
+  release-channel parity require separate verification. The web publication was
+  verified after the owner authorized merge and deployment; no production
+  gameplay orders or data edits were submitted.

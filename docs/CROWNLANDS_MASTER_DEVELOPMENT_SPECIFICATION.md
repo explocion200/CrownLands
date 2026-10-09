@@ -66,7 +66,18 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Direct building starts
+### Current verified web release — Estate refresh and short-screen HUD performance
+
+The authorized merge and web deployment of [PR #500](https://github.com/explocion200/CrownLands/pull/500), from `codex/game-health-performance-review`, is verified at build `74645db3f91693ac1239d8509acd29e2071a1c4f`. Unchanged estate resource, timer and management refreshes avoid redundant DOM writes, and unchanged building levels/states preserve detail nodes and skip repeated map layout. Fresh receipts, balances, construction deadlines and confirmed completions continue to update. The short-landscape combat-timer selector limits style invalidation to the existing HUD subtree. Approved gameplay, economy, artwork and the preceding direct building-start behavior are retained.
+
+- **`LIVE — WEB`:** Netlify deploy `6ac8706c706414000862f1b1`, published `2026-10-09T04:44:26.782Z` (October 9, 12:44 a.m. Eastern). All 56 staged-file and 168 public-file comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`, including both estate scripts and the changed HUD stylesheet. The exact merged artifact and full build stamp match; the manual publication hold remains enabled.
+- **Validation:** required GitHub `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run `37883732613`](https://github.com/explocion200/CrownLands/actions/runs/37883732613). Seven selected local validators, Node 22 syntax/lint, runtime synchronization, production artifact and asset budgets passed. Exact staged estate interactions passed at 1440×900, 844×390 and 568×320. Staged refresh checks retained zero mutations for unchanged resources and estate snapshots, fresh receipts and construction completion. The staged short-screen trace recorded ten style updates with a maximum of 92 affected elements, and timer/alert visibility checks passed at all three sizes. Public anonymous desktop/mobile startup passed without uncaught runtime errors. Emulator suites were not required for this client-only update.
+- **Backend compatibility:** release ID `crownlands-2026-10-08-estate-economy-v1`, contract `c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58`, server fingerprint `0f18ff66712056e19ad0f4d4ac74459a6519321fbddf33918013d7cbc0ee564c` and 144-callable manifest match the preceding verified web release. The client fingerprint is `4b04716241a69aa0a648501cad9f45e19b10fd2654665fab4362ea5b10001d8a`. Backend/rules/indexes/Firebase deployment source is unchanged from that release. No Functions, rules, indexes, realm configuration or player records were deployed or edited, and no production gameplay orders were submitted.
+- **itch.io and limits:** a fresh public manifest check retained upload `19646406` and build `27965d48b00b1067c3e622e222753f5338c8c0a6`; this channel was not republished. The performance correction is `LIVE — WEB`. Staged gameplay used isolated fixtures; authenticated production play, physical-phone checks, crowded-map capacity and long soaks remain unverified. The broader review and remaining performance opportunities are recorded in [the game health review](GAME_HEALTH_REVIEW.md). PR #497 remains separately unmerged and is not included.
+
+Sanitized evidence is retained under `release-artifacts/game-health-performance-review/deployment/`. Before publication, local `main` and `origin/main` were clean and equal to the merged build with divergence `0 0`.
+
+### Previous verified web release — Direct building starts
 
 The authorized merge and web deployment of [PR #498](https://github.com/explocion200/CrownLands/pull/498), from `codex/estate-upgrade-payment-confirmation`, is verified at build `f49871ade7b09702541782b011efff820a5cc342`. The external requirements panel displays the next target, material credit, Gold, duration and benefits. Selecting **Build Level 1** or **Upgrade to Level N** starts that exact quoted level directly, without a second payment review or checkbox. Material deposits retain their separate permanent-credit review. Duplicate-click guards, original-request replay, authoritative quote rejection and the no-queue rule remain in force. Costs, timers, benefits, persistence, artwork and fixed captions are unchanged.
 
@@ -452,10 +463,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current direct-start publication and the preceding itch.io build are verified separately in FM-2. Historical follow-up rows retain their original release evidence.
+Current estate/HUD performance publication and the preceding itch.io build are verified separately in FM-2. Historical follow-up rows retain their original release evidence.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Estate refresh DOM preservation and short-landscape HUD style invalidation | Verified web build `74645db...` from PR #500; backend unchanged | Still upload `19646406` / build `27965d4...`; not republished | `LIVE — WEB`; 56 staged and 168 public-file comparisons, exact-runtime estate/performance regressions and public startup passed; gameplay and backend contract retained |
 | Direct estate Build/Upgrade starts from displayed requirements without a second payment confirmation | Verified web build `f49871a...` from PR #498; backend unchanged | Still preceding upload `19646406` / build `27965d4...`; new ZIP prepared but unpublished | `LIVE — WEB`; 55 staged and 165 public-file comparisons, direct-start/deposit/retry checks at three sizes and public startup passed; all 144 Functions, realm and rules retained |
 | Inner Castle management overview, readiness filters, production guidance, unlock previews, completion notices, champion cards, starter guide and Build/Upgrade wording | Verified web and targeted backend build `27965d4...` from PR #495 | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, three emulator suites, exact staged desktop/mobile interactions and public startup passed; two deployed callables verified, other 142 functions and realm/rules retained |
 | Inner Castle building service clarity, availability and refresh/deadline preservation | Verified web build `50a795d...` from PR #493 | Not republished for this follow-up | `LIVE — WEB`; 55 staged and 165 public-file comparisons, exact-runtime service/deposit/Gear checks and desktop/mobile startup passed; approved economy/backend/realm/rules retained |
@@ -2411,6 +2423,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 9, 2026 — Game health performance release verification
+
+- Recorded authorized PR #500 merge and verified web publication at `74645db...`, Netlify deploy `6ac8706c706414000862f1b1`, published `2026-10-09T04:44:26.782Z` (12:44 a.m. Eastern).
+- Required CI, seven selected validators, production artifact, 56 staged and 168 public-file comparisons, exact-runtime estate/performance checks and public desktop/mobile startup passed. Unchanged refreshes retained zero DOM mutations; the staged short-screen trace affected at most 92 elements. These controlled measurements do not establish production FPS or physical-phone latency.
+- Updated the current snapshot and Release Channel Matrix to `LIVE — WEB`; the manual publication hold, backend and approved gameplay remain unchanged. itch.io retains its preceding build. Authenticated play, physical devices, crowded-map capacity and long soaks retain their stated limits.
 
 ## October 8, 2026 — Direct building start release verification
 
