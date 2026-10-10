@@ -46,6 +46,19 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       await page.locator(".guild-hall-art img").evaluate(image=>image.decode());
       await checkArt(".guild-hall-art img",["hall-v3.webp"]);
       await layout();await page.screenshot({path:path.join(output,`hall-${width}x${height}.png`)});
+      assert.equal((await snapshot()).selectedMission,null,"No mission is chosen on the player's behalf");
+      assert.equal(await page.locator('#guildPreview nav [data-tab="planning"]').count(),0,"Planning appears only after choosing a contract");
+      await page.locator(".guild-room-links button").filter({hasText:"Planning table"}).click();
+      assert.equal(await page.locator(".guild-contract").count(),8,"The planning room starts with contract selection");
+      await tab("members");await page.locator('#guildPreview footer [data-tab="contracts"]').click();
+      assert.equal(await page.locator(".guild-contract").count(),8,"A roster without a mission leads to contracts");
+      await page.goto(origin+"/docs/visual-qa/guild-master/game.html?entry=guild&tab=planning");
+      await page.waitForFunction(()=>document.documentElement.dataset.guildGameReady==="true");
+      assert.equal(await page.locator(".guild-contract").count(),8,"A direct planning URL cannot silently select a mission");
+      assert.equal(await page.locator("[data-forecast]").count(),0);
+      await tab("archive");await action("report").first().click();await tab("hall");
+      assert.equal((await snapshot()).selectedMission,null,"Reading an archived report cannot select a contract");
+      assert.equal(await page.locator('#guildPreview nav [data-tab="planning"]').count(),0);
       const camera=await page.evaluate(()=>guildGamePreview.estate.snapshot());
       await action("recruits").click();await layout();
       let s=await snapshot();const original=structuredClone(s.offers);
@@ -53,6 +66,7 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       for(const c of s.offers){const bounds=await page.evaluate(type=>GuildReviewModel.types[type].base,c.type);assert(c.base.every((n,i)=>n>=bounds[i]-2&&n<=bounds[i]+2));}
       await action("refresh").click();assert.deepEqual((await snapshot()).offers,original,"Refresh cannot reroll offers");
       await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.guildGameReady==="true");
+      await tab("hall");
       await action("recruits").click();assert.deepEqual((await snapshot()).offers,original,"Reload preserves starting rolls");
       await page.screenshot({path:path.join(output,`recruits-${width}x${height}.png`)});
       const gold=s.gold;await page.locator('[data-guild="recruit"][data-id="offer-maren"]').click();
@@ -64,7 +78,11 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       await tab("contracts");await layout();
       await checkArt(".guild-contract img",["escort","muster","equipment","quarry","timber","workshop","waymark","ledger"].map(id=>`mission-${id}.webp`));
       await page.screenshot({path:path.join(output,`contracts-${width}x${height}.png`)});
-      await page.locator('[data-guild="mission"][data-id="escort"]').click();
+      const selectEscort=page.locator('[data-guild="mission"][data-id="escort"]');
+      if(width<900)await selectEscort.tap();else{await selectEscort.focus();await page.keyboard.press("Enter");}
+      assert.equal((await snapshot()).selectedMission,"escort");
+      assert.equal(await page.locator("[data-mission-plan] h2").textContent(),"The Merchant's Road");
+      assert.equal(await page.locator('#guildPreview nav [data-tab="planning"]').textContent(),"Mission plan");
       await checkArt(".guild-planning-art",["room-planning.webp"]);
       const success=async()=>parseFloat(await page.locator(".guild-odds b").first().textContent());
       const twoMemberSuccess=await success(),partyLeader=(await snapshot()).leader;
@@ -97,6 +115,21 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       await action("refresh").click();assert.equal(await page.locator('[data-field="route"]').inputValue(),"remote");
       assert.equal((await snapshot()).saved[0].name,"Western Watch");await layout();
       await page.screenshot({path:path.join(output,`planning-${width}x${height}.png`)});
+      await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.guildGameReady==="true");
+      assert.equal(await page.locator("[data-mission-plan]").getAttribute("data-mission-plan"),"escort","Reload restores the explicitly selected mission");
+      assert.equal(await page.locator('[data-field="route"]').inputValue(),"remote");
+      await page.locator('[data-mission-plan] [data-tab="contracts"]').click();
+      await page.locator('[data-guild="mission"][data-id="timber"]').click();
+      assert.equal(await page.locator("[data-mission-plan] h2").textContent(),"The Western Timber Road");
+      await tab("members");await page.locator('#guildPreview footer [data-tab="planning"]').click();
+      assert.equal(await page.locator("[data-mission-plan]").getAttribute("data-mission-plan"),"timber","Roster return preserves the chosen contract");
+      await tab("archive");await action("report").first().click();await action("skip").click();
+      await checkArt(".guild-report>img",["mission-escort.webp"]);
+      await tab("planning");
+      assert.equal(await page.locator("[data-mission-plan]").getAttribute("data-mission-plan"),"timber","Archived reports cannot overwrite the current plan");
+      assert.equal(await page.locator('[data-field="route"]').inputValue(),"remote");
+      await page.locator('[data-mission-plan] [data-tab="contracts"]').click();
+      await page.locator('[data-guild="mission"][data-id="escort"]').click();
       const beforeReport=await snapshot();await action("report").click();await action("skip").click();
       await checkArt(".guild-report>img",["mission-escort.webp"]);
       assert.equal(await page.locator(".guild-report h2").textContent(),"Rewards");assert.deepEqual(await snapshot(),beforeReport,"Report replay/skip has no economic effect");
@@ -135,10 +168,10 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       }
       await page.goto(origin+"/docs/estate-economy/guild-master-balance-review.html");
       assert((await page.locator("body").textContent()).includes("Groups 1–2 remain proposed"),"Art review cannot approve gameplay balance");
-      results.push({width,height,status:"passed",additivePartyForecast:true,leaderReplacementExplained:true,independentMissionImages:8,independentRoomImages:5,uncroppedArtwork:true,reducedMotion:true,offersStable:true,exactRecruitStats:true,forecastUpdates:true,reportNoRewards:true,oneRoomJob:true,cameraRestored:true});
+      results.push({width,height,status:"passed",missionFirstPlanning:true,chosenMissionRetained:true,archivePreservesPlan:true,additivePartyForecast:true,leaderReplacementExplained:true,independentMissionImages:8,independentRoomImages:5,uncroppedArtwork:true,reducedMotion:true,offersStable:true,exactRecruitStats:true,forecastUpdates:true,reportNoRewards:true,oneRoomJob:true,cameraRestored:true});
       await context.close();
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({scope:"Local fixture UI only; no production mechanics or server authority validated",results},null,2)+"\n");
-    console.log("PASS Guild game preview: three viewport sizes, real estate entry/return, 44px controls, stable random offers, exact recruited stats, additive party forecasts, explicit leader changes, planning/focus retention, harmless report replay and single sample room improvement.");
+    console.log("PASS Guild game preview: three viewport sizes, mission-first planning, retained contracts/preparation, archive isolation, keyboard/touch selection, real estate entry/return, 44px controls, stable recruits, additive party forecasts, explicit leader changes and single sample room improvement.");
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -18,6 +18,19 @@ The `tab` parameter can open `contracts`, `infirmary`, `training` or `improvemen
 The adjacent `index.html` is a simpler artwork gallery; room buttons change the
 illustration. No real purchases, missions or production mutations are possible.
 
+## Choose a contract before planning
+
+The preview starts without a selected mission. Choose a contract, then use its
+mission plan to select members, a leader, route and supplies and review the
+forecast. The Mission plan tab appears only after that choice. The Planning
+table and roster direct players to contracts when no mission has been chosen;
+a direct `tab=planning` URL does the same.
+
+Change contract returns to the board. Returning from the roster, reopening the
+Guild or reloading the preview retains the explicitly chosen contract and
+preparation in this tab's sample session. Archive reports have their own mission
+context and never select a contract or overwrite the current plan.
+
 ## Additive party forecast
 
 Each member adds their relevant stats against a fixed contract target. Adding a
@@ -67,12 +80,13 @@ node tools/validate-guild-game-preview.js
 
 The browser validation checks desktop 1440×900 and landscape 844×390 / 568×320,
 independent and uncropped images, all room improvement illustrations, 44px
-controls, stable sample recruits, preparation choices, harmless report replay,
+controls, stable sample recruits, mission-first planning, keyboard/touch contract
+selection, retained preparation and archive isolation, harmless report replay,
 adding/removing members without diluting the forecast, one sample improvement
 at a time, and estate camera restoration. The model test covers all eight
 contracts and all member types across preparation choices and progression,
-including caps, fixed difficulty and explicit leader changes. It also checks
-the artwork gallery and the pending balance status. Screenshots and results go
+including caps, fixed difficulty and explicit leader changes. Browser checks
+also cover the artwork gallery and pending balance status. Screenshots and results go
 to ignored `release-artifacts/guild-master-missions/game-preview/`.
 
 These checks do not validate production server authority, migration, live

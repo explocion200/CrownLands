@@ -8,7 +8,7 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/visual-qa/guild-master/README.md"
       ],
-      "reason": "Record confirmed Guild facilities, randomized-stat and additive-party directions plus approved artwork; retain remaining proposed numbers and local-review/non-deployment status. Documentation does not enforce production gameplay.",
+      "reason": "Record confirmed Guild facilities, randomized-stat and additive-party and mission-first planning directions plus approved artwork; retain remaining proposed numbers and local-review/non-deployment status. Documentation does not enforce production gameplay.",
       "tests": []
     },
     {
@@ -81,7 +81,7 @@
         "tools/test-guild-party-contributions.js",
         "tools/validate-guild-game-preview.js"
       ],
-      "reason": "Exercise additive party contributions across all types, contracts, routes, approaches, supplies and progression; verify fixed mission difficulty, caps, leader behavior and unchanged two-member calibration. Browser checks add/remove members through actual controls, the contribution breakdown, stable recruits, preparation, report replay, room upgrades, responsive art/controls and estate camera return. Uses unchanged estate/economy fixtures with no production mutations; no server/emulator changes apply.",
+      "reason": "Exercise additive party contributions across all types, contracts, routes, approaches, supplies and progression; verify fixed mission difficulty, caps, leader behavior and unchanged two-member calibration. Browser checks mission-first navigation, empty-plan/deep-link guards, retained chosen contracts and preparation, archive isolation, keyboard/touch selection, and add/remove members through actual controls, the contribution breakdown, stable recruits, preparation, report replay, room upgrades, responsive art/controls and estate camera return. Uses unchanged estate/economy fixtures with no production mutations; no server/emulator changes apply.",
       "tests": [
         "tools/validate-guild-game-preview.js",
         "tools/test-guild-party-contributions.js"
