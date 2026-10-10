@@ -1,18 +1,49 @@
 "use strict";
 // Disposable loopback data: verifies the folio layout without a player account.
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
-const {chromium}=require("playwright"),{createServer}=require("./estate-building-ui-preview");
+const {createServer}=require("./estate-building-ui-preview");
+const {CdpClient}=require("./map-benchmark/cdp-client");
+const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
 const root=path.resolve(__dirname,"..");
+// Use the repository's dependency-free Chromium harness on Windows and CI.
+function pageDriver(client){
+  const evaluate=async(fn,arg)=>{const r=await client.send("Runtime.evaluate",{expression:"("+fn+")("+JSON.stringify(arg)+")",awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
+  const waitForFunction=async(fn,arg)=>{for(let i=0;i<300;i++){if(await evaluate(fn,arg))return;await new Promise(resolve=>setTimeout(resolve,100));}throw Error("Timeout: "+fn);};
+  const key=async name=>{const code={Tab:9,Escape:27}[name];assert(code,"Unsupported key");for(const type of ["rawKeyDown","keyUp"])await client.send("Input.dispatchKeyEvent",{type,key:name,code:name,windowsVirtualKeyCode:code});};
+  const locator=selector=>({
+    first:()=>locator(selector),count:()=>evaluate(s=>document.querySelectorAll(s).length,selector),
+    waitFor:()=>waitForFunction(s=>!!document.querySelector(s),selector),
+    textContent:()=>evaluate(s=>document.querySelector(s).textContent,selector),
+    inputValue:()=>evaluate(s=>document.querySelector(s).value,selector),
+    getAttribute:name=>evaluate(p=>document.querySelector(p.selector).getAttribute(p.name),{selector,name}),
+    evaluate:fn=>evaluate("s=>("+fn+")(document.querySelector(s))",selector),
+    isDisabled:()=>evaluate(s=>document.querySelector(s).disabled,selector),
+    isEnabled:()=>evaluate(s=>!document.querySelector(s).disabled,selector),
+    isVisible:()=>evaluate(s=>!!document.querySelector(s)?.checkVisibility(),selector),
+    fill:async value=>evaluate(p=>{const el=document.querySelector(p.selector);el.focus();el.value=p.value;el.dispatchEvent(new Event('input',{bubbles:true}));}, {selector,value}),
+    press:async name=>{await evaluate(s=>document.querySelector(s).focus(),selector);await key(name);},
+    click:async()=>{await evaluate(s=>document.querySelector(s).scrollIntoView({block:'nearest'}),selector);const r=await evaluate(s=>document.querySelector(s).getBoundingClientRect().toJSON(),selector);assert(r.width&&r.height,selector+" hidden");assert(await evaluate(p=>document.querySelector(p.selector).contains(document.elementFromPoint(p.x,p.y)),{selector,x:r.x+r.width/2,y:r.y+r.height/2}),selector+" covered");for(const type of ['mousePressed','mouseReleased'])await client.send('Input.dispatchMouseEvent',{type,x:r.x+r.width/2,y:r.y+r.height/2,button:'left',clickCount:1});}
+  });
+  return {evaluate,locator,waitForFunction,keyboard:{press:key},
+    goto:async url=>{const navigation=await client.send('Page.navigate',{url});assert(!navigation.errorText,navigation.errorText);await waitForFunction(s=>location.href===s&&document.readyState==='complete',url);},
+    setViewportSize:({width,height})=>client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false}),
+    emulateMedia:({reducedMotion})=>client.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reducedMotion}]}),
+    screenshot:async({path:file})=>{const r=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(file,Buffer.from(r.data,'base64'));}
+  };
+}
 async function main(built=false){
   const output=path.join(root,"release-artifacts/estate-building-ui",built?"built":"source");
   const executable=[process.env.CHROME_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","/usr/bin/google-chrome","/usr/bin/chromium"].find(p=>p&&fs.existsSync(p));
   assert(executable,"Chromium required");fs.mkdirSync(output,{recursive:true});
   const server=createServer({built});await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
   const origin="http://127.0.0.1:"+server.address().port;
-  let browser;const errors=[],proof=[];
+  let session,client;const errors=[],proof=[];
   try{
-    browser=await chromium.launch({executablePath:executable,headless:true});
-    const page=await browser.newPage();page.on("pageerror",error=>errors.push(error.message));
+    session=await startBrowserSession(executable);
+    client=await CdpClient.connect(session.targets.find(t=>t.type==='page').webSocketDebuggerUrl);
+    await client.send('Page.enable');await client.send('Runtime.enable');
+    client.on('Runtime.exceptionThrown',event=>errors.push(event.exceptionDetails.exception?.description||event.exceptionDetails.text));
+    const page=pageDriver(client);
     const action=a=>page.locator('.estate-economy-dialog [data-economy-action="'+a+'"]');
     const open=async(key,profile="ready",view="services")=>{
       await page.goto(origin+"/?"+new URLSearchParams({building:key,profile,view}));
@@ -85,7 +116,11 @@ async function main(built=false){
     assert.deepEqual(errors,[],"No browser exceptions");
     fs.writeFileSync(path.join(output,"verification.json"),JSON.stringify({built,proof,errors},null,2)+"\n");
     console.log("Estate building folio passed "+(built?"built":"source")+": 20 services, 4 manual producers, 6 construction states, persistent actions, draft/chain/close, reduced motion at desktop and two landscape sizes.");
-  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+  }finally{
+    if(client){await client.send('Browser.close').catch(()=>{});client.close();}
+    if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}
+    await new Promise(resolve=>server.close(resolve));
+  }
 }
 async function validate(){
   if(process.argv.includes("--built"))return main(true);
