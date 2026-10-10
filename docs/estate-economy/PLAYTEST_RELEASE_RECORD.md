@@ -1,6 +1,8 @@
 # Inner Castle playtest and release readiness
 
-Current release: [PR #512](https://github.com/explocion200/CrownLands/pull/512), from `codex/estate-building-hit-areas`, **LIVE — ALL PUBLISHED CHANNELS** at build `4680341ee82f4cc5cfb3a687cdbb07e43b6ddeed`. Full building/plot selection and reliable mouse/touch dragging are verified through the exact delivered artifact. No gameplay rule changed; current authenticated and actual installed-app/physical input remain manual.
+Current release: [PR #514](https://github.com/explocion200/CrownLands/pull/514), from `codex/estate-overview-construction-timers`, **LIVE — ALL PUBLISHED CHANNELS** at build `17494c17bc60f1ee7b92b91b946c9d3f167469f3`. Overview construction counters remain visible, fit inside the viewport and separate with leaders. Exact delivered timer fixtures and channel parity are verified; signed-in/installed-app/physical timer behavior remains manual.
+
+Previous release: [PR #512](https://github.com/explocion200/CrownLands/pull/512), from `codex/estate-building-hit-areas`, **LIVE — ALL PUBLISHED CHANNELS** at build `4680341ee82f4cc5cfb3a687cdbb07e43b6ddeed`. Full building/plot selection and reliable mouse/touch dragging are verified through the exact delivered artifact. No gameplay rule changed; current authenticated and actual installed-app/physical input remain manual.
 
 Previous release: [PR #510](https://github.com/explocion200/CrownLands/pull/510), from `codex/estate-refresh-action-lock`, **LIVE — ALL PUBLISHED CHANNELS** at build `969e1ba9c508aeeae39a77a0bd56ab4165862e88`. Guild/service controls visibly lock while refreshing and recover after the response. Exact publication and current signed-in smoke are recorded below. No gameplay rule changed.
 
@@ -16,11 +18,19 @@ Previous release: October 9, 2026 from `codex/estate-release-readiness` in [PR #
 | Signed-in current policy | Owner confirmed the dedicated QA account and completed Google sign-in. Ordinary controls verified direct upgrade payment/Cancel, natural completion and benefit, one paid Food batch/delivery without repeat, earlier expedition completion/recovery/one-time claim, and a funded commission. Reload preserved the paid timer, stock and claimed-reward state. A visible action-lock defect during refresh is repaired on `codex/estate-refresh-action-lock`, **LIVE — ALL PUBLISHED CHANNELS** at build `969e1ba...`. Live interrupted-response retry remains untested; isolated retry coverage is separate. |
 | Timed commission claim | Common Treasury Velvet Cap funded near `2026-10-09T23:06Z` using 81 Timber and 172 Stone; accepted duration 168 hours. Claim is disabled while working. Verify after the actual deadline, approximately October 16 at 23:06 UTC; the authoritative enabled claim controls the test. Do not alter clocks, grant stock or treat a model/emulator claim as a live claim. |
 | Physical phone | Landscape slider/exact amount/Max, visible time/Start, pan/pinch, directory, background/resume, Gear return, X and Android/iOS Back are awaiting user verification. Synthetic browser sizes do not prove physical-device behavior. |
-| itch.io catch-up | Published upload `19665869` at the same merged build as web. Actual Run game iframe observed; all 1,000 files match and six local/six public cold/reload cases pass. Current scripts, estate art and active/prepared Core maps retained; prior uploads preserved. |
+| itch.io catch-up | Published upload `19666640` at the same merged build as web. Actual Run game iframe observed; all 1,000 files match and six local/six public cold/reload cases pass. Current scripts, estate art and active/prepared Core maps retained; prior uploads preserved. |
 
 Local sanitized receipts belong under `release-artifacts/estate-release-readiness/deployment/`. Credentials, private account IDs and account exports are excluded.
 
-## Verified whole-building selection and drag publication
+## Verified overview construction countdown publication
+
+- PR #514 merged `2026-10-10T04:02:38Z`; clean main matched origin/main, `0 0`, before publication. Required CI [38022065505](https://github.com/explocion200/CrownLands/actions/runs/38022065505), four selected validators, syntax/lint, runtime sync and artifact/budgets passed.
+- Netlify `6ac9b8e03d7cf70008acd162` published `2026-10-10T04:23:40.580Z`; manual hold retained. All 56 staged/168 public files matched. Exact delivered timer fixtures for twenty sites and concurrent groups, plus primary anonymous startup, passed at 1440×900, 844×390 and 568×320.
+- Only getRealmInfo identity updated; 56 runtime files/manifest matched, 144 Functions active, other 143 source references/hashes/revisions retained. Guard and 29-callable access audit passed; ready October realm and rules retained read-only.
+- itch.io upload `19666640` selected/saved; actual iframe `https://html-classic.itch.zone/html/19666640/index.html?v=1791606313`. Package 60,093,861 bytes, SHA-256 `3e8fcb8d4a9ca5dea5079fd59701225e08ea28bc0272169c9b81c6ef042d3308`. 998 files match exactly, two HTML entries use known normalization; six local/six public cold/reload cases pass. Earlier uploads retained.
+- Sanitized receipts: `release-artifacts/estate-overview-construction-timers/deployment/`. No current-build authenticated or actual installed-app/physical timer test is claimed. Existing timed/seasonal checks remain manual; no gameplay orders or administrative player edits submitted.
+
+## Previous verified whole-building selection and drag publication
 
 - PR #512 merged `2026-10-10T03:01:35Z`; clean main matched origin/main, `0 0`, before publication. Required CI [38018277646](https://github.com/explocion200/CrownLands/actions/runs/38018277646), four selected validators, syntax/lint, runtime sync and artifact/budgets passed.
 - Netlify `6ac9aa919a691d0008277095` published `2026-10-10T03:05:15.312Z`; manual hold retained. All 56 staged/168 public files matched. Exact delivered native click/drag/touch/pinch/keyboard fixtures and anonymous startup passed at 1440×900, 844×390 and 568×320.

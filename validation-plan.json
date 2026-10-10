@@ -1,27 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "eed714fa8e416cc4d684b0042270363b728bbc40",
+  "baseCommit": "17494c17bc60f1ee7b92b91b946c9d3f167469f3",
   "coverage": [
     {
       "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "tools/validate-estate-overview-timers.js"
-      ],
-      "reason": "Construction timer overview placement now prioritizes running progress over scenery/district captions, constrains northern sites to the viewport, separates concurrent counters with leaders and restores captions on completion/disposal. Verify all twenty sites plus three concurrent groups at desktop and two landscape sizes against source and built assets; check real countdown/progress, completion, zoom/fit, offscreen handling and cleanup. Existing economy browser tests cover authoritative completion, directory notes, independent job durations, background pause and Gear teardown/return; refresh tests preserve zero unchanged DOM writes, and native input tests verify timer overlays do not block clicks/pan/touch/pinch. No server, pricing, duration, balance or gameplay changes need emulator suites.",
-      "tests": [
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-estate-refresh-browser.js",
-        "tools/validate-estate-input-browser.js"
-      ]
-    },
-    {
-      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md"
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
+        "docs/estate-economy/README.md"
       ],
-      "reason": "Record the confirmed zoomed-out construction-counter requirement and its presentation priority, viewport fitting and concurrent-site association while retaining zoom-dependent building captions and all gameplay rules. Distinguish implementation from deployment; runtime behavior is covered above.",
+      "reason": "Record verified authorized PR #514 web/backend/itch publication, exact timer fixture and channel-parity scope, unchanged gameplay and manual authenticated/installed-app limits. Documentation only; no runtime, gameplay, server or balance change requires new executable tests.",
       "tests": []
     }
   ]
