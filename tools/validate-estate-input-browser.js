@@ -30,24 +30,37 @@ async function main() {
   fs.mkdirSync(out, { recursive:true });
   let session, client;
   const errors = [], results = [];
-  try {
+  const openBrowser=async()=>{
     session = await startBrowserSession(executable);
     client = await CdpClient.connect(session.targets.find(target => target.type === "page").webSocketDebuggerUrl);
     await Promise.all([client.send("Page.enable"), client.send("Runtime.enable")]);
+    // Each viewport/delivery fixture starts with an independent input device.
+    await client.send("Emulation.setTouchEmulationEnabled",{enabled:true,maxTouchPoints:2});
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
+  };
+  const closeBrowser=async()=>{
+    if(client){await client.send("Browser.close").catch(()=>{});client.close();client=null;}
+    if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);session=null;}
+  };
+  try {
     const evaluate = async (fn, arg) => {
       const result = await client.send("Runtime.evaluate", { expression:`(${fn})(${JSON.stringify(arg)})`, awaitPromise:true, returnByValue:true });
       if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
       return result.result.value;
     };
-    const wait = async fn => {
-      for (let i = 0; i < 200; i++) { if (await evaluate(fn)) return; await delay(25); }
+    const wait = async (fn,arg) => {
+      for (let i = 0; i < 200; i++) { if (await evaluate(fn,arg)) return; await delay(25); }
       throw Error("Timed out: " + fn);
     };
     const frames = () => evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const box = selector => evaluate(s => document.querySelector(s).getBoundingClientRect().toJSON(), selector);
     const mouse = (type, x, y) => client.send("Input.dispatchMouseEvent", { type, x, y, button:"left", buttons:type === "mouseReleased" ? 0 : 1, clickCount:type === "mouseMoved" ? 0 : 1 });
-    const clickAt = async (x, y) => { await mouse("mousePressed", x, y); await mouse("mouseReleased", x, y); };
+    const clickAt = async (x, y) => {
+      // A physical click includes moving back into the window after an
+      // off-viewport drag; CDP press/release alone does not reset mouse routing.
+      await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",x,y,button:"none",buttons:0});
+      await mouse("mousePressed", x, y); await mouse("mouseReleased", x, y);
+    };
     const click = async selector => {
       const b = await box(selector), x = b.x + b.width / 2, y = b.y + b.height / 2;
       assert(await evaluate(({ selector, x, y }) => document.querySelector(selector).contains(document.elementFromPoint(x, y)), { selector, x, y }), "Covered control: " + selector);
@@ -71,16 +84,19 @@ async function main() {
         return {width:viewport.width,height:viewport.height,scale:world.width/CrownlandsEstate.width,mapWidth:CrownlandsEstate.width,mapHeight:CrownlandsEstate.height};
       });
       const clamp = (value, size, screen) => Math.max(screen/(2*geometry.scale),Math.min(size-screen/(2*geometry.scale),value));
-      assert(Math.abs(after.x-clamp(before.x-dx/geometry.scale,geometry.mapWidth,geometry.width))<.1, "Drag must track the horizontal pointer distance without a jump.");
-      assert(Math.abs(after.y-clamp(before.y-dy/geometry.scale,geometry.mapHeight,geometry.height))<.1, "Drag must track the vertical pointer distance without a jump.");
+      const diagnostic=JSON.stringify({before,after,dx,dy,geometry});
+      assert(Math.abs(after.x-clamp(before.x-dx/geometry.scale,geometry.mapWidth,geometry.width))<.1, "Drag must track the horizontal pointer distance without a jump: "+diagnostic);
+      assert(Math.abs(after.y-clamp(before.y-dy/geometry.scale,geometry.mapHeight,geometry.height))<.1, "Drag must track the vertical pointer distance without a jump: "+diagnostic);
       assert(!after.detailOpen, "Dragging must not select/open a building.");
     };
 
-    for (const delivery of process.argv.includes("--source-only") ? ["source"] : ["source", "built"]) {
+    for (const delivery of process.argv.includes("--source-only") ? ["source"] : process.argv.includes("--built-only") ? ["built"] : ["source", "built"]) {
       for (const [width, height] of [[1440,900],[844,390],[568,320]]) {
+        await openBrowser();
         await client.send("Emulation.setDeviceMetricsOverride", {width,height,deviceScaleFactor:1,mobile:false});
-        await client.send("Page.navigate", {url:`http://127.0.0.1:${server.address().port}/${delivery}/`});
-        await wait(() => !!window.CrownlandsEstateEconomy);
+        const url=`http://127.0.0.1:${server.address().port}/${delivery}/?size=${width}x${height}`;
+        await client.send("Page.navigate", {url});
+        await wait(expected => location.href===expected && document.readyState==="complete" && !!window.CrownlandsEstateEconomy,url);
         await evaluate(() => {
           window.qaEstate = {levels:Object.fromEntries(CrownlandsEstate.buildings.map(b=>[b.key,0])),jobs:[]};
           window.qaSelected = "great-hall";
@@ -91,6 +107,9 @@ async function main() {
             onSelect:key=>{qaSelected=key;}, onBuilding:key=>{window.qaEntered=key;}, onUpgrade:key=>{window.qaUpgraded=key;},
           });
           document.getElementById("modal").showModal();qaView.fit();
+          window.qaTrace=[];
+          for(const type of ["pointerdown","pointermove","pointerup","pointercancel","lostpointercapture"])
+            document.addEventListener(type,event=>{qaTrace.push({type,id:event.pointerId,input:event.pointerType,x:event.clientX,y:event.clientY,target:event.target.dataset?.innerCastleBuilding||event.target.className,captured:document.querySelector('.estate-viewport').hasPointerCapture(event.pointerId)});if(qaTrace.length>30)qaTrace.shift();});
         });
         await frames();
         const keys = await evaluate(() => CrownlandsEstate.buildings.map(b=>b.key));
@@ -163,12 +182,13 @@ async function main() {
         await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"ArrowRight",code:"ArrowRight",windowsVirtualKeyCode:39});
         await assertPan(keyboardBefore,await evaluate(()=>qaView.snapshot()),-70,0);
         await selectSite("royal-stables");
-        await client.send("Emulation.setTouchEmulationEnabled",{enabled:true});
         const t=await box('[data-inner-castle-building="royal-stables"]'),tx=t.x+t.width/2,ty=t.y+t.height/2;
         const touchBefore=await evaluate(()=>qaView.snapshot());
         await touch("touchStart",[{x:tx,y:ty,id:1}]);
         for(let i=1;i<=6;i++){await touch("touchMove",[{x:tx-60*i/6,y:ty+12*i/6,id:1}]);await delay(16);}
         await touch("touchEnd");
+        await frames();
+        assert(await evaluate(()=>qaTrace.some(event=>event.type==="pointerdown"&&event.input==="touch")),"Touch test must deliver native touch pointer events.");
         await assertPan(touchBefore,await evaluate(()=>qaView.snapshot()),-60,12);
         await selectSite("royal-stables");
         await touch("touchStart",[{x:tx,y:ty,id:1}]);
@@ -182,7 +202,6 @@ async function main() {
         await touch("touchMove",[{x:px-24,y:py,id:1},{x:px+24,y:py,id:2}]);await touch("touchEnd");
         assert.equal(await evaluate(()=>qaView.snapshot().zoom),4,"Pinching across a building must zoom without selecting it.");
         assert.equal(await evaluate(()=>qaView.snapshot().detailOpen),false);
-        await client.send("Emulation.setTouchEmulationEnabled",{enabled:false});
         await click("[data-estate-fit]");await click('[data-estate-district="city"]');
         await selectSite("mine");
         const actionsBefore=await evaluate(()=>qaView.snapshot());
@@ -204,16 +223,17 @@ async function main() {
         await evaluate(()=>qaView.destroy());
         results.push({delivery,width,height,sites:20,states:3,offCenterClicks,mouse:true,touch:true,cancel:true,pinch:true,keyboard:true,mapActions:true});
         console.log(`Estate footprint clicks and pointer gestures passed: ${delivery} ${width}x${height}.`);
+        await closeBrowser();
       }
     }
     assert.deepEqual(errors,[]);
     fs.writeFileSync(path.join(out,"verification.json"),JSON.stringify({passed:true,results},null,2)+"\n");
   } catch(error) {
+    if(client)console.error("Native input diagnostics: "+JSON.stringify(await client.send("Runtime.evaluate",{expression:"JSON.stringify({touchPoints:navigator.maxTouchPoints,focused:document.hasFocus(),events:window.qaTrace})",returnByValue:true})));
     if(client){const capture=await client.send("Page.captureScreenshot",{format:"png"});fs.writeFileSync(path.join(out,"failure.png"),Buffer.from(capture.data,"base64"));}
     throw error;
   } finally {
-    if(client){await client.send("Browser.close").catch(()=>{});client.close();}
-    if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}
+    await closeBrowser();
     await new Promise(resolve=>server.close(resolve));
   }
 }
