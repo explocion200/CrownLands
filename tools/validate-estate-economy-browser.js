@@ -380,7 +380,7 @@ async function main() {
       await wait(()=>document.querySelector('[data-economy-action="fund"]')?.disabled===false);
       assert.equal(await evaluate(()=>innerCastleEconomy.snapshot().estate.jobs.length),0,'Available resources never auto-start work');
       assert.deepEqual(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-requirements thead th')].map(e=>e.textContent)),['Material','Required','You have']);
-      await evaluate(()=>document.querySelector('.estate-economy-actions').scrollIntoView({block:"end"}));
+      assert(await evaluate(()=>{const action=document.querySelector('footer [data-economy-action="fund"]'),r=action.getBoundingClientRect();return r.height>=44&&r.top>=0&&r.bottom<=innerHeight;}),'Construction action stays visible without scrolling at every supported size');
       const requirements=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(output,"upgrade-"+width+".png"),Buffer.from(requirements.data,"base64"));
       // Previously paid partial credit remains visible and is used once.
