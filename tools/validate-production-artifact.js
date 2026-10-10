@@ -377,9 +377,11 @@ if (estateArtFiles.length !== 29 || estateArtFiles.reduce((sum, file) => sum + f
 }
 const overviewArtFiles=estateArtFiles.filter(file=>!path.basename(file).startsWith('terrain-detail-'));
 if(overviewArtFiles.reduce((sum,file)=>sum+fs.statSync(file).size,0)>1600*1024)throw new Error('Estate overview artwork exceeds 1600 KiB; detail must remain lazy.');
-const estateModuleBudget = 40 * 1024;
+// Terrain deselection and cleared-selection restoration add 293 shipped bytes.
+// Advance one bounded KiB; estate artwork and global installation caps are unchanged.
+const estateModuleBudget = 41 * 1024;
 if (["inner-city-estate.js", "inner-city-estate.css"].reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0) > estateModuleBudget) {
-  throw new Error("Estate renderer and styles exceed their 40 KiB budget.");
+  throw new Error("Estate renderer and styles exceed their 41 KiB budget.");
 }
 const sourceEstate = require("../inner-city-estate"), builtEstate = require(path.join(dist, "inner-city-estate.js"));
 assert.deepEqual(Object.keys(builtEstate).sort(), Object.keys(sourceEstate).sort(), "Delivered estate must preserve its public API");

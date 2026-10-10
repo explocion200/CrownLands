@@ -17,6 +17,15 @@
     },
     {
       "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The baseline estate renderer/styles use 40901 of 40960 bytes. Deselection and restoration add 293 shipped bytes, so raise only this module allowance by one bounded KiB to 41984 bytes. Run the artifact validator to enforce the new cap, source/built API parity and existing artwork/global budgets; no assets or deployment configuration change.",
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ]
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "reason": "Record the explicitly approved empty-terrain deselection behavior and its limits as pending deployment. Documentation is checked through the affected runtime tests above; no independent executable behavior or balance rule is added.",
