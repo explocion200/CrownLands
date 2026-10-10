@@ -1,6 +1,8 @@
 # Inner Castle playtest and release readiness
 
-Current release: [PR #514](https://github.com/explocion200/CrownLands/pull/514), from `codex/estate-overview-construction-timers`, **LIVE — ALL PUBLISHED CHANNELS** at build `17494c17bc60f1ee7b92b91b946c9d3f167469f3`. Overview construction counters remain visible, fit inside the viewport and separate with leaders. Exact delivered timer fixtures and channel parity are verified; signed-in/installed-app/physical timer behavior remains manual.
+Current release: [PR #516](https://github.com/explocion200/CrownLands/pull/516), from `codex/inner-city-hud-entry`, **LIVE — ALL PUBLISHED CHANNELS** at build `2de0506f18b43a9bea5e0b41ce1fdcd90eb81974`. The castle beside Dailies opens Main City, retaining Profile guards and realm camera. Exact delivered shortcut fixtures and channel artifacts are verified; current signed-in/installed-app/physical-device navigation remains manual.
+
+Previous release: [PR #514](https://github.com/explocion200/CrownLands/pull/514), from `codex/estate-overview-construction-timers`, **LIVE — ALL PUBLISHED CHANNELS** at build `17494c17bc60f1ee7b92b91b946c9d3f167469f3`. Overview construction counters remain visible, fit inside the viewport and separate with leaders. Exact delivered timer fixtures and channel parity are verified; signed-in/installed-app/physical timer behavior remains manual.
 
 Previous release: [PR #512](https://github.com/explocion200/CrownLands/pull/512), from `codex/estate-building-hit-areas`, **LIVE — ALL PUBLISHED CHANNELS** at build `4680341ee82f4cc5cfb3a687cdbb07e43b6ddeed`. Full building/plot selection and reliable mouse/touch dragging are verified through the exact delivered artifact. No gameplay rule changed; current authenticated and actual installed-app/physical input remain manual.
 
@@ -22,7 +24,15 @@ Previous release: October 9, 2026 from `codex/estate-release-readiness` in [PR #
 
 Local sanitized receipts belong under `release-artifacts/estate-release-readiness/deployment/`. Credentials, private account IDs and account exports are excluded.
 
-## Verified overview construction countdown publication
+## Verified illustrated Inner Castle HUD publication
+
+- PR #516 merged `2026-10-10T05:17:51Z`; clean main matched origin/main, `0 0`, before publication. Required CI and all five selected validators passed.
+- Netlify `6ac9ca81e1c3c9000899c0f9` published `2026-10-10T05:23:59.228Z`; manual hold retained. All 57 staged/171 public files matched, including the new icon. Exact built shortcut mouse/touch/keyboard, Profile cancel/discard, off-map entry, camera return and cleanup checks, plus anonymous startup, passed at 1440×900, 844×390 and 568×320.
+- Only getRealmInfo release identity updated; 56 runtime files/manifest matched, 144 Functions active, other 143 retained. Its guard and 29-callable access audit passed. October realm and rules retained read-only.
+- itch upload `19667179` selected/saved; actual iframe `https://html-classic.itch.zone/html/19667179/index.html?v=1791610606`. Package 60,091,372 bytes, SHA-256 `e4c86165eb564ccba85e8acf8fd12a07735d9c92340ccce92e2d3681b72901d1`. 998 files exact plus 2 normalized HTML entries; six local/six public cold/reload cases passed. Earlier uploads retained. Web-only ads.txt omitted from this itch package to keep 1,000 files; game artwork/runtime/Core payloads are retained.
+- Receipts: `release-artifacts/inner-city-hud-entry/deployment/`. No current-build signed-in or actual installed-app/physical-device shortcut test is claimed; no production gameplay orders or administrative player edits were submitted.
+
+## Previous verified overview construction countdown publication
 
 - PR #514 merged `2026-10-10T04:02:38Z`; clean main matched origin/main, `0 0`, before publication. Required CI [38022065505](https://github.com/explocion200/CrownLands/actions/runs/38022065505), four selected validators, syntax/lint, runtime sync and artifact/budgets passed.
 - Netlify `6ac9b8e03d7cf70008acd162` published `2026-10-10T04:23:40.580Z`; manual hold retained. All 56 staged/168 public files matched. Exact delivered timer fixtures for twenty sites and concurrent groups, plus primary anonymous startup, passed at 1440×900, 844×390 and 568×320.

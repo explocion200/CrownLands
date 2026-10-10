@@ -1,46 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "201f8a7dcdc4bf2239c02a4e597b25cd0c3bb6f1",
+  "baseCommit": "2de0506f18b43a9bea5e0b41ce1fdcd90eb81974",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "index.html",
-        "main-screen-art-ui.css",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-crowns-hud-browser.js"
-      ],
-      "reason": "Add a castle shortcut immediately beside Dailies using shared HUD geometry and existing Main City estate entry. Check actual pointer/touch/keyboard activation, an open Profile and unsaved-draft exits, missing/off-map Main City resolution, map camera/focus restoration, and shared HUD collisions at desktop and small landscape sizes. Existing Inner Castle integration covers four Gear screens, ownership guards, camera restoration and scene cleanup. Client presentation only; no server authority, production data, gameplay or topology changes require emulators.",
-      "tests": [
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-crowns-hud-browser.js",
-        "tools/validate-inner-castle-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "assets/optimized/manifest.json",
-        "assets/optimized/hud-inner-city-ink-192x192-677dc563cdd2.webp",
-        "docs/art-sources/inner-city-hud/inner-city-hud-icon-v1.png",
-        "docs/art-sources/inner-city-hud/prompt.txt",
-        "docs/art-sources/inner-city-hud/provenance.json",
-        "tools/validate-production-artifact.js",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Retain the generated transparent master, prompt and provenance and ship one 192px alpha WebP. Browser checks verify manifest digest, image decoding/transparency, runtime caching and real placement. Production-artifact validation requires the exact derivative and its dedicated 16 KiB allowance while retaining previous HUD limits. The shared offline-shell allowance rises only 2 KiB for the measured 1,442 bytes of HTML/game/CSS integration; game.js gets a separate 1 KiB source increment for its 585-byte share. No new art preload; asset/build gates enforce both delivery budgets and exclusion of source masters.",
-      "tests": [
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ]
-    },
-    {
-      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md"
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
+        "docs/estate-economy/README.md"
       ],
-      "reason": "Record only the explicitly approved HUD shortcut, matching atlas aesthetic, existing Main City navigation and pending-release status. Documentation adds no separate gameplay, balance or backend behavior; the implementation coverage above validates its navigation and presentation.",
+      "reason": "Record verified authorized PR #516 web/backend/itch publication and unchanged artwork digests, scoped built navigation and artifact/startup evidence, and authenticated/installed-app limits. Documentation and provenance status only; source artwork, derivatives, runtime, server, gameplay and balance are unchanged, so no executable test is affected.",
       "tests": []
+    },
+    {
+      "paths": [
+        "docs/art-sources/inner-city-hud/provenance.json"
+      ],
+      "reason": "Change only artwork provenance publication status; the existing main-screen art validator verifies unchanged source/runtime digests, dimensions, alpha and delivery using those assets. The required JSON configuration gate needs a selected validator; no server or gameplay change requires emulator suites.",
+      "tests": [
+        "tools/validate-main-screen-art-browser.js"
+      ]
     }
   ]
 }
