@@ -9,7 +9,7 @@ const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = requir
 const root = path.resolve(__dirname, "..");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const files = new Set(["inner-city-estate.js", "inner-city-estate.css", "estate-economy-ui.js", "estate-economy-ui.css", "action-buttons.css"]);
-const out = path.join(root, "release-artifacts/estate-building-hit-areas");
+const out = path.join(root, "release-artifacts/estate-building-tap-zoom");
 
 async function main() {
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
@@ -77,6 +77,48 @@ async function main() {
       await click("[data-estate-detail-close]");
       await frames();
     };
+    const overviewSpot = key => evaluate(k => {
+      const art=document.querySelector(`[data-estate-site="${k}"]>img`).getBoundingClientRect();
+      const viewport=document.querySelector('.estate-viewport');
+      for(const u of [.5,.25,.75,.1,.9])for(const v of [.5,.25,.75,.1,.9]){
+        const x=art.left+art.width*u,y=art.top+art.height*v;
+        const element=document.elementFromPoint(x,y),district=element?.closest('[data-estate-district]');
+        if(element===viewport)return {x,y};
+        if(district){const label=district.querySelector('span').getBoundingClientRect();if(x<label.left||x>label.right||y<label.top||y>label.bottom)return {x,y};}
+      }
+    },key);
+    const assertOverviewSelection = async (key, input, expectedZoom=2.5) => {
+      let spot=await overviewSpot(key);
+      if(!spot){
+        // The camera controls cover southern art on the smallest fitted view.
+        // Reframe below inspection zoom; panels must keep their own hit areas.
+        await selectSite(key);await evaluate(()=>qaView.zoom(2));
+        await evaluate(k=>qaView.select(k==='great-hall'?'mine':'great-hall',false),key);
+        await click('[data-estate-detail-close]');spot=await overviewSpot(key);
+      }
+      assert(spot,"Must find uncovered overview artwork for "+key);
+      const count=await evaluate(()=>qaSelections.length);
+      if(input==="mouse")await clickAt(spot.x,spot.y);
+      else {await touch("touchStart",[{...spot,id:1}]);await touch("touchEnd");}
+      await frames();
+      const result=await evaluate(k=>({
+        selected:qaSelected,camera:qaView.snapshot(),events:qaSelections.length,
+        directory:document.querySelector(`[data-estate-directory-building="${k}"]`).getAttribute('aria-current'),
+        title:document.querySelector('.estate-detail h3')?.textContent,
+        entered:window.qaEntered,upgraded:window.qaUpgraded,
+        captions:[...document.querySelectorAll('.estate-nameplate:not([hidden])')].length,
+      }),key);
+      assert.equal(result.selected,key,input+" overview tap must select "+key);
+      assert.equal(result.camera.zoom,expectedZoom,input+" overview tap must zoom to inspection");
+      assert(result.camera.detailOpen && !result.camera.directoryOpen,"Overview selection must open site details: "+JSON.stringify({key,input,spot,result}));
+      assert.equal(result.events,count+1,"One physical tap must select exactly once");
+      assert.equal(result.directory,"true","Overview selection must update the directory");
+      assert.equal(result.title,await evaluate(k=>CrownlandsEstate.buildings.find(b=>b.key===k).label,key));
+      assert.equal(result.entered,undefined,"Overview taps must not enter building services");
+      assert.equal(result.upgraded,undefined,"Overview taps must not start construction");
+      const centered=await box(`[data-estate-site="${key}"]>img`),viewport=await box('.estate-viewport');
+      assert(centered.left>=viewport.left && centered.right<=viewport.right && centered.top>=viewport.top && centered.bottom<=viewport.bottom,"Zoom must bring selected artwork into view");
+    };
     const emptyTerrain = () => evaluate(() => {
       const viewport=document.querySelector('.estate-viewport'),r=viewport.getBoundingClientRect();
       for(let y=r.top+30;y<r.bottom-70;y+=30)for(let x=r.left+30;x<r.right-30;x+=30)if(document.elementFromPoint(x,y)===viewport)return {x,y};
@@ -95,7 +137,7 @@ async function main() {
         const world = document.querySelector(".estate-world").getBoundingClientRect();
         return {width:viewport.width,height:viewport.height,scale:world.width/CrownlandsEstate.width,mapWidth:CrownlandsEstate.width,mapHeight:CrownlandsEstate.height};
       });
-      const clamp = (value, size, screen) => Math.max(screen/(2*geometry.scale),Math.min(size-screen/(2*geometry.scale),value));
+      const clamp = (value, size, screen) => size*geometry.scale<=screen?size/2:Math.max(screen/(2*geometry.scale),Math.min(size-screen/(2*geometry.scale),value));
       const diagnostic=JSON.stringify({before,after,dx,dy,geometry});
       assert(Math.abs(after.x-clamp(before.x-dx/geometry.scale,geometry.mapWidth,geometry.width))<.1, "Drag must track the horizontal pointer distance without a jump: "+diagnostic);
       assert(Math.abs(after.y-clamp(before.y-dy/geometry.scale,geometry.mapHeight,geometry.height))<.1, "Drag must track the vertical pointer distance without a jump: "+diagnostic);
@@ -112,16 +154,17 @@ async function main() {
         await evaluate(() => {
           window.qaEstate = {levels:Object.fromEntries(CrownlandsEstate.buildings.map(b=>[b.key,0])),jobs:[]};
           window.qaSelected = "great-hall";
+          window.qaSelections = [];
           window.qaOptions = {
             cityName:"QA Estate",estate:qaEstate, now:()=>1000000,
             getResources:()=>({gold:100000,crowns:100,timber:1000,stone:1000,ore:1000,grain:1000,planks:1000,iron:1000,tools:1000,food:1000}),
             actions:CrownlandsEstateEconomy.mapActions(()=>'<svg aria-hidden="true"></svg>',null),
-            onSelect:key=>{qaSelected=key;}, onBuilding:key=>{window.qaEntered=key;}, onUpgrade:key=>{window.qaUpgraded=key;},
+            onSelect:key=>{qaSelected=key;qaSelections.push(key);}, onBuilding:key=>{window.qaEntered=key;}, onUpgrade:key=>{window.qaUpgraded=key;},
           };
           window.qaView = CrownlandsEstate.mount(document.getElementById("modalBody"),qaOptions);
           document.getElementById("modal").showModal();qaView.fit();
           window.qaTrace=[];
-          for(const type of ["pointerdown","pointermove","pointerup","pointercancel","lostpointercapture"])
+          for(const type of ["pointerdown","pointermove","pointerup","pointercancel","lostpointercapture","click"])
             document.addEventListener(type,event=>{qaTrace.push({type,id:event.pointerId,input:event.pointerType,x:event.clientX,y:event.clientY,target:event.target.dataset?.innerCastleBuilding||event.target.className,captured:document.querySelector('.estate-viewport').hasPointerCapture(event.pointerId)});if(qaTrace.length>30)qaTrace.shift();});
         });
         await frames();
@@ -134,6 +177,11 @@ async function main() {
             qaView.updateEstate(qaEstate);
           }, state);
           for (const key of keys) {
+            for(const input of ["mouse","touch"]){
+              await click('[data-estate-fit]');
+              assert.equal(await evaluate(()=>document.querySelectorAll('.estate-nameplate:not([hidden])').length),0,"Overview keeps building captions hidden until selection");
+              await assertOverviewSelection(key,input);
+            }
             await selectSite(key);
             const art = await box(`[data-estate-site="${key}"]>img`);
             const target = await box(`[data-inner-castle-building="${key}"]`);
@@ -153,6 +201,10 @@ async function main() {
               await click("[data-estate-detail-close]");
             }
           }
+          for(const key of ["gatehouse","mine","farmstead"]){
+            await selectSite(key);await evaluate(()=>qaView.zoom(2));
+            await assertOverviewSelection(key,"mouse");
+          }
           await selectSite("mine");
           assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-targets button')].some(button=>!button.hidden)),"Selected map actions must be visible before terrain deselection.");
           const mouseClearBefore=await evaluate(()=>qaView.snapshot()),mouseTerrain=await emptyTerrain();
@@ -169,6 +221,19 @@ async function main() {
           if(state==="constructing")assert(await evaluate(()=>[...document.querySelectorAll('.estate-construction-timer')].some(timer=>!timer.hidden)),"Deselection must retain active construction countdowns.");
         }
         assert(offCenterClicks>0,"Must exercise artwork outside the old 44px center hotspot.");
+        for(const input of ["mouse","touch"]){
+          await selectSite("royal-stables");await evaluate(()=>qaView.zoom(2));
+          const start=await overviewSpot("royal-stables"),before=await evaluate(()=>qaView.snapshot()),count=await evaluate(()=>qaSelections.length);
+          assert(start,"Overview drag must start on painted building artwork");
+          if(input==="mouse"){
+            await mouse("mousePressed",start.x,start.y);await mouse("mouseMoved",start.x-40,start.y+15);await mouse("mouseReleased",start.x-40,start.y+15);
+          }else{
+            await touch("touchStart",[{...start,id:1}]);await touch("touchMove",[{x:start.x-40,y:start.y+15,id:1}]);await touch("touchEnd");
+          }
+          await frames();await assertPan(before,await evaluate(()=>qaView.snapshot()),-40,15);
+          assert.equal(await evaluate(()=>qaView.snapshot().zoom),2,"Dragging from overview artwork must not zoom");
+          assert.equal(await evaluate(()=>qaSelections.length),count,"Dragging from overview artwork must not select");
+        }
         await selectSite("royal-stables");
         const startBox=await box('[data-inner-castle-building="royal-stables"]');
         const x=startBox.x+startBox.width/2,y=startBox.y+startBox.height/2;
@@ -269,7 +334,7 @@ async function main() {
         const capture=await client.send("Page.captureScreenshot",{format:"png"});
         fs.writeFileSync(path.join(out,`${delivery}-${width}x${height}.png`),Buffer.from(capture.data,"base64"));
         await evaluate(()=>qaView.destroy());
-        results.push({delivery,width,height,sites:20,states:3,offCenterClicks,mouse:true,touch:true,cancel:true,pinch:true,keyboard:true,mapActions:true,terrainDeselection:true,clearedSelectionRemount:true});
+        results.push({delivery,width,height,sites:20,states:3,offCenterClicks,overviewSelection:{mouse:60,touch:60,intermediate:9,drag:true},mouse:true,touch:true,cancel:true,pinch:true,keyboard:true,mapActions:true,terrainDeselection:true,clearedSelectionRemount:true});
         console.log(`Estate footprint clicks and pointer gestures passed: ${delivery} ${width}x${height}.`);
         await closeBrowser();
       }
