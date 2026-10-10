@@ -210,6 +210,12 @@
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
+    const buildingBox=(b,tx,ty,scale)=>{
+      const completed=siteStates[b.key]==="completed";
+      const width=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,height=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
+      const x=tx+visualLeft(b)*WIDTH/100*scale,y=ty+visualTop(b)*HEIGHT/100*scale;
+      return {left:x-width/2,top:y-height/2,right:x+width/2,bottom:y+height/2};
+    };
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
     function updateResources() {
       if(destroyed)return;
@@ -260,10 +266,19 @@
         if(visible&&!image.getAttribute("src"))image.src=t.src;
       });
       const locate=(element,x,y)=>{const sx=tx+x*WIDTH/100*scale,sy=ty+y*HEIGHT/100*scale;element.style.left=sx+"px";element.style.top=sy+"px";return sx>=22&&sy>=22&&sx<=width-22&&sy<=height-22;};
-      const boxes=buildings.map(b=>({x:tx+visualLeft(b)*WIDTH/100*scale,y:ty+visualTop(b)*HEIGHT/100*scale}));
+      // Select the entire rendered building/plot, retaining the minimum touch
+      // size for tiny sites. Overlapping targets still defer to the directory.
+      const boxes=buildings.map(b=>{
+        const art=buildingBox(b,tx,ty,scale),x=(art.left+art.right)/2,y=(art.top+art.bottom)/2;
+        const w=Math.max(44,art.right-art.left),h=Math.max(44,art.bottom-art.top);
+        return {left:x-w/2,top:y-h/2,right:x+w/2,bottom:y+h/2,width:w,height:h};
+      });
       targets.forEach((target,i)=>{
-        const b=buildings[i], visible=locate(target,visualLeft(b),visualTop(b));
-        const collision=boxes.some((p,j)=>j!==i&&Math.abs(p.x-boxes[i].x)<46&&Math.abs(p.y-boxes[i].y)<46);
+        const b=buildings[i],box=boxes[i];
+        target.style.left=(box.left+box.right)/2+"px";target.style.top=(box.top+box.bottom)/2+"px";
+        target.style.width=box.width+"px";target.style.height=box.height+"px";
+        const visible=Math.min(width,box.right)-Math.max(0,box.left)>=44-1e-6&&Math.min(height,box.bottom)-Math.max(0,box.top)>=44-1e-6;
+        const collision=boxes.some((p,j)=>j!==i&&box.left<p.right+2&&box.right>p.left-2&&box.top<p.bottom+2&&box.bottom>p.top-2);
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
       const viewportBox=viewport.getBoundingClientRect();
@@ -358,11 +373,7 @@
       }
       const rect=(left,top,w,h)=>({left,top,right:left+w,bottom:top+h});
       const overlaps=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
-      const artBoxes=buildings.map(b=>{
-        const completed=siteStates[b.key]==="completed";
-        const w=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,h=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
-        return rect(tx+visualLeft(b)*WIDTH/100*scale-w/2,ty+visualTop(b)*HEIGHT/100*scale-h/2,w,h);
-      });
+      const artBoxes=buildings.map(b=>buildingBox(b,tx,ty,scale));
       const occupied=[...host.querySelectorAll('.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls,.estate-district:not([hidden])>span')].filter(e=>!e.hidden).map(e=>{
         const r=e.getBoundingClientRect();return rect(r.left-viewportBox.left,r.top-viewportBox.top,r.width,r.height);
       });
@@ -377,12 +388,12 @@
         // it, but must never move it above or beside the building.
         const placement=rect(cx-w/2,art.bottom+3,w,h);
         const visible=placement.left>=6&&placement.top>=6&&placement.right<=width-6&&placement.bottom<=height-6&&!artBoxes.some(a=>overlaps(placement,a))&&!occupied.some(a=>overlaps(placement,a));
-        targets[i].style.setProperty("--estate-caption-top",(22+(art.bottom-art.top)/2+3)+"px");
+        targets[i].style.setProperty("--estate-caption-top",(parseFloat(targets[i].style.height)/2+(art.bottom-art.top)/2+3)+"px");
         label.hidden=!visible;
         targets[i].dataset.hasNameplate=String(visible);
         if(visible){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
       }
-      const hitBoxes=targets.map((target,i)=>target.hidden?null:rect(tx+visualLeft(buildings[i])*WIDTH/100*scale-22,ty+visualTop(buildings[i])*HEIGHT/100*scale-22,44,44)).filter(Boolean);
+      const hitBoxes=targets.map((target,i)=>target.hidden?null:rect(tx+visualLeft(buildings[i])*WIDTH/100*scale-parseFloat(target.style.width)/2,ty+visualTop(buildings[i])*HEIGHT/100*scale-parseFloat(target.style.height)/2,parseFloat(target.style.width),parseFloat(target.style.height))).filter(Boolean);
       options.actions?.place(upgradeTargets,selected,buildings,artBoxes,[...artBoxes,...hitBoxes,...occupied],width,height);
     }
     function zoom(value,clientX,clientY) {
@@ -470,22 +481,26 @@
       if(event.button!==0||event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls"))return;
       const target=event.target.closest("[data-estate-district],[data-inner-castle-building]");
       if(event.target.closest("button")&&!target)return;
-      if(!pointers.size){gestureMoved=false;suppressClick=false;}
+      event.preventDefault();
+      if(!pointers.size){gestureMoved=false;suppressClick=false;viewport.focus({preventScroll:true});}
       pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY});
-      if(!target)viewport.setPointerCapture(event.pointerId);
+      // Capture from the start, even on a roof/plot. A fast move can leave the
+      // viewport before its first move event; retain taps on the original button.
+      (target||viewport).setPointerCapture(event.pointerId);
       if(pointers.size===2){gestureMoved=true;for(const id of pointers.keys())viewport.setPointerCapture(id);}
     });
     listen(viewport,"pointermove",event=>{
       const old=pointers.get(event.pointerId);if(!old)return;
+      const wasDragging=gestureMoved;
       const oldPoints=[...pointers.values()];pointers.set(event.pointerId,{...old,x:event.clientX,y:event.clientY});const next=[...pointers.values()];
       if(Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>4)gestureMoved=true;
       if(!gestureMoved)return;
       for(const id of pointers.keys())if(!viewport.hasPointerCapture(id))viewport.setPointerCapture(id);
       if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2);}
-      else {camera.x-=(event.clientX-old.x)/(fit*camera.zoom);camera.y-=(event.clientY-old.y)/(fit*camera.zoom);paint();}
+      else {camera.x-=(event.clientX-(wasDragging?old.x:old.startX))/(fit*camera.zoom);camera.y-=(event.clientY-(wasDragging?old.y:old.startY))/(fit*camera.zoom);paint();}
     });
     const endPointer=event=>{if(!pointers.has(event.pointerId))return;pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
-    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>{if(event.target===viewport)pointers.delete(event.pointerId);});
+    listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>{if(!viewport.hasPointerCapture(event.pointerId))pointers.delete(event.pointerId);});
     listen(viewport,"keydown",event=>{
       if(event.target!==viewport)return;
       const delta=70/(fit*camera.zoom);
