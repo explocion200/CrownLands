@@ -210,11 +210,14 @@
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
     const visualLeft=b=>b.hotspot.left+(siteStates[b.key]==="completed"?b.artOffsetX*100/WIDTH:0);
     const visualTop=b=>b.hotspot.top+(siteStates[b.key]==="completed"?b.artOffsetY*100/HEIGHT:0);
+    const rect=(left,top,w,h)=>({left,top,w,h,right:left+w,bottom:top+h});
+    const place=(element,x,y)=>{element.style.left=x+"px";element.style.top=y+"px";};
+    const overlaps=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
     const buildingBox=(b,tx,ty,scale)=>{
       const completed=siteStates[b.key]==="completed";
       const width=(completed?b.artSize.width:b.footprint.width*WIDTH/100)*scale,height=(completed?b.artSize.height:b.footprint.height*HEIGHT/100)*scale;
       const x=tx+visualLeft(b)*WIDTH/100*scale,y=ty+visualTop(b)*HEIGHT/100*scale;
-      return {left:x-width/2,top:y-height/2,right:x+width/2,bottom:y+height/2};
+      return rect(x-width/2,y-height/2,width,height);
     };
     const listen=(element,type,callback,extra={})=>element.addEventListener(type,callback,{...extra,signal});
     function updateResources() {
@@ -265,20 +268,20 @@
         image.hidden=!visible;
         if(visible&&!image.getAttribute("src"))image.src=t.src;
       });
-      const locate=(element,x,y)=>{const sx=tx+x*WIDTH/100*scale,sy=ty+y*HEIGHT/100*scale;element.style.left=sx+"px";element.style.top=sy+"px";return sx>=22&&sy>=22&&sx<=width-22&&sy<=height-22;};
+      const locate=(element,x,y)=>{const sx=tx+x*WIDTH/100*scale,sy=ty+y*HEIGHT/100*scale;place(element,sx,sy);return sx>=22&&sy>=22&&sx<=width-22&&sy<=height-22;};
       // Select the entire rendered building/plot, retaining the minimum touch
       // size for tiny sites. Overlapping targets still defer to the directory.
-      const boxes=buildings.map(b=>{
-        const art=buildingBox(b,tx,ty,scale),x=(art.left+art.right)/2,y=(art.top+art.bottom)/2;
-        const w=Math.max(44,art.right-art.left),h=Math.max(44,art.bottom-art.top);
-        return {left:x-w/2,top:y-h/2,right:x+w/2,bottom:y+h/2,width:w,height:h};
+      const artBoxes=buildings.map(b=>buildingBox(b,tx,ty,scale));
+      const boxes=artBoxes.map(art=>{
+        const w=Math.max(44,art.w),h=Math.max(44,art.h);
+        return rect(art.left+(art.w-w)/2,art.top+(art.h-h)/2,w,h);
       });
       targets.forEach((target,i)=>{
         const b=buildings[i],box=boxes[i];
-        target.style.left=(box.left+box.right)/2+"px";target.style.top=(box.top+box.bottom)/2+"px";
-        target.style.width=box.width+"px";target.style.height=box.height+"px";
-        const visible=Math.min(width,box.right)-Math.max(0,box.left)>=44-1e-6&&Math.min(height,box.bottom)-Math.max(0,box.top)>=44-1e-6;
-        const collision=boxes.some((p,j)=>j!==i&&box.left<p.right+2&&box.right>p.left-2&&box.top<p.bottom+2&&box.bottom>p.top-2);
+        place(target,box.left,box.top);
+        target.style.width=box.w+"px";target.style.height=box.h+"px";
+        const visible=box.right>=44&&box.bottom>=44&&box.left<=width-44&&box.top<=height-44;
+        const collision=boxes.some((p,j)=>j!==i&&overlaps(box,p));
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
       const viewportBox=viewport.getBoundingClientRect();
@@ -304,7 +307,7 @@
       // buttons apart, using the nearby painted scenery when the center is tight.
       // Layout coordinates avoid measuring the modal's opening transform, which
       // can otherwise leave districts offset after the transition finishes.
-      const districtObstacles=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>({left:e.offsetLeft,top:e.offsetTop,right:e.offsetLeft+e.offsetWidth,bottom:e.offsetTop+e.offsetHeight}));
+      const districtObstacles=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
       const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
       // Fit the southernmost label before crafts, which has more room above it.
       const districtPriority=['quarry','woodland','city','mine','farmland','crafts','trade'];
@@ -312,14 +315,12 @@
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
         const style=getComputedStyle(target),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
-        const r={width:parseFloat(style.width),height:parseFloat(style.height)};
-        r.left=x-r.width/2;r.top=y-r.height/2;r.right=r.left+r.width;r.bottom=r.top+r.height;
+        const w=parseFloat(style.width),h=parseFloat(style.height),r=rect(x-w/2,y-h/2,w,h);
         if(districts.find(d=>d.key===target.dataset.estateDistrict).labelAnchor){
-          const fixed={left:r.left,right:r.right,top:r.top,bottom:r.bottom};
           // Never search for a new location for an anchored district. Panels
           // and viewport edges may occlude it; the directory remains available.
-          target.hidden=fixed.left<4||fixed.right>width-4||fixed.top<4||fixed.bottom>height-4||districtObstacles.some(other=>overlap(fixed,other));
-          if(!target.hidden)districtObstacles.push(fixed);
+          target.hidden=r.left<4||r.right>width-4||r.top<4||r.bottom>height-4||districtObstacles.some(other=>overlap(r,other));
+          if(!target.hidden)districtObstacles.push(r);
           return;
         }
         const offsets=[];
@@ -336,44 +337,41 @@
           if(key==='woodland'&&y+box.dy>cityY-24)return false;
           // At the smallest landscape size, allow the southern controls' upper
           // halves alongside the square while keeping their centers near it.
-          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY-(width<640?r.height/2:0);
+          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY-(width<640?r.h/2:0);
         };
-        const findPosition=()=>offsets.map(({dx,dy})=>({left:r.left+dx,right:r.right+dx,top:r.top+dy,bottom:r.bottom+dy,dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
+        const findPosition=()=>offsets.map(({dx,dy})=>({...rect(r.left+dx,r.top+dy,r.w,r.h),dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
         let position=findPosition();
         if(!position){
           // Include obstacle edges so narrow landscape views can use the small
           // gaps between fixed districts and controls without moving the anchors.
           const clearance=3.1; // Match the three-pixel collision gap, allowing for rounding.
-          const xs=[r.width/2+4,width-r.width/2-4,x,...districtObstacles.flatMap(o=>[o.left-r.width/2-clearance,o.right+r.width/2+clearance])];
-          const ys=[r.height/2+4,height-r.height/2-4,y,cityY,...districtObstacles.flatMap(o=>[o.top-r.height/2-clearance,o.bottom+r.height/2+clearance])];
+          const xs=[r.w/2+4,width-r.w/2-4,x,...districtObstacles.flatMap(o=>[o.left-r.w/2-clearance,o.right+r.w/2+clearance])];
+          const ys=[r.h/2+4,height-r.h/2-4,y,cityY,...districtObstacles.flatMap(o=>[o.top-r.h/2-clearance,o.bottom+r.h/2+clearance])];
           for(const cy of ys)for(const cx of xs){
             if(cy<y&&['quarry','mine'].includes(key))continue;
             const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy});
           }
-          for(let cy=r.height/2+4;cy<=height-r.height/2-4;cy+=8)for(let cx=r.width/2+4;cx<=width-r.width/2-4;cx+=12){
+          for(let cy=r.h/2+4;cy<=height-r.h/2-4;cy+=8)for(let cx=r.w/2+4;cx<=width-r.w/2-4;cx+=12){
             if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
             const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
           }
           offsets.sort((a,b)=>a.distance-b.distance);position=findPosition();
         }
-        if(position){target.style.left=x+position.dx+'px';target.style.top=y+position.dy+'px';districtObstacles.push(position);}else target.hidden=true;
+        if(position){place(target,x+position.dx,y+position.dy);districtObstacles.push(position);}else target.hidden=true;
       });
       host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
-      placeNameplates(tx,ty,scale,width,height,viewportBox);
+      placeNameplates(artBoxes,boxes,width,height,viewportBox);
       timers?.place(camera.zoom,selected);
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
     }
-    function placeNameplates(tx,ty,scale,width,height,viewportBox) {
+    function placeNameplates(artBoxes,boxes,width,height,viewportBox) {
       if(camera.zoom<2.5){
         upgradeTargets.forEach(button=>{button.hidden=true;});
         nameplates.forEach((label,i)=>{label.hidden=true;targets[i].dataset.hasNameplate="false";});
         return;
       }
-      const rect=(left,top,w,h)=>({left,top,right:left+w,bottom:top+h});
-      const overlaps=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
-      const artBoxes=buildings.map(b=>buildingBox(b,tx,ty,scale));
       const occupied=[...host.querySelectorAll('.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls,.estate-district:not([hidden])>span')].filter(e=>!e.hidden).map(e=>{
         const r=e.getBoundingClientRect();return rect(r.left-viewportBox.left,r.top-viewportBox.top,r.width,r.height);
       });
@@ -388,12 +386,12 @@
         // it, but must never move it above or beside the building.
         const placement=rect(cx-w/2,art.bottom+3,w,h);
         const visible=placement.left>=6&&placement.top>=6&&placement.right<=width-6&&placement.bottom<=height-6&&!artBoxes.some(a=>overlaps(placement,a))&&!occupied.some(a=>overlaps(placement,a));
-        targets[i].style.setProperty("--estate-caption-top",(parseFloat(targets[i].style.height)/2+(art.bottom-art.top)/2+3)+"px");
+        targets[i].style.setProperty("--estate-caption-top",(boxes[i].h/2+art.h/2+3)+"px");
         label.hidden=!visible;
         targets[i].dataset.hasNameplate=String(visible);
-        if(visible){label.style.left=placement.left+"px";label.style.top=placement.top+"px";label.style.visibility="visible";occupied.push(placement);}
+        if(visible){place(label,placement.left,placement.top);label.style.visibility="visible";occupied.push(placement);}
       }
-      const hitBoxes=targets.map((target,i)=>target.hidden?null:rect(tx+visualLeft(buildings[i])*WIDTH/100*scale-parseFloat(target.style.width)/2,ty+visualTop(buildings[i])*HEIGHT/100*scale-parseFloat(target.style.height)/2,parseFloat(target.style.width),parseFloat(target.style.height))).filter(Boolean);
+      const hitBoxes=boxes.filter((_,i)=>!targets[i].hidden);
       options.actions?.place(upgradeTargets,selected,buildings,artBoxes,[...artBoxes,...hitBoxes,...occupied],width,height);
     }
     function zoom(value,clientX,clientY) {
