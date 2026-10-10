@@ -25,9 +25,10 @@
         "docs/art-sources/inner-city-hud/prompt.txt",
         "docs/art-sources/inner-city-hud/provenance.json",
         "tools/validate-production-artifact.js",
-        "tools/asset-performance-budgets.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Retain the generated transparent master, prompt and provenance and ship one 192px alpha WebP. Browser checks verify manifest digest, image decoding/transparency, runtime caching and real placement. Production-artifact validation requires the exact derivative and its dedicated 16 KiB allowance while retaining previous HUD limits. The shared offline-shell allowance rises only 2 KiB for the measured 1,442 bytes of HTML/game/CSS integration, with no new art preload; the asset validator and build gate enforce both delivery budgets and exclusion of source masters.",
+      "reason": "Retain the generated transparent master, prompt and provenance and ship one 192px alpha WebP. Browser checks verify manifest digest, image decoding/transparency, runtime caching and real placement. Production-artifact validation requires the exact derivative and its dedicated 16 KiB allowance while retaining previous HUD limits. The shared offline-shell allowance rises only 2 KiB for the measured 1,442 bytes of HTML/game/CSS integration; game.js gets a separate 1 KiB source increment for its 585-byte share. No new art preload; asset/build gates enforce both delivery budgets and exclusion of source masters.",
       "tests": [
         "tools/validate-main-screen-art-browser.js",
         "tools/validate-asset-performance-budgets.js"
