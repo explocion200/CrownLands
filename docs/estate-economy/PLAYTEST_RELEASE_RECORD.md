@@ -1,6 +1,8 @@
 # Inner Castle playtest and release readiness
 
-Current release: [PR #516](https://github.com/explocion200/CrownLands/pull/516), from `codex/inner-city-hud-entry`, **LIVE — ALL PUBLISHED CHANNELS** at build `2de0506f18b43a9bea5e0b41ce1fdcd90eb81974`. The castle beside Dailies opens Main City, retaining Profile guards and realm camera. Exact delivered shortcut fixtures and channel artifacts are verified; current signed-in/installed-app/physical-device navigation remains manual.
+Current release: [PR #518](https://github.com/explocion200/CrownLands/pull/518), from `codex/estate-tap-deselect`, **LIVE — ALL PUBLISHED CHANNELS** at build `43e051ddabe58ccabc8ff8917b086d8064ee9e12`. Terrain taps clear building selection, details and map actions while preserving camera, drag behavior and construction countdowns. Exact merged interactions and channel artifacts are verified; current signed-in/installed-app/physical-device input remains manual.
+
+Previous release: [PR #516](https://github.com/explocion200/CrownLands/pull/516), from `codex/inner-city-hud-entry`, **LIVE — ALL PUBLISHED CHANNELS** at build `2de0506f18b43a9bea5e0b41ce1fdcd90eb81974`. The castle beside Dailies opens Main City, retaining Profile guards and realm camera. Exact delivered shortcut fixtures and channel artifacts are verified; current signed-in/installed-app/physical-device navigation remains manual.
 
 Previous release: [PR #514](https://github.com/explocion200/CrownLands/pull/514), from `codex/estate-overview-construction-timers`, **LIVE — ALL PUBLISHED CHANNELS** at build `17494c17bc60f1ee7b92b91b946c9d3f167469f3`. Overview construction counters remain visible, fit inside the viewport and separate with leaders. Exact delivered timer fixtures and channel parity are verified; signed-in/installed-app/physical timer behavior remains manual.
 
@@ -20,11 +22,19 @@ Previous release: October 9, 2026 from `codex/estate-release-readiness` in [PR #
 | Signed-in current policy | Owner confirmed the dedicated QA account and completed Google sign-in. Ordinary controls verified direct upgrade payment/Cancel, natural completion and benefit, one paid Food batch/delivery without repeat, earlier expedition completion/recovery/one-time claim, and a funded commission. Reload preserved the paid timer, stock and claimed-reward state. A visible action-lock defect during refresh is repaired on `codex/estate-refresh-action-lock`, **LIVE — ALL PUBLISHED CHANNELS** at build `969e1ba...`. Live interrupted-response retry remains untested; isolated retry coverage is separate. |
 | Timed commission claim | Common Treasury Velvet Cap funded near `2026-10-09T23:06Z` using 81 Timber and 172 Stone; accepted duration 168 hours. Claim is disabled while working. Verify after the actual deadline, approximately October 16 at 23:06 UTC; the authoritative enabled claim controls the test. Do not alter clocks, grant stock or treat a model/emulator claim as a live claim. |
 | Physical phone | Landscape slider/exact amount/Max, visible time/Start, pan/pinch, directory, background/resume, Gear return, X and Android/iOS Back are awaiting user verification. Synthetic browser sizes do not prove physical-device behavior. |
-| itch.io catch-up | Published upload `19666640` at the same merged build as web. Actual Run game iframe observed; all 1,000 files match and six local/six public cold/reload cases pass. Current scripts, estate art and active/prepared Core maps retained; prior uploads preserved. |
+| itch.io catch-up | Published upload `19667640` at the same merged build as web. Actual Run game iframe observed; all 1,000 files match and six local/six public cold/reload cases pass. Current scripts, estate art and active/prepared Core maps retained; prior uploads preserved. |
 
 Local sanitized receipts belong under `release-artifacts/estate-release-readiness/deployment/`. Credentials, private account IDs and account exports are excluded.
 
-## Verified illustrated Inner Castle HUD publication
+## Verified Inner Castle terrain deselection publication
+
+- PR #518 merged `2026-10-10T06:19:26Z`; clean main matched origin/main, `0 0`, before publication. Required CI and four selected validators passed.
+- Netlify `6ac9d8f08227150008b8e0f3` published `2026-10-10T06:27:03.556Z`; manual hold retained. All 57 staged/171 public files matched. Exact merged mouse/touch terrain deselection, reselection, panel/camera preservation, drag, timers and empty-selection remount passed at 1440×900, 844×390 and 568×320, as did anonymous primary startup.
+- Only getRealmInfo release identity updated; 56 runtime files/manifest matched, 144 Functions active, other 143 retained. Its guard passed; the 29-callable audit passed on standalone retry after the deploy hook’s initial non-callable response. October realm/rules retained read-only.
+- itch upload `19667640` selected/saved; actual iframe `https://html-classic.itch.zone/html/19667640/index.html?v=1791613700`. Package 60,091,452 bytes, SHA-256 `e724f0b93652423706998cb9e01bc0570b94adceaba6bf5a588922c37058106e`. All 998 exact plus 2 normalized HTML files and six local/six public cold/reload cases passed. Earlier uploads and current artwork/Core payloads are retained.
+- Receipts: `release-artifacts/estate-tap-deselect/deployment/`. No current signed-in or actual installed-app/physical-device check is claimed; no production gameplay orders or administrative player edits were submitted.
+
+## Previous verified illustrated Inner Castle HUD publication
 
 - PR #516 merged `2026-10-10T05:17:51Z`; clean main matched origin/main, `0 0`, before publication. Required CI and all five selected validators passed.
 - Netlify `6ac9ca81e1c3c9000899c0f9` published `2026-10-10T05:23:59.228Z`; manual hold retained. All 57 staged/171 public files matched, including the new icon. Exact built shortcut mouse/touch/keyboard, Profile cancel/discard, off-map entry, camera return and cleanup checks, plus anonymous startup, passed at 1440×900, 844×390 and 568×320.
