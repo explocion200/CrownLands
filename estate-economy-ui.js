@@ -239,7 +239,7 @@
         : ["market","wagon-yard"].includes(key) ? "Trade & supplies" : ["storehouse","granary"].includes(key) ? "Estate storage" : "Royal administration";
       const status = !level ? "Not built" : job ? "Upgrading to Level "+job.target : level === 100 ? "Maximum level" : "Established";
       return `<aside class="estate-building-identity" aria-label="${escape(b.label)} building details">
-        <div class="estate-building-art ${!level ? "estate-building-plan" : ""}"><img src="${b.artByState.completed}" alt="" width="280" height="200"><span>${!level ? "Building plan" : "Permanent estate"}</span></div>
+        <div class="estate-building-portrait ${!level ? "estate-building-plan" : ""}"><img src="${b.artByState.completed}" alt="" width="280" height="200"><span>${!level ? "Building plan" : "Permanent estate"}</span></div>
         <div class="estate-building-rank"><span>Level <b>${level}</b><small> / 100</small></span><span class="estate-building-state">${escape(status)}</span></div>
         <p class="estate-building-category">${category}</p><p class="estate-building-purpose">${escape(b.role)}</p>
         ${view.type === "building" && !producer ? `<section class="estate-building-benefit"><small>Current benefit</small><p>${escape(s.benefits[key].current)}</p></section>` : ""}

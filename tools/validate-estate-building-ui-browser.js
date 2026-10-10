@@ -54,9 +54,10 @@ async function main(built=false){
       const result=await page.evaluate(()=>{
         const d=document.querySelector('.estate-economy-dialog'),r=d.getBoundingClientRect(),content=d.querySelector('.estate-economy-content'),identity=d.querySelector('.estate-building-identity'),workspace=d.querySelector('.estate-economy-workspace');
         const footer=d.querySelector('footer'),f=footer.getBoundingClientRect();
-        return{bounds:r.toJSON(),width:innerWidth,height:innerHeight,overflow:content.scrollWidth-content.clientWidth,workspaceOverflow:workspace.scrollWidth-workspace.clientWidth,identity:!!identity,loaded:[...d.querySelectorAll('img')].every(img=>img.complete&&img.naturalWidth>0),footer:f.toJSON(),buttons:[...footer.querySelectorAll('button')].map(b=>{const q=b.getBoundingClientRect();return{height:q.height,inside:q.top>=0&&q.bottom<=innerHeight,covered:!b.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2))};}),title:d.querySelector('h2').textContent};
+        return{bounds:r.toJSON(),width:innerWidth,height:innerHeight,overflow:content.scrollWidth-content.clientWidth,workspaceOverflow:workspace.scrollWidth-workspace.clientWidth,identity:!!identity,portraitFramed:getComputedStyle(d.querySelector('.estate-building-portrait')).borderTopWidth==="1px",loaded:[...d.querySelectorAll('img')].every(img=>img.complete&&img.naturalWidth>0),footer:f.toJSON(),buttons:[...footer.querySelectorAll('button')].map(b=>{const q=b.getBoundingClientRect();return{height:q.height,inside:q.top>=0&&q.bottom<=innerHeight,covered:!b.contains(document.elementFromPoint(q.x+q.width/2,q.y+q.height/2))};}),title:d.querySelector('h2').textContent};
       });
       assert(result.identity&&result.loaded,key+": illustrated identity survives every size");
+      assert(result.portraitFramed,key+": the service illustration keeps its window-only styling");
       assert(result.bounds.x>=0&&result.bounds.y>=0&&result.bounds.right<=result.width&&result.bounds.bottom<=result.height,key+": window fits");
       assert(result.overflow<=1&&result.workspaceOverflow<=1,key+": no horizontal overflow "+JSON.stringify(result));
       assert(result.footer.bottom<=result.height&&result.footer.top>=0,key+": footer fits");
@@ -67,6 +68,26 @@ async function main(built=false){
     assert.equal(keys.length,20);
     for(const [width,height]of [[1440,900],[844,390],[568,320]]){
       await page.setViewportSize({width,height});
+      await page.goto(origin+"/?view=map");
+      await page.waitForFunction(()=>document.documentElement.dataset.buildingUiReady==="true"
+        && [...document.querySelectorAll('.estate-site>img')].every(img=>img.complete&&img.naturalWidth>0));
+      await page.screenshot({path:path.join(output,"map-"+width+".png")});
+      const mapArt=await page.evaluate(()=>CrownlandsEstate.buildings.map(b=>{
+        const img=document.querySelector(`[data-estate-site="${b.key}"]>img`),style=getComputedStyle(img);
+        return {key:b.key,width:style.width,height:style.height,expectedWidth:b.artSize.width+"px",expectedHeight:b.artSize.height+"px",
+          border:style.borderTopWidth,shadow:style.boxShadow,background:style.backgroundImage,minHeight:style.minHeight,
+          margins:[style.marginTop,style.marginRight,style.marginBottom,style.marginLeft]};
+      }));
+      assert.equal(mapArt.length,20);
+      for(const art of mapArt){
+        assert.equal(art.border,"0px",art.key+": map building must not inherit the window illustration frame");
+        assert.equal(art.shadow,"none",art.key+": no window trim on the map");
+        assert.equal(art.background,"none",art.key+": map sprites retain transparent backgrounds");
+        assert.equal(art.minHeight,"0px",art.key+": no window minimum height on the map");
+        assert.deepEqual(art.margins,["0px","0px","0px","0px"],art.key+": no window margins moving the map building");
+        assert(Math.abs(parseFloat(art.width)-parseFloat(art.expectedWidth))<.02,art.key+": original map width");
+        assert(Math.abs(parseFloat(art.height)-parseFloat(art.expectedHeight))<.02,art.key+": original map height");
+      }
       for(const key of keys){
         await open(key);await layout(key);
         assert.equal(await page.locator('.estate-building-rank b').textContent(),key==="great-hall"?"25":"24");
@@ -109,13 +130,13 @@ async function main(built=false){
       const before=await page.evaluate(()=>buildingUiPreview.view.snapshot());
       await page.keyboard.press("Escape");await page.waitForFunction(()=>!document.querySelector('.estate-economy-dialog').open);
       assert.deepEqual(await page.evaluate(()=>buildingUiPreview.view.snapshot()),before);
-      proof.push({width,height,sites:20,manualProducers:4,constructionStates:6,footerVisible:true,cameraRetained:true});
+      proof.push({width,height,sites:20,manualProducers:4,constructionStates:6,mapArtUnframed:true,originalSpriteSizes:true,windowPortraitFramed:true,footerVisible:true,cameraRetained:true});
     }
     await page.setViewportSize({width:1440,height:900});await page.emulateMedia({reducedMotion:"reduce"});await open("sawmill");
     assert.equal(await action("produce").evaluate(el=>getComputedStyle(el).transitionDuration),"0s");
     assert.deepEqual(errors,[],"No browser exceptions");
     fs.writeFileSync(path.join(output,"verification.json"),JSON.stringify({built,proof,errors},null,2)+"\n");
-    console.log("Estate building folio passed "+(built?"built":"source")+": 20 services, 4 manual producers, 6 construction states, persistent actions, draft/chain/close, reduced motion at desktop and two landscape sizes.");
+    console.log("Estate building folio passed "+(built?"built":"source")+": 20 unframed map sprites at original sizes, 20 framed service portraits, 4 manual producers, 6 construction states, persistent actions, draft/chain/close, reduced motion at desktop and two landscape sizes.");
   }finally{
     if(client){await client.send('Browser.close').catch(()=>{});client.close();}
     if(session){if(!await waitForProcessExit(session.browserProcess)){session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}
