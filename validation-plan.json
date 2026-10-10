@@ -1,19 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e4d5d9db8c9f153f73c646e941224ad4d86a3dd5",
+  "baseCommit": "ccb14772152e5083d00e4f16196f687f7adcadef",
   "coverage": [
     {
       "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "tools/validate-estate-building-ui-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CROWNLANDS_ART_BIBLE.md",
+        "docs/estate-economy/README.md",
+        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"
       ],
-      "reason": "Give service-window building portraits a distinct class to prevent their frame, background, margins and responsive minimum height leaking onto map sprites. Verify all 20 original transparent map sprites and framed service portraits in source and built delivery at desktop and two landscape sizes; verify that restored sprite geometry still matches full-artwork selection, deselection, pan/zoom and touch targets. No server authority, economy rules or production data change, so no emulator suites apply.",
-      "tests": ["tools/validate-estate-building-ui-browser.js", "tools/validate-estate-input-browser.js"]
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/CROWNLANDS_ART_BIBLE.md"],
-      "reason": "Record the owner's explicit unframed map appearance and window-only portrait styling correction as in development, preserving historical publication evidence. Documentation adds no executable behavior beyond the directly covered presentation fix.",
+      "reason": "Record verified publication of PR #522 and the explicitly confirmed unframed map correction, preserving prior release evidence and distinguishing current source/built input checks from earlier actual-game integration. Only release documentation changes; no executable behavior, server authority, assets or dependencies change, so no runtime or emulator suites apply. Publication receipts independently verify the exact merged artifact on both channels.",
       "tests": []
     }
   ]
