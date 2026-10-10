@@ -9,14 +9,14 @@
         "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record authorized PR #516 verified backend/web publication, scoped built navigation and artifact/startup evidence, prepared itch package and concrete editor rate-limit/host-timeout failures, and authenticated/installed-app limits. Markdown documentation only; runtime, artwork, server, gameplay and balance are unchanged, so no executable test is affected.",
+      "reason": "Record verified authorized PR #516 web/backend/itch publication and unchanged artwork digests, scoped built navigation and artifact/startup evidence, and authenticated/installed-app limits. Documentation and provenance status only; source artwork, derivatives, runtime, server, gameplay and balance are unchanged, so no executable test is affected.",
       "tests": []
     },
     {
       "paths": [
         "docs/art-sources/inner-city-hud/provenance.json"
       ],
-      "reason": "Change only the generated artwork provenance publication status. The existing main-screen art validator verifies the exact source/runtime digests, dimensions, alpha and delivery while covering navigation using those same assets. The required JSON configuration gate requires a selected validator despite unchanged image data; no emulator suite or server authority is affected.",
+      "reason": "Change only artwork provenance publication status; the existing main-screen art validator verifies unchanged source/runtime digests, dimensions, alpha and delivery using those assets. The required JSON configuration gate needs a selected validator; no server or gameplay change requires emulator suites.",
       "tests": [
         "tools/validate-main-screen-art-browser.js"
       ]
