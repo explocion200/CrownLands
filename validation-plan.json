@@ -1,16 +1,88 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "03c952837b28a819e2b8eadd5c22d803ec0a41a3",
+  "baseCommit": "8df6532ca6a543061b82bc2762e2ff16462e972e",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/README.md",
-        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/guild-master/README.md"
       ],
-      "reason": "Record verified authorized PR #524 publication and confirmed Inner Castle overview building selection, retaining prior release evidence and distinguishing fixture, anonymous startup and physical-device limits. Documentation only: no executable behavior, server authority, assets or dependencies change, so no runtime or emulator suites apply. Exact merged artifacts and publication receipts independently verify both channels.",
+      "reason": "Record only confirmed Guild facility and randomized-stat direction and requested artwork language; clearly retain pending Groups 1-2 and local-review/non-deployment status. Documentation does not enforce gameplay or change the active estate.",
       "tests": []
+    },
+    {
+      "paths": [
+        "assets/guild-master/artisan.webp",
+        "assets/guild-master/envoy.webp",
+        "assets/guild-master/guard.webp",
+        "assets/guild-master/hall-v2.webp",
+        "assets/guild-master/medic.webp",
+        "assets/guild-master/mission-equipment.webp",
+        "assets/guild-master/mission-escort.webp",
+        "assets/guild-master/mission-ledger.webp",
+        "assets/guild-master/mission-muster.webp",
+        "assets/guild-master/mission-quarry.webp",
+        "assets/guild-master/mission-timber.webp",
+        "assets/guild-master/mission-waymark.webp",
+        "assets/guild-master/mission-workshop.webp",
+        "assets/guild-master/quartermaster.webp",
+        "assets/guild-master/room-archive.webp",
+        "assets/guild-master/room-contracts.webp",
+        "assets/guild-master/room-infirmary.webp",
+        "assets/guild-master/room-planning.webp",
+        "assets/guild-master/room-training.webp",
+        "assets/guild-master/scholar.webp",
+        "assets/guild-master/scout.webp",
+        "docs/art-sources/guild-master/artisan.png",
+        "docs/art-sources/guild-master/envoy.png",
+        "docs/art-sources/guild-master/guard.png",
+        "docs/art-sources/guild-master/hall-v2.png",
+        "docs/art-sources/guild-master/interior.png",
+        "docs/art-sources/guild-master/journey.png",
+        "docs/art-sources/guild-master/manifest.json",
+        "docs/art-sources/guild-master/medic.png",
+        "docs/art-sources/guild-master/mission-equipment.png",
+        "docs/art-sources/guild-master/mission-escort.png",
+        "docs/art-sources/guild-master/mission-ledger.png",
+        "docs/art-sources/guild-master/mission-muster.png",
+        "docs/art-sources/guild-master/mission-quarry.png",
+        "docs/art-sources/guild-master/mission-timber.png",
+        "docs/art-sources/guild-master/mission-waymark.png",
+        "docs/art-sources/guild-master/mission-workshop.png",
+        "docs/art-sources/guild-master/quartermaster.png",
+        "docs/art-sources/guild-master/room-archive.png",
+        "docs/art-sources/guild-master/room-contracts.png",
+        "docs/art-sources/guild-master/room-infirmary.png",
+        "docs/art-sources/guild-master/room-planning.png",
+        "docs/art-sources/guild-master/room-training.png",
+        "docs/art-sources/guild-master/scholar.png",
+        "docs/art-sources/guild-master/scout.png",
+        "tools/prepare-guild-art.py",
+        "tools/validate-guild-art.js"
+      ],
+      "reason": "Validate all original and optimized image hashes, independent subjects, WebP encoding, file inventory and download budgets; browser checks exercise actual mission/room consumers. Encoder was run with Pillow to produce and inspect the final derivatives. No production preload or existing map asset changes.",
+      "tests": [
+        "tools/validate-guild-art.js",
+        "tools/validate-guild-game-preview.js"
+      ]
+    },
+    {
+      "paths": [
+        "docs/estate-economy/guild-master-balance-review.html",
+        "docs/visual-qa/guild-master/game-fixture.js",
+        "docs/visual-qa/guild-master/game.css",
+        "docs/visual-qa/guild-master/game.html",
+        "docs/visual-qa/guild-master/game.js",
+        "docs/visual-qa/guild-master/index.html",
+        "docs/visual-qa/guild-master/review.css",
+        "docs/visual-qa/guild-master/review.js",
+        "tools/validate-guild-game-preview.js"
+      ],
+      "reason": "Exercise isolated sample recruitment, party preparation, report replay, room upgrades, image selection, responsive controls and estate return at desktop and two small landscape sizes. Uses unchanged estate renderer/economy fixtures; local preview has no player/server mutations, so no emulator tests apply. Also verify gallery room images and proposed-balance label.",
+      "tests": [
+        "tools/validate-guild-game-preview.js"
+      ]
     }
   ]
 }
