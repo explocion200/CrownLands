@@ -1,26 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "043c456fc8a0fbfb8df9428cfcc8371f999d6b69",
+  "baseCommit": "4680341ee82f4cc5cfb3a687cdbb07e43b6ddeed",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "inner-city-estate.css",
-        "tools/validate-estate-input-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
+        "docs/estate-economy/README.md"
       ],
-      "reason": "Whole-artwork and construction-plot hit rectangles, fixed bottom hover captions and pointer capture affect estate selection, camera input, adjacent actions and gear return. Exercise all 20 sites in three visual states using native edge clicks, desktop/small-landscape mouse and touch drags, fast off-viewport release, click jitter, slow drag, cancellation, pinch, keyboard and real map action callbacks against source and production artifact. Shared rectangle and placement calculations retain the 40 KiB delivery budget; existing estate validators cover registry/art bounds, nonoverlapping touch targets, fixed district anchors, district/directory navigation, fixed captions, real gear round trips, disposal and unchanged snapshot refresh budgets. No server-authoritative behavior or economy rules change, so no emulator suite applies.",
-      "tests": [
-        "tools/validate-estate-input-browser.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-estate-refresh-browser.js"
-      ]
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record the owner's confirmed full-building selection and reliable target-origin dragging requirement, retaining zoom thresholds, directory fallback and fixed bottom labels. This documentation change introduces no additional runtime behavior beyond the covered estate input update and makes no new live-release claim.",
+      "reason": "Record verified authorized PR #512 web/backend/itch publication with exact build, input fixture scope, channel parity and manual authenticated/installed-app limits. Documentation only, no runtime, gameplay, server or balance change; no new executable tests apply.",
       "tests": []
     }
   ]
