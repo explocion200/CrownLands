@@ -9,7 +9,7 @@
         "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
         "docs/estate-economy/README.md"
       ],
-      "reason": "Record authorized PR #516 verified backend/web publication, scoped built navigation and artifact/startup evidence, prepared itch package and concrete editor rate limit, and authenticated/installed-app limits. Markdown documentation only; runtime, artwork, server, gameplay and balance are unchanged, so no executable test is affected.",
+      "reason": "Record authorized PR #516 verified backend/web publication, scoped built navigation and artifact/startup evidence, prepared itch package and concrete editor rate-limit/host-timeout failures, and authenticated/installed-app limits. Markdown documentation only; runtime, artwork, server, gameplay and balance are unchanged, so no executable test is affected.",
       "tests": []
     },
     {

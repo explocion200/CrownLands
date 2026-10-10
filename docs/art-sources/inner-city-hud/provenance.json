@@ -15,5 +15,5 @@
   "runtimeBytes": 9222,
   "runtimeSha256": "677dc563cdd2ae30a8585c16f9dcb54cf0ad0ac488e614b825a6935d8a6967a8",
   "optimization": "Fixed transparent canvas downsampled with the existing Pillow/Lanczos WebP optimizer; alpha and composition preserved, no creative edits.",
-  "status": "LIVE — WEB; PR #516, verified build 2de0506f18b43a9bea5e0b41ce1fdcd90eb81974. Matching itch package is ready; editor rate limited, publication pending. See Master Specification FM-2."
+  "status": "LIVE — WEB; PR #516, verified build 2de0506f18b43a9bea5e0b41ce1fdcd90eb81974. Matching itch package is ready; editor unavailable (Cloudflare 1200/522), publication pending. See Master Specification FM-2."
 }
