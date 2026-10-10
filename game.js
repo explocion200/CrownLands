@@ -2475,6 +2475,7 @@ const profileAchievementClaimed = document.getElementById("profileAchievementCla
 const profileAchievementRemaining = document.getElementById("profileAchievementRemaining");
 const profileViewAchievementsBtn = document.getElementById("profileViewAchievementsBtn");
 const profileInnerCastleBtn = document.getElementById("profileInnerCastleBtn");
+const innerCityHudBtn = document.getElementById("innerCityHudBtn");
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
@@ -25152,8 +25153,19 @@ function openProfileInnerCastle() {
     showToast("Your main city is not available yet.");
     return;
   }
-  closeProfileScreen({ force: true });
-  openInnerCastle(mainCity.id);
+  const enterEstate = () => {
+    closeProfileScreen({ force: true });
+    openInnerCastle(mainCity.id);
+  };
+  if (profileScreen?.classList.contains("open") && !skillsView?.hidden && isSelectedSkillPresetDraftDirty()) {
+    requestSkillPresetDraftExit(enterEstate);
+    return;
+  }
+  if (profileScreen?.classList.contains("open") && !flagEditorView?.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(enterEstate);
+    return;
+  }
+  enterEstate();
 }
 
 function animateUiTabPanel(panel) {
@@ -41847,6 +41859,7 @@ if (clanHudBtn) clanHudBtn.addEventListener("click", showClanHub);
 if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => showDailyLoginRewardsModal());
 if (profileViewAchievementsBtn) profileViewAchievementsBtn.addEventListener("click", () => showDailyLoginRewardsModal({ initialTab: "achievements" }));
 if (profileInnerCastleBtn) profileInnerCastleBtn.addEventListener("click", openProfileInnerCastle);
+if (innerCityHudBtn) innerCityHudBtn.addEventListener("click", openProfileInnerCastle);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 document.getElementById("skinsTabBtn")?.addEventListener("click", () => showProfileSkins());
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
@@ -42194,7 +42207,7 @@ modal.addEventListener("keydown", event => {
 });
 document.addEventListener("pointerdown", event => {
   if (!profileScreen?.classList.contains("open") || modal.open || flagDiscardDialog?.open || document.getElementById("profileProductionDialog")?.open) return;
-  if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target)) return;
+  if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target) || innerCityHudBtn?.contains(event.target)) return;
   event.preventDefault();
   event.stopPropagation();
   closeProfileScreen();

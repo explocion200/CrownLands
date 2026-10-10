@@ -1,0 +1,19 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "source": "inner-city-hud-icon-v1.png",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "sourceSha256": "29438d8e5e1ab3b34ceccdec24e4b938b78817136bb712436a736e6b57f7279e",
+  "prompt": "prompt.txt",
+  "runtime": "assets/optimized/hud-inner-city-ink-192x192-677dc563cdd2.webp",
+  "runtimeDimensions": [
+    192,
+    192
+  ],
+  "runtimeBytes": 9222,
+  "runtimeSha256": "677dc563cdd2ae30a8585c16f9dcb54cf0ad0ac488e614b825a6935d8a6967a8",
+  "optimization": "Fixed transparent canvas downsampled with the existing Pillow/Lanczos WebP optimizer; alpha and composition preserved, no creative edits.",
+  "status": "Implemented on codex/inner-city-hud-entry; merge and deployment pending."
+}

@@ -28,7 +28,7 @@ function layout() {
   const overlap = (a,b) => a.x < b.right && a.right > b.x && a.y < b.bottom && a.bottom > b.y;
   const gold = document.querySelector(".profile-gold"), crowns = document.getElementById("crownsBalance"), timers = document.getElementById("combatTimers");
   const g = rect(gold), c = rect(crowns), t = rect(timers);
-  const controls = ["profileBtn","leaderboardBtn","clanHudBtn","dailyLoginRewardBtn","mainCityReturnBtn","fullscreenBtn","incomingAttackBtn","outgoingAttackBtn","logBtn","chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn"]
+  const controls = ["profileBtn","leaderboardBtn","clanHudBtn","dailyLoginRewardBtn","innerCityHudBtn","mainCityReturnBtn","fullscreenBtn","incomingAttackBtn","outgoingAttackBtn","logBtn","chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn"]
     .map(id => document.getElementById(id)).filter(e => !e.hidden).map(e => {
       const r = rect(e), hit = document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
       return { id:e.id, bounds:r, clear:!overlap(t,r), reachable:e.contains(hit) };

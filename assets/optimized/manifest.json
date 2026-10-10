@@ -7087,6 +7087,19 @@
       "hasAlpha": true,
       "preparedDelivery": true,
       "sourceSha256": "0d581275e7b355a70786eaf0ab76fa5446e1187411c309b52190e8446cf53156"
+    },
+    {
+      "id": "hud-inner-city-ink",
+      "category": "hud",
+      "source": "docs/art-sources/inner-city-hud/inner-city-hud-icon-v1.png",
+      "output": "assets/optimized/hud-inner-city-ink-192x192-677dc563cdd2.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 9222,
+      "sha256": "677dc563cdd2ae30a8585c16f9dcb54cf0ad0ac488e614b825a6935d8a6967a8",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "29438d8e5e1ab3b34ceccdec24e4b938b78817136bb712436a736e6b57f7279e"
     }
   ]
 }

@@ -26,6 +26,7 @@ const required = [
   "assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
   "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
   "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
+  "assets/optimized/hud-inner-city-ink-192x192-677dc563cdd2.webp",
   "assets/optimized/hud-profile-frame-ink-512x400-53a2ff612893.webp",
   "infirmary-ui.js", "infirmary-ui.css",
   "clan-treasury-ui.js", "clan-treasury-ui.css",
@@ -262,13 +263,13 @@ if (buildingArt.length !== 18 || !["courtyard.webp", "tower.webp"].every(name =>
 const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
 if (buildingPayload > 1248 * 1024) throw new Error("Clan buildings exceed the dedicated 1248 KiB art/presentation budget.");
 // Reserve a further 16 KiB for map, client API and report integration.
-// Seven approved ink-and-wash HUD derivatives: 339,598 image bytes plus a
-// sub-1 KiB stylesheet. Bound this feature at 336 KiB, each image at 60 KiB;
+// Seven approved HUD derivatives plus the 192px Inner Castle shortcut (16 KiB).
+// Bound the combined artwork/styling at 352 KiB, each prior image at 60 KiB;
 // allow another 4 KiB for entry/artifact metadata. Images stay runtime-cached.
 const illustratedHudArt = files.filter(file => /^assets\/optimized\/hud-[a-z-]+-ink-\d+x\d+-[a-f0-9]{12}\.webp$/.test(path.relative(dist,file).replace(/\\/g,"/")));
-if (illustratedHudArt.length !== 7 || illustratedHudArt.some(file => fs.statSync(file).size > 60 * 1024)) throw new Error("Illustrated HUD must ship seven WebP images, each under 60 KiB.");
+if (illustratedHudArt.length !== 8 || illustratedHudArt.some(file => fs.statSync(file).size > (path.basename(file).startsWith("hud-inner-city-") ? 16 : 60) * 1024)) throw new Error("Illustrated HUD must ship eight WebP images: Inner Castle under 16 KiB, others under 60 KiB.");
 const illustratedHudBytes = [...illustratedHudArt,path.join(dist,"main-screen-art-ui.css")].reduce((sum,file) => sum+fs.statSync(file).size,0);
-if (illustratedHudBytes > 336 * 1024) throw new Error("Approved HUD artwork and styling exceed their 336 KiB budget.");
+if (illustratedHudBytes > 352 * 1024) throw new Error("Approved HUD artwork and styling exceed their 352 KiB budget.");
 // Email accounts add the compact form, client verification/linking, and styles.
 // Bound this feature to 32 KiB, with the UI independently capped at 14 KiB.
 if (fs.statSync(path.join(dist, "email-auth-ui.js")).size > 14 * 1024) throw new Error("Email account UI exceeds its 14 KiB budget.");
