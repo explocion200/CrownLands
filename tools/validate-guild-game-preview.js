@@ -44,7 +44,7 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
         assert(m.buttons.every(b=>b.width>=44&&b.height>=44),"Buttons retain 44px targets");
       };
       await page.locator(".guild-hall-art img").evaluate(image=>image.decode());
-      await checkArt(".guild-hall-art img",["hall-v2.webp"]);
+      await checkArt(".guild-hall-art img",["hall-v3.webp"]);
       await layout();await page.screenshot({path:path.join(output,`hall-${width}x${height}.png`)});
       const camera=await page.evaluate(()=>guildGamePreview.estate.snapshot());
       await action("recruits").click();await layout();

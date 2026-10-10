@@ -12,25 +12,30 @@ node tools/estate-building-ui-preview.js
 ```
 
 Use the port printed by the server and open
-`/docs/visual-qa/guild-master/game.html?entry=guild&revision=guild-art-r2`.
+`/docs/visual-qa/guild-master/game.html?entry=guild&revision=guild-hall-r3`.
 The `tab` parameter can open `contracts`, `infirmary`, `training` or `improvements`.
 The adjacent `index.html` is a simpler artwork gallery; room buttons change the
 illustration. No real purchases, missions or production mutations are possible.
 
-## Artwork revision 2
+## Artwork revision 3
 
 The user's uploaded `inspiration art.png` was inspected and supplied to the
 built-in image generation tool for each of 14 separate scene generations:
-one coherent Guild Hall, eight mission-specific contract images, and five
+one Guild Hall, eight mission-specific contract images, and five
 individual rooms. Infirmary, Training, Archive, planning and room-improvement
 details use their matching images. Contracts and rooms retain full compositions.
 Short landscape screens put the illustrations beside their text. Cards defer
 image loading until needed. The seven existing review portraits are unchanged.
 
+The subsequent Hall refinement replaces the modest meeting room with a grand
+timber hall, oak galleries, burgundy guild standards, a great stone hearth and
+champions preparing expeditions. It was generated independently with the same
+reference image; all contract and room illustrations are retained.
+
 [Originals, exact prompts and hashes](../../art-sources/guild-master/manifest.json)
 record both the active illustrations and the retired cutaway/panorama sources.
 Optimized derivatives are in `assets/guild-master/`. All 21 active WebP files
-total 2,164,564 bytes, with individual and aggregate budgets checked. Nothing is
+total 2,236,580 bytes, with individual and aggregate budgets checked. Nothing is
 added to the installation preload. The encoder only resizes and compresses;
 it does not repaint, composite or synthesize artwork.
 

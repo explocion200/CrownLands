@@ -31,7 +31,7 @@ for (const asset of manifest.assets) {
 }
 assert.equal([...ids].filter(id => id.startsWith("mission-")).length, 8);
 assert.equal([...ids].filter(id => id.startsWith("room-")).length, 5);
-assert(ids.has("hall-v2"));
+assert(ids.has("hall-v3"));
 assert(!ids.has("interior") && !ids.has("journey"), "Repeated cutaway/panorama retired");
 for (const retired of manifest.retiredAssets) assert.equal(hash(read(retired.source)), retired.sourceSha256);
 assert.equal(total, manifest.encoding.totalBytes);

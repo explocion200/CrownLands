@@ -13,7 +13,7 @@
     "method": 6,
     "totalBudgetKiB": 3000,
     "precache": false,
-    "totalBytes": 2164564
+    "totalBytes": 2236580
   },
   "assets": [
     {
@@ -122,19 +122,19 @@
       "bytes": 27886
     },
     {
-      "id": "hall-v2",
-      "source": "docs/art-sources/guild-master/hall-v2.png",
-      "generatedFilename": "exec-94162e21-429a-4510-a8be-be6fa776b7b5.png",
-      "runtime": "assets/guild-master/hall-v2.webp",
+      "id": "hall-v3",
+      "source": "docs/art-sources/guild-master/hall-v3.png",
+      "generatedFilename": "exec-296290e9-9cbc-475d-a577-afb46c45117f.png",
+      "runtime": "assets/guild-master/hall-v3.webp",
       "maxWidth": 1280,
       "maxHeight": 853,
       "maxKiB": 300,
-      "prompt": "Use case: style-transfer. The attached image is the style reference only. Paint a new Crown Lands scene in that reference's restrained HAND-DRAWN medieval atlas language: clear thin dark-brown ink contours, simple flat ochre and olive color fields, restrained painted shading, pale warm-gray fieldstone, warm timber, slate roofs and tiny burgundy cloth accents. Match its graphic simplification and legible silhouettes. NOT photorealism, NOT a glossy 3D render, NOT excessive grain or mottled brown noise, NOT an ornate dollhouse full of meaningless clutter. Coherent human-scale medieval structures, straight carpentry, believable continuous floors and walkways. Soft neutral daylight, moderate contrast, carefully edited details, no dramatic lighting. Wide landscape 3:2 image, composed to read when reduced to a 300px card, important subject centered with safe margins. No text, lettering, labels, frame or watermark. Any people are small, simply drawn adults with clear purposeful poses, not detailed faces. Subject: the main Guild Hall, one simple welcoming rectangular medieval room, seen from a slightly elevated corner. A broad oak table with four simple benches is the single central focal point; two rolled maps and one brass lamp on the tabletop. Left wall has a sturdy noticeboard with a few pinned blank parchments. A stone hearth and a modest burgundy guild banner at the far end. Right wall has two arched windows opening onto olive trees and a hint of the walled city. Three small adult guild members in practical ochre, olive and burgundy clothes speak beside the table. Clear unobstructed floor, believable posts and beams, each piece of furniture distinct. The composition fills the canvas as an illustration of a room, not a whole-building cutaway. No multiple rooms, no ornate staircase, no clusters of identical props, no forest or beds inside the hall.",
+      "prompt": "Use case: illustration-story. Create the main GUILD HALL hero illustration for the medieval strategy game Crown Lands. The attached image is the mandatory STYLE reference only: its fine dark-brown hand-inked outlines, matte restrained watercolor/gouache washes, olive and ochre palette, pale warm limestone, slate gray accents, tiny burgundy flags, beautifully legible miniature architecture. Faithfully translate this illustrated medieval atlas style into a magnificent guild interior. Wide landscape 3:2 composition. This must feel like the prestigious home of an established fellowship of adventurers, full of purpose, history, warmth and anticipation. A grand double-height timber great hall, viewed from an elevated three-quarter angle from near its entrance, with magnificent believable hammerbeam roof trusses overhead, tall pale-stone arches and an oak gallery along one side. Show the interior as one continuous coherent room, not a dollhouse cutaway or a collage of rooms. A massive carved stone hearth on the rear wall and a large burgundy guild banner bearing a simple gold compass-star emblem form the commanding focal point. Two handsome long oak communal tables and benches run along the sides, leaving a clear central aisle. A broad expedition map table sits nearer the hearth, where three small adult adventurers study a parchment map. In the foreground a guard with a worn shield and a scout in an olive cloak prepare their travel packs; a scholar carries a rolled chart toward the table. One guild steward stands beside an orderly contract noticeboard. Only seven to nine small adult people in total, natural proportions and clear poses, no large portrait faces. A few recognizable expedition keepsakes, neatly hung shields and simple weapon racks convey achievement, without piles of clutter. Burgundy banners hang between timber posts; soft daylight through tall arched windows reveals olive greenery and ochre rooftops beyond, balanced with a restrained amber hearth glow. Give the hall impressive scale and depth while retaining the reference's flat painted illustration and fine linework. Clear floor plan, continuous flagstone floor, structurally convincing straight carpentry, each table and bench distinct, clean silhouettes, carefully edited detail. Important composition stays within the full image and reads well at 800px wide. No written text, letters, numbers, UI, watermarks, frame, photorealism, glossy 3D, cinematic bloom, excessive brown grain, ornate royal throne, magical effects or random clutter. Make it an inspiring guild headquarters, richly composed but architecturally clear.",
       "width": 1279,
       "height": 853,
-      "sourceSha256": "ce29c25d5336a382cec417ba067ce39a145b828aec33407c027f8c994218fd65",
-      "runtimeSha256": "254e4289f69dad7cbc9c34a8a688f27d1b89d9b8b81fa4bea4932020ed5acfe2",
-      "bytes": 215798
+      "sourceSha256": "b6207e71c2c7b4e3ae3e2d51aec5240d5aced7d8ad2737f4840f5f46d44d85ba",
+      "runtimeSha256": "c6e2df9c84ac2ec781309078207f2dfdb7afd01d6c2071ef23ad3bd702632493",
+      "bytes": 287814
     },
     {
       "id": "mission-escort",
@@ -370,8 +370,23 @@
       "runtimeSha256": "7a7a9e6d890defa06a46ab8f796611437ac5c1c258eee23e95011b2a29d58b0f",
       "bytes": 412634,
       "previousRuntime": "assets/guild-master/journey.webp"
+    },
+    {
+      "id": "hall-v2",
+      "source": "docs/art-sources/guild-master/hall-v2.png",
+      "generatedFilename": "exec-94162e21-429a-4510-a8be-be6fa776b7b5.png",
+      "maxWidth": 1280,
+      "maxHeight": 853,
+      "maxKiB": 300,
+      "prompt": "Use case: style-transfer. The attached image is the style reference only. Paint a new Crown Lands scene in that reference's restrained HAND-DRAWN medieval atlas language: clear thin dark-brown ink contours, simple flat ochre and olive color fields, restrained painted shading, pale warm-gray fieldstone, warm timber, slate roofs and tiny burgundy cloth accents. Match its graphic simplification and legible silhouettes. NOT photorealism, NOT a glossy 3D render, NOT excessive grain or mottled brown noise, NOT an ornate dollhouse full of meaningless clutter. Coherent human-scale medieval structures, straight carpentry, believable continuous floors and walkways. Soft neutral daylight, moderate contrast, carefully edited details, no dramatic lighting. Wide landscape 3:2 image, composed to read when reduced to a 300px card, important subject centered with safe margins. No text, lettering, labels, frame or watermark. Any people are small, simply drawn adults with clear purposeful poses, not detailed faces. Subject: the main Guild Hall, one simple welcoming rectangular medieval room, seen from a slightly elevated corner. A broad oak table with four simple benches is the single central focal point; two rolled maps and one brass lamp on the tabletop. Left wall has a sturdy noticeboard with a few pinned blank parchments. A stone hearth and a modest burgundy guild banner at the far end. Right wall has two arched windows opening onto olive trees and a hint of the walled city. Three small adult guild members in practical ochre, olive and burgundy clothes speak beside the table. Clear unobstructed floor, believable posts and beams, each piece of furniture distinct. The composition fills the canvas as an illustration of a room, not a whole-building cutaway. No multiple rooms, no ornate staircase, no clusters of identical props, no forest or beds inside the hall.",
+      "width": 1279,
+      "height": 853,
+      "sourceSha256": "ce29c25d5336a382cec417ba067ce39a145b828aec33407c027f8c994218fd65",
+      "runtimeSha256": "254e4289f69dad7cbc9c34a8a688f27d1b89d9b8b81fa4bea4932020ed5acfe2",
+      "bytes": 215798,
+      "previousRuntime": "assets/guild-master/hall-v2.webp"
     }
   ],
-  "revision": "guild-art-r2",
-  "retirementNote": "Original cutaway and shared journey illustration retained as provenance only; replaced by a single-room hall, eight independent mission scenes and five room scenes."
+  "revision": "guild-hall-r3",
+  "retirementNote": "Earlier hall studies and shared journey illustration retained as provenance only. Active artwork uses the grand Guild Hall, eight independent mission scenes and five room scenes."
 }
