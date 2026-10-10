@@ -280,6 +280,23 @@ async function main() {
         }
       }
       await evaluate(() => Promise.all(modal.querySelector('.modal-card').getAnimations().map(a => a.finished.catch(() => {}))));
+      await evaluate(()=>innerCastleEstateView.select('guild-master'));
+      const deselectBefore=await evaluate(()=>innerCastleEstateView.snapshot());
+      const terrain=await evaluate(()=>{
+        const viewport=document.querySelector('.estate-viewport'),r=viewport.getBoundingClientRect();
+        for(let y=r.top+30;y<r.bottom-70;y+=30)for(let x=r.left+30;x<r.right-30;x+=30)if(document.elementFromPoint(x,y)===viewport)return {x,y};
+      });
+      assert(terrain,'Must find empty terrain beside the selected building');
+      await client.send('Input.dispatchMouseEvent',{type:'mouseMoved',...terrain,buttons:0});
+      await client.send('Input.dispatchMouseEvent',{type:'mousePressed',...terrain,button:'left',buttons:1,clickCount:1});
+      await client.send('Input.dispatchMouseEvent',{type:'mouseReleased',...terrain,button:'left',buttons:0,clickCount:1});
+      assert.equal(await evaluate(()=>innerCastleSelectedBuildingKey),'','Terrain click must clear the game selection');
+      assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),{...deselectBefore,detailOpen:false},'Terrain click must preserve the game camera');
+      await evaluate(()=>renderInnerCastle(getMainCityReference().id));
+      await wait(()=>document.querySelector('.estate-world').getBoundingClientRect().width>0);
+      assert.deepEqual(await evaluate(()=>innerCastleEstateView.snapshot()),{...deselectBefore,detailOpen:false},'Scene remount must preserve camera after deselection');
+      assert(await evaluate(()=>document.querySelector('.estate-detail').hidden
+        && !document.querySelector('.estate-building-target[aria-pressed="true"],[data-estate-directory-building][aria-current="true"]')),'Remount must retain cleared selection');
       const gestureY=(await box('.estate-viewport')).top+40;
       await client.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 45, y: gestureY, deltaX: 0, deltaY: -200 }); await delay(100);
       assert(await evaluate(() => innerCastleEstateView.snapshot().zoom > 2.5));

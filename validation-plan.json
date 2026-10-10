@@ -1,25 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2de0506f18b43a9bea5e0b41ce1fdcd90eb81974",
+  "baseCommit": "3028c4107db0f4b1d5fa797a1acc51d68f5d1891",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
-        "docs/estate-economy/README.md"
+        "inner-city-estate.js",
+        "tools/validate-estate-input-browser.js",
+        "tools/validate-inner-castle-browser.js"
       ],
-      "reason": "Record verified authorized PR #516 web/backend/itch publication and unchanged artwork digests, scoped built navigation and artifact/startup evidence, and authenticated/installed-app limits. Documentation and provenance status only; source artwork, derivatives, runtime, server, gameplay and balance are unchanged, so no executable test is affected.",
-      "tests": []
+      "reason": "Clear estate selection on bare-terrain taps through the existing gesture-suppressed click route. Native source/built mouse and touch checks cover all twenty building footprints in all three states, cleared details/map actions/directory markers, overview deselection, scene remounts, selection recovery, dragging, cancellation, pinch, keyboard, camera controls and action callbacks. The actual-game integration covers onSelect persistence, four Gear round trips and disposal. Overview timer validation covers the shared paint pass and selection-independent countdowns. No server-authoritative rule, cost, persistence record, world data or callable changes, so emulator suites are unaffected.",
+      "tests": [
+        "tools/validate-estate-input-browser.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-estate-overview-timers.js"
+      ]
     },
     {
       "paths": [
-        "docs/art-sources/inner-city-hud/provenance.json"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Change only artwork provenance publication status; the existing main-screen art validator verifies unchanged source/runtime digests, dimensions, alpha and delivery using those assets. The required JSON configuration gate needs a selected validator; no server or gameplay change requires emulator suites.",
-      "tests": [
-        "tools/validate-main-screen-art-browser.js"
-      ]
+      "reason": "Record the explicitly approved empty-terrain deselection behavior and its limits as pending deployment. Documentation is checked through the affected runtime tests above; no independent executable behavior or balance rule is added.",
+      "tests": []
     }
   ]
 }
