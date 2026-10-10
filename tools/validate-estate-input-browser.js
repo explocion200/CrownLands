@@ -77,6 +77,18 @@ async function main() {
       await click("[data-estate-detail-close]");
       await frames();
     };
+    const emptyTerrain = () => evaluate(() => {
+      const viewport=document.querySelector('.estate-viewport'),r=viewport.getBoundingClientRect();
+      for(let y=r.top+30;y<r.bottom-70;y+=30)for(let x=r.left+30;x<r.right-30;x+=30)if(document.elementFromPoint(x,y)===viewport)return {x,y};
+    });
+    const assertDeselected = async before => {
+      assert.equal(await evaluate(()=>qaSelected),"","Terrain tap must clear the saved selection.");
+      assert(await evaluate(()=>document.querySelector('.estate-detail').hidden
+        && !document.querySelector('[data-estate-detail-copy]').textContent
+        && !document.querySelector('.estate-building-target[aria-pressed="true"],[data-estate-directory-building][aria-current="true"]')
+        && [...document.querySelectorAll('.estate-upgrade-targets button')].every(button=>button.hidden)),"Deselection must remove the marker, details, directory highlight and map actions.");
+      assert.deepEqual(await evaluate(()=>qaView.snapshot()),{...before,detailOpen:false},"Deselection must preserve camera and directory state.");
+    };
     const assertPan = async (before, after, dx, dy) => {
       const geometry = await evaluate(() => {
         const viewport = document.querySelector(".estate-viewport").getBoundingClientRect();
@@ -100,12 +112,13 @@ async function main() {
         await evaluate(() => {
           window.qaEstate = {levels:Object.fromEntries(CrownlandsEstate.buildings.map(b=>[b.key,0])),jobs:[]};
           window.qaSelected = "great-hall";
-          window.qaView = CrownlandsEstate.mount(document.getElementById("modalBody"), {
+          window.qaOptions = {
             cityName:"QA Estate",estate:qaEstate, now:()=>1000000,
             getResources:()=>({gold:100000,crowns:100,timber:1000,stone:1000,ore:1000,grain:1000,planks:1000,iron:1000,tools:1000,food:1000}),
             actions:CrownlandsEstateEconomy.mapActions(()=>'<svg aria-hidden="true"></svg>',null),
             onSelect:key=>{qaSelected=key;}, onBuilding:key=>{window.qaEntered=key;}, onUpgrade:key=>{window.qaUpgraded=key;},
-          });
+          };
+          window.qaView = CrownlandsEstate.mount(document.getElementById("modalBody"),qaOptions);
           document.getElementById("modal").showModal();qaView.fit();
           window.qaTrace=[];
           for(const type of ["pointerdown","pointermove","pointerup","pointercancel","lostpointercapture"])
@@ -140,6 +153,20 @@ async function main() {
               await click("[data-estate-detail-close]");
             }
           }
+          await selectSite("mine");
+          assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-targets button')].some(button=>!button.hidden)),"Selected map actions must be visible before terrain deselection.");
+          const mouseClearBefore=await evaluate(()=>qaView.snapshot()),mouseTerrain=await emptyTerrain();
+          assert(mouseTerrain,"Must find terrain for deselection.");
+          await clickAt(mouseTerrain.x,mouseTerrain.y);await assertDeselected(mouseClearBefore);
+          await click('[data-inner-castle-building="mine"]');
+          assert.equal(await evaluate(()=>qaSelected),"mine","Building clicks must select again after deselection.");
+          await click('.estate-detail h3');
+          assert.equal(await evaluate(()=>qaSelected),"mine","Clicks inside building details must preserve selection.");
+          const touchClearBefore=await evaluate(()=>qaView.snapshot()),touchTerrain=await emptyTerrain();
+          assert(touchTerrain,"Must find terrain beside the open details panel.");
+          await touch("touchStart",[{...touchTerrain,id:1}]);await touch("touchEnd");
+          await wait(()=>qaSelected==="");await assertDeselected(touchClearBefore);
+          if(state==="constructing")assert(await evaluate(()=>[...document.querySelectorAll('.estate-construction-timer')].some(timer=>!timer.hidden)),"Deselection must retain active construction countdowns.");
         }
         assert(offCenterClicks>0,"Must exercise artwork outside the old 44px center hotspot.");
         await selectSite("royal-stables");
@@ -177,10 +204,12 @@ async function main() {
         const terrainBefore=await evaluate(()=>qaView.snapshot());
         await mouse("mousePressed",terrain.x,terrain.y);await mouse("mouseMoved",terrain.x-50,terrain.y-30);await mouse("mouseReleased",terrain.x-50,terrain.y-30);
         await assertPan(terrainBefore,await evaluate(()=>qaView.snapshot()),-50,-30);
+        assert.equal(await evaluate(()=>qaSelected),"royal-stables","Terrain dragging must retain selection.");
         const keyboardBefore=await evaluate(()=>qaView.snapshot());
         await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"ArrowRight",code:"ArrowRight",windowsVirtualKeyCode:39});
         await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"ArrowRight",code:"ArrowRight",windowsVirtualKeyCode:39});
         await assertPan(keyboardBefore,await evaluate(()=>qaView.snapshot()),-70,0);
+        assert.equal(await evaluate(()=>qaSelected),"royal-stables","Keyboard panning must retain selection.");
         await selectSite("royal-stables");
         const t=await box('[data-inner-castle-building="royal-stables"]'),tx=t.x+t.width/2,ty=t.y+t.height/2;
         const touchBefore=await evaluate(()=>qaView.snapshot());
@@ -193,6 +222,7 @@ async function main() {
         await selectSite("royal-stables");
         await touch("touchStart",[{x:tx,y:ty,id:1}]);
         await touch("touchMove",[{x:tx-10,y:ty,id:1}]);await touch("touchCancel");
+        assert.equal(await evaluate(()=>qaSelected),"royal-stables","Cancelled gestures must retain selection.");
         await tap("[data-estate-fit]");await tap('[data-estate-district="city"]');
         assert.equal(await evaluate(()=>qaView.snapshot().zoom),2.5,"Cancellation must not poison the next touch gesture.");
         await selectSite("royal-stables");
@@ -202,6 +232,7 @@ async function main() {
         await touch("touchMove",[{x:px-24,y:py,id:1},{x:px+24,y:py,id:2}]);await touch("touchEnd");
         assert.equal(await evaluate(()=>qaView.snapshot().zoom),4,"Pinching across a building must zoom without selecting it.");
         assert.equal(await evaluate(()=>qaView.snapshot().detailOpen),false);
+        assert.equal(await evaluate(()=>qaSelected),"royal-stables","Pinching must retain selection.");
         await click("[data-estate-fit]");await click('[data-estate-district="city"]');
         await selectSite("mine");
         const actionsBefore=await evaluate(()=>qaView.snapshot());
@@ -212,6 +243,23 @@ async function main() {
           assert.equal(await evaluate(a=>a==="upgrade"?qaUpgraded:qaEntered,action),"mine","Map action must keep its callback.");
           assert.deepEqual(await evaluate(()=>qaView.snapshot()),actionsBefore,"Map action click must not initiate a pan or building selection.");
         }
+        await click('[data-estate-directory-toggle]');await click('.estate-directory h3');
+        assert.equal(await evaluate(()=>qaSelected),"mine","Directory background must retain selection.");
+        await click('[data-estate-directory-toggle]');
+        await click('[data-estate-zoom="out"]');await click('[data-estate-zoom="in"]');
+        assert.equal(await evaluate(()=>qaSelected),"mine","Camera controls must retain selection.");
+        const wheelTerrain=await emptyTerrain();
+        await client.send("Input.dispatchMouseEvent",{type:"mouseWheel",...wheelTerrain,deltaX:0,deltaY:100});await frames();
+        assert.equal(await evaluate(()=>qaSelected),"mine","Wheel zoom must retain selection.");
+        await click('[data-estate-fit]');
+        const overviewClearBefore=await evaluate(()=>qaView.snapshot()),overviewTerrain=await emptyTerrain();
+        await clickAt(overviewTerrain.x,overviewTerrain.y);await assertDeselected(overviewClearBefore);
+        await evaluate(()=>{
+          const camera=qaView.snapshot();qaView.destroy();
+          qaView=CrownlandsEstate.mount(document.getElementById("modalBody"),{...qaOptions,selectedKey:qaSelected,camera});
+          qaView.zoom(4);
+        });await frames();
+        await assertDeselected(await evaluate(()=>qaView.snapshot()));
         await selectSite("great-hall");
         await evaluate(()=>{qaView.select("treasury",false);document.querySelector('[data-estate-detail-close]').click();document.querySelector('[data-inner-castle-building="great-hall"]').focus();});
         await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",code:"Enter",windowsVirtualKeyCode:13,text:"\r"});
@@ -221,7 +269,7 @@ async function main() {
         const capture=await client.send("Page.captureScreenshot",{format:"png"});
         fs.writeFileSync(path.join(out,`${delivery}-${width}x${height}.png`),Buffer.from(capture.data,"base64"));
         await evaluate(()=>qaView.destroy());
-        results.push({delivery,width,height,sites:20,states:3,offCenterClicks,mouse:true,touch:true,cancel:true,pinch:true,keyboard:true,mapActions:true});
+        results.push({delivery,width,height,sites:20,states:3,offCenterClicks,mouse:true,touch:true,cancel:true,pinch:true,keyboard:true,mapActions:true,terrainDeselection:true,clearedSelectionRemount:true});
         console.log(`Estate footprint clicks and pointer gestures passed: ${delivery} ${width}x${height}.`);
         await closeBrowser();
       }

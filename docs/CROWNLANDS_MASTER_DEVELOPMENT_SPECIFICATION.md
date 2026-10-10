@@ -1965,6 +1965,8 @@ The approved estate supersedes the compact six-building Royal Bailey overview an
 
 Twenty permanent sites retain their positions and finished footprints through all visual states. The existing Treasury, Great Hall, Barracks, Alehouse, Gatehouse and Royal Stables begin completed. Guild Master and thirteen outer buildings begin as surveyed plots. Gatehouse, Royal Stables and Wagon Yard are distinct structures. Cottages, gardens and service yards provide decorative town life.
 
+**Terrain deselection, confirmed October 10, 2026 — pending deployment:** clicking or tapping empty estate terrain clears the selected building, its selection marker, selected-site details and map Build/Upgrade/Enter controls without moving the camera. Preserve the cleared selection when the estate is remounted. Dragging, pinching, wheel zoom, keyboard exploration, directory and camera controls, building actions and clicks inside panels do not deselect a building. Selecting another site replaces the selection normally. Construction countdowns remain visible independently of selection.
+
 | Building | Center: left / top percent | District |
 |---|---|---|
 | Treasury | 39 / 33 | city |

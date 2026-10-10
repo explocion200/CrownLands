@@ -199,7 +199,7 @@
     host.innerHTML = shell(options,siteStates,siteLevels);
     const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
-    let selected=options.selectedKey || "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
+    let selected=options.selectedKey ?? "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
@@ -392,7 +392,8 @@
         if(visible){place(label,placement.left,placement.top);label.style.visibility="visible";occupied.push(placement);}
       }
       const hitBoxes=boxes.filter((_,i)=>!targets[i].hidden);
-      options.actions?.place(upgradeTargets,selected,buildings,artBoxes,[...artBoxes,...hitBoxes,...occupied],width,height);
+      if(selected)options.actions?.place(upgradeTargets,selected,buildings,artBoxes,[...artBoxes,...hitBoxes,...occupied],width,height);
+      else upgradeTargets.forEach(button=>{button.hidden=true;});
     }
     function zoom(value,clientX,clientY) {
       const rect=viewport.getBoundingClientRect(), px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
@@ -430,9 +431,15 @@
       });
     }
     function renderDetail() {
-      const b=buildings.find(b=>b.key===selected);if(!b)return;
+      const b=buildings.find(b=>b.key===selected);
+      detail.hidden=!camera.detailOpen||!b;
+      host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
+      if(!b){
+        detail.querySelector("[data-estate-detail-copy]").replaceChildren();
+        detail.querySelector(".estate-site-actions")?.remove();
+        detail.querySelector(":scope > [data-manage-common-gear]")?.remove();return;
+      }
       const s=siteStates[b.key],gearRole=(s==="completed"||(options.estate&&siteLevels[b.key]>0))&&options.onGear?options.gearRoles?.[b.key]:null;
-      detail.hidden=!camera.detailOpen;
       detail.querySelector(":scope > [data-manage-common-gear]")?.remove();
       const actions=detail.querySelector(".estate-site-actions");
       if(actions?.querySelector("[data-estate-upgrade]").dataset.estateUpgrade!==selected)actions?.remove();
@@ -440,7 +447,6 @@
       if(options.actions&&!detail.querySelector(".estate-site-actions"))detail.insertAdjacentHTML("beforeend",'<div class="estate-site-actions">'+["upgrade","enter"].map(action=>options.actions.button(b,action,"detail",siteLevels[b.key])).join("")+"</div>");
       const manage=detail.querySelector("[data-manage-common-gear]");
       if(manage){if(options.actions)manage.remove();else{detail.append(manage);manage.addEventListener("click",()=>options.onGear?.(b.key),{signal});}}
-      host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
     }
     function select(key, focus=true, openBuilding=false) {
       const b=buildings.find(b=>b.key===key);if(!b)return;
@@ -473,6 +479,9 @@
       if(event.target.closest("[data-estate-detail-close]")){camera.detailOpen=false;renderDetail();paint();viewport.focus({preventScroll:true});}
       if(event.target.closest("[data-estate-directory-toggle]")){camera.directoryOpen=!camera.directoryOpen;directory.hidden=!camera.directoryOpen;event.target.closest("button").setAttribute("aria-expanded",String(camera.directoryOpen));if(camera.directoryOpen)directory.querySelector("button").focus({preventScroll:true});paint();}
       if(event.target.closest("[data-inner-castle-back]"))options.onBack?.();
+      if(event.target===viewport&&selected){
+        selected="";camera.detailOpen=false;options.onSelect?.(selected);renderDetail();paint();
+      }
     });
     listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
     listen(viewport,"pointerdown",event=>{
