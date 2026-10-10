@@ -11,7 +11,7 @@ async function main() {
   const executable = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find(p => p && fs.existsSync(p));
   assert(executable, 'Set CHROME_PATH to a Chromium browser');
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const errors = [], out = path.join(root, 'release-artifacts/estate-building-labels');
+  const errors = [], out = path.join(root, 'release-artifacts/estate-building-tap-zoom/integration');
   fs.mkdirSync(out, { recursive: true });
   let session, client;
   try {
@@ -337,6 +337,16 @@ async function main() {
       assert.equal(await evaluate(() => document.querySelector('[data-inner-castle-back]').getAttribute('aria-label')), 'Back to Realm');
       assert.equal(await text('[data-inner-castle-back] span'), 'Back to Realm');
       const realmView = await evaluate(() => ({ region: getActiveMapRegionId(), camera: { ...camera }, zoom }));
+      await click('[data-estate-fit]');
+      const overviewArt=await box('[data-estate-site="treasury"]>img'),tapX=overviewArt.x+overviewArt.width/2,tapY=overviewArt.y+overviewArt.height/2;
+      await client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:tapX,y:tapY,button:'none',buttons:0});
+      await client.send('Input.dispatchMouseEvent',{type:'mousePressed',x:tapX,y:tapY,button:'left',clickCount:1});
+      await client.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:tapX,y:tapY,button:'left',clickCount:1});
+      assert.equal(await evaluate(()=>innerCastleSelectedBuildingKey),'treasury','Actual game overview taps select the painted building');
+      assert.equal(await evaluate(()=>innerCastleEstateView.snapshot().zoom),2.5,'Actual game overview taps zoom to inspection');
+      assert(await evaluate(()=>innerCastleEstateView.snapshot().detailOpen&&!document.querySelector('[data-gear-back]')),'Overview tap stays on the estate with selected details');
+      assert.deepEqual(await evaluate(()=>({region:getActiveMapRegionId(),camera:{...camera},zoom})),realmView,'Estate overview selection must not alter the realm map');
+      await screenshot('overview-selected-'+width+'x'+height+'.png');
       if (width === 1440) {
         await evaluate(() => document.querySelector('[data-inner-castle-back]').focus());
         await press('Enter', 13);

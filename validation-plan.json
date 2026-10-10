@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ccb14772152e5083d00e4f16196f687f7adcadef",
+  "baseCommit": "8a97d7e89f685bfde19f70793b94a6299e601c1e",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/estate-economy/README.md",
-        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md"
-      ],
-      "reason": "Record verified publication of PR #522 and the explicitly confirmed unframed map correction, preserving prior release evidence and distinguishing current source/built input checks from earlier actual-game integration. Only release documentation changes; no executable behavior, server authority, assets or dependencies change, so no runtime or emulator suites apply. Publication receipts independently verify the exact merged artifact on both channels.",
+      "paths": ["inner-city-estate.js", "tools/validate-estate-input-browser.js", "tools/validate-inner-castle-browser.js"],
+      "reason": "Select painted Inner Castle buildings/plots from fitted and intermediate overview zoom, focus the existing bounded inspection camera, and retain the physical touch position when Chromium adjusts a tap toward a nearby district control. Native source/built tests cover all 20 sites in three states with mouse/touch, once-only callbacks, overview-origin drag, existing cancellation/pinch/deselection, directory/actions and keyboard behavior at desktop and two landscape sizes. The actual game integration checks estate selection does not enter Gear automatically or mutate the outside realm camera, and preserves navigation/Gear/lifecycle behavior at four sizes. The layout validator checks unchanged fixed artwork, Gatehouse offsets, active-world dimensions and asset inclusion. No economy, server-authoritative behavior or player data changes, so no emulator suites apply.",
+      "tests": ["tools/validate-estate-input-browser.js", "tools/validate-inner-castle-browser.js", "tools/validate-inner-city-estate.js"]
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/CROWNLANDS_ART_BIBLE.md"],
+      "reason": "Record the explicitly confirmed Inner Castle-only overview selection behavior as in development, supplementing the original inspection-target rule and preserving historical release evidence. These presentation specifications add no executable behavior beyond the focused coverage above.",
       "tests": []
     }
   ]

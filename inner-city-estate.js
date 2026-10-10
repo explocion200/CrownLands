@@ -175,7 +175,7 @@
         <div class="estate-map-targets">${districts.map(d=>`<button type="button" class="estate-district" data-estate-district="${d.key}" aria-label="Zoom to ${escape(d.label)}"><span>${escape(d.label)}</span></button>`).join("")}${buildings.map(b=>`<button type="button" class="estate-building-target" data-inner-castle-building="${b.key}" aria-label="${escape(b.label)}, ${levelText(siteStates[b.key],siteLevels[b.key])}${options.newMarkers?.[b.key] ? "; new gear" : ""}" aria-controls="estateDetail" aria-pressed="false" hidden><span>${escape(b.label)} · ${levelText(siteStates[b.key],siteLevels[b.key])}</span>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div>
         <nav class="estate-directory" id="estateDirectory" aria-label="Estate buildings" hidden>${districts.map(d=>`<section><h3>${escape(d.label)}</h3>${buildings.filter(b=>b.district===d.key).map(b=>`<div class="estate-directory-site">${action(b,"upgrade","directory")}<button type="button" data-estate-directory-building="${b.key}"><span>${escape(b.label)}</span><small>${levelText(siteStates[b.key],siteLevels[b.key])}</small>${options.newMarkers?.[b.key] ? '<b class="estate-new" aria-label="New gear">!</b>' : ""}</button>${action(b,"enter","directory")}</div>`).join("")}</section>`).join("")}</nav>
         <aside class="estate-detail" id="estateDetail" aria-label="Selected building" hidden><button type="button" class="estate-detail-close" data-estate-detail-close aria-label="Close building details">×</button><div data-estate-detail-copy aria-live="polite"></div></aside>
-        <div class="estate-camera-controls"><button type="button" data-estate-zoom="out" aria-label="Zoom out">−</button><output aria-label="Map zoom" data-estate-zoom-label>100%</output><button type="button" data-estate-zoom="in" aria-label="Zoom in">+</button><button type="button" data-estate-fit>Fit Estate</button></div><p class="estate-map-hint">Drag to explore · Select a district to look closer</p>
+        <div class="estate-camera-controls"><button type="button" data-estate-zoom="out" aria-label="Zoom out">−</button><output aria-label="Map zoom" data-estate-zoom-label>100%</output><button type="button" data-estate-zoom="in" aria-label="Zoom in">+</button><button type="button" data-estate-fit>Fit Estate</button></div><p class="estate-map-hint">Drag to explore · Select a building or district to look closer</p>
       </div></section>`;
   }
   const pathMetrics = new WeakMap();
@@ -200,6 +200,7 @@
     const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
     let selected=options.selectedKey ?? "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
+    let overviewArtBoxes=[],overviewTap=null;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
@@ -272,6 +273,7 @@
       // Select the entire rendered building/plot, retaining the minimum touch
       // size for tiny sites. Overlapping targets still defer to the directory.
       const artBoxes=buildings.map(b=>buildingBox(b,tx,ty,scale));
+      overviewArtBoxes=artBoxes;
       const boxes=artBoxes.map(art=>{
         const w=Math.max(44,art.w),h=Math.max(44,art.h);
         return rect(art.left+(art.w-w)/2,art.top+(art.h-h)/2,w,h);
@@ -463,9 +465,22 @@
       renderDetail();paint();
       if(focus) detail.querySelector("[data-estate-detail-close]").focus({preventScroll:true});
     }
+    function overviewBuildingAt(clientX,clientY) {
+      if(camera.zoom>=2.5)return -1;
+      // Read the physical point rather than a touch browser's adjusted target.
+      // Panels and visible district labels keep their own interactions.
+      const element=document.elementFromPoint(clientX,clientY),district=element?.closest("[data-estate-district]");
+      if(element!==viewport&&!district)return -1;
+      if(district){const label=district.querySelector("span").getBoundingClientRect();if(clientX>=label.left&&clientX<=label.right&&clientY>=label.top&&clientY<=label.bottom)return -1;}
+      const bounds=viewport.getBoundingClientRect(),x=clientX-bounds.left,y=clientY-bounds.top;
+      return overviewArtBoxes.findIndex(box=>x>=box.left&&x<=box.right&&y>=box.top&&y<=box.bottom);
+    }
     listen(shellElement,"click",event=>{
+      const tap=event.detail>0&&overviewTap?overviewTap:event;overviewTap=null;
       if(suppressClick&&event.detail>0&&(!event.target.closest("button")||event.target.closest("[data-estate-district],[data-inner-castle-building]"))){suppressClick=false;return;}
       suppressClick=false;
+      const overviewIndex=viewport.contains(event.target)?overviewBuildingAt(tap.clientX,tap.clientY):-1;
+      if(overviewIndex>=0){select(buildings[overviewIndex].key);return;}
       const upgrade=event.target.closest("[data-estate-upgrade]");
       if(upgrade){options.onUpgrade?.(upgrade.dataset.estateUpgrade);return;}
       const enter=event.target.closest("[data-estate-enter]");
@@ -485,15 +500,16 @@
     });
     listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
     listen(viewport,"pointerdown",event=>{
-      if(event.button!==0||event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls"))return;
+      const overviewHit=overviewBuildingAt(event.clientX,event.clientY)>=0;
+      if(event.button!==0||(event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls")&&!overviewHit))return;
       const target=event.target.closest("[data-estate-district],[data-inner-castle-building]");
-      if(event.target.closest("button")&&!target)return;
+      if(event.target.closest("button")&&!target&&!overviewHit)return;
       event.preventDefault();
-      if(!pointers.size){gestureMoved=false;suppressClick=false;viewport.focus({preventScroll:true});}
+      if(!pointers.size){gestureMoved=false;suppressClick=false;overviewTap=null;viewport.focus({preventScroll:true});}
       pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY});
       // Capture from the start, even on a roof/plot. A fast move can leave the
       // viewport before its first move event; retain taps on the original button.
-      (target||viewport).setPointerCapture(event.pointerId);
+      (overviewHit?viewport:target||viewport).setPointerCapture(event.pointerId);
       if(pointers.size===2){gestureMoved=true;for(const id of pointers.keys())viewport.setPointerCapture(id);}
     });
     listen(viewport,"pointermove",event=>{
@@ -506,7 +522,13 @@
       if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2);}
       else {camera.x-=(event.clientX-(wasDragging?old.x:old.startX))/(fit*camera.zoom);camera.y-=(event.clientY-(wasDragging?old.y:old.startY))/(fit*camera.zoom);paint();}
     });
-    const endPointer=event=>{if(!pointers.has(event.pointerId))return;pointers.delete(event.pointerId);if(gestureMoved)suppressClick=true;};
+    const endPointer=event=>{
+      const point=pointers.get(event.pointerId);if(!point)return;pointers.delete(event.pointerId);
+      if(gestureMoved)suppressClick=true;
+      // Chromium can snap a touch click's coordinates toward a nearby button.
+      // Retain the physical tap position, excluding drags, pinches and cancels.
+      else if(event.type==="pointerup"&&camera.zoom<2.5)overviewTap={clientX:point.startX,clientY:point.startY};
+    };
     listen(viewport,"pointerup",endPointer);listen(viewport,"pointercancel",endPointer);listen(viewport,"lostpointercapture",event=>{if(!viewport.hasPointerCapture(event.pointerId))pointers.delete(event.pointerId);});
     listen(viewport,"keydown",event=>{
       if(event.target!==viewport)return;
