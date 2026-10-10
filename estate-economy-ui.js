@@ -190,7 +190,8 @@
         || Object.values(data.estate.productionOrders || {}).some(o=>o.status==="running"&&o.completesAtMs>now())
         || data.estate.jobs.some(j => j.status === "running" && j.completesAtMs > now())) counterTimer = setTimeout(paintCounters, 1000);
     }
-    const button = (action, text, attributes = "") => `<button type="button" data-economy-action="${action}" ${attributes}>${text}</button>`;
+    const primaryActions = new Set(["fund","produce","confirm","commission","recruit","quest","supply","claimCommission","claimParcel"]);
+    const button = (action, text, attributes = "") => `<button type="button" ${primaryActions.has(action) ? 'class="estate-action-primary"' : ""} data-economy-action="${action}" ${attributes}>${text}</button>`;
     function accept(result) {
       if (!current()) return;
       options.apply?.(result);
@@ -226,6 +227,37 @@
       const next = rows.filter(([n]) => n > level).sort((a,b) => a[0]-b[0])[0];
       return next ? `<aside class="estate-milestone"><b>Next unlock · Level ${next[0]}</b><progress max="${next[0]}" value="${level}" aria-label="${escape(label(key))} progress toward Level ${next[0]}"></progress><p>${escape(next[1])} ${next[0]-level} levels to go.</p></aside>`
         : `<p class="estate-economy-muted">Every completed level improves this service through Level 100. The next-level benefit is shown in Upgrade requirements.</p>`;
+    }
+    function buildingIdentity(key) {
+      const b = root.CrownlandsEstate.buildings.find(b => b.key === key);
+      if (!b || !data) return "";
+      const s = data.estate, level = s.levels[key], job = s.jobs.find(j=>j.building===key);
+      const producer = Object.values(s.resources).find(r=>r.source===key);
+      const category = producer ? Object.keys(producer.inputs || {}).length ? "Material production" : "Resource gathering"
+        : ["treasury","barracks","gatehouse","royal-stables"].includes(key) ? "Officer equipment"
+        : key === "guild-master" ? "Champions & expeditions" : key === "alehouse" ? "Recruitment & recovery"
+        : ["market","wagon-yard"].includes(key) ? "Trade & supplies" : ["storehouse","granary"].includes(key) ? "Estate storage" : "Royal administration";
+      const status = !level ? "Not built" : job ? "Upgrading to Level "+job.target : level === 100 ? "Maximum level" : "Established";
+      return `<aside class="estate-building-identity" aria-label="${escape(b.label)} building details">
+        <div class="estate-building-art ${!level ? "estate-building-plan" : ""}"><img src="${b.artByState.completed}" alt="" width="280" height="200"><span>${!level ? "Building plan" : "Permanent estate"}</span></div>
+        <div class="estate-building-rank"><span>Level <b>${level}</b><small> / 100</small></span><span class="estate-building-state">${escape(status)}</span></div>
+        <p class="estate-building-category">${category}</p><p class="estate-building-purpose">${escape(b.role)}</p>
+        ${view.type === "building" && !producer ? `<section class="estate-building-benefit"><small>Current benefit</small><p>${escape(s.benefits[key].current)}</p></section>` : ""}
+        ${!producer || view.type === "upgrade" ? milestone(key,level) : ""}<p class="estate-building-permanence">Buildings and materials stay through every season.</p>
+      </aside>`;
+    }
+    function upgradeAvailability(bill) {
+      const s = data.estate, gold = options.gold?.() ?? data.gold;
+      return { materialsReady:Object.entries(bill.remaining).every(([k,v])=>v<=s.stock[k]),
+        builderBusy:s.jobs.filter(j=>j.status==="running").length >= s.slots,
+        affordable:Number.isFinite(gold) && gold >= bill.gold };
+    }
+    function upgradeFooter(key) {
+      if (pending && quote?.value.action === "fund") return `${button("fund","Retry same upgrade")}${button("close","Cancel","data-economy-cancel")}`;
+      if (!upgradeBill || data.estate.jobs.some(j=>j.building===key) || data.estate.levels[key]>=100 || data.estate.buildingPrerequisites?.[key]?.length) return "";
+      const {materialsReady,builderBusy,affordable}=upgradeAvailability(upgradeBill);
+      return `<div class="estate-order-total"><small>Construction time</small><b>${duration(upgradeBill.durationMs)}</b><small>${number(upgradeBill.gold)} Gold · materials paid at start</small></div>
+        ${button("fund",data.estate.levels[key]?"Upgrade to Level "+upgradeBill.target:"Build Level 1",!materialsReady||builderBusy||!affordable?"disabled":"")}${button("close","Cancel","data-economy-cancel")}`;
     }
     function productionHelp(key) {
       const s = data.estate, r = s.resources[key];
@@ -422,12 +454,14 @@
       const recipe = data.estate.productionRecipes[view.key];
       const quantity = Math.max(1,Math.min(Number(slider.max),Math.floor(Number((source || slider).value) || 1)));
       slider.value = numeric.value = quantity;
+      slider.style.setProperty("--estate-quantity-progress", (Number(slider.max)>1 ? 100*(quantity-1)/(Number(slider.max)-1) : 0)+"%");
       slider.setAttribute("aria-valuetext",number(quantity)+" "+label(recipe.output));
       for (const [k,v] of Object.entries(recipe.inputs)) setText(dialog.querySelector(`[data-economy-production-input="${k}"]`),number(v*quantity));
       setText(dialog.querySelector("[data-economy-production-time]"),recipe.maxQuantity ? productionDuration(Math.ceil(quantity/recipe.ratePerHour*3600000)) : "Needs materials or storage");
       const output = data.estate.resources[recipe.output];
       setText(dialog.querySelector("[data-economy-production-storage]"),number(output.available+(recipe.maxQuantity?quantity:0))+" / "+number(output.capacity));
-      setText(dialog.querySelector("[data-economy-production-output]"),number(quantity)+" "+label(recipe.output));
+      const unit = quantity === 1 ? {planks:"Plank",tools:"Tool"}[recipe.output] : null;
+      setText(dialog.querySelector("[data-economy-production-output]"),number(quantity)+" "+(unit || label(recipe.output)));
     }
     function open(next) {
       if (!current()) return;
@@ -440,16 +474,14 @@
       const s = data.estate, level = s.levels[key];
       const producer = Object.values(s.resources).find(r => r.source === key);
       const commission = s.commissions[key];
-      let body = `<p class="estate-economy-kicker">Permanent estate · Level ${level} / 100</p>
-        <p>${escape(root.CrownlandsEstate.buildings.find(b => b.key === key)?.role)}</p>
-        <p><b>Current benefit:</b> ${escape(s.benefits[key].current)}</p>` + milestone(key,level);
+      let body = "";
       if (!level) return body + "<p>This service becomes available after Level 1 completes. Close this window and use the building’s Build button to review construction.</p>";
       if (producer) {
         const recipe = s.productionRecipes?.[key];
-        const kicker = `<p class="estate-economy-kicker">Level ${level} / 100</p>`;
-        if (Object.keys(producer.inputs || {}).length) return kicker + productionBody(key, producer) + productionDetails(key,body,recipe,producer);
+        body = `<section class="estate-building-benefit"><small>Current benefit</small><p>${escape(s.benefits[key].current)}</p></section>` + milestone(key,level);
+        if (Object.keys(producer.inputs || {}).length) return productionBody(key, producer) + productionDetails(key,body,recipe,producer);
         const resource = Object.keys(s.resources).find(k=>s.resources[k]===producer);
-        return kicker + `<article class="estate-production-item"><h3>${escape(label(resource))}</h3><p>${producer.status === "Storage full" ? "Storage full · gathering waits for space" : "Gathering automatically"}</p><p>${number(producer.gross)} per hour · ${number(producer.available)} / ${number(producer.capacity)} stored.</p><progress max="${producer.capacity}" value="${Math.min(producer.capacity,producer.available)}" aria-label="${escape(label(resource))} storage"></progress><p class="estate-production-note">No production order needed. Gathering continues while you are away and pauses when storage is full.</p>${productionHelp(resource)}</article>` + productionDetails(key,body,null,producer);
+        return `<article class="estate-production-item"><div class="estate-production-heading"><h3>${escape(label(resource))}</h3><span>${producer.status === "Storage full" ? "Storage full" : "Gathering automatically"}</span></div><div class="estate-gathering-stats"><p><small>Gathering rate</small><b>${number(producer.gross)}</b><span>per hour</span></p><p><small>In storage</small><b>${number(producer.available)}</b><span>of ${number(producer.capacity)}</span></p><p><small>Free space</small><b>${number(producer.storageSpace)}</b><span>${escape(label(resource))}</span></p></div><progress max="${producer.capacity}" value="${Math.min(producer.capacity,producer.available)}" aria-label="${escape(label(resource))} storage"></progress><p class="estate-production-note">No production order needed. Gathering continues while you are away and pauses when storage is full.</p>${productionHelp(resource)}</article>` + productionDetails(key,body,null,producer);
       }
       if (["storehouse", "granary", "wagon-yard", "market"].includes(key)) {
         const food = ["granary", "market"].includes(key);
@@ -509,10 +541,10 @@
       let body = (trail.length ? `<nav class="estate-prerequisite-trail" aria-label="Building requirement chain"><p>${[...trail,key].map(k=>escape(label(k))).join(" → ")}</p>${button("prerequisiteBack","Back to "+escape(label(trail.at(-1))))}</nav>` : "")
         + `<p class="estate-economy-kicker">${escape(label(key))} · Level ${level} / 100</p>
         <div class="estate-economy-benefits"><p><b>Now</b><br>${escape(s.benefits[key].current)}</p><p><b>Next level</b><br>${escape(s.benefits[key].next)}</p></div>
-        <p>Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>` + milestone(key,level);
+        <p class="estate-production-note">Builders working: ${s.jobs.filter(j => j.status === "running").length} / ${s.slots}. Upgrades start individually; no queue.</p>`;
       if (pending && quote?.value.action === "fund") {
         const bill = quote.value.jobs[0];
-        return body + `<h3>Waiting for Level ${bill.target} start result</h3><p>${duration(bill.durationMs)} · ${number(quote.value.gold)} Gold</p><p>Retry checks this same upgrade request without paying twice.</p>${button("fund", "Retry same upgrade")}`;
+        return body + `<h3>Waiting for Level ${bill.target} start result</h3><p>${duration(bill.durationMs)} · ${number(quote.value.gold)} Gold</p><p>Retry checks this same upgrade request without paying twice.</p>`;
       }
       if (jobs.length) return body + jobs.map(j => `<article><b>Level ${j.target}</b> · ${j.status === "running" ? duration(Math.max(0,j.completesAtMs-now()))+" remaining" : "Previously paid work · "+escape(j.status)}
         ${j.status === "running" ? "" : button("pause",j.status === "paused" ? "Resume paid work" : "Pause paid work",`data-id="${escape(j.id)}" data-paused="${j.status !== "paused"}"`)}</article>`).join("") + "<p>Finish this building’s paid work before its next upgrade.</p>";
@@ -525,17 +557,15 @@
         <p>Follow a required building to review its next level and any prerequisites of its own.</p>${button("close","Cancel","data-economy-cancel")}</section>`;
       const bill = upgradeBill;
       if (!bill) return body + (error ? "<p>Resolve the condition above, then refresh to review this building’s requirements.</p>" : "<p>Loading requirements. If unavailable, refresh to request them again.</p>");
-      const materialsReady = Object.entries(bill.remaining).every(([k,v])=>v<=s.stock[k]), builderBusy = s.jobs.filter(j=>j.status==="running").length >= s.slots;
-      const gold = options.gold?.() ?? data.gold, affordable = Number.isFinite(gold) && gold >= bill.gold;
+      const {materialsReady,builderBusy,affordable} = upgradeAvailability(bill);
       const amounts = Object.entries(bill.materials);
-      body += `<h3>Requirements for Level ${bill.target}</h3><p>${duration(bill.durationMs)} · ${number(bill.gold)} Gold when you start</p>`;
+      body += `<h3>Requirements for Level ${bill.target}</h3><div class="estate-construction-summary"><p><small>Construction time</small><b>${duration(bill.durationMs)}</b></p><p><small>Gold when you start</small><b>${number(bill.gold)}</b></p></div>`;
       const hasCredit = Object.values(bill.deposited).some(v=>v>0);
       if (amounts.length) body += `<div class="estate-upgrade-requirements"><table><thead><tr><th>Material</th><th>Required</th>${hasCredit ? "<th>Already paid</th><th>Due now</th>" : ""}<th>You have</th></tr></thead><tbody>${amounts.map(([k,v])=>
-        `<tr><th>${escape(label(k))}</th><td>${number(v)}</td>${hasCredit ? `<td>${number(bill.deposited[k])}</td><td>${number(bill.remaining[k])}</td>` : ""}<td>${number(s.stock[k])}</td></tr>`
+        `<tr><th>${escape(label(k))}</th><td>${number(v)}</td>${hasCredit ? `<td>${number(bill.deposited[k])}</td><td>${number(bill.remaining[k])}</td>` : ""}<td class="${bill.remaining[k]>s.stock[k] ? "estate-material-shortage" : "estate-material-ready"}">${number(s.stock[k])}${bill.remaining[k]>s.stock[k] ? `<small>Need ${number(bill.remaining[k]-s.stock[k])} more</small>` : ""}</td></tr>`
       ).join("")}</tbody></table></div>${hasCredit ? "<p>Your previously paid materials stay credited to this level. You pay only the amount due now.</p>" : ""}`;
       else body += "<p>First construction requires Gold only.</p>";
-      body += `<div class="estate-economy-actions">${button("fund",level?"Upgrade to Level "+bill.target:"Build Level 1",!materialsReady||builderBusy||!affordable?"disabled":"")}${button("close","Cancel","data-economy-cancel")}</div>
-        <p data-economy-upgrade-status>${!materialsReady?"Gather the required materials, then refresh to start.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Select Build or Upgrade to pay the shown Gold and materials and begin construction."} Started work cannot be cancelled.</p>`;
+      body += `<p class="estate-order-readiness" data-economy-upgrade-status>${!materialsReady?"Gather the required materials, then refresh to start.":builderBusy?"Materials are ready. Start when a builder becomes free.":!affordable?"Materials are ready. You need "+number(bill.gold)+" Gold to start.":"Ready to start. Select Build or Upgrade to pay the shown Gold and materials and begin construction."} Started work cannot be cancelled.</p>`;
       return body;
     }
     function reviewBody() {
@@ -558,8 +588,7 @@
         ${q.action === "roster" ? `<p>Move champion to the ${q.active ? "active roster" : "permanent bench"}.</p>` : ""}
         ${q.action === "pause" ? `<p>${q.paused ? "Pause" : "Resume"} this paid contract. No additional payment.</p>` : ""}
         ${q.nonrefundable ? '<label class="estate-economy-commit"><input type="checkbox" data-economy-permanent> I understand: payments belong permanently to this building. No withdrawal, refund or transfer. Starting an upgrade cannot be cancelled.</label>' : ""}
-        <p class="estate-economy-muted">This quote is valid for five minutes and until the estate changes.</p>
-        <div class="estate-economy-actions">${button("confirm",pending ? "Retry same request" : "Confirm")}${button("cancelReview","Back")}</div>`;
+        <p class="estate-economy-muted">This quote is valid for five minutes and until the estate changes.</p>`;
     }
     function partyStatus() {
       const status = dialog.querySelector("[data-economy-party-status]");
@@ -604,9 +633,16 @@
         if(view.sourceTrail?.length)body=`<nav class="estate-production-trail" aria-label="Production sources"><p>${view.sourceTrail.map(site=>escape(label(site.key))).concat(escape(label(view.key))).join(" → ")}</p>${button("sourceBack","Back to "+label(view.sourceTrail.at(-1).key))}</nav>`+body;
       }
       const recipe = data && view.type === "building" && data.estate.levels[view.key] && !quote && data.estate.productionPolicy === "manual-batches" && !data.estate.productionOrders?.[view.key] ? data.estate.productionRecipes?.[view.key] : null;
-      dialog.innerHTML = `<header><div><small>Inner Castle</small><h2 id="estateEconomyTitle" tabindex="-1">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","Close")}</header>
-        <div class="estate-economy-content" aria-busy="${busy}">${error ? `<p role="alert" class="estate-economy-error">${escape(error)}</p>` : ""}${body}</div>
-        <footer${recipe ? ' class="estate-production-footer"' : ""}>${recipe ? `<div><small>Production time</small><b data-economy-production-time></b><small>Materials used now; output added when finished.</small></div>${button("produce",'Start production · <span data-economy-production-output></span>',recipe.maxQuantity ? "" : "disabled")}` : `Buildings, materials, paid work and champions stay through every season. ${data ? "Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}`}</footer>`;
+      const identity = ["building","upgrade"].includes(view.type) ? buildingIdentity(view.key) : "";
+      const reviewing = quote && quote.value.action !== "fund";
+      const upgradeActions = data && view.type === "upgrade" ? upgradeFooter(view.key) : "";
+      const footer = recipe ? `<div class="estate-order-total"><small>Production time</small><b data-economy-production-time></b><small>Materials used now; output added when finished.</small></div>${button("produce",'Start production · <span data-economy-production-output></span>',recipe.maxQuantity ? "" : "disabled")}`
+        : reviewing ? `<div class="estate-order-total"><small>Order review</small><b>${pending ? "Awaiting confirmation" : "Ready for your decision"}</b></div>${button("confirm",pending ? "Retry same request" : "Confirm")}${button("cancelReview","Back")}`
+        : upgradeActions || `Permanent estate${data ? " · Updated "+new Date(data.serverNowMs).toLocaleTimeString() : ""}`;
+      dialog.dataset.estateView = view.type;
+      dialog.innerHTML = `<header><div><small>Inner Castle <span>${reviewing ? "Order review" : view.type === "upgrade" ? "Construction" : view.type === "building" ? "Building services" : "Estate ledger"}</span></small><h2 id="estateEconomyTitle" tabindex="-1">${escape(title)}</h2></div>${button("refresh","Refresh")}${button("close","×",'aria-label="Close building window" title="Back to Inner Castle"')}</header>
+        <div class="estate-economy-workspace ${identity ? "estate-with-identity" : ""}">${identity}<div class="estate-economy-content" aria-busy="${busy}">${error ? `<p role="alert" class="estate-economy-error">${escape(error)}</p>` : ""}<div class="estate-building-services" data-building-service="${escape(view.key || "estate")}">${body}</div></div></div>
+        <footer${recipe || reviewing || upgradeActions ? ' class="estate-order-footer"' : ""}>${footer}</footer>`;
       for (const el of dialog.querySelectorAll("input,select")) {
         const saved = draft?.fields.find(field => field.id === controlId(el));
         if (!saved || el.disabled) continue;

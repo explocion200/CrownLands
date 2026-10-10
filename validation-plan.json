@@ -1,14 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "43e051ddabe58ccabc8ff8917b086d8064ee9e12",
+  "baseCommit": "77cf03cdfcb9f7c8c4d65827bab48ba9598dde09",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/estate-economy/PLAYTEST_RELEASE_RECORD.md",
-        "docs/estate-economy/README.md"
-      ],
-      "reason": "Documentation-only record of authorized PR #518 publication, exact artifact/interaction evidence, matching backend identity and retained realm/rules. Update current channel matrix and manual verification limits; no executable code, assets, configuration, costs, timers or gameplay behavior changes, so no runtime or emulator tests apply.",
+      "paths": ["estate-economy-ui.js", "estate-economy-ui.css", "tools/validate-estate-economy-browser.js"],
+      "reason": "Shared estate service and external construction presentation changes affect every building, production quantity/drafts, quote and retry controls, normal-button sizing, prerequisite navigation, focus, return camera and service refresh. Existing actual-game browser coverage verifies those integration paths; the new source/built folio suite verifies illustrated identity, collapsed production benefits, all twenty layouts and persistent decisions at desktop and both supported landscape sizes. All server prices, payments, progression and assets are retained; no server-authoritative change or emulator suite applies.",
+      "tests": ["tools/validate-estate-economy-browser.js", "tools/validate-estate-building-ui-browser.js"]
+    },
+    {
+      "paths": ["tools/estate-building-ui-preview.js", "tools/validate-estate-building-ui-browser.js", "docs/visual-qa/estate-building-ui/index.html", "docs/visual-qa/estate-building-ui/preview.js"],
+      "reason": "Loopback-only visual review uses disposable snapshots and existing server quote calculators without player authentication or paid commits. Source and delivered runtime files must show all service types, manual production and construction states with intact navigation and no browser errors. This suite exercises fixture loading, illustration paths, controls, quote review, responsive layout and cleanup; production artifact validation separately excludes development fixtures.",
+      "tests": ["tools/validate-estate-building-ui-browser.js"]
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md", "docs/CROWNLANDS_ART_BIBLE.md", "docs/visual-qa/estate-building-ui/README.md"],
+      "reason": "Document the requested visual polish, preserved approved Focused production and existing gameplay, development-only review usage and pending deployment status. No economy rule or channel status is silently changed; browser coverage above verifies implementation. Documentation adds no runtime authority, so no separate emulator or gameplay tests apply.",
       "tests": []
     }
   ]
