@@ -8,7 +8,7 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/visual-qa/guild-master/README.md"
       ],
-      "reason": "Record only confirmed Guild facility and randomized-stat direction and requested artwork language; clearly retain pending Groups 1-2 and local-review/non-deployment status. Documentation does not enforce gameplay or change the active estate.",
+      "reason": "Record confirmed Guild facilities, randomized-stat and additive-party directions plus approved artwork; retain remaining proposed numbers and local-review/non-deployment status. Documentation does not enforce production gameplay.",
       "tests": []
     },
     {
@@ -78,11 +78,13 @@
         "docs/visual-qa/guild-master/index.html",
         "docs/visual-qa/guild-master/review.css",
         "docs/visual-qa/guild-master/review.js",
+        "tools/test-guild-party-contributions.js",
         "tools/validate-guild-game-preview.js"
       ],
-      "reason": "Exercise isolated sample recruitment, party preparation, report replay, room upgrades, image selection, responsive controls and estate return at desktop and two small landscape sizes. Uses unchanged estate renderer/economy fixtures; local preview has no player/server mutations, so no emulator tests apply. Also verify gallery room images and proposed-balance label.",
+      "reason": "Exercise additive party contributions across all types, contracts, routes, approaches, supplies and progression; verify fixed mission difficulty, caps, leader behavior and unchanged two-member calibration. Browser checks add/remove members through actual controls, the contribution breakdown, stable recruits, preparation, report replay, room upgrades, responsive art/controls and estate camera return. Uses unchanged estate/economy fixtures with no production mutations; no server/emulator changes apply.",
       "tests": [
-        "tools/validate-guild-game-preview.js"
+        "tools/validate-guild-game-preview.js",
+        "tools/test-guild-party-contributions.js"
       ]
     }
   ]

@@ -22,7 +22,7 @@ window.GuildReviewModel = (() => {
     {id:"workshop",name:"The Missing Workshop Wagon",client:"Artisans' Company",kind:"Iron",primary:4,secondary:2,hazard:"supplies",hours:2,copy:"Recover tools and iron from a stalled wagon before the woodland track becomes impassable."},
     {id:"waymark",name:"The Forgotten Waymark",client:"Guild Cartographers",kind:"Discovery",primary:1,secondary:2,hazard:"wilderness",hours:1,copy:"Follow the marks on an old milestone. A forgotten path may connect places absent from the Guild's maps."},
     {id:"ledger",name:"The Sealed Ledger",client:"Alderwick Archivist",kind:"Story chapter",primary:2,secondary:3,hazard:"investigation",hours:2,copy:"Trace a name through abandoned records. Scholars may uncover why the northern watchtower was deserted."},
-  ];
+  ].map(mission=>({...mission,requiredMembers:2,statTarget:24}));
   const facilities=[
     {id:"contracts",name:"Contract board",benefit:l=>l?`${l} additional client contract${l===1?"":"s"}`:"Base contracts available"},
     {id:"planning",name:"Planning table",benefit:l=>`${3+l} saved party slots`},
@@ -49,16 +49,19 @@ window.GuildReviewModel = (() => {
   function forecast(s,mission){
     const party=s.members.filter(c=>s.party.includes(c.id));if(!party.length)return null;
     const leader=party.find(c=>c.id===s.leader)||party[0];
-    const mean=i=>party.reduce((n,c)=>n+values(c)[i],0)/party.length;
-    const readiness=.6*mean(mission.primary)+.3*mean(mission.secondary)+.1*values(leader)[3];
-    const adjustment=Math.max(-15,Math.min(35,20*(1-readiness/12)));
+    // Calibrate against the contract's fixed required party, never the selected
+    // headcount. The two-member reference preserves earlier two-member odds.
+    const contributions=party.map(c=>({id:c.id,name:c.name,points:.6*values(c)[mission.primary]+.3*values(c)[mission.secondary]}));
+    const leaderBonus=.1*mission.requiredMembers*values(leader)[3];
+    const readiness=contributions.reduce((total,c)=>total+c.points,0)+leaderBonus;
+    const adjustment=Math.max(-15,Math.min(35,20*(1-readiness/mission.statTarget)));
     const matching=party.filter(c=>types[c.type].hazard===mission.hazard).length;
     const signature=Math.min(12,matching*4),traits=Math.min(6,matching*2);
     const route={direct:[1,0,1],patrolled:[1.25,-6,.9],remote:[.8,8,1.15]}[s.route];
     const approach={cautious:[1.2,-6,.9],balanced:[1,0,1],bold:[.9,6,1.1]}[s.approach];
     const risk=Math.round(Math.max(5,Math.min(75,20+adjustment-signature-traits+route[1]+approach[1]-(s.supply?6:0)))*10)/10;
     const partial=Math.round(risk*.7*10)/10, failure=Math.round((risk-partial)*10)/10;
-    return {risk,success:Math.round((100-risk)*10)/10,partial,failure,readiness,adjustment,signature,traits,routeRisk:route[1],approachRisk:approach[1],hours:mission.hours*route[0]*approach[0],xp:mission.hours*20,food:Math.ceil(mission.hours*.01*120)+(s.supply?6:0),rewardFactor:route[2]*approach[2],recovery:Math.max(10,mission.hours*15*(1-s.rooms.infirmary*.07))};
+    return {risk,success:Math.round((100-risk)*10)/10,partial,failure,readiness,target:mission.statTarget,contributions,leaderBonus,leaderId:leader.id,adjustment,signature,traits,routeRisk:route[1],approachRisk:approach[1],hours:mission.hours*route[0]*approach[0],xp:mission.hours*20,food:Math.ceil(mission.hours*.01*120)+(s.supply?6:0),rewardFactor:route[2]*approach[2],recovery:Math.max(10,mission.hours*15*(1-s.rooms.infirmary*.07))};
   }
   return {types,stats,missions,facilities,roomCosts,initial,values,forecast};
 })();

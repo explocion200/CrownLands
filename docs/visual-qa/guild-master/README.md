@@ -3,7 +3,8 @@
 This is a development-only preview inside the existing Inner Castle renderer.
 It uses isolated sample state, not a player's account. The full Guild expansion
 is not implemented or deployed. Groups 1–2 of the balance review remain proposed;
-Group 3 and the direction of individual randomized starting stats are confirmed.
+Group 3, individual randomized starting stats and additive party contributions
+are confirmed directions. Exact champion and mission numbers remain proposed.
 
 Start the existing loopback server from the repository root:
 
@@ -16,6 +17,21 @@ Use the port printed by the server and open
 The `tab` parameter can open `contracts`, `infirmary`, `training` or `improvements`.
 The adjacent `index.html` is a simpler artwork gallery; room buttons change the
 illustration. No real purchases, missions or production mutations are possible.
+
+## Additive party forecast
+
+Each member adds their relevant stats against a fixed contract target. Adding a
+member cannot lower success while the leader and preparation stay unchanged;
+removing a non-leader cannot improve it. The forecast shows total readiness,
+the fixed target and an expandable contribution breakdown including Leadership.
+Caps can leave displayed odds unchanged, and choosing a different leader can
+change the Leadership bonus.
+
+The Local sample target is 24, calibrated to two required members so existing
+two-member odds stay unchanged. This is proposed numerical calibration, not a
+newly approved production rule. With fixed center rolls, a Level 3 Guard and
+Scout have 88% escort success; adding a Level 1 Scholar raises it to 92.5%.
+The mission target and Leadership weight never scale with selected headcount.
 
 ## Artwork revision 3
 
@@ -45,13 +61,17 @@ With Node 22 and the repository's locked dependencies installed:
 
 ```powershell
 node tools/validate-guild-art.js
+node tools/test-guild-party-contributions.js
 node tools/validate-guild-game-preview.js
 ```
 
 The browser validation checks desktop 1440×900 and landscape 844×390 / 568×320,
 independent and uncropped images, all room improvement illustrations, 44px
 controls, stable sample recruits, preparation choices, harmless report replay,
-one sample improvement at a time, and estate camera restoration. It also checks
+adding/removing members without diluting the forecast, one sample improvement
+at a time, and estate camera restoration. The model test covers all eight
+contracts and all member types across preparation choices and progression,
+including caps, fixed difficulty and explicit leader changes. It also checks
 the artwork gallery and the pending balance status. Screenshots and results go
 to ignored `release-artifacts/guild-master-missions/game-preview/`.
 

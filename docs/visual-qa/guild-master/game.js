@@ -36,6 +36,7 @@
     const full=m.kind==="Gold"?`${number(285*.05*m.hours*f.rewardFactor)} Gold`:m.kind==="Troops"?`${number(200*.025*m.hours*f.rewardFactor)} troops`:m.kind==="Officer Gear"?"40% chance of one Common item after full success":m.kind==="Discovery"||m.kind==="Story chapter"?"A permanent discovery":`${number(600*.009*m.hours*f.rewardFactor)} ${m.kind}`;
     const signed=n=>(n>0?"+":"")+n.toFixed(1)+" points";
     return `<p class="guild-eyebrow">Example forecast · Proposed balance</p><h3>The likely road ahead</h3><div class="guild-odds"><div><b>${f.success.toFixed(1)}%</b><span>Full success</span></div><div><b>${f.partial.toFixed(1)}%</b><span>Partial success</span></div><div><b>${f.failure.toFixed(1)}%</b><span>Failure</span></div></div><p class="guild-subtle">Risk of a setback: <b>${f.risk.toFixed(1)}%</b></p>
+      <p class="guild-subtle" data-party-readiness>Party readiness <b>${f.readiness.toFixed(1)}</b> · Mission target <b>${f.target.toFixed(1)}</b></p><details data-member-contributions><summary>Member contributions</summary><dl class="guild-breakdown">${f.contributions.map(c=>`<dt>${escape(c.name)}</dt><dd>+${c.points.toFixed(1)}</dd>`).join("")}<dt>${escape(nameFor(f.leaderId))} · Leadership bonus</dt><dd>+${f.leaderBonus.toFixed(1)}</dd></dl><p class="guild-subtle">Each member adds their relevant stats. The mission target stays fixed as the party changes. Extra members can improve success or leave it at the cap. Changing the leader can change their bonus.</p></details>
       <dl class="guild-breakdown"><dt>Contract risk</dt><dd>20.0 points</dd><dt>Party stats &amp; leader</dt><dd>${signed(f.adjustment)}</dd><dt>Matching signatures</dt><dd>${signed(-f.signature)}</dd><dt>Matching traits</dt><dd>${signed(-f.traits)}</dd><dt>Route</dt><dd>${signed(f.routeRisk)}</dd><dt>Approach</dt><dd>${signed(f.approachRisk)}</dd><dt>Supplies</dt><dd>${signed(state.supply?-6:0)}</dd></dl><p class="guild-subtle">Displayed risk is limited to 5–75% in this proposal.</p>
       <div class="guild-summary"><div><small>Journey</small><strong>${time(f.hours*60)}</strong></div><div><small>Costs</small><strong>${f.food} Food</strong></div><div><small>Recovery</small><strong>${time(f.recovery)}</strong></div></div><h4>On full success</h4><p>${full}</p><h4>Experience</h4><p class="guild-subtle">${f.xp} XP each on success · ${Math.floor(f.xp*.75)} on partial success · ${Math.floor(f.xp*.5)} on failure.</p><h4>Setbacks</h4><p class="guild-subtle">Partial success pays half the material, Gold or troop reward; failure pays none. Gear and discoveries need full success. Recovery can be longer after setbacks.</p>${m.kind==="Officer Gear"?`<p class="guild-notice">Overall Common Gear chance in this example: ${(f.success*.4).toFixed(2)}%. No other rarity is offered in this sample.</p>`:""}`;
   }
@@ -121,7 +122,10 @@
       const c=state.members.find(c=>c.id===b.dataset.id);if(!c||!ready(c))return;
       if(state.party.includes(c.id))state.party=state.party.filter(id=>id!==c.id);
       else if(state.party.length<3)state.party.push(c.id);
-      if(!state.party.includes(state.leader))state.leader=state.party[0]||"";
+      if(!state.party.includes(state.leader)){
+        state.leader=state.party[0]||"";
+        if(state.leader)message=nameFor(state.leader)+" is now the party leader. Their Leadership bonus may change the forecast.";
+      }
     }else if(action==="leader"){if(state.party.includes(b.dataset.id))state.leader=b.dataset.id;
     }else if(action==="saveParty"){
       const name=(state.partyName||"Western Watch").trim().slice(0,36);

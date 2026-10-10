@@ -66,6 +66,28 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       await page.screenshot({path:path.join(output,`contracts-${width}x${height}.png`)});
       await page.locator('[data-guild="mission"][data-id="escort"]').click();
       await checkArt(".guild-planning-art",["room-planning.webp"]);
+      const success=async()=>parseFloat(await page.locator(".guild-odds b").first().textContent());
+      const twoMemberSuccess=await success(),partyLeader=(await snapshot()).leader;
+      const fixedTarget=await page.locator("[data-party-readiness] b").last().textContent();
+      await tab("members");await page.locator('[data-guild="party"][data-id="elin"]').click();
+      await tab("planning");assert(await success()>=twoMemberSuccess,"Adding a non-specialist never lowers displayed success");
+      assert.equal((await snapshot()).leader,partyLeader,"Adding a member retains the chosen leader");
+      assert.equal(await page.locator("[data-party-readiness] b").last().textContent(),fixedTarget);
+      await page.locator("[data-member-contributions] summary").click();
+      assert((await page.locator("[data-member-contributions]").textContent()).includes("Elin Marsh"));
+      await layout();
+      await page.screenshot({path:path.join(output,`party-contributions-${width}x${height}.png`)});
+      await tab("members");await page.locator('[data-guild="party"][data-id="elin"]').click();
+      await tab("planning");assert.equal(await success(),twoMemberSuccess,"Removing the added member restores the same forecast");
+      assert.equal((await snapshot()).leader,partyLeader);
+      await tab("members");await page.locator('[data-guild="party"][data-id="mara"]').click();
+      assert.equal((await snapshot()).leader,"rowan");
+      assert((await page.locator('#guildPreview [role="status"]').textContent()).includes("Rowan Ashford is now the party leader"),"Automatic replacement explains the leader change");
+      await tab("planning");assert(await action("report").isDisabled(),"One-member party still cannot depart");
+      await tab("members");await page.locator('[data-guild="party"][data-id="mara"]').click();
+      assert.equal((await snapshot()).leader,"rowan","Re-adding someone does not silently replace the leader");
+      await page.locator('[data-guild="leader"][data-id="mara"]').click();
+      await tab("planning");assert.equal(await success(),twoMemberSuccess);
       const before=await page.locator("[data-forecast]").textContent();
       await page.locator('[data-field="route"]').focus();
       await page.locator('[data-field="route"]').selectOption("remote");
@@ -113,10 +135,10 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       }
       await page.goto(origin+"/docs/estate-economy/guild-master-balance-review.html");
       assert((await page.locator("body").textContent()).includes("Groups 1–2 remain proposed"),"Art review cannot approve gameplay balance");
-      results.push({width,height,status:"passed",independentMissionImages:8,independentRoomImages:5,uncroppedArtwork:true,reducedMotion:true,offersStable:true,exactRecruitStats:true,forecastUpdates:true,reportNoRewards:true,oneRoomJob:true,cameraRestored:true});
+      results.push({width,height,status:"passed",additivePartyForecast:true,leaderReplacementExplained:true,independentMissionImages:8,independentRoomImages:5,uncroppedArtwork:true,reducedMotion:true,offersStable:true,exactRecruitStats:true,forecastUpdates:true,reportNoRewards:true,oneRoomJob:true,cameraRestored:true});
       await context.close();
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({scope:"Local fixture UI only; no production mechanics or server authority validated",results},null,2)+"\n");
-    console.log("PASS Guild game preview: three viewport sizes, real estate entry/return, 44px controls, stable random offers, exact recruited stats, planning/focus retention, harmless report replay and single sample room improvement.");
+    console.log("PASS Guild game preview: three viewport sizes, real estate entry/return, 44px controls, stable random offers, exact recruited stats, additive party forecasts, explicit leader changes, planning/focus retention, harmless report replay and single sample room improvement.");
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});
