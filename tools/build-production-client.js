@@ -21,6 +21,7 @@ const rootFiles = [
   "training-grounds-ui.js", "training-grounds-ui.css",
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
   "estate-economy-ui.js", "estate-economy-ui.css",
+    "guild-config.js", "guild-rules.js", "guild-ui.js", "guild-ui.css",
   "app-entry.js",
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "player-journey.js", "player-journey.css",
@@ -94,6 +95,7 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
+copyDirectoryFiles("assets/guild-master", relativePath => relativePath.endsWith(".webp"));
 copyDirectoryFiles("assets/inner-city-estate", relativePath => /\.(?:webp|svg)$/i.test(relativePath));
 copyDirectoryFiles("assets/clan-buildings", relativePath => relativePath.endsWith(".webp"));
 copy("assets/flag-symbols/runtime.svg");

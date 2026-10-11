@@ -2581,6 +2581,7 @@
   async function getEstateQuote(input) { return callServerFunction("getEstateQuote", { input }); }
   async function commitEstateAction(data) { return callServerFunction("commitEstateAction", data); }
   async function getEstateChampions(cursor = "") { return callServerFunction("getEstateChampions", { cursor }); }
+  async function getGuildReports(cursor = "", reportId = "") { return callServerFunction("getGuildReports", { cursor, reportId }); }
 
   async function getCommonGearStatus() {
     return callServerFunction("getCommonGearStatus", {});
@@ -3701,7 +3702,7 @@
     applyRealmIdentity,
     relinquishCity,
     purchaseShopItem,
-    subscribeEstateChanges, getEstateState, getEstateQuote, commitEstateAction, getEstateChampions,
+    subscribeEstateChanges, getEstateState, getEstateQuote, commitEstateAction, getEstateChampions, getGuildReports,
     getCommonGearStatus,
     purchaseCommonGearBox,
     openCommonGearBox,

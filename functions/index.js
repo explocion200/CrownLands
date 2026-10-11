@@ -157,6 +157,22 @@ const estateService = createEstateService({ db, HttpsError, runTransaction: runT
     const entry = getCanonicalMainCityEntry(economy.profileAfter, economy.cityEntries);
     return entry ? getMillionLordsPassiveGoldPerHour(clampCityLevel(entry.city.level)) : 285;
   },
+  guildRealm: (economy, nowMs) => {
+    const profile = economy.profileAfter, entry = getCanonicalMainCityEntry(profile, economy.cityEntries);
+    const rates = entry ? getCityProductionStats(entry.city, profile, {}, { nowMs, includeSkillBoosts: false,
+      includeStrongholdBoosts: false, includeWarDrums: false, includeRoyalTaxDecree: false }) : {};
+    const realm = REALM_TOPOLOGY.getRealmIdentity(RUNTIME_REALM_CONFIG, nowMs);
+    return { resetGeneration: profile.resetGeneration, worldId: profile.worldId, realmShardId: profile.realmShardId || "legacy",
+      mainCityPath: entry?.ref?.path || "", endsAtMs: realm.endsAtMs || 0,
+      goldRate: rates.baseGoldProductionPerHour || 0, troopRate: rates.baseTroopProductionPerHour || 0 };
+  },
+  creditGuildTroops: (economy, cityPath, amount, nowMs) => {
+    const entry = getCanonicalMainCityEntry(economy.profileAfter, economy.cityEntries);
+    if (!entry?.ref || entry.ref.path !== cityPath || getOwnerUid(entry.city) !== economy.uid) return false;
+    const troopFloat = Math.max(0, safeNumber(entry.city.troopFloat, entry.city.troops || 0)) + amount;
+    if (!Number.isFinite(troopFloat) || troopFloat > Number.MAX_SAFE_INTEGER) throw new HttpsError("failed-precondition", "The Main City cannot receive these troops yet.");
+    return appendEconomyCityPatch(economy, entry.ref, entry.city, { troopFloat, troops: Math.floor(troopFloat), productionUpdatedAtMs: nowMs });
+  },
 });
 const messaging = getMessaging();
 
@@ -35812,6 +35828,7 @@ exports.getEstateQuote = onCall({ region: "us-central1", maxInstances: 20, invok
 exports.commitEstateAction = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.execute(
   requireAuth(request, { allowRealmMismatch: true }), request.data || {}, () => requireCompatibleClient(request.data || {})));
 exports.getEstateChampions = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.bench(requireAuth(request), request.data?.cursor || ""));
+exports.getGuildReports = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => estateService.reports(requireAuth(request), request.data?.cursor || "", request.data?.reportId || ""));
 
 // Account cosmetics are permanent and never part of seasonal economy initialization.
 exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));

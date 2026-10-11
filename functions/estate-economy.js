@@ -366,8 +366,8 @@ function benefit(key, level) {
     return C.gearMilestones[rarityIndex(level)][1] + " commissions · " + (168 - 96 * (level - 1) / 99).toFixed(1) + " hours";
   if (key === "great-hall") return "Other buildings may reach Level " + level;
   if (key === "builders-yard") return (level >= 50 ? 3 : level >= 10 ? 2 : 1) + " builders · " + (30 * (level - 1) / 99).toFixed(2) + "% shorter new contracts";
-  if (key === "alehouse") return C.gearMilestones[rarityIndex(level)][1] + " recruits · " + (35 * (level - 1) / 99).toFixed(2) + "% faster recovery";
-  if (key === "guild-master") return "Champion Level " + level + " · " + (6 + Math.floor(18 * (level - 1) / 99)) + " active roster";
+  if (key === "alehouse") return C.gearMilestones[rarityIndex(level)][1] + " recruits · " + (level >= 50 ? "Guild feast" : level >= 25 ? "Hearty stew" : level >= 10 ? "Trail bread" : "Preparation meals at Level 10");
+  if (key === "guild-master") return (6 + Math.floor(18 * (level - 1) / 99)) + " active roster · " + (level >= 50 ? 4 : level >= 25 ? 3 : 2) + " members per party · " + (level >= 60 ? 3 : level >= 25 ? 2 : 1) + " mission slots";
   const terms = key === "storehouse" ? C.storehouseCapacity : key === "granary" ? C.granaryCapacity
     : key === "wagon-yard" ? C.rules.wagonCapacityBonus : C.rules.marketCapacityBonus;
   return poly(terms, level).toLocaleString("en-US") + " capacity per " + (["market", "granary"].includes(key) ? "food stock" : "building material");

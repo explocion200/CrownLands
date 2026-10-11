@@ -1,10 +1,10 @@
-# Guild Master local review
+# Guild Master implementation and review
 
-This is a development-only preview inside the existing Inner Castle renderer.
-It uses isolated sample state, not a player's account. The full Guild expansion
-is not implemented or deployed. Groups 1–2 of the balance review remain proposed;
-Group 3, individual randomized starting stats and additive party contributions
-are confirmed directions. Exact champion and mission numbers remain proposed.
+All three balance groups are approved for implementation. The branch now connects the production Guild UI to the estate transaction service, saved champions, private mission outcomes, reports, room improvements and reward collection. Release validation is in progress; nothing in this document claims deployment.
+
+Run `node tools/guild-production-preview.js`, then open the printed loopback address with `/docs/visual-qa/guild-master/production.html`. This exercises the production UI and rule modules with disposable sample state. It never uses Firebase or spends player funds. The browser validator covers desktop and landscape layouts, mission-first planning, recruitment, saved parties, departure, recovery, reports, safe retries and collection.
+
+The earlier art/interaction prototype remains available for reference:
 
 Start the existing loopback server from the repository root:
 
@@ -108,6 +108,9 @@ node tools/validate-guild-art.js
 node tools/test-guild-common-portraits.js
 node tools/test-guild-party-contributions.js
 node tools/validate-guild-game-preview.js
+node tools/test-guild-facilities.js
+node tools/test-guild-missions.js
+node tools/validate-guild-production-ui.js
 ```
 
 The browser validation checks desktop 1440×900 and landscape 844×390 / 568×320,
@@ -119,7 +122,7 @@ adding/removing members without diluting the forecast, one sample improvement
 at a time, and estate camera restoration. The model test covers all eight
 contracts and all member types across preparation choices and progression,
 including caps, fixed difficulty and explicit leader changes. Browser checks
-also cover the artwork gallery and pending balance status. Screenshots and results go
+also cover the artwork gallery and recorded balance approvals. Screenshots and results go
 to ignored `release-artifacts/guild-master-missions/game-preview/`.
 
 These checks do not validate production server authority, migration, live

@@ -19,6 +19,8 @@ const required = [
   "assets/optimized/login-kingdom-960-6646f1d404b1.webp",
   "assets/optimized/login-kingdom-1672-05a4bd4eda17.webp",
   "optional-ui-styles.js",
+  "guild-config.js", "guild-rules.js", "guild-ui.js", "guild-ui.css",
+  ...fs.readdirSync(path.join(root,"assets/guild-master")).filter(name=>name.endsWith(".webp")).map(name=>"assets/guild-master/"+name),
   "main-screen-art-ui.css",
   "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
   "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
@@ -79,6 +81,7 @@ const required = [
 ];
 const forbidden = [
   "docs/art-sources/login",
+  "docs/art-sources/guild-master", "docs/visual-qa/guild-master",
   "docs/art-sources/inner-city-estate", "docs/visual-qa/inner-city-estate",
   "docs/visual-qa/crowns-currency/art",
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
@@ -393,15 +396,26 @@ assert.deepEqual(builtEstate.createLevels(builtEstate.createStates()), sourceEst
 if (fs.readFileSync(path.join(dist, "service-worker.js"), "utf8").includes("assets/inner-city-estate/")) {
   throw new Error("Estate artwork must load on entry to the estate, outside installation precaching.");
 }
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget;
+// Approved Guild artwork: 42 distinct WebP images, measured at 3,385,022 bytes.
+// Bound this lazy feature separately so other art and prepared-world caps stay fixed.
+const guildArtFiles=files.filter(file=>path.relative(dist,file).replace(/\\/g,"/").startsWith("assets/guild-master/"));
+const guildArtBudget=3328*1024,guildModuleBudget=80*1024;
+assert.equal(guildArtFiles.length,42,"Ship exactly the approved Guild runtime paintings");
+assert(guildArtFiles.reduce((n,file)=>n+fs.statSync(file).size,0)<=guildArtBudget,"Guild paintings exceed 3328 KiB");
+const guildModules=["guild-config.js","guild-rules.js","guild-ui.js","guild-ui.css"];
+assert(guildModules.reduce((n,file)=>n+fs.statSync(path.join(dist,file)).size,0)<=guildModuleBudget,"Guild modules exceed 80 KiB");
+const worker=fs.readFileSync(path.join(dist,"service-worker.js"),"utf8");
+assert(!worker.includes("assets/guild-master/")&&!guildModules.some(file=>worker.includes(file)),"Guild assets must remain outside installation precaching");
+const guildFeatureBudget=guildArtBudget+guildModuleBudget;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 if (preparedWorldBytes > 35 * 1024 * 1024) {
   throw new Error(`Prepared Core-expansion world exceeds 35 MiB (${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
-if (totalBytes > 60 * 1024 * 1024 + soundtrackIncrementBudget) {
-  throw new Error(`Combined production artifact exceeds 82 MiB (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
+if (totalBytes > 60 * 1024 * 1024 + soundtrackIncrementBudget + guildFeatureBudget) {
+  throw new Error(`Combined production artifact exceeds the existing 82 MiB plus bounded Guild allowance (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 
 for (const absolutePath of files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))) {

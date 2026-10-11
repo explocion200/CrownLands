@@ -1,7 +1,7 @@
 "use strict";
 // Development-only review: real estate renderer, isolated sample Guild state.
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
-const {chromium}=require("playwright");
+const {openGuildBrowser}=require("./guild-browser-harness");
 const {createServer}=require("./estate-building-ui-preview");
 const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts/guild-master-missions/game-preview");
 (async()=>{
@@ -10,12 +10,9 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
   const origin=`http://127.0.0.1:${server.address().port}`;
   let browser;const errors=[],results=[];
   try{
-    browser=await chromium.launch({channel:"chrome",headless:true});
     for(const [width,height]of [[1440,900],[844,390],[568,320]]){
-      const context=await browser.newContext({viewport:{width,height},reducedMotion:"reduce",hasTouch:width<900});
-      const page=await context.newPage();
-      page.on("pageerror",error=>errors.push(error.message));
-      page.on("response",r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
+      browser=await openGuildBrowser({width,height,errors});
+      const context=browser,page=browser.page;
       await page.goto(origin+"/docs/visual-qa/guild-master/game.html");
       await page.waitForFunction(()=>document.documentElement.dataset.guildGameReady==="true");
       const action=(name)=>page.locator(`#guildPreview [data-guild="${name}"]`);
@@ -183,7 +180,7 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
         await page.locator(".hall-art img").evaluate(node=>node.decode());
       }
       await page.goto(origin+"/docs/estate-economy/guild-master-balance-review.html");
-      assert((await page.locator("body").textContent()).includes("Groups 1–2 remain proposed"),"Art review cannot approve gameplay balance");
+      assert((await page.locator("body").textContent()).includes("Groups 1–3 are approved for implementation; the full expansion is not deployed"),"Record explicit balance approval without claiming deployment");
       results.push({width,height,status:"passed",missionFirstPlanning:true,chosenMissionRetained:true,archivePreservesPlan:true,additivePartyForecast:true,leaderReplacementExplained:true,independentMissionImages:8,independentRoomImages:5,uncroppedArtwork:true,reducedMotion:true,offersStable:true,exactRecruitStats:true,forecastUpdates:true,reportNoRewards:true,oneRoomJob:true,cameraRestored:true});
       await context.close();
     }

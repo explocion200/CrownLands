@@ -72,6 +72,7 @@ function createManifest() {
     "skins-ui.js", "skins-ui.css", "functions/cosmetics.js", "cosmetics-client.js",
     "season-rewards-ui.js", "season-rewards-ui.css",
     "estate-economy-ui.js", "estate-economy-ui.css",
+    "guild-config.js", "guild-rules.js", "guild-ui.js", "guild-ui.css",
   "app-entry.js",
     "optional-ui-styles.js",
     "assets/icons/google-translate-attribution.png", "assets/icons/google-translate-attribution-short.png",
@@ -108,6 +109,7 @@ function createManifest() {
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
     "region-catalog.js", "functions/world-travel-network.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
     "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg",
+    ...fs.readdirSync(path.join(root, "assets/guild-master")).filter(name => name.endsWith(".webp")).map(name => `assets/guild-master/${name}`),
     ...fs.readdirSync(path.join(root, "assets/inner-city-estate")).filter(name => /\.(?:webp|svg)$/.test(name)).map(name => `assets/inner-city-estate/${name}`),
   ].map(relativePath => path.join(root, relativePath));
 

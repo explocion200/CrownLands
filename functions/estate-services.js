@@ -128,7 +128,7 @@ function settleQuests(state, champions, now) {
     state.parcels.push({ id: quest.id, rewards: quest.rewards, day: quest.day, budget: quest.budget });
   }
   state.quests = remaining;
-  for (const id of state.activeChampionIds) if (champions[id] && !champions[id].questId)
+  for (const id of state.activeChampionIds) if (champions[id] && champions[id].guildVersion !== 2 && !champions[id].questId)
     champions[id] = train(champions[id], 0, state.levels["guild-master"]).champion;
 }
 function claimParcel(state, id) {
