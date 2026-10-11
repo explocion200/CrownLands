@@ -11,3 +11,61 @@
 
 .guild-window .guild-room-art{position:relative;margin-bottom:12px}.guild-window .guild-room-art img{display:block;width:100%;height:auto;float:none;margin:0}.guild-window .guild-room-ranks{display:flex;gap:4px;position:absolute;bottom:8px;left:8px;padding:5px 7px;background:#ede1c2e8;border:1px solid #9b8052}.guild-window .guild-room-ranks i{font-style:normal;color:#897858;line-height:20px;width:20px;text-align:center}.guild-window .guild-room-ranks .earned{color:#f7e6b7;background:#703b36;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
 @media(orientation:landscape) and (max-height:550px){.guild-window .guild-room-art{float:left;width:36%;margin:0 12px 8px 0}.guild-window .guild-room-ranks{gap:1px;padding:2px;left:4px;bottom:4px}.guild-window .guild-room-ranks i{width:16px}}
+
+/* Keep the same card rows aligned, including wrapped names and expanded history. */
+.guild-window .guild-member-grid>.guild-member{display:flex;flex-direction:column}
+.guild-window .guild-member-actions{margin-top:auto;padding-top:12px;align-items:end}
+.guild-window .guild-member-actions button{min-width:0;overflow-wrap:anywhere}
+.guild-window .guild-member-top{align-items:start}
+.guild-window .guild-member-top>div{min-width:0}
+.guild-window .guild-member-top .guild-portrait{float:none;margin:0}
+@supports(grid-template-rows:subgrid){
+  /* Heading, five stats, skills, XP, history, actions; recruits omit XP/history. */
+  .guild-window .guild-member-grid{row-gap:0}
+  .guild-window .guild-member-grid>.guild-member{display:grid;grid-template-rows:subgrid;grid-row:span 10;row-gap:0;margin-bottom:14px}
+  .guild-window .guild-member-grid>.guild-member>.guild-stat{margin:4px 0}
+  .guild-window .guild-member-grid>.guild-recruit{grid-row:span 8}
+}
+.guild-window .guild-planning{align-items:start;margin-top:16px}
+.guild-window .guild-planning>.guild-paper{margin:0}
+.guild-window .guild-planning .guild-member-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.guild-window .guild-planning>*,.guild-window .guild-two-col>*,.guild-window .guild-choices>*{min-width:0}
+.guild-window .guild-tools{align-items:end}
+.guild-window label{margin:0}
+.guild-window .guild-saved{clear:both}
+.guild-window .guild-two-col{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.guild-window .guild-two-col>section{display:flow-root}
+.guild-window .guild-room-image{margin-bottom:16px}
+.guild-window .guild-two-col label{margin:12px 0}
+.guild-window .guild-two-col select{width:100%}
+.guild-window .guild-room-card{min-width:0;display:flex;flex-direction:column}
+.guild-window .guild-room-card>button{align-self:start;margin-top:auto}
+.guild-window header .guild-close{flex:none}
+.guild-window footer>span{min-width:0;overflow-wrap:anywhere}
+.guild-window footer>div{flex:none}
+.guild-window nav{scroll-padding-inline:8px;scrollbar-width:thin}
+@media(max-width:1050px){
+  .guild-window .guild-planning,.guild-window .guild-two-col{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:700px){
+  .guild-window .guild-member-top{display:flex;gap:9px}
+  .guild-window .guild-member-top:after{display:none}
+}
+@media(max-width:600px){
+  .guild-window{width:calc(100vw - 12px);height:calc(100dvh - 12px)}
+  .guild-window .guild-body{padding:14px}
+}
+@media(max-width:430px){
+  .guild-window h1{font-size:24px}
+  .guild-window .guild-planning .guild-member-grid{grid-template-columns:minmax(0,1fr)}
+  .guild-window footer{flex-wrap:wrap;gap:6px;padding:8px 12px}
+  .guild-window footer>span{max-width:none;width:100%;font-size:11px}
+  .guild-window footer>div{width:100%;justify-content:flex-end}
+}
+@media(orientation:landscape) and (max-height:550px){
+  .guild-window .guild-hall{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}
+  .guild-window .guild-room-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);column-gap:16px;align-content:start}
+  .guild-window .guild-room-card>.guild-room-art{float:none;width:auto;grid-column:1;grid-row:1/span 6;margin:0}
+  .guild-window .guild-room-card>.guild-room-art~*{grid-column:2}
+  .guild-window .guild-room-card>button{justify-self:start;margin-top:12px}
+}
