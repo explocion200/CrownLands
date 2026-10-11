@@ -14,7 +14,7 @@ for(const [type,label] of Object.entries(commonTypes)){
   section.className="common-specialty";title.textContent=label;grid.className="members common-members";
   for(const p of GuildCommonPortraits.filter(p=>p.type===type)){
     const article=document.createElement("article"),img=document.createElement("img"),name=document.createElement("h4");
-    article.dataset.commonPortrait=p.id;img.src=`../../../assets/guild-master/${p.id}.webp`;img.alt=p.alt;img.width=512;img.height=512;img.loading="lazy";img.decoding="async";name.textContent=p.name;
+    article.dataset.commonPortrait=p.id;img.src=`../../../assets/guild-master/${p.id}.webp?revision=common-champions-r2`;img.alt=p.alt;img.width=512;img.height=512;img.loading="lazy";img.decoding="async";name.textContent=p.name;
     article.append(img,name);grid.append(article);
   }
   section.append(title,grid);gallery.append(section);

@@ -3,7 +3,7 @@
   if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") throw Error("Guild gameplay review is local only.");
   const M=GuildReviewModel, key="crownlands-guild-review-v1", dialog=document.querySelector("#guildPreview");
   const escape=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const art=id=>`assets/guild-master/${id}.webp`, number=n=>Math.round(n).toLocaleString();
+  const art=id=>`assets/guild-master/${id}.webp${id.startsWith("common-")?"?revision=common-champions-r2":""}`, number=n=>Math.round(n).toLocaleString();
   const illustration=(id,alt,cls="",lazy=true)=>`<img class="${cls}" src="${art(id)}" alt="${escape(alt)}" width="1536" height="1024" loading="${lazy?"lazy":"eager"}" decoding="async">`;
   const time=minutes=>minutes<60?`${Math.round(minutes)} min`:`${Math.floor(minutes/60)}h${Math.round(minutes%60)?` ${Math.round(minutes%60)}m`:""}`;
   let state;try{state=JSON.parse(sessionStorage.getItem(key));}catch(_){}if(state?.version!==1)state=M.initial();

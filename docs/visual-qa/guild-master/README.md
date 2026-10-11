@@ -65,7 +65,7 @@ reference image; all contract and room illustrations are retained.
 [Originals, exact prompts and hashes](../../art-sources/guild-master/manifest.json)
 record both the active illustrations and the retired cutaway/panorama sources.
 Optimized derivatives are in `assets/guild-master/`. Including the Common set,
-all 42 active WebP files total 3,425,854 bytes, with individual and aggregate
+all 42 active WebP files total 3,385,022 bytes, with individual and aggregate
 budgets checked. Nothing is
 added to the installation preload. The encoder only resizes and compresses;
 it does not repaint, composite or synthesize artwork.
@@ -74,22 +74,28 @@ it does not repaint, composite or synthesize artwork.
 
 The new Common set contains 21 individually generated portraits, three per
 specialty: Guard, Scout, Scholar, Artisan, Envoy, Quartermaster and Medic.
-Ordinary villagers wear repaired linen/wool and carry simple peasant weapons,
-farm tools and small hints of their specialty. The reference's ink contours,
-painted shading and earth colors guide every portrait. This set is for review;
+Revision 2 follows the owner's refined direction: poor medieval Europeans,
+18 men and 3 women, with lean or wiry builds and serious, stern expressions.
+They wear repaired linen/wool and carry simple peasant weapons, farm tools and
+small hints of their specialty, taking dangerous paid work to survive.
+The reference's ink contours, painted shading and earth colors guide every portrait.
+This set is for review;
 the earlier Hall/room/contract approval does not imply approval of these new faces.
 
 `index.html#common-champions` shows the entire set grouped by specialty.
-`game.html?entry=guild&tab=members&revision=common-champions-r1` shows the portraits
+`game.html?entry=guild&tab=members&revision=common-champions-r2` shows the portraits
 on the actual sample roster. Common offers keep their portrait through hiring,
 refreshes and party changes. Existing local samples receive a stable portrait
 without changing their stats, names, rarity, resources or progression. Other
 rarities retain the previous artwork. The catalog does not add 21 recruit offers
 or alter recruitment availability.
 
-All selected PNG originals and exact built-in generation prompts are in the art
-manifest. Each new derivative is 512×512 WebP, under 80 KiB; together the Common
-portraits are 1,189,274 bytes. Generate only these derivatives with the bundled
+All selected versioned PNG originals and exact built-in generation prompts are in
+the art manifest. First-round originals remain as retired provenance; runtime
+portraits retain their IDs and use a revision query to avoid stale browser images.
+The replacement batch uses only the supplied landscape as its style reference.
+Each new derivative is 512×512 WebP, under 80 KiB; together the Common
+portraits are 1,148,442 bytes. Generate only these derivatives with the bundled
 Python/Pillow runtime: `python tools/prepare-guild-art.py --only-prefix common-`.
 The encoder preserves all existing derivatives when using that option.
 
