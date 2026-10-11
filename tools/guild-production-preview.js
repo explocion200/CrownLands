@@ -39,6 +39,17 @@ function fixture(){
 function createServer({built=false}={}){let data=fixture();const server=staticServer({built}),base=server.listeners("request")[0];server.removeAllListeners("request");server.on("request",async(req,res)=>{
   const url=new URL(req.url,"http://127.0.0.1");
   if(["/docs/visual-qa/guild-master/production.html","/docs/visual-qa/guild-master/production.js"].includes(url.pathname)){
+    if(url.pathname.endsWith(".html")&&url.searchParams.get("gameStyles")==="1"){
+      // Review the real game's stylesheet cascade without connecting to Firebase.
+      const root=path.resolve(__dirname,".."),directory=built?path.join(root,"dist"):root;
+      const game=fs.readFileSync(path.join(directory,"index.html"),"utf8");
+      const links=(game.match(/<link\b[^>]*>/g)||[])
+        .filter(tag=>/rel="stylesheet"/.test(tag)||/data-optional-ui-style="(?:guild|estate-economy)"/.test(tag))
+        .filter(tag=>!/(?:href=")https?:/.test(tag)).map(tag=>tag.replace('rel="crownlands-optional-stylesheet"','rel="stylesheet"')).join("\n");
+      const html=fs.readFileSync(path.join(root,"docs/visual-qa/guild-master/production.html"),"utf8")
+        .replace(/<link rel="stylesheet"[^>]*>/g,"").replace("</head>",links+"</head>").replace("<body>",game.match(/<body\b[^>]*>/)?.[0]||"<body>");
+      res.writeHead(200,{"Content-Type":"text/html","Cache-Control":"no-store"}).end(html);return;
+    }
     res.writeHead(200,{"Content-Type":url.pathname.endsWith(".html")?"text/html":"application/javascript","Cache-Control":"no-store"});fs.createReadStream(path.resolve(__dirname,"..","."+url.pathname)).pipe(res);return;
   }
   if(!url.pathname.startsWith("/guild-qa/")){base(req,res);return;}

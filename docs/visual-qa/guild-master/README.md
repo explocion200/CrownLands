@@ -4,6 +4,29 @@ All three balance groups are approved and live on web and itch.io at PR #526 bui
 
 Run `node tools/guild-production-preview.js`, then open the printed loopback address with `/docs/visual-qa/guild-master/production.html`. This exercises the production UI and rule modules with disposable sample state. It never uses Firebase or spends player funds. The browser validator covers desktop and landscape layouts, mission-first planning, recruitment, saved parties, departure, recovery, reports, safe retries and collection.
 
+## Responsive alignment review — October 11, 2026
+
+The alignment refinement is in development on `codex/guild-responsive-alignment`.
+Add `?gameStyles=1` to the production preview to include the current game's local
+stylesheets, their actual cascade order and body class. This remains an isolated
+sample account; it does not load Firebase or change live progress.
+
+Champion stats and actions align across each card row, including expanded
+history and recruit offers. Mission planning uses wider cards and stacks its
+columns on smaller screens; the outcome panel fits its contents. Room actions,
+form controls and phone confirmation footers align consistently. The current
+room tab stays visible when opening a room from another screen, and background
+refreshes preserve the navigation strip's scroll position.
+
+`node tools/validate-guild-responsive-layout.js` checks source and built delivery
+with the game's shared styles at 1440×900, 1024×768, 844×390, 568×320, 390×844 and
+320×568. It covers all rooms, comparison/history, planning, departure and room
+reviews, large resource balances, reports, recruitment, 44px controls and
+touch/mouse/keyboard input. Screenshots are saved under
+`release-artifacts/guild-responsive-alignment/`. The existing production UI
+validator continues to cover saved parties, mentoring, claims, retries and
+estate return/cleanup. Physical phone and installed-app checks remain manual.
+
 The earlier art/interaction prototype remains available for reference:
 
 Start the existing loopback server from the repository root:

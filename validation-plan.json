@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "4a367c1a656f96d6c27a19a2738cbf58c983cb94",
+  "baseCommit": "105a6e718cbd9043118961087590bd7bde925868",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWNLANDS_ART_BIBLE.md",
-        "docs/visual-qa/guild-master/README.md"
-      ],
-      "reason": "Documentation-only verified Guild release record: compare deployment IDs, merged manifest, channel file hashes, required CI, backend source/rules receipts, preserved October realm and explicit manual QA limits. No runtime, balance, asset or server behavior changes; no runtime/emulator test applies.",
+      "paths": ["guild-ui.css", "guild-ui.js", "tools/guild-production-preview.js", "tools/validate-guild-responsive-layout.js"],
+      "reason": "Guild-only layout and navigation changes affect roster/recruit cards, mission planning, all room screens, reports, reviews and fixed controls. Check six desktop/phone sizes with the real game's shared CSS cascade in both source and built delivery. Run the existing production Guild flows for refresh/focus, quote/commit/retry, recruiting, mentoring, parties, reports/claims and estate return/cleanup. The preview serves only isolated loopback fixtures. No backend, economy rules or persistence changes require emulators.",
+      "tests": ["tools/validate-guild-responsive-layout.js", "tools/validate-guild-production-ui.js"]
+    },
+    {
+      "paths": ["docs/visual-qa/guild-master/README.md"],
+      "reason": "Document the current responsive review, exact preview URL/commands, screen sizes and physical-device limits. Runtime coverage is selected with the implementation above; no separate documentation runtime test applies.",
       "tests": []
     }
   ]
