@@ -1,6 +1,6 @@
 # Guild Master implementation and review
 
-All three balance groups are approved for implementation. The branch now connects the production Guild UI to the estate transaction service, saved champions, private mission outcomes, reports, room improvements and reward collection. Release validation is in progress; nothing in this document claims deployment.
+All three balance groups are approved and live on web and itch.io at PR #526 build `4a367c1a656f96d6c27a19a2738cbf58c983cb94`. The production release connects the production Guild UI to the estate transaction service, saved champions, private mission outcomes, reports, room improvements and reward collection. Verified deployment and focused validation evidence are recorded in [Master Specification FM-2](../../CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md#fm-2-current-production-snapshot). Current signed-in spending, installed-app and physical-device review remain manual; the previews below still use isolated data.
 
 Run `node tools/guild-production-preview.js`, then open the printed loopback address with `/docs/visual-qa/guild-master/production.html`. This exercises the production UI and rule modules with disposable sample state. It never uses Firebase or spends player funds. The browser validator covers desktop and landscape layouts, mission-first planning, recruitment, saved parties, departure, recovery, reports, safe retries and collection.
 
