@@ -41,6 +41,12 @@ const { createServer } = require("./guild-production-preview");
             if (current && !fits(rect(current), rect(bar))) failures.push("Selected room is clipped in navigation");
             const foot = d.querySelector("footer"), label = rect(foot.firstElementChild), actions = rect(foot.lastElementChild);
             if (label.right > actions.left + 1 && label.bottom > actions.top + 1) failures.push("Resources overlap footer actions");
+            for (const toolbar of d.querySelectorAll(".guild-tools,.guild-saved")) {
+              const controls = [...toolbar.children].map(el => rect(el.querySelector("select,input") || el));
+              for (const [i, a] of controls.entries()) for (const b of controls.slice(i + 1)) {
+                if (Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 20 && Math.abs(a.bottom - b.bottom) > 1) failures.push("Dropdown and button baselines differ");
+              }
+            }
             for (const grid of d.querySelectorAll(".guild-member-grid,.guild-rooms")) {
               const rows = new Map();
               for (const card of grid.children) {

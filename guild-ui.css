@@ -31,6 +31,7 @@
 .guild-window .guild-planning .guild-member-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .guild-window .guild-planning>*,.guild-window .guild-two-col>*,.guild-window .guild-choices>*{min-width:0}
 .guild-window .guild-tools{align-items:end}
+.guild-window label{margin:0}
 .guild-window .guild-saved{clear:both}
 .guild-window .guild-two-col{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
 .guild-window .guild-two-col>section{display:flow-root}
