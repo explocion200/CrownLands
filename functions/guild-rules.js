@@ -42,4 +42,4 @@
   }
   const api = { values, ceiling, skillIndex, advance, forecast, partyLimit, missionLimit };
   if (typeof module === "object" && module.exports) module.exports = api; else root.CrownlandsGuildRules = api;
-})(typeof window === "object" ? window : globalThis);
+})(globalThis);

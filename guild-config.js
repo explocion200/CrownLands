@@ -506,4 +506,4 @@
   ]
 };
   if(typeof module === "object" && module.exports)module.exports=data;else root.CrownlandsGuildConfig=data;
-})(typeof window === "object" ? window : globalThis);
+})(globalThis);
