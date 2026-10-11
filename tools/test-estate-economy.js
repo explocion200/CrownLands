@@ -261,6 +261,7 @@ async function checkRetriedReadClock() {
     HttpsError: Error, runTransaction: action => action(transaction),
     assertCurrentPlayerProfile() {}, normalizeGear: () => require("../functions/common-gear").createDefaultState(),
     prepareEconomy:async()=>{prepared++;return{goldFloat:100};},writeEconomy(){},economyResponse:()=>({gold:100}),rawMainGoldRate:()=>285,
+    guildRealm:()=>({resetGeneration:"test",worldId:"test",realmShardId:"legacy",mainCityPath:"",endsAtMs:0,goldRate:285,troopRate:0}),
   });
   const result = await service.load("test_owner", saved.settledAtMs - 1000, true);
   assert(result.serverNowMs >= saved.settledAtMs, "A delayed request uses a fresh server settlement clock");

@@ -33,8 +33,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         const styles = [...document.querySelectorAll('link[data-optional-ui-style]')].map(entry => entry.href);
         return {deferred:deferred.length, styles:styles.length, downloaded:performance.getEntriesByType('resource').filter(entry => [...deferred,...styles].includes(entry.name)).map(entry => entry.name)};
       })()`);
-      assert.equal(startup.deferred, 17); assert.deepEqual(startup.downloaded, []);
-      assert.equal(startup.styles, 17, "All optional screen styles must remain deferred at startup");
+      assert.equal(startup.deferred, 21); assert.deepEqual(startup.downloaded, []);
+      assert.equal(startup.styles, 19, "All optional screen styles must remain deferred at startup");
+      assert(await ev("!window.CrownlandsGuildUI && !window.CrownlandsGuildRules"), "Guild code is deferred until estate entry");
+      await ev("ensureOptionalUiScripts('estate-economy',modalBody,()=>{modalBody.textContent='Guild ready';})");
+      await ready("Boolean(window.CrownlandsGuildUI && window.CrownlandsGuildRules && window.CrownlandsGuildConfig && window.CrownlandsEstateEconomy) && modalBody.textContent==='Guild ready'");
+      assert(await ev("document.querySelector('link[data-optional-ui-style=guild]').dataset.ready==='true'"), "Guild styles load with their estate group");
+      const guildOrder=await ev("[...document.querySelectorAll('head script[src]')].map(s=>new URL(s.src).pathname.split('/').pop()).filter(s=>['guild-config.js','guild-rules.js','guild-ui.js','estate-economy-ui.js'].includes(s))");
+      assert.deepEqual(guildOrder,["guild-config.js","guild-rules.js","guild-ui.js","estate-economy-ui.js"],"Shared Guild dependencies execute in order, exactly once");
       const dailyStatus = dailyModel.status(dailyModel.sync({}).state);
       await ev(`dailyLoginRewardStatus=normalizeDailyLoginRewardStatus(${JSON.stringify(dailyStatus)});dailyLoginRewardStatusLoading=false;dailyLoginRewardClaimInFlight=false`);
       const screens = [

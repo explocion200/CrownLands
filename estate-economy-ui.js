@@ -178,8 +178,9 @@
     }
     function paintCounters() {
       clearTimeout(counterTimer);
-      if (!current() || document.hidden || !options.visible() || !data) return;
+      if (!current() || document.hidden || (!options.visible() && !guildUI?.isOpen()) || !data) return;
       options.tick?.();
+      guildUI?.tick();
       const order = data.estate.productionOrders?.[view?.key];
       if (dialog.open && order?.status === "running") {
         const left = Math.max(0,order.completesAtMs-now()), progress = dialog.querySelector("[data-economy-production-progress]"), text = dialog.querySelector("[data-economy-production-remaining]");
@@ -188,10 +189,13 @@
       }
       if (Object.values(data.estate.projection?.net || {}).some(rate => Math.abs(rate) > 1e-7)
         || Object.values(data.estate.productionOrders || {}).some(o=>o.status==="running"&&o.completesAtMs>now())
-        || data.estate.jobs.some(j => j.status === "running" && j.completesAtMs > now())) counterTimer = setTimeout(paintCounters, 1000);
+        || data.estate.jobs.some(j => j.status === "running" && j.completesAtMs > now())
+        || guildUI?.isOpen()) counterTimer = setTimeout(paintCounters, 1000);
     }
     const primaryActions = new Set(["fund","produce","confirm","commission","recruit","quest","supply","claimCommission","claimParcel"]);
     const button = (action, text, attributes = "") => `<button type="button" ${primaryActions.has(action) ? 'class="estate-action-primary"' : ""} data-economy-action="${action}" ${attributes}>${text}</button>`;
+    const guildUI = root.CrownlandsGuildUI?.create({ api, snapshot:()=>data, current, now, balances,
+      gold:()=>options.gold?.() || 0, accept, refresh, closed:schedule });
     function accept(result) {
       if (!current()) return;
       options.apply?.(result);
@@ -209,8 +213,11 @@
           }
         }
         const overview = result.upgradeOverview || (result.estate.revision === data?.estate.revision ? data?.upgradeOverview : null);
-        data = { ...result, upgradeOverview:overview, receivedAtMs: Date.now() };
+        data = { ...result, upgradeOverview:overview,
+          guildOverview:result.guildOverview || data?.guildOverview,
+          guildContext:result.guildContext || data?.guildContext, receivedAtMs: Date.now() };
         options.update?.(data);
+        guildUI?.update();
         schedule();
       }
     }
@@ -221,7 +228,7 @@
         milestones.slice(1).forEach((n, i) => rows.push([n, qualities[i+1] + " commissions."]));
       if (key === "builders-yard") rows.push([10,"Second builder."],[50,"Third builder."]);
       if (key === "alehouse") rows.push([10,"Trail bread preparation."],[25,"Uncommon recruits and hearty stew."],[50,"Rare recruits and guild feast."],[75,"Epic recruits."],[100,"Legendary recruits."]);
-      if (key === "guild-master") rows.push([25,"Three champions per party and two expeditions; Uncommon quests also need Alehouse 25."],[50,"Four champions per party; Rare quests also need Alehouse 50."],[60,"Three concurrent expeditions."],[75,"Epic quests also need Alehouse 75."],[100,"Legendary quests also need Alehouse 100; champion training reaches Level 100."]);
+      if (key === "guild-master") rows.push([25,"Three members per party, two mission slots and Established contracts."],[50,"Four members per party and Demanding contracts."],[60,"Three concurrent missions."],[75,"Dangerous contracts."],[100,"Exceptional contracts. Champion level ceilings follow rarity."]);
       if (key === "wagon-yard") rows.push([25,"Plank and Iron supply packs."],[34,"Half-hour supply packs."],[50,"Tool supply packs."],[100,"One-hour supply packs."]);
       if (key === "market") rows.push([34,"Half-hour supply packs."],[100,"One-hour supply packs."]);
       const next = rows.filter(([n]) => n > level).sort((a,b) => a[0]-b[0])[0];
@@ -235,7 +242,7 @@
       const producer = Object.values(s.resources).find(r=>r.source===key);
       const category = producer ? Object.keys(producer.inputs || {}).length ? "Material production" : "Resource gathering"
         : ["treasury","barracks","gatehouse","royal-stables"].includes(key) ? "Officer equipment"
-        : key === "guild-master" ? "Champions & expeditions" : key === "alehouse" ? "Recruitment & recovery"
+        : key === "guild-master" ? "Champions & expeditions" : key === "alehouse" ? "Recruitment & meals"
         : ["market","wagon-yard"].includes(key) ? "Trade & supplies" : ["storehouse","granary"].includes(key) ? "Estate storage" : "Royal administration";
       const status = !level ? "Not built" : job ? "Upgrading to Level "+job.target : level === 100 ? "Maximum level" : "Established";
       return `<aside class="estate-building-identity" aria-label="${escape(b.label)} building details">
@@ -284,11 +291,11 @@
       </div>`;
     }
     function statusBody() {
-      const s = data.estate, working = s.jobs.filter(j=>j.status==="running").length;
+      const s = data.estate, working = s.jobs.filter(j=>j.status==="running").length, guildRewards = (s.guild?.rewards || []).length;
       const claims = Object.entries(s.commissions).filter(([,c])=>c.completesAtMs<=now());
-      let body = `<div class="estate-status-totals"><p><b>${Math.max(0,s.slots-working)} / ${s.slots}</b> builders free</p><p><b>${s.jobs.length}</b> construction projects</p><p><b>${claims.length+s.parcels.length}</b> rewards to review</p></div><p>Use Buildings to filter projects. Readiness uses the latest server quote summary; every start is reviewed and checked again.</p>`;
+      let body = `<div class="estate-status-totals"><p><b>${Math.max(0,s.slots-working)} / ${s.slots}</b> builders free</p><p><b>${s.jobs.length}</b> construction projects</p><p><b>${claims.length+s.parcels.length+guildRewards}</b> rewards to review</p></div><p>Use Buildings to filter projects. Readiness uses the latest server quote summary; every start is reviewed and checked again.</p>`;
       body += `<article><h3>Construction</h3>${s.jobs.map(j=>`<p>${escape(label(j.building))} → Level ${j.target} · ${j.status==="running" ? j.completesAtMs>now()?duration(j.completesAtMs-now())+" remaining":"Finishing…" : "Paid work · "+escape(j.status)} ${button("upgradeSite","View project",`data-id="${j.building}"`)}</p>`).join("") || "<p>No construction running. Select Build or Upgrade in a building’s requirements to start work.</p>"}</article>`;
-      body += `<article><h3>Ready to collect</h3>${claims.map(([key,c])=>`<p>${escape(label(key))} · ${escape(c.name)} ${button("source","View commission",`data-id="${key}"`)}</p>`).join("")}${s.parcels.length ? `<p>${s.parcels.length} quest reward parcels · ${button("source","Visit Guild Master",'data-id="guild-master"')}</p>` : ""}${!claims.length&&!s.parcels.length ? "<p>No completed rewards waiting.</p>" : ""}<p>Claiming remains a separate review. Rewards that do not fit stay available.</p></article>`;
+      body += `<article><h3>Ready to collect</h3>${claims.map(([key,c])=>`<p>${escape(label(key))} · ${escape(c.name)} ${button("source","View commission",`data-id="${key}"`)}</p>`).join("")}${s.parcels.length+guildRewards ? `<p>${s.parcels.length+guildRewards} mission rewards · ${button("source","Visit Guild Master",'data-id="guild-master"')}</p>` : ""}${!claims.length&&!s.parcels.length&&!guildRewards ? "<p>No completed rewards waiting.</p>" : ""}<p>Claiming remains a separate review. Rewards that do not fit stay available.</p></article>`;
       if (completions.length) body += `<article><h3>Recently completed this visit</h3>${completions.map(n=>`<p>${escape(n)}</p>`).join("")}</article>`;
       body += `<article><h3>Getting started ${button("guide",guideHidden?"Show guide":"Dismiss guide")}</h3>`;
       if (!guideHidden) {
@@ -302,7 +309,7 @@
         body += `<ol class="estate-starter-guide">${steps.map(([keys,title,text])=>{
           const missing=keys.filter(k=>!s.levels[k]);
           return `<li><b>${missing.length?"Next":"Built"} · ${title}</b><p>${text}</p>${missing.length ? missing.map(k=>button("upgradeSite","Review "+label(k),`data-id="${k}"`)).join(" ") : button("source","Visit "+label(keys[0]),`data-id="${keys[0]}"`)}</li>`;
-        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Recruit at least two champions at the Alehouse, then select your active party at the Guild Master. Check power, Food and recovery before an expedition. Guild Level 1 banks at most 4 XP per champion; upgrading the Guild lets training continue.</p>${button("source","Visit Alehouse",'data-id="alehouse"')} ${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Gather, then build or upgrade</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button to review resources, time and next-level benefits. Start when you have the materials, Gold and a free builder; payment happens together when you start. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
+        }).join("")}<li><b>${s.activeChampionIds.length>=2?"Ready":"Next"} · Form a party</b><p>Recruit at least two champions at the Alehouse, then select your active party at the Guild Master. Choose a contract and review its odds, Food, rewards and recovery. Champion rarity sets its level ceiling; Guild improvements unlock more party and mission options.</p>${button("source","Visit Alehouse",'data-id="alehouse"')} ${button("source","Visit Guild Master",'data-id="guild-master"')}</li><li><b>Gather, then build or upgrade</b><p>Other buildings follow the completed Great Hall level. Select a building’s external Build or Upgrade button to review resources, time and next-level benefits. Start when you have the materials, Gold and a free builder; payment happens together when you start. No upgrade queue. Estate materials and progress persist; world Gold remains seasonal.</p>${button("upgradeSite","Review Great Hall",'data-id="great-hall"')}</li></ol>`;
       }
       return body + "</article>";
     }
@@ -320,7 +327,7 @@
       let feedbackTimer=0;
       const update=()=>{
         if (!data || !current()) return;
-        const s=data.estate, claims=Object.values(s.commissions).filter(c=>c.completesAtMs<=now()).length+s.parcels.length;
+        const s=data.estate, claims=Object.values(s.commissions).filter(c=>c.completesAtMs<=now()).length+s.parcels.length+(s.guild?.rewards || []).length;
         const title=`Estate overview · ${Math.max(0,s.slots-s.jobs.filter(j=>j.status==="running").length)} builders free · ${claims} rewards waiting`;
         setAttribute(entry,"title",title);setAttribute(entry,"aria-label",title);
         select.querySelectorAll('[value="ready"],[value="materials"]').forEach(option=>{const disabled=!data.upgradeOverview;if(option.disabled!==disabled)option.disabled=disabled;});
@@ -349,10 +356,12 @@
     function schedule() {
       clearTimeout(deadlineTimer);
       paintCounters();
-      if (!current() || document.hidden || (!options.visible() && !dialog.open) || !data) return;
+      if (!current() || document.hidden || (!options.visible() && !dialog.open && !guildUI?.isOpen()) || !data) return;
       const times = [...data.estate.jobs.map(j => j.completesAtMs), ...data.estate.quests.map(q => q.completesAtMs), ...Object.values(data.estate.productionOrders || {}).filter(o=>o.status==="running").map(o=>o.completesAtMs)].filter(Number.isFinite);
       const upcoming = [...Object.values(data.estate.commissions).map(c => c.completesAtMs), ...Object.values(data.champions).map(c => c.recoveryUntilMs)].filter(t => Number.isFinite(t) && t > now());
       times.push(...upcoming);
+      times.push(...(data.estate.guild?.missions || []).map(m=>m.completesAtMs));
+      if (data.estate.guild?.roomJob) times.push(data.estate.guild.roomJob.completesAtMs);
       if (Number.isFinite(data.estate.projection?.untilMs)) times.push(data.estate.projection.untilMs);
       if (["alehouse", "guild-master", "market", "wagon-yard"].some(key => data.estate.levels[key]))
         times.push((Math.floor(now() / 86400000) + 1) * 86400000);
@@ -360,7 +369,7 @@
     }
     async function refresh(includeUpgradeOverview = false) {
       if (!current()) return;
-      overviewRequested ||= includeUpgradeOverview || (dialog.open && view?.type === "status") || management?.needsOverview();
+      overviewRequested ||= includeUpgradeOverview || guildUI?.isOpen() || (dialog.open && view?.type === "status") || management?.needsOverview();
       if (busy) { refreshPending = true; return; }
       busy = true;
       render();
@@ -465,6 +474,10 @@
     }
     function open(next) {
       if (!current()) return;
+      if (guildUI && next.type === "building" && ["guild-master","alehouse"].includes(next.key)) {
+        if (dialog.open) dialog.close();
+        guildUI.open(next.key === "alehouse" ? "recruits" : "hall"); return;
+      }
       view = next; quote = null; pending = null; upgradeBill = null; upgradeQuote = null; error = "";
       formDraft = next.formDraft || null; reviewDraft = null;
       if (!dialog.open) { opener = document.activeElement; dialog.showModal(); }
@@ -749,13 +762,13 @@
       const target=opener?.isConnected?opener:[...document.querySelectorAll("[data-estate-officer-manage]")].find(el=>el.dataset.estateOfficerManage===opener?.dataset.estateOfficerManage);
       target?.focus({preventScroll:true});schedule();
     },{signal:abort.signal});
-    document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible()||dialog.open)refresh();},{signal:abort.signal});
+    document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(deadlineTimer);clearTimeout(counterTimer);}else if(options.visible()||dialog.open||guildUI?.isOpen())refresh();},{signal:abort.signal});
     const stop = api.subscribeEstateChanges?.(revision => {
       if (current() && data && revision > data.estate.revision) refresh();
     });
     refresh();
     return { refresh, balances, now, mountManagement, snapshot:()=>data, building:key=>open({type:"building",key}), upgrade:key=>open({type:"upgrade",key}), resource:key=>open({type:"resource",key}),
-      visibilityChanged:schedule, destroy(){destroyed=true;management?.destroy();abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
+      visibilityChanged:schedule, destroy(){destroyed=true;guildUI?.destroy();management?.destroy();abort.abort();stop?.();clearTimeout(deadlineTimer);clearTimeout(counterTimer);dialog.remove();} };
   }
   root.CrownlandsEstateEconomy = { create, mapActions };
 })(window);

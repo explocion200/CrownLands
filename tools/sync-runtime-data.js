@@ -70,6 +70,8 @@ async function main() {
 
   await validateOrWrite(path.join(root, "functions", "clan-tower-buildings.js"),
     await fsp.readFile(path.join(root, "clan-tower-buildings.js"), "utf8"), "Clan Tower building definitions");
+  for (const file of ["guild-config.js", "guild-rules.js"]) await validateOrWrite(path.join(root, "functions", file),
+    await fsp.readFile(path.join(root, file), "utf8"), "Guild shared rules: " + file);
 
   fingerprintWorldMaps({ checkOnly });
   syncCoreExpansionAssets({ checkOnly });

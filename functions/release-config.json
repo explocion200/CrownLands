@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-10-08-estate-economy-v1",
+  "releaseId": "crownlands-2026-10-10-guild-missions-v2",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "c22b238945d99fc34e6d3b713e4711266f73320dc8a4f79ca5e4fe89bcfd2c58",
+  "apiContractHash": "4473ca88e829899fabbdf909b9fe4c009f48473e3b52488c027a16734538c132",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",
