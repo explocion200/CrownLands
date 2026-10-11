@@ -60,9 +60,51 @@
         "docs/art-sources/guild-master/scholar.png",
         "docs/art-sources/guild-master/scout.png",
         "tools/prepare-guild-art.py",
-        "tools/validate-guild-art.js"
+        "tools/validate-guild-art.js",
+        "docs/art-sources/guild-master/common-guard-01.png",
+        "assets/guild-master/common-guard-01.webp",
+        "docs/art-sources/guild-master/common-guard-02.png",
+        "assets/guild-master/common-guard-02.webp",
+        "docs/art-sources/guild-master/common-guard-03.png",
+        "assets/guild-master/common-guard-03.webp",
+        "docs/art-sources/guild-master/common-scout-01.png",
+        "assets/guild-master/common-scout-01.webp",
+        "docs/art-sources/guild-master/common-scout-02.png",
+        "assets/guild-master/common-scout-02.webp",
+        "docs/art-sources/guild-master/common-scout-03.png",
+        "assets/guild-master/common-scout-03.webp",
+        "docs/art-sources/guild-master/common-scholar-01.png",
+        "assets/guild-master/common-scholar-01.webp",
+        "docs/art-sources/guild-master/common-scholar-02.png",
+        "assets/guild-master/common-scholar-02.webp",
+        "docs/art-sources/guild-master/common-scholar-03.png",
+        "assets/guild-master/common-scholar-03.webp",
+        "docs/art-sources/guild-master/common-artisan-01.png",
+        "assets/guild-master/common-artisan-01.webp",
+        "docs/art-sources/guild-master/common-artisan-02.png",
+        "assets/guild-master/common-artisan-02.webp",
+        "docs/art-sources/guild-master/common-artisan-03.png",
+        "assets/guild-master/common-artisan-03.webp",
+        "docs/art-sources/guild-master/common-envoy-01.png",
+        "assets/guild-master/common-envoy-01.webp",
+        "docs/art-sources/guild-master/common-envoy-02.png",
+        "assets/guild-master/common-envoy-02.webp",
+        "docs/art-sources/guild-master/common-envoy-03.png",
+        "assets/guild-master/common-envoy-03.webp",
+        "docs/art-sources/guild-master/common-quartermaster-01.png",
+        "assets/guild-master/common-quartermaster-01.webp",
+        "docs/art-sources/guild-master/common-quartermaster-02.png",
+        "assets/guild-master/common-quartermaster-02.webp",
+        "docs/art-sources/guild-master/common-quartermaster-03.png",
+        "assets/guild-master/common-quartermaster-03.webp",
+        "docs/art-sources/guild-master/common-medic-01.png",
+        "assets/guild-master/common-medic-01.webp",
+        "docs/art-sources/guild-master/common-medic-02.png",
+        "assets/guild-master/common-medic-02.webp",
+        "docs/art-sources/guild-master/common-medic-03.png",
+        "assets/guild-master/common-medic-03.webp"
       ],
-      "reason": "Validate all original and optimized image hashes, independent subjects, WebP encoding, file inventory and download budgets; browser checks exercise actual mission/room consumers. Encoder was run with Pillow to produce and inspect the final derivatives. No production preload or existing map asset changes.",
+      "reason": "Validate all original and optimized image hashes, independent subjects, WebP encoding, file inventory and download budgets; browser checks exercise actual mission/room consumers. Encoder was run with Pillow to produce and inspect the final derivatives. No production preload or existing map asset changes. Includes 21 separate Common peasant portraits at 512px; prefix encoding preserves existing derivatives.",
       "tests": [
         "tools/validate-guild-art.js",
         "tools/validate-guild-game-preview.js"
@@ -79,12 +121,15 @@
         "docs/visual-qa/guild-master/review.css",
         "docs/visual-qa/guild-master/review.js",
         "tools/test-guild-party-contributions.js",
-        "tools/validate-guild-game-preview.js"
+        "tools/validate-guild-game-preview.js",
+        "docs/visual-qa/guild-master/common-portraits.js",
+        "tools/test-guild-common-portraits.js"
       ],
-      "reason": "Exercise additive party contributions across all types, contracts, routes, approaches, supplies and progression; verify fixed mission difficulty, caps, leader behavior and unchanged two-member calibration. Browser checks mission-first navigation, empty-plan/deep-link guards, retained chosen contracts and preparation, archive isolation, keyboard/touch selection, and add/remove members through actual controls, the contribution breakdown, stable recruits, preparation, report replay, room upgrades, responsive art/controls and estate camera return. Uses unchanged estate/economy fixtures with no production mutations; no server/emulator changes apply.",
+      "reason": "Exercise additive party contributions across all types, contracts, routes, approaches, supplies and progression; verify fixed mission difficulty, caps, leader behavior and unchanged two-member calibration. Browser checks mission-first navigation, empty-plan/deep-link guards, retained chosen contracts and preparation, archive isolation, keyboard/touch selection, and add/remove members through actual controls, the contribution breakdown, stable recruits, preparation, report replay, room upgrades, responsive art/controls and estate camera return. Uses unchanged estate/economy fixtures with no production mutations; no server/emulator changes apply. Common portrait catalog, stable offer/hire/legacy identity, other rarity fallback and uncropped gallery/roster images are covered by portrait and browser checks.",
       "tests": [
         "tools/validate-guild-game-preview.js",
-        "tools/test-guild-party-contributions.js"
+        "tools/test-guild-party-contributions.js",
+        "tools/test-guild-common-portraits.js"
       ]
     }
   ]

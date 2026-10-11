@@ -32,6 +32,10 @@ for (const asset of manifest.assets) {
 assert.equal([...ids].filter(id => id.startsWith("mission-")).length, 8);
 assert.equal([...ids].filter(id => id.startsWith("room-")).length, 5);
 assert(ids.has("hall-v3"));
+assert.equal([...ids].filter(id=>id.startsWith("common-")).length,21);
+for(const type of ["guard","scout","scholar","artisan","envoy","quartermaster","medic"]){
+  for(const variant of ["01","02","03"])assert(ids.has(`common-${type}-${variant}`),"Three Common portraits per specialty");
+}
 assert(!ids.has("interior") && !ids.has("journey"), "Repeated cutaway/panorama retired");
 for (const retired of manifest.retiredAssets) assert.equal(hash(read(retired.source)), retired.sourceSha256);
 assert.equal(total, manifest.encoding.totalBytes);

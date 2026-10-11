@@ -63,18 +63,24 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       await action("recruits").click();await layout();
       let s=await snapshot();const original=structuredClone(s.offers);
       assert.equal(s.offers[0].type,"guard");assert.equal(s.offers[1].type,"guard");
+      assert.notEqual(s.offers[0].portraitId,s.offers[1].portraitId,"Common recruits of one specialty have distinct portraits");
+      await checkArt(".guild-member .guild-portrait",s.offers.map(c=>c.portraitId+".webp"));
       for(const c of s.offers){const bounds=await page.evaluate(type=>GuildReviewModel.types[type].base,c.type);assert(c.base.every((n,i)=>n>=bounds[i]-2&&n<=bounds[i]+2));}
       await action("refresh").click();assert.deepEqual((await snapshot()).offers,original,"Refresh cannot reroll offers");
       await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.guildGameReady==="true");
       await tab("hall");
       await action("recruits").click();assert.deepEqual((await snapshot()).offers,original,"Reload preserves starting rolls");
+      await checkArt(".guild-member .guild-portrait",original.map(c=>c.portraitId+".webp"));
       await page.screenshot({path:path.join(output,`recruits-${width}x${height}.png`)});
       const gold=s.gold;await page.locator('[data-guild="recruit"][data-id="offer-maren"]').click();
       s=await snapshot();assert.equal(s.gold,gold-57);assert.deepEqual(s.members.find(c=>c.id==="hired-offer-maren").base,original[0].base,"Recruit keeps exactly advertised rolls");
+      assert.equal(s.members.find(c=>c.id==="hired-offer-maren").portraitId,original[0].portraitId,"Hired recruit keeps the advertised face");
       assert(await page.locator('[data-guild="recruit"][data-id="offer-maren"]').isDisabled());
       await action("returnGuild").click();await layout();
       await page.locator('[data-field="type"]').selectOption("guard");assert.equal(await page.locator(".guild-member").count(),2);
       await page.locator('[data-field="type"]').selectOption("all");
+      await checkArt(".guild-member .guild-portrait",s.members.map(c=>(c.rarity==="Common"?c.portraitId:c.type)+".webp"));
+      await layout();await page.screenshot({path:path.join(output,`common-members-${width}x${height}.png`)});
       await tab("contracts");await layout();
       await checkArt(".guild-contract img",["escort","muster","equipment","quarry","timber","workshop","waymark","ledger"].map(id=>`mission-${id}.webp`));
       await page.screenshot({path:path.join(output,`contracts-${width}x${height}.png`)});
@@ -161,6 +167,16 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
       assert.equal(await page.locator("#guildTitle").textContent(),"Alehouse","Real estate directory enters recruitment preview");
       assert.deepEqual((await snapshot()).offers[1].base,original[1].base);
       await page.goto(origin+"/docs/visual-qa/guild-master/index.html");
+      const commonIds=await page.evaluate(()=>GuildCommonPortraits.map(p=>p.id));
+      assert.equal(commonIds.length,21);
+      assert.equal(await page.locator(".common-specialty").count(),7);
+      for(const portrait of await page.locator("[data-common-portrait] img").all()){
+        await portrait.scrollIntoViewIfNeeded();await portrait.evaluate(node=>node.decode());
+        const size=await portrait.evaluate(node=>({width:node.clientWidth,height:node.clientHeight,naturalWidth:node.naturalWidth,naturalHeight:node.naturalHeight}));
+        assert(size.naturalWidth===512&&size.naturalHeight===512&&Math.abs(size.width-size.height)<1,"Common portraits are complete square compositions");
+      }
+      await page.locator("#common-champions").evaluate(node=>node.scrollIntoView({block:"start"}));
+      await page.screenshot({path:path.join(output,`common-gallery-${width}x${height}.png`)});
       for(const id of ["contracts","planning","infirmary","training","archive"]){
         await page.locator(`[data-room="${id}"]`).click();
         assert((await page.locator(".hall-art img").getAttribute("src")).endsWith(`room-${id}.webp`));

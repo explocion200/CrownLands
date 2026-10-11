@@ -6,6 +6,7 @@ the originals or this manifest. No external network or image API is used here.
 """
 import hashlib
 import json
+import argparse
 from pathlib import Path
 from PIL import Image
 
@@ -21,9 +22,15 @@ def within_repo(relative):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only-prefix", default="", help="Encode only matching asset IDs; keep other derivatives unchanged")
+    args = parser.parse_args()
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     total = 0
     for item in manifest["assets"]:
+        if not item["id"].startswith(args.only_prefix):
+            total += item["bytes"]
+            continue
         source, destination = within_repo(item["source"]), within_repo(item["runtime"])
         destination.parent.mkdir(parents=True, exist_ok=True)
         with Image.open(source) as original:

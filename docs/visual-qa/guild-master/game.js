@@ -7,6 +7,7 @@
   const illustration=(id,alt,cls="",lazy=true)=>`<img class="${cls}" src="${art(id)}" alt="${escape(alt)}" width="1536" height="1024" loading="${lazy?"lazy":"eager"}" decoding="async">`;
   const time=minutes=>minutes<60?`${Math.round(minutes)} min`:`${Math.floor(minutes/60)}h${Math.round(minutes%60)?` ${Math.round(minutes%60)}m`:""}`;
   let state;try{state=JSON.parse(sessionStorage.getItem(key));}catch(_){}if(state?.version!==1)state=M.initial();
+  for(const c of [...state.members,...state.offers])if(c.rarity==="Common")c.portraitId=M.commonPortraitFor(c);
   if(!M.missions.some(m=>m.id===state.selectedMission))state.selectedMission=null;
   const save=()=>{try{sessionStorage.setItem(key,JSON.stringify(state));}catch(_){} };save();
   let page="hall",building="guild-master",typeFilter="all",statusFilter="all",message="",opener=null,reportStep=0,reportOutcome="partial",reportMission="escort",reviewRoom="infirmary";
@@ -16,7 +17,7 @@
   const button=(action,label,attrs="",primary=false)=>`<button type="button" data-guild="${action}" ${primary?'class="guild-primary"':""} ${attrs}>${label}</button>`;
   const statRows=(c,base=false)=>M.stats.map((name,i)=>`<div class="guild-stat"><span>${name}</span><i aria-hidden="true"><span style="width:${Math.min(100,(base?c.base:M.values(c))[i]/(base?16:35)*100)}%"></span></i><b>${(base?c.base:M.values(c))[i]}</b></div>`).join("");
   const nameFor=id=>state.members.find(c=>c.id===id)?.name||"Member";
-  const portrait=(c,cls="guild-portrait")=>`<img class="${cls}" src="${art(c.type)}" alt="${escape(M.types[c.type].name)} portrait" width="384" height="384">`;
+  const portrait=(c,cls="guild-portrait")=>`<img class="${cls}" src="${art(M.commonPortraitFor(c)||c.type)}" alt="${escape(c.name)} · ${escape(c.rarity)} ${M.types[c.type].name} portrait" width="512" height="512" decoding="async">`;
   const tabNames={hall:"Guild hall",members:"Members",contracts:"Contracts",planning:"Mission plan",infirmary:"Infirmary",training:"Training",archive:"Archive",improvements:"Improvements"};
   function member(c,recruit=false){
     const selected=state.party.includes(c.id),t=M.types[c.type],available=ready(c);

@@ -5,15 +5,15 @@
   "generatedDate": "2026-10-10",
   "reference": {
     "file": "inspiration art.png",
-    "role": "User-provided theme reference; inspected and supplied as a style image for each revision-2 generation. Original input unchanged."
+    "role": "User-provided theme reference; inspected and supplied as a style image for each revision-2 generation. Original input unchanged. Common set: reference supplied to every separate portrait generation; selected first portrait also supplied to nine variants to align rendering. No edits to the original reference."
   },
   "encoding": {
     "format": "webp",
     "quality": 82,
     "method": 6,
-    "totalBudgetKiB": 3000,
+    "totalBudgetKiB": 4600,
     "precache": false,
-    "totalBytes": 2236580
+    "totalBytes": 3425854
   },
   "assets": [
     {
@@ -338,6 +338,456 @@
       "sourceSha256": "98bf4216137aed647af90c676324178b8f0d59f83abb7cade7b1601dba445f76",
       "runtimeSha256": "1f9a45bc1f910a4277be32e91b973ee800c6e06a7fc2f276d9ae964c75562c9c",
       "bytes": 150724
+    },
+    {
+      "id": "common-guard-01",
+      "type": "guard",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-guard-01.png",
+      "generatedFilename": "exec-5c1c1159-3411-412f-b84a-ac413ab10ac2.png",
+      "runtime": "assets/guild-master/common-guard-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Sturdy adult woman about 40, tan complexion, broad square face, dark brown hair in a practical braid, protective calm expression. Faded olive patched wool tunic and beige linen scarf. Holds a rough ash-wood cudgel upright beside one shoulder; her other hand braces a small battered shield made of plain wooden planks. A peasant village watchwoman, entirely unarmored.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "2876953e6cebcb21162bda2dc3724625d0ab28fb0b53a8fa277fd69f93752548",
+      "runtimeSha256": "4ed3477ad8cfc98ed8017279878b3a5df61a9d4eb875f86a0781712f420774b7",
+      "bytes": 58212
+    },
+    {
+      "id": "common-guard-02",
+      "type": "guard",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-guard-02.png",
+      "generatedFilename": "exec-05b2d8e7-c06f-49a3-9c1d-980843a67b7b.png",
+      "runtime": "assets/guild-master/common-guard-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Stocky older woman about 58, fair weathered face, gray hair tucked beneath a simple undyed linen coif, strong eyebrows. Patched brown wool work dress and worn faded burgundy neck cloth. Holds a short-handled agricultural billhook with a plain dark iron curved working end clearly visible and a simple wooden grip; a leather hand wrap hints at village watch duty. Entirely unarmored, no shield.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "1c767ed33e099f5984a89c23cff101010ddacebb183d1afd90eff7604a52277a",
+      "runtimeSha256": "95a32e33d42afca54bc5b971ab554f2d61f13512fe9fd4868b4573f7200c29a8",
+      "bytes": 50706
+    },
+    {
+      "id": "common-guard-03",
+      "type": "guard",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-guard-03.png",
+      "generatedFilename": "exec-875c03f5-70da-4d70-b379-ad7949abfe96.png",
+      "runtime": "assets/guild-master/common-guard-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Broad-shouldered young adult man about 24, deep brown skin, tightly curled short black hair, clean shaven, earnest expression. Coarse ochre linen shirt with rolled sleeves and an olive waistcoat tied with cord. Holds a rustic two-pronged hayfork with short visible tines safely upright beside him. Worn thick cloth wrapped around one forearm suggests improvised protection, entirely unarmored.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "44516a8251a964d6232baf3e463b921da8737bbf691f322fa991be0919596ceb",
+      "runtimeSha256": "d38775219227088a3886f80d5a4c4a6d5f0a675bffa22fb5c5067d68a1a32a67",
+      "bytes": 57746
+    },
+    {
+      "id": "common-scout-01",
+      "type": "scout",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scout-01.png",
+      "generatedFilename": "exec-bb9cf427-9891-4572-9c02-3d28cf9b18cf.png",
+      "runtime": "assets/guild-master/common-scout-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Lean young adult man about 27, fair freckled face, short copper curls, watchful friendly expression. Faded moss-green hood pushed back, rough tan linen shirt with visible mending. Holds a simple unstrung self bow diagonally across the lower portrait, a few plain arrows peek from a small homespun quiver; a rabbit snare cord hangs from his belt. A village hunter, no leather armor.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "e355ab839fe49cf94eade000653cdfdd492abdb9179772494d92d3b2a269738d",
+      "runtimeSha256": "10b63d6288f072d3879514d58cecdaf6cb306196b5cedd84e1dabe24eea98838",
+      "bytes": 55366
+    },
+    {
+      "id": "common-scout-02",
+      "type": "scout",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scout-02.png",
+      "generatedFilename": "exec-2d1dcb09-99fd-4617-b7a6-e6c1660605d5.png",
+      "runtime": "assets/guild-master/common-scout-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Thin adult man about 48, medium olive skin, long nose, grizzled short beard, brown hair under a faded ochre cap. Coarse gray-brown tunic and patched green shoulder shawl. Holds a smooth wooden walking staff and a plain braided sling with a stone pouch visible near his hand; small tied trail markers on his belt. Everyday shepherd and tracker, not a ranger in expensive gear.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "37b2c84376e0869eaefb6ee490a5ae4e132b88cb9463869c72200db17b063b0e",
+      "runtimeSha256": "260cf17924803d62702f7269d103cff463d351b0cc0ff86ee760a817e37cddb8",
+      "bytes": 59580
+    },
+    {
+      "id": "common-scout-03",
+      "type": "scout",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scout-03.png",
+      "generatedFilename": "exec-b1d5b75a-62b4-41cd-a699-0db8ec8c98df.png",
+      "runtime": "assets/guild-master/common-scout-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Wiry adult woman about 32, deep brown complexion, black hair in short practical braids, alert dark eyes. Patched dull ochre tunic, simple olive headscarf. Holds a worn agricultural billhook upright beside her shoulder; a little cloth pouch of snares and a sprig of bracken tucked at her belt quietly suggest woodland knowledge. No ornate gear.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "7b42ded4641301e1d209cf3b8ae06468ed2ee67b0ec159fd2c4f245236e3fd6a",
+      "runtimeSha256": "2310bafc358f166e6cfaaaf8782da9628df53afeb0e2fa7d3d65c136b1a65390",
+      "bytes": 56288
+    },
+    {
+      "id": "common-scholar-01",
+      "type": "scholar",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scholar-01.png",
+      "generatedFilename": "exec-956be7eb-c8c6-4713-a01b-628dede2f371.png",
+      "runtime": "assets/guild-master/common-scholar-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Older adult man about 62, light weathered skin, balding gray hair and short unruly gray beard, thoughtful kind expression. Patched olive work tunic and plain linen shoulder wrap, no robes. Holds a knotted wooden walking staff for protection and a small battered wooden-framed writing slate tucked to his chest, no legible writing. A literate village peasant, not a wizard or noble scholar.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "93a85f38a3cc8c4cbd15a7c32a0163f85d4bc1ed398f180db4a0a196487a343b",
+      "runtimeSha256": "9235cdab90215ecc301233b1c5b2222b35265f597af7b468f51c8cae56c13612",
+      "bytes": 52052
+    },
+    {
+      "id": "common-scholar-02",
+      "type": "scholar",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scholar-02.png",
+      "generatedFilename": "exec-86a9be98-da75-415f-88d4-0c298e4e5df5.png",
+      "runtime": "assets/guild-master/common-scholar-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Young adult woman about 24, warm brown complexion, black hair in a loose practical bun with escaped strands. Faded ochre homespun blouse and brown apron with mended seams. One hand grips a rough wooden cudgel at her side, the other holds a small worn stitched booklet against her waist; a goose quill tucked behind one ear. Ordinary village clerk, no jewels or rich robes.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "454d3067f2a0e0f03fa852965a1dcb0b2748b6c2ab54d5e55901dd032cf143ff",
+      "runtimeSha256": "c0495c22362abdf6c5bb565e5960d21bd97fa32c745519ae26be1b5055e66787",
+      "bytes": 49166
+    },
+    {
+      "id": "common-scholar-03",
+      "type": "scholar",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-scholar-03.png",
+      "generatedFilename": "exec-e5af25ba-0f43-4881-92a0-dce6eebee031.png",
+      "runtime": "assets/guild-master/common-scholar-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Adult man about 39, tawny skin, straight dark hair under a simple linen cap, narrow face and small mustache. Coarse gray-green wool tunic with patched elbow. Holds a stout quarterstaff vertically and a rolled scrap of parchment tied in cord, a charcoal stub in his belt pouch. Curious everyday traveler, no spectacles, no magic.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "d27733183fcf3fa75e62f1ca3f018b18d8a0dacafad4a62acae4e7ab7f6908f3",
+      "runtimeSha256": "3a42034cc019feb7573983220bba80d9594f495860d41552ea9da45b77d76a17",
+      "bytes": 53072
+    },
+    {
+      "id": "common-artisan-01",
+      "type": "artisan",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-artisan-01.png",
+      "generatedFilename": "exec-8e463a95-ef4d-4c2f-ab5e-88b3eba11e17.png",
+      "runtime": "assets/guild-master/common-artisan-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Strong stocky adult woman about 34, medium brown skin, a distinctly round full-cheeked face with a broad blunt nose and small deep-set eyes, short coarse black curls mostly under a worn brown work cap, a small soot smear on her cheek. Face turned toward the LEFT of the picture. Worn brown work apron over patched ochre linen sleeves. Holds a substantial plain wooden carpenter's mallet, recognizably a work tool suitable for self-defense, small pegs and a simple chisel in her belt. A cheerful practical village carpenter, no smith armor or elaborate equipment. Give this individual a distinctive round face and short hair, not a braided-haired square-jawed guard.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "8152f8ccbac26736f2d9c4b212028511ca77742fac7a6243882ae33b7c657f76",
+      "runtimeSha256": "c71f71865cf3d5552dd1d71fc8c51666a3742450324f89b55919500087c3bd4f",
+      "bytes": 51390
+    },
+    {
+      "id": "common-artisan-02",
+      "type": "artisan",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-artisan-02.png",
+      "generatedFilename": "exec-733c970f-34a1-4a06-a6bc-734f273b273e.png",
+      "runtime": "assets/guild-master/common-artisan-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Stocky older adult man about 57, fair ruddy skin, bald crown with wiry gray side hair, thick short gray mustache. Faded olive work shirt, patched leather apron, rough rope belt. Holds a plain iron-headed woodcutting hatchet with a worn wooden handle across his body; a folding wooden measuring rule and a few nails hint at carpentry. Everyday carpenter, no battleaxe.\nConsistency: if a second reference portrait is supplied, match its simple ink-and-gouache rendering and parchment treatment, but keep this subject's specified distinct face, age, clothing and equipment. Do not copy the second reference person's identity.",
+      "referenceImages": [
+        "inspiration art.png",
+        "common-guard-01.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "135af0ddb956970184328d22cf334f153d68dfd5c092e53ed4fdc7e39f602688",
+      "runtimeSha256": "1153b741c85c329f7e133e7af4054a1aee1b06f9182211e3fa86278514e81c9d",
+      "bytes": 53694
+    },
+    {
+      "id": "common-artisan-03",
+      "type": "artisan",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-artisan-03.png",
+      "generatedFilename": "exec-a291f0d0-a4b9-439e-8b0e-1cddffd693ae.png",
+      "runtime": "assets/guild-master/common-artisan-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Slim young adult woman about 25, deep brown skin, short dark curls under a linen kerchief, focused lively expression. Patched beige linen shirt and faded burgundy-brown apron. Holds a sturdy iron-headed work hammer on an ordinary wooden shaft, with a small tool roll and coarse twine tucked at her waist. A village repair worker, grounded and unarmored.\nPortrait variety: Face turned slightly toward the left of the picture, with a different natural pose. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "9a847527f10218997e07aa99a48316972eac98fb728a7b9ada8d4f77a35fb501",
+      "runtimeSha256": "3b8db54ce68adc3dcf5380533d287b6dd8a45193bbbc4b853444616f29c81496",
+      "bytes": 55878
+    },
+    {
+      "id": "common-envoy-01",
+      "type": "envoy",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-envoy-01.png",
+      "generatedFilename": "exec-53ed04e7-e135-491f-8ffd-e979b6f95487.png",
+      "runtime": "assets/guild-master/common-envoy-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Adult woman about 38, warm olive skin, dark hair pinned under a simple beige kerchief, open confident smile and expressive brows. Clean but visibly patched muted burgundy wool shawl over an ochre linen work dress. Holds a modest wooden walking staff and a small cord-tied message roll; plain carved wooden token at her belt. A village messenger who gets on with people, no noble finery.\nPortrait variety: Near-frontal face and asymmetrical relaxed shoulders. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "b300b7f67b4e7b2a8a6c83839623a5d0eb21cd4fb7641f30043371f3e566c35e",
+      "runtimeSha256": "5e332ecdb5369bfcffa01f000104d12f56dc5c949b504eef5078a2e16d2b15ae",
+      "bytes": 60704
+    },
+    {
+      "id": "common-envoy-02",
+      "type": "envoy",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-envoy-02.png",
+      "generatedFilename": "exec-756a21b4-6539-4c67-ac42-c68bc2dfcc9e.png",
+      "runtime": "assets/guild-master/common-envoy-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Friendly older adult man about 60, dark brown complexion, close gray beard, short gray hair, round face with laugh lines. Patched tan linen tunic and faded olive cap held by cord at his neck. Holds a knotted wooden cudgel loosely at his side and a folded sealed note in the other hand; a plain small cloth satchel across chest. Humble village spokesman, no official uniform.\nPortrait variety: Face turned slightly toward the left of the picture, with a different natural pose. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "031fed6fe8930a002ea5b8f737b97b4964719a22f3a74e35400f38e9e4b6d83b",
+      "runtimeSha256": "9940798278d3747023eb416c1a89229cb52fc253a6dac7e374b3998be59afca3",
+      "bytes": 52446
+    },
+    {
+      "id": "common-envoy-03",
+      "type": "envoy",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-envoy-03.png",
+      "generatedFilename": "exec-56a698f8-2096-42e0-bc6c-e5c41105541e.png",
+      "runtime": "assets/guild-master/common-envoy-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Young adult woman about 23, pale freckled complexion, red hair in a loose braid, bright attentive face. Worn gray-brown wool tunic and faded ochre scarf with repairs. Holds a plain quarterstaff and wears a small weathered messenger pouch with a simple wax-sealed folded letter peeking out. Practical peasant courier, no jewelry or rich clothing.\nPortrait variety: Near-frontal face and asymmetrical relaxed shoulders. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "38c7650eafd02845be067074f1a5b832bcb6ca79a0ee7f77bf330479d4a66838",
+      "runtimeSha256": "39d4a16a5c13710aaef26a0e1ce7e25c225c627b90bdaca5c8882c06a8000838",
+      "bytes": 65430
+    },
+    {
+      "id": "common-quartermaster-01",
+      "type": "quartermaster",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-quartermaster-01.png",
+      "generatedFilename": "exec-3872113e-cbf3-4205-aa09-2a21a1614127.png",
+      "runtime": "assets/guild-master/common-quartermaster-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Broad stocky adult man about 50, tan weathered face, full graying dark beard, brown hair under a simple cloth cap. Patched olive tunic and coarse ochre work vest. Holds a stout wooden cudgel and cradles a small tied burlap supply bundle; loops of hemp rope and a tiny wooden tally stick hang from his belt. Ordinary storeyard laborer, no armor.\nPortrait variety: Face turned slightly toward the left of the picture, with a different natural pose. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "b4daeba487197b1e898296fb5523699e09f44c909bceef56e8f0f35de43e0f6f",
+      "runtimeSha256": "03c33c0d78dfd80a83898efda95b015df1603734eef9b2a37cd1ba01ec490dc7",
+      "bytes": 64622
+    },
+    {
+      "id": "common-quartermaster-02",
+      "type": "quartermaster",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-quartermaster-02.png",
+      "generatedFilename": "exec-ffcd461d-e988-4f7f-9376-4da44cd50ed3.png",
+      "runtime": "assets/guild-master/common-quartermaster-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Broad-shouldered adult woman about 46, fair rosy weathered face, brown hair beneath a linen coif, steady practical expression. Faded ochre work dress, patched gray apron, rope belt. Holds a short-handled plain iron hay hook used around sacks and a small tied grain sack; wooden tally notches on a belt stick hint at counting supplies. Humble carter, no metal armor.\nPortrait variety: Near-frontal face and asymmetrical relaxed shoulders. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "aef0ac6d4d0f49bb59cacf114adb3288896580f9f35aa76654e98e02f8ae39ba",
+      "runtimeSha256": "40ac0c11629686e1bab0f5191938e7affdbcd025512a6beea28e912b89f1760f",
+      "bytes": 68456
+    },
+    {
+      "id": "common-quartermaster-03",
+      "type": "quartermaster",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-quartermaster-03.png",
+      "generatedFilename": "exec-48a080cf-82a0-43cf-9c8b-5794670290cb.png",
+      "runtime": "assets/guild-master/common-quartermaster-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Lean young adult man about 28, medium brown complexion, straight black hair cropped short, angular friendly face. Patched gray-green linen tunic and brown scarf. Holds a thick wooden wagon peg used as a club, with a rolled blanket on a simple shoulder strap and a coiled hemp rope. Everyday pack handler, no elaborate backpack or military kit.\nPortrait variety: Face turned slightly toward the left of the picture, with a different natural pose. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "9186f82ad91f85053a1bdbc716aaee1b2378d99bb3287e10168f63e2be80c409",
+      "runtimeSha256": "206af334d4d2bd73686e57195e3fcc1ba41a9aedc744e70216b4a98c98705c85",
+      "bytes": 53756
+    },
+    {
+      "id": "common-medic-01",
+      "type": "medic",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-medic-01.png",
+      "generatedFilename": "exec-a6837cb5-8556-448e-9f0c-d53716511898.png",
+      "runtime": "assets/guild-master/common-medic-01.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Older adult woman about 55, warm brown skin, graying dark hair mostly covered by an undyed linen head wrap, caring lined face. Patched dull olive wool dress and beige work apron. Holds a sturdy wooden walking staff for protection; a little bundle of dried herbs and clean folded linen strips are tucked at her waist. Practical village healer, no magical symbols or modern medical marks.\nPortrait variety: Near-frontal face and asymmetrical relaxed shoulders. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "8d729cf3cecedbd3f82a284a60527c4bac7656d3a32b82e625af8ec7fa3d127a",
+      "runtimeSha256": "3a05bf3b954368fa6cbf15d4e89760c26a33ffbf5516674dbc4b5e35a87575b2",
+      "bytes": 58458
+    },
+    {
+      "id": "common-medic-02",
+      "type": "medic",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-medic-02.png",
+      "generatedFilename": "exec-963592cc-2644-446f-91a8-c253f447ce99.png",
+      "runtime": "assets/guild-master/common-medic-02.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Adult man about 36, fair complexion, brown wavy hair, short brown beard, thoughtful gentle expression. Coarse ochre tunic and faded green hood pushed back, both mended. Holds a simple wooden cudgel upright and a small cloth herb pouch in his other hand; a plain wooden mortar at his belt. Humble herbalist peasant, no robes or glass potions.\nPortrait variety: Face turned slightly toward the left of the picture, with a different natural pose. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "8e22555e82cfb75b6625556f3b2193464d27cfdcc6765c8c257ddaeba18ea450",
+      "runtimeSha256": "fadda267ab15d6a571004634892f43baf3423a5fddeaf6f1283128a860a192c5",
+      "bytes": 59314
+    },
+    {
+      "id": "common-medic-03",
+      "type": "medic",
+      "rarity": "Common",
+      "source": "docs/art-sources/guild-master/common-medic-03.png",
+      "generatedFilename": "exec-8afb197b-8bbc-4767-a441-38e0a910bccb.png",
+      "runtime": "assets/guild-master/common-medic-03.webp",
+      "maxWidth": 512,
+      "maxHeight": 512,
+      "maxKiB": 80,
+      "quality": 82,
+      "prompt": "Use case: stylized-concept. Asset type: one square Common-rarity champion portrait for Crownlands. Use the attached landscape ONLY as the art-style reference: fine dark-brown ink contour lines, restrained opaque gouache shading, subtle aged paper grain, olive and ochre earth tones, pale warm stone, weathered oak brown and a tiny faded burgundy accent. This is a hand-illustrated medieval atlas character, with intentionally simple readable painted shapes, not photorealistic or glossy. Subject must look like an ordinary medieval peasant joining a guild, humble but capable; coarse patched linen and wool, rope or worn leather belt, visibly used village-made equipment. No metal armor, chainmail, noble finery, modern items, magic, ornate weapons, heroic fantasy armor, decorative frames, letters, text, labels or logos. Exactly one adult person, head fully visible, three-quarter view, waist-up including hands and the recognizable working end of their simple weapon/tool; centered with 8% safe margins. Strong distinct face readable as a small game portrait. Anatomically coherent hands and practical grips. A quiet flat mottled pale ochre parchment background, no scene or extra people. Soft even daylight, crisp brown drawing, no dramatic lighting or blur. Render a single individual image, never a sheet. Subject: Young adult woman about 29, deep brown complexion, curly black hair tied back with beige linen, calm observant eyes. Patched brown homespun dress and faded ochre apron. Holds a plain quarterstaff, with a roll of clean linen bandages and a small woven basket of green medicinal leaves at her hip. Everyday village caregiver, no priestly symbols, magic or modern medical equipment.\nPortrait variety: Near-frontal face and asymmetrical relaxed shoulders. Keep this person's described individual face, age and build unmistakable. Simple clear medieval pen-and-gouache character drawing, not detailed photorealistic skin.",
+      "referenceImages": [
+        "inspiration art.png"
+      ],
+      "width": 512,
+      "height": 512,
+      "sourceSha256": "6edf169441302b0a82818811417a7ec6042275484fe2c74081f0996c9e83f206",
+      "runtimeSha256": "54eae5e5120e3208c1cd813fc5e5574896f3e2d122138d3a9853ae5bc534eaeb",
+      "bytes": 52938
     }
   ],
   "retiredAssets": [

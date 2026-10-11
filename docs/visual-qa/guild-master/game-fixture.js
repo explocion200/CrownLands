@@ -38,7 +38,18 @@ window.GuildReviewModel = (() => {
     });
   }
   function person(id,name,type,level=1,rarity="Common") {
-    return {id,name,type,level,rarity,base:rollStats(type),recoveryUntilMs:0,history:[]};
+    return {id,name,type,level,rarity,portraitId:commonPortraitFor({id,name,type,rarity}),base:rollStats(type),recoveryUntilMs:0,history:[]};
+  }
+  function commonPortraitFor(c) {
+    if(c.rarity!=="Common")return null;
+    const pool=(window.GuildCommonPortraits||[]).filter(p=>p.type===c.type);
+    const existing=pool.find(p=>p.id===c.portraitId);
+    if(existing)return existing.id;
+    const named=pool.find(p=>p.name===c.name);
+    if(named)return named.id;
+    // A stable fallback for old local samples; never reroll a face on render.
+    let hash=0;for(const char of c.id)hash=(Math.imul(hash,31)+char.charCodeAt(0))>>>0;
+    return pool.length?pool[hash%pool.length].id:null;
   }
   function initial() {
     const members=[person("mara","Mara Stone","guard",3),person("rowan","Rowan Ashford","scout",3),person("oswin","Oswin Reed","scholar",5,"Uncommon"),person("elin","Elin Marsh","artisan",2),person("ada","Ada Vale","envoy",4),person("bram","Bram Cask","quartermaster",3),person("ione","Ione Holt","medic",4)];
@@ -63,5 +74,5 @@ window.GuildReviewModel = (() => {
     const partial=Math.round(risk*.7*10)/10, failure=Math.round((risk-partial)*10)/10;
     return {risk,success:Math.round((100-risk)*10)/10,partial,failure,readiness,target:mission.statTarget,contributions,leaderBonus,leaderId:leader.id,adjustment,signature,traits,routeRisk:route[1],approachRisk:approach[1],hours:mission.hours*route[0]*approach[0],xp:mission.hours*20,food:Math.ceil(mission.hours*.01*120)+(s.supply?6:0),rewardFactor:route[2]*approach[2],recovery:Math.max(10,mission.hours*15*(1-s.rooms.infirmary*.07))};
   }
-  return {types,stats,missions,facilities,roomCosts,initial,values,forecast};
+  return {types,stats,missions,facilities,roomCosts,initial,values,forecast,commonPortraitFor};
 })();

@@ -54,7 +54,8 @@ one Guild Hall, eight mission-specific contract images, and five
 individual rooms. Infirmary, Training, Archive, planning and room-improvement
 details use their matching images. Contracts and rooms retain full compositions.
 Short landscape screens put the illustrations beside their text. Cards defer
-image loading until needed. The seven existing review portraits are unchanged.
+image loading until needed. The seven earlier type portraits remain available
+for other rarity samples.
 
 The subsequent Hall refinement replaces the modest meeting room with a grand
 timber hall, oak galleries, burgundy guild standards, a great stone hearth and
@@ -63,10 +64,34 @@ reference image; all contract and room illustrations are retained.
 
 [Originals, exact prompts and hashes](../../art-sources/guild-master/manifest.json)
 record both the active illustrations and the retired cutaway/panorama sources.
-Optimized derivatives are in `assets/guild-master/`. All 21 active WebP files
-total 2,236,580 bytes, with individual and aggregate budgets checked. Nothing is
+Optimized derivatives are in `assets/guild-master/`. Including the Common set,
+all 42 active WebP files total 3,425,854 bytes, with individual and aggregate
+budgets checked. Nothing is
 added to the installation preload. The encoder only resizes and compresses;
 it does not repaint, composite or synthesize artwork.
+
+## Common champion set
+
+The new Common set contains 21 individually generated portraits, three per
+specialty: Guard, Scout, Scholar, Artisan, Envoy, Quartermaster and Medic.
+Ordinary villagers wear repaired linen/wool and carry simple peasant weapons,
+farm tools and small hints of their specialty. The reference's ink contours,
+painted shading and earth colors guide every portrait. This set is for review;
+the earlier Hall/room/contract approval does not imply approval of these new faces.
+
+`index.html#common-champions` shows the entire set grouped by specialty.
+`game.html?entry=guild&tab=members&revision=common-champions-r1` shows the portraits
+on the actual sample roster. Common offers keep their portrait through hiring,
+refreshes and party changes. Existing local samples receive a stable portrait
+without changing their stats, names, rarity, resources or progression. Other
+rarities retain the previous artwork. The catalog does not add 21 recruit offers
+or alter recruitment availability.
+
+All selected PNG originals and exact built-in generation prompts are in the art
+manifest. Each new derivative is 512×512 WebP, under 80 KiB; together the Common
+portraits are 1,189,274 bytes. Generate only these derivatives with the bundled
+Python/Pillow runtime: `python tools/prepare-guild-art.py --only-prefix common-`.
+The encoder preserves all existing derivatives when using that option.
 
 ## Validation
 
@@ -74,13 +99,15 @@ With Node 22 and the repository's locked dependencies installed:
 
 ```powershell
 node tools/validate-guild-art.js
+node tools/test-guild-common-portraits.js
 node tools/test-guild-party-contributions.js
 node tools/validate-guild-game-preview.js
 ```
 
 The browser validation checks desktop 1440×900 and landscape 844×390 / 568×320,
 independent and uncropped images, all room improvement illustrations, 44px
-controls, stable sample recruits, mission-first planning, keyboard/touch contract
+controls, distinct/stable Common offer and recruit portraits, all 21 gallery
+images, stable sample recruits, mission-first planning, keyboard/touch contract
 selection, retained preparation and archive isolation, harmless report replay,
 adding/removing members without diluting the forecast, one sample improvement
 at a time, and estate camera restoration. The model test covers all eight
