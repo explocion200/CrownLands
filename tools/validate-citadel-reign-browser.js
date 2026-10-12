@@ -4,19 +4,30 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { openGuildBrowser } = require("./guild-browser-harness");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
+const { minifyEstate } = require("./estate-delivery");
 const artifacts = path.resolve(__dirname, "../release-artifacts/citadel-reign-ledger");
 
 async function main() {
+  const root = path.resolve(__dirname, "..");
+  const delivered = fs.readFileSync(path.join(root, "dist/stronghold-details-ui.js"), "utf8");
+  assert.equal(delivered, minifyEstate(fs.readFileSync(path.join(root, "stronghold-details-ui.js"), "utf8")), "Build the current production client before validating the delivered Citadel UI");
   fs.mkdirSync(artifacts, { recursive: true });
   const server = createMapBenchmarkServer(), address = await server.listen();
   const errors = [];
   let browser;
   try {
-    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+    const cases = ["source", "built"].flatMap(delivery => [[1440, 900], [844, 390], [568, 320]].map(([width, height]) => ({ delivery, width, height })));
+    for (const { delivery, width, height } of cases) {
       browser = await openGuildBrowser({ width, height, errors });
       const p = browser.page;
       await p.goto(`${address.url}/__benchmark__/?scenario=D&visualMarches=0`);
       await p.waitForFunction(() => window.__CROWNLANDS_BENCHMARK__?.getStatus().status === "ready");
+      if (delivery === "built") await p.evaluate(() => new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "/dist/stronghold-details-ui.js";
+        script.onload = resolve; script.onerror = () => reject(Error("Delivered Stronghold UI failed to load"));
+        document.head.append(script);
+      }));
       await p.evaluate(() => {
         window.__CROWNLANDS_BENCHMARK__.closeModal();
         clearOnlineCrownCitadelWatcher();
@@ -88,7 +99,7 @@ async function main() {
       assert.equal(ticking.unchangedWrites, 0, "Unchanged scores must not rewrite the ledger");
       assert(ticking.sameRow && ticking.sameFocus && ticking.rank === "#1", JSON.stringify(ticking));
       assert.equal(ticking.score, ticking.expected, "Live score includes all previous completed reigns");
-      await p.screenshot({ path: path.join(artifacts, `ledger-${width}x${height}.png`) });
+      await p.screenshot({ path: path.join(artifacts, `ledger-${delivery}-${width}x${height}.png`) });
       const layout = await p.evaluate(() => {
         const r = modal.getBoundingClientRect(), panel = modalBody.querySelector("[data-citadel-reign-panel]");
         return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, overflow: panel.scrollWidth > panel.clientWidth + 1 };
@@ -169,7 +180,7 @@ async function main() {
         ensureRegionDefinitionLoaded = ensure;
         if (onlineCrownCitadelBase || reignQa.subscriptions.length !== 1) throw Error("Cancelled initialization started a listener");
       });
-      console.log(JSON.stringify({ width, height, currentCitadelSubscription: true, liveRanks: true, staleReads: true, retry: true, neutralTimer: true, layout }));
+      console.log(JSON.stringify({ delivery, width, height, currentCitadelSubscription: true, liveRanks: true, staleReads: true, retry: true, neutralTimer: true, layout }));
       await browser.close(); browser = null;
     }
     // The isolated map fixture does not serve the public /play/ update probe.
