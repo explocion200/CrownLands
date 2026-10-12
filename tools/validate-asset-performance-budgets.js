@@ -214,7 +214,8 @@ const entrypointBudgets = {
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
-  "stronghold-details-ui.js": 6 * 1024,
+  // Citadel ledger ranking/rendering moved here from game.js; no new script request.
+  "stronghold-details-ui.js": 12 * 1024,
   "stronghold-details-ui.css": 30 * 1024,
   // Shared refresh preservation for cities, holdings, clan drafts, inventory,
   // equipment and Daily Login adds <8 KiB here, with no new script request.

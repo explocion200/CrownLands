@@ -2427,25 +2427,38 @@
     )).sort((left, right) => right.awardedAtMs - left.awardedAtMs).slice(0, safeLimit);
   }
 
-  async function loadCrownCitadelReignLeaderboard(limitCount = 100) {
+  async function loadCrownCitadelReignLeaderboard(limitCount = 100, currentHolderUid = "") {
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
+    const scope = getOnlineRequestScope();
+    const safeCurrentHolderUid = String(currentHolderUid || "").trim().replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
-    const { collection, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
+    const { collection, doc, getDoc, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reignsRef = collection(client.db, "crownCitadelReigns", getRealmStorageId(), "entries");
-    const reignsQuery = firestoreQuery && where && orderBy && limit
-      ? firestoreQuery(
-          reignsRef,
-          where("resetGeneration", "==", RESET_GENERATION),
-          where("worldId", "==", ONLINE_WORLD_ID),
-          ...getRealmShardQueryConstraints(where),
-          orderBy("totalHeldMs", "desc"),
-          limit(safeLimit)
-        )
-      : reignsRef;
-    const snapshot = await getDocs(reignsQuery);
-    return snapshot.docs.slice(0, safeLimit).map(reignDoc => {
+    const reignsQuery = firestoreQuery(
+      reignsRef,
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
+      orderBy("totalHeldMs", "desc"),
+      limit(safeLimit)
+    );
+    // Include the holder's earlier reigns even below the completed-time cutoff.
+    const [snapshot, currentHolderSnapshot] = await Promise.all([
+      getDocs(reignsQuery),
+      safeCurrentHolderUid ? getDoc(doc(reignsRef, safeCurrentHolderUid)) : null,
+    ]);
+    if (scope !== getOnlineRequestScope()) throw new Error("Reign Ledger account or realm changed.");
+    const reignDocs = snapshot.docs.slice(0, safeLimit);
+    if (currentHolderSnapshot?.exists() && !reignDocs.some(reignDoc => reignDoc.id === currentHolderSnapshot.id)) {
+      reignDocs.push(currentHolderSnapshot);
+    }
+    return reignDocs.filter(reignDoc => {
+      const reign = reignDoc.data() || {};
+      return reign.worldId === ONLINE_WORLD_ID && reign.resetGeneration === RESET_GENERATION
+        && (REALM_SHARD_ID === "legacy" || reign.realmShardId === REALM_SHARD_ID);
+    }).map(reignDoc => {
       const reign = reignDoc.data() || {};
       return {
         id: reignDoc.id,

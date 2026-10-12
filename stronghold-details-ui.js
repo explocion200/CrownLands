@@ -117,5 +117,115 @@
     });
     update();
   }
-  global.CrownlandsStrongholdDetailsUi = Object.freeze({ mount });
+  function normalizeCrownCitadelReignEntry(raw = {}, cleanName) {
+    return {
+      playerId: String(raw.playerId || raw.id || ""),
+      playerName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
+      worldId: String(raw.worldId || ""),
+      resetGeneration: String(raw.resetGeneration || ""),
+      totalHeldMs: Math.max(0, Math.floor(Number(raw.totalHeldMs) || 0)),
+      currentHeldSinceMs: Math.max(0, Math.floor(Number(raw.currentHeldSinceMs) || 0)),
+      isCurrentHolder: Boolean(raw.isCurrentHolder),
+    };
+  }
+
+  function getCrownCitadelReignScoreMs(entry, nowMs = Date.now()) {
+    const totalHeldMs = Math.max(0, Number(entry?.totalHeldMs) || 0);
+    const currentHeldSinceMs = Math.max(0, Number(entry?.currentHeldSinceMs) || 0);
+    return totalHeldMs + (currentHeldSinceMs > 0 ? Math.max(0, nowMs - currentHeldSinceMs) : 0);
+  }
+
+  function rankReigns(entries, { holderUid, holderName, heldSinceMs, worldId, resetGeneration, cleanName, nowMs = Date.now() }) {
+    const byPlayer = new Map((Array.isArray(entries) ? entries : [])
+      .map(entry => normalizeCrownCitadelReignEntry(entry, cleanName))
+      .filter(entry => (!entry.worldId || entry.worldId === worldId)
+        && (!entry.resetGeneration || entry.resetGeneration === resetGeneration))
+      .filter(entry => entry.playerId)
+      .map(entry => [entry.playerId, {
+        ...entry,
+        currentHeldSinceMs: 0,
+        isCurrentHolder: false,
+      }]));
+
+    if (holderUid) {
+      const current = byPlayer.get(holderUid) || normalizeCrownCitadelReignEntry({
+        playerId: holderUid,
+        playerName: holderName,
+      }, cleanName);
+      byPlayer.set(holderUid, {
+        ...current,
+        playerName: holderName || current.playerName,
+        currentHeldSinceMs: heldSinceMs,
+        isCurrentHolder: true,
+      });
+    }
+
+    return [...byPlayer.values()]
+      .sort((a, b) => getCrownCitadelReignScoreMs(b, nowMs) - getCrownCitadelReignScoreMs(a, nowMs)
+        || a.playerName.localeCompare(b.playerName))
+      .slice(0, 100);
+  }
+
+  function reignMarkup(ranked, status, { formatNumber, formatDuration, renderPlayerNameLink, escapeHtml }) {
+    if (status === "loading") {
+      return `<div class="citadel-reign-empty">Loading the Reign Ledger...</div>`;
+    }
+    if (status === "error") {
+      return `<div class="citadel-reign-empty">The Reign Ledger could not be loaded right now.</div>`;
+    }
+    if (!ranked.length) {
+      return `<div class="citadel-reign-empty">No ruler has held the Crown Citadel yet.</div>`;
+    }
+    return `
+      <div class="citadel-reign-heading">
+        <span>Rank</span><span>Ruler</span><span>Time held</span>
+      </div>
+      <div class="citadel-reign-list">
+        ${ranked.map((entry, index) => `
+          <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}" data-citadel-reign-player="${escapeHtml(entry.playerId)}">
+            <strong class="citadel-reign-rank">#${formatNumber(index + 1)}</strong>
+            <span class="citadel-reign-ruler">
+              ${renderPlayerNameLink(entry.playerId, entry.playerName, "citadel-reign-player-link")}
+              ${entry.isCurrentHolder ? `<small>Current Citadel ruler</small>` : ""}
+            </span>
+            <strong class="citadel-reign-time" data-citadel-reign-score data-total-held-ms="${entry.totalHeldMs}" data-current-held-since-ms="${entry.currentHeldSinceMs}">${formatDuration(Math.floor(getCrownCitadelReignScoreMs(entry) / 1000))}</strong>
+          </article>`).join("")}
+      </div>
+      <p class="citadel-reign-note">Scores are cumulative. The current ruler's score continues rising until the Citadel changes hands.</p>`;
+  }
+
+  function updateReignRanks(panel, ranked, formatters) {
+    const { formatNumber } = formatters;
+    const list = panel?.querySelector(".citadel-reign-list");
+    if (!list) return;
+    const rows = [...list.querySelectorAll("[data-citadel-reign-player]")];
+    if (rows.length === ranked.length && rows.every((row, index) => row.dataset.citadelReignPlayer === ranked[index].playerId)) return;
+    // Only a rank crossing changes the list. Keep existing links and scrolling
+    // intact while scores tick, including when the holder enters the top 100.
+    const scroll = list.scrollTop;
+    const focus = panel.ownerDocument.activeElement;
+    const byPlayer = new Map(rows.map(row => [row.dataset.citadelReignPlayer, row]));
+    let replacement = null;
+    ranked.forEach((entry, index) => {
+      let row = byPlayer.get(entry.playerId);
+      if (!row) {
+        if (!replacement) {
+          replacement = panel.ownerDocument.createElement("div");
+          replacement.innerHTML = reignMarkup(ranked, "ready", formatters);
+        }
+        row = [...replacement.querySelectorAll("[data-citadel-reign-player]")].find(candidate => candidate.dataset.citadelReignPlayer === entry.playerId);
+      }
+      if (!row) return;
+      const rank = row.querySelector(".citadel-reign-rank");
+      const text = `#${formatNumber(index + 1)}`;
+      if (rank.textContent !== text) rank.textContent = text;
+      if (list.children[index] !== row) list.insertBefore(row, list.children[index] || null);
+      byPlayer.delete(entry.playerId);
+    });
+    byPlayer.forEach(row => row.remove());
+    if (focus?.isConnected && panel.ownerDocument.activeElement !== focus) focus.focus({ preventScroll: true });
+    list.scrollTop = scroll;
+  }
+
+  global.CrownlandsStrongholdDetailsUi = Object.freeze({ mount, rankReigns, reignMarkup, updateReignRanks });
 })(typeof window !== 'undefined' ? window : globalThis);

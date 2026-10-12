@@ -75,9 +75,9 @@ function copy(relativeSource, relativeDestination = relativeSource) {
   // the output; keep source files and binary assets untouched.
   if (/\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(source)) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
-    // Keep estate and capture animation code within the existing delivery budget. Only
+    // Keep estate, Citadel and capture animation code within the existing delivery budget. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js"].includes(relativeSource)) text = minifyRuntime(text);
+    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js", "stronghold-details-ui.js"].includes(relativeSource)) text = minifyRuntime(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }

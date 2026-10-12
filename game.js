@@ -1455,7 +1455,7 @@ function isCrownCitadel(city) {
 
 function getCrownCitadelControlSnapshot() {
   if (onlineCrownCitadelLoaded) return onlineCrownCitadelSnapshot;
-  return state?.cities?.find(city => city.id === CROWN_CITADEL_ID) || null;
+  return state?.cities?.find(isCrownCitadel) || null;
 }
 
 function getCrownCitadelHolderUid() {
@@ -1465,6 +1465,7 @@ function getCrownCitadelHolderUid() {
 }
 
 function getCrownCitadelHeldSinceMs() {
+  if (!getCrownCitadelHolderUid()) return 0;
   const citadel = getCrownCitadelControlSnapshot();
   return Math.max(0, normalizeTimestampMs(
     citadel?.lastCapturedAtMs ?? citadel?.lastCapturedAt
@@ -2082,6 +2083,7 @@ let combatTimersInterval = 0;
 let activeRetaliationId = "";
 let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
+let onlineCrownCitadelBase = null;
 let onlineCrownCitadelSnapshot = null;
 let onlineCrownCitadelLoaded = false;
 let appliedServerReportRevisions = new Map();
@@ -16735,8 +16737,7 @@ function disconnectOnlineWorld() {
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
   deedCampLocationsRequest = null;
-  crownCitadelReignCache = [];
-  crownCitadelReignRequest = null;
+  invalidateCrownCitadelReigns();
   strongholdLegacyCache.clear();
   strongholdLegacyRequests.clear();
   onlineGlobalStats = null;
@@ -19945,8 +19946,10 @@ function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
   if (typeof onlineCrownCitadelUnsubscribe === "function") onlineCrownCitadelUnsubscribe();
   onlineCrownCitadelUnsubscribe = null;
   if (clear) {
+    onlineCrownCitadelBase = null;
     onlineCrownCitadelSnapshot = null;
     onlineCrownCitadelLoaded = false;
+    invalidateCrownCitadelReigns();
   }
 }
 
@@ -20135,8 +20138,9 @@ function getCrownCitadelSnapshotSignature(citadel = null) {
 
 function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
   if (!state) return false;
-  const base = getPlayableBaseCityById(CROWN_CITADEL_ID);
-  const current = cityById(CROWN_CITADEL_ID);
+  const citadelId = citadel?.id || onlineCrownCitadelBase?.id || CROWN_CITADEL_ID;
+  const base = onlineCrownCitadelBase || getPlayableBaseCityById(citadelId);
+  const current = cityById(citadelId);
   if (!base && !current) return false;
 
   const raw = citadel && typeof citadel === "object" ? citadel : {};
@@ -20148,7 +20152,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
     ...(authoritativeBase || {}),
     ...(current || {}),
     ...raw,
-    id: CROWN_CITADEL_ID,
+    id: citadelId,
     name: getCanonicalCityName(authoritativeBase, raw),
     owner: ownership.owner,
     ownerKind: ownership.ownerKind,
@@ -20171,7 +20175,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
     isMainCity: false,
     regionId: normalizeRegionId(raw.regionId || authoritativeBase?.regionId || "center"),
     startPool: raw.startPool || authoritativeBase?.startPool || "center",
-    islandId: raw.islandId || getOnlineIslandId("center"),
+    islandId: raw.islandId || getOnlineIslandId(raw.regionId || authoritativeBase?.regionId || "center"),
     kind: raw.kind || authoritativeBase?.kind || "stronghold",
     strongholdType: raw.strongholdType || authoritativeBase?.strongholdType || "crown_citadel",
     relinquishedAtMs: 0,
@@ -20180,9 +20184,9 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
   const previousSignature = getCrownCitadelSnapshotSignature(current);
   if (current) Object.assign(current, next);
   else if (getCityRegionId(next) === getActiveMapRegionId()) state.cities.push(next);
-  localDirtyCityIds.delete(CROWN_CITADEL_ID);
+  localDirtyCityIds.delete(citadelId);
 
-  const existingCacheIndex = onlineOwnedCitiesCache.findIndex(city => city.id === CROWN_CITADEL_ID);
+  const existingCacheIndex = onlineOwnedCitiesCache.findIndex(city => city.id === citadelId);
   const existingCache = existingCacheIndex >= 0 ? onlineOwnedCitiesCache[existingCacheIndex] : null;
   let cacheChanged = false;
   if (ownership.ownerUid && ownership.ownerUid === currentUid) {
@@ -20202,7 +20206,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
 
 function refreshOpenCrownCitadelInfoModal({ forceLedger = false } = {}) {
   if (!modal?.open || !modalBody?.querySelector(".crown-citadel-info-panel")) return false;
-  const city = cityById(CROWN_CITADEL_ID);
+  const city = cityById(getCrownCitadelControlSnapshot()?.id || onlineCrownCitadelBase?.id || CROWN_CITADEL_ID);
   if (!city) return false;
   const selectedTab = modalBody.querySelector("[data-citadel-info-tab].active")?.dataset.citadelInfoTab || "overview";
   showCrownCitadelInfoModal(city);
@@ -20224,35 +20228,58 @@ function subscribeOnlineCrownCitadel() {
   const api = getOnlineApi();
   if (typeof onlineCrownCitadelUnsubscribe === "function") return;
   if (!state || !api?.subscribeCrownCitadel || !api?.isSignedIn?.()) return;
-  onlineCrownCitadelUnsubscribe = api.subscribeCrownCitadel(
-    getOnlineIslandId("center"),
-    CROWN_CITADEL_ID,
-    {
-      onCitadel: citadel => {
-        const previousHolderUid = getCrownCitadelHolderUid();
-        const previousSignature = getCrownCitadelSnapshotSignature(getCrownCitadelControlSnapshot());
-        onlineCrownCitadelSnapshot = citadel;
-        onlineCrownCitadelLoaded = true;
-        queuePlayerIdentityLookupForRecords(citadel ? [citadel] : []);
-        const cityChanged = reconcileOnlineCrownCitadelSnapshot(citadel);
-        const holderChanged = previousHolderUid !== getCrownCitadelHolderUid();
-        const snapshotChanged = previousSignature !== getCrownCitadelSnapshotSignature(citadel);
-        if (holderChanged) {
-          crownCitadelReignCache = [];
-        }
-        if (!cityChanged && !snapshotChanged) return;
-        cityRenderSignature = "";
-        renderCities(true);
-        updateOutgoingAttackUi();
-        refreshOpenCrownCitadelInfoModal({ forceLedger: holderChanged });
-      },
-      onError: error => {
-        markOnlineRealtimeRecoveryNeeded(error);
-        clearOnlineCrownCitadelWatcher({ clear: false });
-        console.warn("Could not subscribe to Crown Citadel control", error);
-      },
+  const scope = getOnlineSessionRequestScope();
+  let disposed = false, unsubscribe = null;
+  const isCurrent = () => !disposed && scope === getOnlineSessionRequestScope();
+  onlineCrownCitadelUnsubscribe = () => { disposed = true; unsubscribe?.(); };
+  void (async () => {
+    if (CORE_EXPANSION_TOPOLOGY_ACTIVE && !onlineCrownCitadelBase) {
+      const region = REGION_CATALOG.regions?.find(entry => entry.objectivePurpose === "crown_citadel");
+      if (!region) throw new Error("The current world has no Citadel region.");
+      await ensureRegionDefinitionLoaded(region.id, { protectedRegionIds: [getActiveMapRegionId()] });
+      if (!isCurrent()) return;
     }
-  );
+    onlineCrownCitadelBase ||= generateStrongholdSlots().find(isCrownCitadel) || null;
+    if (!onlineCrownCitadelBase) throw new Error("The current world has no Citadel definition.");
+    if (!isCurrent()) return;
+    unsubscribe = api.subscribeCrownCitadel(
+      getOnlineIslandId(onlineCrownCitadelBase.regionId),
+      onlineCrownCitadelBase.id,
+      {
+        onCitadel: citadel => {
+          if (!isCurrent()) return;
+          const previousHolderUid = getCrownCitadelHolderUid();
+          const previousHeldSinceMs = getCrownCitadelHeldSinceMs();
+          const previousSignature = getCrownCitadelSnapshotSignature(getCrownCitadelControlSnapshot());
+          onlineCrownCitadelSnapshot = citadel;
+          onlineCrownCitadelLoaded = true;
+          queuePlayerIdentityLookupForRecords(citadel ? [citadel] : []);
+          const cityChanged = reconcileOnlineCrownCitadelSnapshot(citadel);
+          const holderChanged = previousHolderUid !== getCrownCitadelHolderUid();
+          const reignChanged = holderChanged || previousHeldSinceMs !== getCrownCitadelHeldSinceMs();
+          const snapshotChanged = previousSignature !== getCrownCitadelSnapshotSignature(citadel);
+          if (reignChanged) invalidateCrownCitadelReigns();
+          if (!cityChanged && !snapshotChanged) return;
+          cityRenderSignature = "";
+          renderCities(true);
+          updateOutgoingAttackUi();
+          refreshOpenCrownCitadelInfoModal({ forceLedger: reignChanged });
+        },
+        onError: error => {
+          if (!isCurrent()) return;
+          markOnlineRealtimeRecoveryNeeded(error);
+          clearOnlineCrownCitadelWatcher({ clear: false });
+          console.warn("Could not subscribe to Crown Citadel control", error);
+        },
+      }
+    );
+    if (disposed) unsubscribe?.();
+  })().catch(error => {
+    if (!isCurrent()) return;
+    markOnlineRealtimeRecoveryNeeded(error);
+    clearOnlineCrownCitadelWatcher({ clear: false });
+    console.warn("Could not prepare Crown Citadel control", error);
+  });
 }
 
 function subscribeOnlineHeldCamps() {
@@ -28789,11 +28816,13 @@ function updateVisibleCityDynamicText(targetIds = null) {
       }
     }
   }
+  updateCrownCitadelReignRanks();
   modalBody?.querySelectorAll("[data-citadel-reign-score], [data-stronghold-legacy-score]").forEach(score => {
     const totalHeldMs = Math.max(0, Number(score.dataset.totalHeldMs) || 0);
     const currentHeldSinceMs = Math.max(0, Number(score.dataset.currentHeldSinceMs) || 0);
     const liveHeldMs = currentHeldSinceMs > 0 ? Math.max(0, Date.now() - currentHeldSinceMs) : 0;
-    score.textContent = formatDuration(Math.floor((totalHeldMs + liveHeldMs) / 1000));
+    const text = formatDuration(Math.floor((totalHeldMs + liveHeldMs) / 1000));
+    if (score.textContent !== text) score.textContent = text;
   });
   cityLayer.querySelectorAll(".camp-node[data-camp-id]").forEach(node => {
     if (targetIds && !targetIds.has(node.dataset.campId)) return;
@@ -29062,7 +29091,7 @@ function renderCitiesUncached(force = false) {
       ? `<strong class="map-city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</strong>`
       : "";
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
+      ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong></span>`
       : "";
     const visibleGarrison = getVisibleCityGarrisonTroops(city, scoutReport);
     const assembly = getCityRallyAssembly(city);
@@ -29074,6 +29103,7 @@ function renderCitiesUncached(force = false) {
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
+          ${crownBadge}
           <span class="player-city-banner">
             <span class="city-owner-column">
               ${ownerFlag}
@@ -29081,7 +29111,7 @@ function renderCitiesUncached(force = false) {
             </span>
             <span class="player-city-data">
               ${clanTagMarkup}
-              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>${crownBadge}</span>
+              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong></span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
               <span class="city-army-count">${displayedTroops} troops</span>${assemblyLabel}
             </span>
@@ -29090,7 +29120,8 @@ function renderCitiesUncached(force = false) {
       : isSelectedForeign
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
-          ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`}
+          ${crownBadge}
+          ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong></span>`}
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${formatNumber(city.level)}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -29102,6 +29133,7 @@ function renderCitiesUncached(force = false) {
         </span>`
       : `
         <span class="city-label foreign-city-label">
+          ${crownBadge}
           ${rivalOwnerRow}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
           ${clanAlly ? `<span class="foreign-garrison ${garrisonVisibilityClass}">${displayedTroops} troops</span>${assemblyLabel}` : ""}
@@ -32937,87 +32969,32 @@ function playerMarchTo(targetId) {
   showTroopSliderModal(source, target);
 }
 
-function normalizeCrownCitadelReignEntry(raw = {}) {
-  return {
-    playerId: String(raw.playerId || raw.id || ""),
-    playerName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
-    worldId: String(raw.worldId || ""),
-    resetGeneration: String(raw.resetGeneration || ""),
-    totalHeldMs: Math.max(0, Math.floor(Number(raw.totalHeldMs) || 0)),
-    currentHeldSinceMs: Math.max(0, Math.floor(Number(raw.currentHeldSinceMs) || 0)),
-    isCurrentHolder: Boolean(raw.isCurrentHolder),
-  };
-}
-
-function getCrownCitadelReignScoreMs(entry, nowMs = Date.now()) {
-  const totalHeldMs = Math.max(0, Number(entry?.totalHeldMs) || 0);
-  const currentHeldSinceMs = Math.max(0, Number(entry?.currentHeldSinceMs) || 0);
-  return totalHeldMs + (currentHeldSinceMs > 0 ? Math.max(0, nowMs - currentHeldSinceMs) : 0);
-}
-
 function getRankedCrownCitadelReigns(entries = []) {
-  const holder = getCrownCitadelControlSnapshot();
-  const holderUid = getCrownCitadelHolderUid();
-  const holderName = cleanName(holder?.ownerName || (holderUid === getCurrentOnlineUid() ? state?.playerName : "")) || "Ruler";
-  const heldSinceMs = getCrownCitadelHeldSinceMs();
-  const byPlayer = new Map((Array.isArray(entries) ? entries : [])
-    .map(normalizeCrownCitadelReignEntry)
-    .filter(entry => (!entry.worldId || entry.worldId === ONLINE_WORLD_ID)
-      && (!entry.resetGeneration || entry.resetGeneration === RESET_GENERATION))
-    .filter(entry => entry.playerId)
-    .map(entry => [entry.playerId, {
-      ...entry,
-      currentHeldSinceMs: 0,
-      isCurrentHolder: false,
-    }]));
-
-  if (holderUid) {
-    const current = byPlayer.get(holderUid) || normalizeCrownCitadelReignEntry({
-      playerId: holderUid,
-      playerName: holderName,
-    });
-    byPlayer.set(holderUid, {
-      ...current,
-      playerName: holderName || current.playerName,
-      currentHeldSinceMs: heldSinceMs || Math.max(0, Number(current.currentHeldSinceMs) || 0),
-      isCurrentHolder: true,
-    });
-  }
-
-  const nowMs = Date.now();
-  return [...byPlayer.values()]
-    .sort((a, b) => getCrownCitadelReignScoreMs(b, nowMs) - getCrownCitadelReignScoreMs(a, nowMs)
-      || a.playerName.localeCompare(b.playerName))
-    .slice(0, 100);
+  const holder = getCrownCitadelControlSnapshot(), holderUid = getCrownCitadelHolderUid();
+  return window.CrownlandsStrongholdDetailsUi.rankReigns(entries, {
+    holderUid,
+    holderName: cleanName(holder?.ownerName || (holderUid === getCurrentOnlineUid() ? state?.playerName : "")) || "Ruler",
+    heldSinceMs: getCrownCitadelHeldSinceMs(), worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, cleanName,
+  });
 }
 
 function crownCitadelReignLeaderboardMarkup(entries = [], status = "ready") {
-  if (status === "loading") {
-    return `<div class="citadel-reign-empty">Loading the Reign Ledger...</div>`;
-  }
-  if (status === "error") {
-    return `<div class="citadel-reign-empty">The Reign Ledger could not be loaded right now.</div>`;
-  }
-  const ranked = getRankedCrownCitadelReigns(entries);
-  if (!ranked.length) {
-    return `<div class="citadel-reign-empty">No ruler has held the Crown Citadel yet.</div>`;
-  }
-  return `
-    <div class="citadel-reign-heading">
-      <span>Rank</span><span>Ruler</span><span>Time held</span>
-    </div>
-    <div class="citadel-reign-list">
-      ${ranked.map((entry, index) => `
-        <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}">
-          <strong class="citadel-reign-rank">#${formatNumber(index + 1)}</strong>
-          <span class="citadel-reign-ruler">
-            ${renderPlayerNameLink(entry.playerId, entry.playerName, "citadel-reign-player-link")}
-            ${entry.isCurrentHolder ? `<small>Current Citadel ruler</small>` : ""}
-          </span>
-          <strong class="citadel-reign-time" data-citadel-reign-score data-total-held-ms="${entry.totalHeldMs}" data-current-held-since-ms="${entry.currentHeldSinceMs}">${formatDuration(Math.floor(getCrownCitadelReignScoreMs(entry) / 1000))}</strong>
-        </article>`).join("")}
-    </div>
-    <p class="citadel-reign-note">Scores are cumulative. The current ruler's score continues rising until the Citadel changes hands.</p>`;
+  return window.CrownlandsStrongholdDetailsUi.reignMarkup(getRankedCrownCitadelReigns(entries), status, {
+    formatNumber, formatDuration, renderPlayerNameLink, escapeHtml,
+  });
+}
+
+function updateCrownCitadelReignRanks() {
+  const panel = modalBody?.querySelector("[data-citadel-reign-panel]");
+  if (!panel?.querySelector(".citadel-reign-list")) return;
+  window.CrownlandsStrongholdDetailsUi.updateReignRanks(panel, getRankedCrownCitadelReigns(crownCitadelReignCache), {
+    formatNumber, formatDuration, renderPlayerNameLink, escapeHtml,
+  });
+}
+
+function invalidateCrownCitadelReigns() {
+  crownCitadelReignCache = [];
+  crownCitadelReignRequest = null;
 }
 
 async function refreshCrownCitadelReignPanel({ force = false } = {}) {
@@ -33027,30 +33004,36 @@ async function refreshCrownCitadelReignPanel({ force = false } = {}) {
     panel.innerHTML = crownCitadelReignLeaderboardMarkup(crownCitadelReignCache);
     return true;
   }
-  if (crownCitadelReignRequest) return crownCitadelReignRequest;
+  if (crownCitadelReignRequest && !force) return crownCitadelReignRequest.promise;
   const api = getOnlineApi();
   if (!api?.loadCrownCitadelReignLeaderboard || !api?.isSignedIn?.()) {
     panel.innerHTML = crownCitadelReignLeaderboardMarkup([]);
     return false;
   }
   panel.innerHTML = crownCitadelReignLeaderboardMarkup([], "loading");
-  crownCitadelReignRequest = api.loadCrownCitadelReignLeaderboard(100)
+  const request = { scope: getOnlineSessionRequestScope(), promise: null };
+  crownCitadelReignRequest = request;
+  const isCurrent = () => crownCitadelReignRequest === request && request.scope === getOnlineSessionRequestScope();
+  request.promise = api.loadCrownCitadelReignLeaderboard(100, getCrownCitadelHolderUid())
     .then(entries => {
+      if (!isCurrent()) return false;
       crownCitadelReignCache = Array.isArray(entries) ? entries : [];
       const activePanel = modalBody?.querySelector("[data-citadel-reign-panel]");
       if (activePanel) activePanel.innerHTML = crownCitadelReignLeaderboardMarkup(crownCitadelReignCache);
       return true;
     })
     .catch(error => {
+      if (!isCurrent()) return false;
       console.warn("Could not load Crown Citadel Reign Ledger", error);
+      crownCitadelReignCache = [];
       const activePanel = modalBody?.querySelector("[data-citadel-reign-panel]");
       if (activePanel) activePanel.innerHTML = crownCitadelReignLeaderboardMarkup([], "error");
       return false;
     })
     .finally(() => {
-      crownCitadelReignRequest = null;
+      if (crownCitadelReignRequest === request) crownCitadelReignRequest = null;
     });
-  return crownCitadelReignRequest;
+  return request.promise;
 }
 
 function normalizeStrongholdLegacyEntry(raw = {}) {
