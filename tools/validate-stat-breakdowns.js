@@ -147,7 +147,7 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /profileKingPowerStat\.textContent = formatNumber\(summary\.kingPower\)/,
+  /setTextIfChanged\(profileKingPowerStat, formatNumber\(summary\.kingPower\)\)/,
   "Profile King Power does not use the approved number-only display."
 );
 requireMatch(
@@ -212,12 +212,15 @@ const productionStatContext = {
 };
 vm.createContext(productionStatContext);
 vm.runInContext(
-  `${extractFunction(clientSource, "formatNumber")}\n${extractFunction(clientSource, "renderProfileProductionStat")}`,
+  `${extractFunction(clientSource, "formatNumber")}\n${extractFunction(clientSource, "setTextIfChanged")}\n${extractFunction(clientSource, "renderProfileProductionStat")}`,
   productionStatContext,
   { filename: path.join(root, "game.js") }
 );
 const productionStatElement = {
   children: [],
+  querySelector(selector) {
+    return this.children.find(child => `.${child.className}` === selector) || null;
+  },
   replaceChildren(...children) {
     this.children = children;
   },
@@ -227,6 +230,13 @@ assert.equal(productionStatElement.children[0].textContent, "91M/h");
 assert.equal(productionStatElement.children[0].className, "profile-production-total");
 assert.equal(productionStatElement.children[1].textContent, "(+58M/h)");
 assert.equal(productionStatElement.children[1].className, "profile-production-bonus");
+const productionNodes = [...productionStatElement.children];
+productionStatContext.renderProfileProductionStat(productionStatElement, 33_000_000, 91_000_000, "/h");
+assert.equal(productionStatElement.children[0], productionNodes[0], "An unchanged production value preserves its node.");
+assert.equal(productionStatElement.children[1], productionNodes[1], "An unchanged production bonus preserves its node.");
+productionStatContext.renderProfileProductionStat(productionStatElement, 33_000_000, 92_000_000, "/h");
+assert.equal(productionStatElement.children[0].textContent, "92M/h");
+assert.equal(productionStatElement.children[1].textContent, "(+59M/h)");
 
 const globalStatsContext = {
   client: { user: { uid: "player-1" } },

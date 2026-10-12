@@ -198,6 +198,10 @@
       gold:()=>options.gold?.() || 0, accept, refresh, closed:schedule });
     function accept(result) {
       if (!current()) return;
+      // Guild quotes and estate refreshes may finish in either order. Reject
+      // older state before applying shared balances or replacing the display.
+      if (result.estate && data && (result.estate.revision < data.estate.revision
+        || (result.estate.revision === data.estate.revision && result.serverNowMs < data.serverNowMs))) return;
       options.apply?.(result);
       if (result.estate) {
         for (const [key, order] of Object.entries(data?.estate.productionOrders || {})) {

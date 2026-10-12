@@ -416,7 +416,7 @@ for (const name of [
 ]) historySandbox[name] = value => value || null;
 vm.createContext(historySandbox);
 for (const name of [
-  "normalizeTimestampMs", "isSuccessfulScoutIntelBattleReport", "getScoutBattleReportExpiresAtMs",
+  "normalizeTimestampMs", "normalizeLinkedCaptureRestriction", "isSuccessfulScoutIntelBattleReport", "getScoutBattleReportExpiresAtMs",
   "getBattleReportRevisionMs", "getBattleReportOccurredAtMs", "getBattleReportHistoryExpiresAtMs",
   "normalizeBattleReports", "compareBattleReportsNewestFirst",
 ]) vm.runInContext(functionBody(client, name), historySandbox);
