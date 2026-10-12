@@ -1,13 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7406e0a929e6c2114f9db359b80b012aa317f406",
+  "baseCommit": "5408487c3f1df78219acb3b5ea679e3596581f3c",
   "coverage": [
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record verified authorized PR #530 web publication, its exact build/manifest/artifact identity, focused source and delivered animation checks, public desktop/mobile smoke and the unchanged itch.io/backend state. Documentation only; no runtime or emulator tests apply. Sanitized deployment receipts independently prove the named web release.",
-      "tests": []
+      "paths": ["functions/index.js"],
+      "reason": "Guard shared power rebuilds against a different player shard before any troop queries or writes; keep rebuilt leaderboard realm metadata complete; reject foreign global/profile power in every protection consumer and prevent clan propagation. Review covers identity lookup, current-realm economy repair, valid zeros, decreases, publication retries and asynchronous clan reconciliation. No visual layout changes or new polling.",
+      "tests": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-realm-sharding.js", "tools/validate-runtime-audit-cleanup.js", "functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"]
+    },
+    {
+      "paths": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-runtime-audit-cleanup.js"],
+      "reason": "Exercise foreign realm rejection, the reported power comparison, zero preservation, troop conservation and coherent repair projections; adapt extracted clan harness to the real realm predicate. Refresh two pre-existing stale UI assertions to the current text setter and 21 optional scripts so the affected regression suites can execute.",
+      "tests": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-runtime-audit-cleanup.js"]
+    },
+    {
+      "paths": ["functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"],
+      "reason": "Run real callable identity lookup from a foreign shard and verify current profile/global stats stay intact; simulate the reported corruption before real preview and launch. Firestore clan-event tests reject foreign zero writes and reconcile repaired valid zeros, retaining concurrency and duplicate-event coverage.",
+      "tests": ["functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"]
     }
   ]
 }
