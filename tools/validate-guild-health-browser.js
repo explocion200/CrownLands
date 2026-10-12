@@ -25,7 +25,7 @@ async function main() {
           now: () => health.snapshot.serverNowMs, balances: () => health.snapshot.estate.stock,
           gold: () => health.snapshot.gold, refresh: async () => {},
           accept: response => { health.snapshot = response; health.guild.update(); },
-          api: { getEstateQuote: input => new Promise(resolve => health.pending.push({ input, resolve })) },
+          api: { getEstateQuote: input => new Promise((resolve, reject) => health.pending.push({ input, resolve, reject })) },
         });
         health.guild.open("members");
       });
@@ -103,6 +103,17 @@ async function main() {
       const staleReview = await control("confirm").count();
       console.log(JSON.stringify({ width, staleReviewRejected: staleReview === 0 }));
       if (!measureOnly) assert.equal(staleReview, 0, "Closing a quote request must not replace a newly opened Guild screen");
+
+      await control("tab", "members").click();
+      await control("roster", "qa-champion-0").click();
+      await p.waitForFunction(() => health.pending.length === 1);
+      await control("close").click();
+      await p.evaluate(async () => {
+        health.guild.open("hall");
+        health.pending.shift().reject(Error("Late quote failure"));
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+      if (!measureOnly) assert.equal(await p.locator(".guild-window [role=alert]").count(), 0, "A failed closed review cannot put an error on a new screen");
 
       await p.evaluate(async () => {
         document.querySelector(".guild-window").close();

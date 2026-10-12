@@ -101,7 +101,16 @@
     }
     function tick(){if(!current()||!dialog.open||document.hidden)return;dialog.querySelectorAll("[data-guild-deadline]").forEach(el=>{const left=Number(el.dataset.guildDeadline)-now();const text=left>0?time(left)+" "+el.dataset.suffix:"Finishing…";if(el.textContent!==text)el.textContent=text;});}
     async function run(operation){if(busy||!current())return;busy=true;error="";render();try{await operation();}catch(e){if(current())error=e.message||"The Guild could not finish this request. Try again.";}finally{busy=false;if(current())render();}}
-    async function requestReview(input){const sequence=++quoteSequence;clearTimeout(quoteTimer);await run(async()=>{const result=await options.api.getEstateQuote(input);if(!current()||!dialog.open||sequence!==quoteSequence)return;options.accept(result);review=result.quote;pending=null;previous=tab;tab="review";});}
+    async function requestReview(input){
+      const sequence=++quoteSequence;clearTimeout(quoteTimer);
+      await run(async()=>{
+        try{
+          const result=await options.api.getEstateQuote(input);
+          if(!current()||!dialog.open||sequence!==quoteSequence)return;
+          options.accept(result);review=result.quote;pending=null;previous=tab;tab="review";
+        }catch(e){if(current()&&dialog.open&&sequence===quoteSequence)throw e;}
+      });
+    }
     function requestForecast(){clearTimeout(quoteTimer);const sequence=++quoteSequence;forecastQuote=null;forecastError="";forecastLoading=false;const m=chosenMission();if(!plan||!m||party().length<(m.id==="introduction"?1:C.tiers[plan.tier].members)||!plan.leaderId){render();return;}forecastLoading=true;render();quoteTimer=setTimeout(async()=>{try{const response=await options.api.getEstateQuote({...plan});if(!current()||sequence!==quoteSequence||review)return;options.accept(response);forecastQuote=response.quote;}catch(e){if(current()&&sequence===quoteSequence)forecastError=e.message||"Could not check this plan. Refresh to retry.";}finally{if(current()&&sequence===quoteSequence){forecastLoading=false;render();}}},250);}
     function choose(id){const m=data().guildCatalogue.find(m=>m.id===id);if(!m?.available)return;plan={action:"guildMission",missionId:id,tier:0,hours:m.rewardKind==="gear"?8:1,championIds:[],leaderId:"",route:"direct",approach:"balanced",meal:"none",supply:false,objective:false,resource:m.resources[0]||"",officer:"treasury",storyChoice:"record"};forecastQuote=null;forecastError="";partyId="";nav("planning");}
     dialog.addEventListener("input",event=>{const field=event.target.dataset.field;if(field==="partyName")partyName=event.target.value;},{signal:abort.signal});

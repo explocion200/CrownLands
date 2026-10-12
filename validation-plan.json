@@ -82,6 +82,17 @@
         "tools/validate-city-details-browser.js",
         "tools/validate-inner-castle.js"
       ]
+    },
+    {
+      "paths": [
+        "tools/validate-estate-economy-browser.js"
+      ],
+      "reason": "Replace obsolete pre-expansion Guild bank/quest interface assertions with current rarity guidance and use production for the generic pending-refresh action lock. Preserve all estate payment, production, supply, focus and cleanup checks; the source and built Guild suite covers recruitment, parties, mission reviews, training, rewards and retries at the same three sizes. Exercise entry and keyboard return through the current Guild and Alehouse dialogs. Publish restored synthetic scenarios with increasing revisions so the stale-response guard is not bypassed.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-guild-production-ui.js",
+        "tools/validate-guild-health-browser.js"
+      ]
     }
   ]
 }
