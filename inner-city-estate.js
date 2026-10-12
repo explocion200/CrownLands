@@ -195,6 +195,7 @@
   }
   function mount(host, options = {}) {
     const query=selector=>host.querySelector(selector);
+    const queryAll=selector=>[...host.querySelectorAll(selector)];
     const siteStates = createStates(options.fixture);
     const siteLevels = createLevels(siteStates,options.levels);
     host.innerHTML = shell(options,siteStates,siteLevels);
@@ -204,10 +205,10 @@
     let overviewArtBoxes=[],overviewTap=null,cameraFrame=0,cameraBounds=null,labelSizes=null,districtSizes=null;
     let viewportWidth=0,viewportHeight=0;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
-    const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
-    const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
-    const nameplates=[...host.querySelectorAll("[data-estate-nameplate]")];
-    const upgradeTargets=[...host.querySelectorAll(".estate-upgrade-targets button")];
+    const targets=queryAll("[data-inner-castle-building]");
+    const districtTargets=queryAll("[data-estate-district]");
+    const nameplates=queryAll("[data-estate-nameplate]");
+    const upgradeTargets=queryAll(".estate-upgrade-targets button");
     const timers=options.actions?.mountTimers(host);
     const tileImages=[...world.querySelectorAll("[data-terrain-tile]")];
     const sceneryImages=[...world.querySelectorAll("[data-estate-scenery]")];
@@ -264,7 +265,7 @@
       const tx=width/2-camera.x*scale,ty=height/2-camera.y*scale;
       // Read fixed panels before moving the map/targets. Their geometry is
       // independent of the camera; measuring it afterward forces another layout.
-      const panelBoxes=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail,#fixtureControls')].filter(e=>!e.hidden&&(camera.zoom>=2.5||e.id!=="fixtureControls")).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
+      const panelBoxes=queryAll('.estate-camera-controls,.estate-directory,.estate-detail,#fixtureControls').filter(e=>!e.hidden&&(camera.zoom>=2.5||e.id!=="fixtureControls")).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
       if(camera.zoom<2.5&&!districtSizes){
         districtTargets.forEach(target=>{target.hidden=false;});
         districtSizes=new Map(districtTargets.map(target=>{
@@ -451,7 +452,7 @@
       if(presentationChanged){labelSizes=null;paint();}
     }
     if(options.onResource){
-      host.querySelectorAll("[data-estate-resource]").forEach(element=>{
+      queryAll("[data-estate-resource]").forEach(element=>{
         element.setAttribute("role","button");
         listen(element,"click",()=>options.onResource(element.dataset.estateResource));
         listen(element,"keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();options.onResource(element.dataset.estateResource);}});
@@ -460,7 +461,7 @@
     function renderDetail() {
       const b=buildings.find(b=>b.key===selected);
       detail.hidden=!camera.detailOpen||!b;
-      host.querySelectorAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
+      queryAll("[data-estate-directory-building]").forEach(t=>t.setAttribute("aria-current",t.dataset.estateDirectoryBuilding===selected?"true":"false"));
       if(!b){
         detail.querySelector("[data-estate-detail-copy]").replaceChildren();
         detail.querySelector(".estate-site-actions")?.remove();
