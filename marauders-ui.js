@@ -1,3 +1,4 @@
+/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderMarauderBattleReport, renderBossReadiness */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
 const bossReadiness = new Map();

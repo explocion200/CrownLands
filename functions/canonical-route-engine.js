@@ -1,3 +1,4 @@
+/* global self */
 "use strict";
 
 const routeWorkerScope = typeof self === "undefined" ? { postMessage() {} } : self;
