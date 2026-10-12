@@ -2,7 +2,7 @@ const assert = require("assert");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { minifyEstate } = require("./estate-delivery");
+const { minifyEstate: minifyRuntime } = require("./estate-delivery");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -376,9 +376,9 @@ for (const url of staticCacheUrls) {
     continue;
   }
   assert(fs.existsSync(path.join(root, relativePath)), `Precached file ${url} is missing.`);
-  if (relativePath === "inner-city-estate.js") {
+  if (["inner-city-estate.js", "animation-manager.js"].includes(relativePath)) {
     // Installation fetches the same minified bytes delivered by the production build.
-    installPrecacheBytes += Buffer.byteLength(minifyEstate(read(relativePath)), "utf8");
+    installPrecacheBytes += Buffer.byteLength(minifyRuntime(read(relativePath)), "utf8");
     continue;
   }
   installPrecacheBytes += /\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)

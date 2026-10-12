@@ -17722,6 +17722,10 @@ function scheduleCityWorldAnimation(type, snapshot, options = {}) {
     const anchor = getWorldAnimationAnchor(city);
     const targetNode = cityLayer?.querySelector(`[data-city-id="${CSS.escape(snapshot.id)}"]`);
     if (!anchor || !targetNode?.isConnected) return;
+    if (type === "city-capture") {
+      // A delayed capture must not dress a city that has already changed hands again.
+      if (String(city.ownerUid || "") !== options.payload?.nextOwnerUid) return;
+    }
     const eventId = options.id || `${type}:${snapshot.regionId}:${snapshot.id}:${Date.now()}`;
     const nowMs = Date.now();
     seenWorldAnimationEventIds.forEach((expiresAtMs, seenEventId) => {
@@ -17764,6 +17768,7 @@ function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
   if (after.neutralClaimSource === "deed_camp") return null;
   const oldColors = getAnimationFlagColors(before.ownerFlag, before.owner);
   const newColors = getAnimationFlagColors(after.ownerFlag, after.owner);
+  const capturedFlag = after.ownerFlag || (after.owner === "player" ? normalizeFlag(state.flag, after.ownerUid) : null);
   return window.setTimeout(() => {
     scheduleCityWorldAnimation("city-capture", after, {
       id: eventId || `city-capture:${after.regionId}:${after.id}:${after.lastCapturedAtMs}:${after.ownerUid}`,
@@ -17775,6 +17780,10 @@ function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
         oldSecondary: oldColors.secondary,
         newPrimary: newColors.primary,
         newSecondary: newColors.secondary,
+        renderOwnerFlag: element => FlagRenderer.render(element, capturedFlag, {
+          stableKey: after.ownerUid,
+          context: "city-capture",
+        }),
       },
     });
   }, 220);

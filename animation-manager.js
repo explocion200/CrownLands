@@ -45,10 +45,10 @@
     "city-capture": Object.freeze({
       scope: "world",
       intensity: "major",
-      duration: 1350,
+      duration: 4000,
       reducedDuration: 520,
       particles: 8,
-      reducedParticles: 2,
+      reducedParticles: 0,
       maxParticles: 10,
       builder: "buildCityCapture",
     }),
@@ -987,17 +987,52 @@
     }
 
     buildCityCapture(context) {
-      this.createPart(context, "impact");
-      this.createPart(context, "dust");
-      this.createPart(context, "ownership-old");
-      this.createPart(context, "ownership-new");
-      this.createPart(context, "banner");
-      if (context.mode === "full" && !context.event.degraded) this.createPart(context, "fire");
-      const smokeCount = Math.min(context.mode === "reduced" ? 1 : 2, context.particleBudget);
-      for (let index = 0; index < smokeCount; index += 1) {
-        this.createParticle(context, "smoke", index, smokeCount, { distance: 28 + index * 7 });
+      // Keep the clash readable above march badges; shared class ownership cleans
+      // up correctly when simultaneous captures finish or the map changes.
+      this.acquireTargetClass(context.record, context.record.root, "crownlands-capture-active");
+      let size = finiteNumber(context.event.captureSize, 184);
+      const target = context.event.target;
+      const art = target?.querySelector?.(".city-castle, .stronghold-building");
+      const targetRect = target?.getBoundingClientRect?.();
+      const artRect = art?.getBoundingClientRect();
+      const scale = targetRect?.width / target?.offsetWidth;
+      if (artRect?.width > 0 && Number.isFinite(scale) && scale > 0) {
+        const anchor = context.record.sourceAnchor;
+        context.element.style.left = `${anchor.x + (artRect.left + artRect.width / 2 - targetRect.left - targetRect.width / 2) / scale}px`;
+        context.element.style.top = `${anchor.y + (artRect.top + artRect.height / 2 - targetRect.top - targetRect.height / 2) / scale}px`;
+        size = artRect.width / scale;
       }
-      this.fillParticles(context, ["ember"]);
+      size = clamp(size, 32, 640);
+      context.element.style.setProperty("--vfx-size", `${size}px`);
+      const drape = this.createPart(context, "capture-drape");
+      const flag = document.createElement("span");
+      flag.className = "kingdom-flag capture-owner-cloth";
+      const symbol = document.createElement("span");
+      symbol.className = "flag-symbol";
+      flag.appendChild(symbol);
+      flag.style.setProperty("--flag-primary", safeCssValue(context.event.newPrimary) || "#315a8a");
+      flag.style.setProperty("--flag-secondary", safeCssValue(context.event.newSecondary) || "#c69a45");
+      if (typeof context.event.renderOwnerFlag === "function") context.event.renderOwnerFlag(flag);
+      const folds = document.createElement("span");
+      folds.className = "capture-cloth-folds";
+      flag.appendChild(folds);
+      drape.appendChild(flag);
+      if (context.mode === "reduced") return;
+
+      // The approved troop-order sword, separated into two independently swung blades.
+      for (const side of ["left", "right"]) {
+        const sword = this.createPart(context, `capture-sword-${side}`);
+        sword.innerHTML = '<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g stroke="#423d31" stroke-width="1.5" stroke-linejoin="round"><path d="M24 3 28 10 27 30H21L20 10Z" fill="#d8dfd7"/><path d="M24 5V29" stroke="#899b97"/><path d="M16 29 24 31 32 29 33 33 24 34 15 33Z" fill="#bc9550"/><path d="M22 34H26V42H22Z" fill="#74483b"/><path d="M22 37H26M22 40H26" stroke="#c3a675" stroke-width="1"/><path d="M21 42H27L26 46H22Z" fill="#bc9550"/></g></svg>';
+      }
+      this.createPart(context, "capture-contact");
+      this.createPart(context, "capture-dust");
+      this.createPart(context, "capture-pulse");
+      for (let index = 0; index < context.particleBudget; index += 1) {
+        this.createParticle(context, "spark", index, context.particleBudget, {
+          delay: [600, 1020, 1440][index % 3],
+          distance: size * .14,
+        });
+      }
     }
 
     buildCityUpgrade(context) {

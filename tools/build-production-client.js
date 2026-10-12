@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
-const { minifyEstate } = require("./estate-delivery");
+const { minifyEstate: minifyRuntime } = require("./estate-delivery");
 
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "dist");
@@ -11,6 +11,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
+  "castle-capture.css",
   "pickup-placement.js",
   "map-transition-bats.css",
   "crown-payments-ui.js", "crown-payments-ui.css", "crown-payment-return.html",
@@ -74,9 +75,9 @@ function copy(relativeSource, relativeDestination = relativeSource) {
   // the output; keep source files and binary assets untouched.
   if (/\.(?:html|css|js|json|svg|webmanifest|xml|txt)$/i.test(source)) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
-    // Keep the expanded estate UI within its existing delivery budget. Only
+    // Keep estate and capture animation code within the existing delivery budget. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (["inner-city-estate.js", "estate-economy-ui.js"].includes(relativeSource)) text = minifyEstate(text);
+    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js"].includes(relativeSource)) text = minifyRuntime(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }
