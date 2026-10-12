@@ -94,6 +94,8 @@ async function main() {
     await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready'");
     for (const mode of ["test", "live"]) for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      // Auto mode settles asynchronously after resizing; keep each tab comparison in one motion mode.
+      await evaluate(`setAnimationModePreference(${JSON.stringify(viewport.width < 900 ? "reduced" : "full")})`);
       await evaluate(`(${fixture.toString()})(${JSON.stringify(mode)})`);
       await wait("!!document.querySelector('[data-skins-mode=shop]')");
       assert.equal(await evaluate("document.querySelectorAll('[data-skin-earn],[data-crown-payments]').length"), 0, "Skins no longer hosts earning or checkout buttons");
