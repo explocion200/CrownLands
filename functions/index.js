@@ -19202,7 +19202,11 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       };
     }
     const cityRef = cityRefForRegion(regionId, cityId);
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    // Advancing the upgraded city's production clock must also persist the troops
+    // accrued at its old level, even inside the normal checkpoint interval.
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      checkpointRequiredRefs: [cityRef],
+    });
     const cityEntry = getEconomyCityByRef(economy, cityRef);
     if (!cityEntry?.city || getOwnerUid(cityEntry.city) !== uid) {
       throw new HttpsError("permission-denied", "You can only upgrade your own city.");
