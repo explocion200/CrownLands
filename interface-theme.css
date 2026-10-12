@@ -1625,10 +1625,14 @@ input[type="range"] {
   background: var(--cl-iron-panel);
 }
 
-.owner-flag .cl-icon,
-.citadel-city-crown .cl-icon {
+.owner-flag .cl-icon {
   width: .88rem;
   height: .88rem;
+}
+
+.citadel-city-crown .cl-icon {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .citadel-city-crown {

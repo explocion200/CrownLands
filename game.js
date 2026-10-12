@@ -29091,7 +29091,7 @@ function renderCitiesUncached(force = false) {
       ? `<strong class="map-city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</strong>`
       : "";
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
+      ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong></span>`
       : "";
     const visibleGarrison = getVisibleCityGarrisonTroops(city, scoutReport);
     const assembly = getCityRallyAssembly(city);
@@ -29103,6 +29103,7 @@ function renderCitiesUncached(force = false) {
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
+          ${crownBadge}
           <span class="player-city-banner">
             <span class="city-owner-column">
               ${ownerFlag}
@@ -29110,7 +29111,7 @@ function renderCitiesUncached(force = false) {
             </span>
             <span class="player-city-data">
               ${clanTagMarkup}
-              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>${crownBadge}</span>
+              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong></span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
               <span class="city-army-count">${displayedTroops} troops</span>${assemblyLabel}
             </span>
@@ -29119,7 +29120,8 @@ function renderCitiesUncached(force = false) {
       : isSelectedForeign
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
-          ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`}
+          ${crownBadge}
+          ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong></span>`}
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${formatNumber(city.level)}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -29131,6 +29133,7 @@ function renderCitiesUncached(force = false) {
         </span>`
       : `
         <span class="city-label foreign-city-label">
+          ${crownBadge}
           ${rivalOwnerRow}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
           ${clanAlly ? `<span class="foreign-garrison ${garrisonVisibilityClass}">${displayedTroops} troops</span>${assemblyLabel}` : ""}

@@ -7,6 +7,82 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { minifyEstate } = require("./estate-delivery");
 const artifacts = path.resolve(__dirname, "../release-artifacts/citadel-reign-ledger");
 
+async function verifyRulerCrowns(p, { delivery, width, height }) {
+  await p.evaluate(() => {
+    reignQa.mapCities = state.cities;
+    reignQa.mainCityId = state.mainCityId;
+    state.mainCityId = "crown-qa-off-map-main";
+    const cities = getPlayableBaseCitiesByRegion(getActiveMapRegionId()).filter(city => !isStronghold(city)).slice(0, 3).map(createNeutralCityFromBase);
+    if (cities.length !== 3) throw Error("Crown fixture needs three regular cities");
+    const bounds = getActiveMapBounds();
+    state.cities = cities.map((city, index) => ({ ...city, isMainCity: false,
+      x: bounds.left + bounds.width / 2 + (index - 1) * 180, y: bounds.top + bounds.height / 2,
+      owner: index === 0 ? "player" : "enemy", ownerKind: "player",
+      ownerUid: ["viewer", "current", "other"][index],
+      ownerName: ["Viewer", "Current Ruler", "Other Ruler"][index],
+    }));
+    reignQa.crownCities = state.cities.map(city => city.id);
+    selectedSourceId = null; selectedTargetId = null;
+    zoom = 1;
+    const city = state.cities[1];
+    centerOnWorldPoint({ x: city.x, y: city.y - 60 });
+    renderCities(true);
+  });
+  const inspect = () => p.evaluate(() => {
+    const city = state.cities.find(c => c.ownerUid === getCrownCitadelHolderUid());
+    const node = city && cityLayer.querySelector(`[data-city-id="${city.id}"]`);
+    const crown = node?.querySelector(".citadel-city-crown");
+    const box = crown?.getBoundingClientRect(), art = node?.querySelector(".city-castle")?.getBoundingClientRect();
+    const label = crown?.parentElement;
+    const next = label && [...label.children].find(child => child !== crown && child.checkVisibility())?.getBoundingClientRect();
+    return {
+      holder: getCrownCitadelHolderUid(),
+      cityCount: cityLayer.querySelectorAll(".city-node").length, detail: mapDetailLevel,
+      rulerVisible: Boolean(node?.querySelector(".city-ruler-row")?.checkVisibility()),
+      marked: [...cityLayer.querySelectorAll(".citadel-city-crown")].map(c => c.closest("[data-city-id]").dataset.cityId),
+      expected: city?.id, visible: Boolean(crown?.checkVisibility() && box?.width > 0 && box?.height > 0),
+      aboveCity: Boolean(box && art && box.bottom <= art.top + 4),
+      aboveLabel: Boolean(label?.classList.contains("city-label") && next && box.bottom <= next.top + 1),
+      withinViewport: Boolean(box && box.x >= 0 && box.y >= 0 && box.right <= innerWidth && box.bottom <= innerHeight),
+      hasIcon: Boolean(crown?.querySelector(".cl-icon")),
+      pointerEvents: crown && getComputedStyle(crown).pointerEvents,
+    };
+  });
+  for (const [holder, far] of [["current", false], ["viewer", false], ["current", true], ["viewer", true]]) {
+    await p.evaluate(({ holder, far }) => {
+      zoom = far ? 0.5 : 1;
+      const city = state.cities[holder === "viewer" ? 0 : 1];
+      centerOnWorldPoint({ x: city.x, y: city.y - 60 });
+      reignQa.subscriptions[0].handlers.onCitadel({ ...reignQa.snapshot, ownerUid: holder });
+    }, { holder, far });
+    await p.waitForFunction(() => !isCameraInteractionActive());
+    const result = await inspect();
+    assert.equal(result.holder, holder);
+    assert.equal(result.cityCount, 3, "Both former and new holders must remain rendered during handoff");
+    assert.equal(result.detail, far ? "far" : "close");
+    assert.equal(result.rulerVisible, !far, "The crown stays visible even when its ruler's name is collapsed");
+    assert.deepEqual(result.marked, [result.expected], JSON.stringify(result));
+    assert(result.visible && result.aboveCity && result.aboveLabel && result.withinViewport && result.hasIcon, JSON.stringify(result));
+    assert.equal(result.pointerEvents, "none", "The crown must not intercept city input");
+    await p.screenshot({ path: path.join(artifacts, `crown-${holder}-${far ? "far" : "close"}-${delivery}-${width}x${height}.png`) });
+  }
+  await p.evaluate(() => {
+    // Selected foreign labels have separate markup; the crown must survive selection.
+    selectedTargetId = reignQa.crownCities[1];
+    reignQa.subscriptions[0].handlers.onCitadel(reignQa.snapshot);
+  });
+  const selected = await inspect();
+  assert(selected.visible && selected.aboveLabel, JSON.stringify(selected));
+  await p.evaluate(() => {
+    reignQa.subscriptions[0].handlers.onCitadel({ ...reignQa.snapshot, ownerKind: "neutral", ownerUid: null });
+    if (cityLayer.querySelector(".citadel-city-crown")) throw Error("Neutral Citadel retained a ruler crown");
+    state.cities = reignQa.mapCities;
+    state.mainCityId = reignQa.mainCityId;
+    selectedTargetId = null;
+    reignQa.subscriptions[0].handlers.onCitadel(reignQa.snapshot);
+  });
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..");
   const delivered = fs.readFileSync(path.join(root, "dist/stronghold-details-ui.js"), "utf8");
@@ -60,6 +136,10 @@ async function main() {
         reignQa.subscriptions[0].handlers.onCitadel(snapshot);
         if (state.cities.length !== before || state.cities.some(isCrownCitadel)) throw Error("Cross-map Citadel snapshot polluted the active map");
         if (getCrownCitadelHolderUid() !== "current" || !cityOwnerHoldsCrownCitadel({ ownerUid: "current", kind: "city" })) throw Error("Current ruler and city crown were not reconciled");
+      });
+      await verifyRulerCrowns(p, { delivery, width, height });
+      await p.evaluate(() => {
+        const snapshot = reignQa.snapshot;
         state.online.activeRegionId = snapshot.regionId;
         state.activeRegionId = snapshot.regionId;
         state.cities = getPlayableBaseCitiesByRegion(snapshot.regionId).map(createNeutralCityFromBase);
@@ -180,7 +260,7 @@ async function main() {
         ensureRegionDefinitionLoaded = ensure;
         if (onlineCrownCitadelBase || reignQa.subscriptions.length !== 1) throw Error("Cancelled initialization started a listener");
       });
-      console.log(JSON.stringify({ delivery, width, height, currentCitadelSubscription: true, liveRanks: true, staleReads: true, retry: true, neutralTimer: true, layout }));
+      console.log(JSON.stringify({ delivery, width, height, currentCitadelSubscription: true, rulerCrowns: true, liveRanks: true, staleReads: true, retry: true, neutralTimer: true, layout }));
       await browser.close(); browser = null;
     }
     // The isolated map fixture does not serve the public /play/ update probe.
