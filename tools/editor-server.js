@@ -57,6 +57,7 @@ const ROOT_STATIC_FILES = new Set([
   "/instant-economy-actions.js",
   "/index.html",
   "/styles.css",
+  "/castle-capture.css",
   "/world-config.js",
   "/economy-config.js",
   "/ui-layout-config.js",

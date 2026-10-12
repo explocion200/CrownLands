@@ -46,6 +46,7 @@ const STATIC_CACHE_URLS = [
   "/settings-ledger-ui.css?v=20260913-settings-ledger-r1",
   "/assets/icons/settings-ledger.svg",
   "/styles.css?v=20261004-gameplay-smoothness-r1",
+  "/castle-capture.css?v=20261011-battle-drape-r1",
   "/map-transition-bats.css?v=20261005-animated-bats-r1",
   "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
   "/interface-theme.css?v=20260814-readability-r38",

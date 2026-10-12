@@ -6,12 +6,17 @@
       "paths": [
         "animation-manager.js",
         "game.js",
-        "styles.css",
         "tools/build-production-client.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-castle-capture-browser.js"
+        "tools/validate-castle-capture-browser.js",
+        "castle-capture.css",
+        "index.html",
+        "service-worker.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js",
+        "tools/editor-server.js"
       ],
-      "reason": "Integrate the approved three-strike capture battle and roofline flag drape. Check actual saved colors/pattern/crest, all three motion modes, automatic system preference, deduplication, authoritative fresh-event filtering, superseded ownership, active-map guards, zoom-aware art anchoring, temporary layer order and cleanup at desktop and two landscape-mobile sizes. The browser validator runs on both source and the production artifact: animation-manager now uses the existing whitespace/local-name minifier with expression optimization disabled, keeping the unchanged offline install budget. Cover shared animation runtime, flag renderer contracts, city DOM reconciliation and independent capture audio cues. No server, rules, API, economy or authoritative capture outcome changes, so no emulator suite applies.",
+      "reason": "Integrate the approved three-strike capture battle and roofline flag drape. Check actual saved colors/pattern/crest, all three motion modes, automatic system preference, deduplication, authoritative fresh-event filtering, superseded ownership, active-map guards, zoom-aware art anchoring, temporary layer order and cleanup at desktop and two landscape-mobile sizes. The browser validator runs on both source and the production artifact: animation-manager now uses the existing whitespace/local-name minifier with expression optimization disabled, keeping the unchanged offline install budget. Cover shared animation runtime, flag renderer contracts, city DOM reconciliation and independent capture audio cues. No server, rules, API, economy or authoritative capture outcome changes, so no emulator suite applies. Capture styles ship as one dedicated cached stylesheet; build inclusion, manifest fingerprint, development serving and offline precache references are checked without increasing existing entrypoint or cache limits.",
       "tests": [
         "tools/validate-castle-capture-browser.js",
         "tools/validate-animation-system.js",
@@ -21,7 +26,9 @@
       ]
     },
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
       "reason": "Record the user's approved capture animation and player heraldry behavior; retain separate implementation and verified deployment status. Documentation only.",
       "tests": []
     }
