@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
@@ -9,7 +10,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const output = path.resolve(__dirname, "../release-artifacts/castle-capture");
+  const output = path.resolve(__dirname, "../release-artifacts/castle-capture", process.env.CROWNLANDS_BENCHMARK_ROOT ? "built" : "source");
   fs.mkdirSync(output, { recursive: true });
   let session, client;
   const results = [], errors = [];
@@ -118,4 +119,11 @@ async function main() {
     await server.close();
   }
 }
-main().catch(error=>{console.error(error.stack||error.message);process.exitCode=1;});
+main().then(() => {
+  if (process.env.CROWNLANDS_BENCHMARK_ROOT) return;
+  const dist = path.resolve(__dirname, "../dist");
+  assert(fs.existsSync(path.join(dist, "animation-manager.js")), "Build the production client before checking its delivered animation.");
+  const result = spawnSync(process.execPath, [__filename], { stdio: "inherit", windowsHide: true,
+    env: { ...process.env, CROWNLANDS_BENCHMARK_ROOT: dist } });
+  assert.equal(result.status, 0, "The shipped animation must pass the same capture behavior checks.");
+}).catch(error=>{console.error(error.stack||error.message);process.exitCode=1;});

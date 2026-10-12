@@ -7,9 +7,11 @@
         "animation-manager.js",
         "game.js",
         "styles.css",
+        "tools/build-production-client.js",
+        "tools/validate-asset-performance-budgets.js",
         "tools/validate-castle-capture-browser.js"
       ],
-      "reason": "Integrate the approved three-strike capture battle and roofline flag drape. Check actual saved colors/pattern/crest, all three motion modes, automatic system preference, deduplication, authoritative fresh-event filtering, superseded ownership, active-map guards, zoom-aware art anchoring, temporary layer order and cleanup at desktop and two landscape-mobile sizes. Cover the shared animation runtime, flag renderer contracts, city DOM reconciliation and existing independent capture audio cues. No server, rules, API, economy or authoritative capture outcome changes, so no emulator suite applies.",
+      "reason": "Integrate the approved three-strike capture battle and roofline flag drape. Check actual saved colors/pattern/crest, all three motion modes, automatic system preference, deduplication, authoritative fresh-event filtering, superseded ownership, active-map guards, zoom-aware art anchoring, temporary layer order and cleanup at desktop and two landscape-mobile sizes. The browser validator runs on both source and the production artifact: animation-manager now uses the existing whitespace/local-name minifier with expression optimization disabled, keeping the unchanged offline install budget. Cover shared animation runtime, flag renderer contracts, city DOM reconciliation and independent capture audio cues. No server, rules, API, economy or authoritative capture outcome changes, so no emulator suite applies.",
       "tests": [
         "tools/validate-castle-capture-browser.js",
         "tools/validate-animation-system.js",
