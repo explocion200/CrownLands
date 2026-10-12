@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "generate",
+  "transparent_background": true,
+  "derivatives": {
+    "format": "webp",
+    "width": 384,
+    "height": 384,
+    "quality": 84,
+    "alphaQuality": 100
+  },
+  "assets": [
+    {
+      "path": "assets/marauders/solo-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: transparent overworld NPC sprite for the medieval strategy game Crown Lands. Primary request: a marauder raiding party represented by three rugged medieval foot soldiers clustered on one small irregular patch of earth. Full bodies, one prominent hooded axeman and two smaller rough-armored raiders. Painterly ink-and-watercolor game illustration with weathered steel, muted burgundy cloth and earthy brown leather; restrained hand-painted detail. Slightly elevated three-quarter isometric viewpoint suitable for a parchment world map. Crisp readable silhouette even at 72 pixels. Centered compact square composition, comfortable transparent margin, soft grounding shadow confined beneath feet. No buildings or castle, no text, labels, numbers, UI border or opaque backdrop. Genuine transparent background."
+    },
+    {
+      "path": "assets/marauders/boss-v1.webp",
+      "prompt": "Use case: stylized-concept. Asset type: transparent overworld clan boss sprite for the medieval strategy game Crown Lands. Primary request: an imposing medieval marauder warlord in dark steel plate armor, full body, standing with a heavy war hammer and a torn burgundy war banner behind him, accompanied by two subordinate armored bodyguards. The central warlord has a broad, crowned-helmet silhouette that clearly distinguishes a high-level boss from ordinary hooded raiders. Painterly ink-and-watercolor strategy-game illustration, weathered steel, antique gold accents, muted burgundy and earthy leather. Slightly elevated three-quarter isometric viewpoint for a parchment world map. Centered compact square composition on a small irregular patch of earth, whole silhouette and banner visible with transparent margin. Strong shape legible at 96 pixels. No castle, buildings, text, labels, numbers, UI border, opaque backdrop or photographic background. Genuine transparent background."
+    }
+  ]
+}

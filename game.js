@@ -4479,6 +4479,7 @@ function getHoldingTowerComposerTargets(mode, tower) {
 }
 
 function getHoldingTowerTargetType(target) {
+  if (target?.targetType === "marauder") return "marauder";
   if (isHoldingTowerTarget(target)) return "tower";
   if (isRewardCampTarget(target) || target?.campType) return "camp";
   return "city";
@@ -4667,7 +4668,7 @@ async function submitHoldingTowerOrder(tower, mode, shieldConfirmation = null) {
   const targetType = getHoldingTowerTargetType(to);
   const rally = mode === "rally-attack" || mode === "rally-from";
   if (rally && !isRallyObjectiveTarget(to, targetType)) {
-    rejectGameAction("Rallies may target only Holding Towers, Strongholds, or the Crown Citadel.");
+    rejectGameAction("Rallies may target Clan Bosses, Holding Towers, Strongholds, or the Crown Citadel.");
     return;
   }
   const kind = mode === "reinforce" ? "reinforce" : mode === "withdraw" ? "transfer" : "attack";
@@ -10749,7 +10750,7 @@ function normalizeBattleReports(reports) {
       const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
       if (!type) return null;
       const cityId = getKnownCityId(report.cityId || report.targetCityId || report.city?.id) || String(report.cityId || report.targetCityId || report.city?.id || "");
-      const targetType = report.targetType === "tower" || report.scoutReport?.targetType === "tower"
+      const targetType = report.targetType === "marauder" || report.scoutReport?.targetType === "marauder" ? "marauder" : report.targetType === "tower" || report.scoutReport?.targetType === "tower"
         ? "tower"
         : report.targetType === "camp" || report.city?.targetType === "camp" || WORLD_CAMPS_BY_ID.has(cityId)
           ? "camp"
@@ -10757,7 +10758,7 @@ function normalizeBattleReports(reports) {
       const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
       const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
-      const outcome = ["victory", "defeat", "held", "lost", "scout", "raid", "breach", "breached", "damaged"].includes(report.outcome)
+      const outcome = ["victory", "defeat", "held", "lost", "scout", "raid", "breach", "breached", "damaged", "target_unavailable"].includes(report.outcome)
         ? report.outcome
         : fallbackOutcome;
       return {
@@ -10768,6 +10769,11 @@ function normalizeBattleReports(reports) {
         occurredAtMs: normalizeTimestampMs(report.occurredAtMs || report.resolvedAtMs || report.createdAtMs),
         createdAtMs: normalizeTimestampMs(report.createdAtMs),
         cityId,
+        targetSpawnId: String(report.targetSpawnId || ""),
+        marauderLevel: count(report.marauderLevel),
+        staminaRefunded: count(report.staminaRefunded),
+        damageContribution: count(report.damageContribution),
+        itemAwarded: String(report.itemAwarded || ""),
         targetType,
         regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
@@ -10976,7 +10982,7 @@ function getScoutReport(cityId) {
 
 function getScoutReportForTarget(target = null) {
   if (!target?.id) return null;
-  const report = getScoutReport(target.id);
+  const report = getScoutReport(target.targetType === "marauder" ? target.spawnId : target.id);
   if (!report) return null;
   const currentUid = getCurrentOnlineUid();
   const targetOwnerUid = String(
@@ -11514,7 +11520,8 @@ function launchScoutMission(source, target, route, _options = {}) {
     id: attackIdCounter++,
     owner: "player",
     kind: "scout",
-    targetType: campTarget ? "camp" : "city",
+    targetType: getHoldingTowerTargetType(target),
+    targetSpawnId: target.spawnId || "",
     fromId: source.id,
     toId: target.id,
     troops: 1,
@@ -12506,7 +12513,7 @@ function normalizeServerScoutReport(report = null) {
   const troops = Math.max(0, Math.floor(Number(report.troops) || 0));
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
-  const targetType = report.targetType === "tower" || report.towerId
+  const targetType = report.targetType === "marauder" ? "marauder" : report.targetType === "tower" || report.towerId
     ? "tower"
     : report.targetType === "camp" || WORLD_CAMPS_BY_ID.has(String(report.cityId || ""))
       ? "camp"
@@ -12554,11 +12561,13 @@ function mergeServerScoutReport(rawReport = null) {
     ownerFlag: rawReport.scoutReport.ownerFlag || rawReport.opponentFlag,
   });
   if (!scoutReport) return false;
-  const existing = state.scoutReports[rawReport.cityId];
+  const intelKey = rawReport.targetType === "marauder" ? rawReport.targetSpawnId || rawReport.scoutReport.targetSpawnId : rawReport.cityId;
+  if (!intelKey) return false;
+  const existing = state.scoutReports[intelKey];
   const existingTime = normalizeTimestampMs(existing?.scoutedAtMs) || Math.max(0, Number(existing?.scoutedAt) || 0);
   const nextTime = normalizeTimestampMs(scoutReport.scoutedAtMs) || Math.max(0, Number(scoutReport.scoutedAt) || 0);
   if (existing && existingTime >= nextTime) return false;
-  state.scoutReports[rawReport.cityId] = scoutReport;
+  state.scoutReports[intelKey] = scoutReport;
   return true;
 }
 
@@ -16711,6 +16720,8 @@ function disconnectOnlineWorld() {
   stopSeasonalAchievementLifecycle({ clear: true });
   retireActiveOnlineIslandSubscription();
   stopClanRealtimeSubscriptions({ clear: true });
+  CrownlandsStaminaUI.sync({ uid: "" });
+  marauderMaps.clear(); bossReadiness.clear();
   clearOnlineArmyWatchers();
   clearOnlineReinforcementWatcher();
   clearOnlineHeldCampWatcher();
@@ -17107,6 +17118,9 @@ async function startActiveOnlineIslandSubscription(api, islandId, targetRegionId
           nextOnlineState: options.nextOnlineState || null,
           allowWelcomeBack: options.allowWelcomeBack === true,
         });
+      },
+      onMarauders: enemies => {
+        if (isCurrentSubscription()) applyOnlineMarauders(enemies, targetRegionId);
       },
       onCamps: camps => {
         if (!isCurrentSubscription()) return;
@@ -18146,7 +18160,7 @@ function getCampTargetById(campId) {
 }
 
 function getArmyTargetById(targetId) {
-  return cityById(targetId) || getCampTargetById(targetId) || getHoldingTowerVisual(targetId);
+  return cityById(targetId) || getCampTargetById(targetId) || getHoldingTowerVisual(targetId) || getMarauderById(targetId);
 }
 
 function isRewardCampTarget(target) {
@@ -18792,7 +18806,8 @@ function toOnlineArmyMovement(mission) {
     launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind) || mission.launchKind === "rally_join"
       ? mission.launchKind
       : mission.kind || "attack",
-    targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
+    targetType: mission.targetType === "marauder" ? "marauder" : mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
+    targetSpawnId: String(mission.targetSpawnId || ""),
     fromId: mission.fromId,
     toId: mission.toId,
     fromName: from?.name || "",
@@ -19296,7 +19311,8 @@ function normalizeOnlineArmyMovement(raw) {
     retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind) || raw.retargetedFromKind === "rally_join"
       ? raw.retargetedFromKind
       : "",
-    targetType: raw.targetType === "tower" ? "tower" : raw.targetType === "camp" ? "camp" : "city",
+    targetType: ["tower", "camp", "marauder"].includes(raw.targetType) ? raw.targetType : "city",
+    targetSpawnId: String(raw.targetSpawnId || ""),
     fromId: raw.fromId || "",
     toId: raw.toId || "",
     fromName: raw.fromName || "",
@@ -19904,6 +19920,7 @@ function clearOnlineGlobalStatsWatcher() {
 }
 
 function renderCombatTimers() {
+  globalThis.CrownlandsStaminaUI?.tick();
   const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
   const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
   ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs, focusBattleReportTarget);
@@ -20429,7 +20446,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     kind: army.kind,
     launchKind: army.launchKind || army.kind,
     retargetedFromKind: army.retargetedFromKind || "",
-    targetType: army.targetType === "tower" ? "tower" : army.targetType === "camp" ? "camp" : "city",
+    targetType: ["tower", "camp", "marauder"].includes(army.targetType) ? army.targetType : "city",
+    targetSpawnId: String(army.targetSpawnId || ""),
     fromId: army.fromId,
     toId: army.toId,
     fromName: army.fromName || "",
@@ -23720,6 +23738,8 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       ? "transfer"
       : "attack";
   const campTarget = isRewardCampTarget(target);
+  const marauder = target.targetType === "marauder";
+  if (marauder && (!CrownlandsStaminaUI.value() || CrownlandsStaminaUI.value().value < 10)) { CrownlandsStaminaUI.open(); return false; }
   if (kind === "reinforce") {
     if (!usesServerArmyAuthority() || !isClanAllyCity(target)) {
       if (owner === "player") rejectGameAction("Clan reinforcements require a current allied holding.");
@@ -23731,19 +23751,19 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       return false;
     }
   }
-  const mainCityBlockReason = kind === "attack" && !campTarget ? getMainCityAttackBlockReason(target, owner) : "";
+  const mainCityBlockReason = kind === "attack" && !campTarget && !marauder ? getMainCityAttackBlockReason(target, owner) : "";
   if (mainCityBlockReason) {
     if (owner === "player") rejectGameAction(mainCityBlockReason);
     return false;
   }
 
-  const shieldBlockReason = kind === "attack" && !campTarget ? getPeaceShieldAttackBlockReason(target, owner) : "";
+  const shieldBlockReason = kind === "attack" && !campTarget && !marauder ? getPeaceShieldAttackBlockReason(target, owner) : "";
   if (shieldBlockReason) {
     if (owner === "player") rejectGameAction(shieldBlockReason);
     return false;
   }
 
-  const neutralBlockReason = kind === "attack" && !campTarget ? getNeutralCaptureBlockReason(target, owner) : "";
+  const neutralBlockReason = kind === "attack" && !campTarget && !marauder ? getNeutralCaptureBlockReason(target, owner) : "";
   if (neutralBlockReason) {
     if (owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
     return false;
@@ -23766,7 +23786,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     ? normalizeAttackProtectionSnapshot(options.attackProtection)
     : null;
   const retaliationId = kind === "attack" && owner === "player" ? String(options.retaliationId || "") : "";
-  const attackProtection = kind === "attack" && !retaliationId
+  const attackProtection = kind === "attack" && !marauder && !retaliationId
     ? acceptedAttackProtection
       ? acceptedAttackProtection.mode === "normal" ? null : acceptedAttackProtection
       : createAttackProtectionSnapshot(source, target, requestedSend, owner)
@@ -23790,7 +23810,8 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     id: attackIdCounter++,
     owner,
     kind,
-    targetType: campTarget ? "camp" : "city",
+    targetType: getHoldingTowerTargetType(target),
+    targetSpawnId: target.spawnId || "",
     fromId: source.id,
     toId: target.id,
     troops: send,
@@ -24556,6 +24577,10 @@ function renderAll() {
 
 function renderHud() {
   syncCosmeticsSession();
+  globalThis.CrownlandsStaminaUI?.sync({ uid: getCurrentOnlineUid(), api: getOnlineApi(),
+    onWallet: (crowns, revision) => {
+      if (cosmeticState && revision >= cosmeticState.revision) applyCosmeticResult({ state: { ...cosmeticState, crowns, revision } });
+    } });
   renderOnboardingMapTip();
   setTextIfChanged(lordNameText, state.playerName);
   ensureDailyCaptureTracker();
@@ -26993,6 +27018,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
         <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
       </div>
+      ${rally.targetType === "marauder" ? renderBossReadiness(rally) : ""}
       <ul>${participantRows}</ul></div>
       ${controls ? `<footer>${controls}${canJoin ? `<p class="clan-rally-join-hint">${escapeHtml(getClanRallyJoinHint())}</p>` : ""}</footer>` : ""}
     </article>`;
@@ -27043,6 +27069,7 @@ function confirmClanRallyAction(rally, action) {
       ${launching
         ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">These incoming contributions will turn back now:</p>${inboundList}` : ""}`
         : `<p>The creator's troops return to the assembly city. Assembled allies and inbound contributions will travel back normally.</p>`}
+      ${launching && rally.targetType === "marauder" ? renderHuntStamina("Charged to each assembled participant when you launch.") : ""}
       <footer>
         <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
         <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Rally" : "Cancel Rally"}</button>
@@ -27062,6 +27089,7 @@ function confirmClanRallyAction(rally, action) {
       if (modal.open) modal.close();
     });
     modalBody.querySelector("[data-rally-confirm='accept']")?.addEventListener("click", () => {
+      if (launching && rally.targetType === "marauder" && (!CrownlandsStaminaUI.value() || CrownlandsStaminaUI.value().value < 10)) { CrownlandsStaminaUI.open(); return; }
       finish(true);
       if (modal.open) modal.close();
     });
@@ -28921,6 +28949,7 @@ function renderCitiesUncached(force = false) {
     regroupSource = null;
   }
   const visibleBounds = getVisibleWorldBounds();
+  renderMarauders(visibleBounds);
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
   const visibleCamps = WORLD_CAMPS
     .map(camp => getCampTargetById(camp.id) || camp)
@@ -30342,7 +30371,7 @@ function showRewardCampInfoModal(campId) {
 
 function showScoutReportModal(cityId) {
   const city = getArmyTargetById(cityId);
-  const report = getScoutReport(cityId);
+  const report = city?.targetType === "marauder" ? getScoutReportForTarget(city) : getScoutReport(cityId);
   if (!city || !report) {
     rejectGameAction("That scout report is no longer available.");
     if (state) renderAll();
@@ -30639,6 +30668,7 @@ function beginClanReinforcement(targetOrId) {
 }
 
 function isRallyObjectiveTarget(target = {}, targetType = "city") {
+  if (targetType === "marauder") return target.classification === "boss" && target.status === "active";
   if (targetType === "tower") return WORLD_HOLDING_TOWERS.some(tower => tower.id === target?.id);
   return targetType === "city" && isStronghold(target);
 }
@@ -31659,7 +31689,8 @@ async function loadAttackProtectionPreview(source, target) {
       toId: target.id,
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
-      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      targetType: getHoldingTowerTargetType(target),
+      targetSpawnId: target.spawnId || "",
       requestedTroops: Math.max(1, Math.floor(Number(source.troops) || 1)),
       retaliationId: activeRetaliationId,
     });
@@ -31741,6 +31772,7 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
       targetType: getHoldingTowerTargetType(target),
+      targetSpawnId: target.spawnId || "",
       kind: orderKind === "rally_create" ? "attack" : orderKind,
       requestedTroops: safeRequestedTroops,
     });
@@ -31973,6 +32005,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   activeTroopSliderRoute = {
     sourceId: source.id,
     targetId: target.id,
+    targetSpawnId: target.spawnId || "",
     route: cloneRoute(route),
   };
   activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(options.attackProtection);
@@ -32424,6 +32457,7 @@ function submitClanRallyTroopOrder(source, target, route) {
       fromName: source.name,
       toName: target.name,
       targetType: getHoldingTowerTargetType(target),
+      targetSpawnId: target.spawnId || "",
       troops: submittedTroops,
       requestedTroops: submittedTroops,
       path: [],
@@ -32525,6 +32559,9 @@ async function confirmTroopSliderOrder(shieldConfirmation = null) {
     return;
   }
 
+  if (target.targetType === "marauder" && (activeTroopSliderRoute?.targetSpawnId !== target.spawnId || getMarauderById(target.id)?.spawnId !== target.spawnId)) {
+    rejectGameAction("This enemy spawn changed. Reopen its details before sending."); return;
+  }
   const selection = getTroopOrderSelection(getTroopSliderSendLimit(source, target));
   const selectionError = selection?.error || "";
   if (selectionError) {
@@ -33897,6 +33934,7 @@ function renderCityListModal() {
         <p class="cll-summary"><strong>${rosterCountLabel}</strong> cities <i>·</i> <strong>${cityDetailsNumber(cities.length - regularCityCount)}</strong> Strongholds <i>·</i> <strong>${new Set(cities.map(getCityRegionId)).size}</strong> maps</p>
       </div>
       <div class="cll-toolbar" aria-label="City list sorting">
+        <button type="button" data-find-marauders>Find enemies</button>
         <span class="cll-sort-caption">Order by</span>
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
           <span>Level</span><small>${getCityListSortLabel("level")}</small>
@@ -39845,6 +39883,7 @@ function renderLegacyBattleComparison(report = null, siege = null) {
 }
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
+  if (report.targetType === "marauder") return renderMarauderBattleReport(report);
   message ||= report.summary;
   const siege = normalizeCombatFortificationSnapshot(report.fortification);
   const { attacker, defender } = getLegacyBattleSides(report, siege);
@@ -40074,6 +40113,7 @@ async function showBattleReportDetail(reportId) {
 }
 
 function getBattleReportBadge(report) {
+  if (report?.outcome === "target_unavailable") return { label: "Returning", tone: "neutral", icon: "return" };
   if(report.eventKind==="anti_handoff_v2_notice")return{label:/^F/.test(report.summary)?"FINAL WARNING":"HANDOFF WARNING",tone:"defeat"};
   if (isDefenderScoutReport(report)) return { label: "YOU WERE SCOUTED", tone: "scout" };
   if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
@@ -40947,7 +40987,7 @@ function getElementAvoidRect(element, viewRect, padding = 12) {
 
 function getMainCityReturnAvoidRects(viewRect) {
   return [
-    ...document.querySelectorAll(".profile-stack, .profile-action-row, .resource-bar, #quickChat, #chatToggleBtn"),
+    ...document.querySelectorAll(".profile-stack, .profile-action-row, .profile-resources, .resource-bar, #quickChat, #chatToggleBtn"),
     inventoryBtn,
     shopBtn,
     cityListBtn,

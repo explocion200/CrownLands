@@ -38,6 +38,7 @@ const rootFiles = [
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
   "combat-timers-ui.js", "combat-timers-ui.css",
+  "stamina-ui.js", "stamina-ui.css", "marauders-ui.js", "marauders-ui.css",
   "shop-ui.js", "shop-ui.css",
   "quests-ui.js", "quests-ui.css",
   "achievements-ui.js", "achievements-ui.css",
@@ -96,6 +97,7 @@ fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
+copyDirectoryFiles("assets/marauders", relativePath => relativePath.endsWith(".webp"));
 copyDirectoryFiles("assets/guild-master", relativePath => relativePath.endsWith(".webp"));
 copyDirectoryFiles("assets/inner-city-estate", relativePath => /\.(?:webp|svg)$/i.test(relativePath));
 copyDirectoryFiles("assets/clan-buildings", relativePath => relativePath.endsWith(".webp"));
@@ -158,6 +160,7 @@ copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath)
 copy("functions/clanQuestPeriod.js");
 copy("functions/world-travel-network.js");
 copy("functions/cosmetics.js");
+copy("functions/marauder-rules.js");
 copy("functions/playerFlagConfig.js");
 copy("functions/flagRenderer.js");
 copy("functions/clanHeraldryConfig.js");

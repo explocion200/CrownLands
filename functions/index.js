@@ -55,6 +55,11 @@ const {
 } = require("./player-region-spawn.js");
 const COSMETICS = require("./cosmetics.js");
 const { createCosmeticsService } = require("./cosmetics-service.js");
+const MARAUDERS = require("./marauder-rules.js");
+const { createStaminaService } = require("./stamina-service.js");
+const { createMarauderPopulation } = require("./marauder-population.js");
+const { isRegionWalkablePoint } = require("./canonical-route-engine.js");
+const MARAUDER_SEASONAL_CLEARANCE = require("./marauder-seasonal-clearance.json");
 const { createEstateService } = require("./estate-service");
 const { defineSecret } = require("firebase-functions/params");
 const { createCrownPaymentsService } = require("./crown-payments-service");
@@ -150,6 +155,19 @@ const linkedAccountService = LINKED_ACCOUNTS.createService({ db,
   unavailable: () => new HttpsError("unavailable", "Network verification is unavailable. Try again shortly."),
 });
 const cosmeticService = createCosmeticsService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry, assertCurrentPlayerProfile, normalizeFlag: normalizeServerFlag });
+const staminaService = createStaminaService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry,
+  assertCurrentPlayerProfile, cosmeticService,
+  readAvailability: async transaction => isCoreExpansionTopologyActive()
+    && (await transaction.get(db.doc(`marauderPopulation/${getRealmStorageId()}`))).data()?.enabled === true });
+const marauderPopulation = createMarauderPopulation({ db, runTransaction: runTransactionWithInfrastructureRetry,
+  context: () => ({ worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(), storageId: getRealmStorageId() }),
+  activeRegions: async () => {
+    if (!isCoreExpansionTopologyActive()) return new Set();
+    const snap = await coreExpansionStateRef().get();
+    await ensureTravelNetworkContext();
+    return getActiveServerRegionIds(snap.exists ? snap.data() : null);
+  },
+  descriptor: getServerCatalogRegion, layout: getMarauderPlacementLayout, islandId: getOnlineIslandId });
 const estateService = createEstateService({ db, HttpsError, runTransaction: runTransactionWithInfrastructureRetry,
   assertCurrentPlayerProfile, prepareEconomy: prepareEconomyCollection, writeEconomy: writePreparedEconomy,
   economyResponse: createEconomyResponse, normalizeGear: normalizeCommonGear,
@@ -5926,7 +5944,10 @@ function normalizeArmyPayload(data = {}, uid = "") {
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     kind,
     launchKind: ARMY_ORDER_KINDS.includes(raw.launchKind) ? raw.launchKind : kind,
-    targetType: raw.targetType === "tower" || data.targetType === "tower"
+    targetSpawnId: safeString(raw.targetSpawnId || data.targetSpawnId, 96),
+    targetType: raw.targetType === "marauder" || data.targetType === "marauder"
+      ? "marauder"
+      : raw.targetType === "tower" || data.targetType === "tower"
       ? "tower"
       : raw.targetType === "camp" || data.targetType === "camp"
         ? "camp"
@@ -6639,7 +6660,7 @@ function normalizeClanRally(snapshotOrData = null) {
     clanId: safeString(data.clanId, 128),
     leaderUid: safeString(data.leaderUid, 128),
     status: safeString(data.status, 24),
-    targetType: data.targetType === "tower" ? "tower" : data.targetType === "camp" ? "camp" : "city",
+    targetType: ["tower", "camp", "marauder"].includes(data.targetType) ? data.targetType : "city",
     targetId: safeString(data.targetId, 96),
     targetRegionId: normalizeRegionId(data.targetRegionId),
     assemblyType: data.assemblyType === "tower" ? "tower" : "city",
@@ -6655,12 +6676,14 @@ function normalizeClanRally(snapshotOrData = null) {
 }
 
 function isRallyObjectiveTarget(target = {}, targetType = "city") {
+  if (targetType === "marauder") return target.classification === "boss" && target.status === "active";
   if (targetType === "tower") return Boolean(HOLDING_TOWERS.getTowerDefinition(target?.id));
   return targetType === "city" && isStronghold(target);
 }
 
 function rallyTargetRef(rally = {}) {
   if (!rally.targetRegionId || !rally.targetId) return null;
+  if (rally.targetType === "marauder") return marauderRefForRegion(rally.targetRegionId, rally.targetId);
   return rally.targetType === "tower"
     ? holdingTowerRef(rally.targetId)
     : rally.targetType === "camp"
@@ -6872,7 +6895,8 @@ function rallyForClient(rally = {}) {
     status: safeString(rally.status, 24),
     leaderUid: safeString(rally.leaderUid, 128),
     leaderName: normalizePlayerName(rally.leaderName, "Ruler"),
-    targetType: rally.targetType === "tower" ? "tower" : rally.targetType === "camp" ? "camp" : "city",
+    targetType: ["tower", "camp", "marauder"].includes(rally.targetType) ? rally.targetType : "city",
+    targetSpawnId: safeString(rally.targetSpawnId, 96),
     targetId: safeString(rally.targetId, 96),
     targetName: safeString(rally.targetName || rally.targetId, 80),
     targetRegionId: normalizeRegionId(rally.targetRegionId),
@@ -7016,6 +7040,51 @@ function isCurrentProtectedAssaultBreach(
 
 function campRefForRegion(regionId, campId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/camps/${campId}`);
+}
+
+function marauderRefForRegion(regionId, id) {
+  if (!/^marauder_[a-f0-9]{12}_\d{2}$/.test(id)) throw new HttpsError("invalid-argument", "Choose a valid marauder.");
+  return db.doc(`islands/${getOnlineIslandId(regionId)}/marauderCombat/${id}`);
+}
+
+function assertMarauderTarget(target, order, classification) {
+  const slots = isCoreExpansionTopologyActive() ? MARAUDERS.slots(getServerCatalogRegion(order.targetRegionId)) : [];
+  if (!target || target.regionId !== order.targetRegionId || target.status !== "active" || target.spawnId !== order.targetSpawnId
+    || target.worldId !== ONLINE_WORLD_ID || target.resetGeneration !== RESET_GENERATION
+    || target.realmShardId !== getCurrentRealmShardId()
+    || !slots.some(slot => slot.classification === target.classification && slot.slot === target.slot
+      && target.level >= slot.min && target.level <= slot.max)) {
+    throw new HttpsError("failed-precondition", "That enemy is no longer available. Choose its current spawn.");
+  }
+  if (classification && target.classification !== classification) throw new HttpsError("failed-precondition",
+    classification === "solo" ? "Clan bosses require a rally with at least two clan members." : "Solo marauders require an individual army.");
+}
+
+function getMarauderPlacementLayout(regionId) {
+  const descriptor = getServerCatalogRegion(regionId), seed = getAuthoritativeIslandSeed(regionId);
+  const templateId = descriptor.templateRegionId || regionId;
+  const art = (descriptor.artPresentation || getServerCatalogRegion(templateId)?.artPresentation) || {};
+  const imageRects = [
+    ...(art.scenery || []).map(item => ({ x: item.x - item.w / 2, y: item.y - item.h / 2, width: item.w, height: item.h })),
+    ...(art.landmarks || []), ...(MARAUDER_SEASONAL_CLEARANCE.rectangles[templateId] || []),
+  ];
+  const rectangles = imageRects.map(rect => {
+    const a = serverImagePointToWorld(regionId, rect);
+    const b = serverImagePointToWorld(regionId, { x: rect.x + rect.width, y: rect.y + rect.height });
+    return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+  });
+  const structures = [...seed.cities, ...seed.camps].map(city => ({ ...city, clearance: Math.max(132, city.size || 0) }));
+  HOLDING_TOWERS.TOWERS.filter(tower => tower.regionId === regionId).forEach(tower => structures.push({
+    ...serverImagePointToWorld(regionId, { x: tower.reservedX, y: tower.reservedY }), clearance: 350 }));
+  const model = getAuthoritativeRoutePlannerForRegions([regionId]).getModel(regionId);
+  return { bounds: getServerMapBounds(regionId), structures, rectangles,
+    walkable: (point, padding) => isRegionWalkablePoint({ regions: { [regionId]: model.workerRegion } }, point.x, point.y, regionId, padding),
+    accessible: point => {
+      const origin = [...seed.cities].sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
+      if (!origin) return false;
+      try { return Boolean(buildServerGeneratedArmyRoute(origin, point)?.pathLength); }
+      catch { return false; }
+    } };
 }
 
 function getAuthoritativeRewardCampSeed(regionId = "", campId = "") {
@@ -22992,7 +23061,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     order.sourceRegionId,
     order.targetRegionId,
   ]);
-  if (!["city", "tower"].includes(order.targetType)) {
+  if (!["city", "tower", "marauder"].includes(order.targetType)) {
     throw new HttpsError("failed-precondition", "Rallies may target only Holding Towers, Strongholds, or the Crown Citadel.");
   }
   if (order.targetType === "tower" || assemblyType === "tower") assertHoldingTowerWorldActive();
@@ -23009,7 +23078,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       .filter(tower => normalizeRegionId(tower.regionId) === order.targetRegionId)
       .map(tower => tower.id))
     : getServerWorldTargetIds(order.targetRegionId);
-  if (!allowedTargetIds.has(order.toId)) {
+  if (order.targetType !== "marauder" && !allowedTargetIds.has(order.toId)) {
     throw new HttpsError("invalid-argument", "The rally objective is not part of the current Crownlands map.");
   }
   const requestedRallyId = normalizeRallyId(
@@ -23022,7 +23091,9 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
   const sourceGarrisonRef = assemblyType === "tower"
     ? holdingTowerGarrisonRef(order.fromId, uid)
     : null;
-  const targetRef = order.targetType === "tower"
+  const targetRef = order.targetType === "marauder"
+    ? marauderRefForRegion(order.targetRegionId, order.toId)
+    : order.targetType === "tower"
     ? holdingTowerRef(order.toId)
     : cityRefForRegion(order.targetRegionId, order.toId);
   const playerRef = db.doc(`players/${uid}`);
@@ -23079,6 +23150,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     const target = order.targetType === "tower"
       ? normalizeCurrentHoldingTower(targetSnap, order.toId, nowMs)
       : targetSnap.exists ? { id: targetSnap.id, ...targetSnap.data() } : null;
+    if (order.targetType === "marauder") assertMarauderTarget(target, order, "boss");
     if (assemblyType === "tower" ? source.clanId !== clanId : getOwnerUid(source) !== uid) {
       throw new HttpsError("permission-denied", "You can only assemble a rally in your own city or Stronghold.");
     }
@@ -23163,6 +23235,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       assemblyX: safeNumber(source.x, 0),
       assemblyY: safeNumber(source.y, 0),
       targetType: order.targetType,
+      targetSpawnId: order.targetType === "marauder" ? target.spawnId : "",
       targetId: target.id,
       targetName: safeString(target.name || target.id, 80),
       targetRegionId: order.targetRegionId,
@@ -23869,6 +23942,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
     if (!target || !isRallyObjectiveTarget(target, rally.targetType)) {
       throw new HttpsError("failed-precondition", "That location is no longer an eligible rally objective.");
     }
+    if (rally.targetType === "marauder") assertMarauderTarget(target, rally, "boss");
     const targetOwnerUid = getOwnerUid(target);
     const targetOwnerProfileSnap = targetOwnerUid
       ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
@@ -24083,6 +24157,8 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
         movement: null,
       };
     }
+    const staminaChanges = rally.targetType === "marauder"
+      ? await staminaService.prepareChange(transaction, attackPackages.map(p => p.uid), -MARAUDERS.HUNT_COST, nowMs) : [];
     const movement = {
       id: launchOrder.id,
       worldId: ONLINE_WORLD_ID,
@@ -24101,6 +24177,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       rallyParticipantCount: attackPackages.length,
       participantUids: attackPackages.map(participant => participant.uid),
       targetType: rally.targetType,
+      targetSpawnId: rally.targetType === "marauder" ? target.spawnId : "",
+      staminaCommitted: rally.targetType === "marauder",
+      ...(rally.targetType === "marauder" ? { returning: false, marauderLevel: target.level } : {}),
+      marauderOrigin: rally.targetType === "marauder" ? { x: target.x, y: target.y, regionId: rally.targetRegionId } : null,
       sourceType: rally.assemblyType,
       sourceTowerId: rally.assemblyType === "tower" ? rally.assemblyCityId : "",
       fromId: rally.assemblyCityId,
@@ -24135,6 +24215,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       rallyModelVersion: RALLY_MODEL_VERSION,
       serverAuthorityVersion: 3,
     };
+    staminaService.writeChanges(transaction, staminaChanges);
     inboundReturns.forEach(returning => writeRallyJoinMovementCopies(transaction, returning));
     writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
     if (rally.targetType === "tower") {
@@ -24238,8 +24319,58 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   return result;
 });
 
+async function previewMarauderCombat(uid, data) {
+  const order = normalizeAuthoritativeRouteRequest(data);
+  await requireActiveWorldRegionIds([order.sourceRegionId, order.targetRegionId]);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [sourceSnap, targetSnap, profileSnap] = await Promise.all([
+      transaction.get(cityRefForRegion(order.sourceRegionId, order.fromId)),
+      transaction.get(marauderRefForRegion(order.targetRegionId, order.toId)),
+      transaction.get(db.doc(`players/${uid}`)),
+    ]);
+    assertCurrentPlayerProfile(profileSnap.data() || {});
+    if (!sourceSnap.exists || getOwnerUid(sourceSnap.data()) !== uid) throw new HttpsError("permission-denied", "Choose one of your cities.");
+    const target = targetSnap.data();
+    assertMarauderTarget(target, order);
+    const troops = clampInt(order.requestedTroops, 1, Math.max(1, safeNumber(sourceSnap.data().troops, 0)));
+    return { ok: true, attackProtection: null, combatForecastVersion: COMBAT_FORECAST_VERSION,
+      combatForecast: createCombatForecast({ attackerProfile: profileSnap.data(), target, troops }) };
+  }, "previewMarauderCombat", 3, { readOnly: true });
+}
+
+exports.getBossRallyReadiness = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request), clanId = safeString(request.data?.clanId, 128), rallyId = safeString(request.data?.rallyId, 96);
+  if (!clanId || !rallyId || /[/]/.test(clanId + rallyId)) throw new HttpsError("invalid-argument", "Choose a clan rally.");
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [profile, member, snap] = await Promise.all([transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)), transaction.get(clanRallyRef(clanId, rallyId))]);
+    assertCurrentPlayerProfile(profile.data() || {});
+    if (profile.data()?.clanId !== clanId || !member.exists) throw new HttpsError("permission-denied", "Only current clan members can check readiness.");
+    const rally = snap.exists ? normalizeClanRally(snap) : null;
+    if (!rally || rally.targetType !== "marauder") throw new HttpsError("not-found", "Boss rally not found.");
+    const now = Date.now(), participants = normalizeRallyParticipants(rally.participants)
+      .filter(p => [RALLY_PARTICIPANT_ASSEMBLED, RALLY_PARTICIPANT_INBOUND].includes(p.status)).slice(0, RALLY_MAX_PARTICIPANTS);
+    const [states, targetSnap, profiles] = await Promise.all([
+      Promise.all(participants.map(p => staminaService.read(transaction, p.uid, now))),
+      transaction.get(rallyTargetRef(rally)),
+      Promise.all(participants.map(p => transaction.get(db.doc(`players/${p.uid}`)))),
+    ]);
+    let combatForecast = null;
+    if (targetSnap.exists && targetSnap.data().spawnId === rally.targetSpawnId && targetSnap.data().status === "active") {
+      const assembled = participants.map((p, i) => ({ ...p, profile: profiles[i].data() || {} }))
+        .filter(p => p.status === RALLY_PARTICIPANT_ASSEMBLED);
+      const troops = assembled.reduce((sum, p) => sum + p.troops, 0);
+      const attackPower = assembled.reduce((sum, p) => sum + getSnapshottedAttackPower(createAttackCombatSnapshot(p.troops, p.profile), p.troops), 0);
+      if (troops) combatForecast = createCombatForecast({ attackerProfile: profile.data(), target: targetSnap.data(), troops,
+        attackCombatSnapshot: { ...createAttackCombatSnapshot(troops, profile.data()), attackPowerPerTroop: attackPower / troops } });
+    }
+    return { checkedAtMs: now, combatForecast, participants: participants.map((p, index) => ({ uid: p.uid, ready: states[index].state.value >= MARAUDERS.HUNT_COST })) };
+  }, "bossRallyReadiness", 3, { readOnly: true });
+});
+
 exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public", secrets: linkedAccountIpSecrets }, async request => {
   const uid = requireAuth(request);
+  if (request.data?.targetType === "marauder") return previewMarauderCombat(uid, request.data);
   await linkedAccountService.observe(uid, request.rawRequest);
   const data = request.data || {};
   const [sourceRegionId, targetRegionId] = await requireActiveWorldRegionIds([
@@ -24409,7 +24540,7 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
   const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.toRegionId);
   const fromId = safeString(data.fromId || data.sourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const toId = safeString(data.toId || data.targetCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const targetType = data.targetType === "tower" ? "tower" : data.targetType === "camp" ? "camp" : "city";
+  const targetType = data.targetType === "marauder" ? "marauder" : data.targetType === "tower" ? "tower" : data.targetType === "camp" ? "camp" : "city";
   if (!fromId || !toId || fromId === toId) {
     throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
   }
@@ -24421,7 +24552,7 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
     : targetType === "camp"
     ? getServerWorldCampIds(targetRegionId)
     : getServerWorldTargetIds(targetRegionId);
-  if (!allowedTargets.has(toId)) {
+  if (targetType !== "marauder" && !allowedTargets.has(toId)) {
     throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
   }
   return {
@@ -24430,6 +24561,7 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
     fromId,
     toId,
     targetType,
+    targetSpawnId: safeString(data.targetSpawnId, 96),
     kind: data.kind === "rally_join" ? "rally_join" : normalizeMarchKind(data.kind, "attack"),
     requestedTroops: Math.max(1, Math.floor(safeNumber(data.requestedTroops || data.troops, 1))),
   };
@@ -24506,7 +24638,7 @@ function getSnapshottedAttackPower(snapshot = null, troops = 0) {
 }
 
 function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
-  const cityId = safeString(target?.id, 96);
+  const cityId = safeString(target?.targetType === "marauder" ? target.spawnId : target?.id, 96);
   const report = cityId && profile?.scoutReports && typeof profile.scoutReports === "object"
     ? profile.scoutReports[cityId]
     : null;
@@ -24519,10 +24651,10 @@ function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
   const totalDefense = Math.max(0, Math.floor(safeNumber(report.totalDefense, 0)));
   const targetTroops = Math.max(0, Math.floor(safeNumber(report.troops, 0)));
   if (!totalDefense) return { status: "unavailable", report: null };
-  if (!isRewardCamp(target) && Math.floor(safeNumber(report.siegeCombatVersion, 0)) < SIEGE_COMBAT_VERSION) {
+  if (target.targetType !== "marauder" && !isRewardCamp(target) && Math.floor(safeNumber(report.siegeCombatVersion, 0)) < SIEGE_COMBAT_VERSION) {
     return { status: "unavailable", report: null };
   }
-  if (!isRewardCamp(target) && Math.floor(safeNumber(report.defenseCombatVersion, 0)) < DEFENSE_COMBAT_VERSION) {
+  if (target.targetType !== "marauder" && !isRewardCamp(target) && Math.floor(safeNumber(report.defenseCombatVersion, 0)) < DEFENSE_COMBAT_VERSION) {
     return { status: "unavailable", report: null };
   }
   const fortification = Math.floor(safeNumber(report.siegeCombatVersion, 0)) >= SIEGE_COMBAT_VERSION
@@ -24755,7 +24887,7 @@ function createCombatForecast({
     effectiveTroops,
     attackPower: result.attackPower,
     powerRatio: result.ratio,
-    expectedOutcome: result.success && (captureRestriction?.blocked || captureProtectedUntilMs > nowMs) ? "victory_no_capture" : getCombatForecastOutcome(result),
+    expectedOutcome: result.success && (target.targetType === "marauder" || captureRestriction?.blocked || captureProtectedUntilMs > nowMs) ? "victory_no_capture" : getCombatForecastOutcome(result),
     estimatedSurvivors: result.survivors,
     estimatedDefendersLeft: result.defendersLeft,
     estimatedAttackerLosses: result.attackerLosses,
@@ -24783,7 +24915,7 @@ exports.previewArmyRoute = timedCallable(
     if (order.targetType === "tower") assertHoldingTowerWorldActive();
     await requireActiveWorldRegionIds([order.sourceRegionId, order.targetRegionId]);
     const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
-    const targetRef = order.targetType === "tower" ? holdingTowerRef(order.toId) : order.targetType === "camp"
+    const targetRef = order.targetType === "marauder" ? marauderRefForRegion(order.targetRegionId, order.toId) : order.targetType === "tower" ? holdingTowerRef(order.toId) : order.targetType === "camp"
       ? campRefForRegion(order.targetRegionId, order.toId)
       : cityRefForRegion(order.targetRegionId, order.toId);
     const playerRef = db.doc(`players/${uid}`);
@@ -24810,6 +24942,7 @@ exports.previewArmyRoute = timedCallable(
           : missingTargetCamp)
         : { id: targetSnap.id, ...targetSnap.data() };
       if (!target) throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
+      if (order.targetType === "marauder") assertMarauderTarget(target, order);
       if (getOwnerUid(source) !== uid) {
         throw new HttpsError("permission-denied", "You can only preview marches from your own city.");
       }
@@ -26829,7 +26962,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
 
-  if (order.kind === "scout") return launchAutomaticScoutOrder(request, uid, order, nowMs);
+  if (order.kind === "scout" && order.targetType !== "marauder") return launchAutomaticScoutOrder(request, uid, order, nowMs);
+  if (order.targetType === "marauder" && !["attack", "scout"].includes(order.kind)) throw new HttpsError("invalid-argument", "Marauders cannot be occupied or reinforced.");
 
   if (order.targetType === "tower") {
     throw new HttpsError(
@@ -26856,12 +26990,14 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
   const allowedTargetIds = order.targetType === "camp"
     ? getServerWorldCampIds(order.targetRegionId)
     : getServerWorldTargetIds(order.targetRegionId);
-  if (!allowedTargetIds.has(order.toId)) {
+  if (order.targetType !== "marauder" && !allowedTargetIds.has(order.toId)) {
     throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
   }
 
   const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
-  const targetRef = order.targetType === "camp"
+  const targetRef = order.targetType === "marauder"
+    ? marauderRefForRegion(order.targetRegionId, order.toId)
+    : order.targetType === "camp"
     ? campRefForRegion(order.targetRegionId, order.toId)
     : cityRefForRegion(order.targetRegionId, order.toId);
   let armyRefs = [canonicalArmyRef(order.id)];
@@ -26926,6 +27062,9 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       throw new HttpsError("already-exists", "That army order has already been sent.");
     }
 
+    if (order.targetType === "marauder") assertMarauderTarget(target, order, order.kind === "scout" ? null : "solo");
+    const staminaChanges = order.targetType === "marauder" && order.kind === "attack"
+      ? await staminaService.prepareChange(transaction, [uid], -MARAUDERS.HUNT_COST, nowMs) : [];
     const reinforcementCapacitySnap = order.kind === "reinforce"
       && isOrdinaryReinforcementCity(target, order.targetType)
       ? await transaction.get(reinforcementCapacityRef(
@@ -27038,7 +27177,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
       pairState: normalizeAntiFarmPairState({}, nowMs),
     };
-    const neutralCaptureBlockReason = resolvedKind === "attack" && order.targetType !== "camp"
+    const neutralCaptureBlockReason = resolvedKind === "attack" && order.targetType === "city"
       ? getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target)
       : "";
     if (neutralCaptureBlockReason) {
@@ -27065,7 +27204,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       city: target,
       fallback: order.defenderKingPower,
     }));
-    const defenseContext = resolvedKind === "attack"
+    const defenseContext = resolvedKind === "attack" && order.targetType !== "marauder"
       ? await getAuthoritativeDefensePackages(transaction, {
         target,
         targetType: order.targetType,
@@ -27080,7 +27219,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
     if (retaliation && (order.requestedTroops || order.troops) > sourceTroops) {
       throw new HttpsError("failed-precondition", "Not enough troops in the source city. Your retaliation opportunity has not been used.");
     }
-    const attackProtection = resolvedKind === "attack" && !retaliation
+    const attackProtection = resolvedKind === "attack" && order.targetType !== "marauder" && !retaliation
       ? createServerAttackProtectionSnapshot({
         sourceTroops,
         target,
@@ -27101,7 +27240,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
     const attackCombatSnapshot = resolvedKind === "scout"
       ? null
       : createAttackCombatSnapshot(troops, attackerProfile);
-    const launchCombatForecast = resolvedKind === "attack"
+    const launchCombatForecast = resolvedKind === "attack" && order.targetType !== "marauder"
       ? createCombatForecast({
         attackerProfile,
         target,
@@ -27241,6 +27380,10 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       kind: resolvedKind,
       launchKind: resolvedKind,
       targetType: order.targetType,
+      targetSpawnId: order.targetType === "marauder" ? target.spawnId : "",
+      staminaCommitted: staminaChanges.length > 0,
+      ...(order.targetType === "marauder" ? { returning: false, marauderLevel: target.level } : {}),
+      marauderOrigin: order.targetType === "marauder" ? { x: target.x, y: target.y, regionId: order.targetRegionId } : null,
       fromId: order.fromId,
       toId: order.toId,
       sourceRegionId: order.sourceRegionId,
@@ -27291,6 +27434,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       serverAuthorityVersion: 3,
     };
 
+    staminaService.writeChanges(transaction, staminaChanges);
     commitRetaliationLaunch(transaction, retaliation, movement, nowMs);
     let profileOverrides = offensiveShieldCooldownPatch(attackerProfile, uid, target, resolvedKind, nowMs);
     if (resolvedKind === "reinforce") {
@@ -28347,6 +28491,140 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
   }, "resolveHoldingTowerRally");
 }
 
+async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.now() }) {
+  await ensureTravelNetworkContext();
+  // Randomness belongs to the settlement attempt, and is saved with the result.
+  // Transaction retries reuse these rolls; a committed result is never rerolled.
+  const rolls = Array.from({ length: 3 }, () => crypto.randomInt(0, 2 ** 32) / 2 ** 32);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const armyRef = canonicalArmyRef(armyId), armySnap = await transaction.get(armyRef);
+    if (!armySnap.exists) return { ok: true, status: "missing" };
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active") return { ok: true, status: army.status || "resolved" };
+    if (army.returning || army.recalledAtMs) return { ok: true, status: "returning" };
+    if (!isCurrentWorldArmy(army) || army.arrivesAtMs > nowMs) throw new HttpsError("failed-precondition", "Army has not arrived in the current realm.");
+    const earlier = await transaction.get(db.collection("armies").where("targetSpawnId", "==", army.targetSpawnId)
+      .where("status", "==", "active").where("returning", "==", false).where("arrivesAtMs", "<=", nowMs)
+      .orderBy("arrivesAtMs").orderBy(FieldPath.documentId()).limit(1));
+    const first = earlier.docs.find(doc => !doc.data().returning && !doc.data().recalledAtMs);
+    if (first?.id !== armyId) return { ok: true, status: "pending", reason: "earlier-arrival" };
+    const targetRef = marauderRefForRegion(army.targetRegionId, army.toId);
+    const rallyRef = army.rallyAttack ? clanRallyRef(army.rallyClanId, army.rallyId) : null;
+    const [targetSnap, rallySnap] = await Promise.all([transaction.get(targetRef), rallyRef ? transaction.get(rallyRef) : null]);
+    const target = targetSnap.exists ? { id: targetSnap.id, ...targetSnap.data() } : null;
+    const rally = rallySnap?.exists ? normalizeClanRally(rallySnap) : null;
+    if (army.rallyAttack && (!rally || rally.armyId !== armyId || rally.status !== RALLY_STATUS_LAUNCHED)) {
+      throw new HttpsError("failed-precondition", "The rally state is unavailable for this army.");
+    }
+    const snapshot = normalizeAttackCombatSnapshot(army.attackCombatSnapshot);
+    const participants = rally ? getRallyAttackPackages(rally) : [{ uid: army.ownerUid, ownerName: army.ownerName,
+      ownerFlag: army.ownerFlag || null, sourceId: army.fromId, sourceName: army.fromName, sourceRegionId: army.sourceRegionId,
+      troops: army.troops, effectivePower: getSnapshottedAttackPower(snapshot, army.troops) || 0,
+      fieldMedicsPercent: snapshot?.casualtyRecovery?.combinedPercent || 0,
+      fieldMedicsSkillPercent: snapshot?.casualtyRecovery?.fieldMedicsPercent || 0,
+      casualtyGearPercent: snapshot?.casualtyRecovery?.gearPercent || 0,
+      casualtyGearItems: snapshot?.casualtyRecovery?.items || [], attackGearItems: snapshot?.attackGearItems || [] }];
+    if (!participants.length || participants.length > RALLY_MAX_PARTICIPANTS
+      || new Set(participants.map(p => p.uid)).size !== participants.length) throw new HttpsError("failed-precondition", "Invalid hunt participants.");
+    const rallyStateRef = rally ? clanRallyStateRef(rally.clanId) : null;
+    const [rallyState, economies, origins] = await Promise.all([
+      rallyStateRef ? transaction.get(rallyStateRef) : null,
+      Promise.all(participants.map(p => prepareEconomyCollection(transaction, p.uid, nowMs, { checkpointWriteBudget: 0 }))),
+      Promise.all(participants.map(p => transaction.get(cityRefForRegion(p.sourceRegionId, p.sourceId)))),
+    ]);
+    let invalid = false;
+    try { assertMarauderTarget(target, army, army.kind === "scout" ? null : rally ? "boss" : "solo"); }
+    catch (error) { if (error.code !== "failed-precondition") throw error; invalid = true; }
+    const isScout = army.kind === "scout";
+    const refund = invalid && army.staminaCommitted === true;
+    const staminaChanges = refund ? await staminaService.prepareChange(transaction, participants.map(p => p.uid), MARAUDERS.HUNT_COST, nowMs) : [];
+    const troops = participants.reduce((total, p) => total + p.troops, 0);
+    const attackPower = participants.reduce((total, p) => total + p.effectivePower, 0);
+    const result = invalid || isScout ? { success: false, attackerLosses: 0, survivors: troops, defenderLosses: 0 }
+      : calculateCombatResult(troops, target, null, null, { targetType: "marauder", siegeCombatVersion: 0,
+        defensePower: target.troops, attackPower, nowMs });
+    const outcome = invalid ? "target_unavailable" : isScout ? "scout" : result.success ? "victory" : "defeat";
+    const loot = result.success ? MARAUDERS.rewards(target.level, target.troops,
+      participants.map(p => ({ uid: p.uid, attackPower: p.effectivePower })), rolls) : null;
+    const allocations = allocateRallyAttackerLosses(participants, result.attackerLosses);
+    const returns = [], reports = [], patches = [];
+    const encounter = { id: army.toId, name: army.toName, regionId: army.targetRegionId,
+      ...(army.marauderOrigin || {}), targetType: "marauder" };
+    // All reads above; the battle, each reward, and every return commit together.
+    allocations.forEach(participant => {
+      const index = participants.findIndex(p => p.uid === participant.uid);
+      const economy = economies[index], profile = economy.profileAfter;
+      const progress = buildPlayerProgressPatch(profile, { gold: loot?.gold[participant.uid] || 0,
+        xp: capBattleXpForHeroLevel(loot?.xp[participant.uid] || 0, profile) });
+      const levelTroops = creditLevelUpTroopsToMainCity(economy, profile, progress.levelTroopReward, nowMs);
+      finalizeLevelUpReward(progress, levelTroops);
+      const recovery = creditLevelUpTroopsToMainCity(economy, profile,
+        Math.floor(participant.losses * Math.min(COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT, participant.fieldMedicsPercent || 0) / 100), nowMs);
+      const shopItems = { ...economy.shopItems };
+      if (loot?.item && loot.recipientUid === participant.uid) shopItems[loot.item] = (shopItems[loot.item] || 0) + 1;
+      if (refund && army.swiftMarchUsedAtMs && participant.uid === army.ownerUid) shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = (shopItems[SWIFT_MARCH_ORDER_ITEM_ID] || 0) + 1;
+      const origin = origins[index]?.exists ? { id: origins[index].id, ...origins[index].data(), regionId: participant.sourceRegionId } : null;
+      const movement = participant.survivors > 0 ? createRallyReturnMovement({ rally: rally || {}, participant,
+        source: encounter, destinationEntry: getRallyReturnDestination(economy, profile, participant, origin), economy, profile,
+        nowMs, reason: invalid ? "marauder_unavailable" : "marauder_survivors", movementId: `hunt_return_${crypto.createHash("sha256").update(`${armyId}|${participant.uid}`).digest("hex").slice(0, 40)}` }) : null;
+      const patch = { character: progress.character, gold: progress.gold, goldFloat: progress.goldFloat, shopItems,
+        ...(rally ? { committedRallyTroops: Math.max(0, getProfileCommittedRallyTroops(profile) - participant.troops), rallyResetGeneration: RESET_GENERATION } : {}) };
+      const scoutReport = isScout && !invalid ? { targetType: "marauder", targetSpawnId: target.spawnId,
+        cityId: target.id, regionId: target.regionId, ownerUid: "", level: target.level,
+        troops: target.troops, totalDefense: target.troops, baseTotalDefense: target.troops, troopDefense: target.troops,
+        baseDefensePowerPerTroop: 1, wallDefense: 0, scoutedAtMs: nowMs, expiresAtMs: nowMs + SCOUT_REPORT_SECONDS * 1000 } : null;
+      const report = { ...makeReport({ id: `hunt_${armyId}_${participant.uid}`, uid: participant.uid,
+        type: isScout ? "scout" : "attack", outcome, city: encounter, opponentName: army.toName,
+        sentTroops: participant.troops, troopCount: invalid ? 0 : target?.troops || 0, totalDefense: invalid ? 0 : target?.troops || 0,
+        result: { ...result, attackerLosses: participant.losses, survivors: participant.survivors },
+        summary: invalid ? `The enemy was unavailable. Your army is returning.${refund ? " 10 stamina refunded." : ""}`
+          : isScout ? `Scout revealed ${target.troops.toLocaleString()} defenders.`
+          : `${result.success ? "Victory" : "Defeat"}: ${participant.losses.toLocaleString()} troops lost. +${progress.goldAwarded.toLocaleString()} Gold, +${progress.xpAwarded.toLocaleString()} XP.`,
+        scoutReport, xpAwarded: progress.xpAwarded, goldAwarded: progress.goldAwarded, goldAfter: progress.gold,
+        characterAfter: progress.character, levelUpReward: progress.levelUpReward, troopsAwarded: levelTroops?.credited || 0,
+        fieldMedicsRecovered: recovery?.credited || 0, casualtyRecovery: createBattleCasualtyRecoverySnapshot({
+          profile, losses: participant.losses, recoveredTroops: recovery?.credited || 0,
+          fieldMedicsPercent: participant.fieldMedicsSkillPercent || 0, casualtyGearPercent: participant.casualtyGearPercent || 0,
+          casualtyGearItems: participant.casualtyGearItems || [], combinedRecoveryPercent: participant.fieldMedicsPercent || 0 }), nowMs }),
+        targetType: "marauder", targetSpawnId: army.targetSpawnId, marauderLevel: army.marauderLevel || target?.level || 0,
+        staminaRefunded: refund ? MARAUDERS.HUNT_COST : 0, itemAwarded: loot?.recipientUid === participant.uid ? loot.item : null,
+        damageContribution: loot?.damage[participant.uid] || 0 };
+      if (movement) { returns.push(movement); writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true }); }
+      writePreparedEconomy(transaction, economy, patch, [], { excludeArmyIds: [armyId], addActiveArmies: movement ? [movement] : [], nowMs });
+      writeReport(transaction, participant.uid, report, economy.profileSnap, patch);
+      // NPC IDs are slot-local; scout intel is keyed by immutable spawn identity.
+      if (scoutReport) writeScoutReport(transaction, participant.uid, army.targetSpawnId, scoutReport, economy.profileSnap);
+      reports.push(report); patches.push({ uid: participant.uid, ...patch });
+    });
+    staminaService.writeChanges(transaction, staminaChanges);
+    if (!invalid && !isScout) {
+      const status = result.success ? "defeated" : "active";
+      const respawnAtMs = result.success ? nowMs + (target.classification === "boss" ? 30 : 2) * 60000 : 0;
+      transaction.set(targetRef, { troops: result.defendersLeft, status, respawnAtMs, lastBattleId: armyId,
+        ...(loot ? { loot, defeatedByArmyId: armyId } : {}), updatedAtMs: nowMs }, { merge: true });
+      if (result.success) transaction.set(db.doc(`islands/${getOnlineIslandId(army.targetRegionId)}/marauders/${army.toId}`),
+        { status, respawnAtMs }, { merge: true });
+    }
+    if (rally) {
+      releaseActiveRallySlot(transaction, rallyStateRef, rallyState?.data() || {}, rally.id, nowMs);
+      transaction.set(rallyRef, { status: RALLY_STATUS_RESOLVED, outcome, resolvedAtMs: nowMs,
+        participants: normalizeRallyParticipants(rally.participants).map(p => ({ ...p,
+          status: returns.some(m => m.ownerUid === p.uid) ? RALLY_PARTICIPANT_RETURNING : RALLY_PARTICIPANT_RETURNED })) }, { merge: true });
+    }
+    transaction.create(db.doc(`marauderBattles/${armyId}`), {
+      worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
+      armyId, targetSpawnId: army.targetSpawnId, regionId: army.targetRegionId, outcome, loot,
+      participants: participants.map(p => ({ uid: p.uid, troops: p.troops, attackPower: p.effectivePower })),
+      result, staminaRefunded: refund, settledAtMs: nowMs,
+    });
+    const publicResult = { kind: army.kind, targetType: "marauder", outcome, targetSpawnId: army.targetSpawnId };
+    armyRefsForRegions(army.viewRegionIds || army.routeRegionIds, armyId).forEach(ref => transaction.set(ref,
+      { status: "resolved", resolvedAtMs: nowMs, result: publicResult, updatedAt: FieldValue.serverTimestamp() }, { merge: true }));
+    return { ok: true, status: "resolved", ...publicResult, reports: reports.filter(r => r.uid === callerUid),
+      movements: returns.filter(m => m.ownerUid === callerUid), currentUser: patches.find(p => p.uid === callerUid) || null };
+  }, "resolveMarauderArmy");
+}
+
 async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
   await ensureTravelNetworkContext();
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
@@ -28356,6 +28634,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (marker.kind === "scout") OPERATION_TIMING.scout({
       scoutStage: "arrival", scoutSourceType: marker.sourceType || "city", scoutTargetType: marker.targetType || "city",
     });
+    if (marker.targetType === "marauder" && !marker.returning && !marker.recalledAtMs) {
+      return resolveMarauderArmyById({ armyId, callerUid, nowMs });
+    }
     if (marker.rallyAttack === true && marker.targetType === "tower") {
       return resolveHoldingTowerRallyById({ armyId, callerUid, nowMs });
     }
@@ -35548,6 +35829,12 @@ exports.maintainGameServer = onSchedule({
   });
 });
 
+exports.maintainMarauders = onSchedule({ region: "us-central1", schedule: "every 1 minutes", timeZone: "Etc/UTC",
+  maxInstances: 1, timeoutSeconds: 180, memory: "512MiB" }, async () => {
+  const results = await runForCurrentRealmShards(() => marauderPopulation.maintain(Date.now()));
+  console.log("Marauder population maintenance", { results });
+});
+
 exports.maintainInactivePlayers = onSchedule({
   region: "us-central1",
   schedule: "every 1 hours",
@@ -35876,6 +36163,8 @@ exports.getGuildReports = onCall({ region: "us-central1", maxInstances: 20, invo
 
 // Account cosmetics are permanent and never part of seasonal economy initialization.
 exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));
+exports.getStaminaState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => staminaService.load(requireAuth(request)));
+exports.refillStamina = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => staminaService.purchase(requireAuth(request), request.data || {}));
 exports.purchaseCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.purchase(requireAuth(request), request.data || {}));
 exports.equipCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.equip(requireAuth(request), request.data || {}));
 

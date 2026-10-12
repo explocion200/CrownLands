@@ -81,6 +81,7 @@
     return shell(route, overview + fortification, timing);
   }
   function renderIntel(m) {
+    if (m.report.targetType === "marauder") return renderMarauderScoutReport(m);
     if (m.report.targetType === "tower" || m.city.targetType === "tower") return renderTowerIntel(m);
     const { city, report, rewardCampTarget: camp, siege } = m;
     const route = { cityId: city.id, cityName: city.name, regionId: report.regionId || getCityRegionId(city) };

@@ -673,4 +673,4 @@ class RoutePriorityQueue {
 }
 
 
-module.exports = Object.freeze({ calculateRoute, normalizeConstants });
+module.exports = Object.freeze({ calculateRoute, normalizeConstants, isRegionWalkablePoint });

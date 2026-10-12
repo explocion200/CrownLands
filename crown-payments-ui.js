@@ -29,7 +29,7 @@
       }
       for (const pack of session.packs) {
         const card = document.createElement("article"); card.className = "crown-pack";
-        card.innerHTML = `<img src="assets/optimized/crown-coin-96x96-34224e7d7fb4.webp" width="96" height="96" alt="Crowns" draggable="false"><h2>${escape(pack.crowns.toLocaleString())} Crowns</h2><p>${session.mode === "live" ? "One-time purchase · Cosmetics only" : "Sandbox only · No usable Crowns"}</p><strong class="crown-pack-price">${escape(money(pack))} ${escape(pack.currency.toUpperCase())}</strong><button type="button" data-crown-checkout>${session.mode === "live" ? "Buy" : "Test checkout"}</button>`;
+        card.innerHTML = `<img src="assets/optimized/crown-coin-96x96-34224e7d7fb4.webp" width="96" height="96" alt="Crowns" draggable="false"><h2>${escape(pack.crowns.toLocaleString())} Crowns</h2><p>${session.mode === "live" ? "One-time purchase · Crowns" : "Sandbox only · No usable Crowns"}</p><strong class="crown-pack-price">${escape(money(pack))} ${escape(pack.currency.toUpperCase())}</strong><button type="button" data-crown-checkout>${session.mode === "live" ? "Buy" : "Test checkout"}</button>`;
         card.querySelector("button").addEventListener("click", () => {
           if (current !== session) return;
           if (!session.request && (!session.order || terminal(session.order))) session.selected = pack.id;
@@ -50,7 +50,7 @@
       : order ? "Payment has not been confirmed. Check its status or continue the same checkout." : "";
     session.dialog.innerHTML = `<header><h2>${live ? "Buy Crowns" : "Buy Crowns — test checkout"}</h2><button type="button" data-crown-close aria-label="Close Crown checkout">Close</button></header>
       ${live ? `<p class="crown-purchase-notice">One-time purchase. The displayed US-dollar price includes any applicable tax. Crowns cannot be transferred or exchanged for money.</p><p>Refund requests are reviewed manually. Contact <a href="mailto:crownlandsmail@gmail.com">crownlandsmail@gmail.com</a>. Read our <a href="https://playcrownlands.com/terms.html#crown-purchases" target="_blank" rel="noopener">purchase terms</a> and <a href="https://playcrownlands.com/privacy.html#payments" target="_blank" rel="noopener">privacy policy</a>.</p>` : `<p class="crown-test-notice">Sandbox only. No real money is charged and no usable Crowns are granted.</p>`}
-      <p>Crowns are for cosmetics. Checkout opens in a separate tab so you can return to your game.</p>
+      <p>Crowns buy cosmetics and stamina refills. A full stamina refill costs 30 Crowns, once per UTC day when hunting is available. Checkout opens in a separate tab so you can return to your game.</p>
       <label>${live ? "Crown pack" : "Test Crown pack"}<select data-crown-pack ${pending || session.busy ? "disabled" : ""}>${session.packs.map(pack => `<option value="${escape(pack.id)}" ${pack.id === selected ? "selected" : ""}>${pack.crowns.toLocaleString()} Crowns — ${escape(money(pack))}</option>`).join("")}</select></label>
       ${order ? `<p class="crown-order-reference">${live ? "Order" : "Test order"}: ${escape(order.orderId)}</p>` : ""}
       <p role="status" aria-live="polite">${escape(session.error || message)}</p>
