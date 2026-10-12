@@ -1,33 +1,22 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f2a019bce1e3412d742c7dae4732cb8be27b94fa",
+  "baseCommit": "298741b5013dd9ee12f8660bab9e438b370e8c72",
   "coverage": [
     {
       "paths": [
-        "assets/icons/citadel-crown-r1.webp",
-        "docs/art-sources/citadel-crown/citadel-crown-r1.png",
-        "game.js",
-        "interface-theme.css",
-        "kingdom-ledgers-ui.js",
-        "styles.css",
-        "tools/generate-release-manifest.js",
-        "tools/validate-citadel-reign-browser.js"
+        "functions/index.js",
+        "functions/test/emulator-first-time-onboarding.js"
       ],
-      "reason": "Replace only the Map Atlas Citadel crest and current holder's city marker with one transparent painted crown. Check real image decoding and alpha, shared asset identity, production byte parity and bounded payload; include the new WebP in the release fingerprint. Existing Citadel browser coverage verifies own/foreign holders, selection, handoff, neutral removal, close/far zoom and input transparency at desktop and two landscape-mobile sizes. Map picker gestures and live Atlas frame coverage protect the shared decorative renderer, adjacent Stronghold icons, Clan Tower flags and camera interactions. Production artifact and asset budget gates run as part of prepare-pr. No backend, world topology, current-realm data, ownership rules or server contracts change; no emulator suites are needed.",
+      "reason": "Require the upgraded city to checkpoint accrued troops and their fractional remainder before its new level advances production time. Reuse the existing mandatory-checkpoint mechanism; only upgradeCity changes. Current monthly-shared Core emulator cases cover main and off-map exact upgrades, MAX, persisted troops versus the response and all power projections, duplicate replay and authoritative identity rebuild. Existing upgrade-mode and economy-concurrency suites protect rejection, retries, Gold, XP and level-up rewards. Focused validators cover shared troop accounting, progression/rewards and client upgrade reconciliation; existing desktop/mobile King Power browser cases protect the unchanged display consumers. No UI, balance, formula, season or production data migration changes. Production build and asset gates run through prepare-pr.",
       "tests": [
-        "tools/validate-citadel-reign-browser.js",
-        "tools/validate-clan-tower-atlas-browser.js",
-        "tools/validate-map-picker-input.js",
-        "tools/validate-map-feature-indicators.js"
+        "tools/validate-king-power.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-king-power-colors-browser.js",
+        "functions/test/emulator-first-time-onboarding.js",
+        "functions/test/emulator-city-upgrade-modes.js",
+        "functions/test/emulator-economy-concurrency.js"
       ]
-    },
-    {
-      "paths": [
-        "docs/art-sources/citadel-crown/README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "reason": "Record the owner's explicitly requested art direction, the built-in generation prompt and the preserved-alpha delivery process. The specification marks the artwork as pending merge and authorized deployment; gameplay rules are unchanged. Prose needs review only, while the artwork and both consumers are covered above.",
-      "tests": []
     }
   ]
 }

@@ -391,10 +391,62 @@ async function main() {
   assert(Number(arrivedTarget.troops) >= 150,
     "The completed multi-map transfer did not deliver its troops to the destination.");
 
+  // An upgrade between lazy checkpoints must save production at the old level
+  // before advancing its clock. Exercise both main/off-map cities in the live topology.
+  for (const scenario of [
+    { ref: cityRef, regionId: claim.mainRegionId, mode: "exact", levels: 1 },
+    { ref: targetCityRef, regionId: targetRegionId, mode: "exact", levels: 5 },
+    { ref: cityRef, regionId: claim.mainRegionId, mode: "max", levels: 0 },
+  ]) {
+    const checkpointAtMs = Date.now() - 60_000;
+    await profileRef.set({ gold: 100_000_000, goldFloat: 100_000_000,
+      economyUpdatedAtMs: checkpointAtMs, identitySyncVersion: 0 }, { merge: true });
+    for (const ref of [cityRef, targetCityRef]) {
+      await ref.set({ level: 1, investedGold: 0, troops: 1_000, troopFloat: 1_000.375,
+        productionUpdatedAtMs: ref.path === scenario.ref.path ? checkpointAtMs : checkpointAtMs - 300_000,
+      }, { merge: true });
+    }
+    const request = { cityId: scenario.ref.id, regionId: scenario.regionId,
+      mode: scenario.mode, levels: scenario.levels, requestId: `checkpoint_${crypto.randomUUID()}`,
+      ...clientIdentity };
+    const result = await callFunction("upgradeCity", secondSession.token, request);
+    const [savedCity, savedOther, savedStats, savedProfile, savedBoard] = await Promise.all([
+      scenario.ref.get(), (scenario.ref.path === cityRef.path ? targetCityRef : cityRef).get(),
+      statsRef.get(), profileRef.get(), leaderboardRef.get(),
+    ]);
+    const stored = savedCity.data();
+    const responseCity = result.cityUpdates.find(update => update.id === scenario.ref.id
+      && update.regionId === scenario.regionId);
+    assert(stored.productionUpdatedAtMs - checkpointAtMs < 300_000,
+      "The regression did not exercise an upgrade inside the five-minute checkpoint interval.");
+    assert(stored.troops > 1_000 && stored.troopFloat > 1_000.375,
+      "The upgrade advanced production time without saving accrued troops.");
+    assert(stored.troops === Math.floor(stored.troopFloat)
+      && stored.troops === responseCity?.troops && stored.troopFloat === responseCity?.troopFloat,
+    "Saved upgrade troops/fractions disagree with the response, including any level-up reward.");
+    assert(stored.productionUpdatedAtMs === responseCity.productionUpdatedAtMs,
+      "The upgrade response and saved city use different production checkpoints.");
+    const totalTroops = stored.troops + savedOther.data().troops;
+    assert(savedStats.data().totalCityTroops === totalTroops
+      && savedStats.data().totalMilitaryTroops === totalTroops,
+    "Upgrading a city counted troops that were not saved in the same transaction.");
+    for (const power of [savedStats.data().kingPower, savedProfile.data().kingPower,
+      savedBoard.data().kingPower, result.globalStats?.kingPower]) {
+      assert(power === totalTroops * 2, "City upgrade published inconsistent King Power.");
+    }
+    const replayed = await callFunction("upgradeCity", secondSession.token, request);
+    const replayedCity = (await scenario.ref.get()).data();
+    assert(replayed.replayed === true && replayedCity.troopFloat === stored.troopFloat
+      && replayedCity.level === stored.level, "Replaying an upgrade credited troops or levels twice.");
+    const rebuilt = await callFunction("syncPlayerIdentity", secondSession.token, clientIdentity);
+    assert(rebuilt.unchanged !== true && rebuilt.globalStats?.kingPower === totalTroops * 2,
+      "Rebuilding King Power after an upgrade changed the committed troop total.");
+  }
+
   console.log(
     `First-time onboarding passed: auth create/login, required records, Layer 1 ${claim.mainRegionId}, `
     + "100 Gold, Level-1 city with 1,000 troops, matching stats, rules, refresh, logout/login, progress-preserving recovery, "
-    + `and an uncapped ${Math.round(preview.durationMs / 1000)}s cross-map march.`,
+    + `an uncapped ${Math.round(preview.durationMs / 1000)}s cross-map march, and atomic upgrade troop/King Power checkpoints.`,
   );
 }
 
