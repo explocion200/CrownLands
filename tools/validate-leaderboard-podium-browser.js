@@ -28,9 +28,41 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&"+params});
   await ready('document.documentElement?.dataset.ledgerQa==="ready"');
  };
- for(const [width,height] of [[1366,820],[844,390],[568,320]]){
+ const inspectClans = async width => {
+  const layout = await evaluate(`(() => {
+   const panel=document.querySelector('[data-leaderboard-panel="clans"]');
+   const shields=[...panel.querySelectorAll('.clan-leaderboard-shield-link')].filter(n=>n.getBoundingClientRect().width);
+   const rows=[...panel.querySelectorAll('.leaderboard-list>.clan-leaderboard-row')];
+   const standing=panel.querySelector('.leaderboard-standing'),identity=standing.querySelector('.leaderboard-standing-identity').getBoundingClientRect();
+   const fits=(inner,outer)=>inner.left>=outer.left-1&&inner.right<=outer.right+1&&inner.top>=outer.top-1&&inner.bottom<=outer.bottom+1;
+   return {
+    shieldCount:shields.length,
+    undersized:shields.filter(n=>{const b=n.getBoundingClientRect(),s=n.querySelector('.clan-heraldry-v2').getBoundingClientRect();return s.width<b.width*.9||s.height<b.height*.9}).length,
+    rowOverlaps:rows.filter(r=>{const b=r.querySelector('.clan-leaderboard-shield-link'),s=b.getBoundingClientRect(),n=r.querySelector('.leaderboard-ruler').getBoundingClientRect(),p=r.querySelector('.leaderboard-power').getBoundingClientRect(),m=b.querySelector('.season-decoration-mark')?.getBoundingClientRect();return s.right>n.left||m?.right>n.left||n.right>p.left}).length,
+    joinedMembers:rows.filter(r=>{const name=r.querySelector('.clan-leaderboard-name').getBoundingClientRect(),meta=r.querySelector('.leaderboard-mobile-meta').getBoundingClientRect();return meta.top<name.bottom-1}).length,
+    decorations:panel.querySelectorAll('.season-decoration-mark').length,
+    clippedArtwork:shields.filter(n=>!fits(n.querySelector('svg').getBoundingClientRect(),n.getBoundingClientRect())).length,
+    namesFit:[...panel.querySelectorAll('.clan-leaderboard-row .leaderboard-ruler')].every(n=>n.scrollWidth<=n.clientWidth+1),
+    standingFits:identity.top>=standing.querySelector(':scope>strong').getBoundingClientRect().bottom&&identity.bottom<=standing.querySelector(':scope>b').getBoundingClientRect().top,
+    standingMembersHidden:getComputedStyle(standing.querySelector('.leaderboard-mobile-meta')).display==='none',
+    links:shields.every(n=>n.dataset.publicClanId&&n.getAttribute('aria-label')?.startsWith('View '))
+   };
+  })()`);
+  assert(layout.shieldCount>=100&&layout.undersized===0&&layout.rowOverlaps===0&&layout.joinedMembers===0&&layout.decorations===4&&layout.clippedArtwork===0&&layout.namesFit&&layout.standingFits&&layout.standingMembersHidden&&layout.links,`Clan layout at ${width}: ${JSON.stringify(layout)}`);
+ };
+ for(const [width,height] of [[1366,820],[1200,688],[844,390],[568,320]]){
   await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
   await open("ledgerUi=players");
+  await evaluate(`(() => {
+   const load=window.CrownlandsOnline.loadClanLeaderboard;
+   window.CrownlandsOnline.loadClanLeaderboard=async()=> (await load()).map((row,index)=>({...row,
+    shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,shape:'heater',division:'quartered',primary:'#7a2638',secondary:'#24445f',charge:'lion',secondaryCharge:'eagle',chargeLayout:'quartered'},
+    ...(index===0?{name:'Knights of the Grey Kingdom',totalKingPower:6250894016}:{})}));
+   const now=Date.now();
+   window.CrownlandsOnline.getSeasonRewardStatus=async()=>({serverTimeMs:now,decorations:{clans:
+    ['ledger-clan-0','ledger-qa-clan','ledger-clan-4'].map((id,index)=>({id,board:'clans',rank:index+1,seasonId:'realm-2026-09',medal:['gold','silver','bronze'][index],decoration:'laurel',activeFromMs:now-1000,expiresAtMs:now+86400000}))}});
+   leaderboardSeasonStatusPromise=null;
+  })()`);
   for(const [tab,id] of [["players","leaderboardRows"],["clans","clanLeaderboardRows"],["glory","pvpLeaderboardRows"]]){
    await evaluate(`document.querySelector('[data-leaderboard-tab="${tab}"]').click()`);
    await ready(`document.querySelectorAll('#${id} .leaderboard-row').length===100`);
@@ -58,6 +90,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
      findVisible:p.querySelector('[data-find-rank]').getBoundingClientRect().bottom<=box.bottom+1};
    })()`);
    const shot=await client.send("Page.captureScreenshot",{format:"png"});fs.writeFileSync(path.join(out,tab+"-"+width+".png"),Buffer.from(shot.data,"base64"));
+   if(tab==="clans")await inspectClans(width);
    assert.equal(layout.champions,3);assert.equal(layout.rows,97);assert.equal(layout.first,"4");
    assert(!layout.overflow&&layout.scoresFit,JSON.stringify(layout));
    assert(layout.positions[1]<layout.positions[0]&&layout.positions[0]<layout.positions[2]);
@@ -65,9 +98,13 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    if(tab==="glory")assert.equal(layout.score,"23,456,700");
    await evaluate(`document.querySelector('[data-leaderboard-panel="${tab}"] [data-find-rank]').click()`);
    await ready(`document.activeElement?.classList.contains('current')&&document.getElementById('${id}').scrollTop>0`);
+   if(tab==="clans"){
+    const shot=await client.send("Page.captureScreenshot",{format:"png"});fs.writeFileSync(path.join(out,"clan-rows-"+width+".png"),Buffer.from(shot.data,"base64"));
+   }
    await evaluate("document.querySelector('#leaderboardRefreshBtn').click()");
    await ready(`document.querySelectorAll('#${id} .leaderboard-champion').length===3`);
    assert.equal(await evaluate(`document.querySelectorAll('#${id} .leaderboard-columns').length`),1);
+   if(tab==="clans")await inspectClans(width);
   }
   await evaluate(`document.querySelector('[data-leaderboard-tab="glory"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}))`);
   assert.equal(await evaluate(`document.querySelector('[data-leaderboard-tab="players"]').getAttribute('aria-selected')`),"true");

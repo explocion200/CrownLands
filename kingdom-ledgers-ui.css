@@ -64,7 +64,9 @@
 #modal.leaderboard-modal .leaderboard-you { display:inline-block; padding:2px 4px; margin-left:7px; font:8px 'Segoe UI',sans-serif; color:#4f603c; border:1px solid #a3ad81; }
 #modal.leaderboard-modal .leaderboard-mobile-meta { display:none!important; }
 #modal.leaderboard-modal :is(.clan-leaderboard-row,.clan-columns) { grid-template-columns:48px 42px minmax(170px,1fr) 95px 200px; }
-#modal.leaderboard-modal .clan-leaderboard-shield-link { width:38px; }
+#modal.leaderboard-modal .clan-leaderboard-shield-link { display:grid!important; place-items:center; width:38px; aspect-ratio:100/106; line-height:0; }
+/* Saved heraldry must fill its slot on the podium, in standings and in rows. */
+#modal.leaderboard-modal .clan-leaderboard-shield-link>:is(.clan-shield,.clan-heraldry,.clan-heraldry-v2) { width:100%!important; height:100%!important; }
 #modal.leaderboard-modal .leaderboard-toolbar { display:flex; justify-content:space-between; flex:none; min-height:30px; padding:7px 25px; border:0!important; border-top:1px solid var(--ledger-line)!important; border-radius:0!important; background:#e6dab8!important; color:var(--ledger-muted)!important; box-shadow:none!important; }
 #modal.leaderboard-modal .leaderboard-toolbar small { font:10px 'Segoe UI',sans-serif!important; color:var(--ledger-muted)!important; text-shadow:none!important; }
 #modal.leaderboard-modal .leaderboard-empty { padding:35px 20px; color:var(--ledger-muted)!important; background:none!important; text-align:center; font:18px Georgia,serif; border:0; }
@@ -164,7 +166,7 @@
 #modal.leaderboard-modal .leaderboard-standing { grid-column:1; grid-row:1; flex-direction:column; justify-content:flex-start; gap:12px; min-height:0; padding:24px 16px 15px; text-align:center; border:0; border-right:1px solid var(--ledger-line); overflow:auto; background:#e5d6b366; }
 #modal.leaderboard-modal .leaderboard-standing>span { font:18px Georgia,serif; }
 #modal.leaderboard-modal .leaderboard-standing { display:grid; grid-template-rows:auto auto minmax(0,1fr) auto auto; justify-items:center; }
-#modal.leaderboard-modal .leaderboard-standing .leaderboard-standing-identity { min-height:0; overflow:auto; align-self:center; }
+#modal.leaderboard-modal .leaderboard-standing .leaderboard-standing-identity { min-height:0; max-height:100%; padding:5px; overflow:auto; scrollbar-width:thin; align-self:center; }
 #modal.leaderboard-modal .leaderboard-standing .leaderboard-you { display:none!important; }
 #modal.leaderboard-modal .leaderboard-standing>strong { color:#795a2e; font-size:37px; }
 #modal.leaderboard-modal .leaderboard-standing>b { font-size:25px; max-width:100%; overflow-wrap:anywhere; }
@@ -173,10 +175,9 @@
 #modal.leaderboard-modal .leaderboard-standing-identity { display:flex; flex-direction:column; align-items:center; gap:14px; min-width:0; max-width:100%; }
 #modal.leaderboard-modal .leaderboard-standing-identity .leaderboard-ruler { max-width:100%; }
 #modal.leaderboard-modal .leaderboard-standing-identity :is(.player-name-link,.clan-identity-link) { font:19px Georgia,serif!important; background:none!important; padding:0!important; box-shadow:none!important; border:0!important; color:#3c3528!important; overflow-wrap:anywhere; white-space:normal; }
-#modal.leaderboard-modal .leaderboard-standing-identity small { display:none; }
+#modal.leaderboard-modal .leaderboard-standing-identity small { display:none!important; }
 #modal.leaderboard-modal .leaderboard-standing-identity .clan-leaderboard-shield-link { background:none!important; border:0!important; padding:0!important; box-shadow:none!important; }
 #modal.leaderboard-modal .leaderboard-standing-identity :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:82px!important; height:96px!important; flex-shrink:0; }
-#modal.leaderboard-modal .leaderboard-standing-identity .clan-heraldry { width:100%!important; height:100%!important; }
 #modal.leaderboard-modal .leaderboard-list { grid-column:2; grid-row:1; padding:0 18px 12px; scroll-padding-top:36px; }
 #modal.leaderboard-modal .leaderboard-toolbar { grid-column:1/-1; grid-row:2; gap:12px; }
 #modal.leaderboard-modal .leaderboard-roll-heading { padding:16px 7px 8px; color:#503e29; }
@@ -194,7 +195,6 @@
 #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank:before { content:""; width:26px; height:23px; background:url("assets/icons/hero-reward-crown.svg") center/contain no-repeat; opacity:.7; }
 #modal.leaderboard-modal .leaderboard-champion :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:75px!important; height:90px!important; flex-shrink:0; }
 #modal.leaderboard-modal .leaderboard-champion.first :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:90px!important; height:108px!important; }
-#modal.leaderboard-modal .leaderboard-champion .clan-heraldry { width:100%!important; height:100%!important; }
 #modal.leaderboard-modal .leaderboard-champion :is(.leaderboard-map,.leaderboard-cities,.leaderboard-members,.leaderboard-mobile-meta) { display:none!important; }
 #modal.leaderboard-modal .leaderboard-champion .leaderboard-power { text-align:center; }
 #modal.leaderboard-modal .leaderboard-champion.first .leaderboard-power strong { font-size:27px!important; }
@@ -206,6 +206,9 @@
 #modal.leaderboard-modal .leaderboard-list>.leaderboard-row { padding:6px 10px; }
 #modal.leaderboard-modal .leaderboard-list :is(.leaderboard-map,.leaderboard-cities,.leaderboard-members) { display:none!important; }
 #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-mobile-meta { display:inline!important; }
+#modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .leaderboard-mobile-meta { display:block!important; }
+#modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .clan-leaderboard-shield-link { width:100%; height:auto; }
+#modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .season-decoration-mark { min-width:14px; height:16px; font-size:11px; right:-3px; bottom:-3px; }
 @media(max-width:1000px),(max-height:600px) {
  #modal.leaderboard-modal .leaderboard-tab-panel { grid-template-columns:150px minmax(0,1fr); }
  #modal.leaderboard-modal .leaderboard-tabs-header { gap:5px; padding:1px 10px; }
