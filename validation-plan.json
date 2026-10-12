@@ -1,18 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1a88d61b844bcc057e8b491c515191917bcfccaf",
+  "baseCommit": "4d5a64a111d8753f063b1e58095a1900eabc3f86",
   "coverage": [
     {
       "paths": [
-        "kingdom-ledgers-ui.css",
-        "tools/validate-leaderboard-podium-browser.js",
-        "tools/validate-clan-heraldry-v2.js"
+        "game.js",
+        "tools/validate-distant-city-orders-browser.js",
+        "tools/validate-main-city-recovery.js",
+        "tools/validate-report-location-navigation.js"
       ],
-      "reason": "Fix clan leaderboard heraldry scaling, crowded row metadata and personal-standing overlap in the active client. The existing podium browser suite now checks saved V2 shields, seasonal gold/silver/bronze decorations, name/member separation, row overlap, artwork containment and sidebar containment before and after refresh at 1366x820, screenshot-sized 1200x688 and landscape-mobile 844x390/568x320. Its existing Kingdom and Glory cases protect shared ledger styles, full scores, podium order, personal standing, scroll/focus and keyboard controls. The heraldry validator protects the renderer and saved identity contracts consumed by the CSS; its stale September bundle assertion now verifies that the current shell and offline cache reference the same versioned game bundle. Leaderboard tab validation covers presentation and navigation contracts. No server, scoring, season, gameplay, production data or world topology changes, so emulator suites are not applicable. Production build and asset gates run through prepare-pr.",
+      "reason": "Preserve the correct source region for distant attacks after the current Core map-definition cache evicts opaque city IDs. The shared ID lookup falls back to retained city state; submitted army endpoints and route membership retain explicit mission regions. The new browser regression uses actual Core IDs and the current 81-map topology, evicts the source definition, verifies server-preview gating and error retry, submits the attack, and checks retained order endpoints after the source leaves visible state at desktop and two landscape-mobile sizes. Main-city recovery and report navigation fixtures now provide the runtime city lookup and protect callers of the changed shared helper. Owned-city cross-map synchronization and pending-departure tests cover roster retention, ownership loss, order reconciliation and recovery. World-travel tests protect reciprocal roads, cold/evicted caches, disconnected routes, terrain distance, long-route persistence and authoritative preview matching. The world-travel emulator suite checks authoritative preview/launch endpoint validation and forged-route rejection for the affected client payload boundary. No server implementation, topology, balance or production data is changed; build and asset validation run through prepare-pr.",
       "tests": [
-        "tools/validate-clan-heraldry-v2.js",
-        "tools/validate-leaderboard-tabs.js",
-        "tools/validate-leaderboard-podium-browser.js"
+        "tools/validate-distant-city-orders-browser.js",
+        "tools/validate-world-travel-network.js",
+        "tools/validate-main-city-recovery.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-pending-army-departures.js",
+        "functions/test/emulator-world-travel.js"
       ]
     }
   ]
