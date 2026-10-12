@@ -391,6 +391,18 @@ assert(
   `Service-worker installation cache is ${mib(installPrecacheBytes)}; budget is ${mib(MAX_INSTALL_PRECACHE_BYTES)}.`
 );
 
+// The approved NPC/stamina UI and shared rules remain a small offline-shell addition.
+const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js', 'marauders-ui.css', 'functions/marauder-rules.js'];
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 36 * 1024,
+  'NPC/stamina shell files exceed their 36 KiB source budget.');
+let marauderArtBytes = 0;
+for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
+  const bytes = statBytes(file); marauderArtBytes += bytes;
+  assert(bytes <= 64 * 1024, file + ' exceeds its 64 KiB sprite budget.');
+  assert(!staticCacheUrls.some(url => localPathFromUrl(url) === file), 'NPC artwork must remain outside the installation cache.');
+}
+assert(marauderArtBytes <= 112 * 1024, 'Both NPC sprites exceed their combined 112 KiB budget.');
+
 const retiredPrecacheMasters = [
   "assets/loading-ring.png",
   "assets/loading-crown.png",
