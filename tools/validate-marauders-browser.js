@@ -94,6 +94,12 @@ async function main() {
     assert.equal(await ev('getScoutReportForTarget(huntQA.target).troops'),87);
     assert(await ev("renderMarauderScoutReport({report:getScoutReportForTarget(huntQA.target),city:huntQA.target,age:0,remaining:600}).includes('1 defense per defender')"));
     assert(await ev("renderMarauderBattleReport({cityName:'Marauder',marauderLevel:1,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn'}).includes('Added to your Bag')"));
+    await ev("state.battleReports=[{id:'npc-scout-report',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:huntQA.target.id,cityName:huntQA.target.name,regionId:huntQA.target.regionId,targetType:'marauder',targetSpawnId:'fixture-spawn',summary:'Scout revealed 87 defenders.',occurredAtMs:Date.now(),scoutReport:getScoutReportForTarget(huntQA.target)}];showBattleReportDetail('npc-scout-report')");
+    await ev("updateScoutReportLifecycle(Date.now()+1000)");
+    assert(await ev("modal.open && modal.classList.contains('scout-report-ledger') && !!document.querySelector('[data-scout-close]') && !!document.getElementById('battleReportBackBtn')"),'Actual NPC report uses navigation and expiry shell');
+    await ev("CrownlandsScoutReportUI.updateTiming(modalBody,20)");assert(await ev("document.querySelector('.expiry').classList.contains('urgent')"));
+    await ev("document.querySelector('[data-scout-close]').click()");
+    assert(!await ev('modal.open'));
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
     await ev("modal.close();CrownlandsStaminaUI.sync({uid:'',api:huntQA.api})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');

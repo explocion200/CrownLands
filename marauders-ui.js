@@ -49,11 +49,11 @@ function renderMarauderScoutReport(model) {
   return `<section class="marauder-details"><h2>${escapeHtml(city.name)}</h2><p>${escapeHtml(getRegionLabel(report.regionId || city.regionId))}</p>
     <p>Scouted defenders: <strong>${formatNumber(report.troops)}</strong><br>Total defense: <strong>${formatNumber(report.totalDefense)}</strong></p>
     <p>1 defense per defender · No walls. Defenders can change before arrival. Intelligence applies only to this spawn.</p>
-    <p>Report age: <strong data-scout-report-age>${formatDuration(model.age)}</strong> · <span data-scout-expiry-label>Expires in</span> <strong data-scout-report-expires>${formatDuration(model.remaining)}</strong></p>${renderHuntStamina()}</section>`;
+    ${renderHuntStamina()}</section>`;
 }
 function renderMarauderBattleReport(report) {
   const item = report.itemAwarded ? getShopItemById(report.itemAwarded) : null;
-  return `<section class="marauder-details"><img class="marauder-portrait" src="${marauderArt({ classification: report.marauderLevel >= 80 ? "boss" : "solo" })}" alt="">
+  return `<section class="marauder-details"><button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button><img class="marauder-portrait" src="${marauderArt({ classification: report.marauderLevel >= 80 ? "boss" : "solo" })}" alt="">
     <h2>${escapeHtml(report.cityName)}</h2><p>${escapeHtml(getRegionLabel(report.regionId))}</p><h3>${report.outcome === "victory" ? "Victory" : report.outcome === "target_unavailable" ? "Returning · Target unavailable" : "Defeat"}</h3>
     <p>${escapeHtml(report.summary)}</p><dl><dt>Your troops sent</dt><dd>${formatNumber(report.sentTroops)}</dd><dt>Your troops lost</dt><dd>${formatNumber(report.attackerLosses)}</dd><dt>Your returning survivors</dt><dd>${formatNumber(report.survivors)}</dd><dt>Recovered to main city</dt><dd>${formatNumber(report.fieldMedicsRecovered || 0)}</dd><dt>Enemy defenders remaining</dt><dd>${report.outcome === "target_unavailable" ? "Not attacked" : formatNumber(report.defendersLeft)}</dd></dl>
     ${report.outcome === "victory" ? `<p>Gold awarded: <strong>${formatNumber(report.goldAwarded)}</strong> · Hero XP: <strong>${formatNumber(report.xpAwarded)}</strong></p>${item ? `<p>Item: <strong>${escapeHtml(item.name)}</strong> · Added to your Bag</p>` : ""}${report.levelUpReward ? `<p>Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded)} troops at your main city.</p>` : ""}` : ""}

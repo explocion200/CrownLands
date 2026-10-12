@@ -11087,7 +11087,8 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
 
   const activeScoutCityId = String(modal?.dataset?.scoutReportCityId || "");
   if (modal?.open && modal.classList.contains("scout-report-modal")) {
-    const report = activeScoutCityId ? getScoutReport(activeScoutCityId) : null;
+    const scoutKey = String(modal.dataset.scoutReportSpawnId || activeScoutCityId);
+    const report = scoutKey ? getScoutReport(scoutKey) : null;
     if (!report) {
       delete modal.dataset.scoutReportCityId;
       showLogModal({ silentAudio: true });
@@ -30428,6 +30429,7 @@ function showScoutReportModal(cityId) {
   modal.className = "modal scout-report-modal";
   delete modal.dataset.battleReportDetailId;
   modal.dataset.scoutReportCityId = cityId;
+  modal.dataset.scoutReportSpawnId = city.targetType === "marauder" ? city.spawnId : "";
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = window.CrownlandsScoutReportUI?.renderIntel({
     city, report, remaining, age, reportedOwnerName, reportedOwnerUid, currentPlayerUid,
@@ -38943,7 +38945,8 @@ async function focusBattleReportTarget(cityId, regionId = "") {
   regroupSourceId = null;
   sendMode = false;
   selectedTargetId = null;
-  if (getCampTargetById(targetId)) selectRewardCamp(targetId);
+  if (target.targetType === "marauder") centerOnWorldPoint(target, mapId);
+  else if (getCampTargetById(targetId)) selectRewardCamp(targetId);
   else selectCity(targetId);
   showToast(`Viewing ${target.name}`);
   return true;
@@ -40045,7 +40048,11 @@ async function showBattleReportDetail(reportId) {
     return;
   }
   const badge = getBattleReportBadge(report);
-  if (report.type === "scout" && isSuccessfulScoutIntelBattleReport(report) && getScoutReport(report.cityId)) {
+  const scoutTarget = report.targetType === "marauder" ? getMarauderById(report.cityId) : null;
+  const currentScout = report.targetType === "marauder"
+    ? scoutTarget?.spawnId === report.targetSpawnId && getScoutReportForTarget(scoutTarget)
+    : getScoutReport(report.cityId);
+  if (report.type === "scout" && isSuccessfulScoutIntelBattleReport(report) && currentScout) {
     showScoutReportModal(report.cityId);
     return;
   }
