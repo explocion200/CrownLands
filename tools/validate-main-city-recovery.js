@@ -38,6 +38,7 @@ const decisionSandbox = {
   WORLD_REGION_IDS: [...activeRegionIds, "new-lands-l01-p003"],
   DEFAULT_ONLINE_REGION_ID: "west",
   state: null,
+  cityById: id => decisionSandbox.state?.cities?.find(city => city.id === id) || null,
   getPlayableBaseCityById: value => {
     const cityId = String(value || "");
     if (/^region_(11|12)_city_\d{3}$/.test(cityId)) {

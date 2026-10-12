@@ -3054,8 +3054,10 @@ function getCityRegionId(cityOrId) {
     return normalizeRegionId(cityOrId.regionId || cityOrId.startPool);
   }
   const cityId = String(cityOrId || "");
-  const base = getPlayableBaseCityById(cityId);
-  if (base) return normalizeRegionId(base.regionId || base.startPool);
+  // Owned/visited cities retain their region after the map definition is evicted.
+  // Core city IDs are opaque, so they cannot be recovered from an ID prefix.
+  const knownCity = getPlayableBaseCityById(cityId) || cityById(cityId);
+  if (knownCity) return normalizeRegionId(knownCity.regionId || knownCity.startPool);
   const dynamicNewLandsCity = getDynamicNewLandsCityIdentity(cityId);
   if (dynamicNewLandsCity) return normalizeRegionId(dynamicNewLandsCity.regionId);
   const prefixedRegionId = [...WORLD_REGION_IDS]
@@ -18728,7 +18730,8 @@ function getMissionDisplayRouteSegments(mission) {
 
 function getMissionRegionIds(mission) {
   const ids = getMissionRouteSegments(mission).map(segment => segment.regionId);
-  const fromRegionId = getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "";
+  const fromRegionId = mission?.sourceRegionId ? normalizeRegionId(mission.sourceRegionId)
+    : getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "";
   const target = getArmyTargetById(mission?.toId);
   const toRegionId = target ? getCityRegionId(target) : mission?.targetRegionId ? normalizeRegionId(mission.targetRegionId) : "";
   if (fromRegionId) ids.push(fromRegionId);
@@ -19078,7 +19081,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
   };
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
-  const sourceRegionId = getCityRegionId(mission.fromId);
+  const sourceRegionId = normalizeRegionId(mission.sourceRegionId || getCityRegionId(mission.fromId));
   const target = getArmyTargetById(mission.toId);
   const targetRegionId = normalizeRegionId(mission.targetRegionId || target?.regionId || getCityRegionId(mission.toId));
   mission.fromName = mission.fromName || movement.fromName || "";

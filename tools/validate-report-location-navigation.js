@@ -31,6 +31,7 @@ function createSession() {
     cleanEditorRegionId: value => String(value || "").trim().toLowerCase(),
     getRegionIds: () => [...summaries.keys()], getRegionById: id => summaries.get(id),
     getPlayableBaseCityById: () => null,
+    cityById: id => context.state.cities.find(city => city.id === id) || null,
     getArmyTargetById: id => context.state.cities.find(city => city.id === id) || null,
     getCampTargetById: id => context.getArmyTargetById(id)?.targetType === "camp" ? context.getArmyTargetById(id) : null,
     getActiveMapRegionId: () => context.activeRegion,
