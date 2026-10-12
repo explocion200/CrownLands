@@ -40,7 +40,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     undersized:shields.filter(n=>{const b=n.getBoundingClientRect(),s=n.querySelector('.clan-heraldry-v2').getBoundingClientRect();return s.width<b.width*.9||s.height<b.height*.9}).length,
     rowOverlaps:rows.filter(r=>{const b=r.querySelector('.clan-leaderboard-shield-link'),s=b.getBoundingClientRect(),n=r.querySelector('.leaderboard-ruler').getBoundingClientRect(),p=r.querySelector('.leaderboard-power').getBoundingClientRect(),m=b.querySelector('.season-decoration-mark')?.getBoundingClientRect();return s.right>n.left||m?.right>n.left||n.right>p.left}).length,
     joinedMembers:rows.filter(r=>{const name=r.querySelector('.clan-leaderboard-name').getBoundingClientRect(),meta=r.querySelector('.leaderboard-mobile-meta').getBoundingClientRect();return meta.top<name.bottom-1}).length,
-    ranksFit:rows.every(r=>{const rank=r.querySelector('.leaderboard-rank'),shield=r.querySelector('.clan-leaderboard-shield-link');return rank.scrollWidth<=rank.clientWidth+1&&rank.getBoundingClientRect().right<=shield.getBoundingClientRect().left-5}),
+    rankIssues:rows.map(r=>{const n=r.querySelector('.leaderboard-rank'),s=r.querySelector('.clan-leaderboard-shield-link');return {rank:n.textContent,width:n.clientWidth,scroll:n.scrollWidth,gap:s.getBoundingClientRect().left-n.getBoundingClientRect().right,font:getComputedStyle(n).fontSize}}).filter(n=>n.scroll>n.width+1||n.gap<5),
     decorations:panel.querySelectorAll('.season-decoration-mark').length,
     clippedArtwork:shields.filter(n=>!fits(n.querySelector('svg').getBoundingClientRect(),n.getBoundingClientRect())).length,
     namesFit:[...panel.querySelectorAll('.clan-leaderboard-row .leaderboard-ruler')].every(n=>n.scrollWidth<=n.clientWidth+1),
@@ -49,7 +49,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     links:shields.every(n=>n.dataset.publicClanId&&n.getAttribute('aria-label')?.startsWith('View '))
    };
   })()`);
-  assert(layout.shieldCount>=100&&layout.undersized===0&&layout.rowOverlaps===0&&layout.joinedMembers===0&&layout.ranksFit&&layout.decorations===4&&layout.clippedArtwork===0&&layout.namesFit&&layout.standingFits&&layout.standingMembersHidden&&layout.links,`Clan layout at ${width}: ${JSON.stringify(layout)}`);
+  assert(layout.shieldCount>=100&&layout.undersized===0&&layout.rowOverlaps===0&&layout.joinedMembers===0&&layout.rankIssues.length===0&&layout.decorations===4&&layout.clippedArtwork===0&&layout.namesFit&&layout.standingFits&&layout.standingMembersHidden&&layout.links,`Clan layout at ${width}: ${JSON.stringify(layout)}`);
  };
  for(const [width,height] of [[1366,820],[1200,688],[844,390],[568,320]]){
   await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});
