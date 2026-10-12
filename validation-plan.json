@@ -1,24 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cf7442f17850d1f8709f58a6ebf765dbab15aa6d",
+  "baseCommit": "a017b86f5d5a4a9da3c677dbd241a6aecb858e6b",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/test/emulator-clan-power-events.js",
-        "tools/validate-troop-accounting.js",
-        "tools/validate-reset-release.js",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "inner-city-estate.js",
+        "estate-economy-ui.js",
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-estate-camera-performance-browser.js"
       ],
-      "reason": "Keep active clan power scoped to the current season and shard. Identity projection repair must not overwrite roster power before its aggregate event, recreate absent/removed memberships, or update archived clan roots. Reconcile totals transactionally from current roster entries rather than retaining a stale aggregate offset, including unchanged scores and board-only drift. Exercise actual callbacks with transaction conflicts and the Firestore emulator with concurrent, duplicate and delayed events, valid losses/zero, scope guards, and preserved returning members contributing zero without editing their archived profiles. The real identity callable/rules and reset gate cover canonical flag projection plus seasonal roster/role persistence, fresh starting claims, concurrent returning members, and reset replay safety. No UI layout, balance, archived data or release configuration changes; no browser layout checks are needed. The specification records the owner's current-season clarification and pending deployment status.",
+      "reason": "Reduce Inner Castle dragging and zooming work by coalescing pointer/wheel paints, caching fixed-size labels, reading fixed panels before camera writes and batching construction timer geometry. Preserve every input delta and per-event bounds, accessible building selection, artwork sharpness, district anchors, construction overlays, resource refresh and equipment return. The browser regression exercises frame/layout budgets under 4x CPU slowdown, real pointer capture with high-rate drag bursts, boundary reversal, queued-work cancellation, resize/text/font cache invalidation and no idle work. Existing native input, timer and refresh checks cover shared dependencies; actual-game integration covers production delivery and lifecycle. Source and built fixtures run at desktop and two landscape-mobile sizes. Static checks preserve artwork and estate integration contracts; the previous blanket animation-frame ban is replaced by idle/teardown behavior checks. No server, gameplay balance, saved state, current realm data or release contract changes, so no emulator suites are needed.",
       "tests": [
-        "tools/validate-king-power.js",
-        "tools/validate-clans.js",
-        "tools/validate-player-flags.js",
-        "tools/validate-reset-release.js",
-        "functions/test/emulator-clan-power-events.js",
-        "functions/test/emulator-player-flag-rules.js",
-        "functions/test/emulator-reset-gate.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle.js",
+        "tools/validate-estate-camera-performance-browser.js",
+        "tools/validate-estate-input-browser.js",
+        "tools/validate-estate-overview-timers.js",
+        "tools/validate-estate-refresh-browser.js",
+        "tools/validate-inner-castle-browser.js"
       ]
     }
   ]

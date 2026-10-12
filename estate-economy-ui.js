@@ -65,16 +65,21 @@
       },
       place(zoom, selected) {
         if (destroyed) return;
+        const districts = [...host.querySelectorAll('.estate-district')];
+        const active = sites.filter(site => site.job).sort((a,b) => (b.b.key === selected) - (a.b.key === selected));
+        if (!active.length) { districts.forEach(e => e.classList.remove('estate-timer-obscured')); return; }
         const view = viewport.getBoundingClientRect(), overview = zoom < 2.5, width = overview ? 88 : 112, height = 40;
         const rect = e => { const r = e.getBoundingClientRect(); return {left:r.left - view.left, right:r.right - view.left, top:r.top - view.top, bottom:r.bottom - view.top}; };
         const overlaps = (a,b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;
         const panels = '.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls';
         const obstacles = [...host.querySelectorAll(overview ? panels : panels + ',.estate-site>img,.estate-district:not([hidden])>span,.estate-nameplate:not([hidden]),.estate-building-target:not([hidden]),.estate-upgrade-targets button:not([hidden])')].filter(e => !e.hidden && e.getClientRects().length).map(rect);
-        const districts = [...host.querySelectorAll('.estate-district')];
+        // Snapshot all geometry before positioning gauges or obscuring labels.
+        // Interleaving those writes with reads forces a layout for every job.
+        const artBoxes = new Map(active.map(site => [site, rect(host.querySelector(`[data-estate-site="${site.b.key}"]>img`))]));
+        const districtBoxes = overview ? new Map(districts.map(e => [e, rect(e.querySelector('span'))])) : null;
         districts.forEach(e => e.classList.remove('estate-timer-obscured'));
-        for (const site of [...sites].sort((a,b) => (b.b.key === selected) - (a.b.key === selected))) {
-          if (!site.job) continue;
-          const art = rect(host.querySelector(`[data-estate-site="${site.b.key}"]>img`)), cx = (art.left + art.right) / 2;
+        for (const site of active) {
+          const art = artBoxes.get(site), cx = (art.left + art.right) / 2;
           let box = {left:cx - width / 2, right:cx + width / 2, top:art.top - height - 6, bottom:art.top - 6};
           if (overview) {
             // Running timers take precedence over scenery/district captions.
@@ -90,7 +95,7 @@
             const line = site.gauge.querySelector('i'), dx = cx - (box.left + width / 2), dy = art.top - box.bottom;
             line.hidden = !overview || Math.abs(dx) < .5 && Math.abs(dy - 6) < .5;
             if (!line.hidden) { line.style.width = Math.hypot(dx,dy) + 'px'; line.style.transform = 'rotate(' + Math.atan2(dy,dx) + 'rad)'; }
-            if (overview) districts.filter(e => overlaps(box,rect(e.querySelector('span')))).forEach(e => e.classList.add('estate-timer-obscured'));
+            if (overview) districts.filter(e => overlaps(box,districtBoxes.get(e))).forEach(e => e.classList.add('estate-timer-obscured'));
             obstacles.push(box);
           }
         }
