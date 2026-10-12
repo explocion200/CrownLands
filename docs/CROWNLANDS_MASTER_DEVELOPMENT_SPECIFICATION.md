@@ -66,7 +66,16 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified release — Guild Master responsive alignment
+### Current verified web release — Sword-clash captures and player flag draping
+
+The authorized merge and web deployment of [PR #530](https://github.com/explocion200/CrownLands/pull/530), from `codex/castle-capture-battle-drape`, is verified at build `7406e0a929e6c2114f9db359b80b012aa317f406`. Newly confirmed castle captures play three sword clashes, then drape the capturing player's saved colors, pattern, crest and crest color over the castle front. Full motion lasts four seconds; Reduced uses a brief opacity-only confirmation and Off preserves immediate authoritative ownership. Capture rules, ordinary ownership markers and audio cues are retained.
+
+- **LIVE — WEB:** Netlify deploy `6acc51b90a75ee0008714c44`, published `2026-10-12T03:20:47.434Z` (October 11, 11:20 p.m. Eastern). Ten staged file comparisons and the 1,149-file inventory match the tested artifact. All thirty public comparisons passed across `playcrownlands.com/play/`, `crownland.netlify.app` and `game.playcrownlands.com`; the publication hold remains enabled.
+- **Validation:** `Static validation`, `Multiplayer emulator validation` and `Validate` passed in [run 38199019495](https://github.com/explocion200/CrownLands/actions/runs/38199019495). Source and delivered animation checks passed at 1440×900, 844×390 and 568×320, covering saved heraldry, timing, zoom-aware anchoring, duplicate/stale events, map guards, motion modes and cleanup. Shared animation, player-flag, city reconciliation and audio checks, syntax/lint, production artifact and asset budgets passed. No authoritative server changes required emulator suites; the named multiplayer gate explicitly passed as inapplicable. The unchanged installation limit remains 4.28 MiB; the delivered cache is 4.26 MiB.
+- **Release identity:** release `crownlands-2026-10-10-guild-missions-v2`, contract `4473ca88e829899fabbdf909b9fe4c009f48473e3b52488c027a16734538c132` and server source `36077855ca6f6462096be1726c69d71772b02dd44bba47f6dd91b2b0cf9e8e5e` match the preceding published web manifest. The new client source is `a1360f45266eee30905fab7436c944b2df24031df489b106e06ca7ac2d6333ea`. No Functions, rules, indexes, realm configuration or player data were deployed or changed.
+- **Limits and evidence:** six anonymous public cold/reload cases passed at the three sizes without runtime exceptions. Capture interactions used isolated game fixtures; authenticated production captures and installed-app/physical-device review remain manual. itch.io was not republished and remains at its preceding verified build `24cfa4e...`. Sanitized receipts and screenshots are retained under `release-artifacts/castle-capture/`. Local main and origin/main were clean, equal to the merged build and at divergence `0 0` before publication.
+
+### Previous verified release and current itch.io baseline — Guild Master responsive alignment
 
 The authorized merge of [PR #528](https://github.com/explocion200/CrownLands/pull/528), from `codex/guild-responsive-alignment`, is verified on backend, web and itch.io at build `24cfa4e7dcecbf76175697097335091f26f5df59`. Guild member/recruit stats and actions align across card rows. Mission planning uses wider cards and stacks columns on smaller screens; its outcome panel fits its contents. Room actions, field spacing and phone confirmation footers align consistently. The active room tab stays visible and refreshes retain the navigation strip's scroll position. Approved artwork, game balance, progression and outside-realm presentation are retained.
 
@@ -618,10 +627,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web and itch.io both serve build `24cfa4e...`, verified in FM-2. Current estate rows supersede their earlier web-only channel status; older entries in FM-2 retain their original publication evidence.
+Current web serves build `7406e0a...`; itch.io remains at its verified build `24cfa4e...`. The capture animation is web-only. Existing estate rows retain their prior verification evidence and remain included in both channels; older entries in FM-2 retain their original publication evidence.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Three sword-clash castle captures followed by the capturing player's saved flag draping over the city | PR #530 build `7406e0a...`; source/built animation and public delivery verified | Not republished; retains preceding capture effect | `LIVE — WEB`; authenticated capture and physical-device review remain manual |
 | Guild card rows, planning columns, room controls and phone review footers align; active tab remains visible | PR #528 build `24cfa4e...`; source/built checks at six desktop/phone sizes with actual game styles | Same-build upload `19696818`; all 1,000 files and six cold/reload cases verified | `LIVE — ALL PUBLISHED CHANNELS`; current authenticated, installed-app and physical-phone alignment remains manual |
 | Full Guild: persistent rolled champions, contracts, reports, five facilities, mentoring and approved art | Verified build `24cfa4e...` retaining PR #526; its coordinated 145-function backend, report rules and original focused emulator evidence remain in FM-2 | Same-build upload `19696818`; all 1,000 files and six cold/reload cases verified | `LIVE — ALL PUBLISHED CHANNELS`; authenticated spending, installed-app/physical-device and long-term pacing remain manual |
 | Inner Castle overview artwork taps select and zoom to 2.5× | Verified build `24cfa4e...` retaining PR #524; original native-input and actual-game evidence is in FM-2; Guild release rechecks estate UI at three sizes | Same-build upload `19696818`, all 1,000 files and six cold/reload cases verified | `LIVE — ALL PUBLISHED CHANNELS`; outside realm unchanged; current authenticated/installed-app/physical-device review remains manual |
@@ -2330,7 +2340,7 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 
 - A newly confirmed combat capture plays three clashing sword strikes, contact sparks and a small dust impact, followed by the capturing player's own flag unfurling from the roofline and draping down the castle front. Preserve that player's saved colors, pattern, crest and crest color; use the existing flag renderer. Outer towers remain visible and the map camera stays fixed.
 - Full motion lasts four seconds, including a short still hold and clean removal; the ordinary ownership marker remains afterward. Reduced motion uses a brief opacity-only flag confirmation. Off mode shows the authoritative ownership state immediately. Existing automatic performance limits, event deduplication, active-map visibility, capture eligibility, sound preferences and cleanup remain authoritative. The animation never postpones or changes capture results.
-- **Status:** approved for integration, merge and deployment; production status requires verification of the resulting release.
+- **Status:** `LIVE — WEB` at build `7406e0a...` from PR #530; see FM-2 for release evidence and verification limits. itch.io retains its preceding capture effect.
 
 ### Authority
 
