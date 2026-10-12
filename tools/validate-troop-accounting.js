@@ -155,12 +155,14 @@ function docRef(id) {
 }
 function query(kind) { return { kind, where() { return this; }, get() { throw Error("Troop reads escaped the transaction"); } }; }
 const written = new Map();
+const clanDocuments = new Map();
 let attempts = 0;
 Object.assign(sandbox, {
   db: { doc: docRef, collectionGroup: () => query("cities") },
   HttpsError: Error, onCall: (_, handler) => handler, requireAuth: () => "owner",
   verifyCurrentSeasonParticipation: async () => {}, PLAYER_IDENTITY_SYNC_VERSION: 1,
-  getPlayerIdentitySyncSignature: () => "identity", getCanonicalPlayerIdentity: () => ({ ownerName: "Ruler", ownerFlag: {}, clanId: "" }),
+  getPlayerIdentitySyncSignature: () => "identity", getCanonicalPlayerIdentity: () => ({ ownerName: "Ruler", ownerFlag: {}, clanId: profile.clanId || "" }),
+  clanWorldBenefitsRef: id => docRef(`clans/${id}/worldBenefits/current`),
   createOwnedCityEntriesFromSnapshot: (_, snap) => snap.docs.map(doc => ({ ref: doc.ref, city: doc.data() })),
   createActiveArmiesFromSnapshot: (_, snap) => snap.docs.map(doc => doc.data()),
   createHeldCampEntriesFromSnapshot: (_, snap) => snap.docs.map(doc => ({ ref: doc.ref, camp: doc.data() })),
@@ -181,6 +183,7 @@ Object.assign(sandbox, {
       const transaction = {
         get: async ref => {
           assert(!writesStarted, "Firestore reads must precede writes.");
+          if (ref.path?.startsWith("clans/")) return { exists: clanDocuments.has(ref.path), data: () => clanDocuments.get(ref.path), ref };
           if (!ref.kind) return { exists: ref.path !== "crown/owner", data: () => profile, ref };
           const data = ref.kind === "cities" ? { ...city, troops: attempt ? 20 : 100 }
             : ref.kind === "armies" ? { ...march, troops: attempt ? 380 : 300 } : camp;
@@ -196,6 +199,7 @@ Object.assign(sandbox, {
   },
 });
 vm.runInContext(between(source, "async function rebuildGlobalStatsForPlayer(", "function createEconomyResponse("), sandbox);
+vm.runInContext(between(source, "function isCurrentRealmPowerSnapshot(", "function getPlayerPowerSnapshot("), sandbox);
 vm.runInContext(between(source, "exports.syncPlayerIdentity = onCall", "exports.recalculatePlayerGlobalStats ="), sandbox);
 async function main() {
   const originalShard = profile.realmShardId;
@@ -223,6 +227,27 @@ async function main() {
     assert.equal(written.get("board/owner").totalMilitaryTroops, 1125);
   }
   assert(attempts >= 4);
+  profile.clanId = "current";
+  const clanPath = "clans/current", memberPath = `${clanPath}/members/owner`;
+  clanDocuments.set(clanPath, { ...realm, status: "active", totalKingPower: 100 });
+  clanDocuments.set(memberPath, { ...realm, status: "active", kingPower: 100, role: "officer" });
+  written.clear();
+  await sandbox.exports.syncPlayerIdentity({});
+  assert.equal(written.get(memberPath).displayName, "Ruler", "Identity sync still updates the current roster's display name.");
+  assert(!Object.hasOwn(written.get(memberPath), "kingPower"), "Identity sync must leave power to the atomic roster/aggregate update.");
+  assert.equal(written.get("stats/owner").kingPower, baseline.kingPower, "Identity sync must still publish the complete troop score.");
+  for (const invalid of [null, { ...realm, status: "removed" }, { ...realm, realmShardId: "legacy" }, { ...realm, resetGeneration: "archived" }]) {
+    if (invalid) clanDocuments.set(memberPath, invalid);
+    else clanDocuments.delete(memberPath);
+    written.clear();
+    await sandbox.exports.syncPlayerIdentity({});
+    assert(!written.has(memberPath), "Identity sync must not recreate or rewrite a missing, removed or foreign-season membership.");
+  }
+  clanDocuments.set(memberPath, { ...realm, status: "active" });
+  clanDocuments.set(clanPath, { ...realm, resetGeneration: "archived", status: "active" });
+  written.clear();
+  await sandbox.exports.syncPlayerIdentity({});
+  assert(!written.has(memberPath), "Identity sync must not update a roster under an archived clan root.");
   console.log("Validated troop accounting across Towers, Camps, marches, reinforcements, rallies, client summaries and transaction retries.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

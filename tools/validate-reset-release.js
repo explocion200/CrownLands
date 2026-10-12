@@ -64,7 +64,8 @@ requireMatch(server, /writeOwnershipChangeEvent[\s\S]*processOwnershipChangeEven
 if (/exports\.syncCityArmyTargetOwner|exports\.syncCampArmyTargetOwner/.test(server)) {
   throw new Error("Broad city/camp write triggers are still exported.");
 }
-requireMatch(server, /rebuildClanPowerOnPlayerStats[\s\S]*previousStatsPower === eventPower[\s\S]*return/, "Clan power work does not stop before reads when power is unchanged.");
+requireMatch(server, /rebuildClanPowerOnPlayerStats[\s\S]*!isCurrentRealmPowerSnapshot\(afterStats\)\) return/, "Clan power events must reject foreign-season snapshots before reading current records.");
+requireMatch(server, /rebuildClanPowerOnPlayerStats[\s\S]*previousPower === nextPower && clan\.totalKingPower === totalKingPower[\s\S]*boardSnap\.data\(\)\?\.totalKingPower === totalKingPower[\s\S]*return/, "Clan power reconciliation may skip writes only after both current totals agree.");
 requireMatch(server, /exports\.getRealmInfo[\s\S]*REALM_RELEASE_ID/, "The realm-info release handshake is missing.");
 requireMatch(
   server,
