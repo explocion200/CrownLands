@@ -112,8 +112,10 @@ async function main() {
       await wait("!!document.querySelector('.stamina-panel[open]') && document.querySelector('[data-refill-buy]').textContent==='Refill to 100 — 30 Crowns' && !document.querySelector('[data-refill-buy]').disabled");
       assert(await ev("huntQA.input===document.getElementById('troopExactAmount') && huntQA.input.value==='123' && selectedSourceId===huntQA.source.id && selectedTargetId===huntQA.target.id && activeRallyOrderContext.rallyId==='preserved-rally'"),'Shop return preserves source, target, troops, rally and input handlers');
       assert.equal(await ev('huntQA.purchases.length'),await ev('huntQA.beforePurchases'),'Crown credit never automatically refills');
-      await ev("document.querySelector('[data-stamina-close]').click()");
-      assert(await ev("modal.open && document.activeElement.matches('[data-open-stamina]')"),'Return focus to the hunt draft');
+      const immediateFocus = await ev("document.querySelector('[data-stamina-close]').click();document.activeElement.id");
+      // Native dialog close events are queued; allow the focus-restoration handler to run.
+      await wait("modal.open && document.activeElement.matches('[data-open-stamina]')");
+      records.push({kind:'shopReturnFocus',width,height,immediateFocus});
     }
     for(const [mode,enabled,failure] of [['live',false,false],['test',true,false],['live',true,true]]){
       await ev(`huntQA.crowns=29;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:29,revision:huntQA.walletRevision});huntQA.shopMode=${JSON.stringify(mode)};huntQA.shopEnabled=${enabled};huntQA.catalogFailure=${failure};document.querySelector('#modal [data-open-stamina]').click()`);
