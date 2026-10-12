@@ -1,36 +1,24 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b50777ef97fae107e93f95cf09f851e3f0acfb29",
+  "baseCommit": "cf7442f17850d1f8709f58a6ebf765dbab15aa6d",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "firebaseClient.js",
-        "tools/test-citadel-reign-ledger.js",
-        "tools/validate-citadel-reign-browser.js",
-        "functions/test/emulator-citadel-reign-leaderboard.js",
-        "stronghold-details-ui.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/build-production-client.js",
-        "interface-theme.css",
+        "functions/index.js",
+        "functions/test/emulator-clan-power-events.js",
+        "tools/validate-troop-accounting.js",
+        "tools/validate-reset-release.js",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Resolve the live Core Citadel from its current catalog and lazy region definition, reconcile its real ID without contaminating another map, retain the current ruler beyond the ranked query cutoff, reject superseded/session-stale reads, and update ranks without replacing stable links. Cover server accumulation used by the UI, current-realm Firestore query/document permissions, watcher cancellation/owned-city cleanup, loading/error/retry/empty states, current and neutral timers, profile links, top-100 entry, stable focus, and desktop/landscape layouts. Related Stronghold timers and region-loader/realtime contracts remain covered; backend accounting, rules and balance are unchanged. Keep the existing main-script budget by moving only Citadel presentation helpers into the already-loaded Stronghold UI module, with a measured 12 KiB source allowance for that module; production artifact and aggregate payload budgets remain enforced. Minify the changed Stronghold presentation module with the existing non-optimizing runtime minifier to preserve the 76 KiB delivered ledger budget; the browser regression checks both source and actual built module at all three viewports. Restore the user-requested crown above city labels, outside the name rows hidden at distant zoom, with an independently sized icon. Verify rendered own/foreign crowns, live handoffs with both rulers' cities present, neutral removal, selected labels, close/far zoom visibility, and non-intercepting pointer behavior; cover the shared map selection/gesture contract. The Master Specification records this confirmed visual behavior and its pending deployment status.",
+      "reason": "Keep active clan power scoped to the current season and shard. Identity projection repair must not overwrite roster power before its aggregate event, recreate absent/removed memberships, or update archived clan roots. Reconcile totals transactionally from current roster entries rather than retaining a stale aggregate offset, including unchanged scores and board-only drift. Exercise actual callbacks with transaction conflicts and the Firestore emulator with concurrent, duplicate and delayed events, valid losses/zero, scope guards, and preserved returning members contributing zero without editing their archived profiles. The real identity callable/rules and reset gate cover canonical flag projection plus seasonal roster/role persistence, fresh starting claims, concurrent returning members, and reset replay safety. No UI layout, balance, archived data or release configuration changes; no browser layout checks are needed. The specification records the owner's current-season clarification and pending deployment status.",
       "tests": [
-        "tools/test-citadel-reign-ledger.js",
-        "tools/validate-citadel-reign-browser.js",
-        "tools/validate-crown-citadel-reigns.js",
-        "tools/validate-stronghold-legacies.js",
-        "tools/validate-live-subscription-scope.js",
-        "tools/validate-realtime-health.js",
-        "tools/validate-core-expansion-topology.js",
-        "tools/validate-map-image-loading.js",
-        "tools/validate-map-interactions.js",
-        "tools/validate-universal-profile-links.js",
-        "functions/test/emulator-citadel-reign-leaderboard.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-king-power.js",
+        "tools/validate-clans.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-reset-release.js",
+        "functions/test/emulator-clan-power-events.js",
+        "functions/test/emulator-player-flag-rules.js",
+        "functions/test/emulator-reset-gate.js"
       ]
     }
   ]

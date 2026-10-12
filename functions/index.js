@@ -16970,6 +16970,12 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       const clanBenefitsSnap = identity.clanId
         ? await transaction.get(clanWorldBenefitsRef(identity.clanId))
         : null;
+      const [clanSnap, clanMemberSnap] = identity.clanId
+        ? await Promise.all([
+          transaction.get(db.doc(`clans/${identity.clanId}`)),
+          transaction.get(db.doc(`clans/${identity.clanId}/members/${uid}`)),
+        ])
+        : [null, null];
       const objectiveBonuses = combinePlayerObjectiveBonuses(
         uid,
         ownedCityEntries,
@@ -17039,14 +17045,18 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
           },
         },
       ];
-      if (identity.clanId) {
+      if (clanSnap?.exists && clanMemberSnap?.exists
+          && isCurrentRealmPowerSnapshot(clanSnap.data())
+          && isCurrentRealmPowerSnapshot(clanMemberSnap.data())
+          && clanSnap.data().status === "active" && clanMemberSnap.data().status !== "removed") {
         writes.push({
-          ref: db.doc(`clans/${identity.clanId}/members/${uid}`),
+          ref: clanMemberSnap.ref,
           data: {
             uid,
             displayName: identity.ownerName,
             flag: identity.ownerFlag,
-            kingPower: serverKingPower,
+            // The stats trigger updates roster power and the clan total together.
+            // Publishing power here first would hide its unapplied delta.
             updatedAtMs: nowMs,
             updatedAt: FieldValue.serverTimestamp(),
           },
@@ -22910,12 +22920,8 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   maxInstances: 20,
 }, withDocumentRealmShard(async event => {
   const uid = safeString(event.params?.uid, 128);
-  const beforeStats = event.data?.before?.exists ? event.data.before.data() || {} : {};
   const afterStats = event.data?.after?.exists ? event.data.after.data() || {} : {};
-  if (safeString(afterStats.resetGeneration, 120) !== RESET_GENERATION) return;
-  const previousStatsPower = Math.max(0, Math.floor(safeNumber(beforeStats.kingPower, 0)));
-  const eventPower = Math.max(0, Math.floor(safeNumber(afterStats.kingPower, 0)));
-  if (!uid || (previousStatsPower === eventPower && isCurrentRealmPowerSnapshot(beforeStats))) return;
+  if (!uid || !isCurrentRealmPowerSnapshot(afterStats)) return;
   await runTransactionWithInfrastructureRetry(async transaction => {
     // Firestore events can arrive out of order or more than once. Read current
     // stats and membership under the same transaction as the aggregate update.
@@ -22931,21 +22937,35 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
         || !isCurrentRealmPowerSnapshot(profile) || !isCurrentRealmPowerSnapshot(stats)) return;
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) return;
-    const [clanSnap, memberSnap] = await Promise.all([
+    const boardRef = db.doc(`clanLeaderboards/${getRealmStorageId()}/entries/${clanId}`);
+    const [clanSnap, membersSnap, boardSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
-      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.collection(`clans/${clanId}/members`)),
+      transaction.get(boardRef),
     ]);
-    if (!clanSnap.exists || !memberSnap.exists) return;
+    const memberSnap = membersSnap.docs.find(snapshot => snapshot.id === uid);
+    if (!clanSnap.exists || !memberSnap) return;
     const clan = clanSnap.data() || {};
     const member = memberSnap.data() || {};
-    if (clan.resetGeneration !== RESET_GENERATION || member.resetGeneration !== RESET_GENERATION
-        || clan.worldId !== ONLINE_WORLD_ID || member.worldId !== ONLINE_WORLD_ID
-        || member.status === "removed") return;
+    if (!isCurrentRealmPowerSnapshot(clan) || !isCurrentRealmPowerSnapshot(member)
+        || clan.status !== "active" || member.status === "removed") return;
     const nextPower = Math.max(0, Math.floor(safeNumber(stats.kingPower, 0)));
     const previousPower = Math.max(0, Math.floor(safeNumber(member.kingPower, 0)));
-    if (previousPower === nextPower) return;
-    const totalKingPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0)) - previousPower + nextPower);
-    transaction.set(memberSnap.ref, { kingPower: nextPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    // Sum the transactional current-season roster instead of perpetuating an
+    // old aggregate error. Preserved members awaiting entry have zero power;
+    // never read their previous-season stats into this season's total.
+    const totalKingPower = membersSnap.docs.reduce((total, snapshot) => {
+      const entry = snapshot.data() || {};
+      if (!isCurrentRealmPowerSnapshot(entry) || entry.status === "removed") return total;
+      const power = snapshot.id === uid ? nextPower : Math.max(0, Math.floor(safeNumber(entry.kingPower, 0)));
+      return Math.min(Number.MAX_SAFE_INTEGER, total + power);
+    }, 0);
+    if (previousPower === nextPower && clan.totalKingPower === totalKingPower
+        && boardSnap.data()?.totalKingPower === totalKingPower
+        && isCurrentRealmPowerSnapshot(boardSnap.data())) return;
+    if (previousPower !== nextPower) {
+      transaction.set(memberSnap.ref, { kingPower: nextPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    }
     transaction.set(clanSnap.ref, { totalKingPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, memberSnap.data()?.role), { merge: true });
     writeClanLeaderboard(transaction, clanId, clan, { totalKingPower });
