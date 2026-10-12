@@ -200,7 +200,8 @@
     const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
     let selected=options.selectedKey ?? "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
-    let overviewArtBoxes=[],overviewTap=null;
+    let overviewArtBoxes=[],overviewTap=null,cameraFrame=0,cameraBounds=null,labelSizes=null,districtSizes=null;
+    let viewportWidth=0,viewportHeight=0;
     const pointers = new Map(), abort = new AbortController(), signal=abort.signal;
     const targets=[...host.querySelectorAll("[data-inner-castle-building]")];
     const districtTargets=[...host.querySelectorAll("[data-estate-district]")];
@@ -238,15 +239,42 @@
     const stopResourceUpdates=options.subscribeResources?.(updateResources);
     listen(shellElement,"focusin",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
     listen(shellElement,"pointerover",event=>{if(event.target.closest("[data-estate-resource]"))updateResources();});
+    function clampCamera() {
+      const scale=fit*camera.zoom;
+      const clampAxis=(value,size,screen)=>size*scale<=screen?size/2:Math.max(screen/(2*scale),Math.min(size-screen/(2*scale),value));
+      camera.x=clampAxis(camera.x,WIDTH,viewportWidth);camera.y=clampAxis(camera.y,HEIGHT,viewportHeight);
+    }
+    function requestCameraPaint() {
+      // Apply every input delta (including bounds) immediately, but lay out the
+      // scene only once per display frame, even on high-rate touch/trackpads.
+      clampCamera();
+      if(!destroyed&&!cameraFrame)cameraFrame=requestAnimationFrame(paint);
+    }
     function paint() {
+      if(cameraFrame){cancelAnimationFrame(cameraFrame);cameraFrame=0;}
       if(destroyed) return;
       const width=viewport.clientWidth,height=viewport.clientHeight;
       if(!width || !height) return;
+      if(width!==viewportWidth||height!==viewportHeight){labelSizes=null;districtSizes=null;}
+      viewportWidth=width;viewportHeight=height;
+      cameraBounds=viewport.getBoundingClientRect();
       fit=Math.min(width/WIDTH,height/HEIGHT);
       const scale=fit*camera.zoom;
-      const clampAxis=(value,size,screen)=>size*scale<=screen?size/2:Math.max(screen/(2*scale),Math.min(size-screen/(2*scale),value));
-      camera.x=clampAxis(camera.x,WIDTH,width);camera.y=clampAxis(camera.y,HEIGHT,height);
+      clampCamera();
       const tx=width/2-camera.x*scale,ty=height/2-camera.y*scale;
+      // Read fixed panels before moving the map/targets. Their geometry is
+      // independent of the camera; measuring it afterward forces another layout.
+      const occupied=camera.zoom<2.5?[]:[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail,#fixtureControls')].filter(e=>!e.hidden).map(e=>{
+        const r=e.getBoundingClientRect();return rect(r.left-cameraBounds.left,r.top-cameraBounds.top,r.width,r.height);
+      });
+      const districtObstacles=camera.zoom>=2.5?[]:[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
+      if(camera.zoom<2.5&&!districtSizes){
+        districtTargets.forEach(target=>{target.hidden=false;});
+        districtSizes=new Map(districtTargets.map(target=>{
+          const style=getComputedStyle(target),label=getComputedStyle(target.querySelector("span"));
+          return [target,{w:parseFloat(style.width),h:parseFloat(style.height),labelHeight:parseFloat(label.height)}];
+        }));
+      }
       // Re-rasterize at the current scale; a promoted overview layer otherwise
       // magnifies its cached low-density pixels even with native detail images.
       world.style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
@@ -286,38 +314,35 @@
         const collision=boxes.some((p,j)=>j!==i&&overlaps(box,p));
         target.hidden=camera.zoom<2.5||!visible||collision; target.setAttribute("aria-pressed",String(selected===b.key));
       });
-      const viewportBox=viewport.getBoundingClientRect();
       districtTargets.forEach((target,i)=>{
         const d=districts[i],anchor=d.labelAnchor||d;target.hidden=camera.zoom>=2.5||!locate(target,anchor.x,anchor.y);
         if(target.hidden)return;
         if(d.labelAnchor){
           // The label's top stays six screen pixels below its map anchor.
           // Keep the existing district center for zooming into its buildings.
-          const labelHeight=parseFloat(getComputedStyle(target.querySelector("span")).height);
+          const {labelHeight}=districtSizes.get(target);
           target.style.top=(parseFloat(target.style.top)+labelHeight/2+6)+"px";
           return;
         }
         // Extraction labels stay below their miniature art even when the map
         // shrinks but accessible text retains its screen-pixel size.
         if(d.key==="mine"){
-          const b=buildings.find(b=>b.key===d.key),label=target.querySelector("span").getBoundingClientRect();
+          const b=buildings.find(b=>b.key===d.key),{labelHeight}=districtSizes.get(target);
           const south=ty+(b.hotspot.top+b.footprint.height/2)*HEIGHT/100*scale;
-          target.style.top=Math.max(parseFloat(target.style.top),south+label.height/2+6)+"px";
+          target.style.top=Math.max(parseFloat(target.style.top),south+labelHeight/2+6)+"px";
         }
       });
       // The resource ledger reduces map height on small screens. Keep district
       // buttons apart, using the nearby painted scenery when the center is tight.
       // Layout coordinates avoid measuring the modal's opening transform, which
       // can otherwise leave districts offset after the transition finishes.
-      const districtObstacles=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
       const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
       // Fit the southernmost label before crafts, which has more room above it.
       const districtPriority=['quarry','woodland','city','mine','farmland','crafts','trade'];
       const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
-        const style=getComputedStyle(target),x=parseFloat(target.style.left),y=parseFloat(target.style.top);
-        const w=parseFloat(style.width),h=parseFloat(style.height),r=rect(x-w/2,y-h/2,w,h);
+        const x=parseFloat(target.style.left),y=parseFloat(target.style.top),{w,h}=districtSizes.get(target),r=rect(x-w/2,y-h/2,w,h);
         if(districts.find(d=>d.key===target.dataset.estateDistrict).labelAnchor){
           // Never search for a new location for an anchored district. Panels
           // and viewport edges may occlude it; the directory remains available.
@@ -362,28 +387,27 @@
         if(position){place(target,x+position.dx,y+position.dy);districtObstacles.push(position);}else target.hidden=true;
       });
       host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
-      placeNameplates(artBoxes,boxes,width,height,viewportBox);
+      placeNameplates(artBoxes,boxes,width,height,occupied);
       timers?.place(camera.zoom,selected);
       host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
       host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
       host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
     }
-    function placeNameplates(artBoxes,boxes,width,height,viewportBox) {
+    function placeNameplates(artBoxes,boxes,width,height,occupied) {
       if(camera.zoom<2.5){
         upgradeTargets.forEach(button=>{button.hidden=true;});
         nameplates.forEach((label,i)=>{label.hidden=true;targets[i].dataset.hasNameplate="false";});
         return;
       }
-      const occupied=[...host.querySelectorAll('.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls,.estate-district:not([hidden])>span')].filter(e=>!e.hidden).map(e=>{
-        const r=e.getBoundingClientRect();return rect(r.left-viewportBox.left,r.top-viewportBox.top,r.width,r.height);
-      });
-      // Measure all labels together before positioning; text remains sharp and
-      // the same readable screen-pixel size throughout the camera range.
-      nameplates.forEach(label=>{label.hidden=false;label.style.visibility="hidden";});
-      const sizes=nameplates.map(label=>({w:label.offsetWidth,h:label.offsetHeight}));
+      // Labels have a fixed screen-pixel size. Re-measure only when their text,
+      // font or responsive viewport changes, not on every camera movement.
+      if(!labelSizes){
+        nameplates.forEach(label=>{label.hidden=false;label.style.visibility="hidden";});
+        labelSizes=nameplates.map(label=>({w:label.offsetWidth,h:label.offsetHeight}));
+      }
       const order=buildings.map((b,i)=>i).sort((a,b)=>(buildings[b].key===selected)-(buildings[a].key===selected));
       for(const i of order){
-        const label=nameplates[i],art=artBoxes[i],{w,h}=sizes[i],cx=(art.left+art.right)/2;
+        const label=nameplates[i],art=artBoxes[i],{w,h}=labelSizes[i],cx=(art.left+art.right)/2;
         // Keep the caption attached to the building's base. Crowding can hide
         // it, but must never move it above or beside the building.
         const placement=rect(cx-w/2,art.bottom+3,w,h);
@@ -397,11 +421,14 @@
       if(selected)options.actions?.place(upgradeTargets,selected,buildings,artBoxes,[...artBoxes,...hitBoxes,...occupied],width,height);
       else upgradeTargets.forEach(button=>{button.hidden=true;});
     }
-    function zoom(value,clientX,clientY) {
-      const rect=viewport.getBoundingClientRect(), px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
+    function zoom(value,clientX,clientY,defer=false) {
+      if(destroyed)return;
+      if(!defer||!cameraFrame||!cameraBounds)cameraBounds=viewport.getBoundingClientRect();
+      const rect=cameraBounds, px=clientX==null?rect.width/2:clientX-rect.left,py=clientY==null?rect.height/2:clientY-rect.top;
       const previous=fit*camera.zoom,next=Math.max(1,Math.min(4,value));
       const wx=camera.x+(px-rect.width/2)/previous,wy=camera.y+(py-rect.height/2)/previous;
-      camera.zoom=next;camera.x=wx-(px-rect.width/2)/(fit*next);camera.y=wy-(py-rect.height/2)/(fit*next);paint();
+      camera.zoom=next;camera.x=wx-(px-rect.width/2)/(fit*next);camera.y=wy-(py-rect.height/2)/(fit*next);
+      if(defer)requestCameraPaint();else paint();
     }
     function updateEstate(snapshot) {
       if(destroyed||!snapshot)return;
@@ -423,7 +450,7 @@
       if(presentationChanged)options.actions?.sync(host,siteLevels);
       if(selectedChanged)renderDetail();
       updateResources();
-      if(presentationChanged)paint();
+      if(presentationChanged){labelSizes=null;paint();}
     }
     if(options.onResource){
       host.querySelectorAll("[data-estate-resource]").forEach(element=>{
@@ -498,7 +525,7 @@
         selected="";camera.detailOpen=false;options.onSelect?.(selected);renderDetail();paint();
       }
     });
-    listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY);},{passive:false});
+    listen(viewport,"wheel",event=>{if(event.target.closest(".estate-detail,.estate-directory"))return;event.preventDefault();zoom(camera.zoom*Math.exp(-event.deltaY*.0015),event.clientX,event.clientY,true);},{passive:false});
     listen(viewport,"pointerdown",event=>{
       const overviewHit=overviewBuildingAt(event.clientX,event.clientY)>=0;
       if(event.button!==0||(event.target.closest(".estate-detail,.estate-directory,.estate-camera-controls,#fixtureControls")&&!overviewHit))return;
@@ -519,8 +546,8 @@
       if(Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>4)gestureMoved=true;
       if(!gestureMoved)return;
       for(const id of pointers.keys())if(!viewport.hasPointerCapture(id))viewport.setPointerCapture(id);
-      if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2);}
-      else {camera.x-=(event.clientX-(wasDragging?old.x:old.startX))/(fit*camera.zoom);camera.y-=(event.clientY-(wasDragging?old.y:old.startY))/(fit*camera.zoom);paint();}
+      if(next.length===2){const before=Math.hypot(oldPoints[0].x-oldPoints[1].x,oldPoints[0].y-oldPoints[1].y),after=Math.hypot(next[0].x-next[1].x,next[0].y-next[1].y);if(before>1)zoom(camera.zoom*after/before,(next[0].x+next[1].x)/2,(next[0].y+next[1].y)/2,true);}
+      else {camera.x-=(event.clientX-(wasDragging?old.x:old.startX))/(fit*camera.zoom);camera.y-=(event.clientY-(wasDragging?old.y:old.startY))/(fit*camera.zoom);requestCameraPaint();}
     });
     const endPointer=event=>{
       const point=pointers.get(event.pointerId);if(!point)return;pointers.delete(event.pointerId);
@@ -538,12 +565,13 @@
       if(event.key==="+"||event.key==="=")zoom(camera.zoom+.5);if(event.key==="-")zoom(camera.zoom-.5);if(event.key==="0"){camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;}paint();
     });
     const resize=new ResizeObserver(paint);resize.observe(viewport);
+    if(document.fonts)listen(document.fonts,"loadingdone",()=>{labelSizes=null;districtSizes=null;paint();});
     renderDetail();paint();if(options.estate)updateEstate(options.estate);
     return {
       select, zoom, updateResources, updateEstate, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
       debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
-      destroy(){if(destroyed)return;destroyed=true;abort.abort();resize.disconnect();stopResourceUpdates?.();timers?.destroy();},
+      destroy(){if(destroyed)return;destroyed=true;if(cameraFrame)cancelAnimationFrame(cameraFrame);cameraFrame=0;abort.abort();resize.disconnect();stopResourceUpdates?.();timers?.destroy();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }

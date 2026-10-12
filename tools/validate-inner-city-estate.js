@@ -68,7 +68,9 @@ for(const file of runtimeFiles){const buffer=fs.readFileSync(path.join(root,"ass
 assert(allBytes<=4096*1024,'Zoom artwork must stay inside the bounded 4 MiB lazy budget');
 assert(overviewBytes<=1600*1024,'Overview must not absorb the zoom-only payload');
 const source=fs.readFileSync(path.join(root,"inner-city-estate.js"),"utf8");assert.doesNotMatch(source,/\b(?:fetch|localStorage|saveGame|callServer)\s*[.(]/,"Visual estate must not write player progression or call the server");
-assert.doesNotMatch(source,/requestAnimationFrame|estate-roads|estate-wall|estate-actor|estate-mill-sails/,'Still cohesive scene has no vector roads/walls or ambient animation work');
+assert.doesNotMatch(source,/setInterval|estate-roads|estate-wall|estate-actor|estate-mill-sails/,'Still cohesive scene has no vector roads/walls or ambient interval work');
+// Input-driven frames are permitted; the camera browser validator checks that
+// redraws stop when idle and pending work is cancelled on scene disposal.
 assert.doesNotMatch(source,/estate-site-ground|plot-ground\.webp/,'Do not overlay repeated soil shapes on the integrated terrain');
 const sizes=JSON.parse(fs.readFileSync(path.join(root,'docs/art-sources/inner-city-estate/sprite-sizes.json'),'utf8'));
 assert.equal(sizes.mapPixelScale,.30);
