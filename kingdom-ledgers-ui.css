@@ -207,6 +207,7 @@
 #modal.leaderboard-modal .leaderboard-list :is(.leaderboard-map,.leaderboard-cities,.leaderboard-members) { display:none!important; }
 #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-mobile-meta { display:inline!important; }
 #modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .leaderboard-mobile-meta { display:block!important; }
+#modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .leaderboard-rank { font-size:19px!important; }
 #modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .clan-leaderboard-shield-link { width:100%; height:auto; }
 #modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .season-decoration-mark { min-width:14px; height:16px; font-size:11px; right:-3px; bottom:-3px; }
 @media(max-width:1000px),(max-height:600px) {
@@ -244,6 +245,7 @@
  #modal.leaderboard-modal .leaderboard-list :is(.leaderboard-row,.leaderboard-columns) { grid-template-columns:23px 26px minmax(0,1fr) 140px; gap:7px; }
  #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-flag { width:25px!important; height:32px!important; }
  #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-power strong { font-size:16px!important; }
+ #modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .leaderboard-rank { font-size:14px!important; }
 }
 @media(max-width:650px) {
  #modal.leaderboard-modal .leaderboard-tab-panel { grid-template-columns:115px minmax(0,1fr); }
@@ -255,6 +257,7 @@
  #modal.leaderboard-modal .leaderboard-list :is(.leaderboard-row,.leaderboard-columns) { grid-template-columns:20px 22px minmax(0,1fr) 118px; gap:5px; }
  #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-flag { width:21px!important; height:28px!important; }
  #modal.leaderboard-modal .leaderboard-list>.leaderboard-row .leaderboard-power strong { font-size:14px!important; }
+ #modal.leaderboard-modal .leaderboard-list>.clan-leaderboard-row .leaderboard-rank { font-size:12px!important; }
  #modal.leaderboard-modal .leaderboard-champion :is(.player-name-link,.clan-identity-link) { font-size:12px!important; }
  #modal.leaderboard-modal .leaderboard-champion .leaderboard-power strong { font-size:15px!important; }
  #modal.leaderboard-modal .leaderboard-champion.first .leaderboard-power strong { font-size:17px!important; }
