@@ -17722,19 +17722,9 @@ function scheduleCityWorldAnimation(type, snapshot, options = {}) {
     const anchor = getWorldAnimationAnchor(city);
     const targetNode = cityLayer?.querySelector(`[data-city-id="${CSS.escape(snapshot.id)}"]`);
     if (!anchor || !targetNode?.isConnected) return;
-    let captureSize;
     if (type === "city-capture") {
       // A delayed capture must not dress a city that has already changed hands again.
       if (String(city.ownerUid || "") !== options.payload?.nextOwnerUid) return;
-      const art = targetNode.querySelector(".city-castle, .stronghold-building");
-      const targetRect = targetNode.getBoundingClientRect();
-      const artRect = art?.getBoundingClientRect();
-      const scale = targetRect.width / targetNode.offsetWidth;
-      if (artRect?.width > 0 && Number.isFinite(scale) && scale > 0) {
-        anchor.x += (artRect.left + artRect.width / 2 - targetRect.left - targetRect.width / 2) / scale;
-        anchor.y += (artRect.top + artRect.height / 2 - targetRect.top - targetRect.height / 2) / scale;
-        captureSize = artRect.width / scale;
-      }
     }
     const eventId = options.id || `${type}:${snapshot.regionId}:${snapshot.id}:${Date.now()}`;
     const nowMs = Date.now();
@@ -17757,7 +17747,6 @@ function scheduleCityWorldAnimation(type, snapshot, options = {}) {
         cityId: snapshot.id,
         stronghold: snapshot.stronghold,
         crownCitadel: snapshot.crownCitadel,
-        captureSize,
         ...(options.payload || {}),
       },
     });

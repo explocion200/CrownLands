@@ -990,7 +990,19 @@
       // Keep the clash readable above march badges; shared class ownership cleans
       // up correctly when simultaneous captures finish or the map changes.
       this.acquireTargetClass(context.record, context.record.root, "crownlands-capture-active");
-      const size = clamp(finiteNumber(context.event.captureSize, 184), 32, 640);
+      let size = finiteNumber(context.event.captureSize, 184);
+      const target = context.event.target;
+      const art = target?.querySelector?.(".city-castle, .stronghold-building");
+      const targetRect = target?.getBoundingClientRect?.();
+      const artRect = art?.getBoundingClientRect();
+      const scale = targetRect?.width / target?.offsetWidth;
+      if (artRect?.width > 0 && Number.isFinite(scale) && scale > 0) {
+        const anchor = context.record.sourceAnchor;
+        context.element.style.left = `${anchor.x + (artRect.left + artRect.width / 2 - targetRect.left - targetRect.width / 2) / scale}px`;
+        context.element.style.top = `${anchor.y + (artRect.top + artRect.height / 2 - targetRect.top - targetRect.height / 2) / scale}px`;
+        size = artRect.width / scale;
+      }
+      size = clamp(size, 32, 640);
       context.element.style.setProperty("--vfx-size", `${size}px`);
       const drape = this.createPart(context, "capture-drape");
       const flag = document.createElement("span");
