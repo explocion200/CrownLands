@@ -1,24 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "a017b86f5d5a4a9da3c677dbd241a6aecb858e6b",
+  "baseCommit": "f2a019bce1e3412d742c7dae4732cb8be27b94fa",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "estate-economy-ui.js",
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-estate-camera-performance-browser.js"
+        "assets/icons/citadel-crown-r1.webp",
+        "docs/art-sources/citadel-crown/citadel-crown-r1.png",
+        "game.js",
+        "interface-theme.css",
+        "kingdom-ledgers-ui.js",
+        "styles.css",
+        "tools/generate-release-manifest.js",
+        "tools/validate-citadel-reign-browser.js"
       ],
-      "reason": "Reduce Inner Castle dragging and zooming work by coalescing pointer/wheel paints, caching fixed-size labels, reading fixed panels before camera writes and batching construction timer geometry. Preserve every input delta and per-event bounds, accessible building selection, artwork sharpness, district anchors, construction overlays, resource refresh and equipment return. The browser regression exercises frame/layout budgets under 4x CPU slowdown, real pointer capture with high-rate drag bursts, boundary reversal, queued-work cancellation, resize/text/font cache invalidation and no idle work. Existing native input, timer and refresh checks cover shared dependencies; actual-game integration covers production delivery and lifecycle. Source and built fixtures run at desktop and two landscape-mobile sizes. Static checks preserve artwork and estate integration contracts; the previous blanket animation-frame ban is replaced by idle/teardown behavior checks. No server, gameplay balance, saved state, current realm data or release contract changes, so no emulator suites are needed.",
+      "reason": "Replace only the Map Atlas Citadel crest and current holder's city marker with one transparent painted crown. Check real image decoding and alpha, shared asset identity, production byte parity and bounded payload; include the new WebP in the release fingerprint. Existing Citadel browser coverage verifies own/foreign holders, selection, handoff, neutral removal, close/far zoom and input transparency at desktop and two landscape-mobile sizes. Map picker gestures and live Atlas frame coverage protect the shared decorative renderer, adjacent Stronghold icons, Clan Tower flags and camera interactions. Production artifact and asset budget gates run as part of prepare-pr. No backend, world topology, current-realm data, ownership rules or server contracts change; no emulator suites are needed.",
       "tests": [
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle.js",
-        "tools/validate-estate-camera-performance-browser.js",
-        "tools/validate-estate-input-browser.js",
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-refresh-browser.js",
-        "tools/validate-inner-castle-browser.js"
+        "tools/validate-citadel-reign-browser.js",
+        "tools/validate-clan-tower-atlas-browser.js",
+        "tools/validate-map-picker-input.js",
+        "tools/validate-map-feature-indicators.js"
       ]
+    },
+    {
+      "paths": [
+        "docs/art-sources/citadel-crown/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "reason": "Record the owner's explicitly requested art direction, the built-in generation prompt and the preserved-alpha delivery process. The specification marks the artwork as pending merge and authorized deployment; gameplay rules are unchanged. Prose needs review only, while the artwork and both consumers are covered above.",
+      "tests": []
     }
   ]
 }

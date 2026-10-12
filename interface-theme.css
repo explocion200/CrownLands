@@ -1630,15 +1630,11 @@ input[type="range"] {
   height: .88rem;
 }
 
-.citadel-city-crown .cl-icon {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
-.citadel-city-crown {
-  display: inline-grid;
-  place-items: center;
-  color: #d7bd72;
+.citadel-crown-art {
+  display: block;
+  width: 32px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .city-shield-field img,

@@ -44,7 +44,8 @@ async function verifyRulerCrowns(p, { delivery, width, height }) {
       aboveCity: Boolean(box && art && box.bottom <= art.top + 4),
       aboveLabel: Boolean(label?.classList.contains("city-label") && next && box.bottom <= next.top + 1),
       withinViewport: Boolean(box && box.x >= 0 && box.y >= 0 && box.right <= innerWidth && box.bottom <= innerHeight),
-      hasIcon: Boolean(crown?.querySelector(".cl-icon")),
+      hasIcon: Boolean(crown?.querySelector("img")?.complete && crown.querySelector("img").naturalWidth === 256),
+      art: crown?.querySelector("img")?.getAttribute("src"),
       pointerEvents: crown && getComputedStyle(crown).pointerEvents,
     };
   });
@@ -56,6 +57,7 @@ async function verifyRulerCrowns(p, { delivery, width, height }) {
       reignQa.subscriptions[0].handlers.onCitadel({ ...reignQa.snapshot, ownerUid: holder });
     }, { holder, far });
     await p.waitForFunction(() => !isCameraInteractionActive());
+    await p.evaluate(() => Promise.all([...cityLayer.querySelectorAll(".citadel-city-crown img")].map(image => image.decode())));
     const result = await inspect();
     assert.equal(result.holder, holder);
     assert.equal(result.cityCount, 3, "Both former and new holders must remain rendered during handoff");
@@ -64,6 +66,7 @@ async function verifyRulerCrowns(p, { delivery, width, height }) {
     assert.deepEqual(result.marked, [result.expected], JSON.stringify(result));
     assert(result.visible && result.aboveCity && result.aboveLabel && result.withinViewport && result.hasIcon, JSON.stringify(result));
     assert.equal(result.pointerEvents, "none", "The crown must not intercept city input");
+    assert.equal(result.art, "assets/icons/citadel-crown-r1.webp", "The holder must use the painted Citadel crown");
     await p.screenshot({ path: path.join(artifacts, `crown-${holder}-${far ? "far" : "close"}-${delivery}-${width}x${height}.png`) });
   }
   await p.evaluate(() => {
@@ -83,8 +86,46 @@ async function verifyRulerCrowns(p, { delivery, width, height }) {
   });
 }
 
+async function verifyAtlasCrown(p, { delivery, width, height }) {
+  await p.evaluate(() => showIslandSwitcherModal());
+  await p.waitForFunction(() => modalBody.querySelector(".citadel-crest"));
+  const art = await p.evaluate(async () => {
+    const crest = modalBody.querySelector(".citadel-crest"), src = crest.getAttribute("href");
+    const image = new Image(); image.src = src; await image.decode();
+    const canvas = document.createElement("canvas"); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let transparent = false, opaque = false;
+    for (let i = 3; i < pixels.length; i += 4) { transparent ||= pixels[i] === 0; opaque ||= pixels[i] === 255; }
+    const tile = crest.closest("[data-island-region]"), region = WORLD_REGIONS.find(r => r.id === tile.dataset.islandRegion);
+    const picker = getIslandMapPickerElement(), position = getIslandMapPosition(region), scale = innerWidth < 600 ? 0.7 : 1;
+    getIslandMapPickerCameraController(picker).renderNow({ x: picker.clientWidth / 2 - position.x * scale, y: picker.clientHeight / 2 - position.y * scale, zoom: scale });
+    return { src, transparent, opaque, width: image.naturalWidth, height: image.naturalHeight, count: modalBody.querySelectorAll(".citadel-crest").length };
+  });
+  assert.equal(art.src, "assets/icons/citadel-crown-r1.webp");
+  assert(art.transparent && art.opaque && art.width === 256 && art.height === 256 && art.count === 1, JSON.stringify(art));
+  await p.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const layout = await p.evaluate(() => {
+    const crown = modalBody.querySelector(".citadel-crest"), box = crown.getBoundingClientRect();
+    const tile = crown.closest("[data-island-region]"), thumb = tile.querySelector(".island-map-thumb").getBoundingClientRect();
+    return { visible: crown.checkVisibility(), pointer: getComputedStyle(crown).pointerEvents,
+      inside: box.left >= 0 && box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight,
+      aboveMap: box.top < thumb.top && box.bottom < thumb.top + thumb.height / 2,
+      tileReceivesInput: document.elementFromPoint(thumb.x + thumb.width / 2, thumb.y + thumb.height / 2)?.closest("[data-island-region]") === tile };
+  });
+  assert(layout.visible && layout.inside && layout.aboveMap && layout.tileReceivesInput, JSON.stringify(layout));
+  assert.equal(layout.pointer, "none");
+  await p.screenshot({ path: path.join(artifacts, `atlas-crown-${delivery}-${width}x${height}.png`) });
+  await p.evaluate(() => window.__CROWNLANDS_BENCHMARK__.closeModal());
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..");
+  for (const file of ["game.js", "kingdom-ledgers-ui.js", "styles.css", "interface-theme.css"])
+    assert.equal(fs.readFileSync(path.join(root, "dist", file), "utf8"), fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n/g, "\n"), `Production crown consumer must match source: ${file}`);
+  const crownAsset = "assets/icons/citadel-crown-r1.webp";
+  assert.deepEqual(fs.readFileSync(path.join(root, "dist", crownAsset)), fs.readFileSync(path.join(root, crownAsset)), "Production crown bytes must match the reviewed art");
+  assert(fs.statSync(path.join(root, crownAsset)).size < 32 * 1024, "A small map crown must remain below 32 KiB");
   const delivered = fs.readFileSync(path.join(root, "dist/stronghold-details-ui.js"), "utf8");
   assert.equal(delivered, minifyEstate(fs.readFileSync(path.join(root, "stronghold-details-ui.js"), "utf8")), "Build the current production client before validating the delivered Citadel UI");
   fs.mkdirSync(artifacts, { recursive: true });
@@ -138,6 +179,7 @@ async function main() {
         if (getCrownCitadelHolderUid() !== "current" || !cityOwnerHoldsCrownCitadel({ ownerUid: "current", kind: "city" })) throw Error("Current ruler and city crown were not reconciled");
       });
       await verifyRulerCrowns(p, { delivery, width, height });
+      await verifyAtlasCrown(p, { delivery, width, height });
       await p.evaluate(() => {
         const snapshot = reignQa.snapshot;
         state.online.activeRegionId = snapshot.regionId;

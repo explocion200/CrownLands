@@ -29082,7 +29082,7 @@ function renderCitiesUncached(force = false) {
     const ownerName = getCityOwnerDisplayName(city);
     const ownerFlag = renderCityOwnerFlag(city);
     const crownBadge = cityOwnerHoldsCrownCitadel(city)
-      ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">${renderCrownlandsIcon("crown")}</span>`
+      ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler"><img class="citadel-crown-art" src="${KINGDOM_UI.citadelCrownArt}" width="32" height="28" alt="" draggable="false"></span>`
       : "";
     const clanIdentity = city.owner === "player"
       ? { clanId: state.clanId, clanTag: state.clanTag }

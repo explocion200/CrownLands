@@ -8,6 +8,7 @@ const ATLAS_STRONGHOLD_BONUS_ICONS = Object.freeze({
  "core-v2-swiftgate-p1-p0": "assets/icons/skills/atlas-v1/marchOrders.webp",
  "core-v2-ironwatch-p0-p1": "assets/icons/skills/atlas-v1/shieldwallDiscipline.webp"
 });
+const CITADEL_CROWN_ART = "assets/icons/citadel-crown-r1.webp";
 // Decorative SVG overlays stay outside layout and never intercept map gestures.
 function atlasFeatureFrame(kind, citadel = false, bonusIcon = "", hasClanFlag = false) {
  const corners = (art, inset = 0, bottomArt = art) => [
@@ -49,16 +50,7 @@ function atlasFeatureFrame(kind, citadel = false, bonusIcon = "", hasClanFlag = 
    <path d="M9 10c14-10 19 1 9 5 5-7-4-8-9-5Zm1-1c-10 14 1 19 5 9-7 5-8-4-5-9Z" fill="#c69a53" stroke="#683e26" stroke-width=".9"/>
    <path d="m5 5 4 3-1 4-4-3Z" fill="#923c32" stroke="#ffdf97" stroke-width=".7"/>`;
   // Show each Stronghold's specialization; only Crown Citadel uses the crown.
-  crest = citadel ? `<g class="citadel-crest">
-   <path d="M110 5q21-12 42 0l-3 19-18 12-18-12Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
-   <path d="m113 8 4 15 14 9 14-9 4-15" fill="none" stroke="#b36d51" stroke-width="1"/>
-   <path d="m117 10 7 5 7-12 7 12 7-5-4 14h-20Z" fill="#e6c17e" stroke="#593924" stroke-width="1.2" stroke-linejoin="round"/>
-   <path d="M121 21h20m-16-4 6-10 5 10" fill="none" stroke="#fff1b9" stroke-width="1.2"/>
-   <circle cx="117" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
-   <circle cx="145" cy="9" r="2" fill="#f4d895" stroke="#593924" stroke-width=".7"/>
-   <path d="m131 1 3 3-3 3-3-3Z" fill="#fff3c5" stroke="#593924" stroke-width=".7"/>
-   <path d="m105 6-7-3 3 7m56-4 7-3-3 7M124 28l7 4 7-4" fill="none" stroke="#f1d897" stroke-width="1.5"/>
-   </g>` : `<g class="stronghold-crest">
+  crest = citadel ? `<image class="citadel-crest" href="${CITADEL_CROWN_ART}" x="99" y="-20" width="64" height="56" preserveAspectRatio="xMidYMid meet"/>` : `<g class="stronghold-crest">
    <path d="M106 0q25-12 50 0l-3 23-22 15-22-15Z" fill="#7e3029" stroke="#dcb775" stroke-width="1.7"/>
    <path d="M110 2q21-9 42 0l-3 19-18 12-18-12Z" fill="#dfcba0" stroke="#a57e47" stroke-width="1"/>
    ${bonusIcon ? `<image class="stronghold-bonus-icon" href="${bonusIcon}" x="114" y="-3" width="34" height="34" preserveAspectRatio="xMidYMid meet"/>` : ''}
@@ -139,5 +131,5 @@ function updateLeaderboardStanding(panel, category, entries, currentUid, clanId,
   });
 }
 
-  global.CrownlandsKingdomLedgersUi = Object.freeze({ formatLedgerNumber, formatLedgerBaseAndBonus, atlasFeatureFrame, updateLeaderboardStanding, strongholdIcons: ATLAS_STRONGHOLD_BONUS_ICONS });
+  global.CrownlandsKingdomLedgersUi = Object.freeze({ formatLedgerNumber, formatLedgerBaseAndBonus, atlasFeatureFrame, updateLeaderboardStanding, strongholdIcons: ATLAS_STRONGHOLD_BONUS_ICONS, citadelCrownArt: CITADEL_CROWN_ART });
 })(window);
