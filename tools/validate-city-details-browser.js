@@ -172,7 +172,7 @@ async function main() {
         modal.close();showCityInfoModal(cdQaCity.id);
         if(modalBody.querySelector('[aria-pressed="true"]').dataset.cdAmount!=='0')throw Error('A fresh city visit inherited stale selection');
       })()`);
-      const castleEntry = await evaluate(`(() => {
+      const castleEntry = await evaluate(`(async () => {
         const main=getMainCityReference();
         const other=state.cities.find(c=>c.id!==main.id&&!isStronghold(c)&&!isCrownCitadel(c));
         const saved={owner:other.owner,ownerUid:other.ownerUid};
@@ -187,9 +187,11 @@ async function main() {
             if(owner==='player')document.getElementById('cdDefencesTab').click();
             if(!entry.getClientRects().length||entry.closest('[role="tabpanel"]'))throw Error('Shortcut must remain available outside the tabs');
             entry.click();
-            if(!modal.classList.contains('inner-castle-modal')||modal.dataset.innerCastleCityId!==main.id||!modalBody.querySelector('.bailey-shell'))throw Error('Shortcut did not open the player Main City Inner Castle');
+            for(let attempt=0;attempt<100&&!modalBody.querySelector('.estate-shell');attempt++)await new Promise(resolve=>setTimeout(resolve,50));
+            if(!modal.classList.contains('inner-castle-modal')||modal.dataset.innerCastleCityId!==main.id||!modalBody.querySelector('.estate-shell'))throw Error('Shortcut did not open the player Main City Inner Castle');
             modalBody.querySelector('[data-inner-castle-back]').click();
-            if(modal.dataset.cityInfoId!==inspected.id||document.activeElement.id!=='enterInnerCastleBtn'||modal.dataset.innerCastleReturnCityId)throw Error('Back did not restore the inspected city and focus');
+            if(modal.open||document.activeElement!==mapFrame||modal.dataset.innerCastleReturnCityId)throw Error('Back to Realm did not close the estate and restore map focus');
+            await new Promise(resolve=>setTimeout(resolve,0));
             checks.push({owner,main:inspected.id===main.id});
           }
         }
