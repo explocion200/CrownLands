@@ -194,10 +194,11 @@
     return { x:x+(nx-x)*ratio,y:y+(ny-y)*ratio,facing:(nx-x)*(reverse?-1:1)<0?-1:1 };
   }
   function mount(host, options = {}) {
+    const query=selector=>host.querySelector(selector);
     const siteStates = createStates(options.fixture);
     const siteLevels = createLevels(siteStates,options.levels);
     host.innerHTML = shell(options,siteStates,siteLevels);
-    const shellElement=host.querySelector(".estate-shell"), viewport=host.querySelector(".estate-viewport"), world=host.querySelector(".estate-world"), detail=host.querySelector(".estate-detail"), directory=host.querySelector(".estate-directory");
+    const shellElement=query(".estate-shell"), viewport=query(".estate-viewport"), world=query(".estate-world"), detail=query(".estate-detail"), directory=query(".estate-directory");
     const camera = {zoom:1,x:WIDTH/2,y:HEIGHT/2,detailOpen:false,directoryOpen:false,...options.camera};
     let selected=options.selectedKey ?? "great-hall", fit=1, destroyed=false, gestureMoved=false, suppressClick=false;
     let overviewArtBoxes=[],overviewTap=null,cameraFrame=0,cameraBounds=null,labelSizes=null,districtSizes=null;
@@ -227,7 +228,7 @@
       timers?.update(options.estate,options.now?.());
       const balances=typeof options.getResources==="function" ? options.getResources() : options.resources;
       resources.forEach(r=>{
-        const value=resourceValue(balances?.[r.key]),element=host.querySelector(`[data-estate-resource="${r.key}"]`);
+        const value=resourceValue(balances?.[r.key]),element=query(`[data-estate-resource="${r.key}"]`);
         const label=value===null ? `${r.label}: ${r.key==="gold"||r.key==="crowns" ? "balance unavailable" : "estate production planned"}` : `${r.label}: ${value.toLocaleString("en-US")}${options.resourcePreview ? " (preview)" : ""}`;
         const text=formatResource(value),valueElement=element.querySelector("dd");
         if(valueElement.textContent!==text)valueElement.textContent=text;
@@ -251,23 +252,19 @@
       if(!destroyed&&!cameraFrame)cameraFrame=requestAnimationFrame(paint);
     }
     function paint() {
-      if(cameraFrame){cancelAnimationFrame(cameraFrame);cameraFrame=0;}
+      cancelAnimationFrame(cameraFrame);cameraFrame=0;
       if(destroyed) return;
       const width=viewport.clientWidth,height=viewport.clientHeight;
       if(!width || !height) return;
       if(width!==viewportWidth||height!==viewportHeight){labelSizes=null;districtSizes=null;}
       viewportWidth=width;viewportHeight=height;
-      cameraBounds=viewport.getBoundingClientRect();
       fit=Math.min(width/WIDTH,height/HEIGHT);
       const scale=fit*camera.zoom;
       clampCamera();
       const tx=width/2-camera.x*scale,ty=height/2-camera.y*scale;
       // Read fixed panels before moving the map/targets. Their geometry is
       // independent of the camera; measuring it afterward forces another layout.
-      const occupied=camera.zoom<2.5?[]:[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail,#fixtureControls')].filter(e=>!e.hidden).map(e=>{
-        const r=e.getBoundingClientRect();return rect(r.left-cameraBounds.left,r.top-cameraBounds.top,r.width,r.height);
-      });
-      const districtObstacles=camera.zoom>=2.5?[]:[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail')].filter(e=>!e.hidden).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
+      const panelBoxes=[...host.querySelectorAll('.estate-camera-controls,.estate-directory,.estate-detail,#fixtureControls')].filter(e=>!e.hidden&&(camera.zoom>=2.5||e.id!=="fixtureControls")).map(e=>rect(e.offsetLeft,e.offsetTop,e.offsetWidth,e.offsetHeight));
       if(camera.zoom<2.5&&!districtSizes){
         districtTargets.forEach(target=>{target.hidden=false;});
         districtSizes=new Map(districtTargets.map(target=>{
@@ -337,6 +334,7 @@
       // Layout coordinates avoid measuring the modal's opening transform, which
       // can otherwise leave districts offset after the transition finishes.
       const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
+      const districtObstacles=panelBoxes;
       // Fit the southernmost label before crafts, which has more room above it.
       const districtPriority=['quarry','woodland','city','mine','farmland','crafts','trade'];
       const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
@@ -386,12 +384,12 @@
         }
         if(position){place(target,x+position.dx,y+position.dy);districtObstacles.push(position);}else target.hidden=true;
       });
-      host.querySelector(".estate-map-hint").hidden=camera.zoom>=2.5;
-      placeNameplates(artBoxes,boxes,width,height,occupied);
+      query(".estate-map-hint").hidden=camera.zoom>=2.5;
+      placeNameplates(artBoxes,boxes,width,height,panelBoxes);
       timers?.place(camera.zoom,selected);
-      host.querySelector("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
-      host.querySelector('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
-      host.querySelector('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
+      query("[data-estate-zoom-label]").textContent=Math.round(camera.zoom*100)+"%";
+      query('[data-estate-zoom="out"]').disabled=camera.zoom<=1;
+      query('[data-estate-zoom="in"]').disabled=camera.zoom>=4;
     }
     function placeNameplates(artBoxes,boxes,width,height,occupied) {
       if(camera.zoom<2.5){
@@ -438,12 +436,12 @@
         const level=snapshot.levels[b.key],state=snapshot.jobs.some(j=>j.building===b.key&&j.status==="running")?"constructing":level?"completed":"unbuilt";
         if(siteStates[b.key]===state&&siteLevels[b.key]===level)continue;
         presentationChanged=true;if(b.key===selected)selectedChanged=true;
-        if(siteStates[b.key]!==state)host.querySelector('[data-estate-site="'+b.key+'"]').outerHTML=siteMarkup(b,state);
+        if(siteStates[b.key]!==state)query('[data-estate-site="'+b.key+'"]').outerHTML=siteMarkup(b,state);
         siteStates[b.key]=state;siteLevels[b.key]=level;
-        const caption=levelText(state,level),target=host.querySelector('[data-inner-castle-building="'+b.key+'"]');
+        const caption=levelText(state,level),target=query('[data-inner-castle-building="'+b.key+'"]');
         target.setAttribute("aria-label",b.label+", "+caption);target.querySelector("span").textContent=b.label+" · "+caption;
-        host.querySelector('[data-estate-nameplate="'+b.key+'"] small').textContent=caption;
-        host.querySelector('[data-estate-directory-building="'+b.key+'"] small').textContent=caption;
+        query('[data-estate-nameplate="'+b.key+'"] small').textContent=caption;
+        query('[data-estate-directory-building="'+b.key+'"] small').textContent=caption;
       }
       // Resource and receipt timestamps can change without moving any building.
       // Keep the live timers current, but retain unchanged controls and layout.
@@ -480,7 +478,7 @@
     function select(key, focus=true, openBuilding=false) {
       const b=buildings.find(b=>b.key===key);if(!b)return;
       selected=key;camera.detailOpen=true;camera.directoryOpen=false;directory.hidden=true;
-      host.querySelector("[data-estate-directory-toggle]").setAttribute("aria-expanded","false");
+      query("[data-estate-directory-toggle]").setAttribute("aria-expanded","false");
       if(focus){camera.zoom=Math.max(2.5,camera.zoom);camera.x=visualLeft(b)*WIDTH/100;camera.y=visualTop(b)*HEIGHT/100;}
       options.onSelect?.(key);
       if(openBuilding&&(siteStates[key]==="completed"||(options.estate&&siteLevels[key]>0))&&options.gearRoles?.[key]&&typeof options.onGear==="function"){
@@ -571,7 +569,7 @@
       select, zoom, updateResources, updateEstate, fit:()=>{camera.zoom=1;camera.x=WIDTH/2;camera.y=HEIGHT/2;paint();},
       snapshot:()=>({...camera}),
       debug:()=>({camera:{...camera},siteStates:{...siteStates},siteLevels:{...siteLevels},actors:0,mode:"still",animationRunning:false,destroyed}),
-      destroy(){if(destroyed)return;destroyed=true;if(cameraFrame)cancelAnimationFrame(cameraFrame);cameraFrame=0;abort.abort();resize.disconnect();stopResourceUpdates?.();timers?.destroy();},
+      destroy(){if(destroyed)return;destroyed=true;cancelAnimationFrame(cameraFrame);cameraFrame=0;abort.abort();resize.disconnect();stopResourceUpdates?.();timers?.destroy();},
     };
   }
   function rootDevicePixelRatio() { return typeof window === "undefined" ? 1 : window.devicePixelRatio || 1; }
