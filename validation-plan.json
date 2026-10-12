@@ -8,9 +8,11 @@
         "firebaseClient.js",
         "tools/test-citadel-reign-ledger.js",
         "tools/validate-citadel-reign-browser.js",
-        "functions/test/emulator-citadel-reign-leaderboard.js"
+        "functions/test/emulator-citadel-reign-leaderboard.js",
+        "stronghold-details-ui.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Resolve the live Core Citadel from its current catalog and lazy region definition, reconcile its real ID without contaminating another map, retain the current ruler beyond the ranked query cutoff, reject superseded/session-stale reads, and update ranks without replacing stable links. Cover server accumulation used by the UI, current-realm Firestore query/document permissions, watcher cancellation/owned-city cleanup, loading/error/retry/empty states, current and neutral timers, profile links, top-100 entry, stable focus, and desktop/landscape layouts. Related Stronghold timers and region-loader/realtime contracts remain covered; backend accounting, rules and balance are unchanged.",
+      "reason": "Resolve the live Core Citadel from its current catalog and lazy region definition, reconcile its real ID without contaminating another map, retain the current ruler beyond the ranked query cutoff, reject superseded/session-stale reads, and update ranks without replacing stable links. Cover server accumulation used by the UI, current-realm Firestore query/document permissions, watcher cancellation/owned-city cleanup, loading/error/retry/empty states, current and neutral timers, profile links, top-100 entry, stable focus, and desktop/landscape layouts. Related Stronghold timers and region-loader/realtime contracts remain covered; backend accounting, rules and balance are unchanged. Keep the existing main-script budget by moving only Citadel presentation helpers into the already-loaded Stronghold UI module, with a measured 12 KiB source allowance for that module; production artifact and aggregate payload budgets remain enforced.",
       "tests": [
         "tools/test-citadel-reign-ledger.js",
         "tools/validate-citadel-reign-browser.js",
@@ -21,7 +23,9 @@
         "tools/validate-core-expansion-topology.js",
         "tools/validate-map-image-loading.js",
         "tools/validate-universal-profile-links.js",
-        "functions/test/emulator-citadel-reign-leaderboard.js"
+        "functions/test/emulator-citadel-reign-leaderboard.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-kingdom-ledgers-browser.js"
       ]
     }
   ]

@@ -67,7 +67,7 @@ async function clientReads() {
     ONLINE_WORLD_ID: "world", RESET_GENERATION: "realm", REALM_SHARD_ID: "shard",
     cleanPlayerName: v => v, timestampToMs: () => 0,
     client: { db: {}, modules: { firestore: {
-      collection: (_, ...parts) => parts.join("/"), doc: (_, ...parts) => parts.join("/"),
+      collection: (_, ...parts) => parts.join("/"), doc: (parent, ...parts) => (typeof parent === "string" ? [parent, ...parts] : parts).join("/"),
       query: (...args) => args, where: (...args) => args, orderBy: (...args) => args, limit: n => n,
       getDocs: async q => { reads.push(q); if (pending) await pending; return { docs }; },
       getDoc: async ref => { reads.push(ref); return current; },

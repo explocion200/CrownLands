@@ -2436,24 +2436,18 @@
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const { collection, doc, getDoc, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reignsRef = collection(client.db, "crownCitadelReigns", getRealmStorageId(), "entries");
-    const reignsQuery = firestoreQuery && where && orderBy && limit
-      ? firestoreQuery(
-          reignsRef,
-          where("resetGeneration", "==", RESET_GENERATION),
-          where("worldId", "==", ONLINE_WORLD_ID),
-          ...getRealmShardQueryConstraints(where),
-          orderBy("totalHeldMs", "desc"),
-          limit(safeLimit)
-        )
-      : reignsRef;
-    // The live tenure is not part of totalHeldMs until control changes. Include
-    // the holder separately so their earlier reigns survive the top-100 cutoff.
-    const currentHolderRef = safeCurrentHolderUid
-      ? doc(client.db, "crownCitadelReigns", getRealmStorageId(), "entries", safeCurrentHolderUid)
-      : null;
+    const reignsQuery = firestoreQuery(
+      reignsRef,
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
+      orderBy("totalHeldMs", "desc"),
+      limit(safeLimit)
+    );
+    // Include the holder's earlier reigns even below the completed-time cutoff.
     const [snapshot, currentHolderSnapshot] = await Promise.all([
       getDocs(reignsQuery),
-      currentHolderRef ? getDoc(currentHolderRef) : Promise.resolve(null),
+      safeCurrentHolderUid ? getDoc(doc(reignsRef, safeCurrentHolderUid)) : null,
     ]);
     if (scope !== getOnlineRequestScope()) throw new Error("Reign Ledger account or realm changed.");
     const reignDocs = snapshot.docs.slice(0, safeLimit);
