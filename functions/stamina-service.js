@@ -13,12 +13,12 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
     return { ref, exists: snap.exists, state: translate(() => M.stamina(snap.exists ? snap.data() : null, now)) };
   }
   function response(account, wallet, now, receipt = null, replayed = false) {
-    const state = M.view(account, now), utcDay = M.day(now);
+    const state = M.view(account, now), utcDay = M.day(now), price = M.refillPrice(state.value);
     return { state, crowns: wallet.crowns, walletRevision: wallet.revision, receipt, replayed,
-      offer: { version: M.VERSION, price: M.REFILL_PRICE, stamina: state.value, staminaRevision: state.revision,
+      offer: { version: M.REFILL_VERSION, price, stamina: state.value, staminaRevision: state.revision,
         walletRevision: wallet.revision, utcDay },
       unavailable: state.value === M.MAX_STAMINA ? "Stamina full" : state.paidRefillsToday ? "Refill used today"
-        : wallet.crowns < M.REFILL_PRICE ? "Not enough Crowns" : "" };
+        : wallet.crowns < price ? "Not enough Crowns" : "" };
   }
   async function load(uid) {
     return runTransaction(async transaction => {
@@ -45,16 +45,17 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
         return response(account.state, wallet.state, now, saved.data(), true);
       }
       if (!enabled) throw new HttpsError("failed-precondition", "Hunting is not available in this realm yet.");
-      if (offer.version !== M.VERSION || offer.price !== M.REFILL_PRICE || offer.utcDay !== M.day(now)
+      const price = M.refillPrice(account.state.value);
+      if (offer.version !== M.REFILL_VERSION || offer.price !== price || offer.utcDay !== M.day(now)
         || offer.stamina !== account.state.value || offer.staminaRevision !== account.state.revision
         || offer.walletRevision !== wallet.state.revision) throw new HttpsError("failed-precondition", "Your refill offer changed. Review the updated values before buying.");
       const preview = response(account.state, wallet.state, now);
       if (preview.unavailable) throw new HttpsError("failed-precondition", preview.unavailable);
       const next = { ...account.state, value: M.MAX_STAMINA, recoveredAtMs: now,
         revision: account.state.revision + 1, paidDay: M.day(now) };
-      const nextWallet = { ...wallet.state, crowns: wallet.state.crowns - M.REFILL_PRICE, revision: wallet.state.revision + 1 };
-      const record = { requestId: id, signature, version: M.VERSION, purchasedAtMs: now, utcDay: M.day(now),
-        price: M.REFILL_PRICE, restored: M.MAX_STAMINA - account.state.value,
+      const nextWallet = { ...wallet.state, crowns: wallet.state.crowns - price, revision: wallet.state.revision + 1 };
+      const record = { requestId: id, signature, version: M.REFILL_VERSION, purchasedAtMs: now, utcDay: M.day(now),
+        price, restored: M.MAX_STAMINA - account.state.value,
         staminaBefore: account.state.value, staminaAfter: M.MAX_STAMINA, crownsBefore: wallet.state.crowns, crownsAfter: nextWallet.crowns };
       transaction.set(wallet.ref, nextWallet);
       transaction.set(account.ref, next);

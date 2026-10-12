@@ -31,7 +31,7 @@ async function main() {
       __CROWNLANDS_BENCHMARK__.closeModal();
       const now=Date.now(), qa=window.huntQA={uid:'hunt-fixture', purchases:[], sends:0, count:0};
       getCurrentOnlineUid=()=>qa.uid;
-      const api={getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:1,price:30,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
+      const api={getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:2,price:9,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
       qa.api=api; getOnlineApi=()=>api;
       CrownlandsStaminaUI.sync({uid:qa.uid,api,onWallet:()=>{}});
       onlineCombatAuthorization={uid:qa.uid,shieldExpiresAtMs:now+900000,retaliation:[{id:'hunt-retake',cityId:'fixture-city',cityName:'Thornford',regionId:getActiveMapRegionId(),status:'available',expiresAtMs:now+600000}]};renderCombatTimers();
@@ -51,7 +51,8 @@ async function main() {
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
       assert(!await ev("document.querySelector('.stamina-panel details').open"),'Recovery details start collapsed');
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
-      assert.equal(await ev("document.querySelector('[data-refill-crowns]').textContent"),'120 → 90');
+      assert.equal(await ev("document.querySelector('[data-refill-crowns]').textContent"),'120 → 111');
+      assert.equal(await ev("document.querySelector('[data-refill-buy]').textContent"),'Refill to 100 — 9 Crowns');
       const panel=await ev("(()=>{const r=document.querySelector('.stamina-panel').getBoundingClientRect(), b=document.querySelector('[data-refill-buy]').getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right,buyBottom:b.bottom};})()");
       assert(panel.top>=0&&panel.bottom<=height&&panel.left>=0&&panel.right<=width&&panel.buyBottom<=height,JSON.stringify(panel));
       const screen=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(artifacts,`stamina-${width}x${height}.png`),Buffer.from(screen.data,'base64'));
@@ -78,8 +79,9 @@ async function main() {
     await ev("document.querySelector('#modal [data-open-stamina]').click()");
     await wait("!document.querySelector('[data-refill-buy]').disabled");
     await ev("document.querySelector('[data-refill-buy]').click();document.querySelector('[data-refill-buy]').click()");assert.equal(await ev('huntQA.purchases.length'),1);
-    await ev("huntQA.resolve({state:{version:1,value:100,recoveredAtMs:Date.now(),revision:2,paidDay:CrownlandsMarauders.day(Date.now())},crowns:90,walletRevision:2,receipt:{restored:30}})");
+    await ev("huntQA.resolve({state:{version:1,value:100,recoveredAtMs:Date.now(),revision:2,paidDay:CrownlandsMarauders.day(Date.now())},crowns:111,walletRevision:2,receipt:{restored:30,price:9}})");
     await wait("document.querySelector('[data-refill-buy]').textContent==='Stamina full'");
+    assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('30 stamina restored for 9 Crowns')"),'Confirmation uses the receipt charge');
     await ev("document.querySelector('[data-stamina-close]').click()");
     assert(await ev("modal.open && selectedSourceId===huntQA.source.id && selectedTargetId===huntQA.target.id && selectedTroopAmount===123 && document.getElementById('troopExactAmount').value==='123' && document.activeElement.matches('[data-open-stamina]') && !!document.getElementById('troopSliderConfirm')"),'Real attack draft preserved; explicit send remains');
     // A replacement in the same slot cannot silently become the target of this draft.
@@ -91,7 +93,7 @@ async function main() {
     // Insufficient Crowns opens the real Shop, then restores the exact draft nodes.
     await ev(`(()=>{const qa=huntQA;qa.crowns=0;qa.walletRevision=3;qa.shopEnabled=true;qa.shopMode='live';qa.catalogReads=0;qa.checkoutCalls=0;
       qa.stamina={version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''};qa.callbacks.onState(qa.stamina);
-      qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:1,price:30,stamina:9,staminaRevision:3,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
+      qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:2,price:Math.ceil((100-qa.stamina.value)*3/10),stamina:qa.stamina.value,staminaRevision:qa.stamina.revision,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
       qa.api.getLiveCrownPaymentCatalog=async()=>{qa.catalogReads++;if(qa.catalogFailure)throw Error('Unavailable');return{enabled:qa.shopEnabled,mode:qa.shopMode,packs:[{id:'fixture',crowns:1000,amountMinor:499,currency:'usd'}]};};
       qa.api.getCrownPaymentCatalog=async()=>({enabled:false,mode:'test',packs:[]});qa.api.createLiveCrownCheckout=async()=>{qa.checkoutCalls++;throw Error('No checkout should be created by navigation');};
       cosmeticUid=qa.uid;cosmeticState=COSMETIC_CATALOG.normalize({crowns:qa.crowns,revision:qa.walletRevision});CrownlandsCrownPaymentsUI.reset(null);
@@ -101,15 +103,15 @@ async function main() {
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
       await ev("huntQA.crowns=0;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:0,revision:huntQA.walletRevision});document.querySelector('#modal [data-open-stamina]').click()");
       await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns' && !document.querySelector('[data-refill-buy]').disabled");
-      assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('30 Crowns')"));
+      assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('28 Crowns')"));
       fs.writeFileSync(path.join(artifacts,`stamina-buy-crowns-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
       await ev("document.querySelector('[data-refill-buy]').click()");
       await wait("modal.classList.contains('shop-modal') && !!document.querySelector('[data-crown-checkout]')");
       assert.equal(await ev("document.querySelector('[data-rs-section=crowns]').getAttribute('aria-selected')"),'true');
       assert(!await ev('huntQA.input.isConnected'),'Draft is suspended, not overwritten');
       assert.equal(await ev('huntQA.checkoutCalls'),0,'Navigation never starts a Crown purchase');
-      await ev("huntQA.crowns=30;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:30,revision:huntQA.walletRevision});document.getElementById('closeModalBtn').click()");
-      await wait("!!document.querySelector('.stamina-panel[open]') && document.querySelector('[data-refill-buy]').textContent==='Refill to 100 — 30 Crowns' && !document.querySelector('[data-refill-buy]').disabled");
+      await ev("huntQA.crowns=28;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:28,revision:huntQA.walletRevision});document.getElementById('closeModalBtn').click()");
+      await wait("!!document.querySelector('.stamina-panel[open]') && document.querySelector('[data-refill-buy]').textContent==='Refill to 100 — 28 Crowns' && !document.querySelector('[data-refill-buy]').disabled");
       assert(await ev("huntQA.input===document.getElementById('troopExactAmount') && huntQA.input.value==='123' && selectedSourceId===huntQA.source.id && selectedTargetId===huntQA.target.id && activeRallyOrderContext.rallyId==='preserved-rally'"),'Shop return preserves source, target, troops, rally and input handlers');
       assert.equal(await ev('huntQA.purchases.length'),await ev('huntQA.beforePurchases'),'Crown credit never automatically refills');
       const immediateFocus = await ev("document.querySelector('[data-stamina-close]').click();document.activeElement.id");
@@ -117,8 +119,19 @@ async function main() {
       await wait("modal.open && document.activeElement.matches('[data-open-stamina]')");
       records.push({kind:'shopReturnFocus',width,height,immediateFocus});
     }
+    // Affordability follows the missing-stamina price, including a one-Crown top-up.
+    for(const [value,crowns,cost,label] of [[70,8,9,'Buy Crowns'],[70,9,9,'Refill to 100 — 9 Crowns'],[70,29,9,'Refill to 100 — 9 Crowns'],[66,11,11,'Refill to 100 — 11 Crowns'],[67,10,10,'Refill to 100 — 10 Crowns'],[99,0,1,'Buy Crowns'],[99,1,1,'Refill to 100 — 1 Crown'],[0,29,30,'Buy Crowns'],[0,30,30,'Refill to 100 — 30 Crowns'],[100,120,0,'Stamina full']]){
+      await ev(`huntQA.stamina.value=${value};huntQA.stamina.revision++;huntQA.crowns=${crowns};huntQA.walletRevision++;huntQA.callbacks.onState(huntQA.stamina);document.querySelector('#modal [data-open-stamina]').click()`);
+      await wait(`document.querySelector('[data-refill-buy]').textContent===${JSON.stringify(label)}`);
+      assert.equal(await ev("document.querySelector('[data-refill-buy]').disabled"),value===100);
+      if(cost>0 && crowns>=cost) assert.equal(await ev("document.querySelector('[data-refill-crowns]').textContent"),`${crowns} → ${crowns-cost}`);
+      if(crowns<cost) assert(await ev(`document.querySelector('[data-stamina-feedback]').textContent.includes('You need ${cost-crowns} more.')`));
+      await ev("document.querySelector('[data-stamina-close]').click()");
+      await wait("modal.open && document.activeElement.matches('[data-open-stamina]')");
+    }
+    await ev("huntQA.stamina.value=9;huntQA.stamina.revision++;huntQA.callbacks.onState(huntQA.stamina)");
     for(const [mode,enabled,failure] of [['live',false,false],['test',true,false],['live',true,true]]){
-      await ev(`huntQA.crowns=29;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:29,revision:huntQA.walletRevision});huntQA.shopMode=${JSON.stringify(mode)};huntQA.shopEnabled=${enabled};huntQA.catalogFailure=${failure};document.querySelector('#modal [data-open-stamina]').click()`);
+      await ev(`huntQA.crowns=27;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:27,revision:huntQA.walletRevision});huntQA.shopMode=${JSON.stringify(mode)};huntQA.shopEnabled=${enabled};huntQA.catalogFailure=${failure};document.querySelector('#modal [data-open-stamina]').click()`);
       await wait("document.querySelector('[data-stamina-feedback]').textContent.includes('Crown purchases are currently unavailable.')");
       assert(await ev("document.querySelector('[data-refill-buy]').disabled"),'Disabled, test-only or unavailable checkout cannot route to paid Crowns');
       assert(!await ev("modal.classList.contains('shop-modal')"));await ev("document.querySelector('[data-stamina-close]').click()");

@@ -5,7 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const VERSION = 1;
-  const MAX_STAMINA = 100, HUNT_COST = 10, RECOVERY_MS = 12 * 60 * 1000, REFILL_PRICE = 30;
+  const REFILL_VERSION = 2;
+  const MAX_STAMINA = 100, HUNT_COST = 10, RECOVERY_MS = 12 * 60 * 1000, FULL_REFILL_PRICE = 30;
   const ANCHORS = Object.freeze([
     [1, 100, 100, 20], [20, 10000, 5000, 500], [40, 100000, 50000, 2500],
     [60, 1000000, 500000, 10000], [79, 10000000, 5000000, 25000],
@@ -18,6 +19,10 @@
   ].map(Object.freeze));
   function fail(message) { const error = new Error(message); error.code = "failed-precondition"; throw error; }
   const day = now => new Date(now).toISOString().slice(0, 10);
+  function refillPrice(value) {
+    if (!Number.isInteger(value) || value < 0 || value > MAX_STAMINA) fail("Invalid stamina value.");
+    return Math.ceil((MAX_STAMINA - value) * FULL_REFILL_PRICE / MAX_STAMINA);
+  }
   function balance(level) {
     if (!Number.isInteger(level) || level < 1 || level > 100) fail("Invalid marauder level.");
     const upper = ANCHORS.find(row => row[0] >= level);
@@ -95,6 +100,6 @@
     }
     return { balanceVersion: VERSION, damage, gold, xp, item, recipientUid, rolls: [...rolls] };
   }
-  return Object.freeze({ VERSION, MAX_STAMINA, HUNT_COST, RECOVERY_MS, REFILL_PRICE, ANCHORS, ITEMS,
-    day, balance, slots, stamina, changeStamina, view, allocate, rewards });
+  return Object.freeze({ VERSION, REFILL_VERSION, MAX_STAMINA, HUNT_COST, RECOVERY_MS, FULL_REFILL_PRICE, ANCHORS, ITEMS,
+    day, refillPrice, balance, slots, stamina, changeStamina, view, allocate, rewards });
 });

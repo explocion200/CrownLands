@@ -1,6 +1,16 @@
 "use strict";
 const assert = require("node:assert/strict");
 const M = require("../functions/marauder-rules");
+for (const [stamina, crowns] of [[0,30],[1,30],[50,15],[66,11],[67,10],[70,9],[90,3],[96,2],[97,1],[99,1],[100,0]]) {
+  assert.equal(M.refillPrice(stamina), crowns);
+}
+for (let stamina = 0; stamina <= 100; stamina++) {
+  const price = M.refillPrice(stamina), missing = 100 - stamina;
+  assert(Number.isSafeInteger(price) && price >= 0 && price <= 30);
+  assert(price * 100 >= missing * 30 && (price - 1) * 100 < missing * 30, 'Charge the smallest whole Crown amount covering the missing stamina');
+  if (stamina) assert(price <= M.refillPrice(stamina - 1), 'More stamina never costs more');
+}
+for (const invalid of [-1, 101, 1.5, NaN, Infinity, null, '70']) assert.throws(() => M.refillPrice(invalid));
 for (const [level, defenders, gold, xp] of M.ANCHORS) assert.deepEqual(
   [M.balance(level).defenders, M.balance(level).gold, M.balance(level).xp], [defenders, gold, xp]);
 let previous = null;

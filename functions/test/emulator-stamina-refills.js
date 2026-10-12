@@ -25,28 +25,59 @@ async function main() {
   await profileRef.set({ resetGeneration: "test-current", character: { level: 1 } });
   const initialized = await stamina.load(uid);
   assert.equal(initialized.state.value, 100);
-  for (const value of [0, 70, 99, 100]) for (const crowns of [29, 30, 120]) {
+  for (const [value, price] of [[0, 30], [66, 11], [67, 10], [70, 9], [99, 1], [100, 0]]) for (const crowns of new Set([0, Math.max(0, price - 1), price, price + 1, 29, 30, 120])) {
     await seed(value, crowns);
     const offer = (await stamina.load(uid)).offer, purchase = request(offer), before = await snapshot();
-    if (value === 100 || crowns < 30) {
+    assert.equal(offer.price, price); assert.equal(offer.version, M.REFILL_VERSION);
+    if (value === 100 || crowns < price) {
       await assert.rejects(stamina.purchase(uid, purchase), /full|Crowns/);
       assert.deepEqual(await snapshot(), before);
       assert.equal((await stamina.receiptRef(uid, purchase.requestId).get()).exists, false);
     } else {
       const result = await stamina.purchase(uid, purchase);
-      assert.equal(result.state.value, 100); assert.equal(result.crowns, crowns - 30);
+      assert.equal(result.state.value, 100); assert.equal(result.crowns, crowns - price);
+      assert.equal(result.receipt.price, price); assert.equal(result.receipt.crownsBefore - result.receipt.crownsAfter, price);
       assert.equal(result.receipt.restored, 100 - value); assert.equal(result.state.paidRefillsToday, 1);
       const committed = await snapshot();
       const replay = await stamina.purchase(uid, purchase); // Response lost; identical retry.
       assert.equal(replay.replayed, true); assert.deepEqual(await snapshot(), committed);
-      await assert.rejects(stamina.purchase(uid, { ...purchase, offer: { ...offer, price: 1 } }), /another refill/);
+      await assert.rejects(stamina.purchase(uid, { ...purchase, offer: { ...offer, price: price + 1 } }), /another refill/);
     }
   }
   await seed(70, 120);
   const concurrent = request((await stamina.load(uid)).offer);
   const duplicates = await Promise.all([stamina.purchase(uid, concurrent), stamina.purchase(uid, concurrent)]);
   assert.equal(duplicates.filter(result => !result.replayed).length, 1);
-  assert.equal((await snapshot()).wallet.crowns, 90);
+  assert.equal((await snapshot()).wallet.crowns, 111);
+  // An interrupted response from a committed v1 purchase still replays its original receipt.
+  await seed(100, 90, M.day(now));
+  const legacyOffer = { version: 1, price: 30, stamina: 70, staminaRevision: 0, walletRevision: 0, utcDay: M.day(now) };
+  const legacyRequest = request(legacyOffer);
+  const legacyReceipt = { requestId: legacyRequest.requestId, version: 1, price: 30, restored: 30,
+    purchasedAtMs: now, utcDay: M.day(now), staminaBefore: 70, staminaAfter: 100, crownsBefore: 120, crownsAfter: 90,
+    signature: JSON.stringify([1, 30, 70, 0, 0, M.day(now)]) };
+  await stamina.receiptRef(uid, legacyRequest.requestId).set(legacyReceipt);
+  const legacyBefore = await snapshot(), legacyReplay = await stamina.purchase(uid, legacyRequest);
+  assert.equal(legacyReplay.replayed, true); assert.deepEqual(legacyReplay.receipt, legacyReceipt);
+  assert.deepEqual(await snapshot(), legacyBefore);
+  // Reject old flat-price quotes and forged prices without charging or consuming the day.
+  for (const patch of [{ version: 1, price: 30 }, { version: 1, price: 9 }, { price: 30 }, { price: 8 }, { price: 0 }, { price: -1 }, { price: 9.1 }]) {
+    await seed(70, 120); const offer = { ...(await stamina.load(uid)).offer, ...patch };
+    const before = await snapshot(), purchase = request(offer);
+    await assert.rejects(stamina.purchase(uid, purchase), /offer changed/);
+    assert.deepEqual(await snapshot(), before);
+    assert.equal((await stamina.receiptRef(uid, purchase.requestId).get()).exists, false);
+  }
+  // Offline recovery crosses a price boundary; only a newly reviewed quote may purchase.
+  await seed(66, 120); const beforeRecovery = (await stamina.load(uid)).offer;
+  assert.equal(beforeRecovery.price, 11); now += M.RECOVERY_MS;
+  const recoveredSnapshot = await snapshot();
+  await assert.rejects(stamina.purchase(uid, request(beforeRecovery)), /offer changed/);
+  assert.deepEqual(await snapshot(), recoveredSnapshot);
+  const recoveredOffer = (await stamina.load(uid)).offer;
+  assert.equal(recoveredOffer.price, 10);
+  const recoveredPurchase = await stamina.purchase(uid, request(recoveredOffer));
+  assert.equal(recoveredPurchase.receipt.restored, 33); assert.equal(recoveredPurchase.crowns, 110);
   await seed(0, 120);
   const quote = (await stamina.load(uid)).offer;
   const race = await Promise.allSettled([stamina.purchase(uid, request(quote)), stamina.purchase(uid, request(quote))]);
@@ -77,13 +108,15 @@ async function main() {
     assert.deepEqual(await snapshot(), before);
   }
   // A cosmetic purchase races a refill against the same playable wallet.
-  await seed(0, 620);
-  const cosmeticRace = await Promise.allSettled([
-    stamina.purchase(uid, request((await stamina.load(uid)).offer)),
-    wallet.purchase(uid, { requestId: `skin_race_${sequence}`, offerId: "templar_city", catalogVersion: 1, expectedPrice: 600 }, now),
-  ]);
-  assert.equal(cosmeticRace.filter(result => result.status === "fulfilled").length, 1);
-  assert([20, 590].includes((await snapshot()).wallet.crowns));
+  for (const [value, crowns, price] of [[0, 620, 30], [70, 608, 9]]) {
+    await seed(value, crowns);
+    const cosmeticRace = await Promise.allSettled([
+      stamina.purchase(uid, request((await stamina.load(uid)).offer)),
+      wallet.purchase(uid, { requestId: `skin_race_${sequence}`, offerId: "templar_city", catalogVersion: 1, expectedPrice: 600 }, now),
+    ]);
+    assert.equal(cosmeticRace.filter(result => result.status === "fulfilled").length, 1);
+    assert([crowns - 600, crowns - price].includes((await snapshot()).wallet.crowns));
+  }
   // Use the real Crown pickup reducer; the live-payment suite also races its verified credit service against a refill.
   for (const credit of [1]) {
     await seed(70, 120); const offer = (await stamina.load(uid)).offer;
@@ -92,7 +125,7 @@ async function main() {
       transaction.set(account.ref, C.collectCrown(account.state, now));
     })]);
     assert.equal(results[1].status, "fulfilled");
-    assert.equal((await snapshot()).wallet.crowns, 120 + credit - (results[0].status === "fulfilled" ? 30 : 0));
+    assert.equal((await snapshot()).wallet.crowns, 120 + credit - (results[0].status === "fulfilled" ? 9 : 0));
   }
   await seed(70, 120);
   const huntRace = await Promise.allSettled([stamina.purchase(uid, request((await stamina.load(uid)).offer)), db.runTransaction(async transaction => {
@@ -101,7 +134,7 @@ async function main() {
   assert.equal(huntRace[1].status, "fulfilled");
   const afterHunt = await snapshot();
   assert.equal(afterHunt.state.value, huntRace[0].status === "fulfilled" ? 90 : 60);
-  assert.equal(afterHunt.wallet.crowns, huntRace[0].status === "fulfilled" ? 90 : 120);
+  assert.equal(afterHunt.wallet.crowns, huntRace[0].status === "fulfilled" ? 111 : 120);
   await seed(99, 120, M.day(now));
   await db.runTransaction(async transaction => { const changes = await stamina.prepareChange(transaction, [uid], 10, now); stamina.writeChanges(transaction, changes); });
   assert.equal((await snapshot()).state.value, 100);

@@ -33,7 +33,8 @@
       s.error = ""; accept(s, result);
       const check = s.shopCheck = (s.shopCheck || 0) + 1;
       s.shopAvailable = false;
-      if (s.enabled && s.crowns < 30 && value()?.value < 100 && !value()?.paidRefillsToday && s.api.getLiveCrownPaymentCatalog) {
+      const state = value(), price = state ? M.refillPrice(state.value) : null;
+      if (s.enabled && price > 0 && s.crowns < price && !state.paidRefillsToday && s.api.getLiveCrownPaymentCatalog) {
         s.shopAvailable = null; tick();
         try { const catalog = await s.api.getLiveCrownPaymentCatalog();
           if (session === s && s.shopCheck === check) s.shopAvailable = catalog.enabled === true && catalog.mode === "live" && catalog.packs?.length > 0;
@@ -75,6 +76,7 @@
     });
     const s = session, dialog = s?.dialog;
     if (!dialog?.open) return;
+    const price = state ? M.refillPrice(state.value) : null, cost = `${price} ${price === 1 ? "Crown" : "Crowns"}`;
     const set = (selector, text) => { dialog.querySelector(selector).textContent = text; };
     set("[data-panel-value]", state ? `${state.value}/100` : "—/100");
     const progress = dialog.querySelector("progress"); progress.value = state?.value || 0;
@@ -83,23 +85,24 @@
     set("[data-next]", !state ? "—" : state.value === 100 ? "Full" : duration(state.nextPointAtMs));
     set("[data-full]", !state ? "—" : state.value === 100 ? "Full" : duration(state.fullAtMs));
     set("[data-refill-stamina]", state ? `${state.value} → 100 · Restores ${100 - state.value}` : "—");
-    set("[data-refill-crowns]", s.crowns === null ? "—" : `${number(s.crowns)}${s.crowns >= 30 ? ` → ${number(s.crowns - 30)}` : ""}`);
+    set("[data-refill-crowns]", s.crowns === null ? "—" : `${number(s.crowns)}${price > 0 && s.crowns >= price ? ` → ${number(s.crowns - price)}` : ""}`);
     set("[data-refill-used]", state ? `${state.paidRefillsToday}/1` : "—/1");
     const unavailable = !state || s.crowns === null ? "Loading stamina…" : !s.enabled ? "Hunting not available yet"
-      : state.value === 100 ? "Stamina full" : state.paidRefillsToday ? "Refill used today" : s.crowns < 30 ? "Not enough Crowns" : "";
-    const reviewed = s.offer && state && s.offer.stamina === state.value && s.offer.staminaRevision === state.revision
+      : state.value === 100 ? "Stamina full" : state.paidRefillsToday ? "Refill used today" : s.crowns < price ? "Not enough Crowns" : "";
+    const reviewed = s.offer && state && s.offer.version === M.REFILL_VERSION && s.offer.price === price
+      && s.offer.stamina === state.value && s.offer.staminaRevision === state.revision
       && s.offer.walletRevision === s.walletRevision && s.offer.utcDay === M.day(Date.now() + s.offset);
     const needsCrowns = unavailable === "Not enough Crowns" && !s.pending;
     const canShop = needsCrowns && s.shopAvailable === true;
     const buy = dialog.querySelector("[data-refill-buy]");
     buy.disabled = s.busy || (!s.pending && !canShop && Boolean(unavailable || !reviewed));
     buy.dataset.action = canShop ? "shop" : "refill";
-    buy.textContent = s.busy ? "Checking refill…" : s.pending ? "Check pending refill" : canShop ? "Buy Crowns" : unavailable || "Refill to 100 — 30 Crowns";
+    buy.textContent = s.busy ? "Checking refill…" : s.pending ? "Check pending refill" : canShop ? "Buy Crowns" : unavailable || `Refill to 100 — ${cost}`;
     dialog.querySelector("[data-stamina-refresh]").hidden = Boolean(reviewed && !s.error && (!needsCrowns || canShop));
     dialog.querySelector("[data-stamina-refresh]").disabled = s.busy;
     dialog.querySelector("[data-stamina-close]").disabled = s.busy;
     set("[data-stamina-feedback]", s.error || (s.success || (state?.paidRefillsToday ? `Next paid refill at 00:00 UTC · ${duration(state.resetsAtMs)} remaining.`
-      : needsCrowns ? `A full refill costs 30 Crowns. You need ${30 - s.crowns} more. ${s.shopAvailable === null ? "Checking Crown purchases…" : canShop ? "Buy Crowns in the Shop, then return here to refill." : "Crown purchases are currently unavailable."}` : !reviewed && state ? "Your balance changed. Refresh this review before buying." : "30 Crowns · Once per UTC day.")));
+      : needsCrowns ? `Your refill costs ${cost}. You need ${price - s.crowns} more. ${s.shopAvailable === null ? "Checking Crown purchases…" : canShop ? "Buy Crowns in the Shop, then return here to refill." : "Crown purchases are currently unavailable."}` : !reviewed && state ? "Your balance changed. Refresh this review before buying." : "30 Crowns per 100 stamina · Rounded up · Once per UTC day.")));
   }
   async function purchase(s) {
     if (session !== s || s.busy) return;
@@ -109,7 +112,7 @@
       const result = await s.api.refillStamina(s.pending);
       if (session !== s) return;
       s.pending = null; remember(s); accept(s, result);
-      s.success = `Refill confirmed. ${result.receipt.restored} stamina restored for 30 Crowns.`;
+      s.success = `Refill confirmed. ${result.receipt.restored} stamina restored for ${result.receipt.price} ${result.receipt.price === 1 ? "Crown" : "Crowns"}.`;
     } catch (error) {
       if (session !== s) return;
       if (/failed-precondition|invalid-argument|permission-denied|unauthenticated/.test(error.code || "")) { s.pending = null; remember(s); }

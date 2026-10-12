@@ -122,12 +122,13 @@ async function main() {
   await profileRef.set({ daily:{date:today,harvestedGoldBonuses:0,harvestedTroopBonuses:0,harvestedBonuses:0},
     harvestBonuses:[{id:'hunt_refill_pickup',type:'crowns',regionId:region,x:1000,y:1000,createdAtMs:Date.now()}] },{merge:true});
   const reviewed = await callFunction('getStaminaState',users[0].token);
+  strictEqual(reviewed.offer.price,9);
   const pickupRace = await Promise.allSettled([
     callFunction('refillStamina',users[0].token,{requestId:'hunt_pickup_refill',offer:reviewed.offer}),
     callFunction('collectHarvestBonus',users[0].token,{bonusId:'hunt_refill_pickup',type:'crowns',regionId:region}),
   ]);
   strictEqual(pickupRace[1].status,'fulfilled');
-  strictEqual((await walletRef.get()).data().crowns,121-(pickupRace[0].status==='fulfilled'?30:0));
+  strictEqual((await walletRef.get()).data().crowns,121-(pickupRace[0].status==='fulfilled'?9:0));
   strictEqual((await staminaRef.get()).data().paidDay,today && pickupRace[0].status==='fulfilled'?today:'');
   await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:10,paidDay:''});
   const previewPayload={...request('attack',200).army,requestedTroops:200};
