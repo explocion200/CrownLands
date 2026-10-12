@@ -2326,6 +2326,12 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 
 ## 18. Art & Medieval Visual Direction
 
+### Approved castle capture animation — October 11, 2026
+
+- A newly confirmed combat capture plays three clashing sword strikes, contact sparks and a small dust impact, followed by the capturing player's own flag unfurling from the roofline and draping down the castle front. Preserve that player's saved colors, pattern, crest and crest color; use the existing flag renderer. Outer towers remain visible and the map camera stays fixed.
+- Full motion lasts four seconds, including a short still hold and clean removal; the ordinary ownership marker remains afterward. Reduced motion uses a brief opacity-only flag confirmation. Off mode shows the authoritative ownership state immediately. Existing automatic performance limits, event deduplication, active-map visibility, capture eligibility, sound preferences and cleanup remain authoritative. The animation never postpones or changes capture results.
+- **Status:** approved for integration, merge and deployment; production status requires verification of the resulting release.
+
 ### Authority
 
 The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual authority and is incorporated by reference. If this section and the Art Bible conflict, record the conflict and obtain an explicit design decision before changing either source.

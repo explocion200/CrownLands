@@ -1,13 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "24cfa4e7dcecbf76175697097335091f26f5df59",
+  "baseCommit": "e25dac0c4e14419531e0f9a1c8e0f523a513e0cd",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/guild-master/README.md"
+        "animation-manager.js",
+        "game.js",
+        "styles.css",
+        "tools/validate-castle-capture-browser.js"
       ],
-      "reason": "Record verified authorized PR #528 publication, exact channel/backend/package identity, focused responsive validation and the remaining authenticated/device limits. Documentation only; no executable, artwork, dependencies, balance or server-authoritative changes, so no runtime or emulator suite applies. Release receipts verify both published channels independently.",
+      "reason": "Integrate the approved three-strike capture battle and roofline flag drape. Check actual saved colors/pattern/crest, all three motion modes, automatic system preference, deduplication, authoritative fresh-event filtering, superseded ownership, active-map guards, zoom-aware art anchoring, temporary layer order and cleanup at desktop and two landscape-mobile sizes. Cover the shared animation runtime, flag renderer contracts, city DOM reconciliation and existing independent capture audio cues. No server, rules, API, economy or authoritative capture outcome changes, so no emulator suite applies.",
+      "tests": [
+        "tools/validate-castle-capture-browser.js",
+        "tools/validate-animation-system.js",
+        "tools/validate-player-flags.js",
+        "tools/validate-city-map-reconciliation-browser.js",
+        "tools/validate-audio-contract.js"
+      ]
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "reason": "Record the user's approved capture animation and player heraldry behavior; retain separate implementation and verified deployment status. Documentation only.",
       "tests": []
     }
   ]
