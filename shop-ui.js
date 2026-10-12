@@ -1,5 +1,27 @@
 /* Approved Shop presentation. Prices, inventory, purchase queues and rewarded ads remain server-backed. */
-/* exported renderRoyalShopPanel, bindRoyalShopPresentation, patchRoyalShopSelection, updateRoyalShopCountdown */
+/* exported renderRoyalShopPanel, bindRoyalShopPresentation, patchRoyalShopSelection, updateRoyalShopCountdown, openCrownShop, returnFromCrownShop */
+let crownShopReturn = null;
+// Keep the actual draft nodes and handlers while using the existing Shop.
+function openCrownShop({ isCurrent, onReturn }) {
+  if (crownShopReturn || !isCurrent()) return null;
+  const saved = { isCurrent, onReturn, scope: getOnlineSessionRequestScope(), open: modal.open,
+    className: modal.className, title: modalTitle.textContent, nodes: document.createDocumentFragment() };
+  while (modalBody.firstChild) saved.nodes.append(modalBody.firstChild);
+  crownShopReturn = saved;
+  modal.className = "modal shop-modal";
+  royalShopSection = "crowns"; cosmeticOpenShopRequested = false; showShopModal();
+  return () => { if (crownShopReturn === saved) { crownShopReturn = null; modal.close(); } };
+}
+function returnFromCrownShop() {
+  const saved = crownShopReturn; crownShopReturn = null;
+  if (!saved) return false;
+  if (!saved.isCurrent() || saved.scope !== getOnlineSessionRequestScope()) { saved.onReturn(false); return false; }
+  modal.className = saved.className; modalTitle.textContent = saved.title;
+  modalBody.replaceChildren(saved.nodes);
+  if (saved.open) modal.showModal();
+  saved.onReturn(true);
+  return true;
+}
 let royalShopSection = "provisions";
 let royalShopRewardId = "gold";
 let royalShopBoxPending = false;

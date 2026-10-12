@@ -42256,6 +42256,11 @@ document.addEventListener("pointerdown", event => {
 }, true);
 installGameModalLifecycle(modal, handleGameModalClose);
 function handleGameModalClose() {
+  if (globalThis.returnFromCrownShop?.()) {
+    if (rewardedAdShopCountdownTimer) window.clearInterval(rewardedAdShopCountdownTimer);
+    rewardedAdShopCountdownTimer = 0;
+    return;
+  }
   modal.classList.remove("help-handbook-modal");
   delete modalBody.dataset.helpReady;
   battleReportVisitViewedAtMs = null;

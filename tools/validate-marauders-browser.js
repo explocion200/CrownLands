@@ -22,7 +22,7 @@ async function main() {
       const r = await client.send("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});
       if(r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value;
     };
-    const wait = async expression => { for(let i=0;i<500;i++){ if(await ev(expression))return; await delay(100); } throw Error("Timeout: "+expression); };
+    const wait = async expression => { for(let i=0;i<500;i++){ if(await ev(expression))return; if(errors.length)throw Error(JSON.stringify(errors)); await delay(100); } throw Error("Timeout: "+expression+" · "+JSON.stringify(await ev("({modal:modal.className,open:modal.open,text:modalBody.textContent.slice(0,500),uid:cosmeticUid})"))); };
     await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
     await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=2&hudOperations=both&chatMode=quick"});
     await wait("document.documentElement?.dataset.crownlandsBenchmarkReady==='true'");
@@ -45,9 +45,11 @@ async function main() {
       await ev('renderCombatTimers();updateMainCityReturnButton()');
       const hud=await ev(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};const card=document.getElementById('staminaButton');return{card:rect(card),currencies:rect(document.querySelector('.profile-currencies')),timers:rect(document.getElementById('combatTimers')),hit:card.contains(document.elementFromPoint(card.getBoundingClientRect().x+card.offsetWidth/2,card.getBoundingClientRect().y+card.offsetHeight/2))};})()`);
       assert(hud.card.height>=44&&hud.card.right<=width&&hud.hit,JSON.stringify(hud));
+      assert(await ev("!!document.querySelector('#staminaButton .stamina-refill-icon') && document.getElementById('staminaButton').getAttribute('aria-label').includes('Refill stamina')"),'Refill icon has an accessible button label');
       assert(Math.abs(hud.card.y-hud.currencies.y)<2,'Stamina beside currencies');assert(hud.card.x>=hud.currencies.right,'No overlap');assert(hud.timers.y>=hud.card.bottom-2,'Timers below group');
       await ev("document.getElementById('staminaButton').focus();document.getElementById('staminaButton').click()");await wait("!!document.querySelector('.stamina-panel[open]')");
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
+      assert(!await ev("document.querySelector('.stamina-panel details').open"),'Recovery details start collapsed');
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
       assert.equal(await ev("document.querySelector('[data-refill-crowns]').textContent"),'120 → 90');
       const panel=await ev("(()=>{const r=document.querySelector('.stamina-panel').getBoundingClientRect(), b=document.querySelector('[data-refill-buy]').getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right,buyBottom:b.bottom};})()");
@@ -86,6 +88,43 @@ async function main() {
     await ev("getMarauderById(huntQA.target.id).spawnId='fixture-spawn';activeRallyOrderContext={rallyId:'preserved-rally'};document.querySelector('#modal [data-open-stamina]').click()");
     await wait("!!document.querySelector('.stamina-panel[open]')");await ev("document.querySelector('[data-stamina-close]').click()");
     assert.equal(await ev('activeRallyOrderContext.rallyId'),'preserved-rally');
+    // Insufficient Crowns opens the real Shop, then restores the exact draft nodes.
+    await ev(`(()=>{const qa=huntQA;qa.crowns=0;qa.walletRevision=3;qa.shopEnabled=true;qa.shopMode='live';qa.catalogReads=0;qa.checkoutCalls=0;
+      qa.stamina={version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''};qa.callbacks.onState(qa.stamina);
+      qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:1,price:30,stamina:9,staminaRevision:3,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
+      qa.api.getLiveCrownPaymentCatalog=async()=>{qa.catalogReads++;if(qa.catalogFailure)throw Error('Unavailable');return{enabled:qa.shopEnabled,mode:qa.shopMode,packs:[{id:'fixture',crowns:1000,amountMinor:499,currency:'usd'}]};};
+      qa.api.getCrownPaymentCatalog=async()=>({enabled:false,mode:'test',packs:[]});qa.api.createLiveCrownCheckout=async()=>{qa.checkoutCalls++;throw Error('No checkout should be created by navigation');};
+      cosmeticUid=qa.uid;cosmeticState=COSMETIC_CATALOG.normalize({crowns:qa.crowns,revision:qa.walletRevision});CrownlandsCrownPaymentsUI.reset(null);
+      qa.input=document.getElementById('troopExactAmount');qa.beforePurchases=qa.purchases.length;
+    })()`);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev("huntQA.crowns=0;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:0,revision:huntQA.walletRevision});document.querySelector('#modal [data-open-stamina]').click()");
+      await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns' && !document.querySelector('[data-refill-buy]').disabled");
+      assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('30 Crowns')"));
+      fs.writeFileSync(path.join(artifacts,`stamina-buy-crowns-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      await ev("document.querySelector('[data-refill-buy]').click()");
+      await wait("modal.classList.contains('shop-modal') && !!document.querySelector('[data-crown-checkout]')");
+      assert.equal(await ev("document.querySelector('[data-rs-section=crowns]').getAttribute('aria-selected')"),'true');
+      assert(!await ev('huntQA.input.isConnected'),'Draft is suspended, not overwritten');
+      assert.equal(await ev('huntQA.checkoutCalls'),0,'Navigation never starts a Crown purchase');
+      await ev("huntQA.crowns=30;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:30,revision:huntQA.walletRevision});document.getElementById('closeModalBtn').click()");
+      await wait("!!document.querySelector('.stamina-panel[open]') && document.querySelector('[data-refill-buy]').textContent==='Refill to 100 — 30 Crowns' && !document.querySelector('[data-refill-buy]').disabled");
+      assert(await ev("huntQA.input===document.getElementById('troopExactAmount') && huntQA.input.value==='123' && selectedSourceId===huntQA.source.id && selectedTargetId===huntQA.target.id && activeRallyOrderContext.rallyId==='preserved-rally'"),'Shop return preserves source, target, troops, rally and input handlers');
+      assert.equal(await ev('huntQA.purchases.length'),await ev('huntQA.beforePurchases'),'Crown credit never automatically refills');
+      await ev("document.querySelector('[data-stamina-close]').click()");
+      assert(await ev("modal.open && document.activeElement.matches('[data-open-stamina]')"),'Return focus to the hunt draft');
+    }
+    for(const [mode,enabled,failure] of [['live',false,false],['test',true,false],['live',true,true]]){
+      await ev(`huntQA.crowns=29;huntQA.walletRevision++;cosmeticState=COSMETIC_CATALOG.normalize({crowns:29,revision:huntQA.walletRevision});huntQA.shopMode=${JSON.stringify(mode)};huntQA.shopEnabled=${enabled};huntQA.catalogFailure=${failure};document.querySelector('#modal [data-open-stamina]').click()`);
+      await wait("document.querySelector('[data-stamina-feedback]').textContent.includes('Crown purchases are currently unavailable.')");
+      assert(await ev("document.querySelector('[data-refill-buy]').disabled"),'Disabled, test-only or unavailable checkout cannot route to paid Crowns');
+      assert(!await ev("modal.classList.contains('shop-modal')"));await ev("document.querySelector('[data-stamina-close]').click()");
+    }
+    await ev("huntQA.shopMode='live';huntQA.shopEnabled=true;huntQA.catalogFailure=false;document.querySelector('#modal [data-open-stamina]').click()");
+    await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns'");
+    await ev("huntQA.loadShop=ensureOptionalUiScripts;ensureOptionalUiScripts=(names,host,ready)=>{huntQA.shopReady=ready;return false;};document.querySelector('[data-refill-buy]').click();document.querySelector('[data-stamina-close]').click();huntQA.shopReady();ensureOptionalUiScripts=huntQA.loadShop");
+    assert(await ev("modal.open && !modal.classList.contains('shop-modal') && !document.querySelector('.stamina-panel[open]') && huntQA.input===document.getElementById('troopExactAmount')"),'Late Shop load cannot reopen a canceled review');
     await ev("modal.close();huntQA.callbacks.onState({version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''})");assert.equal(await ev("document.querySelector('[data-stamina-low]').hidden"),false);
     await ev("showNearbyMarauders()");assert.equal(await ev("document.querySelectorAll('[data-enemy-id]').length"),1);
     await ev("document.querySelector('[data-enemy-id]').click()");assert(await ev("modalBody.textContent.includes('Scout this spawn')"));assert(!await ev("modalBody.textContent.includes('Scouted defenders:')"));
@@ -102,7 +141,11 @@ async function main() {
     assert(!await ev('modal.open'));
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
-    await ev("modal.close();CrownlandsStaminaUI.sync({uid:'',api:huntQA.api})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
+    await ev("modal.close();document.getElementById('staminaButton').click()");
+    await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns'");await ev("document.querySelector('[data-refill-buy]').click()");
+    await wait("modal.open && modal.classList.contains('shop-modal')");
+    await ev("CrownlandsStaminaUI.sync({uid:'',api:huntQA.api})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
+    assert(!await ev("modal.open || !!document.querySelector('.stamina-panel[open]')"),'Sign-out discards the suspended view');
     assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
     fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log('Marauder/stamina UI passed: desktop and both landscape sizes, panel bounds, exact review, duplicate clicks, focus, preserved drafts, explicit sending, private intel, search, low/unknown states.');
   } finally {

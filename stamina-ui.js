@@ -31,11 +31,20 @@
   async function refresh(s) {
     try { const result = await s.api.getStaminaState(); if (session !== s) return;
       s.error = ""; accept(s, result);
+      const check = s.shopCheck = (s.shopCheck || 0) + 1;
+      s.shopAvailable = false;
+      if (s.enabled && s.crowns < 30 && value()?.value < 100 && !value()?.paidRefillsToday && s.api.getLiveCrownPaymentCatalog) {
+        s.shopAvailable = null; tick();
+        try { const catalog = await s.api.getLiveCrownPaymentCatalog();
+          if (session === s && s.shopCheck === check) s.shopAvailable = catalog.enabled === true && catalog.mode === "live" && catalog.packs?.length > 0;
+        } catch { if (session === s && s.shopCheck === check) s.shopAvailable = false; }
+      }
+      if (session === s) tick();
     } catch (error) { if (session === s) { s.error = error.message || "Stamina unavailable. Try again."; tick(); } }
   }
   function sync({ uid, api, onWallet }) {
     if (session?.uid === uid) return;
-    session?.stop?.(); session?.dialog?.close(); session?.dialog?.remove(); session = null;
+    session?.stop?.(); session?.closeShop?.(); session?.dialog?.close(); session?.dialog?.remove(); session = null;
     if (!uid || !api?.getStaminaState) { tick(); return; }
     const s = session = { uid, api, onWallet, state: null, crowns: null, walletRevision: -1,
       enabled: false, offset: 0, error: "", busy: false, offer: null, pending: null, dialog: null };
@@ -58,7 +67,7 @@
       card.querySelector("[data-stamina-low]").hidden = !state || state.value >= 10;
       card.querySelector("[data-stamina-fill]").style.width = `${state?.value || 0}%`;
       card.classList.toggle("stamina-low", Boolean(state && state.value < 10));
-      card.setAttribute("aria-label", state ? `Stamina ${state.value} of 100. Open recovery and refill.` : "Stamina unavailable. Open stamina panel.");
+      card.setAttribute("aria-label", state ? `Stamina ${state.value} of 100. Refill stamina.` : "Stamina unavailable. Open refill review.");
     }
     document.querySelectorAll("[data-hunt-stamina]").forEach(element => {
       element.textContent = `Stamina ${state ? `${state.value}/100` : "—/100"} · Cost 10`;
@@ -80,14 +89,17 @@
       : state.value === 100 ? "Stamina full" : state.paidRefillsToday ? "Refill used today" : s.crowns < 30 ? "Not enough Crowns" : "";
     const reviewed = s.offer && state && s.offer.stamina === state.value && s.offer.staminaRevision === state.revision
       && s.offer.walletRevision === s.walletRevision && s.offer.utcDay === M.day(Date.now() + s.offset);
+    const needsCrowns = unavailable === "Not enough Crowns" && !s.pending;
+    const canShop = needsCrowns && s.shopAvailable === true;
     const buy = dialog.querySelector("[data-refill-buy]");
-    buy.disabled = s.busy || (!s.pending && Boolean(unavailable || !reviewed));
-    buy.textContent = s.busy ? "Checking refill…" : s.pending ? "Check pending refill" : unavailable || "Refill to 100 — 30 Crowns";
-    dialog.querySelector("[data-stamina-refresh]").hidden = Boolean(reviewed && !s.error);
+    buy.disabled = s.busy || (!s.pending && !canShop && Boolean(unavailable || !reviewed));
+    buy.dataset.action = canShop ? "shop" : "refill";
+    buy.textContent = s.busy ? "Checking refill…" : s.pending ? "Check pending refill" : canShop ? "Buy Crowns" : unavailable || "Refill to 100 — 30 Crowns";
+    dialog.querySelector("[data-stamina-refresh]").hidden = Boolean(reviewed && !s.error && (!needsCrowns || canShop));
     dialog.querySelector("[data-stamina-refresh]").disabled = s.busy;
     dialog.querySelector("[data-stamina-close]").disabled = s.busy;
     set("[data-stamina-feedback]", s.error || (s.success || (state?.paidRefillsToday ? `Next paid refill at 00:00 UTC · ${duration(state.resetsAtMs)} remaining.`
-      : unavailable === "Not enough Crowns" ? "A full refill costs 30 Crowns. Your balance is too low." : !reviewed && state ? "Your balance changed. Refresh this review before buying." : "One paid refill per UTC day. The price is always 30 Crowns.")));
+      : needsCrowns ? `A full refill costs 30 Crowns. You need ${30 - s.crowns} more. ${s.shopAvailable === null ? "Checking Crown purchases…" : canShop ? "Buy Crowns in the Shop, then return here to refill." : "Crown purchases are currently unavailable."}` : !reviewed && state ? "Your balance changed. Refresh this review before buying." : "30 Crowns · Once per UTC day.")));
   }
   async function purchase(s) {
     if (session !== s || s.busy) return;
@@ -111,20 +123,39 @@
     if (!s.dialog) {
       const dialog = s.dialog = document.createElement("dialog"); dialog.className = "stamina-panel";
       dialog.setAttribute("aria-labelledby", "stamina-panel-title");
-      dialog.innerHTML = `<div class="stamina-panel-body"><h2 id="stamina-panel-title">Stamina <strong data-panel-value>—/100</strong></h2>
-        <progress max="100" value="0"></progress><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
-        <p>Recover 1 stamina every 12 minutes.<br>Next point: <strong data-next>—</strong> · Full in: <strong data-full>—</strong></p>
-        <h3>Refill stamina</h3><dl><div><dt>Stamina</dt><dd data-refill-stamina>—</dd></div><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
-        <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button></div>
+      dialog.innerHTML = `<div class="stamina-panel-body"><h2 id="stamina-panel-title">Refill stamina</h2>
+        <p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
+        <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button>
+        <div data-stamina-shop-loading hidden></div><details><summary>Recovery &amp; hunts</summary><strong data-panel-value>—/100</strong><progress max="100" value="0"></progress><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
+        <p>Recover 1 stamina every 12 minutes.<br>Next point: <strong data-next>—</strong> · Full in: <strong data-full>—</strong></p></details></div>
         <footer><button type="button" data-stamina-close>Back</button><button type="button" data-refill-buy disabled>Loading stamina…</button></footer>`;
       document.body.append(dialog);
-      dialog.querySelector("[data-refill-buy]").addEventListener("click", () => { void purchase(s); });
+      dialog.querySelector("[data-refill-buy]").addEventListener("click", event => {
+        if (event.currentTarget.disabled) return;
+        if (event.currentTarget.dataset.action !== "shop") { void purchase(s); return; }
+        const host = dialog.querySelector("[data-stamina-shop-loading]"), request = s.shopLoad = (s.shopLoad || 0) + 1;
+        host.hidden = false;
+        const enter = () => {
+          if (session !== s || !dialog.open || request !== s.shopLoad) return;
+          host.hidden = true;
+          if (dialog.querySelector("[data-refill-buy]").dataset.action !== "shop") return;
+          s.shop = true; dialog.close();
+          s.closeShop = root.openCrownShop({ isCurrent: () => session === s, onReturn: restored => {
+            s.shop = false; s.closeShop = null; if (restored) open(s.opener);
+          } });
+        };
+        if (root.ensureOptionalUiScripts("shop", host, enter)) enter();
+      });
       dialog.querySelector("[data-stamina-refresh]").addEventListener("click", () => { void refresh(s); });
       dialog.querySelector("[data-stamina-close]").addEventListener("click", () => dialog.close());
       dialog.addEventListener("cancel", event => { if (s.busy) event.preventDefault(); });
-      dialog.addEventListener("close", () => { if (s.opener?.isConnected) s.opener.focus({ preventScroll: true }); });
+      dialog.addEventListener("close", () => { if (!dialog.open) s.shopLoad = (s.shopLoad || 0) + 1; if (!s.shop && !dialog.open && s.opener?.isConnected) s.opener.focus({ preventScroll: true }); });
     }
-    if (!s.dialog.open) { s.opener = opener; s.dialog.showModal(); s.dialog.querySelector("[data-stamina-close]").focus(); }
+    if (!s.dialog.open) {
+      s.shopLoad = (s.shopLoad || 0) + 1;
+      const host = s.dialog.querySelector("[data-stamina-shop-loading]"); host.hidden = true; host.replaceChildren();
+      s.opener = opener; s.dialog.showModal(); s.dialog.querySelector("[data-stamina-close]").focus();
+    }
     s.success = ""; tick(); void refresh(s);
   }
   document.addEventListener("click", event => { const opener = event.target.closest("#staminaButton,[data-open-stamina]"); if (opener) open(opener); });

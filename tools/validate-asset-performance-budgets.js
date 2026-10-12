@@ -242,7 +242,7 @@ const entrypointBudgets = {
   "common-gear-box-ui.css": 24 * 1024,
   "item-bag-ui.js": 12 * 1024,
   "item-bag-ui.css": 24 * 1024,
-  "shop-ui.js": 16 * 1024,
+  "shop-ui.js": 17 * 1024, // Includes the stamina review's preserved-draft Shop return path.
   "shop-ui.css": 28 * 1024,
   "assets/icons/common-gear-chest-r1.svg": 16 * 1024,
   "base-cities.js": 32 * 1024,
