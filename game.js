@@ -1455,7 +1455,7 @@ function isCrownCitadel(city) {
 
 function getCrownCitadelControlSnapshot() {
   if (onlineCrownCitadelLoaded) return onlineCrownCitadelSnapshot;
-  return state?.cities?.find(city => city.id === CROWN_CITADEL_ID) || null;
+  return state?.cities?.find(isCrownCitadel) || null;
 }
 
 function getCrownCitadelHolderUid() {
@@ -1465,6 +1465,7 @@ function getCrownCitadelHolderUid() {
 }
 
 function getCrownCitadelHeldSinceMs() {
+  if (!getCrownCitadelHolderUid()) return 0;
   const citadel = getCrownCitadelControlSnapshot();
   return Math.max(0, normalizeTimestampMs(
     citadel?.lastCapturedAtMs ?? citadel?.lastCapturedAt
@@ -2082,6 +2083,7 @@ let combatTimersInterval = 0;
 let activeRetaliationId = "";
 let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
+let onlineCrownCitadelBase = null;
 let onlineCrownCitadelSnapshot = null;
 let onlineCrownCitadelLoaded = false;
 let appliedServerReportRevisions = new Map();
@@ -16735,8 +16737,7 @@ function disconnectOnlineWorld() {
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
   deedCampLocationsRequest = null;
-  crownCitadelReignCache = [];
-  crownCitadelReignRequest = null;
+  invalidateCrownCitadelReigns();
   strongholdLegacyCache.clear();
   strongholdLegacyRequests.clear();
   onlineGlobalStats = null;
@@ -19945,8 +19946,10 @@ function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
   if (typeof onlineCrownCitadelUnsubscribe === "function") onlineCrownCitadelUnsubscribe();
   onlineCrownCitadelUnsubscribe = null;
   if (clear) {
+    onlineCrownCitadelBase = null;
     onlineCrownCitadelSnapshot = null;
     onlineCrownCitadelLoaded = false;
+    invalidateCrownCitadelReigns();
   }
 }
 
@@ -20135,8 +20138,9 @@ function getCrownCitadelSnapshotSignature(citadel = null) {
 
 function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
   if (!state) return false;
-  const base = getPlayableBaseCityById(CROWN_CITADEL_ID);
-  const current = cityById(CROWN_CITADEL_ID);
+  const citadelId = citadel?.id || onlineCrownCitadelBase?.id || CROWN_CITADEL_ID;
+  const base = onlineCrownCitadelBase || getPlayableBaseCityById(citadelId);
+  const current = cityById(citadelId);
   if (!base && !current) return false;
 
   const raw = citadel && typeof citadel === "object" ? citadel : {};
@@ -20148,7 +20152,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
     ...(authoritativeBase || {}),
     ...(current || {}),
     ...raw,
-    id: CROWN_CITADEL_ID,
+    id: citadelId,
     name: getCanonicalCityName(authoritativeBase, raw),
     owner: ownership.owner,
     ownerKind: ownership.ownerKind,
@@ -20171,7 +20175,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
     isMainCity: false,
     regionId: normalizeRegionId(raw.regionId || authoritativeBase?.regionId || "center"),
     startPool: raw.startPool || authoritativeBase?.startPool || "center",
-    islandId: raw.islandId || getOnlineIslandId("center"),
+    islandId: raw.islandId || getOnlineIslandId(raw.regionId || authoritativeBase?.regionId || "center"),
     kind: raw.kind || authoritativeBase?.kind || "stronghold",
     strongholdType: raw.strongholdType || authoritativeBase?.strongholdType || "crown_citadel",
     relinquishedAtMs: 0,
@@ -20180,9 +20184,9 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
   const previousSignature = getCrownCitadelSnapshotSignature(current);
   if (current) Object.assign(current, next);
   else if (getCityRegionId(next) === getActiveMapRegionId()) state.cities.push(next);
-  localDirtyCityIds.delete(CROWN_CITADEL_ID);
+  localDirtyCityIds.delete(citadelId);
 
-  const existingCacheIndex = onlineOwnedCitiesCache.findIndex(city => city.id === CROWN_CITADEL_ID);
+  const existingCacheIndex = onlineOwnedCitiesCache.findIndex(city => city.id === citadelId);
   const existingCache = existingCacheIndex >= 0 ? onlineOwnedCitiesCache[existingCacheIndex] : null;
   let cacheChanged = false;
   if (ownership.ownerUid && ownership.ownerUid === currentUid) {
@@ -20202,7 +20206,7 @@ function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
 
 function refreshOpenCrownCitadelInfoModal({ forceLedger = false } = {}) {
   if (!modal?.open || !modalBody?.querySelector(".crown-citadel-info-panel")) return false;
-  const city = cityById(CROWN_CITADEL_ID);
+  const city = cityById(getCrownCitadelControlSnapshot()?.id || onlineCrownCitadelBase?.id || CROWN_CITADEL_ID);
   if (!city) return false;
   const selectedTab = modalBody.querySelector("[data-citadel-info-tab].active")?.dataset.citadelInfoTab || "overview";
   showCrownCitadelInfoModal(city);
@@ -20224,35 +20228,58 @@ function subscribeOnlineCrownCitadel() {
   const api = getOnlineApi();
   if (typeof onlineCrownCitadelUnsubscribe === "function") return;
   if (!state || !api?.subscribeCrownCitadel || !api?.isSignedIn?.()) return;
-  onlineCrownCitadelUnsubscribe = api.subscribeCrownCitadel(
-    getOnlineIslandId("center"),
-    CROWN_CITADEL_ID,
-    {
-      onCitadel: citadel => {
-        const previousHolderUid = getCrownCitadelHolderUid();
-        const previousSignature = getCrownCitadelSnapshotSignature(getCrownCitadelControlSnapshot());
-        onlineCrownCitadelSnapshot = citadel;
-        onlineCrownCitadelLoaded = true;
-        queuePlayerIdentityLookupForRecords(citadel ? [citadel] : []);
-        const cityChanged = reconcileOnlineCrownCitadelSnapshot(citadel);
-        const holderChanged = previousHolderUid !== getCrownCitadelHolderUid();
-        const snapshotChanged = previousSignature !== getCrownCitadelSnapshotSignature(citadel);
-        if (holderChanged) {
-          crownCitadelReignCache = [];
-        }
-        if (!cityChanged && !snapshotChanged) return;
-        cityRenderSignature = "";
-        renderCities(true);
-        updateOutgoingAttackUi();
-        refreshOpenCrownCitadelInfoModal({ forceLedger: holderChanged });
-      },
-      onError: error => {
-        markOnlineRealtimeRecoveryNeeded(error);
-        clearOnlineCrownCitadelWatcher({ clear: false });
-        console.warn("Could not subscribe to Crown Citadel control", error);
-      },
+  const scope = getOnlineSessionRequestScope();
+  let disposed = false, unsubscribe = null;
+  const isCurrent = () => !disposed && scope === getOnlineSessionRequestScope();
+  onlineCrownCitadelUnsubscribe = () => { disposed = true; unsubscribe?.(); };
+  void (async () => {
+    if (CORE_EXPANSION_TOPOLOGY_ACTIVE && !onlineCrownCitadelBase) {
+      const region = REGION_CATALOG.regions?.find(entry => entry.objectivePurpose === "crown_citadel");
+      if (!region) throw new Error("The current world has no Citadel region.");
+      await ensureRegionDefinitionLoaded(region.id, { protectedRegionIds: [getActiveMapRegionId()] });
+      if (!isCurrent()) return;
     }
-  );
+    onlineCrownCitadelBase ||= generateStrongholdSlots().find(isCrownCitadel) || null;
+    if (!onlineCrownCitadelBase) throw new Error("The current world has no Citadel definition.");
+    if (!isCurrent()) return;
+    unsubscribe = api.subscribeCrownCitadel(
+      getOnlineIslandId(onlineCrownCitadelBase.regionId),
+      onlineCrownCitadelBase.id,
+      {
+        onCitadel: citadel => {
+          if (!isCurrent()) return;
+          const previousHolderUid = getCrownCitadelHolderUid();
+          const previousHeldSinceMs = getCrownCitadelHeldSinceMs();
+          const previousSignature = getCrownCitadelSnapshotSignature(getCrownCitadelControlSnapshot());
+          onlineCrownCitadelSnapshot = citadel;
+          onlineCrownCitadelLoaded = true;
+          queuePlayerIdentityLookupForRecords(citadel ? [citadel] : []);
+          const cityChanged = reconcileOnlineCrownCitadelSnapshot(citadel);
+          const holderChanged = previousHolderUid !== getCrownCitadelHolderUid();
+          const reignChanged = holderChanged || previousHeldSinceMs !== getCrownCitadelHeldSinceMs();
+          const snapshotChanged = previousSignature !== getCrownCitadelSnapshotSignature(citadel);
+          if (reignChanged) invalidateCrownCitadelReigns();
+          if (!cityChanged && !snapshotChanged) return;
+          cityRenderSignature = "";
+          renderCities(true);
+          updateOutgoingAttackUi();
+          refreshOpenCrownCitadelInfoModal({ forceLedger: reignChanged });
+        },
+        onError: error => {
+          if (!isCurrent()) return;
+          markOnlineRealtimeRecoveryNeeded(error);
+          clearOnlineCrownCitadelWatcher({ clear: false });
+          console.warn("Could not subscribe to Crown Citadel control", error);
+        },
+      }
+    );
+    if (disposed) unsubscribe?.();
+  })().catch(error => {
+    if (!isCurrent()) return;
+    markOnlineRealtimeRecoveryNeeded(error);
+    clearOnlineCrownCitadelWatcher({ clear: false });
+    console.warn("Could not prepare Crown Citadel control", error);
+  });
 }
 
 function subscribeOnlineHeldCamps() {
@@ -28789,11 +28816,13 @@ function updateVisibleCityDynamicText(targetIds = null) {
       }
     }
   }
+  updateCrownCitadelReignRanks();
   modalBody?.querySelectorAll("[data-citadel-reign-score], [data-stronghold-legacy-score]").forEach(score => {
     const totalHeldMs = Math.max(0, Number(score.dataset.totalHeldMs) || 0);
     const currentHeldSinceMs = Math.max(0, Number(score.dataset.currentHeldSinceMs) || 0);
     const liveHeldMs = currentHeldSinceMs > 0 ? Math.max(0, Date.now() - currentHeldSinceMs) : 0;
-    score.textContent = formatDuration(Math.floor((totalHeldMs + liveHeldMs) / 1000));
+    const text = formatDuration(Math.floor((totalHeldMs + liveHeldMs) / 1000));
+    if (score.textContent !== text) score.textContent = text;
   });
   cityLayer.querySelectorAll(".camp-node[data-camp-id]").forEach(node => {
     if (targetIds && !targetIds.has(node.dataset.campId)) return;
@@ -32979,7 +33008,7 @@ function getRankedCrownCitadelReigns(entries = []) {
     byPlayer.set(holderUid, {
       ...current,
       playerName: holderName || current.playerName,
-      currentHeldSinceMs: heldSinceMs || Math.max(0, Number(current.currentHeldSinceMs) || 0),
+      currentHeldSinceMs: heldSinceMs,
       isCurrentHolder: true,
     });
   }
@@ -33008,7 +33037,7 @@ function crownCitadelReignLeaderboardMarkup(entries = [], status = "ready") {
     </div>
     <div class="citadel-reign-list">
       ${ranked.map((entry, index) => `
-        <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}">
+        <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}" data-citadel-reign-player="${escapeHtml(entry.playerId)}">
           <strong class="citadel-reign-rank">#${formatNumber(index + 1)}</strong>
           <span class="citadel-reign-ruler">
             ${renderPlayerNameLink(entry.playerId, entry.playerName, "citadel-reign-player-link")}
@@ -33020,6 +33049,45 @@ function crownCitadelReignLeaderboardMarkup(entries = [], status = "ready") {
     <p class="citadel-reign-note">Scores are cumulative. The current ruler's score continues rising until the Citadel changes hands.</p>`;
 }
 
+function updateCrownCitadelReignRanks() {
+  const panel = modalBody?.querySelector("[data-citadel-reign-panel]");
+  const list = panel?.querySelector(".citadel-reign-list");
+  if (!list) return;
+  const ranked = getRankedCrownCitadelReigns(crownCitadelReignCache);
+  const rows = [...list.querySelectorAll("[data-citadel-reign-player]")];
+  if (rows.length === ranked.length && rows.every((row, index) => row.dataset.citadelReignPlayer === ranked[index].playerId)) return;
+  // Only a rank crossing changes the list. Keep existing links and scrolling
+  // intact while scores tick, including when the holder enters the top 100.
+  const scroll = list.scrollTop;
+  const focus = document.activeElement;
+  const byPlayer = new Map(rows.map(row => [row.dataset.citadelReignPlayer, row]));
+  let replacement = null;
+  ranked.forEach((entry, index) => {
+    let row = byPlayer.get(entry.playerId);
+    if (!row) {
+      if (!replacement) {
+        replacement = document.createElement("div");
+        replacement.innerHTML = crownCitadelReignLeaderboardMarkup(crownCitadelReignCache);
+      }
+      row = [...replacement.querySelectorAll("[data-citadel-reign-player]")].find(candidate => candidate.dataset.citadelReignPlayer === entry.playerId);
+    }
+    if (!row) return;
+    const rank = row.querySelector(".citadel-reign-rank");
+    const text = `#${formatNumber(index + 1)}`;
+    if (rank.textContent !== text) rank.textContent = text;
+    if (list.children[index] !== row) list.insertBefore(row, list.children[index] || null);
+    byPlayer.delete(entry.playerId);
+  });
+  byPlayer.forEach(row => row.remove());
+  if (focus?.isConnected && document.activeElement !== focus) focus.focus({ preventScroll: true });
+  list.scrollTop = scroll;
+}
+
+function invalidateCrownCitadelReigns() {
+  crownCitadelReignCache = [];
+  crownCitadelReignRequest = null;
+}
+
 async function refreshCrownCitadelReignPanel({ force = false } = {}) {
   const panel = modalBody?.querySelector("[data-citadel-reign-panel]");
   if (!panel) return false;
@@ -33027,30 +33095,36 @@ async function refreshCrownCitadelReignPanel({ force = false } = {}) {
     panel.innerHTML = crownCitadelReignLeaderboardMarkup(crownCitadelReignCache);
     return true;
   }
-  if (crownCitadelReignRequest) return crownCitadelReignRequest;
+  if (crownCitadelReignRequest && !force) return crownCitadelReignRequest.promise;
   const api = getOnlineApi();
   if (!api?.loadCrownCitadelReignLeaderboard || !api?.isSignedIn?.()) {
     panel.innerHTML = crownCitadelReignLeaderboardMarkup([]);
     return false;
   }
   panel.innerHTML = crownCitadelReignLeaderboardMarkup([], "loading");
-  crownCitadelReignRequest = api.loadCrownCitadelReignLeaderboard(100)
+  const request = { scope: getOnlineSessionRequestScope(), promise: null };
+  crownCitadelReignRequest = request;
+  const isCurrent = () => crownCitadelReignRequest === request && request.scope === getOnlineSessionRequestScope();
+  request.promise = api.loadCrownCitadelReignLeaderboard(100, getCrownCitadelHolderUid())
     .then(entries => {
+      if (!isCurrent()) return false;
       crownCitadelReignCache = Array.isArray(entries) ? entries : [];
       const activePanel = modalBody?.querySelector("[data-citadel-reign-panel]");
       if (activePanel) activePanel.innerHTML = crownCitadelReignLeaderboardMarkup(crownCitadelReignCache);
       return true;
     })
     .catch(error => {
+      if (!isCurrent()) return false;
       console.warn("Could not load Crown Citadel Reign Ledger", error);
+      crownCitadelReignCache = [];
       const activePanel = modalBody?.querySelector("[data-citadel-reign-panel]");
       if (activePanel) activePanel.innerHTML = crownCitadelReignLeaderboardMarkup([], "error");
       return false;
     })
     .finally(() => {
-      crownCitadelReignRequest = null;
+      if (crownCitadelReignRequest === request) crownCitadelReignRequest = null;
     });
-  return crownCitadelReignRequest;
+  return request.promise;
 }
 
 function normalizeStrongholdLegacyEntry(raw = {}) {

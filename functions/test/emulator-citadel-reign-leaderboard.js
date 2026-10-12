@@ -203,6 +203,38 @@ async function main() {
   const strongholdWrite = await attemptClientWrite(user, "strongholdLegacies", `${strongholdId}__${user.uid}`);
   assert(strongholdWrite.status === 403, "A player unexpectedly wrote a server-owned Stronghold Legacy entry.");
 
+  // Exercise the current shared-realm query and the holder's extra document
+  // read, including a ruler whose completed score is outside the top 100.
+  const shard = "shard_0001", storage = `${realm.resetGeneration}--${shard}`;
+  await db.doc(`players/${user.uid}`).set({ realmShardId: shard }, { merge: true });
+  const sharded = db.batch();
+  const scope = { worldId: realm.worldId, resetGeneration: realm.resetGeneration, realmShardId: shard };
+  for (let i = 0; i < 100; i++) {
+    sharded.set(db.doc(`crownCitadelReigns/${storage}/entries/ranked_${i}`), {
+      ...scope, playerId: `ranked_${i}`, totalHeldMs: 2000 + i, currentHeldSinceMs: 0, isCurrentHolder: false,
+    });
+  }
+  sharded.set(db.doc(`crownCitadelReigns/${storage}/entries/current`), {
+    ...scope, playerId: "current", totalHeldMs: 1000, currentHeldSinceMs: Date.now() - 3600000, isCurrentHolder: true,
+  });
+  sharded.set(db.doc(`crownCitadelReigns/${storage}/entries/stale`), { ...scope, resetGeneration: "old", totalHeldMs: 999999 });
+  await sharded.commit();
+  const query = leaderboardQuery(true);
+  query.where.compositeFilter.filters.push(equality("realmShardId", shard));
+  const shardedQuery = await fetch(`http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/crownCitadelReigns/${storage}:runQuery`, {
+    method: "POST", headers: { authorization: `Bearer ${user.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ structuredQuery: query }),
+  });
+  assert(shardedQuery.status === 200, "The current shared-realm ledger query was denied.");
+  const shardedIds = returnedDocumentIds(await shardedQuery.json());
+  assert(shardedIds.length === 100 && !shardedIds.includes("current"), "The extra current-holder read must cover the ranked cutoff.");
+  const readEntry = (board, id) => fetch(`http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/crownCitadelReigns/${board}/entries/${id}`, {
+    headers: { authorization: `Bearer ${user.token}` },
+  });
+  assert((await readEntry(storage, "current")).status === 200, "A signed-in player cannot read the current holder's cumulative record.");
+  assert((await readEntry(storage, "stale")).status === 403, "The holder lookup leaked an archived generation.");
+  assert((await readEntry(realm.resetGeneration, currentEntries[0].id)).status === 403, "The holder lookup leaked another shard.");
+
   console.log("Citadel Reign Ledger and Stronghold Legacy rules passed: ranked scoped reads work while cross-scope, stale, anonymous, and client-write access stays blocked.");
 }
 
