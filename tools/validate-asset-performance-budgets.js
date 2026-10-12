@@ -210,7 +210,9 @@ const entrypointBudgets = {
   // Aggregate offline-shell, image, request and frame limits stay fixed.
   // Main City HUD wiring and unsaved Profile exit guards add 585 normalized
   // source bytes. Bound that runtime growth at one further 1 KiB step.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1) * 1024,
+  // NPC target/order/report wiring uses 1,966,385 bytes; bound the
+  // 3.3 KiB source overage at 4 KiB within the shared installation allowance.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
@@ -270,7 +272,8 @@ const entrypointBudgets = {
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   // Owner-scoped Guild report retrieval adds one callable wrapper.
-  "firebaseClient.js": 162 * 1024,
+  // NPC map subscription and readiness callable add 376 bytes over the prior cap.
+  "firebaseClient.js": 163 * 1024,
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,
