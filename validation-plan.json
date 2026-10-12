@@ -1,21 +1,98 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5408487c3f1df78219acb3b5ea679e3596581f3c",
+  "baseCommit": "9df8c2a4b4b0fedcec341064d68a7fe29e5d25e0",
   "coverage": [
     {
-      "paths": ["functions/index.js"],
-      "reason": "Guard shared power rebuilds against a different player shard before any troop queries or writes; keep rebuilt leaderboard realm metadata complete; reject foreign global/profile power in every protection consumer and prevent clan propagation. Review covers identity lookup, current-realm economy repair, valid zeros, decreases, publication retries and asynchronous clan reconciliation. No visual layout changes or new polling.",
-      "tests": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-realm-sharding.js", "tools/validate-runtime-audit-cleanup.js", "functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"]
+      "paths": [
+        "guild-ui.js",
+        "estate-economy-ui.js",
+        "tools/validate-guild-health-browser.js"
+      ],
+      "reason": "Preserve Guild controls on unchanged snapshots, avoid unchanged countdown writes, invalidate superseded quotes and queued close events, and reject older estate snapshots before applying shared balances. Cover delayed responses, DOM identity/focus/scroll, newer state acceptance, normal Guild actions, estate production and source/built desktop/landscape presentation. The estate emulator covers authoritative quotes, receipts, concurrent actions and Guild settlement consumed by this UI; authority and balance are unchanged.",
+      "tests": [
+        "tools/validate-guild-health-browser.js",
+        "tools/validate-guild-production-ui.js",
+        "tools/validate-guild-responsive-layout.js",
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-estate-refresh-browser.js",
+        "tools/validate-estate-input-browser.js",
+        "tools/test-estate-manual-production.js",
+        "tools/test-guild-missions.js",
+        "tools/test-guild-facilities.js",
+        "functions/test/emulator-estate-economy.js"
+      ]
     },
     {
-      "paths": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-runtime-audit-cleanup.js"],
-      "reason": "Exercise foreign realm rejection, the reported power comparison, zero preservation, troop conservation and coherent repair projections; adapt extracted clan harness to the real realm predicate. Refresh two pre-existing stale UI assertions to the current text setter and 21 optional scripts so the affected regression suites can execute.",
-      "tests": ["tools/validate-king-power.js", "tools/validate-troop-accounting.js", "tools/validate-weaker-kingdom-protection.js", "tools/validate-runtime-audit-cleanup.js"]
+      "paths": [
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js"
+      ],
+      "reason": "Repair stale pre-Guild stylesheet inventory assertions while keeping exact count, uniqueness, lazy loading, failed-load retry and stale-view isolation checks.",
+      "tests": [
+        "tools/validate-deferred-ui-styles.js",
+        "tools/validate-deferred-ui-styles-browser.js"
+      ]
     },
     {
-      "paths": ["functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"],
-      "reason": "Run real callable identity lookup from a foreign shard and verify current profile/global stats stay intact; simulate the reported corruption before real preview and launch. Firestore clan-event tests reject foreign zero writes and reconcile repaired valid zeros, retaining concurrency and duplicate-event coverage.",
-      "tests": ["functions/test/emulator-combat-authorization.js", "functions/test/emulator-clan-power-events.js"]
+      "paths": [
+        "tools/validate-interaction-health.js"
+      ],
+      "reason": "Assert city, camp and estate actions all share the existing 64px interactive rule without requiring obsolete two-selector spelling. Preserve route responsiveness and touch-target checks.",
+      "tests": [
+        "tools/validate-interaction-health.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "reason": "Measure the delivered minified animation/estate modules as the production builder and asset validator do. Keep the existing precache budget and independently validate shipped inventory.",
+      "tests": [
+        "tools/validate-manuscript-prototype.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-skill-presets.js"
+      ],
+      "reason": "Update stale fixtures/assertions for current DOM patch helpers. Verify production value/bonus node preservation and changed values; retain skill-cost, refund and preset coverage.",
+      "tests": [
+        "tools/validate-stat-breakdowns.js",
+        "tools/validate-skill-presets.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-report-system.js"
+      ],
+      "reason": "Load the real linked-capture normalizer in the history VM. Restore retention, stale-save recovery, notification idempotency and account-isolation coverage without changing report runtime behavior.",
+      "tests": [
+        "tools/validate-report-system.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-city-details-browser.js"
+      ],
+      "reason": "Replace obsolete six-building Bailey and return-to-City-Details expectations with the approved twenty-site estate, bounded lazy-load readiness and Back to Realm focus behavior. Keep own/foreign-city entry and privacy checks at five viewport sizes.",
+      "tests": [
+        "tools/validate-city-details-browser.js",
+        "tools/validate-inner-castle.js"
+      ]
+    },
+    {
+      "paths": [
+        "tools/validate-estate-economy-browser.js"
+      ],
+      "reason": "Replace obsolete pre-expansion Guild bank/quest interface assertions with current rarity guidance and use production for the generic pending-refresh action lock. Preserve all estate payment, production, supply, focus and cleanup checks; the source and built Guild suite covers recruitment, parties, mission reviews, training, rewards and retries at the same three sizes. Exercise entry and keyboard return through the current Guild and Alehouse dialogs. Publish restored synthetic scenarios with increasing revisions so the stale-response guard is not bypassed.",
+      "tests": [
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-guild-production-ui.js",
+        "tools/validate-guild-health-browser.js"
+      ]
     }
   ]
 }

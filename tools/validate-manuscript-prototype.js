@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { minifyEstate: minifyRuntime } = require("./estate-delivery");
 
 const root = path.resolve(__dirname, "..");
 const resolve = relativePath => path.join(root, ...relativePath.split("/"));
@@ -93,6 +94,9 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
   // Artifact validation checks this generated entry against index.html; the
   // static ../ base adds one byte to the directory-relative root shell.
   if (relativePath === "play/index.html") return total + normalizedTextBytes("index.html") + 1;
+  // Measure delivered code, matching the build and the shared asset validator.
+  if (["inner-city-estate.js", "animation-manager.js"].includes(relativePath))
+    return total + Buffer.byteLength(minifyRuntime(read(relativePath)), "utf8");
   return total + (/\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
     ? normalizedTextBytes(relativePath)
     : fs.statSync(resolve(relativePath)).size);

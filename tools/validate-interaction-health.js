@@ -150,7 +150,14 @@ assert.ok(
 );
 assert.match(game, /scheduleMainMapPinchUpdate\(\)/, "Main-map pinch work must be animation-frame coalesced.");
 assert.match(styles, /--map-hit-size/, "Map interactions must retain a zoom-aware 44px target.");
-assert.match(actionButtons, /--cl-action-size:\s*64px;[\s\S]*?:is\(\.city-wheel-action, \.gold-camp-wheel-action\)\.cl-action-button[\s\S]*?pointer-events:\s*auto;/, "City and camp action-wheel buttons must retain their shared 64px interactive target.");
+assert.match(actionButtons, /--cl-action-size:\s*64px;/, "Shared map actions retain their 64px target size.");
+const sharedActionRule = actionButtons.match(/:is\(([^)]+)\)\.cl-action-button\s*\{([^}]+)\}/);
+assert(sharedActionRule, "Shared map action-button rule must exist.");
+for (const selector of [".city-wheel-action", ".gold-camp-wheel-action", ".estate-site-action"])
+  assert(sharedActionRule[1].split(",").map(value => value.trim()).includes(selector), `${selector} uses the shared action rule.`);
+assert.match(sharedActionRule[2], /pointer-events:\s*auto;/, "Shared map actions remain interactive.");
+for (const dimension of ["width", "height"])
+  assert.match(sharedActionRule[2], new RegExp(`(?:^|\\s)${dimension}:\\s*var\\(--cl-action-size\\)`), `Shared actions retain their ${dimension}.`);
 assert.match(styles, /\.army-sync-status/, "Realtime march recovery must be visible to players.");
 
 const dialogOpenScrollReset = extractFunction("installDialogOpenScrollReset");
