@@ -65,6 +65,8 @@ sandbox.DEMO_ATTACK_TIERS = vm.runInNewContext(
   )
 );
 Object.assign(sandbox, {
+  getCurrentRealmShardId: () => "shard_0001",
+  REALM_TOPOLOGY: { normalizeRealmShardId: value => value || "legacy" },
   safeNumber(value, fallback = 0) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
@@ -109,6 +111,7 @@ Object.assign(sandbox, {
 vm.createContext(sandbox);
 vm.runInContext([
   readFunction(source, "getPowerValue"),
+  readFunction(source, "isCurrentRealmPowerSnapshot"),
   readFunction(source, "getPlayerPowerSnapshot"),
   readFunction(source, "getDemoAttackTier"),
   readFunction(source, "normalizeDemoAttackSnapshot"),
@@ -136,9 +139,10 @@ if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
   throw new Error("The legacy snapshot minimum ratios changed unexpectedly.");
 }
 
+const powerRealm = { worldId: sandbox.ONLINE_WORLD_ID, resetGeneration: sandbox.RESET_GENERATION, realmShardId: "shard_0001" };
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
-  profile: { kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 13, kingPower: 900_000, updatedAtMs: 4000 },
+  profile: { ...powerRealm, kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
+  globalStats: { ...powerRealm, version: 13, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
@@ -146,11 +150,25 @@ if (validGlobalPower !== 900_000) {
 }
 
 const target = { ownerUid: "defender", totalDefense: 1000, troops: 1000 };
-assert.equal(sandbox.getPlayerPowerSnapshot({ globalStats: { version: 13, kingPower: 0 },
-  profile: { kingPowerVersion: 13, kingPower: 1000000 }, city: { powerFloor: 5000 } }), 0);
-assert.equal(sandbox.getPlayerPowerSnapshot({ globalStats: { version: 13 },
-  profile: { kingPowerVersion: 13, kingPower: 1000 } }), 1000,
+assert.equal(sandbox.getPlayerPowerSnapshot({ globalStats: { ...powerRealm, version: 13, kingPower: 0 },
+  profile: { ...powerRealm, kingPowerVersion: 13, kingPower: 1000000 }, city: { powerFloor: 5000 } }), 0);
+assert.equal(sandbox.getPlayerPowerSnapshot({ globalStats: { ...powerRealm, version: 13 },
+  profile: { ...powerRealm, kingPowerVersion: 13, kingPower: 1000 } }), 1000,
   "Missing power must not be mistaken for a confirmed zero.");
+for (const foreignScope of [{ realmShardId: "legacy" }, { worldId: "other" }, { resetGeneration: "old" }]) {
+  const power = sandbox.getPlayerPowerSnapshot({
+    globalStats: { ...powerRealm, ...foreignScope, version: 13, kingPower: 0, totalTroops: 0 },
+    profile: { ...powerRealm, kingPowerVersion: 13, kingPower: 0 },
+    leaderboard: { ...powerRealm, kingPowerVersion: 13, kingPower: 39_217_002 },
+  });
+  assert.equal(power, 39_217_002, "A foreign global record must not override the current realm's published score.");
+  assert.equal(sandbox.getAttackProtectionMode(59_875_162 / power, 59_875_162), "normal",
+    "The reported kingdom powers must not become a protected raid through foreign stats.");
+  assert.equal(sandbox.getPlayerPowerSnapshot({
+    globalStats: { ...powerRealm, ...foreignScope, version: 13, kingPower: 0 },
+    profile: { ...powerRealm, kingPowerVersion: 13, kingPower: 999_999 },
+  }), 0, "The profile copy of foreign stats cannot become an authoritative fallback.");
+}
 function protectionAt(ratio, overrides = {}) {
   return sandbox.createServerAttackProtectionSnapshot({
     sourceTroops: 1_000_000,

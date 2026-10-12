@@ -14,7 +14,7 @@ function section(start, end) {
 const settle = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 
 async function validateClanPower() {
-  const identity = {resetGeneration: "audit-generation", worldId: "audit-world"};
+  const identity = {resetGeneration: "audit-generation", worldId: "audit-world", realmShardId: "shard_0001"};
   const records = new Map([
     ["players/player", {...identity, clanId: "clan"}],
     ["players/player/stats/global", {...identity, kingPower: 200}],
@@ -31,12 +31,15 @@ async function validateClanPower() {
     exports: {}, db: {doc}, RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
     safeString: value => String(value || ""), safeNumber: (value, fallback) => Number(value) || fallback,
     onDocumentWritten: (_options, handler) => handler, withDocumentRealmShard: handler => handler,
+    getCurrentRealmShardId: () => identity.realmShardId,
+    REALM_TOPOLOGY: {normalizeRealmShardId: value => value || "legacy"},
     runTransactionWithInfrastructureRetry: callback => callback(tx),
     FieldValue: {serverTimestamp: () => 1}, playerGlobalStatsRef: uid => doc(`players/${uid}/stats/global`),
     leaderboardEntryRef: uid => doc(`leaderboard/${uid}`), clanIdentityPatch: () => ({}),
     writeClanLeaderboard: (transaction, id, clan, patch) => transaction.set(doc(`clanLeaderboard/${id}`), {...clan, ...patch}),
     getPlayerLastLoginAtMs: data => data.lastLoginAtMs || 0,
   });
+  vm.runInContext(section("function isCurrentRealmPowerSnapshot(", "function getPlayerPowerSnapshot("), context);
   vm.runInContext(section("exports.rebuildClanPowerOnPlayerStats =", "exports.createClanRally ="), context);
   const snapshot = data => ({exists: true, data: () => ({...identity, ...data})});
   const event = (before, after) => ({params: {uid: "player"}, data: {before: snapshot({kingPower: before}), after: snapshot({kingPower: after})}});
@@ -146,7 +149,7 @@ async function validateDeferredCode() {
   const html = read("index.html"), worker = read("service-worker.js");
   const entries = [...html.matchAll(/data-optional-ui-script="([^"]+)" data-src="([^"]+)"/g)]
     .map(([, group, src]) => ({dataset: {optionalUiScript: group, src}}));
-  assert.equal(entries.length, 17);
+  assert.equal(entries.length, 21);
   for (const entry of entries) {
     assert(fs.existsSync(path.join(root, entry.dataset.src.split("?")[0])));
     assert(!worker.includes(`"/${entry.dataset.src}"`), "Optional scripts must not be precached at startup");

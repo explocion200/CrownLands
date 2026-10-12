@@ -29,7 +29,7 @@ async function invoke(name, actor, data = {}) {
   const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
     method: "POST", headers: { authorization: `Bearer ${actor.token}`, "content-type": "application/json" },
     body: JSON.stringify({ data: { ...data, clientReleaseId: identity.releaseId, clientResetGeneration: identity.resetGeneration,
-      clientWorldId: identity.worldId, clientRealmShardId: identity.realmShardId } }),
+      clientWorldId: identity.worldId, clientRealmShardId: data.clientRealmShardId || identity.realmShardId } }),
   });
   const body = await response.json();
   return { ok: response.ok && !body.error, result: body.result, error: body.error };
@@ -371,6 +371,25 @@ async function verifySmoothProtectionRanges(attacker, defender, source, target) 
     await setTroops(source, attackingTroops);
     await setTroops(target, defendingTroops);
     await Promise.all([attacker, defender].map(actor => call("collectEconomy", actor)));
+    if (attackingTroops === cases[0][0]) {
+      const statsRef = db.doc(`players/${defender.uid}/stats/global`);
+      const beforeStats = (await statsRef.get()).data();
+      const beforeProfile = await profile(defender);
+      const wrongShardViewer = await user("Wrong shard viewer");
+      await profileRef(wrongShardViewer).set({ ...identity, realmShardId: "legacy" });
+      const lookup = await invoke("getCombatPlayerIdentity", wrongShardViewer, {
+        uid: defender.uid, clientRealmShardId: "legacy",
+      });
+      assert.equal(lookup.ok, false, "A foreign shard must not create its own leaderboard copy");
+      assert.equal((await statsRef.get()).data().kingPower, beforeStats.kingPower,
+        "Foreign identity lookup overwrote the defender's real troop score");
+      assert.equal((await statsRef.get()).data().realmShardId, identity.realmShardId);
+      assert.equal((await profile(defender)).kingPower, beforeProfile.kingPower);
+      // Reproduce an already-corrupted global/profile pair. Preview and dispatch
+      // must use the intact current-realm standings until normal collection heals it.
+      await statsRef.update({ realmShardId: "legacy", kingPower: 0, totalTroops: 0 });
+      await profileRef(defender).update({ kingPower: 0 });
+    }
     const preview = await call("previewArmyProtection", attacker, {
       fromId: source.id, toId: target.id, sourceRegionId: source.regionId,
       targetRegionId: target.regionId, requestedTroops: 1,

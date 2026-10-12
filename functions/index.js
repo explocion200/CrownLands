@@ -4983,7 +4983,20 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
   return getTroopKingPower(getTotalMilitaryTroopsFromGlobalStats(stats));
 }
 
+function isCurrentRealmPowerSnapshot(data = {}) {
+  return safeString(data.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(data.resetGeneration, 120) === RESET_GENERATION
+    && REALM_TOPOLOGY.normalizeRealmShardId(data.realmShardId) === getCurrentRealmShardId();
+}
+
 function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, globalStats = {}, city = {}, fallback = 0 } = {}) {
+  // A rebuild in another shard can overwrite the global document and its profile
+  // projection while leaving this realm's leaderboard intact. Neither bad copy
+  // may override a valid score (including a genuine zero) in the current realm.
+  const foreignGlobalStats = Object.keys(globalStats).length > 0 && !isCurrentRealmPowerSnapshot(globalStats);
+  if (!isCurrentRealmPowerSnapshot(globalStats)) globalStats = {};
+  if (!isCurrentRealmPowerSnapshot(leaderboard)) leaderboard = {};
+  if (foreignGlobalStats || !isCurrentRealmPowerSnapshot(profile)) profile = {};
   const authoritativeCandidates = [
     {
       version: Math.max(0, Math.floor(safeNumber(globalStats.version, 0))),
@@ -14280,11 +14293,13 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     const currentSeasonProfile = profileSnap.exists
       && safeString(profile.resetGeneration, 120) === RESET_GENERATION
       && safeString(profile.worldId, 120) === ONLINE_WORLD_ID;
-    if (!currentSeasonProfile) {
+    const currentShardProfile = REALM_TOPOLOGY.normalizeRealmShardId(profile.realmShardId) === getCurrentRealmShardId();
+    if (!currentSeasonProfile || !currentShardProfile) {
       return {
         uid: playerUid,
         skipped: true,
-        reason: profileSnap.exists ? "archived-player-profile" : "missing-player-profile",
+        reason: !profileSnap.exists ? "missing-player-profile"
+          : !currentSeasonProfile ? "archived-player-profile" : "other-realm-shard",
         stats: null,
         cityUpdates: 0,
         armyUpdates: 0,
@@ -14362,6 +14377,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
           uid: playerUid,
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
+          realmShardId: getCurrentRealmShardId(),
           displayName: identity.ownerName,
           playerName: identity.ownerName,
           flag: identity.ownerFlag,
@@ -16991,6 +17007,9 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
           ref: leaderboardEntryRef(uid),
           data: {
             uid,
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+            realmShardId: getCurrentRealmShardId(),
             displayName: identity.ownerName,
             playerName: identity.ownerName,
             flag: identity.ownerFlag,
@@ -22896,7 +22915,7 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   if (safeString(afterStats.resetGeneration, 120) !== RESET_GENERATION) return;
   const previousStatsPower = Math.max(0, Math.floor(safeNumber(beforeStats.kingPower, 0)));
   const eventPower = Math.max(0, Math.floor(safeNumber(afterStats.kingPower, 0)));
-  if (!uid || previousStatsPower === eventPower) return;
+  if (!uid || (previousStatsPower === eventPower && isCurrentRealmPowerSnapshot(beforeStats))) return;
   await runTransactionWithInfrastructureRetry(async transaction => {
     // Firestore events can arrive out of order or more than once. Read current
     // stats and membership under the same transaction as the aggregate update.
@@ -22908,7 +22927,8 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
     const stats = statsSnap.data() || {};
     if (!profileSnap.exists || !statsSnap.exists
         || profile.resetGeneration !== RESET_GENERATION || stats.resetGeneration !== RESET_GENERATION
-        || profile.worldId !== ONLINE_WORLD_ID || stats.worldId !== ONLINE_WORLD_ID) return;
+        || profile.worldId !== ONLINE_WORLD_ID || stats.worldId !== ONLINE_WORLD_ID
+        || !isCurrentRealmPowerSnapshot(profile) || !isCurrentRealmPowerSnapshot(stats)) return;
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) return;
     const [clanSnap, memberSnap] = await Promise.all([

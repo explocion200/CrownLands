@@ -44,7 +44,7 @@ const config = Object.fromEntries(constantNames.map(name => {
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
 const profileRenderSource = extractFunction(clientSource, "renderProfileScreen");
-assert.match(profileRenderSource, /profileKingPowerStat\.textContent\s*=\s*formatNumber\(summary\.kingPower\)/,
+assert.match(profileRenderSource, /setTextIfChanged\(profileKingPowerStat,\s*formatNumber\(summary\.kingPower\)\)/,
   "The player profile must show only the authoritative King Power total.");
 assert.doesNotMatch(profileRenderSource, /formatBaseAndBonusStat|profileKingPowerBreakdown|profileKingPowerStrongholdBonus/,
   "The player profile must not append a bonus suffix or Power explanation.");

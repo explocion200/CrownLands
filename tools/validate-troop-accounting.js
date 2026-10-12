@@ -198,6 +198,16 @@ Object.assign(sandbox, {
 vm.runInContext(between(source, "async function rebuildGlobalStatsForPlayer(", "function createEconomyResponse("), sandbox);
 vm.runInContext(between(source, "exports.syncPlayerIdentity = onCall", "exports.recalculatePlayerGlobalStats ="), sandbox);
 async function main() {
+  const originalShard = profile.realmShardId;
+  for (const scope of ["legacy", "another-shard"]) {
+    profile.realmShardId = scope;
+    written.clear();
+    const result = await sandbox.rebuildGlobalStatsForPlayer("owner");
+    assert.equal(result.reason, "other-realm-shard");
+    assert.equal(result.skipped, true);
+    assert.equal(written.size, 0, "A wrong-shard rebuild must not overwrite global stats, profile power or standings.");
+  }
+  profile.realmShardId = originalShard;
   for (const repair of [() => sandbox.rebuildGlobalStatsForPlayer("owner"), () => sandbox.exports.syncPlayerIdentity({})]) {
     written.clear();
     await repair();
@@ -208,6 +218,7 @@ async function main() {
     assert.equal(stats.armyPower, baseline.armyPower, "Repair must preserve total troop power across movement.");
     assert.equal(stats.kingPower, baseline.kingPower, "A conflicted transaction must publish only the committed troop score.");
     assert.equal(written.get("board/owner").kingPower, stats.kingPower);
+    assert.equal(written.get("board/owner").realmShardId, realm.realmShardId);
     assert.equal(written.get("board/owner").totalTowerTroops, 400);
     assert.equal(written.get("board/owner").totalMilitaryTroops, 1125);
   }

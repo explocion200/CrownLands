@@ -9,7 +9,7 @@ const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error("The Firestore emulator is required.");
 initializeApp({projectId: process.env.GCLOUD_PROJECT || "crown-land-b15e0"});
 const db = getFirestore(), suffix = randomUUID();
-const identity = {resetGeneration: `audit-${suffix}`, worldId: `audit-world-${suffix}`};
+const identity = {resetGeneration: `audit-${suffix}`, worldId: `audit-world-${suffix}`, realmShardId: "shard_0001"};
 const clanId = `power-${suffix}`, members = [`a-${suffix}`, `b-${suffix}`];
 const source = fs.readFileSync(path.resolve(__dirname, "../index.js"), "utf8");
 const start = source.indexOf("exports.rebuildClanPowerOnPlayerStats =");
@@ -19,6 +19,8 @@ const context = vm.createContext({
   exports: {}, db, FieldValue, RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
   safeString: value => String(value || ""), safeNumber: (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   onDocumentWritten: (_options, handler) => handler, withDocumentRealmShard: handler => handler,
+  getCurrentRealmShardId: () => identity.realmShardId,
+  REALM_TOPOLOGY: {normalizeRealmShardId: value => value || "legacy"},
   // Firestore checks native Promise identity; the extracted callback has a VM realm.
   runTransactionWithInfrastructureRetry: callback => db.runTransaction(async transaction => callback(transaction)),
   playerGlobalStatsRef: uid => db.doc(`players/${uid}/stats/global`),
@@ -26,6 +28,7 @@ const context = vm.createContext({
   clanIdentityPatch: id => ({clanId: id}),
   writeClanLeaderboard: (tx, id, clan, patch) => tx.set(db.doc(`auditClanLeaderboards/${id}`), {...clan, ...patch}),
 });
+vm.runInContext(source.slice(source.indexOf("function isCurrentRealmPowerSnapshot("), source.indexOf("function getPlayerPowerSnapshot(")), context);
 vm.runInContext(source.slice(start, end), context);
 const handler = context.exports.rebuildClanPowerOnPlayerStats;
 const snapshot = power => ({exists: true, data: () => ({...identity, kingPower: power})});
@@ -54,5 +57,15 @@ const event = (uid, before, after) => ({params: {uid}, data: {before: snapshot(b
   await db.doc(`players/${members[1]}/stats/global`).update({resetGeneration: "archived", kingPower: 9000});
   await handler(event(members[1], 400, 9000));
   assert.equal((await clanRef.get()).data().totalKingPower, 1450, "Cross-generation stats cannot enter the active aggregate");
+  await db.doc(`players/${members[1]}/stats/global`).update({...identity, realmShardId: "legacy", kingPower: 0});
+  await handler(event(members[1], 400, 0));
+  assert.equal((await clanRef.get()).data().totalKingPower, 1450, "Wrong-shard zero stats cannot erase a current member's clan power");
+  await db.doc(`players/${members[1]}/stats/global`).update({...identity, kingPower: 0});
+  await handler({params: {uid: members[1]}, data: {
+    before: {exists: true, data: () => ({...identity, realmShardId: "legacy", kingPower: 0})},
+    after: snapshot(0),
+  }});
+  assert.equal((await clanRef.get()).data().totalKingPower, 1050,
+    "Repairing the realm must reconcile a genuine zero even when the corrupt score was also zero");
   console.log("Clan power events passed against Firestore: concurrent updates, duplicates, delayed events, decreases, membership changes and generation isolation.");
 })().catch(error => {console.error(error); process.exitCode = 1;});
