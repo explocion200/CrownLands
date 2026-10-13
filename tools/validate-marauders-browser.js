@@ -388,7 +388,8 @@ async function main(built = false) {
       }
     }
     await ev("applyOnlineMarauders([huntQA.target],huntQA.target.regionId);state.battleReports=[{id:'npc-scout-report',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:huntQA.target.id,cityName:huntQA.target.name,regionId:huntQA.target.regionId,targetType:'marauder',targetSpawnId:'fixture-spawn',occurredAtMs:Date.now(),scoutReport:getScoutReportForTarget(huntQA.target)}];showBattleReportDetail('npc-scout-report')");
-    await ev("CrownlandsScoutReportUI.updateTiming(modalBody,20)");assert(await ev("document.querySelector('.expiry').classList.contains('urgent')"));
+    // Assert in the same browser turn; the live scout clock may repaint between CDP calls.
+    assert(await ev("(()=>{CrownlandsScoutReportUI.updateTiming(modalBody,20);return document.querySelector('.expiry').classList.contains('urgent')})()"));
     await ev("document.querySelector('[data-scout-close]').click()");
     assert(!await ev('modal.open'));
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
