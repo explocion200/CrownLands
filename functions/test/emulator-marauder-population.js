@@ -1,7 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict"), crypto = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app"), { getFirestore } = require("firebase-admin/firestore");
-const { createMarauderPopulation, isClear, placementBounds } = require("../marauder-population");
+const { createMarauderPopulation, isClear, placementBounds, roadPlacementPoints } = require("../marauder-population");
 const M = require("../marauder-rules"), topology = require("../coreExpansionTopology");
 const catalog = require("../core-expansion-region-catalog.json");
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error("Emulator only");
@@ -9,8 +9,10 @@ initializeApp({ projectId: process.env.GCLOUD_PROJECT || "crown-land-b15e0" });
 const db = getFirestore(), token = crypto.randomBytes(6).toString("hex");
 const world = { worldId: `population_${token}`, resetGeneration: `generation_${token}`, realmShardId: "shard_0001", storageId: `population_${token}` };
 const regions = new Map(catalog.regions.map(row => [row.id, row]));
-let active = [...regions.keys()], blocked = false;
+let active = [...regions.keys()], blocked = false, roadsAvailable = true;
+const roads = Array.from({ length: 6 }, (_, y) => Array.from({ length: 31 }, (_, x) => ({ x: 1000 + x * 100, y: 1000 + y * 600 }))).flat();
 const geometry = () => ({ bounds: { left: 0, top: 0, right: 5000, bottom: 5000 },
+  roadPoints: roadsAvailable ? roads : [],
   structures: [{ x: 2500, y: 2500, clearance: 132 }], rectangles: [{ left: 200, top: 200, right: 1200, bottom: 800 }],
   walkable: point => !blocked && point.x > 1000, accessible: point => point.y > 1000 });
 const population = createMarauderPopulation({ db, runTransaction: operation => db.runTransaction(operation), context: () => world,
@@ -31,7 +33,8 @@ async function main() {
       assert(row.level >= slot.min && row.level <= slot.max);
       assert.equal(row.classification === "boss", regions.get(region).permanentCore);
       assert.equal(row.troops, M.balance(row.level).defenders);
-      assert.equal(row.placementVersion, 2);
+      assert.equal(row.placementVersion, 3);
+      assert(roadPlacementPoints(geometry()).some(point => point.x === row.x && point.y === row.y), "All new NPCs use a road sample");
       const interior = placementBounds(geometry().bounds);
       assert(row.x >= interior.left && row.x <= interior.right && row.y >= interior.top && row.y <= interior.bottom,
         "Every generated spawn stays inside the inset area");
@@ -70,7 +73,8 @@ async function main() {
     assert.equal((await population.populate(before.regionId, now + delay)).spawned, 1);
     const after = (await row.ref.get()).data();
     assert.notEqual(after.spawnId, before.spawnId); assert.equal(after.regionId, before.regionId);
-    assert.equal(after.placementVersion, 2);
+    assert.equal(after.placementVersion, 3);
+    assert(roadPlacementPoints(geometry()).some(point => point.x === after.x && point.y === after.y), "Replacements stay on roads");
     const interior = placementBounds(geometry().bounds);
     assert(after.x >= interior.left && after.x <= interior.right && after.y >= interior.top && after.y <= interior.bottom);
     assert(Math.hypot(after.x - before.x, after.y - before.y) >= 128, "Replacement gets a new clear location");
@@ -83,12 +87,44 @@ async function main() {
     layout: () => ({ ...geometry(), bounds: { left: 0, top: 0, right: 100, bottom: 100 } }), islandId: id => `${world.worldId}--${id}` });
   assert.equal((await tinyPopulation.populate(tinyRegion.id, now)).blocked, 12, "An unusable inset retries instead of throwing from randomInt");
   assert.equal((await island(tinyRegion.id).collection("marauders").get()).size, 0);
+  // Walkable open ground is not a fallback when roads are missing/blocked.
+  roadsAvailable = false;
+  assert.equal((await population.populate(tinyRegion.id, now)).blocked, 12);
+  assert.equal((await island(tinyRegion.id).collection("marauders").get()).size, 0);
+  const roadlessBoss = bosses.docs[1], roadlessBossRow = roadlessBoss.data();
+  await roadlessBoss.ref.set({ status: "defeated", respawnAtMs: now }, { merge: true });
+  assert.deepEqual(await population.populate(roadlessBossRow.regionId, now), { spawned: 0, blocked: 1 });
+  assert.equal((await roadlessBoss.ref.get()).data().spawnId, roadlessBossRow.spawnId, "Blocked boss replacement retains the defeated identity");
+  roadsAvailable = true;
+  assert.equal((await population.populate(roadlessBossRow.regionId, now + 60000)).spawned, 1);
+  assert.equal((await population.populate(tinyRegion.id, now + 60000)).spawned, 12, "Road availability restores blocked slots");
+  // A safe road with space for one enemy must leave the other slots empty,
+  // even when plenty of walkable open ground is available nearby.
+  const crowdedRegion = topology.getRegionAtActivationOrdinal(122);
+  regions.set(crowdedRegion.id, { ...crowdedRegion, permanentCore: false });
+  await island(crowdedRegion.id).set({ ...world });
+  let crowded = true;
+  const partialPopulation = createMarauderPopulation({ db, runTransaction: operation => db.runTransaction(operation), context: () => world,
+    activeRegions: async () => [crowdedRegion.id], descriptor: id => regions.get(id),
+    layout: () => ({ ...geometry(), roadPoints: crowded ? [{ x: 1600, y: 2000 }] : roads }), islandId: id => `${world.worldId}--${id}` });
+  assert.deepEqual(await partialPopulation.populate(crowdedRegion.id, now), { spawned: 1, blocked: 11 });
+  const partialRows = await island(crowdedRegion.id).collection("marauderCombat").get();
+  assert.equal(partialRows.size, 1);
+  const retained = partialRows.docs[0].data();
+  const concurrent = await Promise.all([partialPopulation.populate(crowdedRegion.id, now + 1), partialPopulation.populate(crowdedRegion.id, now + 1)]);
+  assert(concurrent.every(result => result.spawned === 0 && result.blocked === 11));
+  assert.deepEqual((await partialRows.docs[0].ref.get()).data(), retained, "Retries retain active road targets");
+  const metadata = (await partialPopulation.rolloutRef().collection("maps").doc(crowdedRegion.id).get()).data();
+  assert.equal(metadata.initialized, false); assert.equal(metadata.retryAtMs, now + 60001);
+  crowded = false;
+  assert.equal((await partialPopulation.maintain(now + 60001)).spawned, 11, "Only vacant slots fill when safe road space becomes available");
+  assert.equal((await island(crowdedRegion.id).collection("marauderCombat").get()).size, 12);
   const area = geometry();
   assert.equal(isClear({ x: 50, y: 50 }, area), false);
   assert.equal(isClear({ x: 1100, y: 300 }, area), false);
   assert.equal(isClear({ x: 2500, y: 2500 }, area), false);
   await population.rolloutRef().set({ enabled: false }, { merge: true });
   assert.equal((await population.maintain(now)).enabled, false);
-  console.log("Population passed: all 25 Core maps and prepared New Lands, 12-slot distribution, 20% edge margins, stationary active targets, generated closed-admission maps, blocked/narrow-map retry, immutable replacements, two/30-minute cooldowns and rollout gate.");
+  console.log("Population passed: road-only new/replacement spawns, no open-ground fallback, partial maps and concurrent retries, all 25 Core maps and prepared/generated closed-admission New Lands, unchanged spacing/inset, stationary active targets, immutable replacements, two/30-minute cooldowns and rollout gate.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

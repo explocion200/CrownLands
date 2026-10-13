@@ -27,6 +27,13 @@ function isClear(point, { bounds, rectangles = [], structures = [], enemies = []
   return Boolean(walkable?.(point, radius));
 }
 
+function roadPlacementPoints(geometry) {
+  const bounds = placementBounds(geometry.bounds);
+  if (!bounds) return [];
+  return (geometry.roadPoints || []).filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y)
+    && point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.top && point.y <= bounds.bottom);
+}
+
 function createMarauderPopulation({ db, runTransaction, context, activeRegions, descriptor, layout, islandId }) {
   const rolloutRef = () => db.doc(`marauderPopulation/${context().storageId}`);
   const mapRef = regionId => rolloutRef().collection("maps").doc(regionId);
@@ -35,6 +42,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
     if (!slots.length) return { spawned: 0, blocked: 0 };
     const world = context(), island = db.doc(`islands/${islandId(regionId)}`);
     const geometry = layout(regionId);
+    const roadPoints = roadPlacementPoints(geometry);
     return runTransaction(async transaction => {
       const [rollout, rows, cities, islandSnap] = await Promise.all([
         transaction.get(rolloutRef()), transaction.get(island.collection("marauderCombat")),
@@ -48,13 +56,11 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
       for (const slot of slots) {
         const id = `marauder_${crypto.createHash("sha256").update(regionId).digest("hex").slice(0, 12)}_${String(slot.slot).padStart(2, "0")}`, previous = existing.get(id);
         if (previous?.status === "active" || previous?.respawnAtMs > now) continue;
-        const placement = placementBounds(geometry.bounds);
         // Crowded Core interiors need more chances; keep each slot's search bounded.
         const maxAttempts = slot.classification === "boss" ? 512 : 48;
         let point = null;
-        for (let attempt = 0; placement && attempt < maxAttempts; attempt++) {
-          const candidate = { x: crypto.randomInt(placement.left, placement.right + 1),
-            y: crypto.randomInt(placement.top, placement.bottom + 1), regionId };
+        for (let attempt = 0; roadPoints.length && attempt < maxAttempts; attempt++) {
+          const candidate = { ...roadPoints[crypto.randomInt(roadPoints.length)], regionId };
           if (!isClear(candidate, { ...geometry, structures, enemies: previous ? [...enemies, previous] : enemies })) continue;
           if (!geometry.accessible(candidate)) continue;
           point = candidate; break;
@@ -62,7 +68,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
         if (!point) { blocked++; continue; }
         const level = crypto.randomInt(slot.min, slot.max + 1), balance = M.balance(level);
         const row = { id, ...point, slot: slot.slot, spawnId: crypto.randomUUID(), level,
-          classification: slot.classification, balanceVersion: M.VERSION, placementVersion: 2, status: "active",
+          classification: slot.classification, balanceVersion: M.VERSION, placementVersion: 3, status: "active",
           name: `${slot.classification === "boss" ? "Clan Boss" : "Marauder"} Lv. ${level}`,
           worldId: world.worldId, resetGeneration: world.resetGeneration, realmShardId: world.realmShardId,
           targetType: "marauder", ownerKind: "neutral", ownerUid: "", spawnedAtMs: now, respawnAtMs: 0 };
@@ -99,4 +105,4 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
   }
   return { rolloutRef, populate, maintain };
 }
-module.exports = { MAP_EDGE_INSET, placementBounds, isClear, createMarauderPopulation };
+module.exports = { MAP_EDGE_INSET, placementBounds, roadPlacementPoints, isClear, createMarauderPopulation };
