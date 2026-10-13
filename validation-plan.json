@@ -1,14 +1,27 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b372622f7a20ecf2a74e5854621f6bf579125e1b",
+  "baseCommit": "187ea9ce16ce45b4f1599b0a588b57896dbf16a1",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_REPORTS_RELEASE_2026-10-13.md"
+        "marauders-ui.js",
+        "marauders-ui.css"
       ],
-      "tests": [],
-      "reason": "Documentation-only record of the authorized verified NPC report deployment. Check CI, source archives, published assets, realm identity and population/refill restoration against sanitized operational receipts; preserve historical records and manual verification limits. No runtime or authority input changes, so no additional emulator or browser suite is affected."
+      "tests": [
+        "tools/validate-marauders-browser.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Replace map-wheel classes on NPC Info controls with scoped dialog actions so their absolute hexagon decorations cannot cover the panel. Verify source and exact built solo/boss Info at desktop and both landscape sizes, artwork, no overlay, keyboard/touch hit areas, close/scroll, scout privacy and preserved scout/attack/rally/refill flows. Shared map-wheel, stamina and production asset dependencies retain their existing assertions; budgets are unchanged. No backend or combat authority changes require emulators."
+    },
+    {
+      "paths": [
+        "tools/validate-marauders-browser.js"
+      ],
+      "tests": [
+        "tools/validate-marauders-browser.js"
+      ],
+      "reason": "Execute the regression that reproduced 537-by-584-pixel button decorations before the fix. Add real dialog visibility, bounded decorations, loaded NPC artwork, touch targets, keyboard focus and close assertions for solo and boss Info at three sizes, including exact production JS/CSS interception, while retaining existing hunt and stamina draft lifecycle coverage."
     }
   ]
 }

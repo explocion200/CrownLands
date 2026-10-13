@@ -7,7 +7,7 @@ const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = requir
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const artifacts = path.resolve(__dirname, "../release-artifacts/marauders");
 
-async function main() {
+async function main(built = false) {
   const executable = [process.env.CHROME_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","/usr/bin/google-chrome","/usr/bin/chromium"].find(p => p && fs.existsSync(p));
   assert(executable, "Chromium required"); fs.mkdirSync(artifacts,{recursive:true});
   const server = createMapBenchmarkServer(), address = await server.listen();
@@ -16,6 +16,21 @@ async function main() {
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
     await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("Network.enable");
+    if(built){
+      const delivered={};
+      for(const file of ['marauders-ui.js','marauders-ui.css']){
+        delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
+        const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
+        assert.equal(delivered[file].replace(/\r\n/g,'\n'),file.endsWith('.js')?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
+      }
+      client.on('Fetch.requestPaused',event=>{
+        const file=new URL(event.request.url).pathname.split('/').at(-1);
+        client.send('Fetch.fulfillRequest',{requestId:event.requestId,responseCode:200,
+          responseHeaders:[{name:'Content-Type',value:file.endsWith('.css')?'text/css':'text/javascript'}],
+          body:Buffer.from(delivered[file]).toString('base64')}).catch(error=>errors.push(error.message));
+      });
+      await client.send('Fetch.enable',{patterns:Object.keys(delivered).map(file=>({urlPattern:'*'+file+'*'}))});
+    }
     client.on("Runtime.exceptionThrown", e => errors.push(e.exceptionDetails.exception?.description || e.exceptionDetails.text));
     client.on("Network.responseReceived", e => { if (e.response.status >= 400 && ["Image","Stylesheet","Script"].includes(e.type)) failedAssets.push(e.response.url); });
     const ev = async expression => {
@@ -23,6 +38,46 @@ async function main() {
       if(r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value;
     };
     const wait = async expression => { for(let i=0;i<500;i++){ if(await ev(expression))return; if(errors.length)throw Error(JSON.stringify(errors)); await delay(100); } throw Error("Timeout: "+expression+" · "+JSON.stringify(await ev("({modal:modal.className,open:modal.open,text:modalBody.textContent.slice(0,500),uid:cosmeticUid})"))); };
+    const checkInfo=async(classification,width,height)=>{
+      await wait("modalBody.querySelector('.marauder-portrait')?.complete");
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+      assert(await ev('modal.open'),'NPC Info must remain open after painting');
+      const info=await ev(`(()=>{
+        modalBody.scrollTop=0;const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+        const art=modalBody.querySelector('.marauder-portrait'),close=document.getElementById('closeModalBtn');
+        return {dialog:rect(modal),body:rect(modalBody),portrait:rect(art),artLoaded:art.naturalWidth>0,
+          art:art.getAttribute('src'),scrollable:modalBody.scrollHeight>modalBody.clientHeight,
+          close:rect(close),closeHit:close.contains(document.elementFromPoint(close.getBoundingClientRect().x+close.offsetWidth/2,close.getBoundingClientRect().y+close.offsetHeight/2)),
+          privateIntel:modalBody.textContent.includes('Scout this spawn')&&!modalBody.textContent.includes('Scouted defenders:'),
+          horizontalOverflow:modalBody.scrollWidth>modalBody.clientWidth+1};
+      })()`);
+      assert(info.artLoaded&&info.art.includes(classification==='boss'?'boss-v1':'solo-v1'));
+      assert(info.privateIntel&&!info.horizontalOverflow,JSON.stringify(info));
+      assert(info.dialog.left>=0&&info.dialog.right<=width+1&&info.dialog.top>=0&&info.dialog.bottom<=height+1,JSON.stringify(info));
+      assert(info.closeHit&&info.close.bottom<=height&&info.portrait.width<=140&&info.portrait.height<=140,JSON.stringify(info));
+      for(const action of ['scout','attack']){
+        const button=await ev(`(()=>{
+          const b=modalBody.querySelector('[data-npc-action="${action}"]');b.focus();
+          const r=b.getBoundingClientRect(),body=modalBody.getBoundingClientRect(),decoration=getComputedStyle(b,'::before');
+          return {width:r.width,height:r.height,label:b.textContent.trim(),focus:document.activeElement===b,
+            visible:r.top>=body.top-1&&r.bottom<=body.bottom+1,
+            hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),
+            decoration:decoration.content!=='none'&&decoration.display!=='none',
+            decorationWidth:parseFloat(decoration.width),decorationHeight:parseFloat(decoration.height)};
+        })()`);
+        assert(!button.decoration||(button.decorationWidth<=button.width&&button.decorationHeight<=button.height),'NPC Info button decoration covers the dialog: '+JSON.stringify(button));
+        assert(button.height>=44&&button.visible&&button.hit&&button.focus,JSON.stringify(button));
+        assert.equal(button.label,action==='scout'?'Scout':classification==='boss'?'Prepare rally':'Attack');
+      }
+      await ev('modalBody.scrollTop=0');
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+      assert.equal(await ev("getComputedStyle(modal.querySelector('.modal-card')).opacity"),'1','NPC Info must be fully painted');
+      fs.writeFileSync(path.join(artifacts,`npc-info-${classification}-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      assert(await ev('modal.open'),'NPC Info closed during screenshot capture');
+      records.push({kind:'npcInfo',classification,width,height,built,...info});
+    };
     await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
     await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=2&hudOperations=both&chatMode=quick"});
     await wait("document.documentElement?.dataset.crownlandsBenchmarkReady==='true'");
@@ -70,6 +125,9 @@ async function main() {
       await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
       await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       assert(await ev("modal.open && modal.classList.contains('marauder-modal') && modalBody.textContent.includes('Scout this spawn')"));
+      await checkInfo('solo',width,height);
+      await ev("document.getElementById('closeModalBtn').click()");assert(!await ev('modal.open'));
+      await ev("openMarauderDetails('boss-size-fixture')");await checkInfo('boss',width,height);
       await ev('modal.close()');records.push({kind:'npcControls',width,height,wheel});
     }
     // Pending scouts cannot be duplicated, and a changed spawn cancels the route.
@@ -228,11 +286,11 @@ async function main() {
     assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
     assert(!await ev("modal.open || !!document.querySelector('.stamina-panel[open]')"),'Sign-out discards the suspended view');
     assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
-    fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log('Marauder/stamina UI passed: desktop and both landscape sizes, panel bounds, exact review, duplicate clicks, focus, preserved drafts, explicit sending, private intel, search, low/unknown states.');
+    fs.writeFileSync(path.join(artifacts,built?'checks-built.json':'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log(`Marauder/stamina UI (${built?'production':'source'}) passed: solo/boss Info artwork, contained buttons, touch targets, focus, scroll, private intel, desktop/landscape bounds, existing map controls, refill review and preserved drafts.`);
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(browser){if(!await waitForProcessExit(browser.browserProcess)){browser.browserProcess.kill();await waitForProcessExit(browser.browserProcess);}await removeBrowserProfile(browser.profilePath);}
     await server.close();
   }
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+main().then(()=>main(true)).catch(error=>{console.error(error);process.exitCode=1;});
