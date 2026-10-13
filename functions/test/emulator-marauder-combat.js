@@ -251,9 +251,12 @@ async function main() {
   const bossSnapshot=(await bossSnapshotRef.get()).data();
   strictEqual(bossSnapshot.target.classification,'boss');strictEqual(bossSnapshot.attackers.length,2);
   strictEqual(bossSnapshot.totals.attackPower,(await db.doc('clans/'+clanId+'/rallies/'+rallyId).get()).data().attackPower);
+  strictEqual(bossBattle.reports.length,1,'The callable returns only the caller\'s personal report');
+  strictEqual(bossBattle.reports[0].uid,users[0].uid);
   for(const report of bossBattle.reports)strictEqual(report.battleId,launched.movement.id,'Rally recipients share one settled snapshot');
   for(const row of bossSnapshot.attackers){
-    const personal=bossBattle.reports.find(report=>report.uid===row.ownerUid);
+    const personal=(await db.doc('players/'+row.ownerUid).get()).data().battleReports.find(report=>report.battleId===launched.movement.id);
+    assert(personal,'Participant did not receive a saved report');
     strictEqual(row.startingTroops,personal.sentTroops);strictEqual(row.losses,personal.attackerLosses);strictEqual(row.survivors,personal.survivors);
   }
   for(const user of users.slice(0,2))strictEqual((await readAs(user,bossSnapshotRef.path)).status,200);
