@@ -1,4 +1,5 @@
 /* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder */
+/* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
 const bossReadiness = new Map();
