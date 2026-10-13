@@ -1,12 +1,12 @@
 .profile-resources{display:flex;align-items:stretch;gap:8px;width:max-content;margin:.16rem 0 0 -7px}
 .profile-resources>.profile-currencies{margin:0}
-.stamina-card{box-sizing:border-box;width:128px;min-height:44px;display:grid;grid-template-columns:1fr auto;align-content:center;gap:3px 6px;padding:7px 9px;color:#f5e5be;border:1px solid #a78a58;border-radius:5px;background:linear-gradient(#542d35,#38202a);box-shadow:0 2px 5px #20121b55;text-align:left;cursor:pointer;font:inherit;font-size:12px}
-.stamina-card strong{grid-row:2;grid-column:1;font-variant-numeric:tabular-nums;font-size:15px}
+.stamina-card{box-sizing:border-box;width:104px;height:52px;min-height:44px;align-self:flex-start;display:grid;grid-template-columns:1fr auto;align-content:center;gap:2px;padding:5px;color:#f5e5be;border:1px solid #a78a58;border-radius:5px;background:linear-gradient(#542d35,#38202a);box-shadow:0 2px 5px #20121b55;text-align:left;cursor:pointer;font:inherit;font-size:11px;line-height:1.1}
+.stamina-card strong{grid-row:2;grid-column:1;font-variant-numeric:tabular-nums;font-size:14px}
 .stamina-card-label{grid-column:1;white-space:nowrap}
-.stamina-refill-icon{grid-column:2;grid-row:1/3;align-self:center;width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.stamina-refill-icon{grid-column:2;grid-row:1/3;align-self:center;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .stamina-card small{color:#f0bc66;font-size:10px}
-.stamina-card-track{grid-column:1/-1;height:5px;overflow:hidden;border-radius:3px;background:#1e2020}
-.stamina-card-track>span{display:block;height:100%;background:#8a9d72}
+.stamina-card-track{grid-column:1/-1;height:4px;overflow:hidden;border-radius:3px;background:#1e2020}
+.stamina-card-track>span{display:block;height:100%;background:#e5c34b}
 .stamina-low .stamina-card-track>span{background:#d5a350}
 .stamina-card:focus-visible,.stamina-panel button:focus-visible{outline:3px solid #f1c970;outline-offset:3px}
 .stamina-panel{box-sizing:border-box;width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:2px solid #725836;border-radius:12px;background:#e8d5ae;color:#352719;box-shadow:0 12px 60px #0009;font-family:Georgia,serif;overflow:hidden}
@@ -21,7 +21,7 @@
 .stamina-panel details p{font-size:12px}
 .stamina-panel [data-stamina-feedback]{font-size:12px}
 .stamina-panel p{font-size:14px;line-height:1.45;margin:8px 0}
-.stamina-panel progress{display:block;width:100%;height:12px;accent-color:#718459}
+.stamina-panel progress{display:block;width:100%;height:12px;accent-color:#e5c34b}
 .stamina-panel dl{margin:0;font-size:14px;font-variant-numeric:tabular-nums}
 .stamina-panel dl>div{display:flex;justify-content:space-between;gap:14px;padding:4px 0}
 .stamina-panel dd{margin:0;font-weight:bold;text-align:right}
