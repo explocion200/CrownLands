@@ -1,14 +1,13 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f57b5604b14df112d8a87d47af0d4fea631c3a49",
+  "baseCommit": "0c26e68eb074c55343d5d8b4273d51c5fe53be41",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_INFO_SCOUT_RELEASE_2026-10-13.md"
+        "docs/art-sources/marauder-defeated/"
       ],
       "tests": [],
-      "reason": "Documentation-only record of authorized verified PR #550 web/Firebase publication. Receipts establish exact build/delivered panel assets, staged/public startup and interactions, unchanged gameplay backend, October realm and retained population/refills. No runtime, balance, permission, payment or population changes; feature validation is recorded and should not be repeated for this ledger."
+      "reason": "Create two draft defeated NPC artwork variants, original transparent PNGs, compact WebP derivatives and generation provenance. Manually inspect both designs and verify real alpha, transparent borders, dimensions, hashes and derivative sizes. These docs/art-sources assets have no runtime references and are excluded from the production game; no gameplay, network, balance, combat, spawn or client code changes require emulator or browser tests."
     }
   ]
 }

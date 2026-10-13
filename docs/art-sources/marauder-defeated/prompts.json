@@ -1,0 +1,31 @@
+{
+  "tool": "image_gen.imagegen",
+  "mode": "edit",
+  "status": "draft-artwork-not-integrated",
+  "transparent_background": true,
+  "useCase": "precise-object-edit",
+  "references": [
+    {
+      "role": "normal edit target",
+      "path": "assets/marauders/solo-v1.webp"
+    },
+    {
+      "role": "boss edit target",
+      "path": "assets/marauders/boss-v1.webp"
+    },
+    {
+      "role": "atlas style reference",
+      "source": "User-provided inspiration art.png"
+    }
+  ],
+  "assets": [
+    {
+      "path": "solo-defeated-v1.png",
+      "prompt": "Use case: precise-object-edit. Asset type: transparent defeated-state overworld NPC sprite for Crown Lands, readable at 90 pixels. Input image 1 is the edit target: the existing normal marauder group. Input image 2 is the supporting STYLE reference: the player's medieval atlas inspiration. Create the DEFEATED variant of image 1. Preserve the same three identifiable adult raiders (central burgundy-hooded axeman, left helmeted spearman with round shield, right blond swordsman), clothing and weapon designs, earthy colors, fine dark-brown ink outlines, restrained hand-painted watercolor/gouache shading and compact natural proportions. Change only their state: all three are fallen and motionless on the ground, laid in a compact believable arrangement, feet oriented generally south toward the bottom and visible fronts viewed from the same elevated southern three-quarter map camera; no standing, kneeling, celebrating or surviving guard. Central hooded axeman is most visible in the foreground, axe dropped beside him; the spear, sword and round shield are dropped next to their original owners. Show clean non-graphic battlefield defeat: no blood, wounds, dismemberment or skulls. Keep the exact small irregular flat olive-grass/ochre-earth footprint and comparable framing as image 1, without a raised base or hexagon. Transparent outside the ground patch, genuinely transparent alpha with no white/black/parchment canvas or checkerboard. Square centered composition, full figures and weapons within canvas with 8% transparent margins, no cropping. Use atlas brush texture from image 2, with only subtle contact shadows. Avoid realism, 3D, dramatic light, smoke, glow, new enemies, terrain scenery, text, labels, icons or UI. Make the defeated silhouette unmistakable at map scale, maintain correct anatomy and three distinct bodies."
+    },
+    {
+      "path": "boss-defeated-v1.png",
+      "prompt": "Use case: precise-object-edit. Asset type: transparent defeated-state clan boss overworld sprite for Crown Lands, readable at 115 pixels. Input image 1 is the edit target: the existing crowned armored warlord, two bodyguards and burgundy sun-emblem banner. Input image 2 is the supporting STYLE reference: the player's medieval atlas inspiration. Create the DEFEATED variant of image 1. Preserve the same three identifiable adult armored characters, crown-like helmet, weathered gray plate armor, burgundy cloth, heavy hammer, shield, bodyguard weapons and one torn burgundy banner with ochre sun emblem. Change only their state: all three are fallen and motionless, laid compactly with the central crowned warlord largest and clearly visible in the foreground, his heavy hammer dropped beside him. Keep the crown helmet on his head. Both guards are down, with their shield and weapons dropped nearby. The existing banner pole has toppled onto the ground behind/alongside them, with the burgundy cloth crumpled but still recognizable and inside the sprite; no upright guards or upright proud banner. Same elevated SOUTHERN three-quarter atlas camera, fronts visible from above, feet generally toward bottom center; no rear-facing view. Fine warm dark-brown pen outlines, muted watercolor/gouache fill, restrained hatching, olive/ochre ground, warm gray steel and dusty burgundy; avoid shiny 3D or fantasy key art. Keep the existing small irregular flat ground footprint, comparable framing, subtle contact shadows and an 8% transparent outer margin. Genuine transparent alpha outside the patch and around bodies; no hexagon, platform, surrounding map scenery or opaque/checkerboard backdrop. Non-graphic defeat: no blood, wounds, dismemberment or skulls. No smoke/fire/glow, extra characters, text, labels, UI or cropped weapons. Distinct boss silhouette, anatomically coherent three bodies, readable at map scale."
+    }
+  ]
+}
