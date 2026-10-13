@@ -57,10 +57,11 @@ const catalog = require("../functions/core-expansion-region-catalog.json");
 assert.equal(catalog.regions.filter(region => region.permanentCore).length, 25);
 for (const region of catalog.regions) {
   const slots = M.slots(region);
-  assert.equal(slots.length, region.permanentCore ? 1 : 12);
+  assert.equal(slots.length, region.permanentCore ? 1 : 2);
   for (const slot of slots) assert.equal(slot.classification === "boss", region.permanentCore);
 }
-assert.equal(M.slots({ permanentCore: false, spawnEligible: false }).length, 12);
+assert.equal(M.slots({ permanentCore: false, spawnEligible: false }).length, 2);
+assert.deepEqual(M.slots({ permanentCore: false }).map(({ min, max }) => [min, max]), [[1, 10], [11, 79]]);
 assert.deepEqual(M.slots({}), []);
 const now = Date.UTC(2026, 9, 12), interval = M.RECOVERY_MS;
 let stamina = M.changeStamina(null, -10, now);

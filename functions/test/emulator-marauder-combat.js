@@ -177,6 +177,22 @@ async function main() {
   strictEqual((await arrive(swift.movement)).outcome,'target_unavailable');
   strictEqual((await staminaRef.get()).data().value,beforeInvalid+10);strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1);
   enemy=await seed();
+  // Population-policy retirement uses the same invalid-encounter path as a
+  // vanished spawn: return every troop and refund committed stamina once.
+  const retiredMarch=await launch('attack',200), beforeRetirement=(await staminaRef.get()).data().value;
+  // Represent an already committed march consumable from before retirement.
+  await profileRef.set({shopItems:{swift_march_order:0}},{merge:true});
+  await db.doc('armies/'+retiredMarch.movement.id).set({swiftMarchUsedAtMs:Date.now()},{merge:true});
+  await Promise.all([targetRef.set({status:'retired',retirementPolicyVersion:4},{merge:true}),publicRef.set({status:'retired'},{merge:true})]);
+  const retiredResult=await arrive(retiredMarch.movement);
+  strictEqual(retiredResult.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,beforeRetirement+10);
+  strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1);
+  const retiredReceipt=(await db.doc('marauderBattles/'+retiredMarch.movement.id).get()).data();strictEqual(retiredReceipt.loot,null);
+  strictEqual(retiredResult.movements.reduce((sum,row)=>sum+row.troops,0),200);
+  await callFunction('resolveArmyOrder',users[0].token,{armyId:retiredMarch.movement.id});
+  strictEqual((await staminaRef.get()).data().value,beforeRetirement+10,'No duplicate retirement refund');
+  strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1,'No duplicate retirement consumable refund');
+  await arrive(retiredResult.movements[0]);enemy=await seed();
   await staminaRef.set({version:1,value:9,recoveredAtMs:Date.now(),revision:99,paidDay:''});await rejects(launch('attack',200),/stamina/);strictEqual((await staminaRef.get()).data().value,9);
   // Private stamina and current defender counts must never be readable by another player.
   async function readAs(user,path){return fetch('http://'+firestoreHost+'/v1/projects/'+projectId+'/databases/(default)/documents/'+path,{headers:{authorization:'Bearer '+user.token}});}

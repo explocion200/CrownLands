@@ -3,7 +3,7 @@ const fs = require("node:fs"), vm = require("node:vm"), assert = require("node:a
 const { createAuthoritativeRoutePlanner, imagePointToWorld } = require("../functions/authoritative-route-planner");
 const { getAuthoritativeTerrainBlockers } = require("../functions/authoritative-route-policy");
 const { isRegionWalkablePoint } = require("../functions/canonical-route-engine");
-const { isClear, placementBounds, roadPlacementPoints } = require("../functions/marauder-population"), M = require("../functions/marauder-rules");
+const { isClear, minimumEnemySeparation, spawnLevelRange, placementBounds, roadPlacementPoints } = require("../functions/marauder-population"), M = require("../functions/marauder-rules");
 const { createTravelFixture, extractFunction } = require("./world-travel-test-fixtures");
 const catalog = require("../functions/core-expansion-region-catalog.json");
 const layout = require("../functions/core-expansion-world-layout.json");
@@ -100,6 +100,15 @@ function main() {
   assert(isClear({ x: 300, y: 360 }, plain));
   assert.equal(placementBounds({ left: 0, top: 0, right: 100, bottom: 100 }), null);
   assert.equal(placementBounds({ left: 0, top: 0, right: Infinity, bottom: 1000 }), null);
+  assert.equal(minimumEnemySeparation(plain.bounds), 200);
+  assert.equal(isClear({ x: 500, y: 500 }, { ...plain, enemies: [{ x: 699, y: 500 }] }), false);
+  assert.equal(isClear({ x: 500, y: 500 }, { ...plain, enemies: [{ x: 700, y: 500 }] }), true);
+  const [beginner, varied] = M.slots({ permanentCore: false });
+  assert.deepEqual(spawnLevelRange(beginner, { level: 5 }, true), { min: 1, max: 10 });
+  assert.deepEqual(spawnLevelRange(varied, null, false), { min: 11, max: 39 });
+  assert.deepEqual(spawnLevelRange(varied, null, true), { min: 40, max: 79 });
+  for (const level of [11, 20, 39]) assert.deepEqual(spawnLevelRange(varied, { level }), { min: 40, max: 79 });
+  for (const level of [40, 60, 79]) assert.deepEqual(spawnLevelRange(varied, { level }), { min: 11, max: 39 });
   assert.deepEqual(roadPlacementPoints(plain), [], "Missing roads fail closed on otherwise walkable ground");
   const invalid = { ...plain, roadPoints: [{ x: NaN, y: 500 }, { x: 200, y: 500 }, { x: 500, y: 500 }] };
   assert.deepEqual(roadPlacementPoints(invalid), [{ x: 500, y: 500 }]);
@@ -123,7 +132,7 @@ function main() {
       "Generated New Lands transform template roads into their own world coordinates");
   }
   const futurePopulation = samplePopulation(futureFixture, { ...futureRegions[0], spawnEligible: false });
-  assert(futurePopulation.count > 0 && futurePopulation.count <= 12);
+  assert(futurePopulation.count > 0 && futurePopulation.count <= 2);
   const partial = results.filter(row => row.blocked > 0), blocked = results.reduce((sum, row) => sum + row.blocked, 0);
   console.log(`Validated ${roadCount} painted-road points, all 81 prepared maps and ${futureRegions.length} generated New Lands templates. Bounded probe leaves ${blocked} slots empty across ${partial.length} maps; every placed NPC retains the 20% inset, existing clearance and reachable routes. Counts are availability samples, not guarantees.`);
 }

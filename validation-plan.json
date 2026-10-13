@@ -5,15 +5,18 @@
     {
       "paths": [
         "functions/index.js",
+        "functions/marauder-rules.js",
         "functions/marauder-population.js",
         "functions/marauder-road-points.json"
       ],
       "tests": [
         "tools/validate-marauder-terrain.js",
         "tools/validate-marauder-roads-browser.js",
-        "functions/test/emulator-marauder-population.js"
+        "tools/validate-marauder-rules.js",
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js"
       ],
-      "reason": "Server population now samples approved painted-road surfaces in the current Core topology and generated template-backed New Lands. Verify source geometry and transforms, all map classifications/caps, unchanged inset/terrain/scenery/building/objective spacing and routes, no fallback, partial maps and retries, concurrent population, stationary active targets and immutable replacements/cooldowns. Browser coverage verifies real artwork coordinate agreement at desktop and both landscape sizes."
+      "reason": "Server population samples approved roads in the current Core topology and template-backed New Lands, caps solos at two with quarter-map separation, retains one beginner and alternates medium/high replacements. Verify geometry, unchanged building/scenery/terrain/objective clearance and inset/routes, partial maps, concurrency, cooldowns, versioned retirement of old/close targets and preservation of eligible identities. Changed shared slot eligibility also affects actual scouting/attack/rally validation and arrival: exercise exact-once retirement stamina/consumable refunds, full troop returns and no loot through real combat callables. Static rules preserve existing balance/stamina/reward dependencies; browser tests verify coordinate agreement at desktop and both landscape sizes."
     },
     {
       "paths": [
@@ -23,16 +26,18 @@
       "tests": [
         "tools/validate-marauder-terrain.js"
       ],
-      "reason": "Reproducible bounded server-only road data must match committed approved clearance/art receipts and place every sample inside the original road half-width. Exercise prepared and generated map geometry, existing placement guards and accepted partial availability."
+      "reason": "Reproducible bounded server-only road data must match committed approved clearance/art receipts and place every sample inside the original road half-width. Exercise prepared/generated map geometry, two-solo/one-boss caps, quarter-map separation boundaries, medium/high alternation, retained building/inset guards and accepted partial availability."
     },
     {
       "paths": [
-        "functions/test/emulator-marauder-population.js"
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js"
       ],
       "tests": [
-        "functions/test/emulator-marauder-population.js"
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js"
       ],
-      "reason": "Execute the changed transactional population suite for road-only initial/replacement spawns, empty-road solo/boss retries, partial road capacity, concurrent retries, rollout eligibility and retained identities."
+      "reason": "Execute changed transactional population and real combat suites: road-only capped/separated spawns, missing-road and partial-capacity retries, alternating replacement levels, concurrent/idempotent reconciliation of previously initialized maps, hidden retired public targets without defender leaks, preserved eligible identities, exact-once retired-target refunds and full troop returns without loot."
     },
     {
       "paths": [
@@ -45,10 +50,19 @@
     },
     {
       "paths": [
+        "tools/validate-marauder-rules.js"
+      ],
+      "tests": [
+        "tools/validate-marauder-rules.js"
+      ],
+      "reason": "Execute the changed shared-rules validator for two solo slots with beginner/medium-high level eligibility, one Core boss and closed-admission maps; preserve all existing balance, reward, stamina and combat boundary checks for the shared library."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly confirmed road-only rule, preserved spacing and edge inset, fewer enemies when safe roads are unavailable, active-target preservation and pending release status. Documentation does not change runtime."
+      "reason": "Record explicitly confirmed road-only placement, max two separated solos, beginner/alternating medium-high levels, one boss, retained building clearance/inset, accepted partial availability and the approved remove-extras/refund transition exception. Document bounded reconciliation verification and pending production authorization. Documentation does not change runtime."
     }
   ]
 }
