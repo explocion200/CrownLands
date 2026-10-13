@@ -19,7 +19,9 @@
   }
   function sideCard(side,viewer) {
     const primary=side.primary || {}, role=side.role === "attacker" ? "Attacker" : "Defender";
-    return `<article class="army ${viewer ? "viewer" : "opponent"}"><div class="army-top">${renderBattleKingdomFlag(side.flagKey,primary.ownerName || role,"flag")}<div class="identity"><span class="eyebrow">${viewer ? "Your side" : "Opponent side"}</span>${renderPlayerNameLink(primary.ownerUid,primary.ownerName || "Unknown ruler","ruler-link")}<small>${role} · ${esc(side.participantSummary)}</small></div><div class="power"><small>Total ${side.role === "attacker" ? "attack" : "defense"} power</small><strong>${value(side.finalPower)}</strong></div></div><div class="troop-flow" aria-label="Troops before and after battle"><div><span>Starting troops</span><strong>${value(side.startingTroops)}</strong></div><div><span>Troops lost</span><strong class="loss">${value(side.losses)}</strong></div><div><span>Surviving</span><strong class="survive">${value(side.survivors)}</strong></div></div></article>`;
+    const identity=side.npc ? `<strong class="ruler-link npc-name">${esc(primary.ownerName)}</strong>` : renderPlayerNameLink(primary.ownerUid,primary.ownerName || "Unknown ruler","ruler-link");
+    const flag=side.npc ? `<img class="flag npc-report-art" src="assets/marauders/${side.npcClassification === "boss" ? "boss" : "solo"}-v1.webp" alt="" decoding="async">` : renderBattleKingdomFlag(side.flagKey,primary.ownerName || role,"flag");
+    return `<article class="army ${viewer ? "viewer" : "opponent"}"><div class="army-top">${flag}<div class="identity"><span class="eyebrow">${viewer ? "Your side" : "Opponent side"}</span>${identity}<small>${role} · ${esc(side.participantSummary)}</small></div><div class="power"><small>Total ${side.role === "attacker" ? "attack" : "defense"} power</small><strong>${value(side.finalPower)}</strong></div></div><div class="troop-flow" aria-label="Troops before and after battle"><div><span>Starting troops</span><strong>${value(side.startingTroops)}</strong></div><div><span>Troops lost</span><strong class="loss">${value(side.losses)}</strong></div><div><span>Surviving</span><strong class="survive">${value(side.survivors)}</strong></div></div></article>`;
   }
   function summary({report,badge,left,right,target,resultLabel,ruleLabel,message,forecast}) {
     const icon=report.type === "defense" ? badge.tone === "defeat" ? "defense-defeat" : "defense" : "attack";
@@ -30,7 +32,7 @@
     const rows=[
       ["Starting troops","startingTroops",side=>side.participantSummary], ["Base troop power","basePower",side=>side.basePowerHelp],
       ...([left,right].some(side=>side.role === "defender" && !side.wallFree && (side.wallPower || typeof side.wallPower === "string")) ? [["Wall power at battle","wallPower",side=>side.role === "attacker" ? "No attacking wall" : side.wallHelp]] : []),
-      ["Final resolved power","finalPower",side=>side.role === "attacker" ? "Attack power" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall","resolved"],
+      ["Final resolved power","finalPower",side=>side.role === "attacker" ? "Attack power" : side.npc ? "NPC defenders only · No walls" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall","resolved"],
       ["Troops lost","losses",null,"losses"], ["Troops surviving","survivors",null,"survivors"],
       ...([left,right].some(side=>side.reinforcementCount>0) ? [["Allied reinforcements","reinforcementTroops",side=>side.reinforcementCount>0 ? `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}` : "None recorded"]] : [])
     ];
@@ -88,6 +90,19 @@
         help="Field Medics + Barracks gear · 90% combined cap · returned to the main city";
       }
       if (report.troopsAwarded>0) rows.push(metric("troops","Level-up troops",`+${formatNumber(report.troopsAwarded)}`));
+    }
+    if (report.targetType === "marauder") {
+      if (report.outcome === "victory" && report.itemAwarded) {
+        const item=getShopItemById(report.itemAwarded), row=metric("dispatch","Item",item?.label || report.itemAwarded,"",true);
+        if (item?.icon) row.art=renderItemIcon(item,"reward-art");
+        rows.push(row); help += `${help ? " · " : ""}Added to your Bag`;
+      }
+      if (report.staminaRefunded>0) {
+        rows.push(metric("dispatch","Stamina refunded",`+${formatNumber(report.staminaRefunded)}`));
+        help += `${help ? " · " : ""}Stamina refunds are capped at 100`;
+      }
+      if (report.levelUpReward) help += `${help ? " · " : ""}Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded ?? report.levelUpReward.gold)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded ?? report.levelUpReward.troops)} troops at your Main City`;
+      if (report.marauderLevel >= 80 && report.outcome === "victory") help += `${help ? " · " : ""}Your share of the boss rewards · Damage contribution: ${value(Math.max(0, Math.floor(Number(report.damageContribution) || 0)).toLocaleString("en-US"))}`;
     }
     if (!rows.length) return "";
     return section("rewards","Rewards",`<div class="rewards">${rows.map(row=>`<div class="reward${row.wide ? " wide" : ""}">${row.art || art(row.icon,"reward-art")}<div class="reward-copy"><small>${esc(row.label)}</small><strong>${esc(row.amount)}</strong></div></div>`).join("")}</div>${help ? `<p class="reward-help">${help}</p>` : ""}`,"xp");
