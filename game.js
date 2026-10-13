@@ -39511,6 +39511,35 @@ function formatBattleReportValue(value, fallback = "Not recorded") {
   return Number.isFinite(numeric) ? formatNumber(Math.max(0, Math.floor(numeric))) : fallback;
 }
 
+function getBattleReportSideIdentity(side = {}) {
+  const primary = side.primary || {}, name = primary.ownerName || "Unknown ruler";
+  return side.npc ? {
+    identity: `<strong class="ruler-link npc-name">${escapeHtml(name)}</strong>`,
+    flag: `<img class="flag npc-report-art" src="${marauderArt({ classification: side.npcClassification })}" alt="" decoding="async">`,
+  } : {
+    identity: renderPlayerNameLink(primary.ownerUid, name, "ruler-link"),
+    flag: renderBattleKingdomFlag(side.flagKey, name, "flag"),
+  };
+}
+
+function getMarauderBattleReportRewards(report = {}) {
+  const rows = [], help = [];
+  if (report.targetType !== "marauder") return { rows, help: "" };
+  if (report.outcome === "victory" && report.itemAwarded) {
+    const item = getShopItemById(report.itemAwarded);
+    rows.push({ icon: "dispatch", label: "Item", amount: item?.label || report.itemAwarded,
+      wide: true, art: item?.icon ? renderItemIcon(item, "reward-art") : "" });
+    help.push("Added to your Bag");
+  }
+  if (report.staminaRefunded > 0) {
+    rows.push({ icon: "dispatch", label: "Stamina refunded", amount: `+${formatNumber(report.staminaRefunded)}` });
+    help.push("Stamina refunds are capped at 100");
+  }
+  if (report.levelUpReward) help.push(`Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded ?? report.levelUpReward.gold)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded ?? report.levelUpReward.troops)} troops at your Main City`);
+  if (report.marauderLevel >= 80 && report.outcome === "victory") help.push(`Your share of the boss rewards · Damage contribution: ${Math.max(0, Math.floor(Number(report.damageContribution) || 0)).toLocaleString("en-US")}`);
+  return { rows, help: help.join(" · ") };
+}
+
 function getBattleTargetTypeLabel(target = {}) {
   if (target.targetType === "marauder") return target.classification === "boss" || target.level >= 80 ? "Clan boss" : "Marauder";
   if (target.targetType === "tower") return "Clan Tower";

@@ -69,6 +69,15 @@
       ],
       "tests": [],
       "reason": "Record the explicitly confirmed matching NPC attack-report presentation and private historical-snapshot behavior as in development; preserve existing deployment evidence and every combat/reward/stamina rule. Prose does not introduce runtime behavior."
+    },
+    {
+      "paths": [
+        "tools/validate-battle-report-detail.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js"
+      ],
+      "reason": "Execute the existing complete report presentation validator with the shared game-owned identity and NPC reward adapters loaded, retaining city/defense/rally/Tower, item, escaping, historical and navigation assertions. The adapters keep the original report payload budget without adding resources."
     }
   ]
 }

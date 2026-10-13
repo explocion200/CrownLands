@@ -24,7 +24,7 @@ const context = vm.createContext({
   getBattleReportCampReward: report => report.campReward || null,
   getShopItemById: () => null, renderItemIcon: () => "",
 });
-for (const name of ["formatBattleReportValue","getBattleTargetTypeLabel","getDetailedBattleSideParticipants"]) vm.runInContext(functionSource(client,name),context);
+for (const name of ["formatBattleReportValue","getBattleReportSideIdentity","getMarauderBattleReportRewards","getBattleTargetTypeLabel","getDetailedBattleSideParticipants"]) vm.runInContext(functionSource(client,name),context);
 vm.runInContext(functionSource(read("common-gear-ui.js"),"getBattleSideBonusEntries"),context);
 vm.runInContext(read("battle-report-detail-ui.js"),context);
 const ui = context.window.CrownlandsBattleReportUI;
