@@ -142,17 +142,19 @@ async function main(){
         if(!mission.path.length)throw Error("Preview route never became available: "+JSON.stringify({workerUnavailable:routeWorkerUnavailable,requests:routeWorkerRequests.size,job:Boolean(buildRouteWorkerJob(qa.source,qa.target))}));
         renderArmies(true);await qa.nextFrame();const token=armyTokenCache.get(id);
         if(!token||!token.textContent.includes("Pending"))throw Error("Pending token missing");
-        const first=token.style.transform;for(let i=0;i<5;i++)await qa.nextFrame();
-        const moved=token.style.transform!==first;
+        // Five frames can finish before the normal 140/400ms army render tick.
+        const position=getArmyTokenParts(token).position,first=position.style.transform,deadline=performance.now()+2000;
+        while(position.style.transform===first&&performance.now()<deadline)await qa.nextFrame();
+        const moved=position.style.transform!==first;
         if(getArmyTravelProgress(mission,getArmyClockNowMs()+600000)>.08)throw Error("Preview reached target");
         qa.pendingToken=token;qa.pendingId=id;
         return {moved,pending:token.classList.contains("pending-order"),routePoints:mission.path.length};})()`);
       assert(row.departure.moved);assert(row.departure.pending);
       const departureShot=await client.send("Page.captureScreenshot",{format:"png"});
       fs.writeFileSync(path.join(artifacts,`scout-departure-${viewport.name}.png`),Buffer.from(departureShot.data,"base64"));
-      row.departure.reconciled=await evaluate(`(async()=>{const qa=scoutQa;const before=qa.pendingToken.style.transform;
+      row.departure.reconciled=await evaluate(`(async()=>{const qa=scoutQa;const position=getArmyTokenParts(qa.pendingToken).position,before=position.style.transform;
         adoptServerArmyMovement(qa.movement(qa.pendingId));
-        if(qa.pendingToken.style.transform!==before)throw Error("Acceptance flashed the new position before blending");
+        if(position.style.transform!==before)throw Error("Acceptance flashed the new position before blending");
         await qa.nextFrame();return !pendingOutgoingMissions.has(qa.pendingId)&&armyTokenCache.get(qa.pendingId)===qa.pendingToken
           &&!qa.pendingToken.classList.contains("pending-order");})()`);
       assert(row.departure.reconciled,"Accepted departure replaced or duplicated its token");
