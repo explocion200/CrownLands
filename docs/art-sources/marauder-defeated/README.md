@@ -1,6 +1,6 @@
 # Defeated marauder artwork
 
-Created with the built-in image generation tool using the current solo/boss sprites as edit targets and the user's medieval-atlas landscape as the style reference. The user approved these designs for the defeated map state. Runtime integration is in development and has not been deployed.
+Created with the built-in image generation tool using the current solo/boss sprites as edit targets and the user's medieval-atlas landscape as the style reference. The user approved these designs for the defeated map state. Runtime integration is **LIVE — WEB AND FIREBASE** at build `1c3faf7f062b0173fd09ae34575df1c1f1accac0`; see [the verified release ledger](../../MARAUDER_DEFEATED_RELEASE_2026-10-13.md). itch.io was not republished. The generation-time validation below remains historical artwork evidence.
 
 - Normal: the same three leather-clad marauders fallen with their axe, spear, sword and round shield nearby.
 - Boss: the crowned armored warlord and two guards fallen with their heavy hammer, shield, weapons and collapsed burgundy sun banner.
