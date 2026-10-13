@@ -4,10 +4,25 @@
   "coverage": [
     {
       "paths": [
-        "docs/art-sources/marauder-defeated/"
+        "docs/art-sources/marauder-defeated/README.md"
       ],
       "tests": [],
       "reason": "Create two draft defeated NPC artwork variants, original transparent PNGs, compact WebP derivatives and generation provenance. Manually inspect both designs and verify real alpha, transparent borders, dimensions, hashes and derivative sizes. These docs/art-sources assets have no runtime references and are excluded from the production game; no gameplay, network, balance, combat, spawn or client code changes require emulator or browser tests."
+    },
+    {
+      "paths": [
+        "docs/art-sources/marauder-defeated/boss-defeated-v1.png",
+        "docs/art-sources/marauder-defeated/boss-defeated-v1.webp",
+        "docs/art-sources/marauder-defeated/solo-defeated-v1.png",
+        "docs/art-sources/marauder-defeated/solo-defeated-v1.webp",
+        "docs/art-sources/marauder-defeated/prompts.json",
+        "docs/art-sources/marauder-defeated/validation.json"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Verified transparent masters, 384px WebP derivatives under 64 KiB each, original identities, defeated poses, south-facing viewpoint and fallen banner by mechanical alpha/dimension/hash checks and visual inspection. Run existing asset budgets and production artifact validation to preserve distribution limits and packaging; drafts remain in docs/art-sources with no runtime references, so no server/emulator or gameplay browser coverage is affected."
     }
   ]
 }
