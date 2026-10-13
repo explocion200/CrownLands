@@ -1,14 +1,97 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6946e9bd78a0a7d97a12fefe746bd8b44be26926",
+  "baseCommit": "357693f8ef672b9f7ed160d0c54b9fc8f5dd052f",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_ROAD_RESPAWN_RELEASE_2026-10-13.md"
+        "functions/index.js"
+      ],
+      "tests": [
+        "tools/validate-marauder-reports.js",
+        "tools/validate-report-system.js",
+        "functions/test/emulator-marauder-combat.js"
+      ],
+      "reason": "NPC arrival now writes one existing private detailed-battle snapshot in the same settlement transaction and links each report to it. Validate departure powers, item/recovery attribution, full rally losses and survivors, neutral one-defense/no-wall packages, no capture/PvP events, replay immutability, participant-only reads and no fabricated scout/refund snapshots. Shared snapshot, gear and report persistence dependencies retain normal attack coverage through the report-system validator."
+    },
+    {
+      "paths": [
+        "game.js",
+        "marauders-ui.js",
+        "battle-report-detail-ui.js",
+        "battle-report-detail-ui.css"
+      ],
+      "tests": [
+        "tools/validate-marauder-reports-browser.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-report-system.js"
+      ],
+      "reason": "Replace the compact NPC attack renderer with the normal parchment report path, preserve NPC target/rule normalization and show neutral art, recorded combat, individual loot/items/level-up receipts and refunds without walls/capture claims or invented historical power. Exercise real lazy loading, shared UI cascade, 20-member rally, snapshot failure, keyboard/map/close/scroll and three desktop/landscape sizes; retain scout, city and existing NPC draft/control/report lifecycle coverage."
+    },
+    {
+      "paths": [
+        "functions/test/emulator-marauder-combat.js"
+      ],
+      "tests": [
+        "functions/test/emulator-marauder-combat.js"
+      ],
+      "reason": "Execute added real-callable assertions for atomic solo/boss report snapshot links, exact saved departure and participant combat, all private recipients, outside-reader rejection, no PvP credit, no scout/invalid-encounter snapshots, defeat survivors and duplicate settlement immutability while retaining combat/loot/refund lifecycle coverage."
+    },
+    {
+      "paths": [
+        "tools/validate-marauder-reports.js"
+      ],
+      "tests": [
+        "tools/validate-marauder-reports.js"
+      ],
+      "reason": "Execute new server adapter fixtures with level 1/79 solos, 80/100 bosses, capped mixed departure bonuses, gear/recovery and up to 20 participants; prove input immutability, conservation of troop results and no walls/capture/PvP credit. These fixtures also feed real browser normalization/rendering."
+    },
+    {
+      "paths": [
+        "tools/validate-marauder-reports-browser.js"
+      ],
+      "tests": [
+        "tools/validate-marauder-reports-browser.js"
+      ],
+      "reason": "Execute the actual game report flow in isolated loopback fixtures at 1440x900, 844x390 and 568x320: victory/defeat, boss personal rewards and whole roster, maximum rally, old/failed snapshots, target-unavailable refunds, neutral art, keyboard focus, map/close, scroll/viewport fit and asset/runtime failures."
+    },
+    {
+      "paths": [
+        "tools/validate-marauders-browser.js"
+      ],
+      "tests": [
+        "tools/validate-marauders-browser.js"
+      ],
+      "reason": "Execute the adjusted existing NPC report assertion through the shared optional report UI, preserving item Bag text plus all existing NPC scout controls, target replacement, nearby search, hunt/rally draft and stamina/refill navigation coverage."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Documentation-only release record: reconcile the authoritative specification with exact verified PR #546 web/backend identity, approved population transition and read-only map/monitor observations. No runtime, balance, account, topology or deployment configuration changes; prior passing runtime/emulator checks remain evidence, and no runtime suite is selected for prose."
+      "reason": "Record the explicitly confirmed matching NPC attack-report presentation and private historical-snapshot behavior as in development; preserve existing deployment evidence and every combat/reward/stamina rule. Prose does not introduce runtime behavior."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-marauder-reports-browser.js"
+      ],
+      "reason": "Ship only NPC and optional full-report scripts through the existing whitespace/comment and local-name minifier. Count actual delivered NPC bytes in the installed cache without increasing any ceiling; retain the 52 KiB report, 40 KiB NPC/stamina source and main-script limits. Verify artifact/inventory and all existing asset budgets, and exercise both exact minified modules plus source through desktop/landscape report flows."
+    },
+    {
+      "paths": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js"
+      ],
+      "reason": "Execute existing normal report, gear, viewer ordering, historical, delivery/read-state and navigation validators with the actual NPC type/side helpers loaded into their isolated contexts. Preserve every ordinary attack/defense/Tower assertion while the shared model now delegates NPC-only data."
     }
   ]
 }

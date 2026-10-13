@@ -1,4 +1,5 @@
-/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderMarauderBattleReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder */
+/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder */
+/* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
 const bossReadiness = new Map();
@@ -122,14 +123,44 @@ function renderMarauderScoutReport(model) {
     <p>1 defense per defender · No walls. Defenders can change before arrival. Intelligence applies only to this spawn.</p>
     ${renderHuntStamina()}</section>`;
 }
-function renderMarauderBattleReport(report) {
-  const item = report.itemAwarded ? getShopItemById(report.itemAwarded) : null;
-  return `<section class="marauder-details"><button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button><img class="marauder-portrait" src="${marauderArt({ classification: report.marauderLevel >= 80 ? "boss" : "solo" })}" alt="">
-    <h2>${escapeHtml(report.cityName)}</h2><p>${escapeHtml(getRegionLabel(report.regionId))}</p><h3>${report.outcome === "victory" ? "Victory" : report.outcome === "target_unavailable" ? "Returning · Target unavailable" : "Defeat"}</h3>
-    <p>${escapeHtml(report.summary)}</p><dl><dt>Your troops sent</dt><dd>${formatNumber(report.sentTroops)}</dd><dt>Your troops lost</dt><dd>${formatNumber(report.attackerLosses)}</dd><dt>Your returning survivors</dt><dd>${formatNumber(report.survivors)}</dd><dt>Recovered to main city</dt><dd>${formatNumber(report.fieldMedicsRecovered || 0)}</dd><dt>Enemy defenders remaining</dt><dd>${report.outcome === "target_unavailable" ? "Not attacked" : formatNumber(report.defendersLeft)}</dd></dl>
-    ${report.outcome === "victory" ? `<p>Gold awarded: <strong>${formatNumber(report.goldAwarded)}</strong> · Hero XP: <strong>${formatNumber(report.xpAwarded)}</strong></p>${item ? `<p>Item: <strong>${escapeHtml(item.name)}</strong> · Added to your Bag</p>` : ""}${report.levelUpReward ? `<p>Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded)} troops at your main city.</p>` : ""}` : ""}
-    ${report.staminaRefunded ? `<p>${formatNumber(report.staminaRefunded)} stamina refunded, capped at 100.</p>` : ""}
-    <p>No ownership or PvP credit is awarded for this encounter.</p></section>`;
+const MARAUDER_BATTLE_RULE_LABEL = "NPC combat — 1.00 defense per defender; no walls, ownership or PvP credit";
+function getMarauderBattleTargetLabel(target) {
+  return target.targetType === "marauder" ? target.classification === "boss" || target.level >= 80 ? "Clan boss" : "Marauder" : "";
+}
+function getMarauderBattleRuleLabel(snapshot) {
+  return snapshot?.target?.targetType === "marauder" ? MARAUDER_BATTLE_RULE_LABEL : "";
+}
+function getMarauderReportTarget(report) {
+  return report.targetType === "marauder" ? { targetType: "marauder", name: report.cityName,
+    level: report.marauderLevel, regionId: report.regionId, ruleLabel: MARAUDER_BATTLE_RULE_LABEL } : null;
+}
+function normalizeMarauderReportTarget(target) {
+  return target.targetType === "marauder" ? { targetType: "marauder",
+    targetSpawnId: String(target.targetSpawnId || "").slice(0, 128),
+    classification: target.classification === "boss" ? "boss" : "solo", strongholdType: "",
+    level: clamp(Math.floor(Number(target.level) || 1), 1, 100) } : {};
+}
+function marauderBattleReportSide(target, role) {
+  return target?.targetType === "marauder" && role === "defender"
+    ? { npc: true, npcClassification: target.classification } : {};
+}
+function getMarauderBattleResultLabel(report) {
+  if (report.outcome === "target_unavailable") return "Target unavailable — your army is returning";
+  return report.outcome === "victory" ? "Enemy defeated — survivors return" : "Enemy survived — your survivors return";
+}
+function getLegacyMarauderBattleSides(report) {
+  const sides = getLegacyBattleSides({ ...report, targetType: "camp" }), defender = sides.defender;
+  defender.primary.ownerName = report.opponentName || report.cityName || "Enemy";
+  defender.npc = true;
+  defender.npcClassification = report.marauderLevel >= 80 ? "boss" : "solo";
+  defender.basePowerHelp = "1.00 defense per defender · No walls";
+  defender.startingTroops = Math.max(defender.startingTroops, report.troopCount || 0);
+  defender.basePower = defender.startingTroops;
+  defender.finalPower = report.totalDefense;
+  if (report.outcome === "target_unavailable") {
+    for (const key of ["startingTroops", "basePower", "finalPower", "losses", "survivors"]) defender[key] = "Not attacked";
+  }
+  return sides;
 }
 function openMarauderDetails(id) {
   const target = getMarauderById(id);

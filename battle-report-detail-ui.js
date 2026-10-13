@@ -14,12 +14,42 @@
   const art = (name, cls = "section-art") => assets[name] ? `<img class="${cls}" src="${assets[name]}" alt="" decoding="async">` : emblem(name, cls);
   const metric = (icon,label,amount,help="",wide=false) => ({icon,label,amount,help,wide});
 
+function getBattleReportSideIdentity(side = {}) {
+  const primary = side.primary || {}, name = primary.ownerName || "Unknown ruler";
+  return side.npc ? {
+    identity: `<strong class="ruler-link npc-name">${escapeHtml(name)}</strong>`,
+    flag: `<img class="flag npc-report-art" src="${marauderArt({ classification: side.npcClassification })}" alt="" decoding="async">`,
+  } : {
+    identity: renderPlayerNameLink(primary.ownerUid, name, "ruler-link"),
+    flag: renderBattleKingdomFlag(side.flagKey, name, "flag"),
+  };
+}
+
+function getMarauderBattleReportRewards(report = {}) {
+  const rows = [], help = [];
+  if (report.targetType !== "marauder") return { rows, help: "" };
+  if (report.outcome === "victory" && report.itemAwarded) {
+    const item = getShopItemById(report.itemAwarded);
+    rows.push({ icon: "dispatch", label: "Item", amount: item?.label || report.itemAwarded,
+      wide: true, art: item?.icon ? renderItemIcon(item, "reward-art") : "" });
+    help.push("Added to your Bag");
+  }
+  if (report.staminaRefunded > 0) {
+    rows.push({ icon: "dispatch", label: "Stamina refunded", amount: `+${formatNumber(report.staminaRefunded)}` });
+    help.push("Stamina refunds are capped at 100");
+  }
+  if (report.levelUpReward) help.push(`Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded ?? report.levelUpReward.gold)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded ?? report.levelUpReward.troops)} troops at your Main City`);
+  if (report.marauderLevel >= 80 && report.outcome === "victory") help.push(`Your share of the boss rewards · Damage contribution: ${Math.max(0, Math.floor(Number(report.damageContribution) || 0)).toLocaleString("en-US")}`);
+  return { rows, help: help.join(" · ") };
+}
+
   function section(id,title,content,icon,hint="") {
     return `<section id="battleDetail-${id}" data-detail-section="${id}" data-detail-label="${title}"><div class="section-heading">${icon ? art(icon) : ""}<h3 tabindex="-1">${title}</h3>${hint ? `<span>${esc(hint)}</span>` : ""}</div>${content}</section>`;
   }
   function sideCard(side,viewer) {
-    const primary=side.primary || {}, role=side.role === "attacker" ? "Attacker" : "Defender";
-    return `<article class="army ${viewer ? "viewer" : "opponent"}"><div class="army-top">${renderBattleKingdomFlag(side.flagKey,primary.ownerName || role,"flag")}<div class="identity"><span class="eyebrow">${viewer ? "Your side" : "Opponent side"}</span>${renderPlayerNameLink(primary.ownerUid,primary.ownerName || "Unknown ruler","ruler-link")}<small>${role} · ${esc(side.participantSummary)}</small></div><div class="power"><small>Total ${side.role === "attacker" ? "attack" : "defense"} power</small><strong>${value(side.finalPower)}</strong></div></div><div class="troop-flow" aria-label="Troops before and after battle"><div><span>Starting troops</span><strong>${value(side.startingTroops)}</strong></div><div><span>Troops lost</span><strong class="loss">${value(side.losses)}</strong></div><div><span>Surviving</span><strong class="survive">${value(side.survivors)}</strong></div></div></article>`;
+    const role=side.role === "attacker" ? "Attacker" : "Defender";
+    const {identity,flag}=getBattleReportSideIdentity(side);
+    return `<article class="army ${viewer ? "viewer" : "opponent"}"><div class="army-top">${flag}<div class="identity"><span class="eyebrow">${viewer ? "Your side" : "Opponent side"}</span>${identity}<small>${role} · ${esc(side.participantSummary)}</small></div><div class="power"><small>Total ${side.role === "attacker" ? "attack" : "defense"} power</small><strong>${value(side.finalPower)}</strong></div></div><div class="troop-flow" aria-label="Troops before and after battle"><div><span>Starting troops</span><strong>${value(side.startingTroops)}</strong></div><div><span>Troops lost</span><strong class="loss">${value(side.losses)}</strong></div><div><span>Surviving</span><strong class="survive">${value(side.survivors)}</strong></div></div></article>`;
   }
   function summary({report,badge,left,right,target,resultLabel,ruleLabel,message,forecast}) {
     const icon=report.type === "defense" ? badge.tone === "defeat" ? "defense-defeat" : "defense" : "attack";
@@ -30,7 +60,7 @@
     const rows=[
       ["Starting troops","startingTroops",side=>side.participantSummary], ["Base troop power","basePower",side=>side.basePowerHelp],
       ...([left,right].some(side=>side.role === "defender" && !side.wallFree && (side.wallPower || typeof side.wallPower === "string")) ? [["Wall power at battle","wallPower",side=>side.role === "attacker" ? "No attacking wall" : side.wallHelp]] : []),
-      ["Final resolved power","finalPower",side=>side.role === "attacker" ? "Attack power" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall","resolved"],
+      ["Final resolved power","finalPower",side=>side.role === "attacker" ? "Attack power" : side.npc ? "NPC defenders only · No walls" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall","resolved"],
       ["Troops lost","losses",null,"losses"], ["Troops surviving","survivors",null,"survivors"],
       ...([left,right].some(side=>side.reinforcementCount>0) ? [["Allied reinforcements","reinforcementTroops",side=>side.reinforcementCount>0 ? `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}` : "None recorded"]] : [])
     ];
@@ -89,6 +119,8 @@
       }
       if (report.troopsAwarded>0) rows.push(metric("troops","Level-up troops",`+${formatNumber(report.troopsAwarded)}`));
     }
+    const extra=getMarauderBattleReportRewards(report); rows.push(...extra.rows);
+    if (extra.help) help += `${help ? " · " : ""}${extra.help}`;
     if (!rows.length) return "";
     return section("rewards","Rewards",`<div class="rewards">${rows.map(row=>`<div class="reward${row.wide ? " wide" : ""}">${row.art || art(row.icon,"reward-art")}<div class="reward-copy"><small>${esc(row.label)}</small><strong>${esc(row.amount)}</strong></div></div>`).join("")}</div>${help ? `<p class="reward-help">${help}</p>` : ""}`,"xp");
   }

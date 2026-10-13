@@ -10120,6 +10120,34 @@ function createHoldingTowerBattleSnapshot({ armyId, tower, defense, defenderAllo
   return snapshot;
 }
 
+// Neutral hunts reuse the private battle report model without capture or PvP credit.
+function createMarauderBattleSnapshot({ armyId, target, participants, allocations, result,
+  attackerUid, attackerProfile, attackCombatSnapshot, nowMs }) {
+  const snapshot = createDetailedBattleSnapshot({
+    battleId: armyId, armyId, target, targetType: "camp", attackerUid, attackerProfile,
+    defensePackages: {
+      owner: { ownerUid: "", ownerName: target.name, ownerFlag: null, troops: target.troops,
+        basePower: target.troops, effectivePower: target.troops,
+        defenseCombatVersion: 0, baseDefensePowerPerTroop: 1,
+        shieldwallDisciplineLevel: 0, shieldwallDisciplinePercent: 0,
+        gearDefenderStrengthPercent: 0, gearDefenderStrengthBonusPower: 0,
+        defenseGearItems: [], bonusPercent: 0, cityLevelDefensePercent: 0,
+        baseCityWalls: 0, cityWalls: 0, stoneworksPercent: 0, gearWallStrengthPercent: 0 },
+      reinforcements: [], fortification: null, totalDefense: target.troops, defenseCombatVersion: 0,
+    },
+    allocation: { ownerLosses: result.defenderLosses, contributions: [] },
+    attackerPackages: participants, attackerAllocation: allocations, result, attackCombatSnapshot,
+    outcome: result.success ? "victory" : "defeat", nowMs,
+  });
+  snapshot.target = { ...snapshot.target, targetType: "marauder", level: target.level,
+    targetSpawnId: target.spawnId, classification: target.classification, x: target.x, y: target.y };
+  snapshot.combatModel = "marauder_troops_only";
+  snapshot.combatRule = { id: "marauder_hunt", captureAllowed: false,
+    breachRequired: false, maxDefenderLossPercent: 100 };
+  snapshot.formula.captureRequiresAttackPowerAboveDefense = false;
+  return snapshot;
+}
+
 function writeDetailedBattleSnapshot(transaction, snapshot = null) {
   const ref = battleSnapshotRef(snapshot?.battleId);
   if (!transaction || !ref || !snapshot) return null;
@@ -28522,6 +28550,9 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     const participants = rally ? getRallyAttackPackages(rally) : [{ uid: army.ownerUid, ownerName: army.ownerName,
       ownerFlag: army.ownerFlag || null, sourceId: army.fromId, sourceName: army.fromName, sourceRegionId: army.sourceRegionId,
       troops: army.troops, effectivePower: getSnapshottedAttackPower(snapshot, army.troops) || 0,
+      role: "leader", attackBonusPercent: snapshot?.swordmasteryPercent || 0,
+      attackSkillLevel: snapshot?.swordmasteryLevel || 0, attackGearPercent: snapshot?.attackStrengthPercent || 0,
+      attackPowerPerTroop: snapshot?.attackPowerPerTroop,
       fieldMedicsPercent: snapshot?.casualtyRecovery?.combinedPercent || 0,
       fieldMedicsSkillPercent: snapshot?.casualtyRecovery?.fieldMedicsPercent || 0,
       casualtyGearPercent: snapshot?.casualtyRecovery?.gearPercent || 0,
@@ -28552,7 +28583,13 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     const returns = [], reports = [], patches = [];
     const encounter = { id: army.toId, name: army.toName, regionId: army.targetRegionId,
       ...(army.marauderOrigin || {}), targetType: "marauder" };
+    const detailedBattleSnapshot = !invalid && !isScout ? createMarauderBattleSnapshot({
+      armyId, target, participants, allocations, result, attackerUid: army.ownerUid,
+      attackerProfile: economies[participants.findIndex(p => p.uid === army.ownerUid)]?.profileAfter || {},
+      attackCombatSnapshot: snapshot, nowMs,
+    }) : null;
     // All reads above; the battle, each reward, and every return commit together.
+    if (detailedBattleSnapshot) writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
     allocations.forEach(participant => {
       const index = participants.findIndex(p => p.uid === participant.uid);
       const economy = economies[index], profile = economy.profileAfter;
@@ -28582,7 +28619,9 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
         summary: invalid ? `The enemy was unavailable. Your army is returning.${refund ? " 10 stamina refunded." : ""}`
           : isScout ? `Scout revealed ${target.troops.toLocaleString()} defenders.`
           : `${result.success ? "Victory" : "Defeat"}: ${participant.losses.toLocaleString()} troops lost. +${progress.goldAwarded.toLocaleString()} Gold, +${progress.xpAwarded.toLocaleString()} XP.`,
-        scoutReport, xpAwarded: progress.xpAwarded, goldAwarded: progress.goldAwarded, goldAfter: progress.gold,
+        scoutReport, battleId: detailedBattleSnapshot?.battleId || "",
+        gearEffects: detailedBattleSnapshot?.gearEffects || null,
+        xpAwarded: progress.xpAwarded, goldAwarded: progress.goldAwarded, goldAfter: progress.gold,
         characterAfter: progress.character, levelUpReward: progress.levelUpReward, troopsAwarded: levelTroops?.credited || 0,
         fieldMedicsRecovered: recovery?.credited || 0, casualtyRecovery: createBattleCasualtyRecoverySnapshot({
           profile, losses: participant.losses, recoveredTroops: recovery?.credited || 0,

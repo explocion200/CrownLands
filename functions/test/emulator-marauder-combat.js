@@ -135,20 +135,35 @@ async function main() {
   const unscouted=await callFunction('previewArmyProtection',users[0].token,previewPayload);strictEqual(unscouted.combatForecast.status,'unavailable');
   const scout=await launch('scout',1);strictEqual((await staminaRef.get()).data().value,100);
   await arrive(scout.movement);
+  strictEqual((await db.doc(`battleSnapshots/${storage}/entries/${scout.movement.id}`).get()).exists,false,'Scouting creates no battle snapshot');
   const intel=(await profileRef.get()).data().scoutReports[enemy.spawnId];strictEqual(intel.troops,100);strictEqual(intel.totalDefense,100);
   const forecast=await callFunction('previewArmyProtection',users[0].token,previewPayload);strictEqual(forecast.combatForecast.status,'scouted');strictEqual(forecast.combatForecast.defensePower,100);
   const shieldUntil=Date.now()+3600000;await profileRef.set({itemEffects:{shieldExpiresAtMs:shieldUntil}},{merge:true});
   const battle=await launch('attack',200);strictEqual((await staminaRef.get()).data().value,90);
   await callFunction('sendArmyOrder',users[0].token,battle.payload);strictEqual((await staminaRef.get()).data().value,90);
   strictEqual((await profileRef.get()).data().itemEffects.shieldExpiresAtMs,shieldUntil);
+  const soloDeparture=(await db.doc('armies/'+battle.movement.id).get()).data().attackCombatSnapshot;
   const settled=await arrive(battle.movement);strictEqual(settled.outcome,'victory');
+  const soloSnapshotRef=db.doc(`battleSnapshots/${storage}/entries/${battle.movement.id}`);
+  const savedSoloSnapshot=await soloSnapshotRef.get(),soloSnapshot=savedSoloSnapshot.data();
+  strictEqual(settled.reports[0].battleId,battle.movement.id);
+  strictEqual(soloSnapshot.target.targetType,'marauder');strictEqual(soloSnapshot.target.targetSpawnId,enemy.spawnId);
+  strictEqual(soloSnapshot.totals.attackers,200);strictEqual(soloSnapshot.totals.defenders,100);
+  strictEqual(soloSnapshot.totals.attackPower,soloDeparture.launchAttackPower);
+  strictEqual(soloSnapshot.defender.effectivePower,100);strictEqual(soloSnapshot.siege,null);
+  strictEqual(soloSnapshot.combatRule.captureAllowed,false);strictEqual(soloSnapshot.participantUids.length,1);
+  strictEqual((await db.doc(`pvpKillEvents/${storage}/events/${battle.movement.id}`).get()).exists,false,'NPC report cannot grant PvP credit');
   strictEqual((await targetRef.get()).data().status,'defeated');strictEqual((await targetRef.get()).data().troops,0);
   const receipt=(await db.doc('marauderBattles/'+battle.movement.id).get()).data();strictEqual(receipt.loot.gold[users[0].uid],100);strictEqual(receipt.loot.xp[users[0].uid],20);
   assert(settled.movements.length===1,'Survivors return');
   const after=(await profileRef.get()).data();await callFunction('resolveArmyOrder',users[0].token,{armyId:battle.movement.id});strictEqual((await profileRef.get()).data().gold,after.gold);
+  assert((await soloSnapshotRef.get()).updateTime.isEqual(savedSoloSnapshot.updateTime),'Replay rewrote the battle snapshot');
   await arrive(settled.movements[0]);
   enemy=await seed(1,100);const loss=await launch('attack',10);const defeat=await arrive(loss.movement);strictEqual(defeat.outcome,'defeat');
   const failed=(await targetRef.get()).data();assert(failed.troops>0&&failed.troops<100,'Failed battles retain defenders: '+JSON.stringify({failed,result:defeat}));strictEqual((await db.doc('marauderBattles/'+loss.movement.id).get()).data().loot,null);
+  const failedSnapshot=(await db.doc(`battleSnapshots/${storage}/entries/${loss.movement.id}`).get()).data();
+  strictEqual(failedSnapshot.outcome,'defeat');strictEqual(failedSnapshot.defender.survivors,failed.troops);
+  strictEqual(failedSnapshot.attacker.losses,defeat.reports[0].attackerLosses);
   enemy=await seed();const first=await launch('attack',200),later=await launch('attack',200);const tie=Date.now()-2000;
   await Promise.all([first,later].map(b=>db.doc('armies/'+b.movement.id).set({arrivesAtMs:tie},{merge:true})));
   const sorted=[first,later].sort((a,b)=>a.movement.id.localeCompare(b.movement.id));
@@ -157,6 +172,8 @@ async function main() {
   const staminaBefore=(await staminaRef.get()).data().value;
   enemy=await seed();const replacementSpawn=enemy.spawnId;
   const refunded=await callFunction('resolveArmyOrder',users[0].token,{armyId:sorted[1].movement.id});strictEqual(refunded.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,staminaBefore+10);strictEqual((await targetRef.get()).data().spawnId,replacementSpawn);strictEqual((await targetRef.get()).data().troops,100);
+  strictEqual(refunded.reports[0].battleId,'');
+  strictEqual((await db.doc(`battleSnapshots/${storage}/entries/${sorted[1].movement.id}`).get()).exists,false,'Refund fabricated battle statistics');
   const stale=await callFunction('previewArmyProtection',users[0].token,{...previewPayload,targetSpawnId:replacementSpawn});strictEqual(stale.combatForecast.status,'unavailable');
   // Voluntary recalls spend committed stamina; server-invalid encounters refund it.
   // Existing Swift March restrictions still apply to hunts.
@@ -197,6 +214,8 @@ async function main() {
   // Private stamina and current defender counts must never be readable by another player.
   async function readAs(user,path){return fetch('http://'+firestoreHost+'/v1/projects/'+projectId+'/databases/(default)/documents/'+path,{headers:{authorization:'Bearer '+user.token}});}
   strictEqual((await readAs(users[1],staminaRef.path)).status,403);strictEqual((await readAs(users[0],targetRef.path)).status,403);strictEqual((await readAs(users[1],publicRef.path)).status,200);
+  strictEqual((await readAs(users[0],soloSnapshotRef.path)).status,200);
+  strictEqual((await readAs(users[1],soloSnapshotRef.path)).status,403,'Other players cannot read solo battle intelligence');
 
   const clanId='hunt_clan_'+crypto.randomBytes(6).toString('hex');
   await db.doc('clans/'+clanId).set({...current,status:'active',leaderUid:users[0].uid,name:'Hunters',tag:'HUNT',memberCount:2});
@@ -228,6 +247,20 @@ async function main() {
   strictEqual((await profileRef.get()).data().itemEffects.shieldExpiresAtMs,shieldUntil,'Neutral boss launch preserves shield');
   await callFunction('launchClanRally',users[0].token,{clanId,rallyId});strictEqual((await staminaRef.get()).data().value,90);
   const bossBattle=await arrive(launched.movement);strictEqual(bossBattle.outcome,'victory');
+  const bossSnapshotRef=db.doc(`battleSnapshots/${storage}/entries/${launched.movement.id}`);
+  const bossSnapshot=(await bossSnapshotRef.get()).data();
+  strictEqual(bossSnapshot.target.classification,'boss');strictEqual(bossSnapshot.attackers.length,2);
+  strictEqual(bossSnapshot.totals.attackPower,(await db.doc('clans/'+clanId+'/rallies/'+rallyId).get()).data().attackPower);
+  strictEqual(bossBattle.reports.length,1,'The callable returns only the caller\'s personal report');
+  strictEqual(bossBattle.reports[0].uid,users[0].uid);
+  for(const report of bossBattle.reports)strictEqual(report.battleId,launched.movement.id,'Rally recipients share one settled snapshot');
+  for(const row of bossSnapshot.attackers){
+    const personal=(await db.doc('players/'+row.ownerUid).get()).data().battleReports.find(report=>report.battleId===launched.movement.id);
+    assert(personal,'Participant did not receive a saved report');
+    strictEqual(row.startingTroops,personal.sentTroops);strictEqual(row.losses,personal.attackerLosses);strictEqual(row.survivors,personal.survivors);
+  }
+  for(const user of users.slice(0,2))strictEqual((await readAs(user,bossSnapshotRef.path)).status,200);
+  strictEqual((await readAs(users[2],bossSnapshotRef.path)).status,403,'Nonparticipants cannot read a boss snapshot');
   const bossReceipt=(await db.doc('marauderBattles/'+launched.movement.id).get()).data();
   strictEqual(Object.values(bossReceipt.loot.gold).reduce((a,b)=>a+b,0),10000000);strictEqual(Object.values(bossReceipt.loot.xp).reduce((a,b)=>a+b,0),50000);
   strictEqual(Object.values(bossReceipt.loot.damage).reduce((a,b)=>a+b,0),20000000);assert(bossReceipt.loot.gold[users[1].uid]>bossReceipt.loot.gold[users[0].uid],'Departure damage weights split loot');

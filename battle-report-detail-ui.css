@@ -1,4 +1,5 @@
 /* Approved full Battle Report only; Scout and Reports list retain their own scopes. */
+#modal .npc-report-art{object-fit:contain}#modal .npc-name{text-decoration:none!important;cursor:default!important}
 #modal.battle-report-detail-ledger{display:block !important;font-weight:400 !important}
 #modal.battle-report-detail-ledger:not([open]){display:none !important}
 #modal.battle-report-detail-ledger::before,#modal.battle-report-detail-ledger::after{display:none !important}

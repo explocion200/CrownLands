@@ -39156,7 +39156,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
   const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
   const rawCombatRule = value.combatRule && typeof value.combatRule === "object" ? value.combatRule : {};
-  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid", "former_clan_protection", "linked_account_capture"]
+  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid", "clan_tower_raid", "former_clan_protection", "linked_account_capture", "marauder_hunt"]
     .includes(rawCombatRule.id)
     ? rawCombatRule.id
     : "normal_capture";
@@ -39254,6 +39254,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
       targetType: target.targetType === "tower" ? "tower" : target.targetType === "camp" ? "camp" : "city",
       strongholdType: String(target.strongholdType || "").slice(0, 32),
       level: target.targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
+      ...normalizeMarauderReportTarget(target),
       fortifications: target.fortifications && typeof target.fortifications === "object"
         ? {
             cityLevelDefensePercent: Math.max(0, Number(target.fortifications.cityLevelDefensePercent) || 0),
@@ -39362,7 +39363,7 @@ function formatBattleWallAfterStatus(siege = null) {
 
 function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const attacker = role === "attacker";
-  const campTarget = snapshot?.target?.targetType === "camp";
+  const campTarget = ["camp", "marauder"].includes(snapshot?.target?.targetType);
   const participants = getDetailedBattleSideParticipants(snapshot, role);
   const primary = attacker ? snapshot?.attacker : snapshot?.defender;
   const totals = snapshot?.totals || {};
@@ -39446,6 +39447,7 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
       : "1 defending garrison";
   return {
     role,
+    ...marauderBattleReportSide(snapshot?.target, role),
     flagKey: role,
     primary,
     startingTroops,
@@ -39511,7 +39513,7 @@ function getBattleTargetTypeLabel(target = {}) {
   const strongholdType = String(target.strongholdType || "").toLowerCase();
   if (strongholdType === "crown" || strongholdType === "crown_citadel") return "Crown Citadel";
   if (strongholdType) return "Stronghold";
-  return "City";
+  return getMarauderBattleTargetLabel(target) || "City";
 }
 
 function renderBattleReportNavigation(report = null, target = {}) {
@@ -39638,6 +39640,7 @@ function renderBattleComparisonSections(left = {}, right = {}, defender = {}, si
 }
 
 function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", report = null) {
+  if (snapshot?.target?.targetType === "marauder") return getMarauderBattleResultLabel(snapshot);
   if (!snapshot) return "Outcome unavailable";
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
     return "The Citadel Legion damaged the holding";
@@ -39697,7 +39700,7 @@ function getBattleRuleLabel(snapshot = null) {
   if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
   if (snapshot?.combatRule?.id === "protected_breach") return "Protected breach — wall breach only";
   if (snapshot?.combatRule?.id === "protected_capture") return "Protected capture — capture allowed";
-  return "";
+  return getMarauderBattleRuleLabel(snapshot);
 }
 
 function getBattleReportCampReward(report = null) {
@@ -39777,6 +39780,7 @@ function renderBattleRewards(report = null) {
 }
 
 function getLegacyBattleResultLabel(report = null) {
+  if (report?.targetType === "marauder") return getMarauderBattleResultLabel(report);
   if (["former_clan_protection", "linked_account_capture"].includes(report?.captureBlockedReason)) {
     return report.type === "defense" ? "Opponent won — you keep the city" : "Your side won — city ownership unchanged";
   }
@@ -39798,6 +39802,7 @@ function getLegacyBattleResultLabel(report = null) {
 }
 
 function getLegacyBattleSides(report = null, siege = null) {
+  if (report?.targetType === "marauder") return getLegacyMarauderBattleSides(report);
   const campTarget = report?.targetType === "camp";
   const player = {
     ownerUid: getCurrentOnlineUid(),
@@ -39897,14 +39902,14 @@ function renderLegacyBattleComparison(report = null, siege = null) {
 }
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
-  if (report.targetType === "marauder") return renderMarauderBattleReport(report);
   message ||= report.summary;
   const siege = normalizeCombatFortificationSnapshot(report.fortification);
   const { attacker, defender } = getLegacyBattleSides(report, siege);
   const [left, right] = report?.type === "defense" ? [defender, attacker] : [attacker, defender];
-  const target = { name: report.cityName, level: report.cityLevel, regionId: report.regionId, targetType: report.targetType === "camp" ? "camp" : "city", strongholdType: "" };
+  const target = getMarauderReportTarget(report) || { name: report.cityName, level: report.cityLevel, regionId: report.regionId, targetType: report.targetType === "camp" ? "camp" : "city", strongholdType: "" };
   if (window.CrownlandsBattleReportUI) {
     return window.CrownlandsBattleReportUI.render({ report, badge, left, right, defender, target, siege, message,
+      ruleLabel: target.ruleLabel,
       viewerRole: report.type === "defense" ? "defender" : "attacker", resultLabel: getLegacyBattleResultLabel(report) });
   }
   return `

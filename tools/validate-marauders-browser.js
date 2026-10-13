@@ -210,7 +210,8 @@ async function main() {
     assert(await ev("modalBody.textContent.includes('Scouted defenders:')"));
     assert.equal(await ev('getScoutReportForTarget(huntQA.target).troops'),87);
     assert(await ev("renderMarauderScoutReport({report:getScoutReportForTarget(huntQA.target),city:huntQA.target,age:0,remaining:600}).includes('1 defense per defender')"));
-    assert(await ev("renderMarauderBattleReport({cityName:'Marauder',marauderLevel:1,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn'}).includes('Added to your Bag')"));
+    await ev('ensureModalUiScripts("battle-report",()=>{})');await wait('!!window.CrownlandsBattleReportUI');
+    assert(await ev("renderLegacyBattleReportDetail({type:'attack',targetType:'marauder',cityName:'Marauder',marauderLevel:1,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn'},{tone:'victory',label:'VICTORY'}).includes('Added to your Bag')"));
     await ev("state.battleReports=[{id:'npc-scout-report',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:huntQA.target.id,cityName:huntQA.target.name,regionId:huntQA.target.regionId,targetType:'marauder',targetSpawnId:'fixture-spawn',summary:'Scout revealed 87 defenders.',occurredAtMs:Date.now(),scoutReport:getScoutReportForTarget(huntQA.target)}];showBattleReportDetail('npc-scout-report')");
     await ev("updateScoutReportLifecycle(Date.now()+1000)");
     assert(await ev("modal.open && modal.classList.contains('scout-report-ledger') && !!document.querySelector('[data-scout-close]') && !!document.getElementById('battleReportBackBtn')"),'Actual NPC report uses navigation and expiry shell');

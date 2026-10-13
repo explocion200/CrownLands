@@ -382,7 +382,7 @@ for (const url of staticCacheUrls) {
     continue;
   }
   assert(fs.existsSync(path.join(root, relativePath)), `Precached file ${url} is missing.`);
-  if (["inner-city-estate.js", "animation-manager.js"].includes(relativePath)) {
+  if (["inner-city-estate.js", "animation-manager.js", "marauders-ui.js"].includes(relativePath)) {
     // Installation fetches the same minified bytes delivered by the production build.
     installPrecacheBytes += Buffer.byteLength(minifyRuntime(read(relativePath)), "utf8");
     continue;
