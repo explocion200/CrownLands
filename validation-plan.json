@@ -1,43 +1,14 @@
 {
+  "schemaVersion": 1,
+  "baseCommit": "a3f0b09033c8cfd7562d711d937397b30d9e7bc5",
   "coverage": [
     {
-      "reason": "NPC selection reuses the foreign-city action wheel and pending scout/report refresh. Validate keyboard Info, three viewports with chat/HUD, duplicate and travelling scouts, replaced-spawn cancellation, private intel, Rescout/Report, solo preparation and real boss rally permissions/preparation. Existing draft/refill coverage preserves explicit Send/Launch. Cover shared city/objective buttons, scouting delivery/ownership/expiry and touch map input. No server, economy or combat rule changes; no new emulator suite applies. The existing scout motion test waits for normal 140/400ms rendering (bounded at two seconds), rather than assuming movement within five animation frames. Measure the current army position wrapper instead of the token, matching the existing renderer; retain the no-jump and same-token reconciliation assertions.",
+      "tests": [],
       "paths": [
-        "game.js",
-        "marauders-ui.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MARAUDER_CONTROLS_RELEASE_2026-10-13.md"
       ],
-      "tests": [
-        "tools/validate-marauders-browser.js",
-        "tools/validate-objective-action-buttons.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-scout-responsiveness-browser.js",
-        "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-map-picker-input.js",
-        "tools/validate-troop-selection-draft-browser.js"
-      ]
-    },
-    {
-      "reason": "Record the confirmed common Scout / Info / Attack controls while retaining neutral PvE, stamina, spawn identity and boss rally rules. Release status remains pending verification.",
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": []
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "The existing offline cache is near its cap. Bound the added NPC scout/spawn-selection wiring at one 4 KiB aggregate step and NPC/stamina source at 40 KiB (measured 39,783 bytes); retain lazy artwork and all unrelated limits. Verify generated artifact and cache accounting.",
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ]
+      "reason": "Document verified authorized PR 543/544 web/backend publication, identities, current realm and population, unchanged active spawns, tests and channel/manual verification limits. Documentation only; no runtime or emulator test applies."
     }
-  ],
-  "schemaVersion": 1,
-  "baseCommit": "7a21e3d3b70dd7adf1a1084dc920bbc3b539e2bd"
+  ]
 }
