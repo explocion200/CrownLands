@@ -1,5 +1,5 @@
 "use strict";
-/* exported captureCityDetailsRefresh, renderCityDetailsPanel, renderCityDetailsUpgrade, bindCityDetailsPanel, patchCityDetailsPanel, recordCityDetailsFailure */
+/* exported captureCityDetailsRefresh, renderCityDetailsPanel, renderCityDetailsUpgrade, bindCityDetailsPanel, patchCityDetailsPanel, recordCityDetailsFailure, renderMarauderDetailsPanel */
 
 // Presentation only. Costs, projections, visibility and actions remain game-owned.
 const cityDetailsIcons = {
@@ -63,6 +63,18 @@ function getCityDetailsValues(city) {
   };
 }
 
+function renderCityDetailsFrame(attributes, ledger, actions = "") {
+  return `<section class="cd-panel" ${attributes}><div class="cd-ledger">${ledger}</div>${actions}</section>`;
+}
+
+function renderMarauderDetailsPanel(target) {
+  const model = getMarauderDetailsModel(target);
+  return renderCityDetailsFrame(`data-npc-info="${escapeHtml(target.id)}"`, `
+    <section class="cd-portrait"><img class="marauder-portrait" data-cd-art src="${marauderArt(target)}" alt="${escapeHtml(target.name)}"><div><p class="cd-relation">${model.kind}</p><span class="cd-level">Level <b>${cityDetailsNumber(target.level)}</b></span><div class="cd-owner">${escapeHtml(getRegionLabel(target.regionId))}</div><span class="cd-allegiance">Neutral enemy</span></div></section>
+    ${model.sections.map(([title, rows]) => `<h3>${title}</h3><dl class="cd-stats">${rows.map(row => cityDetailsRow(...row)).join("")}</dl>`).join("")}
+    ${model.note ? `<p class="cd-note">${model.note}</p>` : ""}`, model.actions);
+}
+
 function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", onboardingMarkup = "", foreignMarkup = "" } = {}) {
   const owned = city.owner === "player";
   const mainCity = getMainCityReference();
@@ -81,8 +93,7 @@ function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", 
     </dl>
     <div class="cd-management">${mainCityBlock}${renderRelinquishCityAction(city)}</div>
     ${renderCityRallyAssemblyPanel(city)}${renderHoldingReinforcementPanel(city)}` : foreignMarkup;
-  return `<section class="cd-panel" data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineSessionRequestScope())}" data-cd-owned="${owned}">
-    <div class="cd-ledger">
+  return renderCityDetailsFrame(`data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineSessionRequestScope())}" data-cd-owned="${owned}"`, `
       <section class="cd-portrait"><img data-cd-art src="${escapeHtml(getCastleAsset(getCastleStage(projected.level)))}" alt=""><div><p class="cd-relation">${relation}</p><span class="cd-level">Level <b data-cd-value="level">${formatNumber(projected.level)}</b></span><div class="cd-owner">${owner}</div><span class="cd-allegiance">${cityDetailsIcon("allegiance")}${owned ? "Your kingdom" : relation}</span></div></section>
       ${owned && canEnterInnerCastle(mainCity) ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" title="Open your main city's Inner Castle">${cityDetailsIcon("city")}Enter Inner Castle</button>` : ""}
       ${onboardingMarkup}
@@ -92,8 +103,7 @@ function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", 
         ${cityDetailsRow("defense", "Estimated live defense", values.defense, "wall", supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense"))}
         ${cityDetailsRow("soldiers", "Soldier defense", values.soldiers, "troops", `${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · ${getCityStatBonusSources(stats, "defense")}`)}
         </dl><div class="cd-fortification">${renderCityFortificationStatus(city, stats)}</div><p class="cd-note">Live defense uses confirmed city data. Pending levels appear in the overview while upgrades sync.</p></section>` : ""}
-    </div>${upgradeMarkup}
-  </section>`;
+    `, upgradeMarkup);
 }
 
 function renderCityDetailsUpgrade(city) {

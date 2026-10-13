@@ -1,4 +1,4 @@
-/* City Details only. The shared dialog returns to its existing theme as soon
+/* Shared city/NPC Info. The dialog returns to its existing theme as soon
    as another panel replaces this body. No map, HUD or global icon overrides. */
 #modal:has(.cd-panel) {
   --cd-paper: #f2e8cd;
@@ -249,3 +249,4 @@
  #modal .cd-panel .inner-castle-entry-btn>.cd-icon { width:18px; }
  #modal .cd-panel .inner-castle-entry-btn::after { display:none; }
 }
+#modal [data-npc-action]{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:48px;margin-top:8px}

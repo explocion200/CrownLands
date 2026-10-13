@@ -54,8 +54,19 @@ async function main(built = false) {
       { name: "unavailable", snapshot: snapshots.boss, outcome: "target_unavailable", legacy: true },
       { name: "snapshot-failed", snapshot: snapshots.boss, outcome: "victory", fails: true },
     ];
+    await ev('ensureModalUiScripts("battle-report",()=>{})');
+    await wait("!!window.CrownlandsBattleReportUI && [...document.styleSheets].some(sheet=>sheet.href?.includes('battle-report-detail-ui.css'))");
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+      const cityReportStyle=await ev(`(async()=>{
+        const report={id:'city-style-reference',type:'attack',targetType:'city',outcome:'victory',cityId:'city-reference',cityName:'City reference',cityLevel:1,
+          regionId:getActiveMapRegionId(),sentTroops:200,attackerLosses:50,survivors:150,defenderLosses:100,defendersLeft:0,occurredAtMs:Date.now()};
+        state.battleReports=[report];await showBattleReportDetail(report.id);
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        await Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})));
+        return [modal,modalBody.querySelector('.detail-ledger-shell'),modalBody.querySelector('.window-header'),modalBody.querySelector('.report-body')].map(node=>{
+          const s=getComputedStyle(node),r=node.getBoundingClientRect();return [Math.round(r.width),s.backgroundColor,s.color,s.fontFamily,s.fontSize];});
+      })()`);
       for (const test of cases) {
         const snapshot = test.snapshot, viewer = test.viewer || "hunter-0";
         const personal = snapshot.attackers.find(p => p.ownerUid === viewer);
@@ -83,6 +94,8 @@ async function main(built = false) {
             spawnId:npcReportSnapshot.target.targetSpawnId,status:'active'}],npcReportSnapshot.target.regionId);
           showBattleReportDetail(${JSON.stringify(report.id)});`);
         await wait("modalBody.querySelector('.detail-ledger-shell .army') && modalBody.querySelector('[data-detail-jump]')");
+        await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+        await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
         const info = await ev(`(()=>{const b=modalBody.querySelector('.report-body'),text=b.textContent;
           return {shell:!!modalBody.querySelector('.detail-ledger-shell'),header:modalBody.querySelector('.window-header').textContent,
             text,art:b.querySelector('.npc-report-art')?.getAttribute('src'),fakeNpcFlag:!!b.querySelector('.opponent [data-battle-participant-flag]'),
@@ -93,6 +106,9 @@ async function main(built = false) {
             nav:[...modalBody.querySelectorAll('[data-detail-jump]')].map(n=>n.textContent),
             values:[...b.querySelectorAll('.comparison tbody tr')].map(r=>r.textContent)};})()`);
         assert(info.shell && info.header.includes("Attack report") && info.header.includes("Reports"));
+        const npcReportStyle=await ev(`[modal,modalBody.querySelector('.detail-ledger-shell'),modalBody.querySelector('.window-header'),modalBody.querySelector('.report-body')].map(node=>{
+          const s=getComputedStyle(node),r=node.getBoundingClientRect();return [Math.round(r.width),s.backgroundColor,s.color,s.fontFamily,s.fontSize];})`);
+        assert.deepEqual(npcReportStyle,cityReportStyle,'NPC attack report must match the regular-city report window and typography');
         assert(!info.walls && !info.fakeNpcFlag, "NPC report invented walls or a player flag");
         assert(!info.text.includes("captured") && !info.text.includes("held the holding"));
         assert(info.art.includes(snapshot.target.classification === "boss" ? "boss-v1" : "solo-v1"));

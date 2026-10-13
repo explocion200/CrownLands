@@ -4,15 +4,19 @@
   "coverage": [
     {
       "paths": [
+        "city-details-ui.js",
+        "city-details-ui.css",
         "marauders-ui.js",
         "marauders-ui.css"
       ],
       "tests": [
+        "tools/validate-city-details-browser.js",
         "tools/validate-marauders-browser.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-marauder-reports-browser.js",
+        "tools/validate-report-system.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Replace map-wheel classes on NPC Info controls with scoped dialog actions so their absolute hexagon decorations cannot cover the panel. Verify source and exact built solo/boss Info at desktop and both landscape sizes, artwork, no overlay, keyboard/touch hit areas, close/scroll, scout privacy and preserved scout/attack/rally/refill flows. Shared map-wheel, stamina and production asset dependencies retain their existing assertions; budgets are unchanged. No backend or combat authority changes require emulators."
+      "reason": "Reuse the City Details frame and scoped styles for NPC Info, with domain-owned scout-gated stats, loot and hunt actions. Check normal owned/foreign City Details and isolation, exact source/built NPC Info at desktop and landscape sizes, same dimensions/typography, independent scroll, touch/keyboard/close, contained decorations and preserved scout/attack/rally/refill drafts. NPC report helpers share the script; validate their existing city attack renderer, historical/refund paths, rewards, navigation and regular report dependencies. Production build and all existing budgets remain required. No authoritative server or combat rule changes need emulators."
     },
     {
       "paths": [
@@ -21,7 +25,23 @@
       "tests": [
         "tools/validate-marauders-browser.js"
       ],
-      "reason": "Execute the regression that reproduced 537-by-584-pixel button decorations before the fix. Add real dialog visibility, bounded decorations, loaded NPC artwork, touch targets, keyboard focus and close assertions for solo and boss Info at three sizes, including exact production JS/CSS interception, while retaining existing hunt and stamina draft lifecycle coverage."
+      "reason": "Execute the oversized-decoration regression and source/exact-built NPC plus shared City Details asset checks. Compare live city/NPC window styles, portrait/stat/column structure, scout privacy, focus and independent scrolling at three sizes; retain existing NPC controls, stamina and draft lifecycle assertions."
+    },
+    {
+      "paths": [
+        "tools/validate-marauder-reports-browser.js"
+      ],
+      "tests": [
+        "tools/validate-marauder-reports-browser.js"
+      ],
+      "reason": "Compare NPC reports to the actual regular-city attack report window and typography after entrance transitions finish. Run all eight solo/boss, rally, historical, failed-snapshot and unavailable scenarios at three sizes against source and exact built assets, retaining loot, art, no walls/capture, focus/map/close and scrolling assertions."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the user-confirmed extension of the original city-only Info presentation to NPCs, including the existing shared attack report design. Keep the new Info status IN DEVELOPMENT until separately authorized deployment is verified; retain NPC combat, privacy, stamina and rewards rules."
     }
   ]
 }

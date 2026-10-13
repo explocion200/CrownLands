@@ -18,10 +18,10 @@ async function main(built = false) {
     await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("Network.enable");
     if(built){
       const delivered={};
-      for(const file of ['marauders-ui.js','marauders-ui.css']){
+      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css']){
         delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
         const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
-        assert.equal(delivered[file].replace(/\r\n/g,'\n'),file.endsWith('.js')?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
+        assert.equal(delivered[file].replace(/\r\n/g,'\n'),file==='marauders-ui.js'?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
       }
       client.on('Fetch.requestPaused',event=>{
         const file=new URL(event.request.url).pathname.split('/').at(-1);
@@ -44,22 +44,33 @@ async function main(built = false) {
       await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
       assert(await ev('modal.open'),'NPC Info must remain open after painting');
       const info=await ev(`(()=>{
-        modalBody.scrollTop=0;const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+        const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');ledger.scrollTop=0;
+        const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
         const art=modalBody.querySelector('.marauder-portrait'),close=document.getElementById('closeModalBtn');
         return {dialog:rect(modal),body:rect(modalBody),portrait:rect(art),artLoaded:art.naturalWidth>0,
-          art:art.getAttribute('src'),scrollable:modalBody.scrollHeight>modalBody.clientHeight,
+          art:art.getAttribute('src'),scrollable:ledger.scrollHeight>ledger.clientHeight,
+          cityFrame:!!modalBody.querySelector('.cd-panel[data-npc-info] .cd-portrait'),
+          paper:getComputedStyle(modal).backgroundColor,titleFont:getComputedStyle(modalTitle).fontFamily,
+          columns:getComputedStyle(modalBody.querySelector('.cd-panel')).gridTemplateColumns.split(' ').length,
+          actionScroll:getComputedStyle(actions).overflowY,ledgerScroll:getComputedStyle(ledger).overflowY,
+          fakeCityControls:!!modalBody.querySelector('[data-city-upgrade-mode],#enterInnerCastleBtn,.player-name-link,[data-live-city-garrison]'),
           close:rect(close),closeHit:close.contains(document.elementFromPoint(close.getBoundingClientRect().x+close.offsetWidth/2,close.getBoundingClientRect().y+close.offsetHeight/2)),
           privateIntel:modalBody.textContent.includes('Scout this spawn')&&!modalBody.textContent.includes('Scouted defenders:'),
-          horizontalOverflow:modalBody.scrollWidth>modalBody.clientWidth+1};
+          horizontalOverflow:ledger.scrollWidth>ledger.clientWidth+1||actions.scrollWidth>actions.clientWidth+1};
       })()`);
       assert(info.artLoaded&&info.art.includes(classification==='boss'?'boss-v1':'solo-v1'));
       assert(info.privateIntel&&!info.horizontalOverflow,JSON.stringify(info));
+      assert(info.cityFrame&&info.columns===2&&!info.fakeCityControls,JSON.stringify(info));
+      assert.equal(info.paper,'rgb(242, 232, 205)');
+      assert.equal(Math.round(info.dialog.width),Math.min(1040,width-24),'NPC Info matches City Details width');
+      assert.equal(Math.round(info.dialog.height),Math.min(790,height-24),'NPC Info matches City Details height');
+      assert.equal(info.actionScroll,'auto');assert.equal(info.ledgerScroll,'auto');
       assert(info.dialog.left>=0&&info.dialog.right<=width+1&&info.dialog.top>=0&&info.dialog.bottom<=height+1,JSON.stringify(info));
       assert(info.closeHit&&info.close.bottom<=height&&info.portrait.width<=140&&info.portrait.height<=140,JSON.stringify(info));
       for(const action of ['scout','attack']){
         const button=await ev(`(()=>{
           const b=modalBody.querySelector('[data-npc-action="${action}"]');b.focus();
-          const r=b.getBoundingClientRect(),body=modalBody.getBoundingClientRect(),decoration=getComputedStyle(b,'::before');
+          const r=b.getBoundingClientRect(),body=b.closest('.cd-actions').getBoundingClientRect(),decoration=getComputedStyle(b,'::before');
           return {width:r.width,height:r.height,label:b.textContent.trim(),focus:document.activeElement===b,
             visible:r.top>=body.top-1&&r.bottom<=body.bottom+1,
             hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),
@@ -70,12 +81,20 @@ async function main(built = false) {
         assert(button.height>=44&&button.visible&&button.hit&&button.focus,JSON.stringify(button));
         assert.equal(button.label,action==='scout'?'Scout':classification==='boss'?'Prepare rally':'Attack');
       }
-      await ev('modalBody.scrollTop=0');
+      const isolation=await ev(`(()=>{const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');
+        const before=actions.scrollTop;ledger.scrollTop=99999;const independent=actions.scrollTop===before;ledger.scrollTop=0;actions.scrollTop=0;return independent;})()`);
+      assert(isolation,'NPC ledger scroll must preserve the action column');
       await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
       await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
       assert.equal(await ev("getComputedStyle(modal.querySelector('.modal-card')).opacity"),'1','NPC Info must be fully painted');
       fs.writeFileSync(path.join(artifacts,`npc-info-${classification}-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
       assert(await ev('modal.open'),'NPC Info closed during screenshot capture');
+      const sameStyle=await ev(`(()=>{
+        const signature=()=>[modal,modalTitle,modalBody].map(node=>{const s=getComputedStyle(node),r=node.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height),s.backgroundColor,s.color,s.fontFamily,s.fontSize];});
+        const npc=signature();modal.close();const city=state.cities.find(c=>c.owner==='player'&&!isStronghold(c));showCityInfoModal(city.id);
+        const regular=signature();modal.close();return JSON.stringify(npc)===JSON.stringify(regular);
+      })()`);
+      assert(sameStyle,'NPC and regular-city Info must use the same window and typography');
       records.push({kind:'npcInfo',classification,width,height,built,...info});
     };
     await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});

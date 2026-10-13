@@ -1,4 +1,4 @@
-/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder */
+/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
@@ -162,17 +162,26 @@ function getLegacyMarauderBattleSides(report) {
   }
   return sides;
 }
+function getMarauderDetailsModel(target) {
+  const intel = getScoutReportForTarget(target), balance = CrownlandsMarauders.balance(target.level), boss = target.classification === "boss";
+  const count = cityDetailsNumber;
+  return { kind: boss ? "Clan boss" : "Marauder", sections: [
+    ["Defenders", [
+      ["npcTroops", intel ? "Scouted defenders:" : "Defenders", intel ? count(intel.troops) : "Unknown", "troops", intel ? `${Math.ceil(getScoutReportRemainingSeconds(intel) / 60)} minutes until expiry` : "Scout this spawn to reveal its current defenders and combat forecast."],
+      ["npcDefense", "Total defense", intel ? count(intel.totalDefense) : "Unknown", "troops", "No walls · 1 defense per defender. Defeats leave survivors."]]],
+    ["Victory rewards", [
+      ["npcGold", "Gold pool", count(balance.gold), "coin"],
+      ["npcXp", "Hero XP pool", count(balance.xp), "ledger", "Hero XP caps apply."],
+      ["npcItem", "One item chance", `${(balance.itemChance * 100).toFixed(1)}%`, "ledger"]]]],
+    note: boss ? "The winning rally shares rewards by damage contribution." : "",
+    actions: `<aside class="cd-actions" aria-label="Hunt preparation"><div class="cd-upgrade-heading">${cityDetailsIcon("troops")}<span><strong>Prepare a hunt</strong><small>${boss ? "Clan rally · 2–20 members" : "Solo army · Clan optional"}</small></span></div>${renderHuntStamina(boss ? "Each member needs 10 stamina at launch." : "")}
+      ${["scout", "attack"].map(action => `<button class="marauder-info-action" type="button" data-npc-action="${action}">${renderCrownlandsIcon(action)} <span>${action === "scout" ? "Scout" : boss ? "Prepare rally" : "Attack"}</span></button>`).join("")}<p class="cd-note">Scouting uses one troop and no stamina.</p></aside>` };
+}
 function openMarauderDetails(id) {
   const target = getMarauderById(id);
   if (!target) { showToast("That enemy is no longer available."); return; }
-  const intel = getScoutReportForTarget(target), balance = CrownlandsMarauders.balance(target.level);
   modal.className = "modal marauder-modal"; modalTitle.textContent = target.name;
-  modalBody.innerHTML = `<section class="marauder-details"><img class="marauder-portrait" src="${marauderArt(target)}" alt="${escapeHtml(target.name)}">
-    <h2>${escapeHtml(target.name)}</h2><p>${escapeHtml(getRegionLabel(target.regionId))} · ${target.classification === "boss" ? "Clan rally · 2–20 members" : "Solo army · Clan optional"}</p>
-    <p>${intel ? `Scouted defenders: <strong>${formatNumber(intel.troops)}</strong> · ${formatNumber(Math.ceil(getScoutReportRemainingSeconds(intel) / 60))} minutes remaining` : "Scout this spawn to reveal its current defenders and combat forecast."}</p>
-    <p>No walls · 1 defense per defender. Failed attacks leave surviving defenders.</p>
-    <p>Victory pool: <strong>${formatNumber(balance.gold)} Gold</strong> · <strong>${formatNumber(balance.xp)} Hero XP</strong>${target.classification === "boss" ? ". Shared by damage contribution." : "."}<br>One item chance: ${(balance.itemChance * 100).toFixed(1)}%. Hero XP caps apply.</p>
-    ${renderHuntStamina()}<footer><button class="marauder-info-action" type="button" data-npc-action="scout">${renderCrownlandsIcon("scout")} <span>Scout</span></button><button class="marauder-info-action" type="button" data-npc-action="attack">${renderCrownlandsIcon("attack")} <span>${target.classification === "boss" ? "Prepare rally" : "Attack"}</span></button></footer><p>Scouting uses one troop and no stamina.</p></section>`;
+  modalBody.innerHTML = renderMarauderDetailsPanel(target);
   if (!modal.open) modal.showModal();
   modalBody.querySelectorAll("[data-npc-action]").forEach(button => button.addEventListener("click", async () => {
     if (getMarauderById(id)?.spawnId !== target.spawnId) { showToast("This spawn has changed. Choose the new enemy."); return; }
