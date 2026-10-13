@@ -3,6 +3,14 @@
   "use strict";
   root.CrownlandsCosmeticsClient = { create({ client, callServerFunction, subscribeScopedSnapshot }) {
   async function getCosmeticsState() { return callServerFunction("getCosmeticsState", {}); }
+  async function getStaminaState() { return callServerFunction("getStaminaState", {}); }
+  async function refillStamina(payload) { return callServerFunction("refillStamina", payload); }
+  function subscribeStamina(handlers = {}) {
+    if (!client.db || !client.user?.uid) return () => {};
+    const { doc } = client.modules.firestore;
+    return subscribeScopedSnapshot(doc(client.db, "players", client.user.uid, "stamina", "state"),
+      snapshot => handlers.onState?.(snapshot.exists() ? snapshot.data() : null), error => handlers.onError?.(error));
+  }
   async function purchaseCosmetic(payload) { return callServerFunction("purchaseCosmetic", payload); }
   async function equipCosmetic(payload) { return callServerFunction("equipCosmetic", payload); }
   async function getCrownPaymentCatalog() { return callServerFunction("getCrownPaymentCatalog", {}); }
@@ -36,6 +44,6 @@
   async function reserveHarvestBonusSpawn(payload = {}) {
     return callServerFunction("reserveHarvestBonusSpawn", payload);
   }
-    return { getLiveCrownPaymentCatalog, createLiveCrownCheckout, getLiveCrownCheckoutStatus, getCrownPaymentCatalog, createCrownCheckout, getCrownCheckoutStatus, reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
+    return { getStaminaState, refillStamina, subscribeStamina, getLiveCrownPaymentCatalog, createLiveCrownCheckout, getLiveCrownCheckoutStatus, getCrownPaymentCatalog, createCrownCheckout, getCrownCheckoutStatus, reserveHarvestBonusSpawn, collectHarvestBonus, getCosmeticsState, purchaseCosmetic, equipCosmetic, subscribeCosmetics, subscribeCosmeticOwners };
   } };
 })(globalThis);

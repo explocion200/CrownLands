@@ -1,3 +1,4 @@
+/* global self */
 "use strict";
 
 const routeWorkerScope = typeof self === "undefined" ? { postMessage() {} } : self;
@@ -673,4 +674,4 @@ class RoutePriorityQueue {
 }
 
 
-module.exports = Object.freeze({ calculateRoute, normalizeConstants });
+module.exports = Object.freeze({ calculateRoute, normalizeConstants, isRegionWalkablePoint });

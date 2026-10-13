@@ -160,6 +160,29 @@ async function main() {
       const rejected = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${player.idToken}` }, body: JSON.stringify({ data: {} }) });
       assert.equal(rejected.status, 403, "Unverified/anonymous accounts cannot use checkout");
     }
+    // Actual verified live-credit reconciliation competes with the new refill transaction.
+    const refillUid = uid + '-refill', refillProfile = db.doc('players/' + refillUid);
+    await refillProfile.set({ resetGeneration: 'refill-test' });
+    const { HttpsError } = require('firebase-functions/v2/https');
+    const refillWallet = require('../cosmetics-service').createCosmeticsService({ db, HttpsError,
+      runTransaction: action => db.runTransaction(action), assertCurrentPlayerProfile: () => {} });
+    const refill = require('../stamina-service').createStaminaService({ db, HttpsError,
+      runTransaction: action => db.runTransaction(action), assertCurrentPlayerProfile: () => {},
+      cosmeticService: refillWallet, clock: () => clock });
+    await refillWallet.stateRef(refillUid).set({ version: 1, crowns: 120, revision: 1 });
+    await refill.stateRef(refillUid).set({ version: 1, value: 70, recoveredAtMs: clock, revision: 1, paidDay: '' });
+    tamper = null;
+    const paidOrder = await service.create(refillUid, { ...request, requestId: 'refill_credit_race' });
+    const paidSession = [...sessions.values()].find(session => session.client_reference_id === paidOrder.order.orderId);
+    assert(paidSession, 'Credit race checkout exists');
+    Object.assign(paidSession, { payment_status: 'paid', status: 'complete', url: null });
+    const offer = (await refill.load(refillUid)).offer;
+    const race = await Promise.allSettled([refill.purchase(refillUid, { requestId: 'refill_credit_purchase', offer }), service.reconcile(paidSession.id)]);
+    assert.equal(race[1].status, 'fulfilled');
+    const charged = race[0].status === 'fulfilled';
+    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 9 : 0));
+    await service.reconcile(paidSession.id);
+    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 9 : 0), 'Duplicate provider credit never adds twice');
     console.log("Live Crown payment emulator passed: lost-response recovery, concurrent idempotency, owner isolation, forged prices, live/test isolation, expiry, wallet atomicity, callable auth and client-write denial.");
   } finally {
     if (previousConfig.exists) await configRef.set(previousConfig.data()); else await configRef.delete();

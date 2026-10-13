@@ -82,8 +82,8 @@ function getActivityRallyIdentity(rally) {
   const target = getArmyTargetById(rally.targetId) || getPlayableBaseCityById(rally.targetId);
   const citadel = rally.targetId === CROWN_CITADEL_ID || isCrownCitadel(target);
   return {
-    art: `assets/clan-heraldry/art-set-v1/svg/full/${citadel ? "crown" : "fortress-keep"}.svg`,
-    type: rally.targetType === "tower" ? "Holding Tower" : citadel ? "Crown Citadel" : isStronghold(target) ? "Stronghold" : "Objective",
+    art: rally.targetType === "marauder" ? "assets/marauders/boss-v1.webp" : `assets/clan-heraldry/art-set-v1/svg/full/${citadel ? "crown" : "fortress-keep"}.svg`,
+    type: rally.targetType === "marauder" ? "Clan Boss" : rally.targetType === "tower" ? "Holding Tower" : citadel ? "Crown Citadel" : isStronghold(target) ? "Stronghold" : "Objective",
     state: rally.status === "recalling" ? "returning" : rally.status === "launched" ? "launched" : "forming",
     label: rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming",
   };
@@ -150,6 +150,7 @@ function renderRalliesActivityCard(rally, context) {
     <header class="rally-title"><div class="target-seal"><img src="${identity.art}" alt=""></div><div class="target-heading"><h3 id="activityRallyTitle">${escapeHtml(rally.targetName || rally.targetId || "Objective")}</h3><p>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${identity.type}</p></div><span class="status-pill ${identity.state}">${identity.label}</span></header>
     <div class="rally-scroll" tabindex="0" aria-label="Rally information and all participants"><div class="rally-overview"><div class="rally-meta"><div><small>Rally creator</small>${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</div><div><small>Assembly city</small>${renderRallyAssemblyLink(rally)}</div></div>
     <div class="muster-totals ${Math.max(force, inboundTroops) > 9999999 ? "large" : ""}"><div><small>${recalling ? "Returning troops" : launched ? "Marching troops" : "Assembled troops"}</small><strong>${formatMarchesNumber(force)}</strong></div><div><small>Incoming troops</small><strong>${formatMarchesNumber(inboundTroops)}</strong></div><div><small>${forming ? "Rulers ready" : "Rulers in rally"}</small><strong class="ready-total">${forming ? `${ready} / ${activeParticipants.length}` : count}</strong></div></div></div>
+    ${rally.targetType === "marauder" ? renderBossReadiness(rally) : ""}
     <div class="muster-heading"><h4>The muster</h4><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS} rulers${forming ? ` · ${minimumParticipants} Ready required` : ""}</span></div>
     <table class="muster-table" aria-label="Rally participants"><thead><tr><th scope="col">Ruler</th><th scope="col">Troops</th><th scope="col">Status</th></tr></thead><tbody>${participants.map((person, index) => {
       const label = getClanRallyParticipantStatusLabel(rally, person);

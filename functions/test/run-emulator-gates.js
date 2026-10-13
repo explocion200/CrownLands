@@ -44,6 +44,7 @@ const firebaseConfigTemplate = JSON.parse(fs.readFileSync(firebaseConfigPath, "u
 const resetGate = "emulator-reset-gate.js";
 const coreExpansionGate = "emulator-core-expansion-state.js";
 const coreExpansionGates = new Set([
+  "emulator-marauder-combat.js",
   "emulator-estate-economy.js",
   "emulator-cosmetics.js",
   coreExpansionGate,

@@ -1,8 +1,8 @@
 {
-  "releaseId": "crownlands-2026-10-10-guild-missions-v2",
+  "releaseId": "crownlands-2026-10-12-marauder-hunts-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
-  "apiContractHash": "4473ca88e829899fabbdf909b9fe4c009f48473e3b52488c027a16734538c132",
+  "apiContractHash": "ee7ab57bcca5a5af5728e915ffa8b3ce6b2716356295f0d73260bbe188aa71ad",
   "inactivityPolicyMode": "enforce",
   "realmMode": "monthly-shared",
   "worldTopology": "core-expansion-v1",

@@ -210,7 +210,9 @@ const entrypointBudgets = {
   // Aggregate offline-shell, image, request and frame limits stay fixed.
   // Main City HUD wiring and unsaved Profile exit guards add 585 normalized
   // source bytes. Bound that runtime growth at one further 1 KiB step.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1) * 1024,
+  // NPC target/order/report wiring uses 1,966,385 bytes; bound the
+  // 3.3 KiB source overage at 4 KiB within the shared installation allowance.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
@@ -240,7 +242,7 @@ const entrypointBudgets = {
   "common-gear-box-ui.css": 24 * 1024,
   "item-bag-ui.js": 12 * 1024,
   "item-bag-ui.css": 24 * 1024,
-  "shop-ui.js": 16 * 1024,
+  "shop-ui.js": 17 * 1024, // Includes the stamina review's preserved-draft Shop return path.
   "shop-ui.css": 28 * 1024,
   "assets/icons/common-gear-chest-r1.svg": 16 * 1024,
   "base-cities.js": 32 * 1024,
@@ -270,7 +272,8 @@ const entrypointBudgets = {
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   // Owner-scoped Guild report retrieval adds one callable wrapper.
-  "firebaseClient.js": 162 * 1024,
+  // NPC map subscription and readiness callable add 376 bytes over the prior cap.
+  "firebaseClient.js": 163 * 1024,
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,
@@ -390,6 +393,18 @@ assert(
   installPrecacheBytes <= MAX_INSTALL_PRECACHE_BYTES,
   `Service-worker installation cache is ${mib(installPrecacheBytes)}; budget is ${mib(MAX_INSTALL_PRECACHE_BYTES)}.`
 );
+
+// The approved NPC/stamina UI and shared rules remain a small offline-shell addition.
+const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js', 'marauders-ui.css', 'functions/marauder-rules.js'];
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 36 * 1024,
+  'NPC/stamina shell files exceed their 36 KiB source budget.');
+let marauderArtBytes = 0;
+for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
+  const bytes = statBytes(file); marauderArtBytes += bytes;
+  assert(bytes <= 64 * 1024, file + ' exceeds its 64 KiB sprite budget.');
+  assert(!staticCacheUrls.some(url => localPathFromUrl(url) === file), 'NPC artwork must remain outside the installation cache.');
+}
+assert(marauderArtBytes <= 112 * 1024, 'Both NPC sprites exceed their combined 112 KiB budget.');
 
 const retiredPrecacheMasters = [
   "assets/loading-ring.png",

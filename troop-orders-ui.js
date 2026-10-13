@@ -96,8 +96,9 @@ function troopOrderContribution(value, signed = false) {
 function renderTroopOrderLocation(city, label, description, showLevel) {
   const tower = isHoldingTowerTarget(city);
   const camp = isRewardCampTarget(city);
-  const level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level || 1);
-  const art = tower ? city.artSrc || CLAN_TOWER_MAP_ART : camp ? city.artSrc || getCampConfigForType(city.campType).artSrc : isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(level));
+  const marauder = city.targetType === "marauder";
+  const level = marauder ? city.level : isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level || 1);
+  const art = marauder ? marauderArt(city) : tower ? city.artSrc || CLAN_TOWER_MAP_ART : camp ? city.artSrc || getCampConfigForType(city.campType).artSrc : isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(level));
   return `<div class="order-location ${label === "To" ? "destination" : ""}"><img class="location-art" src="${escapeHtml(art)}" alt=""><div class="location-copy"><span class="location-label">${label}</span><div class="location-title"><h2>${escapeHtml(city.name)}</h2>${showLevel && !camp && !tower ? `<span class="location-level">Level ${formatNumber(level)}</span>` : ""}</div><p>${escapeHtml(getRegionLabel(getCityRegionId(city)))}</p>${description ? `<p>${escapeHtml(description)}</p>` : ""}</div></div>`;
 }
 function decorateTroopOrderView(source, target, orderKind, commandLabel, amountSelected = selectedTroopAmount) {
@@ -141,6 +142,10 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel, amountS
   header.querySelector("button").addEventListener("click", () => modal.close());
   const body = document.createElement("main"); body.className = "order-body"; body.tabIndex = 0; body.setAttribute("aria-label", "Order details");
   body.innerHTML = `<div class="order-route">${renderTroopOrderLocation(source, "From", "", attack)}<svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>${renderTroopOrderLocation(target, "To", destinationNote, attack)}</div><div class="order-columns ${attack ? "selection-layout attack-layout" : transfer ? "selection-layout transfer-layout" : ""}"></div>`;
+  if (target.targetType === "marauder" || activeRallyOrderContext?.rally?.targetType === "marauder") {
+    body.insertAdjacentHTML("afterbegin", renderHuntStamina(rally ? "Joining and formation are free. Each participant pays 10 at launch." : "Charged on departure. Victory returns your survivors."));
+    CrownlandsStaminaUI.tick();
+  }
   const columns = body.querySelector(".order-columns");
   columns.append(control);
   if (attack) {

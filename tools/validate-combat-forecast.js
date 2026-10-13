@@ -47,7 +47,7 @@ const requiredClientSnippets = [
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
   "Attack sources: Swordmastery",
   "War Captain gear",
-  "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
+  "targetType: getHoldingTowerTargetType(target)",
   "defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0))",
 ];
 requiredClientSnippets.forEach(snippet => {

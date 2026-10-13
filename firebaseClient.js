@@ -754,6 +754,8 @@
     return () => { stopped = true; unsubscribe(); };
   }
 
+  async function getBossRallyReadiness(payload = {}) { return callServerFunction("getBossRallyReadiness", payload); }
+
   async function sendArmyOrder(payload = {}) {
     const result = await callServerFunction("sendArmyOrder", payload);
     if (result?.antiFarmPolicy?.blocked) {
@@ -3560,6 +3562,11 @@
       ));
     }
 
+    if (typeof handlers.onMarauders === "function") {
+      unsubscribers.push(onSnapshot(collection(client.db, "islands", islandId, "marauders"),
+        snapshot => handlers.onMarauders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))), onError("marauders")));
+    }
+
     if (typeof handlers.onCamps === "function") {
       unsubscribers.push(onSnapshot(
         collection(client.db, "islands", islandId, "camps"),
@@ -3736,6 +3743,7 @@
     subscribePlayerGlobalStats,
     subscribeCombatAuthorization,
     sendArmyOrder,
+    getBossRallyReadiness,
     loadArmyOrder,
     submitRecoverableArmyOrder,
     isRetryableArmySubmissionError,

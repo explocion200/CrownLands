@@ -81,6 +81,11 @@
     return shell(route, overview + fortification, timing);
   }
   function renderIntel(m) {
+    if (m.report.targetType === "marauder") {
+      const route = { cityId: m.city.id, cityName: m.city.name, regionId: m.report.regionId || m.city.regionId };
+      const timing = `<div><small>Report age</small><strong data-scout-report-age>${esc(formatDuration(m.age))}</strong></div><div class="expiry"><small data-scout-expiry-label>Expires in</small><strong data-scout-report-expires>${esc(formatDuration(m.remaining))}</strong></div>`;
+      return shell(route, section("overview", "NPC intelligence", icon("scout"), renderMarauderScoutReport(m), "This spawn only", "Intelligence"), timing);
+    }
     if (m.report.targetType === "tower" || m.city.targetType === "tower") return renderTowerIntel(m);
     const { city, report, rewardCampTarget: camp, siege } = m;
     const route = { cityId: city.id, cityName: city.name, regionId: report.regionId || getCityRegionId(city) };
@@ -110,7 +115,7 @@
   }
   function renderAttempt(report, badge) {
     if (isDefenderScoutReport(report)) return renderDisclosure(report, badge);
-    const meta = [report.targetType === "camp" ? "Reward camp · No level · No walls" : `City · Level ${formatNumber(report.cityLevel)}`, report.regionId ? getRegionLabel(report.regionId) : ""].filter(Boolean).join(" · ");
+    const meta = [report.targetType === "marauder" ? "NPC · No walls" : report.targetType === "camp" ? "Reward camp · No level · No walls" : `City · Level ${formatNumber(report.cityLevel)}`, report.regionId ? getRegionLabel(report.regionId) : ""].filter(Boolean).join(" · ");
     const explanation = report.summary || "The scout did not return usable intelligence.";
     const content = `<section id="scoutDetail-overview" data-scout-section="overview" data-scout-label="Overview">${heading({ name: report.cityName, meta, unavailable: true, badge })}<div class="empty-intel">${icon("dispatch")}<span class="eyebrow">${esc(badge.label)}</span><h3 tabindex="-1">No current intelligence</h3><p>${renderPlayerLinkedText(explanation, report.opponentUid, report.opponentName || report.ownerName)}</p><p class="privacy-note">Failed, blocked, replaced, or expired scouts do not reveal hidden troop or defense statistics.</p></div></section>`;
     const timing = `<div><small>Report age</small><strong>${renderBattleReportAge(report)}</strong></div><div class="expiry inactive"><small>Intelligence</small><strong>Unavailable</strong></div>`;

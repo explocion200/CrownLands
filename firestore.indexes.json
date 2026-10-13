@@ -1168,6 +1168,58 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "marauderCombat",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "respawnAtMs",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "armies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "targetSpawnId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "returning",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "arrivesAtMs",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

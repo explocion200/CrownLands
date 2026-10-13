@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "tool": "image_gen.imagegen",
+  "mode": "edit",
+  "transparent_background": true,
+  "derivatives": {
+    "format": "webp",
+    "width": 384,
+    "height": 384,
+    "quality": 84,
+    "alphaQuality": 100
+  },
+  "assets": [
+    {
+      "path": "assets/marauders/solo-v1.webp",
+      "prompt": "Use case: style-transfer. Asset type: transparent overworld NPC sprite for Crown Lands, for display at 100 pixels. Input roles: image 1 is the edit target, image 2 is the user's authoritative atlas STYLE and CAMERA reference, image 3 is the actual existing city sprite for matching map perspective. Redraw the target completely in the visual language of image 2: fine dark brown pen outlines, simple hand-painted watercolor/gouache blocks, restrained cross-hatching, muted ochre and moss/olive green, dusty burgundy accents, warm gray steel. Prioritize image 2 over the target's overly realistic and dark rendering. Elevated bird's-eye three-quarter view, looking downward from the SOUTH like the city in image 3. ALL figures face SOUTH toward the BOTTOM CENTER of the image, fronts and faces visible from above; feet and weapons oriented toward the bottom, no sideways or rear-facing figures. Make the group look painted on the same medieval atlas, not a realistic character portrait or 3D miniature. Transparent background outside a small irregular flat olive-grass and ochre-earth patch beneath their feet, thin soft broken painted edges and only a subtle contact shadow. No raised plinth, hexagon, hard outline around the ground, large rocks, thick black shading, dramatic rim light, glows, photoreal skin, shiny rendering, text, UI, frame, castle or scenery. Square centered compact composition, full bodies, all weapons and banner if present contained inside image, about 8 percent transparent outer margin. Preserve the role and broad silhouette, simplify tiny ornamental details for map-scale readability. Genuine transparent alpha.\nSubject: preserve three ordinary marauder foot soldiers, a central hooded axeman and two lesser raiders, in worn leather, brown wool, muted red cloth and simple dull steel helmets. Keep them distinct from the boss. Relaxed stationary guarding stance facing south, axeman slightly in front, companions behind each shoulder. Small atlas map figures with natural human proportions and short perspective, NOT large heroic chest-level portrait.",
+      "sourceFile": "exec-9ed6afd5-50fc-4054-a2f2-df097ae60f7a.png"
+    },
+    {
+      "path": "assets/marauders/boss-v1.webp",
+      "prompt": "Use case: style-transfer. Asset type: transparent overworld NPC sprite for Crown Lands, for display at 100 pixels. Input roles: image 1 is the edit target, image 2 is the user's authoritative atlas STYLE and CAMERA reference, image 3 is the actual existing city sprite for matching map perspective. Redraw the target completely in the visual language of image 2: fine dark brown pen outlines, simple hand-painted watercolor/gouache blocks, restrained cross-hatching, muted ochre and moss/olive green, dusty burgundy accents, warm gray steel. Prioritize image 2 over the target's overly realistic and dark rendering. Elevated bird's-eye three-quarter view, looking downward from the SOUTH like the city in image 3. ALL figures face SOUTH toward the BOTTOM CENTER of the image, fronts and faces visible from above; feet and weapons oriented toward the bottom, no sideways or rear-facing figures. Make the group look painted on the same medieval atlas, not a realistic character portrait or 3D miniature. Transparent background outside a small irregular flat olive-grass and ochre-earth patch beneath their feet, thin soft broken painted edges and only a subtle contact shadow. No raised plinth, hexagon, hard outline around the ground, large rocks, thick black shading, dramatic rim light, glows, photoreal skin, shiny rendering, text, UI, frame, castle or scenery. Square centered compact composition, full bodies, all weapons and banner if present contained inside image, about 8 percent transparent outer margin. Preserve the role and broad silhouette, simplify tiny ornamental details for map-scale readability. Genuine transparent alpha.\nSubject: preserve a formidable armored marauder warlord and two bodyguards, central warlord slightly larger, wearing a simple angular crown-like helmet, weathered gray plate and muted burgundy cloth, holding a heavy hammer. Keep ONE small torn burgundy banner behind the group, simple ochre emblem with no lettering. The central warlord's front and hammer point south toward the bottom, bodyguards also face south. Distinguishable silhouette at map size; remove excessive gold chains, skull ornaments and gothic clutter. Match the flat painted atlas style, not fantasy key art.",
+      "sourceFile": "exec-58494b80-f1ee-4f08-9606-1ce5d6ba38c0.png"
+    }
+  ],
+  "revision": 2,
+  "useCase": "style-transfer",
+  "references": [
+    {
+      "role": "style and south-facing perspective",
+      "source": "User-provided inspiration art.png"
+    },
+    {
+      "role": "existing city perspective",
+      "source": "assets/worlds/core-expansion-v1/art/city-castle-0f453b4a11b2.webp"
+    }
+  ]
+}

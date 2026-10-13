@@ -296,6 +296,7 @@ function bindSkinsPanel(root) {
 }
 
 function renderCosmeticHud() {
+  if (cosmeticUid === getCurrentOnlineUid() && cosmeticState) globalThis.CrownlandsStaminaUI?.wallet(cosmeticState.crowns, cosmeticState.revision);
   const counter = document.getElementById("crownsBalance");
   if (!counter) return;
   const balance = cosmeticUid && cosmeticState ? cosmeticState.crowns : null;

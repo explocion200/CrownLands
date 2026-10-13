@@ -305,6 +305,14 @@ service cloud.firestore {
         allow read: if ownsPlayerDoc(uid);
         allow write: if false;
       }
+      match /stamina/{stateId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow write: if false;
+      }
+      match /staminaReceipts/{receiptId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow write: if false;
+      }
 
       allow read: if ownsPlayerDoc(uid);
       allow create: if ownsPlayerDoc(uid) && validPlayerProfileCreate();
@@ -770,6 +778,13 @@ service cloud.firestore {
             && resource.data.awardedToPlayerId == request.auth.uid;
           allow create, update, delete: if false;
         }
+      }
+      match /marauders/{marauderId} {
+        allow read: if signedIn() && isCurrentIslandId(islandId);
+        allow write: if false;
+      }
+      match /marauderCombat/{marauderId} {
+        allow read, write: if false;
       }
 
       match /armies/{armyId} {
