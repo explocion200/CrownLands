@@ -122,6 +122,45 @@ function renderMarauderScoutReport(model) {
     <p>1 defense per defender · No walls. Defenders can change before arrival. Intelligence applies only to this spawn.</p>
     ${renderHuntStamina()}</section>`;
 }
+const MARAUDER_BATTLE_RULE_LABEL = "NPC combat — 1.00 defense per defender; no walls, ownership or PvP credit";
+function getMarauderBattleTargetLabel(target) {
+  return target.targetType === "marauder" ? target.classification === "boss" || target.level >= 80 ? "Clan boss" : "Marauder" : "";
+}
+function getMarauderBattleRuleLabel(snapshot) {
+  return snapshot?.target?.targetType === "marauder" ? MARAUDER_BATTLE_RULE_LABEL : "";
+}
+function getMarauderReportTarget(report) {
+  return report.targetType === "marauder" ? { targetType: "marauder", name: report.cityName,
+    level: report.marauderLevel, regionId: report.regionId, ruleLabel: MARAUDER_BATTLE_RULE_LABEL } : null;
+}
+function normalizeMarauderReportTarget(target) {
+  return target.targetType === "marauder" ? { targetType: "marauder",
+    targetSpawnId: String(target.targetSpawnId || "").slice(0, 128),
+    classification: target.classification === "boss" ? "boss" : "solo", strongholdType: "",
+    level: clamp(Math.floor(Number(target.level) || 1), 1, 100) } : {};
+}
+function marauderBattleReportSide(target, role) {
+  return target?.targetType === "marauder" && role === "defender"
+    ? { npc: true, npcClassification: target.classification } : {};
+}
+function getMarauderBattleResultLabel(report) {
+  if (report.outcome === "target_unavailable") return "Target unavailable — your army is returning";
+  return report.outcome === "victory" ? "Enemy defeated — survivors return" : "Enemy survived — your survivors return";
+}
+function getLegacyMarauderBattleSides(report) {
+  const sides = getLegacyBattleSides({ ...report, targetType: "camp" }), defender = sides.defender;
+  defender.primary.ownerName = report.opponentName || report.cityName || "Enemy";
+  defender.npc = true;
+  defender.npcClassification = report.marauderLevel >= 80 ? "boss" : "solo";
+  defender.basePowerHelp = "1.00 defense per defender · No walls";
+  defender.startingTroops = Math.max(defender.startingTroops, report.troopCount || 0);
+  defender.basePower = defender.startingTroops;
+  defender.finalPower = report.totalDefense;
+  if (report.outcome === "target_unavailable") {
+    for (const key of ["startingTroops", "basePower", "finalPower", "losses", "survivors"]) defender[key] = "Not attacked";
+  }
+  return sides;
+}
 function openMarauderDetails(id) {
   const target = getMarauderById(id);
   if (!target) { showToast("That enemy is no longer available."); return; }

@@ -39251,12 +39251,10 @@ function normalizeDetailedBattleSnapshot(value = null) {
       id: String(target.id || "").slice(0, 96),
       name: String(target.name || "Unknown holding").slice(0, 80),
       regionId: String(target.regionId || "").slice(0, 80),
-      targetType: target.targetType === "marauder" ? "marauder" : target.targetType === "tower" ? "tower" : target.targetType === "camp" ? "camp" : "city",
-      ...(target.targetType === "marauder" ? { targetSpawnId: String(target.targetSpawnId || "").slice(0, 128),
-        classification: target.classification === "boss" ? "boss" : "solo" } : {}),
+      targetType: target.targetType === "tower" ? "tower" : target.targetType === "camp" ? "camp" : "city",
       strongholdType: String(target.strongholdType || "").slice(0, 32),
-      level: target.targetType === "marauder" ? clamp(Math.floor(Number(target.level) || 1), 1, 100)
-        : target.targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
+      level: target.targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
+      ...normalizeMarauderReportTarget(target),
       fortifications: target.fortifications && typeof target.fortifications === "object"
         ? {
             cityLevelDefensePercent: Math.max(0, Number(target.fortifications.cityLevelDefensePercent) || 0),
@@ -39365,7 +39363,6 @@ function formatBattleWallAfterStatus(siege = null) {
 
 function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const attacker = role === "attacker";
-  const npc = snapshot?.target?.targetType === "marauder" && !attacker;
   const campTarget = ["camp", "marauder"].includes(snapshot?.target?.targetType);
   const participants = getDetailedBattleSideParticipants(snapshot, role);
   const primary = attacker ? snapshot?.attacker : snapshot?.defender;
@@ -39450,8 +39447,7 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
       : "1 defending garrison";
   return {
     role,
-    npc,
-    npcClassification: snapshot?.target?.classification,
+    ...marauderBattleReportSide(snapshot?.target, role),
     flagKey: role,
     primary,
     startingTroops,
@@ -39461,7 +39457,7 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     losses: Math.max(0, Math.floor(Number(attacker ? totals.attackerLosses : totals.defenderLosses) || 0)),
     survivors: Math.max(0, Math.floor(Number(attacker ? totals.attackerSurvivors : totals.defenderSurvivors) || 0)),
     participantSummary,
-    skillLabel: attacker ? "Swordmastery" : npc ? "NPC troop power" : modernDefense ? "Shieldwall Discipline" : campTarget ? "Camp troop power" : "Legacy city defense",
+    skillLabel: attacker ? "Swordmastery" : modernDefense ? "Shieldwall Discipline" : campTarget ? "Camp troop power" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     clanTrainingBonusPower: attacker ? sumDetailedBattleParticipantPower(participants, "clanTrainingBonusPower") : 0,
     clanTrainingPercent: attacker ? Math.max(0, ...participants.map(p => p.clanTrainingPercent || 0)) : 0,
@@ -39511,43 +39507,13 @@ function formatBattleReportValue(value, fallback = "Not recorded") {
   return Number.isFinite(numeric) ? formatNumber(Math.max(0, Math.floor(numeric))) : fallback;
 }
 
-function getBattleReportSideIdentity(side = {}) {
-  const primary = side.primary || {}, name = primary.ownerName || "Unknown ruler";
-  return side.npc ? {
-    identity: `<strong class="ruler-link npc-name">${escapeHtml(name)}</strong>`,
-    flag: `<img class="flag npc-report-art" src="${marauderArt({ classification: side.npcClassification })}" alt="" decoding="async">`,
-  } : {
-    identity: renderPlayerNameLink(primary.ownerUid, name, "ruler-link"),
-    flag: renderBattleKingdomFlag(side.flagKey, name, "flag"),
-  };
-}
-
-function getMarauderBattleReportRewards(report = {}) {
-  const rows = [], help = [];
-  if (report.targetType !== "marauder") return { rows, help: "" };
-  if (report.outcome === "victory" && report.itemAwarded) {
-    const item = getShopItemById(report.itemAwarded);
-    rows.push({ icon: "dispatch", label: "Item", amount: item?.label || report.itemAwarded,
-      wide: true, art: item?.icon ? renderItemIcon(item, "reward-art") : "" });
-    help.push("Added to your Bag");
-  }
-  if (report.staminaRefunded > 0) {
-    rows.push({ icon: "dispatch", label: "Stamina refunded", amount: `+${formatNumber(report.staminaRefunded)}` });
-    help.push("Stamina refunds are capped at 100");
-  }
-  if (report.levelUpReward) help.push(`Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded ?? report.levelUpReward.gold)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded ?? report.levelUpReward.troops)} troops at your Main City`);
-  if (report.marauderLevel >= 80 && report.outcome === "victory") help.push(`Your share of the boss rewards · Damage contribution: ${Math.max(0, Math.floor(Number(report.damageContribution) || 0)).toLocaleString("en-US")}`);
-  return { rows, help: help.join(" · ") };
-}
-
 function getBattleTargetTypeLabel(target = {}) {
-  if (target.targetType === "marauder") return target.classification === "boss" || target.level >= 80 ? "Clan boss" : "Marauder";
   if (target.targetType === "tower") return "Clan Tower";
   if (target.targetType === "camp") return "Reward camp";
   const strongholdType = String(target.strongholdType || "").toLowerCase();
   if (strongholdType === "crown" || strongholdType === "crown_citadel") return "Crown Citadel";
   if (strongholdType) return "Stronghold";
-  return "City";
+  return getMarauderBattleTargetLabel(target) || "City";
 }
 
 function renderBattleReportNavigation(report = null, target = {}) {
@@ -39674,7 +39640,7 @@ function renderBattleComparisonSections(left = {}, right = {}, defender = {}, si
 }
 
 function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", report = null) {
-  if (snapshot?.target?.targetType === "marauder") return getLegacyBattleResultLabel({ ...report, targetType: "marauder", outcome: snapshot.outcome });
+  if (snapshot?.target?.targetType === "marauder") return getMarauderBattleResultLabel(snapshot);
   if (!snapshot) return "Outcome unavailable";
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
     return "The Citadel Legion damaged the holding";
@@ -39725,7 +39691,6 @@ function renderRallyParticipantResults(snapshot = null) {
 }
 
 function getBattleRuleLabel(snapshot = null) {
-  if (snapshot?.target?.targetType === "marauder") return "NPC combat — 1.00 defense per defender; no walls, ownership or PvP credit";
   if (snapshot?.combatRule?.id === "linked_account_capture") return "Linked-account protection — battle allowed; city capture restricted";
   if (snapshot?.combatRule?.id === "former_clan_protection") return "Former-clan protection — attacks allowed, city capture disabled for 24 hours";
   if (snapshot?.combatRule?.id === "clan_tower_raid") return "One Clan Tower per clan — attack allowed, capture disabled";
@@ -39735,7 +39700,7 @@ function getBattleRuleLabel(snapshot = null) {
   if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
   if (snapshot?.combatRule?.id === "protected_breach") return "Protected breach — wall breach only";
   if (snapshot?.combatRule?.id === "protected_capture") return "Protected capture — capture allowed";
-  return "";
+  return getMarauderBattleRuleLabel(snapshot);
 }
 
 function getBattleReportCampReward(report = null) {
@@ -39815,10 +39780,7 @@ function renderBattleRewards(report = null) {
 }
 
 function getLegacyBattleResultLabel(report = null) {
-  if (report?.targetType === "marauder") {
-    if (report.outcome === "target_unavailable") return "Target unavailable — your army is returning";
-    return report.outcome === "victory" ? "Enemy defeated — survivors return" : "Enemy survived — your survivors return";
-  }
+  if (report?.targetType === "marauder") return getMarauderBattleResultLabel(report);
   if (["former_clan_protection", "linked_account_capture"].includes(report?.captureBlockedReason)) {
     return report.type === "defense" ? "Opponent won — you keep the city" : "Your side won — city ownership unchanged";
   }
@@ -39840,8 +39802,8 @@ function getLegacyBattleResultLabel(report = null) {
 }
 
 function getLegacyBattleSides(report = null, siege = null) {
-  const npc = report?.targetType === "marauder";
-  const campTarget = npc || report?.targetType === "camp";
+  if (report?.targetType === "marauder") return getLegacyMarauderBattleSides(report);
+  const campTarget = report?.targetType === "camp";
   const player = {
     ownerUid: getCurrentOnlineUid(),
     ownerName: state?.playerName || "You",
@@ -39919,17 +39881,6 @@ function getLegacyBattleSides(report = null, siege = null) {
     wallStoneworksPercent: 0,
   };
   const gearEffects = normalizeBattleGearEffects(report?.gearEffects);
-  if (npc) {
-    defender.npc = true;
-    defender.npcClassification = report.marauderLevel >= 80 ? "boss" : "solo";
-    defender.basePowerHelp = "1.00 defense per defender · No walls";
-    defender.startingTroops = Math.max(defenderStarting, report.troopCount || 0);
-    defender.basePower = defender.startingTroops;
-    defender.finalPower = report.totalDefense;
-    if (report.outcome === "target_unavailable") {
-      for (const key of ["startingTroops", "basePower", "finalPower", "losses", "survivors"]) defender[key] = "Not attacked";
-    }
-  }
   return {
     attacker: applyRecordedGearEffectsToBattleSide(attacker, gearEffects, "attacker"),
     defender: applyRecordedGearEffectsToBattleSide(defender, gearEffects, "defender"),
@@ -39955,11 +39906,10 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
   const siege = normalizeCombatFortificationSnapshot(report.fortification);
   const { attacker, defender } = getLegacyBattleSides(report, siege);
   const [left, right] = report?.type === "defense" ? [defender, attacker] : [attacker, defender];
-  const target = { name: report.cityName, level: report.targetType === "marauder" ? report.marauderLevel : report.cityLevel,
-    regionId: report.regionId, targetType: ["camp", "marauder"].includes(report.targetType) ? report.targetType : "city", strongholdType: "" };
+  const target = getMarauderReportTarget(report) || { name: report.cityName, level: report.cityLevel, regionId: report.regionId, targetType: report.targetType === "camp" ? "camp" : "city", strongholdType: "" };
   if (window.CrownlandsBattleReportUI) {
     return window.CrownlandsBattleReportUI.render({ report, badge, left, right, defender, target, siege, message,
-      ruleLabel: report.targetType === "marauder" ? getBattleRuleLabel({ target }) : "",
+      ruleLabel: target.ruleLabel,
       viewerRole: report.type === "defense" ? "defender" : "attacker", resultLabel: getLegacyBattleResultLabel(report) });
   }
   return `

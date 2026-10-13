@@ -72,12 +72,26 @@
     },
     {
       "paths": [
-        "tools/validate-battle-report-detail.js"
+        "tools/build-production-client.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-battle-report-detail.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-marauder-reports-browser.js"
       ],
-      "reason": "Execute the existing complete report presentation validator with the shared game-owned identity and NPC reward adapters loaded, retaining city/defense/rally/Tower, item, escaping, historical and navigation assertions. The adapters keep the original report payload budget without adding resources."
+      "reason": "Ship only NPC and optional full-report scripts through the existing whitespace/comment and local-name minifier. Count actual delivered NPC bytes in the installed cache without increasing any ceiling; retain the 52 KiB report, 40 KiB NPC/stamina source and main-script limits. Verify artifact/inventory and all existing asset budgets, and exercise both exact minified modules plus source through desktop/landscape report flows."
+    },
+    {
+      "paths": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js"
+      ],
+      "tests": [
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js"
+      ],
+      "reason": "Execute existing normal report, gear, viewer ordering, historical, delivery/read-state and navigation validators with the actual NPC type/side helpers loaded into their isolated contexts. Preserve every ordinary attack/defense/Tower assertion while the shared model now delegates NPC-only data."
     }
   ]
 }

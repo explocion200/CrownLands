@@ -5,10 +5,16 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-async function main() {
+async function main(built = false) {
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
   assert(executable, "Chromium required");
-  const artifacts = path.resolve(__dirname, "../release-artifacts/marauders/reports");
+  const artifacts = path.resolve(__dirname, `../release-artifacts/marauders/reports${built ? "/built" : ""}`);
+  const delivered = {};
+  if (built) for (const file of ["battle-report-detail-ui.js", "marauders-ui.js"]) {
+    delivered[file] = fs.readFileSync(path.resolve(__dirname, "../dist", file), "utf8");
+    assert.equal(delivered[file], require("./estate-delivery").minifyEstate(
+      fs.readFileSync(path.resolve(__dirname, "..", file), "utf8").replace(/\r\n/g, "\n")), `Built ${file} is stale`);
+  }
   fs.mkdirSync(artifacts, { recursive: true });
   const server = createMapBenchmarkServer(), address = await server.listen();
   let browser, client; const errors = [], failedAssets = [], records = [];
@@ -16,6 +22,12 @@ async function main() {
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
     await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("Network.enable");
+    if (built) {
+      client.on("Fetch.requestPaused", e => { client.send("Fetch.fulfillRequest", { requestId: e.requestId,
+        responseCode: 200, responseHeaders: [{ name: "Content-Type", value: "text/javascript; charset=utf-8" }],
+        body: Buffer.from(delivered[new URL(e.request.url).pathname.split("/").at(-1)]).toString("base64") }).catch(error => errors.push(error.message)); });
+      await client.send("Fetch.enable", { patterns: Object.keys(delivered).map(file => ({ urlPattern: `*${file}*` })) });
+    }
     client.on("Runtime.exceptionThrown", e => errors.push(e.exceptionDetails.exception?.description || e.exceptionDetails.text));
     client.on("Network.responseReceived", e => { if (e.response.status >= 400 && ["Image", "Stylesheet", "Script"].includes(e.type)) failedAssets.push(e.response.url); });
     const ev = async expression => {
@@ -114,11 +126,11 @@ async function main() {
     }
     assert.deepEqual(errors, []); assert.deepEqual(failedAssets, []);
     fs.writeFileSync(path.join(artifacts, "browser-validation.json"), JSON.stringify({ ok: true, records, errors, failedAssets }, null, 2));
-    console.log("NPC reports browser: shared attack layout, solo/boss victory/defeat, 20-member rally, historical/failed snapshots, refunds, exact shares, art, keyboard navigation, map/close and scrolling passed in 24 desktop/landscape cases.");
+    console.log(`NPC reports browser (${built ? "production minified" : "source"}): shared attack layout, solo/boss victory/defeat, 20-member rally, historical/failed snapshots, refunds, exact shares, art, keyboard navigation, map/close and scrolling passed in 24 desktop/landscape cases.`);
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { if (!await waitForProcessExit(browser.browserProcess)) { browser.browserProcess.kill(); await waitForProcessExit(browser.browserProcess); } await removeBrowserProfile(browser.profilePath); }
     await server.close();
   }
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().then(() => main(true)).catch(error => { console.error(error); process.exitCode = 1; });

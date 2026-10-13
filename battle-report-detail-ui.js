@@ -14,6 +14,35 @@
   const art = (name, cls = "section-art") => assets[name] ? `<img class="${cls}" src="${assets[name]}" alt="" decoding="async">` : emblem(name, cls);
   const metric = (icon,label,amount,help="",wide=false) => ({icon,label,amount,help,wide});
 
+function getBattleReportSideIdentity(side = {}) {
+  const primary = side.primary || {}, name = primary.ownerName || "Unknown ruler";
+  return side.npc ? {
+    identity: `<strong class="ruler-link npc-name">${escapeHtml(name)}</strong>`,
+    flag: `<img class="flag npc-report-art" src="${marauderArt({ classification: side.npcClassification })}" alt="" decoding="async">`,
+  } : {
+    identity: renderPlayerNameLink(primary.ownerUid, name, "ruler-link"),
+    flag: renderBattleKingdomFlag(side.flagKey, name, "flag"),
+  };
+}
+
+function getMarauderBattleReportRewards(report = {}) {
+  const rows = [], help = [];
+  if (report.targetType !== "marauder") return { rows, help: "" };
+  if (report.outcome === "victory" && report.itemAwarded) {
+    const item = getShopItemById(report.itemAwarded);
+    rows.push({ icon: "dispatch", label: "Item", amount: item?.label || report.itemAwarded,
+      wide: true, art: item?.icon ? renderItemIcon(item, "reward-art") : "" });
+    help.push("Added to your Bag");
+  }
+  if (report.staminaRefunded > 0) {
+    rows.push({ icon: "dispatch", label: "Stamina refunded", amount: `+${formatNumber(report.staminaRefunded)}` });
+    help.push("Stamina refunds are capped at 100");
+  }
+  if (report.levelUpReward) help.push(`Hero level-up rewards included: ${formatNumber(report.levelUpReward.goldAwarded ?? report.levelUpReward.gold)} Gold and ${formatNumber(report.levelUpReward.troopsAwarded ?? report.levelUpReward.troops)} troops at your Main City`);
+  if (report.marauderLevel >= 80 && report.outcome === "victory") help.push(`Your share of the boss rewards · Damage contribution: ${Math.max(0, Math.floor(Number(report.damageContribution) || 0)).toLocaleString("en-US")}`);
+  return { rows, help: help.join(" · ") };
+}
+
   function section(id,title,content,icon,hint="") {
     return `<section id="battleDetail-${id}" data-detail-section="${id}" data-detail-label="${title}"><div class="section-heading">${icon ? art(icon) : ""}<h3 tabindex="-1">${title}</h3>${hint ? `<span>${esc(hint)}</span>` : ""}</div>${content}</section>`;
   }

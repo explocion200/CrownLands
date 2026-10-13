@@ -156,6 +156,7 @@ const battleSandbox = {
   },
 };
 vm.createContext(battleSandbox);
+vm.runInContext(functionBody(read("marauders-ui.js"), "marauderBattleReportSide"), battleSandbox);
 [
   "splitBattleBonusPower",
   "normalizeBattlePowerBreakdown",

@@ -24,9 +24,10 @@ const context = vm.createContext({
   getBattleReportCampReward: report => report.campReward || null,
   getShopItemById: () => null, renderItemIcon: () => "",
 });
-for (const name of ["formatBattleReportValue","getBattleReportSideIdentity","getMarauderBattleReportRewards","getBattleTargetTypeLabel","getDetailedBattleSideParticipants"]) vm.runInContext(functionSource(client,name),context);
+for (const name of ["formatBattleReportValue","getBattleTargetTypeLabel","getDetailedBattleSideParticipants"]) vm.runInContext(functionSource(client,name),context);
 vm.runInContext(functionSource(read("common-gear-ui.js"),"getBattleSideBonusEntries"),context);
 vm.runInContext(read("battle-report-detail-ui.js"),context);
+vm.runInContext(functionSource(read("marauders-ui.js"),"getMarauderBattleTargetLabel"),context);
 const ui = context.window.CrownlandsBattleReportUI;
 const attacker = {role:"attacker",flagKey:"attacker",primary:{ownerUid:"a",ownerName:'Aldric <script>alert("x")</script>'},participantSummary:"2 attacking armies",startingTroops:80000,basePower:100000,basePowerHelp:"1.25 base per troop",finalPower:122000,losses:20000,survivors:60000,skillLabel:"Swordmastery",skillBonusPower:20000,skillPercentText:"+20%",gearLabel:"War Captain gear",gearBonusPower:2000,gearPercentText:"+2%",casualtyRecovery:{sourceLabel:"Barracks casualty recovery",gearRecoveredTroops:1000,gearPercent:5}};
 const defender = {role:"defender",flagKey:"defender",primary:{ownerUid:"d",ownerName:"Maeve"},participantSummary:"1 garrison + 1 reinforcements",startingTroops:20000,basePower:26000,basePowerHelp:"1.30 base per soldier",finalPower:66130,losses:20000,survivors:0,wallPower:35450,wallHelp:"Stoneworks +5811 · Gatehouse gear +581",wallAfter:"Breached — 0%",reinforcementCount:1,reinforcementTroops:5000,skillLabel:"Shieldwall Discipline",skillBonusPower:2600,skillPercentText:"+10%",personalObjectiveBonusPower:1300,sharedClanBonusPower:520,wallStoneworksPower:5811,wallStoneworksPercent:20,gearLabel:"Defensive Commander gear",gearBonusPower:260,gearPercentText:"+1%",wallGearPower:581,wallGearPercent:2};
