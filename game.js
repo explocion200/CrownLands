@@ -11264,9 +11264,11 @@ function refreshScoutActionWheels(targetIds) {
     const tower = holdingTowerSnapshots.get(id);
     const city = cityById(id);
     const camp = getCampTargetById(id);
+    const marauder = getMarauderById(id);
     preserveScoutViewInteraction(mapFrame, () => {
       wheel.remove();
       if (tower) renderSelectedClanTowerWheel(id);
+      else if (marauder && marauder.spawnId === selectedMarauderSpawnId) renderSelectedForeignWheel(marauder);
       else if (city && (city.owner !== "player" || isStronghold(city))) renderSelectedForeignWheel(city);
       else if (camp) renderSelectedRewardCampWheel(camp);
     });
@@ -16723,6 +16725,7 @@ function disconnectOnlineWorld() {
   stopClanRealtimeSubscriptions({ clear: true });
   CrownlandsStaminaUI.sync({ uid: "" });
   marauderMaps.clear(); bossReadiness.clear();
+  selectedMarauderSpawnId = "";
   clearOnlineArmyWatchers();
   clearOnlineReinforcementWatcher();
   clearOnlineHeldCampWatcher();
@@ -29212,7 +29215,9 @@ function renderCitiesUncached(force = false) {
   flushPendingDeedCityHighlights();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
+  const selectedMarauder = selectedTargetId ? getMarauderById(selectedTargetId) : null;
   if (selectedTowerMapId && !sendMode) renderSelectedClanTowerWheel(selectedTowerMapId);
+  else if (selectedMarauder && selectedMarauder.spawnId === selectedMarauderSpawnId && !sendMode) renderSelectedForeignWheel(selectedMarauder);
   else if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
   else if (selectedForeign && isStronghold(selectedForeign) && !sendMode) renderSelectedStrongholdWheel(selectedForeign);
   else if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
@@ -29326,23 +29331,26 @@ function renderSelectedCityWheel(city) {
 
 function renderSelectedForeignWheel(city) {
   if (isStronghold(city)) return renderSelectedStrongholdWheel(city);
+  const marauder = city.targetType === "marauder";
+  const boss = marauder && city.classification === "boss";
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
-  const report = getScoutReport(city.id);
+  const report = marauder ? getScoutReportForTarget(city) : getScoutReport(city.id);
   const scoutPreparing = pendingDirectScoutTargets.has(city.id);
   const pendingScout = getPendingScoutMission(city.id) || scoutPreparing;
-  const friendlyBlockReason = getClanFriendlyBlockReason(city);
+  const friendlyBlockReason = marauder ? "" : getClanFriendlyBlockReason(city);
   const clanAlly = Boolean(friendlyBlockReason);
-  const veilBlockReason = getVeilOfSilenceScoutBlockReason(city, "player");
-  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player") || veilBlockReason;
+  const veilBlockReason = marauder ? "" : getVeilOfSilenceScoutBlockReason(city, "player");
+  const scoutBlockReason = marauder ? "" : friendlyBlockReason || getMainCityScoutBlockReason(city, "player") || veilBlockReason;
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
-  const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
-  const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
+  const mainCityBlockReason = marauder || clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
+  const shieldBlockReason = marauder || clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
   const attackBlockLabel = clanAlly ? "Reinforce" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
-  const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
+  const canAttack = !mainCityBlockReason && !shieldBlockReason && (!boss || canCurrentPlayerCreateClanRally()) && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   wheel.dataset.onboardingCity = city.id;
+  if (marauder) wheel.dataset.marauderSpawnId = city.spawnId;
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
@@ -29351,7 +29359,7 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : veilBlockReason ? "Veiled" : scoutBlockReason ? "Main City" : scoutPreparing ? "Sending" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
+    <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : boss ? `Prepare clan rally to attack ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${boss ? 'title="Clan leaders and officers: form a rally with at least two members"' : ""} ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
@@ -29367,16 +29375,19 @@ function renderSelectedForeignWheel(city) {
   `;
   wheel.querySelector(".wheel-scout").addEventListener("click", event => {
     event.stopPropagation();
-    scoutCity(city.id);
+    if (marauder) void scoutMarauder(city);
+    else scoutCity(city.id);
   });
   wheel.querySelector(".wheel-attack").addEventListener("click", event => {
     event.stopPropagation();
-    if (clanAlly) beginClanReinforcement(city);
+    if (marauder) void attackMarauder(city);
+    else if (clanAlly) beginClanReinforcement(city);
     else attackForeignCity(city.id);
   });
   wheel.querySelector(".wheel-info").addEventListener("click", event => {
     event.stopPropagation();
-    showCityInfoModal(city.id);
+    if (marauder) openMarauderDetails(city.id);
+    else showCityInfoModal(city.id);
   });
   wheel.querySelector(".wheel-report")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -41332,7 +41343,7 @@ function flushMainMapPinchUpdate() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .holding-tower-node, .holding-tower-building-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
+  return Boolean(target?.closest(".city-node, .marauder-node, .city-action-wheel, .camp-node, .holding-tower-node, .holding-tower-building-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
 
 function isMapCommandInteractionTarget(target) {

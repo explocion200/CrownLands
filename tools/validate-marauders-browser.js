@@ -54,7 +54,55 @@ async function main() {
       assert(sizes.solo.aria.includes('Marauder')&&sizes.boss.aria.includes('Boss'));
       fs.writeFileSync(path.join(artifacts,`npc-sizes-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
     }
-    await ev('applyOnlineMarauders([huntQA.target],getActiveMapRegionId())');
+    // NPC selection uses the actual foreign-city wheel, including keyboard Info.
+    await ev(`huntQA.source=state.cities.find(c=>c.owner==='player');huntQA.source.troops=10000;rememberOwnedAttackSource(huntQA.source)`);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev(`modal.close();sendMode=false;centerOnWorldPoint(huntQA.visualSolo);document.querySelector('[data-marauder-id="'+huntQA.target.id+'"]').click()`);
+      await wait("!!document.querySelector('.foreign-city-action-wheel[data-marauder-spawn-id=fixture-spawn]')");
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      assert(!await ev('modal.open'),'Selecting a map NPC opens controls, not details or an order');
+      const wheel=await ev(`(()=>{const w=document.querySelector('[data-marauder-spawn-id=fixture-spawn]');return [...w.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{label:b.getAttribute('aria-label'),icon:!!b.querySelector('.wheel-icon svg'),left:r.left,right:r.right,top:r.top,bottom:r.bottom,hit:b.contains(hit),hitElement:hit?.outerHTML.slice(0,250)};});})()`);
+      fs.writeFileSync(path.join(artifacts,`npc-controls-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      assert.equal(wheel.length,3);assert(wheel.every(b=>b.icon&&b.left>=0&&b.right<=width&&b.top>=0&&b.bottom<=height&&b.hit),JSON.stringify(wheel));
+      assert(await ev("isMapNodeInteractionTarget(document.querySelector('.marauder-node')) && isMapCommandInteractionTarget(document.querySelector('[data-marauder-spawn-id] .wheel-info'))"));
+      await ev("document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-info').focus()");
+      await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
+      await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+      assert(await ev("modal.open && modal.classList.contains('marauder-modal') && modalBody.textContent.includes('Scout this spawn')"));
+      await ev('modal.close()');records.push({kind:'npcControls',width,height,wheel});
+    }
+    // Pending scouts cannot be duplicated, and a changed spawn cancels the route.
+    await ev(`(()=>{const qa=huntQA;qa.preferred=findPreferredAttackSource;qa.routeRequest=requestAuthoritativeOrderRoute;qa.scoutLaunch=launchScoutMission;
+      findPreferredAttackSource=()=>({city:qa.source});qa.scoutCalls=0;qa.routes=0;qa.notices=[];qa.reject=rejectGameAction;rejectGameAction=m=>qa.notices.push(m);
+      requestAuthoritativeOrderRoute=()=>{qa.routes++;return new Promise(resolve=>qa.resolveScoutRoute=resolve);};launchScoutMission=()=>{qa.scoutCalls++;return null;};
+      document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').click();document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').click();})()`);
+    assert.equal(await ev('huntQA.routes'),1);assert(await ev("document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').disabled && document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').getAttribute('aria-busy')==='true'"));
+    await ev("applyOnlineMarauders([{...huntQA.visualSolo,spawnId:'replacement'},huntQA.visualBoss],getActiveMapRegionId());huntQA.resolveScoutRoute({points:[huntQA.source,huntQA.target]})");
+    await wait('!pendingDirectScoutTargets.has(huntQA.target.id)');assert.equal(await ev('huntQA.scoutCalls'),0);
+    assert(await ev("huntQA.notices.some(m=>m.includes('spawn has changed'))"));
+    await ev("applyOnlineMarauders([{...huntQA.visualSolo,spawnId:'replacement'},huntQA.visualBoss],getActiveMapRegionId())");
+    assert(!await ev("!!document.querySelector('[data-marauder-spawn-id]')"),'Replacement must be selected explicitly');
+    await ev(`applyOnlineMarauders([huntQA.visualSolo,huntQA.visualBoss],getActiveMapRegionId());selectMarauder(huntQA.target.id);huntQA.notices=[];
+      document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').click();huntQA.resolveScoutRoute({points:[huntQA.source,huntQA.target]})`);
+    await wait('!pendingDirectScoutTargets.has(huntQA.target.id)');assert.equal(await ev('huntQA.scoutCalls'),1);
+    // Travelling and completed scout states share the city's labels and Report.
+    await ev(`huntQA.pendingScout=getPendingScoutMission;getPendingScoutMission=id=>id===huntQA.target.id?{id:'fixture-mission'}:null;refreshScoutActionWheels([huntQA.target.id])`);
+    assert(await ev("document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout').disabled && document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-action-name').textContent==='Scouting'"));
+    await ev(`getPendingScoutMission=huntQA.pendingScout;const now=Date.now();mergeServerScoutReport({type:'scout',cityId:huntQA.target.id,targetType:'marauder',targetSpawnId:'fixture-spawn',scoutReport:{targetType:'marauder',targetSpawnId:'fixture-spawn',troops:87,totalDefense:87,regionId:huntQA.target.regionId,scoutedAtMs:now,expiresAtMs:now+600000}});refreshScoutActionWheels([huntQA.target.id])`);
+    assert(await ev("document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-action-name').textContent==='Rescout' && !!document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-report')"));
+    await ev("document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-report').click()");assert(await ev("modal.open && modal.classList.contains('scout-report-ledger')"));
+    await ev(`modal.close();delete state.scoutReports['fixture-spawn'];refreshScoutActionWheels([huntQA.target.id]);huntQA.slider=showTroopSliderModalAsync;huntQA.orders=[];showTroopSliderModalAsync=async(source,target,options={})=>huntQA.orders.push({source:source.id,target:target.id,spawn:target.spawnId,kind:options.orderKind||'attack'});document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-attack').click()`);
+    await wait('huntQA.orders.length===1');assert.equal(await ev('huntQA.orders[0].kind'),'attack');assert.equal(await ev('huntQA.orders[0].spawn'),'fixture-spawn');
+    // Boss Attack is available only to rally creators and invokes real rally preparation.
+    await ev(`huntQA.authority=usesServerArmyAuthority;huntQA.canRally=canCurrentPlayerCreateClanRally;huntQA.lastSource=findLastSelectedAttackSource;huntQA.clan=state.clanId;
+      usesServerArmyAuthority=()=>true;canCurrentPlayerCreateClanRally=()=>false;findLastSelectedAttackSource=()=>({city:huntQA.source});state.clanId='fixture-clan';huntQA.api.createClanRally=()=>{throw Error('Preparation must not create a rally');};huntQA.api.isSignedIn=()=>true;selectMarauder('boss-size-fixture')`);
+    assert(await ev("document.querySelector('[data-marauder-spawn-id=boss-size-spawn] .wheel-attack').disabled"));
+    await ev("canCurrentPlayerCreateClanRally=()=>true;renderCities(true);document.querySelector('[data-marauder-spawn-id=boss-size-spawn] .wheel-attack').click()");
+    await wait('huntQA.orders.length===2');assert.equal(await ev('huntQA.orders[1].kind'),'rally_create');assert.equal(await ev('activeRallyOrderContext.target.spawnId'),'boss-size-spawn');
+    await ev(`findPreferredAttackSource=huntQA.preferred;requestAuthoritativeOrderRoute=huntQA.routeRequest;launchScoutMission=huntQA.scoutLaunch;rejectGameAction=huntQA.reject;
+      showTroopSliderModalAsync=huntQA.slider;usesServerArmyAuthority=huntQA.authority;canCurrentPlayerCreateClanRally=huntQA.canRally;findLastSelectedAttackSource=huntQA.lastSource;state.clanId=huntQA.clan;
+      sendMode=false;activeRallyOrderContext=null;applyOnlineMarauders([huntQA.target],getActiveMapRegionId())`);
     for(const [width,height] of [[1440,900],[844,390],[568,320]]){
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await delay(200);
       await ev('renderCombatTimers();updateMainCityReturnButton()');

@@ -1,12 +1,17 @@
-/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderMarauderBattleReport, renderBossReadiness */
+/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderMarauderBattleReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
 const bossReadiness = new Map();
+let selectedMarauderSpawnId = "";
 function marauderArt(target) { return `assets/marauders/${target.classification === "boss" ? "boss" : "solo"}-v1.webp`; }
 function applyOnlineMarauders(rows, regionId) {
   marauderMaps.set(regionId, { uid: getCurrentOnlineUid(), generation: RESET_GENERATION,
     rows: rows.filter(row => row.worldId === ONLINE_WORLD_ID && row.resetGeneration === RESET_GENERATION
       && row.regionId === regionId && row.status === "active").map(row => ({ ...row, owner: "neutral", ownerUid: "", troops: null })) });
+  const selected = getMarauderById(selectedTargetId);
+  if (selectedMarauderSpawnId && selected?.regionId === regionId && selected.spawnId !== selectedMarauderSpawnId && !sendMode) {
+    selectedTargetId = null; selectedMarauderSpawnId = "";
+  }
   renderCities(true);
 }
 function currentMarauders(regionId = getActiveMapRegionId()) {
@@ -28,7 +33,7 @@ function renderMarauders(bounds) {
       node = document.createElement("button"); node.type = "button"; node.className = "marauder-node";
       node.dataset.marauderId = target.id;
       node.addEventListener("pointerdown", event => event.stopPropagation());
-      node.addEventListener("click", event => { event.stopPropagation(); openMarauderDetails(node.dataset.marauderId); });
+      node.addEventListener("click", event => { event.stopPropagation(); selectMarauder(node.dataset.marauderId); });
       cityLayer.append(node);
     }
     const point = worldToMapPoint(target);
@@ -41,6 +46,70 @@ function renderMarauders(bounds) {
     }
   }
   existing.forEach(node => node.remove());
+}
+function selectMarauder(id) {
+  const target = getMarauderById(id);
+  if (!target || isGamePausedByOutcome()) return;
+  selectedTargetId = target.id; selectedMarauderSpawnId = target.spawnId;
+  selectedTowerMapId = ""; holdingTowerSendContext = null;
+  scoutNearbySourceId = null; regroupSourceId = null; sendMode = false;
+  playGameSound("city_select", { cooldownMs: 60, regionId: target.regionId });
+  renderSelectionChangeNow();
+  requestAnimationFrame(() => {
+    if (selectedTargetId !== target.id || sendMode || !isCurrentMarauderSpawn(target)) return;
+    if (!centerOnWorldPoint(target, target.regionId)) return;
+    const frame = mapFrame.getBoundingClientRect();
+    const chat = getElementAvoidRect(document.getElementById("quickChat"), frame, 8);
+    const wheel = cityLayer.querySelector("[data-marauder-spawn-id]");
+    if (!chat || !wheel) return;
+    const overlaps = [...wheel.querySelectorAll("button")].map(button => button.getBoundingClientRect())
+      .filter(rect => rect.right - frame.left > chat.left && rect.left - frame.left < chat.right
+        && rect.bottom - frame.top > chat.top && rect.top - frame.top < chat.bottom);
+    if (overlaps.length) {
+      camera.y += Math.max(...overlaps.map(rect => rect.bottom - frame.top - chat.top)) / zoom;
+      updateCameraTransform();
+    }
+  });
+}
+function isCurrentMarauderSpawn(target) {
+  return getMarauderById(target.id)?.spawnId === target.spawnId;
+}
+async function scoutMarauder(target) {
+  if (!isCurrentMarauderSpawn(target)) { rejectGameAction("This spawn has changed. Choose the new enemy."); return; }
+  if (pendingDirectScoutTargets.has(target.id) || getPendingScoutMission(target.id)) {
+    showToast(`A scout is already being sent to ${target.name}.`); return;
+  }
+  const scope = getOnlineSessionRequestScope();
+  pendingDirectScoutTargets.add(target.id); renderScoutRequestFeedback(target.id);
+  try {
+    const source = findPreferredAttackSource(target)?.city;
+    if (!source) throw new Error("Choose one of your cities with available troops first.");
+    const route = await requestAuthoritativeOrderRoute(source, target, "scout", 1);
+    if (scope !== getOnlineSessionRequestScope()) return;
+    if (!isCurrentMarauderSpawn(target)) throw new Error("This spawn has changed. Choose the new enemy.");
+    if (!route?.points?.length) throw new Error(route?.authoritativeError || "No route is available.");
+    const mission = launchScoutMission(source, target, route);
+    if (mission && modal.open && modal.classList.contains("marauder-modal")) modal.close();
+  } catch (error) {
+    if (scope === getOnlineSessionRequestScope()) rejectGameAction(error.message || "The scout could not be dispatched.");
+  } finally {
+    if (scope === getOnlineSessionRequestScope()) {
+      pendingDirectScoutTargets.delete(target.id); renderScoutRequestFeedback(target.id);
+    }
+  }
+}
+async function attackMarauder(target) {
+  if (!isCurrentMarauderSpawn(target)) { rejectGameAction("This spawn has changed. Choose the new enemy."); return; }
+  if (target.classification === "boss") { beginCreateClanRally(target); return; }
+  const source = findPreferredAttackSource(target)?.city;
+  if (!source) { rejectGameAction("Choose one of your cities with available troops first."); return; }
+  rememberOwnedAttackSource(source);
+  selectedSourceId = source.id; selectedTargetId = target.id; sendMode = true;
+  selectedTowerMapId = ""; holdingTowerSendContext = null;
+  scoutNearbySourceId = null; regroupSourceId = null; activeRallyOrderContext = null;
+  activeTroopOrderKind = "attack"; selectedTroopAmount = Math.max(1, Math.floor(source.troops / 2));
+  renderSelectionChangeNow();
+  await showTroopSliderModalAsync(source, target);
 }
 function renderHuntStamina(note = "") {
   const stamina = CrownlandsStaminaUI.value();
@@ -72,27 +141,15 @@ function openMarauderDetails(id) {
     <p>${intel ? `Scouted defenders: <strong>${formatNumber(intel.troops)}</strong> · ${formatNumber(Math.ceil(getScoutReportRemainingSeconds(intel) / 60))} minutes remaining` : "Scout this spawn to reveal its current defenders and combat forecast."}</p>
     <p>No walls · 1 defense per defender. Failed attacks leave surviving defenders.</p>
     <p>Victory pool: <strong>${formatNumber(balance.gold)} Gold</strong> · <strong>${formatNumber(balance.xp)} Hero XP</strong>${target.classification === "boss" ? ". Shared by damage contribution." : "."}<br>One item chance: ${(balance.itemChance * 100).toFixed(1)}%. Hero XP caps apply.</p>
-    ${renderHuntStamina()}<footer><button type="button" data-npc-action="scout">Scout · No stamina</button><button type="button" data-npc-action="attack">${target.classification === "boss" ? "Prepare rally" : "Prepare attack"}</button></footer><p role="status" data-npc-feedback></p></section>`;
+    ${renderHuntStamina()}<footer><button class="cl-action-button cl-action-scout" type="button" data-npc-action="scout">${renderCrownlandsIcon("scout")} Scout</button><button class="cl-action-button cl-action-attack" type="button" data-npc-action="attack">${renderCrownlandsIcon("attack")} ${target.classification === "boss" ? "Prepare rally" : "Attack"}</button></footer><p>Scouting uses one troop and no stamina.</p></section>`;
   if (!modal.open) modal.showModal();
   modalBody.querySelectorAll("[data-npc-action]").forEach(button => button.addEventListener("click", async () => {
     if (getMarauderById(id)?.spawnId !== target.spawnId) { showToast("This spawn has changed. Choose the new enemy."); return; }
     button.disabled = true;
     try {
-      const source = (target.classification === "boss" ? findLastSelectedAttackSource(target) : findPreferredAttackSource(target))?.city;
-      if (!source) throw new Error("Choose one of your cities with available troops first.");
-      rememberOwnedAttackSource(source);
-      if (button.dataset.npcAction === "scout") {
-        const route = await requestAuthoritativeOrderRoute(source, target, "scout", 1);
-        if (!route?.points?.length) throw new Error(route?.authoritativeError || "No route is available.");
-        const mission = launchScoutMission(source, target, route);
-        if (mission && modal.open) modal.close();
-      } else if (target.classification === "boss") beginCreateClanRally(target);
-      else {
-        selectedSourceId = source.id; selectedTargetId = target.id; sendMode = true;
-        activeTroopOrderKind = "attack"; selectedTroopAmount = Math.max(1, Math.floor(source.troops / 2));
-        await showTroopSliderModalAsync(source, target);
-      }
-    } catch (error) { const feedback = modalBody.querySelector("[data-npc-feedback]"); if (feedback) feedback.textContent = error.message; }
+      if (button.dataset.npcAction === "scout") await scoutMarauder(target);
+      else await attackMarauder(target);
+    } catch (error) { rejectGameAction(error.message || "The order could not be prepared."); }
     finally { if (button.isConnected) button.disabled = false; }
   }));
 }

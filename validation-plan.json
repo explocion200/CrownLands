@@ -1,37 +1,31 @@
 {
-  "schemaVersion": 1,
-  "baseCommit": "dea361a743760ce430e5d588964b53eec7d4261d",
   "coverage": [
     {
+      "reason": "NPC selection reuses the foreign-city action wheel and pending scout/report refresh. Validate keyboard Info, three viewports with chat/HUD, duplicate and travelling scouts, replaced-spawn cancellation, private intel, Rescout/Report, solo preparation and real boss rally permissions/preparation. Existing draft/refill coverage preserves explicit Send/Launch. Cover shared city/objective buttons, scouting delivery/ownership/expiry and touch map input. No server, economy or combat rule changes; no new emulator suite applies.",
       "paths": [
-        "functions/marauder-population.js",
-        "functions/test/emulator-marauder-population.js",
-        "tools/validate-marauder-terrain.js",
-        "tools/generate-marauder-clearance.js"
-      ],
-      "reason": "Spawn centers use the 20% inset on all axes, retain ground clearance compatible with both marker sizes, and use a bounded 512-attempt boss search for crowded Core interiors. Validate all 81 actual terrain/route layouts, boundary and narrow-map cases, blocked retries, immutable active spawns and departure targets, replacement identity/cooldowns, and generated closed-admission New Lands. The prerequisite clearance check also accepts Windows CRLF checkouts without changing generated terrain data.",
-      "tests": [
-        "tools/validate-marauder-terrain.js",
-        "functions/test/emulator-marauder-population.js"
-      ]
-    },
-    {
-      "paths": [
-        "marauders-ui.css",
+        "game.js",
         "marauders-ui.js",
-        "tools/validate-marauders-browser.js"
+        "tools/validate-marauders-browser.js",
+        "tools/validate-scout-responsiveness.js"
       ],
-      "reason": "Render solo NPCs at 90px and bosses at 115px with a classification-specific class. Check real game DOM/art, accessible labels and both sizes at 1440x900, 844x390 and 568x320; retain existing detail/search, stamina and draft behavior.",
       "tests": [
-        "tools/validate-marauders-browser.js"
+        "tools/validate-marauders-browser.js",
+        "tools/validate-objective-action-buttons.js",
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-scout-report-lifecycle.js",
+        "tools/validate-map-picker-input.js",
+        "tools/validate-troop-selection-draft-browser.js"
       ]
     },
     {
+      "reason": "Record the confirmed common Scout / Info / Attack controls while retaining neutral PvE, stamina, spawn identity and boss rally rules. Release status remains pending verification.",
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "reason": "Record the explicitly approved edge clearance and relative sizes, with stationary active targets and the pending release status.",
       "tests": []
     }
-  ]
+  ],
+  "schemaVersion": 1,
+  "baseCommit": "7a21e3d3b70dd7adf1a1084dc920bbc3b539e2bd"
 }
