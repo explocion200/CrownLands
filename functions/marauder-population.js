@@ -1,15 +1,29 @@
 "use strict";
 const crypto = require("node:crypto");
 const M = require("./marauder-rules");
+const MAP_EDGE_INSET = 0.20;
+const NPC_CLEARANCE = 64;
 
-function isClear(point, { bounds, rectangles = [], structures = [], enemies = [], walkable }, radius = 64) {
-  if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !bounds
-    || point.x < bounds.left + radius || point.x > bounds.right - radius
-    || point.y < bounds.top + radius || point.y > bounds.bottom - radius) return false;
+function placementBounds(bounds, radius = NPC_CLEARANCE) {
+  if (!bounds || ![bounds.left, bounds.top, bounds.right, bounds.bottom, radius].every(Number.isFinite)
+    || radius <= 0) return null;
+  const width = bounds.right - bounds.left, height = bounds.bottom - bounds.top;
+  if (width <= 0 || height <= 0) return null;
+  const insetX = Math.max(radius, width * MAP_EDGE_INSET), insetY = Math.max(radius, height * MAP_EDGE_INSET);
+  const result = { left: Math.ceil(bounds.left + insetX), top: Math.ceil(bounds.top + insetY),
+    right: Math.floor(bounds.right - insetX), bottom: Math.floor(bounds.bottom - insetY) };
+  return result.left <= result.right && result.top <= result.bottom ? result : null;
+}
+
+function isClear(point, { bounds, rectangles = [], structures = [], enemies = [], walkable }, radius = NPC_CLEARANCE) {
+  const placement = placementBounds(bounds, radius);
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !placement
+    || point.x < placement.left || point.x > placement.right
+    || point.y < placement.top || point.y > placement.bottom) return false;
   if (rectangles.some(rect => point.x + radius > rect.left && point.x - radius < rect.right
     && point.y + radius > rect.top && point.y - radius < rect.bottom)) return false;
   if ([...structures, ...enemies].some(other => Math.hypot(point.x - other.x, point.y - other.y)
-    < radius + Math.max(64, Number(other.clearance) || 64))) return false;
+    < radius + Math.max(NPC_CLEARANCE, Number(other.clearance) || NPC_CLEARANCE))) return false;
   return Boolean(walkable?.(point, radius));
 }
 
@@ -34,10 +48,13 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
       for (const slot of slots) {
         const id = `marauder_${crypto.createHash("sha256").update(regionId).digest("hex").slice(0, 12)}_${String(slot.slot).padStart(2, "0")}`, previous = existing.get(id);
         if (previous?.status === "active" || previous?.respawnAtMs > now) continue;
+        const placement = placementBounds(geometry.bounds);
+        // Crowded Core interiors need more chances; keep each slot's search bounded.
+        const maxAttempts = slot.classification === "boss" ? 512 : 48;
         let point = null;
-        for (let attempt = 0; attempt < 48; attempt++) {
-          const candidate = { x: crypto.randomInt(Math.ceil(geometry.bounds.left + 100), Math.floor(geometry.bounds.right - 100)),
-            y: crypto.randomInt(Math.ceil(geometry.bounds.top + 100), Math.floor(geometry.bounds.bottom - 100)), regionId };
+        for (let attempt = 0; placement && attempt < maxAttempts; attempt++) {
+          const candidate = { x: crypto.randomInt(placement.left, placement.right + 1),
+            y: crypto.randomInt(placement.top, placement.bottom + 1), regionId };
           if (!isClear(candidate, { ...geometry, structures, enemies: previous ? [...enemies, previous] : enemies })) continue;
           if (!geometry.accessible(candidate)) continue;
           point = candidate; break;
@@ -45,7 +62,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
         if (!point) { blocked++; continue; }
         const level = crypto.randomInt(slot.min, slot.max + 1), balance = M.balance(level);
         const row = { id, ...point, slot: slot.slot, spawnId: crypto.randomUUID(), level,
-          classification: slot.classification, balanceVersion: M.VERSION, status: "active",
+          classification: slot.classification, balanceVersion: M.VERSION, placementVersion: 2, status: "active",
           name: `${slot.classification === "boss" ? "Clan Boss" : "Marauder"} Lv. ${level}`,
           worldId: world.worldId, resetGeneration: world.resetGeneration, realmShardId: world.realmShardId,
           targetType: "marauder", ownerKind: "neutral", ownerUid: "", spawnedAtMs: now, respawnAtMs: 0 };
@@ -82,4 +99,4 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
   }
   return { rolloutRef, populate, maintain };
 }
-module.exports = { isClear, createMarauderPopulation };
+module.exports = { MAP_EDGE_INSET, placementBounds, isClear, createMarauderPopulation };
