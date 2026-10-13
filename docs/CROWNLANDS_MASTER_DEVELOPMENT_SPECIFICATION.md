@@ -66,7 +66,18 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Sword-clash captures and player flag draping
+### Current verified release — Marauders, clan bosses and stamina
+
+The authorized merge and coordinated deployment of [PR #541](https://github.com/explocion200/CrownLands/pull/541), from `codex/marauders-and-clan-bosses`, is **LIVE — WEB AND FIREBASE** at build `2adcd7c03ddf07b6a3f9c4ee092e45efc35a42a8`, release `crownlands-2026-10-12-marauder-hunts-v1`. The compact yellow stamina bar, proportional Crown refill review and NPC hunts are deployed. The user separately approved population activation after verification.
+
+- **Web and backend:** Netlify deployment `6acd91630f4b5e910b62d8a6` published October 12 at 10:17 p.m. Eastern (`2026-10-13T02:17:37.292Z`); the manual publication hold remains enabled. All 149 Functions are ACTIVE on Node 22, deployed rules match, and both NPC indexes are READY. All three required CI checks, focused validation and seven emulator suites passed. Nineteen staged and 55 public artifact comparisons plus cold/reload checks at 1440×900, 844×390 and 568×320 passed.
+- **Current realm population:** authenticated `getRealmInfo` matched the authoritative October pointer before activation. Only `marauderPopulation/realm-2026-10--shard_0001` was enabled at 10:28 p.m. Eastern. All 81 maps initialized: 25 bosses in the 25 Core maps and 672 solos across 56 active New Lands, including 30 closed-admission maps. Territory, levels and spawn identities passed inspection. Initial monitored requests had no server errors.
+- **Purchase disclosures:** [website PR #29](https://github.com/explocion200/crownlands-website/pull/29), build `e6a45e704458d9f0c285210c8822a2ecc4375d23`, corrected the separately hosted terms and relevant guides before activation. Both website CI and all 50 live page/routing checks passed. Merchant configuration and payment availability were preserved.
+- **Channel limitation:** itch.io still serves build `24cfa4e...` from upload `19696818`. An authenticated non-mutating probe confirmed that its old release identity receives the new backend’s update-required guard. It needs a separately authorized matching publication; the web game is the verified playable channel.
+
+See [the release ledger](MARAUDER_STAMINA_RELEASE_2026-10-12.md) for hashes, authorization, validation, scoped activation, initial monitoring and live-verification limits. Earlier snapshots below remain historical.
+
+### Previous verified web release — Sword-clash captures and player flag draping
 
 The authorized merge and web deployment of [PR #530](https://github.com/explocion200/CrownLands/pull/530), from `codex/castle-capture-battle-drape`, is verified at build `7406e0a929e6c2114f9db359b80b012aa317f406`. Newly confirmed castle captures play three sword clashes, then drape the capturing player's saved colors, pattern, crest and crest color over the castle front. Full motion lasts four seconds; Reduced uses a brief opacity-only confirmation and Off preserves immediate authoritative ownership. Capture rules, ordinary ownership markers and audio cues are retained.
 
@@ -627,10 +638,12 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `7406e0a...`; itch.io remains at its verified build `24cfa4e...`. The capture animation is web-only. Existing estate rows retain their prior verification evidence and remain included in both channels; older entries in FM-2 retain their original publication evidence.
+Current web serves build `2adcd7c...`, with its coordinated backend and authorized October NPC population. itch.io still serves `24cfa4e...`; the new backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Solo marauders in active New Lands, Core-only clan bosses, permanent stamina and proportional daily Crown refill | PR #541 build `2adcd7c...`; 25 bosses / 672 solos across all 81 current maps; backend, UI and scoped activation verified | Not republished; old release identity fails the current backend version guard | `LIVE — WEB AND FIREBASE`; matching itch.io publication required |
+| Public Crown purchase disclosures include stamina’s gameplay benefit and reviewed proportional price | Separate website PR #29 build `e6a45e7...`; terms and relevant guides verified | New game disclosure not included in the old upload | `LIVE — WEB` |
 | Three sword-clash castle captures followed by the capturing player's saved flag draping over the city | PR #530 build `7406e0a...`; source/built animation and public delivery verified | Not republished; retains preceding capture effect | `LIVE — WEB`; authenticated capture and physical-device review remain manual |
 | Guild card rows, planning columns, room controls and phone review footers align; active tab remains visible | PR #528 build `24cfa4e...`; source/built checks at six desktop/phone sizes with actual game styles | Same-build upload `19696818`; all 1,000 files and six cold/reload cases verified | `LIVE — ALL PUBLISHED CHANNELS`; current authenticated, installed-app and physical-phone alignment remains manual |
 | Full Guild: persistent rolled champions, contracts, reports, five facilities, mentoring and approved art | Verified build `24cfa4e...` retaining PR #526; its coordinated 145-function backend, report rules and original focused emulator evidence remain in FM-2 | Same-build upload `19696818`; all 1,000 files and six cold/reload cases verified | `LIVE — ALL PUBLISHED CHANNELS`; authenticated spending, installed-app/physical-device and long-term pacing remain manual |
@@ -1196,7 +1209,7 @@ Confirmed September 27, 2026. **Status:** `IN DEVELOPMENT`; merge and deployment
 
 ### Marauders, Clan Bosses and permanent stamina — approved October 12, 2026
 
-**Status: IN DEVELOPMENT — not deployed or populated.** These confirmed rules extend neutral PvE, boss rally eligibility and Crown spending. Existing release ledger entries are historical evidence, not deployment evidence for this feature.
+**Status: LIVE — WEB AND FIREBASE**, at build `2adcd7c...` with separately authorized October-realm population. These confirmed rules extend neutral PvE, boss rally eligibility and Crown spending. See [the October 12 release ledger](MARAUDER_STAMINA_RELEASE_2026-10-12.md); itch.io requires a matching client publication.
 
 - Authoritative current Core topology metadata determines eligibility. Active New Lands with `permanentCore: false` receive solo marauders (levels 1–79). Only the 25 central 5×5 Core maps with `permanentCore: true` receive bosses (80–100), never solo enemies. Newly activated and closed-admission New Lands receive solo enemies. Armies may march from New Lands to Core bosses.
 - Each New Lands map has 12 slots: four uniform levels 1–10, four 11–39, four 40–79. Each Core map has one uniform level 80–100 slot, at most 25 bosses. Defeated solo enemies become eligible for replacement after two minutes; bosses after thirty minutes. A bounded minute scheduler places replacements at new valid points on the same map, retrying blocked terrain, routes, buildings, scenery, objectives and NPC clearance. No launch reservations or automatic target expiry.
