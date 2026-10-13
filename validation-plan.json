@@ -24,6 +24,17 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": []
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "The existing offline cache is near its cap. Bound the added NPC scout/spawn-selection wiring at one 4 KiB aggregate step and NPC/stamina source at 40 KiB (measured 39,783 bytes); retain lazy artwork and all unrelated limits. Verify generated artifact and cache accounting.",
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ]
     }
   ],
   "schemaVersion": 1,
