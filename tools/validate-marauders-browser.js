@@ -7,7 +7,7 @@ const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = requir
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const artifacts = path.resolve(__dirname, "../release-artifacts/marauders");
 
-async function main() {
+async function main(built = false) {
   const executable = [process.env.CHROME_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","/usr/bin/google-chrome","/usr/bin/chromium"].find(p => p && fs.existsSync(p));
   assert(executable, "Chromium required"); fs.mkdirSync(artifacts,{recursive:true});
   const server = createMapBenchmarkServer(), address = await server.listen();
@@ -16,6 +16,21 @@ async function main() {
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
     await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("Network.enable");
+    if(built){
+      const delivered={};
+      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css']){
+        delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
+        const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
+        assert.equal(delivered[file].replace(/\r\n/g,'\n'),file==='marauders-ui.js'?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
+      }
+      client.on('Fetch.requestPaused',event=>{
+        const file=new URL(event.request.url).pathname.split('/').at(-1);
+        client.send('Fetch.fulfillRequest',{requestId:event.requestId,responseCode:200,
+          responseHeaders:[{name:'Content-Type',value:file.endsWith('.css')?'text/css':'text/javascript'}],
+          body:Buffer.from(delivered[file]).toString('base64')}).catch(error=>errors.push(error.message));
+      });
+      await client.send('Fetch.enable',{patterns:Object.keys(delivered).map(file=>({urlPattern:'*'+file+'*'}))});
+    }
     client.on("Runtime.exceptionThrown", e => errors.push(e.exceptionDetails.exception?.description || e.exceptionDetails.text));
     client.on("Network.responseReceived", e => { if (e.response.status >= 400 && ["Image","Stylesheet","Script"].includes(e.type)) failedAssets.push(e.response.url); });
     const ev = async expression => {
@@ -23,6 +38,65 @@ async function main() {
       if(r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value;
     };
     const wait = async expression => { for(let i=0;i<500;i++){ if(await ev(expression))return; if(errors.length)throw Error(JSON.stringify(errors)); await delay(100); } throw Error("Timeout: "+expression+" · "+JSON.stringify(await ev("({modal:modal.className,open:modal.open,text:modalBody.textContent.slice(0,500),uid:cosmeticUid})"))); };
+    const checkInfo=async(classification,width,height)=>{
+      await wait("modalBody.querySelector('.marauder-portrait')?.complete");
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+      assert(await ev('modal.open'),'NPC Info must remain open after painting');
+      const info=await ev(`(()=>{
+        const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');ledger.scrollTop=0;
+        const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+        const art=modalBody.querySelector('.marauder-portrait'),close=document.getElementById('closeModalBtn');
+        return {dialog:rect(modal),body:rect(modalBody),portrait:rect(art),artLoaded:art.naturalWidth>0,
+          art:art.getAttribute('src'),scrollable:ledger.scrollHeight>ledger.clientHeight,
+          cityFrame:!!modalBody.querySelector('.cd-panel[data-npc-info] .cd-portrait'),
+          paper:getComputedStyle(modal).backgroundColor,titleFont:getComputedStyle(modalTitle).fontFamily,
+          columns:getComputedStyle(modalBody.querySelector('.cd-panel')).gridTemplateColumns.split(' ').length,
+          actionScroll:getComputedStyle(actions).overflowY,ledgerScroll:getComputedStyle(ledger).overflowY,
+          fakeCityControls:!!modalBody.querySelector('[data-city-upgrade-mode],#enterInnerCastleBtn,.player-name-link,[data-live-city-garrison]'),
+          close:rect(close),closeHit:close.contains(document.elementFromPoint(close.getBoundingClientRect().x+close.offsetWidth/2,close.getBoundingClientRect().y+close.offsetHeight/2)),
+          privateIntel:modalBody.textContent.includes('Scout this spawn')&&!modalBody.textContent.includes('Scouted defenders:'),
+          horizontalOverflow:ledger.scrollWidth>ledger.clientWidth+1||actions.scrollWidth>actions.clientWidth+1};
+      })()`);
+      assert(info.artLoaded&&info.art.includes(classification==='boss'?'boss-v1':'solo-v1'));
+      assert(info.privateIntel&&!info.horizontalOverflow,JSON.stringify(info));
+      assert(info.cityFrame&&info.columns===2&&!info.fakeCityControls,JSON.stringify(info));
+      assert.equal(info.paper,'rgb(242, 232, 205)');
+      assert.equal(Math.round(info.dialog.width),Math.min(1040,width-24),'NPC Info matches City Details width');
+      assert.equal(Math.round(info.dialog.height),Math.min(790,height-24),'NPC Info matches City Details height');
+      assert.equal(info.actionScroll,'auto');assert.equal(info.ledgerScroll,'auto');
+      assert(info.dialog.left>=0&&info.dialog.right<=width+1&&info.dialog.top>=0&&info.dialog.bottom<=height+1,JSON.stringify(info));
+      assert(info.closeHit&&info.close.bottom<=height&&info.portrait.width<=140&&info.portrait.height<=140,JSON.stringify(info));
+      for(const action of ['scout','attack']){
+        const button=await ev(`(()=>{
+          const b=modalBody.querySelector('[data-npc-action="${action}"]');b.focus();
+          const r=b.getBoundingClientRect(),body=b.closest('.cd-actions').getBoundingClientRect(),decoration=getComputedStyle(b,'::before');
+          return {width:r.width,height:r.height,label:b.textContent.trim(),focus:document.activeElement===b,
+            visible:r.top>=body.top-1&&r.bottom<=body.bottom+1,
+            hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),
+            decoration:decoration.content!=='none'&&decoration.display!=='none',
+            decorationWidth:parseFloat(decoration.width),decorationHeight:parseFloat(decoration.height)};
+        })()`);
+        assert(!button.decoration||(button.decorationWidth<=button.width&&button.decorationHeight<=button.height),'NPC Info button decoration covers the dialog: '+JSON.stringify(button));
+        assert(button.height>=44&&button.visible&&button.hit&&button.focus,JSON.stringify(button));
+        assert.equal(button.label,action==='scout'?'Scout':classification==='boss'?'Prepare rally':'Attack');
+      }
+      const isolation=await ev(`(()=>{const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');
+        const before=actions.scrollTop;ledger.scrollTop=99999;const independent=actions.scrollTop===before;ledger.scrollTop=0;actions.scrollTop=0;return independent;})()`);
+      assert(isolation,'NPC ledger scroll must preserve the action column');
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+      assert.equal(await ev("getComputedStyle(modal.querySelector('.modal-card')).opacity"),'1','NPC Info must be fully painted');
+      fs.writeFileSync(path.join(artifacts,`npc-info-${classification}-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      assert(await ev('modal.open'),'NPC Info closed during screenshot capture');
+      const sameStyle=await ev(`(()=>{
+        const signature=()=>[modal,modalTitle,modalBody].map(node=>{const s=getComputedStyle(node),r=node.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height),s.backgroundColor,s.color,s.fontFamily,s.fontSize];});
+        const npc=signature();modal.close();const city=state.cities.find(c=>c.owner==='player'&&!isStronghold(c));showCityInfoModal(city.id);
+        const regular=signature();modal.close();return JSON.stringify(npc)===JSON.stringify(regular);
+      })()`);
+      assert(sameStyle,'NPC and regular-city Info must use the same window and typography');
+      records.push({kind:'npcInfo',classification,width,height,built,...info});
+    };
     await client.send("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
     await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=2&hudOperations=both&chatMode=quick"});
     await wait("document.documentElement?.dataset.crownlandsBenchmarkReady==='true'");
@@ -70,6 +144,9 @@ async function main() {
       await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
       await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
       assert(await ev("modal.open && modal.classList.contains('marauder-modal') && modalBody.textContent.includes('Scout this spawn')"));
+      await checkInfo('solo',width,height);
+      await ev("document.getElementById('closeModalBtn').click()");assert(!await ev('modal.open'));
+      await ev("openMarauderDetails('boss-size-fixture')");await checkInfo('boss',width,height);
       await ev('modal.close()');records.push({kind:'npcControls',width,height,wheel});
     }
     // Pending scouts cannot be duplicated, and a changed spawn cancels the route.
@@ -209,12 +286,62 @@ async function main() {
     await ev(`(()=>{const now=Date.now();mergeServerScoutReport({type:'scout',cityId:huntQA.target.id,targetType:'marauder',targetSpawnId:'fixture-spawn',scoutReport:{targetType:'marauder',targetSpawnId:'fixture-spawn',troops:87,totalDefense:87,regionId:huntQA.target.regionId,scoutedAtMs:now,expiresAtMs:now+600000}});openMarauderDetails(huntQA.target.id);})()`);
     assert(await ev("modalBody.textContent.includes('Scouted defenders:')"));
     assert.equal(await ev('getScoutReportForTarget(huntQA.target).troops'),87);
-    assert(await ev("renderMarauderScoutReport({report:getScoutReportForTarget(huntQA.target),city:huntQA.target,age:0,remaining:600}).includes('1 defense per defender')"));
     await ev('ensureModalUiScripts("battle-report",()=>{})');await wait('!!window.CrownlandsBattleReportUI');
     assert(await ev("renderLegacyBattleReportDetail({type:'attack',targetType:'marauder',cityName:'Marauder',marauderLevel:1,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn'},{tone:'victory',label:'VICTORY'}).includes('Added to your Bag')"));
     await ev("state.battleReports=[{id:'npc-scout-report',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:huntQA.target.id,cityName:huntQA.target.name,regionId:huntQA.target.regionId,targetType:'marauder',targetSpawnId:'fixture-spawn',summary:'Scout revealed 87 defenders.',occurredAtMs:Date.now(),scoutReport:getScoutReportForTarget(huntQA.target)}];showBattleReportDetail('npc-scout-report')");
     await ev("updateScoutReportLifecycle(Date.now()+1000)");
     assert(await ev("modal.open && modal.classList.contains('scout-report-ledger') && !!document.querySelector('[data-scout-close]') && !!document.getElementById('battleReportBackBtn')"),'Actual NPC report uses navigation and expiry shell');
+    const scoutSignature=`[modal,modalBody.querySelector('.scout-ledger-shell'),modalBody.querySelector('.window-header'),modalBody.querySelector('.report-body')].map(node=>{
+      const s=getComputedStyle(node),r=node.getBoundingClientRect();return [Math.round(r.width),s.backgroundColor,s.color,s.fontFamily,s.fontSize];})`;
+    const settleScout=async()=>{
+      await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+      await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
+    };
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev(`(()=>{modal.close();const city=state.cities.find(c=>!isStronghold(c));const now=Date.now();
+        mergeServerScoutReport({type:'scout',cityId:city.id,targetType:'city',scoutReport:{targetType:'city',cityLevel:city.level,troops:87,totalDefense:87,
+          regionId:getCityRegionId(city),scoutedAtMs:now,expiresAtMs:now+600000}});showScoutReportModal(city.id);})()`);
+      await settleScout();const cityScoutStyle=await ev(scoutSignature);
+      for(const classification of ['solo','boss']){
+        const troops=classification==='boss'?50000000:87;
+        await ev(`(()=>{modal.close();const now=Date.now(),target=huntQA.scoutTarget={...huntQA.target,id:'scout-${classification}',spawnId:'scout-spawn-${classification}',
+          classification:${JSON.stringify(classification)},level:${classification==='boss'?90:1},name:${JSON.stringify(classification==='boss'?'Clan Boss Lv. 90':'Marauder Lv. 1')}};
+          applyOnlineMarauders([huntQA.target,target],target.regionId);
+          const report={id:'scout-report-${classification}',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:target.id,cityName:target.name,regionId:target.regionId,
+            targetType:'marauder',targetSpawnId:target.spawnId,summary:'Scout completed.',occurredAtMs:now,
+            scoutReport:{targetType:'marauder',targetSpawnId:target.spawnId,troops:${troops},totalDefense:${troops},regionId:target.regionId,scoutedAtMs:now,expiresAtMs:now+600000}};
+          mergeServerScoutReport(report);state.battleReports=[report];showBattleReportDetail(report.id);})()`);
+        await wait("modalBody.querySelector('.npc-scout-art')?.complete");await settleScout();
+        assert.deepEqual(await ev(scoutSignature),cityScoutStyle,'NPC scouts match the regular-city scout window and typography');
+        const scout=await ev(`(()=>{const b=modalBody.querySelector('.report-body'),art=b.querySelector('.npc-scout-art'),r=modal.getBoundingClientRect();return{
+          text:b.textContent,art:art.getAttribute('src'),loaded:art.naturalWidth>0,
+          cards:b.querySelectorAll('.intel-metric').length,table:!!b.querySelector('.scout-table'),
+          fakeCity:!!b.querySelector('#scoutReportDefenderFlag,[data-player-uid="enemy"],#scoutDetail-walls,.skill-row'),
+          overflow:b.scrollWidth>b.clientWidth+1,fit:r.left>=0&&r.right<=${width}+1&&r.top>=0&&r.bottom<=${height}+1,
+          sections:[...modalBody.querySelectorAll('[data-scout-jump]')].map(n=>n.textContent),
+          map:!!modalBody.querySelector('[data-report-jump]:not(:disabled)'),timers:!!b.closest('.scout-ledger-shell').querySelector('[data-scout-report-age]')&&!!modalBody.querySelector('[data-scout-report-expires]')};})()`);
+        assert(scout.loaded&&scout.art.includes(classification==='boss'?'boss-v1':'solo-v1')&&scout.cards===2&&scout.table&&!scout.fakeCity&&!scout.overflow&&scout.fit&&scout.map&&scout.timers,JSON.stringify(scout));
+        assert(scout.text.includes(troops.toLocaleString('en-US'))&&scout.text.includes('1.00 defense per defender')&&scout.text.includes('only to this spawn'));
+        assert.deepEqual(scout.sections,['Overview','Defenses','Hunt']);
+        await ev("modalBody.querySelector('[data-scout-jump=\"scoutDetail-defense\"]').focus()");
+        await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
+        await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+        assert(await ev("document.activeElement.closest('#scoutDetail-defense')!==null"),'Scout section keyboard focus lost');
+        await ev("modalBody.querySelector('.report-body').scrollTop=0");
+        fs.writeFileSync(path.join(artifacts,`npc-scout-${classification}-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+        await ev("modalBody.querySelector('[data-open-stamina]').click()");await wait("!!document.querySelector('.stamina-panel[open]')");
+        await ev("document.querySelector('[data-stamina-close]').click()");
+        await wait("modal.open&&modal.classList.contains('scout-report-ledger')&&!!modalBody.querySelector('.npc-scout-art')");
+        assert.equal(await ev('modal.dataset.scoutReportCityId'),'scout-'+classification,'Refill review preserves scout target');
+        await ev("applyOnlineMarauders([huntQA.target,{...huntQA.scoutTarget,spawnId:'replacement'}],huntQA.target.regionId);showBattleReportDetail('scout-report-'+huntQA.scoutTarget.classification)");
+        assert(await ev("modalBody.textContent.includes('No current intelligence')&&!modalBody.querySelector('.intel-metric,.scout-table')"),'Replaced NPC intelligence must stay unavailable');
+        assert.deepEqual(await ev(scoutSignature),cityScoutStyle,'Unavailable NPC scout retains the city report window');
+        await ev("document.querySelector('[data-scout-close]').click()");assert(!await ev('modal.open'));
+        records.push({kind:'npcScout',classification,width,height,built,scout});
+      }
+    }
+    await ev("applyOnlineMarauders([huntQA.target],huntQA.target.regionId);state.battleReports=[{id:'npc-scout-report',uid:huntQA.uid,type:'scout',outcome:'scout',cityId:huntQA.target.id,cityName:huntQA.target.name,regionId:huntQA.target.regionId,targetType:'marauder',targetSpawnId:'fixture-spawn',occurredAtMs:Date.now(),scoutReport:getScoutReportForTarget(huntQA.target)}];showBattleReportDetail('npc-scout-report')");
     await ev("CrownlandsScoutReportUI.updateTiming(modalBody,20)");assert(await ev("document.querySelector('.expiry').classList.contains('urgent')"));
     await ev("document.querySelector('[data-scout-close]').click()");
     assert(!await ev('modal.open'));
@@ -228,11 +355,11 @@ async function main() {
     assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
     assert(!await ev("modal.open || !!document.querySelector('.stamina-panel[open]')"),'Sign-out discards the suspended view');
     assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
-    fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log('Marauder/stamina UI passed: desktop and both landscape sizes, panel bounds, exact review, duplicate clicks, focus, preserved drafts, explicit sending, private intel, search, low/unknown states.');
+    fs.writeFileSync(path.join(artifacts,built?'checks-built.json':'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log(`Marauder/stamina UI (${built?'production':'source'}) passed: city-style solo/boss Info and scout reports, artwork, contained buttons, touch/focus/scroll, exact intelligence and replaced-target privacy, timers/navigation, refill review and preserved drafts.`);
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(browser){if(!await waitForProcessExit(browser.browserProcess)){browser.browserProcess.kill();await waitForProcessExit(browser.browserProcess);}await removeBrowserProfile(browser.profilePath);}
     await server.close();
   }
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+main().then(()=>main(true)).catch(error=>{console.error(error);process.exitCode=1;});
