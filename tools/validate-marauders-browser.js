@@ -144,14 +144,15 @@ async function main(built = false) {
       await ev('centerOnWorldPoint(huntQA.visualSolo);renderCities(true);renderCombatTimers()');
       await wait("[...document.querySelectorAll('.marauder-node img')].every(img=>img.complete&&img.naturalWidth===384)");
       const remains=await ev(`[...document.querySelectorAll('.marauder-node')].map(node=>({width:getComputedStyle(node).width,height:getComputedStyle(node).height,
-        transform:getComputedStyle(node).transform,opacity:getComputedStyle(node).opacity,background:getComputedStyle(node).background,disabled:node.disabled,art:node.querySelector('img').getAttribute('src'),
+        transform:getComputedStyle(node).transform,opacity:getComputedStyle(node).opacity,background:getComputedStyle(node).backgroundColor,backgroundImage:getComputedStyle(node).backgroundImage,disabled:node.disabled,art:node.querySelector('img').getAttribute('src'),
         label:node.querySelector('[data-npc-respawn]').textContent,aria:node.getAttribute('aria-label'),x:node.style.left,y:node.style.top}))`);
       assert.equal(remains.length,2);
       for(const [i,kind,size,timer] of [[0,'solo','90px','Respawn 1:59'],[1,'boss','115px','Respawn 29:59']]){
         assert.equal(remains[i].width,size);assert.equal(remains[i].height,size);assert.equal(remains[i].opacity,'1');
         assert(remains[i].disabled&&remains[i].art.includes(kind+'-defeated-v1'));
         assert.equal(remains[i].label,timer);assert(remains[i].aria.includes('Defeated'));
-        assert(remains[i].background.startsWith('rgba(0, 0, 0, 0) none'),'Defeated map artwork must retain a transparent backing');
+        assert.equal(remains[i].background,'rgba(0, 0, 0, 0)','Defeated map artwork must retain a transparent backing: '+JSON.stringify(remains[i]));
+        assert.equal(remains[i].backgroundImage,'none');
       }
       await ev("document.querySelector('.marauder-node').click();showNearbyMarauders()");
       assert(!await ev("!!document.querySelector('[data-enemy-id]')||!!document.querySelector('[data-marauder-spawn-id]')"));
