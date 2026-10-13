@@ -19925,6 +19925,7 @@ function clearOnlineGlobalStatsWatcher() {
 
 function renderCombatTimers() {
   globalThis.CrownlandsStaminaUI?.tick();
+  updateMarauderRespawnTimers();
   const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
   const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
   ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs, focusBattleReportTarget);

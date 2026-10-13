@@ -1,6 +1,6 @@
 # Defeated marauder artwork
 
-Created with the built-in image generation tool using the current solo/boss sprites as edit targets and the user's medieval-atlas landscape as the style reference. These are draft artwork assets for review, not an implemented map state or a deployed change.
+Created with the built-in image generation tool using the current solo/boss sprites as edit targets and the user's medieval-atlas landscape as the style reference. The user approved these designs for the defeated map state. Runtime integration is in development and has not been deployed.
 
 - Normal: the same three leather-clad marauders fallen with their axe, spear, sword and round shield nearby.
 - Boss: the crowned armored warlord and two guards fallen with their heavy hammer, shield, weapons and collapsed burgundy sun banner.
@@ -9,4 +9,4 @@ Both retain the elevated southern map viewpoint, muted olive/ochre ground, burgu
 
 Files: `solo-defeated-v1.png`, `boss-defeated-v1.png`, `solo-defeated-v1.webp`, `boss-defeated-v1.webp`. Full final prompts and input roles are in [prompts.json](prompts.json); mechanical validation and hashes are in [validation.json](validation.json).
 
-These files stay under `docs/art-sources/`, outside the playable artifact. Defeated NPCs currently disappear from the active-target subscription. Showing these sprites after victory would need a separately defined display lifetime and integration with that existing encounter/respawn lifecycle; this artwork request does not change it.
+The masters and provenance stay under `docs/art-sources/`, outside the playable artifact. Identical WebP derivatives in `assets/marauders/` are loaded on demand after victory. They use the same map boxes and anchors as the living sprites: 90px for normal marauders and 115px for bosses. Defeated targets show their server respawn countdown (two minutes/30 minutes), remain inactive, and disappear atomically when the server supplies the replacement at its new road position. Blocked placements retain the remains with “Awaiting respawn” while bounded maintenance retries.

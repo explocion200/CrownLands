@@ -58,6 +58,6 @@
     }
   ],
   "visualReview": "Both illustrations inspected: correct original identities, defeated pose, south-facing elevated viewpoint, dropped weapons, fallen boss banner and matched atlas medium.",
-  "runtimeReferenced": false,
+  "runtimeReferenced": true,
   "deployed": false
 }

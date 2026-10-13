@@ -1,4 +1,4 @@
-/* exported applyOnlineMarauders, renderMarauders, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
+/* exported applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
@@ -6,18 +6,25 @@ const bossReadiness = new Map();
 let selectedMarauderSpawnId = "";
 function marauderArt(target) { return `assets/marauders/${target.classification === "boss" ? "boss" : "solo"}-v1.webp`; }
 function applyOnlineMarauders(rows, regionId) {
-  marauderMaps.set(regionId, { uid: getCurrentOnlineUid(), generation: RESET_GENERATION,
-    rows: rows.filter(row => row.worldId === ONLINE_WORLD_ID && row.resetGeneration === RESET_GENERATION
-      && row.regionId === regionId && row.status === "active").map(row => ({ ...row, owner: "neutral", ownerUid: "", troops: null })) });
+  const scope = getOnlineSessionRequestScope(), previous = marauderMaps.get(regionId);
+  const requests = previous?.scope === scope && previous.uid === getCurrentOnlineUid() ? previous.requests : new Set();
   const selected = getMarauderById(selectedTargetId);
-  if (selectedMarauderSpawnId && selected?.regionId === regionId && selected.spawnId !== selectedMarauderSpawnId && !sendMode) {
+  marauderMaps.set(regionId, { uid: getCurrentOnlineUid(), scope, generation: RESET_GENERATION,
+    requests: new Set(rows.map(row => row.spawnId).filter(id => requests.has(id))),
+    rows: rows.filter(row => row.worldId === ONLINE_WORLD_ID && row.resetGeneration === RESET_GENERATION
+      && row.regionId === regionId && ["active", "defeated"].includes(row.status)).map(row => ({ ...row, owner: "neutral", ownerUid: "", troops: null })) });
+  if (selectedMarauderSpawnId && selected?.regionId === regionId && getMarauderById(selected.id)?.spawnId !== selectedMarauderSpawnId && !sendMode) {
     selectedTargetId = null; selectedMarauderSpawnId = "";
   }
   renderCities(true);
 }
-function currentMarauders(regionId = getActiveMapRegionId()) {
+function visibleMarauders(regionId = getActiveMapRegionId()) {
   const map = marauderMaps.get(regionId);
-  return map?.uid === getCurrentOnlineUid() && map.generation === RESET_GENERATION ? map.rows : [];
+  return map?.uid === getCurrentOnlineUid() && map.generation === RESET_GENERATION
+    && map.scope === getOnlineSessionRequestScope() ? map.rows : [];
+}
+function currentMarauders(regionId) {
+  return visibleMarauders(regionId).filter(row => row.status === "active");
 }
 function getMarauderById(id) {
   for (const regionId of marauderMaps.keys()) {
@@ -28,7 +35,7 @@ function getMarauderById(id) {
 }
 function renderMarauders(bounds) {
   const existing = new Map([...cityLayer.querySelectorAll("[data-marauder-id]")].map(node => [node.dataset.marauderId, node]));
-  for (const target of currentMarauders().filter(row => shouldRenderCampNode(row, bounds))) {
+  for (const target of visibleMarauders().filter(row => shouldRenderCampNode(row, bounds))) {
     let node = existing.get(target.id); existing.delete(target.id);
     if (!node) {
       node = document.createElement("button"); node.type = "button"; node.className = "marauder-node";
@@ -40,13 +47,37 @@ function renderMarauders(bounds) {
     const point = worldToMapPoint(target);
     node.style.left = `${point.x}px`; node.style.top = `${point.y}px`;
     node.classList.toggle("marauder-node-boss", target.classification === "boss");
+    node.disabled = target.status === "defeated";
+    node.classList.toggle("marauder-node-defeated", node.disabled);
     node.setAttribute("aria-label", target.name); node.title = target.name;
-    if (node.dataset.spawnId !== target.spawnId) {
+    if (node.dataset.spawnId !== target.spawnId || node.dataset.status !== target.status) {
       node.dataset.spawnId = target.spawnId;
-      node.innerHTML = `<img src="${marauderArt(target)}" alt="" draggable="false"><span>${target.classification === "boss" ? "Boss" : "Marauder"} · ${Number(target.level)}</span>`;
+      node.dataset.status = target.status;
+      const art = marauderArt(target).replace("-v1", node.disabled ? "-defeated-v1" : "-v1");
+      node.innerHTML = `<img src="${art}" alt="" draggable="false"><span>${target.classification === "boss" ? "Boss" : "Marauder"} · ${Number(target.level)}${node.disabled ? '<small data-npc-respawn></small>' : ""}</span>`;
     }
   }
   existing.forEach(node => node.remove());
+  updateMarauderRespawnTimers();
+}
+function updateMarauderRespawnTimers() {
+  const now = getArmyClockNowMs(), api = getOnlineApi();
+  for (const target of visibleMarauders().filter(row => row.status === "defeated")) {
+    const seconds = Math.max(0, Math.ceil((Number(target.respawnAtMs) - now) / 1000));
+    const label = seconds > 0 ? `Respawn ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` : "Awaiting respawn";
+    const node = [...cityLayer.querySelectorAll("[data-marauder-id]")].find(item => item.dataset.spawnId === target.spawnId);
+    if (node?.querySelector("[data-npc-respawn]")) {
+      node.querySelector("[data-npc-respawn]").textContent = label;
+      node.title = `${target.name} · Defeated · ${label}`; node.setAttribute("aria-label", node.title);
+    }
+    const requests = marauderMaps.get(target.regionId).requests;
+    if (seconds === 0 && Number.isFinite(target.respawnAtMs) && !document.hidden && navigator.onLine
+      && api?.isSignedIn?.() && api.refreshMarauderRespawn && !requests.has(target.spawnId)) {
+      requests.add(target.spawnId);
+      // One wake-up per identity/session; real-time replacement or the minute job completes it.
+      api.refreshMarauderRespawn({ regionId: target.regionId, id: target.id, spawnId: target.spawnId }).catch(() => {});
+    }
+  }
 }
 function selectMarauder(id) {
   const target = getMarauderById(id);

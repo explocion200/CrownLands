@@ -36206,6 +36206,10 @@ exports.getGuildReports = onCall({ region: "us-central1", maxInstances: 20, invo
 exports.getCosmeticsState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.load(requireAuth(request)));
 exports.getStaminaState = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => staminaService.load(requireAuth(request)));
 exports.refillStamina = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => staminaService.purchase(requireAuth(request), request.data || {}));
+exports.refreshMarauderRespawn = onCall({ region: "us-central1", maxInstances: 10, invoker: "public" }, request => {
+  requireAuth(request);
+  return marauderPopulation.refresh(request.data || {});
+});
 exports.purchaseCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.purchase(requireAuth(request), request.data || {}));
 exports.equipCosmetic = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => cosmeticService.equip(requireAuth(request), request.data || {}));
 

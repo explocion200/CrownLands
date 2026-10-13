@@ -17,6 +17,10 @@ async function main(built = false) {
     client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
     await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("Network.enable");
     if(built){
+      for(const kind of ['solo','boss']) {
+        const file=`assets/marauders/${kind}-defeated-v1.webp`;
+        assert(fs.readFileSync(path.resolve(__dirname,'../dist',file)).equals(fs.readFileSync(path.resolve(__dirname,'..',file))),'Built defeated artwork is stale');
+      }
       const delivered={};
       for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css']){
         delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
@@ -128,6 +132,47 @@ async function main(built = false) {
       assert(sizes.solo.aria.includes('Marauder')&&sizes.boss.aria.includes('Boss'));
       fs.writeFileSync(path.join(artifacts,`npc-sizes-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
     }
+    // Defeated sprites reuse the exact living marker box/anchor and authoritative deadline.
+    await ev(`(()=>{const qa=huntQA;qa.now=Date.now();qa.clock=qa.api.getServerNowMs;qa.api.getServerNowMs=()=>qa.now;
+      qa.wakes=[];qa.api.isSignedIn=()=>true;qa.api.refreshMarauderRespawn=async request=>{qa.wakes.push(request);throw Error('Offline fixture');};
+      selectMarauder(qa.visualSolo.id);qa.dead=[{...qa.visualSolo,status:'defeated',respawnAtMs:qa.now+119000},{...qa.visualBoss,status:'defeated',respawnAtMs:qa.now+1799000}];
+      applyOnlineMarauders(qa.dead,getActiveMapRegionId());})()`);
+    assert(!await ev("!!getMarauderById(huntQA.visualSolo.id)||!!document.querySelector('[data-marauder-spawn-id]')"),'Defeat removes target actions');
+    assert.equal(await ev('currentMarauders().length'),0);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev('centerOnWorldPoint(huntQA.visualSolo);renderCities(true);renderCombatTimers()');
+      await wait("[...document.querySelectorAll('.marauder-node img')].every(img=>img.complete&&img.naturalWidth===384)");
+      const remains=await ev(`[...document.querySelectorAll('.marauder-node')].map(node=>({width:getComputedStyle(node).width,height:getComputedStyle(node).height,
+        transform:getComputedStyle(node).transform,opacity:getComputedStyle(node).opacity,background:getComputedStyle(node).background,disabled:node.disabled,art:node.querySelector('img').getAttribute('src'),
+        label:node.querySelector('[data-npc-respawn]').textContent,aria:node.getAttribute('aria-label'),x:node.style.left,y:node.style.top}))`);
+      assert.equal(remains.length,2);
+      for(const [i,kind,size,timer] of [[0,'solo','90px','Respawn 1:59'],[1,'boss','115px','Respawn 29:59']]){
+        assert.equal(remains[i].width,size);assert.equal(remains[i].height,size);assert.equal(remains[i].opacity,'1');
+        assert(remains[i].disabled&&remains[i].art.includes(kind+'-defeated-v1'));
+        assert.equal(remains[i].label,timer);assert(remains[i].aria.includes('Defeated'));
+        assert(remains[i].background.startsWith('rgba(0, 0, 0, 0) none'),'Defeated map artwork must retain a transparent backing');
+      }
+      await ev("document.querySelector('.marauder-node').click();showNearbyMarauders()");
+      assert(!await ev("!!document.querySelector('[data-enemy-id]')||!!document.querySelector('[data-marauder-spawn-id]')"));
+      await ev('modal.close()');
+      fs.writeFileSync(path.join(artifacts,`npc-defeated-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      records.push({kind:'defeatedNpc',width,height,built,remains});
+    }
+    await ev('huntQA.now+=1000;renderCombatTimers()');
+    assert.equal(await ev("document.querySelector('[data-npc-respawn]').textContent"),'Respawn 1:58');
+    await ev('huntQA.now+=1798000;renderCombatTimers();renderCombatTimers();applyOnlineMarauders(huntQA.dead,getActiveMapRegionId());renderCombatTimers()');
+    assert.equal(await ev('huntQA.wakes.length'),2,'One deadline request per spawn, even after repeat snapshots and failed responses');
+    assert(await ev("[...document.querySelectorAll('[data-npc-respawn]')].every(n=>n.textContent==='Awaiting respawn')"),'No local replacement or disappearing remains while placement waits');
+    await ev("huntQA.uid='different-account';renderCities(true);renderCombatTimers()");
+    assert.equal(await ev("document.querySelectorAll('.marauder-node').length"),0,'No remains from an old account');
+    await ev("huntQA.uid='hunt-fixture';applyOnlineMarauders([{...huntQA.visualSolo,spawnId:'respawned',x:huntQA.visualSolo.x+140},huntQA.visualBoss],getActiveMapRegionId())");
+    assert.equal(await ev("document.querySelectorAll('.marauder-node-defeated,[data-npc-respawn]').length"),0);
+    assert(await ev("document.querySelector('[data-spawn-id=respawned] img').getAttribute('src').includes('solo-v1') && !document.querySelector('[data-spawn-id=respawned]').disabled"));
+    assert(await ev("document.querySelector('[data-spawn-id=respawned]').style.left===worldToMapPoint({...huntQA.visualSolo,x:huntQA.visualSolo.x+140}).x+'px'"),'Replacement moves to its new server position');
+    await ev("applyOnlineMarauders(huntQA.dead.map(row=>({...row,status:'retired'})),getActiveMapRegionId())");
+    assert.equal(await ev("document.querySelectorAll('.marauder-node').length"),0,'Retired targets leave no permanent remains');
+    await ev('huntQA.api.getServerNowMs=huntQA.clock;applyOnlineMarauders([huntQA.visualSolo,huntQA.visualBoss],getActiveMapRegionId())');
     // NPC selection uses the actual foreign-city wheel, including keyboard Info.
     await ev(`huntQA.source=state.cities.find(c=>c.owner==='player');huntQA.source.troops=10000;rememberOwnedAttackSource(huntQA.source)`);
     for(const [width,height] of [[1440,900],[844,390],[568,320]]){
