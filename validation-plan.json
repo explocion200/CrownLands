@@ -1,68 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f52bc0fec1b9a74a07d35b52543ffbb3fc89c733",
+  "baseCommit": "6946e9bd78a0a7d97a12fefe746bd8b44be26926",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/marauder-rules.js",
-        "functions/marauder-population.js",
-        "functions/marauder-road-points.json"
-      ],
-      "tests": [
-        "tools/validate-marauder-terrain.js",
-        "tools/validate-marauder-roads-browser.js",
-        "tools/validate-marauder-rules.js",
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/emulator-marauder-combat.js"
-      ],
-      "reason": "Server population samples approved roads in the current Core topology and template-backed New Lands, caps solos at two with quarter-map separation, retains one beginner and alternates medium/high replacements. Verify geometry, unchanged building/scenery/terrain/objective clearance and inset/routes, partial maps, concurrency, cooldowns, versioned retirement of old/close targets and preservation of eligible identities. Changed shared slot eligibility also affects actual scouting/attack/rally validation and arrival: exercise exact-once retirement stamina/consumable refunds, full troop returns and no loot through real combat callables. Static rules preserve existing balance/stamina/reward dependencies; browser tests verify coordinate agreement at desktop and both landscape sizes."
-    },
-    {
-      "paths": [
-        "tools/generate-marauder-roads.js",
-        "tools/validate-marauder-terrain.js"
-      ],
-      "tests": [
-        "tools/validate-marauder-terrain.js"
-      ],
-      "reason": "Reproducible bounded server-only road data must match committed approved clearance/art receipts and place every sample inside the original road half-width. Exercise prepared/generated map geometry, two-solo/one-boss caps, quarter-map separation boundaries, medium/high alternation, retained building/inset guards and accepted partial availability."
-    },
-    {
-      "paths": [
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/emulator-marauder-combat.js"
-      ],
-      "tests": [
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/emulator-marauder-combat.js"
-      ],
-      "reason": "Execute changed transactional population and real combat suites: road-only capped/separated spawns, missing-road and partial-capacity retries, alternating replacement levels, concurrent/idempotent reconciliation of previously initialized maps, hidden retired public targets without defender leaks, preserved eligible identities, exact-once retired-target refunds and full troop returns without loot."
-    },
-    {
-      "paths": [
-        "tools/validate-marauder-roads-browser.js"
-      ],
-      "tests": [
-        "tools/validate-marauder-roads-browser.js"
-      ],
-      "reason": "Execute the new isolated loopback visual check using actual server-selected road coordinates, Core boss/New Lands solo backgrounds and correct 90/115px art at 1440x900, 844x390 and 568x320 with HUD/chat/march alerts visible."
-    },
-    {
-      "paths": [
-        "tools/validate-marauder-rules.js"
-      ],
-      "tests": [
-        "tools/validate-marauder-rules.js"
-      ],
-      "reason": "Execute the changed shared-rules validator for two solo slots with beginner/medium-high level eligibility, one Core boss and closed-admission maps; preserve all existing balance, reward, stamina and combat boundary checks for the shared library."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MARAUDER_ROAD_RESPAWN_RELEASE_2026-10-13.md"
       ],
       "tests": [],
-      "reason": "Record explicitly confirmed road-only placement, max two separated solos, beginner/alternating medium-high levels, one boss, retained building clearance/inset, accepted partial availability and the approved remove-extras/refund transition exception. Document bounded reconciliation verification and pending production authorization. Documentation does not change runtime."
+      "reason": "Documentation-only release record: reconcile the authoritative specification with exact verified PR #546 web/backend identity, approved population transition and read-only map/monitor observations. No runtime, balance, account, topology or deployment configuration changes; prior passing runtime/emulator checks remain evidence, and no runtime suite is selected for prose."
     }
   ]
 }
