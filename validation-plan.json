@@ -1,12 +1,13 @@
 {
   "coverage": [
     {
-      "reason": "NPC selection reuses the foreign-city action wheel and pending scout/report refresh. Validate keyboard Info, three viewports with chat/HUD, duplicate and travelling scouts, replaced-spawn cancellation, private intel, Rescout/Report, solo preparation and real boss rally permissions/preparation. Existing draft/refill coverage preserves explicit Send/Launch. Cover shared city/objective buttons, scouting delivery/ownership/expiry and touch map input. No server, economy or combat rule changes; no new emulator suite applies.",
+      "reason": "NPC selection reuses the foreign-city action wheel and pending scout/report refresh. Validate keyboard Info, three viewports with chat/HUD, duplicate and travelling scouts, replaced-spawn cancellation, private intel, Rescout/Report, solo preparation and real boss rally permissions/preparation. Existing draft/refill coverage preserves explicit Send/Launch. Cover shared city/objective buttons, scouting delivery/ownership/expiry and touch map input. No server, economy or combat rule changes; no new emulator suite applies. The existing scout motion test waits for normal 140/400ms rendering (bounded at two seconds), rather than assuming movement within five animation frames. Measure the current army position wrapper instead of the token, matching the existing renderer; retain the no-jump and same-token reconciliation assertions.",
       "paths": [
         "game.js",
         "marauders-ui.js",
         "tools/validate-marauders-browser.js",
-        "tools/validate-scout-responsiveness.js"
+        "tools/validate-scout-responsiveness.js",
+        "tools/validate-scout-responsiveness-browser.js"
       ],
       "tests": [
         "tools/validate-marauders-browser.js",
