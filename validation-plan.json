@@ -1,59 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "187ea9ce16ce45b4f1599b0a588b57896dbf16a1",
+  "baseCommit": "f57b5604b14df112d8a87d47af0d4fea631c3a49",
   "coverage": [
     {
       "paths": [
-        "city-details-ui.js",
-        "city-details-ui.css",
-        "marauders-ui.js",
-        "marauders-ui.css"
-      ],
-      "tests": [
-        "tools/validate-city-details-browser.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-report-system.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Reuse the City Details frame/styles for NPC Info with domain-owned scout-gated stats, rewards and hunt actions, and retire the compact NPC scout renderer. Validate owned/foreign city regression and isolation, source/exact-built Info dimensions/typography at three sizes, independent scrolling, touch/keyboard/close and preserved scout/attack/rally/refill drafts. Shared NPC report helpers and stamina/art dependencies retain report-system and budget coverage. Build/artifact validation remains required; no server-authoritative code changes require emulators."
-    },
-    {
-      "paths": [
-        "scout-report-ui.js",
-        "scout-report-ui.css"
-      ],
-      "tests": [
-        "tools/validate-scout-report-ui.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-report-system.js",
-        "tools/validate-scout-report-lifecycle.js"
-      ],
-      "reason": "Render NPC scout intelligence through the regular-city heading, ruler/neutral identity, metrics, defense table and shared timing/navigation shell. Check exact recorded/zero/missing data, no fake NPC owner/flag/skills/walls/reinforcements, no unavailable intelligence, escaping, solo/boss artwork, large numbers and identical city scout styling at three source/built sizes. Preserve original city/camp/Tower/disclosure paths, ten-minute expiry, report history delivery and refill return without automatic orders."
-    },
-    {
-      "paths": [
-        "tools/validate-marauders-browser.js"
-      ],
-      "tests": [
-        "tools/validate-marauders-browser.js"
-      ],
-      "reason": "Execute the decoration regression, direct live city/NPC Info and scout-style comparisons, exact built shared assets and solo/boss scout success/replacement cases at three sizes. Verify timers, keyboard navigation, map/close, refill return and spawn context while retaining hunt/stamina draft lifecycle checks."
-    },
-    {
-      "paths": [
-        "tools/validate-scout-report-ui.js"
-      ],
-      "tests": [
-        "tools/validate-scout-report-ui.js"
-      ],
-      "reason": "Run NPC intelligence assertions with poisoned city/owner/reinforcement data to prove it is excluded. Verify full integer values, zero and unknown snapshots, escaped names, artwork, urgency and unavailable privacy; retain every existing city/camp/disclosure and timing assertion."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MARAUDER_INFO_SCOUT_RELEASE_2026-10-13.md"
       ],
       "tests": [],
-      "reason": "Record the corrected user-confirmed scope: city-style NPC Info and Scout Reports. Keep new presentation IN DEVELOPMENT until authorized verified deployment and retain the already-live attack reports and gameplay rules unchanged."
+      "reason": "Documentation-only record of authorized verified PR #550 web/Firebase publication. Receipts establish exact build/delivered panel assets, staged/public startup and interactions, unchanged gameplay backend, October realm and retained population/refills. No runtime, balance, permission, payment or population changes; feature validation is recorded and should not be repeated for this ledger."
     }
   ]
 }
