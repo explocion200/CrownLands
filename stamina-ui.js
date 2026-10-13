@@ -65,7 +65,6 @@
     const state = value(), card = document.getElementById("staminaButton");
     if (card) {
       card.querySelector("[data-stamina-value]").textContent = state ? `${state.value}/100` : "—/100";
-      card.querySelector("[data-stamina-low]").hidden = !state || state.value >= 10;
       card.querySelector("[data-stamina-fill]").style.width = `${state?.value || 0}%`;
       card.classList.toggle("stamina-low", Boolean(state && state.value < 10));
       card.setAttribute("aria-label", state ? `Stamina ${state.value} of 100. Refill stamina.` : "Stamina unavailable. Open refill review.");
