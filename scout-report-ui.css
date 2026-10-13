@@ -1,4 +1,7 @@
 /* Approved Scout Reports only. Scoped from the reviewed desktop/landscape design. */
+#modal.scout-report-ledger .npc-scout-art{width:40px;height:44px;object-fit:contain;flex:none}
+#modal.scout-report-ledger .npc-scout-name{display:block;grid-column:1!important;grid-row:1/3!important;font:18px/1.2 Georgia,serif!important}
+@media(max-width:650px){#modal.scout-report-ledger .npc-scout-name{font-size:14px!important}#modal.scout-report-ledger .npc-scout-art{width:26px;height:30px}}
 #modal.scout-report-ledger{display:block !important;font-weight:400 !important}
 #modal.scout-report-ledger:not([open]){display:none !important}
 #modal.scout-report-ledger::before,#modal.scout-report-ledger::after{display:none !important}

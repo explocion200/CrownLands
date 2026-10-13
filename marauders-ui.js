@@ -1,4 +1,4 @@
-/* exported applyOnlineMarauders, renderMarauders, renderMarauderScoutReport, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
+/* exported applyOnlineMarauders, renderMarauders, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
@@ -115,13 +115,6 @@ async function attackMarauder(target) {
 function renderHuntStamina(note = "") {
   const stamina = CrownlandsStaminaUI.value();
   return `<div class="hunt-stamina"><span><strong data-hunt-stamina>Stamina ${stamina ? `${stamina.value}/100` : "—/100"} · Cost 10</strong>${note ? `<small>${escapeHtml(note)}</small>` : ""}</span><button type="button" data-open-stamina>Stamina &amp; refill</button></div>`;
-}
-function renderMarauderScoutReport(model) {
-  const report = model.report, city = model.city;
-  return `<section class="marauder-details"><h2>${escapeHtml(city.name)}</h2><p>${escapeHtml(getRegionLabel(report.regionId || city.regionId))}</p>
-    <p>Scouted defenders: <strong>${formatNumber(report.troops)}</strong><br>Total defense: <strong>${formatNumber(report.totalDefense)}</strong></p>
-    <p>1 defense per defender · No walls. Defenders can change before arrival. Intelligence applies only to this spawn.</p>
-    ${renderHuntStamina()}</section>`;
 }
 const MARAUDER_BATTLE_RULE_LABEL = "NPC combat — 1.00 defense per defender; no walls, ownership or PvP credit";
 function getMarauderBattleTargetLabel(target) {

@@ -8,7 +8,8 @@ const context = vm.createContext({ window: {}, escapeHtml: esc, formatNumber: St
   SKILL_CONFIG: Object.fromEntries(Object.entries(skillNames).map(([key, label]) => [key, { label }])),
   renderPlayerNameLink: (uid, name) => `<button class="ruler-link" data-player-uid="${esc(uid)}">${esc(name)}</button>`, renderPlayerLinkedText: text => esc(text),
   renderBattleReportLocateButton: report => `<button class="map-button" data-report-jump="${esc(report.cityId)}">Map</button>`, renderBattleReportAge: () => '<span data-report-occurred-at-ms="123">30s ago</span>',
-  renderOnboardingTip: () => '<aside class="onboarding-tip">First scout guidance</aside>', isDefenderScoutReport: report => report.scoutPerspective === "defender", getBattleReportExactTime: () => "14 Sep 2026, 10:42:18"
+  renderOnboardingTip: () => '<aside class="onboarding-tip">First scout guidance</aside>', isDefenderScoutReport: report => report.scoutPerspective === "defender", getBattleReportExactTime: () => "14 Sep 2026, 10:42:18",
+  marauderArt: city => `assets/marauders/${city.classification === "boss" ? "boss" : "solo"}-v1.webp`, renderHuntStamina: () => '<div class="hunt-stamina">Stamina 70/100 · Cost 10</div>'
 });
 vm.runInContext(read("scout-report-ui.js"), context);
 const ui = context.window.CrownlandsScoutReportUI;
@@ -38,6 +39,18 @@ const playerCamp = ui.renderIntel({ ...model, rewardCampTarget: true, siege: nul
 for (const text of ["23010", "7280", "30290", "1.30 base", "Shieldwall +10%", "owner gear +3%", "Player defense bonuses", "capped at +200%"]) assert(playerCamp.includes(text), `Player camp lost recorded defense detail: ${text}`);
 assert(!playerCamp.includes("1.00 power per troop") && !playerCamp.includes('id="scoutDetail-walls"'), "Player camp used neutral troop power or a city wall");
 const attempt = { id: "blocked", type: "scout", cityId: "target", cityName: "Thornfield", cityLevel: 2, summary: "Veil blocked the scout <unsafe>", troops: 987654321, totalDefense: 876543210, scoutReport: report };
+for (const [classification,level] of [["solo",79],["boss",90]]) {
+  const npc = ui.renderIntel({ ...model, city: {id:"npc-target",name:"Enemy <unsafe>",level,classification},
+    report: {...report,targetType:"marauder",troops:1234567,totalDefense:1234567}, remaining:20 });
+  for(const value of ['class="scout-heading"','class="ruler-strip"','class="intel-metrics two"','class="scout-table"','1,234,567','Enemy &lt;unsafe&gt;','scoutReportPlayerFlag','Neutral defenders','1.00 defense per defender','This intelligence applies only to this spawn','data-scout-report-age','data-scout-report-expires','Expiring soon','Stamina 70/100'])assert(npc.includes(value),value);
+  for(const invented of ['scoutReportDefenderFlag','data-player-uid="enemy"','data-player-uid="ally"','City owner','Gatehouse gear','class="skill-row"','id="scoutDetail-walls"','14,180'])assert(!npc.includes(invented),'NPC scout report invented city/player intelligence: '+invented);
+  const zero = ui.renderIntel({...model,city:{id:'npc',name:'Marauder',classification,level},report:{targetType:'marauder',troops:0,totalDefense:0}});
+  assert(zero.includes('<strong>0</strong>'),'Zero NPC defenders were replaced by fallback values');
+  const unknown = ui.renderIntel({...model,city:{id:'npc',name:'Marauder',classification,level},report:{targetType:'marauder'}});
+  assert(unknown.includes('Not recorded'),'Missing NPC intelligence was fabricated');
+  const hiddenNpc=ui.renderAttempt({...attempt,targetType:'marauder'}, {label:'TARGET UNAVAILABLE'});
+  assert(!hiddenNpc.includes('987654321')&&!hiddenNpc.includes('876543210')&&!hiddenNpc.includes('class="intel-metric'),'Unavailable NPC scout leaked recorded intelligence');
+}
 const hidden = ui.renderAttempt(attempt, { label: "SCOUT BLOCKED" });
 assert(hidden.includes("Veil blocked the scout &lt;unsafe&gt;") && hidden.includes("No current intelligence"));
 for (const secret of ["987654321", "876543210", 'class="intel-metric', 'class="skill-row"']) assert(!hidden.includes(secret), "Unavailable report leaked hidden statistics");
