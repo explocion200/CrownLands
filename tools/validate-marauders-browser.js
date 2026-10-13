@@ -159,7 +159,9 @@ async function main() {
     await ev("modal.close();document.getElementById('staminaButton').click()");
     await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns'");await ev("document.querySelector('[data-refill-buy]').click()");
     await wait("modal.open && modal.classList.contains('shop-modal')");
-    await ev("CrownlandsStaminaUI.sync({uid:'',api:huntQA.api})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
+    // Sign out the fixture account too: a normal HUD tick must not rehydrate the old session.
+    await ev("huntQA.uid='';CrownlandsStaminaUI.sync({uid:'',api:huntQA.api});renderHud()");
+    assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
     assert(!await ev("modal.open || !!document.querySelector('.stamina-panel[open]')"),'Sign-out discards the suspended view');
     assert.deepEqual(errors,[]);assert.deepEqual(failedAssets,[]);
     fs.writeFileSync(path.join(artifacts,'checks.json'),JSON.stringify({passed:true,records,errors,failedAssets},null,2));console.log('Marauder/stamina UI passed: desktop and both landscape sizes, panel bounds, exact review, duplicate clicks, focus, preserved drafts, explicit sending, private intel, search, low/unknown states.');
