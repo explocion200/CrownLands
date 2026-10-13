@@ -36,8 +36,8 @@
   function slots(region) {
     if (region?.permanentCore === true) return [{ slot: 0, min: 80, max: 100, classification: "boss" }];
     if (region?.permanentCore !== false) return [];
-    return Array.from({ length: 12 }, (_, slot) => ({ slot, classification: "solo",
-      min: slot < 4 ? 1 : slot < 8 ? 11 : 40, max: slot < 4 ? 10 : slot < 8 ? 39 : 79 }));
+    return [{ slot: 0, classification: "solo", min: 1, max: 10 },
+      { slot: 1, classification: "solo", min: 11, max: 79 }];
   }
   function stamina(raw, now) {
     if (!Number.isSafeInteger(now) || now < 0) fail("Invalid server time.");

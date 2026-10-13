@@ -60,6 +60,7 @@ const { createStaminaService } = require("./stamina-service.js");
 const { createMarauderPopulation } = require("./marauder-population.js");
 const { isRegionWalkablePoint } = require("./canonical-route-engine.js");
 const MARAUDER_SEASONAL_CLEARANCE = require("./marauder-seasonal-clearance.json");
+const MARAUDER_ROAD_POINTS = require("./marauder-road-points.json");
 const { createEstateService } = require("./estate-service");
 const { defineSecret } = require("firebase-functions/params");
 const { createCrownPaymentsService } = require("./crown-payments-service");
@@ -7078,6 +7079,7 @@ function getMarauderPlacementLayout(regionId) {
     ...serverImagePointToWorld(regionId, { x: tower.reservedX, y: tower.reservedY }), clearance: 350 }));
   const model = getAuthoritativeRoutePlannerForRegions([regionId]).getModel(regionId);
   return { bounds: getServerMapBounds(regionId), structures, rectangles,
+    roadPoints: (MARAUDER_ROAD_POINTS.templates[templateId] || []).map(([x, y]) => serverImagePointToWorld(regionId, { x, y })),
     walkable: (point, padding) => isRegionWalkablePoint({ regions: { [regionId]: model.workerRegion } }, point.x, point.y, regionId, padding),
     accessible: point => {
       const origin = [...seed.cities].sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
