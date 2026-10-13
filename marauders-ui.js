@@ -33,6 +33,7 @@ function renderMarauders(bounds) {
     }
     const point = worldToMapPoint(target);
     node.style.left = `${point.x}px`; node.style.top = `${point.y}px`;
+    node.classList.toggle("marauder-node-boss", target.classification === "boss");
     node.setAttribute("aria-label", target.name); node.title = target.name;
     if (node.dataset.spawnId !== target.spawnId) {
       node.dataset.spawnId = target.spawnId;

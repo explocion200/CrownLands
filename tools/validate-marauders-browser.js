@@ -40,6 +40,21 @@ async function main() {
     })()`);
     await wait("CrownlandsStaminaUI.value()?.value===70");
     assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'70/100');
+    await ev(`(() => {
+      const bounds=getActiveMapBounds(),solo=huntQA.visualSolo={...huntQA.target,x:(bounds.left+bounds.right)/2,y:(bounds.top+bounds.bottom)/2};
+      huntQA.visualBoss={...solo,id:'boss-size-fixture',spawnId:'boss-size-spawn',classification:'boss',level:90,name:'Clan Boss Lv. 90',x:solo.x+200};
+      centerOnWorldPoint(solo);applyOnlineMarauders([solo,huntQA.visualBoss],getActiveMapRegionId());
+    })()`);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev('centerOnWorldPoint(huntQA.visualSolo);renderCities(true)');
+      const sizes=await ev(`(() => {const solo=document.querySelector('[data-marauder-id="'+huntQA.target.id+'"]'),boss=document.querySelector('[data-marauder-id="boss-size-fixture"]');return{solo:{width:getComputedStyle(solo).width,height:getComputedStyle(solo).height,aria:solo.getAttribute('aria-label')},boss:{width:getComputedStyle(boss).width,height:getComputedStyle(boss).height,aria:boss.getAttribute('aria-label'),classified:boss.classList.contains('marauder-node-boss')}}})()`);
+      assert.equal(sizes.solo.width,'90px');assert.equal(sizes.solo.height,'90px');
+      assert.equal(sizes.boss.width,'115px');assert.equal(sizes.boss.height,'115px');assert(sizes.boss.classified);
+      assert(sizes.solo.aria.includes('Marauder')&&sizes.boss.aria.includes('Boss'));
+      fs.writeFileSync(path.join(artifacts,`npc-sizes-${width}x${height}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+    }
+    await ev('applyOnlineMarauders([huntQA.target],getActiveMapRegionId())');
     for(const [width,height] of [[1440,900],[844,390],[568,320]]){
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await delay(200);
       await ev('renderCombatTimers();updateMainCityReturnButton()');
