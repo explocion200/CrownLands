@@ -106,6 +106,7 @@ function createManifest() {
   "item-bag-ui.js", "item-bag-ui.css",
   "combat-timers-ui.js", "combat-timers-ui.css",
   "stamina-ui.js", "stamina-ui.css", "marauders-ui.js", "marauders-ui.css", "assets/marauders/solo-v1.webp", "assets/marauders/boss-v1.webp", "functions/marauder-rules.js",
+  "assets/marauders/solo-defeated-v1.webp", "assets/marauders/boss-defeated-v1.webp",
   "assets/icons/common-gear-chest-r1.svg",
   "assets/icons/uncommon-gear-chest-r1.svg",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",

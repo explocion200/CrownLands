@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "tool": "image_gen.imagegen",
+  "assets": [
+    {
+      "classification": "solo",
+      "master": {
+        "file": "solo-defeated-v1.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1474309,
+        "sha256": "5ba8d38e072268eb9ede29ca40acc49b96846be7c53687d78c9d77bfac85aa19"
+      },
+      "derivative": {
+        "file": "solo-defeated-v1.webp",
+        "width": 384,
+        "height": 384,
+        "bytes": 32802,
+        "sha256": "04ea6429b6e81f1b9d324484043462de49f8cedf4c365c54db5df2c6347236a1"
+      },
+      "transparentPixels": 1051279,
+      "partiallyTransparentPixels": 521124,
+      "visibleAlphaBounds": {
+        "threshold": 8,
+        "minX": 83,
+        "minY": 345,
+        "maxX": 1218,
+        "maxY": 1002
+      },
+      "borderAlphaAtMost": 1
+    },
+    {
+      "classification": "boss",
+      "master": {
+        "file": "boss-defeated-v1.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1694915,
+        "sha256": "a1296086f11432d523b85d088935683afca7015ef7f08d7894a13f8244500b32"
+      },
+      "derivative": {
+        "file": "boss-defeated-v1.webp",
+        "width": 384,
+        "height": 384,
+        "bytes": 40116,
+        "sha256": "3cf01b412e2d603b1744a211a97e52509346b3b3c9153a90fdca594fb2b93674"
+      },
+      "transparentPixels": 963420,
+      "partiallyTransparentPixels": 608836,
+      "visibleAlphaBounds": {
+        "threshold": 8,
+        "minX": 52,
+        "minY": 270,
+        "maxX": 1212,
+        "maxY": 1059
+      },
+      "borderAlphaAtMost": 1
+    }
+  ],
+  "visualReview": "Both illustrations inspected: correct original identities, defeated pose, south-facing elevated viewpoint, dropped weapons, fallen boss banner and matched atlas medium.",
+  "runtimeReferenced": true,
+  "deployed": false
+}

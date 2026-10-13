@@ -1,14 +1,57 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f57b5604b14df112d8a87d47af0d4fea631c3a49",
+  "baseCommit": "0c26e68eb074c55343d5d8b4273d51c5fe53be41",
   "coverage": [
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_INFO_SCOUT_RELEASE_2026-10-13.md"
+        "docs/art-sources/marauder-defeated/README.md"
       ],
       "tests": [],
-      "reason": "Documentation-only record of authorized verified PR #550 web/Firebase publication. Receipts establish exact build/delivered panel assets, staged/public startup and interactions, unchanged gameplay backend, October realm and retained population/refills. No runtime, balance, permission, payment or population changes; feature validation is recorded and should not be repeated for this ledger."
+      "reason": "Record the explicitly approved defeated normal/boss presentation, exact sizes, authoritative respawn lifecycle and blocked-placement fallback. This status is in development, with no merge or production rollout authorized."
+    },
+    {
+      "paths": [
+        "assets/marauders/provenance.json",
+        "docs/art-sources/marauder-defeated/boss-defeated-v1.png",
+        "docs/art-sources/marauder-defeated/boss-defeated-v1.webp",
+        "docs/art-sources/marauder-defeated/prompts.json",
+        "docs/art-sources/marauder-defeated/solo-defeated-v1.png",
+        "docs/art-sources/marauder-defeated/solo-defeated-v1.webp",
+        "docs/art-sources/marauder-defeated/validation.json",
+        "game.js",
+        "marauders-ui.css",
+        "marauders-ui.js",
+        "tools/asset-performance-budgets.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-marauders-browser.js",
+        "assets/marauders/boss-defeated-v1.webp",
+        "assets/marauders/solo-defeated-v1.webp"
+      ],
+      "tests": [
+        "tools/validate-marauders-browser.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Check source and delivered desktop/landscape UI: transparent matching-size fallen art, deadline countdown, inactive targets, nearby-search exclusion, one bounded wake request, replacement movement/removal, retired/account scoping, and existing Info/scout/refill drafts. Verify approved derivative parity, production packaging and explicitly bounded source/lazy-art growth."
+    },
+    {
+      "paths": [
+        "firebaseClient.js",
+        "functions/index.js",
+        "functions/marauder-population.js",
+        "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-marauder-population.js"
+      ],
+      "tests": [
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-marauder-rules.js",
+        "tools/validate-marauder-terrain.js"
+      ],
+      "reason": "Exercise realm/auth guards and server time; retained public defeated positions and two/30-minute deadlines; no failed-battle remains; early/stale/retired/foreign/inactive requests; blocked retries; concurrent viewers and minute maintenance produce one atomic public/private replacement, with valid new roads and no reward/intelligence changes. Preserve combat/rally/refund and placement dependencies."
     }
   ]
 }

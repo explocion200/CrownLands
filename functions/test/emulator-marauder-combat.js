@@ -67,7 +67,7 @@ async function createAuthUser(label) {
   return { uid: body.localId, token: body.idToken };
 }
 
-async function callFunction(name, token, data = {}) {
+async function callFunction(name, token, data = {}, scopeOverrides = {}) {
   const host = await resolveFunctionsHost();
   const response = await fetch(`http://${host}/${projectId}/us-central1/${name}`, {
     method: "POST",
@@ -79,6 +79,7 @@ async function callFunction(name, token, data = {}) {
         clientResetGeneration: realm.resetGeneration,
         clientWorldId: realm.worldId,
         clientRealmShardId: realm.realmShardId || "legacy",
+        ...scopeOverrides,
       },
     }),
   });
@@ -154,6 +155,14 @@ async function main() {
   strictEqual(soloSnapshot.combatRule.captureAllowed,false);strictEqual(soloSnapshot.participantUids.length,1);
   strictEqual((await db.doc(`pvpKillEvents/${storage}/events/${battle.movement.id}`).get()).exists,false,'NPC report cannot grant PvP credit');
   strictEqual((await targetRef.get()).data().status,'defeated');strictEqual((await targetRef.get()).data().troops,0);
+  const corpse=(await publicRef.get()).data(),privateCorpse=(await targetRef.get()).data();
+  strictEqual(corpse.status,'defeated');strictEqual(corpse.spawnId,enemy.spawnId);
+  strictEqual(corpse.x,enemy.x);strictEqual(corpse.y,enemy.y);
+  strictEqual(corpse.respawnAtMs,privateCorpse.updatedAtMs+120000);strictEqual(corpse.troops,undefined);
+  const wake={regionId:region,id,spawnId:enemy.spawnId,now:Date.now()+99999999,respawnAtMs:0,x:1,y:1};
+  strictEqual((await callFunction('refreshMarauderRespawn',users[0].token,wake)).spawned,0,'Caller-supplied time cannot accelerate respawn');
+  await rejects(callFunction('refreshMarauderRespawn','',wake),/UNAUTHENTICATED/);
+  await rejects(callFunction('refreshMarauderRespawn',users[0].token,wake,{clientReleaseId:'wrong'}),/updated|precondition/i);
   const receipt=(await db.doc('marauderBattles/'+battle.movement.id).get()).data();strictEqual(receipt.loot.gold[users[0].uid],100);strictEqual(receipt.loot.xp[users[0].uid],20);
   assert(settled.movements.length===1,'Survivors return');
   const after=(await profileRef.get()).data();await callFunction('resolveArmyOrder',users[0].token,{armyId:battle.movement.id});strictEqual((await profileRef.get()).data().gold,after.gold);
@@ -161,6 +170,7 @@ async function main() {
   await arrive(settled.movements[0]);
   enemy=await seed(1,100);const loss=await launch('attack',10);const defeat=await arrive(loss.movement);strictEqual(defeat.outcome,'defeat');
   const failed=(await targetRef.get()).data();assert(failed.troops>0&&failed.troops<100,'Failed battles retain defenders: '+JSON.stringify({failed,result:defeat}));strictEqual((await db.doc('marauderBattles/'+loss.movement.id).get()).data().loot,null);
+  strictEqual((await publicRef.get()).data().status,'active');strictEqual((await publicRef.get()).data().respawnAtMs,0);
   const failedSnapshot=(await db.doc(`battleSnapshots/${storage}/entries/${loss.movement.id}`).get()).data();
   strictEqual(failedSnapshot.outcome,'defeat');strictEqual(failedSnapshot.defender.survivors,failed.troops);
   strictEqual(failedSnapshot.attacker.losses,defeat.reports[0].attackerLosses);
@@ -247,6 +257,8 @@ async function main() {
   strictEqual((await profileRef.get()).data().itemEffects.shieldExpiresAtMs,shieldUntil,'Neutral boss launch preserves shield');
   await callFunction('launchClanRally',users[0].token,{clanId,rallyId});strictEqual((await staminaRef.get()).data().value,90);
   const bossBattle=await arrive(launched.movement);strictEqual(bossBattle.outcome,'victory');
+  const deadBoss=(await bossRef.get()).data(),publicBoss=(await db.doc('islands/'+bossIsland+'/marauders/'+boss.id).get()).data();
+  strictEqual(publicBoss.status,'defeated');strictEqual(publicBoss.respawnAtMs,deadBoss.updatedAtMs+1800000);
   const bossSnapshotRef=db.doc(`battleSnapshots/${storage}/entries/${launched.movement.id}`);
   const bossSnapshot=(await bossSnapshotRef.get()).data();
   strictEqual(bossSnapshot.target.classification,'boss');strictEqual(bossSnapshot.attackers.length,2);

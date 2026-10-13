@@ -214,7 +214,8 @@ const entrypointBudgets = {
   // 3.3 KiB source overage at 4 KiB within the shared installation allowance.
   // Shared NPC action-wheel wiring adds less than 2 KiB; use existing headroom
   // plus one bounded KiB, within the aggregate four-KiB refinement above.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1) * 1024,
+  // The NPC countdown reuses the combat tick; its call exceeds remaining source headroom by 27 bytes.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   "kingdom-ledgers-ui.css": 31 * 1024,
@@ -398,9 +399,9 @@ assert(
 
 // The approved NPC/stamina UI and shared rules remain a small offline-shell addition.
 const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js', 'marauders-ui.css', 'functions/marauder-rules.js'];
-// Shared city controls bring NPC/stamina presentation to 39,783 source bytes.
-assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 40 * 1024,
-  'NPC/stamina shell files exceed their 40 KiB source budget.');
+// Defeated markers and the existing-clock countdown add a bounded 4 KiB step.
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 44 * 1024,
+  'NPC/stamina shell files exceed their 44 KiB source budget.');
 let marauderArtBytes = 0;
 for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
   const bytes = statBytes(file); marauderArtBytes += bytes;
@@ -408,6 +409,15 @@ for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.w
   assert(!staticCacheUrls.some(url => localPathFromUrl(url) === file), 'NPC artwork must remain outside the installation cache.');
 }
 assert(marauderArtBytes <= 112 * 1024, 'Both NPC sprites exceed their combined 112 KiB budget.');
+let defeatedArtBytes = 0;
+for (const kind of ['solo', 'boss']) {
+  const file = `assets/marauders/${kind}-defeated-v1.webp`;
+  const bytes = statBytes(file); defeatedArtBytes += bytes;
+  assert(bytes <= 64 * 1024, file + ' exceeds its 64 KiB sprite budget.');
+  assert(!staticCacheUrls.some(url => localPathFromUrl(url) === file), 'Defeated artwork must load on demand.');
+  assert(fs.readFileSync(path.join(root, file)).equals(fs.readFileSync(path.join(root, 'docs/art-sources/marauder-defeated', `${kind}-defeated-v1.webp`))), 'Runtime defeated artwork must match the approved derivative.');
+}
+assert(defeatedArtBytes <= 80 * 1024, 'Defeated NPC sprites exceed their combined 80 KiB budget.');
 
 const retiredPrecacheMasters = [
   "assets/loading-ring.png",

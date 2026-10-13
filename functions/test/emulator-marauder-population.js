@@ -162,6 +162,40 @@ async function main() {
   assert((await island(crowdedRegion.id).collection("marauders").get()).docs.every(doc => !Object.hasOwn(doc.data(), "troops")));
   assert.equal((await partialPopulation.maintain(now + 1060000)).retired, 0, "Retirement is idempotent and old due slots no longer retry");
   const area = geometry();
+  // Deadline wake-ups only replace the named, due identity in an eligible map.
+  for (const ref of [beginner.ref, bosses.docs[2].ref]) {
+    const before = (await ref.get()).data(), publicRef = island(before.regionId).collection("marauders").doc(ref.id);
+    const request = { regionId: before.regionId, id: ref.id, spawnId: before.spawnId };
+    active = [before.regionId];
+    const due = now + 2000000, patch = { status: "defeated", respawnAtMs: due };
+    assert.equal((await population.refresh(request, due)).spawned, 0, "Active targets cannot be reset");
+    await ref.set(patch, { merge: true }); await publicRef.set(patch, { merge: true });
+    assert.equal((await population.refresh(request, due - 1)).spawned, 0, "Client cannot accelerate the deadline");
+    assert.equal((await population.refresh({ ...request, spawnId: "stale" }, due)).spawned, 0);
+    active = []; assert.equal((await population.refresh(request, due)).spawned, 0, "Inactive maps cannot respawn");
+    active = [before.regionId];
+    await ref.set({ resetGeneration: "stale" }, { merge: true });
+    assert.equal((await population.refresh(request, due)).spawned, 0, "A foreign realm identity cannot respawn");
+    await ref.set({ resetGeneration: world.resetGeneration }, { merge: true });
+    roadsAvailable = false;
+    assert.equal((await population.refresh(request, due)).blocked, 1);
+    assert.equal((await population.refresh(request, due + 1)).blocked, 0, "Concurrent viewers do not repeatedly search blocked roads");
+    assert.equal((await publicRef.get()).data().status, "defeated", "Keep the remains until replacement is committed");
+    assert.equal((await publicRef.get()).data().spawnId, before.spawnId);
+    roadsAvailable = true;
+    const results = await Promise.all([population.refresh(request, due + 60000), population.refresh(request, due + 60000), population.maintain(due + 60000)]);
+    assert.equal(results.reduce((sum, result) => sum + result.spawned, 0), 1, "Viewers and scheduler create exactly one replacement");
+    const after = (await publicRef.get()).data();
+    assert.equal(after.status, "active"); assert.equal(after.respawnAtMs, 0);
+    assert.notEqual(after.spawnId, before.spawnId);
+    assert(Math.hypot(after.x - before.x, after.y - before.y) >= 128);
+    assert.equal(after.spawnId, (await ref.get()).data().spawnId, "Public corpse removal and private replacement are atomic");
+    assert(!Object.hasOwn(after, "troops") && !Object.hasOwn(after, "respawnRetryAtMs"));
+    assert.equal((await population.refresh(request, due + 60001)).spawned, 0, "Replayed request cannot replace the new target");
+    await ref.set({ status: "retired" }, { merge: true });
+    assert.equal((await population.refresh({ ...request, spawnId: after.spawnId }, due + 60001)).spawned, 0);
+  }
+  assert.equal((await population.refresh({ regionId: "missing", id: "../escape", spawnId: "x" }, now)).spawned, 0);
   assert.equal(isClear({ x: 50, y: 50 }, area), false);
   assert.equal(isClear({ x: 1100, y: 300 }, area), false);
   assert.equal(isClear({ x: 2500, y: 2500 }, area), false);

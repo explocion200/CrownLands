@@ -3665,6 +3665,7 @@
     prepareRewardedAd,
     claimRewardedAd,
     ...cosmeticsApi,
+    refreshMarauderRespawn: data => callServerFunction("refreshMarauderRespawn", data),
     getCityUpgradeXpPreview,
     upgradeCity,
     spendSkillPoint,

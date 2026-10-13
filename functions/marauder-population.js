@@ -52,13 +52,23 @@ function roadPlacementPoints(geometry) {
 function createMarauderPopulation({ db, runTransaction, context, activeRegions, descriptor, layout, islandId }) {
   const rolloutRef = () => db.doc(`marauderPopulation/${context().storageId}`);
   const mapRef = regionId => rolloutRef().collection("maps").doc(regionId);
-  async function populate(regionId, now) {
+  async function populate(regionId, now, expected = null) {
     const spec = descriptor(regionId), slots = M.slots(spec);
     if (!slots.length) return { spawned: 0, blocked: 0, retired: 0 };
     const world = context(), island = db.doc(`islands/${islandId(regionId)}`);
     const geometry = layout(regionId);
     const roadPoints = roadPlacementPoints(geometry);
     return runTransaction(async transaction => {
+      // A viewer may wake one due identity, never create vacancies or choose a spawn.
+      if (expected) {
+        const row = (await transaction.get(island.collection("marauderCombat").doc(expected.id))).data();
+        if (!row || row.spawnId !== expected.spawnId || row.status !== "defeated"
+          || row.worldId !== world.worldId || row.resetGeneration !== world.resetGeneration
+          || row.realmShardId !== world.realmShardId || row.regionId !== regionId
+          || !Number.isFinite(row.respawnAtMs) || row.respawnAtMs > now || row.respawnRetryAtMs > now) {
+          return { spawned: 0, blocked: 0, retired: 0 };
+        }
+      }
       const [rollout, rows, cities, islandSnap] = await Promise.all([
         transaction.get(rolloutRef()), transaction.get(island.collection("marauderCombat")),
         transaction.get(island.collection("cities")), transaction.get(island),
@@ -71,6 +81,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
       // Retired identities invalidate old marches, which settle through the
       // existing no-loss return/stamina/consumable-refund path at arrival.
       for (const [id, row] of [...existing].sort(([a], [b]) => a.localeCompare(b))) {
+        if (expected) { if (row.status === "active") enemies.push(row); continue; }
         const slot = allowed.get(id);
         const invalidActive = row.status === "active" && (!slot || row.slot !== slot.slot
           || row.classification !== slot.classification || row.level < slot.min || row.level > slot.max
@@ -82,10 +93,12 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           existing.set(id, { ...row, ...patch }); retired++;
         } else if (row.status === "active") enemies.push(row);
       }
-      const structures = [...geometry.structures, ...cities.docs.map(doc => ({ ...doc.data(), clearance: 132 }))];
+      const structures = [...geometry.structures, ...cities.docs.map(doc => ({ ...doc.data(), clearance: 132 })),
+        ...[...existing.values()].filter(row => row.status === "defeated")];
       let spawned = 0, blocked = 0;
       for (const slot of slots) {
         const id = slotId(regionId, slot.slot), previous = existing.get(id);
+        if (expected && id !== expected.id) continue;
         if (previous?.status === "active" || previous?.respawnAtMs > now) continue;
         if (enemies.length >= slots.length) { blocked++; continue; }
         // Crowded Core interiors need more chances; keep each slot's search bounded.
@@ -97,7 +110,12 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           if (!geometry.accessible(candidate)) continue;
           point = candidate; break;
         }
-        if (!point) { blocked++; continue; }
+        if (!point) {
+          blocked++;
+          if (previous?.status === "defeated") transaction.set(island.collection("marauderCombat").doc(id),
+            { respawnRetryAtMs: now + 60000 }, { merge: true });
+          continue;
+        }
         const range = spawnLevelRange(slot, previous, crypto.randomInt(2) === 1);
         const level = crypto.randomInt(range.min, range.max + 1), balance = M.balance(level);
         const row = { id, ...point, slot: slot.slot, spawnId: crypto.randomUUID(), level,
@@ -109,10 +127,17 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
         transaction.set(island.collection("marauderCombat").doc(id), { ...row, troops: balance.defenders });
         enemies.push(row); spawned++;
       }
-      transaction.set(mapRef(regionId), { regionId, placementVersion: PLACEMENT_VERSION, initialized: blocked === 0,
+      if (!expected) transaction.set(mapRef(regionId), { regionId, placementVersion: PLACEMENT_VERSION, initialized: blocked === 0,
         retryAtMs: blocked ? now + 60000 : 0, updatedAtMs: now });
       return { spawned, blocked, retired };
     }, "populateMarauders");
+  }
+  async function refresh({ regionId, id, spawnId } = {}, now = Date.now()) {
+    const empty = { spawned: 0, blocked: 0, retired: 0 };
+    if (typeof regionId !== "string" || regionId.length > 160 || typeof spawnId !== "string"
+      || !spawnId || spawnId.length > 128 || !M.slots(descriptor(regionId)).some(slot => slotId(regionId, slot.slot) === id)) return empty;
+    if (!new Set(await activeRegions()).has(regionId)) return empty;
+    return populate(regionId, now, { id, spawnId });
   }
   async function maintain(now = Date.now()) {
     const rollout = await rolloutRef().get();
@@ -137,6 +162,6 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
     await rolloutRef().set({ cursor: (start + candidates.length) % Math.max(1, regions.length) }, { merge: true });
     return { enabled: true, spawned, blocked, retired, checkedMaps: selected.length, dueSlots: due.size };
   }
-  return { rolloutRef, populate, maintain };
+  return { rolloutRef, populate, refresh, maintain };
 }
 module.exports = { MAP_EDGE_INSET, minimumEnemySeparation, spawnLevelRange, placementBounds, roadPlacementPoints, isClear, createMarauderPopulation };

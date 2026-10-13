@@ -11,5 +11,7 @@
 // the previous cap). Bound this feature at one 24 KiB step; NPC art stays lazy.
 // Reusing city target controls adds scout-state and spawn-selection wiring.
 // Bound the offline-shell refinement at 4 KiB; no new assets or requests.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4) * 1024;
+// Defeated markers, server-clock countdowns and the bounded deadline wake-up
+// add at most 4 KiB. The two defeated sprites remain outside installation cache.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4) * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };
