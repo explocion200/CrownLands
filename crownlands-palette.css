@@ -1070,30 +1070,8 @@ input[type="range"] {
   }
 }
 
-/* Skills: final state and readability contract ------------------------- */
-.profile-screen .skill-preset-tabs button:not(.active):not(.selected):not([aria-selected="true"]):not(.locked) {
-  color: var(--cl-text) !important; border-color: var(--cl-border-faded) !important; background: var(--cl-card-bg) !important; text-shadow: none !important;
-}
-.profile-screen .skill-preset-tabs button.active:not(.locked) {
-  color: var(--cl-text-light) !important; border-color: var(--cl-burgundy-dark) !important; background: var(--cl-header-bg) !important;
-  box-shadow: inset 0 -2px 0 var(--cl-burgundy-dark) !important; text-shadow: 0 1px 1px rgba(47, 15, 18, .72) !important;
-}
-.profile-screen .skill-preset-tabs button.selected:not(.active):not(.locked),
-.profile-screen .skill-preset-tabs button[aria-selected="true"]:not(.active):not(.locked) {
-  color: var(--cl-text) !important; border-color: var(--cl-brass) !important; background: linear-gradient(180deg, #dbbd70, var(--cl-gold)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .55), inset 0 -2px 0 #8d6729 !important;
-  text-shadow: none !important;
-}
-.profile-screen .skill-preset-tabs button.active.selected:not(.locked),
-.profile-screen .skill-preset-tabs button.active[aria-selected="true"]:not(.locked) {
-  color: var(--cl-text-light) !important; border-color: #d7ad53 !important; background: var(--cl-header-bg) !important;
-  box-shadow: inset 0 -2px 0 var(--cl-burgundy-dark), 0 0 0 2px #d7ad53 !important;
-}
-.profile-screen .skill-preset-tabs button.locked,
-.profile-screen .skill-preset-tabs button.locked.selected,
-.profile-screen .skill-preset-tabs button.locked[aria-selected="true"] {
-  color: #ede1c9 !important; border-color: #756b5c !important; background: linear-gradient(180deg, #68645c, #46433e) !important; opacity: .82;
-}
+/* Skills: state cues; shared tab paint belongs to crownlands-theme. */
+.profile-screen .skill-preset-tabs button.locked { opacity: .82; }
 .profile-screen .skill-preset-tabs button :is(strong, small) { color: inherit !important; opacity: 1; }
 .profile-screen .profile-skill-group {
   color: var(--cl-text) !important; border-color: var(--cl-brass) !important; background: var(--cl-panel-inset) !important;
@@ -1230,7 +1208,8 @@ input[type="range"] {
   :is(.profile-tabs, .profile-subtabs, .skill-preset-tabs, .battle-report-filters,
     .leaderboard-tabs-header, .daily-reward-tabs, .camp-info-tabs, .citadel-info-tabs,
     .clan-section-nav, .clan-browser-nav, .active-operations-tabs, .cd-tabs,
-    .chat-tabs, .section-nav, .tabs-bar, .clan-building-tabs, .filters,
+    .chat-tabs, .section-nav, .tabs-bar, .clan-building-tabs, .filters, .ib-categories,
+    .player-flag-editor__tabs, .clan-shield-editor-tabs,
     #royalShopSections, .guild-window > nav) {
     color: var(--cl-text) !important;
     background: var(--cl-panel-secondary) !important;
@@ -1242,6 +1221,8 @@ input[type="range"] {
       border-color: transparent !important;
       box-shadow: none !important;
       text-shadow: none !important;
+      outline: 1px solid var(--cl-border-faded) !important;
+      outline-offset: -5px !important;
       & :is(span, small, strong, b) { color: inherit !important; }
       &:hover:not(:disabled):not(.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
         color: var(--cl-text) !important;
@@ -1251,6 +1232,10 @@ input[type="range"] {
         color: var(--cl-burgundy) !important;
         background: var(--cl-tab-selected) !important;
         box-shadow: inset 0 -3px var(--cl-burgundy) !important;
+      }
+      &:focus-visible {
+        outline: 2px solid var(--cl-burgundy) !important;
+        outline-offset: -4px !important;
       }
     }
   }
