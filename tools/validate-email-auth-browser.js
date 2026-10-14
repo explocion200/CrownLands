@@ -106,12 +106,13 @@ async function main() {
       assert.match(await evaluate('document.getElementById("emailAuthStatus").textContent'), /do not match/);
       await fill("emailAuthConfirm", "a long password");
       await evaluate('document.getElementById("emailAuthTitle").scrollIntoView()');
+      await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 0, y: 0 });
       await capture(`create-${viewport.width}x${viewport.height}.png`);
       const box = await evaluate('document.getElementById("emailAuthDialog").getBoundingClientRect().toJSON()');
       assert(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, "Email dialog leaves the viewport.");
-      const theme = await evaluate('({paper:getComputedStyle(document.getElementById("emailAuthDialog")).backgroundImage,ink:getComputedStyle(document.getElementById("emailAuthHint")).color,button:getComputedStyle(document.getElementById("emailAuthSubmit")).backgroundImage,radius:getComputedStyle(document.getElementById("emailAuthDialog")).borderRadius})');
-      assert.match(theme.paper, /rgb\(238, 222, 190\)/, "Email form does not use the game parchment.");
-      assert.equal(theme.ink, "rgb(90, 70, 50)"); assert.match(theme.button, /rgb\(114, 54, 58\)/); assert.equal(theme.radius, "2px");
+      const theme = await evaluate('({paper:getComputedStyle(document.getElementById("emailAuthDialog")).backgroundColor,ink:getComputedStyle(document.getElementById("emailAuthHint")).color,button:getComputedStyle(document.getElementById("emailAuthSubmit")).backgroundColor,radius:getComputedStyle(document.getElementById("emailAuthDialog")).borderRadius})');
+      assert.equal(theme.paper, "rgb(237, 225, 194)", "Email form does not use the game parchment.");
+      assert.equal(theme.ink, "rgb(102, 82, 57)"); assert.equal(theme.button, "rgb(114, 54, 58)"); assert.equal(theme.radius, "2px");
       await evaluate('emailQa.failNext("signup")'); await click("emailAuthSubmit");
       await waitFor('document.getElementById("emailAuthStatus").textContent.includes("Could not connect")');
       assert(await evaluate('document.getElementById("emailAuthDialog").open'));

@@ -1178,7 +1178,7 @@ input[type="range"] {
 
   :is(.primary-btn, .profile-primary-btn, .shop-buy-btn, .rs-buy-button, .inventory-use-btn,
     .troop-slider-confirm, .offline-collect-btn, .level-up-collect-btn,
-    .guild-primary, [data-refill-buy], [data-shield-continue],
+    .guild-primary, [data-refill-buy], [data-shield-continue], [data-crown-checkout], [data-crown-pay],
     .estate-order-footer button:not([data-economy-action="close"])) {
     color: var(--cl-text-light) !important;
     background: var(--cl-burgundy) !important;
@@ -1283,8 +1283,8 @@ input[type="range"] {
     & :is(span, small, strong, b, .cl-icon) { color: inherit !important; text-shadow: none !important; }
     &:hover { background: var(--cl-oak-hover) !important; }
   }
-  :is(button, input, select, textarea):disabled,
-  :is(button, input, select, textarea)[aria-disabled="true"] {
+  :where(dialog, .profile-screen, .setup-card, .commander-panel)
+    :is(button, input, select, textarea):is(:disabled, [aria-disabled="true"]) {
     color: var(--cl-disabled-text) !important;
     background: var(--cl-disabled-bg) !important;
     border-color: var(--cl-disabled-border) !important;

@@ -50,8 +50,10 @@
         "tools/asset-performance-budgets.js",
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-crown-payments-browser.js",
         "tools/validate-crownlands-palette.js",
         "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-marauders-browser.js",
         "tools/validate-window-close-browser.js",
         "training-grounds-ui.css",
         "treasury-gear-ui.css",
@@ -89,7 +91,7 @@
       "tests": [
         "tools/validate-email-auth-browser.js"
       ],
-      "reason": "Retain the current cosmetics adapter in the isolated auth fixture so Firebase initialization and the moved email header close control are tested with external APIs blocked."
+      "reason": "Retain the current cosmetics adapter in the isolated auth fixture so Firebase initialization and the moved email header close control are tested with external APIs blocked. Verify the approved flat parchment, secondary text and primary-action colors without a leftover pointer hover."
     }
   ]
 }
