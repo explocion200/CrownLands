@@ -22,7 +22,7 @@
   background:#e9dcb483!important; border-bottom:1px solid var(--ledger-line);
   color:var(--ledger-ink)!important; font:30px Georgia,serif!important; text-shadow:none!important;
 }
-#modal.island-switcher-modal #modalTitle { gap:12px; }
+.atlas-title-art { margin-right:12px; }
 #modal:is(.leaderboard-modal,.island-switcher-modal) #closeModalBtn {
   position:absolute; top:14px; right:14px; width:44px; height:44px; padding:0;
   background:transparent!important; color:var(--ledger-ink)!important; border:0!important; box-shadow:none!important;
