@@ -1,13 +1,12 @@
 /* Approved Scout Reports presentation. Existing game helpers own snapshots, availability and timers. */
 (function (root) {
   "use strict";
-  const sprite = "assets/icons/battle-reports-ledger-r1.svg";
   const defenseSkills = ["shieldwallDiscipline", "stoneworks", "fieldMedics", "guildCharters"];
   const attackSkills = ["swordmastery", "marchOrders", "taxStewardship", "royalGranaries"];
   const esc = value => escapeHtml(String(value ?? ""));
   const number = value => value == null || !Number.isFinite(Number(value)) ? "Not recorded" : esc(Number(value).toLocaleString("en-US"));
   const percent = value => Math.max(0, Number(value) || 0).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
-  const icon = (name, cls = "") => `<svg class="${cls}" aria-hidden="true"><use href="${sprite}#${name}"></use></svg>`;
+  const icon = (name, cls = "") => renderBattleReportLedgerIcon(name, cls);
   const art = (name, cls = "") => `<img class="${cls}" src="${name === "troops" ? "assets/optimized/troops-helmet-192x192-8c144647d31b.webp" : `assets/icons/skills/atlas-v1/${name}.webp`}" alt="" decoding="async">`;
   const flag = id => `<span id="${id}" class="kingdom-flag flag" aria-hidden="true"><span class="flag-symbol"></span></span>`;
   const player = (uid, name) => renderPlayerNameLink(uid, name || "Unknown ruler", "ruler-link");

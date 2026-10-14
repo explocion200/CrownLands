@@ -1,7 +1,6 @@
 /* Approved full-report presentation. Game helpers own snapshots, rewards, identities, and navigation. */
 (function (root) {
   "use strict";
-  const sprite = "assets/icons/battle-reports-ledger-r1.svg";
   const assets = {
     troops:"assets/optimized/troops-helmet-192x192-8c144647d31b.webp", gold:"assets/optimized/gold-coin-192x192-f2620b39eb0d.webp", xp:"assets/icons/reward-achievements-r1.svg",
     sword:"assets/icons/skills/atlas-v1/swordmastery.webp", shield:"assets/icons/skills/atlas-v1/shieldwallDiscipline.webp", wall:"assets/icons/skills/atlas-v1/stoneworks.webp",
@@ -10,7 +9,7 @@
   };
   const esc = value => escapeHtml(String(value ?? ""));
   const value = input => esc(formatBattleReportValue(input));
-  const emblem = (name, cls = "") => `<svg class="${cls}" aria-hidden="true"><use href="${sprite}#${name}"></use></svg>`;
+  const emblem = (name, cls = "") => renderBattleReportLedgerIcon(name, cls);
   const art = (name, cls = "section-art") => assets[name] ? `<img class="${cls}" src="${assets[name]}" alt="" decoding="async">` : emblem(name, cls);
   const metric = (icon,label,amount,help="",wide=false) => ({icon,label,amount,help,wide});
 

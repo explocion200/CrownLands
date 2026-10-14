@@ -1,0 +1,62 @@
+[
+  {
+    "name": "reports",
+    "path": "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
+    "width": 384,
+    "height": 384,
+    "bytes": 35976,
+    "sha256": "05cfed23ee0edb049956ee3a74d0ddd60780a788459b0b72a934f72581d34172",
+    "hasAlpha": true,
+    "transparentPixels": 80800,
+    "sourceFile": "exec-e005630f-4d30-4ea7-a671-f28ac0077183.png",
+    "sourceSha256": "1ee1475c1bf1c5daed16d8e7c8d8711d0ce5d4ee4b9c5c36af13e6956e8cb16a"
+  },
+  {
+    "name": "attack",
+    "path": "assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp",
+    "width": 384,
+    "height": 384,
+    "bytes": 26618,
+    "sha256": "1e1a12b255a7bc4eea0537023d2723ad43d5249db1940762d52161fe7619cd18",
+    "hasAlpha": true,
+    "transparentPixels": 117081,
+    "sourceFile": "exec-09275f23-bc66-4a65-ba7f-d07214360b47.png",
+    "sourceSha256": "9790101d9960b6345ee8ec9833cb6be9c1d6660d856ff05d47c938584303cd11"
+  },
+  {
+    "name": "defense",
+    "path": "assets/optimized/report-defense-ink-384x384-08a43d2877bf.webp",
+    "width": 384,
+    "height": 384,
+    "bytes": 34324,
+    "sha256": "08a43d2877bfbc0459501a26b3de99b6b6f7a18eaf0628e3f519c4e7072ddcbe",
+    "hasAlpha": true,
+    "transparentPixels": 76913,
+    "sourceFile": "exec-432e5e47-1d29-4330-afde-687f119e9911.png",
+    "sourceSha256": "cda42fe303a6351ec42c4d93e5dcdbc432429463e5de1774cca6c7038460c3fb"
+  },
+  {
+    "name": "scout",
+    "path": "assets/optimized/report-scout-ink-384x384-449c386d3b06.webp",
+    "width": 384,
+    "height": 384,
+    "bytes": 41086,
+    "sha256": "449c386d3b0624b778f4c86f4cff2d1b10c5f0839ac53755a575f64a7afd15cd",
+    "hasAlpha": true,
+    "transparentPixels": 75651,
+    "sourceFile": "exec-e3654f30-e1e7-4d32-b824-ae9d14210bb1.png",
+    "sourceSha256": "a56bc2cd5aa67406a72cfc4819f8d7f440c160c612e2c866dc1fcf124e67383f"
+  },
+  {
+    "name": "realm",
+    "path": "assets/optimized/report-realm-ink-384x384-53b8cbd44f70.webp",
+    "width": 384,
+    "height": 384,
+    "bytes": 39966,
+    "sha256": "53b8cbd44f70b8d4f5ab0c3808b0113c7c9dd6b65f493ef434d2a1d1e4c0c8a6",
+    "hasAlpha": true,
+    "transparentPixels": 83292,
+    "sourceFile": "exec-f0787817-48aa-479c-b478-3f71e6875ee0.png",
+    "sourceSha256": "aff403fce5c8bebd62841591ec023c7f9bbb11facfca8f3932934d476ba581c3"
+  }
+]

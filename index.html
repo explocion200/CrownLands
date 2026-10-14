@@ -98,13 +98,10 @@
 </head>
 <body class="hud-illustrated">
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-    <symbol id="cl-icon-attack" viewBox="0 0 32 32"><path d="M8 5l5 2 12 15-3 3L7 10zm16 0l-5 2L7 22l3 3 15-15z"/><path d="M5 23l4 4 3-3-4-4zm22 0l-4 4-3-3 4-4z"/></symbol>
     <symbol id="cl-icon-transfer" viewBox="0 0 32 32"><path d="M6 29h21v-4h-3c0-4-1-7-4-9l6-2 4-6-4-5-5 4-2-8-5 7-7-3 2 8c-4 3-6 8-6 14z"/><path d="M15 11l-8 3 4 3-5 3 4 3-3 4h7c0-5 1-9 4-12z"/></symbol>
-    <symbol id="cl-icon-scout" viewBox="0 0 32 32"><path d="M16 7c6 0 10 5 12 9-2 4-6 9-12 9S6 20 4 16c2-4 6-9 12-9zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M16 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></symbol>
     <symbol id="cl-icon-crown" viewBox="0 0 32 32"><path d="M4 24L5 11l5 6 3-10 3 8 3-8 3 10 5-6 1 13z"/><path d="M5 25h22v3H5z"/></symbol>
-    <symbol id="cl-icon-shield" viewBox="0 0 32 32"><path d="M16 3l10 4v8c0 7-4 12-10 15C10 27 6 22 6 15V7z"/><path d="M16 7v17" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
     <symbol id="cl-icon-city" viewBox="0 0 32 32"><path d="M5 26h22v3H5zM7 13h5v13H7zm7-7h4v20h-4zm6 9h5v11h-5z"/><path d="M7 10l3-4 2 4zm7-4l2-4 2 4zm6 6l3-4 2 4z"/></symbol>
-    <symbol id="cl-icon-reports" viewBox="0 0 32 32"><path d="M8 4h14l4 4v20H8z"/><path d="M22 4v6h5M11 14h12M11 18h12M11 22h8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-reports" viewBox="0 0 32 32"><image href="assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp" width="32" height="32"/></symbol>
     <symbol id="cl-icon-gold" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 19l1-7 3 3 2-5 2 5 3-3 1 7z" fill="currentColor"/></symbol>
     <symbol id="cl-icon-troops" viewBox="0 0 32 32"><image href="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" width="32" height="32"/></symbol>
     <symbol id="cl-icon-map" viewBox="0 0 32 32"><path d="M4 7l7-3 10 4 7-3v20l-7 3-10-4-7 3z"/><path d="M11 4v20M21 8v20" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
@@ -336,7 +333,7 @@
 
       <aside id="realmAnnouncement" class="realm-announcement" role="status" aria-live="assertive" aria-atomic="true" hidden>
         <div class="realm-announcement-banner">
-          <img id="realmAnnouncementIcon" class="realm-announcement-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+          <img id="realmAnnouncementIcon" class="realm-announcement-icon" src="assets/optimized/report-realm-ink-384x384-53b8cbd44f70.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
           <div class="realm-announcement-copy">
             <strong id="realmAnnouncementTitle"></strong>
             <span id="realmAnnouncementMessage"></span>
@@ -369,7 +366,7 @@
           <strong class="nav-btn-heading"><span id="outgoingAttackCount" class="nav-btn-count">0</span> Outgoing</strong>
           <small id="outgoingAttackTime" class="nav-btn-label">Marches</small>
         </button>
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><svg class="nav-icon report-icon" width="192" height="192" viewBox="0 0 64 64" aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#dispatch"></use></svg><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span><strong class="nav-btn-heading">Reports</strong><small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small></button>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><svg class="nav-icon report-icon" width="192" height="192" viewBox="0 0 64 64" aria-hidden="true"><use href="#cl-icon-reports"></use></svg><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span><strong class="nav-btn-heading">Reports</strong><small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small></button>
       </nav>
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">

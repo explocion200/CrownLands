@@ -217,7 +217,8 @@ const entrypointBudgets = {
   // The NPC countdown reuses the combat tick; its call exceeds remaining source headroom by 27 bytes.
   // City List/Map header images add 391 normalized markup bytes, reusing cached HUD art.
   // Allow a bounded 0.5 KiB source step; aggregate shell/image/request limits stay fixed.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5) * 1024,
+  // Shared report/action artwork routing adds under 1 KiB; aggregate shell cap is unchanged.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -489,10 +490,25 @@ assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The opti
 const appReferenceSource = [read("home.html"), read("guides.html"), read("world.html"), indexSource, gameSource, commonGearUiScriptSource, read("inner-city-estate.js"), read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), read("royal-stables-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
 // These retained comparison masters were superseded by the already-shipped HUD art.
 const replacedHudArt = {
+  "hud-report": "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
   "hud-leaderboard": "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
   "hud-shop": "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
   "hud-bag": "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
 };
+const reportArt = JSON.parse(read("docs/art-sources/report-actions/assets.json"));
+const reportPrompts = JSON.parse(read("docs/art-sources/report-actions/prompts.json")).prompts;
+assert.deepEqual(reportArt.map(asset => asset.name).sort(), ["attack", "defense", "realm", "reports", "scout"]);
+for (const asset of reportArt) {
+  const bytes = fs.readFileSync(path.join(root, asset.path)), metadata = getWebpMetadata(bytes);
+  const hash = crypto.createHash("sha256").update(bytes).digest("hex");
+  assert.equal(hash, asset.sha256);
+  assert.equal(bytes.length, asset.bytes);
+  assert(asset.path.includes(hash.slice(0, 12)) && bytes.length <= 44 * 1024);
+  assert(metadata.width === 384 && metadata.height === 384 && metadata.hasAlpha);
+  assert(gameSource.includes(asset.path) && reportPrompts[asset.name]?.length > 100);
+  assert(!staticCacheUrls.some(url => url.includes(asset.path)), "Report artwork must remain outside installation precache.");
+}
+assert(reportArt.reduce((sum, asset) => sum + asset.bytes, 0) <= 180 * 1024);
 let optimizedBytes = 0;
 let sourceBytes = 0;
 const countedSourceMasters = new Set();
