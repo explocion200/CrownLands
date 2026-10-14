@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Shared Guild Master theme and framed tabs
+### Current verified web release — Restored burgundy UI colors
+
+The authorized merge and web deployment of [PR #562](https://github.com/explocion200/CrownLands/pull/562), from `codex/restore-burgundy-ui-colors`, is **LIVE — WEB** at build `7ff2ab69a2bee3c00b7d2a4febcad38b5e49df3f`. Headers, HUD controls and boxed X buttons again use the previous burgundy (`#72363a`, with `#542728` hover). Parchment surfaces, gold borders, inset tab frames, alignment, artwork and interactions retain the preceding release's design.
+
+- Netlify deploy `6acfe006a891a1c7f1dd9534` published October 14 at 4:05 p.m. Eastern (`2026-10-14T20:05:24.478Z`); the manual publication hold remains enabled. All three required GitHub checks passed. Local preparation passed seven selected validators, including 189 window/viewport combinations.
+- The merged artifact and asset budgets passed. The complete 1,161-entry staged inventory and nine staged files matched; 42 staged and 18 public window checks passed at 1440×900, 844×390 and 568×320. All 27 public file comparisons and six anonymous public startup/reload cases passed.
+- Release ID, API contract and server source fingerprint match the preceding publication. No backend or player data was deployed or changed. itch.io was not republished; authenticated gameplay, installed-app cache recovery and physical-device review remain manual limits.
+
+See [the burgundy color release record](BURGUNDY_UI_RELEASE_2026-10-14.md) for exact identity and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Shared Guild Master theme and framed tabs
 
 The authorized merge and web deployment of [PR #560](https://github.com/explocion200/CrownLands/pull/560), from `codex/consistent-window-close-controls`, is **LIVE — WEB** at build `16d282a35c9764e6cc7ca11b6d28b3ffa5021252`. Game windows and HUD use the approved dark-oak, parchment and muted-gold palette. Window headers share a centered cream X in a thin square frame; adjacent tabs have inset gold frames, a burgundy selection underline and stronger keyboard focus. Superseded close and tab paint is removed while layout, artwork, saved heraldry and guarded dismissal are preserved.
 
@@ -730,10 +740,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `16d282a...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `7ff2ab6...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Restored burgundy headers, HUD and boxed X buttons; existing parchment, frames and alignment retained | PR #562 build `7ff2ab6...`; exact staged/public assets, desktop/landscape windows and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
 | Shared Guild Master colors, aligned framed X controls and inset tab frames | PR #560 build `16d282a...`; exact staged/public assets, desktop/landscape windows and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
 | Map Atlas counts clear lost cities and confirmed empty holdings while retaining unloaded Core city identity | PR #558 build `ed933ca...`; exact assets, staged/public desktop/mobile Atlas fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated ownership changes, installed-app and physical-device review remain manual |
 | Three shared sword clashes for every confirmed attack; saved-flag drape only for eligible captures | PR #556 build `ec42a35...`; exact staged/public assets, desktop/landscape combat fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated combat, installed-app and physical-device review remain manual |
@@ -2840,6 +2851,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 14, 2026 — Burgundy UI color release verification
+
+- Recorded the authorized PR #562 merge and verified web publication at `7ff2ab6...`, Netlify deploy `6acfe006a891a1c7f1dd9534`, published `2026-10-14T20:05:24.478Z` (4:05 p.m. Eastern).
+- Marked the restored burgundy colors `LIVE — WEB`, with required CI, seven local validators, 189 local/42 staged/18 public window cases, exact artifact comparisons and six public startup/reload checks. Preserved the existing framing/layout, publication hold, backend, itch.io distinction and authenticated/device verification limits.
 
 ## October 14, 2026 — Shared UI theme release verification
 

@@ -1,35 +1,14 @@
 {
-  "schemaVersion": 1,
-  "baseCommit": "296607c082e9850acfbd34808ddec3e304e4a0dd",
   "coverage": [
     {
       "paths": [
-        "crownlands-palette.css",
-        "interface-theme.css",
-        "guild-ui.css",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-window-close-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js"
-      ],
-      "tests": [
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-window-close-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-guild-responsive-layout.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Restore the previous burgundy color for shared headers, HUD and framed close controls, including Guild fallback paint. Preserve parchment, tab frames, geometry, artwork and interactions. Update existing exact color assertions and retain header contrast, 189 desktop/landscape window cases, HUD native input/zoom checks, affected chat/reward and kingdom suites, source/built Guild responsive coverage and delivery budgets. Color-only client changes do not require emulator suites."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/BURGUNDY_UI_RELEASE_2026-10-14.md"
       ],
       "tests": [],
-      "reason": "Record the explicit color preference superseding dark oak. Preserve historical published-release evidence; this decision does not assert a new deployment."
+      "reason": "Documentation-only record of the authorized PR 562 merge and verified burgundy web publication. Check build/deploy identities and validation counts against sanitized receipts; preserve prior release history, publication hold, backend and channel/manual limits. No runtime changes or additional game suites apply."
     }
-  ]
+  ],
+  "baseCommit": "7ff2ab69a2bee3c00b7d2a4febcad38b5e49df3f",
+  "schemaVersion": 1
 }
