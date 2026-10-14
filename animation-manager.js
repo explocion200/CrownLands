@@ -1674,3 +1674,30 @@
   window.CrownlandsAnimations = manager;
   manager.init();
 })();
+
+/* exported getCombatReportAnimationId, playCityAttackAnimation */
+// Game integration is invoked only after the shared game target registries initialize.
+function getCombatReportAnimationId(report) {
+  if (!report || !["attack", "defense"].includes(report.type)) return "";
+  if (["returned", "target_unavailable", "cancelled", "blocked"].includes(report.outcome)) return "";
+  if (report.battleId) return report.battleId;
+  // Legion assaults have authoritative defense reports but no battle snapshot.
+  return report.eventKind === CITADEL_ASSAULT_EVENT_KIND && ["held", "damaged", "lost"].includes(report.outcome)
+    ? report.id : "";
+}
+
+function getCombatAnimationTarget(id, targetSpawnId = "") {
+  // A defeated NPC remains drawn during respawn but is no longer an army target.
+  const target = getArmyTargetById(id) || visibleMarauders().find(row => row.id === id);
+  if (target?.targetType === "marauder" && targetSpawnId && target.spawnId !== targetSpawnId) return null;
+  return target;
+}
+
+function playCityAttackAnimation(cityOrId, { eventId = "", intensity = "standard", combatAtMs = 0, targetSpawnId = "" } = {}) {
+  const target = typeof cityOrId === "string" ? getCombatAnimationTarget(cityOrId, targetSpawnId) : cityOrId;
+  if (!target?.id) return null;
+  return scheduleCityWorldAnimation("city-attack", { id: target.id, regionId: getCityRegionId(target) }, {
+    id: eventId, intensity,
+    payload: { targetId: target.id, combatAtMs, targetSpawnId },
+  });
+}

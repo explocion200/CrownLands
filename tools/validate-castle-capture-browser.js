@@ -104,6 +104,9 @@ async function validateAttacks(evaluate, client, width, height, output) {
   await evaluate(`(() => {
     CrownlandsAnimations.clearAll();
     mergeServerReports([{id:'blocked-order',type:'attack',outcome:'defeat',cityId:captureFixture.id,occurredAtMs:Date.now()}]);
+    const friendly={id:'friendly-tower',battleId:'friendly-tower-battle',type:'attack',outcome:'returned',targetType:'tower',cityId:attackFixtures[2].id,occurredAtMs:Date.now()};
+    mergeServerReports([friendly]);
+    applyServerArmyResult({kind:'attack',targetType:'tower',friendlyAtResolution:true,targetId:friendly.cityId,reports:[friendly]});
     mergeServerReports([{id:'scout-order',type:'scout',battleId:'not-combat',outcome:'scout',cityId:captureFixture.id,occurredAtMs:Date.now()}]);
     deedRewardReportsVfxHydrated=false;
     mergeServerReports([{id:'historical-combat',battleId:'historical-combat',type:'attack',outcome:'victory',cityId:captureFixture.id,occurredAtMs:Date.now()-60000}],{authoritative:true});
