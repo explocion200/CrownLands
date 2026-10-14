@@ -3485,6 +3485,11 @@ input {
   50% { filter: brightness(1.22); box-shadow: 0 0 0 7px rgba(79, 177, 255, .14), 0 0 24px rgba(79, 177, 255, .42), inset 0 -5px 0 rgba(0,0,0,.2); }
 }
 
+/* Window headings reuse the matching HUD artwork without cropping or a second frame. */
+.modal .window-title-art { display:block; flex:none; width:40px; height:40px; object-fit:contain; pointer-events:none; }
+@media (max-height:600px), (max-width:1000px) {
+  .modal .window-title-art { width:36px; height:36px; }
+}
 .modal { width: min(460px, calc(100% - 1.3rem)); padding: 0; border: 0; color: var(--ink); background: transparent; }
 .modal::backdrop { background: rgba(0,0,0,.68); }
 .modal-card { position: relative; max-height: min(86vh, 720px); overflow: hidden; padding: 1rem; display: grid; grid-template-rows: auto minmax(0, 1fr); border-radius: 24px; background: linear-gradient(180deg, #312a38, #131119); border: 1px solid var(--line); box-shadow: 0 28px 70px rgba(0,0,0,.52); }

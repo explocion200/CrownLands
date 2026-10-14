@@ -26,7 +26,6 @@ let royalShopSection = "provisions";
 let royalShopRewardId = "gold";
 let royalShopBoxPending = false;
 const ROYAL_SHOP_GLYPHS = {
-  store:'<path d="M5 13h22v16H5Z M3 12l3-9h20l3 9M3 12q3 6 6 0 3 6 6 0 3 6 6 0 4 6 8 0M12 29V19h8v10M10 3l-1 9m7-9v9m6-9 1 9"/>',
   bag:'<path d="M10 3h12l-3 6H13Z M12 10c-1 5-9 9-9 15 0 7 26 7 26 0 0-6-8-10-9-15Z M11 10h11M13 16l-3 9m12-9 1 9"/>',
   buy:'<path d="M7 3h17v26H7Z M11 8h9m-9 5h9m-9 5h5m-5 6h5M5 6H3v25h18M20 22l3 3 6-8"/>',
   play:'<path d="M5 4h22v24H5Z M13 10l8 6-8 6Z M8 4v24m16-24v24"/>'
@@ -84,7 +83,7 @@ function renderRoyalShopPanel() {
   const content = royalShopSection === "skins" ? renderSkinsPanel("shop")
     : royalShopSection === "crowns" ? '<section class="crown-shop" aria-label="Crown packs"><div data-crown-payments><p role="status">Loading Crown packs…</p></div></section>'
     : `<div class="rs-shop-body"><section class="rs-shop-catalog" data-section="${royalShopSection}" aria-label="Shop catalog"><div class="rs-catalog-heading"><h2>${rewards ? "Free .5h Boosts" : "The royal stores"}</h2><span>${rewards ? "Optional advertisements" : items.length + " provisions"}</span></div><div class="rs-shop-items-panel"><div id="royalShopItemGrid" class="shop-items" role="listbox" aria-label="${rewards ? "Optional rewards" : "Shop items"}">${items.map(item => renderRoyalShopCard(item, rewards)).join("")}${rewards ? "" : `<div class="rs-tile-empty" aria-hidden="true">${royalShopIcon("bag")}<span>For your realm</span></div>`}</div></div><footer class="rs-catalog-footer"><span>${rewards ? "One shared 30-minute cooldown" : "Purchased items go to your Bag"}</span><span>${rewards ? "Daily reset · 00:00 UTC" : "One item per purchase"}</span></footer></section>${renderRoyalShopSelection()}</div>`;
-  return `<div class="rs-shop-shell"><header class="rs-shop-header"><span class="rs-shop-seal" aria-hidden="true">${royalShopIcon("store")}</span><div class="rs-shop-heading"><p>The royal market</p><h1>Shop</h1></div><div class="rs-gold-balance"><span>Gold available</span><strong><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span data-shop-balance title="${royalShopExact(getProjectedGold())} Gold">${formatNumber(getProjectedGold())}</span></strong></div><span class="rs-close-space" aria-hidden="true"></span></header>${renderRoyalShopTabs()}<div id="royalShopCatalogPanel" role="tabpanel" aria-labelledby="royalShopTab-${royalShopSection}">${content}</div></div>`;
+  return `<div class="rs-shop-shell"><header class="rs-shop-header"><img class="window-title-art rs-shop-seal" src="assets/optimized/hud-shop-ink-384x384-315e187c1111.webp" width="384" height="384" alt="" draggable="false" decoding="async"><div class="rs-shop-heading"><p>The royal market</p><h1>Shop</h1></div><div class="rs-gold-balance"><span>Gold available</span><strong><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span data-shop-balance title="${royalShopExact(getProjectedGold())} Gold">${formatNumber(getProjectedGold())}</span></strong></div><span class="rs-close-space" aria-hidden="true"></span></header>${renderRoyalShopTabs()}<div id="royalShopCatalogPanel" role="tabpanel" aria-labelledby="royalShopTab-${royalShopSection}">${content}</div></div>`;
 }
 
 function bindRoyalShopAction() {

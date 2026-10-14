@@ -15835,7 +15835,7 @@ function showIslandSwitcherModal() {
   }
   modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "scout-report-ledger", "offline-reward-modal");
   modal.classList.add("island-switcher-modal");
-  modalTitle.textContent = "Map";
+  modalTitle.innerHTML = `<img class="window-title-art atlas-title-art" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async"><span>Map</span>`;
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
   refreshIslandMapHomeRegionOnceForOpen();
@@ -33942,7 +33942,7 @@ function renderCityListModal() {
   const markup = `
     <div class="city-list-panel">
       <div class="cll-header">
-        <div aria-hidden="true"><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div>
+        <div class="cll-heading" aria-hidden="true"><img class="window-title-art cll-title-art" src="assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp" width="384" height="384" alt="" draggable="false" decoding="async"><div><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div></div>
         <div class="cll-treasury">${cityDetailsIcon("coin")}<div><span>Available Gold</span><strong data-city-list-gold>${instantEconomySyncRecovery ? "Syncing…" : cityDetailsNumber(getProjectedGold())}</strong></div></div>
         <p class="cll-summary"><strong>${rosterCountLabel}</strong> cities <i>·</i> <strong>${cityDetailsNumber(cities.length - regularCityCount)}</strong> Strongholds <i>·</i> <strong>${new Set(cities.map(getCityRegionId)).size}</strong> maps</p>
       </div>
