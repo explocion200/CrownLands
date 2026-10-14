@@ -12620,9 +12620,7 @@ function mergeServerReports(reports = [], options = {}) {
         newDeedCompletionReports.push(normalized);
       }
       if (
-        newRevision && normalized.battleId
-        && (normalized.type === "attack" || normalized.type === "defense")
-        && normalized.eventKind !== CITADEL_ASSAULT_EVENT_KIND
+        newRevision && getCombatReportAnimationId(normalized)
       ) {
         newCityCombatReports.push(normalized);
       }
@@ -12673,8 +12671,12 @@ function mergeServerReports(reports = [], options = {}) {
   }
   if (deedRewardReportsVfxHydrated) {
     newCityCombatReports.forEach(report => {
-      const target = cityById(report.cityId);
-      if (target) playCityAttackAnimation(target, { eventId: `city-attack:${report.battleId}` });
+      const target = getCombatAnimationTarget(report.cityId, report.targetSpawnId);
+      if (target) playCityAttackAnimation(target, {
+        eventId: `city-attack:${getCombatReportAnimationId(report)}`,
+        combatAtMs: report.occurredAtMs,
+        targetSpawnId: report.targetSpawnId,
+      });
     });
     newDeedCompletionReports.forEach(report => {
       const sourceCamp = getCampTargetById(report.rewardSourceId);
@@ -13087,17 +13089,22 @@ function applyServerArmyResult(result = null, options = {}) {
     || Boolean(normalizedCampUpdate)
     || isRewardCampTarget(audioTarget);
   const cityBattleId = String(preResultReport?.battleId || newestPlayerReport?.battleId || "");
-  if (result.kind === "attack" && !resultTargetIsCamp && audioTarget && cityBattleId) {
+  const combatTarget = getCombatAnimationTarget(preResultTargetId, preResultReport?.targetSpawnId || result.targetSpawnId);
+  if (result.kind === "attack" && combatTarget && cityBattleId) {
     const attackEventId = cityBattleId;
-    playCityAttackAnimation(audioTarget, { eventId: `city-attack:${attackEventId}` });
+    playCityAttackAnimation(combatTarget, {
+      eventId: `city-attack:${attackEventId}`,
+      combatAtMs: normalizeTimestampMs(preResultReport?.occurredAtMs || preResultReport?.createdAtMs),
+      targetSpawnId: preResultReport?.targetSpawnId || result.targetSpawnId,
+    });
     const afterSnapshot = getCityVfxSnapshot(cityById(preResultTargetId) || audioTarget);
     if (
-      preResultCitySnapshot
+      !resultTargetIsCamp && preResultCitySnapshot
       && afterSnapshot
       && preResultCitySnapshot.ownerUid !== afterSnapshot.ownerUid
       && afterSnapshot.ownerUid
     ) {
-      playCityCaptureAnimation(preResultCitySnapshot, afterSnapshot);
+      playCityCaptureAnimation(preResultCitySnapshot, afterSnapshot, { combatId: `city-attack:${attackEventId}` });
     }
   }
   if (
@@ -17774,17 +17781,47 @@ function scheduleCityWorldAnimation(type, snapshot, options = {}) {
   });
 }
 
-function playCityAttackAnimation(cityOrId, { eventId = "", intensity = "standard" } = {}) {
-  const city = typeof cityOrId === "string" ? cityById(cityOrId) : cityOrId;
-  const snapshot = getCityVfxSnapshot(city);
-  if (!snapshot) return null;
-  return scheduleCityWorldAnimation("city-attack", snapshot, {
-    id: eventId || `city-attack:${snapshot.regionId}:${snapshot.id}:${Date.now()}`,
-    intensity,
+function getCombatReportAnimationId(report) {
+  if (!report || !["attack", "defense"].includes(report.type)) return "";
+  if (report.battleId) return report.battleId;
+  // Legion assaults have authoritative defense reports but no battle snapshot.
+  return report.eventKind === CITADEL_ASSAULT_EVENT_KIND && ["held", "damaged", "lost"].includes(report.outcome)
+    ? report.id : "";
+}
+
+function getCombatAnimationTarget(id, targetSpawnId = "") {
+  // A defeated NPC remains drawn during respawn but is no longer an army target.
+  const target = getArmyTargetById(id) || visibleMarauders().find(row => row.id === id);
+  if (target?.targetType === "marauder" && targetSpawnId && target.spawnId !== targetSpawnId) return null;
+  return target;
+}
+
+function playCityAttackAnimation(cityOrId, { eventId = "", intensity = "standard", combatAtMs = 0, targetSpawnId = "" } = {}) {
+  const target = typeof cityOrId === "string" ? getCombatAnimationTarget(cityOrId, targetSpawnId) : cityOrId;
+  if (!target?.id || getCityRegionId(target) !== getActiveMapRegionId()) return null;
+  const regionId = getCityRegionId(target);
+  const id = eventId || `city-attack:${regionId}:${target.id}:${Date.now()}`;
+  const session = onlineSessionGeneration;
+  return requestAnimationFrame(() => {
+    if (session !== onlineSessionGeneration || regionId !== getActiveMapRegionId()) return;
+    const current = getCombatAnimationTarget(target.id, targetSpawnId);
+    if (!current) return;
+    const escapedId = CSS.escape(target.id);
+    const node = cityLayer?.querySelector(`[data-city-id="${escapedId}"], [data-render-camp-id="${escapedId}"], [data-holding-tower-id="${escapedId}"], [data-marauder-id="${escapedId}"]`);
+    if (!node?.isConnected) return;
+    const nowMs = Date.now();
+    seenWorldAnimationEventIds.forEach((expiry, key) => { if (expiry <= nowMs) seenWorldAnimationEventIds.delete(key); });
+    if (seenWorldAnimationEventIds.has(id)) return;
+    seenWorldAnimationEventIds.set(id, nowMs + 30 * 60 * 1000);
+    while (seenWorldAnimationEventIds.size > 512) seenWorldAnimationEventIds.delete(seenWorldAnimationEventIds.keys().next().value);
+    emitCrownlandsAnimation("city-attack", {
+      id, intensity, regionId, worldSpace: true, anchor: getWorldAnimationAnchor(current), target: node,
+      payload: { targetId: target.id, combatId: id, combatAtMs },
+    });
   });
 }
 
-function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
+function playCityCaptureAnimation(before, after, { eventId = "", combatId = "" } = {}) {
   if (!before || !after || after.crownCitadel) return null;
   if (after.neutralClaimSource === "deed_camp") return null;
   const oldColors = getAnimationFlagColors(before.ownerFlag, before.owner);
@@ -17795,6 +17832,9 @@ function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
       id: eventId || `city-capture:${after.regionId}:${after.id}:${after.lastCapturedAtMs}:${after.ownerUid}`,
       intensity: "major",
       payload: {
+        targetId: after.id,
+        combatId,
+        combatAtMs: after.lastCapturedAtMs,
         previousOwnerUid: before.ownerUid,
         nextOwnerUid: after.ownerUid,
         oldPrimary: oldColors.primary,
@@ -24196,9 +24236,10 @@ function resolveAttack(attack) {
   }
 
   const targetVfxBefore = getCityVfxSnapshot(target);
+  const attackAnimationId = `city-attack:${getOnlineArmyResolutionId(attack) || attack.id || `${attack.fromId}:${attack.toId}`}`;
   if (attackOnActiveMap) {
     playCityAttackAnimation(target, {
-      eventId: `city-attack:${getOnlineArmyResolutionId(attack) || attack.id || `${attack.fromId}:${attack.toId}`}`,
+      eventId: attackAnimationId,
     });
   }
 
@@ -24526,7 +24567,7 @@ function resolveAttack(attack) {
     )
     && (targetVfxAfter.ownerUid || targetVfxAfter.owner !== "neutral")
   ) {
-    playCityCaptureAnimation(targetVfxBefore, targetVfxAfter);
+    playCityCaptureAnimation(targetVfxBefore, targetVfxAfter, { combatId: attackAnimationId });
   }
 
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {

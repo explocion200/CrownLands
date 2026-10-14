@@ -35,11 +35,11 @@
     "city-attack": Object.freeze({
       scope: "world",
       intensity: "standard",
-      duration: 650,
+      duration: 2100,
       reducedDuration: 360,
-      particles: 5,
-      reducedParticles: 1,
-      maxParticles: 7,
+      particles: 8,
+      reducedParticles: 0,
+      maxParticles: 10,
       builder: "buildCityAttack",
     }),
     "city-capture": Object.freeze({
@@ -672,6 +672,30 @@
         return null;
       }
 
+      // A battle receipt and its ownership update can arrive in either order.
+      // Continue the same three strikes when that battle becomes a capture.
+      let combatElapsed = 0;
+      if (type === "city-attack" || type === "city-capture") {
+        const otherType = type === "city-attack" ? "city-capture" : "city-attack";
+        const other = [...this.active.values()].find(record => record.type === otherType
+          && record.root === root && record.event.targetId === event.targetId && event.targetId
+          && ((event.combatId && event.combatId === record.event.combatId)
+            || (event.combatAtMs > 0 && event.combatAtMs === record.event.combatAtMs)));
+        if (other && type === "city-attack") {
+          if (dedupeKey) {
+            this.markDedupe(dedupeKey, other, other.duration);
+            // The capture owns its own lifecycle key; retain only the bounded
+            // recent receipt for this suppressed attack, not a second owner.
+            this.activeDedupe.delete(dedupeKey);
+          }
+          return other.handle;
+        }
+        if (other) {
+          combatElapsed = Math.min(2100, Math.max(0, Date.now() - other.createdAt));
+          this.completeRecord(other, "promoted-to-capture");
+        }
+      }
+
       const intensity = normalizeIntensity(event.intensity, definition.intensity);
       if (!this.reserveEffectSlot(renderScope, INTENSITY_PRIORITY[intensity])) {
         this.lastSkipReason = "effect-cap";
@@ -703,12 +727,16 @@
         record.particleCount = context.particles;
         this.activeParticles += record.particleCount;
         root.appendChild(record.element);
+        if (combatElapsed && mode === "full") {
+          record.createdAt -= combatElapsed;
+          record.element.getAnimations({ subtree: true }).forEach(animation => { animation.currentTime = combatElapsed; });
+        }
         this.active.set(record.instanceId, record);
         if (dedupeKey) this.markDedupe(dedupeKey, record, duration);
         this.decorateTarget(record);
         this.armRecord(record, persistent
           ? finiteNumber(event.watchdogMs, this.limits.persistentWatchdogMs)
-          : duration + this.limits.cleanupPaddingMs);
+          : duration - (mode === "full" ? combatElapsed : 0) + this.limits.cleanupPaddingMs);
         this.notify("effectstart", this.publicRecord(record));
         this.lastSkipReason = "";
         return record.handle;
@@ -980,30 +1008,34 @@
     }
 
     buildCityAttack(context) {
-      this.createPart(context, "weapons");
-      this.createPart(context, "dust");
-      if (context.mode === "full" && !context.event.degraded) this.createPart(context, "mist");
-      this.fillParticles(context, ["spark"]);
+      const size = this.positionCombatEffect(context);
+      this.buildCombatSwords(context, size);
     }
 
-    buildCityCapture(context) {
+    positionCombatEffect(context) {
       // Keep the clash readable above march badges; shared class ownership cleans
       // up correctly when simultaneous captures finish or the map changes.
       this.acquireTargetClass(context.record, context.record.root, "crownlands-capture-active");
       let size = finiteNumber(context.event.captureSize, 184);
       const target = context.event.target;
-      const art = target?.querySelector?.(".city-castle, .stronghold-building");
+      const art = target?.querySelector?.(".city-castle, .stronghold-building, .camp-art, .holding-tower-art")
+        || target?.querySelector?.(".marauder-node > img");
       const targetRect = target?.getBoundingClientRect?.();
       const artRect = art?.getBoundingClientRect();
       const scale = targetRect?.width / target?.offsetWidth;
       if (artRect?.width > 0 && Number.isFinite(scale) && scale > 0) {
-        const anchor = context.record.sourceAnchor;
-        context.element.style.left = `${anchor.x + (artRect.left + artRect.width / 2 - targetRect.left - targetRect.width / 2) / scale}px`;
-        context.element.style.top = `${anchor.y + (artRect.top + artRect.height / 2 - targetRect.top - targetRect.height / 2) / scale}px`;
+        const rootRect = context.record.root.getBoundingClientRect();
+        context.element.style.left = `${(artRect.left + artRect.width / 2 - rootRect.left) / scale}px`;
+        context.element.style.top = `${(artRect.top + artRect.height / 2 - rootRect.top) / scale}px`;
         size = artRect.width / scale;
       }
       size = clamp(size, 32, 640);
       context.element.style.setProperty("--vfx-size", `${size}px`);
+      return size;
+    }
+
+    buildCityCapture(context) {
+      const size = this.positionCombatEffect(context);
       const drape = this.createPart(context, "capture-drape");
       const flag = document.createElement("span");
       flag.className = "kingdom-flag capture-owner-cloth";
@@ -1019,14 +1051,19 @@
       drape.appendChild(flag);
       if (context.mode === "reduced") return;
 
+      this.createPart(context, "capture-pulse");
+      this.buildCombatSwords(context, size);
+    }
+
+    buildCombatSwords(context, size) {
       // The approved troop-order sword, separated into two independently swung blades.
       for (const side of ["left", "right"]) {
         const sword = this.createPart(context, `capture-sword-${side}`);
         sword.innerHTML = '<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g stroke="#423d31" stroke-width="1.5" stroke-linejoin="round"><path d="M24 3 28 10 27 30H21L20 10Z" fill="#d8dfd7"/><path d="M24 5V29" stroke="#899b97"/><path d="M16 29 24 31 32 29 33 33 24 34 15 33Z" fill="#bc9550"/><path d="M22 34H26V42H22Z" fill="#74483b"/><path d="M22 37H26M22 40H26" stroke="#c3a675" stroke-width="1"/><path d="M21 42H27L26 46H22Z" fill="#bc9550"/></g></svg>';
       }
+      if (context.mode === "reduced") return;
       this.createPart(context, "capture-contact");
       this.createPart(context, "capture-dust");
-      this.createPart(context, "capture-pulse");
       for (let index = 0; index < context.particleBudget; index += 1) {
         this.createParticle(context, "spark", index, context.particleBudget, {
           delay: [600, 1020, 1440][index % 3],

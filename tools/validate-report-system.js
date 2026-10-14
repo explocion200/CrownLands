@@ -473,9 +473,10 @@ Object.assign(historySandbox, {
   playGameSound() { reportSounds += 1; },
   queueLevelUpReward() { reportRewards += 1; },
   cityById: () => ({}),
+  getCombatAnimationTarget: () => ({}),
   playCityAttackAnimation() { reportAnimations += 1; },
 });
-for (const name of ["getBattleReportListScrollTop", "normalizeServerBattleReport", "mergeServerReports", "mergeOnlineBattleReports"]) {
+for (const name of ["getBattleReportListScrollTop", "normalizeServerBattleReport", "getCombatReportAnimationId", "mergeServerReports", "mergeOnlineBattleReports"]) {
   vm.runInContext(functionBody(client, name), historySandbox);
 }
 const arrivalReport = {

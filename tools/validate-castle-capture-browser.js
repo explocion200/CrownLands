@@ -14,6 +14,135 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+async function validateAttacks(evaluate, client, width, height, output) {
+  // Exercise the actual target registries and renderers with a nearby sample of
+  // each target family, including NPCs already marked defeated by the server.
+  const kinds = await evaluate(`(() => {
+    const city = captureFixture, regionId = getActiveMapRegionId();
+    const camp = WORLD_CAMPS.find(c => getCampTargetById(c.id));
+    if (!camp) throw Error('Camp fixture missing');
+    Object.assign(camp, { regionId, x: city.x + 75, y: city.y });
+    const tower = { id:'attack-test-tower', name:'Attack test tower', kind:'holdingTower', targetType:'tower',
+      regionId, x:city.x-75,y:city.y,visualX:city.x-75,visualY:city.y,width:100,anchorX:.5,anchorY:.969,artSrc:CLAN_TOWER_MAP_ART };
+    WORLD_HOLDING_TOWERS.push(tower);
+    const npc = {id:'attack-test-npc',spawnId:'attack-test-spawn',worldId:ONLINE_WORLD_ID,resetGeneration:RESET_GENERATION,
+      regionId,x:city.x,y:city.y+70,name:'Marauder',targetType:'marauder',classification:'solo',status:'defeated',level:25,respawnAtMs:Date.now()+600000};
+    const boss = {...npc,id:'attack-test-boss',spawnId:'attack-test-boss-spawn',classification:'boss',x:city.x+70,status:'active'};
+    applyOnlineMarauders([npc,boss],regionId);
+    renderCities(true);
+    window.attackFixtures = [city,getCampTargetById(camp.id),tower,npc,boss];
+    window.readAttackTest = time => {
+      const effect=document.querySelector('.crownlands-vfx--city-attack');
+      if(!effect) throw Error('Attack missing: '+JSON.stringify({debug:CrownlandsAnimations.getDebugState(),region:getActiveMapRegionId(),seen:[...seenWorldAnimationEventIds.keys()],targets:attackFixtures.map(t=>({id:t.id,region:getCityRegionId(t),resolved:!!getCombatAnimationTarget(t.id,t.spawnId),node:!!cityLayer.querySelector('[data-city-id="'+t.id+'"], [data-render-camp-id="'+t.id+'"], [data-holding-tower-id="'+t.id+'"], [data-marauder-id="'+t.id+'"]')}))}));
+      effect.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=time;});
+      const target=attackFixtures.find(t=>t.id===effect.dataset.targetId);
+      const node=cityLayer.querySelector('[data-city-id="'+target.id+'"], [data-render-camp-id="'+target.id+'"], [data-holding-tower-id="'+target.id+'"], [data-marauder-id="'+target.id+'"]');
+      const art=node.querySelector('.city-castle,.stronghold-building,.camp-art,.holding-tower-art') || node.querySelector('.marauder-node > img');
+      const a=art.getBoundingClientRect(),b=effect.getBoundingClientRect();
+      const swords=[...effect.querySelectorAll('[class*="__part--capture-sword-"]')];
+      return {swords:swords.length,opacity:swords.map(s=>Number(getComputedStyle(s).opacity)),
+        names:swords.map(s=>getComputedStyle(s).animationName),transforms:swords.map(s=>getComputedStyle(s).transform),
+        flag:!!effect.querySelector('.capture-owner-cloth,.crownlands-vfx__part--capture-drape,.crownlands-vfx__part--capture-pulse'),
+        particles:effect.querySelectorAll('.crownlands-vfx__particle').length,duration:effect.style.getPropertyValue('--vfx-duration'),
+        sizeDelta:Math.abs(a.width-b.width),centerDelta:Math.abs(a.x+a.width/2-b.x-b.width/2)+Math.abs(a.y+a.height/2-b.y-b.height/2),
+        count:document.querySelectorAll('.crownlands-vfx--city-attack').length};
+    };
+    return attackFixtures.map(t=>t.targetType||'city');
+  })()`);
+  await delay(250);
+  for (let index = 0; index < kinds.length; index++) {
+    await evaluate(`(() => {
+      CrownlandsAnimations.clearAll(); CrownlandsAnimations.setMode('full');
+      const target=attackFixtures[${index}],id='attack-full-${index}';
+      playCityAttackAnimation(target,{eventId:id,targetSpawnId:target.spawnId});
+      playCityAttackAnimation(target,{eventId:id,targetSpawnId:target.spawnId});
+    })()`);
+    await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+    for (const contact of [610, 1020, 1440]) {
+      const result = await evaluate(`readAttackTest(${contact})`);
+      assert.equal(result.swords, 2); assert.equal(result.count, 1); assert.equal(result.flag, false);
+      assert.equal(result.duration, '2100ms');
+      assert(result.opacity.every(value => value > .9), JSON.stringify({kind:kinds[index],contact,result}));
+      assert(result.names.every(name => name === 'crownlandsCaptureSword'));
+      assert(result.sizeDelta < 2 && result.centerDelta < 2, JSON.stringify({kind:kinds[index],result}));
+    }
+    const shot = await client.send('Page.captureScreenshot', {format:'png'});
+    fs.writeFileSync(path.join(output, `attack-${index}-${kinds[index]}-${width}x${height}.png`), Buffer.from(shot.data,'base64'));
+  }
+  // A defeated spawn still receives its battle; a replacement spawn must not.
+  await evaluate(`CrownlandsAnimations.clearAll(); playCityAttackAnimation(attackFixtures[3],{eventId:'stale-spawn',targetSpawnId:'older-spawn'});`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"), 0);
+  await evaluate(`(() => {
+    const target=attackFixtures[0];
+    playCityAttackAnimation({...target,regionId:'another-map'},{eventId:'off-map'});
+    playCityAttackAnimation(target,{eventId:'old-session'}); onlineSessionGeneration+=1;
+  })()`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"), 0);
+  await evaluate('onlineSessionGeneration-=1');
+  // Reports and callable results converge on the same effect ID, for all target families.
+  for (let index = 0; index < kinds.length; index++) {
+    await evaluate(`(() => {
+      CrownlandsAnimations.clearAll(); deedRewardReportsVfxHydrated=true;
+      const t=attackFixtures[${index}], report={id:'combat-report-${index}',battleId:'combat-battle-${index}',type:'attack',outcome:'defeat',
+        cityId:t.id,regionId:t.regionId,targetType:t.targetType||'city',targetSpawnId:t.spawnId,occurredAtMs:Date.now()};
+      mergeServerReports([report]);
+      applyServerArmyResult({kind:'attack',targetType:report.targetType,targetId:t.id,targetSpawnId:t.spawnId,reports:[report]});
+    })()`);
+    await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+    const result = await evaluate('readAttackTest(610)');
+    assert.equal(result.count,1); assert.equal(result.flag,false);
+  }
+  await evaluate(`(() => {
+    CrownlandsAnimations.clearAll();
+    const report={id:'legion-defense',type:'defense',eventKind:CITADEL_ASSAULT_EVENT_KIND,outcome:'damaged',cityId:captureFixture.id,regionId:getActiveMapRegionId(),occurredAtMs:Date.now()};
+    mergeServerReports([report]); mergeServerReports([report]);
+  })()`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal((await evaluate('readAttackTest(610)')).count,1);
+  await evaluate(`(() => {
+    CrownlandsAnimations.clearAll();
+    mergeServerReports([{id:'blocked-order',type:'attack',outcome:'defeat',cityId:captureFixture.id,occurredAtMs:Date.now()}]);
+    mergeServerReports([{id:'scout-order',type:'scout',battleId:'not-combat',outcome:'scout',cityId:captureFixture.id,occurredAtMs:Date.now()}]);
+    deedRewardReportsVfxHydrated=false;
+    mergeServerReports([{id:'historical-combat',battleId:'historical-combat',type:'attack',outcome:'victory',cityId:captureFixture.id,occurredAtMs:Date.now()-60000}],{authoritative:true});
+  })()`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
+  await evaluate(`CrownlandsAnimations.setMode('reduced');playCityAttackAnimation(captureFixture,{eventId:'attack-reduced'})`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  const reduced = await evaluate('readAttackTest(100)'), reducedLater = await evaluate('readAttackTest(250)');
+  assert.equal(reduced.swords,2); assert.equal(reduced.flag,false); assert.equal(reduced.particles,0);
+  assert.equal(reduced.duration,'360ms'); assert.deepEqual(reduced.transforms,reducedLater.transforms);
+  assert(reduced.names.every(name=>name==='crownlandsCaptureReduced'));
+  await delay(650);
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
+  await evaluate(`CrownlandsAnimations.setMode('off');playCityAttackAnimation(captureFixture,{eventId:'attack-off'})`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
+  // Promote a battle to a capture without resetting the swords; also cover the reverse order.
+  await evaluate(`CrownlandsAnimations.setMode('full');playCityAttackAnimation(captureFixture,{eventId:'promoted-battle'});`);
+  await delay(180);
+  await evaluate(`playCityCaptureAnimation(captureBefore,captureAfter,{eventId:'promoted-capture',combatId:'promoted-battle'});`);
+  await delay(300);
+  const promotion=await evaluate(`(() => {const e=document.querySelector('.crownlands-vfx--city-capture');return {captures:!!e,attacks:document.querySelectorAll('.crownlands-vfx--city-attack').length,time:e?.querySelector('.crownlands-vfx__part--capture-sword-left').getAnimations()[0]?.currentTime};})()`);
+  assert(promotion.captures && promotion.attacks===0 && promotion.time>350,JSON.stringify(promotion));
+  await evaluate(`CrownlandsAnimations.clearAll();playCityCaptureAnimation(captureBefore,captureAfter,{eventId:'capture-first',combatId:'late-battle'});`);
+  await delay(300);
+  await evaluate(`playCityAttackAnimation(captureFixture,{eventId:'late-battle'});`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
+  assert.equal(await evaluate("CrownlandsAnimations.activeDedupe.has('city-attack:late-battle')"),false,'A coalesced attack must not leak a lifecycle key.');
+  await evaluate(`playCityAttackAnimation(captureFixture,{eventId:'different-battle'});`);
+  await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),1,'A separate attack must still animate.');
+  await delay(2400);
+  assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0,'Attack watchdog must remove even paused effects.');
+  await evaluate('CrownlandsAnimations.clearAll()');
+  return {kinds,reduced,promotion};
+}
+
 async function main() {
   const server = createMapBenchmarkServer(), address = await server.listen();
   const output = path.resolve(__dirname, "../release-artifacts/castle-capture", process.env.CROWNLANDS_BENCHMARK_ROOT ? "built" : "source");
@@ -59,6 +188,7 @@ async function main() {
         };
       })()`);
       await delay(300);
+      const attacks = await validateAttacks(evaluate, client, width, height, output);
       await evaluate("startCaptureTest('capture-full');startCaptureTest('capture-full')");
       for (let i=0;i<30 && !await evaluate("!!document.querySelector('.crownlands-vfx--city-capture')");i++) await delay(100);
       const full = await evaluate(`(() => {
@@ -114,11 +244,11 @@ async function main() {
       await client.send("Emulation.setEmulatedMedia", { features: [{name:"prefers-reduced-motion",value:"reduce"}] });
       assert.equal(await evaluate("CrownlandsAnimations.getEffectiveMode()"), "reduced");
       await client.send("Emulation.setEmulatedMedia", { features: [{name:"prefers-reduced-motion",value:"no-preference"}] });
-      results.push({width,height,full,drape,reduced});
+      results.push({width,height,attacks,full,drape,reduced});
     }
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(output,"validation.json"),JSON.stringify({results,errors},null,2));
-    console.log("Castle capture passed: saved heraldry, sword/drape timing, map anchoring, deduplication, stale-event guards, motion modes and cleanup at three viewports.");
+    console.log("Combat/capture passed: all target families, report/result deduplication, Legion defense, three shared sword strikes, capture-only heraldry, anchoring, stale-event guards, motion modes and cleanup at three viewports.");
   } finally {
     if (client) {await client.send("Browser.close").catch(()=>{});client.close();}
     if (session) {if (!await waitForProcessExit(session.browserProcess)) {session.browserProcess.kill();await waitForProcessExit(session.browserProcess);}await removeBrowserProfile(session.profilePath);}
