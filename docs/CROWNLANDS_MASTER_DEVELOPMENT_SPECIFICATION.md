@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified release — Defeated NPC artwork and respawn timers
+### Current verified web release — Centered leaderboard podium crowns
+
+The authorized merge and web deployment of [PR #554](https://github.com/explocion200/CrownLands/pull/554), from `codex/leaderboard-medal-crowns`, is **LIVE — WEB** at build `eb0be0ec339aef412210e0977337c5b070f1f364`. Top 100 Kingdoms, Top Clans and Field of Glory show gold, silver and bronze crowns for first, second and third place, centered above the numeric ranks and saved flags or clan heraldry. Compact spacing keeps the complete podium visible on short landscape screens.
+
+- Netlify deploy `6aceebc75283c7596bff5353` published October 13 at 10:44 p.m. Eastern (`2026-10-14T02:44:24.817Z`); the manual publication hold remains enabled. All three required GitHub checks passed. The merged production artifact, 1,161-entry staged inventory, ten staged and thirty public file comparisons, and six public startup/reload cases passed.
+- Staged and public leaderboard assets passed the existing podium browser suite at 1366×820, 1200×688, 844×390 and 568×320. Screenshots verify centered crowns and distinct medal colors; checks preserve full scores, 100 ranks, saved identity, seasonal decorations, refresh, keyboard/scroll behavior and empty/failure/few-entry states. These interactions use isolated fixtures, not production player records.
+- Release ID, API contract and server source fingerprint match the preceding published client. No Functions, Firestore rules/indexes, realm configuration or player data were deployed or changed by this release. itch.io was not republished. Authenticated production standings, installed apps and physical-device review remain manual limits.
+
+See [the leaderboard crowns release record](LEADERBOARD_CROWNS_RELEASE_2026-10-13.md) for exact identity and verification evidence. Earlier releases below remain historical.
+
+### Previous verified release — Defeated NPC artwork and respawn timers
 
 The authorized merge and deployment of [PR #552](https://github.com/explocion200/CrownLands/pull/552), from `codex/defeated-npc-artwork`, is **LIVE — WEB AND FIREBASE** at build `1c3faf7f062b0173fd09ae34575df1c1f1accac0`. Defeated marauders and bosses retain their matching-size fallen artwork at the old position with a two-minute/thirty-minute server-clock countdown. They disappear when the authoritative replacement appears at its new road position. Blocked placement retains inactive remains labeled “Awaiting respawn.”
 
@@ -690,10 +700,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `1c3faf7...`, with its coordinated backend and authorized October NPC population. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `eb0be0e...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Centered gold, silver and bronze crowns for the top three on Kingdom, Clan and Glory podiums | PR #554 build `eb0be0e...`; exact assets, desktop/landscape-mobile fixture interactions and public startup verified | Not republished | `LIVE — WEB`; authenticated standings, installed-app and physical-device review remain manual |
 | Matching-size defeated marauder/boss art, server respawn countdown and atomic replacement at a new road position | PR #552 build `1c3faf7...`; client/backend identity, authoritative realm and delivered desktop/mobile UI verified | Not republished | `LIVE — WEB AND FIREBASE`; actual production defeat/respawn and physical-device checks remain manual |
 | Solo marauders in active New Lands, Core-only clan bosses, permanent stamina and proportional daily Crown refill | PR #541 build `2adcd7c...`; 25 bosses / 672 solos across all 81 current maps; backend, UI and scoped activation verified | Not republished; old release identity fails the current backend version guard | `LIVE — WEB AND FIREBASE`; matching itch.io publication required |
 | NPC city Scout / Info / Attack controls; 20% inset for new/replacement spawns; 90px solos and 115px bosses | PRs #543/#544 build `a3f0b09...`; exact client/backend, current realm and isolated desktop/mobile startup verified; active targets retain their locations until defeated | Not republished; older incompatible client remains | `LIVE — WEB AND FIREBASE`; matching itch.io publication required |
@@ -1852,7 +1863,7 @@ The verified `origin/main` production-reward hours are 0.5 for Easy, 1 for Mediu
 **Status: implemented pending deployment verification.** The user approved the draft and requested implementation, merge and deployment. Release evidence determines which channel is live.
 
 - All three boards use a parchment podium for the first three entries (visual order 2 / 1 / 3), saved flags or clan heraldry, full score totals, a personal standing card and a list beginning at fourth place. Tabs are Top 100 Kingdoms, Top Clans, then **Field of Glory**. Existing Kingdom and Clan scoring is unchanged.
-- **Podium crowns confirmed October 13, 2026; implementation pending validation and deployment:** current first, second and third place use gold, silver and bronze crowns respectively on all three boards. Center each crown above its visible numeric rank and flag/heraldry. These current-rank markers are separate from the previous season's earned crowns, crossed swords and laurels; reward eligibility, scores and saved flags/heraldry are unchanged.
+- **Podium crowns confirmed October 13, 2026; LIVE — WEB:** current first, second and third place use gold, silver and bronze crowns respectively on all three boards. Center each crown above its visible numeric rank and flag/heraldry. These current-rank markers are separate from the previous season's earned crowns, crossed swords and laurels; reward eligibility, scores and saved flags/heraldry are unchanged. PR #554 publication and verification are recorded in FM-2; itch.io was not republished.
 - Field of Glory ranks up to 100 players by enemy player-owned troops defeated during the current season. Credit attack and defense, win or loss, using authoritative casualties **before recovery**. Neutral troops, self/friendly battles, wall damage, travel, donations and production do not award kills. Recovery never subtracts or adds kills.
 - Eligible battles use the existing city/royal-holding, occupied Camp and Clan Tower resolution snapshots. Shared attack and defense divide the opposing player-casualty pool by effective combat contribution, with deterministic largest-remainder integer rounding. City owners receive their wall contribution; clan Tower walls are not assigned to one member. Never award the entire shared pool to every participant.
 - Order by kills descending, then earliest battle time reaching the total, then stable player key. Late deliveries use the original battle time. Keep each battle's world, reset generation and shard; delayed or repeated delivery cannot move or duplicate credit across seasons.
