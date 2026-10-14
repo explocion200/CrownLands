@@ -1,98 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "90ffbaa566fb5c6228a23da47cdc127fd02e84fc",
+  "baseCommit": "16d282a35c9764e6cc7ca11b6d28b3ffa5021252",
   "coverage": [
     {
       "paths": [
-        "achievements-ui.css",
-        "barracks-gear-ui.css",
-        "battle-report-detail-ui.css",
-        "chat-ledger-ui.css",
-        "city-details-ui.css",
-        "city-list-ui.css",
-        "clan-ledger-ui.css",
-        "clan-shop-ui.css",
-        "clan-tower-details-ui.css",
-        "common-gear-box-ui.css",
-        "common-gear-ui.css",
-        "crown-payments-ui.css",
-        "crownlands-palette.css",
-        "daily-login-ui.css",
-        "daily-rewards.css",
-        "engineers-workshop-ui.css",
-        "estate-economy-ui.css",
-        "gatehouse-gear-ui.css",
-        "guild-ui.css",
-        "help-handbook-ui.css",
-        "incoming-threats-ui.css",
-        "index.html",
-        "infirmary-ui.css",
-        "inner-city-estate.css",
-        "interface-theme.css",
-        "item-bag-ui.css",
-        "kingdom-ledgers-ui.css",
-        "marches-activity-ui.css",
-        "objectives-activity-ui.css",
-        "player-profile-ui.css",
-        "quests-ui.css",
-        "rallies-activity-ui.css",
-        "reinforcements-activity-ui.css",
-        "royal-stables-gear-ui.css",
-        "scout-report-ui.css",
-        "settings-ledger-ui.css",
-        "shop-ui.css",
-        "skills-ledger-ui.css",
-        "skins-ui.css",
-        "stamina-ui.css",
-        "stamina-ui.js",
-        "stronghold-details-ui.css",
-        "styles.css",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
-        "tools/validate-crown-payments-browser.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-window-close-browser.js",
-        "training-grounds-ui.css",
-        "treasury-gear-ui.css",
-        "troop-orders-ui.css"
-      ],
-      "tests": [
-        "tools/validate-window-close-browser.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
-        "tools/validate-guild-responsive-layout.js",
-        "tools/validate-login-layout-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-player-identity-browser.js",
-        "tools/validate-email-auth-browser.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-crown-payments-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Apply the owner-confirmed Guild reference across shared UI: oak headers/HUD, parchment surfaces and tabs, centralized component color tokens, framed X controls, and inset tab frames with distinct keyboard focus. Include Item Bag and heraldry-editor navigation without repainting saved heraldry. Remove superseded close paint while preserving geometry, artwork, semantic indicators and guarded dismissal. Verify actual colors and header contrast, 44px targets, clearances, hover, keyboard and pointer/touch closure across desktop and two landscape sizes; cover every estate service and Guild room, gear, Profile/flags, Shop, Bag, rewards, auth, stamina and checkout. Existing suites additionally exercise all five Stronghold/Citadel layouts, Tower services, login states, HUD/art/zoom invariants, identities, mandatory reward collection and modal cleanup. Production build and per-file/offline-shell budgets are required. No authoritative gameplay/backend change requires emulators."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/GUILD_THEME_RELEASE_2026-10-14.md"
       ],
       "tests": [],
-      "reason": "Record the explicit Guild screenshot direction, superseding the plain-X and burgundy HUD paint decisions while preserving gameplay, semantic colors, artwork and deployment boundaries."
-    },
-    {
-      "paths": [
-        "tools/validate-email-auth-browser.js"
-      ],
-      "tests": [
-        "tools/validate-email-auth-browser.js"
-      ],
-      "reason": "Retain the current cosmetics adapter in the isolated auth fixture so Firebase initialization and the moved email header close control are tested with external APIs blocked. Verify the approved flat parchment, secondary text and primary-action colors without a leftover pointer hover."
+      "reason": "Documentation-only release evidence: record the authorized PR 560 merge, exact published web identity, required CI and local/staged/public validation, preserved backend and publication hold, and channel/manual verification limits. No runtime behavior changes; existing release receipts were checked against the recorded claims."
     }
   ]
 }
