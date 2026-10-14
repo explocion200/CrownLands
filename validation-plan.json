@@ -1,15 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1c3faf7f062b0173fd09ae34575df1c1f1accac0",
+  "baseCommit": "479c28e9d3999052b531da7a1ef4903364f4f11f",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_DEFEATED_RELEASE_2026-10-13.md",
-        "docs/art-sources/marauder-defeated/README.md"
+        "kingdom-ledgers-ui.css",
+        "assets/icons/leaderboard-crown-silver.svg",
+        "assets/icons/leaderboard-crown-bronze.svg"
       ],
+      "tests": [
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-leaderboard-podium-browser.js"
+      ],
+      "reason": "The shared podium stylesheet assigns the existing gold crown and new silver/bronze variants by current rank on Kingdom, Clan and Glory boards. Check all three tabs, numeric ranks, existing season decorations, saved flags/heraldry, refresh and empty/few-entry states at desktop and landscape-mobile sizes. Visually inspect the captured podiums for distinct crown colors, crowns centered above numeric ranks and flags/heraldry, and clipping. Production build validation checks referenced assets are packaged. No backend, ranking, reward or authority changes require emulators."
+    },
+    {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "The rank-specific crown selectors add under 0.5 KiB to the almost-full 31 KiB ledger stylesheet budget. Bound this addition at 31.5 KiB and execute the existing performance validator to verify all other entrypoint, installed-shell and artwork limits remain satisfied."
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Documentation-only record of the authorized and verified PR #552 web/Firebase release, exact identities, focused and deployed-asset evidence, preserved October realm, and explicit production/itch verification limits. No runtime code, gameplay rule, asset or deployment configuration changes; no additional runtime or emulator tests apply."
+      "reason": "Records the user's confirmed current-podium gold/silver/bronze crown design and distinguishes these visual rank markers from earned seasonal honors. Documentation adds no runtime behavior beyond the covered presentation change."
     }
   ]
 }
