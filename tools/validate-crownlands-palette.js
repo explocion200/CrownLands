@@ -31,8 +31,8 @@ const exactTokens = {
   "--cl-panel-raised": "#f4ead1",
   "--cl-panel-inset": "#e0cea8",
   "--cl-input-bg": "#f4ead1",
-  "--cl-oak": "#392c24",
-  "--cl-oak-hover": "#554130",
+  "--cl-header-bg": "var(--cl-burgundy)",
+  "--cl-header-hover": "var(--cl-burgundy-dark)",
   "--cl-header-rule": "#84694a",
   "--cl-tab-selected": "#efe3c7",
   "--cl-burgundy": "#72363a",
@@ -84,7 +84,7 @@ for (const family of [
   ".realm-announcement-banner", ".toast", "[role=\"tooltip\"]",
 ]) assert.ok(css.includes(family), `The game-wide palette does not cover ${family}.`);
 
-assert.match(css, /\.profile-screen-header,[\s\S]*?background:\s*var\(--cl-oak\) !important;/, "Major headers must use the Guild reference's dark oak.");
+assert.match(css, /\.profile-screen-header,[\s\S]*?background:\s*var\(--cl-header-bg\) !important;/, "Major headers must use the restored burgundy theme.");
 assert.match(css, /:is\(\.active, \.selected,[\s\S]*?background:\s*var\(--cl-tab-selected\) !important;/, "Active tabs must use parchment with a burgundy underline.");
 assert.match(css, /input:not\(\[type="range"\]\)[\s\S]*?background:\s*var\(--cl-input-bg\) !important;/, "Inputs do not use the aged input surface.");
 assert.match(css, /:disabled,[\s\S]*?color:\s*var\(--cl-disabled-text\) !important;[\s\S]*?background:\s*var\(--cl-disabled-bg\) !important;/, "Disabled controls do not use the exact shared disabled palette.");
@@ -161,8 +161,8 @@ for (const [foreground, background, label] of [
   ["352b20", "ede1c2", "primary parchment copy"],
   ["665239", "e4d5b2", "secondary parchment copy"],
   ["705d45", "ede1c2", "muted parchment copy"],
-  ["f4e6c5", "392c24", "oak headers and close controls"],
-  ["f4e6c5", "554130", "hovered close controls"],
+  ["f4e6c5", "72363a", "burgundy headers and close controls"],
+  ["f4e6c5", "542728", "hovered close controls"],
   ["72363a", "efe3c7", "selected tabs"],
   ["2f2113", "b68a43", "owned-city map labels"],
   ["f2e2bf", "72363a", "burgundy headers"],

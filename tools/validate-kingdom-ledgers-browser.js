@@ -37,7 +37,7 @@ async function main() {
       await client.send('Page.navigate', { url:`${address.url}/__benchmark__/?scenario=A&visualMarches=0&${params}` });
       await ready('document.documentElement?.dataset.ledgerQa === "ready"');
       await wait(180);
-      assert.equal(await evaluate('getComputedStyle(document.querySelector("#modalTitle")).backgroundColor'), 'rgb(57, 44, 36)', 'Ranking and holding windows must share the Guild oak header.');
+      assert.equal(await evaluate('getComputedStyle(document.querySelector("#modalTitle")).backgroundColor'), 'rgb(114, 54, 58)', 'Ranking and holding windows must share the Guild oak header.');
     };
     const shot = async name => {
       const result = await client.send('Page.captureScreenshot', { format:'png' });

@@ -1,14 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "16d282a35c9764e6cc7ca11b6d28b3ffa5021252",
+  "baseCommit": "296607c082e9850acfbd34808ddec3e304e4a0dd",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/GUILD_THEME_RELEASE_2026-10-14.md"
+        "crownlands-palette.css",
+        "interface-theme.css",
+        "guild-ui.css",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-window-close-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js"
+      ],
+      "tests": [
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-window-close-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-guild-responsive-layout.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Restore the previous burgundy color for shared headers, HUD and framed close controls, including Guild fallback paint. Preserve parchment, tab frames, geometry, artwork and interactions. Update existing exact color assertions and retain header contrast, 189 desktop/landscape window cases, HUD native input/zoom checks, affected chat/reward and kingdom suites, source/built Guild responsive coverage and delivery budgets. Color-only client changes do not require emulator suites."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Documentation-only release evidence: record the authorized PR 560 merge, exact published web identity, required CI and local/staged/public validation, preserved backend and publication hold, and channel/manual verification limits. No runtime behavior changes; existing release receipts were checked against the recorded claims."
+      "reason": "Record the explicit color preference superseding dark oak. Preserve historical published-release evidence; this decision does not assert a new deployment."
     }
   ]
 }

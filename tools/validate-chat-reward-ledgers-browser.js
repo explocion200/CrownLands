@@ -252,7 +252,7 @@ async function main() {
           passive:badge.tagName==="DIV",background:getComputedStyle(badge).backgroundColor,loaded:badge.querySelector("img").naturalWidth>0};});
       });
       assert.equal(boostHud.length,4);
-      assert(boostHud.every(item=>item.passive&&item.loaded&&item.background==="rgb(57, 44, 36)"&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
+      assert(boostHud.every(item=>item.passive&&item.loaded&&item.background==="rgb(114, 54, 58)"&&item.left>=0&&item.right<=viewport.width&&item.top>=0&&item.bottom<=viewport.height),JSON.stringify({viewport,boostHud}));
       assert(boostHud.slice(1).every((item,i)=>item.top>=boostHud[i].bottom&&Math.abs(item.right-boostHud[0].right)<1),"All four passive effects form a vertical stack.");
       assert(await evaluate(()=>{
         const buttons=["chatToggleBtn","inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn","logBtn","outgoingAttackBtn","incomingAttackBtn","fullscreenBtn"]
