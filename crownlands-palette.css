@@ -1273,7 +1273,7 @@ input[type="range"] {
     border-color: var(--cl-border-faded) !important;
   }
 
-  :is(.hud-btn, .profile-gold, .resource-pill, .profile-rank-btn, .main-city-return,
+  :is(.hud-btn, .stamina-card, .profile-gold, .resource-pill, .profile-rank-btn, .main-city-return,
     .nav-btn:not(.incoming-attack-btn):not(.outgoing-attack-btn),
     .inner-castle-entry-btn, #chatToggleBtn, #chatMinimizeBtn) {
     background: var(--cl-oak) !important;

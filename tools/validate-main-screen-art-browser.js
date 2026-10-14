@@ -52,7 +52,9 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
   assert(await ev(`(()=>{const i=document.querySelector('#innerCityHudBtn img'),c=document.createElement('canvas');c.width=c.height=192;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);return ctx.getImageData(0,0,1,1).data[3]===0&&ctx.getImageData(96,96,1,1).data[3]>240;})()`),"Shortcut artwork must preserve transparent padding and a solid castle");
   for(const[width,height]of[[1440,900],[844,390],[568,320]]){
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await delay(180);
+   await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0});
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(1)`);
+   assert.deepEqual(await ev(`(()=>{const s=getComputedStyle(document.getElementById('staminaButton'));return[s.backgroundColor,s.color,s.backgroundImage];})()`),['rgb(57, 44, 36)','rgb(244, 230, 197)','none'],'Stamina must use the shared oak HUD palette');
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
    const inset=await ev(`['.profile-action-row','.profile-gold','#logBtn'].map(s=>document.querySelector(s).getBoundingClientRect().left)`);
    assert.deepEqual(inset,[12,12,12],"Production player row and Gold must align with Reports");

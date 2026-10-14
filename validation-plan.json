@@ -53,6 +53,7 @@
         "tools/validate-crown-payments-browser.js",
         "tools/validate-crownlands-palette.js",
         "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-main-screen-art-browser.js",
         "tools/validate-marauders-browser.js",
         "tools/validate-window-close-browser.js",
         "training-grounds-ui.css",
