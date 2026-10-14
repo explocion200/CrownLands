@@ -26,6 +26,7 @@ const context = vm.createContext({
 });
 for (const name of ["formatBattleReportValue","getBattleTargetTypeLabel","getDetailedBattleSideParticipants"]) vm.runInContext(functionSource(client,name),context);
 vm.runInContext(functionSource(read("common-gear-ui.js"),"getBattleSideBonusEntries"),context);
+for (const name of ["getReportIconArt", "renderBattleReportLedgerIcon"]) vm.runInContext(functionSource(client,name),context);
 vm.runInContext(read("battle-report-detail-ui.js"),context);
 vm.runInContext(functionSource(read("marauders-ui.js"),"getMarauderBattleTargetLabel"),context);
 const ui = context.window.CrownlandsBattleReportUI;
@@ -41,8 +42,8 @@ assert(!html.includes("<script>"),"Ruler content injected markup");
 assert(html.includes('data-report-jump="target"') && html.includes('data-report-occurred-at-ms="123"'),"Navigation or age hooks lost");
 const defenseHtml=ui.render({...options,report:{...options.report,type:"defense"},left:defender,right:attacker,viewerRole:"defender",badge:{tone:"defeat",label:"DEFEAT"}});
 assert(defenseHtml.indexOf('data-player-uid="d"')<defenseHtml.indexOf('data-player-uid="a"'),"Defense viewer is not on the left");
-assert(defenseHtml.includes("#defense-defeat"),"Defensive defeat lost the red shield");
-assert(ui.render({...options,report:{type:"defense"},badge:{tone:"victory",label:"HELD"}}).includes('#defense"'),"Held defense lost its olive shield");
+assert(defenseHtml.includes(context.getReportIconArt("defense")) && defenseHtml.includes('class="defeat"'),"Defensive defeat lost its shield artwork or semantic outcome color");
+assert(ui.render({...options,report:{type:"defense"},badge:{tone:"victory",label:"HELD"}}).includes(context.getReportIconArt("defense")),"Held defense lost its shield artwork");
 const legacy=ui.render({...options,left:{...attacker,basePower:"Not recorded",bonusRecorded:false,gearBonusPower:0,casualtyRecovery:null},message:"Participant statistics unavailable"});
 assert(legacy.includes("Not recorded") && legacy.includes("Participant statistics unavailable"));
 const rally=ui.render({...options,snapshot:{attackers:[{ownerName:"Aldric",ownerUid:"a",role:"leader",startingTroops:30000,losses:7500,survivors:22500,effectivePower:45750},{ownerName:"Rowan",ownerUid:"r",role:"participant",startingTroops:50000,losses:12500,survivors:37500,effectivePower:76250}]}});
@@ -63,7 +64,7 @@ assert(ui.render({...options,forecast}).includes(forecast),"Existing forecast di
 const loading=ui.loading({type:"attack",cityName:"Thornfield"},options.badge);
 assert(loading.includes('role="status"') && loading.includes('id="battleReportBackBtn"') && loading.includes("data-detail-close"));
 assert(!loading.includes("data-report-jump") && !loading.includes("122000"),"Loading fabricated settled data");
-console.log("Validated full-report values, viewer order, escaping, historical fallback, gear, rally, all camp rewards, red defense shield, and navigation hooks.");
+console.log("Validated full-report values, viewer order, escaping, historical fallback, gear, rally, all camp rewards, shared defense artwork, outcome colors and navigation hooks.");
 
 const { itemSnapshot, wallEffects } = require("./validate-clan-tower-battle-reports.js");
 for (const name of ["normalizeBattleCasualtyRecovery", "normalizeBattlePowerGearEffect", "normalizeBattleGearEffects"]) {

@@ -10680,7 +10680,7 @@ function getRealmActivityArtSrc(event = {}) {
     kind: "stronghold",
     strongholdType: event.strongholdType,
   });
-  return artSrc || "assets/optimized/hud-report-192x192-21644b7390fb.webp";
+  return artSrc || getReportIconArt("realm");
 }
 
 function renderRealmActivityCard(event = {}) {
@@ -38778,7 +38778,22 @@ function setOnlineReportSyncState(status) {
     : `No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.`;
 }
 
+function getReportIconArt(icon) {
+  if (icon === "dispatch") icon = "reports";
+  if (icon === "defense-defeat" || icon === "shield") icon = "defense";
+  const assets = {
+    "reports": "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
+    "attack": "assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp",
+    "defense": "assets/optimized/report-defense-ink-384x384-08a43d2877bf.webp",
+    "scout": "assets/optimized/report-scout-ink-384x384-449c386d3b06.webp",
+    "realm": "assets/optimized/report-realm-ink-384x384-53b8cbd44f70.webp",
+  };
+  return Object.hasOwn(assets, icon) ? assets[icon] : "";
+}
+
 function renderBattleReportLedgerIcon(icon, className = "") {
+  const art = getReportIconArt(icon);
+  if (art) return `<svg class="${escapeHtml(className)}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><image href="${art}" width="64" height="64"/></svg>`;
   return `<svg class="${className}" aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#${icon}"></use></svg>`;
 }
 
@@ -40747,6 +40762,8 @@ function renderCrownlandsIcon(name, className = "") {
   const iconKey = getCrownlandsIconKey(name);
   const extraClass = String(className || "").trim();
   const classes = extraClass ? `cl-icon ${escapeHtml(extraClass)}` : "cl-icon";
+  const art = getReportIconArt(iconKey);
+  if (art) return `<svg class="${classes}" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><image href="${art}" width="32" height="32"/></svg>`;
   const href = EXTERNAL_FLAG_ICON_KEYS.has(iconKey)
     ? `assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
     : `#cl-icon-${iconKey}`;

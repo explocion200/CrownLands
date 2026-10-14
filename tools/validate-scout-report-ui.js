@@ -11,6 +11,10 @@ const context = vm.createContext({ window: {}, escapeHtml: esc, formatNumber: St
   renderOnboardingTip: () => '<aside class="onboarding-tip">First scout guidance</aside>', isDefenderScoutReport: report => report.scoutPerspective === "defender", getBattleReportExactTime: () => "14 Sep 2026, 10:42:18",
   marauderArt: city => `assets/marauders/${city.classification === "boss" ? "boss" : "solo"}-v1.webp`, renderHuntStamina: () => '<div class="hunt-stamina">Stamina 70/100 · Cost 10</div>'
 });
+for (const name of ["getReportIconArt", "renderBattleReportLedgerIcon"]) {
+  const source = read("game.js"), start = source.indexOf(`function ${name}(`), end = source.indexOf("\nfunction ", start + 9);
+  vm.runInContext(source.slice(start, end), context);
+}
 vm.runInContext(read("scout-report-ui.js"), context);
 const ui = context.window.CrownlandsScoutReportUI;
 const report = { targetType: "city", troops: 20000, totalDefense: 44470, baseAttackPercent: 25, shieldwallDisciplinePercent: 10, stoneworksPercent: 20 };

@@ -2153,6 +2153,10 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 - Movement HUD, Reports, Chat, and modal layers must stack predictably.
 - Reduced-motion and performance-sensitive behavior must be respected where animation exists.
 
+### Confirmed report and action artwork — October 14, 2026
+
+Use five matching transparent ink-and-watercolor illustrations based on the owner's medieval kingdom map: sealed dispatch for Reports, crossed swords for Attack, shield for Defense, hooded Scout and castle for Realm Activity. Apply them throughout the corresponding HUD, tabs, report rows and details, action controls, troop-order headings, incoming threats, Help and report notification artwork. Preserve dimensions, accessible names, outcome text/colors and controls. Saved heraldry, map units, objective artwork, named skills and equipment keep their distinct identities. This presentation change does not alter combat or report rules and does not establish deployment. Prompts and asset hashes are recorded in `docs/art-sources/report-actions/`.
+
 ### Confirmed troops helmet artwork — October 4, 2026
 
 The approved troops icon is a frontal medieval helmet with worn steel, a broad dark brim, two eye slots, an angular face guard, subtle brass rivets and a transparent background. Use the same image across shared troop statistics, production, rewards, reports, troop orders, city and objective panels, Barracks icon controls, and default troop reward particles. Retain existing icon sizes, accessible labels and explicit reward artwork. Map army/scout tokens, heraldry, troop pickup bundles, officers and equippable item illustrations retain their existing designs. Troop counts, production, combat, progression and server authority are unchanged. The approved source and prompt are retained in `docs/visual-qa/troops-helmet/`; the 192 × 192 WebP is recorded as `troops-helmet` in `assets/optimized/manifest.json`. Approval and integration do not establish a live deployment.

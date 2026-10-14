@@ -150,7 +150,7 @@ try {
         tag,
         renotify: true,
         requireInteraction: data.kind === "attack",
-        icon: resolveAppUrl("assets/optimized/hud-report-192x192-21644b7390fb.webp"),
+        icon: resolveAppUrl("assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp"),
         badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
         data: {
           ...data,

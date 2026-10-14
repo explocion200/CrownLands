@@ -6,7 +6,7 @@ function incomingThreatNumber(value) {
   return value == null || !Number.isFinite(amount) ? "Unknown" : Math.max(0, Math.floor(amount)).toLocaleString("en-US");
 }
 function incomingThreatIcon(name) {
-  return `<svg aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#${name}"></use></svg>`;
+  return renderBattleReportLedgerIcon(name);
 }
 function incomingThreatTime(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
