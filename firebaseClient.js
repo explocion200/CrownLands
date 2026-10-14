@@ -3117,7 +3117,7 @@
     };
   }
 
-  async function loadOwnedCitiesAcrossIslands(islandIds = []) {
+  async function loadOwnedCitiesAcrossIslands(islandIds = [], { serverOnly = false } = {}) {
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
@@ -3128,7 +3128,12 @@
       query: firestoreQuery,
       where,
     } = client.modules.firestore;
-    if (!firestoreQuery || !where) return [];
+    const readOwned = serverOnly ? client.modules.firestore.getDocsFromServer : getDocs;
+    if (typeof readOwned !== "function") throw new Error("Server ownership lookup is unavailable.");
+    if (!firestoreQuery || !where) {
+      if (serverOnly) throw new Error("Server ownership query is unavailable.");
+      return [];
+    }
     const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
       .map(islandId => String(islandId || "").trim())
       .filter(Boolean))];
@@ -3141,7 +3146,7 @@
         where("worldId", "==", ONLINE_WORLD_ID),
         ...getRealmShardQueryConstraints(where)
       );
-      const snapshot = await getDocs(ownedRef);
+      const snapshot = await readOwned(ownedRef);
       return snapshot.docs
         .map(cityDoc => {
           const city = cityDoc.data() || {};
@@ -3153,7 +3158,7 @@
     const snapshots = await Promise.all(uniqueIslandIds.map(async islandId => {
       const citiesRef = collection(client.db, "islands", islandId, "cities");
       const ownedRef = firestoreQuery(citiesRef, where("ownerUid", "==", uid));
-      const snapshot = await getDocs(ownedRef);
+      const snapshot = await readOwned(ownedRef);
       return snapshot.docs.map(cityDoc => ({ ...cityDoc.data(), islandId, id: cityDoc.id }));
     }));
     return snapshots.flat();
