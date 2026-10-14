@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Window alignment and readable labels
+### Current verified web release — HUD left-edge alignment
+
+The authorized merge and web deployment of [PR #566](https://github.com/explocion200/CrownLands/pull/566), from `codex/align-top-hud-left-edge`, is **LIVE — WEB** at build `1c8d8ad3ccfafa07ebccf4772d6981ea1db54d7d`. The profile/action row, resources and combat timers share Reports' existing 12px left screen inset across desktop, landscape mobile and fullscreen transitions. The header-only left safe-area gutter is removed; vertical placement, right-side inset, control sizes, artwork, burgundy colors and actions are preserved.
+
+- Netlify deploy `6acff7820bae52e8c1996a16` published October 14 at 5:45 p.m. Eastern (`2026-10-14T21:45:05.382Z`); the manual publication hold remains enabled. All three required GitHub checks and four selected local validators passed.
+- The merged artifact and asset budgets passed. All 1,161 staged inventory entries and eight staged files matched. The desktop/mobile fullscreen matrix passed 18 local, 18 staged and 18 public cases, including left/right and changing screen insets, compact layouts, map zoom and mouse/touch actions. All 24 public file comparisons and six anonymous startup/reload cases passed.
+- Release ID, API contract and server source fingerprint match the preceding publication. No backend or player data changed. itch.io was not republished; physical-device behavior, authenticated gameplay and installed-app cache recovery remain manual limits.
+
+See [the HUD alignment release record](HUD_ALIGNMENT_RELEASE_2026-10-14.md) for exact identity and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Window alignment and readable labels
 
 The authorized merge and web deployment of [PR #564](https://github.com/explocion200/CrownLands/pull/564), from `codex/window-alignment-and-label-contrast`, is **LIVE — WEB** at build `b7b2a2584dd4f727be4a581c1ebbe11201f24ee7`. Boxed X controls align within their headers and remain stable when opening animations finish. Clan reward/member badges and the View Main City label are readable. The approved burgundy theme and framed tabs are preserved.
 
@@ -750,10 +760,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `b7b2a25...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `1c8d8ad...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Top-left HUD shares Reports' 12px left edge across desktop/mobile and fullscreen transitions | PR #566 build `1c8d8ad...`; exact staged/public assets, native fullscreen, emulated screen insets, mouse/touch actions and startup verified | Not republished | `LIVE — WEB`; physical-device, authenticated gameplay and installed-app review remain manual |
 | Boxed X header alignment and animation stability; readable Clan counts and View Main City label | PR #564 build `b7b2a25...`; exact staged/public assets, desktop/landscape windows, profiles and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
 | Restored burgundy headers, HUD and boxed X buttons; existing parchment, frames and alignment retained | PR #562 build `7ff2ab6...`; exact staged/public assets, desktop/landscape windows and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
 | Shared Guild Master colors, aligned framed X controls and inset tab frames | PR #560 build `16d282a...`; exact staged/public assets, desktop/landscape windows and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
@@ -2863,6 +2874,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 14, 2026 — HUD alignment release verification
+
+- Recorded the authorized PR #566 merge and verified web publication at `1c8d8ad...`, Netlify deploy `6acff7820bae52e8c1996a16`, published `2026-10-14T21:45:05.382Z` (5:45 p.m. Eastern).
+- Marked the shared HUD/Reports left edge `LIVE — WEB`, with required CI, four local validators, 18 local/18 staged/18 public desktop/mobile fullscreen cases, exact artifact comparisons and six public startup/reload checks. Preserved existing colors, sizes and actions, publication hold, backend, itch.io distinction and authenticated/device verification limits.
 
 ## October 14, 2026 — Window controls and label release verification
 
