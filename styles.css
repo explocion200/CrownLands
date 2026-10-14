@@ -7400,7 +7400,8 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 }
 
 .top-hud {
-  left: max(.75rem, env(safe-area-inset-left));
+  /* Use Reports' screen-edge inset instead of adding a second mobile gutter. */
+  left: 12px;
   right: max(.75rem, env(safe-area-inset-right));
   padding-top: calc(.55rem + env(safe-area-inset-top));
 }
