@@ -21,6 +21,7 @@
 #modal.city-list-modal .city-list-panel button:disabled { opacity:.55; cursor:default; }
 #modal.city-list-modal :focus-visible { outline:2px solid #486b78; outline-offset:-2px; }
 #modal.city-list-modal .cll-header { display:grid; grid-template-columns:1fr auto; flex:none; align-items:center; gap:12px; padding:20px 64px 14px 24px; border-bottom:1px solid var(--cll-rule); background:linear-gradient(100deg,#e4d4aa55,transparent); }
+#modal.city-list-modal .cll-heading { display:flex; align-items:center; gap:12px; min-width:0; }
 #modal.city-list-modal .cll-eyebrow { margin:0 0 3px; color:#806b43!important; font:10px Georgia,serif; text-transform:uppercase; letter-spacing:1.6px; }
 #modal.city-list-modal .cll-header h3 { margin:0; font:30px/1.1 Georgia,serif; color:var(--cll-ink)!important; }
 #modal.city-list-modal .cll-treasury { display:flex; align-items:center; gap:10px; }

@@ -215,7 +215,9 @@ const entrypointBudgets = {
   // Shared NPC action-wheel wiring adds less than 2 KiB; use existing headroom
   // plus one bounded KiB, within the aggregate four-KiB refinement above.
   // The NPC countdown reuses the combat tick; its call exceeds remaining source headroom by 27 bytes.
-  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1) * 1024,
+  // City List/Map header images add 391 normalized markup bytes, reusing cached HUD art.
+  // Allow a bounded 0.5 KiB source step; aggregate shell/image/request limits stay fixed.
+  "game.js": (1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -256,7 +258,9 @@ const entrypointBudgets = {
   // Map markers and the complete responsive Tower/Treasury panel add under one
   // bounded 16 KiB shared-style step.
   // Onboarding arrows and compact Profile guidance add under 2 KiB.
-  "styles.css": 425 * 1024,
+  // Shared title-image rules add 316 bytes and exceed the old cap by 88 bytes.
+  // Bound this at 0.25 KiB; removed Bag/Shop seal styles offset the total UI payload.
+  "styles.css": 425.25 * 1024,
   "holding-tower-ui.css": 24 * 1024,
   "holding-tower-ui.js": 24 * 1024,
   "camp-details-ui.js": 8 * 1024,

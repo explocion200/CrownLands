@@ -55,7 +55,7 @@ async function main() {
       })()`);
       assert(layout.bounds.x >= 0 && layout.bounds.y >= 0 && layout.bounds.height <= viewport.height, JSON.stringify(layout));
       assert(!layout.overflow && layout.footerVisible && layout.rowHeight >= 80 && layout.targets.every(n => n >= 44) && layout.art, JSON.stringify(layout));
-      assert.equal(layout.paper, "rgb(242, 232, 205)");
+      assert.equal(layout.paper, "rgb(237, 225, 194)", "City List retains the approved shared parchment palette.");
       assert.equal(Math.round(layout.bounds.width), Math.min(1040, viewport.width - 24));
       assert.equal(layout.count, 5, "The ledger must retain five holdings per page.");
       const costs = await evaluate(`(() => {

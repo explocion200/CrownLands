@@ -15,8 +15,6 @@
 #modal.inventory-modal::backdrop{background:#23281e65!important}
 #modal.inventory-modal .ib-bag-shell{height:100%;display:grid;grid-template-rows:82px minmax(0,1fr);border:1px solid var(--line)!important}
 #modal.inventory-modal .ib-bag-header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line)!important;background:#e9dcb483!important}
-#modal.inventory-modal .ib-bag-seal{width:45px;height:51px;display:grid;place-items:center;border:1px solid #9e895e!important;background:#d5bd7933!important;color:#66593b!important}
-#modal.inventory-modal .ib-bag-seal svg{width:32px;height:32px}
 #modal.inventory-modal .ib-bag-heading p{margin:0 0 3px;font-size:11px!important;color:var(--muted)!important}
 #modal.inventory-modal .ib-bag-heading h1{font:32px/1.1 Georgia,serif!important;margin:0}
 #modal.inventory-modal .ib-header-note{margin-left:auto;font:italic 15px Georgia!important;color:#7b6a4f!important}
@@ -80,8 +78,6 @@
 #modal.inventory-modal .ib-empty-bag p{font:15px/1.6 Georgia!important;margin:0;max-width:300px}
 @media(orientation:landscape) and (max-height:550px){#modal.inventory-modal .ib-bag-shell{grid-template-rows:52px minmax(0,1fr)}
 #modal.inventory-modal .ib-bag-header{padding:4px 10px;gap:9px}
-#modal.inventory-modal .ib-bag-seal{width:32px;height:36px}
-#modal.inventory-modal .ib-bag-seal svg{width:24px;height:24px}
 #modal.inventory-modal .ib-bag-heading p{font-size:9px!important;margin-bottom:1px}
 #modal.inventory-modal .ib-bag-heading h1{font-size:23px!important}
 #modal.inventory-modal .ib-header-note{font-size:11px!important}
@@ -167,7 +163,6 @@
 #modal.inventory-modal .ib-active-status,}
 @media(orientation:landscape) and (max-height:350px){#modal.inventory-modal .ib-bag-shell{grid-template-rows:48px minmax(0,1fr)}
 #modal.inventory-modal .ib-bag-header{padding-block:2px}
-#modal.inventory-modal .ib-bag-seal{height:32px}
 #modal.inventory-modal .ib-bag-heading h1{font-size:21px!important}
 #modal.inventory-modal .ib-bag-heading p{font-size:8px!important}
 #modal.inventory-modal .ib-item-name{font-size:10px!important;min-height:23px}
