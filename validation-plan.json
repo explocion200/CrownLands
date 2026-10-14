@@ -29,9 +29,10 @@
         "tools/validate-daily-login-rewards.js",
         "tools/validate-seasonal-achievements.js",
         "tools/validate-achievement-scroll-and-rewards.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-kingdom-ledgers-browser.js"
       ],
-      "reason": "Matching HUD/header artwork and new lazy reward-tab illustrations affect Daily Login, Quests, Achievements and Leaderboards. Verify stable outer/panel/header/tab/X geometry at desktop and short landscape sizes, normal/fullscreen, decoded artwork, scrolling, focus and native dismissal; retain reward claim/migration/seasonal rules and full leaderboard podium behavior. Asset checks verify hashes, alpha, dimensions, bounded size and lazy loading. Shared frame CSS is deduplicated; build and release-fingerprint changes require the normal production packaging gates. No server authority, economy values, player state or emulator behavior changes."
+      "reason": "Matching HUD/header artwork and new lazy reward-tab illustrations affect Daily Login, Quests, Achievements and Leaderboards. Verify stable outer/panel/header/tab/X geometry at desktop and short landscape sizes, normal/fullscreen, decoded artwork, scrolling, focus and native dismissal; retain reward claim/migration/seasonal rules and full leaderboard podium behavior. Asset checks verify hashes, alpha, dimensions, bounded size and lazy loading. Shared frame CSS is deduplicated; build and release-fingerprint changes require the normal production packaging gates. No server authority, economy values, player state or emulator behavior changes. The common ledger title-art class also serves Map Atlas; its existing browser suite covers that retained placement and the shared ledger frame."
     },
     {
       "paths": [

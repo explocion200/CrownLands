@@ -15835,7 +15835,7 @@ function showIslandSwitcherModal() {
   }
   modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "scout-report-ledger", "offline-reward-modal");
   modal.classList.add("island-switcher-modal");
-  modalTitle.innerHTML = `<img class="window-title-art atlas-title-art" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async"><span>Map</span>`;
+  modalTitle.innerHTML = `<img class="window-title-art ledger-title-art" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async"><span>Map</span>`;
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
   refreshIslandMapHomeRegionOnceForOpen();
