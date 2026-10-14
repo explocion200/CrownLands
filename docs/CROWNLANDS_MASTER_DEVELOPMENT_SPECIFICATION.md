@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Centered leaderboard podium crowns
+### Current verified web release — Shared swords for every attack
+
+The authorized merge and web deployment of [PR #556](https://github.com/explocion200/CrownLands/pull/556), from `codex/universal-attack-sword-clashes`, is **LIVE — WEB** at build `ec42a351bd72d45f697da950b0b63648d5a9eeb4`. Confirmed attacks use the capture animation's three sword clashes, sparks and dust across city, objective and NPC targets. The saved-flag drape and ownership pulse remain exclusive to eligible captures; attack and capture receipts for the same battle share one sword sequence.
+
+- Netlify deploy `6acf989fced2cf4068af825c` published October 14 at 11:02 a.m. Eastern (`2026-10-14T15:02:13.557Z`); the manual publication hold remains enabled. All three required GitHub checks passed. The merged production artifact, complete 1,161-entry staged inventory, ten staged and thirty public file comparisons, and six public startup/reload cases passed.
+- Staged and public combat assets passed the existing browser fixture suite at 1440×900, 844×390 and 568×320. Coverage includes all target families, three sword contacts, capture-only flags, receipt deduplication, attack/capture delivery in either order, Citadel Legion reports, motion modes, NPC spawn identity, stale-map/session guards and cleanup. These checks use synthetic game fixtures, not production combat actions.
+- Release ID, API contract and server source fingerprint match the preceding published client. No Functions, Firestore rules/indexes, realm configuration or player data were deployed or changed. itch.io was not republished. Authenticated production combat, installed apps and physical-device review remain manual limits.
+
+See [the attack swords release record](ATTACK_SWORDS_RELEASE_2026-10-14.md) for exact identity and verification evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Centered leaderboard podium crowns
 
 The authorized merge and web deployment of [PR #554](https://github.com/explocion200/CrownLands/pull/554), from `codex/leaderboard-medal-crowns`, is **LIVE — WEB** at build `eb0be0ec339aef412210e0977337c5b070f1f364`. Top 100 Kingdoms, Top Clans and Field of Glory show gold, silver and bronze crowns for first, second and third place, centered above the numeric ranks and saved flags or clan heraldry. Compact spacing keeps the complete podium visible on short landscape screens.
 
@@ -700,10 +710,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `eb0be0e...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `ec42a35...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Three shared sword clashes for every confirmed attack; saved-flag drape only for eligible captures | PR #556 build `ec42a35...`; exact staged/public assets, desktop/landscape combat fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated combat, installed-app and physical-device review remain manual |
 | Centered gold, silver and bronze crowns for the top three on Kingdom, Clan and Glory podiums | PR #554 build `eb0be0e...`; exact assets, desktop/landscape-mobile fixture interactions and public startup verified | Not republished | `LIVE — WEB`; authenticated standings, installed-app and physical-device review remain manual |
 | Matching-size defeated marauder/boss art, server respawn countdown and atomic replacement at a new road position | PR #552 build `1c3faf7...`; client/backend identity, authoritative realm and delivered desktop/mobile UI verified | Not republished | `LIVE — WEB AND FIREBASE`; actual production defeat/respawn and physical-device checks remain manual |
 | Solo marauders in active New Lands, Core-only clan bosses, permanent stamina and proportional daily Crown refill | PR #541 build `2adcd7c...`; 25 bosses / 672 solos across all 81 current maps; backend, UI and scoped activation verified | Not republished; old release identity fails the current backend version guard | `LIVE — WEB AND FIREBASE`; matching itch.io publication required |
@@ -2471,7 +2482,7 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 - Every confirmed combat impact uses the capture animation's same three sword strikes, contact sparks and dust, including attacks on regular cities, Strongholds, the Crown Citadel, Camps, Holding Towers, Marauders and Clan Bosses, as well as Citadel Legion defenses and Rally battles. Attacks without a capture do not show the flag drape or ownership pulse.
 - Confirmed eligible city captures continue into the existing saved-flag drape. The battle receipt and ownership update share one sword sequence when they describe the same combat. Existing capture eligibility, other objective rewards, combat results and sound cues remain unchanged.
 - Reduced motion uses a brief opacity-only crossed-sword confirmation for attacks; Off skips the effect. Active-map/session gating, NPC spawn identity, hydration, event deduplication, performance limits and cleanup remain in force. Scouting, friendly movement, blocked orders and historical report viewing do not trigger combat effects.
-- **Status:** `IN DEVELOPMENT` on `codex/universal-attack-sword-clashes`; implementation and merge do not establish deployment.
+- **Status:** `LIVE — WEB` at build `ec42a35...` from PR #556; see FM-2 and [the release record](ATTACK_SWORDS_RELEASE_2026-10-14.md) for exact public-delivery evidence. itch.io was not republished; authenticated combat and installed-app/physical-device review remain manual.
 
 ### Approved castle capture animation — October 11, 2026
 
@@ -2806,6 +2817,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 14, 2026 — Shared attack swords release verification
+
+- Recorded authorized PR #556 merge and verified web publication at `ec42a35...`, Netlify deploy `6acf989fced2cf4068af825c`, published `2026-10-14T15:02:13.557Z` (11:02 a.m. Eastern).
+- Marked universal attack swords and capture-only flags `LIVE — WEB`, with exact artifact comparisons, staged/public combat fixture checks and six public startup/reload cases. Preserved the manual publication hold, existing backend, itch.io channel distinction and authenticated/device verification limits.
 
 ## October 13, 2026 — Matching NPC Info and Scout Report publication
 
