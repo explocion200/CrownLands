@@ -1,11 +1,11 @@
 /* Full estate, scoped to the existing Main City dialog. */
-#modal.bailey-modal{--paper:#f0e4c7;--ink:#332e23;--rule:#ad9870;--moss:#49583b;color-scheme:light;box-sizing:border-box;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;inset:0;margin:0;padding:0;overflow:hidden;border:0!important;border-radius:0!important;background:var(--paper)!important;color:var(--ink)!important;font:14px/1.4 "Segoe UI",Arial,sans-serif!important}
+#modal.bailey-modal{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--rule:var(--cl-border-faded,#b19a71);--moss:#49583b;color-scheme:light;box-sizing:border-box;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;inset:0;margin:0;padding:0;overflow:hidden;border:0!important;border-radius:0!important;background:var(--paper)!important;color:var(--ink)!important;font:14px/1.4 "Segoe UI",Arial,sans-serif!important}
 #modal.bailey-modal *,#modal.bailey-modal *::before,#modal.bailey-modal *::after{box-sizing:border-box}
 #modal.bailey-modal [hidden]{display:none!important}
 #modal.bailey-modal .modal-card{display:flex;flex-direction:column;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;margin:0;padding:0!important;border:0!important;box-shadow:none!important;transform:none!important;animation:none!important;background:transparent!important;overflow:hidden}
 #modal.bailey-modal .modal-card>header{position:absolute;inset:0 0 auto auto;z-index:20;padding:8px!important;width:56px;background:none!important;border:0!important;pointer-events:none}
 #modal.bailey-modal #modalTitle{display:none}
-#modal.bailey-modal #closeModalBtn{position:absolute;right:8px;top:8px;z-index:20;pointer-events:auto;min-width:44px;min-height:44px;color:var(--ink)!important;border:1px solid var(--rule);background:var(--paper)!important;border-radius:3px}
+#modal.bailey-modal #closeModalBtn{position:absolute;right:8px;top:8px;z-index:20;pointer-events:auto;min-width:44px;min-height:44px;}
 #modal.bailey-modal #modalBody{display:block;flex:1;min-height:0;height:100%;padding:0!important;overflow:hidden}
 #modal.bailey-modal :is(h2,h3,p){margin:0;color:inherit!important;text-shadow:none!important}
 #modal.bailey-modal :is(h2,h3){padding:0;border:0;letter-spacing:0;text-transform:none}

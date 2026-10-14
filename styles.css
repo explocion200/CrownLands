@@ -3730,7 +3730,7 @@ input {
   .public-clan-details dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .public-clan-details dl div:last-child { grid-column: 1 / -1; }
 }
-.modal-close { position: absolute; z-index: 3; right: .7rem; top: .65rem; width: 34px; height: 34px; border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.1); }
+.modal-close { position: absolute; z-index: 3; right: .7rem; top: .65rem; width: 34px; height: 34px; }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; margin: .7rem 0; }
 .stat-card { padding: .65rem; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid var(--line); }
 .stat-card strong { display: block; color: #fff4c8; }

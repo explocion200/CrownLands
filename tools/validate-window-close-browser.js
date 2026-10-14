@@ -37,6 +37,15 @@ async function main() {
     await evaluate(`new Promise(resolve=>{if(ensureOptionalUiStyle('battle-report',modalBody,resolve))resolve();})`);
     await evaluate(`new Promise(resolve=>{if(ensureOptionalUiScripts('estate-economy',modalBody,resolve))resolve();})`);
     await evaluate(`new Promise(resolve=>{if(ensureOptionalUiStyle('estate-economy',modalBody,resolve))resolve();})`);
+    for (const sample of ['quests-ledger/samples.js','achievements-ledger/samples.js'])
+      await evaluate(fs.readFileSync(path.resolve(__dirname,'../docs/visual-qa',sample),'utf8'));
+    const daily = JSON.parse(fs.readFileSync(path.resolve(__dirname,'../docs/visual-qa/daily-login-cycle/runtime-sample.json'),'utf8'));
+    await evaluate(`dailyLoginRewardStatus=normalizeDailyLoginRewardStatus(${JSON.stringify(daily)});
+      dailyMissionState=normalizeDailyMissionState(QuestReviewSamples.standard);
+      seasonalAchievementState=normalizeSeasonalAchievementState({...AchievementReviewSamples.mixed,seasonEndsAtMs:Date.now()+86400000},Date.now());
+      dailyLoginRewardStatusLoading=false;dailyMissionStatusLoading=false;seasonalAchievementStatusLoading=false;
+      // This matrix opens rewards explicitly; do not auto-open them after City closes.
+      const dailyAutoOpenKey=getDailyLoginRewardAutoOpenKey();if(dailyAutoOpenKey)localStorage.setItem(dailyAutoOpenKey,'1');`);
     const estate = require('./guild-production-preview').fixture().snapshot();
     await evaluate(`window.closeEstateSnapshot=${JSON.stringify(estate)};
       window.closeEconomy=CrownlandsEstateEconomy.create({scope:()=>'close-ui',api:()=>({getEstateState:async()=>structuredClone(closeEstateSnapshot)}),visible:()=>true,gold:()=>closeEstateSnapshot.gold,gear:CROWNLANDS_COMMON_GEAR});
@@ -54,10 +63,12 @@ async function main() {
       ["help", "showHelpModal()", "#closeHelp"],
       ["reports", "showLogModal()", "[data-reports-close]"],
       ["incoming", "showIncomingAttacksModal()", ".close-button"],
-      ...["marches", "rallies", "reinforcements", "objectives"].map(tab => [tab, `activeOperationsTab='${tab}';showOutgoingAttacksModal()`, ".close-button"]),
+      ...["marches", "rallies", "reinforcements", "camps", "strongholds"].map(tab => [tab, `showOutgoingAttacksModal();activeOperationsTab='${tab}';renderOutgoingAttacksModalContent()`, ".close-button"]),
       ["leaderboard", "showLeaderboardModal()"],
       ["maps", "showIslandSwitcherModal()"],
-      ["daily", "showDailyLoginRewardsModal()"],
+      ["daily", "showDailyLoginRewardsModal({skipRefresh:true})"],
+      ["quests", "showDailyLoginRewardsModal({initialTab:'quests',skipRefresh:true})"],
+      ["achievements", "showDailyLoginRewardsModal({initialTab:'achievements',skipRefresh:true})"],
       ["castle", "openInnerCastle(getMainCityReference().id)"],
       ...["treasury", "barracks", "gatehouse", "royal-stables"].map(building=>[building, `openInnerCastle(getMainCityReference().id);renderCommonGearBuilding('${building}')`]),
       ["public-profile", "showPublicPlayerProfile(getCurrentOnlineUid())"],
@@ -65,6 +76,8 @@ async function main() {
       ["skills", "showProfileScreen();showProfileSkills()", "#profileCloseBtn", "#profileScreen"],
       ["settings", "showProfileScreen();showProfileSettings()", "#profileCloseBtn", "#profileScreen"],
       ["clan", "showProfileScreen();showProfileClan()", "#profileCloseBtn", "#profileScreen"],
+      ["skins", "showProfileScreen();showProfileSkins()", "#profileCloseBtn", "#profileScreen"],
+      ["flag", "showProfileScreen();showFlagEditor()", "#profileCloseBtn", "#profileScreen"],
       ["chat", "chatDialog.showModal()", "#chatCloseBtn", "#chatDialog"],
       ["production", "showProfileScreen();document.getElementById('profileGoldProductionBtn').click()", "button", "#profileProductionDialog"],
       ["shield-activation", "showInventoryModal();confirmPeaceShieldActivation({id:'royal-peace-shield'},null,()=>{throw Error('Close approved activation')})", "header button", "#peaceShieldActivationDialog"],
@@ -74,11 +87,14 @@ async function main() {
       ["battle-detail", "modalBody.innerHTML=CrownlandsBattleReportUI.loading({type:'attack',cityName:'The Northern Watch',createdAtMs:Date.now()},{label:'Victory'});CrownlandsBattleReportUI.mount(modal,modalBody,closeModalBtn);modal.showModal()", "[data-detail-close]"],
       ["scout", "modalBody.innerHTML=CrownlandsScoutReportUI.renderAttempt({type:'scout',cityName:'The Northern Watch',cityLevel:10,createdAtMs:Date.now()},{label:'Failed'});CrownlandsScoutReportUI.mount(modal,modalBody,closeModalBtn);modal.showModal()", "[data-scout-close]"],
       ...Object.keys(estate.estate.levels).map(key=>['estate-'+key,`closeEconomy.building('${key}')`,['guild-master','alehouse'].includes(key)?'.guild-close':'header [data-economy-action="close"]',['guild-master','alehouse'].includes(key)?'.guild-window[open]':'.estate-economy-dialog[open]']),
+      ...['members','contracts','infirmary','training','archive','improvements'].map(tab=>['guild-'+tab,`closeEconomy.building('guild-master');document.querySelector('.guild-window[open] [data-guild="tab"][data-id="${tab}"]').click()`,'.guild-close','.guild-window[open]']),
     ];
     for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
       for (const [name, open, selector = "#closeModalBtn", root = "#modal"] of windows) {
         if (process.env.CROWNLANDS_CLOSE_FILTER && !name.match(process.env.CROWNLANDS_CLOSE_FILTER)) continue;
+        await client.send("Emulation.setTouchEmulationEnabled",{enabled:false});
+        await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0});
         await evaluate(open);
         for (let i = 0; i < 600 && await evaluate('!!document.querySelector(".optional-ui-loading")'); i++) await wait(100);
         await wait(250);
@@ -94,7 +110,16 @@ async function main() {
             if(el.matches('h1,h2')) { const range=document.createRange();range.selectNodeContents(el);rects=[...range.getClientRects()]; }
             return rects.some(b=>Math.min(b.right,r.right)-Math.max(b.left,r.left)>1&&Math.min(b.bottom,r.bottom)-Math.max(b.top,r.top)>1);
           }).map(el=>el.id||el.textContent.trim().slice(0,50));
-          return {rect:r.toJSON(),frame:frame.toJSON(),visible:visible(button),hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overlaps,
+          const header=[...root.querySelectorAll('.window-header,.profile-screen-header,.rs-shop-header,.ib-bag-header,.cll-header,.tg-header,.estate-header,.chat-header,.email-auth-header,.daily-header,.quest-header,.achievement-header,#modalTitle')].find(visible)||root.querySelector(':scope > header');
+          const rgb=value=>(value.match(/[\\d.]+/g)||[]).map(Number);
+          const luminance=c=>c.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+          const lowContrast=header?[...header.querySelectorAll('h1,h2,h3,p,small,span,strong,b,button')].filter(el=>visible(el)&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).flatMap(el=>{
+            const s=getComputedStyle(el);if(parseFloat(s.fontSize)<1||el.closest(':disabled,[aria-disabled="true"]'))return [];
+            let parent=el,bg=[];while(parent){bg=rgb(getComputedStyle(parent).backgroundColor);if(bg.length===3||bg[3]===1)break;parent=parent.parentElement;}
+            if(bg.length<3)return [];const l=[luminance(rgb(s.color)),luminance(bg)].sort((a,b)=>b-a),ratio=(l[0]+.05)/(l[1]+.05);
+            return ratio<4.5?[{text:el.textContent.trim().slice(0,50),ratio:Math.round(ratio*100)/100,color:s.color}]:[];
+          }):[];
+          return {lowContrast,header:header?{background:getComputedStyle(header).backgroundColor,color:getComputedStyle(header).color}:null,rect:r.toJSON(),frame:frame.toJSON(),visible:visible(button),hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overlaps,
             background:s.backgroundColor,image:s.backgroundImage,border:parseFloat(s.borderTopWidth)+parseFloat(s.borderRightWidth)+parseFloat(s.borderBottomWidth)+parseFloat(s.borderLeftWidth),shadow:s.boxShadow,color:s.color,
             icon:icon.maskImage,iconWidth:icon.width,iconHeight:icon.height,label:button.getAttribute('aria-label'),position:s.position};
         })()`);
@@ -105,10 +130,14 @@ async function main() {
         if (status.rect && (status.rect.left < 0 || status.rect.top < 0 || status.rect.right > viewport.width || status.rect.bottom > viewport.height)) issues.push("outside viewport");
         if (status.rect && (status.rect.left < status.frame.left-1 || status.rect.top < status.frame.top-1 || status.rect.right > status.frame.right+1 || status.rect.bottom > status.frame.bottom+1)) issues.push("outside window");
         if (status.overlaps?.length) issues.push("overlap");
-        if (status.background !== "rgba(0, 0, 0, 0)" || status.image !== "none" || status.border || status.shadow !== "none") issues.push("boxed");
+        if (status.background !== "rgb(57, 44, 36)" || status.image !== "none" || status.border !== 4 || status.shadow !== "none") issues.push("incorrect close frame");
+        if (status.color !== "rgb(244, 230, 197)") issues.push("incorrect close ink");
+        if (status.header?.background !== "rgb(57, 44, 36)") issues.push("incorrect header theme: "+JSON.stringify(status.header));
+        if (status.lowContrast.length) issues.push("header text contrast: "+JSON.stringify(status.lowContrast));
         if (!status.icon?.startsWith('url("data:image/svg+xml')) issues.push("inconsistent X");
         if (status.iconWidth!=="20px" || status.iconHeight!=="20px") issues.push("inconsistent icon size");
         results.push({name,viewport,status,issues});
+        await evaluate('document.activeElement?.blur()');
         const shot = await client.send("Page.captureScreenshot", {format:"png"});
         fs.writeFileSync(path.join(output,`${audit?'before-':''}${name}-${viewport.width}.png`),Buffer.from(shot.data,"base64"));
         if (status.hit) {
@@ -127,7 +156,7 @@ async function main() {
           if (!focused.active || !focused.visible || !focused.tabbable || focused.outline<2 || focused.style==='none') issues.push("missing keyboard focus: "+JSON.stringify(focused));
           await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",...point});
           const hover = await evaluate(`(() => {const s=getComputedStyle(document.querySelector(${JSON.stringify(root)}).querySelector(${JSON.stringify(selector)}));return [s.backgroundColor,s.backgroundImage,s.boxShadow];})()`);
-          if (hover.join('|')!=="rgba(0, 0, 0, 0)|none|none") issues.push("boxed hover");
+          if (hover.join('|')!=="rgb(85, 65, 48)|none|none") issues.push("incorrect close hover: "+hover.join('|'));
           if (viewport.width < 1000) {
             await client.send("Emulation.setTouchEmulationEnabled",{enabled:true});
             await client.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{...point,id:1}]});

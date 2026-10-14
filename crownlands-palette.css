@@ -5,27 +5,31 @@
 :root {
   color-scheme: light;
 
-  --cl-bg: #d7c49d;
-  --cl-panel: #eedebe;
-  --cl-panel-secondary: #e7d6b4;
-  --cl-panel-raised: #dbc8a2;
-  --cl-panel-inset: #d0b98e;
-  --cl-input-bg: #f1e2c5;
+  --cl-bg: #e0cea8;
+  --cl-panel: #ede1c2;
+  --cl-panel-secondary: #e4d5b2;
+  --cl-panel-raised: #f4ead1;
+  --cl-panel-inset: #e0cea8;
+  --cl-input-bg: #f4ead1;
+  --cl-oak: #392c24;
+  --cl-oak-hover: #554130;
+  --cl-header-rule: #84694a;
+  --cl-tab-selected: #efe3c7;
 
   --cl-burgundy: #72363a;
   --cl-burgundy-dark: #542728;
-  --cl-brass: #997643;
+  --cl-brass: #9b8052;
   --cl-gold: #b58a3b;
   --cl-gold-highlight: #c69a45;
   --cl-gold-bonus: #a87624;
 
-  --cl-text: #2f2113;
-  --cl-text-secondary: #5a4632;
-  --cl-text-muted: #756550;
-  --cl-text-light: #f2e2bf;
+  --cl-text: #352b20;
+  --cl-text-secondary: #665239;
+  --cl-text-muted: #705d45;
+  --cl-text-light: #f4e6c5;
   --cl-text-bright: #fff8e8;
   --cl-border-dark: #542f24;
-  --cl-border-faded: #a59070;
+  --cl-border-faded: #b19a71;
 
   --cl-player-owned: #b68a43;
   --cl-main-city: #454b54;
@@ -54,11 +58,11 @@
   --cl-disabled-text: #8c8373;
 
   --cl-panel-shadow: inset 0 0 0 1px rgba(255, 248, 232, .34), 0 13px 32px rgba(47, 33, 19, .34);
-  --cl-card-shadow: inset 0 1px 0 rgba(255, 248, 232, .46), 0 4px 9px rgba(84, 47, 36, .2);
-  --cl-header-bg: linear-gradient(180deg, var(--cl-burgundy), var(--cl-burgundy-dark));
-  --cl-panel-bg: linear-gradient(180deg, var(--cl-panel), var(--cl-panel-secondary));
-  --cl-card-bg: linear-gradient(180deg, var(--cl-panel-secondary), var(--cl-panel-raised));
-  --cl-inset-bg: linear-gradient(180deg, var(--cl-panel-inset), #c5ad80);
+  --cl-card-shadow: none;
+  --cl-header-bg: var(--cl-oak);
+  --cl-panel-bg: var(--cl-panel);
+  --cl-card-bg: var(--cl-panel-raised);
+  --cl-inset-bg: var(--cl-panel-inset);
 
   /* Compatibility aliases used throughout the existing interface. */
   --cl-profile-canvas: var(--cl-bg);
@@ -90,8 +94,8 @@
   --cl-panel-edge: var(--cl-brass);
   --cl-paper-line: rgba(153, 118, 67, .36);
   --cl-ledger-line: rgba(84, 47, 36, .2);
-  --panel: rgba(238, 222, 190, .97);
-  --panel2: rgba(231, 214, 180, .98);
+  --panel: var(--cl-panel);
+  --panel2: var(--cl-panel-secondary);
   --line: rgba(153, 118, 67, .58);
   --ink: var(--cl-text);
   --muted: var(--cl-text-secondary);
@@ -133,34 +137,16 @@
   --cl-contrast-ink: var(--cl-text);
   --cl-contrast-ink-muted: var(--cl-text-secondary);
   --cl-contrast-border: var(--cl-brass);
-  --cl-tab-unselected-bg: var(--cl-panel-raised);
+  --cl-tab-unselected-bg: var(--cl-panel-secondary);
   --cl-tab-unselected-text: var(--cl-text-secondary);
-  --cl-tab-selected-bg: var(--cl-burgundy);
-  --cl-tab-selected-text: var(--cl-text-light);
+  --cl-tab-selected-bg: var(--cl-tab-selected);
+  --cl-tab-selected-text: var(--cl-burgundy);
   --cl-paper-surface-text: var(--cl-text);
   --cl-dark-surface-text: var(--cl-text-light);
 }
 
 body {
   color: var(--cl-text);
-}
-
-/* Full-window shells and modal pages. */
-:is(
-  .setup-card,
-  .online-login,
-  .login-game-info,
-  .commander-panel,
-  .profile-screen,
-  .modal .modal-card,
-  .map-loading-panel,
-  .performance-panel,
-  .rotate-warning > div
-) {
-  color: var(--cl-text) !important;
-  border-color: var(--cl-brass) !important;
-  background: var(--cl-panel-bg) !important;
-  box-shadow: var(--cl-panel-shadow) !important;
 }
 
 .map-loading-panel .map-loading-label {
@@ -172,38 +158,8 @@ body {
   border-color: rgba(153, 118, 67, .44) !important;
 }
 
-/* Burgundy title bars and administrative headings. */
-:is(
-  .profile-screen-header,
-  .settings-section-header,
-  .panel-header,
-  .modal-card > h2,
-  .battle-report-modal .modal-card > h2,
-  .shop-modal .modal-card > h2,
-  .inventory-modal .modal-card > h2,
-  .leaderboard-title,
-  .city-list-title,
-  .clan-hero-head,
-  .daily-reward-heading,
-  .seasonal-achievement-heading,
-  .inner-castle-modal .modal-card > h2,
-  .common-gear-box-modal .modal-card > h2,
-  .common-gear-building-modal .modal-card > h2
-) {
-  color: var(--cl-text-light) !important;
-  border-color: var(--cl-brass) !important;
-  background: var(--cl-header-bg) !important;
-  box-shadow: inset 0 -2px 0 rgba(84, 39, 40, .72) !important;
-  text-shadow: 0 1px 1px rgba(47, 33, 19, .78) !important;
-}
-
-.modal .modal-card > h2,
-.battle-report-modal .modal-card > h2,
-.shop-modal .modal-card > h2,
-.inventory-modal .modal-card > h2,
-.inner-castle-modal .modal-card > h2,
-.common-gear-box-modal .modal-card > h2,
-.common-gear-building-modal .modal-card > h2 {
+/* Shared legacy title geometry; appearance belongs to crownlands-theme. */
+.modal .modal-card > h2 {
   width: auto !important;
   margin: -.1rem -.1rem .45rem !important;
   padding: .5rem .7rem !important;
@@ -388,39 +344,6 @@ body {
 }
 
 :is(
-  .profile-screen-header,
-  .settings-section-header,
-  .panel-header,
-  .modal .modal-card > h2,
-  .leaderboard-title,
-  .city-list-title,
-  .clan-hero-head,
-  .daily-reward-heading,
-  .seasonal-achievement-heading
-) :is(h1, h2, h3, h4, strong, b, span, small),
-:is(
-  .modal .modal-card > h2,
-  .battle-report-modal .modal-card > h2,
-  .shop-modal .modal-card > h2,
-  .inventory-modal .modal-card > h2,
-  .inner-castle-modal .modal-card > h2,
-  .common-gear-box-modal .modal-card > h2,
-  .common-gear-building-modal .modal-card > h2
-) {
-  color: var(--cl-text-light) !important;
-  text-shadow: 0 1px 1px rgba(47, 33, 19, .78) !important;
-}
-
-.modal .modal-card.modal-card > h2,
-.profile-screen.profile-screen .profile-screen-header h2,
-.profile-screen.profile-screen .profile-screen-header span,
-.modal .settings-section-header.settings-section-header :is(h2, h3, strong, span),
-.modal .panel-header.panel-header :is(h2, h3, strong, span) {
-  color: var(--cl-text-light) !important;
-  text-shadow: 0 1px 1px rgba(47, 33, 19, .78) !important;
-}
-
-:is(
   .profile-section-heading span,
   .settings-section-header span,
   .realm-activity-card-head strong,
@@ -465,142 +388,6 @@ body {
 
 input[type="range"] {
   accent-color: var(--cl-burgundy);
-}
-
-/* Tabs: burgundy active, weathered tan inactive, inset tan hover. */
-:is(
-  .profile-tabs,
-  .profile-subtabs,
-  .skill-preset-tabs,
-  .battle-report-filters,
-  .leaderboard-tabs,
-  .daily-reward-tabs,
-  .citadel-info-tabs,
-  .clan-section-nav,
-  .clan-browser-nav,
-  .animation-mode-toggle,
-  .push-alerts-toggle,
-  .camp-info-tabs
-) {
-  color: var(--cl-text) !important;
-  border-color: var(--cl-brass) !important;
-  background: var(--cl-panel-inset) !important;
-  box-shadow: inset 0 1px 4px rgba(84, 47, 36, .2) !important;
-}
-
-:is(
-  .profile-tabs button,
-  .profile-subtabs button,
-  .skill-preset-tabs button,
-  .battle-report-filters button,
-  .leaderboard-tab,
-  .daily-reward-tabs button,
-  .camp-info-tab,
-  .citadel-info-tabs button,
-  .clan-section-nav button,
-  .clan-browser-nav button,
-  .animation-mode-option,
-  .push-alerts-option,
-  .city-list-toolbar button
-):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
-  color: var(--cl-text-secondary) !important;
-  border-color: var(--cl-border-faded) !important;
-  background: var(--cl-panel-raised) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .4) !important;
-  text-shadow: none !important;
-}
-
-:is(
-  .profile-tabs button,
-  .profile-subtabs button,
-  .skill-preset-tabs button,
-  .battle-report-filters button,
-  .leaderboard-tab,
-  .daily-reward-tabs button,
-  .camp-info-tab,
-  .citadel-info-tabs button,
-  .clan-section-nav button,
-  .clan-browser-nav button,
-  .animation-mode-option,
-  .push-alerts-option,
-  .city-list-toolbar button
-):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):hover {
-  color: var(--cl-text) !important;
-  background: var(--cl-panel-inset) !important;
-}
-
-:is(
-  .profile-tabs button,
-  .profile-subtabs button,
-  .skill-preset-tabs button,
-  .battle-report-filters button,
-  .leaderboard-tab,
-  .daily-reward-tabs button,
-  .camp-info-tab,
-  .citadel-info-tabs button,
-  .clan-section-nav button,
-  .clan-browser-nav button,
-  .animation-mode-option,
-  .push-alerts-option,
-  .city-list-toolbar button
-):is(.active, [aria-selected="true"], [aria-pressed="true"]) {
-  color: var(--cl-text-light) !important;
-  border-color: var(--cl-gold) !important;
-  background: var(--cl-header-bg) !important;
-  box-shadow: inset 0 -2px 0 var(--cl-burgundy-dark) !important;
-  text-shadow: 0 1px 1px rgba(47, 33, 19, .68) !important;
-}
-
-.city-list-modal .city-list-toolbar button:is(.active, [aria-pressed="true"]) {
-  color: var(--cl-text-light) !important;
-  border-color: var(--cl-gold) !important;
-  background: var(--cl-header-bg) !important;
-}
-
-.city-list-modal .city-list-toolbar button:is(.active, [aria-pressed="true"]) :is(span, small, .cl-icon) {
-  color: inherit !important;
-}
-
-:is(
-  .setup-card,
-  .commander-panel,
-  .profile-screen,
-  .modal .modal-card,
-  .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):not(.inventory-slot,.inventory-page-arrow):not(:where(.clan-shield-editor[data-heraldry-editor-version="2"] *)) {
-  color: var(--cl-text) !important;
-  border-color: var(--cl-brass) !important;
-  background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .44), 0 3px 7px rgba(84, 47, 36, .22) !important;
-  text-shadow: none !important;
-}
-
-:is(.primary-btn, .profile-primary-btn, .shop-buy-btn, .inventory-use-btn, .troop-slider-confirm, .offline-collect-btn, .level-up-collect-btn) {
-  color: var(--cl-text-light) !important;
-  border-color: var(--cl-gold) !important;
-  background: var(--cl-header-bg) !important;
-  text-shadow: 0 1px 1px rgba(47, 33, 19, .68) !important;
-}
-
-:is(.danger-action, .danger-btn, .delete-btn, .relinquish-confirm, .clan-leave, .clan-disband) {
-  color: var(--cl-text-light) !important;
-  border-color: #b96b65 !important;
-  background: linear-gradient(180deg, #9b4a42, #6d2927) !important;
-}
-
-:is(button, input, select, textarea, a, [tabindex]):focus-visible {
-  outline: 3px solid var(--cl-gold-highlight) !important;
-  outline-offset: 2px;
-}
-
-:is(button, input, select, textarea):disabled,
-:is(button, input, select, textarea)[aria-disabled="true"],
-:is(.daily-reward-card.locked, .skill-preset-tabs button.locked) {
-  color: var(--cl-disabled-text) !important;
-  border-color: var(--cl-disabled-border) !important;
-  background: var(--cl-disabled-bg) !important;
-  opacity: 1;
-  text-shadow: none !important;
 }
 
 /* HUD and compact persistent controls. */
@@ -1341,4 +1128,166 @@ input[type="range"] {
 .profile-screen .skill-row-actions button:disabled,
 .profile-screen .skill-row-actions button[data-skill-decrement]:disabled {
   color: var(--cl-disabled-text) !important; background: var(--cl-disabled-bg) !important; box-shadow: none !important; opacity: 1;
+}
+
+/* Guild Master reference: one appearance owner for current and deferred UI.
+   Layer priority defeats old per-window !important paint without changing
+   layout, hidden controls, artwork, heraldry or semantic map/action colors. */
+@layer crownlands-theme {
+  :is(dialog:not(.modal), .modal-card, .profile-screen, .setup-card, .online-login, .login-game-info, .rotate-warning > div,
+    .commander-panel, .guild-window, .estate-economy-dialog, .stamina-panel,
+    .crown-payments-dialog, .peace-shield-order-dialog, #emailAuthDialog,
+    #profileProductionDialog, .map-loading-panel, .performance-panel) {
+    color: var(--cl-text) !important;
+    background: var(--cl-panel) !important;
+    border-color: var(--cl-brass) !important;
+    border-radius: 2px !important;
+    box-shadow: inset 0 0 0 1px var(--cl-panel-raised), 0 0 0 3px #ccb88788, 0 16px 60px #392c2466 !important;
+  }
+
+  /* Small confirmations keep the same header treatment as full windows. */
+  :is(.email-auth-header, .crown-payments-dialog > header, #profileProductionDialog > header) {
+    padding: 8px 12px !important;
+    gap: 12px !important;
+    align-items: center !important;
+  }
+
+  :where(dialog, .profile-screen, .setup-card, .commander-panel)
+    :is(input:not([type="range"]):not([type="color"]):not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    background: var(--cl-input-bg) !important;
+    border-color: var(--cl-border-faded) !important;
+    color: var(--cl-text) !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+  }
+
+  :where(dialog, .profile-screen, .setup-card, .commander-panel)
+    button:not(:where([aria-label^="Close"], .close-button, .close, .tg-close, .guild-close,
+      [data-shield-cancel][aria-label], [data-economy-action="close"][aria-label],
+      .cl-action-button, .island-map-icon, .inventory-slot, .flag-color-swatch,
+      [data-flag-color], .player-name-link, .clan-identity-link, .clan-name-link,
+      .clan-shield-editor *, .player-flag-editor *)) {
+    color: var(--cl-text) !important;
+    background: var(--cl-panel-raised) !important;
+    border-color: var(--cl-border-faded) !important;
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    &:hover:not(:disabled) { background: var(--cl-panel-secondary) !important; }
+  }
+
+  :is(.primary-btn, .profile-primary-btn, .shop-buy-btn, .rs-buy-button, .inventory-use-btn,
+    .troop-slider-confirm, .offline-collect-btn, .level-up-collect-btn,
+    .guild-primary, [data-refill-buy], [data-shield-continue],
+    .estate-order-footer button:not([data-economy-action="close"])) {
+    color: var(--cl-text-light) !important;
+    background: var(--cl-burgundy) !important;
+    border-color: var(--cl-burgundy-dark) !important;
+    & :is(span, small, strong, b) { color: inherit !important; }
+    &:hover:not(:disabled) { background: var(--cl-burgundy-dark) !important; }
+  }
+  :is(.danger-action, .danger-btn, .delete-btn, .relinquish-confirm, .clan-leave, .clan-disband) {
+    color: var(--cl-text-light) !important;
+    background: var(--cl-red) !important;
+    border-color: var(--cl-negative) !important;
+  }
+
+  :where(.window-header, .profile-screen-header, .rs-shop-header, .ib-bag-header,
+    dialog:not(.modal) > header, .camp-details-header, .season-heading,
+    .daily-header, .quest-header, .achievement-header,
+    .settings-section-header, .panel-header, .leaderboard-title, .city-list-title,
+    .clan-hero-head, .daily-reward-heading, .seasonal-achievement-heading,
+    .cll-header, .tg-header, .estate-header, .chat-header, .reward-header,
+    .welcome-header, .email-auth-header, .modal-card > #modalTitle,
+    .guild-window > header, .estate-economy-dialog > header,
+    .stamina-panel > header, .crown-payments-dialog > header,
+    .peace-shield-order-dialog > header, #profileProductionDialog > header) {
+    color: var(--cl-text-light) !important;
+    background: var(--cl-oak) !important;
+    border-color: var(--cl-header-rule) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    & :where(div, h1, h2, h3, p, small, span, strong, b, label, .cl-icon) {
+      color: inherit !important;
+      text-shadow: none !important;
+    }
+    & :is(h1, h2, h3, .heading, .rs-shop-heading, .ib-bag-heading) {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    & :is(.heading, .profile-screen-heading, .tg-heading) { color: inherit !important; }
+    & .profile-ledger-crown { fill: currentColor !important; color: inherit !important; }
+    & .camp-ownership { color: var(--cl-success) !important; }
+    & button:not(:where([aria-label^="Close"], .close-button, .close, .tg-close, .guild-close)) {
+      color: var(--cl-text-light) !important;
+      background: transparent !important;
+      border-color: var(--cl-header-rule) !important;
+      box-shadow: none !important;
+      &:hover:not(:disabled) { background: var(--cl-oak-hover) !important; }
+    }
+  }
+
+  :is(.profile-tabs, .profile-subtabs, .skill-preset-tabs, .battle-report-filters,
+    .leaderboard-tabs-header, .daily-reward-tabs, .camp-info-tabs, .citadel-info-tabs,
+    .clan-section-nav, .clan-browser-nav, .active-operations-tabs, .cd-tabs,
+    .chat-tabs, .section-nav, .tabs-bar, .clan-building-tabs, .filters,
+    #royalShopSections, .guild-window > nav) {
+    color: var(--cl-text) !important;
+    background: var(--cl-panel-secondary) !important;
+    border-color: var(--cl-border-faded) !important;
+    box-shadow: none !important;
+    & button {
+      color: var(--cl-text-secondary) !important;
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+      & :is(span, small, strong, b) { color: inherit !important; }
+      &:hover:not(:disabled) { color: var(--cl-text) !important; background: var(--cl-panel-raised) !important; }
+      &:is(.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+        color: var(--cl-burgundy) !important;
+        background: var(--cl-tab-selected) !important;
+        box-shadow: inset 0 -3px var(--cl-burgundy) !important;
+      }
+    }
+  }
+
+  :is(.ledger-footer, .report-footer, .guide-footer, .tower-footer, .upgrade-footer,
+    .composer-panel, .public-profile-footer, .estate-order-footer, .cd-actions,
+    .camp-details-footer, .holding-footer, .season-footer, .reward-footer,
+    .rs-purchase-footer, .guild-window > footer, .stamina-panel > footer) {
+    color: var(--cl-text) !important;
+    background: var(--cl-panel-inset) !important;
+    border-color: var(--cl-border-faded) !important;
+    box-shadow: none !important;
+  }
+  :is(.rs-shop-body, .ib-bag-body, .city-list-panel, .tg-shell, .tower-shell,
+    .clan-building-shell, .handbook, .reward-parchment, .season-panel,
+    .player-flag-editor__preview-panel, .player-flag-editor__controls-panel,
+    .cd-panel, .daily-reward-panel, .seasonal-achievement-panel) {
+    background: var(--cl-panel) !important;
+    border-color: var(--cl-border-faded) !important;
+  }
+
+  :is(.hud-btn, .profile-gold, .resource-pill, .profile-rank-btn, .main-city-return,
+    .nav-btn:not(.incoming-attack-btn):not(.outgoing-attack-btn),
+    .inner-castle-entry-btn, #chatToggleBtn, #chatMinimizeBtn) {
+    background: var(--cl-oak) !important;
+    color: var(--cl-text-light) !important;
+    border-color: var(--cl-header-rule) !important;
+    box-shadow: none !important;
+    & :is(span, small, strong, b, .cl-icon) { color: inherit !important; text-shadow: none !important; }
+    &:hover { background: var(--cl-oak-hover) !important; }
+  }
+  :is(button, input, select, textarea):disabled,
+  :is(button, input, select, textarea)[aria-disabled="true"] {
+    color: var(--cl-disabled-text) !important;
+    background: var(--cl-disabled-bg) !important;
+    border-color: var(--cl-disabled-border) !important;
+    text-shadow: none !important;
+  }
+  :is(button, input, select, textarea, a, [tabindex]):focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: 2px;
+  }
 }

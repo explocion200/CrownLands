@@ -38,7 +38,7 @@
 #modal.scout-report-ledger .heading{min-width:0 !important}
 #modal.scout-report-ledger .window-header time{margin-left:auto !important;font-size:11px !important;color:var(--muted) !important;white-space:nowrap !important}
 #modal.scout-report-ledger .map-button svg{width:21px !important;height:21px !important}
-#modal.scout-report-ledger .close-button{width:44px !important;min-width:44px !important;border:0 !important;background:transparent !important;font:26px Georgia,serif !important}
+#modal.scout-report-ledger .close-button{width:44px !important;min-width:44px !important;}
 #modal.scout-report-ledger .section-nav{display:flex !important;gap:6px !important;flex:none !important;padding:8px 22px !important;border-bottom:1px solid #c4b18d !important;background:#eee1c0 !important}
 #modal.scout-report-ledger .section-nav button{min-height:44px !important;flex:1 !important;padding:0 9px !important;border:1px solid transparent !important;background:transparent !important;font:14px Georgia,serif !important;white-space:nowrap !important}
 #modal.scout-report-ledger .section-nav button[aria-current="location"]{border-color:#643938 !important;background:#703e3d !important;color:#fff1d3 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
@@ -61,7 +61,6 @@
 #modal.scout-report-ledger .heading h2{font-size:21px !important}
 #modal.scout-report-ledger .back-button,#modal.scout-report-ledger .map-button{font-size:12px !important;padding:0 9px !important;gap:4px !important}
 #modal.scout-report-ledger .window-header time{font-size:9px !important}
-#modal.scout-report-ledger .close-button{font-size:24px !important}
 #modal.scout-report-ledger .section-nav{gap:3px !important;padding:3px 10px !important}
 #modal.scout-report-ledger .section-nav button{font-size:12px !important;padding:0 5px !important}
 #modal.scout-report-ledger .report-body{padding:0 12px 10px !important}

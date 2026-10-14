@@ -21,7 +21,7 @@
 #modal.clan-building-modal[class] .treasury>span{font-size:11px!important;color:var(--muted)!important}
 #modal.clan-building-modal[class] .treasury strong{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;font:24px Georgia,serif!important;font-variant-numeric:tabular-nums!important}
 #modal.clan-building-modal[class] .treasury img{width:25px!important;height:25px!important}
-#modal.clan-building-modal[class] .close{background:none!important;border:0!important;width:44px!important;min-width:44px!important;min-height:44px!important;font:27px Georgia,serif!important}
+#modal.clan-building-modal[class] .close{;width:44px!important;min-width:44px!important;min-height:44px!important;}
 #modal.clan-building-modal[class] .clan-building-body{display:grid!important;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr)!important;min-height:0!important}
 #modal.clan-building-modal[class] .building-panel{padding:23px 26px 20px!important;text-align:center!important;min-height:0!important;overflow:auto!important;border-right:1px solid var(--line)!important;background:linear-gradient(140deg,#e9dbb6,#e1d0a7)!important}
 #modal.clan-building-modal[class] .building-art{display:flex!important;align-items:center!important;justify-content:center!important;height:255px!important;margin:0 0 15px!important}
@@ -108,7 +108,6 @@
 #modal.clan-building-modal[class] .treasury>span{font-size:9px!important}
 #modal.clan-building-modal[class] .treasury strong{font-size:18px!important;gap:4px!important}
 #modal.clan-building-modal[class] .treasury img{width:19px!important;height:19px!important}
-#modal.clan-building-modal[class] .close{font-size:27px!important}
 #modal.clan-building-modal[class] .clan-building-body{grid-template-columns:minmax(0,.74fr) minmax(0,1.8fr)!important}
 #modal.clan-building-modal[class] .building-panel{padding:8px 13px!important}
 #modal.clan-building-modal[class] .overline{font-size:8px!important;letter-spacing:1px!important}

@@ -1,4 +1,4 @@
-#chatDialog{color-scheme:light;--paper:#f0e5c9;--ink:#3a3024;--muted:#715e44;--line:#beab85;--olive:#53633f;--cl-ivory:#f6e8c8;--cl-gold-highlight:#b19456;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:#343c2b}
+#chatDialog{color-scheme:light;--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--olive:#53633f;--cl-ivory:#f6e8c8;--cl-gold-highlight:#b19456;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:#343c2b}
 #chatDialog *{box-sizing:border-box}
 #chatDialog [hidden]{display:none!important}
 #chatDialog h1,#chatDialog p{margin:0}

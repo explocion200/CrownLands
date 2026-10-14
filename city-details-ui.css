@@ -1,10 +1,10 @@
 /* Shared city/NPC Info. The dialog returns to its existing theme as soon
    as another panel replaces this body. No map, HUD or global icon overrides. */
 #modal:has(.cd-panel) {
-  --cd-paper: #f2e8cd;
-  --cd-ink: #302c22;
-  --cd-muted: #625b49;
-  --cd-rule: #b8a684;
+  --cd-paper:var(--cl-panel,#ede1c2);
+  --cd-ink:var(--cl-text,#352b20);
+  --cd-muted:var(--cl-text-muted,#705d45);
+  --cd-rule:var(--cl-border-faded,#b19a71);
   --cd-moss: #485839;
   color-scheme: light;
   width: min(364px, calc(100vw - 24px));
@@ -55,12 +55,7 @@
   width: 44px;
   height: 44px;
   min-height: 44px;
-  padding: 11px;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--cd-ink) !important;
+  padding: 11px;;
 }
 #modal:has(.cd-panel) #modalBody {
   flex: 1;

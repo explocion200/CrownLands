@@ -1,5 +1,5 @@
 /* Approved Item Bag; styles are confined to this dialog. */
-#modal.inventory-modal{--paper:#f2e8cd;--ink:#302c22;--muted:#6b614f;--line:#b8a684;--moss:#485839;--burgundy:#6f3d3c;color-scheme:light;font:14px/normal "Segoe UI",Arial,sans-serif!important}
+#modal.inventory-modal{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--moss:#485839;--burgundy:#6f3d3c;color-scheme:light;font:14px/normal "Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal,#modal.inventory-modal *{box-sizing:border-box}
 #modal.inventory-modal>.modal-card{font:14px/normal "Segoe UI",Arial,sans-serif!important;position:static;display:block;width:100%;height:100%!important;max-height:100%!important;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden;color:var(--ink)!important;font-family:"Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal>.modal-card>h2,#modal.inventory-modal #modalHeaderNav{display:none!important}
@@ -205,7 +205,7 @@
 
 #modal.inventory-modal{width:min(1200px,calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)))!important;height:min(790px,calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)))!important;padding:5px!important;inset:0;transform:none}
 #modal.inventory-modal .ib-close-space{width:44px;height:44px;flex:none;margin-left:12px}
-#modal.inventory-modal #closeModalBtn{position:absolute;top:24px;right:26px;display:grid!important;place-items:center;width:44px!important;height:44px!important;min-width:44px;min-height:44px;margin:0;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#4e4939!important;z-index:2}
+#modal.inventory-modal #closeModalBtn{position:absolute;top:24px;right:26px;display:grid!important;place-items:center;width:44px!important;height:44px!important;min-width:44px;min-height:44px;margin:0;padding:0;;z-index:2}
 #modal.inventory-modal #closeModalBtn svg{width:22px;height:22px}
 #modal.inventory-modal .ib-item-viewport{width:100%;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 #modal.inventory-modal .ib-item-tile{margin:0;max-width:none;width:100%;height:100%;aspect-ratio:auto;transform:none;min-height:0;border-radius:0!important}

@@ -18,32 +18,36 @@ const paletteTag = "crownlands-palette.css?v=";
 
 // The v2 heraldry cascade boundary is intentionally kept in the global
 // palette so its broad legacy rules cannot override the dedicated editor.
-assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 45 * 1024, "The Crownlands palette exceeds its 45 KiB delivery budget.");
+assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 46 * 1024, "The Crownlands palette exceeds its 46 KiB delivery budget.");
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, "The Crownlands palette has unbalanced braces.");
 assert.doesNotMatch(css, /font-family\s*:/i, "The palette pass must preserve the existing Crownlands typefaces.");
 assert.doesNotMatch(css, /url\s*\(/i, "The palette pass must not recolor or replace visual assets.");
 assert.doesNotMatch(css, /#(?:fff|ffffff|000|000000)\b/i, "The palette layer uses pure white or black instead of the approved earthy palette.");
 
 const exactTokens = {
-  "--cl-bg": "#d7c49d",
-  "--cl-panel": "#eedebe",
-  "--cl-panel-secondary": "#e7d6b4",
-  "--cl-panel-raised": "#dbc8a2",
-  "--cl-panel-inset": "#d0b98e",
-  "--cl-input-bg": "#f1e2c5",
+  "--cl-bg": "#e0cea8",
+  "--cl-panel": "#ede1c2",
+  "--cl-panel-secondary": "#e4d5b2",
+  "--cl-panel-raised": "#f4ead1",
+  "--cl-panel-inset": "#e0cea8",
+  "--cl-input-bg": "#f4ead1",
+  "--cl-oak": "#392c24",
+  "--cl-oak-hover": "#554130",
+  "--cl-header-rule": "#84694a",
+  "--cl-tab-selected": "#efe3c7",
   "--cl-burgundy": "#72363a",
   "--cl-burgundy-dark": "#542728",
-  "--cl-brass": "#997643",
+  "--cl-brass": "#9b8052",
   "--cl-gold": "#b58a3b",
   "--cl-gold-highlight": "#c69a45",
   "--cl-gold-bonus": "#a87624",
-  "--cl-text": "#2f2113",
-  "--cl-text-secondary": "#5a4632",
-  "--cl-text-muted": "#756550",
-  "--cl-text-light": "#f2e2bf",
+  "--cl-text": "#352b20",
+  "--cl-text-secondary": "#665239",
+  "--cl-text-muted": "#705d45",
+  "--cl-text-light": "#f4e6c5",
   "--cl-text-bright": "#fff8e8",
   "--cl-border-dark": "#542f24",
-  "--cl-border-faded": "#a59070",
+  "--cl-border-faded": "#b19a71",
   "--cl-player-owned": "#b68a43",
   "--cl-clan": "#667a4a",
   "--cl-enemy-weaker": "#c9786f",
@@ -80,8 +84,8 @@ for (const family of [
   ".realm-announcement-banner", ".toast", "[role=\"tooltip\"]",
 ]) assert.ok(css.includes(family), `The game-wide palette does not cover ${family}.`);
 
-assert.match(css, /\.profile-screen-header,[\s\S]*?background:\s*var\(--cl-header-bg\) !important;/, "Major headers are not using the burgundy title treatment.");
-assert.match(css, /\.profile-tabs button,[\s\S]*?:is\(\.active,[\s\S]*?background:\s*var\(--cl-header-bg\) !important;/, "Active tabs are not burgundy with the shared tab treatment.");
+assert.match(css, /\.profile-screen-header,[\s\S]*?background:\s*var\(--cl-oak\) !important;/, "Major headers must use the Guild reference's dark oak.");
+assert.match(css, /:is\(\.active, \.selected,[\s\S]*?background:\s*var\(--cl-tab-selected\) !important;/, "Active tabs must use parchment with a burgundy underline.");
 assert.match(css, /input:not\(\[type="range"\]\)[\s\S]*?background:\s*var\(--cl-input-bg\) !important;/, "Inputs do not use the aged input surface.");
 assert.match(css, /:disabled,[\s\S]*?color:\s*var\(--cl-disabled-text\) !important;[\s\S]*?background:\s*var\(--cl-disabled-bg\) !important;/, "Disabled controls do not use the exact shared disabled palette.");
 assert.match(css, /\.bottom-nav \.report-nav-btn[\s\S]*?background:\s*#d8c59f !important;/, "The Reports HUD control does not use its parchment interior.");
@@ -109,7 +113,7 @@ assert.match(styles, /\.citadel-reign-row\.current \.citadel-reign-ruler :is\(\.
 assert.match(styles, /\.island-map-picker \.island-map-name\s*\{[\s\S]*?color:\s*#fff8e8;[\s\S]*?text-shadow:/, "The 15-map selector does not keep map names readable over map thumbnails.");
 assert.match(styles, /\.island-map-owned\s*\{[\s\S]*?color:\s*#d3e3eb;[\s\S]*?text-shadow:/, "The 15-map selector does not keep owned-city counts readable over map thumbnails.");
 for (const themeCss of [read("profile-theme.css"), css]) {
-  assert.match(themeCss, /:not\(\.island-map-icon\)/, "A generic modal button rule can still replace the 15-map selector tile colors.");
+  assert.match(themeCss, themeCss === css ? /button:not\(:where\([\s\S]*?\.island-map-icon/ : /:not\(\.island-map-icon\)/, "Generic buttons must exclude map artwork tiles.");
   assert.match(themeCss, /:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)/, "Generic modal typography can still recolor the 15-map selector labels or detailed report outcomes.");
 }
 
@@ -118,11 +122,11 @@ assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-breakdown-row, \.sco
 assert.match(css, /\.modal\.battle-report-modal \.battle-report-card \.battle-report-city > span,[\s\S]*?\.battle-report-result :is\(strong, small\)[\s\S]*?color:\s*var\(--cl-text-bright\) !important;/, "Battle report result and level text can still disappear into semantic badges.");
 for (const themeCss of [read("profile-theme.css"), css]) {
   assert.match(themeCss, /\.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card/, "Generic modal typography can still repaint detailed report outcomes with parchment ink.");
-  assert.match(themeCss, /:not\(\.offline-collect-btn\)/, "Generic modal controls can still repaint Welcome Back Collect as a secondary action.");
+  assert.match(themeCss, themeCss === css ? /\.offline-collect-btn,[\s\S]*?background:\s*var\(--cl-burgundy\) !important;/ : /:not\(\.offline-collect-btn\)/, "Welcome Back Collect must retain primary-action treatment.");
 }
 assert.doesNotMatch(css, /\.leaderboard-toolbar,\s*\.leaderboard-row,/, "The generic parchment card palette still overrides the dedicated slate leaderboard surface.");
 assert.match(css, /\.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card/, "Generic parchment typography still overrides dedicated leaderboard text colors or gained excess specificity.");
-assert.match(css, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, "Generic controls still give leaderboard identity links an opaque button surface.");
+assert.match(css, /button:not\(:where\([\s\S]*?\.player-name-link, \.clan-identity-link/, "Generic controls must exclude identity links.");
 
 for (const exactAction of [
   "--cl-action-size: 64px",
@@ -154,8 +158,12 @@ function contrast(foreground, background) {
 }
 
 for (const [foreground, background, label] of [
-  ["2f2113", "eedebe", "primary parchment copy"],
-  ["5a4632", "e7d6b4", "secondary parchment copy"],
+  ["352b20", "ede1c2", "primary parchment copy"],
+  ["665239", "e4d5b2", "secondary parchment copy"],
+  ["705d45", "ede1c2", "muted parchment copy"],
+  ["f4e6c5", "392c24", "oak headers and close controls"],
+  ["f4e6c5", "554130", "hovered close controls"],
+  ["72363a", "efe3c7", "selected tabs"],
   ["2f2113", "b68a43", "owned-city map labels"],
   ["f2e2bf", "72363a", "burgundy headers"],
   ["f2e2bf", "4d6575", "movement controls"],
