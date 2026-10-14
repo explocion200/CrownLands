@@ -15,6 +15,14 @@ const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = requir
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function validateAttacks(evaluate, client, width, height, output) {
+  const waitForEffect = async type => {
+    const expression = `!!document.querySelector('.crownlands-vfx--${type}')`;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      if (await evaluate(expression)) return;
+      await delay(100);
+    }
+    assert.fail(`${type} did not start: ${JSON.stringify(await evaluate('CrownlandsAnimations.getDebugState()'))}`);
+  };
   // Exercise the actual target registries and renderers with a nearby sample of
   // each target family, including NPCs already marked defeated by the server.
   const kinds = await evaluate(`(() => {
@@ -126,13 +134,16 @@ async function validateAttacks(evaluate, client, width, height, output) {
   assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
   // Promote a battle to a capture without resetting the swords; also cover the reverse order.
   await evaluate(`CrownlandsAnimations.setMode('full');playCityAttackAnimation(captureFixture,{eventId:'promoted-battle'});`);
+  await waitForEffect('city-attack');
   await delay(180);
   await evaluate(`playCityCaptureAnimation(captureBefore,captureAfter,{eventId:'promoted-capture',combatId:'promoted-battle'});`);
-  await delay(300);
+  // Capture deliberately waits 220ms, then a render frame. A fixed 300ms sleep
+  // can finish before that frame on a busy CI runner, so await the actual effect.
+  await waitForEffect('city-capture');
   const promotion=await evaluate(`(() => {const e=document.querySelector('.crownlands-vfx--city-capture');return {captures:!!e,attacks:document.querySelectorAll('.crownlands-vfx--city-attack').length,time:e?.querySelector('.crownlands-vfx__part--capture-sword-left').getAnimations()[0]?.currentTime};})()`);
   assert(promotion.captures && promotion.attacks===0 && promotion.time>350,JSON.stringify(promotion));
   await evaluate(`CrownlandsAnimations.clearAll();playCityCaptureAnimation(captureBefore,captureAfter,{eventId:'capture-first',combatId:'late-battle'});`);
-  await delay(300);
+  await waitForEffect('city-capture');
   await evaluate(`playCityAttackAnimation(captureFixture,{eventId:'late-battle'});`);
   await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   assert.equal(await evaluate("document.querySelectorAll('.crownlands-vfx--city-attack').length"),0);
