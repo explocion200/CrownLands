@@ -1,49 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "177f4f4a96173cbe756a250bacf51a610800cace",
+  "baseCommit": "1565e3013b060f9860ad5c524ab42eef07e96842",
   "coverage": [
     {
       "paths": [
-        "assets/icons/battle-reports-ledger-r1.svg",
-        "battle-report-detail-ui.js",
-        "game.js",
-        "help-handbook-content.js",
-        "home.html",
-        "incoming-threats-ui.js",
-        "index.html",
-        "scout-report-ui.js",
-        "service-worker.js",
-        "tools/generate-release-manifest.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-scout-report-ui.js",
-        "troop-orders-ui.js",
-        "assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp",
-        "assets/optimized/report-defense-ink-384x384-08a43d2877bf.webp",
-        "assets/optimized/report-realm-ink-384x384-53b8cbd44f70.webp",
-        "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
-        "assets/optimized/report-scout-ink-384x384-449c386d3b06.webp",
-        "docs/art-sources/report-actions/assets.json",
-        "docs/art-sources/report-actions/prompts.json",
-        "tools/validate-report-artwork-browser.js"
-      ],
-      "tests": [
-        "tools/validate-report-artwork-browser.js",
-        "tools/validate-report-system.js",
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-distant-city-orders-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Replace five shared report/action illustrations across HUD, reports, scout details, incoming threats, troop orders and Help. Exercise rendering at desktop and short landscape sizes in/out of fullscreen, asset alpha/decoding, filtering and native close controls. Existing dependent suites cover report navigation/privacy and values, incoming target actions, Help navigation, and authoritative order previews/payloads. Asset/build checks cover provenance JSON, hashed WebP files, production fingerprint, service-worker notification path and fixed aggregate cache limits. No server, rules, data contracts or gameplay change; no emulator suite applies."
-    },
-    {
-      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/report-actions/README.md"
+        "docs/REPORT_ARTWORK_RELEASE_2026-10-14.md"
       ],
       "tests": [],
-      "reason": "Document the explicitly confirmed presentation and generated artwork provenance; no gameplay or release-state changes."
+      "reason": "Documentation only: record the authorized and verified PR 571 web publication, exact release identity, passed staged/public checks and manual limits. Cross-checked against sanitized deployment receipts and GitHub check results. No runtime, gameplay, backend or build inputs change, so no additional runtime or emulator suite applies."
     }
   ]
 }
