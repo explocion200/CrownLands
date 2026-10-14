@@ -295,15 +295,15 @@
 }
 
 #modal.quest-ledger-modal .quests-panel .quest-header{padding-right:226px!important}
-#modal.quest-ledger-modal #modalHeaderNav{top:23px!important;right:60px!important;width:150px!important;height:44px!important;margin:0!important;padding:0!important}
+#modal.quest-ledger-modal #modalHeaderNav{top:19px!important;right:60px!important;width:150px!important;height:44px!important;margin:0!important;padding:0!important}
 #modal.quest-ledger-modal .daily-reward-tabs{display:flex!important;gap:5px!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
 #modal.quest-ledger-modal .daily-reward-tabs button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:4px!important;border:1px solid #a58d64!important;background:#e4d3ae!important;box-shadow:inset 0 0 0 2px #f8ecd377!important;border-radius:0!important}
 #modal.quest-ledger-modal .daily-reward-tabs button.active{background:#703e3d!important;border-color:#643938!important;box-shadow:inset 0 0 0 2px #ab8d69!important}
 #modal.quest-ledger-modal .daily-reward-tabs img{width:100%!important;height:100%!important;object-fit:contain!important}
-#modal.quest-ledger-modal .modal-close{top:23px!important;right:10px!important;width:44px!important;height:44px!important;min-height:44px!important;min-width:44px!important;;}
+#modal.quest-ledger-modal .modal-close{top:19px!important;right:10px!important;width:44px!important;height:44px!important;min-height:44px!important;min-width:44px!important;;}
 #modal.quest-ledger-modal .quests-panel .action-footer p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(orientation:landscape) and (max-height:550px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:11px!important}#modal.quest-ledger-modal .quests-panel .quest-header{padding-right:218px!important}}
-@media(orientation:landscape) and (max-width:650px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:9px!important}}
+@media(orientation:landscape) and (max-height:550px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:7px!important}#modal.quest-ledger-modal .quests-panel .quest-header{padding-right:218px!important}}
+@media(orientation:landscape) and (max-width:650px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:5px!important}}
 
 #modal.quest-ledger-modal,#modal.quest-ledger-modal>.modal-card,#modal.quest-ledger-modal #modalBody{scrollbar-gutter:auto!important}
 #modal.quest-ledger-modal .quests-panel{width:100%!important}

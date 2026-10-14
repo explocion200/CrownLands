@@ -196,7 +196,7 @@
 @media(prefers-reduced-motion:reduce){}
 
 #modal.shop-modal:not(.rewarded-ad-confirmation-modal)>.modal-card{max-width:none!important}
-#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{position:absolute!important;top:24px;right:28px;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;margin:0!important;padding:0!important;;z-index:3}
+#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{position:absolute!important;top:20px;right:28px;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;margin:0!important;padding:0!important;;z-index:3}
 #modal.shop-modal .rs-close-space{width:44px;height:44px;flex:none;margin-left:12px}
 #modal.shop-modal .rs-item-tile,#modal.shop-modal .rs-buy-button,#modal.shop-modal #royalShopSections button{border-radius:0!important}
 #modal.shop-modal #royalShopItemGrid{margin:0!important;padding:0!important;overflow:hidden!important;scroll-snap-type:none!important;grid-auto-flow:row!important;align-items:stretch!important;justify-items:stretch!important;border:0!important;background:transparent!important;box-shadow:none!important}
@@ -209,5 +209,5 @@
 #modal.shop-modal .rs-selection-heading{letter-spacing:normal!important}
 #modal.shop-modal .rs-selection-heading span:last-child{min-width:0;text-align:right;overflow-wrap:anywhere}
 #modal.shop-modal .rs-item-tile.pending{opacity:1!important}
-@media(orientation:landscape) and (max-height:550px){#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{top:10px;right:16px}#modal.shop-modal .rs-close-space{margin-left:4px}}
-@media(orientation:landscape) and (max-height:350px){#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{top:2px}}
+@media(orientation:landscape) and (max-height:550px){#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{top:5px;right:16px}#modal.shop-modal .rs-close-space{margin-left:4px}}
+@media(orientation:landscape) and (max-height:350px){#modal.shop-modal:not(.rewarded-ad-confirmation-modal) #closeModalBtn{top:3px}}
