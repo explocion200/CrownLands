@@ -20,7 +20,8 @@
         "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp",
         "assets/optimized/rewards-quests-ink-384x384-8d198ff51049.webp",
         "docs/art-sources/reward-navigation/assets.json",
-        "tools/validate-reward-window-layout-browser.js"
+        "tools/validate-reward-window-layout-browser.js",
+        "docs/art-sources/reward-navigation/prompts.json"
       ],
       "tests": [
         "tools/validate-reward-window-layout-browser.js",
@@ -35,8 +36,7 @@
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/reward-navigation/README.md",
-        "docs/art-sources/reward-navigation/prompts.json"
+        "docs/art-sources/reward-navigation/README.md"
       ],
       "tests": [],
       "reason": "Record the explicitly requested presentation and generated-art provenance. Prompts and reference describe only the new illustrations; no gameplay rules or deployment claims change. Runtime verification is covered above."

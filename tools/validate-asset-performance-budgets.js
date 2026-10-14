@@ -552,8 +552,10 @@ assert(optimizedBytes <= sourceBytes * 0.1, "Optimized derivatives must remain a
 
 // New reward navigation paintings load on demand, retaining full square alpha canvases.
 const rewardNavigationArt = JSON.parse(read("docs/art-sources/reward-navigation/assets.json")).assets;
+const rewardNavigationPrompts = JSON.parse(read("docs/art-sources/reward-navigation/prompts.json"));
 assert.equal(rewardNavigationArt.length, 2);
 for (const asset of rewardNavigationArt) {
+  assert(typeof rewardNavigationPrompts[asset.name] === "string" && rewardNavigationPrompts[asset.name].trim(), `${asset.name} artwork must retain its generation prompt.`);
   const payload = fs.readFileSync(path.join(root, asset.path)), metadata = getWebpMetadata(payload);
   assert.equal(crypto.createHash("sha256").update(payload).digest("hex"), asset.sha256);
   assert.equal(payload.length, asset.bytes);
