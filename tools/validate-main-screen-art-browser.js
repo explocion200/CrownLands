@@ -54,7 +54,7 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await delay(180);
    await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0});
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(1)`);
-   assert.deepEqual(await ev(`(()=>{const s=getComputedStyle(document.getElementById('staminaButton'));return[s.backgroundColor,s.color,s.backgroundImage];})()`),['rgb(57, 44, 36)','rgb(244, 230, 197)','none'],'Stamina must use the shared oak HUD palette');
+   assert.deepEqual(await ev(`(()=>{const s=getComputedStyle(document.getElementById('staminaButton'));return[s.backgroundColor,s.color,s.backgroundImage];})()`),['rgb(114, 54, 58)','rgb(244, 230, 197)','none'],'Stamina must use the shared burgundy HUD palette');
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
    const inset=await ev(`['.profile-action-row','.profile-gold','#logBtn'].map(s=>document.querySelector(s).getBoundingClientRect().left)`);
    assert.deepEqual(inset,[12,12,12],"Production player row and Gold must align with Reports");

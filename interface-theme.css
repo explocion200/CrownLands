@@ -3172,7 +3172,7 @@ html.game-ui-open :is(.incoming-attack-btn.active, .outgoing-attack-btn.active,
     padding: 0 !important;
     border: 1px solid var(--cl-header-rule, #84694a) !important;
     border-radius: 2px !important;
-    background: var(--cl-oak, #392c24) !important;
+    background: var(--cl-header-bg, #72363a) !important;
     box-shadow: none !important;
     color: var(--cl-text-light, #f4e6c5) !important;
     font-size: 0 !important;
@@ -3201,7 +3201,7 @@ html.game-ui-open :is(.incoming-attack-btn.active, .outgoing-attack-btn.active,
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m3 3 14 14M17 3 3 17' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat !important;
     }
     &::after { display: none !important; }
-    &:hover:not(:disabled) { background: var(--cl-oak-hover, #554130) !important; }
+    &:hover:not(:disabled) { background: var(--cl-header-hover, #542728) !important; }
     &:focus-visible { outline: 2px solid currentColor !important; outline-offset: 2px !important; }
   }
 }

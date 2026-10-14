@@ -11,8 +11,6 @@
   --cl-panel-raised: #f4ead1;
   --cl-panel-inset: #e0cea8;
   --cl-input-bg: #f4ead1;
-  --cl-oak: #392c24;
-  --cl-oak-hover: #554130;
   --cl-header-rule: #84694a;
   --cl-tab-selected: #efe3c7;
 
@@ -59,7 +57,8 @@
 
   --cl-panel-shadow: inset 0 0 0 1px rgba(255, 248, 232, .34), 0 13px 32px rgba(47, 33, 19, .34);
   --cl-card-shadow: none;
-  --cl-header-bg: var(--cl-oak);
+  --cl-header-bg: var(--cl-burgundy);
+  --cl-header-hover: var(--cl-burgundy-dark);
   --cl-panel-bg: var(--cl-panel);
   --cl-card-bg: var(--cl-panel-raised);
   --cl-inset-bg: var(--cl-panel-inset);
@@ -1181,7 +1180,7 @@ input[type="range"] {
     .stamina-panel > header, .crown-payments-dialog > header,
     .peace-shield-order-dialog > header, #profileProductionDialog > header) {
     color: var(--cl-text-light) !important;
-    background: var(--cl-oak) !important;
+    background: var(--cl-header-bg) !important;
     border-color: var(--cl-header-rule) !important;
     box-shadow: none !important;
     text-shadow: none !important;
@@ -1201,7 +1200,7 @@ input[type="range"] {
       background: transparent !important;
       border-color: var(--cl-header-rule) !important;
       box-shadow: none !important;
-      &:hover:not(:disabled) { background: var(--cl-oak-hover) !important; }
+      &:hover:not(:disabled) { background: var(--cl-header-hover) !important; }
     }
   }
 
@@ -1261,12 +1260,12 @@ input[type="range"] {
   :is(.hud-btn, .stamina-card, .profile-gold, .resource-pill, .profile-rank-btn, .main-city-return,
     .nav-btn:not(.incoming-attack-btn):not(.outgoing-attack-btn),
     .inner-castle-entry-btn, #chatToggleBtn, #chatMinimizeBtn) {
-    background: var(--cl-oak) !important;
+    background: var(--cl-header-bg) !important;
     color: var(--cl-text-light) !important;
     border-color: var(--cl-header-rule) !important;
     box-shadow: none !important;
     & :is(span, small, strong, b, .cl-icon) { color: inherit !important; text-shadow: none !important; }
-    &:hover { background: var(--cl-oak-hover) !important; }
+    &:hover { background: var(--cl-header-hover) !important; }
   }
   :where(dialog, .profile-screen, .setup-card, .commander-panel)
     :is(button, input, select, textarea):is(:disabled, [aria-disabled="true"]) {

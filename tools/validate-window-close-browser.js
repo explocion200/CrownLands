@@ -130,9 +130,9 @@ async function main() {
         if (status.rect && (status.rect.left < 0 || status.rect.top < 0 || status.rect.right > viewport.width || status.rect.bottom > viewport.height)) issues.push("outside viewport");
         if (status.rect && (status.rect.left < status.frame.left-1 || status.rect.top < status.frame.top-1 || status.rect.right > status.frame.right+1 || status.rect.bottom > status.frame.bottom+1)) issues.push("outside window");
         if (status.overlaps?.length) issues.push("overlap");
-        if (status.background !== "rgb(57, 44, 36)" || status.image !== "none" || status.border !== 4 || status.shadow !== "none") issues.push("incorrect close frame");
+        if (status.background !== "rgb(114, 54, 58)" || status.image !== "none" || status.border !== 4 || status.shadow !== "none") issues.push("incorrect close frame");
         if (status.color !== "rgb(244, 230, 197)") issues.push("incorrect close ink");
-        if (status.header?.background !== "rgb(57, 44, 36)") issues.push("incorrect header theme: "+JSON.stringify(status.header));
+        if (status.header?.background !== "rgb(114, 54, 58)") issues.push("incorrect header theme: "+JSON.stringify(status.header));
         if (status.lowContrast.length) issues.push("header text contrast: "+JSON.stringify(status.lowContrast));
         if (!status.icon?.startsWith('url("data:image/svg+xml')) issues.push("inconsistent X");
         if (status.iconWidth!=="20px" || status.iconHeight!=="20px") issues.push("inconsistent icon size");
@@ -156,7 +156,7 @@ async function main() {
           if (!focused.active || !focused.visible || !focused.tabbable || focused.outline<2 || focused.style==='none') issues.push("missing keyboard focus: "+JSON.stringify(focused));
           await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",...point});
           const hover = await evaluate(`(() => {const s=getComputedStyle(document.querySelector(${JSON.stringify(root)}).querySelector(${JSON.stringify(selector)}));return [s.backgroundColor,s.backgroundImage,s.boxShadow];})()`);
-          if (hover.join('|')!=="rgb(85, 65, 48)|none|none") issues.push("incorrect close hover: "+hover.join('|'));
+          if (hover.join('|')!=="rgb(84, 39, 40)|none|none") issues.push("incorrect close hover: "+hover.join('|'));
           if (viewport.width < 1000) {
             await client.send("Emulation.setTouchEmulationEnabled",{enabled:true});
             await client.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{...point,id:1}]});
