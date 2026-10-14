@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Map Atlas ownership counts
+### Current verified web release — Shared Guild Master theme and framed tabs
+
+The authorized merge and web deployment of [PR #560](https://github.com/explocion200/CrownLands/pull/560), from `codex/consistent-window-close-controls`, is **LIVE — WEB** at build `16d282a35c9764e6cc7ca11b6d28b3ffa5021252`. Game windows and HUD use the approved dark-oak, parchment and muted-gold palette. Window headers share a centered cream X in a thin square frame; adjacent tabs have inset gold frames, a burgundy selection underline and stronger keyboard focus. Superseded close and tab paint is removed while layout, artwork, saved heraldry and guarded dismissal are preserved.
+
+- Netlify deploy `6acfd84065ed98dd45e940d6` published October 14 at 3:32 p.m. Eastern (`2026-10-14T19:32:28.989Z`); the manual publication hold remains enabled. All three required GitHub checks passed. Local preparation passed all 14 selected validators, including 189 window/viewport combinations.
+- The merged production artifact and existing asset budgets passed. Its complete 1,161-entry staged inventory and 51 staged files matched. Delivered assets passed 42 staged and 18 public window checks at 1440×900, 844×390 and 568×320. All 153 public file comparisons and six anonymous public startup/reload cases passed.
+- Release ID, API contract and server source fingerprint match the prior published client. No backend or player data was deployed or changed. itch.io was not republished. Authenticated gameplay, installed-app cache recovery and physical-device review remain manual verification limits.
+
+See [the shared UI theme release record](GUILD_THEME_RELEASE_2026-10-14.md) for exact identity, coverage and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Map Atlas ownership counts
 
 The authorized merge and web deployment of [PR #558](https://github.com/explocion200/CrownLands/pull/558), from `codex/map-city-ownership-indicators`, is **LIVE — WEB** at build `ed933caca8e67869c27f0b1da108d8116a0d869f`. The Atlas uses current active-map ownership and a bounded server-only owner query for off-map counts. Confirmed zero-city results clear stale counts; older caches and session responses cannot restore them. Unloaded Core cities retain canonical map identity. This corrects presentation without changing authoritative ownership or gameplay rules.
 
@@ -720,10 +730,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `ed933ca...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `16d282a...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Shared Guild Master colors, aligned framed X controls and inset tab frames | PR #560 build `16d282a...`; exact staged/public assets, desktop/landscape windows and startup verified | Not republished | `LIVE — WEB`; authenticated gameplay, installed-app and physical-device review remain manual |
 | Map Atlas counts clear lost cities and confirmed empty holdings while retaining unloaded Core city identity | PR #558 build `ed933ca...`; exact assets, staged/public desktop/mobile Atlas fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated ownership changes, installed-app and physical-device review remain manual |
 | Three shared sword clashes for every confirmed attack; saved-flag drape only for eligible captures | PR #556 build `ec42a35...`; exact staged/public assets, desktop/landscape combat fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated combat, installed-app and physical-device review remain manual |
 | Centered gold, silver and bronze crowns for the top three on Kingdom, Clan and Glory podiums | PR #554 build `eb0be0e...`; exact assets, desktop/landscape-mobile fixture interactions and public startup verified | Not republished | `LIVE — WEB`; authenticated standings, installed-app and physical-device review remain manual |
@@ -2829,6 +2840,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 14, 2026 — Shared UI theme release verification
+
+- Recorded the authorized PR #560 merge and verified web publication at `16d282a...`, Netlify deploy `6acfd84065ed98dd45e940d6`, published `2026-10-14T19:32:28.989Z` (3:32 p.m. Eastern).
+- Marked the shared Guild palette, framed close controls and inset tab frames `LIVE — WEB`, with required CI, 189 local window cases, 42 staged/18 public window cases, exact artifact comparisons and six public startup/reload checks. Preserved the publication hold, backend, itch.io distinction and authenticated/device verification limits.
 
 ## October 14, 2026 — Map Atlas ownership release verification
 
