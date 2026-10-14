@@ -1,14 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b7b2a2584dd4f727be4a581c1ebbe11201f24ee7",
+  "baseCommit": "9cf86e353c4f59d5abb24a6b8af406ae87ffcd1a",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/WINDOW_CONTROLS_RELEASE_2026-10-14.md"
+        "styles.css",
+        "main-screen-art-ui.css",
+        "tools/validate-hud-screen-edge-browser.js",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "tests": [],
-      "reason": "Documentation-only record of the authorized PR 564 merge and verified web publication. Verify build/deploy identities, validation counts and channel limits against sanitized deployment receipts; preserve prior release history, the publication hold and existing backend. No runtime behavior changes or additional game suites apply."
+      "tests": [
+        "tools/validate-hud-screen-edge-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-crowns-hud-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Align the top-left HUD with Reports at the existing 12px screen inset. Remove the header-only mobile left safe-area gutter while retaining vertical placement, right-side inset, control sizes, art, colors and actions. The new real-browser regression covers desktop and touch landscape layouts, actual fullscreen entry/exit, viewport resizing, fixed and changing left/right safe-area values, map zoom, hit targets, overlap and native Profile/Reports actions. Existing illustrated-HUD and currency/timer browser suites cover shared positions, navigation and compact alert stacks; packaging and asset budgets cover the delivered stylesheet. The specification records the explicitly requested alignment without claiming deployment. No gameplay, server, world-data or release identity changes; no emulator suites apply."
     }
   ]
 }
