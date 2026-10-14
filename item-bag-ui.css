@@ -1,7 +1,7 @@
 /* Approved Item Bag; styles are confined to this dialog. */
 #modal.inventory-modal{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--moss:#485839;--burgundy:#6f3d3c;color-scheme:light;font:14px/normal "Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal,#modal.inventory-modal *{box-sizing:border-box}
-#modal.inventory-modal>.modal-card{font:14px/normal "Segoe UI",Arial,sans-serif!important;position:static;display:block;width:100%;height:100%!important;max-height:100%!important;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden;color:var(--ink)!important;font-family:"Segoe UI",Arial,sans-serif!important}
+#modal.inventory-modal>.modal-card{font:14px/normal "Segoe UI",Arial,sans-serif!important;position:relative;display:block;width:100%;height:100%!important;max-height:100%!important;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden;color:var(--ink)!important;font-family:"Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal>.modal-card>h2,#modal.inventory-modal #modalHeaderNav{display:none!important}
 #modal.inventory-modal #modalBody{display:block;width:100%;height:100%;min-height:0;max-height:none;padding:0;margin:0;overflow:hidden!important}
 #modal.inventory-modal :is(h1,h2,h3,p,small,strong,b,span){color:inherit!important;font-family:inherit!important;font-variant:normal!important;text-transform:none!important;text-shadow:none;letter-spacing:normal!important}

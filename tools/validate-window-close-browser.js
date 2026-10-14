@@ -109,6 +109,16 @@ async function main() {
           const root = document.querySelector(${JSON.stringify(root)}), button = root.querySelector(${JSON.stringify(selector)});
           if (!button) return {missing:true};
           for (const animation of root.getAnimations({subtree:true})) if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish();
+          // A completed animation can temporarily leave an identity transform.
+          // The control must keep its containing block when that transform clears.
+          let motionShift=0;
+          if(root.matches('.shop-modal,.inventory-modal,.daily-cycle-modal,.quest-ledger-modal,.achievements-ledger-modal')) {
+            const card=root.querySelector('.modal-card'),before=button.getBoundingClientRect();
+            const value=card.style.getPropertyValue('transform'),priority=card.style.getPropertyPriority('transform');
+            card.style.setProperty('transform','none','important');
+            const after=button.getBoundingClientRect();motionShift=Math.max(Math.abs(before.top-after.top),Math.abs(before.left-after.left));
+            if(value)card.style.setProperty('transform',value,priority);else card.style.removeProperty('transform');
+          }
           const r=button.getBoundingClientRect(),frame=root.getBoundingClientRect(),s=getComputedStyle(button),icon=getComputedStyle(button,'::before');
           const visible=el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.visibility!=='hidden'&&s.display!=='none'&&r.width>0&&r.height>0;};
           const overlaps=[...root.querySelectorAll('button,h1,h2,[role="tab"]')].filter(el=>el!==button&&!el.contains(button)&&visible(el)).filter(el=>{
@@ -131,11 +141,12 @@ async function main() {
             if(bg.length<3)return [];const l=[luminance(rgb(s.color)),luminance(bg)].sort((a,b)=>b-a),ratio=(l[0]+.05)/(l[1]+.05);
             return ratio<4.5?[{text:el.textContent.trim().slice(0,50),ratio:Math.round(ratio*100)/100,color:s.color}]:[];
           });
-          return {lowContrast,header:header?{rect:header.getBoundingClientRect().toJSON(),alignmentRect:(titleRow||header).getBoundingClientRect().toJSON(),background:getComputedStyle(header).backgroundColor,color:getComputedStyle(header).color}:null,rect:r.toJSON(),frame:frame.toJSON(),visible:visible(button),hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overlaps,
+          return {motionShift,lowContrast,header:header?{rect:header.getBoundingClientRect().toJSON(),alignmentRect:(titleRow||header).getBoundingClientRect().toJSON(),background:getComputedStyle(header).backgroundColor,color:getComputedStyle(header).color}:null,rect:r.toJSON(),frame:frame.toJSON(),visible:visible(button),hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overlaps,
             background:s.backgroundColor,image:s.backgroundImage,border:parseFloat(s.borderTopWidth)+parseFloat(s.borderRightWidth)+parseFloat(s.borderBottomWidth)+parseFloat(s.borderLeftWidth),shadow:s.boxShadow,color:s.color,
             icon:icon.maskImage,iconWidth:icon.width,iconHeight:icon.height,label:button.getAttribute('aria-label'),position:s.position};
         })()`);
         const issues=[];
+        if (status.motionShift>1) issues.push('close position depends on animation transform');
         if (name.startsWith('clan')) assert(await evaluate("document.querySelector('.clan-section-nav [data-clan-section=rewards] b.alert')?.textContent.trim()"), 'Expected a populated reward badge');
         if (!status.visible || !status.hit) issues.push("unreachable");
         if (status.rect?.width < 44 || status.rect?.height < 44) issues.push("small target");
@@ -198,7 +209,7 @@ async function main() {
     await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",code:"Enter",windowsVirtualKeyCode:13});
     assert.equal(await evaluate("modal.open"),false,"Keyboard activation must still close the window: "+JSON.stringify(await evaluate("({active:document.activeElement?.outerHTML.slice(0,200),classes:modal.className,dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.className)})")));
     fs.writeFileSync(path.join(output,`${audit?'before-':''}results.json`),JSON.stringify(results,null,2));
-    const failed=results.filter(r=>r.issues.length).map(({name,viewport,issues,status})=>({name,width:viewport.width,issues,overlaps:status.overlaps}));
+    const failed=results.filter(r=>r.issues.length).map(({name,viewport,issues,status})=>({name,width:viewport.width,issues,overlaps:status.overlaps,rect:status.rect,header:status.header,motionShift:status.motionShift}));
     console.log(JSON.stringify(failed,null,2));
     if (!audit) assert.equal(failed.length,0,"Window close controls failed; inspect release-artifacts/window-close/results.json.");
     console.log(`Reviewed ${results.length} window/viewport combinations.`);

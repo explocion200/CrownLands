@@ -1,7 +1,7 @@
 /* Approved Achievements ledger. Scoped to its own reward tab. */
 #modal.achievements-ledger-modal{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--moss:#485839;--burgundy:#703e3d;width:min(1200px,calc(100vw - 24px))!important;height:min(790px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;padding:5px!important;overflow:hidden!important;border:1px solid #766346!important;border-radius:2px!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important}
 #modal.achievements-ledger-modal,#modal.achievements-ledger-modal *{box-sizing:border-box}
-#modal.achievements-ledger-modal>.modal-card{position:static!important;display:block!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important}
+#modal.achievements-ledger-modal>.modal-card{position:relative!important;display:block!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important}
 #modal.achievements-ledger-modal>.modal-card::before,#modal.achievements-ledger-modal>.modal-card::after,#modal.achievements-ledger-modal #modalTitle{display:none!important}
 #modal.achievements-ledger-modal #modalBody{height:100%!important;max-height:none!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;display:block!important}
 
