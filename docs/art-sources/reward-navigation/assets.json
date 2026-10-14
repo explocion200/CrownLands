@@ -1,0 +1,27 @@
+{
+  "encoding": "384px WebP, quality 0.85; full source canvas and alpha preserved",
+  "assets": [
+    {
+      "name": "quests",
+      "path": "assets/optimized/rewards-quests-ink-384x384-8d198ff51049.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 34498,
+      "sha256": "8d198ff510499ffda8b2ca74132d6a181733c8ef735fda267039fdbd4f6baa08",
+      "sourceSha256": "a837bbf4bbf6dbf8d90482014ce3b1c0ee4781428f5abe9bbfbd3cfe22fa5f31",
+      "transparentPixels": 83717,
+      "hasAlpha": true
+    },
+    {
+      "name": "achievements",
+      "path": "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 40456,
+      "sha256": "10f16fe082e9df3a35637bb5ee25d43decf357ca87b787ba51220f34f863b7ea",
+      "sourceSha256": "24519c24d09325947a65e13b190609533fed051741f2d1047bfc988007dad7df",
+      "transparentPixels": 83845,
+      "hasAlpha": true
+    }
+  ]
+}

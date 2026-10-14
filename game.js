@@ -35708,17 +35708,17 @@ function renderDailyRewardModalTabs() {
     {
       id: "rewards",
       label: "Daily Login",
-      icon: "assets/icons/reward-daily-login-r1.svg",
+      icon: "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
     },
     {
       id: "quests",
       label: "Daily Quests",
-      icon: "assets/icons/reward-daily-quests-r1.svg",
+      icon: "assets/optimized/rewards-quests-ink-384x384-8d198ff51049.webp",
     },
     {
       id: "achievements",
       label: "Achievements",
-      icon: "assets/icons/reward-achievements-r1.svg",
+      icon: "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp",
     },
   ];
   return `
@@ -38698,7 +38698,7 @@ function showLeaderboardModal() {
   if (!state) return;
   leaderboardSeasonStatusPromise = null;
   modal.className = "modal leaderboard-modal";
-  modalTitle.textContent = "Leaderboards";
+  modalTitle.innerHTML = '<img class="window-title-art ledger-title-art" src="assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp" alt="" width="40" height="40" draggable="false"><span>Leaderboards</span>';
   leaderboardActiveTab = "players";
   modalBody.innerHTML = `
     <div class="leaderboard-panel">
