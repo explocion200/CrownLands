@@ -192,7 +192,9 @@
 #modal.leaderboard-modal .leaderboard-champion.third { grid-column:3; border-bottom-color:#a77250!important; }
 #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank { display:flex; align-items:center; justify-content:center; gap:6px; font-size:25px!important; }
 #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank { min-height:0; }
-#modal.leaderboard-modal .leaderboard-champion .leaderboard-rank:before { content:""; width:26px; height:23px; background:url("assets/icons/hero-reward-crown.svg") center/contain no-repeat; opacity:.7; }
+#modal.leaderboard-modal .leaderboard-champion .leaderboard-rank:before { content:""; width:32px; height:24px; flex-shrink:0; background:url("assets/icons/hero-reward-crown.svg") center/contain no-repeat; }
+#modal.leaderboard-modal .leaderboard-champion.second .leaderboard-rank:before { background-image:url("assets/icons/leaderboard-crown-silver.svg"); }
+#modal.leaderboard-modal .leaderboard-champion.third .leaderboard-rank:before { background-image:url("assets/icons/leaderboard-crown-bronze.svg"); }
 #modal.leaderboard-modal .leaderboard-champion :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:75px!important; height:90px!important; flex-shrink:0; }
 #modal.leaderboard-modal .leaderboard-champion.first :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:90px!important; height:108px!important; }
 #modal.leaderboard-modal .leaderboard-champion :is(.leaderboard-map,.leaderboard-cities,.leaderboard-members,.leaderboard-mobile-meta) { display:none!important; }
@@ -236,7 +238,7 @@
  #modal.leaderboard-modal .leaderboard-champion .leaderboard-power small { font-size:8px!important; margin-top:2px; }
  #modal.leaderboard-modal .leaderboard-champion.first { padding-bottom:12px; }
  #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank { font-size:17px!important; }
- #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank:before { width:18px; height:17px; }
+ #modal.leaderboard-modal .leaderboard-champion .leaderboard-rank:before { width:24px; height:18px; }
  #modal.leaderboard-modal .leaderboard-champion :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:33px!important; height:40px!important; }
  #modal.leaderboard-modal .leaderboard-champion.first :is(.leaderboard-flag,.clan-leaderboard-shield-link) { width:40px!important; height:49px!important; }
  #modal.leaderboard-modal .leaderboard-champion .leaderboard-power strong { font-size:17px!important; }
