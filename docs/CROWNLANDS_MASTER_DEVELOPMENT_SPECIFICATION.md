@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Shared swords for every attack
+### Current verified web release — Map Atlas ownership counts
+
+The authorized merge and web deployment of [PR #558](https://github.com/explocion200/CrownLands/pull/558), from `codex/map-city-ownership-indicators`, is **LIVE — WEB** at build `ed933caca8e67869c27f0b1da108d8116a0d869f`. The Atlas uses current active-map ownership and a bounded server-only owner query for off-map counts. Confirmed zero-city results clear stale counts; older caches and session responses cannot restore them. Unloaded Core cities retain canonical map identity. This corrects presentation without changing authoritative ownership or gameplay rules.
+
+- Netlify deploy `6acfac49800dda7ddba97930` published October 14 at 12:28 p.m. Eastern (`2026-10-14T16:28:51.572Z`); the manual publication hold remains enabled. All three required GitHub checks passed, including the owner-query/shard emulator suite. The merged artifact, complete staged path/size inventory, nine staged and 27 public file comparisons, and six public startup/reload cases passed.
+- Staged and public delivered assets passed desktop/landscape Atlas fixtures for ownership loss, zero counts, accessibility labels, focus, camera and input stability. City-list and map-marker ownership tests also passed. Current realm identity and backend contract/source fingerprint are unchanged; no backend or player data was deployed or changed.
+- itch.io was not republished. Authenticated live ownership changes, installed apps and physical devices remain manual verification limits. Failed/offline lookups retain the last known counts; successful server refreshes are cached for 15 seconds.
+
+See [the map ownership release record](MAP_OWNERSHIP_RELEASE_2026-10-14.md) for exact identity and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Shared swords for every attack
 
 The authorized merge and web deployment of [PR #556](https://github.com/explocion200/CrownLands/pull/556), from `codex/universal-attack-sword-clashes`, is **LIVE — WEB** at build `ec42a351bd72d45f697da950b0b63648d5a9eeb4`. Confirmed attacks use the capture animation's three sword clashes, sparks and dust across city, objective and NPC targets. The saved-flag drape and ownership pulse remain exclusive to eligible captures; attack and capture receipts for the same battle share one sword sequence.
 
@@ -710,10 +720,11 @@ Evidence is retained locally under `release-artifacts/shop-cooldowns-deployment/
 
 ## FM-3. Release Channel Matrix
 
-Current web serves build `ec42a35...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
+Current web serves build `ed933ca...`, with the existing backend and authorized October NPC population retained. itch.io remains at its previously audited `24cfa4e...` build; the current backend rejects that older release identity with an update-required response. Its matching publication is pending separate authorization. Older matrix rows preserve historical feature-delivery evidence and do not establish present backend compatibility.
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
+| Map Atlas counts clear lost cities and confirmed empty holdings while retaining unloaded Core city identity | PR #558 build `ed933ca...`; exact assets, staged/public desktop/mobile Atlas fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated ownership changes, installed-app and physical-device review remain manual |
 | Three shared sword clashes for every confirmed attack; saved-flag drape only for eligible captures | PR #556 build `ec42a35...`; exact staged/public assets, desktop/landscape combat fixtures and public startup verified | Not republished | `LIVE — WEB`; authenticated combat, installed-app and physical-device review remain manual |
 | Centered gold, silver and bronze crowns for the top three on Kingdom, Clan and Glory podiums | PR #554 build `eb0be0e...`; exact assets, desktop/landscape-mobile fixture interactions and public startup verified | Not republished | `LIVE — WEB`; authenticated standings, installed-app and physical-device review remain manual |
 | Matching-size defeated marauder/boss art, server respawn countdown and atomic replacement at a new road position | PR #552 build `1c3faf7...`; client/backend identity, authoritative realm and delivered desktop/mobile UI verified | Not republished | `LIVE — WEB AND FIREBASE`; actual production defeat/respawn and physical-device checks remain manual |
@@ -2817,6 +2828,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## October 14, 2026 — Map Atlas ownership release verification
+
+- Recorded authorized PR #558 merge and verified web publication at `ed933ca...`, Netlify deploy `6acfac49800dda7ddba97930`, published `2026-10-14T16:28:51.572Z` (12:28 p.m. Eastern).
+- Marked the stale ownership-count correction `LIVE — WEB`, with required CI, delivered desktop/mobile Atlas checks and six public startup/reload cases. Preserved the publication hold, existing backend, itch.io distinction and authenticated/device verification limits.
 
 ## October 14, 2026 — Shared attack swords release verification
 
