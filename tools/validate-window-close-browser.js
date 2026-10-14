@@ -113,14 +113,18 @@ async function main() {
         fs.writeFileSync(path.join(output,`${audit?'before-':''}${name}-${viewport.width}.png`),Buffer.from(shot.data,"base64"));
         if (status.hit) {
           const point={x:status.rect.x+status.rect.width/2,y:status.rect.y+status.rect.height/2};
-          await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"Tab",code:"Tab",windowsVirtualKeyCode:9});
-          await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9});
+          // Start inside this window, then send a non-activating keyboard event.
+          // Tab can leave the page for browser chrome in a one-control dialog;
+          // that browser behavior must not be confused with a missing focus ring.
+          await evaluate(`document.querySelector(${JSON.stringify(root)}).querySelector(${JSON.stringify(selector)}).focus({preventScroll:true})`);
+          await client.send("Input.dispatchKeyEvent",{type:"keyDown",key:"ArrowRight",code:"ArrowRight",windowsVirtualKeyCode:39});
+          await client.send("Input.dispatchKeyEvent",{type:"keyUp",key:"ArrowRight",code:"ArrowRight",windowsVirtualKeyCode:39});
           const focused=await evaluate(`(() => {
             const button=document.querySelector(${JSON.stringify(root)}).querySelector(${JSON.stringify(selector)});
-            button.focus({preventScroll:true});const s=getComputedStyle(button);
-            return document.activeElement===button&&button.matches(':focus-visible')&&parseFloat(s.outlineWidth)>=2&&s.outlineStyle!=='none';
+            const s=getComputedStyle(button);
+            return {active:document.activeElement===button,visible:button.matches(':focus-visible'),tabbable:button.tabIndex>=0&&!button.disabled,outline:parseFloat(s.outlineWidth),style:s.outlineStyle};
           })()`);
-          if (!focused) issues.push("missing keyboard focus");
+          if (!focused.active || !focused.visible || !focused.tabbable || focused.outline<2 || focused.style==='none') issues.push("missing keyboard focus: "+JSON.stringify(focused));
           await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",...point});
           const hover = await evaluate(`(() => {const s=getComputedStyle(document.querySelector(${JSON.stringify(root)}).querySelector(${JSON.stringify(selector)}));return [s.backgroundColor,s.backgroundImage,s.boxShadow];})()`);
           if (hover.join('|')!=="rgba(0, 0, 0, 0)|none|none") issues.push("boxed hover");
