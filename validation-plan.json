@@ -12,7 +12,7 @@
         "tools/validate-leaderboard-tabs.js",
         "tools/validate-leaderboard-podium-browser.js"
       ],
-      "reason": "The shared podium stylesheet assigns the existing gold crown and new silver/bronze variants by current rank on Kingdom, Clan and Glory boards. Check all three tabs, numeric ranks, existing season decorations, saved flags/heraldry, refresh and empty/few-entry states at desktop and landscape-mobile sizes. Visually inspect the captured podiums for distinct crown colors and clipping. Production build validation checks referenced assets are packaged. No backend, ranking, reward or authority changes require emulators."
+      "reason": "The shared podium stylesheet assigns the existing gold crown and new silver/bronze variants by current rank on Kingdom, Clan and Glory boards. Check all three tabs, numeric ranks, existing season decorations, saved flags/heraldry, refresh and empty/few-entry states at desktop and landscape-mobile sizes. Visually inspect the captured podiums for distinct crown colors, crowns centered above numeric ranks and flags/heraldry, and clipping. Production build validation checks referenced assets are packaged. No backend, ranking, reward or authority changes require emulators."
     },
     {
       "paths": ["tools/validate-asset-performance-budgets.js"],
