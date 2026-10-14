@@ -1243,7 +1243,10 @@ input[type="range"] {
       box-shadow: none !important;
       text-shadow: none !important;
       & :is(span, small, strong, b) { color: inherit !important; }
-      &:hover:not(:disabled) { color: var(--cl-text) !important; background: var(--cl-panel-raised) !important; }
+      &:hover:not(:disabled):not(.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+        color: var(--cl-text) !important;
+        background: var(--cl-panel-raised) !important;
+      }
       &:is(.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
         color: var(--cl-burgundy) !important;
         background: var(--cl-tab-selected) !important;
@@ -1265,6 +1268,7 @@ input[type="range"] {
     .clan-building-shell, .handbook, .reward-parchment, .season-panel,
     .player-flag-editor__preview-panel, .player-flag-editor__controls-panel,
     .cd-panel, .daily-reward-panel, .seasonal-achievement-panel) {
+    color: var(--cl-text) !important;
     background: var(--cl-panel) !important;
     border-color: var(--cl-border-faded) !important;
   }
