@@ -15,6 +15,11 @@
       "reason": "The shared podium stylesheet assigns the existing gold crown and new silver/bronze variants by current rank on Kingdom, Clan and Glory boards. Check all three tabs, numeric ranks, existing season decorations, saved flags/heraldry, refresh and empty/few-entry states at desktop and landscape-mobile sizes. Visually inspect the captured podiums for distinct crown colors and clipping. Production build validation checks referenced assets are packaged. No backend, ranking, reward or authority changes require emulators."
     },
     {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "The rank-specific crown selectors add under 0.5 KiB to the almost-full 31 KiB ledger stylesheet budget. Bound this addition at 31.5 KiB and execute the existing performance validator to verify all other entrypoint, installed-shell and artwork limits remain satisfied."
+    },
+    {
       "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
       "reason": "Records the user's confirmed current-podium gold/silver/bronze crown design and distinguishes these visual rank markers from earned seasonal honors. Documentation adds no runtime behavior beyond the covered presentation change."
