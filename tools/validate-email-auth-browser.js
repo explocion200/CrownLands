@@ -39,7 +39,8 @@ async function main() {
     if (target === path.join(root, "index.html")) {
       const html = fs.readFileSync(target, "utf8").replace(/<script\b[^>]*src="([^"]+)"[^>]*><\/script>/g, (tag, src) => {
         if (src.startsWith("firebaseClient.js")) return `<script>${fixture}</script>${tag}`;
-        return src.startsWith("email-auth-ui.js") ? tag : "";
+        // Firebase client constructs this shared adapter before initializing auth.
+        return /^(email-auth-ui|cosmetics-client)\.js/.test(src) ? tag : "";
       });
       response.end(html);
     } else if (target === path.join(root, "firebaseClient.js")) {

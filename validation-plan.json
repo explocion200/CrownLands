@@ -1,14 +1,45 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ed933caca8e67869c27f0b1da108d8116a0d869f",
+  "baseCommit": "90ffbaa566fb5c6228a23da47cdc127fd02e84fc",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MAP_OWNERSHIP_RELEASE_2026-10-14.md"
+        "interface-theme.css",
+        "kingdom-ledgers-ui.css",
+        "shop-ui.css",
+        "crown-payments-ui.css",
+        "index.html",
+        "stamina-ui.css",
+        "stamina-ui.js",
+        "tools/validate-window-close-browser.js",
+        "tools/asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-window-close-browser.js",
+        "tools/validate-modal-lifecycle-browser.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-email-auth-browser.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-crown-payments-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Shared close styling affects every game dialog, custom header and nested confirmation. Verify consistent glyphs, unframed normal/hover appearance, 44px targets, keyboard focus, real pointer/touch dismissal and header clearance across desktop and both landscape sizes, including all estate interiors. Exercise modal cleanup, Tower headers, auth busy states, stamina pending/refill returns and shared Crown shop frames. Asset validation bounds the installation growth below 3 KiB; the normal production build gate verifies delivery. No authority or backend changes require emulators."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Documentation-only record of the authorized PR #558 web publication: exact build/deployment, file and inventory checks, staged/public Atlas fixtures, public startup, retained backend and release-channel/verification limits. No runtime changes or additional runtime/emulator tests apply."
+      "reason": "Record the owner-confirmed plain-X presentation standard and retain existing dismissal and reward semantics; documentation does not establish deployment."
+    },
+    {
+      "paths": [
+        "tools/validate-email-auth-browser.js"
+      ],
+      "tests": [
+        "tools/validate-email-auth-browser.js"
+      ],
+      "reason": "Retain the current cosmetics adapter in the isolated auth fixture: Firebase now constructs it before auth initialization. This restores the existing real email UI regression checks while external requests remain blocked."
     }
   ]
 }

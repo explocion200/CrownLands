@@ -1,6 +1,8 @@
 .crown-payments-dialog { box-sizing:border-box; width:min(560px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; padding:22px; color:#30281f; background:#f4ead6; border:2px solid #785944; border-radius:12px; font:16px/1.5 system-ui,sans-serif; }
 .crown-payments-dialog::backdrop { background:#19131bc9; }
 .crown-payments-dialog header,.crown-payments-dialog footer { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.crown-payments-dialog header { flex-wrap:nowrap; }
+.crown-payments-dialog header h2 { min-width:0; overflow-wrap:anywhere; }
 .crown-payments-dialog h2 { margin:0; font-size:21px; }
 .crown-payments-dialog button,.crown-payments-dialog select { box-sizing:border-box; min-height:44px; padding:9px 12px; border:1px solid #785944; border-radius:6px; font:inherit; color:inherit; background:#fff9ee; }
 .crown-payments-dialog select { display:block; width:100%; margin-top:6px; }

@@ -266,7 +266,7 @@
 }
 @media(max-height:360px) {
  #modal.leaderboard-modal .leaderboard-list .leaderboard-row.leaderboard-champion { gap:1px; min-height:130px; padding-block:0; }
- #modal.leaderboard-modal .modal-card #modalTitle { min-height:38px; padding:6px 50px 6px 12px!important; font-size:21px!important; }
+ #modal.leaderboard-modal .modal-card #modalTitle { min-height:48px; padding:6px 50px 6px 12px!important; font-size:21px!important; }
  #modal.leaderboard-modal .leaderboard-roll-heading h3 { display:none; }
  #modal.leaderboard-modal .leaderboard-roll-heading { padding:0; }
  #modal.leaderboard-modal .leaderboard-standing { padding:5px; gap:4px; }

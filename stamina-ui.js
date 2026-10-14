@@ -125,12 +125,12 @@
     if (!s.dialog) {
       const dialog = s.dialog = document.createElement("dialog"); dialog.className = "stamina-panel";
       dialog.setAttribute("aria-labelledby", "stamina-panel-title");
-      dialog.innerHTML = `<div class="stamina-panel-body"><h2 id="stamina-panel-title">Refill stamina</h2>
+      dialog.innerHTML = `<header><h2 id="stamina-panel-title">Refill stamina</h2><button type="button" data-stamina-close aria-label="Close stamina refill">×</button></header><div class="stamina-panel-body">
         <p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
         <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button>
         <div data-stamina-shop-loading hidden></div><details><summary>Recovery &amp; hunts</summary><strong data-panel-value>—/100</strong><progress max="100" value="0"></progress><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
         <p>Recover 1 stamina every 12 minutes.<br>Next point: <strong data-next>—</strong> · Full in: <strong data-full>—</strong></p></details></div>
-        <footer><button type="button" data-stamina-close>Back</button><button type="button" data-refill-buy disabled>Loading stamina…</button></footer>`;
+        <footer><button type="button" data-refill-buy disabled>Loading stamina…</button></footer>`;
       document.body.append(dialog);
       dialog.querySelector("[data-refill-buy]").addEventListener("click", event => {
         if (event.currentTarget.disabled) return;

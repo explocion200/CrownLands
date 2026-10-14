@@ -604,7 +604,7 @@
   <script src="functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1"></script>
   <dialog id="emailAuthDialog" aria-labelledby="emailAuthTitle" aria-describedby="emailAuthHint">
     <form id="emailAuthForm" novalidate>
-      <h2 id="emailAuthTitle">Sign in with email</h2>
+      <header class="email-auth-header"><h2 id="emailAuthTitle">Sign in with email</h2><button id="emailAuthBackBtn" class="ghost-btn" type="button" aria-label="Close email sign-in">×</button></header>
       <p id="emailAuthHint">Continue to your kingdom.</p>
       <label for="emailAuthAddress">Email address</label>
       <input id="emailAuthAddress" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" required />
@@ -622,7 +622,6 @@
       <div class="email-auth-links">
         <button id="emailAuthModeBtn" class="ghost-btn" type="button">Create account</button>
         <button id="emailForgotBtn" class="ghost-btn" type="button">Forgot password?</button>
-        <button id="emailAuthBackBtn" class="ghost-btn" type="button">Back</button>
       </div>
     </form>
   </dialog>
