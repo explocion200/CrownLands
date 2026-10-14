@@ -1,30 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "8f351e431e456eadb3bce40ff677fde5305f5444",
+  "baseCommit": "643bf16766e69c12dc28e110d7c7782202fe3de6",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "styles.css",
-        "item-bag-ui.js",
-        "item-bag-ui.css",
-        "shop-ui.js",
-        "shop-ui.css",
-        "city-list-ui.css",
-        "kingdom-ledgers-ui.css",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-city-list-browser.js"
+        "docs/HEADER_ICONS_RELEASE_2026-10-14.md"
       ],
-      "tests": [
-        "tools/validate-item-bag-browser.js",
-        "tools/validate-shop-browser.js",
-        "tools/validate-crown-payments-browser.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-kingdom-ledgers-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Item Bag, Shop, City List and Map reuse their illustrated HUD images in the window headings. The six selected validators cover affected rendering, mobile/desktop geometry, controls, navigation, the shared four-tab Shop header, production packaging and asset limits. Isolated visual review additionally verifies all four exact image URLs, uncropped alignment, title/close separation and native mouse/touch dismissal at three sizes. Remove unused Bag/Shop seal styles and the Shop glyph. Record the confirmed presentation in the specification. Correct the City List test to the already-approved #ede1c2 parchment; runtime colors are unchanged. Bounded source ceilings account for 391 added game.js bytes (+0.5 KiB allowance) and 316 styles.css bytes (+0.25 KiB allowance); the eight changed runtime files total 23 bytes less than the base, with unchanged aggregate shell/image/request limits. No gameplay, payments, server authority, world data or backend changes; no emulator suites apply."
+      "tests": [],
+      "reason": "Documentation-only record of the authorized PR #568 merge and verified web publication. Match the exact publication, release fingerprints, staged artifact inventory, desktop/mobile header measurements and public startup receipts. Update the production snapshot, release matrix and ledger. Runtime already passed required CI, production artifact checks and affected staged/public browser verification. No runtime, assets, build configuration, gameplay, server or production-data changes; no additional runtime or emulator tests apply."
     }
   ]
 }
