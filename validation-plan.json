@@ -1,14 +1,27 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "eb0be0ec339aef412210e0977337c5b070f1f364",
+  "baseCommit": "6d97a49a399f3b8001934564ac60c0a1a47a588d",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/LEADERBOARD_CROWNS_RELEASE_2026-10-13.md"
+        "animation-manager.js",
+        "castle-capture.css",
+        "game.js",
+        "tools/validate-castle-capture-browser.js",
+        "tools/validate-report-system.js"
       ],
+      "tests": [
+        "tools/validate-animation-system.js",
+        "tools/validate-castle-capture-browser.js",
+        "tools/validate-report-system.js",
+        "tools/validate-citadel-assaults.js"
+      ],
+      "reason": "Shared combat presentation now reuses capture swords for city/objective, Camp, Tower and NPC targets. Browser coverage executes real target registries/renderers, defeated spawn lookup, report/callable delivery, Legion reports, deduplication, attack-to-capture promotion in both delivery orders, no flag for ordinary attacks, reduced/off modes, cleanup and map/session guards at desktop and two landscape-mobile sizes against source and built assets. Animation and report validators cover shared reward/capture/runtime and hydration/notification dependencies; the Citadel validator checks the newly included Legion report path without changing settlement. Only client visuals and their tests change: no server rules, combat authority or emulator suites are modified."
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Documentation-only record of the authorized PR #554 web publication, exact build/deploy identity, delivered crown and centered-layout checks, release-channel matrix and explicit authenticated/device/itch verification limits. No runtime, backend, assets or release configuration changes; existing feature CI and saved production receipts supply evidence, so no additional runtime or emulator tests apply."
+      "reason": "Records the user's confirmed universal attack-sword design and capture-only flag rule as in development, without claiming a release."
     }
   ]
 }

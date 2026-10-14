@@ -2466,6 +2466,13 @@ Status: design and combined integration approved September 15, 2026 with Strongh
 
 ## 18. Art & Medieval Visual Direction
 
+### Shared attack swords — confirmed October 14, 2026
+
+- Every confirmed combat impact uses the capture animation's same three sword strikes, contact sparks and dust, including attacks on regular cities, Strongholds, the Crown Citadel, Camps, Holding Towers, Marauders and Clan Bosses, as well as Citadel Legion defenses and Rally battles. Attacks without a capture do not show the flag drape or ownership pulse.
+- Confirmed eligible city captures continue into the existing saved-flag drape. The battle receipt and ownership update share one sword sequence when they describe the same combat. Existing capture eligibility, other objective rewards, combat results and sound cues remain unchanged.
+- Reduced motion uses a brief opacity-only crossed-sword confirmation for attacks; Off skips the effect. Active-map/session gating, NPC spawn identity, hydration, event deduplication, performance limits and cleanup remain in force. Scouting, friendly movement, blocked orders and historical report viewing do not trigger combat effects.
+- **Status:** `IN DEVELOPMENT` on `codex/universal-attack-sword-clashes`; implementation and merge do not establish deployment.
+
 ### Approved castle capture animation — October 11, 2026
 
 - A newly confirmed combat capture plays three clashing sword strikes, contact sparks and a small dust impact, followed by the capturing player's own flag unfurling from the roofline and draping down the castle front. Preserve that player's saved colors, pattern, crest and crest color; use the existing flag renderer. Outer towers remain visible and the map camera stays fixed.

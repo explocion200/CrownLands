@@ -12620,9 +12620,7 @@ function mergeServerReports(reports = [], options = {}) {
         newDeedCompletionReports.push(normalized);
       }
       if (
-        newRevision && normalized.battleId
-        && (normalized.type === "attack" || normalized.type === "defense")
-        && normalized.eventKind !== CITADEL_ASSAULT_EVENT_KIND
+        newRevision && getCombatReportAnimationId(rawReport)
       ) {
         newCityCombatReports.push(normalized);
       }
@@ -12673,8 +12671,12 @@ function mergeServerReports(reports = [], options = {}) {
   }
   if (deedRewardReportsVfxHydrated) {
     newCityCombatReports.forEach(report => {
-      const target = cityById(report.cityId);
-      if (target) playCityAttackAnimation(target, { eventId: `city-attack:${report.battleId}` });
+      const target = getCombatAnimationTarget(report.cityId, report.targetSpawnId);
+      if (target) playCityAttackAnimation(target, {
+        eventId: `city-attack:${getCombatReportAnimationId(report)}`,
+        combatAtMs: report.occurredAtMs,
+        targetSpawnId: report.targetSpawnId,
+      });
     });
     newDeedCompletionReports.forEach(report => {
       const sourceCamp = getCampTargetById(report.rewardSourceId);
@@ -13087,17 +13089,22 @@ function applyServerArmyResult(result = null, options = {}) {
     || Boolean(normalizedCampUpdate)
     || isRewardCampTarget(audioTarget);
   const cityBattleId = String(preResultReport?.battleId || newestPlayerReport?.battleId || "");
-  if (result.kind === "attack" && !resultTargetIsCamp && audioTarget && cityBattleId) {
+  const combatTarget = getCombatAnimationTarget(preResultTargetId, preResultReport?.targetSpawnId || result.targetSpawnId);
+  if (result.kind === "attack" && combatTarget && cityBattleId && getCombatReportAnimationId(preResultReport) && !result.friendlyAtResolution) {
     const attackEventId = cityBattleId;
-    playCityAttackAnimation(audioTarget, { eventId: `city-attack:${attackEventId}` });
+    playCityAttackAnimation(combatTarget, {
+      eventId: `city-attack:${attackEventId}`,
+      combatAtMs: normalizeTimestampMs(preResultReport?.occurredAtMs || preResultReport?.createdAtMs),
+      targetSpawnId: preResultReport?.targetSpawnId || result.targetSpawnId,
+    });
     const afterSnapshot = getCityVfxSnapshot(cityById(preResultTargetId) || audioTarget);
     if (
-      preResultCitySnapshot
+      !resultTargetIsCamp && preResultCitySnapshot
       && afterSnapshot
       && preResultCitySnapshot.ownerUid !== afterSnapshot.ownerUid
       && afterSnapshot.ownerUid
     ) {
-      playCityCaptureAnimation(preResultCitySnapshot, afterSnapshot);
+      playCityCaptureAnimation(preResultCitySnapshot, afterSnapshot, { combatId: `city-attack:${attackEventId}` });
     }
   }
   if (
@@ -17738,10 +17745,14 @@ function getCityVfxSnapshot(city = null) {
 
 function scheduleCityWorldAnimation(type, snapshot, options = {}) {
   if (!snapshot?.id || snapshot.regionId !== getActiveMapRegionId()) return null;
+  const session = onlineSessionGeneration;
   return requestAnimationFrame(() => {
-    const city = cityById(snapshot.id) || snapshot;
+    if (session !== onlineSessionGeneration || snapshot.regionId !== getActiveMapRegionId()) return;
+    const city = type === "city-attack"
+      ? getCombatAnimationTarget(snapshot.id, options.payload?.targetSpawnId) : cityById(snapshot.id) || snapshot;
     const anchor = getWorldAnimationAnchor(city);
-    const targetNode = cityLayer?.querySelector(`[data-city-id="${CSS.escape(snapshot.id)}"]`);
+    const id = CSS.escape(snapshot.id);
+    const targetNode = cityLayer?.querySelector(`[data-city-id="${id}"], [data-render-camp-id="${id}"], [data-holding-tower-id="${id}"], [data-marauder-id="${id}"]`);
     if (!anchor || !targetNode?.isConnected) return;
     if (type === "city-capture") {
       // A delayed capture must not dress a city that has already changed hands again.
@@ -17768,23 +17779,14 @@ function scheduleCityWorldAnimation(type, snapshot, options = {}) {
         cityId: snapshot.id,
         stronghold: snapshot.stronghold,
         crownCitadel: snapshot.crownCitadel,
+        combatId: type === "city-attack" ? eventId : "",
         ...(options.payload || {}),
       },
     });
   });
 }
 
-function playCityAttackAnimation(cityOrId, { eventId = "", intensity = "standard" } = {}) {
-  const city = typeof cityOrId === "string" ? cityById(cityOrId) : cityOrId;
-  const snapshot = getCityVfxSnapshot(city);
-  if (!snapshot) return null;
-  return scheduleCityWorldAnimation("city-attack", snapshot, {
-    id: eventId || `city-attack:${snapshot.regionId}:${snapshot.id}:${Date.now()}`,
-    intensity,
-  });
-}
-
-function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
+function playCityCaptureAnimation(before, after, { eventId = "", combatId = "" } = {}) {
   if (!before || !after || after.crownCitadel) return null;
   if (after.neutralClaimSource === "deed_camp") return null;
   const oldColors = getAnimationFlagColors(before.ownerFlag, before.owner);
@@ -17795,6 +17797,9 @@ function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
       id: eventId || `city-capture:${after.regionId}:${after.id}:${after.lastCapturedAtMs}:${after.ownerUid}`,
       intensity: "major",
       payload: {
+        targetId: after.id,
+        combatId,
+        combatAtMs: after.lastCapturedAtMs,
         previousOwnerUid: before.ownerUid,
         nextOwnerUid: after.ownerUid,
         oldPrimary: oldColors.primary,
@@ -24196,9 +24201,10 @@ function resolveAttack(attack) {
   }
 
   const targetVfxBefore = getCityVfxSnapshot(target);
+  const attackAnimationId = `city-attack:${getOnlineArmyResolutionId(attack) || attack.id || `${attack.fromId}:${attack.toId}`}`;
   if (attackOnActiveMap) {
     playCityAttackAnimation(target, {
-      eventId: `city-attack:${getOnlineArmyResolutionId(attack) || attack.id || `${attack.fromId}:${attack.toId}`}`,
+      eventId: attackAnimationId,
     });
   }
 
@@ -24526,7 +24532,7 @@ function resolveAttack(attack) {
     )
     && (targetVfxAfter.ownerUid || targetVfxAfter.owner !== "neutral")
   ) {
-    playCityCaptureAnimation(targetVfxBefore, targetVfxAfter);
+    playCityCaptureAnimation(targetVfxBefore, targetVfxAfter, { combatId: attackAnimationId });
   }
 
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {

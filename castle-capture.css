@@ -1,4 +1,4 @@
-/* Four-second capture: three blade contacts, then the captor's saved heraldry. */
+/* Shared three-strike combat. Captures alone continue with saved heraldry. */
 .map-vfx-layer.crownlands-capture-active { z-index: 19; }
 .crownlands-vfx--city-capture {
   animation: crownlandsCaptureEnd var(--vfx-duration) linear both;
@@ -36,12 +36,12 @@
   0%, 32%, 40%, 55%, 63%, 78%, 88%, 100% { opacity: 0; }
   33%, 56%, 79% { opacity: .9; }
 }
-.crownlands-vfx--city-capture .crownlands-vfx__particle--spark {
+:is(.crownlands-vfx--city-attack, .crownlands-vfx--city-capture) .crownlands-vfx__particle--spark {
   top: 43%; width: 1.2%; height: 1.2%;
   animation-duration: 270ms;
   box-shadow: 0 0 3px #e8bd70;
 }
-.crownlands-vfx--city-capture .crownlands-vfx__particle--spark::after { width: 250%; height: 35%; }
+:is(.crownlands-vfx--city-attack, .crownlands-vfx--city-capture) .crownlands-vfx__particle--spark::after { width: 250%; height: 35%; }
 .crownlands-vfx__part--capture-dust {
   z-index: 3; left: 48%; top: 87%; width: 48%; height: 14%;
   border-radius: 50%;
@@ -96,4 +96,8 @@
 }
 .crownlands-vfx--mode-reduced .capture-owner-cloth { animation: none; }
 @keyframes crownlandsCaptureReduced { 0% { opacity: 0; } 25%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.crownlands-vfx--city-attack.crownlands-vfx--mode-reduced :is(.crownlands-vfx__part--capture-sword-left, .crownlands-vfx__part--capture-sword-right) {
+  transform: translate(calc(var(--capture-hand) * -29%), 0) rotate(calc(var(--capture-hand) * 43deg));
+  animation: crownlandsCaptureReduced 360ms ease-out both;
+}
 

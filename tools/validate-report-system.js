@@ -473,10 +473,12 @@ Object.assign(historySandbox, {
   playGameSound() { reportSounds += 1; },
   queueLevelUpReward() { reportRewards += 1; },
   cityById: () => ({}),
+  getCombatAnimationTarget: () => ({}),
   playCityAttackAnimation() { reportAnimations += 1; },
 });
-for (const name of ["getBattleReportListScrollTop", "normalizeServerBattleReport", "mergeServerReports", "mergeOnlineBattleReports"]) {
-  vm.runInContext(functionBody(client, name), historySandbox);
+for (const name of ["getBattleReportListScrollTop", "normalizeServerBattleReport", "getCombatReportAnimationId", "mergeServerReports", "mergeOnlineBattleReports"]) {
+  const source = name === "getCombatReportAnimationId" ? fs.readFileSync(path.join(root, "animation-manager.js"), "utf8") : client;
+  vm.runInContext(functionBody(source, name), historySandbox);
 }
 const arrivalReport = {
   ...latestReport, uid: "report-reader", battleId: "battle-delivery",
