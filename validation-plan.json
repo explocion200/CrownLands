@@ -1,14 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ec42a351bd72d45f697da950b0b63648d5a9eeb4",
+  "baseCommit": "904fe8ab150ea4d75609a4486fff4a58c35e99a9",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/ATTACK_SWORDS_RELEASE_2026-10-14.md"
+        "game.js",
+        "firebaseClient.js",
+        "tools/validate-map-ownership.js",
+        "tools/validate-map-picker-input.js"
       ],
-      "tests": [],
-      "reason": "Documentation-only record of authorized PR #556 web publication: exact build/deploy identity, staged/public artifact and combat fixture verification, release-channel matrix, and authenticated/device/itch limits. No runtime, backend, artwork or release configuration changes. Existing feature CI and saved production receipts provide evidence; no additional runtime or emulator tests apply."
+      "tests": [
+        "tools/validate-map-ownership.js",
+        "tools/validate-map-picker-input.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-city-map-reconciliation-browser.js",
+        "functions/test/emulator-realm-shard-isolation.js"
+      ],
+      "reason": "Fix stale Map Atlas ownership counts using active-map records and a bounded server-only owner roster query. Cover confirmed zero counts, ownership loss/capture, stale aggregates and visited maps, unloaded Core IDs, malformed/failed reads, request races and session changes; verify desktop/mobile counts, labels, focus/camera stability, city list and map marker ownership reconciliation. Existing roster completeness and canonical identity rules stay intact. Realm shard emulator coverage verifies the owner-scoped cross-map query and access isolation. Production build required for game.js and firebaseClient.js; no backend, security rule or authoritative gameplay mutation changes."
     }
   ]
 }

@@ -2117,6 +2117,7 @@ let harvestSpawnRequestInFlight = false;
 let harvestRelocationRetryAtMs = 0;
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
+let onlineIslandSummaryRefreshAt = 0;
 let onlineOwnedCitiesCache = [];
 let onlineOwnedCitiesCacheAt = 0;
 let onlineOwnedCitiesCacheComplete = false;
@@ -14710,15 +14711,14 @@ function getOwnedRegularCityCountsByRegionForDisplay() {
   const countsByRegion = new Map();
   const seenIds = new Set();
   const addCity = city => {
-    const id = getKnownCityId(city?.id);
     const key = getOwnedCityCacheKey(city);
-    if (!id || !key || seenIds.has(key) || isStronghold(city)) return;
+    if (!key || seenIds.has(key) || isStronghold(city)) return;
     seenIds.add(key);
     const regionId = getCityRegionId(city);
     countsByRegion.set(regionId, (countsByRegion.get(regionId) || 0) + 1);
   };
   onlineOwnedCitiesCache.forEach(addCity);
-  if (state?.cities) playerRegularCities().forEach(addCity);
+  if (state?.cities) playerRegularCities().filter(city => getCityRegionId(city) === getActiveMapRegionId()).forEach(addCity);
   return countsByRegion;
 }
 
@@ -14736,23 +14736,13 @@ function getOwnedRegularCityCountForDisplay(regionId = null) {
   return total;
 }
 
-function getIslandOwnedCityCount(regionId) {
-  const targetRegionId = normalizeRegionId(regionId);
-  const cachedCount = getOwnedRegularCityCountForDisplay(targetRegionId);
-  if (cachedCount > 0 || onlineOwnedCitiesCache.length) return cachedCount;
-  return state ? playerRegularCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
-}
-
 function getIslandSwitcherSummary(regionId) {
   const targetRegionId = normalizeRegionId(regionId);
-  const statsOwnedCount = getGlobalOwnedCityCountByRegion(targetRegionId);
   const summary = getIslandOccupancySummary(targetRegionId);
-  const ownedCount = statsOwnedCount !== null
-    ? statsOwnedCount
-    : summary
-    ? Math.max(0, Math.floor(Number(summary.ownCityCount) || 0))
-    : getIslandOwnedCityCount(targetRegionId);
-  return `Your cities: ${formatNumber(ownedCount)}`;
+  const verified = (onlineCitiesLoaded && targetRegionId === getActiveOnlineRegionId())
+    || (summary?.ownedCitiesVerifiedAtMs && summary.ownedCitiesVerifiedAtMs >= (getGlobalStatsSnapshot()?.updatedAtMs || 0));
+  const count = verified ? summary?.ownCityCount || 0 : getOwnedRegularCityCountForDisplay(targetRegionId);
+  return `Your cities: ${formatNumber(count)}`;
 }
 
 function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
@@ -14826,33 +14816,29 @@ function cacheIslandOccupancySummary(regionId, summary = null) {
         updatedAtMs: Math.max(0, Number(summary.updatedAtMs) || Date.now()),
       }
     : summarizeIslandOccupancy(activeRegionId);
+  normalized.ownedCitiesVerifiedAtMs = summary?.ownedCitiesVerifiedAtMs || (!summary ? Date.now() : 0);
   onlineIslandSummaries.set(activeRegionId, normalized);
   return normalized;
 }
 
 function updateIslandSummariesFromOwnedCityCache() {
-  if (!onlineOwnedCitiesCache.length) return;
-  const countsByRegion = new Map();
-  for (const city of onlineOwnedCitiesCache) {
-    if (!city || isStronghold(city)) continue;
-    const regionId = getCityRegionId(city);
-    countsByRegion.set(regionId, (countsByRegion.get(regionId) || 0) + 1);
-  }
+  if (!onlineOwnedCitiesCache.length && !onlineOwnedCitiesCacheComplete) return;
+  const countsByRegion = getOwnedRegularCityCountsByRegionForDisplay();
   getRegionIds().forEach(regionId => {
+    if (!onlineOwnedCitiesCacheComplete && (!onlineCitiesLoaded || regionId !== getActiveOnlineRegionId())) return;
     const existing = onlineIslandSummaries.get(regionId) || {};
+    if (existing.ownedCitiesVerifiedAtMs > onlineOwnedCitiesCacheAt) return;
     onlineIslandSummaries.set(regionId, {
+      ...existing,
       regionId,
       islandId: getOnlineIslandId(regionId),
-      cityCount: Math.max(0, Math.floor(Number(existing.cityCount) || 0)),
-      regularCityCount: Math.max(0, getRegularCityCapacity(regionId), Math.floor(Number(existing.regularCityCount) || 0)),
+      regularCityCount: Math.max(getRegularCityCapacity(regionId), existing.regularCityCount || 0),
       playerHeldCityCount: Math.max(
-        Math.max(0, Math.floor(Number(existing.playerHeldCityCount) || 0)),
-        Math.max(0, Math.floor(Number(existing.rivalCityCount) || 0)) + (countsByRegion.get(regionId) || 0)
+        existing.playerHeldCityCount || 0,
+        (existing.rivalCityCount || 0) + (countsByRegion.get(regionId) || 0)
       ),
       ownCityCount: countsByRegion.get(regionId) || 0,
-      rivalCityCount: Math.max(0, Math.floor(Number(existing.rivalCityCount) || 0)),
-      rulerCount: Math.max(0, Math.floor(Number(existing.rulerCount) || 0)),
-      rivalRulerCount: Math.max(0, Math.floor(Number(existing.rivalRulerCount) || 0)),
+      ownedCitiesVerifiedAtMs: onlineOwnedCitiesCacheAt,
       updatedAtMs: Date.now(),
     });
     const next = onlineIslandSummaries.get(regionId);
@@ -14915,31 +14901,36 @@ function updateIslandMapTileSummariesInPlace() {
 
 async function refreshOnlineIslandSummaries(force = false) {
   const api = getOnlineApi();
-  if (onlineIslandSummaryRefreshInFlight || !api?.loadIslandCitySummary || !api?.isSignedIn?.()) return false;
+  if (!state || onlineIslandSummaryRefreshInFlight || !api?.loadOwnedCitiesAcrossIslands || !api?.isSignedIn?.()) return false;
+  const regions = getRegionIds();
+  const startedAt = Date.now(), scope = getOnlineSessionRequestScope();
+  if (!force && startedAt - onlineIslandSummaryRefreshAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
   onlineIslandSummaryRefreshInFlight = true;
   try {
-    const now = Date.now();
-    const regions = getRegionIds();
-    const staleRegions = regions
-      .filter(regionId => force || !onlineIslandSummaries.get(regionId) || now - onlineIslandSummaries.get(regionId).updatedAtMs > 30000);
-    if (!staleRegions.length) return true;
-    for (const regionId of staleRegions) {
-      if (mapSwitchLoading || onlineWorldLoading) break;
-      try {
-        const summary = await api.loadIslandCitySummary(getOnlineIslandId(regionId));
-        if (summary) cacheIslandOccupancySummary(regionId, summary);
-      } catch (error) {
-        console.warn(`Could not load ${getRegionLabel(regionId)} ownership summary`, error);
-      }
+    const rows = await withTimeout(api.loadOwnedCitiesAcrossIslands(regions.map(getOnlineIslandId), { serverOnly: true }), ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS, "Map ownership lookup timed out.");
+    if (scope !== getOnlineSessionRequestScope()) return false;
+    if (!Array.isArray(rows)) throw Error("Invalid map ownership.");
+    const counts = new Map(), seen = new Set();
+    for (const raw of rows) {
+      const city = normalizeOwnedCitySnapshot(raw), key = city && getOwnedCityCacheKey(city);
+      if (!key || city.ownerUid !== getCurrentOnlineUid() || seen.has(key)) throw Error("Invalid ownership record.");
+      seen.add(key);
+      if (!isStronghold(city)) counts.set(city.regionId, (counts.get(city.regionId) || 0) + 1);
     }
+    regions.forEach(regionId => {
+      const prior = onlineIslandSummaries.get(regionId) || {};
+      if (prior.ownedCitiesVerifiedAtMs > startedAt) return;
+      onlineIslandSummaries.set(regionId, { ...prior, ownCityCount: counts.get(regionId) || 0, ownedCitiesVerifiedAtMs: startedAt });
+    });
+    onlineIslandSummaryRefreshAt = startedAt;
     rerenderIslandSwitcherModalIfOpen();
     return true;
   } catch (error) {
-    onlineLastError = error?.message || String(error);
+    if (scope !== getOnlineSessionRequestScope()) return false;
     console.warn("Could not load island ownership summaries", error);
     return false;
   } finally {
-    onlineIslandSummaryRefreshInFlight = false;
+    if (scope === getOnlineSessionRequestScope()) onlineIslandSummaryRefreshInFlight = false;
   }
 }
 
@@ -15848,6 +15839,7 @@ function showIslandSwitcherModal() {
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
   refreshIslandMapHomeRegionOnceForOpen();
+  void refreshOnlineIslandSummaries();
 }
 
 function prepareSelectionForIslandSwitch() {
@@ -16767,6 +16759,7 @@ function disconnectOnlineWorld() {
   onlineGlobalStats = null;
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
+  onlineIslandSummaryRefreshAt = 0;
   onlineOwnedCitiesCache = [];
   onlineOwnedCitiesCacheAt = 0;
   onlineOwnedCitiesCacheComplete = false;

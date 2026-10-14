@@ -353,6 +353,53 @@ async function validateDesktopMouseClick(client, serverUrl) {
   assertSinglePickerSwitch(telemetry, tile.regionId, "A desktop mouse click");
 }
 
+async function validateOwnershipRefresh(client, serverUrl, viewport, touch) {
+  await loadFixture(client, serverUrl, viewport, touch);
+  await evaluate(client, `(() => {
+    const region=getRegionIds().find(id=>id!==getActiveOnlineRegionId());
+    window.ownershipTestRegion=region;
+    state.globalStats={...getGlobalStatsSnapshot(),version:1,worldId:ONLINE_WORLD_ID,resetGeneration:RESET_GENERATION,
+      uid:getCurrentOnlineUid(),updatedAtMs:1,cityCountsByRegion:{[region]:1}};
+    onlineIslandSummaries.clear(); onlineOwnedCitiesCacheComplete=false;
+    window.ownershipLookupCalls=0;
+    window.CrownlandsOnline={...window.CrownlandsOnline,loadOwnedCitiesAcrossIslands:(_ids,options)=>{
+      if(!options?.serverOnly) throw Error('Atlas did not request current server ownership');
+      ownershipLookupCalls++;
+      return new Promise(resolve=>{window.finishOwnershipLookup=resolve;});
+    }};
+  })()`);
+  await openPicker(client, touch);
+  await waitFor(client, "typeof finishOwnershipLookup==='function'", "Atlas opening did not refresh ownership.");
+  const before = await evaluate(client, `(() => {
+    const picker=getIslandMapPickerElement();
+    window.ownershipTile=picker.querySelector('[data-island-region="'+ownershipTestRegion+'"]');
+    ownershipTile.focus({preventScroll:true});
+    window.ownershipCamera=getIslandMapPickerCameraController(picker).getCamera();
+    return ownershipTile.querySelector('.island-map-owned').textContent;
+  })()`);
+  assert.equal(before, "Your cities: 1", "The regression fixture needs a stale positive aggregate.");
+  await evaluate(client, "finishOwnershipLookup([])");
+  await waitFor(client, "!onlineIslandSummaryRefreshInFlight", "Ownership refresh did not settle.");
+  const result = await evaluate(client, `(() => {
+    const picker=getIslandMapPickerElement();
+    const tile=picker.querySelector('[data-island-region="'+ownershipTestRegion+'"]');
+    return {text:tile.querySelector('.island-map-owned').textContent,aria:tile.getAttribute('aria-label'),
+      retained:tile===ownershipTile,focus:document.activeElement===tile,
+      camera:JSON.stringify(getIslandMapPickerCameraController(picker).getCamera())===JSON.stringify(ownershipCamera),
+      calls:ownershipLookupCalls};
+  })()`);
+  assert.equal(result.text, "Your cities: 0");
+  assert(result.aria.includes("Your cities: 0"));
+  assert(result.retained && result.focus && result.camera, JSON.stringify(result));
+  assert.equal(result.calls, 1);
+  await evaluate(client, "refreshOnlineIslandSummaries()");
+  assert.equal(await evaluate(client, "ownershipLookupCalls"), 1);
+  const output = path.resolve(__dirname, "../release-artifacts/map-ownership");
+  fs.mkdirSync(output, {recursive:true});
+  const screenshot=await client.send("Page.captureScreenshot", {format:"png"});
+  fs.writeFileSync(path.join(output, `atlas-${viewport.width}x${viewport.height}.png`), Buffer.from(screenshot.data,"base64"));
+}
+
 async function validateDesktopDrag(client, serverUrl) {
   await loadFixture(client, serverUrl, DESKTOP_VIEWPORT);
   const initial = await getTelemetry(client);
@@ -577,8 +624,11 @@ async function main() {
       await validateTouchTap(client, serverAddress.url);
       await validateTouchDragAndPinch(client, serverAddress.url);
       await validateRedTrimPresentation(client, serverAddress.url, TOUCH_VIEWPORT, true, "Mobile map picker");
+      await validateOwnershipRefresh(client, serverAddress.url, DESKTOP_VIEWPORT, false);
+      await validateOwnershipRefresh(client, serverAddress.url, TOUCH_VIEWPORT, true);
+      await validateOwnershipRefresh(client, serverAddress.url, {width:568,height:320}, true);
       assert.deepEqual(consoleErrors, [], `Map picker interaction checks must not emit console errors:\n${consoleErrors.join("\n")}`);
-      console.log("Validated desktop/mobile red-trim presentation, click, immediate post-drag click, keyboard activation, wheel zoom, touch tap, touch drag, pinch behavior, and a clean browser console in the live map picker UI.");
+      console.log("Validated desktop/mobile map ownership loss, in-place counts/ARIA/focus/camera, bounded refresh, red trim, mouse/keyboard/touch selection, pan and zoom with a clean browser console.");
     } finally {
       removeConsoleListener();
       removeExceptionListener();
