@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Matching window header icons
+### Current verified web release — Report and military action artwork
+
+The authorized merge and web deployment of [PR #571](https://github.com/explocion200/CrownLands/pull/571), from `codex/report-action-artwork`, is **LIVE — WEB** at build `1565e3013b060f9860ad5c524ab42eef07e96842`. Reports, Attack, Defense, Scout and Realm Activity use matching illustrated artwork inspired by the approved medieval map reference. Shared icons cover report windows, HUD, incoming threats, troop orders and relevant Help content; combat and report behavior are preserved.
+
+- Netlify deploy `6ad01302037d0f578982afbc` published October 14 at 7:43 p.m. Eastern (`2026-10-14T23:43:54.858Z`); the manual publication hold remains enabled. All three required GitHub checks and eight selected local validators passed.
+- The merged artifact and asset budgets passed. All 1,166 staged inventory entries and 19 selected staged files matched; the bundled homepage passed after normalizing existing Netlify anchor processing. Report windows passed 36 local, 36 staged and 36 public-asset desktop/mobile/fullscreen cases. All 57 public exact-file comparisons, the game-host homepage comparison and six anonymous startup/reload cases passed.
+- Release ID, API contract and server source fingerprint match the preceding publication. No backend or player data changed. itch.io was not republished; physical-device behavior, authenticated gameplay, native notifications and installed-app cache recovery remain manual limits.
+
+See [the report artwork release record](REPORT_ARTWORK_RELEASE_2026-10-14.md) for exact identity and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Matching window header icons
 
 The authorized merge and web deployment of [PR #568](https://github.com/explocion200/CrownLands/pull/568), from `codex/match-window-header-icons`, is **LIVE — WEB** at build `643bf16766e69c12dc28e110d7c7782202fe3de6`. Item Bag, Shop, City List and Map show their corresponding illustrated HUD image to the left of the title. Artwork remains uncropped and vertically centered, with readable titles, header balances and aligned boxed X controls on desktop and landscape mobile.
 
