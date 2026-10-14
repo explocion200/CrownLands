@@ -33,7 +33,7 @@
 #profileScreen.clan-active .profile-tabs{width:auto !important;display:flex !important;gap:6px !important;margin-left:auto !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;align-items:center !important;flex:none !important;overflow:visible !important}
 #profileScreen.clan-active .profile-tabs button{height:44px !important;min-width:78px !important;padding:0 14px !important;background:#e4d3ae !important;border:1px solid #ad956b !important;box-shadow:inset 0 0 0 2px #f8ecd377 !important;font-size:12px !important;flex:none !important}
 #profileScreen.clan-active .profile-tabs button.active{background:var(--burgundy) !important;color:#fff1d3 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
-#profileScreen.clan-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+#profileScreen.clan-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;}
 #profileScreen.clan-active #profileCloseBtn svg{width:22px !important;height:22px !important;fill:currentColor !important}
 #profileScreen #clanContent .eyebrow{font-size:9px !important;letter-spacing:1.7px !important;color:var(--muted) !important}
 #profileScreen #clanContent .overview-body{min-height:0 !important;display:grid !important;grid-template-columns:minmax(0,.95fr) minmax(0,1.8fr) !important}

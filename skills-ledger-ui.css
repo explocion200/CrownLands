@@ -33,7 +33,7 @@
 #profileScreen.skills-active .profile-tabs{width:auto !important;display:flex !important;gap:6px !important;margin-left:auto !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;align-items:center !important;flex:none !important;overflow:visible !important}
 #profileScreen.skills-active .profile-tabs button{height:44px !important;min-width:78px !important;padding:0 14px !important;background:#e4d3ae !important;border:1px solid #ad956b !important;box-shadow:inset 0 0 0 2px #f8ecd377 !important;font-size:12px !important;flex:none !important}
 #profileScreen.skills-active .profile-tabs button.active{background:var(--burgundy) !important;color:#fff1d3 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
-#profileScreen.skills-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+#profileScreen.skills-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;}
 #profileScreen.skills-active #profileCloseBtn svg{width:22px !important;height:22px !important;fill:currentColor !important}
 #profileScreen.skills-active #skillsView{display:grid !important;grid-template-rows:auto minmax(0,1fr) !important;min-height:0 !important;min-width:0 !important;width:100% !important;height:100% !important;padding:0 !important;margin:0 !important;gap:0 !important;overflow:hidden !important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%) !important;border:1px solid var(--line) !important;border-top:0 !important;box-shadow:none !important}
 #profileScreen.skills-active [data-skill-preset-panel-root]{min-width:0 !important;min-height:0 !important;margin:0 !important;padding:0 !important}
@@ -204,10 +204,10 @@
 /* Preset dialogs live outside #profileScreen, so carry the Skills ledger theme with them. */
 #modal.skill-preset-confirmation-modal,
 #skillPresetExitDialog {
-  --preset-paper: #f2e8cd;
-  --preset-ink: #352f23;
-  --preset-muted: #716247;
-  --preset-line: #b8a684;
+  --preset-paper:var(--cl-panel,#ede1c2);
+  --preset-ink:var(--cl-text,#352b20);
+  --preset-muted:var(--cl-text-muted,#705d45);
+  --preset-line:var(--cl-border-faded,#b19a71);
   --preset-burgundy: #703e3d;
   width: min(700px, calc(100vw - 24px)) !important;
   max-width: none !important;
@@ -272,11 +272,7 @@
   width: 44px !important;
   height: 44px !important;
   min-height: 44px !important;
-  padding: 10px !important;
-  border: 1px solid transparent !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  padding: 10px !important;;
 }
 #modal.skill-preset-confirmation-modal #closeModalBtn svg { width: 22px; height: 22px; fill: currentColor; }
 #modal.skill-preset-confirmation-modal #modalBody {

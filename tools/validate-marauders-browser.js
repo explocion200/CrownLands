@@ -65,7 +65,7 @@ async function main(built = false) {
       assert(info.artLoaded&&info.art.includes(classification==='boss'?'boss-v1':'solo-v1'));
       assert(info.privateIntel&&!info.horizontalOverflow,JSON.stringify(info));
       assert(info.cityFrame&&info.columns===2&&!info.fakeCityControls,JSON.stringify(info));
-      assert.equal(info.paper,'rgb(242, 232, 205)');
+      assert.equal(info.paper,'rgb(237, 225, 194)');
       assert.equal(Math.round(info.dialog.width),Math.min(1040,width-24),'NPC Info matches City Details width');
       assert.equal(Math.round(info.dialog.height),Math.min(790,height-24),'NPC Info matches City Details height');
       assert.equal(info.actionScroll,'auto');assert.equal(info.ledgerScroll,'auto');

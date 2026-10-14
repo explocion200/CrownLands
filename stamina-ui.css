@@ -10,6 +10,8 @@
 .stamina-card:focus-visible,.stamina-panel button:focus-visible{outline:3px solid #f1c970;outline-offset:3px}
 .stamina-panel{box-sizing:border-box;width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:2px solid #725836;border-radius:12px;background:#e8d5ae;color:#352719;box-shadow:0 12px 60px #0009;font-family:Georgia,serif;overflow:hidden}
 .stamina-panel[open]{display:flex;flex-direction:column}
+.stamina-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none;padding:4px 14px;border-bottom:1px solid #a98b5c}
+.stamina-panel>header h2{min-width:0;margin:0;font-size:22px;overflow-wrap:anywhere}
 .stamina-panel::backdrop{background:#17101999}
 .stamina-panel-body{padding:18px 20px 8px;overflow:auto;overscroll-behavior:contain;min-height:0}
 .stamina-panel h2{display:flex;justify-content:space-between;gap:12px;margin:0 0 10px;font-size:22px}

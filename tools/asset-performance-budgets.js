@@ -13,5 +13,7 @@
 // Bound the offline-shell refinement at 4 KiB; no new assets or requests.
 // Defeated markers, server-clock countdowns and the bounded deadline wake-up
 // add at most 4 KiB. The two defeated sprites remain outside installation cache.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4) * 1024;
+// The shared Guild palette, framed X and header clearance add under 3 KiB,
+// offset by removing obsolete paint. No new assets, requests or runtimes.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3) * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

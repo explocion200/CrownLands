@@ -120,9 +120,9 @@
 }
 
 .common-gear-building-modal .modal-card {
-  --gear-ink: #2b2117;
-  --gear-muted: #66533d;
-  --gear-parchment: #e6d5aa;
+  --gear-ink:var(--cl-text,#352b20);
+  --gear-muted:var(--cl-text-muted,#705d45);
+  --gear-parchment:var(--cl-panel,#ede1c2);
   --gear-parchment-light: #f4e8c7;
   --gear-night: #17140f;
   --gear-night-soft: #272017;
@@ -156,11 +156,7 @@
   top: .42rem;
   right: .5rem;
   width: 2.85rem;
-  height: 2.5rem;
-  border-color: #9a6f35;
-  color: #2f2216;
-  background: linear-gradient(180deg, #ead59e, #c5a364);
-  box-shadow: inset 0 0 0 2px rgba(255,245,204,.44), 0 3px 5px rgba(0,0,0,.4);
+  height: 2.5rem;;
 }
 
 .common-gear-building-modal #modalBody { min-height: 0; overflow: hidden; }

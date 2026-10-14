@@ -123,7 +123,8 @@ async function main() {
       assert.equal(await evaluate("document.querySelector('.crown-pack h2').textContent"), "1,000 Crowns");
       assert.equal(await evaluate("document.querySelector('.crown-pack-price').textContent"), "$4.99 USD");
       assert.equal(await evaluate("document.querySelector('[data-crown-checkout]').textContent"), mode === "live" ? "Buy" : "Test checkout");
-      assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-crown-checkout]')).color"), "rgb(255, 255, 255)", "Shop styles preserve the Buy button's readable contrast");
+      assert.deepEqual(await evaluate("(() => { const css = getComputedStyle(document.querySelector('[data-crown-checkout]')); return [css.color, css.backgroundColor]; })()"),
+        ["rgb(244, 230, 197)", "rgb(114, 54, 58)"], "The Buy button uses the shared cream-on-burgundy primary action");
       await evaluate("document.querySelector('.crown-pack img').decode()");
       assert(await evaluate("document.querySelector('.crown-pack img').naturalWidth > 0"), "Existing Crown art loads");
       for (const [key, selected] of [["ArrowLeft", "skins"], ["ArrowRight", "crowns"], ["End", "rewards"], ["ArrowRight", "provisions"], ["ArrowLeft", "rewards"], ["Home", "provisions"]]) {
@@ -152,7 +153,7 @@ async function main() {
       }
       assert.equal(await evaluate("document.querySelector('[data-crown-pack]').value"), "fixture");
       assert.deepEqual(await evaluate("[document.querySelector('.crown-payments-dialog label'), document.querySelector('[data-crown-pack]')].map(node => getComputedStyle(node).color)"),
-        ["rgb(48, 40, 31)", "rgb(48, 40, 31)"], "Game-wide label styling must not make checkout prices unreadable");
+        ["rgb(53, 43, 32)", "rgb(53, 43, 32)"], "Game-wide label styling must not make checkout prices unreadable");
       await evaluate("crownQA.blocked = true");
       await click("[data-crown-pay]"); await statusContains("Allow a new tab");
       assert.equal(await evaluate("crownQA.calls.length"), 0);

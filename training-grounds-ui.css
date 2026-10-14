@@ -21,7 +21,7 @@
 #modal.training-grounds-modal .treasury>span{font-size:11px!important;color:var(--muted)!important}
 #modal.training-grounds-modal .treasury strong{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;font:24px Georgia,serif!important;font-variant-numeric:tabular-nums!important}
 #modal.training-grounds-modal .treasury img{width:25px!important;height:25px!important}
-#modal.training-grounds-modal .close{background:none!important;border:0!important;width:44px!important;min-width:44px!important;min-height:44px!important;font:30px Georgia,serif!important}
+#modal.training-grounds-modal .close{;width:44px!important;min-width:44px!important;min-height:44px!important;}
 #modal.training-grounds-modal .training-body{display:grid!important;grid-template-columns:minmax(0,.85fr) minmax(0,1.7fr)!important;min-height:0!important}
 #modal.training-grounds-modal .building-panel{padding:23px 26px 20px!important;text-align:center!important;min-height:0!important;overflow:auto!important;border-right:1px solid var(--line)!important;background:radial-gradient(ellipse at 50% 36%,#f3e3ba99,transparent 65%),linear-gradient(145deg,#e8d9b1,#e2d0a5)!important}
 #modal.training-grounds-modal .building-art{display:flex!important;align-items:center!important;justify-content:center!important;height:255px!important;margin:0 0 15px!important}
@@ -110,7 +110,6 @@
 #modal.training-grounds-modal .treasury>span{font-size:9px!important}
 #modal.training-grounds-modal .treasury strong{font-size:18px!important;gap:4px!important}
 #modal.training-grounds-modal .treasury img{width:19px!important;height:19px!important}
-#modal.training-grounds-modal .close{font-size:27px!important}
 #modal.training-grounds-modal .training-body{grid-template-columns:minmax(0,.74fr) minmax(0,1.8fr)!important}
 #modal.training-grounds-modal .building-panel{padding:8px 13px!important}
 #modal.training-grounds-modal .overline{font-size:8px!important;letter-spacing:1px!important}

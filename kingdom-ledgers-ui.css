@@ -2,7 +2,7 @@
 #modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card { font:12px 'Segoe UI',Arial,sans-serif!important; }
 #modal:is(.leaderboard-modal,.island-switcher-modal) .modal-card #modalTitle { margin:0!important; padding:16px 70px 16px 22px!important; border-radius:0!important; }
 #modal:is(.leaderboard-modal,.island-switcher-modal) {
-  --ledger-paper:#f2e8cd; --ledger-ink:#352f23; --ledger-muted:#6d6049; --ledger-line:#bcab87;
+  --ledger-paper:var(--cl-panel,#ede1c2); --ledger-ink:var(--cl-text,#352b20); --ledger-muted:var(--cl-text-muted,#705d45); --ledger-line:var(--cl-border-faded,#b19a71);
   width:min(1200px,calc(100vw - 24px)); height:min(700px,calc(100dvh - 24px));
   max-width:none; max-height:none; inset:0; margin:auto; padding:5px;
   border:1px solid #766346!important; border-radius:2px!important; overflow:hidden;
@@ -266,7 +266,7 @@
 }
 @media(max-height:360px) {
  #modal.leaderboard-modal .leaderboard-list .leaderboard-row.leaderboard-champion { gap:1px; min-height:130px; padding-block:0; }
- #modal.leaderboard-modal .modal-card #modalTitle { min-height:38px; padding:6px 50px 6px 12px!important; font-size:21px!important; }
+ #modal.leaderboard-modal .modal-card #modalTitle { min-height:48px; padding:6px 50px 6px 12px!important; font-size:21px!important; }
  #modal.leaderboard-modal .leaderboard-roll-heading h3 { display:none; }
  #modal.leaderboard-modal .leaderboard-roll-heading { padding:0; }
  #modal.leaderboard-modal .leaderboard-standing { padding:5px; gap:4px; }

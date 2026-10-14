@@ -27,7 +27,7 @@
 #modal.incoming-attack-modal.incoming-threats-ledger .heading h2{font:29px Georgia,serif!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .heading{min-width:0!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .header-note{margin-left:auto!important;font:italic 13px Georgia,serif!important;color:var(--muted)!important}
-#modal.incoming-attack-modal.incoming-threats-ledger .close-button{width:44px!important;height:44px!important;min-width:44px!important;border:0!important;background:transparent!important;font:28px Georgia,serif!important}
+#modal.incoming-attack-modal.incoming-threats-ledger .close-button{width:44px!important;height:44px!important;min-width:44px!important;}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary{display:flex!important;align-items:center!important;gap:20px!important;flex:none!important;min-height:76px!important;padding:11px 24px!important;background:linear-gradient(90deg,#e7d2b059,#e8dfbd30)!important;border-bottom:1px solid #c4b28b!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary-copy{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary-number{font:36px Georgia,serif!important;color:var(--red)!important;font-variant-numeric:tabular-nums!important}
@@ -92,7 +92,6 @@
 #modal.incoming-attack-modal.incoming-threats-ledger .heading p{display:none!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .heading h2{font-size:22px!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .header-note{font-size:11px!important}
-#modal.incoming-attack-modal.incoming-threats-ledger .close-button{font-size:26px!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary{min-height:48px!important;padding:5px 14px!important;gap:10px!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary-number{font-size:28px!important}
 #modal.incoming-attack-modal.incoming-threats-ledger .summary-copy{gap:9px!important}

@@ -7,7 +7,7 @@
 #profileScreen.settings-active .audio-card{border-radius:0 !important;gap:0 !important}
 #profileScreen.settings-active .volume-slider{padding:0 !important;border:0 !important;box-shadow:none !important;min-height:44px !important;max-height:44px !important}
 #profileScreen.settings-active .volume-heading output{padding:0 !important;border:0 !important;background:none !important;border-radius:0 !important;box-shadow:none !important}
-#profileScreen.settings-active{--paper:#f2e8cd;--ink:#352f23;--muted:#716247;--line:#b8a684;--moss:#4b583c;--red:#703e3d;--brass:#c0a66b;font-family:"Segoe UI",Arial,sans-serif !important;color-scheme:light;grid-template-rows:78px minmax(0,1fr) !important;backdrop-filter:none !important}
+#profileScreen.settings-active{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--moss:#4b583c;--red:#703e3d;--brass:#c0a66b;font-family:"Segoe UI",Arial,sans-serif !important;color-scheme:light;grid-template-rows:78px minmax(0,1fr) !important;backdrop-filter:none !important}
 #profileScreen.settings-active.open{display:grid !important}
 #profileScreen.settings-active::before,#profileScreen.settings-active::after{display:none !important}
 #profileScreen.settings-active :is(h2,h3,p,span,strong,small,button,a,output){color:inherit !important;text-shadow:none !important;font-weight:400 !important;text-transform:none !important;letter-spacing:normal !important}
