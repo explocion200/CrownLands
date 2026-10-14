@@ -1222,7 +1222,8 @@ input[type="range"] {
       text-shadow: none !important;
       outline: 1px solid var(--cl-border-faded) !important;
       outline-offset: -5px !important;
-      & :is(span, small, strong, b) { color: inherit !important; }
+      /* Clan counts own paired foreground/background colors, including alerts. */
+      & :is(span, small, strong, b):not(.clan-section-nav b) { color: inherit !important; }
       &:hover:not(:disabled):not(.active, .selected, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
         color: var(--cl-text) !important;
         background: var(--cl-panel-raised) !important;

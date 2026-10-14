@@ -1,7 +1,7 @@
 /* Approved Item Bag; styles are confined to this dialog. */
 #modal.inventory-modal{--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--moss:#485839;--burgundy:#6f3d3c;color-scheme:light;font:14px/normal "Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal,#modal.inventory-modal *{box-sizing:border-box}
-#modal.inventory-modal>.modal-card{font:14px/normal "Segoe UI",Arial,sans-serif!important;position:static;display:block;width:100%;height:100%!important;max-height:100%!important;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden;color:var(--ink)!important;font-family:"Segoe UI",Arial,sans-serif!important}
+#modal.inventory-modal>.modal-card{font:14px/normal "Segoe UI",Arial,sans-serif!important;position:relative;display:block;width:100%;height:100%!important;max-height:100%!important;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden;color:var(--ink)!important;font-family:"Segoe UI",Arial,sans-serif!important}
 #modal.inventory-modal>.modal-card>h2,#modal.inventory-modal #modalHeaderNav{display:none!important}
 #modal.inventory-modal #modalBody{display:block;width:100%;height:100%;min-height:0;max-height:none;padding:0;margin:0;overflow:hidden!important}
 #modal.inventory-modal :is(h1,h2,h3,p,small,strong,b,span){color:inherit!important;font-family:inherit!important;font-variant:normal!important;text-transform:none!important;text-shadow:none;letter-spacing:normal!important}
@@ -204,7 +204,7 @@
 
 #modal.inventory-modal{width:min(1200px,calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)))!important;height:min(790px,calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)))!important;padding:5px!important;inset:0;transform:none}
 #modal.inventory-modal .ib-close-space{width:44px;height:44px;flex:none;margin-left:12px}
-#modal.inventory-modal #closeModalBtn{position:absolute;top:24px;right:26px;display:grid!important;place-items:center;width:44px!important;height:44px!important;min-width:44px;min-height:44px;margin:0;padding:0;;z-index:2}
+#modal.inventory-modal #closeModalBtn{position:absolute;top:20px;right:26px;display:grid!important;place-items:center;width:44px!important;height:44px!important;min-width:44px;min-height:44px;margin:0;padding:0;;z-index:2}
 #modal.inventory-modal #closeModalBtn svg{width:22px;height:22px}
 #modal.inventory-modal .ib-item-viewport{width:100%;padding:0!important;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 #modal.inventory-modal .ib-item-tile{margin:0;max-width:none;width:100%;height:100%;aspect-ratio:auto;transform:none;min-height:0;border-radius:0!important}
@@ -215,7 +215,8 @@
 #modal.inventory-modal .ib-large-owned{font-size:13px!important;white-space:nowrap}
 #modal.inventory-modal .ib-item-tile.pending{opacity:1}
 #modal.inventory-modal .ib-use-button.pending{opacity:1}
-@media(orientation:landscape) and (max-height:550px){#modal.inventory-modal #closeModalBtn{top:10px;right:16px}#modal.inventory-modal .ib-close-space{margin-left:4px}}
+@media(orientation:landscape) and (max-height:550px){#modal.inventory-modal #closeModalBtn{top:5px;right:16px}#modal.inventory-modal .ib-close-space{margin-left:4px}}
+@media(orientation:landscape) and (max-height:350px){#modal.inventory-modal #closeModalBtn{top:3px}}
 
 #modal.inventory-modal>.modal-card{max-width:none!important}
 #modal.inventory-modal .ib-category-tab,#modal.inventory-modal .ib-quantity,#modal.inventory-modal .ib-paging button{box-shadow:none!important;border-radius:0!important}

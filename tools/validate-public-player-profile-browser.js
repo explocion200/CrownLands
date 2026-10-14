@@ -30,12 +30,23 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
         assert.deepEqual(await run(`(${inspectPlayerBanners})(modalBody)`),["ok"],`Public banner at ${width}/${sample}`);
         const layout=await run(`(()=>{const r=modal.getBoundingClientRect(),body=modalBody,button=body.querySelector('[data-public-main-city]'),b=button.getBoundingClientRect(),cols=[...body.querySelectorAll('.public-profile-section')].map(n=>n.getBoundingClientRect()),flag=body.querySelector('#publicPlayerFlag');return {open:modal.open,width:r.width,height:r.height,left:r.left,top:r.top,bottom:r.bottom,viewportHeight:innerHeight,viewportWidth:innerWidth,overflow:body.scrollWidth>body.clientWidth+1,columns:cols.every(c=>Math.abs(c.top-cols[0].top)<2),buttonVisible:b.bottom<=innerHeight&&b.top>=0,disabled:button.disabled,flag:!!flag.querySelector('svg'),text:body.textContent,brokenImages:[...body.querySelectorAll('img')].filter(n=>!n.complete||!n.naturalWidth).length}})()`);
         assert(layout.open&&!layout.overflow&&layout.columns,JSON.stringify({width,height,sample,layout}));
+        const controls=await run(`(()=>{
+          const button=modalBody.querySelector('[data-public-main-city]'),label=button.querySelector('span'),s=getComputedStyle(button),ink=getComputedStyle(label).color;
+          const luminance=color=>(color.match(/[\\d.]+/g)||[]).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;}).reduce((total,v,i)=>total+v*[.2126,.7152,.0722][i],0);
+          const levels=[luminance(ink),luminance(s.backgroundColor)].sort((a,b)=>b-a);
+          const close=closeModalBtn.getBoundingClientRect(),header=modalTitle.getBoundingClientRect();
+          const range=document.createRange();range.selectNodeContents(modalTitle);
+          return {ink,buttonInk:s.color,ratio:(levels[0]+.05)/(levels[1]+.05),centerOffset:Math.abs(close.top+close.height/2-header.top-header.height/2),contained:close.top>=header.top&&close.bottom<=header.bottom,titleOverlap:[...range.getClientRects()].some(r=>r.right>close.left&&r.left<close.right&&r.bottom>close.top&&r.top<close.bottom)};
+        })()`);
+        assert.equal(controls.ink,controls.buttonInk,'Main City label must follow its current button state');
+        if(!layout.disabled)assert(controls.ratio>=4.5,`Unreadable Main City label: ${JSON.stringify(controls)}`);
+        assert(controls.contained&&controls.centerOffset<=2&&!controls.titleOverlap,`Misaligned profile X at ${width}/${sample}: ${JSON.stringify(controls)}`);
         assert(layout.left>=0&&layout.top>=0&&layout.bottom<=height+1,"Profile leaves viewport");
         if(sample==="standard"){const shot=await client.send("Page.captureScreenshot",{format:"png"});fs.writeFileSync(path.join(output,`${width}x${height}.png`),Buffer.from(shot.data,"base64"));}
         if(sample!=="large")assert(layout.buttonVisible,`Main City requires scrolling: ${JSON.stringify({width,height,sample,layout})}`);
         assert.equal(layout.disabled,sample==="unavailable");assert.equal(layout.brokenImages,0);assert(layout.text.includes("Estimated troops"));
         if(sample==="independent")assert(layout.text.includes("Unavailable")&&layout.text.includes("Not in a clan"));
-        results.push({width,height,sample,layout});
+        results.push({width,height,sample,layout,controls});
       }
     }
     await run("PublicProfileReview.show('failure')");

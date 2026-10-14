@@ -1,14 +1,29 @@
 {
+  "schemaVersion": 1,
+  "baseCommit": "994104960f877aabd3506a6f4e83424901b6145c",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/BURGUNDY_UI_RELEASE_2026-10-14.md"
+        "achievements-ui.css",
+        "city-list-ui.css",
+        "crownlands-palette.css",
+        "daily-login-ui.css",
+        "inner-city-estate.css",
+        "item-bag-ui.css",
+        "player-profile-ui.css",
+        "quests-ui.css",
+        "shop-ui.css",
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-window-close-browser.js"
       ],
-      "tests": [],
-      "reason": "Documentation-only record of the authorized PR 562 merge and verified burgundy web publication. Check build/deploy identities and validation counts against sanitized receipts; preserve prior release history, publication hold, backend and channel/manual limits. No runtime changes or additional game suites apply."
+      "tests": [
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-window-close-browser.js",
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Correct existing UI presentation without changing game rules: center framed X controls in Shop, Bag, City List, daily/quest/achievement headers, Inner Castle and public profiles; preserve paired Clan badge colors and inherit the Main City button label from its current state. The expanded real-renderer window matrix checks header containment/centering, populated Clan tabs, contrast, focus and mouse/touch dismissal at desktop and landscape sizes. Public-profile coverage also checks long names, unavailable locations and the existing navigation/pending/retry flows. Reward-ledger coverage checks the adjacent tab controls affected by the header offsets. Palette, production packaging and asset budgets cover the shared cascade and delivered CSS. No server-authoritative changes or emulator suites apply. Explicit positioning containers keep close controls stable after the modal animation transform is removed; the window matrix compares both transform states."
     }
-  ],
-  "baseCommit": "7ff2ab69a2bee3c00b7d2a4febcad38b5e49df3f",
-  "schemaVersion": 1
+  ]
 }
