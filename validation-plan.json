@@ -13,7 +13,8 @@
         "city-list-ui.css",
         "kingdom-ledgers-ui.css",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-city-list-browser.js"
       ],
       "tests": [
         "tools/validate-item-bag-browser.js",
@@ -23,7 +24,7 @@
         "tools/validate-kingdom-ledgers-browser.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Presentation-only matching HUD artwork in the Item Bag, Shop, City List and Map window headings. Replace the two old seals, remove their unused style/glyph rules, and add decorative images with responsive sizing and title spacing. Existing Bag, Shop, City List and Kingdom ledger browser suites cover affected rendering, controls, focus, navigation and desktop/short-landscape layouts. The Crown payments browser suite verifies that all four Shop sections retain identical header geometry; no payments or wallet logic changes. Asset budgets and production packaging verify reuse of existing optimized images. Additional isolated visual review measures matching image URLs, uncropped placement, title/close separation and native mouse/touch dismissal for all four headers at three sizes. The specification records the confirmed artwork request without deployment claims. No gameplay, server authority, world data or backend changes; no emulator suites apply. The main script had three bytes of source-budget headroom; the two static heading templates add 391 normalized bytes. Increase only its source ceiling by 0.5 KiB; all aggregate shell, artwork and request ceilings remain unchanged. Shared title-image rules add 316 normalized stylesheet bytes (88 over the old cap), bounded by a 0.25 KiB ceiling step. Removed Bag/Shop seal code offsets these additions: the eight changed runtime files total 23 bytes less than the base."
+      "reason": "Item Bag, Shop, City List and Map reuse their illustrated HUD images in the window headings. The six selected validators cover affected rendering, mobile/desktop geometry, controls, navigation, the shared four-tab Shop header, production packaging and asset limits. Isolated visual review additionally verifies all four exact image URLs, uncropped alignment, title/close separation and native mouse/touch dismissal at three sizes. Remove unused Bag/Shop seal styles and the Shop glyph. Record the confirmed presentation in the specification. Correct the City List test to the already-approved #ede1c2 parchment; runtime colors are unchanged. Bounded source ceilings account for 391 added game.js bytes (+0.5 KiB allowance) and 316 styles.css bytes (+0.25 KiB allowance); the eight changed runtime files total 23 bytes less than the base, with unchanged aggregate shell/image/request limits. No gameplay, payments, server authority, world data or backend changes; no emulator suites apply."
     }
   ]
 }
