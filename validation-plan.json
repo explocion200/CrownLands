@@ -1,27 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6d97a49a399f3b8001934564ac60c0a1a47a588d",
+  "baseCommit": "ec42a351bd72d45f697da950b0b63648d5a9eeb4",
   "coverage": [
     {
       "paths": [
-        "animation-manager.js",
-        "castle-capture.css",
-        "game.js",
-        "tools/validate-castle-capture-browser.js",
-        "tools/validate-report-system.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/ATTACK_SWORDS_RELEASE_2026-10-14.md"
       ],
-      "tests": [
-        "tools/validate-animation-system.js",
-        "tools/validate-castle-capture-browser.js",
-        "tools/validate-report-system.js",
-        "tools/validate-citadel-assaults.js"
-      ],
-      "reason": "Shared combat presentation now reuses capture swords for city/objective, Camp, Tower and NPC targets. Browser coverage executes real target registries/renderers, defeated spawn lookup, report/callable delivery, Legion reports, deduplication, attack-to-capture promotion in both delivery orders, no flag for ordinary attacks, reduced/off modes, cleanup and map/session guards at desktop and two landscape-mobile sizes against source and built assets. Animation and report validators cover shared reward/capture/runtime and hydration/notification dependencies; the Citadel validator checks the newly included Legion report path without changing settlement. Only client visuals and their tests change: no server rules, combat authority or emulator suites are modified."
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Records the user's confirmed universal attack-sword design and capture-only flag rule as in development, without claiming a release."
+      "reason": "Documentation-only record of authorized PR #556 web publication: exact build/deploy identity, staged/public artifact and combat fixture verification, release-channel matrix, and authenticated/device/itch limits. No runtime, backend, artwork or release configuration changes. Existing feature CI and saved production receipts provide evidence; no additional runtime or emulator tests apply."
     }
   ]
 }
