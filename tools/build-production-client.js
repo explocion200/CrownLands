@@ -11,6 +11,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
+  "local-client.js",
   "castle-capture.css",
   "pickup-placement.js",
   "map-transition-bats.css",

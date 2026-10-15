@@ -24,4 +24,6 @@ assert.throws(() => V.applyWrite(before, { settings: {}, "settings.one": true },
 const polluted = V.decode(V.encode(JSON.parse('{"__proto__":{"polluted":true}}')));
 assert.equal({}.polluted, undefined);
 assert.equal(Object.hasOwn(polluted, "__proto__"), true);
+const fakeReference = { _documentReference: true, name: "not-a-reference", private: "fixture" };
+assert.deepEqual(V.decode(V.encode(fakeReference)), fakeReference, "A client map must not impersonate an internal reference");
 console.log("Local document values: precision, references, timestamps, transforms, merge semantics and prototype safety passed.");

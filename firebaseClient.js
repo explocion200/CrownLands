@@ -422,6 +422,10 @@
   }
 
   async function loadModules() {
+    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") {
+      await import("/api/local-game/rehearsal/local-client.js");
+      return window.CrownlandsLocalBackend.create();
+    }
     const [app, auth, firestore, functions, appCheck] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),

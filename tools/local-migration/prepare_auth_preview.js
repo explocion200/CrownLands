@@ -103,4 +103,4 @@ if (require.main === module) {
   if (!snapshot || !sourceSchema || !email || !bundle) { console.error("Usage: node prepare_auth_preview.js PRIVATE_SNAPSHOT SOURCE_SCHEMA OWNER_EMAIL NEW_PRIVATE_BUNDLE"); process.exitCode = 1; }
   else prepareBundle({ snapshot, sourceSchema, email, bundle }).catch(() => { console.error("Preview preparation stopped. Private source, schema and partial bundle were preserved for inspection."); process.exitCode = 1; });
 }
-module.exports = { prepareCaddy, prepareSchema };
+module.exports = { prepareCaddy, prepareSchema, hashes };

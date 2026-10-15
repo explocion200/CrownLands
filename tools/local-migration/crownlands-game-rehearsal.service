@@ -1,0 +1,35 @@
+[Unit]
+Description=Crownlands private local game preview
+After=network-online.target postgresql.service crownlands-auth-rehearsal.service
+Wants=network-online.target
+
+[Service]
+User=crownlands-game-rehearsal
+Group=crownlands-game-rehearsal
+WorkingDirectory=/usr/local/lib/crownlands-game-rehearsal/app
+ExecStart=/usr/local/lib/crownlands-game-rehearsal/node /usr/local/lib/crownlands-game-rehearsal/app/local-backend/game-rehearsal-server.js
+LoadCredential=config:/etc/crownlands-game-rehearsal/config.json
+LoadCredential=secrets:/etc/crownlands-game-rehearsal/secrets.json
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=768M
+TasksMax=80
+
+[Install]
+WantedBy=multi-user.target

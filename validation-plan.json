@@ -49,7 +49,9 @@
         "tools/test-local-auth-service.js",
         "tools/test-local-auth-http.js",
         "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-jobs.js"
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-browser-client.js"
       ],
       "reason": "PostgreSQL storage and pinned local dependencies, selected only by the isolated game rehearsal. Test typed values, ordering/cursors, literal FieldPath updates, conditional bulk cleanup, atomic rollback/change records, serializable callback transactions and path-locked blind writes with concurrent creation/merge/increment. Actual game initialization and season/PvP receipt tests reproduce large parallel map writes; worker and account tests exercise shared transaction behavior. No live backend selection changes."
     },
@@ -67,7 +69,8 @@
         "tools/test-local-auth-service.js",
         "tools/test-local-auth-http.js",
         "tools/test-local-auth-rehearsal.js",
-        "tools/test-local-postgres-auth-preview.js"
+        "tools/test-local-postgres-auth-preview.js",
+        "tools/test-local-postgres-game-http.js"
       ],
       "reason": "Account migration library, with an owner-only LAN rehearsal prepared separately from live login: verify imported hashes, UID/provider preservation, revoked sessions including verification races, one-use actions, Google binding/nonce/PKCE, registration and reauthentication. HTTP tests exercise host/origin/CSRF, cookies, size/concurrency, private errors and return-path handling. Real preview tests cover isolated source preservation and no privileged-runtime startup. No live Firebase account or game-client changes."
     },
@@ -122,6 +125,63 @@
         "functions/test/emulator-email-auth.js"
       ],
       "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal."
+    },
+    {
+      "paths": [
+        "local-backend/access.js",
+        "local-backend/client-data.js",
+        "local-backend/game-http.js",
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-browser-client.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-browser-client.js",
+        "functions/test/emulator-profile-save-rules.js",
+        "functions/test/emulator-player-flag-rules.js",
+        "functions/test/emulator-army-listener-rules.js",
+        "functions/test/emulator-email-auth.js"
+      ],
+      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate."
+    },
+    {
+      "paths": [
+        "local-client.js",
+        "firebaseClient.js",
+        "game.js",
+        "service-worker.js",
+        "tools/build-production-client.js"
+      ],
+      "tests": [
+        "tools/test-local-browser-client.js",
+        "tools/test-local-postgres-game-preview.js",
+        "tools/validate-login-resilience.js",
+        "tools/validate-login-realm-sequence.js",
+        "tools/validate-email-auth.js",
+        "tools/test-shell-cache-assertions.js",
+        "functions/test/emulator-realm-scale-admission.js"
+      ],
+      "reason": "Opt-in private browser transport; default Firebase initialization and live game URLs stay unchanged. Test real cookie/data protocol, transforms, typed timestamps, scoped cursors, transaction retries, listener aggregation and stopped/old-session responses. Isolate private update checks/PWA/storage and exclude no-store/private auth responses from caches. Existing login, realm admission, email and cache contract tests cover shared client dependencies; standard build/artifact checks cover the new static file. Desktop/landscape preview is a separate manual gate before production readiness."
+    },
+    {
+      "paths": [
+        "local-backend/game-rehearsal-server.js",
+        "local-backend/preview-static.js",
+        "tools/local-migration/crownlands-game-rehearsal.service",
+        "tools/local-migration/install_game_preview.py",
+        "tools/local-migration/local-preview.js",
+        "tools/local-migration/prepare_game_preview.js",
+        "tools/test-local-postgres-game-preview.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-game-preview.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-browser-client.js"
+      ],
+      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated."
     }
   ]
 }

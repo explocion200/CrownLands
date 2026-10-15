@@ -14,7 +14,7 @@ The website and game assets already run on the owner's Ubuntu computer. The requ
 | Background work | Cloud Scheduler and Firestore document triggers | Durable local job queue and transactional outbox; scheduled workers with retry, deduplication, leases and restart recovery |
 | Purchases | Stripe test/live checkout and signed webhooks | Preserve order/event IDs and wallet idempotency; configure and test local webhook endpoints before routing events |
 | Notifications | Firebase Cloud Messaging and its service worker | Standard Web Push and local subscriptions/outbox; browser push delivery still uses browser-operated infrastructure |
-| Chat translation | Google Cloud Translation via cloud credentials | Separate dependency decision: retain the service initially or evaluate a local translator against existing quality/latency requirements |
+| Chat translation | Google Cloud Translation via cloud credentials | Owner chose to keep Google Translation; configure scoped credentials for the local runtime and verify chat translation before cutover |
 | Recovery | Firestore PITR/backups; encrypted host backups stored locally and off site | Consistent PostgreSQL dumps or supported physical backups, tested restores, monitoring, and separate protected account/key exports |
 
 The local server does not eliminate third-party Google sign-in, payment processing, email delivery, or off-site storage. Do not delete the Google Cloud project: it currently also contains the explicitly requested off-site host backups and monitoring.
@@ -107,7 +107,28 @@ node tools/test-local-postgres-game.js
 node tools/test-local-postgres-jobs.js
 ```
 
-The browser still uses Firebase. Authenticated local callable transport, equivalent document permissions/subscriptions, account email delivery, replacement purchase/push endpoints, consistent scheduled database backups and end-to-end game tests must be completed before any production cutover.
+The live browser still uses Firebase. The owner-only game transport and browser adapter below are prepared for rehearsal. Full permission/workflow parity, account email delivery, replacement purchase/push endpoints, consistent scheduled database backups and end-to-end game tests must be completed before any production cutover.
+
+## Private game interface and preview
+
+`access.js` ports the current Firestore rule conditions into application permissions. The live published rules were read and compared with the repository on October 15; their LF-normalized SHA-256 is `2a941faa654b27c18ab45bd4a9dd2c88e035a8ad6912baef8bc9a86554fb4040`. The permission test pins that source and the protected profile field lists. Authorization reads share the game transaction, including current realm, player profile, clan membership and cosmetic entitlement. Unknown records default to denied. Query authorization checks constraints before reading, including empty queries, then checks returned documents. The port deliberately requires explicit current realm/shard filters for collection queries; legacy-query compatibility and complete differential rule coverage are not established.
+
+`client-data.js` bounds typed writes, transactions, query sizes and response bytes. Browser inputs cannot impersonate internal document references, choose arbitrary query SQL, grant membership, overwrite economic fields or replace protected active sessions. Conditional updates retain document versions. `game-http.js` exposes only registered callables and authenticated data operations under `/api/local-game/v1/`. It uses the existing local HttpOnly cookie, strict origin/CSRF, a proxy-overwritten source IP, owner/LAN/expiry gates, rate and concurrency bounds, redacted errors, and execution deadlines. Every transaction checks its guard again before committing; timed-out work cannot commit late mutations. A timed-out handler keeps its concurrency slot until it stops.
+
+`local-client.js` supplies the existing client's modular auth/data/callable interface only when explicitly selected at `/api/local-game/rehearsal/`. Its listeners share one bounded polling request (1.5 seconds visible, 10 seconds hidden); individual permission failures terminate only the affected listener. It discards old-session responses and preserves typed timestamps, cursors, document parents, transforms and optimistic transaction retries. This is polling, not Firestore streaming; load, responsiveness, network recovery and complete gameplay parity still require acceptance testing. Firebase remains the default client. Push and external purchase operations are unavailable in the private preview; this does not remove them from the live game.
+
+The game preview preparation tool creates a fresh `migration_game_preview_*` schema from the retained snapshot and compares every source row before any preview-only adjustments. Direct import creates no historical trigger deliveries. It preserves the network HMAC, then adapts the copied ingress configuration to the local trusted proxy. The HMAC is the only integration secret available to this preview. Background workers remain disabled for this first interactive inspection; time-based gameplay is not yet validated. The source snapshot and live Firestore remain unchanged.
+
+Its separate Ubuntu installer checks hashes, the existing account configuration and unchanged Caddy configuration, grants a dedicated runtime role access only to the copied game tables and necessary account/session/rate-limit tables, and installs root-owned files with systemd credentials. A failed routing/health check restores Caddy and stops the preview. Installation is an explicit administrator step, separate from the static publisher. The preview uses the existing account session and expires with that private sign-in service. No production backend routing changes. The private build isolates browser storage, disables PWA registration and ads, uses a private update URL, and marks itself as a test. Its CSP prevents browser connections to Firebase. Live service-worker code also excludes local account routes and responses marked private/no-store from caching.
+
+```sh
+node tools/test-local-postgres-access.js
+node tools/test-local-postgres-game-http.js
+node tools/test-local-browser-client.js
+node tools/test-local-postgres-game-preview.js
+```
+
+These tests use synthetic PostgreSQL accounts/data. They verify negative permissions, allowed scoped queries and edits, immutable source copies, transaction conflicts, independent listeners, stale-session rejection, late-write fencing, private static-file boundaries and browser-storage isolation. They do not establish that a real copied city loads or behaves correctly. Desktop/landscape interactive preview, current-scale query timings, complete provider/worker tests and cutover remain outstanding.
 
 ## Migration sequence and acceptance gates
 

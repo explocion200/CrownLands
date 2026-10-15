@@ -168,6 +168,7 @@ function isCacheableResponse(response) {
     response
     && response.status === 200
     && (response.type === "basic" || response.type === "default")
+    && !/(?:^|,)\s*(?:no-store|private)(?:\s*(?:,|=|$))/i.test(response.headers?.get("Cache-Control") || "")
   );
 }
 
@@ -175,6 +176,7 @@ function isApiOrServerRequest(url) {
   return (
     url.origin !== self.location.origin
     || url.pathname.startsWith("/api/")
+    || url.pathname.startsWith("/local-auth/")
     || url.pathname.startsWith("/.netlify/functions/")
     || url.pathname.startsWith("/__/")
     || url.pathname.includes("/google.firestore.")

@@ -16809,7 +16809,8 @@ function getCurrentDocumentBuildId() {
 }
 
 function getUpdateCheckUrl() {
-  const url = new URL("/play/", window.location.origin);
+  const entry = window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/play/";
+  const url = new URL(entry, window.location.origin);
   url.searchParams.set("updateCheck", Date.now().toString());
   return url;
 }
@@ -41810,6 +41811,7 @@ function registerPwaInstallPrompt() {
 }
 
 function registerCrownlandsServiceWorker() {
+  if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") return;
   if (!("serviceWorker" in navigator)) {
     console.info("[Crownlands] Service workers are not supported in this browser.");
     return;

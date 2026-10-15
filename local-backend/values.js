@@ -1,6 +1,7 @@
 "use strict";
 const { isDeepStrictEqual } = require("node:util");
 const MIN_INT64 = -(2n ** 63n), MAX_INT64 = 2n ** 63n - 1n;
+const DOCUMENT_REFERENCE = Symbol("crownlands-document-reference");
 
 class Timestamp {
   constructor(seconds, nanoseconds) {
@@ -55,7 +56,7 @@ function encode(value) {
   if (value instanceof Timestamp) return { timestampValue: value.toString() };
   if (value instanceof Date) return { timestampValue: Timestamp.fromDate(value).toString() };
   if (Buffer.isBuffer(value) || value instanceof Uint8Array) return { bytesValue: Buffer.from(value).toString("base64") };
-  if (value instanceof ReferenceValue || value?._documentReference === true) return { referenceValue: value.name };
+  if (value instanceof ReferenceValue || value?.[DOCUMENT_REFERENCE] === true) return { referenceValue: value.name };
   if (value instanceof GeoPoint) return { geoPointValue: { latitude: value.latitude, longitude: value.longitude } };
   if (Array.isArray(value)) return { arrayValue: { values: value.map(item => {
     if (Array.isArray(item)) throw Error("Nested arrays are not supported by Firestore");
@@ -156,4 +157,4 @@ function applyWrite(previous, patch, kind, options, timestamp) {
   return applyValue(previous, patch, options?.merge === true, timestamp);
 }
 
-module.exports = { Timestamp, ReferenceValue, GeoPoint, FieldPath, FieldValue, Transform, UpdateFields, encode, decode, segments, getField, setField, applyWrite };
+module.exports = { Timestamp, ReferenceValue, GeoPoint, FieldPath, FieldValue, Transform, UpdateFields, DOCUMENT_REFERENCE, encode, decode, segments, getField, setField, applyWrite };

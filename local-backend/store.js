@@ -50,7 +50,7 @@ function checkPrecondition(condition, body) {
 class DocumentReference {
   constructor(store, path) {
     pathParts(path, true); this.firestore = store; this.path = path; this.id = path.split("/").at(-1);
-    this.name = store.root + "/" + path; this._documentReference = true;
+    this.name = store.root + "/" + path; this[V.DOCUMENT_REFERENCE] = true;
   }
   get parent() { return this.firestore.collection(this.path.split("/").slice(0, -1).join("/")); }
   collection(id) { return this.firestore.collection(this.path + "/" + id); }
@@ -307,7 +307,9 @@ class Store {
         if (guard) await guard(client);
         const tx = new Transaction(this, client);
         const result = await callback(tx);
+        if (guard) await guard(client);
         await this.commit(tx);
+        if (guard) await guard(client);
         await client.query("COMMIT");
         return result;
       } catch (error) {

@@ -60,9 +60,9 @@ class AuthService {
       [digest(token), body.localId, provider, Number(body.localAuthEpoch || 0)]);
     return { token, user: safeUser(body, provider) };
   }
-  async session(token) {
+  async session(token, connection = this.pool) {
     if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-    const result = await this.pool.query(`SELECT a.body,s.provider,s.auth_time,s.epoch FROM ${this.schema}.auth_sessions s JOIN ${this.schema}.accounts a ON a.uid=s.uid WHERE s.token_hash=$1 AND s.expires_at>clock_timestamp()`, [digest(token)]);
+    const result = await connection.query(`SELECT a.body,s.provider,s.auth_time,s.epoch FROM ${this.schema}.auth_sessions s JOIN ${this.schema}.accounts a ON a.uid=s.uid WHERE s.token_hash=$1 AND s.expires_at>clock_timestamp()`, [digest(token)]);
     const row = result.rows[0];
     if (!row || row.body.disabled || Number(row.epoch) !== Number(row.body.localAuthEpoch || 0)) return null;
     let custom = {};
