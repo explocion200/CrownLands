@@ -225,6 +225,20 @@
         "tools/test-local-postgres-game.js"
       ],
       "reason": "Prepare an expiring private worker service for the copied game only, after a consistent dump. Require a separate restricted PostgreSQL/OS role, no schema creation or account-table access, root-owned runtime and systemd credentials, AF_UNIX-only private networking, bounded memory/restart/shutdown, fresh aggregate health after startup and restart, and fail-closed expiry. Test unsafe configurations, real owner-role refusal, grant scopes, health acceptance and private status files. Actual administrator installation/restart remains a separate acceptance check; public routes and production providers are unchanged. Reproduce private preparation umask 077, make only the nonsecret program directory traversable by its restricted service account, preserve root-only credentials, reject symlinks and checksum/config changes during the scoped installed-permission repair."
+    },
+    {
+      "paths": [
+        "tools/local-migration/postgres_backup.py",
+        "tools/local-migration/install_database_backup.py",
+        "tools/local-migration/prepare_database_backup.py",
+        "tools/local-migration/test_postgres_backup.py",
+        "tools/local-migration/test_database_backup_install.py",
+        "tools/test-local-postgres-backup.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-backup.js"
+      ],
+      "reason": "Add a consistent shared-snapshot PostgreSQL account/game archive to the existing encrypted host backup before restic runs. Test concurrent changes during snapshot export, every-row fingerprints, actual synthetic restore, identity-sequence preservation, archive corruption and target rejection, private file modes, source-list preservation, installer refusal of changed scripts and failed-restore retention. The root installer must restore the actual copied database as its restricted owner and compare every table before modifying the existing backup; an initial full sandboxed local/off-site run remains an operational acceptance check. Existing cloud destination, retention and backup-failure uptime alerts are preserved; no game balance, active-world or Firebase behavior changes."
     }
   ]
 }
