@@ -11,7 +11,8 @@ const { AuthService } = require("../local-backend/auth");
 const { createPlatform } = require("../local-backend/platform");
 const { createGameServer } = require("../local-backend/game-http");
 const { staticPreview } = require("../local-backend/preview-static");
-const { prepareSchema, prepareCaddy, prepareClient } = require("./local-migration/prepare_game_preview");
+const { prepareSchema, prepareCaddy, prepareClient, copyRuntime } = require("./local-migration/prepare_game_preview");
+const { hashes } = require("./local-migration/prepare_auth_preview");
 const root = path.resolve(__dirname, "..");
 
 (async () => {
@@ -62,6 +63,15 @@ const root = path.resolve(__dirname, "..");
     assert.equal((await request(entry, "203.0.113.3")).status, 404);
     const page = await request(entry); assert.equal(page.headers["cache-control"], "no-store"); assert.match(page.headers["content-security-policy"], /connect-src 'self'/);
     assert(!page.text.includes("private fixture"));
+    const fakeRepo = path.join(temp, "repo"), copiedRuntime = path.join(temp, "runtime");
+    fs.mkdirSync(path.join(fakeRepo, "functions/node_modules/.bin"), { recursive: true }); fs.mkdirSync(path.join(fakeRepo, "local-backend"));
+    fs.symlinkSync(outside, path.join(fakeRepo, "functions/node_modules/node")); fs.symlinkSync(outside, path.join(fakeRepo, "functions/node_modules/.bin/node"));
+    fs.writeFileSync(path.join(fakeRepo, "functions/handler.js"), "// fixture handler");
+    copyRuntime(fakeRepo, copiedRuntime);
+    assert(!fs.existsSync(path.join(copiedRuntime, "functions/node_modules/node")));
+    assert.equal(hashes(copiedRuntime).length, 1);
+    fs.symlinkSync(outside, path.join(copiedRuntime, "functions/unexpected.js"));
+    assert.throws(() => hashes(copiedRuntime), /symlink leaves/);
 
     const storage = () => {
       const values = new Map([["crownlands-save", "live"], ["crownlands-active-session-id", "live-session"]]);

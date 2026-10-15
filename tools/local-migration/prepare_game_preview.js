@@ -45,6 +45,15 @@ function prepareClient(source, destination) {
   if (!config.includes("enabled: true")) throw Error("Review changed advertising configuration");
   fs.writeFileSync(ads, config.replace("enabled: true", "enabled: false"));
 }
+function copyRuntime(repo, destination) {
+  for (const directory of ["local-backend", "functions"]) {
+    const source = path.join(repo, directory);
+    // This host's Functions toolchain links Node outside node_modules. The
+    // system unit has its own pinned Node binary; don't copy those CLI links.
+    fs.cpSync(source, path.join(destination, directory), { recursive: true, verbatimSymlinks: true,
+      filter: file => !["node_modules/node", "node_modules/.bin/node"].includes(path.relative(source, file).split(path.sep).join("/")) });
+  }
+}
 async function prepareSchema({ sourceSchema, authSchema, store }) {
   if (!/^migration_[a-z0-9_]{1,40}$/.test(sourceSchema) || !/^migration_auth_preview_[a-f0-9]{12}$/.test(authSchema)
     || !/^migration_game_preview_[a-f0-9]{12}$/.test(store.schema) || [sourceSchema, authSchema].includes(store.schema)) throw Error("Invalid isolated game copy");
@@ -107,7 +116,7 @@ async function prepareBundle({ authBundle, sourceSchema, secretsDirectory, bundl
     write("manifest.json", JSON.stringify({ commit, schema, authSchema: auth.schema, documents: count, role: ROLE, expiresAt: auth.expiresAt,
       caddyBeforeHash: hash(before), authConfigHash: hash(authBytes), sourceSchema }, null, 2));
     write("Caddyfile", caddy);
-    for (const directory of ["local-backend", "functions"]) fs.cpSync(path.join(repo, directory), path.join(bundle, "app", directory), { recursive: true, verbatimSymlinks: true });
+    copyRuntime(repo, path.join(bundle, "app"));
     prepareClient(path.join(repo, "dist"), path.join(bundle, "app", "client"));
     fs.copyFileSync(process.execPath, path.join(bundle, "node"));
     fs.copyFileSync(path.join(__dirname, "install_game_preview.py"), path.join(bundle, "install.py"));
@@ -121,4 +130,4 @@ if (require.main === module) {
   if (!bundle) { console.error("Usage: node prepare_game_preview.js PRIVATE_AUTH_BUNDLE SOURCE_SCHEMA PRIVATE_SECRETS NEW_PRIVATE_BUNDLE"); process.exitCode = 1; }
   else prepareBundle({ authBundle, sourceSchema, secretsDirectory, bundle }).catch(() => { console.error("Game preview preparation stopped; source, partial copy and bundle preserved. Private details were not logged."); process.exitCode = 1; });
 }
-module.exports = { prepareCaddy, prepareClient, prepareSchema };
+module.exports = { prepareCaddy, prepareClient, prepareSchema, copyRuntime };
