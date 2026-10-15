@@ -83,6 +83,22 @@ def start_and_verify():
     run(['systemctl', 'enable', UNIT])
 
 
+def copy_runtime(bundle):
+    APP.mkdir(mode=0o755)
+    # mkdir's mode is filtered through the installer's private umask. Both the
+    # top-level program folder and its descendants must be traversable; secrets
+    # are installed separately under CONF and retain mode 0700/0600.
+    APP.chmod(0o755)
+    shutil.copytree(bundle / 'app', APP / 'app', symlinks=True)
+    for directory, dirs, files in os.walk(APP / 'app'):
+        Path(directory).chmod(0o755)
+        for filename in files:
+            file = Path(directory) / filename
+            if not file.is_symlink():
+                file.chmod(0o755 if os.access(file, os.X_OK) else 0o644)
+    shutil.copyfile(bundle / 'node', APP / 'node'); (APP / 'node').chmod(0o755)
+
+
 def install(bundle):
     if os.geteuid() != 0:
         raise RuntimeError('Ubuntu administrator authentication is required for the protected mail service')
@@ -116,16 +132,7 @@ def install(bundle):
         try:
             run(['useradd', '--system', '--user-group', '--no-create-home', '--home-dir', '/nonexistent', '--shell', '/usr/sbin/nologin', ROLE]); created_user = True
             sql(grants(schema)); created_role = True
-            APP.mkdir(mode=0o755)
-            shutil.copytree(bundle / 'app', APP / 'app', symlinks=True)
-            # Never copy umask-077 directory modes into the service runtime.
-            for directory, dirs, files in os.walk(APP / 'app'):
-                Path(directory).chmod(0o755)
-                for filename in files:
-                    file = Path(directory) / filename
-                    if not file.is_symlink():
-                        file.chmod(0o755 if os.access(file, os.X_OK) else 0o644)
-            shutil.copyfile(bundle / 'node', APP / 'node'); (APP / 'node').chmod(0o755)
+            copy_runtime(bundle)
             CONF.mkdir(mode=0o700)
             for name in ['config.json', 'resend-api-key', 'manifest.json']:
                 shutil.copyfile(bundle / name, CONF / name); (CONF / name).chmod(0o600)

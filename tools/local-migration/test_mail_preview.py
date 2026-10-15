@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone, timedelta
@@ -9,6 +10,27 @@ import install_mail_preview as mail
 
 
 class MailInstallerTests(unittest.TestCase):
+    def test_runtime_traversable_under_actual_private_umask(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); bundle = root / 'bundle'; bundle.mkdir()
+            (bundle / 'app').mkdir(mode=0o700)
+            (bundle / 'app' / 'nested').mkdir(mode=0o700)
+            (bundle / 'app' / 'nested' / 'program.js').write_text('synthetic')
+            (bundle / 'node').write_text('synthetic')
+            private = root / 'credentials'; private.mkdir(mode=0o700)
+            app = root / 'installed'
+            previous = os.umask(0o077)
+            try:
+                with patch.object(mail, 'APP', app):
+                    mail.copy_runtime(bundle)
+            finally:
+                os.umask(previous)
+            for folder in [app, app / 'app', app / 'app' / 'nested']:
+                self.assertEqual(folder.stat().st_mode & 0o777, 0o755)
+            self.assertEqual((app / 'node').stat().st_mode & 0o777, 0o755)
+            self.assertEqual((app / 'app' / 'nested' / 'program.js').stat().st_mode & 0o777, 0o644)
+            self.assertEqual(private.stat().st_mode & 0o777, 0o700)
+
     def config(self):
         config = {'schema': 'migration_auth_preview_012345abcdef', 'expiresAt': (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(), 'allowedRecipients': ['fixture@example.test']}
         auth = {'schema': config['schema'], 'expiresAt': config['expiresAt'], 'origin': 'https://playcrownlands.com', 'allowEmailActionTest': True}
