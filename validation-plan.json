@@ -257,6 +257,20 @@
         "tools/test-local-auth-rehearsal.js"
       ],
       "reason": "Opt-in account-email dispatcher with an explicitly allowlisted Resend rehearsal transport; importing code starts no service or email. Real PostgreSQL and synthetic HTTP tests cover concurrent claims, provider acceptance before process failure, immutable idempotent retries, stale completion fencing, quota/network failures, expired/consumed/superseded/disabled-account actions, bounded attempts, token-payload cleanup, fixed provider errors and recipient/URL restrictions. Existing local auth action/session tests cover shared one-use reset and verification semantics. No real emails or provider credentials are used by tests; production Firebase behavior is unchanged. The controlled owner-email command refuses changed recipient/account count, expired previews and existing pending mail. Test the explicit LAN-only account-action opt-in, preserved blocked email-request/registration routes, default production action-page behavior, and source/config/privilege rollback after failed protected-service restart. Desktop and landscape action-page inspection is recorded separately; Ubuntu installation and an explicitly approved real email remain operational gates."
+    },
+    {
+      "paths": [
+        "local-backend/payment-webhooks.js",
+        "tools/test-local-postgres-payments.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-payments.js",
+        "tools/test-crown-live-payments.js",
+        "tools/test-crown-payments.js",
+        "functions/test/emulator-crown-live-payments.js",
+        "functions/test/emulator-crown-payments.js"
+      ],
+      "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior."
     }
   ]
 }
