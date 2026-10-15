@@ -1141,7 +1141,7 @@ input[type="range"] {
   :where(dialog, .profile-screen, .setup-card, .commander-panel)
     button:not(:where([aria-label^="Close"], .close-button, .close, .tg-close, .guild-close,
       [data-shield-cancel][aria-label], [data-economy-action="close"][aria-label],
-      .cl-action-button, .island-map-icon, .inventory-slot, .flag-color-swatch,
+      .cl-action-button, .island-map-icon, .estate-building-target, .inventory-slot, .flag-color-swatch,
       [data-flag-color], .player-name-link, .clan-identity-link, .clan-name-link,
       .clan-shield-editor *, .player-flag-editor *)) {
     color: var(--cl-text) !important;

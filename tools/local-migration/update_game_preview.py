@@ -14,7 +14,7 @@ CONF = Path('/etc/crownlands-game-rehearsal')
 CADDY = Path('/etc/caddy/Caddyfile')
 BACKUPS = Path('/var/backups/crownlands')
 UNIT = 'crownlands-game-rehearsal.service'
-FILES = ('local-backend/game-http.js', 'local-backend/game-rehearsal-server.js', 'client/local-client.js')
+FILES = ('local-backend/game-http.js', 'local-backend/game-rehearsal-server.js', 'client/local-client.js', 'client/crownlands-palette.css')
 
 
 def digest(data):
@@ -60,7 +60,7 @@ def prepare(original, bundle, previous_repair=None):
         expected = previous['files'][filename]['after'] if previous and filename in previous['files'] else digest((original / 'app' / filename).read_bytes())
         if digest(current) != expected:
             raise RuntimeError('Installed runtime changed; preserved for review')
-        data = (repo / ('local-client.js' if filename == 'client/local-client.js' else filename)).read_bytes()
+        data = (repo / filename.removeprefix('client/')).read_bytes()
         target = bundle / filename
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         target.write_bytes(data)
@@ -71,7 +71,7 @@ def prepare(original, bundle, previous_repair=None):
     manifest['caddyAfterHash'] = digest(caddy)
     (bundle / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     shutil.copyfile(__file__, bundle / 'update.py')
-    print('Private preview repair prepared. Only the reviewed preview runtime, browser adapter and private request limit can change.')
+    print('Private preview repair prepared. Only the reviewed preview runtime, browser adapter, palette and private request limit can change.')
 
 
 def install(bundle):

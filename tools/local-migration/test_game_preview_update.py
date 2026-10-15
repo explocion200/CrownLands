@@ -49,7 +49,8 @@ class RepairTests(unittest.TestCase):
         self.assertEqual(repair.repair_caddy(repair.repair_caddy(self.before)), repair.repair_caddy(self.before))
         with patch.object(repair, 'run', return_value=''), contextlib.redirect_stdout(io.StringIO()):
             repair.install(self.bundle)
-        self.assertEqual((self.app / repair.FILES[0]).read_bytes(), b'new fixture')
+        for filename in repair.FILES:
+            self.assertEqual((self.app / filename).read_bytes(), b'new fixture')
         self.assertEqual(self.caddy.read_text(), repair.repair_caddy(self.before))
         self.assertTrue((self.conf / 'repair.json').exists())
 

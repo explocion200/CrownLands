@@ -186,7 +186,7 @@
         "tools/test-local-postgres-game-http.js",
         "tools/test-local-browser-client.js"
       ],
-      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes. Subsequent preview repairs also verify the previous installed repair receipt and the browser adapter hash."
+      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes. Subsequent preview repairs also verify the previous installed repair receipt and the browser adapter hash. Extend the same checksum/rollback guarded private repair to the installed palette; verify all prepared files install and roll back, retaining live routes and data."
     },
     {
       "paths": [
@@ -271,6 +271,16 @@
         "functions/test/emulator-crown-payments.js"
       ],
       "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior."
+    },
+    {
+      "paths": [
+        "crownlands-palette.css"
+      ],
+      "tests": [
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-inner-city-estate.js"
+      ],
+      "reason": "Private migration acceptance exposed opaque generic themed buttons covering already-loaded Inner Castle building sprites. Exclude only the existing building hit targets from generic button paint so the dedicated transparent map controls remain authoritative. Existing palette and estate asset/layout checks cover shared presentation contracts; desktop and landscape browser checks verify loaded images, transparent selected/unselected controls and visible building art. No gameplay, balance, data, prices or server authority changes."
     }
   ]
 }
