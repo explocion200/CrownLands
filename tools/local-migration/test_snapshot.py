@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
 import os
@@ -78,6 +79,19 @@ class SnapshotTests(unittest.TestCase):
         self.fixture.requests.clear()
         self.assertEqual(snapshot.export_firestore(self.directory, self.fixture), result)
         self.assertEqual(self.fixture.requests, [])
+
+    def test_explicit_post_freeze_minute_is_preserved_and_cannot_be_changed(self):
+        minute = (datetime.now(timezone.utc) - timedelta(minutes=1)).replace(second=0, microsecond=0)
+        value = minute.isoformat().replace("+00:00", "Z")
+        result = snapshot.export_firestore(self.directory, self.fixture, read_time=value)
+        self.assertEqual(result["readTime"], value)
+        self.assertTrue(all(body["readTime"] == value for url, body in self.fixture.requests if url.endswith(":runQuery")))
+        other = (minute - timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
+        with self.assertRaisesRegex(ValueError, "different read time"):
+            snapshot.export_firestore(self.directory, self.fixture, read_time=other)
+        for invalid in ["not-a-time", value.replace(":00Z", ":01Z"), "2999-01-01T00:00:00Z", "2000-01-01T00:00:00Z"]:
+            with self.assertRaises(ValueError):
+                snapshot.checked_read_time(invalid)
 
     def test_reference_component_order_handles_parent_prefixes(self):
         self.fixture.docs = [document("parents/p"), document("parents/p/children/a"), document("parents/p-2")]

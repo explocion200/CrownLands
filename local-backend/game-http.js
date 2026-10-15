@@ -46,6 +46,22 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       const url = new URL(req.url, origin);
       if (url.origin !== origin.origin) throw fail("invalid-argument");
       if (preview && await preview(req, res, url)) return;
+      if (permanent && url.pathname === "/api/season-rankings") {
+        if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
+        if (req.method !== "GET") { res.setHeader("Allow", "GET"); return send(res, 405, { error: "Use GET to read season rankings." }); }
+        if (req.url.length > 2048 || new Set(url.searchParams.keys()).size !== [...url.searchParams.keys()].length) throw fail("invalid-argument");
+        await auth.rateLimit("public-rankings-ip", ip, 60, 60);
+        operation = "public-rankings";
+        operationPromise = require("../functions/public-season-rankings").readArchive(store, Object.fromEntries(url.searchParams), now())
+          .catch(error => { throw fail(error.status === 400 ? "invalid-argument" : "unavailable"); });
+        const result = await Promise.race([operationPromise, new Promise((_, reject) => {
+          timer = setTimeout(() => { timedOut = true; reject(fail("deadline-exceeded")); }, requestBudgetMs);
+        })]);
+        await deployment.assertActive();
+        if (disconnected) return;
+        res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
+        return send(res, 200, result);
+      }
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
       if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }

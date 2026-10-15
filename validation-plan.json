@@ -32,7 +32,7 @@
         "tools/test-local-migration-snapshot.js",
         "tools/test-local-postgres-import.js"
       ],
-      "reason": "Read-only fixed-time source export and isolated local PostgreSQL import/restore. Test interrupted-page recovery, typed values, missing parent documents, cursor order, count/checksum/privacy failures, adaptive page limits, identity/hash completeness, overwrite refusal and complete real-database restore comparisons. No live writes, routes, scheduler or Firebase authority changes; emulator suites do not exercise the new PostgreSQL target."
+      "reason": "Read-only fixed-time source export and isolated local PostgreSQL import/restore. Test interrupted-page recovery, typed values, missing parent documents, cursor order, count/checksum/privacy failures, adaptive page limits, identity/hash completeness, overwrite refusal and complete real-database restore comparisons. No live writes, routes, scheduler or Firebase authority changes; emulator suites do not exercise the new PostgreSQL target. Explicit UTC PITR-minute selection preserves the default rehearsal behavior, rejects future/expired/non-minute timestamps and refuses a changed timestamp when resuming an existing snapshot. This does not establish a source freeze."
     },
     {
       "paths": [
@@ -162,9 +162,10 @@
         "functions/test/emulator-email-auth.js",
         "tools/test-local-postgres-permanent.js",
         "tools/test-local-payment-ingress.js",
-        "tools/test-local-production-client.js"
+        "tools/test-local-production-client.js",
+        "functions/test/emulator-public-season-rankings.js"
       ],
-      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate. Reproduce a 600 KB imported save through the actual HTTP transport, retain the smaller callable budget, reject oversized writes, and prove operational diagnostics omit payloads and error messages. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes. Production opt-in also tests matching account/game deployment epochs before access, per-request fencing, production email-action headers, and real restricted-role PostgreSQL password login/read/save/logout without provider IO."
+      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate. Reproduce a 600 KB imported save through the actual HTTP transport, retain the smaller callable budget, reject oversized writes, and prove operational diagnostics omit payloads and error messages. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes. Production opt-in also tests matching account/game deployment epochs before access, per-request fencing, production email-action headers, and real restricted-role PostgreSQL password login/read/save/logout without provider IO. Permanent public historical rankings now reuse the existing sanitized archive reader; exercise anonymous responses without private UIDs, malformed/duplicate query rejection, method/cache rules and maintenance refusal. Its original Firebase emulator verifies the shared archive contract."
     },
     {
       "paths": [
@@ -427,7 +428,8 @@
         "tools/local-migration/prepare_permanent_services.js",
         "tools/local-migration/test_permanent_operations.py",
         "tools/test-local-payment-ingress.js",
-        "tools/test-local-postgres-permanent.js"
+        "tools/test-local-postgres-permanent.js",
+        "tools/local-migration/prepare_cutover_routes.js"
       ],
       "tests": [
         "tools/test-local-postgres-permanent.js",
@@ -441,7 +443,20 @@
         "tools/test-local-postgres-payment-provider.js",
         "tools/test-local-production-client.js"
       ],
-      "reason": "Permanent installation remains in standby; independent private PostgreSQL cluster boots all six roles, verifies empty targets, restricted grants, receipt-gated activation and concurrent authority write fencing. Signed ingress tests preserve bytes/mode/one authority, reject bad requests, propagate retryable failures and retain failed-event hashes across restart; sanitized health rejects stale data. Collector fixtures cover service/queue/provider faults and explicit permanent backup scope. Existing database restore, game HTTP, worker, mail, push and payment suites cover shared adapters and unchanged preview guards. Protected installer performs actual startup/restart, HTTPS and all-row recovery checks before enabling services; Stripe routing is a separately verified operator action. Production opt-in also tests matching account/game deployment epochs before access, per-request fencing, production email-action headers, and real restricted-role PostgreSQL password login/read/save/logout without provider IO."
+      "reason": "Permanent installation remains in standby; independent private PostgreSQL cluster boots all six roles, verifies empty targets, restricted grants, receipt-gated activation and concurrent authority write fencing. Signed ingress tests preserve bytes/mode/one authority, reject bad requests, propagate retryable failures and retain failed-event hashes across restart; sanitized health rejects stale data. Collector fixtures cover service/queue/provider faults and explicit permanent backup scope. Existing database restore, game HTTP, worker, mail, push and payment suites cover shared adapters and unchanged preview guards. Protected installer performs actual startup/restart, HTTPS and all-row recovery checks before enabling services; Stripe routing is a separately verified operator action. Production opt-in also tests matching account/game deployment epochs before access, per-request fencing, production email-action headers, and real restricted-role PostgreSQL password login/read/save/logout without provider IO. Pure route preparation preserves payment/health/website routes while producing maintenance and permanent API candidates; reject changed preview layouts and remaining Firebase rankings proxy. Both actual Caddy candidates are separately adapted and validated without installation."
+    },
+    {
+      "paths": [
+        "tools/local-migration/prepare_firebase_freeze.py",
+        "tools/local-migration/firebase_transfer_controls.py",
+        "tools/local-migration/test_firebase_freeze_plan.py",
+        "tools/local-migration/test_firebase_transfer_controls.py",
+        "tools/test-local-firebase-freeze-plan.js"
+      ],
+      "tests": [
+        "tools/test-local-firebase-freeze-plan.js"
+      ],
+      "reason": "Owner-permitted source-control preparation and a guarded, reversible controller for the fixed project: synthetic inventory and transport fixtures cover exact service identities, key restrictions, unchanged project IAM, original rules/policies, missing permissions and drift. Exercise durable intent before mutations, lost acknowledgements without duplicate requests, unresolved requests and concurrent policy changes, minimum drain, retained paused schedules, exact rollback before local activation, and exclusion of Translation/monitoring/storage and new role grants. All mutation tests are offline; actual reads only verify current access. Control-plane completion deliberately leaves sourceFrozen false pending data-plane, trigger/payment reconciliation and protected local maintenance evidence. No production freeze, import, deployment or activation is performed by validation."
     }
   ]
 }

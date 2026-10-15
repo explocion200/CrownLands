@@ -283,3 +283,61 @@ The candidate loads its immutable local configuration before other game scripts.
 The production service worker imports no Firebase SDK. It keeps existing PWA caching and launch behavior, excludes account/game responses from caches, and handles native notifications with bounded expiry and same-origin game clicks. Before replacing an existing Firebase subscription, the browser asks the active worker to confirm its local protocol, epoch and public key; matching script URLs alone do not prove the worker has updated. The candidate uses a distinct, matching HTML/worker build identity so an existing installed app sees a real update without a reload loop. Private notifications remain scoped to their separate rehearsal worker.
 
 Tests cover separate artifact generation, immutable storage isolation, incompatible-backend refusal, native worker handshakes and click destinations. An independent PostgreSQL cluster exercises the actual production browser adapter against restricted account/game roles: password sign-in, reading and saving a profile, rejected economy/cross-player writes, maintenance fencing and logout. Desktop and landscape-mobile browser checks use synthetic account responses and send no provider messages. This does not replace real production Google/password, installed-app upgrade and multi-browser notification acceptance after a fenced fresh-data transfer. Installed standby runtime files must be updated to this tested protocol as part of the reviewed cutover bundle; passing source tests is not installation evidence.
+
+## Source controls and final snapshot preparation
+
+The project owner already has permanent Owner access. An attempted permanent
+`roles/iam.denyAdmin` grant was rejected: Google permits that role only at an
+[organization](https://docs.cloud.google.com/iam/docs/roles-permissions/iam#iam.denyAdmin),
+and this project has no organization parent. No new IAM grant succeeded. The
+transfer must use the owner's existing service-management permissions; creating
+an organization is not a prerequisite for this approach.
+
+`prepare_firebase_freeze.py NEW_PRIVATE_DIRECTORY` only reads current metadata.
+It captures the 150 deployed functions and matching Cloud Run invocation
+policies, 16 schedules, API key restrictions, published rules, project IAM and
+the three reviewed game service accounts. It rejects unexpected identities,
+bypassed Cloud Run invocation checks, unrestricted keys, missing pagination and
+other inventory drift. Original rules and restrictions remain in the private
+plan for recovery. It never downloads an API key string or changes access.
+
+`firebase_transfer_controls.py PRIVATE_PLAN_DIRECTORY close|fence|rollback`
+is a separately guarded control-plane procedure. It requires fresh root-owned
+maintenance and drained-payment receipts tied to that exact plan and the
+installed epoch, stopped automatic publishing, and a matching maintenance
+proxy. **The protected receipt producer and final activation/import procedure
+remain to be prepared and installed; do not manufacture receipts to bypass
+these checks.** Closing pauses schedules, blocks the old account APIs, publishes
+deny-all client rules, and removes public invocation while preserving internal
+event-drain identities. Fencing requires at least ten minutes after closure
+and disables only the reviewed game runtime/Admin SDK identities. Owner,
+Google-managed service agents, Translation, monitoring and backup services are
+retained. Do not use retained administrative identities to deploy or import
+while the source is being drained.
+
+Every request is journaled before submission and read back afterward. A lost
+acknowledgement is reconciled by reads; an unresolved request is not repeated.
+Rollback restores only this attempt's controls, preserves previously paused
+schedules and refuses concurrent policy drift. It requires fresh evidence that
+the local game has never been activated. After local authoritative writes,
+recovery requires data reconciliation rather than reopening the old source.
+Neither a ten-minute wait nor successful control-plane changes proves all
+sources have stopped writing: the journal deliberately keeps `sourceFrozen`
+false. Actual client/runtime denial, propagation, stable account/data reads,
+pending trigger work and outstanding payments must still be verified before
+the final snapshot and single-authority switch.
+
+`export_snapshot.py --read-time UTC_MINUTE` permits the reviewed post-freeze
+PITR minute. It rejects changing an existing snapshot's read time and retains
+the default rehearsal timestamp when no explicit value is supplied. Full Auth
+exports are still separate reads; verify stability across the stopped-source
+boundary. A rehearsal snapshot must never substitute for the final copy.
+
+The permanent game service also provides the website's public historical
+`/api/season-rankings` through the existing sanitized archive reader. It
+preserves public fields and cache rules, rejects duplicate parameters and
+stops during maintenance. `prepare_cutover_routes.js` produces separate Caddy
+maintenance/active candidates without installing them; the active candidate
+replaces the remaining Firebase rankings proxy and routes account/game APIs
+to the permanent services. The live routes and publisher still require their
+reviewed activation update.

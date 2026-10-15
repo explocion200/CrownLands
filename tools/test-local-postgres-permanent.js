@@ -39,6 +39,14 @@ async function child(directory,role){
   }
   if(role==='game'){
    const port=active.server.address().port;
+   const archive=await request(port,'/api/season-rankings?season=realm-2026-09&board=players');
+   assert.equal(archive.status,200);assert.match(archive.headers['cache-control'],/s-maxage=300/);
+   assert.deepEqual(JSON.parse(archive.body).entries,[{rank:1,name:'Fixture ruler',score:123}]);
+   assert(!archive.body.toString().includes('private-fixture'));
+   assert.equal((await request(port,'/api/season-rankings?season=realm-2026-09&season=realm-2026-08')).status,400);
+   assert.equal((await request(port,'/api/season-rankings?unknown=players')).status,400);
+   assert.equal((await request(port,'/api/season-rankings',{method:'POST'})).status,405);
+   control.phase='maintenance';assert.equal((await request(port,'/api/season-rankings')).status,503);control.phase='active';
    assert.equal((await request(port,'/api/local-game/v1/read',{method:'POST',body:'{}'})).status,503);
    const authFolder=path.join(directory,'auth'),authentication=await start('auth',{...options,credentials:authFolder,directory:authFolder,
     connect:opts=>new Pool({...opts,host:directory,user:'crownlands-auth'})});
@@ -73,6 +81,12 @@ async function main(){
  assert.throws(()=>validateControl({...control,extra:true}));assert.throws(()=>validateControl({...control,epoch:'bad'}));assert(!isPolicy({schema:GAME},GAME));
  for(const role of [...COMPONENTS,'payment-ingress','operations']){const s=unit(role);assert(s.includes('ProtectSystem=strict'));assert(s.includes('User=crownlands-'+role));assert(!s.includes('sudo'));}
  const source='(crownlands_routes) {\n\t\thandle /backup-healthz {\n\t\t}\n}';assert(caddy(source).includes('/api/payments/stripe/*'));assert.throws(()=>caddy(caddy(source)));
+ const routeFixture='(crownlands_routes) {\n\troute {\n'+['/local-auth/*','/api/local-game/*','@rankings'].map((name,i)=>`\t\thandle ${name} {\n\t\t\treverse_proxy ${i===2?'https://us-central1-crown-land-b15e0.cloudfunctions.net':'127.0.0.1:'+ (9190+i)}\n\t\t}\n`).join('')+'\t\thandle /api/payments/stripe/* {\n\t\t\treverse_proxy 127.0.0.1:9294\n\t\t}\n\t\troot * /srv/crownlands/current/game\n\t}\n}';
+ const cutover=require('./local-migration/prepare_cutover_routes').prepare(routeFixture);
+ assert(!cutover.active.includes('cloudfunctions.net'));assert(!cutover.active.includes(':9190'));assert(!cutover.active.includes(':9191'));
+ assert(cutover.active.includes(':9294'));assert(cutover.active.includes('header_up X-Crownlands-Client-IP {remote_host}'));
+ assert(cutover.maintenance.includes('503'));assert(cutover.maintenance.includes('Cache-Control "no-store"'));
+ assert.throws(()=>require('./local-migration/prepare_cutover_routes').prepare(cutover.active));
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'cl-permanent-'));const bin=execFileSync('pg_config',['--bindir'],{encoding:'utf8'}).trim();let started=false,pool;
  const run=(name,args)=>execFileSync(path.join(bin,name),args,{stdio:'pipe',timeout:30000});
  try{
@@ -106,6 +120,8 @@ async function main(){
   await pool.query(`INSERT INTO ${AUTH}.accounts(uid,body) VALUES($1,$2)`,[account.localId,account]);
   const scope={resetGeneration:'realm-2026-10',worldId:'main-realm-2026-10',realmShardId:'shard_0001'};
   await fixtureStore.doc('realmConfig/current').set(scope);await fixtureStore.doc('players/'+account.localId).set({...scope,uid:account.localId,marchPercent:70});
+  await fixtureStore.doc('seasonResults/realm-2026-09').set({seasonId:'realm-2026-09',status:'ready'});
+  await fixtureStore.doc('seasonResults/realm-2026-09/boards/players').set({entries:[{rank:1,playerName:'Fixture ruler',kingPower:123,uid:'private-fixture'}]});
   for(const r of schedules)await pool.query(`INSERT INTO ${GAME}.work_schedules(name,signature,last_minute) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[r.name,r.signature,Math.floor(Date.now()/60000)+10]);
   for(const role of COMPONENTS){execFileSync(process.execPath,[__filename,'--child',directory,role],{stdio:'inherit',timeout:25000,env:{...process.env,CROWNLANDS_BACKEND:''}});}
   console.log('Permanent services: private PostgreSQL cluster, restricted roles, standby, all six active startups, real production browser password sign-in/read/save/logout, denied cross-player/economy writes, epoch/maintenance and concurrent authority fencing passed.');

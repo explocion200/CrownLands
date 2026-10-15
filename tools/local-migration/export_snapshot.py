@@ -165,18 +165,33 @@ def verify_files(directory, manifest):
             raise ValueError("Snapshot file integrity check failed")
 
 
-def export_firestore(directory, read, progress=None):
+def checked_read_time(value):
+    """PITR minute selected by the operator, including a post-freeze minute."""
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:00Z", value):
+        raise ValueError("Snapshot read time must be an exact UTC minute")
+    instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    if instant > now or instant < now - timedelta(days=6):
+        raise ValueError("Snapshot read time is outside the reviewed PITR window")
+    return value
+
+
+def export_firestore(directory, read, progress=None, read_time=None):
+    if read_time is not None:
+        read_time = checked_read_time(read_time)
     manifest_path = directory / "manifest.json"
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text())
         if manifest.get("project") != PROJECT or manifest.get("schemaVersion") != 1:
             raise ValueError("Snapshot identity differs from this migration")
+        if read_time is not None and manifest.get("readTime") != read_time:
+            raise ValueError("Existing snapshot has a different read time; preserve it")
         verify_files(directory, manifest)
     else:
         database = read(BASE)
         if database.get("databaseEdition") != "STANDARD" or database.get("pointInTimeRecoveryEnablement") != "POINT_IN_TIME_RECOVERY_ENABLED":
             raise ValueError("This exporter requires Standard Firestore with PITR enabled")
-        read_time = (datetime.now(timezone.utc) - timedelta(minutes=2)).replace(second=0, microsecond=0).isoformat().replace("+00:00", "Z")
+        read_time = read_time or (datetime.now(timezone.utc) - timedelta(minutes=2)).replace(second=0, microsecond=0).isoformat().replace("+00:00", "Z")
         count = snapshot_count(read, read_time)
         if count > MAX_DOCUMENTS:
             raise ValueError("Snapshot exceeds the reviewed document bound")
@@ -269,6 +284,7 @@ def export_auth(directory, read, manifest):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
+    parser.add_argument("--read-time", help="Explicit UTC PITR minute; does not freeze or authorize a transfer")
     args = parser.parse_args()
     directory = private_directory(args.directory)
     # Reject repository/web-root destinations even if their permissions change.
@@ -277,7 +293,7 @@ def main():
     if resolved.is_relative_to(repo) or resolved.is_relative_to(Path("/srv")):
         raise ValueError("Private exports must stay outside source and web roots")
     read = GoogleReader()
-    manifest = export_firestore(directory, read, lambda done, total: print(f"Snapshot progress: {done}/{total} documents", flush=True))
+    manifest = export_firestore(directory, read, lambda done, total: print(f"Snapshot progress: {done}/{total} documents", flush=True), read_time=args.read_time)
     manifest = export_auth(directory, read, manifest)
     print(json.dumps({"firestoreComplete": manifest["firestoreComplete"], "documents": manifest["exportedDocuments"],
                       "accounts": manifest["authAccounts"], "readTime": manifest["readTime"],
