@@ -66,7 +66,17 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Report and military action artwork
+### Current verified web release — Reward windows and leaderboard artwork
+
+The authorized merge and web deployment of [PR #573](https://github.com/explocion200/CrownLands/pull/573), from `codex/rewards-leaderboard-artwork-current`, is **LIVE — WEB** at build `2ce492c5cab315ba308cd55cee4e688709eaf612`. Leaderboards and Daily Login display their matching HUD image beside the title. Reward tabs use matching illustrations and retain identical frame, header, navigation and boxed-X geometry when switching. The compact leaderboard podium fits short landscape screens. PR #570 was closed as superseded by this merged replacement.
+
+- Netlify deploy `6ad023011d5f39c5a604d4a8` published October 14 at 8:52 p.m. Eastern (`2026-10-15T00:52:11.978Z`); the manual publication hold remains enabled. All three required GitHub checks and eight selected local validators passed.
+- The merged artifact and asset budgets passed. All 1,168 staged inventory entries and 19 staged files matched. Reward/leaderboard windows passed 24 local, 24 staged and 24 public-asset desktop/mobile/fullscreen cases. All 57 public exact-file comparisons and six anonymous startup/reload cases passed. The existing report artwork also passed its 36-view integration check.
+- Reward rules, rankings, API contract and server source fingerprint are preserved. No backend or player data changed. itch.io was not republished; physical-device behavior, authenticated gameplay and installed-app cache recovery remain manual limits.
+
+See [the reward windows release record](REWARD_WINDOWS_RELEASE_2026-10-14.md) for exact identity and evidence. Earlier releases below remain historical.
+
+### Previous verified web release — Report and military action artwork
 
 The authorized merge and web deployment of [PR #571](https://github.com/explocion200/CrownLands/pull/571), from `codex/report-action-artwork`, is **LIVE — WEB** at build `1565e3013b060f9860ad5c524ab42eef07e96842`. Reports, Attack, Defense, Scout and Realm Activity use matching illustrated artwork inspired by the approved medieval map reference. Shared icons cover report windows, HUD, incoming threats, troop orders and relevant Help content; combat and report behavior are preserved.
 
