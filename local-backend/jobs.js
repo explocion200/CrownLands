@@ -33,10 +33,12 @@ function scheduleMatcher({ schedule, timeZone }) {
   };
 }
 class JobQueue {
-  constructor({ store, routes, leaseSeconds = 60, maxAttempts = 8 }) {
+  constructor({ store, routes, leaseSeconds = 60, maxAttempts = 8, maxActive = 2 }) {
     if (!(store instanceof Store) || !/^migration_game_[a-z0-9_]{1,30}$/.test(store.schema)) throw Error("Jobs require an isolated game rehearsal schema");
     if (!Number.isInteger(leaseSeconds) || leaseSeconds < 5 || leaseSeconds > 300 || !Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 20) throw Error("Invalid job bounds");
+    if (!Number.isInteger(maxActive) || maxActive < 1 || maxActive > 8) throw Error("Invalid worker concurrency");
     this.store = store; this.schema = store.schema; this.leaseSeconds = leaseSeconds; this.maxAttempts = maxAttempts;
+    this.maxActive = maxActive; this.active = 0; this.stopping = false; this.stopAt = Infinity;
     this.routes = new Map(); this.triggers = []; this.schedules = [];
     for (const route of routes) {
       if (!/^[A-Za-z][A-Za-z0-9]{1,100}$/.test(route.name) || this.routes.has(route.name) || typeof route.handler !== "function") throw Error("Invalid or duplicate handler");
@@ -164,8 +166,12 @@ class JobQueue {
       data: job.kind === "created" ? after : { before, after } };
   }
   async runOne() {
-    const job = await this.claim(); if (!job) return false;
-    let failure = null, stopped = false, timer, deadline;
+    if (this.stopping || Date.now() >= this.stopAt || this.active >= this.maxActive) return false;
+    this.active++;
+    let job;
+    try { job = await this.claim(); } catch (error) { this.active--; throw error; }
+    if (!job) { this.active--; return false; }
+    let failure = null, stopped = false, timer, deadline, execute, executionFinished = false;
     const refresh = async () => {
       try { await this.heartbeat(job); }
       catch { failure = lostLease(); stopped = true; }
@@ -176,10 +182,14 @@ class JobQueue {
       const route = this.routes.get(job.handler);
       if (!route || route.kind !== job.kind) throw Object.assign(Error("Retained job handler missing"), { code: "handler-missing" });
       const event = await this.event(job);
-      const execute = this.store.withTransactionGuard(async client => {
+      execute = Promise.resolve(this.store.withTransactionGuard(async client => {
         if (failure) throw failure;
+        if (this.stopping || Date.now() >= this.stopAt) throw Object.assign(Error("Worker is stopping"), { code: "job-worker-stopping" });
         await this.guard(job)(client);
-      }, () => route.handler(event));
+      }, () => route.handler(event)));
+      // A handler can ignore its timeout and keep running JavaScript. Retain
+      // its slot until it actually settles, even after the job is retried.
+      execute.then(() => { executionFinished = true; }, () => { executionFinished = true; });
       await Promise.race([execute, new Promise((resolve, reject) => {
         deadline = setTimeout(() => reject(Object.assign(Error("Job deadline exceeded"), { code: "job-timeout" })), Math.min(route.options.timeoutSeconds || 540, 540) * 1000);
       })]);
@@ -187,7 +197,12 @@ class JobQueue {
     finally { stopped = true; clearTimeout(timer); clearTimeout(deadline); }
     try { await this.finish(job, failure); }
     catch (error) { if (error.code !== "job-lease-lost") throw error; }
+    finally {
+      if (execute && !executionFinished) execute.then(() => { this.active--; }, () => { this.active--; });
+      else this.active--;
+    }
     return true;
   }
+  stop() { this.stopping = true; }
 }
 module.exports = { JobQueue, scheduleMatcher, matchDocument };

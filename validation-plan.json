@@ -122,9 +122,10 @@
         "tools/test-local-postgres-store.js",
         "functions/test/emulator-season-rewards.js",
         "functions/test/emulator-core-expansion-state.js",
-        "functions/test/emulator-email-auth.js"
+        "functions/test/emulator-email-auth.js",
+        "tools/test-local-postgres-worker-loop.js"
       ],
-      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal."
+      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events."
     },
     {
       "paths": [
@@ -193,6 +194,19 @@
         "tools/validate-email-auth.js"
       ],
       "reason": "The selected existing auth validator omitted the current cosmetics client dependency and failed before reaching its assertions. Load the actual dependency in its isolated VM to restore email/Google/session coverage without changing game behavior or stubbing away the requirement."
+    },
+    {
+      "paths": [
+        "local-backend/worker-loop.js",
+        "tools/local-migration/rehearse_workers.js",
+        "tools/test-local-postgres-worker-loop.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-game.js"
+      ],
+      "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation."
     }
   ]
 }

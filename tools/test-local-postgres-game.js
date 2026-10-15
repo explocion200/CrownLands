@@ -6,6 +6,7 @@ const { createRequire } = require("node:module");
 const { Store, DocumentSnapshot } = require("../local-backend/store");
 const { createPlatform, describe } = require("../local-backend/platform");
 const { JobQueue } = require("../local-backend/jobs");
+const { privateWorkerRoutes } = require("../local-backend/worker-loop");
 const requireFunctions = createRequire(path.resolve(__dirname, "../functions/package.json"));
 
 (async () => {
@@ -27,6 +28,8 @@ const requireFunctions = createRequire(path.resolve(__dirname, "../functions/pac
   const routes = describe(game), counts = {};
   for (const route of routes) counts[route.kind] = (counts[route.kind] || 0) + 1;
   assert.deepEqual(counts, { callable: 121, created: 8, written: 2, schedule: 16, http: 3 });
+  const privateRoutes = privateWorkerRoutes(routes);
+  assert.equal(privateRoutes.length, 25); assert(!privateRoutes.some(route => route.name === "deliverIncomingArmyNotification"));
   const queue = new JobQueue({ store: db, routes });
   try {
     await db.initialize(); await queue.initialize();

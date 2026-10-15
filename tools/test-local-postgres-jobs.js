@@ -88,11 +88,17 @@ const { JobQueue, scheduleMatcher, matchDocument } = require("../local-backend/j
       try { await db.doc("fence/after-timeout").set({ wrong: true }); }
       catch (error) { lateError = error.code; }
     }) });
-    const timedQueue = new JobQueue({ store: db, routes: [...routes, ...slow], maxAttempts: 1 });
+    const timedQueue = new JobQueue({ store: db, routes: [...routes, ...slow], maxAttempts: 1, maxActive: 1 });
     await db.doc("slow/one").set({ fixture: true }); await timedQueue.dispatchChanges(); await timedQueue.runOne();
+    assert.equal(timedQueue.active, 1, "A timed-out but unfinished handler must retain its worker slot");
+    await db.doc("slow/two").set({ fixture: true }); await timedQueue.dispatchChanges();
+    assert.equal(await timedQueue.runOne(), false);
+    assert.equal(Number((await db.pool.query(`SELECT attempts FROM ${schema}.work_jobs WHERE handler='slowFixture' AND status='pending'`)).rows[0].attempts), 0);
     releaseSlow(); await new Promise(resolve => setTimeout(resolve, 20));
     assert.equal(lateError, "job-timeout");
     assert.equal((await db.doc("fence/after-timeout").get()).exists, false);
+    assert.equal(timedQueue.active, 0);
+    timedQueue.stop(); assert.equal(await timedQueue.runOne(), false, "A stopping worker must not claim another job");
     // Scheduler cursor survives restarts and catches up in bounded transactions.
     const schedules = describe({ minuteFixture: p.onSchedule({ schedule: "every 1 minutes", timeZone: "UTC" }, async () => {}) });
     const clockQueue = new JobQueue({ store: db, routes: schedules });
