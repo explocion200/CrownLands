@@ -6,6 +6,7 @@ const { WorkerLoop, privateWorkerRoutes } = require("./worker-loop");
 const { WorkerDiagnostics } = require("./worker-diagnostics");
 const { describe } = require("./platform");
 const ROLE = "crownlands-worker-rehearsal";
+const reportFailure = console.error.bind(console);
 
 function readConfig(file) {
   const stat = fs.statSync(file);
@@ -37,17 +38,18 @@ async function start(configFile, secretsFile, directory) {
   process.env.CROWNLANDS_BACKEND = "postgres-rehearsal";
   process.env.CROWNLANDS_REHEARSAL_SCHEMA = config.schema;
   process.env.CROWNLANDS_REHEARSAL_SECRET_FILE = secretsFile;
-  const diagnostics = new WorkerDiagnostics(), restore = diagnostics.capture();
+  const diagnostics = new WorkerDiagnostics(); diagnostics.capture();
   let store, loop, timer, stopping = false;
   const stop = async () => {
     if (stopping) return; stopping = true; clearTimeout(timer); loop?.stop();
-    const deadline = setTimeout(() => process.exit(1), 15000).unref();
+    // Keep both the privacy filter and the unreferenced hard deadline until
+    // process exit: a timed-out handler may still have JavaScript/timers alive.
+    setTimeout(() => process.exit(1), 15000).unref();
     try {
       await loop?.settle();
       if (loop) writeStatus(directory, { ...await loop.status(), recordedAt: new Date().toISOString(), handlerLogs: diagnostics.snapshot() });
       await store?.close();
     } catch { process.exitCode = 1; }
-    finally { clearTimeout(deadline); restore(); }
   };
   try {
     const game = require("../functions"); store = require("../functions/platform").store;
@@ -70,6 +72,6 @@ if (require.main === module) {
   const credentials = process.env.CREDENTIALS_DIRECTORY, state = process.env.STATE_DIRECTORY;
   if (!credentials || !state) { console.error("Private system service credentials and state required"); process.exitCode = 1; }
   else start(path.join(credentials, "config"), path.join(credentials, "secrets"), state)
-    .catch(() => { console.error("Private worker stopped; private error details were not logged."); process.exitCode = 1; });
+    .catch(() => { reportFailure("Private worker stopped; private error details were not logged."); process.exitCode = 1; });
 }
 module.exports = { readConfig, assertWorkerRole, writeStatus };
