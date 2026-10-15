@@ -218,7 +218,10 @@ const entrypointBudgets = {
   // City List/Map header images add 391 normalized markup bytes, reusing cached HUD art.
   // Allow a bounded 0.5 KiB source step; aggregate shell/image/request limits stay fixed.
   // Shared report/action artwork routing adds under 1 KiB; aggregate shell cap is unchanged.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5) * 1024,
+  // Leaderboard title markup and reward-tab paths add less than 0.5 KiB;
+  // allow another 0.25 KiB here, offset by shared frame CSS deduplication.
+  // Aggregate shell, requests and frame limits remain unchanged.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -543,7 +546,7 @@ for (const asset of manifest.assets) {
     asset.id === "item-common-gear-box"
       ? gameSource.includes('icon: "assets/icons/common-gear-chest-r1.svg"')
       : asset.id === "hud-achievements"
-        ? gameSource.includes('icon: "assets/icons/reward-achievements-r1.svg"')
+        ? gameSource.includes('icon: "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp"')
       : replacedHudArt[asset.id]
         ? indexSource.includes(replacedHudArt[asset.id]) && fs.existsSync(path.join(root, replacedHudArt[asset.id]))
       : asset.id === "inner-castle-hub"
@@ -562,6 +565,21 @@ for (const asset of manifest.assets) {
 }
 assert(optimizedBytes <= MAX_OPTIMIZED_ART_BYTES, `Optimized art totals ${mib(optimizedBytes)}; budget is ${mib(MAX_OPTIMIZED_ART_BYTES)}.`);
 assert(optimizedBytes <= sourceBytes * 0.1, "Optimized derivatives must remain at least 90% smaller than their source masters.");
+
+// New reward navigation paintings load on demand, retaining full square alpha canvases.
+const rewardNavigationArt = JSON.parse(read("docs/art-sources/reward-navigation/assets.json")).assets;
+const rewardNavigationPrompts = JSON.parse(read("docs/art-sources/reward-navigation/prompts.json"));
+assert.equal(rewardNavigationArt.length, 2);
+for (const asset of rewardNavigationArt) {
+  assert(typeof rewardNavigationPrompts[asset.name] === "string" && rewardNavigationPrompts[asset.name].trim(), `${asset.name} artwork must retain its generation prompt.`);
+  const payload = fs.readFileSync(path.join(root, asset.path)), metadata = getWebpMetadata(payload);
+  assert.equal(crypto.createHash("sha256").update(payload).digest("hex"), asset.sha256);
+  assert.equal(payload.length, asset.bytes);
+  assert(payload.length <= 48 * 1024, `${asset.name} tab artwork exceeds 48 KiB.`);
+  assert(metadata.hasAlpha && metadata.width === 384 && metadata.height === 384, "Reward artwork must retain its 384px transparent canvas.");
+  assert(gameSource.includes(asset.path), `${asset.name} tab artwork is not referenced.`);
+  assert(!staticCacheUrls.some(url => localPathFromUrl(url) === asset.path), "Reward artwork must remain outside the installation cache.");
+}
 
 let fullMapBytes = 0;
 let thumbnailBytes = 0;

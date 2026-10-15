@@ -21,7 +21,7 @@ window.CrownlandsDailyLoginUI = { mount(root, options) {
 
   root.innerHTML = `<section id="dailyRewardPanelRewards" class="dl-cycle daily-shell" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
 
-<header class="daily-header"><span id="headerSeal" class="header-seal" aria-hidden="true"></span><div><p>A gift for your return</p><h1 id="dailyTitle">Daily Login</h1></div><div class="cycle-status"><span id="cycleLabel"></span><strong id="dayLabel"></strong></div></header>
+<header class="daily-header"><img class="window-title-art" src="assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp" alt="" width="40" height="40" draggable="false"><div><p>A gift for your return</p><h1 id="dailyTitle">Daily Login</h1></div><div class="cycle-status"><span id="cycleLabel"></span><strong id="dayLabel"></strong></div></header>
 
 <div class="daily-body"><section class="reward-ledger" aria-label="Daily reward cycle"><div class="ledger-heading"><div><h2>Your royal rewards</h2><p>${status.schedule.length} days. Yours to finish.</p></div><span id="progressLabel"></span></div><nav id="weekNav" aria-label="Reward weeks"></nav><div id="weeks"></div><footer class="ledger-footer"><span><i class="legend-ready"></i> Ready</span><span><i class="legend-claimed"></i> Collected</span><span class="carry-note">Progress carries across seasons</span></footer></section><section class="reward-detail" aria-label="Selected reward"><div class="detail-heading"><span id="selectedDayLabel"></span><span id="selectedStatus"></span></div><div id="detailScroll" class="detail-scroll"></div><footer class="claim-footer"><p id="claimNote"></p><button id="claimButton" class="claim-button"></button></footer></section></div>
 
@@ -110,8 +110,6 @@ $("#weeks").addEventListener("keydown",e=>{const b=e.target.closest("[data-day]"
 
 
   $("#claimButton").addEventListener("click", event => { if(selected!==state.nextDay){select(state.nextDay);$("#claimButton").focus();return;} if(!busy) claim(event.currentTarget); });
-
-  $("#headerSeal").innerHTML='<svg viewBox="0 0 32 36"><path d="M6 4h20v29H6ZM6 11h20M11 2v5m10-5v5M10 16h3m6 0h3M10 21h3m6 0h3M10 27l3 2 7-6"/></svg>';
 
   if(status.transition) $(".ledger-heading p").textContent="Finish your saved rewards, then begin the new 30-day cycle.";
 

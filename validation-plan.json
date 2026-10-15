@@ -1,14 +1,47 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1565e3013b060f9860ad5c524ab42eef07e96842",
+  "baseCommit": "97c786028449bc21d8a51829d694aae288198446",
   "coverage": [
     {
       "paths": [
+        "achievements-ui.css",
+        "achievements-ui.js",
+        "daily-login-ui.css",
+        "daily-login-ui.js",
+        "daily-rewards.css",
+        "game.js",
+        "kingdom-ledgers-ui.css",
+        "quests-ui.css",
+        "quests-ui.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-seasonal-achievements.js",
+        "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp",
+        "assets/optimized/rewards-quests-ink-384x384-8d198ff51049.webp",
+        "docs/art-sources/reward-navigation/assets.json",
+        "tools/validate-reward-window-layout-browser.js",
+        "docs/art-sources/reward-navigation/prompts.json"
+      ],
+      "tests": [
+        "tools/validate-reward-window-layout-browser.js",
+        "tools/validate-leaderboard-podium-browser.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-seasonal-achievements.js",
+        "tools/validate-achievement-scroll-and-rewards.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-kingdom-ledgers-browser.js",
+        "tools/validate-report-artwork-browser.js"
+      ],
+      "reason": "Matching HUD/header artwork and new lazy reward-tab illustrations affect Daily Login, Quests, Achievements and Leaderboards. Verify stable outer/panel/header/tab/X geometry at desktop and short landscape sizes, normal/fullscreen, decoded artwork, scrolling, focus and native dismissal; retain reward claim/migration/seasonal rules and full leaderboard podium behavior. Asset checks verify hashes, alpha, dimensions, bounded size and lazy loading. Shared frame CSS is deduplicated; build and release-fingerprint changes require the normal production packaging gates. No server authority, economy values, player state or emulator behavior changes. The common ledger title-art class also serves Map Atlas; its existing browser suite covers that retained placement and the shared ledger frame. Preserve the compact leaderboard header height and scale the first-place flag within the existing mobile size ceiling so the complete podium remains visible. Update against PR 571 preserves its report artwork routing, lazy assets and source budget; run its focused 36-view artwork check alongside the reward matrix to verify the combined game and asset pipeline."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/REPORT_ARTWORK_RELEASE_2026-10-14.md"
+        "docs/art-sources/reward-navigation/README.md"
       ],
       "tests": [],
-      "reason": "Documentation only: record the authorized and verified PR 571 web publication, exact release identity, passed staged/public checks and manual limits. Cross-checked against sanitized deployment receipts and GitHub check results. No runtime, gameplay, backend or build inputs change, so no additional runtime or emulator suite applies."
+      "reason": "Record the explicitly requested presentation and generated-art provenance. Prompts and reference describe only the new illustrations; no gameplay rules or deployment claims change. Runtime verification is covered above."
     }
   ]
 }

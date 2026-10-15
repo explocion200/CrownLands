@@ -15835,7 +15835,7 @@ function showIslandSwitcherModal() {
   }
   modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "scout-report-ledger", "offline-reward-modal");
   modal.classList.add("island-switcher-modal");
-  modalTitle.innerHTML = `<img class="window-title-art atlas-title-art" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async"><span>Map</span>`;
+  modalTitle.innerHTML = `<img class="window-title-art ledger-title-art" src="assets/optimized/hud-map-ink-384x384-8809be8ab509.webp" width="384" height="384" alt="" draggable="false" decoding="async"><span>Map</span>`;
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
   refreshIslandMapHomeRegionOnceForOpen();
@@ -35708,17 +35708,17 @@ function renderDailyRewardModalTabs() {
     {
       id: "rewards",
       label: "Daily Login",
-      icon: "assets/icons/reward-daily-login-r1.svg",
+      icon: "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp",
     },
     {
       id: "quests",
       label: "Daily Quests",
-      icon: "assets/icons/reward-daily-quests-r1.svg",
+      icon: "assets/optimized/rewards-quests-ink-384x384-8d198ff51049.webp",
     },
     {
       id: "achievements",
       label: "Achievements",
-      icon: "assets/icons/reward-achievements-r1.svg",
+      icon: "assets/optimized/rewards-achievements-ink-384x384-10f16fe082e9.webp",
     },
   ];
   return `
@@ -38698,7 +38698,7 @@ function showLeaderboardModal() {
   if (!state) return;
   leaderboardSeasonStatusPromise = null;
   modal.className = "modal leaderboard-modal";
-  modalTitle.textContent = "Leaderboards";
+  modalTitle.innerHTML = '<img class="window-title-art ledger-title-art" src="assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp" alt="" width="40" height="40" draggable="false"><span>Leaderboards</span>';
   leaderboardActiveTab = "players";
   modalBody.innerHTML = `
     <div class="leaderboard-panel">
