@@ -224,7 +224,7 @@
         "tools/test-local-postgres-jobs.js",
         "tools/test-local-postgres-game.js"
       ],
-      "reason": "Prepare an expiring private worker service for the copied game only, after a consistent dump. Require a separate restricted PostgreSQL/OS role, no schema creation or account-table access, root-owned runtime and systemd credentials, AF_UNIX-only private networking, bounded memory/restart/shutdown, fresh aggregate health after startup and restart, and fail-closed expiry. Test unsafe configurations, real owner-role refusal, grant scopes, health acceptance and private status files. Actual administrator installation/restart remains a separate acceptance check; public routes and production providers are unchanged."
+      "reason": "Prepare an expiring private worker service for the copied game only, after a consistent dump. Require a separate restricted PostgreSQL/OS role, no schema creation or account-table access, root-owned runtime and systemd credentials, AF_UNIX-only private networking, bounded memory/restart/shutdown, fresh aggregate health after startup and restart, and fail-closed expiry. Test unsafe configurations, real owner-role refusal, grant scopes, health acceptance and private status files. Actual administrator installation/restart remains a separate acceptance check; public routes and production providers are unchanged. Reproduce private preparation umask 077, make only the nonsecret program directory traversable by its restricted service account, preserve root-only credentials, reject symlinks and checksum/config changes during the scoped installed-permission repair."
     }
   ]
 }

@@ -1,10 +1,23 @@
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
+from pathlib import Path
+import tempfile
 import install_worker_preview as worker
 
 
 class WorkerInstallerTests(unittest.TestCase):
+    def test_private_preparation_directory_can_be_traversed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); app = root / "app"; config = root / "config"
+            app.mkdir(mode=0o700); config.mkdir(mode=0o700)
+            worker.make_app_traversable(app)
+            self.assertEqual(app.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(config.stat().st_mode & 0o777, 0o700)
+            link = root / "link"; link.symlink_to(config)
+            with self.assertRaises(RuntimeError):
+                worker.make_app_traversable(link)
+
     def test_grants_only_private_game(self):
         schema = "migration_game_preview_012345abcdef"
         sql = worker.grants(schema)

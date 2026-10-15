@@ -52,6 +52,55 @@ def healthy(value, after):
         return False
 
 
+def make_app_traversable(directory):
+    # The preparation shell can use umask 077. copytree preserves its private
+    # top-level app directory, which the dedicated service user must traverse.
+    # Credentials remain in the separate root-only configuration directory.
+    if directory.is_symlink() or not directory.is_dir():
+        raise RuntimeError("Expected an ordinary worker program directory")
+    directory.chmod(0o755)
+
+
+def start_and_verify():
+    try:
+        for action in ["start", "restart"]:
+            after = time.time(); run(["systemctl", action, UNIT])
+            for _ in range(40):
+                time.sleep(0.5)
+                status = STATE / "status.json"
+                if status.exists() and healthy(json.loads(status.read_text()), after):
+                    break
+            else:
+                raise RuntimeError("Private worker did not pass its restricted startup/restart check")
+        run(["systemctl", "enable", UNIT])
+    except Exception:
+        subprocess.run(["systemctl", "stop", UNIT], capture_output=True)
+        raise
+
+
+def repair_permissions(bundle):
+    if os.geteuid() != 0:
+        raise RuntimeError("Ubuntu administrator authentication is required for protected worker files")
+    run(["sha256sum", "--check", "--quiet", str(bundle / "SHA256SUMS")])
+    for name in ["config.json", "secrets.json", "manifest.json"]:
+        if (CONF / name).read_bytes() != (bundle / name).read_bytes():
+            raise RuntimeError("Installed worker configuration changed; preserved")
+    if Path("/etc/systemd/system", UNIT).read_bytes() != (bundle / UNIT).read_bytes():
+        raise RuntimeError("Installed worker unit changed; preserved")
+    for line in (bundle / "SHA256SUMS").read_text().splitlines():
+        digest, relative = line.split("  ", 1)
+        if relative != "node" and not relative.startswith("app/"):
+            continue
+        installed = APP / relative
+        if not installed.resolve().is_relative_to(APP) or hashlib.sha256(installed.read_bytes()).hexdigest() != digest:
+            raise RuntimeError("Installed worker program changed; preserved")
+    if APP.stat().st_uid != 0 or (APP / "app").stat().st_uid != 0:
+        raise RuntimeError("Root-owned worker program required")
+    make_app_traversable(APP / "app")
+    start_and_verify()
+    print("Private worker directory permissions repaired; startup and restart checks passed. Live Firebase authority and monitoring unchanged.")
+
+
 def install(bundle):
     if os.geteuid() != 0:
         raise RuntimeError("Use Ubuntu administrator authentication for the prepared worker service")
@@ -86,6 +135,7 @@ def install(bundle):
         raise RuntimeError("Private worker unexpectedly has access to another migration schema")
     APP.mkdir(mode=0o755)
     shutil.copytree(bundle / "app", APP / "app", symlinks=True)
+    make_app_traversable(APP / "app")
     shutil.copy2(bundle / "node", APP / "node"); os.chmod(APP / "node", 0o755)
     run(["chown", "-R", "root:root", str(APP)])
     CONF.mkdir(mode=0o700)
@@ -94,30 +144,20 @@ def install(bundle):
     unit_file = Path("/etc/systemd/system", UNIT)
     shutil.copyfile(bundle / UNIT, unit_file); os.chmod(unit_file, 0o644)
     run(["systemctl", "daemon-reload"])
-    try:
-        # Verify startup and restart with the actual restricted role and unit.
-        for action in ["start", "restart"]:
-            after = time.time(); run(["systemctl", action, UNIT])
-            for _ in range(40):
-                time.sleep(0.5)
-                status = STATE / "status.json"
-                if status.exists() and healthy(json.loads(status.read_text()), after):
-                    break
-            else:
-                raise RuntimeError("Private worker did not pass its restricted startup/restart check")
-        run(["systemctl", "enable", UNIT])
-    except Exception:
-        subprocess.run(["systemctl", "stop", UNIT], capture_output=True)
-        raise
+    start_and_verify()
     print("Private copied-game workers started and restarted successfully. Public routes, live Firebase authority and uptime monitoring are unchanged.")
     print("Consistent pre-worker backup: " + str(backup))
 
 
 if __name__ == "__main__":
-    private_bundle = Path(__file__).resolve().parent
+    repair = len(sys.argv) == 3 and sys.argv[1] == "--repair-permissions"
+    private_bundle = Path(sys.argv[2]).resolve() if repair else Path(__file__).resolve().parent
     os.chdir(private_bundle)
     try:
-        install(private_bundle)
+        if repair:
+            repair_permissions(private_bundle)
+        else:
+            install(private_bundle)
     except Exception as error:
         print(str(error) if isinstance(error, RuntimeError) else "Worker installation stopped; retained files and private copy were preserved. Private details were not logged.", file=sys.stderr)
         sys.exit(1)
