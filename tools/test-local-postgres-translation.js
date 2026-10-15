@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { mock } = require("node:test");
 const { JWT } = require("../local-backend/node_modules/google-auth-library");
 const { Store } = require("../local-backend/store");
 const { Access } = require("../local-backend/access");
@@ -78,6 +79,31 @@ const { reserveProjectAllowance, initializeLocalAllowance } = require("./local-m
     assert.equal(T.readConfiguration(file).scope.schema, store.schema);
     fs.chmodSync(file, 0o640); assert.throws(() => T.readConfiguration(file)); fs.chmodSync(file, 0o600);
     fs.symlinkSync(file, path.join(temporary, "link")); assert.throws(() => T.readConfiguration(path.join(temporary, "link")));
+    // Reproduce systemd's root-owned ACL credential metadata without requiring
+    // root or copying any real credential. All bytes still come from the fixture.
+    const managedDirectory = "/run/credentials/crownlands-game-rehearsal.service", managed = managedDirectory + "/translation";
+    const environmentBefore = process.env.CREDENTIALS_DIRECTORY, open = fs.openSync;
+    let fileMetadata = { ...fs.statSync(file), uid: 0, gid: 0, mode: 0o100440, isFile: () => true };
+    let parentMetadata = { uid: 0, gid: 0, mode: 0o40550, isDirectory: () => true }, canonical = managed;
+    const patches = [mock.method(fs, "openSync", (filename, flags) => { assert.equal(flags, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW); return open(file, flags); }),
+      mock.method(fs, "fstatSync", () => fileMetadata), mock.method(fs, "lstatSync", () => parentMetadata), mock.method(fs, "realpathSync", () => canonical)];
+    try {
+      process.env.CREDENTIALS_DIRECTORY = managedDirectory;
+      assert.equal(T.readConfiguration(managed).scope.schema, store.schema);
+      for (const change of [{ uid: 1000 }, { gid: 1000 }, { mode: 0o100640 }, { mode: 0o100444 }, { mode: 0o104440 }, { isFile: () => false }, { size: 16385 }]) {
+        const before = fileMetadata; fileMetadata = { ...before, ...change }; assert.throws(() => T.readConfiguration(managed)); fileMetadata = before;
+      }
+      for (const change of [{ uid: 1000 }, { gid: 1000 }, { mode: 0o40750 }, { mode: 0o40555 }, { isDirectory: () => false }]) {
+        const before = parentMetadata; parentMetadata = { ...before, ...change }; assert.throws(() => T.readConfiguration(managed)); parentMetadata = before;
+      }
+      canonical = file; assert.throws(() => T.readConfiguration(managed)); canonical = managed;
+      assert.throws(() => T.readConfiguration(file)); assert.throws(() => T.readConfiguration(managedDirectory + "/another-key"));
+      process.env.CREDENTIALS_DIRECTORY = temporary; assert.throws(() => T.readConfiguration(managed));
+      delete process.env.CREDENTIALS_DIRECTORY; assert.throws(() => T.readConfiguration(managed));
+    } finally {
+      for (const patch of patches) patch.mock.restore();
+      if (environmentBefore === undefined) delete process.env.CREDENTIALS_DIRECTORY; else process.env.CREDENTIALS_DIRECTORY = environmentBefore;
+    }
     const missing = provider(initial); await assert.rejects(missing(["hola"], "en")); assert.equal(tokenCalls, 0); assert.equal(providerCalls, 0);
     const receipts = await Promise.all([1, 2].map(() => reserveProjectAllowance({ db: source, scope: initial, now })));
     assert.deepEqual(receipts[0], receipts[1]); assert.equal((await source.doc("chatTranslationUsage/2026-10").get()).data().reservedCharacters, 12);

@@ -27,11 +27,23 @@ function validateScope(value, now = Date.now()) {
 function reservationPath(scope) { return `localTranslationReservations/${scope.reservationId}`; }
 function matchesScope(receipt, scope) { return receipt && SCOPE_FIELDS.every(key => receipt[key] === scope[key]); }
 
+function isManagedCredential(filename, stat) {
+  // systemd grants the service UID access through an ACL. Its read mask appears
+  // as mode 0440 although the owning group has no access. Trust that form only
+  // inside this service's root-owned, read-only credential directory.
+  const directory = "/run/credentials/crownlands-game-rehearsal.service";
+  if (process.env.CREDENTIALS_DIRECTORY !== directory || filename !== directory + "/translation"
+    || stat.uid !== 0 || stat.gid !== 0 || (stat.mode & 0o7777) !== 0o440) return false;
+  const parent = fs.lstatSync(directory);
+  return parent.isDirectory() && parent.uid === 0 && parent.gid === 0 && (parent.mode & 0o7777) === 0o550
+    && fs.realpathSync(filename) === filename;
+}
+
 function readConfiguration(filename) {
   const fd = fs.openSync(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
   try {
     const stat = fs.fstatSync(fd);
-    if (!stat.isFile() || stat.mode & 0o077 || stat.size > 16384) unavailable();
+    if (!stat.isFile() || (stat.mode & 0o077 && !isManagedCredential(filename, stat)) || stat.size > 16384) unavailable();
     const value = JSON.parse(fs.readFileSync(fd, "utf8"));
     if (!value || Object.keys(value).sort().join() !== "scope,serviceAccount") unavailable();
     return value;
