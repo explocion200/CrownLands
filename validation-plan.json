@@ -199,14 +199,15 @@
       "paths": [
         "local-backend/worker-loop.js",
         "tools/local-migration/rehearse_workers.js",
-        "tools/test-local-postgres-worker-loop.js"
+        "tools/test-local-postgres-worker-loop.js",
+        "local-backend/worker-diagnostics.js"
       ],
       "tests": [
         "tools/test-local-postgres-worker-loop.js",
         "tools/test-local-postgres-jobs.js",
         "tools/test-local-postgres-game.js"
       ],
-      "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation."
+      "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation. Allowlist static handler labels, operational error codes and aggregate outcome counters; prove private identifiers/messages, arbitrary codes and getters cannot enter worker diagnostics."
     }
   ]
 }

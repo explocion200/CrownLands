@@ -4,8 +4,26 @@ const crypto = require("node:crypto");
 const { Store } = require("../local-backend/store");
 const { JobQueue } = require("../local-backend/jobs");
 const { WorkerLoop, privateWorkerRoutes } = require("../local-backend/worker-loop");
+const { WorkerDiagnostics } = require("../local-backend/worker-diagnostics");
 
 (async () => {
+  const diagnostics = new WorkerDiagnostics(), output = {}, privateValue = "private-fixture-must-not-leak";
+  const restore = diagnostics.capture(output);
+  output.error("Scheduled army resolution failed", { code: "40001", ownerUid: privateValue, message: privateValue });
+  output.error("Scheduled army resolution failed", { code: privateValue });
+  output.warn(privateValue, { code: privateValue });
+  output.log("Scheduled army resolution finished", { scanned: 3, failed: 1, backlogOldestArmyId: privateValue });
+  const unsafe = Object.create({ code: "40001" });
+  Object.defineProperty(unsafe, "code", { get() { throw Error("Do not invoke a logged getter"); } });
+  output.error("Scheduled reward camp payout failed", unsafe);
+  const observed = diagnostics.snapshot();
+  assert.deepEqual(observed.counts, { log: 1, warn: 1, error: 3, info: 0, debug: 0 });
+  assert.deepEqual(observed.events[0].codes, { "40001": 1, unspecified: 1 });
+  assert.deepEqual(observed.events[1].outcomes, { scanned: 3, failed: 1 });
+  assert.equal(JSON.stringify(observed).includes(privateValue), false);
+  observed.events[0].codes["40001"] = 999;
+  assert.equal(diagnostics.snapshot().events[0].codes["40001"], 1);
+  restore(); assert.equal(output.error, undefined);
   const store = new Store({ schema: "migration_game_loop_" + crypto.randomBytes(5).toString("hex") });
   let loop, release;
   try {

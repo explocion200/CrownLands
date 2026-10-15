@@ -8,6 +8,7 @@ const { execFileSync } = require("node:child_process");
 const { JobQueue } = require("../../local-backend/jobs");
 const { WorkerLoop, privateWorkerRoutes } = require("../../local-backend/worker-loop");
 const { describe } = require("../../local-backend/platform");
+const { WorkerDiagnostics } = require("../../local-backend/worker-diagnostics");
 const log = console.log.bind(console);
 
 async function rehearse(bundle, seconds = 120) {
@@ -27,10 +28,8 @@ async function rehearse(bundle, seconds = 120) {
   process.env.CROWNLANDS_BACKEND = "postgres-rehearsal";
   process.env.CROWNLANDS_REHEARSAL_SCHEMA = config.schema;
   process.env.CROWNLANDS_REHEARSAL_SECRET_FILE = path.join(bundle, "secrets.json");
-  // Existing handlers can log player IDs and report details. Retain only
-  // aggregate log counts in this operator rehearsal, never message payloads.
-  const handlerLogs = { log: 0, warn: 0, error: 0, info: 0, debug: 0 };
-  for (const level of Object.keys(handlerLogs)) console[level] = () => { handlerLogs[level]++; };
+  const diagnostics = new WorkerDiagnostics();
+  const restoreConsole = diagnostics.capture();
   const game = require("../../functions"), { store } = require("../../functions/platform");
   const queue = new JobQueue({ store, routes: privateWorkerRoutes(describe(game)), maxActive: 2 });
   let loop;
@@ -45,13 +44,13 @@ async function rehearse(bundle, seconds = 120) {
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     loop.stop();
     await Promise.race([loop.settle(), new Promise((_, reject) => setTimeout(() => reject(Error("Worker shutdown deadline exceeded")), 15000).unref())]);
-    const status = { ...await loop.status(), handlerLogs };
+    const status = { ...await loop.status(), handlerLogs: diagnostics.snapshot() };
     const jobs = (await store.pool.query(`SELECT handler,status,count(*) AS count,last_error_code FROM ${store.schema}.work_jobs GROUP BY handler,status,last_error_code ORDER BY handler,status`)).rows;
     fs.writeFileSync(path.join(output, "status.json"), JSON.stringify({ ...status, jobsByHandler: jobs }, null, 2), { mode: 0o600 });
     log(JSON.stringify(status));
     log("Private recovery and aggregate results: " + output);
     return status;
-  } finally { loop?.stop(); await store.close(); clearTimeout(hardStop); }
+  } finally { loop?.stop(); await store.close(); clearTimeout(hardStop); restoreConsole(); }
 }
 if (require.main === module) rehearse(path.resolve(process.argv[2] || ""), Number(process.argv[3] || 120))
   .catch(() => { log("Worker rehearsal stopped. The copy and private recovery files were retained; no private error payload was printed."); process.exitCode = 1; });
