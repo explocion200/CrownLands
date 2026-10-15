@@ -1,6 +1,6 @@
 # Local backend migration
 
-Status: discovery and local database preparation, October 15, 2026. The live game still uses Firebase. This document describes the migration work; it does not establish feature parity or authorize a production cutover.
+Status: isolated snapshot, restore and account/storage adapter rehearsal, October 15, 2026. The live game still uses Firebase. This document describes the migration work; it does not establish feature parity or authorize a production cutover.
 
 The website and game assets already run on the owner's Ubuntu computer. The requested next step is to host the authoritative game backend and account system there too. Keep existing gameplay, player identities, cities, balances, purchases, history, and recovery behavior intact.
 
@@ -37,9 +37,50 @@ This inventory is **not a data export or consistent snapshot**. Top-level counts
 
 Use Ubuntu's PostgreSQL 18 packages for the isolated `crownlands_migration` rehearsal database. Restrict the initial cluster to Unix sockets (`listen_addresses = ''`). The local operator role must not be a superuser, create roles/databases, or have replication privileges. Revoke public connection rights to the rehearsal database. Do not open a router/firewall database port.
 
-This initial database is not attached to the game and has no player import. Before deploying the application, use separate migration-owner and runtime roles, minimum privileges, a managed service identity, tested restart behavior and monitored backups. The operator role is for rehearsal, not a future web-server credential.
+This database is not attached to the game. Its isolated rehearsal schemas now contain a private player-data copy. Before deploying the application, use separate migration-owner and runtime roles, minimum privileges, a managed service identity, tested restart behavior and monitored backups. The operator role is for rehearsal, not a future web-server credential.
 
 A filesystem copy of a running PostgreSQL data directory is not a sufficient database backup. Produce consistent dumps or use PostgreSQL's supported physical-backup mechanism. Include roles/configuration and recovery keys, and demonstrate a restore before storing authoritative player state locally.
+
+## Completed rehearsal and limits
+
+The October 15 rehearsal copied 901,316 documents at the fixed Firestore PITR read time `2026-10-15T11:44:00Z`, including nested records whose parents do not exist. The private export contains 310 accounts, 283 Google provider subjects and 28 password hashes. All 291 top-level player profiles have a corresponding imported account. The current pointer is `main-realm-2026-10 / realm-2026-10 / shard_0001`.
+
+Import into `crownlands_migration.migration_20261015` completed. A consistent custom-format PostgreSQL dump was restored and every column of every document, account and receipt was compared in both directions with `EXCEPT ALL`; there were no differences. The original schema was retained as `migration_20261015_before_restore`. The raw snapshot is approximately 6.0 GB; the compressed database dump is approximately 584 MB. These sizes describe this rehearsal, not future retention costs.
+
+Private source pages, account/hash/OAuth exports, checksums, receipts and dump are under `~/.local/share/crownlands/firebase-rehearsal-20261015`, outside Git and the web root, with directory mode 0700 and files mode 0600. Do not paste their contents into logs, issues or pull requests. Firestore and Auth exports are **not atomic together**. This older rehearsal must never be switched into production as though it contained subsequent gameplay.
+
+Repeat the read-only export into a new private directory, then import into a new isolated schema:
+
+```sh
+python3 tools/local-migration/export_snapshot.py /absolute/private/snapshot-directory
+python3 tools/local-migration/import_rehearsal.py /absolute/private/snapshot-directory --schema migration_rehearsal --verify-restore
+```
+
+The exporter resumes a committed cursor at its original read time, verifies saved page hashes, adapts page size for large documents and checks final counts. It preserves raw Firestore typed values and fails closed on incomplete accounts, missing hash parameters, tenant configuration, changed read times, duplicate paths or corrupt files. An interrupted `.next` write is retained for operator inspection; do not delete private partial output blindly. The importer refuses an existing target schema and can only target the local Unix-socket rehearsal database.
+
+`local-backend/` is an **unconnected rehearsal library**, not an installed production server:
+
+- `values.js` and `store.js` cover typed values, bounded queries/cursors, nested projections, serializable transactions with retries, and atomic change records. Tests use real PostgreSQL for concurrent receipt deduplication, overlapping balance updates and rollback. This is not a full Firestore implementation: aggregation, bulk-writer compatibility, all complex query types, field indexes/performance, permission enforcement, subscriptions, trigger consumption and game parity remain unfinished. Unsupported operations fail explicitly.
+- `passwords.js` verifies imported Firebase SCRYPT using the official public known-answer fixture. Successful local password sign-in preserves the UID and upgrades the private copy to a local scrypt record. No real player's password was requested or used for this test.
+- `auth.js` covers opaque hashed sessions, revocation, disabled accounts, one-use verification/reset actions, private pending email records, rate limits, Google subject matching, OAuth state/cookie binding, nonce/PKCE checks, reauthentication, and password linking. Registration defaults off. Registration tests use synthetic accounts. Email-only matches never silently merge identities.
+- `auth-http.js` supplies same-origin endpoints with secure HttpOnly session cookies, CSRF checks, bounded bodies/concurrency and generic errors. Its account-action page was visually checked at desktop and landscape-mobile sizes. It has no command-line listener or public route installed. No private data is accessible through the live website.
+
+Run the synthetic tests with Node 22, locked local dependencies and the isolated PostgreSQL database. They create uniquely named test schemas, never target the retained source schema, and clean up only their own fixtures:
+
+```sh
+pnpm --dir local-backend install --frozen-lockfile --ignore-scripts
+node tools/test-local-migration-snapshot.js
+node tools/test-local-postgres-import.js
+node tools/test-local-document-values.js
+node tools/test-local-postgres-store.js
+node tools/test-local-password-compatibility.js
+node tools/test-local-auth-service.js
+node tools/test-local-auth-http.js
+```
+
+The release workflow installs the local dependencies and prepares a separate PostgreSQL database when the reviewed selection includes its integration tests. CI fixtures contain no production account data, credentials or email delivery. Production-host PostgreSQL 18.6 was used for the actual import/restore rehearsal; CI uses the runner distribution's PostgreSQL package as an additional compatibility check.
+
+The existing Stripe credentials were read-only verified. Resend's sending domain and restricted key are ready, and the separately approved owner test email was delivered. The authentication outbox is not yet connected to email delivery. The proposed Google OAuth callback is `https://playcrownlands.com/local-auth/google/callback`; its registration and a real end-to-end Google sign-in must be verified before activation. No local Stripe webhook, local scheduler or local game API has been activated. Existing monitoring and host backups remain in place; the new database still needs inclusion in scheduled consistent backups before cutover.
 
 ## Migration sequence and acceptance gates
 
@@ -57,8 +98,8 @@ A filesystem copy of a running PostgreSQL data directory is not a sufficient dat
 - Existing Google Cloud/Firebase access is sufficient for discovery. Later it must allow private Auth/hash export, Firestore export and OAuth configuration. Preserve Google sign-in through the existing Google project or an explicitly chosen replacement project.
 - GitHub is needed for the reviewed code changes; no additional hosting account is required for PostgreSQL or Node.js.
 - Ubuntu administrator authentication is needed for system packages and services; enter it in the operating-system prompt, never in chat.
-- Stripe dashboard access will be needed when registering/testing the replacement purchase webhooks. Existing secret names identify the credentials to transfer privately; never put their values in source control or transcripts.
-- Choose a transactional email provider or an existing suitable SMTP service for verification and password-reset delivery. Any sender-domain verification uses Name.com DNS. Do not add a paid plan before pricing is reviewed with the owner.
+- Existing Stripe server credentials are usable; dashboard sign-in is not currently a blocker. Register/test replacement purchase webhooks only after their local handlers are ready. Never put keys or webhook secrets in source control or transcripts.
+- Resend is configured for `mail.playcrownlands.com`, with a privately saved sending-only key restricted to that domain. Its owner test email was delivered. Integrating account email actions remains separate work; no paid plan was added.
 
 ## References
 

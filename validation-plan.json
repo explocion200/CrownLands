@@ -17,7 +17,70 @@
         "docs/LOCAL_BACKEND_MIGRATION.md"
       ],
       "tests": [],
-      "reason": "Document the inspected Firebase dependencies, local PostgreSQL preparation, access requirements and acceptance gates for preserving game authority, identities, recovery and integrations. Operator design/runbook only; no live routing, game rules, data, or deployment change."
+      "reason": "Document observed snapshot/import/restore results, account and storage test coverage, integrations/access status, and remaining migration/cutover gates. Explicitly distinguish isolated rehearsal from live deployment; no gameplay or permission changes."
+    },
+    {
+      "paths": [
+        "tools/local-migration/export_snapshot.py",
+        "tools/local-migration/import_rehearsal.py",
+        "tools/local-migration/test_snapshot.py",
+        "tools/local-migration/test_postgres_rehearsal.py",
+        "tools/test-local-migration-snapshot.js",
+        "tools/test-local-postgres-import.js"
+      ],
+      "tests": [
+        "tools/test-local-migration-snapshot.js",
+        "tools/test-local-postgres-import.js"
+      ],
+      "reason": "Read-only fixed-time source export and isolated local PostgreSQL import/restore. Test interrupted-page recovery, typed values, missing parent documents, cursor order, count/checksum/privacy failures, adaptive page limits, identity/hash completeness, overwrite refusal and complete real-database restore comparisons. No live writes, routes, scheduler or Firebase authority changes; emulator suites do not exercise the new PostgreSQL target."
+    },
+    {
+      "paths": [
+        "local-backend/package.json",
+        "local-backend/pnpm-lock.yaml",
+        "local-backend/values.js",
+        "local-backend/store.js",
+        "tools/test-local-document-values.js",
+        "tools/test-local-postgres-store.js"
+      ],
+      "tests": [
+        "tools/test-local-document-values.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js"
+      ],
+      "reason": "Unconnected rehearsal storage library and pinned PostgreSQL/Google dependencies. Real PostgreSQL tests cover numeric/timestamp/name ordering, filters/cursors/projections, missing-parent collections, transaction rollback, concurrent idempotent charges, lost-update prevention and atomic change records. Account integration depends on the same schema/pool. Local dependency audit passed separately. No live function/client imports use this library; no game emulator behavior changes."
+    },
+    {
+      "paths": [
+        "local-backend/passwords.js",
+        "local-backend/auth.js",
+        "local-backend/auth-http.js",
+        "tools/test-local-password-compatibility.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js"
+      ],
+      "tests": [
+        "tools/test-local-password-compatibility.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js"
+      ],
+      "reason": "Private, uninstalled account-service rehearsal: public Firebase SCRYPT vectors in standard and URL-safe Base64, password upgrade preserving UID, disabled/expired/revoked sessions, reset replay rejection, provider-subject ownership, OAuth state/binding/nonce, safe new-account creation, reauthentication, rate limits, host/origin/CSRF checks, secure cookies and body/concurrency bounds. Synthetic Google client and email outbox only; no production sign-ins/emails. Account-action page visually checked at 1440x900 and 844x390. Existing Firebase auth/client remains unchanged."
+    },
+    {
+      "paths": [
+        ".github/workflows/crownlands-release-gate.yml"
+      ],
+      "tests": [
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js",
+        "tools/test-local-postgres-import.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-auth-service.js"
+      ],
+      "reason": "Prepare locked local dependencies and an isolated fixture-only PostgreSQL database in the static job when the reviewed selection needs it. Preserve all required checks and emulator selection. Exercise workflow selection/push protections and the actual synthetic PostgreSQL test commands; GitHub independently verifies fresh-runner setup."
     }
   ]
 }
