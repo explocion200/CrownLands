@@ -1,5 +1,5 @@
 (function () {
-  const LOCAL = Boolean(window.CROWNLANDS_LOCAL_BACKEND);
+  const LOCAL = window.CROWNLANDS_LOCAL_BACKEND;
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
@@ -424,8 +424,8 @@
 
   async function loadModules() {
     if (LOCAL) {
-      const base = window.CROWNLANDS_LOCAL_BACKEND.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/";
-      const version = base === "/" ? "?v=" + encodeURIComponent(window.CROWNLANDS_LOCAL_BACKEND.buildId || "") : "";
+      const base = LOCAL.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/";
+      const version = LOCAL.buildId ? "?v=" + encodeURIComponent(LOCAL.buildId) : "";
       await import(base + "local-web-push.js" + version);
       await import(base + "local-client.js" + version);
       return window.CrownlandsLocalBackend.create();
@@ -453,7 +453,7 @@
 
     client.initPromise = (async () => {
       const config = LOCAL ? {} : window.CROWNLANDS_FIREBASE_CONFIG;
-      client.configured = LOCAL || hasRealFirebaseConfig(config);
+      client.configured = Boolean(LOCAL) || hasRealFirebaseConfig(config);
 
       if (!client.configured) {
         client.ready = true;

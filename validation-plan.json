@@ -404,13 +404,14 @@
     },
     {
       "paths": [
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Measured private notification selection adds 255 bytes to firebaseClient.js after deduplicating its private-mode checks. Raise only that single-file source allowance by one KiB. Preserve the aggregate installation-cache budget, lazy notification implementation, art/network limits and production artifact validation; do not remove cached dependencies."
+      "reason": "Explicit local backend selection adds 161 bytes to the shared Firebase-default client. The measured installation source shell is 4,528,276 bytes, 148 bytes over its former cap; allow a bounded 512-byte increase while preserving per-file, image, request and lazy-delivery limits. New local transport/bootstrap modules stay outside the default precache. The separately prepared local candidate has its own bounded extra transport precache checked by candidate tests. Both source and production artifact validators share this single constant."
     },
     {
       "paths": [

@@ -15,5 +15,8 @@
 // add at most 4 KiB. The two defeated sprites remain outside installation cache.
 // The shared Guild palette, framed X and header clearance add under 3 KiB,
 // offset by removing obsolete paint. No new assets, requests or runtimes.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3) * 1024;
+// Production-local backend selection adds 161 bytes to the shared client,
+// bringing the measured source shell to 4,528,276 bytes. Bound this at 512
+// bytes; local transport/bootstrap modules remain outside the default shell.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3) * 1024 + 512;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };
