@@ -1,0 +1,71 @@
+name: Publish local game
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crownlands-local-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'explocion200/CrownLands' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      checks: read
+      pull-requests: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - name: Require merged PR and successful release gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/check-local-deploy-merge.js
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
+        with:
+          version: "11.9.0"
+          runtime: "node@22"
+          install: false
+      - name: Build and validate exact merged commit
+        run: |
+          pnpm install --frozen-lockfile
+          node tools/sync-runtime-data.js --check
+          node tools/generate-release-manifest.js
+          node tools/build-production-client.js
+          node tools/validate-production-artifact.js
+          python3 tools/local-deploy/pack.py
+      - name: Sign release provenance
+        id: provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: release-artifacts/local-game.tar.gz
+      - name: Publish signed package for this computer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
+        run: |
+          cp "$BUNDLE_PATH" release-artifacts/provenance.json
+          tag="local-game-$GITHUB_SHA"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already exists; preserving its original signed package."
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Local game $GITHUB_SHA" \
+              --notes "Signed static game package for the Crownlands local publisher. A package is not proof of live activation; check /local-deployment.json on the live site." \
+              release-artifacts/local-game.tar.gz release-artifacts/provenance.json
+          fi

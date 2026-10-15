@@ -1,5 +1,12 @@
 # Safe update workflow
 
+The owner has authorized automatic local game publication after validated merges
+to main. Once installed, the separate **Publish local game** workflow and local
+publisher handle compatible client releases. A merge remains distinct from a
+verified live deployment: check the live commit and publisher status. Backend
+changes are held during the local-backend migration. See
+[Automatic local deployment](AUTOMATIC_LOCAL_DEPLOYMENT.md) for scope and recovery.
+
 Every Crownlands update begins from a freshly synchronized `main` branch and ends in a pull request. Never begin the next update from the previous feature branch.
 
 ## One-time setup
