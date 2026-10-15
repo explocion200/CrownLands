@@ -270,9 +270,10 @@
         "tools/test-crown-live-payments.js",
         "tools/test-crown-payments.js",
         "functions/test/emulator-crown-live-payments.js",
-        "functions/test/emulator-crown-payments.js"
+        "functions/test/emulator-crown-payments.js",
+        "tools/test-local-postgres-payment-provider.js"
       ],
-      "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior."
+      "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior. An explicit lifecycle gate also rejects requests and late transaction commits after provider rehearsal shutdown."
     },
     {
       "paths": [
@@ -301,6 +302,20 @@
         "tools/test-local-auth-rehearsal.js"
       ],
       "reason": "Prepare an expiring owner-allowlisted account-mail system service. Real PostgreSQL and synthetic provider tests cover empty queue/no send, password-free account projection, restart replay avoidance, single active send, abort on shutdown/expiry, stop after delayed database claims, durable retry recovery, private health counts/backlog failures and restricted-role refusal. Installer tests exercise exact configuration/recipient/expiry gates, minimal column grants, empty-queue startup/restart checks and removal of only newly installed service identities/files on failure. Preserve existing encrypted backup sources and add only this service; no message is queued, live route changed or real provider request made by tests. Actual administrator installation and restricted-runtime startup are separate acceptance checks; production email and external delivery alerts remain migration gates. Reproduce the actual private umask 077 at installation; prove the top-level runtime and nested folders become traversable while credential directories stay private."
+    },
+    {
+      "paths": [
+        "local-backend/payment-provider-rehearsal.js",
+        "tools/local-migration/rehearse_stripe_payments.js",
+        "tools/test-local-postgres-payment-provider.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-payment-provider.js",
+        "tools/test-local-postgres-payments.js",
+        "tools/test-crown-payments.js",
+        "functions/test/emulator-crown-payments.js"
+      ],
+      "reason": "Prepare an explicitly invoked test-key-only provider rehearsal in a fresh disposable payment schema for the existing approved tester/pack. Real PostgreSQL and synthetic Stripe SDK/HTTP tests exercise distinct metadata purpose/marker isolation, actual signatures, wrong mode/account/provider evidence, duplicate credit, unchanged playable profile, owner restriction, stop/expiry including delayed provider reads, scoped Checkout cleanup, private operator-file permissions and secret-preserving CLI startup checks. Existing native payment tests cover request limits/late commits; existing test payment unit/emulator suites preserve the shared business contract. Actual sandbox Checkout and automatic provider delivery are operator acceptance checks after committing and validating; no production endpoint/key/wallet is activated."
     }
   ]
 }

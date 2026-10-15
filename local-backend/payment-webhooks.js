@@ -7,10 +7,10 @@ const { createCrownPaymentsWebhook } = require("../functions/crown-payments-http
 // An uninstalled, expiring rehearsal adapter. Callers must explicitly supply
 // signature verification and payment services; no keys or listeners on import.
 function createPaymentWebhookServer({ store, live, test, expiresAt, now = Date.now,
-  maxConcurrent = 4, requestBudgetMs = 25000, bodyBudgetMs = 5000 }) {
+  maxConcurrent = 4, requestBudgetMs = 25000, bodyBudgetMs = 5000, isEnabled = () => true }) {
   const expiry = Date.parse(expiresAt);
   if (!(store instanceof Store) || !/^migration_game_[a-z0-9_]{1,30}$/.test(store.schema)
-    || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000) throw Error("An expiring isolated payment rehearsal is required");
+    || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000 || typeof isEnabled !== "function") throw Error("An expiring isolated payment rehearsal is required");
   for (const [value, max] of [[maxConcurrent, 16], [requestBudgetMs, 60000], [bodyBudgetMs, 15000]]) {
     if (!Number.isInteger(value) || value < 1 || value > max) throw Error("Invalid payment request bound");
   }
@@ -36,7 +36,7 @@ function createPaymentWebhookServer({ store, live, test, expiresAt, now = Date.n
     const handler = routes.get(req.url);
     if (req.headers.host !== "playcrownlands.com") return send(421, "Unexpected host");
     if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.socket.remoteAddress)
-      || !handler || now() >= expiry) return send(404, "Not found");
+      || !handler || now() >= expiry || !isEnabled()) return send(404, "Not found");
     if (req.method !== "POST") { res.setHeader("Allow", "POST"); return send(405, "Method not allowed"); }
     if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/json"
       || req.headers["content-encoding"]) return send(415, "JSON bytes required");
@@ -65,7 +65,7 @@ function createPaymentWebhookServer({ store, live, test, expiresAt, now = Date.n
         status(value) { this.statusCode = value; return this; },
         send(value) { this.body = value; return this; } };
       operation = store.withTransactionGuard(async () => {
-        if (fenced || now() >= expiry) throw Error("Payment rehearsal request expired");
+        if (fenced || now() >= expiry || !isEnabled()) throw Error("Payment rehearsal request expired");
       }, () => handler({ method: req.method, rawBody, get: name => req.headers[name.toLowerCase()] }, response));
       await Promise.race([operation, new Promise((_, reject) => {
         timer = setTimeout(() => { fenced = true; reject(Object.assign(Error("Payment request expired"), { status: 504 })); }, requestBudgetMs);
