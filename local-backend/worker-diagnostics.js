@@ -11,6 +11,7 @@ const labels = new Set([
   "Scheduled army resolution failed", "Scheduled reward camp payout failed", "Pending Deed city retry failed",
   "Scheduled army resolution finished", "Scheduled reward camp payouts finished",
   "Retrying Crownlands Firestore transaction", "Deed Camp city reserved until an eligible city is available",
+  "PostgreSQL client concurrent-query deprecation",
 ]);
 const codes = new Set([
   "40001", "40P01", "57014", "23505", "23503", "23514", "22003", "22023", "42501",
@@ -20,6 +21,7 @@ const codes = new Set([
 ]);
 const countKeys = ["scanned", "resolved", "skipped", "failed", "paid", "backlogPending"];
 const levels = ["log", "warn", "error", "info", "debug"];
+const pgNotice = "DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)";
 const ownValue = (object, key) => object && typeof object === "object"
   ? Object.getOwnPropertyDescriptor(object, key)?.value : undefined;
 
@@ -30,6 +32,11 @@ class WorkerDiagnostics {
   }
   record(level, label, details) {
     if (!levels.includes(level)) return;
+    // Node sends deprecation warnings through console.error. Recognize only
+    // the exact installed driver's static notice, never arbitrary substrings.
+    if (level === "error" && typeof label === "string" && label.replace(/^\(node:\d+\) /, "") === pgNotice) {
+      level = "warn"; label = "PostgreSQL client concurrent-query deprecation";
+    }
     this.counts[level]++;
     if (!labels.has(label)) return;
     const key = level + ":" + label;

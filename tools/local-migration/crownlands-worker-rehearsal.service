@@ -1,0 +1,40 @@
+[Unit]
+Description=Crownlands expiring private game worker rehearsal
+After=postgresql.service crownlands-game-rehearsal.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+User=crownlands-worker-rehearsal
+Group=crownlands-worker-rehearsal
+WorkingDirectory=/usr/local/lib/crownlands-worker-rehearsal/app
+ExecStart=/usr/local/lib/crownlands-worker-rehearsal/node --max-old-space-size=1024 /usr/local/lib/crownlands-worker-rehearsal/app/local-backend/worker-rehearsal.js
+LoadCredential=config:/etc/crownlands-worker-rehearsal/config.json
+LoadCredential=secrets:/etc/crownlands-worker-rehearsal/secrets.json
+StateDirectory=crownlands-worker-rehearsal
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+MemoryMax=1536M
+TasksMax=80
+
+[Install]
+WantedBy=multi-user.target

@@ -208,6 +208,23 @@
         "tools/test-local-postgres-game.js"
       ],
       "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation. Allowlist static handler labels, operational error codes and aggregate outcome counters; prove private identifiers/messages, arbitrary codes and getters cannot enter worker diagnostics."
+    },
+    {
+      "paths": [
+        "local-backend/worker-rehearsal.js",
+        "tools/local-migration/prepare_worker_preview.js",
+        "tools/local-migration/install_worker_preview.py",
+        "tools/local-migration/crownlands-worker-rehearsal.service",
+        "tools/local-migration/test_worker_preview.py",
+        "tools/test-local-postgres-worker-service.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-worker-service.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-game.js"
+      ],
+      "reason": "Prepare an expiring private worker service for the copied game only, after a consistent dump. Require a separate restricted PostgreSQL/OS role, no schema creation or account-table access, root-owned runtime and systemd credentials, AF_UNIX-only private networking, bounded memory/restart/shutdown, fresh aggregate health after startup and restart, and fail-closed expiry. Test unsafe configurations, real owner-role refusal, grant scopes, health acceptance and private status files. Actual administrator installation/restart remains a separate acceptance check; public routes and production providers are unchanged."
     }
   ]
 }

@@ -28,6 +28,15 @@ const { WorkerDiagnostics } = require("../local-backend/worker-diagnostics");
   let loop, release;
   try {
     await store.initialize();
+    const runtimeNotices = new WorkerDiagnostics(), undoNotices = runtimeNotices.capture();
+    const warningClient = await store.pool.connect();
+    try {
+      await Promise.all(Array.from({ length: 5 }, () => warningClient.query("SELECT 1")));
+      await new Promise(resolve => setImmediate(resolve));
+    } finally { warningClient.release(); undoNotices(); }
+    assert.equal(runtimeNotices.snapshot().counts.error, 0);
+    assert.equal(runtimeNotices.snapshot().counts.warn, 1);
+    assert.equal(runtimeNotices.snapshot().events[0].label, "PostgreSQL client concurrent-query deprecation");
     const route = { name: "fixtureIncrement", kind: "created", options: { document: "events/{id}" }, handler: async event => {
       await store.runTransaction(async tx => {
         const ref = store.doc("totals/fixture"), before = await tx.get(ref);
