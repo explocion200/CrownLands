@@ -144,7 +144,7 @@
         "functions/test/emulator-army-listener-rules.js",
         "functions/test/emulator-email-auth.js"
       ],
-      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate."
+      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate. Reproduce a 600 KB imported save through the actual HTTP transport, retain the smaller callable budget, reject oversized writes, and prove operational diagnostics omit payloads and error messages."
     },
     {
       "paths": [
@@ -173,7 +173,9 @@
         "tools/local-migration/install_game_preview.py",
         "tools/local-migration/local-preview.js",
         "tools/local-migration/prepare_game_preview.js",
-        "tools/test-local-postgres-game-preview.js"
+        "tools/test-local-postgres-game-preview.js",
+        "tools/local-migration/update_game_preview.py",
+        "tools/local-migration/test_game_preview_update.py"
       ],
       "tests": [
         "tools/test-local-postgres-game-preview.js",
@@ -181,7 +183,7 @@
         "tools/test-local-postgres-game-http.js",
         "tools/test-local-browser-client.js"
       ],
-      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated."
+      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes."
     },
     {
       "paths": [

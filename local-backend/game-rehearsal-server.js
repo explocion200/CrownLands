@@ -26,7 +26,8 @@ async function start(configPath, secretsPath, clientDirectory) {
     const count = await store.pool.query(`SELECT count(*) AS n FROM ${config.authSchema}.accounts WHERE uid=$1`, [config.ownerUid]);
     if (Number(count.rows[0].n) !== 1) throw Error("Copied owner account required");
     const auth = new AuthService({ store: authStore, rateKey: Buffer.from(config.rateKey, "base64url"), origin: config.origin });
-    const server = createGameServer({ store, auth, routes: describe(game), ownerUid: config.ownerUid, expiresAt: config.expiresAt, preview: staticPreview(clientDirectory) });
+    const server = createGameServer({ store, auth, routes: describe(game), ownerUid: config.ownerUid, expiresAt: config.expiresAt, preview: staticPreview(clientDirectory),
+      reportError: diagnostic => console.error("local_game_error", JSON.stringify(diagnostic)) });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(9191, "127.0.0.1", resolve); });
     let stopping = false;
     const stop = () => { if (stopping) return; stopping = true; server.close(() => store.close().then(() => process.exit(0))); setTimeout(() => process.exit(1), 10000).unref(); };

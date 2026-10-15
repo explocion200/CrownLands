@@ -15,6 +15,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
   const other = { ...owner, localId: "fixture-other", email: "other@example.test" };
   const scope = { resetGeneration: "realm-2026-10", worldId: "main-realm-2026-10", realmShardId: "shard_0001" };
   let signed, otherSigned, server, request, current = Date.now(), calls = 0;
+  const diagnostics = [];
   try {
     await db.initialize(); await auth.initialize();
     for (const account of [owner, other]) await db.pool.query(`INSERT INTO ${schema}.accounts(uid,body) VALUES($1,$2)`, [account.localId, account]);
@@ -29,7 +30,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
       return { uid: req.auth.uid, value: req.data.value };
     } }, { name: "fixturePrivateError", kind: "callable", options: {}, handler: async () => { throw Error("private-database-credentials-fixture"); } },
     { name: "fixtureScheduler", kind: "schedule", options: {}, handler: async () => { throw Error("Must not be HTTP callable"); } }];
-    server = createGameServer({ store: db, auth, routes, ownerUid: owner.localId, expiresAt: new Date(current + 60000).toISOString(), now: () => current });
+    server = createGameServer({ store: db, auth, routes, ownerUid: owner.localId, expiresAt: new Date(current + 60000).toISOString(), now: () => current, reportError: item => diagnostics.push(item) });
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
     const headers = { Host: "playcrownlands.com", Origin: auth.origin, "Content-Type": "application/json", Cookie: `${CSRF}=${csrf}; ${COOKIE}=${signed.token}`, "X-Crownlands-CSRF": csrf, "X-Crownlands-Client-IP": "192.168.1.145", "Sec-Fetch-Site": "same-origin" };
     request = (route, input, extra = {}) => new Promise((resolve, reject) => {
@@ -47,12 +48,21 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     assert.equal(result.status, 200); assert.equal(result.json.result.uid, owner.localId); assert.equal(result.headers["cache-control"], "no-store");
     assert.equal((await request("call/fixtureScheduler", { data: {} })).status, 404);
     const hidden = await request("call/fixturePrivateError", { data: {} }); assert.equal(hidden.status, 500); assert(!hidden.text.includes("credentials"));
+    assert.deepEqual(diagnostics, [{ operation: "call", status: 500, databaseCode: null }]);
     assert.equal((await request("call/fixtureCall", { data: { large: "x".repeat(270000) } })).status, 413);
     assert.equal((await request("read", { targets: [{ path: ref.path }] })).status, 200);
     const denied = await request("read", { targets: [{ path: "players/" + other.localId }] }); assert.equal(denied.status, 403); assert(!denied.text.includes("must-not-leak"));
     assert.equal((await request("read", { targets: [{ collection: "serverConfig", filters: [{ field: ["secret"], op: "==", value: encode("guessed") }] }] })).status, 403, "Even empty private queries must be denied before reading");
     assert.equal((await request("write", { writes: [{ path: ref.path, kind: "update", data: encode({ gold: 999999 }) }] })).status, 403);
     assert.equal((await ref.get()).data().gold, 500);
+    const savePath = `players/${owner.localId}/saves/default-${scope.resetGeneration}`;
+    const largeSave = { state: { history: Array.from({ length: 12 }, (_, index) => ({ index, text: "x".repeat(50000) })) } };
+    const saveWrite = { path: savePath, kind: "set", merge: true, data: encode(largeSave), transforms: [{ field: ["updatedAt"], kind: "timestamp" }] };
+    assert(Buffer.byteLength(JSON.stringify(saveWrite)) > 584000);
+    assert.equal((await request("write", { writes: [saveWrite] })).status, 200, "A normal imported save must fit through the write transport");
+    assert.deepEqual((await db.doc(savePath).get()).data().state, largeSave.state);
+    assert.equal((await request("write", { writes: [{ ...saveWrite, data: { stringValue: "x".repeat(2 * 1024 * 1024) } }] })).status, 413);
+    assert.deepEqual(diagnostics.at(-1), { operation: "write", status: 413, databaseCode: null });
     const before = await ref.get();
     const write = { path: ref.path, kind: "update", data: encode({ marchPercent: 50 }), transforms: [{ field: ["updatedAt"], kind: "timestamp" }] };
     assert.equal((await request("write", { writes: [write], checks: [{ path: ref.path, updateTime: before.body.updateTime }] })).status, 200);

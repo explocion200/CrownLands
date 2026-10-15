@@ -9,15 +9,15 @@ const statusFor = Object.freeze({ "invalid-argument": 400, unauthenticated: 401,
   "already-exists": 409, aborted: 409, "failed-precondition": 400, "resource-exhausted": 429, unavailable: 503, "deadline-exceeded": 504 });
 const fail = (code, status) => Object.assign(Error("The game request could not be completed."), { code, status });
 function csrfEqual(left, right) { return typeof left === "string" && typeof right === "string" && /^[A-Za-z0-9_-]{43}$/.test(left) && /^[A-Za-z0-9_-]{43}$/.test(right) && crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right)); }
-async function body(req) {
+async function body(req, maximum = 262144) {
   if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json" || req.headers["content-encoding"]) throw fail("invalid-argument", 415);
   let size = 0; const chunks = [];
-  for await (const chunk of req) { size += chunk.length; if (size > 262144) throw fail("resource-exhausted", 413); chunks.push(chunk); }
+  for await (const chunk of req) { size += chunk.length; if (size > maximum) throw fail("resource-exhausted", 413); chunks.push(chunk); }
   let value; try { value = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { throw fail("invalid-argument"); }
   if (!value || typeof value !== "object" || Array.isArray(value)) throw fail("invalid-argument"); return value;
 }
 function send(res, status, value) { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(value)); }
-function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now }) {
+function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now, reportError = () => {} }) {
   const data = new ClientData(store), origin = new URL(auth.origin), expiry = Date.parse(expiresAt), callables = new Map();
   if (origin.protocol !== "https:" || !/^[^/\0]{1,128}$/.test(ownerUid || "") || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000) throw Error("Explicit private owner and expiring HTTPS game rehearsal required");
   if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 32) throw Error("Invalid concurrency bound");
@@ -30,7 +30,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
   const server = http.createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {
     res.setHeader("Cache-Control", "no-store"); res.setHeader("Referrer-Policy", "no-referrer"); res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive"); res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
-    let counted = false, timer, operationPromise, timedOut = false, disconnected = false;
+    let counted = false, timer, operationPromise, timedOut = false, disconnected = false, operation = "request";
     res.on("close", () => { if (!res.writableEnded) disconnected = true; });
     try {
       if (req.headers.host !== origin.host) throw fail("invalid-argument", 421);
@@ -55,8 +55,10 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
       if (!session) throw fail("unauthenticated");
       if (session.user.uid !== ownerUid) throw fail("permission-denied");
       await auth.rateLimit("game-account", session.user.uid, 240, 60);
-      const input = await body(req);
-      const operation = url.pathname.slice("/api/local-game/v1/".length);
+      operation = url.pathname.slice("/api/local-game/v1/".length);
+      // Imported saves can exceed 256 KiB in typed JSON. Keep callables and
+      // reads smaller; writes still have count/value/document limits below.
+      const input = await body(req, operation === "write" ? 2 * 1024 * 1024 : 262144);
       // Only the verified cookie supplies identity. Client-supplied auth/app/IP
       // objects never become a callable context or an anti-farming signal.
       let result;
@@ -88,6 +90,12 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
     } catch (cause) {
       const code = cause.code === "auth/too-many-requests" ? "resource-exhausted" : Object.hasOwn(statusFor, cause.code) ? cause.code : "internal";
       const status = cause.status || statusFor[code] || 500;
+      if (code === "internal" || status === 413) {
+        // Do not log error messages, request bodies, account IDs, SQL or tokens.
+        const diagnostic = { operation: ["read", "watch", "write"].includes(operation) ? operation : operation.startsWith("call/") ? "call" : "request", status,
+          databaseCode: ["40001", "40P01", "42501", "57014", "53300", "54000"].includes(cause.code) ? cause.code : null };
+        try { reportError(diagnostic); } catch { /* Diagnostics cannot change request completion. */ }
+      }
       if (status === 429 || status === 503) res.setHeader("Retry-After", "10");
       const error = { status: code.toUpperCase().replaceAll("-", "_"), code: "functions/" + code,
         message: code === "internal" ? "The game request could not be completed." : cause.message };

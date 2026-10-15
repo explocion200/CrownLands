@@ -15,7 +15,7 @@ const snippet = `\t\t# Private game migration rehearsal; original player data re
 \t\t\t}
 \t\t\thandle @gamePreviewLocal {
 \t\t\t\trequest_body {
-\t\t\t\t\tmax_size 256KB
+\t\t\t\t\tmax_size 2097152
 \t\t\t\t}
 \t\t\t\treverse_proxy 127.0.0.1:9191 {
 \t\t\t\t\theader_up X-Crownlands-Client-IP {remote_host}
