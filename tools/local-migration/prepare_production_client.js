@@ -30,6 +30,8 @@ function prepare({ source, destination, config }) {
     if (!listed.has(file)) throw Error("Local client dependency missing");
   }
   const sourceHtml = fs.readFileSync(path.join(source, "index.html"), "utf8");
+  const extraPrecache = ["local-production.js", "local-client.js", "local-web-push.js", "firebase-config.js"];
+  if (extraPrecache.reduce((bytes, name) => bytes + listed.get(name), 0) > 32 * 1024) throw Error("Local transport precache exceeds 32 KiB");
   const sourceBuild = /name="crownlands-build" content="([A-Za-z0-9_-]+)"/.exec(sourceHtml)?.[1];
   if (!sourceBuild) throw Error("Stamped source build required");
   const buildId = sourceBuild + "-local-" + config.epoch;
@@ -52,7 +54,7 @@ function prepare({ source, destination, config }) {
   write("service-worker.js", worker.replace("const LOCAL_BACKEND = null;", `const LOCAL_BACKEND = ${JSON.stringify(config)};`)
     .replace(/const CACHE_VERSION = "([A-Za-z0-9_-]+)";/, `const CACHE_VERSION = "${buildId}";`)
     .replace(/("(?:\/[^"\n]+)\.(?:css|js))\?v=[^"]*(")/gi, `$1?v=${buildId}$2`)
-    .replace("const STATIC_CACHE_URLS = [", "const STATIC_CACHE_URLS = [\n" + ["firebase-config.js", "local-production.js", "local-client.js", "local-web-push.js"].map(name => `  "/${name}?v=${buildId}",`).join("\n")));
+    .replace("const STATIC_CACHE_URLS = [", "const STATIC_CACHE_URLS = [\n" + extraPrecache.map(name => `  "/${name}?v=${buildId}",`).join("\n")));
   // Regenerate sizes after the variant transformation; preserve a digest of the
   // original build and exact candidate for later reviewed installation.
   const files = inventory(destination).filter(file => file.path !== "artifact-manifest.json");

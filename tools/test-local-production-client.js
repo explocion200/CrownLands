@@ -95,6 +95,10 @@ async function main() {
     run("local-web-push.js", pushRoot); const push = pushRoot.CrownlandsLocalPush.create();
     assert.equal(await push.isSupported(), true); await assert.rejects(push.getServiceWorkerRegistration()); assert.equal(unsubscribed, 0);
     workerEpoch = config.epoch; assert.equal(await push.getServiceWorkerRegistration(), registration); push.dispose();
+    fs.appendFileSync(path.join(source, "local-client.js"), " ".repeat(32768));
+    fs.writeFileSync(path.join(source, "artifact-manifest.json"), JSON.stringify({ files: inventory(source).filter(file => file.path !== "artifact-manifest.json") }));
+    assert.throws(() => prepare({ source, destination: path.join(directory, "oversized"), config }), /32 KiB/);
+    assert(!fs.existsSync(path.join(directory, "oversized")));
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
   console.log("Local production browser: separate artifact, early storage isolation, matching server identity, no Firebase fallback/imports, native worker handshake, safe clicks and uncached account/game routes passed.");
 }
