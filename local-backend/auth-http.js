@@ -33,10 +33,10 @@ function send(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
 }
-function actionPage(nonce) {
+function actionPage(nonce, rehearsal = false) {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Crownlands account</title>
 <style nonce="${nonce}">body{font:18px system-ui;background:#172622;color:#f5eedb;margin:0;min-height:100vh;display:grid;place-items:center}main{width:min(85vw,430px);padding:32px}h1{font-size:28px}label,input,button{display:block}input,button{box-sizing:border-box;width:100%;padding:14px;margin:14px 0;font:inherit;border-radius:8px;border:1px solid #b7a879}button{background:#d6b86e;color:#172622;font-weight:600;cursor:pointer}a{color:#edcf86}#message{min-height:3em;line-height:1.5}</style>
-<main><h1 id="title">Crownlands account</h1><p id="message" role="status">Preparing your account link…</p><form id="form" hidden><label id="label">New password<input id="password" type="password" minlength="12" maxlength="1024" autocomplete="new-password"></label><button id="submit">Continue</button></form><a href="/play/">Return to Crownlands</a></main>
+<main><h1 id="title">Crownlands account</h1>${rehearsal ? '<p>Private account test. This changes only the copy on this computer; your live Firebase password is unchanged.</p>' : ''}<p id="message" role="status">Preparing your account link…</p><form id="form" hidden><label id="label">New password<input id="password" type="password" minlength="12" maxlength="1024" autocomplete="new-password"></label><button id="submit">Continue</button></form><a href="${rehearsal ? '/local-auth/rehearsal' : '/play/'}">${rehearsal ? 'Return to sign-in test' : 'Return to Crownlands'}</a></main>
 <script nonce="${nonce}">
 const params=new URLSearchParams(location.search),mode=params.get('mode'),token=params.get('token');
 history.replaceState(null,'','/local-auth/action');
@@ -56,7 +56,7 @@ if(!response.ok)throw Error();form.hidden=true;password.value='';message.textCon
 }
 
 function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12, maxPasswordConcurrent = 2,
-  beforeRoute, afterSignInPath = "/play/?localAuth=complete" }) {
+  beforeRoute, afterSignInPath = "/play/?localAuth=complete", emailActionRehearsal = false }) {
   const origin = new URL(auth.origin); let active = 0, hashing = 0;
   if (origin.protocol !== "https:") throw Error("Authentication requires an HTTPS origin");
   if (!/^\/(?!\/)[A-Za-z0-9_/?=&-]+$/.test(afterSignInPath)) throw Error("Sign-in return path must be a local path");
@@ -88,7 +88,7 @@ function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12
       if (req.method === "GET" && path === "/local-auth/action") {
         const nonce = secret();
         res.setHeader("Content-Security-Policy", `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(actionPage(nonce));
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(actionPage(nonce, emailActionRehearsal));
       }
       if (req.method === "GET" && path === "/local-auth/google/callback") {
         await auth.rateLimit("oauth-callback-ip", ip, 40);

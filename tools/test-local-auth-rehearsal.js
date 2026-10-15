@@ -61,4 +61,23 @@ const { prepareCaddy } = require("./local-migration/prepare_auth_preview");
     assert.throws(() => prepareCaddy("unknown configuration"), /Unexpected/);
     console.log("Account rehearsal: LAN and host restrictions, untrusted forwarding headers, expiry, blocked account changes/email, session-owned profile check, local callback return and additive Caddy routing passed.");
   } finally { await new Promise(resolve => server.close(resolve)); }
+  const actionServer = createRehearsalServer({ auth, expiresAt: new Date(Date.now() + 60000).toISOString(), allowEmailActionTest: true });
+  await new Promise(resolve => actionServer.listen(0, "127.0.0.1", resolve));
+  try {
+    const actionRequest = (url, options = {}) => new Promise((resolve, reject) => {
+      const req = http.request({ hostname: "127.0.0.1", port: actionServer.address().port, path: url, method: options.method || "GET",
+        headers: { Host: "playcrownlands.com", "X-Crownlands-Client-IP": "192.168.1.145", ...options.headers } }, res => {
+        let body = ""; res.setEncoding("utf8"); res.on("data", chunk => body += chunk);
+        res.on("end", () => resolve({ status: res.statusCode, text: async () => body }));
+      }); req.on("error", reject); req.end();
+    });
+    const action = await actionRequest("/local-auth/action?token=fixture"); assert.equal(action.status, 200);
+    const body = await action.text(); assert.match(body, /live Firebase password is unchanged/); assert.match(body, /Return to sign-in test/);
+    assert.equal((await actionRequest("/local-auth/v1/email-action", { method: "POST" })).status, 403);
+    for (const operation of ["register", "reset-request", "verification-request", "password-link"]) {
+      assert.equal((await actionRequest("/local-auth/v1/" + operation, { method: "POST" })).status, 404);
+    }
+    assert.equal((await actionRequest("/local-auth/action", { headers: { "X-Crownlands-Client-IP": "8.8.8.8" } })).status, 404);
+    console.log("Account action preview: explicit opt-in, private-copy notice, retained CSRF/LAN boundaries and blocked email-request routes passed.");
+  } finally { await new Promise(resolve => actionServer.close(resolve)); }
 })().catch(cause => { console.error(cause); process.exitCode = 1; });

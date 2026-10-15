@@ -70,7 +70,8 @@
         "tools/test-local-auth-http.js",
         "tools/test-local-auth-rehearsal.js",
         "tools/test-local-postgres-auth-preview.js",
-        "tools/test-local-postgres-game-http.js"
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-postgres-auth-mail.js"
       ],
       "reason": "Account migration library, with an owner-only LAN rehearsal prepared separately from live login: verify imported hashes, UID/provider preservation, revoked sessions including verification races, one-use actions, Google binding/nonce/PKCE, registration and reauthentication. HTTP tests exercise host/origin/CSRF, cookies, size/concurrency, private errors and return-path handling. Real preview tests cover isolated source preservation and no privileged-runtime startup. No live Firebase account or game-client changes."
     },
@@ -102,7 +103,8 @@
         "tools/test-local-auth-rehearsal.js",
         "tools/test-local-postgres-auth-preview.js",
         "tools/test-local-auth-service.js",
-        "tools/test-local-auth-http.js"
+        "tools/test-local-auth-http.js",
+        "tools/test-local-postgres-auth-mail.js"
       ],
       "reason": "Prepare an expiring private account test with exactly one copied owner account, a read-only profile-existence receipt, loopback-only listener, LAN/host gating, overwritten trusted proxy header, blocked resets/registration/email, separate least-privilege PostgreSQL role and hardened OS service. Tests prove isolation, UID preservation, no snapshot overwrite, authenticated receipt access, expiry and runtime ownership refusal. Prepared Caddy adaptation and systemd unit are validated locally; actual administrator installation and real Google sign-in are separately verified. Existing game routes, player data, workers, monitoring and publisher remain unchanged."
     },
@@ -239,6 +241,22 @@
         "tools/test-local-postgres-backup.js"
       ],
       "reason": "Add a consistent shared-snapshot PostgreSQL account/game archive to the existing encrypted host backup before restic runs. Test concurrent changes during snapshot export, every-row fingerprints, actual synthetic restore, identity-sequence preservation, archive corruption and target rejection, private file modes, source-list preservation, installer refusal of changed scripts and failed-restore retention. The root installer must restore the actual copied database as its restricted owner and compare every table before modifying the existing backup; an initial full sandboxed local/off-site run remains an operational acceptance check. Existing cloud destination, retention and backup-failure uptime alerts are preserved; no game balance, active-world or Firebase behavior changes."
+    },
+    {
+      "paths": [
+        "local-backend/auth-mail.js",
+        "tools/test-local-postgres-auth-mail.js",
+        "tools/local-migration/rehearse_account_email.js",
+        "tools/local-migration/update_auth_action_preview.py",
+        "tools/local-migration/test_auth_action_preview.py"
+      ],
+      "tests": [
+        "tools/test-local-postgres-auth-mail.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js",
+        "tools/test-local-auth-rehearsal.js"
+      ],
+      "reason": "Opt-in account-email dispatcher with an explicitly allowlisted Resend rehearsal transport; importing code starts no service or email. Real PostgreSQL and synthetic HTTP tests cover concurrent claims, provider acceptance before process failure, immutable idempotent retries, stale completion fencing, quota/network failures, expired/consumed/superseded/disabled-account actions, bounded attempts, token-payload cleanup, fixed provider errors and recipient/URL restrictions. Existing local auth action/session tests cover shared one-use reset and verification semantics. No real emails or provider credentials are used by tests; production Firebase behavior is unchanged. The controlled owner-email command refuses changed recipient/account count, expired previews and existing pending mail. Test the explicit LAN-only account-action opt-in, preserved blocked email-request/registration routes, default production action-page behavior, and source/config/privilege rollback after failed protected-service restart. Desktop and landscape action-page inspection is recorded separately; Ubuntu installation and an explicitly approved real email remain operational gates."
     }
   ]
 }

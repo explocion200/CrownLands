@@ -40,10 +40,10 @@ refresh().catch(()=>{message.textContent='The private sign-in test is unavailabl
 </script></html>`;
 }
 
-function createRehearsalServer({ auth, expiresAt, trustLoopbackProxy = true, now = Date.now }) {
+function createRehearsalServer({ auth, expiresAt, trustLoopbackProxy = true, now = Date.now, allowEmailActionTest = false }) {
   const expiry = Date.parse(expiresAt);
   if (!Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000) throw Error("Rehearsal must expire within seven days");
-  return createAuthServer({ auth, trustLoopbackProxy, afterSignInPath: ENTRY,
+  return createAuthServer({ auth, trustLoopbackProxy, afterSignInPath: ENTRY, emailActionRehearsal: allowEmailActionTest === true,
     beforeRoute: async (req, res, { ip, path: requestPath, token }) => {
       res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
       if (!localAddress(ip) || now() >= expiry) { res.writeHead(404); res.end(); return true; }
@@ -59,7 +59,8 @@ function createRehearsalServer({ auth, expiresAt, trustLoopbackProxy = true, now
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ identityPreserved: result.rowCount === 1, profileFound: result.rows[0]?.profile_found === true })); return true;
       }
-      if (!permitted.has(req.method + " " + requestPath)) { res.writeHead(404); res.end(); return true; }
+      const actionTest = allowEmailActionTest === true && ["GET /local-auth/action", "POST /local-auth/v1/email-action"].includes(req.method + " " + requestPath);
+      if (!actionTest && !permitted.has(req.method + " " + requestPath)) { res.writeHead(404); res.end(); return true; }
       return false;
     } });
 }
@@ -79,7 +80,7 @@ async function start(configPath) {
       rateKey: Buffer.from(config.rateKey, "base64url"), allowRegistration: false });
     await auth.initialize({ createTables: false });
     if (Number((await store.pool.query(`SELECT count(*) AS n FROM ${config.schema}.accounts`)).rows[0].n) !== 1) throw Error("The owner-only rehearsal needs exactly one account copy");
-    const server = createRehearsalServer({ auth, expiresAt: config.expiresAt });
+    const server = createRehearsalServer({ auth, expiresAt: config.expiresAt, allowEmailActionTest: config.allowEmailActionTest });
     await new Promise((resolve, reject) => { server.once("error", reject); server.listen(9190, "127.0.0.1", resolve); });
     let stopping = false;
     const shutdown = () => { if (stopping) return; stopping = true; server.close(() => store.close().then(() => process.exit(0)));
