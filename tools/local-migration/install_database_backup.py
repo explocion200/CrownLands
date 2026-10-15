@@ -15,6 +15,7 @@ import uuid
 PROGRAM = Path("/usr/local/lib/crownlands-backup/crownlands-backup.py")
 HELPER = PROGRAM.with_name("postgres_backup.py")
 SOURCES = Path("/etc/crownlands-backup/sources.txt")
+EXCLUDES = Path("/etc/crownlands-backup/exclude.txt")
 STAGE = Path("/var/lib/crownlands-backup/recovery-metadata/postgres")
 EXTRA_SOURCES = ["/etc/postgresql", *[base + name for base in ["/etc/", "/usr/local/lib/"] for name in
                  ["crownlands-auth-rehearsal", "crownlands-game-rehearsal", "crownlands-worker-rehearsal"]]]
@@ -32,6 +33,21 @@ def updated_program(before):
 def updated_sources(before):
     existing = {line.strip() for line in before.splitlines() if line.strip() and not line.startswith("#")}
     return before.rstrip() + "\n" + "".join(name + "\n" for name in EXTRA_SOURCES if name not in existing)
+
+
+def updated_excludes(before, development_home=Path("/home/project-server")):
+    # Rebuildable development dependencies stay excluded. Installed service
+    # dependencies outside the home directory must survive disaster recovery.
+    scoped = str(development_home) + "/**/node_modules"
+    lines = before.splitlines(keepends=True)
+    broad = [index for index, line in enumerate(lines) if line.strip() == "node_modules"]
+    if not broad and any(line.strip() == scoped for line in lines):
+        return before
+    if len(broad) != 1:
+        raise RuntimeError("Review changed dependency backup exclusions before proceeding")
+    line = lines[broad[0]]
+    lines[broad[0]] = scoped + ("\n" if line.endswith("\n") else "")
+    return "".join(lines)
 
 
 def command(args, **kwargs):
@@ -89,8 +105,9 @@ def install(bundle):
         raise RuntimeError("Installed database targets changed since preparation")
     with open("/run/lock/crownlands-backup.lock", "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        before = PROGRAM.read_text(); sources_before = SOURCES.read_text()
+        before = PROGRAM.read_text(); sources_before = SOURCES.read_text(); excludes_before = EXCLUDES.read_text()
         after = updated_program(before); sources_after = updated_sources(sources_before)
+        excludes_after = updated_excludes(excludes_before)
         print("Preparing a consistent account/game backup while private workers continue running.", flush=True)
         module.main(STAGE)
         print("Restoring the backup into a separate restricted test database and comparing every row.", flush=True)
@@ -99,14 +116,17 @@ def install(bundle):
         backup = Path("/var/backups/crownlands") / ("database-backup-install-" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()))
         backup.mkdir(mode=0o700, parents=True)
         shutil.copy2(PROGRAM, backup / "crownlands-backup.py"); shutil.copy2(SOURCES, backup / "sources.txt")
-        if PROGRAM.read_text() != before or SOURCES.read_text() != sources_before:
+        shutil.copy2(EXCLUDES, backup / "exclude.txt")
+        if PROGRAM.read_text() != before or SOURCES.read_text() != sources_before or EXCLUDES.read_text() != excludes_before:
             raise RuntimeError("Host backup files changed during restore validation; preserved")
         try:
             shutil.copyfile(bundle / "postgres_backup.py", HELPER); HELPER.chmod(0o644)
             PROGRAM.write_text(after); PROGRAM.chmod(0o755)
             SOURCES.write_text(sources_after); SOURCES.chmod(0o600)
+            EXCLUDES.write_text(excludes_after); EXCLUDES.chmod(0o600)
         except Exception:
             shutil.copy2(backup / "crownlands-backup.py", PROGRAM); shutil.copy2(backup / "sources.txt", SOURCES)
+            shutil.copy2(backup / "exclude.txt", EXCLUDES)
             raise
     # The existing unit, encryption, cloud destination, retention and failure
     # alert stay in charge. Starting it also tests its actual systemd sandbox.
