@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const V = require("./values");
 const { isDeepStrictEqual } = require("node:util");
+const { AsyncLocalStorage } = require("node:async_hooks");
 
 function pathParts(path, even) {
   if (typeof path !== "string" || !path || Buffer.byteLength(path) > 6000) throw Error("Invalid document path");
@@ -16,6 +17,35 @@ function canonical(value) {
   return value;
 }
 function hash(value) { return crypto.createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex"); }
+function precondition(value = {}) {
+  if (!value || Object.getPrototypeOf(value) !== Object.prototype || Object.keys(value).some(key => !["exists", "lastUpdateTime"].includes(key))
+    || (value.exists !== undefined && typeof value.exists !== "boolean")
+    || (value.lastUpdateTime !== undefined && !(value.lastUpdateTime instanceof V.Timestamp))
+    || (value.exists !== undefined && value.lastUpdateTime !== undefined)) throw Error("Invalid write precondition");
+  return value;
+}
+function updateArguments(args) {
+  if (!args.length) throw Error("Update fields are required");
+  let data, condition;
+  if (typeof args[0] === "string" || args[0] instanceof V.FieldPath) {
+    const values = [...args];
+    if (values.length % 2) condition = values.pop();
+    if (!values.length || values.length % 2) throw Error("Update requires field/value pairs");
+    const entries = [];
+    for (let i = 0; i < values.length; i += 2) { V.segments(values[i]); entries.push([values[i], values[i + 1]]); }
+    data = new V.UpdateFields(entries);
+  } else {
+    if (args.length > 2) throw Error("Unexpected update arguments");
+    [data, condition] = args;
+  }
+  return { data, precondition: precondition(condition) };
+}
+function checkPrecondition(condition, body) {
+  if ((condition.exists !== undefined && condition.exists !== Boolean(body))
+    || (condition.lastUpdateTime !== undefined && (!body || !condition.lastUpdateTime.isEqual(V.Timestamp.fromString(body.updateTime))))) {
+    throw Object.assign(Error("Document changed before the conditional write"), { code: 9 });
+  }
+}
 
 class DocumentReference {
   constructor(store, path) {
@@ -25,10 +55,11 @@ class DocumentReference {
   get parent() { return this.firestore.collection(this.path.split("/").slice(0, -1).join("/")); }
   collection(id) { return this.firestore.collection(this.path + "/" + id); }
   get() { return this.firestore.get(this); }
-  set(data, options) { return this.firestore.runTransaction(tx => { tx.set(this, data, options); }); }
-  create(data) { return this.firestore.runTransaction(tx => { tx.create(this, data); }); }
-  update(data) { return this.firestore.runTransaction(tx => { tx.update(this, data); }); }
-  delete() { return this.firestore.runTransaction(tx => { tx.delete(this); }); }
+  set(data, options) { return this.firestore.batch().set(this, data, options).commit(); }
+  create(data) { return this.firestore.batch().create(this, data).commit(); }
+  update(...args) { return this.firestore.batch().update(this, ...args).commit(); }
+  delete(condition) { return this.firestore.batch().delete(this, condition).commit(); }
+  listCollections() { return this.firestore.listCollections(this); }
   isEqual(other) { return other instanceof DocumentReference && this.firestore === other.firestore && this.path === other.path; }
 }
 class DocumentSnapshot {
@@ -87,8 +118,29 @@ class Transaction {
   }
   set(ref, data, options) { return this._write("set", ref, data, options); }
   create(ref, data) { return this._write("create", ref, data); }
-  update(ref, data) { return this._write("update", ref, data); }
-  delete(ref) { return this._write("delete", ref); }
+  update(ref, ...args) { const value = updateArguments(args); return this._write("update", ref, value.data, { precondition: value.precondition }); }
+  delete(ref, condition) { return this._write("delete", ref, undefined, { precondition: precondition(condition) }); }
+}
+
+class BulkWriter {
+  constructor(store) { this.store = store; this.jobs = []; this.results = []; this.active = 0; this.closed = false; }
+  delete(ref, condition) {
+    if (this.closed || this.results.length >= 2000) throw Error("Bulk writer is closed or its bounded batch is full");
+    if (!(ref instanceof DocumentReference) || ref.firestore !== this.store) throw Error("Foreign document reference");
+    condition = precondition(condition);
+    const result = new Promise((resolve, reject) => this.jobs.push({ ref, condition, resolve, reject }));
+    // Track settled results without suppressing rejection of the caller's promise.
+    this.results.push(result.then(() => undefined, () => undefined));
+    this.pump(); return result;
+  }
+  pump() {
+    while (this.active < 4 && this.jobs.length) {
+      const job = this.jobs.shift(); this.active++;
+      this.store.runTransaction(tx => { tx.delete(job.ref, job.condition); }).then(job.resolve, job.reject)
+        .finally(() => { this.active--; this.pump(); });
+    }
+  }
+  async close() { this.closed = true; await Promise.all(this.results); }
 }
 
 class Store {
@@ -97,6 +149,7 @@ class Store {
     // game parity, authorization, workers and a reviewed cutover are complete.
     if (!/^migration_[a-z0-9_]{1,40}$/.test(schema) || database !== "crownlands_migration" || host !== "/var/run/postgresql") throw Error("Only the isolated local rehearsal database is allowed");
     this.schema = schema; this.root = "projects/" + project + "/databases/(default)/documents";
+    this.transactionGuard = new AsyncLocalStorage();
     this.pool = pool || new Pool({ database, host, max: 12, application_name: "crownlands-migration", statement_timeout: 30000 });
   }
   async initialize() {
@@ -105,6 +158,7 @@ class Store {
       CREATE TABLE IF NOT EXISTS ${s}.documents (path text PRIMARY KEY, collection_id text NOT NULL, parent_path text NOT NULL, body jsonb NOT NULL, source_sha256 text NOT NULL);
       CREATE INDEX IF NOT EXISTS documents_collection_path ON ${s}.documents (collection_id,path);
       CREATE INDEX IF NOT EXISTS documents_parent_collection ON ${s}.documents (parent_path,collection_id,path);
+      CREATE INDEX IF NOT EXISTS documents_path_prefix ON ${s}.documents (path text_pattern_ops);
       CREATE TABLE IF NOT EXISTS ${s}.changes (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, path text NOT NULL, before_body jsonb, after_body jsonb, created_at timestamptz NOT NULL DEFAULT clock_timestamp());
       REVOKE ALL ON ALL TABLES IN SCHEMA ${s} FROM PUBLIC;
       DO $type$ BEGIN
@@ -131,6 +185,13 @@ class Store {
   collection(path) { return new CollectionReference(this, path); }
   collectionGroup(id) { if (!id || id.includes("/")) throw Error("Invalid collection ID"); return new Query(this, { collection: id }); }
   reference(name) { if (!name.startsWith(this.root + "/")) return new V.ReferenceValue(name); return this.doc(name.slice(this.root.length + 1)); }
+  async listCollections(ref) {
+    if (!(ref instanceof DocumentReference) || ref.firestore !== this) throw Error("Foreign document reference");
+    const pattern = (ref.path + "/").replace(/[\\%_]/g, value => "\\" + value) + "%";
+    const result = await this.pool.query(`SELECT DISTINCT split_part(path,'/',$1) COLLATE "C" AS id FROM ${this.schema}.documents WHERE path LIKE $2 ORDER BY id LIMIT 1001`, [ref.path.split("/").length + 1, pattern]);
+    if (result.rows.length > 1000) throw Error("Subcollection enumeration exceeds migration bound");
+    return result.rows.map(row => ref.collection(row.id));
+  }
   async getAll(...refs) { if (refs.length > 1000) throw Error("Too many document reads"); return Promise.all(refs.map(ref => this.get(ref))); }
   async get(target, connection = this.pool) {
     if (target.firestore !== this) throw Error("Foreign query reference");
@@ -232,12 +293,18 @@ class Store {
     }
     return { text: `SELECT path,body FROM ${this.schema}.documents WHERE ${where.join(" AND ")} ORDER BY ${expressions.map((expression, i) => expression + " " + orders[i].direction.toUpperCase()).join(",")} LIMIT ${param(query.constraints.limit || 10001)}`, values };
   }
-  async runTransaction(callback, { maxAttempts = 8 } = {}) {
+  runTransaction(callback, options) { return this._runTransaction(callback, options, "SERIALIZABLE"); }
+  async _runTransaction(callback, { maxAttempts = 8 } = {}, isolation = "SERIALIZABLE") {
+    if (!["SERIALIZABLE", "READ COMMITTED"].includes(isolation)) throw Error("Unsupported transaction isolation");
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 32) throw Error("Invalid transaction retry bound");
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const client = await this.pool.connect();
       try {
-        await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+        await client.query("BEGIN ISOLATION LEVEL " + isolation);
+        // A reclaimed or timed-out background job must not commit further game
+        // writes, even if its old JavaScript handler finishes late.
+        const guard = this.transactionGuard.getStore();
+        if (guard) await guard(client);
         const tx = new Transaction(this, client);
         const result = await callback(tx);
         await this.commit(tx);
@@ -253,11 +320,27 @@ class Store {
   async commit(tx) {
     const paths = [...new Set(tx.writes.map(write => write.ref.path))].sort();
     if (!paths.length) return;
+    // Lock absent keys as well as existing rows. This lets blind batches use
+    // READ COMMITTED without losing simultaneous creates/merges/increments,
+    // avoiding unrelated predicate conflicts during parallel map seeding.
+    // Callback transactions still use SERIALIZABLE for query/phantom safety.
+    await tx.client.query(`SELECT pg_advisory_xact_lock(hashtext($1),lock_id) FROM
+      (SELECT DISTINCT hashtext(path) AS lock_id FROM unnest($2::text[]) AS path ORDER BY lock_id) AS locks`, [this.schema, paths]);
     const current = await tx.client.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[]) ORDER BY path FOR UPDATE`, [paths]);
     const bodies = new Map(current.rows.map(row => [row.path, row.body]));
-    const original = new Map(bodies), timestamp = V.Timestamp.now();
+    const original = new Map(bodies);
+    let timestamp = V.Timestamp.now();
+    // A version must change even for consecutive writes in one millisecond.
+    // Conditional maintenance deletes must never accept a stale document version.
+    for (const body of bodies.values()) {
+      const prior = V.Timestamp.fromString(body.updateTime);
+      if (prior.seconds > timestamp.seconds || (prior.seconds === timestamp.seconds && prior.nanoseconds >= timestamp.nanoseconds)) {
+        timestamp = new V.Timestamp(prior.seconds + (prior.nanoseconds === 999999999 ? 1 : 0), (prior.nanoseconds + 1) % 1e9);
+      }
+    }
     for (const write of tx.writes) {
       const before = bodies.get(write.ref.path);
+      checkPrecondition(write.options.precondition || {}, before);
       if (write.kind === "create" && before) throw Object.assign(Error("Document already exists"), { code: 6 });
       if (write.kind === "delete") bodies.delete(write.ref.path);
       else {
@@ -280,8 +363,13 @@ class Store {
   }
   batch() {
     const batch = new Transaction(this, null);
-    batch.commit = () => this.runTransaction(tx => { tx.writes = batch.writes; });
+    batch.commit = () => this._runTransaction(tx => { tx.writes = batch.writes; }, {}, "READ COMMITTED");
     return batch;
+  }
+  bulkWriter() { return new BulkWriter(this); }
+  withTransactionGuard(guard, callback) {
+    if (typeof guard !== "function" || typeof callback !== "function" || this.transactionGuard.getStore()) throw Error("Invalid or nested transaction guard");
+    return this.transactionGuard.run(guard, callback);
   }
   close() { return this.pool.end(); }
 }

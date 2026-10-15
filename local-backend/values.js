@@ -33,6 +33,7 @@ class FieldPath {
   toString() { return this.segments.join("."); }
 }
 class Transform { constructor(kind, values = []) { this.kind = kind; this.values = values; } }
+class UpdateFields { constructor(entries) { this.entries = entries; } }
 const FieldValue = Object.freeze({
   serverTimestamp: () => new Transform("timestamp"), delete: () => new Transform("delete"),
   increment: n => { if (typeof n !== "number" || !Number.isFinite(n)) throw Error("Invalid increment"); return new Transform("increment", [n]); },
@@ -137,20 +138,22 @@ function applyValue(previous, next, merge, timestamp) {
   return next;
 }
 function applyWrite(previous, patch, kind, options, timestamp) {
-  if (!plain(patch)) throw Error("Document must be a map");
+  if (!plain(patch) && !(kind === "update" && patch instanceof UpdateFields)) throw Error("Document must be a map");
   if (kind === "update") {
     if (previous === undefined) throw Object.assign(Error("Document does not exist"), { code: 5 });
     const result = decode(encode(previous));
-    const fields = Object.keys(patch).map(key => segments(key));
+    const entries = patch instanceof UpdateFields ? patch.entries : Object.entries(patch);
+    if (!entries.length) throw Error("An update must contain at least one field");
+    const fields = entries.map(([key]) => segments(key));
     for (let i = 0; i < fields.length; i++) for (let j = i + 1; j < fields.length; j++) {
       const length = Math.min(fields[i].length, fields[j].length);
       if (fields[i].slice(0, length).every((part, index) => part === fields[j][index])) throw Error("Conflicting update paths");
     }
-    for (const [key, value] of Object.entries(patch)) setField(result, key, applyValue(getField(previous, key), value, false, timestamp));
+    for (const [key, value] of entries) setField(result, key, applyValue(getField(previous, key), value, false, timestamp));
     return result;
   }
   if (options?.mergeFields) throw Error("Explicit mergeFields requires migration coverage before use");
   return applyValue(previous, patch, options?.merge === true, timestamp);
 }
 
-module.exports = { Timestamp, ReferenceValue, GeoPoint, FieldPath, FieldValue, Transform, encode, decode, segments, getField, setField, applyWrite };
+module.exports = { Timestamp, ReferenceValue, GeoPoint, FieldPath, FieldValue, Transform, UpdateFields, encode, decode, segments, getField, setField, applyWrite };

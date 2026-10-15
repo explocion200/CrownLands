@@ -80,7 +80,7 @@ node tools/test-local-auth-http.js
 
 The release workflow installs the local dependencies and prepares a separate PostgreSQL database when the reviewed selection includes its integration tests. CI fixtures contain no production account data, credentials or email delivery. Production-host PostgreSQL 18.6 was used for the actual import/restore rehearsal; CI uses the runner distribution's PostgreSQL package as an additional compatibility check.
 
-The existing Stripe credentials were read-only verified. Resend's sending domain and restricted key are ready, and the separately approved owner test email was delivered. The authentication outbox is not yet connected to email delivery. The owner-approved Google OAuth callback `https://playcrownlands.com/local-auth/google/callback` was saved and confirmed in Google Cloud Console; the existing Firebase callback remains. A real end-to-end Google sign-in is still a separate acceptance gate. No local Stripe webhook, local scheduler or local game API has been activated. Existing monitoring and host backups remain in place; the new database still needs inclusion in scheduled consistent backups before cutover.
+The existing Stripe credentials were read-only verified. Resend's sending domain and restricted key are ready, and the separately approved owner test email was delivered. The authentication outbox is not yet connected to email delivery. The owner-approved Google OAuth callback `https://playcrownlands.com/local-auth/google/callback` was saved and confirmed in Google Cloud Console; the existing Firebase callback remains. The installed private owner preview completed real Google OAuth sign-in on October 15: the original account UID was preserved and the matching imported player profile was found. This verifies account identity, not city gameplay or password login. No local Stripe webhook, local scheduler or local game API has been activated. Existing monitoring and host backups remain in place; the new database still needs inclusion in scheduled consistent backups before cutover.
 
 ## Private owner sign-in preview
 
@@ -91,6 +91,23 @@ The installer requires Ubuntu administrator authentication. It verifies bundle h
 The HTTPS entry is `/local-auth/rehearsal` on the main domain. Both Caddy and the process restrict it to loopback and the configured home LAN (`192.168.1.0/24`); the process binds only `127.0.0.1:9190` and accepts the client address only from its loopback proxy. Reset, verification-email, registration, password-linking, gameplay and worker routes are unavailable. The preview expires two days after preparation and fails closed after expiry. It reports only whether the signed-in account retained its ID and matched its imported profile; it does not establish gameplay parity.
 
 After the preview's real Google/password sign-in checks, stop `crownlands-auth-rehearsal.service`. Before preparing a replacement, inspect the retained service/configuration rather than rerunning its one-time installer. A production account deployment needs its own reviewed installation, current data, backup coverage and full acceptance gates below. No player should use the old preview as a live account system.
+
+## Game runtime and durable work rehearsal
+
+The `functions/platform.js` boundary keeps the original Firebase SDK exports as its default. Only an explicit `CROWNLANDS_BACKEND=postgres-rehearsal` and a separate `migration_game_*` schema select the local adapter. Existing business handlers are unchanged. All 150 exports register locally: 121 callables, three HTTP handlers, ten document triggers and sixteen schedules. Loading them starts no HTTP listener, timers or jobs. Secrets, push delivery and cloud translation credentials are disabled in this isolated adapter; that is a rehearsal boundary, not an approved removal of those features. The owner chose to retain Google Cloud Translation during migration.
+
+Actual PostgreSQL tests exercise the unchanged realm initializer (81 fixture maps, 3,725 cities and 12 camps), authentication/release rejection, the PvP trigger's receipt-based deduplication, season closing fences, deterministic rankings and concurrent season reward claims. These synthetic tests do not alter the retained player snapshot. Callback transactions remain serializable. Blind writes/batches lock every target key, including missing keys, before applying their atomic write under READ COMMITTED; this avoids false predicate conflicts during independent parallel map initialization while preserving concurrent merges/increments, conditional versions and create-only uniqueness.
+
+`local-backend/jobs.js` prepares a transactional outbox and bounded durable queue. Each committed change is acknowledged individually in the same transaction that creates its trigger jobs: a sequence-number high-water mark would lose lower IDs that commit later. Handlers receive immutable before/after snapshots. A retained lease token is checked and locked inside every game write transaction; reclaimed or timed-out workers cannot commit later writes. Jobs run at least once, so the existing business receipts remain necessary. Safe error codes, attempt counts and dead-letter state are retained without error payloads. No queue worker is installed or running against player data.
+
+Scheduling covers the actual interval/daily-cron forms, preserves the Citadel's New York wall time through DST, records each invocation's original scheduleTime, and resumes missed minutes in bounded batches without silently discarding history. A new schedule starts at its initialization minute; a schedule-definition change requires cursor review. Rehearsal execution serializes invocations of the same handler. Load testing, long-outage/realm-boundary recovery, dead-letter alerts, queue retention and production service installation remain acceptance work.
+
+```sh
+node tools/test-local-postgres-game.js
+node tools/test-local-postgres-jobs.js
+```
+
+The browser still uses Firebase. Authenticated local callable transport, equivalent document permissions/subscriptions, account email delivery, replacement purchase/push endpoints, consistent scheduled database backups and end-to-end game tests must be completed before any production cutover.
 
 ## Migration sequence and acceptance gates
 

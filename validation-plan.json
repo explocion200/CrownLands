@@ -47,9 +47,11 @@
         "tools/test-local-document-values.js",
         "tools/test-local-postgres-store.js",
         "tools/test-local-auth-service.js",
-        "tools/test-local-auth-http.js"
+        "tools/test-local-auth-http.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-jobs.js"
       ],
-      "reason": "Unconnected rehearsal storage library and pinned PostgreSQL/Google dependencies. Real PostgreSQL tests cover numeric/timestamp/name ordering, filters/cursors/projections, missing-parent collections, transaction rollback, concurrent idempotent charges, lost-update prevention and atomic change records. Account integration depends on the same schema/pool. Local dependency audit passed separately. No live function/client imports use this library; no game emulator behavior changes."
+      "reason": "PostgreSQL storage and pinned local dependencies, selected only by the isolated game rehearsal. Test typed values, ordering/cursors, literal FieldPath updates, conditional bulk cleanup, atomic rollback/change records, serializable callback transactions and path-locked blind writes with concurrent creation/merge/increment. Actual game initialization and season/PvP receipt tests reproduce large parallel map writes; worker and account tests exercise shared transaction behavior. No live backend selection changes."
     },
     {
       "paths": [
@@ -100,6 +102,26 @@
         "tools/test-local-auth-http.js"
       ],
       "reason": "Prepare an expiring private account test with exactly one copied owner account, a read-only profile-existence receipt, loopback-only listener, LAN/host gating, overwritten trusted proxy header, blocked resets/registration/email, separate least-privilege PostgreSQL role and hardened OS service. Tests prove isolation, UID preservation, no snapshot overwrite, authenticated receipt access, expiry and runtime ownership refusal. Prepared Caddy adaptation and systemd unit are validated locally; actual administrator installation and real Google sign-in are separately verified. Existing game routes, player data, workers, monitoring and publisher remain unchanged."
+    },
+    {
+      "paths": [
+        "functions/index.js",
+        "functions/season-rewards.js",
+        "functions/platform.js",
+        "local-backend/platform.js",
+        "local-backend/jobs.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-jobs.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-store.js",
+        "functions/test/emulator-season-rewards.js",
+        "functions/test/emulator-core-expansion-state.js",
+        "functions/test/emulator-email-auth.js"
+      ],
+      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal."
     }
   ]
 }

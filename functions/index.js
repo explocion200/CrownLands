@@ -1,10 +1,5 @@
-const { onCall: firebaseOnCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
-const admin = require("firebase-admin");
-const { getApp } = require("firebase-admin/app");
-const { FieldPath, FieldValue, Filter, Timestamp, getFirestore } = require("firebase-admin/firestore");
-const { getMessaging } = require("firebase-admin/messaging");
+const { onCall: firebaseOnCall, onRequest, HttpsError, onSchedule, onDocumentCreated, onDocumentWritten,
+  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret } = require("./platform");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
@@ -62,7 +57,6 @@ const { isRegionWalkablePoint } = require("./canonical-route-engine.js");
 const MARAUDER_SEASONAL_CLEARANCE = require("./marauder-seasonal-clearance.json");
 const MARAUDER_ROAD_POINTS = require("./marauder-road-points.json");
 const { createEstateService } = require("./estate-service");
-const { defineSecret } = require("firebase-functions/params");
 const { createCrownPaymentsService } = require("./crown-payments-service");
 const { createCrownPaymentsWebhook } = require("./crown-payments-http");
 const stripeCrownTestKey = defineSecret("STRIPE_CROWNS_TEST_SECRET_KEY");

@@ -63,9 +63,62 @@ const { Store, FieldValue, FieldPath, Filter, Timestamp } = require("../local-ba
     await db.doc("players/a").update({ "settings.x": FieldValue.delete(), gold: FieldValue.increment(2) });
     assert.deepEqual((await db.doc("players/a").get()).data().settings, { y: 2 });
     assert.equal((await db.doc("players/a").get()).data().gold, 90);
+    await Promise.all(Array.from({ length: 30 }, () => db.doc("blind/increments").set({ total: FieldValue.increment(1) }, { merge: true })));
+    assert.equal((await db.doc("blind/increments").get()).data().total, 30, "Blind concurrent writes must preserve increments on an initially missing key");
+    await Promise.all(Array.from({ length: 20 }, (_, i) => db.doc("blind/merges").set({ ["field" + i]: i }, { merge: true })));
+    assert.equal(Object.keys((await db.doc("blind/merges").get()).data()).length, 20);
+    const creates = await Promise.allSettled(Array.from({ length: 10 }, () => db.doc("blind/create").create({ fixture: true })));
+    assert.equal(creates.filter(result => result.status === "fulfilled").length, 1);
+    assert(creates.filter(result => result.status === "rejected").every(result => result.reason.code === 6));
+    // Scout reports use a FieldPath because a city ID can contain a literal dot.
+    await db.doc("players/a").update(new FieldPath("reports", "city.with.dots"), { seen: true }, "settings.y", 3);
+    await db.runTransaction(async tx => {
+      tx.update(db.doc("players/a"), new FieldPath("reports", "city.with.dots"), FieldValue.delete());
+    });
+    assert.deepEqual((await db.doc("players/a").get()).data().reports, {});
+    assert.equal((await db.doc("players/a").get()).data().settings.y, 3);
+    await assert.rejects(db.doc("players/a").update("settings", {}, "settings.x", 4), /[Cc]onflict/);
+    assert.throws(() => db.doc("players/a").update("settings.x"), /pairs/);
+    // Cleanup must see direct subcollections, including missing parent documents,
+    // while escaped LIKE characters cannot select an unrelated player's data.
+    await db.doc("parents/literal_%/direct/a/nested/b").set({ fixture: true });
+    await db.doc("parents/literal_%/another/a").set({ fixture: true });
+    await db.doc("parents/literal_XX/notMine/a").set({ fixture: true });
+    assert.deepEqual((await db.doc("parents/literal_%").listCollections()).map(c => c.id), ["another", "direct"]);
+    assert.deepEqual(await db.doc("parents/no-children").listCollections(), []);
+    const guarded = db.doc("maintenance/guarded");
+    await guarded.set({ revision: 1 });
+    // Freeze the clock after a fixture write to prove versions advance even
+    // when the wall clock cannot distinguish consecutive commits.
+    const now = Timestamp.now;
+    Timestamp.now = () => Timestamp.fromString("2099-01-01T00:00:00.999999999Z");
+    try {
+      await guarded.update({ revision: 2 });
+      const oldVersion = (await guarded.get()).updateTime;
+      await guarded.update({ revision: 3 }, { lastUpdateTime: oldVersion });
+      assert.equal((await guarded.get()).updateTime.toString(), "2099-01-01T00:00:01.000000000Z");
+      await assert.rejects(guarded.delete({ lastUpdateTime: oldVersion }), { code: 9 });
+      const batch = db.batch();
+      batch.set(db.doc("maintenance/must-roll-back"), { fixture: true });
+      batch.delete(guarded, { lastUpdateTime: oldVersion });
+      await assert.rejects(batch.commit(), { code: 9 });
+      assert.equal((await db.doc("maintenance/must-roll-back").get()).exists, false);
+      // A stale cleanup candidate must fail independently; other bulk writes finish.
+      const bulk = db.bulkWriter();
+      const stale = bulk.delete(guarded, { lastUpdateTime: oldVersion }).then(() => false, error => error.code === 9);
+      const removed = bulk.delete(db.doc("players/b"));
+      await bulk.close();
+      assert.equal(await stale, true); await removed;
+      assert.equal((await guarded.get()).data().revision, 3);
+      assert.equal((await db.doc("players/b").get()).exists, false);
+      assert.throws(() => bulk.delete(guarded), /closed/);
+      await guarded.delete({ lastUpdateTime: (await guarded.get()).updateTime });
+      await guarded.delete();
+      await assert.rejects(guarded.delete({ exists: true }), { code: 9 });
+    } finally { Timestamp.now = now; }
     assert.throws(() => new Store({ schema: "public" }));
     assert.throws(() => new Store({ schema, host: "remote.example" }));
-    console.log("PostgreSQL store: query ordering/cursors, missing parents, nanoseconds, atomic rollback, concurrent idempotency, lost-update prevention and transactional change records passed.");
+    console.log("PostgreSQL store: ordering/cursors, missing parents, literal field paths, versioned cleanup, bulk failure isolation, atomic rollback, concurrent idempotency and transactional change records passed.");
   } finally {
     await db.pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await db.close();
