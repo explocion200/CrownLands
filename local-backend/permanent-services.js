@@ -35,7 +35,7 @@ async function start(role,{credentials=process.env.CREDENTIALS_DIRECTORY,directo
     const auth=new AuthService({store:authStore,origin:config.origin,rateKey:Buffer.from(config.rateKey,'base64url'),hashConfig:config.hashConfig,google:config.google,allowRegistration:role==='auth'});
     if(role==='auth'){
       await auth.initialize({createTables:false});
-      server=require('./auth-http').createAuthServer({auth,trustLoopbackProxy:true,beforeRoute:async()=>{await policy.assertActive();return false;}});
+      server=require('./auth-http').createAuthServer({auth,trustLoopbackProxy:true,deployment:policy});
     }else{
       process.env.CROWNLANDS_BACKEND='postgres-local';require('./permanent-platform').configure({store,config,deployment:policy});
       const game=require('../functions');server=require('./game-http').createGameServer({store,auth,routes:require('./platform').describe(game),deployment:policy});

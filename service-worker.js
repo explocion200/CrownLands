@@ -8,6 +8,9 @@ const MAX_REGION_CACHE_ENTRIES = 8;
 const MAX_WORLD_IMAGE_CACHE_ENTRIES = 12;
 const NETWORK_CACHE_WAIT_MS = 4000;
 const APP_BASE_URL = new URL("./", self.location.href);
+// The opt-in local build replaces this literal. Default/itch builds retain
+// Firebase until the separately fenced production transfer.
+const LOCAL_BACKEND = null;
 
 function resolveAppUrl(path = "") {
   const value = String(path || "").trim();
@@ -121,7 +124,7 @@ const STATIC_CACHE_URLS = [
 
 const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#17110d"/></svg>`;
 
-try {
+if (!LOCAL_BACKEND) try {
   self.window = self;
   importScripts(resolveAppUrl("firebase-config.js"));
   importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
@@ -162,6 +165,36 @@ try {
 } catch (error) {
   console.warn("[Crownlands] Firebase messaging worker setup skipped.", error);
 }
+
+function localWorkerReady() {
+  return LOCAL_BACKEND?.protocol === 1 && /^[a-f0-9]{32}$/.test(LOCAL_BACKEND.epoch || "")
+    && self.location.origin === "https://playcrownlands.com"
+    && self.registration.scope === "https://playcrownlands.com/";
+}
+
+self.addEventListener("push", event => {
+  if (!localWorkerReady()) return;
+  event.waitUntil((async () => {
+    let payload; try { payload = event.data?.json(); } catch { return; }
+    const data = payload?.data;
+    if (!data || data.type !== "incoming_army" || !["attack", "scout", "reinforce"].includes(data.kind)
+      || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) return;
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      const url = new URL(client.url);
+      if (url.origin === self.location.origin && ["/play/", "/play/index.html", "/index.html"].includes(url.pathname)) {
+        client.postMessage({ type: "CROWNLANDS_LOCAL_PUSH", epoch: LOCAL_BACKEND.epoch, payload });
+      }
+    }
+    await self.registration.showNotification(String(data.title || "Crownlands alert").slice(0, 80), {
+      body: String(data.body || "A new army is marching.").slice(0, 180),
+      tag: "crownlands-" + String(data.armyId || "incoming").slice(0, 96), renotify: false,
+      requireInteraction: data.kind === "attack", icon: resolveAppUrl("assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp"),
+      badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
+      data: { ...data, url: "/play/", localEpoch: LOCAL_BACKEND.epoch, expiresAt: payload.expiresAt },
+    });
+  })());
+});
 
 function isCacheableResponse(response) {
   return Boolean(
@@ -374,11 +407,16 @@ self.addEventListener("fetch", event => {
 
 self.addEventListener("message", event => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data?.type === "CROWNLANDS_LOCAL_PUSH_STATUS" && localWorkerReady()) {
+    event.ports?.[0]?.postMessage({ protocol: 1, epoch: LOCAL_BACKEND.epoch, publicKey: LOCAL_BACKEND.publicKey });
+  }
 });
 
 self.addEventListener("notificationclick", event => {
   const notificationData = event.notification?.data || {};
   event.notification.close();
+  if (LOCAL_BACKEND && (!localWorkerReady() || notificationData.localEpoch !== LOCAL_BACKEND.epoch || !(notificationData.expiresAt > Date.now()))) return;
+  if (LOCAL_BACKEND) notificationData.url = "/play/";
   const url = getNotificationOpenUrl(notificationData);
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });

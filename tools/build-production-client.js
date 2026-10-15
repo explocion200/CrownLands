@@ -12,6 +12,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 
 const rootFiles = [
   "local-client.js",
+  "local-production.js",
   "local-web-push.js", "local-push-worker.js",
   "castle-capture.css",
   "pickup-placement.js",

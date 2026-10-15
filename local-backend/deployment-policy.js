@@ -23,6 +23,7 @@ function createPolicy({ store, epoch, read = readControl }) {
   if (!store || !/^migration_(?:game|auth)_[a-z0-9_]{1,30}$/.test(store.schema)
     || !/^[a-f0-9]{32}$/.test(epoch || "") || typeof read !== "function") throw unavailable();
   const policy = {
+    epoch,
     schema: store.schema,
     isActive() { try { const c = validateControl(read()); return c.phase === "active" && c.epoch === epoch; } catch { return false; } },
     async assertActive(client = store.pool) {

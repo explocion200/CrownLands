@@ -1,15 +1,32 @@
 (function initializeLocalClient(root) {
   "use strict";
   function create() {
-    if (root.location.origin !== "https://playcrownlands.com" || !root.location.pathname.startsWith("/api/local-game/rehearsal/")) throw Error("The local client is limited to the private rehearsal.");
+    const config = root.CROWNLANDS_LOCAL_BACKEND;
+    const production = config?.mode === "production" && config.protocol === 1 && config.ready === true && /^[a-f0-9]{32}$/.test(config.epoch || "");
+    const privatePath = root.location.pathname.startsWith("/api/local-game/rehearsal/");
+    if (root.location.origin !== "https://playcrownlands.com" || (production
+      ? !["/play/", "/play/index.html", "/index.html"].includes(root.location.pathname)
+      : !privatePath || (config && config.mode !== "rehearsal"))) throw Error("The local client requires a configured production game or private rehearsal.");
+    const deploymentHeaders = production ? { "X-Crownlands-Deployment": config.epoch } : {};
     const authState = { currentUser: null }, observers = new Set(), watchers = new Set();
     const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0;
     const pendingRequests = [];
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
+    let readiness;
+    async function ready() {
+      if (!production) return;
+      if (!readiness) readiness = Promise.all(["/local-auth/health", "/api/local-game/health"].map(async path => {
+        const response = await root.fetch(path, { credentials: "same-origin", cache: "no-store", headers: deploymentHeaders, signal: root.AbortSignal?.timeout(10000) });
+        const status = await response.json();
+        if (!response.ok || status.ready !== true || status.rehearsal !== false || status.protocol !== 1 || status.epoch !== config.epoch) throw makeError("auth/network-request-failed", "Crownlands is being updated. Please try again shortly.");
+      })).catch(error => { readiness = null; throw error; });
+      await readiness;
+    }
     async function session(notify = true) {
       if (refreshing) return refreshing;
       refreshing = (async () => {
-        const response = await root.fetch("/local-auth/v1/session", { credentials: "same-origin", cache: "no-store" });
+        await ready();
+        const response = await root.fetch("/local-auth/v1/session", { credentials: "same-origin", cache: "no-store", headers: deploymentHeaders });
         if (!response.ok) throw makeError("auth/network-request-failed"); const result = await response.json();
         csrf = result.csrf;
         const prior = JSON.stringify([authState.currentUser, authTime]);
@@ -49,7 +66,7 @@
       if (!csrf) await session();
       const started = revision;
       const response = await root.fetch((authentication ? "/local-auth/v1/" : "/api/local-game/v1/") + path, {
-        method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json", "X-Crownlands-CSRF": csrf }, body: JSON.stringify(input),
+        method: "POST", credentials: "same-origin", cache: "no-store", headers: { ...deploymentHeaders, "Content-Type": "application/json", "X-Crownlands-CSRF": csrf }, body: JSON.stringify(input),
       });
       const result = await response.json().catch(() => ({}));
       if (disposed || (!authentication && started !== revision)) throw makeError(normalizeCode("functions/unauthenticated"), "The account session changed.");

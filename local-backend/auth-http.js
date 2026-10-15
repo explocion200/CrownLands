@@ -33,7 +33,7 @@ function send(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
 }
-function actionPage(nonce, rehearsal = false) {
+function actionPage(nonce, rehearsal = false, epoch = null) {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Crownlands account</title>
 <style nonce="${nonce}">body{font:18px system-ui;background:#172622;color:#f5eedb;margin:0;min-height:100vh;display:grid;place-items:center}main{width:min(85vw,430px);padding:32px}h1{font-size:28px}label,input,button{display:block}input,button{box-sizing:border-box;width:100%;padding:14px;margin:14px 0;font:inherit;border-radius:8px;border:1px solid #b7a879}button{background:#d6b86e;color:#172622;font-weight:600;cursor:pointer}a{color:#edcf86}#message{min-height:3em;line-height:1.5}</style>
 <main><h1 id="title">Crownlands account</h1>${rehearsal ? '<p>Private account test. This changes only the copy on this computer; your live Firebase password is unchanged.</p>' : ''}<p id="message" role="status">Preparing your account link…</p><form id="form" hidden><label id="label">New password<input id="password" type="password" minlength="12" maxlength="1024" autocomplete="new-password"></label><button id="submit">Continue</button></form><a href="${rehearsal ? '/local-auth/rehearsal' : '/play/'}">${rehearsal ? 'Return to sign-in test' : 'Return to Crownlands'}</a></main>
@@ -41,23 +41,25 @@ function actionPage(nonce, rehearsal = false) {
 const params=new URLSearchParams(location.search),mode=params.get('mode'),token=params.get('token');
 history.replaceState(null,'','/local-auth/action');
 const form=document.getElementById('form'),message=document.getElementById('message'),password=document.getElementById('password'),button=document.getElementById('submit');
-let csrf;
+let csrf;const deploymentHeaders=${JSON.stringify(epoch ? { "X-Crownlands-Deployment": epoch } : {})};
 if(!['verifyEmail','resetPassword'].includes(mode)||!token){message.textContent='This account link is invalid. Request a new link from the sign-in screen.';}
-else fetch('/local-auth/v1/session',{credentials:'same-origin'}).then(r=>r.json()).then(data=>{
+else fetch('/local-auth/v1/session',{credentials:'same-origin',cache:'no-store',headers:deploymentHeaders}).then(r=>r.json()).then(data=>{
 csrf=data.csrf;if(!csrf)throw Error();form.hidden=false;document.getElementById('title').textContent=mode==='verifyEmail'?'Verify your email':'Set a new password';
 document.getElementById('label').hidden=mode==='verifyEmail';password.required=mode==='resetPassword';
 message.textContent=mode==='verifyEmail'?'Select Verify email to confirm this address.':'Use at least 12 characters. Your other sessions will be signed out.';button.textContent=mode==='verifyEmail'?'Verify email':'Save password';
 }).catch(()=>{message.textContent='We could not open this link. Please try again shortly.';});
 form.addEventListener('submit',async event=>{event.preventDefault();button.disabled=true;
-try{const response=await fetch('/local-auth/v1/email-action',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Crownlands-CSRF':csrf},body:JSON.stringify({token,mode,password:password.value})});
+try{const response=await fetch('/local-auth/v1/email-action',{method:'POST',credentials:'same-origin',headers:{...deploymentHeaders,'Content-Type':'application/json','X-Crownlands-CSRF':csrf},body:JSON.stringify({token,mode,password:password.value})});
 if(!response.ok)throw Error();form.hidden=true;password.value='';message.textContent=mode==='verifyEmail'?'Your email is verified. Return to Crownlands to continue.':'Your password was saved. Return to Crownlands and sign in.';
 }catch{message.textContent='This link could not be used. It may have expired. Request a new link from the sign-in screen.';button.disabled=false;}});
 </script></html>`;
 }
 
 function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12, maxPasswordConcurrent = 2,
-  beforeRoute, afterSignInPath = "/play/?localAuth=complete", emailActionRehearsal = false }) {
+  beforeRoute, afterSignInPath = "/play/?localAuth=complete", emailActionRehearsal = false, deployment }) {
   const origin = new URL(auth.origin); let active = 0, hashing = 0;
+  const permanent = require('./deployment-policy').isPolicy(deployment, auth.store?.schema);
+  if (deployment && !permanent) throw Error("Invalid deployment capability");
   if (origin.protocol !== "https:") throw Error("Authentication requires an HTTPS origin");
   if (!/^\/(?!\/)[A-Za-z0-9_/?=&-]+$/.test(afterSignInPath)) throw Error("Sign-in return path must be a local path");
   const handler = async (req, res) => {
@@ -78,7 +80,11 @@ function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12
         ip = req.headers["x-crownlands-client-ip"];
       }
       if (beforeRoute && await beforeRoute(req, res, { ip, path, token })) return;
-      if (req.method === "GET" && path === "/local-auth/health") { await auth.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: true }); }
+      if (permanent) {
+        await deployment.assertActive();
+        if (path.startsWith('/local-auth/v1/') && req.headers['x-crownlands-deployment'] !== deployment.epoch) throw error('unavailable', 503);
+      }
+      if (req.method === "GET" && path === "/local-auth/health") { await auth.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
       if (req.method === "GET" && path === "/local-auth/v1/session") {
         const csrf = /^[A-Za-z0-9_-]{43}$/.test(jar[CSRF] || "") ? jar[CSRF] : secret();
         res.setHeader("Set-Cookie", cookie(CSRF, csrf, 30 * 86400, false));
@@ -88,7 +94,7 @@ function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12
       if (req.method === "GET" && path === "/local-auth/action") {
         const nonce = secret();
         res.setHeader("Content-Security-Policy", `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`);
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(actionPage(nonce, emailActionRehearsal));
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); return res.end(actionPage(nonce, emailActionRehearsal, permanent ? deployment.epoch : null));
       }
       if (req.method === "GET" && path === "/local-auth/google/callback") {
         await auth.rateLimit("oauth-callback-ip", ip, 40);

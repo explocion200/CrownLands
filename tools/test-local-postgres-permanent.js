@@ -8,6 +8,12 @@ const {COMPONENTS,GAME,AUTH,validateControl,createPolicy,isPolicy}=require('../l
 const {unit,caddy}=require('./local-migration/prepare_permanent_services');
 const epoch='a'.repeat(32),control={version:1,phase:'standby',epoch};
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
+function request(port,url,options={}) {
+ return new Promise((resolve,reject)=>{const req=require('node:http').request({host:'127.0.0.1',port,path:url,method:options.method||'GET',
+  headers:{Host:'playcrownlands.com',Origin:'https://playcrownlands.com','X-Crownlands-Client-IP':'203.0.113.2',...options.headers}},res=>{
+   const chunks=[];res.on('data',chunk=>chunks.push(chunk));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));
+  });req.on('error',reject);req.end(options.body);});
+}
 async function child(directory,role){
  const config={version:1,role,schema:['auth','mail'].includes(role)?AUTH:GAME,origin:'https://playcrownlands.com',rateKey:Buffer.alloc(32,1).toString('base64url')};
  if(role==='game'||role==='worker')config.secrets={LINKED_ACCOUNT_IP_HMAC_KEY:'synthetic'.repeat(8)};
@@ -23,7 +29,40 @@ async function child(directory,role){
  try{
   assert.equal(active.standby,false);assert.equal(connected,1);
   if(active.server){const endpoint=role==='auth'?'/local-auth/health':role==='game'?'/api/local-game/health':'/invalid';
-   const code=await new Promise((resolve,reject)=>{const req=require('node:http').request({host:'127.0.0.1',port:active.server.address().port,path:endpoint,headers:{Host:'playcrownlands.com','X-Crownlands-Client-IP':'203.0.113.2'}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));});req.on('error',reject);req.end();});assert.equal(code,role==='payments'?404:200);}
+   const result=await request(active.server.address().port,endpoint);assert.equal(result.status,role==='payments'?404:200);
+   if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch});}
+  if(role==='auth'){
+   const port=active.server.address().port;
+   for(const headers of [{},{'X-Crownlands-Deployment':'wrong'}])assert.equal((await request(port,'/local-auth/v1/session',{headers})).status,503);
+   assert.equal((await request(port,'/local-auth/v1/session',{headers:{'X-Crownlands-Deployment':epoch}})).status,200);
+   const page=await request(port,'/local-auth/action');assert(page.body.toString().includes(epoch));assert(page.body.toString().includes('Return to Crownlands'));assert(!page.body.toString().includes('Private account test'));
+  }
+  if(role==='game'){
+   const port=active.server.address().port;
+   assert.equal((await request(port,'/api/local-game/v1/read',{method:'POST',body:'{}'})).status,503);
+   const authFolder=path.join(directory,'auth'),authentication=await start('auth',{...options,credentials:authFolder,directory:authFolder,
+    connect:opts=>new Pool({...opts,host:directory,user:'crownlands-auth'})});
+   const jar=new Map();let client;
+   try{
+    const root={location:{origin:'https://playcrownlands.com',pathname:'/play/'},document:{hidden:false},
+     CROWNLANDS_LOCAL_BACKEND:{mode:'production',protocol:1,ready:true,epoch},setTimeout,clearTimeout,setInterval,clearInterval,
+     fetch:async(url,opts={})=>{const response=await request(url.startsWith('/local-auth/')?authentication.server.address().port:port,url,
+      {...opts,headers:{...opts.headers,Cookie:[...jar].map(([k,v])=>k+'='+v).join('; ')}});
+      for(const cookie of response.headers['set-cookie']||[]){const first=cookie.split(';')[0],index=first.indexOf('=');jar.set(first.slice(0,index),first.slice(index+1));}
+      return new Response(response.body,{status:response.status,headers:response.headers});}};
+    new Function('window',fs.readFileSync(path.join(__dirname,'../local-client.js'),'utf8'))(root);
+    client=root.CrownlandsLocalBackend.create();
+    const signed=await client.auth.signInWithEmailAndPassword(null,'permanent@example.test','Synthetic password 2026');assert.equal(signed.user.uid,'permanent-fixture');
+    const f=client.firestore,db=f.getFirestore(),profile=f.doc(db,'players','permanent-fixture');
+    assert.equal((await f.getDoc(profile)).data().marchPercent,70);
+    await f.updateDoc(profile,{marchPercent:65});assert.equal((await f.getDoc(profile)).data().marchPercent,65);
+    await assert.rejects(f.updateDoc(profile,{gold:999999}),{code:'permission-denied'});
+    await assert.rejects(f.getDoc(f.doc(db,'players','someone-else')),{code:'permission-denied'});
+    control.phase='maintenance';await assert.rejects(f.updateDoc(profile,{marchPercent:80}),{code:'unavailable'});control.phase='active';
+    assert.equal((await f.getDoc(profile)).data().marchPercent,65);
+    await client.auth.signOut();await assert.rejects(f.getDoc(profile),{code:'unauthenticated'});
+   }finally{client?.dispose();await authentication.stop();}
+  }
   if(active.loop){await pause(250);await active.loop.settle();const value=await active.loop.status();assert.equal(value.stopped??false,false);if(role==='worker')assert.equal(value.operationalFailures,0);else assert.equal(value.healthy,true);}
   await assert.rejects(active.store.pool.query('UPDATE crownlands_control.deployment SET phase=\'standby\''),e=>e.code==='42501');
   await assert.rejects(active.store.pool.query('CREATE TABLE '+config.schema+'.forbidden(id int)'),e=>e.code==='42501');
@@ -62,9 +101,14 @@ async function main(){
   process.env.CROWNLANDS_BACKEND='postgres-rehearsal';process.env.CROWNLANDS_REHEARSAL_SCHEMA=GAME;
   const routes=require('../local-backend/platform').describe(require('../functions'));
   const fixtureStore=new (require('../local-backend/store').Store)({schema:GAME,pool});const schedules=new (require('../local-backend/jobs').JobQueue)({store:fixtureStore,routes}).schedules;
+  const account={localId:'permanent-fixture',email:'permanent@example.test',emailVerified:true,
+   providerUserInfo:[{providerId:'password',email:'permanent@example.test'}],localPassword:await require('../local-backend/passwords').createLocalPassword('Synthetic password 2026')};
+  await pool.query(`INSERT INTO ${AUTH}.accounts(uid,body) VALUES($1,$2)`,[account.localId,account]);
+  const scope={resetGeneration:'realm-2026-10',worldId:'main-realm-2026-10',realmShardId:'shard_0001'};
+  await fixtureStore.doc('realmConfig/current').set(scope);await fixtureStore.doc('players/'+account.localId).set({...scope,uid:account.localId,marchPercent:70});
   for(const r of schedules)await pool.query(`INSERT INTO ${GAME}.work_schedules(name,signature,last_minute) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[r.name,r.signature,Math.floor(Date.now()/60000)+10]);
   for(const role of COMPONENTS){execFileSync(process.execPath,[__filename,'--child',directory,role],{stdio:'inherit',timeout:25000,env:{...process.env,CROWNLANDS_BACKEND:''}});}
-  console.log('Permanent services: private PostgreSQL cluster, empty-only schemas, runtime grants, standby without DB/provider IO, all six active startups, active receipts and concurrent authority fencing passed.');
+  console.log('Permanent services: private PostgreSQL cluster, restricted roles, standby, all six active startups, real production browser password sign-in/read/save/logout, denied cross-player/economy writes, epoch/maintenance and concurrent authority fencing passed.');
  }finally{await pool?.end().catch(()=>{});if(started)run('pg_ctl',['-D',path.join(directory,'data'),'-m','immediate','-w','stop']);fs.rmSync(directory,{recursive:true,force:true});}
 }
 (process.argv[2]==='--child'?child(process.argv[3],process.argv[4]):main()).catch(e=>{console.error(e);process.exitCode=1;});

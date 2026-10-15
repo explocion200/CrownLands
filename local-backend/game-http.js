@@ -48,8 +48,9 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       if (preview && await preview(req, res, url)) return;
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
-      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent }); }
+      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
       if (req.method !== "POST" || !url.pathname.startsWith("/api/local-game/v1/")) throw fail("not-found");
+      if (permanent && req.headers["x-crownlands-deployment"] !== deployment.epoch) throw fail("unavailable");
       const jar = cookies(req.headers.cookie);
       if (req.headers.origin !== origin.origin || !csrfEqual(jar[CSRF], req.headers["x-crownlands-csrf"])
         || (req.headers["sec-fetch-site"] && req.headers["sec-fetch-site"] !== "same-origin")) throw fail("permission-denied");

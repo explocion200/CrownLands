@@ -1,8 +1,14 @@
 (function localWebPush(root) {
   "use strict";
-  const BASE = "/api/local-game/rehearsal/", WORKER = "local-push-worker.js";
+  const PRIVATE_BASE = "/api/local-game/rehearsal/";
+  const production = root.CROWNLANDS_LOCAL_BACKEND?.mode === "production";
+  const BASE = production ? "/" : PRIVATE_BASE, WORKER = production ? "service-worker.js" : "local-push-worker.js";
   function configuration() {
-    const config = root.CROWNLANDS_LOCAL_PUSH;
+    const config = production ? root.CROWNLANDS_LOCAL_BACKEND : root.CROWNLANDS_LOCAL_PUSH;
+    if (production) return root.location.origin === "https://playcrownlands.com"
+      && ["/play/", "/play/index.html", "/index.html"].includes(root.location.pathname)
+      && config?.ready === true && config.protocol === 1 && /^[a-f0-9]{32}$/.test(config.epoch || "")
+      && /^[A-Za-z0-9_-]{87}$/.test(config.publicKey || "") ? config : null;
     if (root.location.origin !== "https://playcrownlands.com" || !root.location.pathname.startsWith(BASE)
       || root.CROWNLANDS_LOCAL_BACKEND?.mode !== "rehearsal" || !config
       || !/^[A-Za-z0-9_-]{87}$/.test(config.publicKey || "") || !Number.isFinite(Date.parse(config.expiresAt))
@@ -10,16 +16,18 @@
     return config;
   }
   function create() {
-    let registration;
+    let registration, verifiedRegistration;
     const listeners = new Set(), workerUrl = root.location.origin + BASE + WORKER;
-    const fail = () => { throw Error("Private browser notifications are unavailable."); };
+    const fail = () => { throw Error("Browser notifications are unavailable."); };
     const message = event => {
-      if (!configuration() || event.source?.scriptURL !== workerUrl || event.data?.type !== "CROWNLANDS_LOCAL_PUSH") return;
+      if (!configuration() || event.source?.scriptURL !== workerUrl || event.data?.type !== "CROWNLANDS_LOCAL_PUSH"
+        || (production && event.data?.epoch !== configuration().epoch)) return;
       for (const listener of listeners) listener(event.data.payload);
     };
     root.navigator?.serviceWorker?.addEventListener("message", message);
     async function register() {
       if (!configuration()) fail();
+      verifiedRegistration = null;
       registration = await root.navigator.serviceWorker.register(workerUrl, { scope: BASE, updateViaCache: "none" });
       if (registration.scope !== root.location.origin + BASE) fail();
       if (!registration.active) await new Promise((resolve, reject) => {
@@ -35,6 +43,19 @@
         worker.addEventListener("statechange", check); check();
       });
       if (!configuration() || registration.active?.scriptURL !== workerUrl) fail();
+      // The old Firebase worker has the same script URL and scope. Ask the
+      // active worker to prove its protocol/key before replacing a subscription.
+      if (production) {
+        const config = configuration();
+        const reply = await new Promise((resolve, reject) => {
+          const channel = new root.MessageChannel();
+          const timer = root.setTimeout(() => { channel.port1.close(); reject(Error("The game is updating. Try notifications again shortly.")); }, 10000);
+          channel.port1.onmessage = event => { root.clearTimeout(timer); channel.port1.close(); resolve(event.data); };
+          registration.active.postMessage({ type: "CROWNLANDS_LOCAL_PUSH_STATUS" }, [channel.port2]);
+        });
+        if (!configuration() || reply?.protocol !== 1 || reply.epoch !== config.epoch || reply.publicKey !== config.publicKey) fail();
+      }
+      verifiedRegistration = registration;
       return registration;
     }
     return {
@@ -44,7 +65,7 @@
         const config = configuration();
         if (!config || options.vapidKey !== config.publicKey || root.Notification.permission !== "granted") fail();
         const selected = options.serviceWorkerRegistration;
-        if (selected !== registration || selected.scope !== root.location.origin + BASE || selected.active?.scriptURL !== workerUrl) fail();
+        if (selected !== verifiedRegistration || selected.scope !== root.location.origin + BASE || selected.active?.scriptURL !== workerUrl) fail();
         const key = Uint8Array.from(root.atob(config.publicKey.replace(/-/g, "+").replace(/_/g, "/")), character => character.charCodeAt(0));
         let subscription = await selected.pushManager.getSubscription();
         if (subscription && String(new Uint8Array(subscription.options.applicationServerKey || [])) !== String(key)) {
