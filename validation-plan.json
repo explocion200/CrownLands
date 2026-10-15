@@ -182,6 +182,15 @@
         "tools/test-local-browser-client.js"
       ],
       "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated."
+    },
+    {
+      "paths": [
+        "tools/validate-email-auth.js"
+      ],
+      "tests": [
+        "tools/validate-email-auth.js"
+      ],
+      "reason": "The selected existing auth validator omitted the current cosmetics client dependency and failed before reaching its assertions. Load the actual dependency in its isolated VM to restore email/Google/session coverage without changing game behavior or stubbing away the requirement."
     }
   ]
 }

@@ -40,7 +40,8 @@ function fixture() {
   modules.auth.createUserWithEmailAndPassword = async () => { const u = user("email-player"); auth.currentUser = u; observer(u); return { user: u }; };
   modules.auth.signInWithEmailAndPassword = modules.auth.createUserWithEmailAndPassword;
   const hooks = "window.hooks = { client, acceptAuthUser, load: value => { loadModules = async () => value; } };";
-  vm.runInNewContext(source.replace(/\n  init\(\);\n\}\)\(\);\s*$/, `\n${hooks}\n})();`), {
+  const dependencies = fs.readFileSync(path.join(root, "cosmetics-client.js"), "utf8");
+  vm.runInNewContext(dependencies + "\n" + source.replace(/\n  init\(\);\n\}\)\(\);\s*$/, `\n${hooks}\n})();`), {
     window, navigator: { userAgent: "test" }, console: { warn() {} }, performance, URL, URLSearchParams, Event,
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }, setTimeout, clearTimeout });
   window.hooks.load(modules);
