@@ -33,6 +33,12 @@ const { AuthService, secret } = require("../local-backend/auth");
     assert.equal((await service.passwordSignIn(passwordAccount.email, "user1password", "fixture-ip")).user.uid, passwordAccount.localId);
     assert.equal(await service.session("malformed"), null);
     await service.signOut(signed.token); assert.equal(await service.session(signed.token), null);
+    // Revocation between initial verification authorization and the account lock.
+    const verifyRace = await service.passwordSignIn(passwordAccount.email, "user1password", "verify-race-ip");
+    const originalRateLimit = service.rateLimit.bind(service);
+    service.rateLimit = async (...args) => { await originalRateLimit(...args); await service.signOut(verifyRace.token); };
+    await assert.rejects(service.requestVerification(verifyRace.token, "verify-race-ip"), { code: "auth/user-token-expired" });
+    service.rateLimit = originalRateLimit;
     const beforeReset = await service.passwordSignIn(passwordAccount.email, "user1password", "fixture-ip");
     assert.deepEqual(await service.requestPasswordReset("unknown@example.test", "fixture-ip"), { accepted: true });
     assert.deepEqual(await service.requestPasswordReset(passwordAccount.email, "fixture-ip"), { accepted: true });

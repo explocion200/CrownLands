@@ -55,9 +55,11 @@ if(!response.ok)throw Error();form.hidden=true;password.value='';message.textCon
 </script></html>`;
 }
 
-function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12, maxPasswordConcurrent = 2 }) {
+function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12, maxPasswordConcurrent = 2,
+  beforeRoute, afterSignInPath = "/play/?localAuth=complete" }) {
   const origin = new URL(auth.origin); let active = 0, hashing = 0;
   if (origin.protocol !== "https:") throw Error("Authentication requires an HTTPS origin");
+  if (!/^\/(?!\/)[A-Za-z0-9_/?=&-]+$/.test(afterSignInPath)) throw Error("Sign-in return path must be a local path");
   const handler = async (req, res) => {
     res.setHeader("Cache-Control", "no-store"); res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("X-Frame-Options", "DENY");
@@ -75,6 +77,7 @@ function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12
         if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(ip) || !net.isIP(req.headers["x-crownlands-client-ip"])) throw error("invalid-proxy", 403);
         ip = req.headers["x-crownlands-client-ip"];
       }
+      if (beforeRoute && await beforeRoute(req, res, { ip, path, token })) return;
       if (req.method === "GET" && path === "/local-auth/health") { await auth.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: true }); }
       if (req.method === "GET" && path === "/local-auth/v1/session") {
         const csrf = /^[A-Za-z0-9_-]{43}$/.test(jar[CSRF] || "") ? jar[CSRF] : secret();
@@ -91,7 +94,7 @@ function createAuthServer({ auth, trustLoopbackProxy = false, maxConcurrent = 12
         await auth.rateLimit("oauth-callback-ip", ip, 40);
         const signed = await auth.googleFinish({ state: url.searchParams.get("state"), binding: jar[OAUTH], code: url.searchParams.get("code") });
         res.setHeader("Set-Cookie", [cookie(COOKIE, signed.token, 30 * 86400), cookie(OAUTH, "", 0)]);
-        res.writeHead(303, { Location: "/play/?localAuth=complete" }); return res.end();
+        res.writeHead(303, { Location: afterSignInPath }); return res.end();
       }
       if (req.method !== "POST" || !path.startsWith("/local-auth/v1/")) throw error("not-found", 404);
       if (req.headers.origin !== origin.origin || !equal(jar[CSRF], req.headers["x-crownlands-csrf"])) throw error("csrf-rejected", 403);

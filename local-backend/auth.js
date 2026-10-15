@@ -25,9 +25,9 @@ class AuthService {
     this.google = googleClient || (google?.clientId && google?.clientSecret ? new OAuth2Client({ clientId: google.clientId,
       clientSecret: google.clientSecret, redirectUri: this.origin + "/local-auth/google/callback" }) : null);
   }
-  async initialize() {
+  async initialize({ createTables = true } = {}) {
     const s = this.schema;
-    await this.pool.query(`CREATE TABLE IF NOT EXISTS ${s}.accounts (uid text PRIMARY KEY,body jsonb NOT NULL);
+    if (createTables) await this.pool.query(`CREATE TABLE IF NOT EXISTS ${s}.accounts (uid text PRIMARY KEY,body jsonb NOT NULL);
       CREATE INDEX IF NOT EXISTS accounts_email ON ${s}.accounts (lower(body->>'email'));
       CREATE TABLE IF NOT EXISTS ${s}.auth_sessions (token_hash text PRIMARY KEY,uid text NOT NULL REFERENCES ${s}.accounts(uid),provider text NOT NULL,epoch bigint NOT NULL,auth_time timestamptz NOT NULL DEFAULT clock_timestamp(),expires_at timestamptz NOT NULL);
       CREATE TABLE IF NOT EXISTS ${s}.auth_limits (key text PRIMARY KEY,count integer NOT NULL,expires_at timestamptz NOT NULL);
@@ -140,6 +140,8 @@ class AuthService {
     await this.transaction(async client => {
       const result = await client.query(`SELECT body FROM ${this.schema}.accounts WHERE uid=$1 FOR UPDATE`, [current.user.uid]);
       const body = result.rows[0]?.body;
+      if (!body) throw fail("user-token-expired");
+      await this.assertLockedSession(client, digest(token), body);
       if (body && !body.disabled && !body.emailVerified) await this.queueEmailAction(client, body, "verifyEmail");
     });
     return { accepted: true };

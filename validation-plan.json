@@ -63,9 +63,11 @@
       "tests": [
         "tools/test-local-password-compatibility.js",
         "tools/test-local-auth-service.js",
-        "tools/test-local-auth-http.js"
+        "tools/test-local-auth-http.js",
+        "tools/test-local-auth-rehearsal.js",
+        "tools/test-local-postgres-auth-preview.js"
       ],
-      "reason": "Private, uninstalled account-service rehearsal: public Firebase SCRYPT vectors in standard and URL-safe Base64, password upgrade preserving UID, disabled/expired/revoked sessions, reset replay rejection, provider-subject ownership, OAuth state/binding/nonce, safe new-account creation, reauthentication, rate limits, host/origin/CSRF checks, secure cookies and body/concurrency bounds. Synthetic Google client and email outbox only; no production sign-ins/emails. Account-action page visually checked at 1440x900 and 844x390. Existing Firebase auth/client remains unchanged."
+      "reason": "Account migration library, with an owner-only LAN rehearsal prepared separately from live login: verify imported hashes, UID/provider preservation, revoked sessions including verification races, one-use actions, Google binding/nonce/PKCE, registration and reauthentication. HTTP tests exercise host/origin/CSRF, cookies, size/concurrency, private errors and return-path handling. Real preview tests cover isolated source preservation and no privileged-runtime startup. No live Firebase account or game-client changes."
     },
     {
       "paths": [
@@ -81,6 +83,23 @@
         "tools/test-local-auth-service.js"
       ],
       "reason": "Prepare locked local dependencies and an isolated fixture-only PostgreSQL database in the static job when the reviewed selection needs it. Preserve all required checks and emulator selection. Exercise workflow selection/push protections and the actual synthetic PostgreSQL test commands; GitHub independently verifies fresh-runner setup."
+    },
+    {
+      "paths": [
+        "local-backend/rehearsal-server.js",
+        "tools/local-migration/prepare_auth_preview.js",
+        "tools/local-migration/install_auth_preview.py",
+        "tools/local-migration/crownlands-auth-rehearsal.service",
+        "tools/test-local-auth-rehearsal.js",
+        "tools/test-local-postgres-auth-preview.js"
+      ],
+      "tests": [
+        "tools/test-local-auth-rehearsal.js",
+        "tools/test-local-postgres-auth-preview.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js"
+      ],
+      "reason": "Prepare an expiring private account test with exactly one copied owner account, a read-only profile-existence receipt, loopback-only listener, LAN/host gating, overwritten trusted proxy header, blocked resets/registration/email, separate least-privilege PostgreSQL role and hardened OS service. Tests prove isolation, UID preservation, no snapshot overwrite, authenticated receipt access, expiry and runtime ownership refusal. Prepared Caddy adaptation and systemd unit are validated locally; actual administrator installation and real Google sign-in are separately verified. Existing game routes, player data, workers, monitoring and publisher remain unchanged."
     }
   ]
 }
