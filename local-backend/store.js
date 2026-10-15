@@ -107,18 +107,23 @@ class Store {
       CREATE INDEX IF NOT EXISTS documents_parent_collection ON ${s}.documents (parent_path,collection_id,path);
       CREATE TABLE IF NOT EXISTS ${s}.changes (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, path text NOT NULL, before_body jsonb, after_body jsonb, created_at timestamptz NOT NULL DEFAULT clock_timestamp());
       REVOKE ALL ON ALL TABLES IN SCHEMA ${s} FROM PUBLIC;
-      CREATE OR REPLACE FUNCTION ${s}.sort_key(v jsonb) RETURNS jsonb LANGUAGE plpgsql IMMUTABLE AS $fn$
+      DO $type$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='${s}' AND t.typname='query_key') THEN
+          CREATE TYPE ${s}.query_key AS (kind integer,numeric_value numeric,bytes_value bytea);
+        END IF;
+      END $type$;
+      CREATE OR REPLACE FUNCTION ${s}.query_sort_key(v jsonb) RETURNS ${s}.query_key LANGUAGE plpgsql IMMUTABLE AS $fn$
       BEGIN
         IF v IS NULL THEN RETURN NULL; END IF;
-        IF v ? 'nullValue' THEN RETURN jsonb_build_array(0,null,null); END IF;
-        IF v ? 'booleanValue' THEN RETURN jsonb_build_array(1,v->'booleanValue',null); END IF;
-        IF v ? 'integerValue' THEN RETURN jsonb_build_array(2,(v->>'integerValue')::numeric,null); END IF;
+        IF v ? 'nullValue' THEN RETURN ROW(0,NULL,NULL)::${s}.query_key; END IF;
+        IF v ? 'booleanValue' THEN RETURN ROW(1,CASE WHEN (v->>'booleanValue')::boolean THEN 1 ELSE 0 END,NULL)::${s}.query_key; END IF;
+        IF v ? 'integerValue' THEN RETURN ROW(2,(v->>'integerValue')::numeric,NULL)::${s}.query_key; END IF;
         IF v ? 'doubleValue' THEN
           IF v->>'doubleValue' IN ('NaN','Infinity','-Infinity') THEN RAISE EXCEPTION 'Nonfinite query value requires explicit parity coverage'; END IF;
-          RETURN jsonb_build_array(2,(v->>'doubleValue')::numeric,null);
+          RETURN ROW(2,(v->>'doubleValue')::numeric,NULL)::${s}.query_key;
         END IF;
-        IF v ? 'timestampValue' THEN RETURN jsonb_build_array(3,left(v->>'timestampValue',19)||'.'||rpad(COALESCE(substring(v->>'timestampValue' from '[.]([0-9]+)Z$'),''),9,'0')||'Z',null); END IF;
-        IF v ? 'stringValue' THEN RETURN jsonb_build_array(4,v->>'stringValue',null); END IF;
+        IF v ? 'timestampValue' THEN RETURN ROW(3,NULL,convert_to(left(v->>'timestampValue',19)||'.'||rpad(COALESCE(substring(v->>'timestampValue' from '[.]([0-9]+)Z$'),''),9,'0')||'Z','UTF8'))::${s}.query_key; END IF;
+        IF v ? 'stringValue' THEN RETURN ROW(4,NULL,convert_to(v->>'stringValue','UTF8'))::${s}.query_key; END IF;
         RAISE EXCEPTION 'Complex query value requires explicit parity coverage';
       END $fn$;`);
   }
@@ -157,7 +162,10 @@ class Store {
       if (parts.length === 1 && parts[0] === "__name__") return null;
       return `(body #> ${param(parts.flatMap((part, index) => index ? ["mapValue", "fields", part] : ["fields", part]))}::text[])`;
     };
-    const key = expression => `${this.schema}.sort_key(${expression})`;
+    // Typed composite keys compare numeric values and UTF-8 bytes independently
+    // of the host's language collation. JSONB string ordering is locale-sensitive.
+    const key = expression => `${this.schema}.query_sort_key(${expression})`;
+    const pathKey = expression => `(string_to_array(${expression},'/') COLLATE "C")`;
     const encoded = value => `${param(JSON.stringify(V.encode(value)))}::jsonb`;
     const docPath = value => {
       if (value instanceof DocumentReference) return value.path;
@@ -183,7 +191,7 @@ class Store {
       const ops = { "==": "=", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">=" };
       if (expression === null) {
         if (!ops[op]) throw Error("Unsupported document-name operator");
-        return `string_to_array(path,'/') ${ops[op]} string_to_array(${param(docPath(condition.value))},'/')`;
+        return `${pathKey("path")} ${ops[op]} ${pathKey(param(docPath(condition.value)))}`;
       }
       if (ops[op]) return `${key(expression)} ${ops[op]} ${key(encoded(condition.value))}`;
       if (op === "array-contains") return `EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(${expression}->'arrayValue'->'values','[]'::jsonb)) AS element WHERE ${key("element")}=${key(encoded(condition.value))})`;
@@ -206,7 +214,7 @@ class Store {
     const expressions = orders.map(order => {
       const expression = field(order.field);
       if (expression !== null) where.push(`${expression} IS NOT NULL`);
-      return expression === null ? "string_to_array(path,'/')" : key(expression);
+      return expression === null ? pathKey("path") : key(expression);
     });
     for (const bound of ["start", "end"]) {
       const cursor = query.constraints[bound];
@@ -214,7 +222,7 @@ class Store {
       let inputs = cursor.values;
       if (inputs.length === 1 && inputs[0] instanceof DocumentSnapshot) inputs = orders.map(order => V.segments(order.field).join(".") === "__name__" ? inputs[0].ref : inputs[0].get(order.field));
       if (!inputs.length || inputs.length > orders.length) throw Error("Invalid query cursor");
-      const comparands = inputs.map((value, i) => V.segments(orders[i].field).join(".") === "__name__" ? `string_to_array(${param(docPath(value))},'/')` : key(encoded(value)));
+      const comparands = inputs.map((value, i) => V.segments(orders[i].field).join(".") === "__name__" ? pathKey(param(docPath(value))) : key(encoded(value)));
       const clauses = comparands.map((right, i) => {
         const forward = (bound === "start") !== (orders[i].direction === "desc");
         const op = (forward ? ">" : "<") + (cursor.inclusive && i === comparands.length - 1 ? "=" : "");

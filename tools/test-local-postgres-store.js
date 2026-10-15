@@ -31,6 +31,14 @@ const { Store, FieldValue, FieldPath, Filter, Timestamp } = require("../local-ba
     await db.doc("events/a").set({ when: Timestamp.fromString("2026-10-15T12:00:00Z") });
     await db.doc("events/b").set({ when: Timestamp.fromString("2026-10-15T12:00:00.000000001Z") });
     assert.deepEqual((await db.collection("events").orderBy("when").get()).docs.map(d => d.id), ["a", "b"]);
+    const names = ["é", "aa", "z", "a_", "a-", "a", "Z", "B"];
+    for (const name of names) await db.doc("collation/" + name).set({ name });
+    const orderedNames = [...names].sort((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)));
+    assert.deepEqual((await db.collection("collation").get()).docs.map(d => d.id), orderedNames);
+    const orderedDocs = (await db.collection("collation").orderBy("name").get()).docs;
+    assert.deepEqual(orderedDocs.map(d => d.data().name), orderedNames);
+    assert.deepEqual((await db.collection("collation").orderBy("name").startAfter(orderedDocs[2]).get()).docs.map(d => d.id), orderedNames.slice(3));
+    assert.deepEqual((await db.collection("collation").where(FieldPath.documentId(), ">", "a").get()).docs.map(d => d.id), orderedNames.filter(n => Buffer.compare(Buffer.from(n), Buffer.from("a")) > 0));
     await assert.rejects(db.runTransaction(async tx => {
       const ref = db.doc("players/a"); const snap = await tx.get(ref);
       tx.update(ref, { gold: snap.data().gold - 99 });
