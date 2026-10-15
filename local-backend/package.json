@@ -9,6 +9,7 @@
   "packageManager": "pnpm@11.9.0",
   "dependencies": {
     "google-auth-library": "11.3.0",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "web-push": "3.6.7"
   }
 }

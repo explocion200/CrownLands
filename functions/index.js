@@ -6,7 +6,7 @@ const OPERATION_TIMING = require("./operation-timing");
 const PVP_LEADERBOARD = require("./pvp-leaderboard");
 const SEASON_REWARDS = require("./season-rewards");
 const PUBLIC_SEASON_RANKINGS = require("./public-season-rankings");
-const { deliverNotificationOutbox } = require("./notification-delivery");
+const { deliverNotificationOutbox, incomingArmyData } = require("./notification-delivery");
 const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
 const FORCE_CORE_EXPANSION_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true"
@@ -14933,29 +14933,7 @@ async function sendIncomingArmyNotification(notification = {}, completedTokenIds
     .filter(entry => entry.token && !completedTokenIds.includes(entry.id));
   if (!tokenDocs.length) return resultState;
 
-  const data = {
-    type: "incoming_army",
-    title: safeString(notification.title, 80),
-    body: safeString(notification.body, 180),
-    kind: safeString(notification.kind, 16),
-    armyId: safeString(notification.armyId, 96),
-    cityId: safeString(notification.cityId, 96),
-    sourceCityId: safeString(notification.sourceCityId, 96),
-    targetRegionId: safeString(notification.targetRegionId, 80),
-    sourceRegionId: safeString(notification.sourceRegionId, 80),
-    targetName: safeString(notification.targetName, 60),
-    sourceName: safeString(notification.sourceName, 60),
-    attackerName: safeString(notification.attackerName, 60),
-    troopVisibility: safeString(notification.troopVisibility, 16),
-    troopEstimateMin: safeString(notification.troopEstimateMin, 32),
-    troopEstimateMax: safeString(notification.troopEstimateMax, 32),
-    troopEstimateLabel: safeString(notification.troopEstimateLabel, 40),
-    arrivesAtMs: safeString(notification.arrivesAtMs, 32),
-    url: safeString(notification.url || "/play/", 160),
-  };
-  if (notification.troops !== undefined) {
-    data.troops = safeString(notification.troops, 32);
-  }
+  const data = incomingArmyData(notification);
 
   const messages = tokenDocs.map(entry => ({
     token: entry.token,

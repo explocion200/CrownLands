@@ -423,6 +423,7 @@
 
   async function loadModules() {
     if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") {
+      await import("/api/local-game/rehearsal/local-web-push.js");
       await import("/api/local-game/rehearsal/local-client.js");
       return window.CrownlandsLocalBackend.create();
     }
@@ -1650,6 +1651,7 @@
   }
 
   function getNotificationVapidKey() {
+    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") return window.CrownlandsLocalPush?.configuration()?.publicKey || "";
     const configKey = window.CROWNLANDS_FIREBASE_CONFIG?.vapidKey || window.CROWNLANDS_FIREBASE_VAPID_KEY || "";
     return String(configKey || "").trim();
   }
@@ -1665,7 +1667,7 @@
 
   function isPushSupported() {
     return Boolean(
-      hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG)
+      (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal" || hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG))
       && getNotificationVapidKey()
       && hasPushEnvironmentSupport()
     );
@@ -1736,6 +1738,7 @@
   }
 
   async function getServiceWorkerRegistration() {
+    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") return client.modules.messaging.getServiceWorkerRegistration();
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
     const workerUrl = new URL("./service-worker.js", document.baseURI);
@@ -1749,7 +1752,7 @@
     const messagingModule = await loadMessagingModule();
     if (typeof messagingModule.isSupported === "function") {
       const supported = await messagingModule.isSupported();
-      if (!supported) throw new Error("Firebase notifications are not supported in this browser.");
+      if (!supported) throw new Error("Notifications are not supported in this browser.");
     }
     if (!client.messaging) {
       client.messaging = messagingModule.getMessaging(client.app);

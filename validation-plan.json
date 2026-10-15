@@ -52,9 +52,10 @@
         "tools/test-local-postgres-jobs.js",
         "tools/test-local-postgres-game-http.js",
         "tools/test-local-browser-client.js",
-        "tools/test-local-postgres-mail-service.js"
+        "tools/test-local-postgres-mail-service.js",
+        "tools/test-local-postgres-web-push.js"
       ],
-      "reason": "PostgreSQL storage and pinned local dependencies, selected only by the isolated game rehearsal. Test typed values, ordering/cursors, literal FieldPath updates, conditional bulk cleanup, atomic rollback/change records, serializable callback transactions and path-locked blind writes with concurrent creation/merge/increment. Actual game initialization and season/PvP receipt tests reproduce large parallel map writes; worker and account tests exercise shared transaction behavior. No live backend selection changes."
+      "reason": "PostgreSQL storage and pinned local dependencies, selected only by the isolated game rehearsal. Test typed values, ordering/cursors, literal FieldPath updates, conditional bulk cleanup, atomic rollback/change records, serializable callback transactions and path-locked blind writes with concurrent creation/merge/increment. Actual game initialization and season/PvP receipt tests reproduce large parallel map writes; worker and account tests exercise shared transaction behavior. No live backend selection changes. Pin web-push 3.6.7 and independently decrypt its encrypted request payload with browser fixture keys."
     },
     {
       "paths": [
@@ -117,7 +118,8 @@
         "local-backend/platform.js",
         "local-backend/jobs.js",
         "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-jobs.js"
+        "tools/test-local-postgres-jobs.js",
+        "functions/notification-delivery.js"
       ],
       "tests": [
         "tools/test-local-postgres-game.js",
@@ -129,9 +131,13 @@
         "tools/test-local-postgres-worker-loop.js",
         "tools/test-local-postgres-translation.js",
         "tools/validate-google-chat-translation.js",
-        "functions/test/emulator-chat-translation.js"
+        "functions/test/emulator-chat-translation.js",
+        "tools/test-local-postgres-web-push.js",
+        "tools/validate-notification-system.js",
+        "functions/test/emulator-notification-delivery.js",
+        "functions/test/emulator-first-time-onboarding.js"
       ],
-      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events. Optional bounded local translation provider retains the default Firebase provider and shared chat authorization/cache/allowance logic; include source emulator translation checks and real PostgreSQL provider isolation tests."
+      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events. Optional bounded local translation provider retains the default Firebase provider and shared chat authorization/cache/allowance logic; include source emulator translation checks and real PostgreSQL provider isolation tests. Extract the unchanged incoming-army payload for both notification transports. Retain Firebase delivery by default; validate existing per-device receipts, active-session device cleanup and notification contracts with the original emulators."
     },
     {
       "paths": [
@@ -168,9 +174,12 @@
         "tools/validate-login-realm-sequence.js",
         "tools/validate-email-auth.js",
         "tools/test-shell-cache-assertions.js",
-        "functions/test/emulator-realm-scale-admission.js"
+        "functions/test/emulator-realm-scale-admission.js",
+        "tools/test-local-web-push-client.js",
+        "tools/validate-notification-system.js",
+        "functions/test/emulator-first-time-onboarding.js"
       ],
-      "reason": "Opt-in private browser transport; default Firebase initialization and live game URLs stay unchanged. Test real cookie/data protocol, transforms, typed timestamps, scoped cursors, transaction retries, listener aggregation and stopped/old-session responses. Isolate private update checks/PWA/storage and exclude no-store/private auth responses from caches. Existing login, realm admission, email and cache contract tests cover shared client dependencies; standard build/artifact checks cover the new static file. Desktop/landscape preview is a separate manual gate before production readiness. Exercise 30 simultaneous startup calls through a six-request client queue, cap pending requests, and reject queued/in-flight results on disposal so startup does not overwhelm the twelve-request server admission limit."
+      "reason": "Opt-in private browser transport; default Firebase initialization and live game URLs stay unchanged. Test real cookie/data protocol, transforms, typed timestamps, scoped cursors, transaction retries, listener aggregation and stopped/old-session responses. Isolate private update checks/PWA/storage and exclude no-store/private auth responses from caches. Existing login, realm admission, email and cache contract tests cover shared client dependencies; standard build/artifact checks cover the new static file. Desktop/landscape preview is a separate manual gate before production readiness. Exercise 30 simultaneous startup calls through a six-request client queue, cap pending requests, and reject queued/in-flight results on disposal so startup does not overwhelm the twelve-request server admission limit. Explicit private-only Web Push module uses an expiring native subscription key and worker under the private path. Test permission, registration scope, matching key, unsubscribe, expiry, foreground isolation and cold-click target preservation; public Firebase/PWA remain default."
     },
     {
       "paths": [
@@ -338,6 +347,33 @@
         "functions/test/emulator-chat-translation.js"
       ],
       "reason": "Prepare owner-only local Google Translation using a dedicated credential and at most 1,000 characters reserved atomically from the live project allowance only after explicit approval. Real PostgreSQL tests cover concurrent source/local reservations, idempotent receipts, Unicode, no refund/reset, cache/access rechecks, fixed JWT/provider endpoints and scope, stop/expiry during waits, default disabled integrations, and credential/installer rollback fixtures. Existing Firebase translation emulator covers unchanged source visibility/cache/monthly rules through the shared entry point. No new UI, actual Google request, cloud access grant or live ledger write is performed by validation. Reproduce systemd root-owned 0440 ACL credential delivery and accept it only in the exact root-owned read-only service directory; reject arbitrary shared files, writable/non-root directories, changed ownership, symlink resolution, oversize and wrong-service paths."
+    },
+    {
+      "paths": [
+        "local-backend/web-push.js",
+        "local-backend/web-push-loop.js",
+        "local-backend/web-push-rehearsal.js",
+        "local-web-push.js",
+        "local-push-worker.js",
+        "tools/local-migration/prepare_push_preview.js",
+        "tools/local-migration/install_push_preview.py",
+        "tools/local-migration/test_push_preview.py",
+        "tools/local-migration/crownlands-push-rehearsal.service",
+        "tools/test-local-postgres-web-push.js",
+        "tools/test-local-web-push-client.js",
+        "tools/test-local-web-push-service.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-web-push.js",
+        "tools/test-local-web-push-client.js",
+        "tools/test-local-web-push-service.js",
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/validate-notification-system.js",
+        "functions/test/emulator-notification-delivery.js",
+        "functions/test/emulator-first-time-onboarding.js"
+      ],
+      "reason": "Optional owner-only native browser notification preview. Real PostgreSQL tests exercise encrypted payload decryption, known browser-provider endpoints, scope/key validation, new-only outbox filtering, copied FCM token isolation, durable five-attempt cap, partial per-device receipt retries/restarts, gone subscriptions and transport shutdown. Browser fixtures cover exact private worker scope, permission/key/expiry handling, safe foreground and notification clicks including cold-start targets, and no public fetch/cache interception. Service fixtures verify systemd credential ACL restrictions, role scope, program permissions, changed-client refusal and restoration. Existing server emulators retain delivery receipts and device-takeover cleanup. No real provider request, browser permission grant, protected installation or production publication occurs in tests; these remain operator acceptance gates."
     }
   ]
 }

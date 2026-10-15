@@ -253,9 +253,10 @@
         return () => watchers.delete(watcher);
       },
     };
+    const messaging = root.CrownlandsLocalPush?.create() || { isSupported: async () => false };
     return { app: { initializeApp: () => ({}) }, auth, firestore, functions: { getFunctions: () => ({}), httpsCallable: (_functions, name) => async data => ({ data: await post("call/" + name, { data }) }) },
-      appCheck: {}, messaging: { isSupported: async () => false },
-      dispose: () => { disposed = true; revision++; root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+      appCheck: {}, messaging,
+      dispose: () => { disposed = true; revision++; messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
         for (const request of pendingRequests.splice(0)) request.reject(); } };
   }
   root.CrownlandsLocalBackend = { create };

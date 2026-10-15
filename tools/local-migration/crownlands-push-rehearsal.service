@@ -1,0 +1,40 @@
+[Unit]
+Description=Crownlands expiring owner-only browser notification test
+After=network-online.target postgresql.service crownlands-game-rehearsal.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+User=crownlands-push-rehearsal
+Group=crownlands-push-rehearsal
+WorkingDirectory=/usr/local/lib/crownlands-push-rehearsal/app
+ExecStart=/usr/local/lib/crownlands-push-rehearsal/node --max-old-space-size=128 /usr/local/lib/crownlands-push-rehearsal/app/local-backend/web-push-rehearsal.js
+LoadCredential=config:/etc/crownlands-push-rehearsal/config.json
+LoadCredential=vapid:/etc/crownlands-push-rehearsal/vapid.json
+StateDirectory=crownlands-push-rehearsal
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=256M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target
