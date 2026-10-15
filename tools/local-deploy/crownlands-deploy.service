@@ -1,0 +1,29 @@
+[Unit]
+Description=Publish verified Crownlands main-branch game packages
+Wants=network-online.target
+After=network-online.target caddy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/crownlands-deploy/publisher.py
+TimeoutStartSec=8min
+StateDirectory=crownlands-deploy
+UMask=0022
+Environment=PYTHONDONTWRITEBYTECODE=1
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/srv/crownlands /var/lib/crownlands-deploy
+ReadOnlyPaths=/srv/crownlands/support
+

@@ -55,6 +55,7 @@
 - Check the complete difference from `origin/main` for unrelated deletions, reversions, or out-of-scope changes.
 - Never expose, commit, or print secrets, tokens, credentials, or private production data.
 - Do not change production data, deploy, merge a pull request, or publish a release without explicit user authorization.
+- The owner has authorized the configured automatic local game publisher to publish compatible static game packages after validated merges to main. That authorization does not cover automatic Firebase deployments, backend/data migrations, or changes to the installed root-owned publisher. Check its live build identity and status before claiming deployment; backend changes are held until separately migrated and validated. See docs/AUTOMATIC_LOCAL_DEPLOYMENT.md.
 
 ## Validation and pull requests
 

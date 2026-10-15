@@ -1,14 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2ce492c5cab315ba308cd55cee4e688709eaf612",
+  "baseCommit": "6d64db547199dfe51754ac55eca3f5bc35c1d733",
   "coverage": [
     {
       "paths": [
+        "AGENTS.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/REWARD_WINDOWS_RELEASE_2026-10-14.md"
+        "docs/SAFE_UPDATE_WORKFLOW.md",
+        ".github/workflows/crownlands-local-publish.yml",
+        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md",
+        "tools/check-local-deploy-merge.js",
+        "tools/local-deploy/crownlands-deploy.service",
+        "tools/local-deploy/crownlands-deploy.timer",
+        "tools/local-deploy/install.sh",
+        "tools/local-deploy/pack.py",
+        "tools/local-deploy/publisher.py",
+        "tools/local-deploy/tests.py",
+        "tools/test-local-deployment.js"
       ],
-      "tests": [],
-      "reason": "Documentation only: record the authorized and verified PR 573 web publication and superseded PR 570, exact release identity, passed staged/public window and file checks, and remaining manual limits. Cross-checked against deployment receipts and GitHub results. No runtime, rules, backend or build inputs change; no additional runtime or emulator suite applies."
+      "tests": [
+        "tools/test-local-deployment.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Verify merged-PR gating, signed static package authorization, extraction integrity, backend compatibility holds, atomic local activation and rollback; preserve existing workflow safeguards and validate the production build consumed by the publisher."
     }
   ]
 }

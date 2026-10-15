@@ -39,6 +39,16 @@ This document records confirmed rules, verified deployment status, unresolved co
 4. LIVE status requires a verified deployment to the named channel. When risk warrants it, production smoke-test evidence is also required.
 5. A feature present on web but absent from the published itch.io build must be recorded as `LIVE — WEB`, not `LIVE — ALL PUBLISHED CHANNELS`.
 
+### Confirmed local publication direction — October 15, 2026
+
+The owner requested automatic publication of validated GitHub main-branch merges
+to the Crownlands computer. The target is local hosting of the whole game,
+retaining external Google Cloud uptime monitoring. During migration the local
+publisher may automatically activate compatible static game packages, while
+holding changes that require an uninstalled backend. This decision authorizes
+the publication workflow; it is not evidence that the backend migration or the
+publisher installation is complete. See [the publication runbook](AUTOMATIC_LOCAL_DEPLOYMENT.md).
+
 ### Confirmed installed-game launch behavior — September 20, 2026
 
 - Opening an installed Crownlands app must lead to the game at `/play/`, never leave the player on the public homepage. Existing homepage shortcuts need a standalone/iOS launch redirect; ordinary browser visits to `/` retain the homepage.
