@@ -15,7 +15,8 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
   const owner = { localId: "fixture-browser", email: "browser@example.test", emailVerified: true, providerUserInfo: [{ providerId: "google.com", rawId: "fixture-browser-google" }] };
   const scope = { resetGeneration: "realm-2026-10", worldId: "main-realm-2026-10", realmShardId: "shard_0001" };
   const island = scope.worldId + "--" + scope.realmShardId + "--fixture";
-  let server, client, signed, nextId = 0, reads = 0, pauseWatch, resumeWatch, logOut = false, writeConflict = false;
+  let server, client, signed, nextId = 0, reads = 0, pauseWatch, resumeWatch, logOut = false, writeConflict = false, activeRequests = 0, peakRequests = 0, holdCalls = false;
+  const releaseCalls = [];
   const timers = new Map(), intervals = new Map();
   try {
     await store.initialize(); await auth.initialize();
@@ -39,6 +40,8 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
         if (url.endsWith("/write") && writeConflict) {
           writeConflict = false; await store.doc("players/" + owner.localId).update({ marchPercent: 40 });
         }
+        activeRequests++; peakRequests = Math.max(peakRequests, activeRequests);
+        if (holdCalls) await new Promise(resolve => releaseCalls.push(resolve));
         return new Promise((resolve, reject) => {
           const request = http.request({ hostname: "127.0.0.1", port: server.address().port, path: url, method: options.method,
             headers: { ...options.headers, Host: "playcrownlands.com", Origin: auth.origin,
@@ -46,7 +49,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
             const chunks = []; response.on("data", chunk => chunks.push(chunk));
             response.on("end", () => resolve(new Response(Buffer.concat(chunks), { status: response.statusCode, headers: response.headers })));
           }); request.on("error", reject); request.end(options.body);
-        });
+        }).finally(() => { activeRequests--; });
       },
     };
     new Function("window", fs.readFileSync(path.join(__dirname, "../local-client.js"), "utf8"))(root);
@@ -68,6 +71,10 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     await assert.rejects(f.getDocs(f.query(f.collectionGroup(db, "cities"), ...scopeFilters)), { code: "permission-denied" });
     await assert.rejects(f.getDocs(f.collection(db, "players", "someone-else", "estate")), { code: "permission-denied" });
     const echo = await client.functions.httpsCallable({}, "fixtureEcho")({ value: 42 }); assert.equal(echo.data.value, 42); assert.equal(echo.data.uid, owner.localId);
+    peakRequests = 0;
+    const burst = await Promise.all(Array.from({ length: 30 }, (_, value) => client.functions.httpsCallable({}, "fixtureEcho")({ value })));
+    assert.deepEqual(burst.map(result => result.data.value), Array.from({ length: 30 }, (_, value) => value));
+    assert.equal(peakRequests, 6, "Startup bursts must queue below the server admission limit");
     let attempts = 0; writeConflict = true;
     await f.runTransaction(db, async tx => { attempts++; const before = await tx.get(profile); tx.update(profile, { marchPercent: before.get("marchPercent") + 1 }); });
     assert.equal(attempts, 2); assert.equal((await f.getDoc(profile)).get("marchPercent"), 41);
@@ -92,6 +99,15 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     const pending = tick(); await started;
     logOut = true; await client.auth.reload(); resumeWatch(); await pending;
     assert.equal(timers.size, 0);
+    logOut = false; await client.auth.reload(); holdCalls = true;
+    const held = Array.from({ length: 140 }, () => client.functions.httpsCallable({}, "fixtureEcho")({ value: 1 })
+      .then(() => "unexpected-success", error => error.code));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(releaseCalls.length, 6);
+    client.dispose(); for (const release of releaseCalls) release();
+    const rejected = await Promise.all(held);
+    assert.equal(rejected.filter(code => code === "functions/resource-exhausted").length, 6, "Pending work is bounded to 128 plus six in flight");
+    assert.equal(rejected.filter(code => code === "functions/unauthenticated").length, 134, "Disposal rejects queued and in-flight old-session results");
     console.log("Local browser client: real PostgreSQL cookie API, permission boundaries, nanosecond timestamps, nested transforms, scoped queries/cursors, retrying transactions, batched independent listeners, visibility backoff and stale-session response rejection passed.");
   } finally {
     client?.dispose(); if (resumeWatch) resumeWatch();

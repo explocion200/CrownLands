@@ -3,7 +3,8 @@
   function create() {
     if (root.location.origin !== "https://playcrownlands.com" || !root.location.pathname.startsWith("/api/local-game/rehearsal/")) throw Error("The local client is limited to the private rehearsal.");
     const authState = { currentUser: null }, observers = new Set(), watchers = new Set();
-    const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false;
+    const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0;
+    const pendingRequests = [];
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
     async function session(notify = true) {
       if (refreshing) return refreshing;
@@ -22,6 +23,28 @@
       return refreshing;
     }
     async function post(path, input, authentication = false) {
+      if (authentication) return performPost(path, input, true);
+      if (!csrf) await session();
+      const requestedRevision = revision;
+      const unavailable = () => makeError(path.startsWith("call/") ? "functions/unauthenticated" : "unauthenticated", "The account session changed.");
+      if (disposed) throw unavailable();
+      if (pendingRequests.length >= 128) throw makeError(path.startsWith("call/") ? "functions/resource-exhausted" : "resource-exhausted", "Too many pending game requests.");
+      // Login starts many independent listeners/callables. Bound each tab to
+      // six in-flight game requests so the server's admission limit is useful
+      // protection rather than a source of normal startup failures.
+      await new Promise((resolve, reject) => {
+        if (activeRequests < 6) { activeRequests++; resolve(); }
+        else pendingRequests.push({ resolve, reject: () => reject(unavailable()) });
+      });
+      try {
+        if (disposed || requestedRevision !== revision) throw unavailable();
+        return await performPost(path, input, false);
+      } finally {
+        const next = pendingRequests.shift();
+        if (next) next.resolve(); else activeRequests--;
+      }
+    }
+    async function performPost(path, input, authentication) {
       const normalizeCode = code => !authentication && !path.startsWith("call/") ? code.replace(/^functions\//, "") : code;
       if (!csrf) await session();
       const started = revision;
@@ -232,7 +255,8 @@
     };
     return { app: { initializeApp: () => ({}) }, auth, firestore, functions: { getFunctions: () => ({}), httpsCallable: (_functions, name) => async data => ({ data: await post("call/" + name, { data }) }) },
       appCheck: {}, messaging: { isSupported: async () => false },
-      dispose: () => { disposed = true; revision++; root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear(); } };
+      dispose: () => { disposed = true; revision++; root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+        for (const request of pendingRequests.splice(0)) request.reject(); } };
   }
   root.CrownlandsLocalBackend = { create };
 })(typeof window !== "undefined" ? window : globalThis);

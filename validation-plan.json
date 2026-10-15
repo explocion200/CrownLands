@@ -163,7 +163,7 @@
         "tools/test-shell-cache-assertions.js",
         "functions/test/emulator-realm-scale-admission.js"
       ],
-      "reason": "Opt-in private browser transport; default Firebase initialization and live game URLs stay unchanged. Test real cookie/data protocol, transforms, typed timestamps, scoped cursors, transaction retries, listener aggregation and stopped/old-session responses. Isolate private update checks/PWA/storage and exclude no-store/private auth responses from caches. Existing login, realm admission, email and cache contract tests cover shared client dependencies; standard build/artifact checks cover the new static file. Desktop/landscape preview is a separate manual gate before production readiness."
+      "reason": "Opt-in private browser transport; default Firebase initialization and live game URLs stay unchanged. Test real cookie/data protocol, transforms, typed timestamps, scoped cursors, transaction retries, listener aggregation and stopped/old-session responses. Isolate private update checks/PWA/storage and exclude no-store/private auth responses from caches. Existing login, realm admission, email and cache contract tests cover shared client dependencies; standard build/artifact checks cover the new static file. Desktop/landscape preview is a separate manual gate before production readiness. Exercise 30 simultaneous startup calls through a six-request client queue, cap pending requests, and reject queued/in-flight results on disposal so startup does not overwhelm the twelve-request server admission limit."
     },
     {
       "paths": [
@@ -183,7 +183,7 @@
         "tools/test-local-postgres-game-http.js",
         "tools/test-local-browser-client.js"
       ],
-      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes."
+      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes. Subsequent preview repairs also verify the previous installed repair receipt and the browser adapter hash."
     },
     {
       "paths": [

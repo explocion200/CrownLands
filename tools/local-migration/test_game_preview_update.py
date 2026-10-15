@@ -46,8 +46,7 @@ class RepairTests(unittest.TestCase):
 
     def test_scoped_route_and_install(self):
         self.assertEqual(repair.repair_caddy(self.before).count('max_size 16KB'), 2)
-        with self.assertRaises(RuntimeError):
-            repair.repair_caddy(repair.repair_caddy(self.before))
+        self.assertEqual(repair.repair_caddy(repair.repair_caddy(self.before)), repair.repair_caddy(self.before))
         with patch.object(repair, 'run', return_value=''), contextlib.redirect_stdout(io.StringIO()):
             repair.install(self.bundle)
         self.assertEqual((self.app / repair.FILES[0]).read_bytes(), b'new fixture')

@@ -14,7 +14,7 @@ CONF = Path('/etc/crownlands-game-rehearsal')
 CADDY = Path('/etc/caddy/Caddyfile')
 BACKUPS = Path('/var/backups/crownlands')
 UNIT = 'crownlands-game-rehearsal.service'
-FILES = ('local-backend/game-http.js', 'local-backend/game-rehearsal-server.js')
+FILES = ('local-backend/game-http.js', 'local-backend/game-rehearsal-server.js', 'client/local-client.js')
 
 
 def digest(data):
@@ -32,12 +32,14 @@ def repair_caddy(source):
     start = source.index('\t\thandle /api/local-game/* {')
     end = source.index('\t\thandle /local-auth/* {', start)
     block = source[start:end]
+    if block.count('max_size 2097152') == 1 and 'max_size 256KB' not in block:
+        return source
     if block.count('max_size 256KB') != 1:
         raise RuntimeError('Existing preview body limit requires review')
     return source[:start] + block.replace('max_size 256KB', 'max_size 2097152') + source[end:]
 
 
-def prepare(original, bundle):
+def prepare(original, bundle, previous_repair=None):
     repo = Path(__file__).resolve().parents[2]
     if not bundle.is_absolute() or bundle.exists():
         raise RuntimeError('A new absolute private output path is required')
@@ -45,16 +47,20 @@ def prepare(original, bundle):
         raise RuntimeError('Commit and validate the repair first')
     old = (original / 'manifest.json').read_bytes()
     prior = json.loads(old)
+    repair_bytes = (previous_repair / 'manifest.json').read_bytes() if previous_repair else None
+    previous = json.loads(repair_bytes) if repair_bytes else None
     before = CADDY.read_bytes()
     manifest = {'commit': run(['git', '-C', str(repo), 'rev-parse', 'HEAD']),
-                'previousCommit': prior['commit'], 'installedManifestHash': digest(old),
+                'previousCommit': previous['commit'] if previous else prior['commit'], 'installedManifestHash': digest(old),
+                'previousRepairHash': digest(repair_bytes) if repair_bytes else None,
                 'caddyBeforeHash': digest(before), 'files': {}}
     bundle.mkdir(mode=0o700)
     for filename in FILES:
         current = (APP / filename).read_bytes()
-        if current != (original / 'app' / filename).read_bytes():
+        expected = previous['files'][filename]['after'] if previous and filename in previous['files'] else digest((original / 'app' / filename).read_bytes())
+        if digest(current) != expected:
             raise RuntimeError('Installed runtime changed; preserved for review')
-        data = (repo / filename).read_bytes()
+        data = (repo / ('local-client.js' if filename == 'client/local-client.js' else filename)).read_bytes()
         target = bundle / filename
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         target.write_bytes(data)
@@ -65,7 +71,7 @@ def prepare(original, bundle):
     manifest['caddyAfterHash'] = digest(caddy)
     (bundle / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     shutil.copyfile(__file__, bundle / 'update.py')
-    print('Private preview repair prepared. It changes only the save-request limit and redacted diagnostics.')
+    print('Private preview repair prepared. Only the reviewed preview runtime, browser adapter and private request limit can change.')
 
 
 def install(bundle):
@@ -76,6 +82,9 @@ def install(bundle):
         raise RuntimeError('Unexpected runtime repair files')
     if digest((CONF / 'manifest.json').read_bytes()) != manifest['installedManifestHash']:
         raise RuntimeError('Installed preview identity changed')
+    receipt = CONF / 'repair.json'
+    if (digest(receipt.read_bytes()) if receipt.exists() else None) != manifest.get('previousRepairHash'):
+        raise RuntimeError('Installed preview repair changed')
     before = CADDY.read_bytes()
     if digest(before) != manifest['caddyBeforeHash']:
         raise RuntimeError('Caddy changed; preserved for review')
@@ -122,7 +131,6 @@ def install(bundle):
         subprocess.run(['systemctl', 'restart', UNIT], capture_output=True)
         subprocess.run(['systemctl', 'reload', 'caddy'], capture_output=True)
         raise
-    receipt = CONF / 'repair.json'
     receipt.write_text(json.dumps(manifest, indent=2))
     receipt.chmod(0o600)
     print('Private preview repair installed and HTTPS health verified. Live Firebase routing is unchanged.')
@@ -131,12 +139,12 @@ def install(bundle):
 
 if __name__ == '__main__':
     try:
-        if len(sys.argv) == 4 and sys.argv[1] == 'prepare':
-            prepare(Path(sys.argv[2]).resolve(), Path(sys.argv[3]))
+        if len(sys.argv) in [4, 5] and sys.argv[1] == 'prepare':
+            prepare(Path(sys.argv[2]).resolve(), Path(sys.argv[3]), Path(sys.argv[4]).resolve() if len(sys.argv) == 5 else None)
         elif len(sys.argv) == 3 and sys.argv[1] == 'install':
             install(Path(sys.argv[2]).resolve())
         else:
-            raise RuntimeError('Use prepare ORIGINAL_BUNDLE NEW_BUNDLE or install BUNDLE')
+            raise RuntimeError('Use prepare ORIGINAL_BUNDLE NEW_BUNDLE [PREVIOUS_REPAIR] or install BUNDLE')
     except Exception as error:
         print('Private preview repair stopped: ' + str(error), file=sys.stderr)
         sys.exit(1)
