@@ -126,9 +126,12 @@
         "functions/test/emulator-season-rewards.js",
         "functions/test/emulator-core-expansion-state.js",
         "functions/test/emulator-email-auth.js",
-        "tools/test-local-postgres-worker-loop.js"
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-translation.js",
+        "tools/validate-google-chat-translation.js",
+        "functions/test/emulator-chat-translation.js"
       ],
-      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events."
+      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events. Optional bounded local translation provider retains the default Firebase provider and shared chat authorization/cache/allowance logic; include source emulator translation checks and real PostgreSQL provider isolation tests."
     },
     {
       "paths": [
@@ -185,9 +188,10 @@
         "tools/test-local-postgres-game-preview.js",
         "tools/test-local-postgres-game.js",
         "tools/test-local-postgres-game-http.js",
-        "tools/test-local-browser-client.js"
+        "tools/test-local-browser-client.js",
+        "tools/test-local-postgres-translation.js"
       ],
-      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes. Subsequent preview repairs also verify the previous installed repair receipt and the browser adapter hash. Extend the same checksum/rollback guarded private repair to the installed palette; verify all prepared files install and roll back, retaining live routes and data."
+      "reason": "Fresh exact private game copy, source-preserving ingress adaptation, HMAC-only integration, explicit owner/expiry/LAN boundary, least-privilege service preparation, private static serving and independent browser storage. Test real schema copy/overwrite refusal, source integrity, secret restrictions, route guards, static traversal/symlink rejection and cache isolation. Installer hashes/config guards and Caddy/systemd syntax are reviewed separately; administrator installation and real copied-city gameplay remain explicit acceptance checks. No workers or external side-effect integrations activated. Test the scoped request-limit repair, installed-file/config checksum refusal, unexpected-route rejection and rollback after a failed proxy reload; preserve all data and live routes. Subsequent preview repairs also verify the previous installed repair receipt and the browser adapter hash. Extend the same checksum/rollback guarded private repair to the installed palette; verify all prepared files install and roll back, retaining live routes and data. Explicit translation startup validates the prepared owner/schema/expiry and durable allowance; default private startup remains disconnected, with stop on shutdown."
     },
     {
       "paths": [
@@ -316,6 +320,24 @@
         "functions/test/emulator-crown-payments.js"
       ],
       "reason": "Prepare an explicitly invoked test-key-only provider rehearsal in a fresh disposable payment schema for the existing approved tester/pack. Real PostgreSQL and synthetic Stripe SDK/HTTP tests exercise distinct metadata purpose/marker isolation, actual signatures, wrong mode/account/provider evidence, duplicate credit, unchanged playable profile, owner restriction, stop/expiry including delayed provider reads, scoped Checkout cleanup, private operator-file permissions and secret-preserving CLI startup checks. Existing native payment tests cover request limits/late commits; existing test payment unit/emulator suites preserve the shared business contract. Actual sandbox Checkout and automatic provider delivery are operator acceptance checks after committing and validating; no production endpoint/key/wallet is activated."
+    },
+    {
+      "paths": [
+        "local-backend/chat-translation-rehearsal.js",
+        "tools/local-migration/translation_allowance.js",
+        "tools/local-migration/reserve_translation_allowance.js",
+        "tools/local-migration/update_translation_preview.py",
+        "tools/local-migration/test_translation_preview.py",
+        "tools/test-local-postgres-translation.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-translation.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-game-preview.js",
+        "tools/validate-google-chat-translation.js",
+        "functions/test/emulator-chat-translation.js"
+      ],
+      "reason": "Prepare owner-only local Google Translation using a dedicated credential and at most 1,000 characters reserved atomically from the live project allowance only after explicit approval. Real PostgreSQL tests cover concurrent source/local reservations, idempotent receipts, Unicode, no refund/reset, cache/access rechecks, fixed JWT/provider endpoints and scope, stop/expiry during waits, default disabled integrations, and credential/installer rollback fixtures. Existing Firebase translation emulator covers unchanged source visibility/cache/monthly rules through the shared entry point. No new UI, actual Google request, cloud access grant or live ledger write is performed by validation."
     }
   ]
 }

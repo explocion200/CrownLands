@@ -1,5 +1,5 @@
 const { onCall: firebaseOnCall, onRequest, HttpsError, onSchedule, onDocumentCreated, onDocumentWritten,
-  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret } = require("./platform");
+  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret, chatTranslationProvider } = require("./platform");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
@@ -20646,7 +20646,7 @@ const translateChatMessages = CHAT_TRANSLATION.createService({
   db,
   authorize: authorizeChatTranslation,
   fail: (code, message, details) => new HttpsError(code, message, details),
-  provider: CHAT_TRANSLATION.createGoogleProvider({
+  provider: chatTranslationProvider || CHAT_TRANSLATION.createGoogleProvider({
     projectId: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT,
     credential: getApp().options.credential,
     emulator: process.env.FUNCTIONS_EMULATOR === "true",
