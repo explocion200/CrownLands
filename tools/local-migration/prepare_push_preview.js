@@ -17,7 +17,7 @@ async function prepare(gameBundle, translationBundle, bundle) {
   const bytes = fs.readFileSync(file), game = JSON.parse(bytes);
   if (game.origin !== "https://playcrownlands.com" || Date.parse(game.expiresAt) < Date.now() + 3600000) throw Error("Current private game required");
   const translation = JSON.parse(fs.readFileSync(path.join(translationBundle, "manifest.json"))), progress = JSON.parse(fs.readFileSync(path.join(translationBundle, "activation-progress.json")));
-  if (progress.installed !== true || progress.browserVerified !== true || progress.commit !== translation.commit
+  if (progress.installed !== true || progress.browserVerified?.translatedIntoEnglish !== true || progress.commit !== translation.commit
     || ["schema", "ownerUid", "expiresAt"].some(key => translation.scope[key] !== game[key])) throw Error("Verified installed private translation required");
   const keys = require("../../local-backend/node_modules/web-push").generateVAPIDKeys();
   const scope = validateScope({ schema: game.schema, ownerUid: game.ownerUid, notBefore: Date.now(), expiresAt: game.expiresAt,

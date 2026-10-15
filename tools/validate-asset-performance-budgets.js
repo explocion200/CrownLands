@@ -285,7 +285,9 @@ const entrypointBudgets = {
   "assets/map-editor-data.js": 400 * 1024,
   // Owner-scoped Guild report retrieval adds one callable wrapper.
   // NPC map subscription and readiness callable add 376 bytes over the prior cap.
-  "firebaseClient.js": 163 * 1024,
+  // Private Web Push selection adds 255 bytes; its implementation stays lazy.
+  // Bound the entry at 164 KiB; the total installation-cache cap stays unchanged.
+  "firebaseClient.js": 164 * 1024,
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,

@@ -1,4 +1,5 @@
 (function () {
+  const LOCAL = window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal";
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
@@ -422,7 +423,7 @@
   }
 
   async function loadModules() {
-    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") {
+    if (LOCAL) {
       await import("/api/local-game/rehearsal/local-web-push.js");
       await import("/api/local-game/rehearsal/local-client.js");
       return window.CrownlandsLocalBackend.create();
@@ -1651,7 +1652,7 @@
   }
 
   function getNotificationVapidKey() {
-    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") return window.CrownlandsLocalPush?.configuration()?.publicKey || "";
+    if (LOCAL) return window.CrownlandsLocalPush?.configuration()?.publicKey || "";
     const configKey = window.CROWNLANDS_FIREBASE_CONFIG?.vapidKey || window.CROWNLANDS_FIREBASE_VAPID_KEY || "";
     return String(configKey || "").trim();
   }
@@ -1667,7 +1668,7 @@
 
   function isPushSupported() {
     return Boolean(
-      (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal" || hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG))
+      (LOCAL || hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG))
       && getNotificationVapidKey()
       && hasPushEnvironmentSupport()
     );
@@ -1738,7 +1739,7 @@
   }
 
   async function getServiceWorkerRegistration() {
-    if (window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal") return client.modules.messaging.getServiceWorkerRegistration();
+    if (LOCAL) return client.modules.messaging.getServiceWorkerRegistration();
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
     const workerUrl = new URL("./service-worker.js", document.baseURI);

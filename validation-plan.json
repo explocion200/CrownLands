@@ -374,6 +374,16 @@
         "functions/test/emulator-first-time-onboarding.js"
       ],
       "reason": "Optional owner-only native browser notification preview. Real PostgreSQL tests exercise encrypted payload decryption, known browser-provider endpoints, scope/key validation, new-only outbox filtering, copied FCM token isolation, durable five-attempt cap, partial per-device receipt retries/restarts, gone subscriptions and transport shutdown. Browser fixtures cover exact private worker scope, permission/key/expiry handling, safe foreground and notification clicks including cold-start targets, and no public fetch/cache interception. Service fixtures verify systemd credential ACL restrictions, role scope, program permissions, changed-client refusal and restoration. Existing server emulators retain delivery receipts and device-takeover cleanup. No real provider request, browser permission grant, protected installation or production publication occurs in tests; these remain operator acceptance gates."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Measured private notification selection adds 255 bytes to firebaseClient.js after deduplicating its private-mode checks. Raise only that single-file source allowance by one KiB. Preserve the aggregate installation-cache budget, lazy notification implementation, art/network limits and production artifact validation; do not remove cached dependencies."
     }
   ]
 }
