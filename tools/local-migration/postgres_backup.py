@@ -16,7 +16,16 @@ SOCKET = "/var/run/postgresql"
 CONFIGS = [Path("/etc/crownlands-auth-rehearsal/config.json"), Path("/etc/crownlands-game-rehearsal/config.json")]
 
 
+PERMANENT = ["crownlands_control", "migration_auth_live", "migration_game_live"]
+CONTROL = Path("/etc/crownlands-runtime/activation.json")
+
+
 def validate_schemas(schemas):
+    if isinstance(schemas, list) and len(schemas) == len(set(schemas)) and set(PERMANENT).issubset(schemas):
+        preview = [name for name in schemas if name not in PERMANENT]
+        if preview:
+            validate_schemas(preview)
+        return sorted(schemas)
     if not isinstance(schemas, list) or len(schemas) != 2 or len(set(schemas)) != 2:
         raise ValueError("Exactly one private account and game schema are required")
     if sorted(re.sub(r"[a-f0-9]{12}$", "", name) for name in schemas) != ["migration_auth_preview_", "migration_game_preview_"]:
@@ -157,12 +166,25 @@ def verify_archive(destination):
     return manifest
 
 
+def installed_files():
+    # Keep the verified preview in backups during transition, plus the permanent
+    # schemas and write-fence receipts as soon as they are installed.
+    return [*CONFIGS, *([CONTROL] if CONTROL.exists() else [])]
+
+
 def installed_schemas():
-    original = [file.read_bytes() for file in CONFIGS]
-    auth, game = [json.loads(value) for value in original]
+    files = installed_files()
+    original = [file.read_bytes() for file in files]
+    auth, game = [json.loads(value) for value in original[:2]]
     if game["authSchema"] != auth["schema"]:
         raise RuntimeError("Installed account and game targets disagree")
-    return validate_schemas([auth["schema"], game["schema"]]), original
+    schemas = [auth["schema"], game["schema"]]
+    if CONTROL in files:
+        control = json.loads(original[-1])
+        if control.get("phase") not in ["standby", "active", "maintenance"] or control.get("version") != 1:
+            raise RuntimeError("Invalid permanent backup authority")
+        schemas += PERMANENT
+    return validate_schemas(schemas), original
 
 
 def main(destination):
@@ -170,7 +192,7 @@ def main(destination):
         raise RuntimeError("The scheduled database backup requires the protected backup service")
     schemas, original = installed_schemas()
     capture(destination, schemas, prefix=["runuser", "-u", "postgres", "--"])
-    if original != [file.read_bytes() for file in CONFIGS]:
+    if original != [file.read_bytes() for file in installed_files()]:
         raise RuntimeError("Installed database configuration changed during backup")
     print("Consistent private account/game database snapshot prepared and fingerprinted.")
 

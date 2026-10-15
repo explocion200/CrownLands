@@ -11,9 +11,11 @@ function privateWorkerRoutes(routes) {
 }
 
 class WorkerLoop {
-  constructor({ queue, expiresAt, now = Date.now }) {
-    const expiry = Date.parse(expiresAt);
-    if (!(queue instanceof JobQueue) || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000) throw Error("An expiring private worker is required");
+  constructor({ queue, expiresAt, deployment, now = Date.now }) {
+    const permanent = require("./deployment-policy").isPolicy(deployment, queue?.schema);
+    const expiry = permanent ? Infinity : Date.parse(expiresAt);
+    if (!(queue instanceof JobQueue) || (deployment && !permanent) || (!permanent && (!Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000))) throw Error("An expiring private worker is required");
+    this.deployment = deployment;
     this.queue = queue; this.expiry = expiry; this.now = now;
     queue.stopAt = Math.min(queue.stopAt, expiry);
     this.pending = new Set(); this.stopped = false; this.ticking = false; this.timer = null;
@@ -24,6 +26,7 @@ class WorkerLoop {
     if (this.now() >= this.expiry) { this.stop(); return false; }
     this.ticking = true;
     try {
+      await this.deployment?.assertActive();
       await this.queue.dispatchChanges(200);
       await this.queue.enqueueSchedules(this.now());
       if (this.stopped || this.now() >= this.expiry) { this.stop(); return false; }
@@ -49,7 +52,7 @@ class WorkerLoop {
     const rows = (await this.queue.store.pool.query(`SELECT status,count(*) AS count FROM ${s}.work_jobs GROUP BY status`)).rows;
     const counts = { pending: 0, running: 0, complete: 0, dead: 0 };
     for (const row of rows) counts[row.status] = Number(row.count);
-    return { rehearsal: true, stopped: this.stopped, expiresAt: new Date(this.expiry).toISOString(),
+    return { rehearsal: !this.deployment, stopped: this.stopped, expiresAt: Number.isFinite(this.expiry) ? new Date(this.expiry).toISOString() : null,
       lastSuccessfulTick: this.lastSuccess ? new Date(this.lastSuccess).toISOString() : null,
       operationalFailures: this.failures, activeHandlers: this.queue.active, jobs: counts };
   }

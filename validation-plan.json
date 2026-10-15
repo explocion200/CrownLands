@@ -135,9 +135,11 @@
         "tools/test-local-postgres-web-push.js",
         "tools/validate-notification-system.js",
         "functions/test/emulator-notification-delivery.js",
-        "functions/test/emulator-first-time-onboarding.js"
+        "functions/test/emulator-first-time-onboarding.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events. Optional bounded local translation provider retains the default Firebase provider and shared chat authorization/cache/allowance logic; include source emulator translation checks and real PostgreSQL provider isolation tests. Extract the unchanged incoming-army payload for both notification transports. Retain Firebase delivery by default; validate existing per-device receipts, active-session device cleanup and notification contracts with the original emulators."
+      "reason": "Centralize existing SDK bindings without changing Firebase default references or game handlers. Register all 150 real exports in an explicitly isolated PostgreSQL runtime; no server/worker starts on import. Test current-realm initialization, actual PvP event deduplication, season closing/claims and unauthenticated/unverified/stale release rejection. Durable local jobs test atomic per-change dispatch despite out-of-order commits, immutable event snapshots, retry receipts, stale/late-worker write fencing, dead letters, bounded restart catch-up and New York DST. Existing Firebase emulator suites independently cover the shared entry point, season service, realm readiness and email authorization; external integrations remain disabled only in rehearsal. Retain concurrency slots for timed-out handlers until they actually settle, fence writes on shutdown/expiry, and run the bounded worker loop on synthetic PostgreSQL events. Optional bounded local translation provider retains the default Firebase provider and shared chat authorization/cache/allowance logic; include source emulator translation checks and real PostgreSQL provider isolation tests. Extract the unchanged incoming-army payload for both notification transports. Retain Firebase delivery by default; validate existing per-device receipts, active-session device cleanup and notification contracts with the original emulators. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -155,9 +157,11 @@
         "functions/test/emulator-profile-save-rules.js",
         "functions/test/emulator-player-flag-rules.js",
         "functions/test/emulator-army-listener-rules.js",
-        "functions/test/emulator-email-auth.js"
+        "functions/test/emulator-email-auth.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate. Reproduce a 600 KB imported save through the actual HTTP transport, retain the smaller callable budget, reject oversized writes, and prove operational diagnostics omit payloads and error messages."
+      "reason": "Owner-only local HTTP and application permissions: pin the deployed/repository rule policy and protected-field contracts; real PostgreSQL tests exercise authorized and denied reads/writes, atomic checks, typed-input abuse, optimistic conflicts, cookies, origin/CSRF, source-IP spoofing, bounded independent listeners, deadline fencing and stale-session rejection. Existing rule emulators independently check the source profile/economy/session, cosmetic flag, army-read and verified-email contracts. Full differential policy and workflow parity remain a production acceptance gate. Reproduce a 600 KB imported save through the actual HTTP transport, retain the smaller callable budget, reject oversized writes, and prove operational diagnostics omit payloads and error messages. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -221,9 +225,11 @@
       "tests": [
         "tools/test-local-postgres-worker-loop.js",
         "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-game.js"
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation. Allowlist static handler labels, operational error codes and aggregate outcome counters; prove private identifiers/messages, arbitrary codes and getters cannot enter worker diagnostics."
+      "reason": "Finite worker rehearsal only on an expiring migration_game_preview copy, with a consistent private dump before execution and a hard shutdown limit. Pin the actual 26-handler inventory, omit notification delivery, test bounded dispatch/concurrency, durable retries, expiry and shutdown write fencing, aggregate status and error redaction. No production role, public endpoint or external provider activation. Allowlist static handler labels, operational error codes and aggregate outcome counters; prove private identifiers/messages, arbitrary codes and getters cannot enter worker diagnostics. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -252,9 +258,11 @@
         "tools/test-local-postgres-backup.js"
       ],
       "tests": [
-        "tools/test-local-postgres-backup.js"
+        "tools/test-local-postgres-backup.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Add a consistent shared-snapshot PostgreSQL account/game archive to the existing encrypted host backup before restic runs. Test concurrent changes during snapshot export, every-row fingerprints, actual synthetic restore, identity-sequence preservation, archive corruption and target rejection, private file modes, source-list preservation, installer refusal of changed scripts and failed-restore retention. The root installer must restore the actual copied database as its restricted owner and compare every table before modifying the existing backup; an initial full sandboxed local/off-site run remains an operational acceptance check. Existing cloud destination, retention and backup-failure uptime alerts are preserved; no game balance, active-world or Firebase behavior changes. Verify scoped dependency exclusions with a real encrypted Restic backup/restore when installed: installed nested dependencies remain recoverable while development dependencies and credential exclusions remain omitted. Existing installer repair/rollback and shared-snapshot recovery coverage still applies."
+      "reason": "Add a consistent shared-snapshot PostgreSQL account/game archive to the existing encrypted host backup before restic runs. Test concurrent changes during snapshot export, every-row fingerprints, actual synthetic restore, identity-sequence preservation, archive corruption and target rejection, private file modes, source-list preservation, installer refusal of changed scripts and failed-restore retention. The root installer must restore the actual copied database as its restricted owner and compare every table before modifying the existing backup; an initial full sandboxed local/off-site run remains an operational acceptance check. Existing cloud destination, retention and backup-failure uptime alerts are preserved; no game balance, active-world or Firebase behavior changes. Verify scoped dependency exclusions with a real encrypted Restic backup/restore when installed: installed nested dependencies remain recoverable while development dependencies and credential exclusions remain omitted. Existing installer repair/rollback and shared-snapshot recovery coverage still applies. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -269,9 +277,11 @@
         "tools/test-local-auth-service.js",
         "tools/test-local-auth-http.js",
         "tools/test-local-auth-rehearsal.js",
-        "tools/test-local-postgres-mail-service.js"
+        "tools/test-local-postgres-mail-service.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Opt-in account-email dispatcher with an explicitly allowlisted Resend rehearsal transport; importing code starts no service or email. Real PostgreSQL and synthetic HTTP tests cover concurrent claims, provider acceptance before process failure, immutable idempotent retries, stale completion fencing, quota/network failures, expired/consumed/superseded/disabled-account actions, bounded attempts, token-payload cleanup, fixed provider errors and recipient/URL restrictions. Existing local auth action/session tests cover shared one-use reset and verification semantics. No real emails or provider credentials are used by tests; production Firebase behavior is unchanged. The controlled owner-email command refuses changed recipient/account count, expired previews and existing pending mail. Test the explicit LAN-only account-action opt-in, preserved blocked email-request/registration routes, default production action-page behavior, and source/config/privilege rollback after failed protected-service restart. Desktop and landscape action-page inspection is recorded separately; Ubuntu installation and an explicitly approved real email remain operational gates."
+      "reason": "Opt-in account-email dispatcher with an explicitly allowlisted Resend rehearsal transport; importing code starts no service or email. Real PostgreSQL and synthetic HTTP tests cover concurrent claims, provider acceptance before process failure, immutable idempotent retries, stale completion fencing, quota/network failures, expired/consumed/superseded/disabled-account actions, bounded attempts, token-payload cleanup, fixed provider errors and recipient/URL restrictions. Existing local auth action/session tests cover shared one-use reset and verification semantics. No real emails or provider credentials are used by tests; production Firebase behavior is unchanged. The controlled owner-email command refuses changed recipient/account count, expired previews and existing pending mail. Test the explicit LAN-only account-action opt-in, preserved blocked email-request/registration routes, default production action-page behavior, and source/config/privilege rollback after failed protected-service restart. Desktop and landscape action-page inspection is recorded separately; Ubuntu installation and an explicitly approved real email remain operational gates. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -284,9 +294,11 @@
         "tools/test-crown-payments.js",
         "functions/test/emulator-crown-live-payments.js",
         "functions/test/emulator-crown-payments.js",
-        "tools/test-local-postgres-payment-provider.js"
+        "tools/test-local-postgres-payment-provider.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior. An explicit lifecycle gate also rejects requests and late transaction commits after provider rehearsal shutdown."
+      "reason": "Prepare an uninstalled expiring native HTTP payment adapter for isolated PostgreSQL. Exercise raw SDK signatures, explicit live/test separation, wrong account/host/path and duplicate headers, bounded bodies/concurrency/deadlines, late-write fencing, real atomic wallet/order receipts, lost checkout responses, simultaneous/restarted delivery replay, provider failures, refund deduplication, overflow rollback and concurrent game credit. Providers, accounts and keys are synthetic; no listener persists or external checkout/webhook is activated. Existing payment contract and Firebase emulator suites independently preserve shared business behavior. An explicit lifecycle gate also rejects requests and late transaction commits after provider rehearsal shutdown. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -312,9 +324,11 @@
         "tools/test-local-postgres-mail-service.js",
         "tools/test-local-postgres-auth-mail.js",
         "tools/test-local-auth-service.js",
-        "tools/test-local-auth-rehearsal.js"
+        "tools/test-local-auth-rehearsal.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Prepare an expiring owner-allowlisted account-mail system service. Real PostgreSQL and synthetic provider tests cover empty queue/no send, password-free account projection, restart replay avoidance, single active send, abort on shutdown/expiry, stop after delayed database claims, durable retry recovery, private health counts/backlog failures and restricted-role refusal. Installer tests exercise exact configuration/recipient/expiry gates, minimal column grants, empty-queue startup/restart checks and removal of only newly installed service identities/files on failure. Preserve existing encrypted backup sources and add only this service; no message is queued, live route changed or real provider request made by tests. Actual administrator installation and restricted-runtime startup are separate acceptance checks; production email and external delivery alerts remain migration gates. Reproduce the actual private umask 077 at installation; prove the top-level runtime and nested folders become traversable while credential directories stay private."
+      "reason": "Prepare an expiring owner-allowlisted account-mail system service. Real PostgreSQL and synthetic provider tests cover empty queue/no send, password-free account projection, restart replay avoidance, single active send, abort on shutdown/expiry, stop after delayed database claims, durable retry recovery, private health counts/backlog failures and restricted-role refusal. Installer tests exercise exact configuration/recipient/expiry gates, minimal column grants, empty-queue startup/restart checks and removal of only newly installed service identities/files on failure. Preserve existing encrypted backup sources and add only this service; no message is queued, live route changed or real provider request made by tests. Actual administrator installation and restricted-runtime startup are separate acceptance checks; production email and external delivery alerts remain migration gates. Reproduce the actual private umask 077 at installation; prove the top-level runtime and nested folders become traversable while credential directories stay private. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -371,9 +385,11 @@
         "tools/test-local-postgres-worker-loop.js",
         "tools/validate-notification-system.js",
         "functions/test/emulator-notification-delivery.js",
-        "functions/test/emulator-first-time-onboarding.js"
+        "functions/test/emulator-first-time-onboarding.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js"
       ],
-      "reason": "Optional owner-only native browser notification preview. Real PostgreSQL tests exercise encrypted payload decryption, known browser-provider endpoints, scope/key validation, new-only outbox filtering, copied FCM token isolation, durable five-attempt cap, partial per-device receipt retries/restarts, gone subscriptions and transport shutdown. Browser fixtures cover exact private worker scope, permission/key/expiry handling, safe foreground and notification clicks including cold-start targets, and no public fetch/cache interception. Service fixtures verify systemd credential ACL restrictions, role scope, program permissions, changed-client refusal and restoration. Existing server emulators retain delivery receipts and device-takeover cleanup. No real provider request, browser permission grant, protected installation or production publication occurs in tests; these remain operator acceptance gates."
+      "reason": "Optional owner-only native browser notification preview. Real PostgreSQL tests exercise encrypted payload decryption, known browser-provider endpoints, scope/key validation, new-only outbox filtering, copied FCM token isolation, durable five-attempt cap, partial per-device receipt retries/restarts, gone subscriptions and transport shutdown. Browser fixtures cover exact private worker scope, permission/key/expiry handling, safe foreground and notification clicks including cold-start targets, and no public fetch/cache interception. Service fixtures verify systemd credential ACL restrictions, role scope, program permissions, changed-client refusal and restoration. Existing server emulators retain delivery receipts and device-takeover cleanup. No real provider request, browser permission grant, protected installation or production publication occurs in tests; these remain operator acceptance gates. Explicit permanent deployment capability now permits standby-prepared production services; test both existing expiring behavior and the new database authority fence. No default Firebase selection or live player routing changes."
     },
     {
       "paths": [
@@ -384,6 +400,35 @@
         "tools/validate-production-artifact.js"
       ],
       "reason": "Measured private notification selection adds 255 bytes to firebaseClient.js after deduplicating its private-mode checks. Raise only that single-file source allowance by one KiB. Preserve the aggregate installation-cache budget, lazy notification implementation, art/network limits and production artifact validation; do not remove cached dependencies."
+    },
+    {
+      "paths": [
+        "local-backend/deployment-policy.js",
+        "local-backend/operations-http.js",
+        "local-backend/payment-ingress.js",
+        "local-backend/permanent-platform.js",
+        "local-backend/permanent-push.js",
+        "local-backend/permanent-services.js",
+        "tools/local-migration/collect_operations.py",
+        "tools/local-migration/initialize_permanent_schema.js",
+        "tools/local-migration/install_permanent_services.py",
+        "tools/local-migration/prepare_permanent_services.js",
+        "tools/local-migration/test_permanent_operations.py",
+        "tools/test-local-payment-ingress.js",
+        "tools/test-local-postgres-permanent.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js",
+        "tools/test-local-postgres-backup.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-mail-service.js",
+        "tools/test-local-postgres-web-push.js",
+        "tools/test-local-postgres-payments.js",
+        "tools/test-local-postgres-payment-provider.js"
+      ],
+      "reason": "Permanent installation remains in standby; independent private PostgreSQL cluster boots all six roles, verifies empty targets, restricted grants, receipt-gated activation and concurrent authority write fencing. Signed ingress tests preserve bytes/mode/one authority, reject bad requests, propagate retryable failures and retain failed-event hashes across restart; sanitized health rejects stale data. Collector fixtures cover service/queue/provider faults and explicit permanent backup scope. Existing database restore, game HTTP, worker, mail, push and payment suites cover shared adapters and unchanged preview guards. Protected installer performs actual startup/restart, HTTPS and all-row recovery checks before enabling services; Stripe routing is a separately verified operator action."
     }
   ]
 }

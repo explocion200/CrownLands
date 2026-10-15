@@ -40,22 +40,23 @@ function subscription(token, vapidKey) {
   } catch { throw failure("push-invalid-subscription"); }
 }
 class WebPushSender {
-  constructor({ keys, expiresAt, fetchImpl = fetch, now = Date.now }) {
-    this.expiry = Date.parse(expiresAt); this.now = now; this.fetch = fetchImpl;
-    if (!Number.isFinite(this.expiry) || this.expiry <= now() || this.expiry > now() + 7 * 86400000) throw failure();
+  constructor({ keys, expiresAt, deployment, fetchImpl = fetch, now = Date.now }) {
+    const permanent = require("./deployment-policy").isPolicy(deployment, "migration_game_live");
+    this.deployment = deployment; this.expiry = permanent ? Infinity : Date.parse(expiresAt); this.now = now; this.fetch = fetchImpl;
+    if ((deployment && !permanent) || (!permanent && (!Number.isFinite(this.expiry) || this.expiry <= now() || this.expiry > now() + 7 * 86400000))) throw failure();
     if (!keys || Object.keys(keys).sort().join() !== "privateKey,publicKey") throw failure();
     const pair = crypto.createECDH("prime256v1");
     try { pair.setPrivateKey(bytes(keys?.privateKey, 32)); } catch { throw failure(); }
     if (!pair.getPublicKey().equals(publicKey(keys?.publicKey))) throw failure();
     this.keys = { ...keys }; this.controller = new AbortController(); this.active = false;
-    this.timer = setTimeout(() => this.stop(), this.expiry - now()); this.timer.unref();
+    if (Number.isFinite(this.expiry)) { this.timer = setTimeout(() => this.stop(), this.expiry - now()); this.timer.unref(); }
   }
   assertActive() { if (this.controller.signal.aborted || this.now() >= this.expiry) throw failure("push-stopped"); }
   async send(token, notification, { reserve = async () => {}, signal, topic } = {}) {
     if (this.active) throw failure("push-busy");
     this.assertActive();
     const target = subscription(token, this.keys.publicKey);
-    const data = { ...incomingArmyData(notification), url: GAME_PATH };
+    const data = { ...incomingArmyData(notification), url: this.deployment ? "/play/" : GAME_PATH };
     const payload = JSON.stringify({ data, expiresAt: Math.min(this.expiry, this.now() + 1800000) });
     if (Buffer.byteLength(payload) > 3000 || !/^[A-Za-z0-9_-]{1,32}$/.test(topic || "")) throw failure("push-invalid-payload");
     this.active = true;
@@ -66,6 +67,7 @@ class WebPushSender {
         vapidDetails: { subject: "https://playcrownlands.com/support", ...this.keys },
       });
       await reserve(); this.assertActive(); if (signal?.aborted) throw failure("push-stopped");
+      await this.deployment?.assertActive();
       const response = await this.fetch(request.endpoint, { method: "POST", headers: request.headers, body: request.body,
         redirect: "error", signal: AbortSignal.any([this.controller.signal, AbortSignal.timeout(8000), ...(signal ? [signal] : [])]) });
       // No provider body or URL can reach game records, logs or error messages.

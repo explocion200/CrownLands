@@ -17,9 +17,11 @@ async function body(req, maximum = 262144) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw fail("invalid-argument"); return value;
 }
 function send(res, status, value) { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(value)); }
-function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now, reportError = () => {} }) {
-  const data = new ClientData(store), origin = new URL(auth.origin), expiry = Date.parse(expiresAt), callables = new Map();
-  if (origin.protocol !== "https:" || !/^[^/\0]{1,128}$/.test(ownerUid || "") || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000) throw Error("Explicit private owner and expiring HTTPS game rehearsal required");
+function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, deployment, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now, reportError = () => {} }) {
+  const permanent = require("./deployment-policy").isPolicy(deployment, store.schema);
+  const data = new ClientData(store), origin = new URL(auth.origin), expiry = permanent ? Infinity : Date.parse(expiresAt), callables = new Map();
+  if (deployment && !permanent) throw Error("Invalid deployment capability");
+  if (origin.protocol !== "https:" || (!permanent && (!/^[^/\0]{1,128}$/.test(ownerUid || "") || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 7 * 86400000))) throw Error("Explicit private owner and expiring HTTPS game rehearsal required");
   if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 32) throw Error("Invalid concurrency bound");
   if (!Number.isInteger(requestBudgetMs) || requestBudgetMs < 10 || requestBudgetMs > 120000) throw Error("Invalid request deadline");
   for (const route of routes) if (route.kind === "callable") {
@@ -39,13 +41,14 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
         if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(ip) || !net.isIP(req.headers["x-crownlands-client-ip"])) throw fail("permission-denied");
         ip = req.headers["x-crownlands-client-ip"];
       }
-      if (!localAddress(ip) || now() >= expiry) throw fail("not-found");
+      if ((!permanent && !localAddress(ip)) || now() >= expiry) throw fail("not-found");
+      if (permanent) await deployment.assertActive();
       const url = new URL(req.url, origin);
       if (url.origin !== origin.origin) throw fail("invalid-argument");
       if (preview && await preview(req, res, url)) return;
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
-      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: true }); }
+      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent }); }
       if (req.method !== "POST" || !url.pathname.startsWith("/api/local-game/v1/")) throw fail("not-found");
       const jar = cookies(req.headers.cookie);
       if (req.headers.origin !== origin.origin || !csrfEqual(jar[CSRF], req.headers["x-crownlands-csrf"])
@@ -53,7 +56,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
       await auth.rateLimit("game-ip", ip, 300, 60);
       const token = jar[COOKIE], session = await auth.session(token);
       if (!session) throw fail("unauthenticated");
-      if (session.user.uid !== ownerUid) throw fail("permission-denied");
+      if (!permanent && session.user.uid !== ownerUid) throw fail("permission-denied");
       await auth.rateLimit("game-account", session.user.uid, 240, 60);
       operation = url.pathname.slice("/api/local-game/v1/".length);
       // Imported saves can exceed 256 KiB in typed JSON. Keep callables and
@@ -65,8 +68,9 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, t
       const guard = async client => {
         if (timedOut || disconnected) throw fail("deadline-exceeded");
         if (now() >= expiry) throw fail("unavailable");
+        if (permanent) await deployment.assertActive(client);
         const current = await auth.session(token, client);
-        if (!current || current.user.uid !== ownerUid) throw fail("unauthenticated");
+        if (!current || current.user.uid !== session.user.uid) throw fail("unauthenticated");
       };
       operationPromise = store.withTransactionGuard(guard, async () => {
         if (operation === "read" || operation === "watch") {

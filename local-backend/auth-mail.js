@@ -26,11 +26,12 @@ function message(mail, origin) {
 }
 
 class ResendRehearsalSender {
-  constructor({ apiKey, allowedRecipients, fetchImpl = globalThis.fetch, timeoutMs = 10000 }) {
+  constructor({ apiKey, allowedRecipients, deployment, fetchImpl = globalThis.fetch, timeoutMs = 10000 }) {
+    const permanent = require("./deployment-policy").isPolicy(deployment, "migration_auth_live");
     if (typeof apiKey !== "string" || !/^re_[A-Za-z0-9_-]{8,200}$/.test(apiKey)
-      || !Array.isArray(allowedRecipients) || !allowedRecipients.length || allowedRecipients.some(item => !address(item))
+      || (deployment && !permanent) || (!permanent && (!Array.isArray(allowedRecipients) || !allowedRecipients.length || allowedRecipients.some(item => !address(item))))
       || !Number.isInteger(timeoutMs) || timeoutMs < 10 || timeoutMs > 15000) throw failure("invalid-message");
-    this.apiKey = apiKey; this.recipients = new Set(allowedRecipients.map(value => value.toLowerCase()));
+    this.apiKey = apiKey; this.deployment = deployment; this.recipients = new Set((allowedRecipients || []).map(value => value.toLowerCase()));
     this.fetch = fetchImpl; this.timeoutMs = timeoutMs;
   }
   async send({ id, payload, signal }) {
@@ -38,7 +39,8 @@ class ResendRehearsalSender {
       || !address(payload.to[0]) || typeof payload.subject !== "string" || typeof payload.text !== "string"
       || payload.subject.length > 100 || payload.text.length > 4096
       || Object.keys(payload).sort().join(",") !== "from,subject,text,to") throw failure("invalid-message");
-    if (!this.recipients.has(payload.to[0].toLowerCase())) throw failure("recipient-blocked");
+    if (this.deployment) await this.deployment.assertActive();
+    else if (!this.recipients.has(payload.to[0].toLowerCase())) throw failure("recipient-blocked");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {

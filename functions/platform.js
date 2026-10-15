@@ -6,6 +6,8 @@
 const mode = process.env.CROWNLANDS_BACKEND || "firebase";
 if (mode === "postgres-rehearsal") {
   module.exports = require("../local-backend/platform").fromEnvironment();
+} else if (mode === "postgres-local") {
+  module.exports = require("../local-backend/permanent-platform").load();
 } else if (mode === "firebase") {
   module.exports = {
     ...require("firebase-functions/v2/https"),
