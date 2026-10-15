@@ -16809,8 +16809,7 @@ function getCurrentDocumentBuildId() {
 }
 
 function getUpdateCheckUrl() {
-  const entry = window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/play/";
-  const url = new URL(entry, window.location.origin);
+  const url = new URL(window.CROWNLANDS_LOCAL_BACKEND?.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/play/", location.origin);
   url.searchParams.set("updateCheck", Date.now().toString());
   return url;
 }
