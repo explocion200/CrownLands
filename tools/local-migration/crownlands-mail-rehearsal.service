@@ -1,0 +1,40 @@
+[Unit]
+Description=Crownlands expiring private account mail rehearsal
+After=network-online.target postgresql.service crownlands-auth-rehearsal.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+User=crownlands-mail-rehearsal
+Group=crownlands-mail-rehearsal
+WorkingDirectory=/usr/local/lib/crownlands-mail-rehearsal/app
+ExecStart=/usr/local/lib/crownlands-mail-rehearsal/node --max-old-space-size=128 /usr/local/lib/crownlands-mail-rehearsal/app/auth-mail-rehearsal.js
+LoadCredential=config:/etc/crownlands-mail-rehearsal/config.json
+LoadCredential=resend:/etc/crownlands-mail-rehearsal/resend-api-key
+StateDirectory=crownlands-mail-rehearsal
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=256M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

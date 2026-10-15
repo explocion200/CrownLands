@@ -33,7 +33,7 @@ class ResendRehearsalSender {
     this.apiKey = apiKey; this.recipients = new Set(allowedRecipients.map(value => value.toLowerCase()));
     this.fetch = fetchImpl; this.timeoutMs = timeoutMs;
   }
-  async send({ id, payload }) {
+  async send({ id, payload, signal }) {
     if (!UUID.test(id) || !payload || payload.from !== FROM || !Array.isArray(payload.to) || payload.to.length !== 1
       || !address(payload.to[0]) || typeof payload.subject !== "string" || typeof payload.text !== "string"
       || payload.subject.length > 100 || payload.text.length > 4096
@@ -42,7 +42,7 @@ class ResendRehearsalSender {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const response = await this.fetch("https://api.resend.com/emails", { method: "POST", redirect: "error", signal: controller.signal,
+      const response = await this.fetch("https://api.resend.com/emails", { method: "POST", redirect: "error", signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal,
         headers: { Authorization: "Bearer " + this.apiKey, "Content-Type": "application/json", "Idempotency-Key": "crownlands-auth/" + id },
         body: JSON.stringify(payload) });
       if (!response.ok) {
@@ -83,7 +83,10 @@ class AuthMailDispatcher {
       attempts integer NOT NULL DEFAULT 0, lease_token text, lease_until timestamptz,
       next_attempt_at timestamptz NOT NULL DEFAULT clock_timestamp(),
       status text NOT NULL DEFAULT 'pending', last_code text, provider_id text, accepted_at timestamptz);
-      REVOKE ALL ON ${this.schema}.auth_mail_delivery FROM PUBLIC;`);
+      REVOKE ALL ON ${this.schema}.auth_mail_delivery FROM PUBLIC;
+      CREATE OR REPLACE VIEW ${this.schema}.auth_mail_accounts WITH (security_barrier=true) AS
+        SELECT uid,body->>'email' AS email,coalesce((body->>'disabled')::boolean,false) AS disabled FROM ${this.schema}.accounts;
+      REVOKE ALL ON ${this.schema}.auth_mail_accounts FROM PUBLIC;`);
   }
   async transaction(callback) {
     const client = await this.pool.connect();
@@ -116,9 +119,9 @@ class AuthMailDispatcher {
       if (!mail.fresh) reason = "expired";
       else if (mail.attempts >= 8) reason = "attempts-exhausted";
       if (!reason) {
-        const valid = await client.query(`SELECT 1 FROM ${this.schema}.auth_actions a JOIN ${this.schema}.accounts u ON u.uid=a.uid
+        const valid = await client.query(`SELECT 1 FROM ${this.schema}.auth_actions a JOIN ${this.schema}.auth_mail_accounts u ON u.uid=a.uid
           WHERE a.token_hash=$1 AND a.purpose=$2 AND a.expires_at>clock_timestamp()
-          AND u.body->>'email'=$3 AND coalesce((u.body->>'disabled')::boolean,false)=false`,
+          AND u.email=$3 AND u.disabled=false`,
         [crypto.createHash("sha256").update(prepared.token).digest("hex"), mail.purpose, mail.recipient]);
         if (valid.rowCount !== 1) reason = "superseded";
       }

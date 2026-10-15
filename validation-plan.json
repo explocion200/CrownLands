@@ -51,7 +51,8 @@
         "tools/test-local-postgres-game.js",
         "tools/test-local-postgres-jobs.js",
         "tools/test-local-postgres-game-http.js",
-        "tools/test-local-browser-client.js"
+        "tools/test-local-browser-client.js",
+        "tools/test-local-postgres-mail-service.js"
       ],
       "reason": "PostgreSQL storage and pinned local dependencies, selected only by the isolated game rehearsal. Test typed values, ordering/cursors, literal FieldPath updates, conditional bulk cleanup, atomic rollback/change records, serializable callback transactions and path-locked blind writes with concurrent creation/merge/increment. Actual game initialization and season/PvP receipt tests reproduce large parallel map writes; worker and account tests exercise shared transaction behavior. No live backend selection changes."
     },
@@ -254,7 +255,8 @@
         "tools/test-local-postgres-auth-mail.js",
         "tools/test-local-auth-service.js",
         "tools/test-local-auth-http.js",
-        "tools/test-local-auth-rehearsal.js"
+        "tools/test-local-auth-rehearsal.js",
+        "tools/test-local-postgres-mail-service.js"
       ],
       "reason": "Opt-in account-email dispatcher with an explicitly allowlisted Resend rehearsal transport; importing code starts no service or email. Real PostgreSQL and synthetic HTTP tests cover concurrent claims, provider acceptance before process failure, immutable idempotent retries, stale completion fencing, quota/network failures, expired/consumed/superseded/disabled-account actions, bounded attempts, token-payload cleanup, fixed provider errors and recipient/URL restrictions. Existing local auth action/session tests cover shared one-use reset and verification semantics. No real emails or provider credentials are used by tests; production Firebase behavior is unchanged. The controlled owner-email command refuses changed recipient/account count, expired previews and existing pending mail. Test the explicit LAN-only account-action opt-in, preserved blocked email-request/registration routes, default production action-page behavior, and source/config/privilege rollback after failed protected-service restart. Desktop and landscape action-page inspection is recorded separately; Ubuntu installation and an explicitly approved real email remain operational gates."
     },
@@ -281,6 +283,24 @@
         "tools/validate-inner-city-estate.js"
       ],
       "reason": "Private migration acceptance exposed opaque generic themed buttons covering already-loaded Inner Castle building sprites. Exclude only the existing building hit targets from generic button paint so the dedicated transparent map controls remain authoritative. Existing palette and estate asset/layout checks cover shared presentation contracts; desktop and landscape browser checks verify loaded images, transparent selected/unselected controls and visible building art. No gameplay, balance, data, prices or server authority changes."
+    },
+    {
+      "paths": [
+        "local-backend/auth-mail-loop.js",
+        "local-backend/auth-mail-rehearsal.js",
+        "tools/local-migration/prepare_mail_preview.js",
+        "tools/local-migration/install_mail_preview.py",
+        "tools/local-migration/crownlands-mail-rehearsal.service",
+        "tools/local-migration/test_mail_preview.py",
+        "tools/test-local-postgres-mail-service.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-mail-service.js",
+        "tools/test-local-postgres-auth-mail.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-rehearsal.js"
+      ],
+      "reason": "Prepare an expiring owner-allowlisted account-mail system service. Real PostgreSQL and synthetic provider tests cover empty queue/no send, password-free account projection, restart replay avoidance, single active send, abort on shutdown/expiry, stop after delayed database claims, durable retry recovery, private health counts/backlog failures and restricted-role refusal. Installer tests exercise exact configuration/recipient/expiry gates, minimal column grants, empty-queue startup/restart checks and removal of only newly installed service identities/files on failure. Preserve existing encrypted backup sources and add only this service; no message is queued, live route changed or real provider request made by tests. Actual administrator installation and restricted-runtime startup are separate acceptance checks; production email and external delivery alerts remain migration gates."
     }
   ]
 }
