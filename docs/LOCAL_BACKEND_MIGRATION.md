@@ -354,6 +354,14 @@ start the maintenance timer or produce an authorizing receipt. Changed targets
 are preserved for review; a standby installation failure restores its runtime
 files before reporting failure.
 
+The first protected installation exposed the operator's private `umask 077`:
+creating a nominally `0644` file did not make it readable by service accounts,
+and the original rollback had the same defect. Atomic writes now explicitly set
+the requested mode on the open file, and public program/receipt directories have
+explicit traversal permissions. Private configurations remain `0600`/`0700`.
+Success and rollback fixtures run under `umask 077`, and installation checks
+actual read access as each of the six runtime identities before starting them.
+
 Once the remaining import, reconciliation and activation workflow is ready,
 the separate root command `transfer_maintenance.py begin PRIVATE_PLAN_FILE`
 begins player-visible maintenance. It binds a fresh source plan to the installed

@@ -159,7 +159,14 @@ class MaintenanceTests(unittest.TestCase):
     def test_protected_file_and_atomic_boundaries(self):
         with tempfile.TemporaryDirectory() as root:
             folder=Path(root);target=folder/'receipt'
-            transfer.atomic(target,b'{}',0o644)
+            previous=os.umask(0o077)
+            try:
+                transfer.atomic(target,b'{}',0o644)
+                self.assertEqual(target.stat().st_mode & 0o777,0o644)
+                private=folder/'private';transfer.atomic(private,b'private')
+                self.assertEqual(private.stat().st_mode & 0o777,0o600)
+            finally:
+                os.umask(previous)
             self.assertEqual(transfer.read_json(target,uid=os.getuid()),{})
             with self.assertRaises(ValueError):transfer.read_file(target,uid=os.getuid(),maximum=1)
             target.chmod(0o666)
@@ -218,6 +225,7 @@ class MaintenanceTests(unittest.TestCase):
         from contextlib import ExitStack
         for failure in [None,'start','health','receipt']:
             with self.subTest(failure=failure),tempfile.TemporaryDirectory() as root,ExitStack() as stack:
+                previous=os.umask(0o077);stack.callback(os.umask,previous)
                 base=Path(root);app=base/'app';units=base/'units';units.mkdir();backups=base/'backups';backups.mkdir()
                 conf,state,program=[base/n for n in ['config','state','program']]
                 sourcefile=base/'sources';sourcefile.write_bytes(b'existing-source\n');sourcefile.chmod(0o600)
@@ -260,7 +268,12 @@ class MaintenanceTests(unittest.TestCase):
                 else:
                     installer.install(base/'bundle');self.assertTrue((conf/'installation.json').exists())
                     self.assertIn(str(conf),sourcefile.read_text())
+                    self.assertEqual(conf.stat().st_mode & 0o777,0o700)
+                    for directory in [state,program]:self.assertEqual(directory.stat().st_mode & 0o777,0o755)
+                    for name in ['crownlands-transfer-check.service','crownlands-transfer-check.timer']:
+                        self.assertEqual((units/name).stat().st_mode & 0o777,0o644)
                 for name in installer.FILES:self.assertEqual((app/name).read_bytes(),b'previous runtime' if failure else b'new runtime')
+                for name in installer.FILES:self.assertEqual((app/name).stat().st_mode & 0o777,0o644)
                 self.assertEqual(proxy.read_bytes(),b'live-routes')
                 self.assertFalse(any('enable' in cmd or 'caddy' in cmd[1:] for cmd in calls if cmd[0]=='systemctl'))
                 self.assertFalse((state/'maintenance.json').exists())

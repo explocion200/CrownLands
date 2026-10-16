@@ -193,12 +193,15 @@ def install_locked(bundle):
         for name in FILES:
             transfer.atomic(APP/name,payload['runtime/'+name],0o644)
         for folder,mode in [(CONF,0o700),(STATE,0o755),(PROGRAM,0o755)]:
-            folder.mkdir(mode=mode);created.append(folder)
+            folder.mkdir(mode=mode);created.append(folder);folder.chmod(mode)
         for name in ['config.json','Caddyfile.before','Caddyfile.maintenance']:
             transfer.atomic(CONF/name,payload[name])
         transfer.atomic(PROGRAM/'transfer_maintenance.py',payload['transfer_maintenance.py'],0o644)
         for name in ['crownlands-transfer-check.service','crownlands-transfer-check.timer']:
             transfer.atomic(UNITS/name,payload[name],0o644);created.append(UNITS/name)
+        for role in transfer.COMPONENTS:
+            for name in FILES:
+                transfer.run(['runuser','-u','crownlands-'+role,'--','test','-r',str(APP/name)])
         transfer.run(['systemctl','daemon-reload'])
         transfer.run(['systemctl','start',*units],timeout=60)
         for attempt in range(40):
@@ -258,5 +261,6 @@ if __name__ == '__main__':
             install(Path(sys.argv[2]).absolute())
         else:
             raise ValueError('Use prepare CANDIDATE NEW_BUNDLE or install BUNDLE')
-    except Exception:
-        raise SystemExit('Standby transfer installation stopped; preserve its private bundle and rollback directory for inspection. No Firebase controls or game activation were attempted.') from None
+    except Exception as error:
+        detail = str(error) if type(error) is ValueError else type(error).__name__
+        raise SystemExit('Standby transfer installation stopped: '+detail+'. Preserve its private bundle and rollback directory for inspection. No Firebase controls or game activation were attempted.') from None

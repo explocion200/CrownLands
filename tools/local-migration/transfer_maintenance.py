@@ -65,6 +65,9 @@ def atomic(path, data, mode=0o600):
     # Never follow an unexpected .next file; leave interrupted work for review.
     temporary = path.with_name(path.name+'.next')
     with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode), 'wb') as handle:
+        # pkexec and the installer intentionally inherit umask 077. Explicit
+        # public program/receipt modes must survive that private default.
+        os.fchmod(handle.fileno(), mode)
         handle.write(data); handle.flush(); os.fsync(handle.fileno())
     os.replace(temporary, path)
     fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
