@@ -20,6 +20,7 @@ function functionSource(name) {
 function createSequence(overrides = {}) {
   return {
     generation: 1,
+    kind: "login",
     mapReady: true,
     seasonResolved: true,
     seasonFinished: true,
@@ -56,10 +57,18 @@ assert.match(
   "Welcome Back does not resolve the presentation phase on both success and failure."
 );
 
-function createAdvanceContext(sequence) {
+function createAdvanceContext(sequence, { stored = new Map(), storageUnavailable = false } = {}) {
   const actions = [];
   const seasonOptions = [];
   const context = {
+    testUid: "fixture-player",
+    RESET_GENERATION: "realm-2026-10",
+    seasonRewardAutoOpenUsed: new Set(),
+    getCurrentOnlineUid: () => context.testUid,
+    window: { localStorage: {
+      getItem: key => { if (storageUnavailable) throw Error("Storage unavailable"); return stored.get(key); },
+      setItem: (key, value) => { if (storageUnavailable) throw Error("Storage unavailable"); stored.set(key, value); },
+    } },
     showSeasonRewardsPanel: options => { seasonOptions.push(options); actions.push("season"); return true; },
     loginPresentationGeneration: 1,
     loginPresentationSequence: sequence,
@@ -85,7 +94,9 @@ function createAdvanceContext(sequence) {
   };
   vm.createContext(context);
   vm.runInContext(functionSource("isLoginPresentationSequenceActive"), context);
-  vm.runInContext(functionSource("advanceLoginPresentationSequence"), context);
+  for (const name of ["getSeasonRewardAutoOpenKey", "hasSeasonRewardAutoOpenBeenUsed", "markSeasonRewardAutoOpenUsed", "advanceLoginPresentationSequence"]) {
+    vm.runInContext(functionSource(name), context);
+  }
   return { context, actions, seasonOptions };
 }
 
@@ -146,6 +157,54 @@ for (const scenario of [
   assert.deepEqual(actions, ["season", "daily"], `${scenario.name}: dismissal releases Daily Login.`);
   context.completeLoginPresentationModal("daily");
   assert.deepEqual(actions, ["season", "daily", "welcome"]);
+}
+
+// Presentation memory survives a new JS context (reload/relogin), while earned
+// rewards remain unclaimed and another account/season gets its own first notice.
+{
+  const stored = new Map();
+  const status = { seasonId: "realm-2026-09", status: "ready", award: { claimed: false } };
+  const first = createAdvanceContext(createSequence({ seasonFinished: false, seasonStatus: status }), { stored });
+  first.context.advanceLoginPresentationSequence();
+  assert.deepEqual(first.actions, ["season"]);
+  const next = createAdvanceContext(createSequence({ seasonFinished: false, seasonStatus: status, dailyRequired: true, dailyFinished: false, welcomeFinished: false }), { stored });
+  next.context.advanceLoginPresentationSequence();
+  assert.deepEqual(next.actions, ["daily"], "Reload/relogin must skip the already-presented season and release Daily Login.");
+  assert.equal(status.award.claimed, false, "Remembering presentation cannot claim rewards.");
+  vm.runInContext(functionSource("completeLoginPresentationModal"), next.context);
+  next.context.completeLoginPresentationModal("daily");
+  assert.deepEqual(next.actions, ["daily", "welcome"]);
+  for (const scope of [{ testUid: "another-player" }, { RESET_GENERATION: "realm-2026-11" }]) {
+    const other = createAdvanceContext(createSequence({ seasonFinished: false, seasonStatus: status }), { stored });
+    Object.assign(other.context, scope);
+    other.context.advanceLoginPresentationSequence();
+    assert.deepEqual(other.actions, ["season"], "Another player or season must receive its own reminder, even for older outstanding awards.");
+  }
+}
+for (const blocked of [{ mapReady: false }, { kind: "resume" }]) {
+  const sequence = createSequence({ seasonFinished: false, seasonStatus: { loadFailed: true }, ...blocked });
+  const { context, actions } = createAdvanceContext(sequence);
+  context.advanceLoginPresentationSequence();
+  assert(!actions.includes("season"), "Resume or an unloaded kingdom must not open the login reminder.");
+  assert.equal(context.hasSeasonRewardAutoOpenBeenUsed(), false, "Skipped presentation must not consume the reminder.");
+}
+{
+  const status = { seasonId: "realm-2026-09", status: "finalizing", participated: true };
+  const first = createAdvanceContext(createSequence({ seasonFinished: false, seasonStatus: status }), { storageUnavailable: true });
+  first.context.advanceLoginPresentationSequence();
+  first.context.loginPresentationSequence = createSequence({ seasonFinished: false, seasonStatus: status });
+  first.context.advanceLoginPresentationSequence();
+  assert.deepEqual(first.actions, ["season", "realm"], "Unavailable storage still remembers within the page.");
+}
+{
+  const { context, actions } = createAdvanceContext(createSequence({ seasonFinished: false, seasonStatus: { loadFailed: true } }));
+  context.showSeasonRewardsPanel = () => false;
+  context.advanceLoginPresentationSequence();
+  assert.equal(context.hasSeasonRewardAutoOpenBeenUsed(), false, "A panel that could not open must not consume the reminder.");
+  assert.deepEqual(actions, ["realm"], "A missing panel must not stall the login sequence.");
+  assert.equal(context.loginPresentationSequence.seasonOpen, false);
+  context.testUid = "";
+  assert.equal(context.hasSeasonRewardAutoOpenBeenUsed(), true, "Signed-out pages cannot store an anonymous reminder.");
 }
 
 for (const status of [

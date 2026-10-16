@@ -2074,6 +2074,7 @@ let realmAnnouncementQueue = [];
 let activeRealmAnnouncement = null;
 let realmAnnouncementTimer = 0;
 let realmAnnouncementExitTimer = 0;
+const seasonRewardAutoOpenUsed = new Set();
 let loginPresentationGeneration = 0;
 let loginPresentationSequence = null;
 let onlineGlobalStatsUnsubscribe = null;
@@ -19592,6 +19593,25 @@ function markLoginPresentationMapReady(generation = loginPresentationGeneration)
   return true;
 }
 
+function getSeasonRewardAutoOpenKey() {
+  const uid = getCurrentOnlineUid();
+  return uid && /^realm-\d{4}-(0[1-9]|1[0-2])$/.test(RESET_GENERATION)
+    ? `crownlands-season-reward-opened-v1:${uid}:${RESET_GENERATION}` : "";
+}
+
+function hasSeasonRewardAutoOpenBeenUsed() {
+  const key = getSeasonRewardAutoOpenKey();
+  if (!key || seasonRewardAutoOpenUsed.has(key)) return true;
+  try { return window.localStorage?.getItem(key) === "1"; } catch (_) { return false; }
+}
+
+function markSeasonRewardAutoOpenUsed() {
+  const key = getSeasonRewardAutoOpenKey();
+  if (!key) return;
+  seasonRewardAutoOpenUsed.add(key);
+  try { window.localStorage?.setItem(key, "1"); } catch (_) { /* Keep the in-memory reminder when storage is unavailable. */ }
+}
+
 function hasDailyLoginAutoOpenBeenUsed(status = dailyLoginRewardStatus) {
   const key = getDailyLoginRewardAutoOpenKey(status);
   if (!key) return true;
@@ -19700,10 +19720,14 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
   if (!sequence.seasonFinished) {
     if (sequence.seasonOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
     const season = sequence.seasonStatus;
-    if (season && (season.loadFailed || (season.participated && season.status !== "ready") || (season.award && !season.award.claimed) || season.pendingSeasons?.length)) {
+    if (sequence.kind !== "resume" && !hasSeasonRewardAutoOpenBeenUsed()
+      && season && (season.loadFailed || (season.participated && season.status !== "ready") || (season.award && !season.award.claimed) || season.pendingSeasons?.length)) {
       sequence.seasonOpen = true;
-      showSeasonRewardsPanel({ view: "results", seasonId: season.award && !season.award.claimed ? season.seasonId : season.pendingSeasons?.[0] || season.seasonId || "", login: true });
-      return true;
+      if (showSeasonRewardsPanel({ view: "results", seasonId: season.award && !season.award.claimed ? season.seasonId : season.pendingSeasons?.[0] || season.seasonId || "", login: true })) {
+        markSeasonRewardAutoOpenUsed();
+        return true;
+      }
+      sequence.seasonOpen = false;
     }
     sequence.seasonFinished = true;
   }
@@ -38533,6 +38557,7 @@ function showSeasonRewardsPanel({ view = "info", seasonId = view === "results" ?
     modal.removeEventListener("close", disposeWhenClosed);
   };
   modal.addEventListener("close", disposeWhenClosed);
+  return true;
 }
 
 async function attachSeasonHonors(kind, id, anchor, current) {
