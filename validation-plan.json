@@ -25,15 +25,18 @@
       "paths": [
         "game.js",
         "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-skill-presets.js"
+        "tools/validate-skill-presets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-gold-spend-audio.js"
       ],
       "tests": [
         "tools/validate-skill-presets.js",
         "tools/validate-skill-point-efficiency-browser.js",
         "tools/validate-instant-economy-actions.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-gold-spend-audio.js"
       ],
-      "reason": "Display the fixed Crown price, known account wallet affordability and confirmation balance; prohibit client-only currency spending and retain request IDs after uncertain outcomes. Check cancel, lost response/retry at zero balance, account isolation, free draft editing and shared skill controls. Real rendered desktop and landscape views retain readable cost/confirmation and right-hand action. Build and shared asset checks cover the existing Crown icon and delivered scripts. Update the old static palette assertion to inspect the already-shipped ledger stylesheet, without changing styles."
+      "reason": "Display the fixed Crown price, known account wallet affordability and confirmation balance; prohibit client-only currency spending and retain request IDs after uncertain outcomes. Check cancel, lost response/retry at zero balance, account isolation, free draft editing and shared skill controls. Real rendered desktop and landscape views retain readable cost/confirmation and right-hand action. Build and shared asset checks cover the existing Crown icon and delivered scripts. Update the old static palette assertion to inspect the already-shipped ledger stylesheet, without changing styles. Bound the source increase for Crown confirmation and retry safety at 2 KiB; no new assets or requests. Verify that Crown purchases do not play the Gold-spend cue."
     },
     {
       "paths": [

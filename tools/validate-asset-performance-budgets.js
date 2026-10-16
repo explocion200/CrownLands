@@ -221,7 +221,8 @@ const entrypointBudgets = {
   // Leaderboard title markup and reward-tab paths add less than 0.5 KiB;
   // allow another 0.25 KiB here, offset by shared frame CSS deduplication.
   // Aggregate shell, requests and frame limits remain unchanged.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25) * 1024,
+  // Crown-priced preset review and safe retries add 1,610 source bytes; no new requests or assets.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
