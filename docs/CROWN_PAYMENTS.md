@@ -1,6 +1,18 @@
 # Stripe Crown payments
 
-The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. Checkout is now enabled only for that account; live release remains pending and the cosmetics-only rule is unchanged.
+The October 4, 2026 request selected Stripe for future Crown purchases and approved a **sandbox-only** checkout foundation. On October 5, the owner authorized connecting that sandbox, confirmed the first pack (**1,000 Crowns for US$4.99**) and designated one account for sandbox testing. The sections below retain that setup history; the current local checkout status is recorded first.
+
+## Local checkout handoff recovery — October 16, 2026
+
+The live local service currently has the approved 1,000-Crown / US$4.99 pack enabled. A read-only investigation of a reported missing payment form found an open, unpaid Stripe session with a valid checkout URL; merchant card payments and the inclusive-tax price were active. The historical launch notes below describe earlier setup, not the current deployment. The exact browser failure on the reporting device was not observed.
+
+The browser previously relied entirely on opening a blank tab and navigating that tab after the server replied. It discarded the returned URL, leaving no direct link if the browser blocked, detached, closed or failed to navigate the tab. Checkout now retains the validated URL only in the current signed-in UI and displays **Open secure checkout** plus **Open in this tab instead**. Both links use the same server order. Blocked popups can prepare that order without requiring a browser-settings change. Popup access errors do not discard a successful server response. Checkout controls stay visible while the review text scrolls on short screens.
+
+Confirmed/expired orders and account changes remove the links; URLs are never persisted in browser storage. Returning from Stripe never proves payment. The return page distinguishes an unfinished checkout from a completed payment and provides a route back to the game after same-tab checkout. Payment methods, pricing, live launch gates, provider configuration, wallet authority and fulfillment are unchanged. No charge, refund, live wallet grant or provider configuration change is part of this repair.
+
+Players need a signed-in permanent Crownlands account and the details requested by the Stripe form: email, a supported card, billing address, agreement to the purchase terms and any verification requested by their bank. They do not need a Stripe merchant account. The current offer is a one-time purchase; creating or reopening checkout does not charge the card. [Stripe-hosted checkout](https://docs.stripe.com/payments/checkout) handles payment details; only server verification of a paid order delivers Crowns.
+
+Validation selects the desktop/landscape-mobile browser fixture (including blocked, inaccessible, closed and silently failed popup navigation, same-order recovery, safe links, return page, expiry, confirmation and account isolation) and the existing live/test payment contract validators. These tests use simulated provider responses and do not make a live purchase. Deployment and the reporting device's final checkout verification must be recorded separately.
 
 ## Live purchase implementation — October 5, 2026
 

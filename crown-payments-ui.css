@@ -1,5 +1,12 @@
 .crown-payments-dialog { box-sizing:border-box; width:min(560px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; padding:22px; color:#30281f; background:#f4ead6; border:2px solid #785944; border-radius:12px; font:16px/1.5 system-ui,sans-serif; }
 .crown-payments-dialog::backdrop { background:#19131bc9; }
+main.crown-payments-dialog { max-height:none; overflow:visible; }
+.crown-payments-dialog[open] { display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+.crown-payments-dialog .crown-checkout-details { min-height:0; overflow:auto; }
+.crown-payments-dialog header,.crown-payments-dialog footer { flex-shrink:0; }
+.crown-checkout-links { display:grid; gap:8px; }
+.crown-checkout-links a { display:block; min-height:44px; box-sizing:border-box; padding:9px 12px; text-align:center; color:inherit; }
+.crown-checkout-links [data-crown-open],.crown-payments-dialog [data-crown-pay] { color:#fff9ee; background:#72363a; border:1px solid #785944; border-radius:6px; font-weight:600; }
 .crown-payments-dialog header,.crown-payments-dialog footer { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .crown-payments-dialog header { flex-wrap:nowrap; }
 .crown-payments-dialog header h2 { min-width:0; overflow-wrap:anywhere; }
@@ -17,6 +24,7 @@
 #modal.shop-modal .crown-pack-price { font-size:23px!important; font-variant-numeric:tabular-nums!important; }
 #modal.shop-modal .crown-pack [data-crown-checkout] { width:100%; min-height:44px; padding:10px 18px; font-size:16px!important; font-weight:600!important; }
 .crown-payments-dialog button:not(:disabled) { cursor:pointer; }
+.crown-payments-dialog a:focus-visible { outline:3px solid #72363a; outline-offset:2px; }
 .crown-payments-dialog button:disabled { opacity:.6; }
 .crown-payments-dialog .crown-test-notice { padding:10px; border:1px solid var(--cl-border-faded); background:var(--cl-panel-secondary); font-weight:650; }
 .crown-payments-dialog .crown-order-reference { overflow-wrap:anywhere; font-size:12px; }

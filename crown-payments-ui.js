@@ -7,6 +7,9 @@
   const money = pack => new Intl.NumberFormat(undefined, { style: "currency", currency: pack.currency }).format(pack.amountMinor / 100);
   const requestFor = order => ({ requestId: order.requestId, packId: order.packId, expectedAmountMinor: order.amountMinor,
     expectedCurrency: order.currency, expectedCrowns: order.crowns });
+  function closePopup(popup) {
+    try { popup?.close(); } catch { /* Some mobile browsers detach newly opened tabs. */ }
+  }
   function reset(uid) {
     if (current?.uid === uid) return;
     current?.dialog?.remove();
@@ -44,17 +47,22 @@
     const order = session.order, pending = session.request || (order && !terminal(order));
     const selected = session.selected || session.packs[0]?.id;
     const live = session.mode === "live";
+    const checkoutUrl = !session.busy && order && !terminal(order) && !order.reviewRequired ? session.checkoutUrl : null;
     const message = order?.reviewRequired ? "This payment needs manual review. Contact crownlandsmail@gmail.com with your order reference."
       : order?.status === "confirmed" ? (live ? `Payment confirmed: ${order.crowns.toLocaleString()} Crowns delivered to your account.` : `Test payment confirmed: ${order.crowns} test Crowns recorded. Your playable Crown balance is unchanged.`)
       : order?.status === "expired" ? (live ? "This checkout expired. No Crowns were credited by this check." : "This test checkout expired. No new test Crowns were credited by this check.")
-      : order ? "Payment has not been confirmed. Check its status or continue the same checkout." : "";
+      : checkoutUrl ? "Your payment form is ready. If it did not open, use Open secure checkout below. Check payment status after paying."
+      : order ? "Payment has not been confirmed. Continue checkout to enter payment details, or check the status of an earlier payment." : "";
     session.dialog.innerHTML = `<header><h2>${live ? "Buy Crowns" : "Buy Crowns — test checkout"}</h2><button type="button" data-crown-close aria-label="Close Crown checkout">Close</button></header>
+      <div class="crown-checkout-details">
       ${live ? `<p class="crown-purchase-notice">One-time purchase. The displayed US-dollar price includes any applicable tax. Crowns cannot be transferred or exchanged for money.</p><p>Refund requests are reviewed manually. Contact <a href="mailto:crownlandsmail@gmail.com">crownlandsmail@gmail.com</a>. Read our <a href="https://playcrownlands.com/terms.html#crown-purchases" target="_blank" rel="noopener">purchase terms</a> and <a href="https://playcrownlands.com/privacy.html#payments" target="_blank" rel="noopener">privacy policy</a>.</p>` : `<p class="crown-test-notice">Sandbox only. No real money is charged and no usable Crowns are granted.</p>`}
-      <p>Crowns buy cosmetics and stamina refills. Stamina refills cost 30 Crowns per 100 missing points, rounded up to whole Crowns, once per UTC day when hunting is available. Checkout opens in a separate tab so you can return to your game.</p>
+      <p>Crowns buy cosmetics and stamina refills. Stamina refills cost 30 Crowns per 100 missing points, rounded up to whole Crowns, once per UTC day when hunting is available. Enter your payment details on Stripe's secure form. Checkout opens in a separate tab; a same-tab option is also available once your order is ready.</p>
       <label>${live ? "Crown pack" : "Test Crown pack"}<select data-crown-pack ${pending || session.busy ? "disabled" : ""}>${session.packs.map(pack => `<option value="${escape(pack.id)}" ${pack.id === selected ? "selected" : ""}>${pack.crowns.toLocaleString()} Crowns — ${escape(money(pack))}</option>`).join("")}</select></label>
       ${order ? `<p class="crown-order-reference">${live ? "Order" : "Test order"}: ${escape(order.orderId)}</p>` : ""}
       <p role="status" aria-live="polite">${escape(session.error || message)}</p>
+      </div>
       <footer>${terminal(order) ? `<button type="button" data-crown-again>Choose another ${live ? "" : "test "}pack</button>`
+        : checkoutUrl ? `<div class="crown-checkout-links"><a data-crown-open href="${escape(checkoutUrl)}" target="_blank" rel="noopener noreferrer">Open secure ${live ? "" : "test "}checkout</a><a data-crown-same-tab href="${escape(checkoutUrl)}" referrerpolicy="no-referrer">Open in this tab instead</a></div>`
         : `<button type="button" data-crown-pay ${session.busy || !session.packs.length ? "disabled" : ""}>${session.busy ? "Checking…" : pending ? (live ? "Continue checkout" : "Continue test checkout") : (live ? "Open Stripe checkout" : "Open Stripe test checkout")}</button>`}
       ${order ? `<button type="button" data-crown-check ${session.busy ? "disabled" : ""}>Check payment status</button>` : ""}</footer>`;
     session.dialog.querySelector("[data-crown-close]").onclick = () => session.dialog.close();
@@ -62,7 +70,7 @@
     session.dialog.querySelector("[data-crown-pay]")?.addEventListener("click", () => pay(session));
     session.dialog.querySelector("[data-crown-check]")?.addEventListener("click", () => check(session));
     session.dialog.querySelector("[data-crown-again]")?.addEventListener("click", () => {
-      session.order = null; session.request = null; session.error = ""; remember(session); render(session);
+      session.order = null; session.request = null; session.checkoutUrl = null; session.error = ""; remember(session); render(session);
     });
   }
   function open(session) {
@@ -79,15 +87,21 @@
     if (!session.request) session.request = { requestId: `crown_${crypto.randomUUID().replaceAll("-", "")}`, packId: pack.id,
       expectedAmountMinor: pack.amountMinor, expectedCurrency: pack.currency, expectedCrowns: pack.crowns };
     remember(session);
-    const popup = window.open("about:blank", "_blank");
-    if (!popup) { session.error = "Allow a new tab for Stripe checkout, then retry."; render(session); return; }
-    popup.opener = null;
-    popup.document.title = "Opening Stripe checkout";
-    popup.document.body.textContent = "Opening Stripe checkout…";
-    session.busy = true; session.error = ""; render(session);
+    let popup = null;
+    try {
+      popup = window.open("about:blank", "_blank");
+      if (popup) {
+        popup.opener = null;
+        popup.document.title = "Opening Stripe checkout";
+        popup.document.body.textContent = "Opening Stripe checkout…";
+      }
+    } catch { closePopup(popup); popup = null; }
+    // A blocked or detached popup must not strand a valid order. Keep the
+    // verified URL in this account's UI so a real link can open the same order.
+    session.busy = true; session.error = ""; session.checkoutUrl = null; render(session);
     try {
       const result = await session.api.createCrownCheckout(session.request);
-      if (current !== session) { popup.close(); return; }
+      if (current !== session) { closePopup(popup); return; }
       if (result.order?.mode !== session.mode) throw Error("The checkout mode changed. Reopen the game before buying.");
       session.order = result.order;
       session.selected = result.order.packId;
@@ -95,10 +109,13 @@
       if (result.url) {
         const url = new URL(result.url);
         if (url.protocol !== "https:" || url.hostname !== "checkout.stripe.com" || url.port || url.username || url.password) throw Error("Checkout returned an invalid address.");
-        popup.location.replace(url.href);
-      } else popup.close();
+        if (!terminal(session.order) && !session.order.reviewRequired) {
+          session.checkoutUrl = url.href;
+          try { if (popup && !popup.closed) popup.location.replace(url.href); } catch { closePopup(popup); }
+        } else closePopup(popup);
+      } else closePopup(popup);
     } catch (error) {
-      popup.close();
+      closePopup(popup);
       if (current !== session) return;
       session.error = error.message || "Checkout could not be opened. Retry to recover the same order.";
       try {
@@ -123,7 +140,7 @@
       if (current !== session) return;
       if (result.order?.mode !== session.mode) throw Error("The checkout mode changed. Reopen the game before buying.");
       session.order = result.order;
-      if (terminal(session.order)) { session.request = null; remember(session); }
+      if (terminal(session.order)) { session.request = null; session.checkoutUrl = null; remember(session); }
     } catch (error) { if (current === session) session.error = error.message || "Payment status is unavailable. Please retry."; }
     finally { if (current === session) { session.busy = false; render(session); } }
   }
