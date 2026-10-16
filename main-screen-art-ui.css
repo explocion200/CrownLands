@@ -41,7 +41,7 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 @layer crownlands-theme{
  :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn).nav-btn{
   color:var(--notice-ink,#493521)!important;border:2px solid transparent!important;
-  background:url("assets/optimized/hud-notice-ribbon-392x152-93a6da8400e8.webp") center calc(50% + 9px)/100% 44px no-repeat!important;
+  background:url("assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp") center calc(50% + 9px)/100% 44px no-repeat!important;
   box-shadow:none!important;
  }
  #incomingAttackBtn{--notice-ink:#7b3034}

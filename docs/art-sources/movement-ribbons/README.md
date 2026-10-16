@@ -14,7 +14,7 @@ timers remain live HTML text. Existing targets, actions and holding rules remain
 - Reports retains its existing emblem and unread badge.
 
 The existing `tools/optimize-game-art.py` `build_asset` function scales the master
-to a 392 × 152 transparent HUD canvas, quality 88. No creative postprocessing.
+to a 196 × 76 transparent HUD canvas, quality 88. No creative postprocessing.
 The manifest marks this as prepared delivery so later optimization retains the
 reviewed encoding. CSS positions this single image under the live label rows;
 the unpainted area around each icon stays transparent. Runtime image caching

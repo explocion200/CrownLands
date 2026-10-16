@@ -8,7 +8,7 @@
         "main-screen-art-ui.css",
         "tools/validate-parchment-notices-browser.js",
         "assets/optimized/manifest.json",
-        "assets/optimized/hud-notice-ribbon-392x152-93a6da8400e8.webp",
+        "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
         "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
         "docs/art-sources/movement-ribbons/runtime-assets.json",
         "docs/art-sources/movement-ribbons/prompt.json"
@@ -29,6 +29,15 @@
       ],
       "tests": [],
       "reason": "Record the owner's explicitly requested visual refinement, asset provenance and exact built-in image-generation prompt. Preserve existing gameplay and holding-notice rules. Documentation does not establish deployment."
+    },
+    {
+      "paths": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "The shipped HUD stylesheet was omitted from the existing unused-derivative scan. Include it so the new ribbon reference is recognized. The 6,352-byte shared ribbon exceeds the prior total-art headroom by 3,366 bytes; bound this at 4 KiB while preserving startup/precache, preload and per-image limits and metadata/hash checks. The focused browser test additionally caps this ribbon at 7 KiB."
     }
   ]
 }
