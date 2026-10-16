@@ -1,10 +1,14 @@
 # Local backend migration
 
-Status: isolated snapshot, restore and account/storage adapter rehearsal, October 15, 2026. The live game still uses Firebase. This document describes the migration work; it does not establish feature parity or authorize a production cutover.
+Status: **production local authority active**, October 16, 2026. The protected transfer completed at 07:09 UTC; the public game uses local accounts, PostgreSQL and local game services. See [the production transfer record](LOCAL_BACKEND_RELEASE_2026-10-16.md) for deployed identities, acceptance evidence and remaining limits.
+
+The old Firebase source is fenced and retained. Local production has accepted new player changes. Do not rerun initial import/activation commands, clear activation receipts, or reopen the old source: returning authority would require reconciling subsequent local writes.
+
+The sections below retain the October 15 preparation and rehearsal history. Statements about the live game still using Firebase describe those earlier stages, not the current deployment. Their commands are operator references with explicit preconditions, not a sequence to rerun on the active server.
 
 The website and game assets already run on the owner's Ubuntu computer. The requested next step is to host the authoritative game backend and account system there too. Keep existing gameplay, player identities, cities, balances, purchases, history, and recovery behavior intact.
 
-## Current dependencies
+## Pre-transfer dependencies and replacement plan
 
 | Component | Current implementation | Replacement work |
 | --- | --- | --- |

@@ -14,10 +14,12 @@
     },
     {
       "paths": [
-        "docs/LOCAL_BACKEND_MIGRATION.md"
+        "docs/LOCAL_BACKEND_MIGRATION.md",
+        "docs/LOCAL_BACKEND_RELEASE_2026-10-16.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document observed snapshot/import/restore results, account and storage test coverage, integrations/access status, and remaining migration/cutover gates. Explicitly distinguish isolated rehearsal from live deployment; no gameplay or permission changes."
+      "reason": "Record the owner-authorized local production transfer, exact client/realm identity, account/data comparison, restore/cloud backup, phone-save acceptance and remaining limits. Mark older rehearsal prose as historical and prohibit initial reimport or source reopening after local writes. This updates deployment evidence only; no gameplay design, balance, permissions or runtime changes."
     },
     {
       "paths": [
