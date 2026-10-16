@@ -1,0 +1,34 @@
+[Unit]
+Description=Crownlands private account migration rehearsal
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=crownlands-auth-rehearsal
+Group=crownlands-auth-rehearsal
+WorkingDirectory=/usr/local/lib/crownlands-auth-rehearsal/app
+ExecStart=/usr/local/lib/crownlands-auth-rehearsal/node /usr/local/lib/crownlands-auth-rehearsal/app/rehearsal-server.js
+LoadCredential=config:/etc/crownlands-auth-rehearsal/config.json
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=384M
+TasksMax=80
+
+[Install]
+WantedBy=multi-user.target

@@ -1,17 +1,12 @@
-const { onCall: firebaseOnCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
-const admin = require("firebase-admin");
-const { getApp } = require("firebase-admin/app");
-const { FieldPath, FieldValue, Filter, Timestamp, getFirestore } = require("firebase-admin/firestore");
-const { getMessaging } = require("firebase-admin/messaging");
+const { onCall: firebaseOnCall, onRequest, HttpsError, onSchedule, onDocumentCreated, onDocumentWritten,
+  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret, chatTranslationProvider } = require("./platform");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
 const PVP_LEADERBOARD = require("./pvp-leaderboard");
 const SEASON_REWARDS = require("./season-rewards");
 const PUBLIC_SEASON_RANKINGS = require("./public-season-rankings");
-const { deliverNotificationOutbox } = require("./notification-delivery");
+const { deliverNotificationOutbox, incomingArmyData } = require("./notification-delivery");
 const { deleteMaintenanceDocuments } = require("./maintenance-deletes");
 const REALM_CONFIG = require("./release-config.json");
 const FORCE_CORE_EXPANSION_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true"
@@ -62,7 +57,6 @@ const { isRegionWalkablePoint } = require("./canonical-route-engine.js");
 const MARAUDER_SEASONAL_CLEARANCE = require("./marauder-seasonal-clearance.json");
 const MARAUDER_ROAD_POINTS = require("./marauder-road-points.json");
 const { createEstateService } = require("./estate-service");
-const { defineSecret } = require("firebase-functions/params");
 const { createCrownPaymentsService } = require("./crown-payments-service");
 const { createCrownPaymentsWebhook } = require("./crown-payments-http");
 const stripeCrownTestKey = defineSecret("STRIPE_CROWNS_TEST_SECRET_KEY");
@@ -14939,29 +14933,7 @@ async function sendIncomingArmyNotification(notification = {}, completedTokenIds
     .filter(entry => entry.token && !completedTokenIds.includes(entry.id));
   if (!tokenDocs.length) return resultState;
 
-  const data = {
-    type: "incoming_army",
-    title: safeString(notification.title, 80),
-    body: safeString(notification.body, 180),
-    kind: safeString(notification.kind, 16),
-    armyId: safeString(notification.armyId, 96),
-    cityId: safeString(notification.cityId, 96),
-    sourceCityId: safeString(notification.sourceCityId, 96),
-    targetRegionId: safeString(notification.targetRegionId, 80),
-    sourceRegionId: safeString(notification.sourceRegionId, 80),
-    targetName: safeString(notification.targetName, 60),
-    sourceName: safeString(notification.sourceName, 60),
-    attackerName: safeString(notification.attackerName, 60),
-    troopVisibility: safeString(notification.troopVisibility, 16),
-    troopEstimateMin: safeString(notification.troopEstimateMin, 32),
-    troopEstimateMax: safeString(notification.troopEstimateMax, 32),
-    troopEstimateLabel: safeString(notification.troopEstimateLabel, 40),
-    arrivesAtMs: safeString(notification.arrivesAtMs, 32),
-    url: safeString(notification.url || "/play/", 160),
-  };
-  if (notification.troops !== undefined) {
-    data.troops = safeString(notification.troops, 32);
-  }
+  const data = incomingArmyData(notification);
 
   const messages = tokenDocs.map(entry => ({
     token: entry.token,
@@ -20652,7 +20624,7 @@ const translateChatMessages = CHAT_TRANSLATION.createService({
   db,
   authorize: authorizeChatTranslation,
   fail: (code, message, details) => new HttpsError(code, message, details),
-  provider: CHAT_TRANSLATION.createGoogleProvider({
+  provider: chatTranslationProvider || CHAT_TRANSLATION.createGoogleProvider({
     projectId: process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT,
     credential: getApp().options.credential,
     emulator: process.env.FUNCTIONS_EMULATOR === "true",

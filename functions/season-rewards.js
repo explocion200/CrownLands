@@ -1,7 +1,6 @@
 "use strict";
 
-const { FieldPath } = require("firebase-admin/firestore");
-const { HttpsError } = require("firebase-functions/v2/https");
+const { FieldPath, HttpsError } = require("./platform");
 const PVP = require("./pvp-leaderboard");
 const GEAR = require("./common-gear");
 

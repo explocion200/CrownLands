@@ -47,4 +47,32 @@ async function deliverNotificationOutbox(ref, { db, send, fieldValue, now = Date
   if (result.retryError) throw result.retryError;
 }
 
-module.exports = { deliverNotificationOutbox };
+function incomingArmyData(notification = {}) {
+  const safeString = (value, max) => String(value || "").trim().slice(0, max);
+  const data = {
+    type: "incoming_army",
+    title: safeString(notification.title, 80),
+    body: safeString(notification.body, 180),
+    kind: safeString(notification.kind, 16),
+    armyId: safeString(notification.armyId, 96),
+    cityId: safeString(notification.cityId, 96),
+    sourceCityId: safeString(notification.sourceCityId, 96),
+    targetRegionId: safeString(notification.targetRegionId, 80),
+    sourceRegionId: safeString(notification.sourceRegionId, 80),
+    targetName: safeString(notification.targetName, 60),
+    sourceName: safeString(notification.sourceName, 60),
+    attackerName: safeString(notification.attackerName, 60),
+    troopVisibility: safeString(notification.troopVisibility, 16),
+    troopEstimateMin: safeString(notification.troopEstimateMin, 32),
+    troopEstimateMax: safeString(notification.troopEstimateMax, 32),
+    troopEstimateLabel: safeString(notification.troopEstimateLabel, 40),
+    arrivesAtMs: safeString(notification.arrivesAtMs, 32),
+    url: safeString(notification.url || "/play/", 160),
+  };
+  if (notification.troops !== undefined) {
+    data.troops = safeString(notification.troops, 32);
+  }
+  return data;
+}
+
+module.exports = { deliverNotificationOutbox, incomingArmyData };

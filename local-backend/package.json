@@ -1,0 +1,15 @@
+{
+  "name": "crownlands-local-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Isolated PostgreSQL migration rehearsal; not activated for live players",
+  "engines": {
+    "node": "22"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "dependencies": {
+    "google-auth-library": "11.3.0",
+    "pg": "8.23.1",
+    "web-push": "3.6.7"
+  }
+}

@@ -76,7 +76,15 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-### Current verified web release — Reward windows and leaderboard artwork
+### Current verified web backend — Local production transfer
+
+The owner-authorized transfer completed October 16, 2026 at 07:09 UTC. `playcrownlands.com/play/` now uses the computer's PostgreSQL database, account service, game APIs and background services. The verified client is `72c325f0be954b7053e685d15e70b80606a23e51`, backend `postgres-local`. Existing gameplay and the current `main-realm-2026-10 / realm-2026-10 / shard_0001` are preserved.
+
+All 918,090 source documents and 318 accounts were copied and verified. Production Google sign-in, the owner's 43 cities, Inner Castle artwork and refresh passed; the owner also confirmed a normal phone gameplay change remained saved after refresh. Encrypted off-site backup and full database restore checks passed. Google sign-in, Translation, Resend, Stripe, external uptime monitoring and encrypted off-site storage remain external services. Firebase game authority is fenced and its historical data retained; local writes must be reconciled before any authority reversal.
+
+The worker catch-up and transaction-contention repair `121bca612622ac1698de96aa9d7bedf446e8f694` was installed at 11:43 UTC; repeated service and current-realm queue checks passed. Its validation, recovery evidence and retained diagnostics are in [the local production transfer record](LOCAL_BACKEND_RELEASE_2026-10-16.md). This deployment record does not claim every gameplay path, native notification or installed-app variant was observed in production. PR #577 remains separate from deployment: its merge status does not determine the already-active local authority.
+
+### Previous verified web release — Reward windows and leaderboard artwork
 
 The authorized merge and web deployment of [PR #573](https://github.com/explocion200/CrownLands/pull/573), from `codex/rewards-leaderboard-artwork-current`, is **LIVE — WEB** at build `2ce492c5cab315ba308cd55cee4e688709eaf612`. Leaderboards and Daily Login display their matching HUD image beside the title. Reward tabs use matching illustrations and retain identical frame, header, navigation and boxed-X geometry when switching. The compact leaderboard podium fits short landscape screens. PR #570 was closed as superseded by this merged replacement.
 

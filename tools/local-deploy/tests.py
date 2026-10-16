@@ -5,6 +5,9 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+import os
+import shutil
+import subprocess
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
@@ -19,6 +22,7 @@ def load(name):
 
 p = load("publisher")
 pack = load("pack")
+local = load("local_runtime")
 COMMIT = "a" * 40
 APPROVED = {"backend": {"serverSourceHash": "b" * 64, "contractHash": "c" * 64,
                        "releaseId": "live", "worldId": "world", "resetGeneration": "current"},
@@ -186,6 +190,109 @@ class PublicationTests(unittest.TestCase):
         extracted = self.root / "roundtrip"
         extracted.mkdir()
         self.assertEqual(p.unpack(package, extracted, COMMIT, APPROVED)["files"], packed["files"])
+
+
+class LocalPublicationTests(unittest.TestCase):
+    archive = PublicationTests.archive
+    unpack = PublicationTests.unpack
+
+    def setUp(self):
+        PublicationTests.setUp(self)
+        self.repo=HERE.parents[1]
+        self.node=Path(shutil.which('node')).resolve()
+        self.helper=self.repo/'tools/local-migration/prepare_production_client.js'
+        public=subprocess.check_output([str(self.node),'-e',"const e=require('node:crypto').createECDH('prime256v1');e.generateKeys();process.stdout.write(e.getPublicKey().toString('base64url'))"],text=True)
+        self.local={'mode':'production','protocol':1,'epoch':'e'*32,'publicKey':public,
+                    'runtimeHash':local.runtime_hash(self.repo),'helperHash':local.digest(self.helper.read_bytes()),'nodeHash':local.digest(self.node.read_bytes())}
+        self.config={'localBackend':self.local,'approved':{**APPROVED,'localRuntimeHash':self.local['runtimeHash']}}
+
+    def make_local(self):
+        self.archive();meta=self.unpack();game=self.stage/'game'
+        html=f'<meta name="crownlands-build" content="{COMMIT}"><script src="firebase-config.js"></script><script src="app-entry.js"></script>'
+        for name in ['index.html','play/index.html']:(game/name).write_text(html)
+        for name in ['local-production.js','local-client.js','local-web-push.js','firebaseClient.js','service-worker.js','firebase-config.js']:
+            (game/name).write_bytes((self.repo/name).read_bytes())
+        meta['localRuntimeHash']=self.local['runtimeHash'];meta['files']=local.inventory(game)
+        def protected(file,maximum=65536):
+            self.assertIn(file,[self.node,self.helper]);return file.read_bytes()
+        with patch.object(local,'NODE',self.node),patch.object(local,'HELPER',self.helper),patch.object(local,'protected',side_effect=protected):
+            return local.transform(self.stage,meta,self.local)
+
+    def test_actual_trusted_transform_preserves_source_and_local_identity(self):
+        meta=self.make_local()
+        self.assertEqual(meta['files'],local.inventory(self.stage/'game'))
+        self.assertIn('CROWNLANDS_LOCAL_BACKEND',(self.stage/'game/firebase-config.js').read_text())
+        self.assertIn('CROWNLANDS_FIREBASE_CONFIG',(self.stage/'signed-game/firebase-config.js').read_text())
+        self.assertIn('"'+COMMIT+'-local-'+self.local['epoch']+'"',(self.stage/'game/service-worker.js').read_text())
+        local.require_local_release(self.stage,self.local,self.config['approved'])
+        identity=json.loads((self.stage/'game/local-deployment.json').read_text())
+        self.assertEqual(identity['backend'],'postgres-local');self.assertEqual(identity['epoch'],self.local['epoch'])
+        self.assertTrue((self.stage/'signed-deployment.json').exists())
+
+    def test_source_code_is_never_loaded_by_transform(self):
+        # Browser input is only read as bytes, even when it would fail if executed.
+        sentinel=self.root/'must-not-exist'
+        with patch.object(local.subprocess,'run',wraps=subprocess.run) as run:
+            self.make_local()
+            call=run.call_args.args[0]
+            self.assertEqual(call[:2],[str(self.node),str(self.helper)])
+            self.assertFalse(any(str(self.stage/'game')==arg for arg in call[:2]))
+        self.assertFalse(sentinel.exists())
+
+    def test_wrong_runtime_hold_and_old_firebase_rollback_refused(self):
+        self.archive(lambda meta,_:meta.update(localRuntimeHash='0'*64))
+        with self.assertRaisesRegex(p.BackendHold,'Local backend'):
+            p.unpack(self.package,self.stage,COMMIT,self.config['approved'])
+        # A well-formed old static release is still the wrong authority.
+        self.archive();meta=self.unpack()
+        with self.assertRaisesRegex(ValueError,'across backend'):
+            local.require_local_release(self.stage,self.local,self.config['approved'])
+
+    def test_authority_requires_exact_epoch_phase_and_installed_programs(self):
+        control={'version':1,'phase':'active','epoch':self.local['epoch']}
+        def protected(file,maximum=65536):
+            if file==local.CONTROL:return json.dumps(control).encode()
+            return file.read_bytes()
+        with patch.object(local,'APP',self.repo),patch.object(local,'NODE',self.node),patch.object(local,'HELPER',self.helper),patch.object(local,'protected',side_effect=protected),patch.object(Path,'exists',return_value=True):
+            self.assertEqual(local.authority(self.config),self.local)
+            with self.assertRaisesRegex(ValueError,'Firebase publication'):local.authority({'approved':APPROVED})
+            control['phase']='maintenance'
+            with self.assertRaisesRegex(ValueError,'Active matching'):local.authority(self.config)
+            control['phase']='active';control['epoch']='a'*32
+            with self.assertRaisesRegex(ValueError,'Active matching'):local.authority(self.config)
+            control['epoch']=self.local['epoch'];self.config['localBackend']={**self.local,'helperHash':'0'*64}
+            with self.assertRaisesRegex(ValueError,'runtime changed'):local.authority(self.config)
+
+    def test_runtime_fingerprint_covers_changes_new_files_and_dependencies(self):
+        root=self.root/'runtime';(root/'local-backend').mkdir(parents=True)
+        f=root/'local-backend/adapter.js';f.write_text('one');before=local.runtime_hash(root)
+        f.write_text('two');self.assertNotEqual(local.runtime_hash(root),before)
+        f.write_text('one');(root/'local-backend/new.js').write_text('new');self.assertNotEqual(local.runtime_hash(root),before)
+        (root/'local-backend/new.js').unlink();(root/'local-backend/node_modules').mkdir();(root/'local-backend/node_modules/private').write_text('ignored')
+        self.assertEqual(local.runtime_hash(root),before)
+        (root/'local-backend/pnpm-lock.yaml').write_text('dependencies');self.assertNotEqual(local.runtime_hash(root),before)
+        (root/'local-backend/link').symlink_to('/etc/passwd')
+        with self.assertRaises(ValueError):local.runtime_hash(root)
+
+    def test_local_recovery_refuses_firebase_without_switching(self):
+        candidate=self.host/'releases'/('auto-'+COMMIT);candidate.mkdir()
+        p.atomic_json(self.state/'transaction.json',{'previous':'previous','candidate':candidate.name,'commit':COMMIT})
+        p.swap(self.host/'current',candidate)
+        def reject(_):raise ValueError('cross authority')
+        with self.assertRaisesRegex(ValueError,'cross authority'):p.recover(self.host,self.state,reject)
+        self.assertEqual(p.current_release(self.host),candidate)
+        self.assertTrue((self.state/'transaction.json').exists())
+
+    def test_phase_change_before_symlink_switch_preserves_live_client(self):
+        self.archive();meta=self.unpack();calls=0
+        def authority():
+            nonlocal calls
+            calls+=1
+            if calls==2:raise ValueError('authority changed')
+        with self.assertRaisesRegex(ValueError,'authority changed'):
+            p.activate(self.host,self.state,self.stage,meta,lambda *_:None,lambda:COMMIT,authority)
+        self.assertEqual(p.current_release(self.host),self.previous)
+        self.assertTrue((self.state/'transaction.json').exists())
 
 
 if __name__ == "__main__":

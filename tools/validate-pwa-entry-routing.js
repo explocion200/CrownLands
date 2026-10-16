@@ -101,7 +101,14 @@ assert.match(index, /apple-mobile-web-app-title" content="Crownlands"/);
 assert.equal((index.match(/name="apple-mobile-web-app-capable"/g) || []).length, 1, "iOS install metadata must not be duplicated.");
 assert.match(home, /rel="canonical" href="https:\/\/playcrownlands\.com\/"/);
 assert.doesNotMatch(home, /rel="manifest"/, "The public homepage must not become the iOS install entry surface.");
-assert.match(game, /new URL\("\/play\/", window\.location\.origin\)/, "Game update checks must use the canonical game-entry route.");
+const updateUrlSource = game.match(/function getUpdateCheckUrl\(\) \{[\s\S]*?\n\}/)?.[0];
+assert(updateUrlSource, "The game must expose its update-check route.");
+for (const mode of [undefined, "production", "rehearsal"]) {
+  const location = { origin: "https://playcrownlands.com" };
+  const url = vm.runInNewContext(updateUrlSource + "\ngetUpdateCheckUrl()", { URL, location, window: { location, CROWNLANDS_LOCAL_BACKEND: mode && { mode } } });
+  assert.equal(url.pathname, mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/play/");
+  assert(url.searchParams.has("updateCheck"));
+}
 
 const listeners = new Map();
 const cacheEntries = new Map([

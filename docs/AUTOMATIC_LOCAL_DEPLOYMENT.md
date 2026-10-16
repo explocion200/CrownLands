@@ -1,8 +1,8 @@
 # Automatic publication to the Crownlands computer
 
 The owner requested that merging game updates in GitHub publish them to the local
-live server. The target is an entirely local game backend, with external Google
-Cloud uptime monitoring. This publisher does not perform that backend migration
+live server. The game backend became locally authoritative on October 16, 2026,
+with external Google Cloud uptime monitoring retained. This publisher does not perform backend migration
 and never deploys Firebase functions, rules, indexes, accounts or player data.
 
 ## Publication flow
@@ -35,19 +35,39 @@ next timer run. An offline computer catches up after it comes back online.
 
 ## Current backend boundary
 
-The live game still depends on Firebase. Installation records the current server
-source fingerprint, release contract, Firebase project configuration and Firebase
-deployment configuration. A package that changes these is held before activation.
-The currently running version remains live. A backend migration needs its own
-tested deployment, database backups/restore, authentication and player-data
-validation, then an explicit update of this installed publisher's backend policy.
-Do not bypass the hold by copying a new fingerprint into its configuration.
+The live game uses local accounts, PostgreSQL and local game services. The installed
+publisher records their reviewed runtime fingerprint and active authority epoch,
+in addition to the server source, release contract and retained Firebase build
+configuration fingerprints. A package that changes these is held before activation;
+the current game stays live. Runtime changes require a separately tested service
+installation and explicit compatibility review before updating the publisher policy.
+Do not bypass a hold by copying an uninstalled fingerprint into its configuration.
+The older Firebase main-branch package is held until a compatible local migration
+package has passed review, merged and been built. See [the transfer record](LOCAL_BACKEND_RELEASE_2026-10-16.md).
 
 This phase automatically publishes the CrownLands game repository's static
 client. It preserves the separately managed crownlands-website publication and
 the contact inbox. It does not publish the website repository, database
 migrations, native/itch.io packages, server processes, or changes to the
 root-owned publisher itself.
+
+The prepared local-backend mode additionally binds all local adapter source and
+dependency locks to the installed runtime. It requires an active matching epoch,
+the reviewed root-owned Node binary and the reviewed static transformation
+helper. The helper reads verified package files as data and creates the local
+client variant; it never executes downloaded JavaScript. Both the original signed
+inventory and the transformed inventory are retained. Public deployment identity
+records `postgres-local`, the epoch and transformed build ID. HTTPS smoke checks
+also require the account and game APIs to report the same epoch. Missing or changed
+local adapters are held for a separately tested service update.
+
+This mode refuses Firebase publication once the authority control leaves standby.
+Both normal rollback and recovery after interruption require a compatible local
+previous release, preventing an old Firebase client from being restored after
+the data transfer. A pause also prevents automatic recovery from switching files
+during maintenance. This local mode and the first local release were installed
+by the protected October 16 transfer; a successful GitHub merge alone does not
+install a different backend.
 
 ## Install and operate
 
@@ -76,7 +96,10 @@ and disabling crownlands-deploy.timer. Wait for any active service to finish
 before manual operations. To resume, remove the pause file and start the timer.
 Do not alter the source checkout to deploy; the service does not read it.
 
-Manual rollback: pause the timer, stop the service, inspect
+Manual static-client rollback requires a previous local release whose epoch,
+backend contract and runtime fingerprint match the installed services. Never
+restore a Firebase client or change database authority through a symlink rollback.
+Pause the timer, stop the service, inspect
 /var/lib/crownlands-deploy/last-success.json, and atomically repoint current to
 that receipt's previous directory. Verify HTTPS, homepage, /play/ and the worker.
 Keep publication paused until the offending change is reverted through a tested

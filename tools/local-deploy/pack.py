@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import tarfile
 import io
+from local_runtime import runtime_hash
 
 
 def digest(data):
@@ -37,6 +38,7 @@ def package(root, output, sha):
                 ("serverSourceHash", "contractHash", "releaseId", "worldId", "resetGeneration")},
                 "firebaseConfigHash": digest((dist / "firebase-config.js").read_bytes()),
                 "firebaseDeploymentHash": digest((root / "firebase.json").read_bytes()),
+                "localRuntimeHash": runtime_hash(root),
                 "files": files}
     output.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(output, "w:gz") as archive:

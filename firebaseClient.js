@@ -1,4 +1,5 @@
 (function () {
+  const LOCAL = window.CROWNLANDS_LOCAL_BACKEND;
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
@@ -422,6 +423,13 @@
   }
 
   async function loadModules() {
+    if (LOCAL) {
+      const base = LOCAL.mode === "rehearsal" ? "/api/local-game/rehearsal/" : "/";
+      const version = LOCAL.buildId ? "?v=" + encodeURIComponent(LOCAL.buildId) : "";
+      await import(base + "local-web-push.js" + version);
+      await import(base + "local-client.js" + version);
+      return window.CrownlandsLocalBackend.create();
+    }
     const [app, auth, firestore, functions, appCheck] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),
@@ -444,8 +452,8 @@
     if (client.initPromise) return client.initPromise;
 
     client.initPromise = (async () => {
-      const config = window.CROWNLANDS_FIREBASE_CONFIG;
-      client.configured = hasRealFirebaseConfig(config);
+      const config = LOCAL ? {} : window.CROWNLANDS_FIREBASE_CONFIG;
+      client.configured = Boolean(LOCAL) || hasRealFirebaseConfig(config);
 
       if (!client.configured) {
         client.ready = true;
@@ -1646,6 +1654,7 @@
   }
 
   function getNotificationVapidKey() {
+    if (LOCAL) return window.CrownlandsLocalPush?.configuration()?.publicKey || "";
     const configKey = window.CROWNLANDS_FIREBASE_CONFIG?.vapidKey || window.CROWNLANDS_FIREBASE_VAPID_KEY || "";
     return String(configKey || "").trim();
   }
@@ -1661,7 +1670,7 @@
 
   function isPushSupported() {
     return Boolean(
-      hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG)
+      (LOCAL || hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG))
       && getNotificationVapidKey()
       && hasPushEnvironmentSupport()
     );
@@ -1732,6 +1741,7 @@
   }
 
   async function getServiceWorkerRegistration() {
+    if (LOCAL) return client.modules.messaging.getServiceWorkerRegistration();
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
     const workerUrl = new URL("./service-worker.js", document.baseURI);
@@ -1745,7 +1755,7 @@
     const messagingModule = await loadMessagingModule();
     if (typeof messagingModule.isSupported === "function") {
       const supported = await messagingModule.isSupported();
-      if (!supported) throw new Error("Firebase notifications are not supported in this browser.");
+      if (!supported) throw new Error("Notifications are not supported in this browser.");
     }
     if (!client.messaging) {
       client.messaging = messagingModule.getMessaging(client.app);
