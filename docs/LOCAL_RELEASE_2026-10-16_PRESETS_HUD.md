@@ -20,7 +20,7 @@ This record does not claim an itch.io publication.
   The 1 MiB document budget now uses logical storage sizes rather than inflated
   typed JSON wrappers, following the documented
   [size calculation](https://firebase.google.com/docs/firestore/storage-size).
-  No reports were pruned and no player records were manually rewritten.
+  No report-pruning workaround or manual player-data rewrite was used.
 - Seven matching website guides/rules pages from
   [website PR #31](https://github.com/explocion200/crownlands-website/pull/31)
   were published with their reviewed 10-Crown wording.
