@@ -3,15 +3,12 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
-const ribbon=require("../docs/art-sources/movement-ribbons/runtime-assets.json")[0];
-const provenance=require("../docs/art-sources/movement-ribbons/prompt.json");
-assert.equal(provenance.source,ribbon.source);assert(provenance.prompt&&fs.existsSync(path.resolve(__dirname,"..",provenance.reference)));
-const root=path.resolve(__dirname,"..");
-for(const[file,hash]of[[ribbon.source,ribbon.sourceSha256],[ribbon.output,ribbon.sha256]])assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root,file))).digest("hex"),hash);
-assert(ribbon.hasAlpha&&ribbon.bytes<=7*1024);
+const retired=require("../docs/art-sources/movement-ribbons/runtime-assets.json")[0];
+assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.resolve(__dirname,"../docs/art-sources/movement-ribbons/retired-ribbon-196x76.webp"))).digest("hex"),retired.sha256);
+assert(!require("../assets/optimized/manifest.json").assets.some(a=>a.id===retired.id));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{
- const server=createMapBenchmarkServer(),address=await server.listen(),output=path.resolve(__dirname,"../release-artifacts/movement-ribbons");
+ const server=createMapBenchmarkServer(),address=await server.listen(),output=path.resolve(__dirname,"../release-artifacts/restored-notice-style");
  fs.mkdirSync(output,{recursive:true});let browser,client;const errors=[],failed=[],writes=[],records=[];
  try{
   const executable=[process.env.CHROME_PATH,"/usr/bin/google-chrome","/usr/bin/chromium","C:/Program Files/Google/Chrome/Application/chrome.exe"].find(p=>p&&fs.existsSync(p));assert(executable,"Chromium required");
@@ -36,9 +33,9 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     assert.equal((await measure("incomingAttackBtn")).hidden,!["incoming","both"].includes(mode));
     assert.equal((await measure("outgoingAttackBtn")).hidden,!["outgoing","both"].includes(mode));
    }
-   const artwork=await ev(`(async()=>{const paths=[${JSON.stringify(ribbon.output)},'assets/icons/skills/atlas-v1/marchOrders.webp','assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp'];const result=[];for(const src of paths){const img=new Image();img.src=src;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);result.push({src,width:img.naturalWidth,height:img.naturalHeight,corner:ctx.getImageData(0,0,1,1).data[3],center:ctx.getImageData(canvas.width/2,canvas.height/2,1,1).data[3]});}return result;})()`);
+   const artwork=await ev(`(async()=>{const paths=['assets/icons/skills/atlas-v1/marchOrders.webp','assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp'];const result=[];for(const src of paths){const img=new Image();img.src=src;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);result.push({src,width:img.naturalWidth,height:img.naturalHeight,corner:ctx.getImageData(0,0,1,1).data[3],center:ctx.getImageData(canvas.width/2,canvas.height/2,1,1).data[3]});}return result;})()`);
    assert(artwork.every(a=>a.corner===0&&a.center>240),JSON.stringify(artwork));
-   for(const[id,src]of[['outgoingAttackBtn',artwork[1].src],['incomingAttackBtn',artwork[2].src]]){
+   for(const[id,src]of[['outgoingAttackBtn',artwork[0].src],['incomingAttackBtn',artwork[1].src]]){
     assert(await ev(`(()=>{const img=document.querySelector('#${id} img.nav-btn-icon');return img?.getAttribute('src')==='${src}'&&img.complete&&img.naturalWidth>0&&img.alt==='';})()`));
     assert.equal(await ev(`document.getElementById('${id.replace('Btn','Count')}').textContent`),'1');
     assert.match(await ev(`document.getElementById('${id.replace('Btn','Time')}').textContent`),/\d+m/);
@@ -63,7 +60,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     for(const state of ["idle","hover","focus"]){
      await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",...(state==="hover"?await point(id):{x:0,y:0})});
      if(state==="focus")await ev(`document.getElementById('${id}').focus()`);await pause(180);
-     const n=await measure(id);assert(n.image.includes(ribbon.output),id+" lost illustrated ribbon on "+state);assert.equal(n.background,"rgba(0, 0, 0, 0)");assert.equal(n.shadow,"none");if(state==="focus")assert.notEqual(n.outline,"none");assert.equal(n.color,ink);assert(n.labels.every(l=>l.color===ink&&l.fits),JSON.stringify({id,state,n}));assert.deepEqual(n.rect,initial.rect);
+     const n=await measure(id);assert(n.image.includes("linear-gradient"),id+" lost parchment on "+state);assert(!n.image.includes("url("));assert(n.shadow.includes("inset"));assert.equal(n.border,"2px");if(state==="focus")assert.notEqual(n.outline,"none");assert.equal(n.color,ink);assert(n.labels.every(l=>l.color===ink&&l.fits),JSON.stringify({id,state,n}));assert.deepEqual(n.rect,initial.rect);
     }
     for(const method of ["mouse","keyboard",...(width<1000?["touch"]:[])]){
      if(method==="mouse")await click(id);
