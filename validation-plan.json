@@ -1,53 +1,49 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5f4e9d343de1240d97681b40c71c80ef2fc226fe",
+  "baseCommit": "1ccdd6764a512ff9ffd57ba4af9b2f806de1545b",
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/chat-toggle-image-draft/draft.css",
-        "docs/visual-qa/chat-toggle-image-draft/images/chat-left-r2.png",
-        "docs/visual-qa/chat-toggle-image-draft/images/chat-left.png",
-        "docs/visual-qa/chat-toggle-image-draft/images/chat-right-r2.png",
-        "docs/visual-qa/chat-toggle-image-draft/images/chat-right.png",
-        "docs/visual-qa/chat-toggle-image-draft/images/current-closed.png",
-        "docs/visual-qa/chat-toggle-image-draft/images/prompts.json",
-        "docs/visual-qa/chat-toggle-image-draft/index.html",
-        "docs/visual-qa/chat-toggle-image-draft/preview.html",
-        "docs/visual-qa/chat-toggle-image-draft/preview.js",
-        "docs/visual-qa/chat-toggle-image-draft/review.css",
-        "docs/visual-qa/chat-toggle-image-draft/review.js",
-        "docs/visual-qa/chat-toggle-image-draft/runtime-fixture.js",
-        "tools/validate-chat-toggle-draft-browser.js",
-        "docs/visual-qa/chat-toggle-image-draft/images/runtime-assets.json"
+        "game.js",
+        "tools/validate-held-camp-operations.js"
       ],
       "tests": [
-        "tools/validate-chat-toggle-draft-browser.js"
+        "tools/validate-active-operations.js",
+        "tools/validate-held-camp-operations.js",
+        "tools/validate-parchment-notices-browser.js",
+        "tools/validate-chat.js"
       ],
-      "reason": "Approved Chat arrow image integration and preserved historical review. Check identical 56px targets at desktop and both landscape widths; both upright states; real mouse, Enter, Space and touch toggles; unread visibility; keyboard focus; zoom independence; transparent image delivery hashes and byte budget; review controls; and no failed assets, browser exceptions or network writes. The focused test exercises the actual production HTML/CSS separately from the review overlay."
+      "reason": "Outgoing no longer counts held Camps, Strongholds or the Citadel. Exercise all held-camp types before map load, across map switches and snapshot removal; mixed holdings with attack, scout, transfer, return, pending, support and rally states; and preserving an open holdings ledger when movement ends. Keep complete activity snapshots, authoritative ownership and reward behavior unchanged. Browser tests use actual production notification functions and ensure occupancy transitions still reach chat. This is client presentation, not a server or data change; no emulator suites apply."
     },
     {
       "paths": [
-        "index.html",
+        "chat.css",
         "main-screen-art-ui.css",
-        "assets/optimized/manifest.json",
-        "assets/optimized/hud-chat-left-labeled-192x192-cc1059e9e269.webp",
-        "assets/optimized/hud-chat-right-labeled-192x192-eac413442419.webp",
-        "chat.css"
+        "tools/validate-parchment-notices-browser.js"
       ],
       "tests": [
+        "tools/validate-parchment-notices-browser.js",
         "tools/validate-chat-toggle-draft-browser.js",
         "tools/validate-main-screen-art-browser.js",
         "tools/validate-chat.js"
       ],
-      "reason": "Integrate the approved two-state images into the existing chat target. Shared HUD CSS needs the neighboring top/bottom controls, dynamic clan shield and existing actions checked; chat validation preserves layout, privacy, translation, unread and conversation contracts. Verify manifest hashes, dimensions, delivery budgets and existing runtime-cache strategy. No game logic, server authority, data or release-contract change; no emulator suite applies. Remove superseded SVG-only styles and border; retain them solely in the historical review and preserve the existing offline-shell budget. Required build validation independently enforces the asset-performance budgets."
+      "reason": "Remove the inherited Chat backdrop blur and obsolete fill; style the three notice surfaces as parchment. Verify clear backdrop in both Chat states during hover/focus/press, preserved notice geometry and readable fitting labels, all visibility combinations, real pointer/keyboard/touch actions, neighboring HUD art and live clan shield, map zoom, chat collision contracts, no failed requests or network writes. Build checks enforce the unchanged offline-shell and art budgets."
     },
     {
       "paths": [
-        "docs/visual-qa/chat-toggle-image-draft/README.md",
+        "tools/validate-military-ui.js"
+      ],
+      "tests": [
+        "tools/validate-military-ui.js"
+      ],
+      "reason": "The existing active-operations validator imports the military renderer fixture, which lacked its real getReportIconArt dependency. Load that existing production helper and retain all 200 attack-power comparisons, equipped/stored gear checks, authoritative forecast and local fallback assertions. No gameplay code or combat values change."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicit October 16 approval, narrow supersession of the burgundy SVG toggle, artwork provenance and validation procedure. Documentation does not establish deployment."
+      "reason": "Record the explicitly requested presentation and outgoing-notice behavior while preserving holding details and authoritative mechanics. Documentation does not establish live deployment."
     }
   ]
 }

@@ -20,6 +20,7 @@ const context = {
   formatMarchesNumber: value => Math.floor(value).toLocaleString("en-US"),
 };
 vm.createContext(context);
+vm.runInContext(functionSource(game, "getReportIconArt"), context);
 vm.runInContext(functionSource(server, "createAttackCombatSnapshot"), context);
 vm.runInContext(fs.readFileSync(path.join(root, "troop-orders-ui.js"), "utf8"), context);
 let vectors = 0;

@@ -13,13 +13,8 @@
   color: var(--cl-ivory);
   border: 0;
   border-radius: 10px;
-  background:
-    linear-gradient(180deg, rgba(84, 54, 33, .97), rgba(45, 29, 19, .98)),
-    repeating-linear-gradient(90deg, rgba(237, 220, 179, .06) 0 1px, transparent 1px 7px);
-  box-shadow:
-    inset 0 0 0 2px rgba(231, 221, 196, .08),
-    inset 0 -4px 0 rgba(20, 12, 8, .28),
-    0 8px 16px rgba(0, 0, 0, .42);
+  background: transparent;
+  box-shadow: none;
   overflow: visible;
   touch-action: manipulation;
 }

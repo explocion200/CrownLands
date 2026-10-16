@@ -30,6 +30,7 @@ const camps = ["gold", "troops", "items", "deed"].map((type, index) => {
     state: "held", combatVersion: 1,
   };
 });
+let outgoing = [], holdings = [], renderedOperations = null;
 const context = {
   Date,
   WORLD_CAMPS_BY_ID: new Map(), // No camp map has been loaded in this session.
@@ -49,10 +50,11 @@ const context = {
     setAttribute(name, value) { this[name] = String(value); },
     removeAttribute(name) { delete this[name]; },
   },
-  outgoingAttackCount: {}, outgoingAttackTime: {}, modal: { open: false },
+  outgoingAttackCount: {}, outgoingAttackTime: {}, modal: { open: false, classList: { contains: name => name === "outgoing-attack-modal" }, close() { this.open = false; } },
+  renderOutgoingAttacksModalContent: value => { renderedOperations = value; },
   getCurrentOnlineUid: () => uid,
-  getOutgoingAttacks: () => [], getIncomingClanReinforcementMarches: () => [],
-  getHeldStrongholdsForActiveOperations: () => [],
+  getOutgoingAttacks: () => outgoing, getIncomingClanReinforcementMarches: () => [],
+  getHeldStrongholdsForActiveOperations: () => holdings,
   normalizeRegionId: value => value,
   normalizeTimestampMs: value => Number(value) || 0,
   readVisualSize: (value, fallback) => Number(value) || fallback,
@@ -69,6 +71,7 @@ for (const name of [
   "getCampConfigForType", "getRewardCampConfig", "normalizeOnlineCampState",
   "getCampTargetById", "applyOnlineHeldCamps", "applyOnlineCamps",
   "getHeldCampsForActiveOperations", "getActiveOperationsSnapshot", "updateOutgoingAttackUi",
+  "getArmyKindCounts", "formatOutgoingMissionSummary", "formatReinforcementOperationSummary",
   "formatHeldCampReward", "renderActiveOperationLocationButton", "renderHeldCampOperationCard",
 ]) vm.runInContext(functionSource(game, name), context);
 
@@ -78,8 +81,8 @@ for (const camp of camps) {
   context.applyOnlineHeldCamps([camp]);
   const operations = context.getActiveOperationsSnapshot();
   assert.equal(operations.camps.length, 1, `${camp.name} disappeared before its map loaded.`);
-  assert.equal(context.outgoingAttackBtn.hidden, false, `${camp.name} did not activate Outbound.`);
-  assert.equal(context.outgoingAttackCount.textContent, "1");
+  assert.equal(context.outgoingAttackBtn.hidden, true, `${camp.name} must not activate Outgoing while held.`);
+  assert.equal(context.outgoingAttackCount.textContent, "0");
   const held = operations.camps[0];
   assert.equal(held.currentGarrison, camp.currentGarrison);
   assert.equal(held.payoutAtMs, camp.payoutAtMs);
@@ -99,11 +102,11 @@ context.applyOnlineHeldCamps(camps);
 assert.equal(context.getActiveOperationsSnapshot().camps.length, 4, "Simultaneous cross-map holds collapsed.");
 context.WORLD_CAMPS_BY_ID.set(camps[0].id, camps[0]);
 context.applyOnlineCamps([camps[0]], camps[0].regionId);
-assert.equal(context.outgoingAttackCount.textContent, "4", "Visiting a camp double-counted its hold.");
+assert.equal(context.getActiveOperationsSnapshot().camps.length, 4, "Visiting a camp double-counted its hold.");
 context.applyOnlineCamps([], "core-v2-home");
-assert.equal(context.outgoingAttackCount.textContent, "4", "Leaving the camp map removed Outbound activity.");
+assert.equal(context.getActiveOperationsSnapshot().camps.length, 4, "Leaving the camp map removed held activity.");
 context.applyOnlineHeldCamps(camps.slice(1));
-assert.equal(context.outgoingAttackCount.textContent, "3", "An off-map loss retained a stale hold.");
+assert.equal(context.getActiveOperationsSnapshot().camps.length, 3, "An off-map loss retained a stale hold.");
 context.applyOnlineHeldCamps([{ ...camps[0], holderUid: "other-player" }]);
 assert.equal(context.outgoingAttackBtn.hidden, true, "Another holder's camp appeared in Outbound.");
 assert.equal(context.getCampTargetById("unknown-camp"), null, "Unknown targets must remain unavailable.");
@@ -139,10 +142,41 @@ assert.deepEqual(Array.from(subscribedQuery.filters, filter => [filter.field, fi
   ["worldId", "==", "main-realm-2026-09"], ["realmShardId", "==", "shard_0001"],
 ], "The held-camp listener cannot satisfy current realm access rules.");
 listener({ docs: camps.map(camp => ({ id: camp.id, data: () => camp })) });
-assert.equal(context.outgoingAttackCount.textContent, "4", "A remote capture snapshot did not refresh Outbound.");
+assert.equal(context.getActiveOperationsSnapshot().camps.length, 4, "A remote capture snapshot did not refresh held objectives.");
+assert.equal(context.outgoingAttackBtn.hidden, true, "A remote capture must not activate Outgoing.");
 listener({ docs: [] });
 assert.equal(context.outgoingAttackBtn.hidden, true);
 unsubscribe();
 assert.equal(listener, null, "The held-camp listener did not unsubscribe.");
 
-console.log("Validated all four held-camp Outbound notifications before map load, across map switches, and after capture/loss snapshots.");
+// Held Strongholds and the Citadel remain in the ledger, never in Outgoing.
+holdings = [{id:"stronghold",name:"Stronghold"},{id:"citadel",name:"Crown Citadel"}];
+context.applyOnlineHeldCamps(camps);
+context.updateOutgoingAttackUi();
+assert.equal(context.outgoingAttackBtn.hidden,true);
+assert.equal(context.outgoingAttackCount.textContent,"0");
+assert.equal(context.getActiveOperationsSnapshot().strongholds.length,2);
+for(const mission of [
+ {kind:"attack",remaining:42}, {kind:"scout",remaining:0,isResolving:true},
+ {kind:"transfer",remaining:50}, {kind:"attack",returning:true,remaining:25},
+ {kind:"attack",serverPending:true,serverRetrying:true,remaining:0},
+ {kind:"reinforce",remaining:20},
+]){
+ outgoing=[mission];context.updateOutgoingAttackUi();
+ assert.equal(context.outgoingAttackBtn.hidden,false);
+ assert.equal(context.outgoingAttackCount.textContent,"1","Held objectives inflated the movement count.");
+ assert(!/held|Holdings/.test(context.outgoingAttackBtn.title));
+ assert.equal(context.outgoingAttackTime.textContent,mission.serverPending?"Checking":mission.isResolving?"Receiving report…":`${mission.remaining}s`);
+}
+context.modal.open=true;outgoing=[];context.updateOutgoingAttackUi();
+assert.equal(context.outgoingAttackBtn.hidden,true);
+assert.equal(context.modal.open,true,"Finishing the last march closed a holding ledger.");
+assert.equal(renderedOperations.camps.length,4);assert.equal(renderedOperations.strongholds.length,2);
+context.onlineClanRallies=[{id:"forming"}];context.updateOutgoingAttackUi();
+assert.equal(context.outgoingAttackCount.textContent,"1");assert.equal(context.outgoingAttackTime.textContent,"Rallies");
+context.onlineClanRallies=[];context.onlineReinforcements=[{ownerUid:uid,targetOwnerUid:"ally"}];context.updateOutgoingAttackUi();
+assert.equal(context.outgoingAttackCount.textContent,"1");assert.equal(context.outgoingAttackTime.textContent,"Support");
+context.onlineReinforcements=[];holdings=[];context.onlineCampStates.clear();context.applyOnlineHeldCamps([]);
+assert.equal(context.modal.open,false,"An empty activity ledger should still close.");
+assert.equal(context.outgoingAttackBtn.hidden,true);
+console.log("Validated held-objective discovery without Outgoing notices, accurate mixed movement counts, existing support/rally states and open-ledger lifecycle.");
