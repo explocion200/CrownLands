@@ -1,25 +1,18 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "245c3846a94a6957a63a443d199c5bede77d127c",
+  "baseCommit": "d52ca7bfd544007651c22b8373da9828e92a317c",
   "coverage": [
     {
       "paths": [
-        "tools/local-postgres-army-indexes.js",
-        "tools/test-local-postgres-army-indexes.js"
+        "AGENTS.md"
       ],
       "tests": [
-        "tools/test-local-postgres-army-indexes.js",
-        "tools/test-local-postgres-store.js",
-        "functions/test/emulator-economy-concurrency.js"
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js"
       ],
-      "reason": "Operator-only nonunique army indexes match the unchanged Store compiler. Real PostgreSQL fixtures reproduce the historical scan, verify owner/due index plans and bounded block reads, preserve realm/shard/status/projection filters, numeric and document-name ordering/cursors, and exercise concurrent exact-once launch debits and arrival status updates. Installer repeat and name-collision tests protect rollout. The shared store suite covers typed query/transaction semantics; the economy emulator covers unchanged server-authoritative concurrent economic rules. No client, gameplay, runtime, permissions, isolation or retry behavior changes, so browser visual testing and client build are not applicable."
-    },
-    {
-      "paths": [
-        "docs/LOCAL_GAME_QUERY_PERFORMANCE.md"
-      ],
-      "tests": [],
-      "reason": "Documents observed diagnostic evidence, scope, tested index definitions and explicit operator rollout/rollback. No additional runtime behavior or visual presentation is introduced."
+      "reason": "Record the owner's standing authorization to merge reviewed, current PRs after exact-head required checks pass, preserving explicit holds, production authorization boundaries and post-merge synchronization. This edits workflow instructions only. The repository requires these four workflow-protection validators for AGENTS.md changes; no gameplay, emulator or browser behavior changes."
     }
   ]
 }
