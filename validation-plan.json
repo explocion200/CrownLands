@@ -1,49 +1,34 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1ccdd6764a512ff9ffd57ba4af9b2f806de1545b",
+  "baseCommit": "f3674526434cbe1bf72cf9b30b6600b7c8f56c50",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-held-camp-operations.js"
-      ],
-      "tests": [
-        "tools/validate-active-operations.js",
-        "tools/validate-held-camp-operations.js",
-        "tools/validate-parchment-notices-browser.js",
-        "tools/validate-chat.js"
-      ],
-      "reason": "Outgoing no longer counts held Camps, Strongholds or the Citadel. Exercise all held-camp types before map load, across map switches and snapshot removal; mixed holdings with attack, scout, transfer, return, pending, support and rally states; and preserving an open holdings ledger when movement ends. Keep complete activity snapshots, authoritative ownership and reward behavior unchanged. Browser tests use actual production notification functions and ensure occupancy transitions still reach chat. This is client presentation, not a server or data change; no emulator suites apply."
-    },
-    {
-      "paths": [
-        "chat.css",
+        "index.html",
         "main-screen-art-ui.css",
-        "tools/validate-parchment-notices-browser.js"
+        "tools/validate-parchment-notices-browser.js",
+        "assets/optimized/manifest.json",
+        "assets/optimized/hud-notice-ribbon-392x152-93a6da8400e8.webp",
+        "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
+        "docs/art-sources/movement-ribbons/runtime-assets.json"
       ],
       "tests": [
         "tools/validate-parchment-notices-browser.js",
-        "tools/validate-chat-toggle-draft-browser.js",
         "tools/validate-main-screen-art-browser.js",
-        "tools/validate-chat.js"
+        "tools/validate-chat-toggle-draft-browser.js",
+        "tools/validate-chat.js",
+        "tools/validate-active-operations.js"
       ],
-      "reason": "Remove the inherited Chat backdrop blur and obsolete fill; style the three notice surfaces as parchment. Verify clear backdrop in both Chat states during hover/focus/press, preserved notice geometry and readable fitting labels, all visibility combinations, real pointer/keyboard/touch actions, neighboring HUD art and live clan shield, map zoom, chat collision contracts, no failed requests or network writes. Build checks enforce the unchanged offline-shell and art budgets."
+      "reason": "Replace the three flat notice surfaces with one illustrated label ribbon and reuse the existing horse and crossed-swords artwork. Browser checks cover decoded asset identity/alpha, source and runtime hashes, bounded image size, original target geometry, all movement visibility states, live counts/countdowns, unread badge, readable fitting labels, focus and mouse/keyboard/touch actions at desktop and landscape-phone sizes. Shared HUD and Chat tests protect neighboring artwork, saved clan shield, toggle transparency and collision contracts. Active-operations tests protect the already-approved exclusion of held Camps/Strongholds/Citadel and complete activity tabs. Production build and asset-budget validation must include the referenced runtime assets without new precaching. No game logic, backend, data or server-authoritative changes; no emulator suites apply."
     },
     {
       "paths": [
-        "tools/validate-military-ui.js"
-      ],
-      "tests": [
-        "tools/validate-military-ui.js"
-      ],
-      "reason": "The existing active-operations validator imports the military renderer fixture, which lacked its real getReportIconArt dependency. Load that existing production helper and retain all 200 attack-power comparisons, equipped/stored gear checks, authoritative forecast and local fallback assertions. No gameplay code or combat values change."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/art-sources/movement-ribbons/README.md",
+        "docs/art-sources/movement-ribbons/prompt.json"
       ],
       "tests": [],
-      "reason": "Record the explicitly requested presentation and outgoing-notice behavior while preserving holding details and authoritative mechanics. Documentation does not establish live deployment."
+      "reason": "Record the owner's explicitly requested visual refinement, asset provenance and exact built-in image-generation prompt. Preserve existing gameplay and holding-notice rules. Documentation does not establish deployment."
     }
   ]
 }
