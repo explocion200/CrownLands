@@ -1,39 +1,17 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d356b72c1d635114f3c2da26edb3c986909afdc3",
+  "baseCommit": "1cf9d9ce0e4ca0604f3f8e06ba7c075dd0e58fe3",
   "coverage": [
     {
       "paths": [
         "crown-payments-ui.js",
         "crown-payments-ui.css",
-        "crown-payment-return.html",
         "tools/validate-crown-payments-browser.js"
       ],
       "tests": [
-        "tools/validate-crown-payments-browser.js",
-        "tools/test-crown-payments.js",
-        "tools/test-crown-live-payments.js"
-      ],
-      "reason": "Repair hosted-checkout handoff in the shared live/test client, preserve the same idempotent order when popup navigation is blocked or lost, and provide visible real links plus same-tab return. Browser coverage exercises the actual Shop/dialog at desktop and landscape-mobile sizes, blocked/throwing/closed/silent popup paths, retry recovery, terminal states, hostile URL rejection, account-switch isolation, and no client wallet mutations. Existing live/test validators protect the provider URL, quote and API contracts consumed by this UI. No server-authoritative code or schema changes; no emulator suite is needed."
-    },
-    {
-      "paths": [
-        "docs/CROWN_PAYMENTS.md"
-      ],
-      "tests": [],
-      "reason": "Document the observed read-only diagnostic and checkout recovery behavior, distinguish historical setup from current local operation, and explain player requirements. Runtime behavior is covered by the adjacent UI validation group."
-    },
-    {
-      "paths": [
-        "tools/build-production-client.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
         "tools/validate-crown-payments-browser.js"
       ],
-      "reason": "The checkout recovery exceeded the existing installation-cache cap. Apply the existing conservative minifier only to crown-payments-ui.js and count those delivered bytes in the shell validator. Keep all size caps unchanged. Full artifact and asset-budget validators verify packaging, while the checkout browser suite asserts exact minifier output and serves the built client to exercise every live/test flow after compilation."
+      "reason": "Move initial, continued and ready checkout actions to the footer right, keeping payment status as a quieter left-hand recovery control in matching keyboard order. The existing built-client live/test browser suite checks desktop and landscape-mobile geometry, visible controls, navigation, order recovery, status, terminal states and account isolation. Only presentation and DOM order change; payment requests, server verification and wallet authority are unchanged, so no emulator suites apply. Production build and asset budgets run automatically."
     }
   ]
 }
