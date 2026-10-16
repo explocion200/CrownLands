@@ -184,6 +184,10 @@ class MaintenanceTests(unittest.TestCase):
         good='HTTP/2 503\ncache-control: no-store\nretry-after: 300\n\n'+transfer.MESSAGE
         with patch.object(transfer,'read_file',return_value=b'config'),patch.object(transfer,'run',return_value=good) as run:
             host.check_proxy();self.assertEqual(run.call_count,4)
+            for call in run.call_args_list:
+                args=call.args[0]
+                self.assertEqual(args[args.index('--resolve')+1],'playcrownlands.com:443:192.168.1.145')
+                self.assertNotIn('--insecure',args)
             for bad in [good.replace('503','200'),good.replace('no-store','public'),good.replace('300','1'),good.replace(transfer.MESSAGE,'ordinary page')]:
                 run.return_value=bad
                 with self.assertRaises(ValueError):host.check_proxy()

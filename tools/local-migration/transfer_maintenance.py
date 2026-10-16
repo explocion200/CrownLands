@@ -197,7 +197,10 @@ class Host:
             raise ValueError('Maintenance proxy changed')
         for endpoint in ['/play/','/local-auth/health','/api/local-game/health','/api/season-rankings']:
             response = run(['curl','--silent','--show-error','--max-time','3','--noproxy','*',
-                '--resolve','playcrownlands.com:443:127.0.0.1','--include','https://playcrownlands.com'+endpoint])
+                # The protected Caddy routes bind HTTPS to this reserved LAN
+                # address; no TLS listener exists on loopback. Keep certificate
+                # and hostname verification while bypassing public DNS/NAT.
+                '--resolve','playcrownlands.com:443:192.168.1.145','--include','https://playcrownlands.com'+endpoint])
             header, body = response.split('\r\n\r\n' if '\r\n\r\n' in response else '\n\n', 1)
             if (not re.match(r'HTTP/[\d.]+ 503\b', header) or body != MESSAGE
                 or not re.search(r'(?im)^cache-control: no-store\s*$', header)
