@@ -8,6 +8,10 @@ main.crown-payments-dialog { max-height:none; overflow:visible; }
 .crown-checkout-links a { display:block; min-height:44px; box-sizing:border-box; padding:9px 12px; text-align:center; color:inherit; }
 .crown-checkout-links [data-crown-open],.crown-payments-dialog [data-crown-pay] { color:#fff9ee; background:#72363a; border:1px solid #785944; border-radius:6px; font-weight:600; }
 .crown-payments-dialog header,.crown-payments-dialog footer { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.crown-payments-dialog footer > :last-child { margin-left:auto; }
+@layer crownlands-theme {
+  .crown-payments-dialog footer button[data-crown-check] { background:transparent !important; border-color:transparent !important; text-decoration:underline; }
+}
 .crown-payments-dialog header { flex-wrap:nowrap; }
 .crown-payments-dialog header h2 { min-width:0; overflow-wrap:anywhere; }
 .crown-payments-dialog h2 { margin:0; font-size:21px; }

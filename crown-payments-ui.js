@@ -61,10 +61,10 @@
       ${order ? `<p class="crown-order-reference">${live ? "Order" : "Test order"}: ${escape(order.orderId)}</p>` : ""}
       <p role="status" aria-live="polite">${escape(session.error || message)}</p>
       </div>
-      <footer>${terminal(order) ? `<button type="button" data-crown-again>Choose another ${live ? "" : "test "}pack</button>`
+      <footer>${order ? `<button type="button" data-crown-check ${session.busy ? "disabled" : ""}>Check payment status</button>` : ""}
+      ${terminal(order) ? `<button type="button" data-crown-again>Choose another ${live ? "" : "test "}pack</button>`
         : checkoutUrl ? `<div class="crown-checkout-links"><a data-crown-open href="${escape(checkoutUrl)}" target="_blank" rel="noopener noreferrer">Open secure ${live ? "" : "test "}checkout</a><a data-crown-same-tab href="${escape(checkoutUrl)}" referrerpolicy="no-referrer">Open in this tab instead</a></div>`
-        : `<button type="button" data-crown-pay ${session.busy || !session.packs.length ? "disabled" : ""}>${session.busy ? "Checking…" : pending ? (live ? "Continue checkout" : "Continue test checkout") : (live ? "Open Stripe checkout" : "Open Stripe test checkout")}</button>`}
-      ${order ? `<button type="button" data-crown-check ${session.busy ? "disabled" : ""}>Check payment status</button>` : ""}</footer>`;
+        : `<button type="button" data-crown-pay ${session.busy || !session.packs.length ? "disabled" : ""}>${session.busy ? "Checking…" : pending ? (live ? "Continue checkout" : "Continue test checkout") : (live ? "Open Stripe checkout" : "Open Stripe test checkout")}</button>`}</footer>`;
     session.dialog.querySelector("[data-crown-close]").onclick = () => session.dialog.close();
     session.dialog.querySelector("[data-crown-pack]").onchange = event => { session.selected = event.target.value; };
     session.dialog.querySelector("[data-crown-pay]")?.addEventListener("click", () => pay(session));

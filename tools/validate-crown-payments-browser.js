@@ -166,8 +166,23 @@ async function main() {
       assert.equal(await evaluate("document.querySelector('[data-crown-pack]').value"), "fixture");
       assert.deepEqual(await evaluate("[document.querySelector('.crown-payments-dialog label'), document.querySelector('[data-crown-pack]')].map(node => getComputedStyle(node).color)"),
         ["rgb(53, 43, 32)", "rgb(53, 43, 32)"], "Game-wide label styling must not make checkout prices unreadable");
+      const actionLayout = async selector => {
+        const layout = await evaluate(`(() => {
+          const footer = document.querySelector('.crown-payments-dialog footer'), primary = footer.querySelector(${JSON.stringify(selector)});
+          const check = footer.querySelector('[data-crown-check]'), p = primary.getBoundingClientRect(), f = footer.getBoundingClientRect();
+          return { rightGap: f.right - p.right, visible: p.top >= 0 && p.bottom <= innerHeight,
+            checkOnLeft: !check || check.getBoundingClientRect().right < p.left,
+            checkFirst: !check || footer.firstElementChild === check,
+            checkBackground: check ? getComputedStyle(check).backgroundColor : null };
+        })()`);
+        assert(Math.abs(layout.rightGap) <= 1 && layout.visible, "Primary checkout stays visible at the footer's right edge");
+        assert(layout.checkOnLeft && layout.checkFirst, "Status recovery stays on the left in visual and keyboard order");
+        if (layout.checkBackground) assert.equal(layout.checkBackground, "rgba(0, 0, 0, 0)", "Status recovery is a quieter secondary action");
+      };
+      await actionLayout('[data-crown-pay]');
       const checkoutLinks = async () => {
         await wait("!!document.querySelector('[data-crown-open]')");
+        await actionLayout('.crown-checkout-links');
         const links = await evaluate(`['[data-crown-open]', '[data-crown-same-tab]'].map(selector => {
           const link = document.querySelector(selector), r = link.getBoundingClientRect();
           return { href: link.href, target: link.target, rel: link.rel, referrerPolicy: link.referrerPolicy,
@@ -189,6 +204,8 @@ async function main() {
       assert.equal(await evaluate("crownQA.popups.length"), 0);
       fs.writeFileSync(path.join(output, `checkout-ready-${mode}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
       await reopen();
+      await actionLayout('[data-crown-pay]');
+      fs.writeFileSync(path.join(output, `checkout-continue-${mode}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
       await evaluate("crownQA.blocked = false; crownQA.lose = true");
       await click("[data-crown-pay]"); await statusContains("Connection lost");
       await click("[data-crown-pay]");
