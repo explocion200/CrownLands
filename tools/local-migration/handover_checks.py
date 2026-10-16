@@ -88,7 +88,56 @@ def require_drained_inventory(inventory):
         raise ValueError('Pending game receipts or purchases require reconciliation')
 
 
-def scheduler_cursors(jobs, routes, closed_at, observed_at, planned_jobs):
+def scheduler_logged_minute(job, before, evidence, closed, observed):
+    """Prove complete successful execution windows from Google's own logs.
+
+    PauseJob clears lastAttemptTime/scheduleTime and reports status -1. Log
+    timestamps can put AttemptStarted just after AttemptFinished, so associate
+    each unique finish with its scheduled-time window, not log arrival order.
+    Require the reviewed pre-pause attempt and every later attempt to be paired.
+    """
+    anchor=stamp(before['lastAttemptTime'])
+    if (before.get('status') is None or before['status'].get('code',0)!=0
+            or stamp(evidence['from'])>anchor or not 0<=observed-stamp(evidence['through'])<=300):
+        raise ValueError('Fresh complete scheduler execution evidence required')
+    entries=evidence['entries'];starts=[];finishes=[]
+    if not isinstance(entries,list) or not 2<=len(entries)<1000:
+        raise ValueError('Bounded scheduler execution history required')
+    for entry in entries:
+        resource=entry.get('resource',{});payload=entry.get('jsonPayload',{});at=stamp(entry['timestamp'])
+        if (entry.get('logName')!='projects/'+PROJECT+'/logs/cloudscheduler.googleapis.com%2Fexecutions'
+                or resource.get('type')!='cloud_scheduler_job'
+                or resource.get('labels')!={'project_id':PROJECT,'location':'us-central1','job_id':job['name'].split('/')[-1]}
+                or payload.get('jobName')!=job['name'] or payload.get('targetType')!='HTTP'
+                or payload.get('url')!=job['httpTarget']['uri']
+                or not stamp(evidence['from'])<=at<=stamp(evidence['through'])):
+            raise ValueError('Scheduler log provenance or coverage changed')
+        kind=payload.get('@type','')
+        if kind=='type.googleapis.com/google.cloud.scheduler.logging.AttemptStarted':
+            scheduled=stamp(payload['scheduledTime'])
+            if scheduled>=anchor:starts.append((scheduled,at,entry))
+        elif kind=='type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished':
+            if at>=anchor:finishes.append((at,entry))
+        else:raise ValueError('Unexpected scheduler execution record')
+    starts.sort(key=lambda x:x[0]);finishes.sort(key=lambda x:x[0])
+    if (not starts or starts[0][0]!=anchor or len(starts)!=len(finishes)
+            or len({s[0] for s in starts})!=len(starts)
+            or len({f[0] for f in finishes})!=len(finishes)):
+        raise ValueError('Missing, duplicate or ambiguous scheduler completion')
+    for i,((scheduled,logged,_),(finished,entry)) in enumerate(zip(starts,finishes)):
+        payload=entry['jsonPayload'];code=entry.get('httpRequest',{}).get('status')
+        if (not scheduled<=closed or not scheduled<=logged<=closed+600
+                or not scheduled<=finished<=closed+600
+                or (i+1<len(starts) and finished>=starts[i+1][0])
+                or observed-max(logged,finished)<600
+                or type(code) is not int or not 200<=code<300
+                or payload.get('status') not in [None,'','OK']
+                or entry.get('severity') in ['ERROR','CRITICAL','ALERT','EMERGENCY']):
+            raise ValueError('Scheduler attempt is failed, unfinished or overlapping')
+    return int(starts[-1][0]//60)
+
+
+def scheduler_cursors(jobs, routes, closed_at, observed_at, planned_jobs, execution_logs=None):
     """Prepare cursors only after paused HTTP jobs report completed success.
 
     lastAttemptTime is an attempted start, not proof of success. Require its
@@ -102,6 +151,8 @@ def scheduler_cursors(jobs, routes, closed_at, observed_at, planned_jobs):
     expected={r['name']:r for r in routes}
     planned={j['name']:j for j in planned_jobs}
     if len(expected)!=16 or len(planned)!=16: raise ValueError('Duplicate local or source schedule')
+    if execution_logs is not None and set(execution_logs)!=set(planned):
+        raise ValueError('Complete scheduler log coverage required')
     result=[]
     for job in jobs:
         match=re.fullmatch(r'projects/'+PROJECT+r'/locations/us-central1/jobs/firebase-schedule-([A-Za-z][A-Za-z0-9]+)-us-central1',job.get('name',''))
@@ -111,18 +162,24 @@ def scheduler_cursors(jobs, routes, closed_at, observed_at, planned_jobs):
         uri=job.get('httpTarget',{}).get('uri','')
         valid_uri=(uri=='https://us-central1-'+PROJECT+'.cloudfunctions.net/'+name
             or re.fullmatch(r'https://'+name.lower()+r'-[a-z0-9-]+\.a\.run\.app/?',uri))
-        if (job.get('state')!='PAUSED' or job.get('status') is None or job['status'].get('code',0)!=0
+        cleared=(job.get('status')=={'code':-1} and not job.get('lastAttemptTime') and not job.get('scheduleTime'))
+        if (job.get('state')!='PAUSED' or job.get('status') is None
+                or (job['status'].get('code',0)!=0 and not (cleared and execution_logs is not None))
                 or job.get('schedule')!=route['schedule'] or job.get('timeZone','UTC')!=route['timeZone']
                 or any(job.get(key)!=before.get(key) for key in immutable)
                 or 'pubsubTarget' in job or 'appEngineHttpTarget' in job
                 or job.get('httpTarget',{}).get('httpMethod')!='POST'
                 or not valid_uri):
             raise ValueError('Schedule state, target, grammar or result changed')
-        attempted=stamp(job['lastAttemptTime']);next_at=stamp(job['scheduleTime'])
-        if not 0<attempted<=closed or attempted>=next_at or observed-attempted<600:
-            raise ValueError('Scheduler completion boundary is ambiguous')
+        if execution_logs is not None:
+            last_minute=scheduler_logged_minute(job,before,execution_logs[job['name']],closed,observed)
+        else:
+            attempted=stamp(job['lastAttemptTime']);next_at=stamp(job['scheduleTime'])
+            if not 0<attempted<=closed or attempted>=next_at or observed-attempted<600:
+                raise ValueError('Scheduler completion boundary is ambiguous')
+            last_minute=int(attempted//60)
         signature=hashlib.sha256(json.dumps([route['schedule'],route['timeZone']],separators=(',',':')).encode()).hexdigest()
-        result.append({'name':name,'signature':signature,'lastMinute':int(attempted//60)})
+        result.append({'name':name,'signature':signature,'lastMinute':last_minute})
     if len({r['name'] for r in result})!=16: raise ValueError('Duplicate scheduler observation')
     return sorted(result,key=lambda r:r['name'])
 

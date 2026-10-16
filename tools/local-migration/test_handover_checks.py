@@ -13,6 +13,21 @@ def current(path,**values):return doc(path,**{**REALM,**values})
 def timestamp(seconds):return datetime.fromtimestamp(seconds,timezone.utc).isoformat()
 T=h.stamp('2026-10-16T02:00:00Z')
 
+def execution_logs(jobs,observed):
+    result={}
+    for job in jobs:
+        scheduled=h.stamp(job['lastAttemptTime'])
+        common={'logName':'projects/'+h.PROJECT+'/logs/cloudscheduler.googleapis.com%2Fexecutions',
+            'resource':{'type':'cloud_scheduler_job','labels':{'project_id':h.PROJECT,'location':'us-central1',
+                'job_id':job['name'].split('/')[-1]}},'severity':'INFO'}
+        payload={'jobName':job['name'],'targetType':'HTTP','url':job['httpTarget']['uri']}
+        result[job['name']]={'from':timestamp(scheduled-600),'through':timestamp(observed),'entries':[
+            {**copy.deepcopy(common),'timestamp':timestamp(scheduled+2.05),'jsonPayload':{**payload,
+                '@type':'type.googleapis.com/google.cloud.scheduler.logging.AttemptStarted','scheduledTime':timestamp(scheduled)}},
+            {**copy.deepcopy(common),'timestamp':timestamp(scheduled+2),'jsonPayload':{**payload,
+                '@type':'type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished'},'httpRequest':{'status':200}}]}
+    return result
+
 class HandoverTests(unittest.TestCase):
     def test_current_only_and_global_orders(self):
         data=[current('realmConfig/current'),current('dailyMissionEvents/old',resetGeneration='realm-2026-09',uid='old'),
@@ -84,6 +99,45 @@ class HandoverTests(unittest.TestCase):
             with self.assertRaises(ValueError):h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),self.schedules()[0])
         jobs,routes=self.schedules();jobs[-1]=jobs[0]
         with self.assertRaises(ValueError):h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),self.schedules()[0])
+
+    def test_paused_jobs_use_complete_logged_attempts_not_cleared_metadata(self):
+        jobs,routes=self.schedules();planned=copy.deepcopy(jobs)
+        logs=execution_logs(planned,T+610)
+        for job in jobs:
+            job['status']={'code':-1};job.pop('lastAttemptTime');job.pop('scheduleTime')
+        with self.assertRaises(ValueError):h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned)
+        result=h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
+        self.assertEqual(len(result),16)
+        self.assertTrue(all(r['lastMinute']==(T-60)//60 for r in result))
+        key=planned[0]['name'];pair=copy.deepcopy(logs[key]['entries'])
+        pair[0]['jsonPayload']['scheduledTime']=timestamp(T-30)
+        pair[0]['timestamp']=timestamp(T-28);pair[1]['timestamp']=timestamp(T-29)
+        logs[key]['entries']+=pair
+        result=h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
+        self.assertEqual(result[0]['lastMinute'],int((T-30)//60))
+        logs[key]['entries'][1]['timestamp']=timestamp(T-29.5)
+        with self.assertRaisesRegex(ValueError,'overlapping'):
+            h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
+        logs=execution_logs(planned,T+610);logs[key]['entries'].append(pair[0])
+        with self.assertRaisesRegex(ValueError,'completion'):
+            h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
+
+    def test_missing_failed_ambiguous_and_foreign_execution_evidence_is_rejected(self):
+        jobs,routes=self.schedules();planned=copy.deepcopy(jobs);key=jobs[0]['name']
+        edits=[lambda e:e['entries'].pop(),lambda e:e['entries'].pop(0),
+            lambda e:e['entries'].append(copy.deepcopy(e['entries'][0])),
+            lambda e:e['entries'][1]['httpRequest'].update(status=500),
+            lambda e:e['entries'][1]['jsonPayload'].update(status='UNAVAILABLE'),
+            lambda e:e['entries'][1]['resource']['labels'].update(project_id='other'),
+            lambda e:e['entries'][1]['jsonPayload'].update(url='https://other.example/'),
+            lambda e:e['entries'][0]['jsonPayload'].update(scheduledTime=timestamp(T+1)),
+            lambda e:e.update(through=timestamp(T)),
+            lambda e:e['entries'][1].update(timestamp=timestamp(T+601))]
+        for edit in edits:
+            logs=execution_logs(planned,T+610);edit(logs[key])
+            with self.assertRaises(ValueError):h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
+        logs=execution_logs(planned,T+610);logs.pop(key)
+        with self.assertRaises(ValueError):h.scheduler_cursors(jobs,routes,timestamp(T),timestamp(T+610),planned,logs)
 
     def series(self):
         names=['event'+str(i) for i in range(10)]

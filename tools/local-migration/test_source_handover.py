@@ -86,6 +86,7 @@ class SourceHandoverTests(unittest.TestCase):
              patch.object(v.snapshot,'verify_files'),patch.object(v.freeze,'listed',side_effect=[jobs,subscriptions]),\
              patch.object(v,'api_read',return_value=metrics),patch.object(v,'public_probes',return_value={'runtimeReadStatus':503}),\
              patch.object(v,'published_client_lock',return_value={'method':'published-rules-evaluation','allDenied':True,'authenticatedCases':20}),\
+             patch.object(v,'scheduler_execution_logs',return_value=fixtures.execution_logs(jobs,datetime.now(timezone.utc).timestamp())),\
              patch.object(v.subprocess,'run',return_value=SimpleNamespace(stdout='synthetic')),patch.object(Path,'read_text',read):
             return v.collect(root/'plan',root/'snapshot',root/'verification',root/'baseline',root/'baseline/final-payments.json',root/'output')
 
@@ -95,6 +96,21 @@ class SourceHandoverTests(unittest.TestCase):
             self.assertTrue(result['sourceFrozen']);self.assertFalse(result['localAuthorityActivated'])
             self.assertEqual(result['documents'],1);self.assertEqual(len(result['schedulers']),16)
             self.assertTrue((root/'output/event-metrics.json').exists());self.assertTrue((root/'output/receipt.json').exists())
+            self.assertTrue((root/'output/scheduler-executions.json').exists())
+
+    def test_execution_reader_is_bounded_and_uses_only_logging_reads(self):
+        jobs,_=fixtures.HandoverTests().schedules();jobs=jobs[:1]
+        with patch.object(v.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout='[]')) as run:
+            result=v.scheduler_execution_logs(jobs)
+            self.assertEqual(set(result),{jobs[0]['name']})
+            args=run.call_args.args[0]
+            self.assertEqual(args[:3],['gcloud','logging','read'])
+            self.assertIn('--limit=1000',args)
+            self.assertIn(jobs[0]['name'].split('/')[-1],args[3])
+        for response in [SimpleNamespace(returncode=1,stdout='[]'),
+                         SimpleNamespace(returncode=0,stdout=json.dumps([{}]*1000))]:
+            with patch.object(v.subprocess,'run',return_value=response),self.assertRaises(ValueError):
+                v.scheduler_execution_logs(jobs)
 
     def test_late_source_drift_leaves_no_success_receipt(self):
         with tempfile.TemporaryDirectory() as temporary:

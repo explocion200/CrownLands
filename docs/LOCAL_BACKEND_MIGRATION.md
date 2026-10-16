@@ -413,9 +413,16 @@ full stable-data comparison remain required. See the official
 and [listener propagation guidance](https://firebase.google.com/docs/firestore/security/get-started).
 It retains
 fresh scheduler results and derives reviewed local cursors only from paused,
-successfully completed HTTP jobs. Cloud Scheduler's `lastAttemptTime` alone is
-not completion evidence; its corresponding successful status and a quiet interval
-are also required. Daily cron schedules retain their timezone; the existing
+successfully completed HTTP jobs. Pausing may clear `lastAttemptTime` and
+`scheduleTime` and report status `-1`. The checker therefore reads Google's
+execution logs, requires the reviewed pre-pause scheduled attempt and every
+later attempt to have one successful HTTP completion, and rejects missing,
+duplicate, overlapping, failed or foreign records. It pairs by scheduled-time
+windows because start/finish log timestamps may arrive slightly out of order.
+The complete evidence is retained and hashed into the handover receipt; no
+schedule is run to obtain it. See Google's
+[execution-log guidance](https://docs.cloud.google.com/scheduler/docs/troubleshooting).
+Daily cron schedules retain their timezone; the existing
 local interval scheduler resumes on its UTC minute boundaries. See Google's
 [job field definitions](https://docs.cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs).
 The command holds the source-control lock, checks again at the end and writes

@@ -7,6 +7,7 @@ the later protected import, restore and activation checks.
 """
 import argparse
 import fcntl
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import json
 import os
@@ -109,6 +110,24 @@ def published_client_lock(api,plan,journal):
         'browserSessionUsed':False,'propagationWaitSeconds':int(datetime.now(timezone.utc).timestamp()-closed)}
 
 
+def scheduler_execution_logs(planned_jobs):
+    through=datetime.now(timezone.utc).isoformat()
+    def read(job):
+        start=(datetime.fromisoformat(job['lastAttemptTime'].replace('Z','+00:00'))-timedelta(seconds=600)).isoformat()
+        query=('logName="projects/'+freeze.PROJECT+'/logs/cloudscheduler.googleapis.com%2Fexecutions"'
+            +' AND resource.type="cloud_scheduler_job" AND resource.labels.project_id='+json.dumps(freeze.PROJECT)
+            +' AND resource.labels.location="us-central1" AND resource.labels.job_id='+json.dumps(job['name'].split('/')[-1])
+            +' AND timestamp>='+json.dumps(start)+' AND timestamp<='+json.dumps(through))
+        result=subprocess.run(['gcloud','logging','read',query,'--project='+freeze.PROJECT,
+            '--order=asc','--limit=1000','--format=json'],capture_output=True,text=True,timeout=90)
+        if result.returncode or len(result.stdout)>16*1024*1024:raise ValueError('Scheduler execution log read failed')
+        entries=json.loads(result.stdout)
+        if not isinstance(entries,list) or len(entries)>=1000:raise ValueError('Scheduler execution history incomplete')
+        return job['name'],{'from':start,'through':through,'entries':entries}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        return dict(executor.map(read,planned_jobs))
+
+
 def collect(plan_directory,snapshot_directory,verification_directory,baseline_directory,payments_file,output):
     if output.exists():raise ValueError('Preserve previous handover evidence')
     plan=json.loads((plan_directory/'freeze-plan.json').read_text())
@@ -151,7 +170,8 @@ def collect(plan_directory,snapshot_directory,verification_directory,baseline_di
         raise ValueError('Fresh final-snapshot provider reconciliation required')
     routes=json.loads((baseline_directory/'local-schedules.json').read_text())
     jobs=freeze.listed(api.read,'https://cloudscheduler.googleapis.com/v1/projects/'+freeze.PROJECT+'/locations/us-central1/jobs?pageSize=500','jobs')
-    cursors=handover.scheduler_cursors(jobs,routes,journal['closedAt'],datetime.now(timezone.utc).isoformat(),plan['jobsBefore'])
+    executions=scheduler_execution_logs(plan['jobsBefore'])
+    cursors=handover.scheduler_cursors(jobs,routes,journal['closedAt'],datetime.now(timezone.utc).isoformat(),plan['jobsBefore'],executions)
     subscriptions=freeze.listed(lambda url:api_read(url,api.reader.token),
         'https://pubsub.googleapis.com/v1/projects/'+freeze.PROJECT+'/subscriptions?pageSize=1000','subscriptions')
     expected=json.loads((baseline_directory/'event-subscriptions.json').read_text())
@@ -176,11 +196,12 @@ def collect(plan_directory,snapshot_directory,verification_directory,baseline_di
         'snapshotManifestSha256':snapshot.checksum(manifest_raw),'verificationSha256':snapshot.checksum(proof_raw),
         'recordedAt':datetime.now(timezone.utc).isoformat(),'sourceFrozen':True,'localAuthorityActivated':False,
         'documents':inventory['documents'],'realm':inventory['realm'],'pending':inventory['pending'],
+        'schedulerExecutionEvidenceSha256':snapshot.checksum(snapshot.encode(executions)),
         'payments':{'orders':payments['orders'],'unsettled':0},'queues':queues,'probes':probes,'schedulers':cursors,
         'clientLock':{'method':client_lock['method'],'allDenied':client_lock['allDenied'],
             'authenticatedCases':client_lock['authenticatedCases'],'browserSessionUsed':False,
             'evidenceSha256':snapshot.checksum(snapshot.encode(client_lock))}}
-    for name,value in [('scheduler-observations.json',jobs),('event-metrics.json',metrics),
+    for name,value in [('scheduler-observations.json',jobs),('scheduler-executions.json',executions),('event-metrics.json',metrics),
                        ('client-rules-evaluation.json',client_lock),('receipt.json',report)]:
         if (output/name).exists():raise ValueError('Previous handover evidence preserved')
         snapshot.atomic_private(output/name,snapshot.encode(value))
