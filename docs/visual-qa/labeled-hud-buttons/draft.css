@@ -35,10 +35,10 @@ html.hud-buttons-draft .profile-action-row .hud-draft-image {
    remains a separate layer, updated through the existing clan-render hook. */
 html.hud-buttons-draft .profile-action-row .clan-hud-icon {
   position: absolute;
-  inset: 2% 13% 26%;
-  width: 74%;
+  inset: 2% 16% 26%;
+  width: 68%;
   height: 72%;
   z-index: 1;
 }
-html.hud-buttons-draft .profile-action-row .clan-shield-size-small { width: 100%; height: 100%; }
+html.hud-buttons-draft .profile-action-row .clan-hud-icon > :is(.clan-shield-size-small, .clan-heraldry-size-small) { width: 100%; height: 100%; }
 html.hud-buttons-draft .clan-hud-btn.is-search::after { right: 0; bottom: 25%; }

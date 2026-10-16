@@ -21,7 +21,7 @@
       "tests": [
         "tools/validate-labeled-hud-draft-browser.js"
       ],
-      "reason": "Review-only image-button draft derives three transparent labeled images from current HUD art and preserves the actual dynamic clan heraldry renderer over a separate Clan ribbon. Focused browser validation compares exact original button positions, dimensions and spacing at desktop and two landscape sizes, checks RGBA image decoding and bounds, transparent surfaces, touch/hit targets, current comparison, changing clan shields, no-clan state, badges and no network writes. Prompt metadata and README document the review assets. The test uses installed CI Chrome before its optional local Playwright fallback. Shared live sources and server authority are unchanged; no emulator suite is needed. Production build and artifact checks ensure these draft assets are excluded."
+      "reason": "Review-only image-button draft derives three transparent labeled images from current HUD art and preserves the actual dynamic clan heraldry renderer over a separate Clan ribbon. Focused browser validation compares exact original button positions, dimensions and spacing at desktop and two landscape sizes, checks RGBA image decoding and bounds, transparent surfaces, touch/hit targets, current comparison, changing clan shields and their clearance above the Clan ribbon for both shield renderer classes, no-clan state, badges and no network writes. Prompt metadata and README document the review assets. The test uses installed CI Chrome before its optional local Playwright fallback. Shared live sources and server authority are unchanged; no emulator suite is needed. Production build and artifact checks ensure these draft assets are excluded."
     }
   ]
 }

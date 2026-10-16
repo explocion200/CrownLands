@@ -42,7 +42,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       const d = draftGame.document;
       return [...d.querySelectorAll('.profile-action-row > .profile-rank-btn')].map(b => {
         const r = b.getBoundingClientRect(), art = b.querySelector('.hud-draft-image'), a = art.getBoundingClientRect();
+        const shield = b.querySelector('.clan-hud-icon > :is(.clan-shield-size-small, .clan-heraldry-size-small)')?.getBoundingClientRect();
         return { id:b.id, text:b.dataset.draftLabel, x:r.x, right:r.right, y:r.y, bottom:r.bottom, width:r.width, height:r.height,
+          clanRibbonClear:b.id !== 'clanHudBtn' || !!shield && shield.x >= r.x && shield.right <= r.right && shield.y >= r.y && shield.bottom <= r.y + r.height * 0.75,
           imageFits:a.x >= r.x && a.right <= r.right && a.y >= r.y && a.bottom <= r.bottom,
           decoded:art.complete && art.naturalWidth > 100, separateText:!!b.querySelector('.hud-draft-label'),
           transparent:draftGame.getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)' && draftGame.getComputedStyle(b).backgroundImage === 'none',
@@ -63,7 +65,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.deepEqual(layout.map(x => x.text), ["Leaderboard", "Clan", "Daily", "Inner Castle"]);
       for (const button of layout) {
         assert(button.width >= 44 && button.height >= 44 && button.x >= 0 && button.right <= width, `Touch target: ${width} ${button.id}`);
-        assert(button.imageFits && button.hit && button.imageVisible && button.decoded && button.transparent && !button.separateText, `Layout: ${width} ${JSON.stringify(button)}`);
+        assert(button.imageFits && button.hit && button.imageVisible && button.decoded && button.transparent && button.clanRibbonClear && !button.separateText, `Layout: ${width} ${JSON.stringify(button)}`);
         assert.match(button.source, /labeled-hud-buttons\/images\/[a-z-]+-button\.png$/);
         const png = fs.readFileSync(path.resolve(__dirname, "..", button.source.slice(1)));
         assert.equal(png.subarray(1, 4).toString(), "PNG");
@@ -76,11 +78,12 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       await ev('draftGame.LabeledHudDraft.apply({look:"draft",clan:"raven",badges:false})');
       const raven = await ev('draftGame.document.getElementById("clanHudIcon").innerHTML');
       assert.notEqual(amber, raven, "Changing clans must change the rendered shield");
+      assert((await measure()).every(x => x.clanRibbonClear), "Changed clan shield must leave the Clan ribbon visible");
       assert.match(await ev('draftGame.document.getElementById("clanHudBtn").getAttribute("aria-label")'), /Raven Guard/);
       assert.equal(await ev('draftGame.getComputedStyle(draftGame.document.getElementById("dailyLoginRewardBadge")).display'), "none");
       await ev('draftGame.LabeledHudDraft.apply({look:"draft",clan:"none",badges:false})');
       assert.equal(await ev('draftGame.document.getElementById("clanHudBtn").getAttribute("aria-label")'), "Find a clan");
-      assert((await measure()).every(x => x.imageVisible && x.imageFits && !x.separateText));
+      assert((await measure()).every(x => x.imageVisible && x.imageFits && x.clanRibbonClear && !x.separateText));
       await shot(width + "-no-clan");
       await ev('draftGame.LabeledHudDraft.apply({look:"current",clan:"amber",badges:true})');
       assert((await measure()).every(x => !x.imageVisible)); await shot(width + "-current");
