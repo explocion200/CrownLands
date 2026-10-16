@@ -1,0 +1,39 @@
+{
+  "revision": 2,
+  "assets": [
+    {
+      "asset": "leaderboard-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Create ONE finished transparent square game HUD button image, not a mockup. Keep the supplied existing Crownlands icon artwork recognizable and faithful: same objects, drawing style, colors and viewpoint. Fit the icon in the upper 76% of the square, and add one wide antique parchment name ribbon in the bottom 24%, incorporated into the image. Match its ink-and-watercolor medieval illustration and brass details. The ribbon must have very dark bold condensed readable lettering, minimal ornament, high contrast, sized to remain legible when the complete button is displayed at 56 by 56 and 46 by 46 pixels. Use nearly the full canvas with a tiny 2% transparent edge. No rectangular tile background, no extra border, no additional objects, no watermark. Actual alpha transparency outside the artwork. Text (verbatim, exact spelling): \"Leaderboard\". Set the complete word on ONE line on the widest part of the parchment ribbon. Preserve the crown-and-laurel medallion."
+    },
+    {
+      "asset": "daily-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-daily-reward-ink-384x384-e2287cbf41c2.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Create ONE finished transparent square game HUD button image, not a mockup. Keep the supplied existing Crownlands icon artwork recognizable and faithful: same objects, drawing style, colors and viewpoint. Fit the icon in the upper 76% of the square, and add one wide antique parchment name ribbon in the bottom 24%, incorporated into the image. Match its ink-and-watercolor medieval illustration and brass details. The ribbon must have very dark bold condensed readable lettering, minimal ornament, high contrast, sized to remain legible when the complete button is displayed at 56 by 56 and 46 by 46 pixels. Use nearly the full canvas with a tiny 2% transparent edge. No rectangular tile background, no extra border, no additional objects, no watermark. Actual alpha transparency outside the artwork. Text (verbatim): \"Daily\". One centered line on the parchment ribbon. Preserve the illustrated calendar, gift and coins."
+    },
+    {
+      "asset": "inner-castle-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-inner-city-ink-192x192-677dc563cdd2.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Create ONE finished transparent square game HUD button image, not a mockup. Keep the supplied existing Crownlands icon artwork recognizable and faithful: same objects, drawing style, colors and viewpoint. Fit the icon in the upper 76% of the square, and add one wide antique parchment name ribbon in the bottom 24%, incorporated into the image. Match its ink-and-watercolor medieval illustration and brass details. The ribbon must have very dark bold condensed readable lettering, minimal ornament, high contrast, sized to remain legible when the complete button is displayed at 56 by 56 and 46 by 46 pixels. Use nearly the full canvas with a tiny 2% transparent edge. No rectangular tile background, no extra border, no additional objects, no watermark. Actual alpha transparency outside the artwork. Text (verbatim): \"Inner Castle\". Two closely spaced centered lines within the lower ribbon, Inner then Castle, so the letters remain readable at 46 pixels. Preserve the cream stone castle and its red flags."
+    },
+    {
+      "asset": "clan-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [],
+      "prompt": "Use case: ui-mockup. Asset type: transparent square game UI overlay image, not a screenshot. Create a single antique parchment name ribbon across the bottom 24% of a square canvas with 2% transparent side margins. Text exactly \"Clan\" in very dark bold readable lettering, centered. Match medieval ink-and-watercolor Crownlands icons: aged warm cream parchment, fine brown ink edges, restrained brass details. The upper 74% must be COMPLETELY EMPTY TRANSPARENT SPACE reserved for a dynamic player clan shield that the game will render separately. Do NOT draw a shield, crest, emblem, frame, background, placeholder, checkerboard, additional words or shadow in the upper empty area. The ONLY artwork is the bottom parchment ribbon reading Clan. Actual alpha transparency. The entire square will display at 56x56 or 46x46 pixels, so use simple bold high-contrast lettering."
+    }
+  ]
+}

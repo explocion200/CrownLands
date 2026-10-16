@@ -6,6 +6,11 @@
       "paths": [
         "docs/visual-qa/labeled-hud-buttons/README.md",
         "docs/visual-qa/labeled-hud-buttons/draft.css",
+        "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/daily-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/inner-castle-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/leaderboard-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/prompts.json",
         "docs/visual-qa/labeled-hud-buttons/index.html",
         "docs/visual-qa/labeled-hud-buttons/preview.html",
         "docs/visual-qa/labeled-hud-buttons/preview.js",
@@ -16,7 +21,7 @@
       "tests": [
         "tools/validate-labeled-hud-draft-browser.js"
       ],
-      "reason": "Review-only HUD draft reuses current images and the real clan heraldry renderer inside the existing synthetic benchmark. Browser validation covers desktop and both landscape sizes, readable labels, image bounds, touch/hit targets, current comparison, saved shield changes, no-clan state, notification badges and isolated non-writing actions. Shared live sources, server authority and production entries are unchanged; no emulator suite is needed. The production build gate verifies preview-only files do not enter the published game."
+      "reason": "Review-only image-button draft derives three transparent labeled images from current HUD art and preserves the actual dynamic clan heraldry renderer over a separate Clan ribbon. Focused browser validation compares exact original button positions, dimensions and spacing at desktop and two landscape sizes, checks RGBA image decoding and bounds, transparent surfaces, touch/hit targets, current comparison, changing clan shields, no-clan state, badges and no network writes. Prompt metadata and README document the review assets. The test uses installed CI Chrome before its optional local Playwright fallback. Shared live sources and server authority are unchanged; no emulator suite is needed. Production build and artifact checks ensure these draft assets are excluded."
     }
   ]
 }

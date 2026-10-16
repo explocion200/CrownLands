@@ -21,6 +21,7 @@
       const styled = new Promise((resolve, reject) => { style.onload = resolve; style.onerror = reject; }); doc.head.append(style); await styled;
       const script = doc.createElement("script"); script.src = "/docs/visual-qa/labeled-hud-buttons/runtime-fixture.js";
       const loaded = new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; }); doc.body.append(script); await loaded;
+      await Promise.all([...doc.querySelectorAll(".hud-draft-image")].map(image => image.decode()));
       ready = true; notice.hidden = true; win.LabeledHudDraft.apply(settings);
       doc.documentElement.dataset.hudDraftReady = "true"; document.documentElement.dataset.hudDraftReady = "true";
       status("Appearance preview only · Uses example clans and sample game data.", true);

@@ -1,57 +1,44 @@
-/* Review-only styles. Loaded by the isolated preview, never by the game entry. */
-.hud-draft-label { display: none; }
-/* Keep the review's sample badge selection stable across synthetic HUD ticks. */
+/* Review only. The game retains its original button dimensions and row gap. */
+.hud-draft-image { display: none; }
+/* Keep sample badges stable across synthetic HUD ticks. */
 html[data-hud-draft-badges="true"] #dailyLoginRewardBadge { display: grid !important; }
 html[data-hud-draft-badges="false"] #dailyLoginRewardBadge { display: none !important; }
-html.hud-buttons-draft .profile-action-row { gap: 8px; }
 html.hud-buttons-draft .profile-action-row > .profile-rank-btn {
   position: relative;
-  flex: 0 0 86px;
-  width: 86px;
-  height: 78px;
-  min-height: 44px;
-  padding: 4px 4px 5px;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) 15px;
-  gap: 1px;
-  align-items: center;
-  justify-items: center;
-  border: 1px solid #c5a265;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #814247, #612d32);
-  box-shadow: inset 0 0 0 2px #f4dba111, 0 3px 6px #21150f44;
-  color: #fff0cf;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
-html.hud-buttons-draft .profile-action-row > .profile-rank-btn:hover { background: #542728; border-color: #ebc782; }
-html.hud-buttons-draft .profile-action-row > .profile-rank-btn:focus-visible { outline: 3px solid #ffe8a6; outline-offset: 3px; }
+/* Match the existing theme layer so its important red surface yields to art. */
+@layer crownlands-theme {
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn),
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn):hover,
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn):focus-visible {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
 html.hud-buttons-draft .profile-action-row .profile-rank-icon,
-html.hud-buttons-draft .profile-action-row .daily-login-reward-icon {
-  width: 54px;
-  height: 51px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 3px #25170b44);
-}
-html.hud-buttons-draft .profile-action-row .clan-hud-icon { width: 52px; height: 51px; }
-html.hud-buttons-draft .profile-action-row .clan-shield-size-small { width: 45px; height: 50px; }
-html.hud-buttons-draft .hud-draft-label {
+html.hud-buttons-draft .profile-action-row .daily-login-reward-icon { visibility: hidden; }
+html.hud-buttons-draft .profile-action-row .hud-draft-image {
   display: block;
-  white-space: nowrap;
-  font: 650 12px/15px system-ui, sans-serif;
-  text-transform: none;
-  letter-spacing: 0;
-  text-shadow: 0 1px 2px #23100d88;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   pointer-events: none;
+  user-select: none;
 }
-html.hud-buttons-draft .clan-hud-btn.is-search::after { right: 12px; bottom: 22px; width: 17px; height: 17px; font-size: 12px; }
-html.hud-buttons-draft .clan-hud-btn.has-clan-notifications::before,
-html.hud-buttons-draft .daily-login-reward-badge { right: -4px; top: -5px; }
-@media (max-height: 500px), (max-width: 780px) {
-  html.hud-buttons-draft .profile-action-row { gap: 6px; }
-  html.hud-buttons-draft .profile-action-row > .profile-rank-btn { flex-basis: 74px; width: 74px; height: 65px; padding: 3px 2px 4px; grid-template-rows: minmax(0, 1fr) 14px; }
-  html.hud-buttons-draft .profile-action-row .profile-rank-icon,
-  html.hud-buttons-draft .profile-action-row .daily-login-reward-icon { width: 45px; height: 41px; }
-  html.hud-buttons-draft .profile-action-row .clan-hud-icon { width: 44px; height: 41px; }
-  html.hud-buttons-draft .profile-action-row .clan-shield-size-small { width: 37px; height: 41px; }
-  html.hud-buttons-draft .hud-draft-label { font-size: 11px; line-height: 14px; }
-  html.hud-buttons-draft .clan-hud-btn.is-search::after { right: 9px; bottom: 20px; }
+/* Only the Clan ribbon is baked into the PNG. The complete saved heraldry
+   remains a separate layer, updated through the existing clan-render hook. */
+html.hud-buttons-draft .profile-action-row .clan-hud-icon {
+  position: absolute;
+  inset: 2% 13% 26%;
+  width: 74%;
+  height: 72%;
+  z-index: 1;
 }
+html.hud-buttons-draft .profile-action-row .clan-shield-size-small { width: 100%; height: 100%; }
+html.hud-buttons-draft .clan-hud-btn.is-search::after { right: 0; bottom: 25%; }

@@ -13,7 +13,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   let browser, client;
   const errors = [], failed = [], writes = [], records = [];
   try {
-    const executable = [process.env.CHROME_PATH, "/usr/bin/google-chrome", "/usr/bin/chromium", "C:/Program Files/Google/Chrome/Application/chrome.exe", require("playwright").chromium.executablePath()].find(p => p && fs.existsSync(p));
+    let executable = [process.env.CHROME_PATH, "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "C:/Program Files/Google/Chrome/Application/chrome.exe"].find(p => p && fs.existsSync(p));
+    // CI supplies Chrome directly; the local optional fallback must be lazy.
+    if (!executable) { try { const candidate = require("playwright").chromium.executablePath(); if (fs.existsSync(candidate)) executable = candidate; } catch (_) {} }
     assert(executable, "Chromium is required");
     browser = await startBrowserSession(executable);
     client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
@@ -39,25 +41,33 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const measure = () => ev(`(() => {
       const d = draftGame.document;
       return [...d.querySelectorAll('.profile-action-row > .profile-rank-btn')].map(b => {
-        const r = b.getBoundingClientRect(), label = b.querySelector('.hud-draft-label'), l = label.getBoundingClientRect();
-        const art = b.querySelector('img') || b.querySelector('.clan-hud-icon'), a = art.getBoundingClientRect();
-        return { id:b.id, text:label.textContent, x:r.x, right:r.right, y:r.y, bottom:r.bottom, width:r.width, height:r.height,
-          labelFits:l.x >= r.x && l.right <= r.right && l.bottom <= r.bottom && label.scrollWidth <= label.clientWidth,
-          imageFits:a.x >= r.x && a.right <= r.right && a.y >= r.y && a.bottom <= l.y + 1,
+        const r = b.getBoundingClientRect(), art = b.querySelector('.hud-draft-image'), a = art.getBoundingClientRect();
+        return { id:b.id, text:b.dataset.draftLabel, x:r.x, right:r.right, y:r.y, bottom:r.bottom, width:r.width, height:r.height,
+          imageFits:a.x >= r.x && a.right <= r.right && a.y >= r.y && a.bottom <= r.bottom,
+          decoded:art.complete && art.naturalWidth > 100, separateText:!!b.querySelector('.hud-draft-label'),
+          transparent:draftGame.getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)' && draftGame.getComputedStyle(b).backgroundImage === 'none',
           hit:b.contains(d.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)),
-          source:b.querySelector('img')?.getAttribute('src'), labelVisible:draftGame.getComputedStyle(label).display !== 'none' };
+          source:art.getAttribute('src'), imageVisible:draftGame.getComputedStyle(art).display !== 'none' };
       });
     })()`);
     const original = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8");
+    assert(!original.includes("labeled-hud-buttons"), "Draft must not enter the game entry");
+    const geometry = rows => rows.map(({id,x,right,y,bottom,width,height}) => ({id,x,right,y,bottom,width,height}));
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+      await ev('draftGame.LabeledHudDraft.apply({look:"current",clan:"amber",badges:true})'); await pause(200);
+      const baseline = await measure();
       await ev('draftGame.LabeledHudDraft.apply({look:"draft",clan:"amber",badges:true})'); await pause(200);
       const layout = await measure();
+      assert.deepEqual(geometry(layout), geometry(baseline), "Original button positions, dimensions and spacing must remain identical");
       assert.deepEqual(layout.map(x => x.text), ["Leaderboard", "Clan", "Daily", "Inner Castle"]);
       for (const button of layout) {
         assert(button.width >= 44 && button.height >= 44 && button.x >= 0 && button.right <= width, `Touch target: ${width} ${button.id}`);
-        assert(button.labelFits && button.imageFits && button.hit && button.labelVisible, `Layout: ${width} ${JSON.stringify(button)}`);
-        if (button.source) assert(original.includes(`src="${button.source}"`), "Draft must reuse current HUD art");
+        assert(button.imageFits && button.hit && button.imageVisible && button.decoded && button.transparent && !button.separateText, `Layout: ${width} ${JSON.stringify(button)}`);
+        assert.match(button.source, /labeled-hud-buttons\/images\/[a-z-]+-button\.png$/);
+        const png = fs.readFileSync(path.resolve(__dirname, "..", button.source.slice(1)));
+        assert.equal(png.subarray(1, 4).toString(), "PNG");
+        assert.equal(png[25], 6, "Image buttons must retain RGBA transparency");
       }
       for (let i = 1; i < layout.length; i++) assert(layout[i].x > layout[i - 1].right, "Buttons overlap");
       assert(await ev('draftGame.getComputedStyle(draftGame.document.getElementById("dailyLoginRewardBadge")).display !== "none"'));
@@ -70,17 +80,17 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.equal(await ev('draftGame.getComputedStyle(draftGame.document.getElementById("dailyLoginRewardBadge")).display'), "none");
       await ev('draftGame.LabeledHudDraft.apply({look:"draft",clan:"none",badges:false})');
       assert.equal(await ev('draftGame.document.getElementById("clanHudBtn").getAttribute("aria-label")'), "Find a clan");
-      assert((await measure()).every(x => x.labelVisible && x.labelFits && x.imageFits));
+      assert((await measure()).every(x => x.imageVisible && x.imageFits && !x.separateText));
       await shot(width + "-no-clan");
       await ev('draftGame.LabeledHudDraft.apply({look:"current",clan:"amber",badges:true})');
-      assert((await measure()).every(x => !x.labelVisible)); await shot(width + "-current");
+      assert((await measure()).every(x => !x.imageVisible)); await shot(width + "-current");
       await ev('draftGame.LabeledHudDraft.apply({look:"draft",clan:"amber",badges:true}); for (const id of ["leaderboardBtn","clanHudBtn","dailyLoginRewardBtn","innerCityHudBtn"]) draftGame.document.getElementById(id).click();');
       assert(await ev('!draftGame.document.getElementById("modal").open'), "Draft buttons must not open real game actions");
-      records.push({ width, height, layout, currentComparison:true, clanChanges:true, noClan:true, badges:true, isolatedClicks:true });
+      records.push({ width, height, layout, baseline, originalGeometry:true, currentComparison:true, clanChanges:true, noClan:true, badges:true, isolatedClicks:true });
     }
     assert.deepEqual(errors, []); assert.deepEqual(failed, []); assert.deepEqual(writes, [], "The draft must not send account/game writes");
     fs.writeFileSync(path.join(artifacts, "checks.json"), JSON.stringify({ passed:true, records, errors, failed, writes }, null, 2));
-    console.log(JSON.stringify({ passed:true, sizes:records.map(x => [x.width,x.height]), sameAssets:true, dynamicClanShield:true, noNetworkWrites:true }));
+    console.log(JSON.stringify({ passed:true, sizes:records.map(x => [x.width,x.height]), originalGeometry:true, rasterLabels:true, dynamicClanShield:true, noNetworkWrites:true }));
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { if (!await waitForProcessExit(browser.browserProcess)) { browser.browserProcess.kill(); await waitForProcessExit(browser.browserProcess); } await removeBrowserProfile(browser.profilePath); }
