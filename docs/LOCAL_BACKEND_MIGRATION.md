@@ -394,9 +394,19 @@ source snapshot manifest, preventing reuse of an older preflight payment list.
 
 `verify_source_handover.py PLAN SNAPSHOT COMPARISON BASELINE PAYMENTS NEW_OUTPUT`
 rereads all source controls, verifies the exact snapshot's pending-event inventory,
-compares the subscription configuration, checks the actual account/API/runtime
-denials and requires recorded permission denial from a previously signed-in
-Firebase browser. Baseline reads must have succeeded before closure. It retains
+compares the subscription configuration and checks actual account/API/runtime
+denials. Baseline reads must have succeeded before closure. For client rules,
+it fetches the published ruleset before and after Google's rules evaluator tests
+30 denied read/write contexts, including 20 authenticated contexts with ordinary
+and administrator claims. Only the exact unconditional deny-all source is
+accepted, after at least ten minutes from completed closure. This is explicitly
+recorded as a published-rules evaluation, not an observed signed-in browser
+request; it works when existing player sessions have already closed without
+reopening authentication. The independent runtime denial, source controls and
+full stable-data comparison remain required. See the official
+[rules evaluator](https://firebase.google.com/docs/reference/rules/rest/v1/projects/test)
+and [listener propagation guidance](https://firebase.google.com/docs/firestore/security/get-started).
+It retains
 fresh scheduler results and derives reviewed local cursors only from paused,
 successfully completed HTTP jobs. Cloud Scheduler's `lastAttemptTime` alone is
 not completion evidence; its corresponding successful status and a quiet interval

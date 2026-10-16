@@ -65,6 +65,50 @@ def api_read(url,token):
     return json.loads(body)
 
 
+def evaluate_rules(source,cases,token):
+    # This is Google's rules evaluator, not a document write or rule deployment.
+    url='https://firebaserules.googleapis.com/v1/projects/'+freeze.PROJECT+':test'
+    req=urllib.request.Request(url,data=snapshot.encode({'source':source,'testSuite':{'testCases':cases}}),
+        headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','x-goog-user-project':freeze.PROJECT})
+    with urllib.request.build_opener(NoRedirect).open(req,timeout=45) as response:
+        raw=response.read(4*1024*1024+1)
+    if len(raw)>4*1024*1024:raise ValueError('Rules evaluation exceeded its limit')
+    return json.loads(raw)
+
+
+def published_client_lock(api,plan,journal):
+    # Existing game sessions may already be closed. Do not reopen authentication
+    # or invent an observed browser denial. Fetch the actual published deny-all
+    # rules before/after evaluating synthetic client contexts with Google, after
+    # the documented maximum ten-minute listener propagation window.
+    closed=handover.stamp(journal['closedAt'])
+    if datetime.now(timezone.utc).timestamp()-closed<600:raise ValueError('Client rule propagation window incomplete')
+    url='https://firebaserules.googleapis.com/v1/projects/'+freeze.PROJECT+'/releases/cloud.firestore'
+    release=api.read(url)
+    if release.get('rulesetName')!=journal.get('rulesetCreated'):raise ValueError('Published client rules changed')
+    rules=api.read('https://firebaserules.googleapis.com/v1/'+release['rulesetName'])
+    expected={'files':[{'name':'firestore.rules','content':freeze.DENY_RULES}]}
+    if rules.get('source')!=expected or plan.get('rulesetBlocked',{}).get('source')!=expected:
+        raise ValueError('Only the exact unconditional client lock may be evaluated')
+    cases=[]
+    for auth in [None,{'uid':'migration-lock-test','token':{}},
+                 {'uid':'migration-lock-test','token':{'email_verified':True,'admin':True}}]:
+        for path in ['players/migration-lock-test','worlds/migration-lock-test/cities/probe']:
+            for method in ['get','list','create','update','delete']:
+                cases.append({'expectation':'DENY','request':{'path':'/databases/(default)/documents/'+path,
+                    'method':method,**({'auth':auth} if auth else {})},'resource':{'data':{}}})
+    result=evaluate_rules(expected,cases,api.reader.token)
+    results=result.get('testResults',[])
+    if (result.get('issues') or len(results)!=len(cases) or any(x.get('state')!='SUCCESS'
+            or not x.get('visitedExpressions') or any(e.get('value') is not False for e in x['visitedExpressions']) for x in results)):
+        raise ValueError('Google did not verify every unconditional client denial')
+    if api.read(url)!=release:raise ValueError('Client rules changed during evaluation')
+    return {'method':'published-rules-evaluation','recordedAt':datetime.now(timezone.utc).isoformat(),
+        'ruleset':release['rulesetName'],'sourceSha256':snapshot.checksum(snapshot.encode(expected)),
+        'cases':cases,'result':result,'allDenied':True,'authenticatedCases':20,
+        'browserSessionUsed':False,'propagationWaitSeconds':int(datetime.now(timezone.utc).timestamp()-closed)}
+
+
 def collect(plan_directory,snapshot_directory,verification_directory,baseline_directory,payments_file,output):
     if output.exists():raise ValueError('Preserve previous handover evidence')
     plan=json.loads((plan_directory/'freeze-plan.json').read_text())
@@ -83,12 +127,7 @@ def collect(plan_directory,snapshot_directory,verification_directory,baseline_di
     if (baseline.get('runtimeStatus')!=200 or baseline.get('accountStatus')!=200
             or baseline.get('epoch')!=plan['epoch'] or handover.stamp(baseline['recordedAt'])>=handover.stamp(journal['closedAt'])):
         raise ValueError('Pre-closure read-only access baseline required')
-    browser=json.loads((baseline_directory/'browser-denial.json').read_text())
-    if (browser.get('epoch')!=plan['epoch'] or browser.get('planSha256')!=freeze.digest(plan)
-            or browser.get('authenticatedFirebaseReadDenied') is not True
-            or browser.get('firebaseErrorCode')!='permission-denied'
-            or handover.stamp(browser['recordedAt'])<handover.stamp(journal['controlsAppliedAt'])):
-        raise ValueError('Observed signed-in Firebase client denial required')
+    client_lock=published_client_lock(api,plan,journal)
     def documents():
         for page in manifest['pages']:
             yield from json.loads((snapshot_directory/page['file']).read_text())
@@ -138,8 +177,11 @@ def collect(plan_directory,snapshot_directory,verification_directory,baseline_di
         'recordedAt':datetime.now(timezone.utc).isoformat(),'sourceFrozen':True,'localAuthorityActivated':False,
         'documents':inventory['documents'],'realm':inventory['realm'],'pending':inventory['pending'],
         'payments':{'orders':payments['orders'],'unsettled':0},'queues':queues,'probes':probes,'schedulers':cursors,
-        'browserEvidenceSha256':snapshot.checksum((baseline_directory/'browser-denial.json').read_bytes())}
-    for name,value in [('scheduler-observations.json',jobs),('event-metrics.json',metrics),('receipt.json',report)]:
+        'clientLock':{'method':client_lock['method'],'allDenied':client_lock['allDenied'],
+            'authenticatedCases':client_lock['authenticatedCases'],'browserSessionUsed':False,
+            'evidenceSha256':snapshot.checksum(snapshot.encode(client_lock))}}
+    for name,value in [('scheduler-observations.json',jobs),('event-metrics.json',metrics),
+                       ('client-rules-evaluation.json',client_lock),('receipt.json',report)]:
         if (output/name).exists():raise ValueError('Previous handover evidence preserved')
         snapshot.atomic_private(output/name,snapshot.encode(value))
     return report

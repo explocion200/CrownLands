@@ -12,6 +12,30 @@ from test_handover_checks import current,REALM,timestamp
 
 
 class SourceHandoverTests(unittest.TestCase):
+    def test_published_rules_evaluation_without_reopening_accounts(self):
+        source={'files':[{'name':'firestore.rules','content':v.freeze.DENY_RULES}]}
+        release={'rulesetName':'projects/'+v.freeze.PROJECT+'/rulesets/fixture'}
+        journal={'closedAt':timestamp(datetime.now(timezone.utc).timestamp()-1200),'rulesetCreated':release['rulesetName']}
+        plan={'rulesetBlocked':{'source':source}}
+        def run(result=None,changed=False):
+            api=SimpleNamespace(reader=SimpleNamespace(token='synthetic'))
+            api.read=lambda url:copy.deepcopy({'source':source} if '/rulesets/' in url else release)
+            def evaluate(actual,cases,token):
+                self.assertEqual(actual,source);self.assertEqual(token,'synthetic')
+                self.assertEqual(len(cases),30);self.assertEqual(sum('auth' in x['request'] for x in cases),20)
+                self.assertTrue(all(x['expectation']=='DENY' for x in cases))
+                if changed:api.read=lambda url:{'rulesetName':'changed'}
+                return result if result is not None else {'testResults':[{'state':'SUCCESS','visitedExpressions':[{'value':False}]} for _ in cases]}
+            with patch.object(v,'evaluate_rules',side_effect=evaluate):return v.published_client_lock(api,plan,journal)
+        proof=run();self.assertTrue(proof['allDenied']);self.assertFalse(proof['browserSessionUsed'])
+        for bad in [{}, {'testResults':[{'state':'SUCCESS'}]*30},
+                    {'testResults':[{'state':'FAILURE','visitedExpressions':[{'value':False}]}]*30},
+                    {'testResults':[{'state':'SUCCESS','visitedExpressions':[{'value':True}]}]*30}]:
+            with self.assertRaises(ValueError):run(bad)
+        with self.assertRaises(ValueError):run(changed=True)
+        journal['closedAt']=timestamp(datetime.now(timezone.utc).timestamp()-599)
+        with self.assertRaises(ValueError):run()
+
     def test_independent_denial_probes(self):
         responses=[(403,b'Forbidden'),(503,b'{"error":"Season rankings are temporarily unavailable."}'),
             (403,b'{"error":{"details":[{"reason":"API_KEY_SERVICE_BLOCKED","metadata":{"service":"identitytoolkit.googleapis.com"}}]}}')]
@@ -37,8 +61,6 @@ class SourceHandoverTests(unittest.TestCase):
             'snapshotManifestSha256':v.snapshot.checksum(raw)}
         save('verification','receipt.json',proof);save('plan','freeze-plan.json',plan);save('plan','controls-journal.json',journal)
         save('baseline','baseline.json',{'runtimeStatus':200,'accountStatus':200,'epoch':epoch,'recordedAt':timestamp(closed-60)})
-        save('baseline','browser-denial.json',{'epoch':epoch,'planSha256':v.freeze.digest(plan),'authenticatedFirebaseReadDenied':True,
-            'firebaseErrorCode':'permission-denied','recordedAt':timestamp(now-30)})
         save('baseline','final-payments.json',{'snapshotManifestSha256':v.snapshot.checksum(raw),'orders':0,'unsettled':0,
             'endpointsVerified':['live','test'],'recordedAt':timestamp(now-30)})
         save('baseline','local-schedules.json',routes)
@@ -63,6 +85,7 @@ class SourceHandoverTests(unittest.TestCase):
              patch.object(v.controls,'local_guard'),patch.object(v.final,'verify_controls',side_effect=controls),\
              patch.object(v.snapshot,'verify_files'),patch.object(v.freeze,'listed',side_effect=[jobs,subscriptions]),\
              patch.object(v,'api_read',return_value=metrics),patch.object(v,'public_probes',return_value={'runtimeReadStatus':503}),\
+             patch.object(v,'published_client_lock',return_value={'method':'published-rules-evaluation','allDenied':True,'authenticatedCases':20}),\
              patch.object(v.subprocess,'run',return_value=SimpleNamespace(stdout='synthetic')),patch.object(Path,'read_text',read):
             return v.collect(root/'plan',root/'snapshot',root/'verification',root/'baseline',root/'baseline/final-payments.json',root/'output')
 
