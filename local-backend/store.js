@@ -2,6 +2,7 @@
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const V = require("./values");
+const { documentSize } = require("./document-size");
 const { isDeepStrictEqual } = require("node:util");
 const { AsyncLocalStorage } = require("node:async_hooks");
 
@@ -361,7 +362,7 @@ class Store {
         const data = V.applyWrite(before ? V.decode({ mapValue: { fields: before.fields || {} } }) : undefined, write.data, write.kind, write.options, timestamp);
         const body = { name: write.ref.name, fields: V.encode(data).mapValue.fields,
           createTime: before?.createTime || timestamp.toString(), updateTime: timestamp.toString() };
-        if (Buffer.byteLength(JSON.stringify(body)) > 1024 * 1024) throw Error("Document exceeds supported size");
+        if (documentSize(body) > 1024 * 1024) throw Error("Document exceeds supported size");
         bodies.set(write.ref.path, body);
       }
     }
