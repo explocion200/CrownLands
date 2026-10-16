@@ -10,7 +10,7 @@ main.crown-payments-dialog { max-height:none; overflow:visible; }
 .crown-payments-dialog header,.crown-payments-dialog footer { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .crown-payments-dialog footer > :last-child { margin-left:auto; }
 @layer crownlands-theme {
-  .crown-payments-dialog [data-crown-check] { background:transparent !important; border-color:transparent !important; text-decoration:underline; }
+  .crown-payments-dialog footer button[data-crown-check] { background:transparent !important; border-color:transparent !important; text-decoration:underline; }
 }
 .crown-payments-dialog header { flex-wrap:nowrap; }
 .crown-payments-dialog header h2 { min-width:0; overflow-wrap:anywhere; }
