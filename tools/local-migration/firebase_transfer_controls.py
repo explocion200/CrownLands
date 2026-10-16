@@ -33,6 +33,12 @@ def seconds_since(value):
     return time.time() - datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
 
 
+def key_operation_name(value):
+    # API Keys returns opaque IDs such as operations/akmf.p10-... .
+    # Accept that documented dot without allowing URLs, traversal or queries.
+    return isinstance(value, str) and re.fullmatch(r"operations/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,199}", value) is not None
+
+
 def normalized(kind, value):
     if kind == "job":
         return value.get("state")
@@ -152,7 +158,7 @@ class Controls:
         result = self.api.mutate(method, target, body)
         if kind == "key":
             operation = result.get("name", "")
-            if not re.fullmatch(r"operations/[A-Za-z0-9_-]+", operation):
+            if not key_operation_name(operation):
                 raise ValueError("API key operation identity requires review")
             entry["operation"] = operation
             self.persist()
@@ -277,7 +283,7 @@ class Controls:
             result = self.api.mutate(method, target, body)
             if kind == "key":
                 operation = result.get("name", "")
-                if not re.fullmatch(r"operations/[A-Za-z0-9_-]+", operation):
+                if not key_operation_name(operation):
                     raise ValueError("Rollback operation identity requires inspection")
                 entry["rollbackOperation"] = operation; self.persist()
                 for _ in range(15):

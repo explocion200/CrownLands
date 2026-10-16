@@ -45,7 +45,7 @@ class Cloud:
             key = self.resources[url.split("?")[0]]
             assert key["etag"] == body["etag"]
             key.update(restrictions=copy.deepcopy(body["restrictions"]), etag="next")
-            response = {"name": "operations/key_fixture", "done": True}
+            response = {"name": "operations/akmf.p10-542378516435-fixture", "done": True}
         elif url.endswith("/rulesets"):
             response = {"name": "projects/" + freeze.PROJECT + "/rulesets/new-fixture"}
         elif "/releases/" in url:
@@ -78,6 +78,12 @@ def setup():
 
 
 class SourceControlTests(unittest.TestCase):
+    def test_key_operation_identity_accepts_provider_format_without_url_injection(self):
+        for name in ['operations/akmf.p10-542378516435-fixture', 'operations/akmf.cdabc4df-cbff-4420-8c7e-65dc832c945d', 'operations/key_fixture']:
+            self.assertTrue(controls.key_operation_name(name))
+        for name in ['operations/..', 'operations/../keys/other', 'operations/id?key=value', 'https://example.com/operations/id', 'operations/id#other', 'operations/'+'x'*201, None]:
+            self.assertFalse(controls.key_operation_name(name))
+
     def test_complete_pause_drain_fence_and_exact_rollback(self):
         controller, cloud, journal, saved = setup()
         original = copy.deepcopy(cloud.resources)
