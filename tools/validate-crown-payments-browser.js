@@ -3,6 +3,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { CdpClient } = require("./map-benchmark/cdp-client");
+// Test authority stays synthetic; serve the actual production client, including
+// the compact checkout module. Build validation runs before this browser suite.
+require("./map-benchmark/fixtures");
+process.env.CROWNLANDS_BENCHMARK_ROOT = path.resolve(__dirname, "../dist");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 
@@ -13,7 +17,13 @@ function fixture(mode = "test") {
   const qa = window.crownQA = { calls: [], popups: [], paid: false, lose: false, blocked: false, latest: null, enabled: true, mode };
   window.open = () => {
     if (qa.blocked) return null;
-    const popup = { document: { body: {} }, location: { replace(url) { popup.url = url; } }, close() { popup.closed = true; } };
+    if (qa.popupMode === "open-error") throw new DOMException("New tabs unavailable", "SecurityError");
+    const popup = { document: { body: {} }, location: { replace(url) {
+      if (qa.popupMode === "navigate-error") throw new DOMException("Detached tab", "SecurityError");
+      if (qa.popupMode !== "ignored-navigation") popup.url = url;
+    } }, close() { popup.closed = true; } };
+    if (qa.popupMode === "setup-error") Object.defineProperty(popup, "document", { get() { throw new DOMException("Detached tab", "SecurityError"); } });
+    if (qa.popupMode === "closed") popup.closed = true;
     qa.popups.push(popup); return popup;
   };
   cosmeticUid = "owner"; cosmeticState = COSMETIC_CATALOG.normalize({ crowns: 2000 }); cosmeticError = "";
@@ -28,9 +38,9 @@ function fixture(mode = "test") {
       qa.latest = { orderId: "a".repeat(64), requestId: request.requestId, packId: "fixture", crowns: 1000, amountMinor: 499, currency: "usd", status: "awaiting_payment", mode: qa.mode };
       if (qa.defer) await new Promise(resolve => { qa.resolve = resolve; });
       if (qa.lose) { qa.lose = false; throw Error("Connection lost. Check the same test order."); }
-      return { order: qa.latest, url: qa.badUrl || "https://checkout.stripe.com/c/pay/cs_test_fixture" };
+      return { order: qa.latest, url: qa.badUrl || `https://checkout.stripe.com/c/pay/cs_${qa.mode}_fixture` };
     },
-    getCrownCheckoutStatus: async () => ({ order: { ...qa.latest, status: qa.paid ? "confirmed" : "awaiting_payment" } }),
+    getCrownCheckoutStatus: async () => ({ order: { ...qa.latest, status: qa.expired ? "expired" : qa.paid ? "confirmed" : "awaiting_payment" } }),
   };
   if (mode === "live") {
     qa.api.getLiveCrownPaymentCatalog = qa.api.getCrownPaymentCatalog;
@@ -55,6 +65,8 @@ function shopFrame() {
 
 async function main() {
   const root = path.resolve(__dirname, "..");
+  assert.equal(fs.readFileSync(path.join(root, "dist/crown-payments-ui.js"), "utf8"),
+    require("./estate-delivery").minifyEstate(fs.readFileSync(path.join(root, "crown-payments-ui.js"), "utf8")), "Test the exact compiled checkout module");
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
   assert(executable, "Chromium is required");
   const server = createMapBenchmarkServer(), address = await server.listen();
@@ -154,20 +166,55 @@ async function main() {
       assert.equal(await evaluate("document.querySelector('[data-crown-pack]').value"), "fixture");
       assert.deepEqual(await evaluate("[document.querySelector('.crown-payments-dialog label'), document.querySelector('[data-crown-pack]')].map(node => getComputedStyle(node).color)"),
         ["rgb(53, 43, 32)", "rgb(53, 43, 32)"], "Game-wide label styling must not make checkout prices unreadable");
+      const checkoutLinks = async () => {
+        await wait("!!document.querySelector('[data-crown-open]')");
+        const links = await evaluate(`['[data-crown-open]', '[data-crown-same-tab]'].map(selector => {
+          const link = document.querySelector(selector), r = link.getBoundingClientRect();
+          return { href: link.href, target: link.target, rel: link.rel, referrerPolicy: link.referrerPolicy,
+            visible: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, height: r.height };
+        })`);
+        assert(links.every(link => link.href === `https://checkout.stripe.com/c/pay/cs_${mode}_fixture` && link.visible && link.height >= 44), "Both real links stay visible without scrolling, including after a lost popup");
+        assert.equal(links[0].target, "_blank"); assert.equal(links[0].rel, "noopener noreferrer");
+        assert.equal(links[1].target, ""); assert.equal(links[1].referrerPolicy, "no-referrer");
+        assert.equal(await evaluate("sessionStorage.getItem('crownlands-stripe-' + crownQA.mode + ':owner').includes('checkout.stripe.com')"), false, "Payment URLs are not persisted in browser storage");
+        assert.equal(await evaluate("!!document.querySelector('[data-crown-pay]')"), false, "Ready checkout uses the existing order link instead of creating another request");
+      };
+      const reopen = async () => {
+        await evaluate('CrownlandsCrownPaymentsUI.reset(null); CrownlandsCrownPaymentsUI.mount(document.querySelector("[data-crown-payments]"), { uid: "owner", api: crownQA.api })');
+        await click("[data-crown-checkout]");
+      };
       await evaluate("crownQA.blocked = true");
-      await click("[data-crown-pay]"); await statusContains("Allow a new tab");
-      assert.equal(await evaluate("crownQA.calls.length"), 0);
+      await click("[data-crown-pay]"); await checkoutLinks();
+      assert.equal(await evaluate("crownQA.calls.length"), 1, "Blocked popups still prepare the recoverable order without charging it");
+      assert.equal(await evaluate("crownQA.popups.length"), 0);
+      fs.writeFileSync(path.join(output, `checkout-ready-${mode}-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+      await reopen();
       await evaluate("crownQA.blocked = false; crownQA.lose = true");
       await click("[data-crown-pay]"); await statusContains("Connection lost");
       await click("[data-crown-pay]");
-      await wait("crownQA.calls.length === 2 && !!crownQA.popups.at(-1).url");
+      await wait("crownQA.calls.length === 3 && !!crownQA.popups.at(-1).url");
+      await checkoutLinks();
       assert.equal(await evaluate("new Set(crownQA.calls.map(call => call.requestId)).size"), 1);
       assert.equal(await evaluate("crownQA.popups.at(-1).opener"), null);
-      await click("[data-crown-check]"); await statusContains("Payment has not been confirmed.");
+      for (const popupMode of ["open-error", "setup-error", "navigate-error", "closed", "ignored-navigation"]) {
+        await reopen(); await evaluate(`crownQA.popupMode = ${JSON.stringify(popupMode)}`);
+        await click("[data-crown-pay]"); await checkoutLinks();
+        assert.equal(await evaluate("new Set(crownQA.calls.map(call => call.requestId)).size"), 1, "Every recovery uses the same order");
+      }
+      await evaluate("crownQA.popupMode = null");
+      await click("[data-crown-check]"); await statusContains("Your payment form is ready.");
+      await checkoutLinks();
+      await evaluate("crownQA.expired = true");
+      await click("[data-crown-check]"); await statusContains("checkout expired.");
+      assert.equal(await evaluate("document.querySelectorAll('[data-crown-open],[data-crown-same-tab]').length"), 0, "Expired orders lose their payment links");
+      await evaluate("crownQA.expired = false");
+      await click("[data-crown-again]");
+      await click("[data-crown-pay]"); await checkoutLinks();
       await evaluate("crownQA.paid = true");
       await click("[data-crown-check]"); await statusContains(mode === "test" ? "Test payment confirmed:" : "Payment confirmed:");
       if (mode === "test") assert(await evaluate("document.querySelector('.crown-payments-dialog [role=status]').textContent.includes('playable Crown balance is unchanged')"));
       assert.equal(await evaluate("cosmeticState.crowns"), 2000);
+      assert.equal(await evaluate("document.querySelectorAll('[data-crown-open],[data-crown-same-tab]').length"), 0, "Confirmed orders lose their payment links");
       const bounds = await evaluate("document.querySelector('.crown-payments-dialog').getBoundingClientRect().toJSON()");
       assert(bounds.x >= 0 && bounds.x + bounds.width <= viewport.width + 1 && bounds.height <= viewport.height, "Dialog fits the viewport");
       const screenshot = await client.send("Page.captureScreenshot", { format: "png" });
@@ -182,6 +229,7 @@ async function main() {
       await click("[data-crown-pay]"); await statusContains("Checkout returned an invalid address.");
       assert.equal(await evaluate("crownQA.popups.at(-1).closed"), true);
       assert.equal(await evaluate("crownQA.popups.at(-1).url"), undefined);
+      assert.equal(await evaluate("document.querySelectorAll('[data-crown-open],[data-crown-same-tab]').length"), 0, "An unsafe URL is never rendered as a payment link");
       await evaluate("crownQA.badUrl = null; crownQA.defer = true");
       await click("[data-crown-pay]"); await wait("!!crownQA.resolve");
       await evaluate('CrownlandsCrownPaymentsUI.reset("other-account"); crownQA.resolve()');
@@ -194,6 +242,34 @@ async function main() {
       await evaluate('CrownlandsCrownPaymentsUI.mount(document.querySelector("[data-crown-payments]"), { uid: "", api: crownQA.api })');
       assert.equal(await evaluate("document.querySelector('[data-crown-payments]').textContent"), "Sign in to buy Crowns.");
       await evaluate("modal.close()");
+    }
+    // Exercise a real browser link navigation, not window.open or a mocked
+    // location setter. Fulfill at the request stage so Stripe is never contacted.
+    await evaluate(`(${fixture.toString()})("live")`);
+    await click('[data-rs-section="crowns"]'); await click('[data-crown-checkout]');
+    await evaluate("crownQA.blocked = true"); await click('[data-crown-pay]');
+    await wait("!!document.querySelector('[data-crown-same-tab]')");
+    const navigations = [];
+    const stopIntercept = client.on("Fetch.requestPaused", event => {
+      navigations.push(event.request.url);
+      void client.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: 200,
+        responseHeaders: [{ name: "Content-Type", value: "text/html" }],
+        body: Buffer.from('<!doctype html><title>Simulated payment form</title><link rel="icon" href="data:,"><p id="checkout-fixture">No provider request or payment was made.</p>').toString('base64') }).catch(error => errors.push(error.message));
+    });
+    await client.send("Fetch.enable", { patterns: [{ urlPattern: "https://checkout.stripe.com/*", requestStage: "Request" }] });
+    await click('[data-crown-same-tab]');
+    await wait("!!document.querySelector('#checkout-fixture')");
+    assert.deepEqual(navigations, ["https://checkout.stripe.com/c/pay/cs_live_fixture"]);
+    assert.equal(await evaluate("location.href"), navigations[0], "Same-tab recovery reaches the payment form even when window.open is blocked");
+    await client.send("Fetch.disable"); stopIntercept();
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      await client.send("Page.navigate", { url: address.url + "/crown-payment-return.html" });
+      await wait("document.readyState === 'complete' && !!document.querySelector('[data-crown-open]')");
+      assert.equal(await evaluate("document.querySelector('[data-crown-open]').href"), "https://playcrownlands.com/play/");
+      assert(await evaluate("document.body.textContent.includes('does not confirm payment') && document.body.textContent.includes('not entered payment details')"), "Cancel/return never claims payment and explains how to resume checkout");
+      assert(await evaluate("document.documentElement.scrollWidth <= innerWidth + 1"));
+      fs.writeFileSync(path.join(output, `checkout-return-${viewport.width}.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
     }
     for (const page of [{ file: "support.html", section: "private-support" }, { file: "terms.html", section: "crown-purchases" }, { file: "privacy.html", section: "payments" }]) {
       for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
@@ -219,7 +295,7 @@ async function main() {
       }
     }
     assert.deepEqual(errors, []);
-    console.log("Crown checkout browser passed at desktop and landscape mobile: consistent four-tab Shop frame/header/navigation, server-priced Crown card, keyboard tabs, removed Earn Crowns, live/test disclosure, manual review, blocked popup, same-order recovery, status, unchanged wallet, hostile URL and account-switch isolation.");
+    console.log("Crown checkout browser passed at desktop and landscape mobile: consistent Shop, live/test disclosure, visible same-order checkout links for blocked/detached/closed/lost tabs, same-tab return, retry recovery, status, unchanged wallet, hostile URL and account-switch isolation.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (browser) { await waitForProcessExit(browser.browserProcess); await removeBrowserProfile(browser.profilePath); }

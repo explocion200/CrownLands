@@ -1,18 +1,39 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d52ca7bfd544007651c22b8373da9828e92a317c",
+  "baseCommit": "d356b72c1d635114f3c2da26edb3c986909afdc3",
   "coverage": [
     {
       "paths": [
-        "AGENTS.md"
+        "crown-payments-ui.js",
+        "crown-payments-ui.css",
+        "crown-payment-return.html",
+        "tools/validate-crown-payments-browser.js"
       ],
       "tests": [
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/test-safe-update-pipeline.js",
-        "tools/validate-release-gate.js"
+        "tools/validate-crown-payments-browser.js",
+        "tools/test-crown-payments.js",
+        "tools/test-crown-live-payments.js"
       ],
-      "reason": "Record the owner's standing authorization to merge reviewed, current PRs after exact-head required checks pass, preserving explicit holds, production authorization boundaries and post-merge synchronization. This edits workflow instructions only. The repository requires these four workflow-protection validators for AGENTS.md changes; no gameplay, emulator or browser behavior changes."
+      "reason": "Repair hosted-checkout handoff in the shared live/test client, preserve the same idempotent order when popup navigation is blocked or lost, and provide visible real links plus same-tab return. Browser coverage exercises the actual Shop/dialog at desktop and landscape-mobile sizes, blocked/throwing/closed/silent popup paths, retry recovery, terminal states, hostile URL rejection, account-switch isolation, and no client wallet mutations. Existing live/test validators protect the provider URL, quote and API contracts consumed by this UI. No server-authoritative code or schema changes; no emulator suite is needed."
+    },
+    {
+      "paths": [
+        "docs/CROWN_PAYMENTS.md"
+      ],
+      "tests": [],
+      "reason": "Document the observed read-only diagnostic and checkout recovery behavior, distinguish historical setup from current local operation, and explain player requirements. Runtime behavior is covered by the adjacent UI validation group."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-crown-payments-browser.js"
+      ],
+      "reason": "The checkout recovery exceeded the existing installation-cache cap. Apply the existing conservative minifier only to crown-payments-ui.js and count those delivered bytes in the shell validator. Keep all size caps unchanged. Full artifact and asset-budget validators verify packaging, while the checkout browser suite asserts exact minifier output and serves the built client to exercise every live/test flow after compilation."
     }
   ]
 }
