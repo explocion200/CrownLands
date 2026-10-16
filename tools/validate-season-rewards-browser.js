@@ -90,7 +90,8 @@ async function main() {
         onlineRealmActivityEvents=[];realmActivityAuthoritativeHydrated=true;`);
       await wait(100);
       for (const closeSelector of ['[data-season-back]','#closeModalBtn']) {
-        await evaluate("window.rewardLoginGeneration=beginLoginPresentationSequence();startLoginPresentationDailyRefresh(rewardLoginGeneration)");
+        // Each close path starts with a fresh reminder, then tests a second login.
+        await evaluate("localStorage.removeItem(getSeasonRewardAutoOpenKey());seasonRewardAutoOpenUsed.clear();window.rewardLoginGeneration=beginLoginPresentationSequence();startLoginPresentationDailyRefresh(rewardLoginGeneration)");
         await ready("loginPresentationSequence?.seasonResolved===true");
         assert.equal(await evaluate("modal.open"),false,"Automatic rewards must wait until the new kingdom has loaded");
         await evaluate("markLoginPresentationMapReady(rewardLoginGeneration)");
@@ -103,6 +104,13 @@ async function main() {
         await ready("loginPresentationSequence===null && !modal.open");
         assert.equal(await evaluate("window.seasonClaims"),0,"Later and Close must never claim or discard rewards");
         assert.equal(await evaluate("seasonFixture.award.claimed===true"),false);
+        assert.equal(await evaluate("localStorage.getItem(getSeasonRewardAutoOpenKey())"),"1","The shown reminder must persist separately from unclaimed awards");
+        await evaluate("window.rewardLoginGeneration=beginLoginPresentationSequence();startLoginPresentationDailyRefresh(rewardLoginGeneration);markLoginPresentationMapReady(rewardLoginGeneration)");
+        await ready("loginPresentationSequence===null");
+        assert.equal(await evaluate("modal.open"),false,"Later or Close must suppress the reminder on the next login");
+        await evaluate("window.rewardLoginGeneration=beginLoginPresentationSequence({kind:'resume'});startLoginPresentationDailyRefresh(rewardLoginGeneration);markLoginPresentationMapReady(rewardLoginGeneration)");
+        await ready("loginPresentationSequence===null");
+        assert.equal(await evaluate("modal.open"),false,"Foreground resume must not reopen season rewards");
       }
       await evaluate("showLeaderboardModal();document.getElementById('seasonRewardsInfoBtn').click()");
       await ready("document.querySelectorAll('[data-season-board]').length===3");
@@ -150,7 +158,9 @@ async function main() {
     await ready('document.documentElement?.dataset.ledgerQa==="ready"');
     await evaluate(`window.seasonFixture=${JSON.stringify({...R.seasonInfo("realm-2026-09"),status:"ready",pendingSeasons:[]})};
       window.CrownlandsOnline.getSeasonRewardStatus=async()=>{if(window.seasonMode==='error')throw Error('Synthetic rewards outage');return {...seasonFixture,status:'finalizing',award:null};};`);
-    await evaluate(`modal.close();RESET_GENERATION='realm-2026-10';window.seasonMode='error';
+    await evaluate(`modal.close();RESET_GENERATION='realm-2026-10';
+      if(!hasSeasonRewardAutoOpenBeenUsed())throw Error('Season reminder was lost across page reload');
+      localStorage.removeItem(getSeasonRewardAutoOpenKey());seasonRewardAutoOpenUsed.clear();window.seasonMode='error';
       refreshDailyMissionStatus=async()=>null;refreshSeasonalAchievementStatus=async()=>null;
       refreshDailyLoginRewardStatus=async()=>null;pendingOfflineRewardsSummary=null;
       onlineRealmActivityEvents=[];realmActivityAuthoritativeHydrated=true;`);
@@ -176,7 +186,7 @@ async function main() {
     await evaluate("modal.close();showLeaderboardModal();window.resolveSeason(seasonFixture)");
     await wait(100);assert.equal(await evaluate("modal.classList.contains('leaderboard-modal') && !document.querySelector('.season-panel')"),true);
     assert.deepEqual(errors,[]);
-    console.log("Season reward browser passed desktop/mobile automatic post-spawn rewards, Later/Close retention and leaderboard claims, failed-login retry, bounded panel waits, three-board overviews, reward tiers, receipts, single claim, gear refresh, honors, pending/error and stale-response guards.");
+    console.log("Season reward browser passed desktop/mobile once-per-season automatic post-spawn rewards, repeat-login/resume suppression, persisted reload memory, Later/Close retention and leaderboard claims, failed-login retry, bounded panel waits, three-board overviews, reward tiers, receipts, single claim, gear refresh, honors, pending/error and stale-response guards.");
   } finally {
     if(client)await client.send("Browser.close").catch(()=>{});
     if(session){await waitForProcessExit(session.browserProcess);await removeBrowserProfile(session.profilePath);}

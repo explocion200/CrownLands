@@ -1,19 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "10b8ccf636c02fc13d7f18d08d95b3fab694cb90",
+  "baseCommit": "c70bba825e1c867670923f8b7e0126ca076528ee",
   "coverage": [
     {
       "paths": [
-        "main-screen-art-ui.css",
-        "tools/validate-main-screen-art-browser.js"
+        "game.js",
+        "tools/validate-login-realm-sequence.js",
+        "tools/validate-season-rewards-browser.js"
       ],
       "tests": [
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-parchment-notices-browser.js",
-        "tools/validate-crowns-hud-browser.js",
-        "tools/validate-hud-screen-edge-browser.js"
+        "tools/validate-login-realm-sequence.js",
+        "tools/validate-season-rewards-browser.js",
+        "tools/validate-daily-login-rewards.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-lag-recovery.js"
       ],
-      "reason": "Apply the existing flat parchment surface to Gold, Crowns, Stamina, both fullscreen toggles and Home return modes without changing geometry or actions. Update the existing visual assertion to the confirmed palette. Shared HUD checks cover currency rendering/subscription updates, responsive fit, surrounding named buttons and clan shields, unchanged notices/Chat, keyboard/touch actions and native fullscreen/safe-area transitions. Additional local browser inspection checks baseline geometry, both Home modes, login fullscreen and full/low/unavailable stamina plus refill review without purchase. CSS-only presentation; no server-authoritative gameplay or emulator suites apply."
+      "reason": "Remember the automatic Last Season Rewards presentation per account/current season in browser storage, with page-memory fallback; exclude foreground resumes and record only an opened panel. Exercise first login, Later/Close, later login/reload/resume, independent accounts/seasons, pending/error and unavailable-storage handling. Preserve manual claims/receipts, reward retention, map-ready gating and Daily Login/Welcome Back/Realm announcement order. Browser checks cover desktop and landscape mobile layouts and claim controls. No server-authoritative reward, entitlement or database change; no emulator suites apply."
     },
     {
       "paths": [
@@ -22,14 +24,14 @@
       "tests": [
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "The shared surface selector and focus additions require 287 shell bytes. Increase only the install-precache ceiling by a bounded 512 bytes; no new artwork, dependencies or requests. Asset checks and the production build verify the resulting shell and unchanged remaining budgets."
+      "reason": "Bound the 966-byte reminder implementation to a 1 KiB install-shell allowance increase. Existing production build, artifact and asset-budget checks confirm packaging; no new artwork, requests or dependencies."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly requested parchment resource/display control design while preserving existing gameplay, balance and interaction rules. This documentation does not establish deployment."
+      "reason": "Record the confirmed first-login-only reminder and explicit browser-persistence boundary, preserving rewards and manual access. Documentation does not establish deployment."
     }
   ]
 }
