@@ -33,11 +33,12 @@ function scheduleMatcher({ schedule, timeZone }) {
   };
 }
 class JobQueue {
-  constructor({ store, routes, leaseSeconds = 60, maxAttempts = 8, maxActive = 2 }) {
+  constructor({ store, controlStore = store, routes, leaseSeconds = 60, maxAttempts = 8, maxActive = 2 }) {
     if (!(store instanceof Store) || !/^migration_game_[a-z0-9_]{1,30}$/.test(store.schema)) throw Error("Jobs require an isolated game rehearsal schema");
+    if (!(controlStore instanceof Store) || controlStore.schema !== store.schema) throw Error("Job control must use the same game schema");
     if (!Number.isInteger(leaseSeconds) || leaseSeconds < 5 || leaseSeconds > 300 || !Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 20) throw Error("Invalid job bounds");
     if (!Number.isInteger(maxActive) || maxActive < 1 || maxActive > 8) throw Error("Invalid worker concurrency");
-    this.store = store; this.schema = store.schema; this.leaseSeconds = leaseSeconds; this.maxAttempts = maxAttempts;
+    this.store = store; this.controlStore = controlStore; this.schema = store.schema; this.leaseSeconds = leaseSeconds; this.maxAttempts = maxAttempts;
     this.maxActive = maxActive; this.active = 0; this.stopping = false; this.stopAt = Infinity;
     this.routes = new Map(); this.triggers = []; this.schedules = [];
     for (const route of routes) {
@@ -57,7 +58,7 @@ class JobQueue {
   }
   async initialize() {
     const s = this.schema;
-    await this.store.pool.query(`
+    await this.controlStore.pool.query(`
       ALTER TABLE ${s}.changes ADD COLUMN IF NOT EXISTS dispatched_at timestamptz;
       CREATE INDEX IF NOT EXISTS changes_undispatched ON ${s}.changes(id) WHERE dispatched_at IS NULL;
       CREATE TABLE IF NOT EXISTS ${s}.work_jobs (
@@ -72,7 +73,7 @@ class JobQueue {
       REVOKE ALL ON ${s}.work_jobs,${s}.work_schedules FROM PUBLIC;`);
   }
   async transaction(callback) {
-    const client = await this.store.pool.connect();
+    const client = await this.controlStore.pool.connect();
     try {
       await client.query("BEGIN"); const result = await callback(client); await client.query("COMMIT"); return result;
     } catch (error) { await client.query("ROLLBACK").catch(() => {}); throw error; }
@@ -134,7 +135,7 @@ class JobQueue {
     });
   }
   async heartbeat(job) {
-    const result = await this.store.pool.query(`UPDATE ${this.schema}.work_jobs SET lease_until=clock_timestamp()+$3*interval '1 second'
+    const result = await this.controlStore.pool.query(`UPDATE ${this.schema}.work_jobs SET lease_until=clock_timestamp()+$3*interval '1 second'
       WHERE id=$1 AND lease_token=$2 AND status='running' AND lease_until>clock_timestamp()`, [job.id, job.lease_token, this.leaseSeconds]);
     if (!result.rowCount) throw lostLease();
   }
@@ -151,14 +152,14 @@ class JobQueue {
     // Only safe error codes are retained; handlers can include player data in
     // error messages, and payloads must never enter ordinary status logs.
     const status = error ? (job.attempts >= this.maxAttempts ? "dead" : "pending") : "complete";
-    const result = await this.store.pool.query(`UPDATE ${this.schema}.work_jobs SET status=$3,lease_token=NULL,lease_until=NULL,
+    const result = await this.controlStore.pool.query(`UPDATE ${this.schema}.work_jobs SET status=$3,lease_token=NULL,lease_until=NULL,
       last_error_code=$4,available_at=clock_timestamp()+$5*interval '1 second',finished_at=CASE WHEN $3 IN ('complete','dead') THEN clock_timestamp() ELSE NULL END
       WHERE id=$1 AND lease_token=$2 AND status='running' AND lease_until>clock_timestamp()`, [job.id, job.lease_token, status, code, error ? Math.min(300, 2 ** job.attempts) : 0]);
     if (!result.rowCount) throw lostLease();
   }
   async event(job) {
     if (job.kind === "schedule") return { jobName: job.handler, scheduleTime: job.event.scheduleTime };
-    const row = (await this.store.pool.query(`SELECT path,before_body,after_body,created_at FROM ${this.schema}.changes WHERE id=$1`, [job.event.changeId])).rows[0];
+    const row = (await this.controlStore.pool.query(`SELECT path,before_body,after_body,created_at FROM ${this.schema}.changes WHERE id=$1`, [job.event.changeId])).rows[0];
     if (!row) throw Object.assign(Error("Job source change missing"), { code: "source-change-missing" });
     const before = new DocumentSnapshot(this.store, row.path, row.before_body);
     const after = new DocumentSnapshot(this.store, row.path, row.after_body);

@@ -27,7 +27,7 @@ async function child(directory,role){
  control.phase='active';
  const active=await start(role,options);
  try{
-  assert.equal(active.standby,false);assert.equal(connected,1);
+  assert.equal(active.standby,false);assert.equal(connected,role==='worker'?2:1);
   if(active.server){const endpoint=role==='auth'?'/local-auth/health':role==='game'?'/api/local-game/health':'/invalid';
    const result=await request(active.server.address().port,endpoint);assert.equal(result.status,role==='payments'?404:200);
    if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch});}
@@ -72,6 +72,22 @@ async function child(directory,role){
    }finally{client?.dispose();await authentication.stop();}
   }
   if(active.loop){await pause(250);await active.loop.settle();const value=await active.loop.status();assert.equal(value.stopped??false,false);if(role==='worker')assert.equal(value.operationalFailures,0);else assert.equal(value.healthy,true);}
+  if(role==='worker'){
+   // Slow game transactions can occupy every worker connection. Its status
+   // query must still reach PostgreSQL without timing out and stopping jobs.
+   const held=[];
+   try{
+    for(let i=0;i<active.store.pool.options.max;i++)held.push(await active.store.pool.connect());
+    await assert.doesNotReject(active.loop.status(),'Worker status must survive a saturated game pool');
+    await pause(6000);
+    const report=JSON.parse(fs.readFileSync(path.join(folder,'status.json')));
+    assert(Date.now()-Date.parse(report.recordedAt)<3000,'Periodic status must remain fresh while game connections are busy');
+    assert.equal(active.loop.stopped,false);
+    assert.equal(active.loop.failures,0,'Authority and queue checks must also remain responsive');
+    assert.equal(active.loop.queue.controlStore.pool.options.max,3);
+    assert.equal(active.store.pool.options.max,12);
+   }finally{for(const client of held)client.release();}
+  }
   await assert.rejects(active.store.pool.query('UPDATE crownlands_control.deployment SET phase=\'standby\''),e=>e.code==='42501');
   await assert.rejects(active.store.pool.query('CREATE TABLE '+config.schema+'.forbidden(id int)'),e=>e.code==='42501');
  }finally{await active.stop();}
@@ -210,4 +226,4 @@ async function main(){
   console.log('Permanent services: private PostgreSQL cluster, restricted roles, standby, all six active startups, real production browser password sign-in/read/save/logout, denied cross-player/economy writes, epoch/maintenance and concurrent authority fencing passed.');
  }finally{await pool?.end().catch(()=>{});if(started)run('pg_ctl',['-D',path.join(directory,'data'),'-m','immediate','-w','stop']);fs.rmSync(directory,{recursive:true,force:true});}
 }
-(process.argv[2]==='--child'?child(process.argv[3],process.argv[4]):main()).catch(e=>{console.error(e);process.exitCode=1;});
+(process.argv[2]==='--child'?child(process.argv[3],process.argv[4]):main()).catch(e=>{process.stderr.write(String(e.stack||e)+'\n');process.exitCode=1;});

@@ -59,7 +59,7 @@ class WorkerLoop {
   }
   async status() {
     const s = this.queue.schema;
-    const rows = (await this.queue.store.pool.query(`SELECT status,count(*) AS count FROM ${s}.work_jobs GROUP BY status`)).rows;
+    const rows = (await this.queue.controlStore.pool.query(`SELECT status,count(*) AS count FROM ${s}.work_jobs GROUP BY status`)).rows;
     const counts = { pending: 0, running: 0, complete: 0, dead: 0 };
     for (const row of rows) counts[row.status] = Number(row.count);
     return { rehearsal: !this.deployment, stopped: this.stopped, expiresAt: Number.isFinite(this.expiry) ? new Date(this.expiry).toISOString() : null,

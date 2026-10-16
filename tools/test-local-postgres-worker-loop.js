@@ -5,6 +5,7 @@ const { Store } = require("../local-backend/store");
 const { JobQueue } = require("../local-backend/jobs");
 const { WorkerLoop, privateWorkerRoutes } = require("../local-backend/worker-loop");
 const { WorkerDiagnostics } = require("../local-backend/worker-diagnostics");
+const { Pool } = require("../local-backend/node_modules/pg");
 
 (async () => {
   const diagnostics = new WorkerDiagnostics(), output = {}, privateValue = "private-fixture-must-not-leak";
@@ -87,6 +88,30 @@ const { WorkerDiagnostics } = require("../local-backend/worker-diagnostics");
     assert(maximum <= 2, "Repeated ticks cannot exceed the existing concurrency limit");
     assert.equal((await loop.status()).operationalFailures, 0);
     loop.stop();
+
+    // Lease renewal, dispatch and status have a separate bounded connection
+    // budget. Exhausting every data connection must not prevent queue control.
+    const dataPool = new Pool({ database: "crownlands_migration", host: "/var/run/postgresql", max: 1, connectionTimeoutMillis: 100 });
+    const dataStore = new Store({ schema: store.schema, pool: dataPool });
+    const controlled = new JobQueue({ store: dataStore, controlStore: store, routes: [{
+      name: "fixtureControl", kind: "schedule", options: { schedule: "every 1 minutes", timeZone: "UTC" }, handler: async () => {},
+    }] });
+    let controlJob;
+    try {
+      const heldData = await dataPool.connect();
+      try {
+        await assert.rejects(dataPool.query("SELECT 1"), /timeout exceeded when trying to connect/);
+        await controlled.enqueueSchedules(); controlJob = await controlled.claim(); assert(controlJob);
+        await controlled.heartbeat(controlJob);
+        await controlled.dispatchChanges();
+        const controlledLoop = new WorkerLoop({ queue: controlled, expiresAt: new Date(Date.now() + 60000).toISOString() });
+        assert.equal((await controlledLoop.status()).jobs.running, 1);
+        await controlled.finish(controlJob);
+      } finally { heldData.release(); }
+      await assert.rejects(dataStore.withTransactionGuard(controlled.guard(controlJob),
+        () => dataStore.doc("totals/finished-job-must-not-write").set({ wrong: true })), { code: "job-lease-lost" });
+      assert.equal((await store.doc("totals/finished-job-must-not-write").get()).exists, false);
+    } finally { await dataStore.close(); }
 
     let started, starts = 0;
     const entered = new Promise(resolve => { started = resolve; });
