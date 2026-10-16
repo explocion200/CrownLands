@@ -17,19 +17,37 @@
         "docs/visual-qa/chat-toggle-image-draft/review.css",
         "docs/visual-qa/chat-toggle-image-draft/review.js",
         "docs/visual-qa/chat-toggle-image-draft/runtime-fixture.js",
-        "tools/validate-chat-toggle-draft-browser.js"
+        "tools/validate-chat-toggle-draft-browser.js",
+        "docs/visual-qa/chat-toggle-image-draft/images/runtime-assets.json"
       ],
       "tests": [
         "tools/validate-chat-toggle-draft-browser.js"
       ],
-      "reason": "Isolated, unapproved chat-arrow design uses generated labeled raster images and a loopback-only synthetic game preview. Verify desktop/landscape unchanged 56px target geometry, two upright image states, existing show/hide handler via pointer/keyboard/touch, accessible expanded labels, independent unread dot, review toggles, decoded RGBA assets, no failed requests or network writes, and no draft references in production. The owner explicitly requires approval before runtime integration; no backend or gameplay change and no emulator suite apply. Revision 2 reduces only the arrow artwork while retaining the parchment label size; visually review both states at actual display size."
+      "reason": "Approved Chat arrow image integration and preserved historical review. Check identical 56px targets at desktop and both landscape widths; both upright states; real mouse, Enter, Space and touch toggles; unread visibility; keyboard focus; zoom independence; transparent image delivery hashes and byte budget; review controls; and no failed assets, browser exceptions or network writes. The focused test exercises the actual production HTML/CSS separately from the review overlay."
     },
     {
       "paths": [
-        "docs/visual-qa/chat-toggle-image-draft/README.md"
+        "index.html",
+        "main-screen-art-ui.css",
+        "assets/optimized/manifest.json",
+        "assets/optimized/hud-chat-left-labeled-192x192-cc1059e9e269.webp",
+        "assets/optimized/hud-chat-right-labeled-192x192-eac413442419.webp",
+        "chat.css"
+      ],
+      "tests": [
+        "tools/validate-chat-toggle-draft-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-chat.js"
+      ],
+      "reason": "Integrate the approved two-state images into the existing chat target. Shared HUD CSS needs the neighboring top/bottom controls, dynamic clan shield and existing actions checked; chat validation preserves layout, privacy, translation, unread and conversation contracts. Verify manifest hashes, dimensions, delivery budgets and existing runtime-cache strategy. No game logic, server authority, data or release-contract change; no emulator suite applies. Remove superseded SVG-only styles and border; retain them solely in the historical review and preserve the existing offline-shell budget. Required build validation independently enforces the asset-performance budgets."
+    },
+    {
+      "paths": [
+        "docs/visual-qa/chat-toggle-image-draft/README.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Explain the pending approval, draft artwork provenance, preview-only boundary and focused validation. No confirmed design rule or production behavior is changed."
+      "reason": "Record the explicit October 16 approval, narrow supersession of the burgundy SVG toggle, artwork provenance and validation procedure. Documentation does not establish deployment."
     }
   ]
 }

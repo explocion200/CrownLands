@@ -20,10 +20,16 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
  pointer-events:none;user-select:none;filter:none!important;
 }
 @layer crownlands-theme{
- :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#innerCityHudBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn).hud-image-button{
+ :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#innerCityHudBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn,#chatToggleBtn).hud-image-button{
   background:transparent!important;box-shadow:none!important;
  }
 }
+/* Separate states keep the parchment Chat label upright. */
+#chatToggleBtn.hud-image-button{border:0}
+#chatToggleBtn.hud-image-button > .chat-toggle-image{display:none}
+#chatToggleBtn:not(.is-expanded) > .chat-toggle-left,
+#chatToggleBtn.is-expanded > .chat-toggle-right{display:block}
+#chatToggleUnread{z-index:1}
 .hud-image-button:focus-visible{outline:2px solid #d8bd78!important;outline-offset:2px}
 .hud-image-button:hover .hud-button-image{filter:brightness(1.08)!important}
 .profile-action-row > .hud-image-button .clan-hud-icon{

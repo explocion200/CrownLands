@@ -14,3 +14,19 @@ html.chat-button-draft #chatToggleBtn:focus-visible{outline:2px solid #d8bd78!im
 /* Synthetic unread example, confined to the review page. */
 html[data-chat-draft-unread="true"] #chatToggleUnread{display:block!important;z-index:2}
 html[data-chat-draft-unread="false"] #chatToggleUnread{display:none!important}
+
+/* Archived SVG treatment, used only by the before/after review. */
+html:not(.chat-button-draft) #chatToggleBtn{border:2px solid rgba(181,138,59,.78)}
+.chat-toggle-chevron {
+  width: 34px;
+  height: 34px;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .48));
+  transition: transform 160ms ease;
+}
+
+.chat-toggle-btn.is-expanded .chat-toggle-chevron {
+  transform: rotate(180deg);
+}
+
+@media(max-width:900px) and (orientation:landscape){.chat-toggle-chevron{width:29px;height:29px}}
+@media(prefers-reduced-motion:reduce){.chat-toggle-chevron{transition:none}}
