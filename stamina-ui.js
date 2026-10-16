@@ -1,6 +1,7 @@
 (function (root) {
   "use strict";
   const M = root.CrownlandsMarauders;
+  const connectionError = "Stamina unavailable. Reconnect to continue.";
   let session = null;
   const number = value => Number(value).toLocaleString("en-US");
   function remember(s) {
@@ -54,8 +55,9 @@
     } catch { /* Ignore corrupt local draft; it has no currency authority. */ }
     s.stop = api.subscribeStamina?.({ onState: raw => {
       if (session !== s || !raw || (s.state && raw.revision < s.state.revision)) return;
+      if (s.error === connectionError) s.error = "";
       s.state = raw; tick();
-    }, onError: () => { if (session === s) { s.state = null; s.error = "Stamina unavailable. Reconnect to continue."; tick(); } } });
+    }, onError: () => { if (session === s) { s.state = null; s.error = connectionError; tick(); } } });
     tick(); void refresh(s);
   }
   function duration(until) {

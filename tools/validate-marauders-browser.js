@@ -22,7 +22,7 @@ async function main(built = false) {
         assert(fs.readFileSync(path.resolve(__dirname,'../dist',file)).equals(fs.readFileSync(path.resolve(__dirname,'..',file))),'Built defeated artwork is stale');
       }
       const delivered={};
-      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css']){
+      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css','stamina-ui.js']){
         delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
         const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
         assert.equal(delivered[file].replace(/\r\n/g,'\n'),file==='marauders-ui.js'?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
@@ -237,6 +237,13 @@ async function main(built = false) {
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
       assert(!await ev("document.querySelector('.stamina-panel details').open"),'Recovery details start collapsed');
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
+      await ev("huntQA.callbacks.onError(new Error('Synthetic disconnect'))");
+      assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
+      assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('Reconnect to continue')"));
+      await ev("huntQA.callbacks.onState({version:1,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:''})");
+      assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'70/100');
+      assert.equal(await ev("document.querySelector('[data-stamina-fill]').style.width"),'70%');
+      assert(!await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('Reconnect to continue')"),'Recovered snapshots clear the connection warning');
       assert.equal(await ev("document.querySelector('[data-refill-crowns]').textContent"),'120 → 111');
       assert.equal(await ev("document.querySelector('[data-refill-buy]').textContent"),'Refill to 100 — 9 Crowns');
       const panel=await ev("(()=>{const r=document.querySelector('.stamina-panel').getBoundingClientRect(), b=document.querySelector('[data-refill-buy]').getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right,buyBottom:b.bottom};})()");

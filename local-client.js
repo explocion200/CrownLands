@@ -291,6 +291,9 @@
         const terminal = ["permission-denied", "unauthenticated", "invalid-argument"].includes(error.code);
         for (const watcher of active) if (watchers.has(watcher)) {
           if (terminal) watchers.delete(watcher);
+          // Error handlers can clear their visible state. On recovery, deliver
+          // the next authorized snapshot even when its data has not changed.
+          else watcher.identity = undefined;
           try { watcher.error?.(error); } catch { /* Keep remaining listeners independent. */ }
         }
       }
