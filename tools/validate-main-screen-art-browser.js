@@ -26,7 +26,10 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
 const labeledArt=JSON.parse(fs.readFileSync(path.join(root,"docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json"),"utf8"));
 assert.equal(labeledArt.length,4);
 assert(labeledArt.reduce((sum,asset)=>sum+asset.bytes,0)<=68*1024);
-for(const asset of labeledArt){
+const bottomArt=JSON.parse(fs.readFileSync(path.join(root,"docs/art-sources/labeled-bottom-hud/runtime-assets.json"),"utf8"));
+assert.equal(bottomArt.length,4);
+assert(bottomArt.reduce((sum,asset)=>sum+asset.bytes,0)<=92*1024);
+for(const asset of [...labeledArt,...bottomArt]){
  const source=fs.readFileSync(path.join(root,asset.source)),bytes=fs.readFileSync(path.join(root,asset.output));
  assert.equal(crypto.createHash("sha256").update(source).digest("hex"),asset.sourceSha256);
  assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),asset.sha256);
@@ -35,6 +38,7 @@ for(const asset of labeledArt){
 }
 const labeledPath=name=>labeledArt.find(a=>a.id===`hud-${name}-labeled`).output;
 assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath('daily');assets['inner-city']=labeledPath('inner-castle');assets.clan=labeledPath('clan');
+for(const key of ['bag','shop','cities','map'])assets[key]=bottomArt.find(a=>a.id===`hud-${key}-labeled`).output;
 (async()=>{
  const server=createMapBenchmarkServer(),address=await server.listen();let browser,client;
  const artifacts=path.join(root,"release-artifacts/main-screen-art-game");fs.mkdirSync(artifacts,{recursive:true});
@@ -57,7 +61,7 @@ assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath
   await wait(`document.documentElement?.dataset.crownlandsBenchmarkReady==='true'`);
   assert(await ev(`document.body.classList.contains('hud-illustrated')&&!window.HudArtDraft`),"Actual game must use production art without preview injection");
   await ev(`window.hudArtExpected=${JSON.stringify(assets)};void 0`);
-  await wait(`[['bag','#inventoryBtn img',384],['shop','#shopBtn img',384],['cities','#cityListBtn img',384],['map','#islandSwitchBtn img',384],['leaderboard','#leaderboardBtn img',192],['daily-reward','#dailyLoginRewardBtn img',192],['clan','#clanHudBtn img',192]].every(([key,selector,size])=>{const i=document.querySelector(selector);return i.src.endsWith(hudArtExpected[key])&&i.complete&&i.naturalWidth===size;})`);
+  await wait(`[['bag','#inventoryBtn img',192],['shop','#shopBtn img',192],['cities','#cityListBtn img',192],['map','#islandSwitchBtn img',192],['leaderboard','#leaderboardBtn img',192],['daily-reward','#dailyLoginRewardBtn img',192],['clan','#clanHudBtn img',192]].every(([key,selector,size])=>{const i=document.querySelector(selector);return i.src.endsWith(hudArtExpected[key])&&i.complete&&i.naturalWidth===size;})`);
   assert(await ev(`getComputedStyle(document.getElementById('profileBtn'),'::before').backgroundImage.includes(hudArtExpected['profile-frame'])`));
   assert.equal(await ev(`document.querySelector('#logBtn .report-icon use').getAttribute('href')`),"#cl-icon-reports");
   assert.equal(await ev(`document.querySelector('#cl-icon-reports image').getAttribute('href')`),"assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp");
@@ -71,6 +75,18 @@ assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
    const labeled=await ev(`['leaderboardBtn','clanHudBtn','dailyLoginRewardBtn','innerCityHudBtn'].map(id=>{const b=document.getElementById(id),r=b.getBoundingClientRect(),i=b.querySelector('.hud-button-image'),a=i.getBoundingClientRect();return{width:r.width,height:r.height,transparent:getComputedStyle(b).backgroundColor==='rgba(0, 0, 0, 0)',imageFits:a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom};})`);
    assert(labeled.every(b=>b.width===(width===568?46:56)&&b.height===b.width&&b.transparent&&b.imageFits),'Named images must keep original bounds and transparent surfaces');
+   const bottom=await ev(`['inventoryBtn','shopBtn','cityListBtn','islandSwitchBtn'].map(id=>{const b=document.getElementById(id),r=b.getBoundingClientRect(),i=b.querySelector('.hud-button-image'),a=i.getBoundingClientRect(),s=getComputedStyle(b),c=document.createElement('canvas');c.width=c.height=192;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);return{id,x:r.x,y:r.y,width:r.width,height:r.height,transparent:s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.boxShadow==='none',imageFits:a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom,alpha:ctx.getImageData(0,0,1,1).data[3]===0,ribbon:ctx.getImageData(96,160,1,1).data[3]>240,aria:b.getAttribute('aria-label')};})`);
+   assert(bottom.every(b=>b.width===(width===568?56:64)&&b.height===64&&b.transparent&&b.imageFits&&b.alpha&&b.ribbon),'Bottom images must preserve the original responsive targets, alpha and readable ribbon');
+   assert.deepEqual(bottom.map(b=>[b.x,b.y]),[0,1,2,3].map(i=>[width-(width===568?296:304)+i*76,height-76]),'Bottom-right spacing/inset must match the pre-change production measurements');
+   assert.match(bottom[2].aria,/Open city list, \d+ cities owned/,'City count remains accessible');
+   for(const b of bottom){
+    await ev(`document.getElementById('${b.id}').focus()`);
+    await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+    await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+    await ev(`document.getElementById('${b.id}').focus()`);
+    assert(await ev(`document.getElementById('${b.id}').matches(':focus-visible')&&getComputedStyle(document.getElementById('${b.id}')).outlineStyle==='solid'`),'Image buttons must retain visible keyboard focus');
+   }
+   await ev(`document.activeElement.blur()`);
    const noClan=await ev(`({id:state.clanId,name:state.clanName,tag:state.clanTag,snapshot:clanSnapshot})`);
    for(const charge of ['lion','eagle']){
     await ev(`state.clanId='qa-labeled';state.clanName='QA '+${JSON.stringify(charge)};state.clanTag='QA';clanSnapshot={id:state.clanId,name:state.clanName,tag:state.clanTag,shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,charge:${JSON.stringify(charge)}}};lastClanHudSignature='';renderClanHudAccess();`);
@@ -86,6 +102,23 @@ assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath
    // Actual pointer clicks hit the existing handlers with the replacement art.
    for(const id of["inventoryBtn","shopBtn","cityListBtn","islandSwitchBtn","leaderboardBtn","dailyLoginRewardBtn","logBtn"]){
     await click(id);await wait(`document.getElementById('modal').open`);await ev(`__CROWNLANDS_BENCHMARK__.closeModal()`);await delay(50);
+   }
+   // These four images are decorative: keyboard and touch keep the original actions.
+   for(const [id,title]of[['inventoryBtn','Item Bag'],['shopBtn','Shop'],['cityListBtn','City List'],['islandSwitchBtn','Map']]){
+    for(const method of ['keyboard',...(width<1000?['touch']:[])]){
+     if(method==='keyboard'){
+      await ev(`document.getElementById('${id}').focus()`);
+      await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',text:'\r',windowsVirtualKeyCode:13});
+      await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+     }else{
+      await client.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+      const p=await ev(`(()=>{const r=document.getElementById('${id}').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+      await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+     }
+     await wait(`document.getElementById('modal').open&&document.getElementById('modalTitle').textContent.toLowerCase().includes(${JSON.stringify(title.toLowerCase())})`);
+     await ev(`__CROWNLANDS_BENCHMARK__.closeModal()`);await delay(100);
+     if(method==='touch')await client.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    }
    }
    await click("profileBtn");await wait(`document.getElementById('profileScreen').classList.contains('open')`);await ev(`document.getElementById('profileCloseBtn').click()`);
    await click("clanHudBtn");await wait(`document.getElementById('profileScreen').classList.contains('open')&&!document.getElementById('clanView').hidden`);await ev(`document.getElementById('profileCloseBtn').click()`);
@@ -112,7 +145,7 @@ assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath
    for(const [key,code,vk]of[['Enter','Enter',13],[' ','Space',32]]){console.log(`Inner Castle keyboard: ${width}x${height} ${code}`);await ev(`document.getElementById('innerCityHudBtn').focus()`);const text=key==='Enter'?'\r':' ';await client.send('Input.dispatchKeyEvent',{type:'keyDown',key,code,text,unmodifiedText:text,windowsVirtualKeyCode:vk});await client.send('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:vk});await readyEstate();await backRealm();}
    if(width<1000){await client.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});const p=await ev(`(()=>{const r=document.getElementById('innerCityHudBtn').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await readyEstate();await backRealm();await client.send('Emulation.setTouchEmulationEnabled',{enabled:false});}
    await ev(`window.hudShortcutMainId=state.mainCityId;state.mainCityId=''`);await click("innerCityHudBtn");assert(await ev(`!document.getElementById('modal').open`),"Unavailable Main City must not open another estate");await ev(`state.mainCityId=hudShortcutMainId`);
-   records.push({width,height,actualNavigation:true,innerCityShortcut:{adjacent:true,mouse:true,keyboard:true,touch:width<1000,exposedProfileEntry:width===1440,unsavedProfileGuards:width===1440,realmCameraRetained:true,unavailableCityGuard:true},geometryAndColorsPreserved:true,zoomIndependent:true,reportsAlignedInset:inset[0]});
+   records.push({width,height,actualNavigation:true,bottomImages:{controls:bottom,mouse:true,keyboard:true,touch:width<1000},innerCityShortcut:{adjacent:true,mouse:true,keyboard:true,touch:width<1000,exposedProfileEntry:width===1440,unsavedProfileGuards:width===1440,realmCameraRetained:true,unavailableCityGuard:true},geometryAndColorsPreserved:true,zoomIndependent:true,reportsAlignedInset:inset[0]});
   }
   await ev(`switchOnlineIsland(__CROWNLANDS_BENCHMARK__.fixture.neighborRegionId,{fromMapPicker:true})`);await wait(`getActiveMapRegionId()===__CROWNLANDS_BENCHMARK__.fixture.neighborRegionId&&!isMapInteractionBlocked()`);
   assert(await ev(`getCityRegionId(state.mainCityId)!==getActiveMapRegionId()`),"Off-map case must actually view another region");
