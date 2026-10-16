@@ -63,27 +63,34 @@ async function main() {
     const assertFixedDistricts = async () => {
       const report=await evaluate(()=>{
         const world=document.querySelector('.estate-world').getBoundingClientRect();
-        return ['quarry','woodland'].map(key=>{
-          const target=document.querySelector('[data-estate-district="'+key+'"]'),label=target.querySelector('span').getBoundingClientRect();
-          const plot=document.querySelector('[data-estate-site="'+(key==='quarry'?'quarry':'sawmill')+'"]').getBoundingClientRect();
-          return {key,hidden:target.hidden,label:label.toJSON(),bottom:plot.bottom,x:world.left+world.width*(key==='quarry'?.29:.19)};
+        return CrownlandsEstate.districts.map(d=>{
+          const target=document.querySelector('[data-estate-district="'+d.key+'"]'),label=target.querySelector('span').getBoundingClientRect(),anchor=d.labelAnchor||d;
+          let y=world.top+world.height*anchor.y/100;
+          if(d.labelAnchor)y+=label.height/2+6;
+          if(d.key==='mine')y=Math.max(y,document.querySelector('[data-estate-site="mine"]').getBoundingClientRect().bottom+label.height/2+6);
+          return {key:d.key,hidden:target.hidden,label:label.toJSON(),x:world.left+world.width*anchor.x/100,y,background:getComputedStyle(target).backgroundColor,shadow:getComputedStyle(target).boxShadow};
         });
       });
       for(const item of report.filter(item=>!item.hidden)){
-        assert(Math.abs((item.label.left+item.label.right)/2-item.x)<1,'District must stay on its fixed western map anchor: '+item.key);
-        assert(Math.abs(item.label.top-item.bottom-6)<1,'District must stay beneath its own plot, without vertical drift: '+item.key);
+        assert(Math.abs((item.label.left+item.label.right)/2-item.x)<1,'District must stay on its own map anchor: '+item.key);
+        assert(Math.abs((item.label.top+item.label.bottom)/2-item.y)<1,'District title drifted vertically: '+item.key);
+        assert.equal(item.background,'rgba(0, 0, 0, 0)','Padded touch target must not acquire the shared dialog background: '+item.key);
+        assert.equal(item.shadow,'none','Padded touch target must not have a white outline: '+item.key);
       }
     };
     const assertDistrictGeography = async () => {
       const result = await evaluate(() => {
         const world=document.querySelector('.estate-world').getBoundingClientRect();
         const cityX=world.left+world.width*.5,cityY=world.top+world.height*.43;
-        const boxes=[...document.querySelectorAll('[data-estate-district]')].map(e=>({key:e.dataset.estateDistrict,hidden:e.hidden,...e.getBoundingClientRect().toJSON()}));
-        return {cityX,cityY,boxes};
+        const boxes=[...document.querySelectorAll('[data-estate-district]')].filter(e=>!e.hidden).map(e=>({key:e.dataset.estateDistrict,...e.getBoundingClientRect().toJSON()}));
+        return {cityX,cityY,boxes,height:innerHeight};
       });
-      assert.equal(result.boxes.filter(b=>!b.hidden).length,7,'Fit Estate must retain all district controls: '+JSON.stringify(result.boxes));
+      assert(result.boxes.some(b=>b.key==='city'),'Fit must retain its central district control');
+      if(result.height>=900)assert.equal(result.boxes.length,7,'Uncrowded desktop fit must expose every district');
+      assert.equal(await count('[data-estate-directory-building]'),20,'Crowded views retain every building in the directory');
       for(const b of result.boxes){
-        if(b.key==='city')assert(Math.abs((b.left+b.right)/2-result.cityX)<24&&Math.abs((b.top+b.bottom)/2-result.cityY)<24,'City label must stay over the city');
+        assert(b.width>=44&&b.height>=44,'District controls retain accessible touch targets');
+        if(b.key==='city')assert(Math.abs((b.left+b.right)/2-result.cityX)<1&&Math.abs((b.top+b.bottom)/2-result.cityY)<1,'City label must stay over the city');
         if(['quarry','woodland','crafts','farmland'].includes(b.key))assert(b.right<result.cityX,'Western district label crossed to eastern scenery: '+b.key);
         if(['mine','trade'].includes(b.key))assert(b.left>result.cityX,'Eastern district label crossed to western scenery: '+b.key);
         for(const other of result.boxes.filter(o=>o.key!==b.key))assert(b.right<=other.left||b.left>=other.right||b.bottom<=other.top||b.top>=other.bottom,'District hit targets overlap');
@@ -162,6 +169,10 @@ async function main() {
       }), 'Painted scenery must fill both wide-screen gutters with a small ground-edge overlap');
       await screenshot('initial-' + width + 'x' + height + '.png');
       await assertDistrictGeography();
+      const cityTarget=await box('[data-estate-district="city"]');
+      await client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:cityTarget.x+cityTarget.width/2,y:cityTarget.y+cityTarget.height/2});
+      await assertFixedDistricts();
+      await client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:1,y:1});
       await evaluate(()=>innerCastleEstateView.zoom(1.5));await assertFixedDistricts();
       for(const resizedWidth of [width-20,width]){
         await client.send('Emulation.setDeviceMetricsOverride',{width:resizedWidth,height,deviceScaleFactor:1,mobile:false});
@@ -189,8 +200,8 @@ async function main() {
       assert(await evaluate(() => !!document.querySelector('[data-estate-directory-building="treasury"] .estate-new')), 'New gear must appear in the building directory');
       assert.equal(await count('.estate-actor, .estate-roads, .estate-wall, .estate-mill-sails'),0,'Estate uses cohesive painted terrain without vector overlays or ambient actors');
       assert.equal(await evaluate(()=>document.querySelector('.estate-world').getAnimations({subtree:true}).length),0,'Still estate has no ambient CSS animation');
-      assert(await evaluate(()=>['quarry','mine'].every(key=>{const label=document.querySelector('[data-estate-district="'+key+'"] span').getBoundingClientRect(),art=document.querySelector('[data-estate-site="'+key+'"] img').getBoundingClientRect();return label.top>=art.bottom+5;})),'Overview extraction labels must not cover site art at any viewport size');
-      for (const district of await evaluate(() => CrownlandsEstate.districts.map(d => d.key))) {
+      assert(await evaluate(()=>['quarry','mine'].every(key=>{const target=document.querySelector('[data-estate-district="'+key+'"]');if(target.hidden)return true;const label=target.querySelector('span').getBoundingClientRect(),art=document.querySelector('[data-estate-site="'+key+'"] img').getBoundingClientRect();return label.top>=art.bottom+5;})),'Overview extraction labels must not cover site art at any viewport size');
+      for (const district of await evaluate(() => [...document.querySelectorAll('[data-estate-district]:not([hidden])')].map(e=>e.dataset.estateDistrict))) {
         await click('[data-estate-district="' + district + '"]'); assert.equal(await evaluate(() => innerCastleEstateView.snapshot().zoom), 2.5);
         await assertNameplates();
         if(width===844 && ['city','crafts','farmland'].includes(district))await screenshot('district-'+district+'-'+width+'x'+height+'.png');

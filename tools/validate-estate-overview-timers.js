@@ -3,7 +3,7 @@ const assert = require("node:assert/strict"), fs = require("node:fs"), http = re
 const { CdpClient } = require("./map-benchmark/cdp-client");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const root = path.resolve(__dirname, ".."), output = path.join(root,"release-artifacts/estate-overview-construction-timers");
-const files = new Set(["inner-city-estate.js","inner-city-estate.css","estate-economy-ui.js","estate-economy-ui.css","action-buttons.css"]);
+const files = new Set(["inner-city-estate.js","inner-city-estate.css","estate-economy-ui.js","estate-economy-ui.css","action-buttons.css","crownlands-palette.css"]);
 const delay = ms => new Promise(resolve => setTimeout(resolve,ms));
 async function main() {
   const executable = [process.env.CHROME_PATH,"C:/Program Files/Google/Chrome/Application/chrome.exe","/usr/bin/google-chrome","/usr/bin/chromium"].find(p => p && fs.existsSync(p));
@@ -12,7 +12,7 @@ async function main() {
     const url = new URL(req.url,"http://127.0.0.1"), built = url.pathname.startsWith("/built/"), file = url.pathname.replace(/^\/(?:source\/|built\/)?/,"");
     if (!file) {
       res.writeHead(200,{"content-type":"text/html; charset=utf-8","content-security-policy":"default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'"});
-      res.end('<!doctype html><html><head><link rel="stylesheet" href="inner-city-estate.css"><link rel="stylesheet" href="estate-economy-ui.css"><link rel="stylesheet" href="action-buttons.css"></head><body style="margin:0"><dialog id="modal" class="modal bailey-modal"><div class="modal-card"><header><h2 id="modalTitle">Timer fixture</h2><button id="closeModalBtn">Close</button></header><div id="modalBody"></div></div></dialog><script src="inner-city-estate.js"></script><script src="estate-economy-ui.js"></script></body></html>');
+      res.end('<!doctype html><html><head><link rel="stylesheet" href="inner-city-estate.css"><link rel="stylesheet" href="estate-economy-ui.css"><link rel="stylesheet" href="action-buttons.css"><link rel="stylesheet" href="crownlands-palette.css"></head><body style="margin:0"><dialog id="modal" class="modal bailey-modal"><div class="modal-card"><header><h2 id="modalTitle">Timer fixture</h2><button id="closeModalBtn">Close</button></header><div id="modalBody"></div></div></dialog><script src="inner-city-estate.js"></script><script src="estate-economy-ui.js"></script></body></html>');
     } else if (files.has(file) || /^assets\/inner-city-estate\/[a-z0-9-]+\.webp$/.test(file)) {
       res.writeHead(200,{"content-type":file.endsWith(".js")?"application/javascript":file.endsWith(".css")?"text/css":"image/webp"});
       res.end(fs.readFileSync(path.join(root,built?"dist":"",file)));
@@ -49,28 +49,50 @@ async function main() {
         });
         await frames();
         const check=()=>{
-          const view=document.querySelector('.estate-viewport').getBoundingClientRect(),boxes=[];
+          const view=document.querySelector('.estate-viewport').getBoundingClientRect(),boxes=[],hidden=[],overview=qaView.snapshot().zoom<2.5;
+          const overlap=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
+          const panels='.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls';
+          const obstacles=[...document.querySelectorAll(overview?panels:panels+',.estate-site>img,.estate-nameplate:not([hidden]),.estate-building-target:not([hidden]),.estate-upgrade-targets button:not([hidden])')].filter(e=>!e.hidden&&e.getClientRects().length).map(e=>e.getBoundingClientRect());
           for(const job of qaEstate.jobs){
             const gauge=document.querySelector('[data-estate-construction="'+job.building+'"]'),box=gauge.getBoundingClientRect();
-            if(gauge.hidden||box.width!==88||box.height!==40)throw Error('Overview timer missing/unreadable: '+job.building);
-            if(box.left<view.left+5||box.top<view.top+5||box.right>view.right-5||box.bottom>view.bottom-5)throw Error('Overview timer outside view: '+job.building);
+            const art=document.querySelector('[data-estate-site="'+job.building+'"] img').getBoundingClientRect(),cx=(art.left+art.right)/2;
+            const anchored={left:cx-44,right:cx+44,top:art.top-46,bottom:art.top-6};
+            const note=document.querySelector('#estateConstructionNote-'+job.building),entry=document.querySelector('[data-estate-directory-building="'+job.building+'"]');
+            if(note.hidden||!note.textContent.includes(gauge.querySelector('[data-estate-time-left]').textContent)||entry.getAttribute('aria-describedby')!==note.id)throw Error('Missing live directory fallback: '+job.building);
+            if(gauge.querySelector('i'))throw Error('Fixed timers must not need displacement leaders');
+            if(gauge.hidden){hidden.push({key:job.building,box:anchored});continue;}
+            if(box.width!==88||box.height!==40)throw Error('Timer changed screen size: '+job.building);
+            if(Math.abs(box.left-anchored.left)>.6||Math.abs(box.top-anchored.top)>.6)throw Error('Timer moved away from its building: '+job.building);
+            if(box.left<view.left+5||box.top<view.top+5||box.right>view.right-5||box.bottom>view.bottom-5)throw Error('Timer outside view: '+job.building);
             if(getComputedStyle(gauge).pointerEvents!=='none')throw Error('Timer intercepts map gestures');
-            if(boxes.some(r=>box.left<r.right&&box.right>r.left&&box.top<r.bottom&&box.bottom>r.top))throw Error('Concurrent counters overlap');
+            if(boxes.some(r=>overlap(box,r)))throw Error('Concurrent counters overlap');
             boxes.push(box);
             const text=gauge.querySelector('[data-estate-time-left]').getBoundingClientRect();
             if(text.left<view.left||text.right>view.right||text.top<view.top||text.bottom>view.bottom)throw Error('Countdown clipped');
-            for(const district of document.querySelectorAll('.estate-district:not([hidden])')){
-              const r=district.querySelector('span').getBoundingClientRect(),overlap=box.left<r.right+2&&box.right>r.left-2&&box.top<r.bottom+2&&box.bottom>r.top-2;
-              if(overlap&&getComputedStyle(district).visibility!=='hidden')throw Error('District covers active countdown');
+            if(overview)for(const district of document.querySelectorAll('.estate-district:not([hidden])')){
+              if(overlap(box,district.querySelector('span').getBoundingClientRect())&&getComputedStyle(district).visibility!=='hidden')throw Error('District covers active countdown');
             }
           }
-          if([...document.querySelectorAll('.estate-nameplate')].some(e=>!e.hidden))throw Error('Overview must retain hidden name/level captions');
+          for(const {key,box}of hidden){
+            const clipped=box.left<view.left+6||box.top<view.top+6||box.right>view.right-6||box.bottom>view.bottom-6;
+            if(!clipped&&![...obstacles,...boxes].some(r=>overlap(box,r)))throw Error('Unobstructed timer was hidden: '+key);
+          }
+          if(overview&&[...document.querySelectorAll('.estate-nameplate')].some(e=>!e.hidden))throw Error('Overview must retain hidden name/level captions');
           return boxes.length;
         };
         const keys=await evaluate(()=>CrownlandsEstate.buildings.map(b=>b.key));
-        for(const key of keys){await evaluate(k=>qaJobs([k]),key);await frames();assert.equal(await evaluate(check),1);}
+        let overviewVisible=0,inspectionVisible=0;
+        for(const key of keys){
+          await evaluate(k=>{qaView.fit();qaJobs([k]);},key);await frames();overviewVisible+=await evaluate(check);
+          for(const zoom of [2.5,3,4]){
+            await evaluate(({key,zoom})=>{qaView.zoom(zoom);qaView.select(key);document.querySelector('[data-estate-detail-close]').click();},{key,zoom});
+            await frames();inspectionVisible+=await evaluate(check);
+          }
+        }
+        assert(overviewVisible>0,'Fit must show unobstructed projects');
+        assert(inspectionVisible>=20,'Inspection must expose construction above sites');
         for(const keys of [['great-hall','treasury','barracks'],['quarry','mine','foresters-lodge'],['alehouse','royal-stables','guild-master']]){
-          await evaluate(ks=>qaJobs(ks),keys);await frames();assert.equal(await evaluate(check),3);
+          await evaluate(ks=>{qaView.fit();qaJobs(ks);},keys);await frames();await evaluate(check);
         }
         await evaluate(()=>qaJobs(['great-hall','treasury','barracks']));await frames();
         const capture=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,delivery+'-'+width+'x'+height+'.png'),Buffer.from(capture.data,'base64'));
@@ -83,14 +105,19 @@ async function main() {
         await evaluate(()=>{qaJobs(['quarry']);qaView.select('quarry');document.querySelector('[data-estate-detail-close]').click();});await frames();
         assert(await evaluate(()=>{
           const g=document.querySelector('[data-estate-construction="quarry"]'),r=g.getBoundingClientRect(),a=document.querySelector('[data-estate-site="quarry"] img').getBoundingClientRect();
-          return !g.hidden&&r.width===112&&Math.abs(a.top-r.bottom-6)<.5&&g.querySelector('i').hidden;
+          return !g.hidden&&r.width===88&&r.height===40&&Math.abs(a.top-r.bottom-6)<.5&&!g.querySelector('i');
         }),'District timer retains its fixed art anchor');
-        await evaluate(()=>qaView.fit());await frames();assert.equal(await evaluate(check),1);
+        // A layout during the modal opening scale must not leave a displaced timer
+        // after the CSS transform finishes, even before another camera movement.
+        await evaluate(()=>{document.getElementById('modal').style.transform='scale(.85)';qaView.zoom(3);});await frames();
+        await evaluate(()=>{document.getElementById('modal').style.transform='';});await frames();assert.equal(await evaluate(check),1);
+        const detailCapture=await client.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,delivery+'-anchored-'+width+'x'+height+'.png'),Buffer.from(detailCapture.data,'base64'));
+        await evaluate(()=>qaView.fit());await frames();await evaluate(check);
         await evaluate(()=>{qaView.zoom(4);qaView.select('market');document.querySelector('[data-estate-detail-close]').click();});await frames();
         assert(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"]').hidden),'Offscreen projects must not float on another site');
         await evaluate(()=>{qaView.fit();qaView.destroy();});
         assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers,.estate-construction-note,.estate-timer-obscured').length),0);
-        results.push({delivery,width,height,sites:20,concurrentGroups:3,fitVisible:true,completion:true,zoomReturn:true,offscreen:true,cleanup:true});
+        results.push({delivery,width,height,sites:20,concurrentGroups:3,overviewVisible,inspectionVisible,fixedSizeAndAnchor:true,completion:true,zoomReturn:true,offscreen:true,cleanup:true});
         console.log(`Estate overview construction timers passed: ${delivery} ${width}x${height}.`);
       }
     }

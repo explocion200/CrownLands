@@ -66,7 +66,7 @@ async function main() {
           const r = text.getBoundingClientRect();
           return !e.classList.contains('cl-action-button') && !e.querySelector('.wheel-icon')
             && e.textContent === (e.dataset.estateUpgrade ? innerCastleEconomy.snapshot().estate.levels[e.dataset.estateUpgrade] > 0 ? 'Upgrade' : 'Build' : 'Enter')
-            && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) >= 3
+            && style.clipPath === 'none' && parseFloat(style.borderTopWidth) >= 1 && parseFloat(style.borderRadius) === 2
             && parseFloat(style.fontSize) >= 12 && b.width >= 44 && b.height >= 44
             && b.left >= panel.left && b.right <= panel.right
             && text.getClientRects().length === 1 && r.left >= b.left + 2 && r.right <= b.right - 2;
@@ -432,7 +432,7 @@ async function main() {
         if(gauge.hidden)throw Error('Selected construction timer must fit above the building');
         const b=gauge.getBoundingClientRect(),art=document.querySelector('[data-estate-site="quarry"] img').getBoundingClientRect();
         if(Math.abs((b.left+b.right-art.left-art.right)/2)>.5||Math.abs(art.top-b.bottom-6)>.5)throw Error('Timer lost fixed top anchor');
-        if(b.width!==112||b.height!==40)throw Error('Timer must retain readable screen size');
+        if(b.width!==88||b.height!==40)throw Error('Timer must retain readable screen size');
         for(const e of document.querySelectorAll('.estate-site>img,.estate-nameplate:not([hidden]),.estate-upgrade-targets button:not([hidden]),.estate-camera-controls')){
           const r=e.getBoundingClientRect();if(b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top)throw Error('Construction timer overlaps artwork or a control');
         }
