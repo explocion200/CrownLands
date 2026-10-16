@@ -164,6 +164,22 @@ class SourceControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             controller.close()
         self.assertEqual(len(cloud.calls), 16)
+        with self.assertRaises(ValueError):
+            controller.rollback()
+        self.assertEqual(len(cloud.calls), 16)
+
+    def test_lost_key_rollback_acknowledgement_does_not_resume_jobs(self):
+        controller, cloud, journal, _ = setup()
+        controller.close()
+        cloud.fail_after = len(cloud.calls) + 152  # 150 invocation policies, rules, then key.
+        with self.assertRaises(ValueError):
+            controller.rollback()
+        count = len(cloud.calls)
+        cloud.fail_after = None
+        with self.assertRaises(ValueError):
+            controller.rollback()
+        self.assertEqual(len(cloud.calls), count)
+        self.assertFalse(any(url.endswith(":resume") for _, url, _ in cloud.calls))
 
     def test_writer_and_plan_drift_refused(self):
         controller, cloud, journal, _ = setup()

@@ -238,6 +238,16 @@ class Controls:
         for name, entry in ordered:
             self.guard()
             kind, url = entry["kind"], entry["url"]
+            if kind == "key":
+                if entry["status"] == "submitted" and not entry.get("operation"):
+                    raise ValueError("Resolve the outstanding API key request before rollback")
+                if entry.get("rollbackSubmittedAt") and not entry.get("rollbackOperation"):
+                    raise ValueError("Resolve the unacknowledged key rollback before continuing")
+                for label in ["operation", "rollbackOperation"]:
+                    if entry.get(label):
+                        operation = self.api.read("https://apikeys.googleapis.com/v2/" + entry[label])
+                        if not operation.get("done") or operation.get("error"):
+                            raise ValueError("An API key operation is still unresolved")
             current = self.api.read(url)
             if normalized(kind, current) == normalized(kind, entry["before"]):
                 # An unacknowledged forward request might still apply later.
