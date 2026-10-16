@@ -1198,7 +1198,7 @@ const CITY_LEVEL_STATS = {
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_AUTHORITY_VERSION = 13;
-const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
+const SKILL_PRESET_APPLY_CROWNS = economyNumber("playerCosts.skillPresetApplyCrowns", 10);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 100), description: "Outgoing attack power." },
@@ -27757,12 +27757,31 @@ function renderProfileScreen() {
   });
 }
 
+let pendingSkillPresetApply = null;
+
 function getSkillPresetApplyCost() {
-  return Math.max(0, Math.ceil(getShopPricingContext().rawBaseGoldPerHour * SKILL_PRESET_APPLY_HOURS));
+  return SKILL_PRESET_APPLY_CROWNS;
+}
+
+function getSkillPresetCrownBalance() {
+  const uid = getCurrentOnlineUid();
+  if (!uid || cosmeticUid !== uid || !cosmeticState) return null;
+  return Math.max(0, Math.floor(Number(cosmeticState.crowns) || 0));
+}
+
+function getPendingSkillPresetApply() {
+  return pendingSkillPresetApply?.scope === getOnlineRequestScope() ? pendingSkillPresetApply : null;
 }
 
 function canAffordSkillPreset(cost = getSkillPresetApplyCost()) {
-  return Math.floor(Number(state?.gold) || 0) >= cost;
+  const balance = getSkillPresetCrownBalance();
+  return balance !== null && balance >= cost;
+}
+
+function getSkillPresetPriceHint() {
+  const balance = getSkillPresetCrownBalance();
+  return balance === null ? "Loading Crown balance…"
+    : `Cost ${formatNumber(getSkillPresetApplyCost())} Crowns · have ${formatNumber(balance)}`;
 }
 
 function getSkillPresetSlot(slot = selectedSkillPresetSlot) {
@@ -27872,11 +27891,11 @@ function renderSkillPresetPanel() {
         ${!unlocked
           ? `<p class="skill-preset-locked-copy">Reach Hero Level ${selected.unlockLevel} to name, edit, save, and apply this preset.</p>`
           : `${valid
-              ? `<p class="skill-preset-points">This draft assigns ${formatNumber(getSpentSkillPoints(draft.upgrades))} points and leaves ${formatNumber(remainingAfterApply)} unspent.${dirty ? " Save these changes before applying." : selected.saved ? ` Applying costs ${formatNumber(applyCost)} gold (1h of base gold production).` : " Assign points below, then save the preset."}</p>`
+              ? `<p class="skill-preset-points">This draft assigns ${formatNumber(getSpentSkillPoints(draft.upgrades))} points and leaves ${formatNumber(remainingAfterApply)} unspent.${dirty ? " Save these changes before applying." : selected.saved ? ` Applying costs ${formatNumber(applyCost)} Crowns.` : " Assign points below, then save the preset."}</p>`
               : `<p class="skill-preset-error">This draft exceeds the current skill limits or earned-point budget. Remove points before saving.</p>`}
             <footer>
               <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked || !valid || (selected.saved && !dirty) ? "disabled" : ""}>Save Preset</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" aria-label="Apply · ${formatNumber(applyCost)} Gold" title="${canAffordSkillPreset(applyCost) ? "1 hour of base Gold production" : `Need ${formatNumber(applyCost)} Gold; have ${formatNumber(state.gold)}.`}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply<small><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt="">${formatNumber(applyCost)}</small></button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" aria-label="Apply · ${formatNumber(applyCost)} Crowns" title="${getSkillPresetPriceHint()}" ${controlsBlocked || dirty || !selected.saved || !valid || (!canAffordSkillPreset(applyCost) && getPendingSkillPresetApply()?.payload.slot !== selected.slot) ? "disabled" : ""}>Apply<small><img src="assets/optimized/crown-coin-96x96-34224e7d7fb4.webp" alt="">${formatNumber(applyCost)}</small></button>
             </footer>`}
       </article>`}
     </section>`;
@@ -27925,6 +27944,7 @@ function getSkillPresetMarkupSignature() {
     selectedSkillPresetSlot,
     applyCost: getSkillPresetApplyCost(),
     canAfford: canAffordSkillPreset(),
+    crownBalance: getSkillPresetCrownBalance(),
     controlsBlocked: skillActionInFlight || isSkillSpendSyncing(),
     presets,
     liveAllocation: normalizeSkillPresetAllocation(state?.upgrades),
@@ -27945,9 +27965,10 @@ function updateSkillPresetDraftActionState() {
   const applyButton = skillsView.querySelector("[data-apply-skill-preset]");
   const status = getSkillPresetEditorStatus(slot, presets, draft);
   if (saveButton) saveButton.disabled = blocked || !valid || (slot.saved && !dirty);
-  if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid || !canAffordSkillPreset();
+  if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid || (!canAffordSkillPreset() && getPendingSkillPresetApply()?.payload.slot !== slot.slot);
+  if (applyButton) applyButton.title = getSkillPresetPriceHint();
   setTextIfChanged(skillsView.querySelector("[data-skill-preset-status]"), !dirty && !canAffordSkillPreset()
-    ? `Need ${formatNumber(getSkillPresetApplyCost())} Gold · have ${formatNumber(state.gold)}` : status);
+    ? getSkillPresetPriceHint() : status);
   setTextIfChanged(skillsView.querySelector(`[data-skill-preset-tab-status="${slot.slot}"]`), dirty
     ? presets.activeSlot === slot.slot ? "Active · Unsaved" : "Unsaved"
     : presets.activeSlot === slot.slot
@@ -37439,23 +37460,24 @@ function skillRow(key) {
   `;
 }
 
-function confirmSkillPresetAction(slotNumber = 0) {
+function confirmSkillPresetAction(slotNumber = 0, retry = false) {
   const applyCost = getSkillPresetApplyCost();
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot) return Promise.resolve(false);
   modal.classList.add("skill-preset-confirmation-modal");
-  modalTitle.textContent = `Apply ${slot.name}?`;
+  modalTitle.textContent = retry ? "Check preset application?" : `Apply ${slot.name}?`;
   modalBody.innerHTML = `
     <section class="skill-preset-confirmation">
       <div>
         <small>Preset ${slot.slot}</small>
         <h3>${escapeHtml(slot.name)}</h3>
       </div>
-      <p>Every preset application costs <strong>${formatNumber(applyCost)} gold</strong> (1h of base gold production), including an active or identical build. Additional earned points remain unspent.</p>
+      <p>Every preset application costs <strong>${formatNumber(applyCost)} Crowns</strong>, including an active or identical build. Additional earned points remain unspent.</p>
+      ${retry ? "<p>Retry the previous request. If it already completed, you will not be charged again.</p>" : `<p>${getSkillPresetPriceHint()}. After Apply: ${formatNumber(Math.max(0, getSkillPresetCrownBalance() - applyCost))} Crowns.</p>`}
       ${renderSkillPresetAllocation(slot.upgrades)}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
-        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">Apply for ${formatNumber(applyCost)}</button>
+        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${retry ? "Check previous Apply" : `Apply for ${formatNumber(applyCost)} Crowns`}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -37614,44 +37636,55 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast("This preset is no longer valid. Save the current build again.");
     return false;
   }
-  const applyCost = getSkillPresetApplyCost();
-  if (!canAffordSkillPreset(applyCost)) {
-    showToast(`Applying a skill preset costs ${formatNumber(applyCost)} gold.`);
-    return false;
-  }
-  if (!await confirmSkillPresetAction(slot.slot)) return false;
-  if (!canAffordSkillPreset()) {
-    showToast(`Applying a skill preset costs ${formatNumber(getSkillPresetApplyCost())} gold.`);
-    return false;
-  }
-  const soundScope = getOnlineSessionRequestScope();
   const api = getOnlineApi();
+  if (!usesServerEconomyAuthority() || !api?.applySkillPreset) {
+    showToast("Applying presets requires the Crownlands server.");
+    return false;
+  }
+  const pending = getPendingSkillPresetApply();
+  if (pending && pending.payload.slot !== slot.slot) {
+    showToast("Check the previous preset application before applying another preset.");
+    return false;
+  }
+  const applyCost = getSkillPresetApplyCost();
+  if (!pending && !canAffordSkillPreset(applyCost)) {
+    showToast(getSkillPresetPriceHint());
+    return false;
+  }
+  const scope = getOnlineRequestScope();
+  const sessionScope = getOnlineSessionRequestScope();
+  // Hold the action lock across the confirmation too, so double taps cannot open two purchases.
   skillActionInFlight = true;
-  renderProfileSkills();
   try {
-    let goldCharged = getSkillPresetApplyCost();
-    if (usesServerEconomyAuthority()) {
-      if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
-      const result = await api.applySkillPreset({ slot: slot.slot });
-      applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
-      goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
-      playGoldSpendSound(goldCharged, result, soundScope);
-    } else {
-      state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
-      state.upgrades = normalizeUpgrades(slot.upgrades, state.version);
-      state.character = normalizeCharacterProgress(state.character);
-      reconcileSkillPoints(state.character, state.upgrades);
-      state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, slot.slot);
-      saveGame();
-      playGoldSpendSound(goldCharged);
+    if (!await confirmSkillPresetAction(slot.slot, Boolean(pending))) return false;
+    if (sessionScope !== getOnlineSessionRequestScope()) return false;
+    if (!pending && !canAffordSkillPreset(applyCost)) {
+      showToast(getSkillPresetPriceHint());
+      return false;
     }
-    const remaining = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0));
-    addLog(`${slot.name} applied for ${formatNumber(goldCharged)} gold. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);
-    showToast(`${slot.name} applied`);
+    const purchase = pending || { scope, payload: {
+      requestId: crypto.randomUUID(), slot: slot.slot, currency: "crowns",
+      expectedPrice: applyCost, expectedSavedAtMs: slot.savedAtMs,
+    } };
+    pendingSkillPresetApply = purchase;
+    renderProfileSkills();
+    const result = await api.applySkillPreset(purchase.payload);
+    if (sessionScope !== getOnlineSessionRequestScope()) return false;
+    pendingSkillPresetApply = null;
+    applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
+    applyCosmeticResult(result);
+    const crownsCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.crownsCharged) || 0));
+    addLog(result?.replayed ? "Previous preset application confirmed; no additional Crowns charged."
+      : `${slot.name} applied for ${formatNumber(crownsCharged)} Crowns.`);
+    showToast(result?.replayed ? "Previous preset application confirmed" : `${slot.name} applied`);
     return true;
   } catch (error) {
+    // Keep the same receipt ID for uncertain network outcomes. Definitive validation failures did not spend Crowns.
+    const code = String(error?.code || "").replace(/^functions\//, "");
+    if (["invalid-argument", "failed-precondition", "not-found", "permission-denied", "unauthenticated"].includes(code)
+        && sessionScope === getOnlineSessionRequestScope()) pendingSkillPresetApply = null;
     console.warn("Could not apply skill preset", error);
-    showToast(error?.message || "Preset apply failed.");
+    showToast(error?.message || "Preset apply failed. Retry to check the same application.");
     return false;
   } finally {
     skillActionInFlight = false;
