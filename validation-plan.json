@@ -499,6 +499,27 @@
         "tools/test-local-firebase-freeze-plan.js"
       ],
       "reason": "Protected final copy into empty maintenance targets only. Actual isolated PostgreSQL tests reject drift between staging and its retained restored original, wrong snapshot identity and occupied targets; verify exact typed data/account copy, no trigger/schedule replay, unchanged authority gate and refusal to repeat a committed import. Existing export/import tests verify source-manifest binding and independent all-row restore; source/maintenance fixtures cover the reused guard. No live data is imported or activated by validation."
+    },
+    {
+      "paths": [
+        "tools/local-migration/handover_checks.py",
+        "tools/local-migration/test_handover_checks.py",
+        "tools/local-migration/verify_source_handover.py",
+        "tools/local-migration/test_source_handover.py",
+        "tools/local-migration/verify_handover_payments.js",
+        "tools/test-handover-payments.js",
+        "tools/local-migration/prepare_live_handover.js",
+        "tools/local-migration/activate_local_transfer.py",
+        "tools/local-migration/test_activate_local_transfer.py"
+      ],
+      "tests": [
+        "tools/test-local-firebase-freeze-plan.js",
+        "tools/test-handover-payments.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-postgres-backup.js",
+        "tools/test-local-deployment.js"
+      ],
+      "reason": "Complete the initial handover controls while live authority remains Firebase. Offline tests cover current-realm pending receipts, global purchase settlement, exact source/queue/scheduler inventories, stale or missing observations, independent account/public/runtime denial, late control drift and report preservation. Read-only Stripe fixtures retain existing game validators and reject mismatched mode, purpose, settlement and endpoints. The real isolated PostgreSQL test copies typed data, seeds reviewed cursors, changes only enabled proxy ingress, retains unrelated fields and refuses occupied or previously activated targets. Fault injection stops each activation stage without reopening Firebase or clearing irreversible activation marks; existing full-row recovery and publisher tests cover shared helpers. No test alters live player data, source controls, provider state, protected services or routing."
     }
   ]
 }

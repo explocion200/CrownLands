@@ -366,6 +366,66 @@ configuration, recovery verification and source-fence evidence belong to the
 separate activation step. If the process stops after its database commit, retain
 the populated target and reconcile the recorded digest; do not clear it to retry.
 
+### Final handover checks and activation
+
+The reviewed final-copy and local publisher preparation at `72c325f` is installed
+in standby. Its first operational attempt rolled back because a loopback health
+probe omitted the required `Host: playcrownlands.com` header. The corrected
+installer passed all six real health checks and preserved the prior candidate.
+No maintenance, source freeze, production import or local activation occurred
+as part of that installation.
+
+`handover_checks.py` classifies current-realm receipt backlogs without editing
+archived data. Purchase orders are global: the live collection is
+`crownPaymentOrders`, and the separate test collection is
+`crownPaymentTestOrders`. Any unfinished purchase, manual payment review,
+unprocessed current-realm reward/battle receipt, missing subscription metric,
+nonzero backlog or unsuccessful scheduler result prevents handover. Ten event
+subscriptions must each have two recent zero observations after fencing;
+missing metrics are never treated as zero. Profile-change triggers additionally
+depend on this queue drain because the final document cannot reconstruct their
+original before/after event.
+
+`verify_handover_payments.js SNAPSHOT NEW_RECEIPT` verifies page checksums and
+reads Stripe's existing endpoints and each saved Checkout. It uses the unchanged
+game purchase validators, requires settled matching provider results, and creates
+no Checkout, charge, refund or webhook event. Its receipt binds the complete
+source snapshot manifest, preventing reuse of an older preflight payment list.
+
+`verify_source_handover.py PLAN SNAPSHOT COMPARISON BASELINE PAYMENTS NEW_OUTPUT`
+rereads all source controls, verifies the exact snapshot's pending-event inventory,
+compares the subscription configuration, checks the actual account/API/runtime
+denials and requires recorded permission denial from a previously signed-in
+Firebase browser. Baseline reads must have succeeded before closure. It retains
+fresh scheduler results and derives reviewed local cursors only from paused,
+successfully completed HTTP jobs. Cloud Scheduler's `lastAttemptTime` alone is
+not completion evidence; its corresponding successful status and a quiet interval
+are also required. Daily cron schedules retain their timezone; the existing
+local interval scheduler resumes on its UTC minute boundaries. See Google's
+[job field definitions](https://docs.cloud.google.com/scheduler/docs/reference/rest/v1/projects.locations.jobs).
+The command holds the source-control lock, checks again at the end and writes
+its success receipt last. It performs no source mutation, import or activation.
+
+`activate_local_transfer.py PLAN SNAPSHOT COMPARISON BASELINE --schema
+migration_final_HEX12` is the separate administrator operation after maintenance,
+source fencing, final export/comparison and staging restoration. It checks the
+protected client and publisher identities, obtains fresh handover evidence,
+copies into empty permanent targets and seeds reviewed schedule cursors. The
+only configuration delta uses the normal typed store to set verified single-hop
+proxy ingress when that protection is enabled; the other fields and historical
+records remain intact. It then prepares the local release, completes an encrypted
+off-site backup, independently restores every backed-up table, compares the still
+closed permanent target, and repeats source/payment checks before activation.
+
+The database receipt, root epoch, local client, service startup and HTTPS routes
+form a journaled sequence. Failure keeps maintenance and all data, receipts and
+activation timestamps; it never restores Firebase authority. A lost commit
+response therefore requires inspecting the retained journal, never clearing the
+target or rerunning the initial import. Successful publication still requires
+real production login/save, browser-update, notification and payment acceptance
+and a fresh backup of the active installation. The command's preparation and
+synthetic tests do not establish that the production transfer has occurred.
+
 The permanent game service also provides the website's public historical
 `/api/season-rankings` through the existing sanitized archive reader. It
 preserves public fields and cache rules, rejects duplicate parameters and

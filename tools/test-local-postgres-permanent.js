@@ -150,9 +150,34 @@ async function main(){
    assert.equal(fence.phase,'maintenance');assert.equal(fence.snapshot_receipt,'4'.repeat(64));assert.equal(fence.firebase_fence_receipt,null);assert.equal(fence.activated_at,null);
    await assert.rejects(copyConnection.query(finalSql()),/Empty initial targets required/);await copyConnection.query('ROLLBACK');
   }finally{copyConnection.release();}
+  // Complete the guarded administrative handover in this disposable cluster.
+  // The root activation file and every production database remain untouched.
+  const handover=require('./local-migration/prepare_live_handover');
+  const ingressPath='realmSecurity/global/configuration/ipIngress';
+  const ingressBody={name:'projects/crown-land-b15e0/databases/(default)/documents/'+ingressPath,
+   fields:{enabled:{booleanValue:true},verified:{booleanValue:false},suffixLength:{integerValue:'2'},preserve:{stringValue:'original'}},
+   createTime:'2026-10-15T00:00:00Z',updateTime:'2026-10-15T00:00:00Z'};
+  await pool.query(`INSERT INTO ${GAME}.documents VALUES($1,'configuration','realmSecurity/global',$2,'fixture')`,[ingressPath,ingressBody]);
+  const handoverInput={epoch,verificationSha256:'4'.repeat(64),sourceFenceSha256:'7'.repeat(64),documents:3,accounts:1,
+   schedulers:Array.from({length:16},(_,i)=>({name:'scheduled'+String(i).padStart(2,'0'),signature:'8'.repeat(64),lastMinute:12345}))};
+  await assert.rejects(handover.prepare(pool,{...handoverInput,verificationSha256:'9'.repeat(64)}),/maintenance target required/);
+  assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.work_schedules`)).rows[0].count,'0');
+  const prepared=await handover.prepare(pool,handoverInput);assert.equal(prepared.ingressAdjusted,true);assert.equal(prepared.authorityActivated,false);
+  const adjusted=(await pool.query(`SELECT body FROM ${GAME}.documents WHERE path=$1`,[ingressPath])).rows[0].body;
+  assert.equal(adjusted.fields.verified.booleanValue,true);assert.equal(adjusted.fields.suffixLength.integerValue,'1');assert.equal(adjusted.fields.preserve.stringValue,'original');
+  assert.equal((await pool.query(`SELECT path FROM ${GAME}.changes`)).rows[0].path,ingressPath);
+  await assert.rejects(handover.prepare(pool,handoverInput),/Prior preparation/);
+  await pool.query(`UPDATE ${GAME}.work_schedules SET last_minute=12346 WHERE name='scheduled00'`);
+  await assert.rejects(handover.activate(pool,handoverInput,prepared),/cursor changed/);
+  assert.equal((await pool.query('SELECT phase FROM crownlands_control.deployment')).rows[0].phase,'maintenance');
+  await pool.query(`UPDATE ${GAME}.work_schedules SET last_minute=12345 WHERE name='scheduled00'`);
+  const activated=await handover.activate(pool,handoverInput,prepared);assert.equal(activated.phase,'active');assert(activated.activated_at);
+  assert.equal((await pool.query('SELECT firebase_fence_receipt FROM crownlands_control.deployment')).rows[0].firebase_fence_receipt,handoverInput.sourceFenceSha256);
+  await assert.rejects(handover.activate(pool,handoverInput,prepared),/maintenance target required/);
   // Remove only this test's synthetic fixtures, before testing active services.
   await pool.query(`DROP SCHEMA ${stage} CASCADE;DROP SCHEMA ${preserved} CASCADE;DELETE FROM ${GAME}.documents;DELETE FROM ${AUTH}.accounts;
-   UPDATE crownlands_control.deployment SET phase='standby',snapshot_receipt=NULL`);
+   DELETE FROM ${GAME}.changes;DELETE FROM ${GAME}.work_schedules;
+   UPDATE crownlands_control.deployment SET phase='standby',snapshot_receipt=NULL,firebase_fence_receipt=NULL,activated_at=NULL`);
   const runtime=new Pool({host:directory,user:'crownlands-game',database:'crownlands_migration',options:'-c crownlands.runtime_epoch='+epoch});
   try{
    const policy=createPolicy({store:{schema:GAME,pool:runtime},epoch,read:()=>control});await assert.rejects(policy.assertActive());
