@@ -1,50 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "097b6835329c3eff9c0bc33e765d15b34de756fe",
+  "baseCommit": "f83a54b218651c59cc3496082d326a024f0f50bd",
   "coverage": [
     {
       "paths": [
-        "local-backend/chat-events.js",
-        "local-backend/game-http.js",
-        "local-backend/permanent-services.js",
-        "local-backend/store.js",
-        "tools/test-local-postgres-chat-events.js",
-        "tools/test-local-postgres-permanent.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-chat-events.js",
-        "tools/test-local-postgres-permanent.js",
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-postgres-access.js",
-        "functions/test/emulator-chat.js"
-      ],
-      "reason": "Commit-scoped chat notifications and independently bounded held responses share the store transaction, cookie/session, current-realm and clan authorization paths. Real PostgreSQL tests verify rollback, edits/deletion, lost notifications, session/membership revocation, pool/admission independence and restricted permanent-service startup/shutdown. Existing store and access suites protect unrelated transactions and privacy; the selected chat emulator preserves authoritative send cooldown, idempotency, membership, moderation and retention rules. No gameplay or schema migration changes."
-    },
-    {
-      "paths": [
         "local-client.js",
-        "tools/build-production-client.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-production-client.js"
+        "tools/test-stamina-display-recovery.js"
       ],
       "tests": [
-        "tools/test-local-chat-client.js",
+        "tools/test-stamina-display-recovery.js",
         "tools/test-local-browser-client.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-chat-client.js",
         "tools/test-local-production-client.js",
-        "tools/validate-map-chat-responsiveness-browser.js",
-        "tools/validate-chat.js",
-        "tools/validate-chat-translation.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Shared browser transport gains coalesced foreground/network refresh and a separate authorized chat delivery loop. Source and exact-minifier tests exercise fallback, cancellation, account/channel isolation, old response ordering, disposal and bounded ordinary requests; the production artifact fixture checks delivery bytes and unchanged cache budget. Existing real PostgreSQL browser adapter tests cover shared read/write compatibility, and desktop plus two landscape visual suites preserve composer, focus, moderation, cooldown and duplicate handling. Translation is unchanged but consumes the same message events."
+      "reason": "After a transient subscription error, replay the next authorized snapshot so cleared stamina and other subscribed views recover even when persisted data is unchanged. Test the actual stamina UI and cosmetics subscription against source and minified local transport, network/service/deadline/rate-limit failures, unchanged-snapshot deduplication, existing backoff, hunt/recovery values and terminal permission revocation. Real PostgreSQL HTTP and browser integration protect the snapshot/error response contract, batching, authorization, transactions and session isolation; selecting the HTTP integration also provisions the isolated CI database used by the browser integration; chat and production-artifact fixtures protect shared transport and delivery budgets. No server, data, cooldown or balance changes."
     },
     {
       "paths": [
-        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md"
+        "stamina-ui.js",
+        "tools/validate-marauders-browser.js"
       ],
-      "tests": [],
-      "reason": "Documents the measured polling bottleneck, implemented transport bounds, validation limitations and separate protected-runtime rollout. No additional runtime behavior."
+      "tests": [
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-marauder-rules.js"
+      ],
+      "reason": "Clear only the stale reconnect warning after a valid stamina snapshot. Verify the number, progress bar, accessible label, unknown state, low-stamina threshold and refill review at desktop and two landscape-mobile sizes using source and delivered stamina UI. Existing marauder/refill tests preserve exact Crown pricing, no automatic purchase, draft retention, cooldown/recovery calculations and sign-out cleanup. No gameplay rules or server-authoritative code changes; emulator suites are not required for this client recovery fix."
     }
   ]
 }
