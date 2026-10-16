@@ -457,6 +457,20 @@
         "tools/test-local-firebase-freeze-plan.js"
       ],
       "reason": "Owner-permitted source-control preparation and a guarded, reversible controller for the fixed project: synthetic inventory and transport fixtures cover exact service identities, key restrictions, unchanged project IAM, original rules/policies, missing permissions and drift. Exercise durable intent before mutations, lost acknowledgements without duplicate requests, unresolved requests and concurrent policy changes, minimum drain, retained paused schedules, exact rollback before local activation, and exclusion of Translation/monitoring/storage and new role grants. All mutation tests are offline; actual reads only verify current access. Control-plane completion deliberately leaves sourceFrozen false pending data-plane, trigger/payment reconciliation and protected local maintenance evidence. No production freeze, import, deployment or activation is performed by validation."
+    },
+    {
+      "paths": [
+        "tools/local-migration/transfer_maintenance.py",
+        "tools/local-migration/install_transfer_maintenance.py",
+        "tools/local-migration/test_transfer_maintenance.py"
+      ],
+      "tests": [
+        "tools/test-local-firebase-freeze-plan.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-payment-ingress.js",
+        "tools/test-local-postgres-backup.js"
+      ],
+      "reason": "Protected initial-transfer preparation only. Fault fixtures exercise durable phase transitions, occupied/previously-active target refusal, publisher overlap without termination, stale/drifting maintenance checks, real HTTPS response contract, drained payment observations after closure, retained failed deliveries, receipt withdrawal, plan binding and bounded protected files. Independent PostgreSQL executes the exact maintenance SQL and verifies nonempty-target and prior-activation refusal without deleting rows. Standby installer checks exact reviewed runtime payloads, service health and rollback; existing ingress and backup suites cover the shared authority and recovery dependencies. No fixture changes live routes, Firebase, payment providers or player data. Actual installation and explicit maintenance begin remain distinct operator actions."
     }
   ]
 }

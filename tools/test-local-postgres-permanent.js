@@ -98,6 +98,19 @@ async function main(){
   // initialize closes its injected pool, matching production CLI lifecycle.
   await require('./local-migration/initialize_permanent_schema').initialize({pool,control:()=>control});
   pool=new Pool({host:directory,user:'postgres',database:'crownlands_migration'});
+  const maintenanceSql=options=>execFileSync('python3',['-c',
+   'import sys; sys.path.insert(0,sys.argv[1]); import transfer_maintenance as t; print(t.database_sql(sys.argv[2],empty=sys.argv[3]=="yes",maintenance=sys.argv[4]=="yes"))',
+   path.join(__dirname,'local-migration'),epoch,options.empty?'yes':'no',options.maintenance?'yes':'no'],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+  const gateConnection=await pool.connect();
+  try{
+   await gateConnection.query(maintenanceSql({empty:true,maintenance:true}));
+   assert.equal((await pool.query('SELECT phase FROM crownlands_control.deployment')).rows[0].phase,'maintenance');
+   await pool.query(`INSERT INTO ${GAME}.documents VALUES('fixture/preserved','fixture','','{}','')`);
+   await assert.rejects(gateConnection.query(maintenanceSql({empty:true,maintenance:true})),e=>e.code==='P0001');await gateConnection.query('ROLLBACK');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.documents`)).rows[0].count,'1');
+   await gateConnection.query(maintenanceSql({})); // Refresh after a reviewed import remains allowed.
+   await pool.query(`DELETE FROM ${GAME}.documents; UPDATE crownlands_control.deployment SET phase='standby'`);
+  }finally{gateConnection.release();}
   const runtime=new Pool({host:directory,user:'crownlands-game',database:'crownlands_migration',options:'-c crownlands.runtime_epoch='+epoch});
   try{
    const policy=createPolicy({store:{schema:GAME,pool:runtime},epoch,read:()=>control});await assert.rejects(policy.assertActive());
@@ -105,6 +118,9 @@ async function main(){
    await assert.rejects(runtime.query(`INSERT INTO ${GAME}.documents VALUES('fixture/blocked','fixture','','{}','')`),e=>e.code==='55000');
    await assert.rejects(pool.query("UPDATE crownlands_control.deployment SET phase='active'"),e=>e.code==='23514');
    await pool.query("UPDATE crownlands_control.deployment SET phase='active',snapshot_receipt=$1,firebase_fence_receipt=$1,activated_at=clock_timestamp()",['1'.repeat(64)]);await policy.assertActive();
+   const retired=await pool.connect();try{
+    await assert.rejects(retired.query(maintenanceSql({maintenance:true})),e=>e.code==='P0001');await retired.query('ROLLBACK');
+   }finally{retired.release();}
    const tx=await runtime.connect();await tx.query('BEGIN');await tx.query(`INSERT INTO ${GAME}.documents VALUES('fixture/committed','fixture','','{}','')`);
    let fenced=false;const fence=pool.query("UPDATE crownlands_control.deployment SET phase='maintenance'").then(()=>{fenced=true;});await pause(50);assert.equal(fenced,false);await tx.query('COMMIT');tx.release();await fence;
    await assert.rejects(runtime.query(`DELETE FROM ${GAME}.documents`),e=>e.code==='55000');

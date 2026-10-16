@@ -305,9 +305,8 @@ plan for recovery. It never downloads an API key string or changes access.
 is a separately guarded control-plane procedure. It requires fresh root-owned
 maintenance and drained-payment receipts tied to that exact plan and the
 installed epoch, stopped automatic publishing, and a matching maintenance
-proxy. **The protected receipt producer and final activation/import procedure
-remain to be prepared and installed; do not manufacture receipts to bypass
-these checks.** Closing pauses schedules, blocks the old account APIs, publishes
+proxy. **The final activation/import procedure remains separate; do not
+manufacture receipts to bypass these checks.** Closing pauses schedules, blocks the old account APIs, publishes
 deny-all client rules, and removes public invocation while preserving internal
 event-drain identities. Fencing requires at least ten minutes after closure
 and disables only the reviewed game runtime/Admin SDK identities. Owner,
@@ -341,3 +340,46 @@ maintenance/active candidates without installing them; the active candidate
 replaces the remaining Firebase rankings proxy and routes account/game APIs
 to the permanent services. The live routes and publisher still require their
 reviewed activation update.
+
+### Protected maintenance preparation
+
+`install_transfer_maintenance.py prepare CANDIDATE NEW_BUNDLE` prepares an
+initial-standby installation from a separately checked production candidate.
+The installer validates the exact four server protocol updates against their
+installed and reviewed checksums, backs them up, restarts only the six standby
+services, and requires all six health endpoints to pass. It adds the protected
+helper, configuration and receipts to encrypted-backup coverage. Installation
+does not edit the live Caddy configuration, change Firebase, pause publication,
+start the maintenance timer or produce an authorizing receipt. Changed targets
+are preserved for review; a standby installation failure restores its runtime
+files before reporting failure.
+
+Once the remaining import, reconciliation and activation workflow is ready,
+the separate root command `transfer_maintenance.py begin PRIVATE_PLAN_FILE`
+begins player-visible maintenance. It binds a fresh source plan to the installed
+epoch, checks that permanent tables are empty and have never been active,
+persists its attempt, pauses and disables automatic publication, and waits for
+the publisher's existing lock and inactive state. It never kills an in-progress
+publication. The database fence and root phase close local authority and payment
+forwarding before the validated maintenance Caddy route is installed. A failed
+or interrupted transition stays closed; this helper cannot activate the local
+game or automatically reopen Firebase.
+
+The installed timer runs a root-owned `check` every 15 seconds during
+maintenance, including after a reboot. It requires the database and root phase
+to agree, `activated_at` to remain absent, the publisher to be stopped, reviewed
+runtime hashes, fresh maintenance status from all six services, and actual
+HTTPS 503/no-store responses for the game, account, game API and rankings routes.
+The payment receiver must report zero in-flight requests in a fresh observation
+after maintenance started. Pending payment hashes are retained and represented
+only by a count in the public receipt; draining does not prove fulfillment.
+Both root-owned receipts are removed if any check fails. These attestations
+authorize only the separately journaled source controls, not final source
+quiescence, data import or local activation.
+
+Offline fault tests cover drift, interrupted transitions, publication overlap,
+stale or unfinished payment drain, retained delivery failures, wrong plans,
+receipt withdrawal and protected-file boundaries. The independent PostgreSQL
+fixture executes the actual maintenance SQL, rejects nonempty initial targets
+and any previously activated authority, and confirms source rows survive a
+rejected transition. No test contacts a payment provider or modifies live data.

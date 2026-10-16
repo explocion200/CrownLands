@@ -318,7 +318,8 @@ def local_guard(plan):
         if status.returncode or status.stdout.strip() != "inactive":
             raise ValueError("Automatic publishing must be stopped before source controls")
     state = read_root_json("/var/lib/crownlands-transfer/ingress-drained.json")
-    if state.get("epoch") != plan["epoch"] or state.get("drained") is not True or not -5 <= seconds_since(state["recordedAt"]) <= 60:
+    if (state.get("epoch") != plan["epoch"] or state.get("planSha256") != preflight.digest(plan)
+        or state.get("drained") is not True or not -5 <= seconds_since(state["recordedAt"]) <= 60):
         raise ValueError("A fresh root payment-drain check is required")
 
 
