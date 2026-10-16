@@ -4,6 +4,8 @@ const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
 const ribbon=require("../docs/art-sources/movement-ribbons/runtime-assets.json")[0];
+const provenance=require("../docs/art-sources/movement-ribbons/prompt.json");
+assert.equal(provenance.source,ribbon.source);assert(provenance.prompt&&fs.existsSync(path.resolve(__dirname,"..",provenance.reference)));
 const root=path.resolve(__dirname,"..");
 for(const[file,hash]of[[ribbon.source,ribbon.sourceSha256],[ribbon.output,ribbon.sha256]])assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root,file))).digest("hex"),hash);
 assert(ribbon.hasAlpha&&ribbon.bytes<20000);

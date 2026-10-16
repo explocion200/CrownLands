@@ -10,7 +10,8 @@
         "assets/optimized/manifest.json",
         "assets/optimized/hud-notice-ribbon-392x152-93a6da8400e8.webp",
         "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
-        "docs/art-sources/movement-ribbons/runtime-assets.json"
+        "docs/art-sources/movement-ribbons/runtime-assets.json",
+        "docs/art-sources/movement-ribbons/prompt.json"
       ],
       "tests": [
         "tools/validate-parchment-notices-browser.js",
@@ -19,13 +20,12 @@
         "tools/validate-chat.js",
         "tools/validate-active-operations.js"
       ],
-      "reason": "Replace the three flat notice surfaces with one illustrated label ribbon and reuse the existing horse and crossed-swords artwork. Browser checks cover decoded asset identity/alpha, source and runtime hashes, bounded image size, original target geometry, all movement visibility states, live counts/countdowns, unread badge, readable fitting labels, focus and mouse/keyboard/touch actions at desktop and landscape-phone sizes. Shared HUD and Chat tests protect neighboring artwork, saved clan shield, toggle transparency and collision contracts. Active-operations tests protect the already-approved exclusion of held Camps/Strongholds/Citadel and complete activity tabs. Production build and asset-budget validation must include the referenced runtime assets without new precaching. No game logic, backend, data or server-authoritative changes; no emulator suites apply."
+      "reason": "Replace the three flat notice surfaces with one illustrated label ribbon and reuse the existing horse and crossed-swords artwork. Browser checks cover decoded asset identity/alpha, source and runtime hashes, bounded image size, original target geometry, all movement visibility states, live counts/countdowns, unread badge, readable fitting labels, focus and mouse/keyboard/touch actions at desktop and landscape-phone sizes. Shared HUD and Chat tests protect neighboring artwork, saved clan shield, toggle transparency and collision contracts. Active-operations tests protect the already-approved exclusion of held Camps/Strongholds/Citadel and complete activity tabs. Production build and asset-budget validation must include the referenced runtime assets without new precaching. No game logic, backend, data or server-authoritative changes; no emulator suites apply. Validate the prompt metadata references the hashed ribbon master and an existing approved reference."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/movement-ribbons/README.md",
-        "docs/art-sources/movement-ribbons/prompt.json"
+        "docs/art-sources/movement-ribbons/README.md"
       ],
       "tests": [],
       "reason": "Record the owner's explicitly requested visual refinement, asset provenance and exact built-in image-generation prompt. Preserve existing gameplay and holding-notice rules. Documentation does not establish deployment."
