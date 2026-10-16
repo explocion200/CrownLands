@@ -157,7 +157,7 @@ class FinalSnapshotTests(unittest.TestCase):
 
     def test_new_ttl_job_and_function_version_are_rejected(self):
         prefix='projects/'+verify.freeze.PROJECT+'/locations/'+verify.freeze.REGION
-        cases=[(snapshot.BASE+'/collectionGroups/-/fields?filter=ttlConfig:*&pageSize=1000',{'fields':[{'name':'ttl'}]}),
+        cases=[(snapshot.BASE+'/collectionGroups/-/fields?filter=ttlConfig:*',{'fields':[{'name':'ttl'}]}),
             ('https://cloudfunctions.googleapis.com/v2/'+prefix+'/functions?pageSize=1000',{'functions':[]}),
             ('https://cloudscheduler.googleapis.com/v1/'+prefix+'/jobs?pageSize=500',{'jobs':self.plan['jobsBefore']+[{'name':'new'}]}),
             ('https://run.googleapis.com/v2/'+prefix+'/services?pageSize=1000&fields=services(name,invokerIamDisabled),nextPageToken',
@@ -166,6 +166,39 @@ class FinalSnapshotTests(unittest.TestCase):
             self.cloud.extra={url:value}
             with self.assertRaises(ValueError):self.run_verify()
             self.assertFalse(self.output.exists())
+
+    def test_ttl_uses_provider_default_and_rejects_later_page(self):
+        url = snapshot.BASE+'/collectionGroups/-/fields?filter=ttlConfig:*'
+        self.cloud.extra[url] = {'nextPageToken':'next'}
+        self.cloud.extra[url+'&pageToken=next'] = {'fields':[{'name':'ttl','ttlConfig':{'state':'ACTIVE'}}]}
+        with self.assertRaisesRegex(ValueError,'TTL'):
+            self.run_verify()
+        self.assertIn(url+'&pageToken=next',self.cloud.reads)
+        self.assertFalse(self.output.exists())
+
+    def test_filter_order_is_irrelevant_but_filter_and_deployment_changes_stop(self):
+        filters = [{'attribute':'database','value':'(default)'},
+                   {'attribute':'document','value':'events/{id}','operator':'match-path-pattern'}]
+        self.plan['functions'][0]['eventTrigger'] = {'eventFilters':copy.deepcopy(filters)}
+        self.journal['planSha256'] = verify.freeze.digest(self.plan)
+        functions = copy.deepcopy(self.plan['functions'])
+        functions[0]['eventTrigger']['eventFilters'].reverse()
+        url = ('https://cloudfunctions.googleapis.com/v2/projects/'+verify.freeze.PROJECT+
+               '/locations/'+verify.freeze.REGION+'/functions?pageSize=1000')
+        self.cloud.extra[url] = {'functions':functions}
+        self.assertEqual(verify.verify_controls(self.plan,self.journal,self.cloud,self.guard),171)
+        self.assertEqual(self.plan['functions'][0]['eventTrigger']['eventFilters'],filters)
+        mutations = [lambda f:f['eventTrigger']['eventFilters'][0].update(value='other'),
+                     lambda f:f['eventTrigger']['eventFilters'][0].update(operator='other'),
+                     lambda f:f['eventTrigger']['eventFilters'].pop(),
+                     lambda f:f['eventTrigger']['eventFilters'].append(copy.deepcopy(filters[0])),
+                     lambda f:f.update(updateTime='changed'),
+                     lambda f:f['serviceConfig'].update(serviceAccountEmail='other')]
+        for mutate in mutations:
+            changed = copy.deepcopy(functions)
+            mutate(changed[0]);self.cloud.extra[url] = {'functions':changed}
+            with self.assertRaisesRegex(ValueError,'deployment changed'):
+                verify.verify_controls(self.plan,self.journal,self.cloud,self.guard)
 
     def test_corrupt_snapshot_and_pre_fence_snapshot_do_not_produce_receipt(self):
         self.journal['controlsAppliedAt']=self.at

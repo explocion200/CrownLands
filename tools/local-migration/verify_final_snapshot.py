@@ -5,6 +5,7 @@ This proves exact data equality at two selected instants. It does not establish
 runtime denial, reconcile queued events/payments, import data or activate it.
 """
 import argparse
+import copy
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import fcntl
@@ -24,6 +25,18 @@ def instant(value):
     if parsed.tzinfo is None:
         raise ValueError("Timezone-qualified transfer times required")
     return parsed.timestamp()
+
+
+def canonical_functions(functions):
+    # Google may reorder the conjunctive Eventarc attribute filters between
+    # reads. Preserve every filter (including duplicates) and every other
+    # deployment field; only this collection's presentation order is ignored.
+    result = copy.deepcopy(functions)
+    for function in result:
+        trigger = function.get("eventTrigger", {})
+        if "eventFilters" in trigger:
+            trigger["eventFilters"] = sorted(trigger["eventFilters"], key=freeze.encode)
+    return sorted(result, key=lambda function: function["name"])
 
 
 def verify_controls(plan, journal, api, guard):
@@ -75,7 +88,7 @@ def verify_controls(plan, journal, api, guard):
         raise ValueError("Project permissions changed during transfer")
     prefix = "projects/" + freeze.PROJECT + "/locations/" + freeze.REGION
     functions = freeze.listed(api.read, "https://cloudfunctions.googleapis.com/v2/" + prefix + "/functions?pageSize=1000", "functions")
-    if sorted(functions, key=lambda f: f["name"]) != sorted(plan["functions"], key=lambda f: f["name"]):
+    if canonical_functions(functions) != canonical_functions(plan["functions"]):
         raise ValueError("Function deployment changed during transfer")
     services = freeze.listed(api.read, "https://run.googleapis.com/v2/" + prefix + "/services?pageSize=1000&fields=services(name,invokerIamDisabled),nextPageToken", "services")
     if ({s["name"] for s in services} != {s["name"] for s in plan["invocationPolicies"]}
@@ -90,7 +103,9 @@ def verify_controls(plan, journal, api, guard):
     ruleset = api.read("https://firebaserules.googleapis.com/v1/" + rules["rulesetName"])
     if ruleset.get("source") != plan["rulesetBlocked"]["source"]:
         raise ValueError("Published rules do not match the reviewed deny rules")
-    ttl = freeze.listed(api.read, snapshot.BASE + "/collectionGroups/-/fields?filter=ttlConfig:*&pageSize=1000", "fields")
+    # Database-wide TTL listing currently accepts only the server default page
+    # size. Keep listed()'s bounded pagination and reject policies on any page.
+    ttl = freeze.listed(api.read, snapshot.BASE + "/collectionGroups/-/fields?filter=ttlConfig:*", "fields")
     if ttl:
         raise ValueError("Automatic TTL deletion requires separate reconciliation")
     guard()

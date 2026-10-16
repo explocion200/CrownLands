@@ -337,7 +337,12 @@ boundary. A rehearsal snapshot must never substitute for the final copy.
 requires the completed, unreversed control journal and current protected
 maintenance evidence. It rereads all 171 controls, deployment/key/job inventories,
 the exact deny rules and project permissions before and after comparison, and
-rejects automatic TTL deletion policies. Every exported typed document,
+rejects automatic TTL deletion policies using the provider's default page size
+and complete bounded pagination. Deployment comparison treats only the order
+of Eventarc attribute filters as irrelevant; every filter value, operator,
+duplicate and other deployment field remains checked. Eventarc requires
+[all filters to match](https://docs.cloud.google.com/eventarc/standard/docs/workflows/route-trigger-eventarc).
+Every exported typed document,
 including its original creation/update versions, must match a complete second
 Firestore scan at the later fixed minute. A new private Auth export must match
 every account, password parameter and Google provider setting. Different account
