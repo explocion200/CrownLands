@@ -111,6 +111,14 @@ class Host:
                 or result.get('verificationSha256')!=t.digest(t.read_file(self.args.verification_directory/'receipt.json',uid=self.owner.pw_uid))
                 or not -5<=t.age(result['recordedAt'])<=300):raise ValueError('Fresh matching source handover required')
         t.atomic(t.STATE/('source-'+label+'.json'),raw)
+        if label=='before':
+            # Keep the rollback metadata and exact comparison identity in the
+            # already backed-up protected state directory before the cloud copy.
+            for name,path in [('source-plan.json',self.args.plan_directory/'freeze-plan.json'),
+                    ('source-controls.json',self.args.plan_directory/'controls-journal.json'),
+                    ('snapshot-manifest.json',self.args.snapshot_directory/'manifest.json'),
+                    ('snapshot-comparison.json',self.args.verification_directory/'receipt.json')]:
+                t.atomic(t.STATE/name,t.read_file(path,uid=self.owner.pw_uid))
         return {**result,'sourceFenceSha256':t.digest(raw),'accounts':self.proof['accounts']}
 
     def copy(self):
