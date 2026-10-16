@@ -81,7 +81,7 @@ function copy(relativeSource, relativeDestination = relativeSource) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
     // Keep estate, Citadel, capture animation, NPCs, reports and checkout within delivery budgets. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js", "stronghold-details-ui.js", "marauders-ui.js", "battle-report-detail-ui.js", "crown-payments-ui.js"].includes(relativeSource)) text = minifyRuntime(text);
+    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js", "stronghold-details-ui.js", "marauders-ui.js", "battle-report-detail-ui.js", "crown-payments-ui.js", "local-client.js"].includes(relativeSource)) text = minifyRuntime(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }

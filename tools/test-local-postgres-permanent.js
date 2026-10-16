@@ -27,7 +27,7 @@ async function child(directory,role){
  control.phase='active';
  const active=await start(role,options);
  try{
-  assert.equal(active.standby,false);assert.equal(connected,role==='worker'?2:1);
+  assert.equal(active.standby,false);assert.equal(connected,['worker','game'].includes(role)?2:1);
   if(active.server){const endpoint=role==='auth'?'/local-auth/health':role==='game'?'/api/local-game/health':'/invalid';
    const result=await request(active.server.address().port,endpoint);assert.equal(result.status,role==='payments'?404:200);
    if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch});}
@@ -38,6 +38,9 @@ async function child(directory,role){
    const page=await request(port,'/local-auth/action');assert(page.body.toString().includes(epoch));assert(page.body.toString().includes('Return to Crownlands'));assert(!page.body.toString().includes('Private account test'));
   }
   if(role==='game'){
+   const listeners=await active.store.pool.query("SELECT count(*)::int AS count FROM pg_stat_activity WHERE application_name='crownlands-chat-events'");
+   assert.equal(listeners.rows[0].count,1,'Chat uses one dedicated notification connection');
+   assert.equal(JSON.parse(fs.readFileSync(path.join(folder,'status.json'))).chatNotificationsConnected,true);
    const port=active.server.address().port;
    const archive=await request(port,'/api/season-rankings?season=realm-2026-09&board=players');
    assert.equal(archive.status,200);assert.match(archive.headers['cache-control'],/s-maxage=300/);

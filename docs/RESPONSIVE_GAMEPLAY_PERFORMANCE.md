@@ -1,5 +1,47 @@
 # Responsive gameplay performance review
 
+## Local chat delivery and foreground refresh (October 16, 2026)
+
+The local-server audit at `097b683` found typical troop-send and resolution
+durations of 202 ms and 191 ms. Chat sends took 19–24 ms in a three-send sample,
+but incoming messages waited for the browser's 1,500 ms general polling cycle.
+Background tabs used a 10,000 ms timer without an immediate local transport wake.
+These are server and code measurements, not physical-phone network latency.
+
+The local client now coalesces an immediate authorized snapshot refresh on
+visibility return and network reconnection. Global and Clan Chat use a separate
+authenticated held HTTP response, released when a committed message changes.
+One PostgreSQL listener serves all browsers; it uses opaque channel hashes and
+never delivers notification payloads to clients. Each response passes the same
+session, realm and channel access checks as ordinary snapshot reads. PostgreSQL
+[LISTEN](https://www.postgresql.org/docs/18/sql-listen.html) registration precedes
+the first snapshot, and transaction notifications are only hints to read current
+authorized state.
+
+Held responses expire after 25 seconds, recheck authorization/data every ten
+seconds, and reserve neither action admission slots nor database transactions.
+There are at most two held requests per account and 64 per process. Hidden tabs
+abort the held request and use the existing background polling. Disconnects,
+older servers and capacity failures retain ordinary authorized polling; the
+notification connection reconnects and wakes readers to recover missed changes.
+Account/channel changes abort stale requests; older general snapshots cannot
+overwrite newer chat delivery. The three-second sending cooldown, server
+authority, expiry, moderation and translation behavior are unchanged.
+
+Synthetic PostgreSQL/HTTP tests measured 66 ms from a committed change to its
+waiting response on this host. They cover commit/rollback notifications,
+edits/deletion, access revocation, disconnected listeners, account limits,
+action independence and cleanup. Source and production-minified client tests
+cover immediate resume, bounded scheduling, stale responses and fallbacks.
+Existing chat browser checks cover desktop and landscape presentation. This
+measurement is a fixture result, not a production latency guarantee.
+
+The production build minifies `local-client.js` using the existing conservative
+minifier and retains the 32 KiB local-transport precache budget. No dependency
+or budget was increased. Rollout requires the tested local runtime to be
+installed and its publisher compatibility fingerprint verified before the
+static client is activated. A merge alone does not prove installation.
+
 ## Gameplay health follow-up (October 4, 2026)
 
 `codex/gameplay-smoothness` starts at `7a440f33e350ed6798e2d04c0c386fb198e183b6` (PR #451). This update is authorized for implementation and PR review only. It has not been merged or deployed. The read-only current-realm check confirmed `main-realm-2026-10`, `realm-2026-10`, `shard_0001`, with the existing `core-expansion-v1` release contract.

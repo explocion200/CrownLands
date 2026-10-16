@@ -2,7 +2,8 @@
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), os = require("node:os"), vm = require("node:vm");
 const { MessageChannel } = require("node:worker_threads");
 const { prepare, inventory, publicConfiguration } = require("./local-migration/prepare_production_client");
-const repo = path.resolve(__dirname, ".."), read = file => fs.readFileSync(path.join(repo, file), "utf8");
+const repo = path.resolve(__dirname, ".."), read = file => file === "local-client.js"
+  ? require("./estate-delivery").minifyEstate(fs.readFileSync(path.join(repo, file), "utf8")) : fs.readFileSync(path.join(repo, file), "utf8");
 const config = { mode: "production", protocol: 1, epoch: "a".repeat(32), publicKey: require("../local-backend/node_modules/web-push").generateVAPIDKeys().publicKey };
 function storage() {
   const data = new Map([["save", "old Firebase save"], ["crownlands-private-rehearsal:save", "private save"]]);
@@ -15,6 +16,7 @@ function browser() {
 }
 const run = (file, root) => vm.runInNewContext(read(file), { window: root });
 async function main() {
+  assert.equal(fs.readFileSync(path.join(repo, "dist/local-client.js"), "utf8"), read("local-client.js"), "Validate the exact production local transport");
   const root = browser(), original = root.localStorage;
   run("local-production.js", root);
   assert.equal(root.localStorage.getItem("save"), null);
