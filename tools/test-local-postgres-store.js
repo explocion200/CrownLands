@@ -60,6 +60,25 @@ const { Store, FieldValue, FieldPath, Filter, Timestamp } = require("../local-ba
       tx.update(player, { gold: snap.data().gold + 1 });
     }, { maxAttempts: 32 })));
     assert.equal((await db.doc("players/a").get()).data().gold, 88);
+    // A busy account can conflict for longer than the old ~200ms retry window.
+    // Force real PostgreSQL serialization failures while another writer is
+    // active, then require the full transaction to commit exactly once.
+    const contended = db.doc("contention/account"), once = db.doc("contention/receipt");
+    await contended.set({ balance: 100 });
+    const busyUntil = Date.now() + 450;
+    let conflicts = 0;
+    await db.runTransaction(async tx => {
+      const current = await tx.get(contended);
+      if (Date.now() < busyUntil) {
+        await contended.update({ balance: FieldValue.increment(1) });
+        conflicts++;
+      }
+      tx.update(contended, { balance: current.data().balance + 10 });
+      tx.create(once, { applied: true });
+    });
+    assert(conflicts > 0, "Fixture must exercise concurrent commits");
+    assert.equal((await contended.get()).data().balance, 110 + conflicts);
+    assert.equal((await once.get()).data().applied, true);
     await db.doc("players/a").update({ "settings.x": FieldValue.delete(), gold: FieldValue.increment(2) });
     assert.deepEqual((await db.doc("players/a").get()).data().settings, { y: 2 });
     assert.equal((await db.doc("players/a").get()).data().gold, 90);

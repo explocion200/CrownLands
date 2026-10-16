@@ -63,20 +63,48 @@ const { WorkerDiagnostics } = require("../local-backend/worker-diagnostics");
     now += 61000; assert.equal(await loop.tick(), false); assert.equal(queue.stopping, true);
     assert.equal(await queue.runOne(), false);
 
-    let started;
+    // A transfer can retain many short jobs. One polling tick must refill its
+    // slots as jobs finish instead of limiting throughput to two jobs/second.
+    let active = 0, maximum = 0, completed = 0;
+    const byHandler = new Map();
+    const bursts = ["First", "Second"].map(name => ({
+      name: "fixtureBurst" + name, kind: "created", options: { document: "burst" + name + "/{id}" },
+      handler: async () => {
+        active++; maximum = Math.max(maximum, active);
+        assert.equal(byHandler.get(name) || 0, 0, "Each handler remains serialized");
+        byHandler.set(name, 1);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        byHandler.set(name, 0); active--; completed++;
+      },
+    }));
+    const burstQueue = new JobQueue({ store, routes: bursts, maxActive: 2 });
+    for (let i = 0; i < 12; i++) for (const name of ["First", "Second"]) {
+      await store.doc("burst" + name + "/" + i).set({ fixture: true });
+    }
+    loop = new WorkerLoop({ queue: burstQueue, expiresAt: new Date(Date.now() + 60000).toISOString() });
+    await loop.tick(); await loop.tick(); await loop.settle();
+    assert.equal(completed, 24, "A bounded batch drains short retained jobs without waiting for another poll");
+    assert(maximum <= 2, "Repeated ticks cannot exceed the existing concurrency limit");
+    assert.equal((await loop.status()).operationalFailures, 0);
+    loop.stop();
+
+    let started, starts = 0;
     const entered = new Promise(resolve => { started = resolve; });
     const blocked = new Promise(resolve => { release = resolve; });
     const slow = { name: "fixtureShutdown", kind: "created", options: { document: "shutdown/{id}" }, handler: async () => {
-      started(); await blocked; await store.doc("totals/forbidden-after-stop").set({ wrong: true });
+      starts++; started(); await blocked; await store.doc("totals/forbidden-after-stop").set({ wrong: true });
     } };
     const stoppingQueue = new JobQueue({ store, routes: [route, slow], maxActive: 1 });
     loop = new WorkerLoop({ queue: stoppingQueue, expiresAt: new Date(Date.now() + 60000).toISOString() });
-    await store.doc("shutdown/one").set({ fixture: true }); loop.start(); await entered;
+    await store.doc("shutdown/one").set({ fixture: true });
+    await store.doc("shutdown/two").set({ fixture: true }); loop.start(); await entered;
     assert.throws(() => loop.start(), /already/);
     loop.stop(); release(); await loop.settle();
+    assert.equal(starts, 1, "Stopping a drain must not start another retained job");
     assert.equal((await store.doc("totals/forbidden-after-stop").get()).exists, false);
-    const failed = (await store.pool.query(`SELECT status,last_error_code FROM ${store.schema}.work_jobs WHERE handler='fixtureShutdown'`)).rows[0];
+    const failed = (await store.pool.query(`SELECT status,last_error_code FROM ${store.schema}.work_jobs WHERE handler='fixtureShutdown' AND attempts=1`)).rows[0];
     assert.deepEqual(failed, { status: "pending", last_error_code: "job-worker-stopping" });
+    assert.equal(Number((await store.pool.query(`SELECT count(*) FROM ${store.schema}.work_jobs WHERE handler='fixtureShutdown' AND attempts=0 AND status='pending'`)).rows[0].count), 1);
     console.log("Worker loop: private handler inventory, bounded dispatch/execution, aggregate status, safe failure counting, expiry and shutdown write fencing passed.");
   } finally {
     loop?.stop(); release?.(); await loop?.settle();

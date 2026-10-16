@@ -316,7 +316,12 @@ class Store {
         await client.query("ROLLBACK").catch(() => {});
         if (!["40001", "40P01"].includes(error.code) || attempt === maxAttempts - 1) throw error;
       } finally { client.release(); }
-      await new Promise(resolve => setTimeout(resolve, Math.min(100, 5 * (attempt + 1)) + Math.floor(Math.random() * 10)));
+      // Give a competing writer time to finish. The previous short linear
+      // delays could exhaust all eight attempts in about 200ms during catch-up.
+      // Keep the attempt bound and SERIALIZABLE isolation; jitter separates
+      // contenders while the cap keeps interactive requests bounded.
+      const delay = Math.min(500, 20 * 2 ** attempt);
+      await new Promise(resolve => setTimeout(resolve, delay + Math.floor(Math.random() * delay)));
     }
   }
   async commit(tx) {

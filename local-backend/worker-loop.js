@@ -30,14 +30,24 @@ class WorkerLoop {
       await this.queue.dispatchChanges(200);
       await this.queue.enqueueSchedules(this.now());
       if (this.stopped || this.now() >= this.expiry) { this.stop(); return false; }
-      for (let i = this.queue.active; i < this.queue.maxActive; i++) {
-        const task = this.queue.runOne().catch(() => { this.failures++; });
+      for (let i = this.pending.size; i < this.queue.maxActive; i++) {
+        const task = this.drain().catch(() => { this.failures++; });
         this.pending.add(task); task.finally(() => this.pending.delete(task));
       }
       this.lastSuccess = this.now();
       return true;
     } catch { this.failures++; return false; }
     finally { this.ticking = false; }
+  }
+  async drain() {
+    // Refill a finished slot immediately. The polling timer still dispatches
+    // new changes/schedules and checks authority once a second. Each lane is
+    // bounded, and JobQueue retains its concurrency, handler-order and lease
+    // guards, including slots held by handlers that outlive their deadline.
+    for (let i = 0; i < 32 && !this.stopped; i++) {
+      if (this.now() >= this.expiry) { this.stop(); break; }
+      if (!await this.queue.runOne()) break;
+    }
   }
   start() {
     if (this.timer || this.stopped) throw Error("Worker loop already started or stopped");
