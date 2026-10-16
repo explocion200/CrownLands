@@ -332,6 +332,40 @@ the default rehearsal timestamp when no explicit value is supplied. Full Auth
 exports are still separate reads; verify stability across the stopped-source
 boundary. A rehearsal snapshot must never substitute for the final copy.
 
+`verify_final_snapshot.py PLAN_DIRECTORY SNAPSHOT_DIRECTORY NEW_OUTPUT_DIRECTORY
+--read-time LATER_UTC_MINUTE` provides the separate read-only comparison. It
+requires the completed, unreversed control journal and current protected
+maintenance evidence. It rereads all 171 controls, deployment/key/job inventories,
+the exact deny rules and project permissions before and after comparison, and
+rejects automatic TTL deletion policies. Every exported typed document,
+including its original creation/update versions, must match a complete second
+Firestore scan at the later fixed minute. A new private Auth export must match
+every account, password parameter and Google provider setting. Different account
+pagination order is allowed; duplicate identities are rejected. Changed data,
+lost maintenance, incomplete streams and partial key operations produce no
+success receipt. Output contains counts and hashes; private account payloads
+remain in private directories. The observation gap is not a token-revocation
+guarantee, and this receipt does not authorize activation: actual client/runtime
+denial and queued event/payment reconciliation are still required.
+
+`import_final_schema.py SNAPSHOT_DIRECTORY VERIFICATION_DIRECTORY --schema
+migration_final_HEX12` is the protected copy step after the final snapshot has
+been imported into a unique staging schema and independently restored. It
+requires matching current root maintenance and plan identity, exact fresh
+account-provider/hash settings, a snapshot manifest digest in the staging
+receipt, and empty permanent tables. One database transaction locks the source
+and its retained pre-restore copy, compares every row, copies all documents and
+accounts, and compares the targets again. Existing data or a prior activation
+is never overwritten. The original typed values and Translation usage ledger
+are copied unchanged. No historical triggers or schedules are enqueued.
+
+The copy records only the snapshot verification digest. It deliberately leaves
+the Firebase-fence receipt and activation timestamp unset, with the root and
+database gates in maintenance. Final scheduler cursors, the reviewed ingress
+configuration, recovery verification and source-fence evidence belong to the
+separate activation step. If the process stops after its database commit, retain
+the populated target and reconcile the recorded digest; do not clear it to retry.
+
 The permanent game service also provides the website's public historical
 `/api/season-rankings` through the existing sanitized archive reader. It
 preserves public fields and cache rules, rejects duplicate parameters and

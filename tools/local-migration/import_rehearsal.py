@@ -105,6 +105,7 @@ def import_snapshot(directory, schema):
                 seen.add(uid)
                 write(copy_value(uid) + "\t" + copy_value(snapshot.encode(user).decode().strip()) + "\n")
             receipt = {"sourceProject": manifest["project"], "readTime": manifest["readTime"], "documents": count,
+                       "snapshotManifestSha256": snapshot.checksum((directory / "manifest.json").read_bytes()),
                        "accounts": len(users), "collections": collections, "realm": realm,
                        "rehearsalOnly": True, "authAtomicWithFirestore": False,
                        "importedAt": datetime.now(timezone.utc).isoformat()}

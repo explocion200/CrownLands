@@ -111,6 +111,48 @@ async function main(){
    await gateConnection.query(maintenanceSql({})); // Refresh after a reviewed import remains allowed.
    await pool.query(`DELETE FROM ${GAME}.documents; UPDATE crownlands_control.deployment SET phase='standby'`);
   }finally{gateConnection.release();}
+  // Exercise the final copier against the same isolated permanent schemas.
+  // No source API, private credential or running game database is involved.
+  const stage='migration_final_0123456789ab',preserved=stage+'_before_restore';
+  const manifest={expectedDocuments:2,authAccounts:1,readTime:'2026-10-15T00:00:00Z',manifestSha256:'3'.repeat(64)};
+  const finalSql=options=>execFileSync('python3',['-c',
+   'import sys,json;sys.path.insert(0,sys.argv[1]);import import_final_schema as f;print(f.import_sql(sys.argv[2],sys.argv[3],json.loads(sys.argv[4]),sys.argv[5]))',
+   path.join(__dirname,'local-migration'),epoch,stage,JSON.stringify(options||manifest),'4'.repeat(64)],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+  await pool.query(`CREATE SCHEMA ${stage};CREATE TABLE ${stage}.documents AS TABLE ${GAME}.documents WITH NO DATA;
+   CREATE TABLE ${stage}.accounts AS TABLE ${AUTH}.accounts WITH NO DATA;CREATE TABLE ${stage}.receipt(body jsonb);
+   UPDATE crownlands_control.deployment SET phase='maintenance'`);
+  const realm={worldId:'main-realm-2026-10',resetGeneration:'realm-2026-10',sharedRealmId:'shard_0001'};
+  const fields=Object.fromEntries(Object.entries(realm).map(([k,v])=>[k,{stringValue:v}]));
+  await pool.query(`INSERT INTO ${stage}.documents VALUES($1,'realmConfig','',$2,$3),($4,'children','parents/missing',$5,$6)`,
+   ['realmConfig/current',{fields},'5'.repeat(64),'parents/missing/children/fixture',{fields:{large:{integerValue:'9223372036854775807'},bytes:{bytesValue:'AAH/'},stamp:{timestampValue:'2026-10-15T00:00:00.123456789Z'}}},'6'.repeat(64)]);
+  await pool.query(`INSERT INTO ${stage}.accounts VALUES('copied-fixture',$1)`,[{localId:'copied-fixture',passwordHash:'unchanged-synthetic',salt:'unchanged',providerUserInfo:[{providerId:'google.com',rawId:'synthetic-subject'}]}]);
+  await pool.query(`INSERT INTO ${stage}.receipt VALUES($1)`,[{sourceProject:'crown-land-b15e0',readTime:manifest.readTime,snapshotManifestSha256:manifest.manifestSha256,documents:2,accounts:1,realm}]);
+  await pool.query(`CREATE SCHEMA ${preserved};CREATE TABLE ${preserved}.documents AS TABLE ${stage}.documents;
+   CREATE TABLE ${preserved}.accounts AS TABLE ${stage}.accounts;CREATE TABLE ${preserved}.receipt AS TABLE ${stage}.receipt`);
+  const copyConnection=await pool.connect();
+  try{
+   await pool.query(`UPDATE ${stage}.accounts SET body=body||'{"changed":true}'::jsonb`);
+   await assert.rejects(copyConnection.query(finalSql()),/Independent staging restore differs/);await copyConnection.query('ROLLBACK');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${AUTH}.accounts`)).rows[0].count,'0');
+   await pool.query(`UPDATE ${stage}.accounts SET body=body-'changed'`);
+   await assert.rejects(copyConnection.query(finalSql({...manifest,manifestSha256:'0'.repeat(64)})),/snapshot and staging differ/);await copyConnection.query('ROLLBACK');
+   await pool.query(`INSERT INTO ${GAME}.documents VALUES('fixture/occupied','fixture','','{}','')`);
+   await assert.rejects(copyConnection.query(finalSql()),/Existing permanent data preserved/);await copyConnection.query('ROLLBACK');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.documents`)).rows[0].count,'1');
+   await pool.query(`DELETE FROM ${GAME}.documents`);
+   await copyConnection.query(finalSql());
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.documents`)).rows[0].count,'2');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${AUTH}.accounts`)).rows[0].count,'1');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.changes`)).rows[0].count,'0');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.work_jobs`)).rows[0].count,'0');
+   assert.equal((await pool.query(`SELECT count(*) FROM ${GAME}.work_schedules`)).rows[0].count,'0');
+   const fence=(await pool.query('SELECT * FROM crownlands_control.deployment')).rows[0];
+   assert.equal(fence.phase,'maintenance');assert.equal(fence.snapshot_receipt,'4'.repeat(64));assert.equal(fence.firebase_fence_receipt,null);assert.equal(fence.activated_at,null);
+   await assert.rejects(copyConnection.query(finalSql()),/Empty initial targets required/);await copyConnection.query('ROLLBACK');
+  }finally{copyConnection.release();}
+  // Remove only this test's synthetic fixtures, before testing active services.
+  await pool.query(`DROP SCHEMA ${stage} CASCADE;DROP SCHEMA ${preserved} CASCADE;DELETE FROM ${GAME}.documents;DELETE FROM ${AUTH}.accounts;
+   UPDATE crownlands_control.deployment SET phase='standby',snapshot_receipt=NULL`);
   const runtime=new Pool({host:directory,user:'crownlands-game',database:'crownlands_migration',options:'-c crownlands.runtime_epoch='+epoch});
   try{
    const policy=createPolicy({store:{schema:GAME,pool:runtime},epoch,read:()=>control});await assert.rejects(policy.assertActive());

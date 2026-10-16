@@ -451,12 +451,14 @@
         "tools/local-migration/firebase_transfer_controls.py",
         "tools/local-migration/test_firebase_freeze_plan.py",
         "tools/local-migration/test_firebase_transfer_controls.py",
-        "tools/test-local-firebase-freeze-plan.js"
+        "tools/test-local-firebase-freeze-plan.js",
+        "tools/local-migration/verify_final_snapshot.py",
+        "tools/local-migration/test_final_snapshot.py"
       ],
       "tests": [
         "tools/test-local-firebase-freeze-plan.js"
       ],
-      "reason": "Owner-permitted source-control preparation and a guarded, reversible controller for the fixed project: synthetic inventory and transport fixtures cover exact service identities, key restrictions, unchanged project IAM, original rules/policies, missing permissions and drift. Exercise durable intent before mutations, lost acknowledgements without duplicate requests, unresolved requests and concurrent policy changes, minimum drain, retained paused schedules, exact rollback before local activation, and exclusion of Translation/monitoring/storage and new role grants. All mutation tests are offline; actual reads only verify current access. Control-plane completion deliberately leaves sourceFrozen false pending data-plane, trigger/payment reconciliation and protected local maintenance evidence. No production freeze, import, deployment or activation is performed by validation."
+      "reason": "Owner-permitted source-control preparation and a guarded, reversible controller for the fixed project: synthetic inventory and transport fixtures cover exact service identities, key restrictions, unchanged project IAM, original rules/policies, missing permissions and drift. Exercise durable intent before mutations, lost acknowledgements without duplicate requests, unresolved requests and concurrent policy changes, minimum drain, retained paused schedules, exact rollback before local activation, and exclusion of Translation/monitoring/storage and new role grants. All mutation tests are offline; actual reads only verify current access. Control-plane completion deliberately leaves sourceFrozen false pending data-plane, trigger/payment reconciliation and protected local maintenance evidence. No production freeze, import, deployment or activation is performed by validation. Read-only final-snapshot comparison checks every document including metadata, full Auth/config equality, later PITR boundaries, complete control journals and exact current topology both before and after; fault fixtures cover same-count mutations, omitted rows, new TTL/jobs/functions, key-operation ambiguity and lost maintenance without a success receipt or source mutation."
     },
     {
       "paths": [
@@ -471,6 +473,32 @@
         "tools/test-local-postgres-backup.js"
       ],
       "reason": "Protected initial-transfer preparation only. Fault fixtures exercise durable phase transitions, occupied/previously-active target refusal, publisher overlap without termination, stale/drifting maintenance checks, real HTTPS response contract, drained payment observations after closure, retained failed deliveries, receipt withdrawal, plan binding and bounded protected files. Independent PostgreSQL executes the exact maintenance SQL and verifies nonempty-target and prior-activation refusal without deleting rows. Standby installer checks exact reviewed runtime payloads, service health and rollback; existing ingress and backup suites cover the shared authority and recovery dependencies. No fixture changes live routes, Firebase, payment providers or player data. Actual installation and explicit maintenance begin remain distinct operator actions. Regression coverage runs atomic writes and installation success/failure/rollback under the actual private umask 077, verifies explicit public/private modes and directory traversal, and checks service-account read access before startup. The first protected attempt exposed this permission defect; runtime content and live Firebase authority were unchanged."
+    },
+    {
+      "paths": [
+        "tools/local-deploy/local_runtime.py",
+        "tools/local-deploy/pack.py",
+        "tools/local-deploy/publisher.py",
+        "tools/local-deploy/tests.py",
+        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md"
+      ],
+      "tests": [
+        "tools/test-local-deployment.js",
+        "tools/test-local-production-client.js",
+        "tools/test-local-postgres-permanent.js"
+      ],
+      "reason": "Bind signed static packages to installed local adapter source/dependency locks; run only the reviewed installed static transformation helper. Test real Node transformation, original/converted inventories, backend source drift, phase/epoch mismatch, blocked Firebase publication after transfer, authority changes before switching and refusal to recover across backends. Existing local browser/native-worker and actual restricted-role PostgreSQL transport tests cover the transformed client API. Preparing code does not install or change the currently running publisher."
+    },
+    {
+      "paths": [
+        "tools/local-migration/import_final_schema.py"
+      ],
+      "tests": [
+        "tools/test-local-postgres-import.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-firebase-freeze-plan.js"
+      ],
+      "reason": "Protected final copy into empty maintenance targets only. Actual isolated PostgreSQL tests reject drift between staging and its retained restored original, wrong snapshot identity and occupied targets; verify exact typed data/account copy, no trigger/schedule replay, unchanged authority gate and refusal to repeat a committed import. Existing export/import tests verify source-manifest binding and independent all-row restore; source/maintenance fixtures cover the reused guard. No live data is imported or activated by validation."
     }
   ]
 }

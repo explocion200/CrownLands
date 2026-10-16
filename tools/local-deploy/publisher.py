@@ -110,6 +110,8 @@ def unpack(package, destination, sha, approved):
         for key in ("backend", "firebaseConfigHash", "firebaseDeploymentHash"):
             if meta.get(key) != approved.get(key):
                 raise BackendHold("Backend change held for migration: " + key)
+        if approved.get('localRuntimeHash') and meta.get('localRuntimeHash') != approved['localRuntimeHash']:
+            raise BackendHold('Local backend change held for reviewed service update')
         files = meta.get("files")
         if not isinstance(files, dict) or not 1 <= len(files) <= MAX_FILES:
             raise ValueError("Invalid file inventory")
@@ -214,6 +216,8 @@ def smoke(root, meta, fetch=None):
                 "/release-manifest.js": "release-manifest.js", "/app-entry.js": "app-entry.js",
                 "/firebaseClient.js": "firebaseClient.js", "/manifest.webmanifest": "manifest.webmanifest",
                 "/local-deployment.json": "local-deployment.json"}
+    if meta.get('backendMode') == 'postgres-local':
+        expected.update({'/firebase-config.js':'firebase-config.js','/local-production.js':'local-production.js','/local-client.js':'local-client.js'})
     for host in ("https://playcrownlands.com", "https://game.playcrownlands.com"):
         for url, name in expected.items():
             if digest(fetch(host + url)) != meta["files"][name]["sha256"]:
@@ -221,12 +225,19 @@ def smoke(root, meta, fetch=None):
     website = current_release(root) / "website/index.html"
     if digest(fetch("https://playcrownlands.com/")) != digest(website.read_bytes()):
         raise ValueError("Public website changed unexpectedly")
+    if meta.get('backendMode') == 'postgres-local':
+        expected_health = {'ready':True,'rehearsal':False,'protocol':1,'epoch':meta['localConfiguration']['epoch']}
+        for route in ['/local-auth/health','/api/local-game/health']:
+            if json.loads(fetch('https://playcrownlands.com'+route)) != expected_health:
+                raise ValueError('Live local backend identity mismatch')
 
 
-def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=main_head):
+def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=main_head, authority_fn=lambda: None, previous_fn=lambda release: None):
+    authority_fn()
     if head_fn() != meta["commit"]:
         raise ValueError("A newer main commit arrived; stale package held")
     previous = current_release(root)
+    previous_fn(previous)
     destination = root / "releases" / ("auto-" + meta["commit"])
     if destination.exists():
         raise ValueError("Release already exists; inspect before retry")
@@ -237,10 +248,12 @@ def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=main_head):
     # Persist recovery BEFORE the atomic symlink change, including power-loss recovery.
     transaction = {"previous": previous.name, "candidate": destination.name, "commit": meta["commit"]}
     atomic_json(state / "transaction.json", transaction)
+    authority_fn()
     swap(root / "current", destination)
     try:
         smoke_fn(root, meta)
     except Exception:
+        previous_fn(previous)
         swap(root / "current", previous)
         atomic_json(state / "blocked.json", {"commit": meta["commit"], "reason": "Live smoke check failed"})
         (state / "transaction.json").unlink()
@@ -249,7 +262,7 @@ def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=main_head):
     (state / "transaction.json").unlink()
 
 
-def recover(root, state):
+def recover(root, state, previous_fn=lambda release: None):
     path = state / "transaction.json"
     if not path.exists():
         return
@@ -261,6 +274,7 @@ def recover(root, state):
     previous = root / "releases" / transaction["previous"]
     candidate = root / "releases" / transaction["candidate"]
     active = current_release(root)
+    previous_fn(previous)
     if active == candidate and previous.is_dir():
         swap(root / "current", previous)
     elif active != previous:
@@ -271,11 +285,16 @@ def recover(root, state):
 
 
 def run(config, root, state, check_only=False):
-    recover(root, state)
     if (Path("/etc/crownlands-deploy") / "paused").exists():
         return {"status": "paused"}
+    import local_runtime
+    local = local_runtime.authority(config)
+    authority_check = lambda: local_runtime.authority(config)
+    previous_check = (lambda release: local_runtime.require_local_release(release, local, config['approved'])) if local else lambda release: None
+    recover(root, state, previous_check)
     sha = main_head()
     active = current_release(root)
+    previous_check(active)
     if active.name == "auto-" + sha:
         return {"status": "current", "commit": sha}
     blocked = state / "blocked.json"
@@ -304,9 +323,12 @@ def run(config, root, state, check_only=False):
                 held = {"commit": sha, "reason": str(error)}
                 atomic_json(state / "blocked.json", held)
                 return {"status": "held", **held}
+            if local:
+                authority_check()
+                meta = local_runtime.transform(staged, meta, local)
             if check_only:
                 return {"status": "verified-ready", "commit": sha, "fileCount": len(meta["files"])}
-            activate(root, state, staged, meta)
+            activate(root, state, staged, meta, authority_fn=authority_check, previous_fn=previous_check)
         finally:
             if staged.exists():
                 shutil.rmtree(staged)

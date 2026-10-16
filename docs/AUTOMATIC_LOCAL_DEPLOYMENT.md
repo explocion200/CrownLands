@@ -49,6 +49,23 @@ the contact inbox. It does not publish the website repository, database
 migrations, native/itch.io packages, server processes, or changes to the
 root-owned publisher itself.
 
+The prepared local-backend mode additionally binds all local adapter source and
+dependency locks to the installed runtime. It requires an active matching epoch,
+the reviewed root-owned Node binary and the reviewed static transformation
+helper. The helper reads verified package files as data and creates the local
+client variant; it never executes downloaded JavaScript. Both the original signed
+inventory and the transformed inventory are retained. Public deployment identity
+records `postgres-local`, the epoch and transformed build ID. HTTPS smoke checks
+also require the account and game APIs to report the same epoch. Missing or changed
+local adapters are held for a separately tested service update.
+
+This mode refuses Firebase publication once the authority control leaves standby.
+Both normal rollback and recovery after interruption require a compatible local
+previous release, preventing an old Firebase client from being restored after
+the data transfer. A pause also prevents automatic recovery from switching files
+during maintenance. Preparing this code does not install the policy or activate
+the backend; the first local release and policy belong to the final transfer.
+
 ## Install and operate
 
 The repository contains reviewed source, not an unattended root installer entry
