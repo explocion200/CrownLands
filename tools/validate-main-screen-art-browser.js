@@ -71,7 +71,7 @@ for(const key of ['bag','shop','cities','map'])assets[key]=bottomArt.find(a=>a.i
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await delay(180);
    await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0});
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(1)`);
-   assert.deepEqual(await ev(`(()=>{const s=getComputedStyle(document.getElementById('staminaButton'));return[s.backgroundColor,s.color,s.backgroundImage];})()`),['rgb(114, 54, 58)','rgb(244, 230, 197)','none'],'Stamina must use the shared burgundy HUD palette');
+   assert(await ev(`(()=>{const r=getComputedStyle(document.getElementById('logBtn'));return [...document.querySelectorAll('.profile-currencies>.profile-gold,#staminaButton,#fullscreenBtn')].every(e=>{const s=getComputedStyle(e);return s.backgroundImage===r.backgroundImage&&s.color===r.color&&s.borderColor===r.borderColor;});})()`),"Resources and fullscreen must match the restored parchment notices");
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
    const labeled=await ev(`['leaderboardBtn','clanHudBtn','dailyLoginRewardBtn','innerCityHudBtn'].map(id=>{const b=document.getElementById(id),r=b.getBoundingClientRect(),i=b.querySelector('.hud-button-image'),a=i.getBoundingClientRect();return{width:r.width,height:r.height,transparent:getComputedStyle(b).backgroundColor==='rgba(0, 0, 0, 0)',imageFits:a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom};})`);
    assert(labeled.every(b=>b.width===(width===568?46:56)&&b.height===b.width&&b.transparent&&b.imageFits),'Named images must keep original bounds and transparent surfaces');
