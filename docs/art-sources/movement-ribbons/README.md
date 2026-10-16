@@ -2,8 +2,9 @@
 
 **Retired October 16, 2026:** The owner requested the previous flat parchment
 button style again, keeping only the horse and crossed-swords icon changes.
-The ribbon delivery file and its optimized manifest entry have been removed;
-the source master, prompt and historical delivery hashes remain here for reference.
+The delivery image is archived here as `retired-ribbon-196x76.webp`; its
+optimized manifest entry has been removed. The source master, prompt and
+historical delivery hashes also remain here for reference.
 These documentation assets are not shipped. The browser validator now writes
 results to `release-artifacts/restored-notice-style/` and checks the restored
 parchment surfaces plus the retained icons and interactions.

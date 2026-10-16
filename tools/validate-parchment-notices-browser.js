@@ -1,8 +1,11 @@
 "use strict";
-const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
+const retired=require("../docs/art-sources/movement-ribbons/runtime-assets.json")[0];
+assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.resolve(__dirname,"../docs/art-sources/movement-ribbons/retired-ribbon-196x76.webp"))).digest("hex"),retired.sha256);
+assert(!require("../assets/optimized/manifest.json").assets.some(a=>a.id===retired.id));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{
  const server=createMapBenchmarkServer(),address=await server.listen(),output=path.resolve(__dirname,"../release-artifacts/restored-notice-style");

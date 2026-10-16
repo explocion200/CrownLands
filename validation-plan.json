@@ -18,13 +18,14 @@
       "paths": [
         "assets/optimized/manifest.json",
         "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "docs/art-sources/movement-ribbons/retired-ribbon-196x76.webp"
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-parchment-notices-browser.js"
       ],
-      "reason": "Remove the now-unused ribbon derivative and its manifest entry, and restore the previous total-art budget. Keep source artwork and historical metadata in documentation only. Production build/artifact and asset-budget checks verify remaining image references and unchanged startup/precache limits; browser checks verify the restored surfaces and retained icons with no missing requests."
+      "reason": "Move the now-unused ribbon derivative into documentation as an exact historical copy and remove its optimized manifest entry. Restore the previous total-art budget. The focused validator verifies the archived hash and exclusion from the runtime manifest. Production build/artifact and asset-budget checks verify remaining references and unchanged startup/precache limits; browser checks verify the restored surfaces and retained icons with no missing requests."
     },
     {
       "paths": [
