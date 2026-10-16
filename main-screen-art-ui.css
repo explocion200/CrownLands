@@ -37,12 +37,11 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 }
 .profile-action-row > .hud-image-button .clan-hud-icon > :is(.clan-shield-size-small,.clan-heraldry-size-small){width:100%;height:100%}
 .hud-image-button.clan-hud-btn.is-search::after{right:0;bottom:25%}
-/* Illustrated ribbons behind live names/timers; keep the original targets. */
 @layer crownlands-theme{
  :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn).nav-btn{
-  color:var(--notice-ink,#493521)!important;border:2px solid transparent!important;
-  background:url("assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp") center calc(50% + 9px)/100% 44px no-repeat!important;
-  box-shadow:none!important;
+  color:var(--notice-ink,#493521)!important;border:2px solid #ac8a50!important;
+  border-radius:3px 6px 4px 5px;background:repeating-linear-gradient(7deg,#79542208 0 1px,transparent 1px 4px),linear-gradient(90deg,#c3a16a44,transparent 12% 88%,#c3a16a44),linear-gradient(#f6e9c9,#e7d2a5)!important;
+  box-shadow:inset 0 1px #fff5df,inset 0 -2px #ad895b55,0 2px 3px #251c1744!important;
  }
  #incomingAttackBtn{--notice-ink:#7b3034}
  #outgoingAttackBtn{--notice-ink:#36576a}

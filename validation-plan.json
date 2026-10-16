@@ -1,26 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f3674526434cbe1bf72cf9b30b6600b7c8f56c50",
+  "baseCommit": "792503f147de4c0d35f44b4d0e5a19f1ead2213d",
   "coverage": [
     {
       "paths": [
-        "index.html",
         "main-screen-art-ui.css",
-        "tools/validate-parchment-notices-browser.js",
-        "assets/optimized/manifest.json",
-        "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
-        "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
-        "docs/art-sources/movement-ribbons/runtime-assets.json",
-        "docs/art-sources/movement-ribbons/prompt.json"
+        "tools/validate-parchment-notices-browser.js"
       ],
       "tests": [
         "tools/validate-parchment-notices-browser.js",
         "tools/validate-main-screen-art-browser.js",
-        "tools/validate-chat-toggle-draft-browser.js",
-        "tools/validate-chat.js",
-        "tools/validate-active-operations.js"
+        "tools/validate-chat-toggle-draft-browser.js"
       ],
-      "reason": "Replace the three flat notice surfaces with one illustrated label ribbon and reuse the existing horse and crossed-swords artwork. Browser checks cover decoded asset identity/alpha, source and runtime hashes, bounded image size, original target geometry, all movement visibility states, live counts/countdowns, unread badge, readable fitting labels, focus and mouse/keyboard/touch actions at desktop and landscape-phone sizes. Shared HUD and Chat tests protect neighboring artwork, saved clan shield, toggle transparency and collision contracts. Active-operations tests protect the already-approved exclusion of held Camps/Strongholds/Citadel and complete activity tabs. Production build and asset-budget validation must include the referenced runtime assets without new precaching. No game logic, backend, data or server-authoritative changes; no emulator suites apply. Validate the prompt metadata references the hashed ribbon master and an existing approved reference."
+      "reason": "Restore the exact flat parchment notice styling from the release before illustrated ribbons, retaining the horse and crossed-swords images in unchanged HTML. Validate desktop and both landscape-phone sizes, all movement visibility combinations, image decode/alpha, live count/countdown text, unread badge, label fit, target geometry, focus, mouse/keyboard/touch, map zoom and transparent Chat. Shared HUD checks protect neighboring labeled art and dynamic clan shields. No game logic, backend, data or server-authoritative behavior changes; no emulator suites apply."
+    },
+    {
+      "paths": [
+        "assets/optimized/manifest.json",
+        "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-parchment-notices-browser.js"
+      ],
+      "reason": "Remove the now-unused ribbon derivative and its manifest entry, and restore the previous total-art budget. Keep source artwork and historical metadata in documentation only. Production build/artifact and asset-budget checks verify remaining image references and unchanged startup/precache limits; browser checks verify the restored surfaces and retained icons with no missing requests."
     },
     {
       "paths": [
@@ -28,16 +32,7 @@
         "docs/art-sources/movement-ribbons/README.md"
       ],
       "tests": [],
-      "reason": "Record the owner's explicitly requested visual refinement, asset provenance and exact built-in image-generation prompt. Preserve existing gameplay and holding-notice rules. Documentation does not establish deployment."
-    },
-    {
-      "paths": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "The shipped HUD stylesheet was omitted from the existing unused-derivative scan. Include it so the new ribbon reference is recognized. The 6,352-byte shared ribbon exceeds the prior total-art headroom by 3,366 bytes; bound this at 4 KiB while preserving startup/precache, preload and per-image limits and metadata/hash checks. The focused browser test additionally caps this ribbon at 7 KiB."
+      "reason": "Record the owner's explicit request to restore the preceding backgrounds while keeping the icon changes; mark ribbon provenance as historical. Preserve holding-notice and Chat rules. Documentation alone does not establish deployment."
     }
   ]
 }

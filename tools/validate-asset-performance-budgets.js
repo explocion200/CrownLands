@@ -134,9 +134,7 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // Four approved labeled HUD derivatives add 67,824 bytes, bounded at 68 KiB.
 // Four matching bottom-right images add 91,982 bytes, bounded at 92 KiB.
 // Keep the existing per-HUD-image 32 KiB cap and installation image exclusions.
-// Shared notice ribbon adds 6,352 bytes with 2,986 bytes of existing headroom.
-// Bound the remaining 3,366 bytes at 4 KiB; startup/precache limits stay fixed.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824 + 68 + 92 + 4) * 1024;
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824 + 68 + 92) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
