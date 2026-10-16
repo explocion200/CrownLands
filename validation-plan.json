@@ -1,44 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f3e2910d26b3979be156635cabf72b091890b587",
+  "baseCommit": "19429148c1e6b4cff1c55b26e728e90669c04a4c",
   "coverage": [
     {
       "paths": [
-        "assets/optimized/hud-clan-labeled-192x192-ce3b79f74ade.webp",
-        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp",
-        "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
-        "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
-        "assets/optimized/manifest.json",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/labeled-hud-buttons/README.md",
-        "docs/visual-qa/labeled-hud-buttons/draft.css",
-        "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
-        "docs/visual-qa/labeled-hud-buttons/images/daily-button.png",
-        "docs/visual-qa/labeled-hud-buttons/images/inner-castle-button.png",
-        "docs/visual-qa/labeled-hud-buttons/images/leaderboard-button.png",
-        "docs/visual-qa/labeled-hud-buttons/images/prompts.json",
-        "docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json",
-        "docs/visual-qa/labeled-hud-buttons/index.html",
-        "docs/visual-qa/labeled-hud-buttons/preview.html",
-        "docs/visual-qa/labeled-hud-buttons/preview.js",
-        "docs/visual-qa/labeled-hud-buttons/review.js",
-        "docs/visual-qa/labeled-hud-buttons/runtime-fixture.js",
-        "index.html",
-        "main-screen-art-ui.css",
-        "service-worker.js",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-labeled-hud-draft-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-production-artifact.js"
+        "local-backend/document-size.js",
+        "local-backend/store.js",
+        "tools/test-local-postgres-document-size.js"
       ],
       "tests": [
-        "tools/validate-labeled-hud-draft-browser.js",
-        "tools/validate-main-screen-art-browser.js",
-        "tools/validate-hud-screen-edge-browser.js",
-        "tools/validate-crowns-hud-browser.js"
+        "tools/test-local-postgres-document-size.js",
+        "tools/test-local-document-values.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-skill-preset-crowns.js",
+        "functions/test/emulator-skill-presets.js"
       ],
-      "reason": "Approved HUD image buttons retain original targets and positions, existing event handlers and dynamic saved heraldry. Draft comparison tests cover exact geometry, decoded alpha artwork, badges and no network writes; startup readiness is null-safe during navigation. Production art tests verify the compressed approved sources/hashes, actual navigation, mouse/touch/keyboard, Profile dirty-exit guards, clan shield clearance, no-clan state, map zoom independence and affected shared HUD controls. Production screen-edge/fullscreen and Crowns HUD tests cover shared profile layout, currency and stamina bounds at desktop and landscape sizes. Existing production artifact and asset-budget gates check runtime image delivery, offline stylesheet linkage and source-master exclusion. README/provenance and the Master Specification record the owner-approved design. No server-authoritative source, database or gameplay rule changes, so no emulator suites are needed. The measured 1,771-byte offline-shell increase is bounded at 2 KiB and the 67,824-byte runtime images at 68 KiB; per-image and login preload caps remain unchanged."
+      "reason": "Deployment preflight found live army resolution rejecting valid report-heavy profiles because REST typed JSON exceeds the logical document size. Retain the 1 MiB budget using documented logical sizes. Synthetic PostgreSQL coverage exercises the exact limit and full rollback, nested report history with atomic army/profile updates, typed values and escaped/Unicode data. Store transaction/query regression, game authorization, durable job scheduling and 10-Crown preset atomic wallet/receipt checks cover shared write dependencies. The selected preset emulator verifies the previously approved gameplay to be activated with this runtime. No UI code changes; already-passed desktop/mobile HUD tests from PR586 remain applicable."
     }
   ]
 }
