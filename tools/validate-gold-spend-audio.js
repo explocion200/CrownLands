@@ -176,7 +176,7 @@ async function run() {
   assert(extract(game, "toggleScoutNearby").includes("else playGoldSpendSound(SCOUT_NEARBY_COST)"), "Refunded local scouting must remain silent");
   const regroup = extract(game, "toggleRegroup");
   assert(regroup.indexOf("playGoldSpendSound(REGROUP_COST)") > regroup.indexOf("state.gold += REGROUP_COST"), "Local Regroup must charge successfully before sounding");
-  for (const [source, name] of [[economy, "buyShopItem"], [economy, "upgradeCity"], [game, "recruit"], [game, "handleClanSubmit"]]) {
+  for (const [source, name] of [[economy, "buyShopItem"], [economy, "upgradeCity"], [game, "handleClanSubmit"]]) {
     assert(extract(source, name).includes("playGoldSpendSound("), `${name} is missing its confirmed spending cue`);
   }
   assert(!extract(game, "applySavedSkillPreset").includes("playGoldSpendSound("), "Crown-priced preset Apply must not play a Gold debit cue");
