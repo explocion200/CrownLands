@@ -1,0 +1,16 @@
+/* Approval preview only: keep the real chat toggle's target and position. */
+.chat-image-draft{display:none}
+html.chat-button-draft #chatToggleBtn.resource-pill{border:0;padding:0;background:transparent!important;box-shadow:none!important}
+@layer crownlands-theme{
+ html.chat-button-draft #chatToggleBtn.resource-pill,
+ html.chat-button-draft #chatToggleBtn.resource-pill:hover,
+ html.chat-button-draft #chatToggleBtn.resource-pill:focus-visible{background:transparent!important;box-shadow:none!important}
+}
+html.chat-button-draft #chatToggleBtn .chat-toggle-chevron{visibility:hidden}
+html.chat-button-draft #chatToggleBtn .chat-image-draft{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none}
+html.chat-button-draft #chatToggleBtn:not(.is-expanded) .chat-image-left,
+html.chat-button-draft #chatToggleBtn.is-expanded .chat-image-right{display:block}
+html.chat-button-draft #chatToggleBtn:focus-visible{outline:2px solid #d8bd78!important;outline-offset:2px}
+/* Synthetic unread example, confined to the review page. */
+html[data-chat-draft-unread="true"] #chatToggleUnread{display:block!important;z-index:2}
+html[data-chat-draft-unread="false"] #chatToggleUnread{display:none!important}

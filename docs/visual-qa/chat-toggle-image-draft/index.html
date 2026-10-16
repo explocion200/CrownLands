@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crownlands · Chat arrow draft</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+<header><div><p>CROWNLANDS · HUD DESIGN</p><h1>A matching arrow for Chat</h1></div><span class="badge">Draft 01 · Awaiting approval</span></header>
+<section class="concepts" aria-label="Chat button artwork states">
+ <button class="concept" data-open="false" aria-pressed="true"><img src="images/chat-left.png" alt="Left-pointing illustrated arrow with Chat ribbon"><span><strong>Show chat</strong><small>Chat is hidden · tap to open</small></span></button>
+ <button class="concept" data-open="true" aria-pressed="false"><img src="images/chat-right.png" alt="Right-pointing illustrated arrow with Chat ribbon"><span><strong>Hide chat</strong><small>Chat is visible · tap to collapse</small></span></button>
+ <p>Artwork shown at 2× for review.<br>The game preview below keeps the original <strong>56 × 56 px</strong> button.</p>
+</section>
+<nav aria-label="Preview controls"><div class="group"><button data-look="draft" aria-pressed="true">Image draft</button><button data-look="current" aria-pressed="false">Current arrow</button></div><div class="group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div><label><input type="checkbox" id="unread"> Example unread dot</label></nav>
+<p class="note">Try the arrow in the map. Its direction changes while “Chat” stays upright. The neighboring Bag, Shop, Cities and Map buttons show the approved live style.</p>
+<main class="stage"><div id="fit"><iframe id="preview" title="Crownlands chat toggle appearance draft"></iframe></div></main>
+<footer><span id="dimensions"></span><span id="status" role="status">Loading sample game…</span><a id="fullWindow" href="preview.html" target="_blank" rel="noopener">Open at actual size ↗</a></footer>
+</body></html>
