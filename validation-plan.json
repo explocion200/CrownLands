@@ -16,9 +16,29 @@
         "tools/test-local-postgres-game-http.js",
         "tools/test-local-postgres-payments.js",
         "tools/validate-transaction-retries.js",
+        "functions/test/emulator-economy-concurrency.js",
+        "tools/test-local-postgres-permanent.js"
+      ],
+      "reason": "Normalize only rolled-back serialization/deadlock exhaustion into the existing aborted contract. Real PostgreSQL fixtures reproduce the original unrecognized 40001, exercise the unchanged game retry wrapper beyond eight conflicts, exact-once receipts, bounded exhaustion, real deadlock and nonretryable business/lease errors. Store, queue, worker, actual game, HTTP and payment suites cover shared adapter consumers; the affected economy emulator checks unchanged game retry/idempotency behavior. No gameplay rules, client presentation, Firebase authority, retry counts or health thresholds change. Permanent-service integration covers all six production roles and shared-store startup after the adapter change."
+    },
+    {
+      "paths": [
+        "local-backend/jobs.js",
+        "local-backend/worker-loop.js",
+        "local-backend/permanent-services.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-permanent.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-postgres-worker-service.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-transaction-retries.js",
         "functions/test/emulator-economy-concurrency.js"
       ],
-      "reason": "Normalize only rolled-back serialization/deadlock exhaustion into the existing aborted contract. Real PostgreSQL fixtures reproduce the original unrecognized 40001, exercise the unchanged game retry wrapper beyond eight conflicts, exact-once receipts, bounded exhaustion, real deadlock and nonretryable business/lease errors. Store, queue, worker, actual game, HTTP and payment suites cover shared adapter consumers; the affected economy emulator checks unchanged game retry/idempotency behavior. No gameplay rules, client presentation, Firebase authority, retry counts or health thresholds change."
+      "reason": "Separate the permanent worker data connection budget from bounded queue/lease/health connections. Actual PostgreSQL saturation tests verify that game-pool acquisition times out while dispatch, lease renewal, status and completion continue, and that completed-job fencing still rejects game writes. The full permanent-service fixture holds every game connection across a periodic status cycle and validates all six roles, restricted credentials and maintenance/epoch fencing. Existing worker/queue suites cover default single-pool rehearsal behavior, ordered dispatch and shutdown; actual game/emulator coverage checks unchanged handler behavior. Worker data capacity matches the existing game pool (12); the control pool remains bounded at 3. Health thresholds, job concurrency, SQL isolation, retry counts and gameplay rules are unchanged."
     }
   ]
 }

@@ -11,22 +11,33 @@ function writeStatus(directory,value){const file=path.join(directory,'status.jso
 async function start(role,{credentials=process.env.CREDENTIALS_DIRECTORY,directory=process.env.STATE_DIRECTORY,control=readControl,connect=options=>new Pool(options),ports=PORTS}={}) {
   if(!credentials||!directory)throw Error('System credentials and state required');
   const config=validateConfig(privateJson(path.join(credentials,'config')),role),initial=require('./deployment-policy').validateControl(control());
-  let pool,store,loop,server,timer,stopping=false;const diagnostics=new WorkerDiagnostics();
+  let pool,controlPool,store,loop,server,timer,stopping=false;const diagnostics=new WorkerDiagnostics();
   const report=async()=>{const c=require('./deployment-policy').validateControl(control());if(c.phase!==initial.phase||c.epoch!==initial.epoch){await stop();return;}
     let status={healthy:true};if(loop)status=await loop.status();
-    if(pool)await pool.query('SELECT 1');
+    if(pool)await (controlPool||pool).query('SELECT 1');
     writeStatus(directory,{...status,component:role,phase:initial.phase,recordedAt:new Date().toISOString(),...(role==='worker'?{handlerLogs:diagnostics.snapshot()}:{})});
     if(!stopping)timer=setTimeout(()=>report().catch(()=>{process.exitCode=1;void stop();}),5000);};
   const stop=async()=>{if(stopping)return;stopping=true;clearTimeout(timer);loop?.stop();
     setTimeout(()=>process.exit(1),20000).unref();
-    if(server)await new Promise(resolve=>server.close(resolve));await loop?.settle();await pool?.end();};
+    if(server)await new Promise(resolve=>server.close(resolve));await loop?.settle();await pool?.end();await controlPool?.end();};
   process.once('SIGTERM',()=>{void stop();});process.once('SIGINT',()=>{void stop();});
   if(initial.phase!=='active'){await report();return {stop,standby:true};}
-  pool=connect({host:'/var/run/postgresql',database:'crownlands_migration',max:role==='game'?12:role==='auth'?6:3,
+  const connection={host:'/var/run/postgresql',database:'crownlands_migration',
     application_name:'crownlands-'+role,connectionTimeoutMillis:5000,statement_timeout:30000,idle_in_transaction_session_timeout:35000,
-    options:'-c crownlands.runtime_epoch='+initial.epoch});
+    options:'-c crownlands.runtime_epoch='+initial.epoch};
+  // Army resolution fans out to eight transactions within one of two active
+  // jobs. Keep its bounded data pool separate from lease/dispatch/status work,
+  // so waiting for game connections cannot stop the service or lose a lease.
+  pool=connect({...connection,max:role==='game'||role==='worker'?12:role==='auth'?6:3,
+    connectionTimeoutMillis:role==='worker'?30000:5000});
+  if(role==='worker'){
+    controlPool=connect({...connection,max:3});
+    controlPool.on('error',()=>{process.exitCode=1;void stop();});
+  }
   pool.on('error',()=>{process.exitCode=1;void stop();});
-  store=new Store({schema:config.schema,pool});const policy=createPolicy({store,epoch:initial.epoch,read:control});
+  store=new Store({schema:config.schema,pool});
+  const controlStore=controlPool?new Store({schema:config.schema,pool:controlPool}):store;
+  const policy=createPolicy({store:controlStore,epoch:initial.epoch,read:control});
   await policy.assertActive();
   const privilege=(await pool.query(`SELECT current_user AS name,r.rolsuper,r.rolcreatedb,r.rolcreaterole,r.rolreplication,has_schema_privilege(current_user,$1,'CREATE') AS creates FROM pg_roles r WHERE rolname=current_user`,[store.schema])).rows[0];
   if(!privilege||privilege.name!=='crownlands-'+role||Object.entries(privilege).some(([k,v])=>k!=='name'&&v!==false))throw Error('Restricted runtime identity required');
@@ -44,7 +55,7 @@ async function start(role,{credentials=process.env.CREDENTIALS_DIRECTORY,directo
     diagnostics.capture();process.env.CROWNLANDS_BACKEND='postgres-local';require('./permanent-platform').configure({store,config,deployment:policy});
     const routes=require('./platform').describe(require('../functions'));
     const {JobQueue}=require('./jobs'),{WorkerLoop,privateWorkerRoutes}=require('./worker-loop');
-    const queue=new JobQueue({store,routes:privateWorkerRoutes(routes),maxActive:2});loop=new WorkerLoop({queue,deployment:policy});
+    const queue=new JobQueue({store,controlStore,routes:privateWorkerRoutes(routes),maxActive:2});loop=new WorkerLoop({queue,deployment:policy});
   }else if(role==='mail'){
     const {ResendRehearsalSender}=require('./auth-mail');
     const sender=new ResendRehearsalSender({apiKey:config.apiKey,deployment:policy});
