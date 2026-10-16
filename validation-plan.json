@@ -1,39 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "792503f147de4c0d35f44b4d0e5a19f1ead2213d",
+  "baseCommit": "10b8ccf636c02fc13d7f18d08d95b3fab694cb90",
   "coverage": [
     {
       "paths": [
         "main-screen-art-ui.css",
-        "tools/validate-parchment-notices-browser.js"
+        "tools/validate-main-screen-art-browser.js"
       ],
       "tests": [
-        "tools/validate-parchment-notices-browser.js",
         "tools/validate-main-screen-art-browser.js",
-        "tools/validate-chat-toggle-draft-browser.js"
+        "tools/validate-parchment-notices-browser.js",
+        "tools/validate-crowns-hud-browser.js",
+        "tools/validate-hud-screen-edge-browser.js"
       ],
-      "reason": "Restore the exact flat parchment notice styling from the release before illustrated ribbons, retaining the horse and crossed-swords images in unchanged HTML. Validate desktop and both landscape-phone sizes, all movement visibility combinations, image decode/alpha, live count/countdown text, unread badge, label fit, target geometry, focus, mouse/keyboard/touch, map zoom and transparent Chat. Shared HUD checks protect neighboring labeled art and dynamic clan shields. No game logic, backend, data or server-authoritative behavior changes; no emulator suites apply."
+      "reason": "Apply the existing flat parchment surface to Gold, Crowns, Stamina, both fullscreen toggles and Home return modes without changing geometry or actions. Update the existing visual assertion to the confirmed palette. Shared HUD checks cover currency rendering/subscription updates, responsive fit, surrounding named buttons and clan shields, unchanged notices/Chat, keyboard/touch actions and native fullscreen/safe-area transitions. Additional local browser inspection checks baseline geometry, both Home modes, login fullscreen and full/low/unavailable stamina plus refill review without purchase. CSS-only presentation; no server-authoritative gameplay or emulator suites apply."
     },
     {
       "paths": [
-        "assets/optimized/manifest.json",
-        "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
-        "tools/validate-asset-performance-budgets.js",
-        "docs/art-sources/movement-ribbons/retired-ribbon-196x76.webp"
+        "tools/asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-parchment-notices-browser.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Move the now-unused ribbon derivative into documentation as an exact historical copy and remove its optimized manifest entry. Restore the previous total-art budget. The focused validator verifies the archived hash and exclusion from the runtime manifest. Production build/artifact and asset-budget checks verify remaining references and unchanged startup/precache limits; browser checks verify the restored surfaces and retained icons with no missing requests."
+      "reason": "The shared surface selector and focus additions require 287 shell bytes. Increase only the install-precache ceiling by a bounded 512 bytes; no new artwork, dependencies or requests. Asset checks and the production build verify the resulting shell and unchanged remaining budgets."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/movement-ribbons/README.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner's explicit request to restore the preceding backgrounds while keeping the icon changes; mark ribbon provenance as historical. Preserve holding-notice and Chat rules. Documentation alone does not establish deployment."
+      "reason": "Record the explicitly requested parchment resource/display control design while preserving existing gameplay, balance and interaction rules. This documentation does not establish deployment."
     }
   ]
 }

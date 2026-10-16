@@ -20,5 +20,7 @@
 // bytes; local transport/bootstrap modules remain outside the default shell.
 // Approved named HUD buttons add 1,771 source bytes across both HTML entries,
 // HUD CSS and the worker cache URL. Bound this at 2 KiB; image assets stay lazy.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2) * 1024 + 512;
+// Shared parchment resource/display controls add 287 CSS bytes and no assets.
+// Bound the required shell growth at 512 bytes; all other limits remain fixed.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2) * 1024 + 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

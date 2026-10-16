@@ -38,15 +38,16 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 .profile-action-row > .hud-image-button .clan-hud-icon > :is(.clan-shield-size-small,.clan-heraldry-size-small){width:100%;height:100%}
 .hud-image-button.clan-hud-btn.is-search::after{right:0;bottom:25%}
 @layer crownlands-theme{
- :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn).nav-btn{
-  color:var(--notice-ink,#493521)!important;border:2px solid #ac8a50!important;
-  border-radius:3px 6px 4px 5px;background:repeating-linear-gradient(7deg,#79542208 0 1px,transparent 1px 4px),linear-gradient(90deg,#c3a16a44,transparent 12% 88%,#c3a16a44),linear-gradient(#f6e9c9,#e7d2a5)!important;
+ :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn).nav-btn{border-width:2px!important}
+ :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn,.profile-currencies>.profile-gold,#staminaButton,#fullscreenBtn,#setupFullscreenBtn,#mainCityReturnBtn):not([hidden]){
+  color:var(--notice-ink,#493521)!important;border-color:#ac8a50!important;text-shadow:none!important;
+  border-radius:4px!important;background:repeating-linear-gradient(7deg,#79542208 0 1px,transparent 1px 4px),linear-gradient(90deg,#c3a16a44,transparent 12% 88%,#c3a16a44),linear-gradient(#f6e9c9,#e7d2a5)!important;
   box-shadow:inset 0 1px #fff5df,inset 0 -2px #ad895b55,0 2px 3px #251c1744!important;
  }
  #incomingAttackBtn{--notice-ink:#7b3034}
  #outgoingAttackBtn{--notice-ink:#36576a}
  :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn) :is(.nav-btn-heading,.nav-btn-label,.nav-btn-count,.nav-btn-icon,.report-icon){color:var(--notice-ink,#493521)!important;text-shadow:none!important}
- :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn):focus-visible{outline:2px solid #674a29!important;outline-offset:2px}
+ :is(#logBtn,#incomingAttackBtn,#outgoingAttackBtn,#staminaButton,#fullscreenBtn,#setupFullscreenBtn,#mainCityReturnBtn):focus-visible{outline:2px solid #674a29!important;outline-offset:2px}
 }
 /* The header shares Reports' 12px screen inset in every display mode;
    7px cancels the row/resource/timer margins inside that header. */
