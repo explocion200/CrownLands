@@ -7100,6 +7100,58 @@
       "hasAlpha": true,
       "preparedDelivery": true,
       "sourceSha256": "29438d8e5e1ab3b34ceccdec24e4b938b78817136bb712436a736e6b57f7279e"
+    },
+    {
+      "id": "hud-leaderboard-labeled",
+      "category": "hud",
+      "source": "docs/visual-qa/labeled-hud-buttons/images/leaderboard-button.png",
+      "output": "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 23144,
+      "sha256": "cb53ce17ab128eab5dd04d807e7326671119bd08eda8ac7ceb3a1543017f701f",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "23ff9f3fbf9efa2873a0e17e62f8c75833814f6b5891167a5bb50c11474ee295"
+    },
+    {
+      "id": "hud-clan-labeled",
+      "category": "hud",
+      "source": "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
+      "output": "assets/optimized/hud-clan-labeled-192x192-ce3b79f74ade.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 7308,
+      "sha256": "ce3b79f74ade97a4337dbf47d869fef43ed50bf787612582cceabf6badfad9fb",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "80f03d1d109824690d69f206dad42ca5ab61f70a4b0089e84ff5cdc0bf9dc31d"
+    },
+    {
+      "id": "hud-daily-labeled",
+      "category": "hud",
+      "source": "docs/visual-qa/labeled-hud-buttons/images/daily-button.png",
+      "output": "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 20318,
+      "sha256": "91fa9910f959359d0d5bbcdb2c818b59953dd707d7528def322a2245682c8c58",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "2c329b110e3a594a1ce6dedc025be033b6befeb0df7c65969b117a5f8f64c790"
+    },
+    {
+      "id": "hud-inner-castle-labeled",
+      "category": "hud",
+      "source": "docs/visual-qa/labeled-hud-buttons/images/inner-castle-button.png",
+      "output": "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 17054,
+      "sha256": "de94d6f901a0ebd257806dc2afe1004ffda2324e79ca56b8d8fbc2ea6feaa6da",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "412a72f2d5bca576546e9f3144906b688e06bc1fe4679c692a77858b1461f5e6"
     }
   ]
 }

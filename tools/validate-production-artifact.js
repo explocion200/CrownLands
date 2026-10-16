@@ -23,6 +23,7 @@ const required = [
   "guild-config.js", "guild-rules.js", "guild-ui.js", "guild-ui.css",
   ...fs.readdirSync(path.join(root,"assets/guild-master")).filter(name=>name.endsWith(".webp")).map(name=>"assets/guild-master/"+name),
   "main-screen-art-ui.css",
+  ...JSON.parse(fs.readFileSync(path.join(root,"docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json"),"utf8")).map(asset=>asset.output),
   "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
   "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
   "assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",

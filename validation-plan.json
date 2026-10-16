@@ -1,79 +1,44 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "74ab40ae34b62095223a872da7bcccd0722d0671",
+  "baseCommit": "f3e2910d26b3979be156635cabf72b091890b587",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/economy-config.json",
-        "economy-config.js",
-        "functions/test/emulator-skill-presets.js",
-        "tools/test-local-postgres-skill-preset-crowns.js",
-        "tools/validate-economy-balance.js"
-      ],
-      "tests": [
-        "tools/validate-economy-balance.js",
-        "tools/validate-skill-presets.js",
-        "tools/test-local-postgres-skill-preset-crowns.js",
-        "functions/test/emulator-skill-presets.js",
-        "functions/test/emulator-cosmetics.js",
-        "functions/test/emulator-stamina-refills.js"
-      ],
-      "reason": "Charge fixed 10 Crowns from the permanent private wallet in the same transaction as skill allocation and receipt, preserving Gold accrual and legacy credits. Actual callable/PostgreSQL tests cover stale Gold consent, stale saved builds, idempotent receipts, independent confirmations, insufficient funds and concurrent Crown products. Full skill emulator preparation covers unlocks, validation, free saves/renames/resets, point budgets, old saved builds and authoritative projections. Existing cosmetics and refill emulators protect shared wallet revisions, permanence and competing Crown purchase semantics."
-    },
-    {
-      "paths": [
-        "game.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-gold-spend-audio.js"
-      ],
-      "tests": [
-        "tools/validate-skill-presets.js",
-        "tools/validate-skill-point-efficiency-browser.js",
-        "tools/validate-instant-economy-actions.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-gold-spend-audio.js"
-      ],
-      "reason": "Display the fixed Crown price, known account wallet affordability and confirmation balance; prohibit client-only currency spending and retain request IDs after uncertain outcomes. Check cancel, lost response/retry at zero balance, account isolation, free draft editing and shared skill controls. Real rendered desktop and landscape views retain readable cost/confirmation and right-hand action. Build and shared asset checks cover the existing Crown icon and delivered scripts. Update the old static palette assertion to inspect the already-shipped ledger stylesheet, without changing styles. Bound the source increase for Crown confirmation and retry safety at 2 KiB; no new assets or requests. Verify that Crown purchases do not play the Gold-spend cue; remove the obsolete assertion for the already-removed recruit function while retaining all existing spending-action checks."
-    },
-    {
-      "paths": [
-        "crown-payments-ui.js",
-        "terms.html"
-      ],
-      "tests": [
-        "tools/validate-crown-payments-browser.js",
-        "tools/test-crown-payments.js"
-      ],
-      "reason": "Explain the newly approved Crown use in existing checkout and product terms; preserve checkout and pack price behavior. No payment routing, processing or legal refund policy changes."
-    },
-    {
-      "paths": [
-        "tools/map-editor/editor.js"
-      ],
-      "tests": [
-        "tools/validate-map-editor-layout.js",
-        "tools/validate-economy-balance.js"
-      ],
-      "reason": "Expose the renamed Crown-denominated preset price in the canonical economy editor, protecting the synchronized config and editor layout."
-    },
-    {
-      "paths": [
-        "README.md",
-        "battle-economy-guide.html",
+        "assets/optimized/hud-clan-labeled-192x192-ce3b79f74ade.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp",
+        "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
+        "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
+        "assets/optimized/manifest.json",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "game-rules.html",
-        "how-to-play.html",
-        "objectives-guide.html",
-        "skills-presets-guide.html"
+        "docs/visual-qa/labeled-hud-buttons/README.md",
+        "docs/visual-qa/labeled-hud-buttons/draft.css",
+        "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/daily-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/inner-castle-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/leaderboard-button.png",
+        "docs/visual-qa/labeled-hud-buttons/images/prompts.json",
+        "docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json",
+        "docs/visual-qa/labeled-hud-buttons/index.html",
+        "docs/visual-qa/labeled-hud-buttons/preview.html",
+        "docs/visual-qa/labeled-hud-buttons/preview.js",
+        "docs/visual-qa/labeled-hud-buttons/review.js",
+        "docs/visual-qa/labeled-hud-buttons/runtime-fixture.js",
+        "index.html",
+        "main-screen-art-ui.css",
+        "service-worker.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-labeled-hud-draft-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/validate-skill-presets.js",
-        "tools/validate-battle-economy-guide.js"
+        "tools/validate-labeled-hud-draft-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-hud-screen-edge-browser.js",
+        "tools/validate-crowns-hud-browser.js"
       ],
-      "reason": "Record the explicit owner decision in the authoritative specification and replace outdated Gold costs in current player rules, guides and README. Preserve unlocks, free editing/reset and all other game rules; no runtime tests beyond the affected skill and guide checks are needed for prose."
+      "reason": "Approved HUD image buttons retain original targets and positions, existing event handlers and dynamic saved heraldry. Draft comparison tests cover exact geometry, decoded alpha artwork, badges and no network writes; startup readiness is null-safe during navigation. Production art tests verify the compressed approved sources/hashes, actual navigation, mouse/touch/keyboard, Profile dirty-exit guards, clan shield clearance, no-clan state, map zoom independence and affected shared HUD controls. Production screen-edge/fullscreen and Crowns HUD tests cover shared profile layout, currency and stamina bounds at desktop and landscape sizes. Existing production artifact and asset-budget gates check runtime image delivery, offline stylesheet linkage and source-master exclusion. README/provenance and the Master Specification record the owner-approved design. No server-authoritative source, database or gameplay rule changes, so no emulator suites are needed. The measured 1,771-byte offline-shell increase is bounded at 2 KiB and the 67,824-byte runtime images at 68 KiB; per-image and login preload caps remain unchanged."
     }
   ]
 }

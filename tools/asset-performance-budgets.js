@@ -18,5 +18,7 @@
 // Production-local backend selection adds 161 bytes to the shared client,
 // bringing the measured source shell to 4,528,276 bytes. Bound this at 512
 // bytes; local transport/bootstrap modules remain outside the default shell.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3) * 1024 + 512;
+// Approved named HUD buttons add 1,771 source bytes across both HTML entries,
+// HUD CSS and the worker cache URL. Bound this at 2 KiB; image assets stay lazy.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2) * 1024 + 512;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

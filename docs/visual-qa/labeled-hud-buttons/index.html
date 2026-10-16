@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crownlands · Labeled HUD buttons draft</title>
+  <link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png">
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eee5d1;color:#352b20;font:14px/1.5 system-ui,sans-serif}header,nav,footer,.note{max-width:1520px;margin:auto;padding:18px 24px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #cbbc9d}h1{font:600 28px/1.2 Georgia,serif;margin:4px 0}header p{font-size:10px;letter-spacing:2px;margin:0;color:#766347}.badge{border:1px solid #b4a17e;border-radius:5px;padding:5px 10px;font-size:11px;white-space:nowrap;color:#72363a}nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding-bottom:6px}.group{display:flex;gap:3px;align-items:center}.group + .group{border-left:1px solid #cbbc9d;padding-left:12px}button,select{font:inherit;border:1px solid #b4a17e;border-radius:5px;background:#f8f2e5;color:#4b3b28;padding:7px 11px;cursor:pointer}button[aria-pressed="true"]{color:#fff1d2;background:#72363a;border-color:#72363a}button:focus-visible,select:focus-visible{outline:3px solid #906e2d;outline-offset:2px}label{font-size:12px;margin-right:5px}.note{padding-top:10px;padding-bottom:14px;font-size:13px;color:#68573e}.stage{margin:0 24px;background:#d4c9b0;border:1px solid #b7a681;border-radius:7px;overflow:hidden;padding:12px;display:flex;justify-content:center}#fit{position:relative}iframe{position:absolute;left:0;top:0;border:0;transform-origin:top left;background:#657043;border-radius:3px}footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12px;color:#68573e}footer a{color:#72363a}#status{max-width:650px}@media(max-width:600px){header,nav,footer,.note{padding-left:14px;padding-right:14px}h1{font-size:23px}.stage{margin:0 12px;padding:6px}.group + .group{border-left:0;padding-left:0}button,select{padding:7px 9px;font-size:12px}}
+  </style>
+  <script src="review.js" defer></script>
+</head>
+<body>
+  <header><div><p>CROWNLANDS · HUD DESIGN</p><h1>Original size. Illustrated names.</h1></div><span class="badge">Draft 02 · Not live</span></header>
+  <nav aria-label="Draft controls">
+    <div class="group"><button data-look="draft" aria-pressed="true">Image buttons</button><button data-look="current" aria-pressed="false">Current icons</button></div>
+    <div class="group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div>
+    <div class="group"><label for="clan">Clan shield</label><select id="clan"><option value="amber">Amber Wardens · example</option><option value="raven">Raven Guard · example</option><option value="none">No clan</option></select></div>
+    <div class="group"><label for="badges"><input type="checkbox" id="badges" checked> Notification badges</label></div>
+  </nav>
+  <p class="note">Names are part of the images. Button sizes and spacing match the current game. The Clan ribbon sits below each player’s saved shield; switch the examples to see it change.</p>
+  <main class="stage"><div id="fit"><iframe id="preview" title="Crownlands HUD appearance draft"></iframe></div></main>
+  <footer><span id="dimensions"></span><span id="status" role="status">Loading the isolated preview…</span><a id="fullWindow" href="preview.html" target="_blank" rel="noopener">Open at actual size ↗</a></footer>
+</body>
+</html>

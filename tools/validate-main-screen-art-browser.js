@@ -23,6 +23,18 @@ assert.equal(crypto.createHash("sha256").update(source).digest("hex"),provenance
 assert.deepEqual([source.readUInt32BE(16),source.readUInt32BE(20)],provenance.sourceDimensions);
 assert.equal(provenance.runtimeSha256,innerCityArt.sha256);
 assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(innerCityArt.output),"The shortcut artwork must use the runtime cache");
+const labeledArt=JSON.parse(fs.readFileSync(path.join(root,"docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json"),"utf8"));
+assert.equal(labeledArt.length,4);
+assert(labeledArt.reduce((sum,asset)=>sum+asset.bytes,0)<=68*1024);
+for(const asset of labeledArt){
+ const source=fs.readFileSync(path.join(root,asset.source)),bytes=fs.readFileSync(path.join(root,asset.output));
+ assert.equal(crypto.createHash("sha256").update(source).digest("hex"),asset.sourceSha256);
+ assert.equal(crypto.createHash("sha256").update(bytes).digest("hex"),asset.sha256);
+ assert.equal(bytes.length,asset.bytes);assert(asset.bytes<=32*1024);
+ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(asset.output),"Labeled images must use runtime caching");
+}
+const labeledPath=name=>labeledArt.find(a=>a.id===`hud-${name}-labeled`).output;
+assets.leaderboard=labeledPath('leaderboard');assets['daily-reward']=labeledPath('daily');assets['inner-city']=labeledPath('inner-castle');assets.clan=labeledPath('clan');
 (async()=>{
  const server=createMapBenchmarkServer(),address=await server.listen();let browser,client;
  const artifacts=path.join(root,"release-artifacts/main-screen-art-game");fs.mkdirSync(artifacts,{recursive:true});
@@ -45,9 +57,10 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
   await wait(`document.documentElement?.dataset.crownlandsBenchmarkReady==='true'`);
   assert(await ev(`document.body.classList.contains('hud-illustrated')&&!window.HudArtDraft`),"Actual game must use production art without preview injection");
   await ev(`window.hudArtExpected=${JSON.stringify(assets)};void 0`);
-  await wait(`[['bag','#inventoryBtn img'],['shop','#shopBtn img'],['cities','#cityListBtn img'],['map','#islandSwitchBtn img'],['leaderboard','#leaderboardBtn img'],['daily-reward','#dailyLoginRewardBtn img']].every(([key,selector])=>{const i=document.querySelector(selector);return i.src.endsWith(hudArtExpected[key])&&i.complete&&i.naturalWidth===384;})`);
+  await wait(`[['bag','#inventoryBtn img',384],['shop','#shopBtn img',384],['cities','#cityListBtn img',384],['map','#islandSwitchBtn img',384],['leaderboard','#leaderboardBtn img',192],['daily-reward','#dailyLoginRewardBtn img',192],['clan','#clanHudBtn img',192]].every(([key,selector,size])=>{const i=document.querySelector(selector);return i.src.endsWith(hudArtExpected[key])&&i.complete&&i.naturalWidth===size;})`);
   assert(await ev(`getComputedStyle(document.getElementById('profileBtn'),'::before').backgroundImage.includes(hudArtExpected['profile-frame'])`));
-  assert.equal(await ev(`document.querySelector('#logBtn .report-icon use').getAttribute('href')`),"assets/icons/battle-reports-ledger-r1.svg#dispatch");
+  assert.equal(await ev(`document.querySelector('#logBtn .report-icon use').getAttribute('href')`),"#cl-icon-reports");
+  assert.equal(await ev(`document.querySelector('#cl-icon-reports image').getAttribute('href')`),"assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp");
   await wait(`document.querySelector('#innerCityHudBtn img').complete&&document.querySelector('#innerCityHudBtn img').naturalWidth===192`);
   assert(await ev(`(()=>{const i=document.querySelector('#innerCityHudBtn img'),c=document.createElement('canvas');c.width=c.height=192;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);return ctx.getImageData(0,0,1,1).data[3]===0&&ctx.getImageData(96,96,1,1).data[3]>240;})()`),"Shortcut artwork must preserve transparent padding and a solid castle");
   for(const[width,height]of[[1440,900],[844,390],[568,320]]){
@@ -56,6 +69,14 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
    await ev(`__CROWNLANDS_BENCHMARK__.setVisualZoom(1)`);
    assert.deepEqual(await ev(`(()=>{const s=getComputedStyle(document.getElementById('staminaButton'));return[s.backgroundColor,s.color,s.backgroundImage];})()`),['rgb(114, 54, 58)','rgb(244, 230, 197)','none'],'Stamina must use the shared burgundy HUD palette');
    const art=await layout();assert(art.every(c=>c.fits&&c.hit),JSON.stringify({width,art}));
+   const labeled=await ev(`['leaderboardBtn','clanHudBtn','dailyLoginRewardBtn','innerCityHudBtn'].map(id=>{const b=document.getElementById(id),r=b.getBoundingClientRect(),i=b.querySelector('.hud-button-image'),a=i.getBoundingClientRect();return{width:r.width,height:r.height,transparent:getComputedStyle(b).backgroundColor==='rgba(0, 0, 0, 0)',imageFits:a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom};})`);
+   assert(labeled.every(b=>b.width===(width===568?46:56)&&b.height===b.width&&b.transparent&&b.imageFits),'Named images must keep original bounds and transparent surfaces');
+   const noClan=await ev(`({id:state.clanId,name:state.clanName,tag:state.clanTag,snapshot:clanSnapshot})`);
+   for(const charge of ['lion','eagle']){
+    await ev(`state.clanId='qa-labeled';state.clanName='QA '+${JSON.stringify(charge)};state.clanTag='QA';clanSnapshot={id:state.clanId,name:state.clanName,tag:state.clanTag,shield:{...CLAN_HERALDRY_CONFIG.DEFAULT_V2,charge:${JSON.stringify(charge)}}};lastClanHudSignature='';renderClanHudAccess();`);
+    assert(await ev(`(()=>{const b=document.getElementById('clanHudBtn'),r=b.getBoundingClientRect(),s=document.querySelector('#clanHudIcon > *').getBoundingClientRect();return s.left>=r.left&&s.right<=r.right&&s.top>=r.top&&s.bottom<=r.top+r.height*.75&&b.getAttribute('aria-label').includes(${JSON.stringify(charge)});})()`),'Dynamic clan shield must fit above the Clan ribbon');
+   }
+   await ev(`state.clanId=${JSON.stringify(noClan.id)};state.clanName=${JSON.stringify(noClan.name)};state.clanTag=${JSON.stringify(noClan.tag)};clanSnapshot=${JSON.stringify(noClan.snapshot)};lastClanHudSignature='';renderClanHudAccess();`);
    const inset=await ev(`['.profile-action-row','.profile-gold','#logBtn'].map(s=>document.querySelector(s).getBoundingClientRect().left)`);
    assert.deepEqual(inset,[12,12,12],"Production player row and Gold must align with Reports");
    await ev(`document.body.classList.remove('hud-illustrated')`);assert.deepEqual(await layout(),art,"Artwork skin changes HUD geometry or original colors");
@@ -67,6 +88,7 @@ assert(!fs.readFileSync(path.join(root,"service-worker.js"),"utf8").includes(inn
     await click(id);await wait(`document.getElementById('modal').open`);await ev(`__CROWNLANDS_BENCHMARK__.closeModal()`);await delay(50);
    }
    await click("profileBtn");await wait(`document.getElementById('profileScreen').classList.contains('open')`);await ev(`document.getElementById('profileCloseBtn').click()`);
+   await click("clanHudBtn");await wait(`document.getElementById('profileScreen').classList.contains('open')&&!document.getElementById('clanView').hidden`);await ev(`document.getElementById('profileCloseBtn').click()`);
    assert(await ev(`(()=>{const b=document.getElementById('innerCityHudBtn'),r=b.getBoundingClientRect(),d=document.getElementById('dailyLoginRewardBtn').getBoundingClientRect();return b.previousElementSibling.id==='dailyLoginRewardBtn'&&r.left>=d.right&&Math.abs(r.top+r.height/2-d.top-d.height/2)<1&&r.width>=44&&r.height>=44&&b.getAttribute('aria-label')==='Open Inner Castle';})()`),"Inner Castle must stay adjacent to Dailies with a usable target");
    const realmBefore=await ev(`({region:getActiveMapRegionId(),transform:document.getElementById('mapWorld').style.transform})`);
    const readyEstate=()=>wait(`document.getElementById('modal').open&&document.querySelector('.estate-viewport')&&document.querySelectorAll('[data-estate-site]').length===20`);

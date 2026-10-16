@@ -1,0 +1,44 @@
+/* Review only. The game retains its original button dimensions and row gap. */
+.hud-draft-image { display: none; }
+/* Keep sample badges stable across synthetic HUD ticks. */
+html[data-hud-draft-badges="true"] #dailyLoginRewardBadge { display: grid !important; }
+html[data-hud-draft-badges="false"] #dailyLoginRewardBadge { display: none !important; }
+html.hud-buttons-draft .profile-action-row > .profile-rank-btn {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* Match the existing theme layer so its important red surface yields to art. */
+@layer crownlands-theme {
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn),
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn):hover,
+  html.hud-buttons-draft .profile-action-row > :is(#leaderboardBtn, #clanHudBtn, #dailyLoginRewardBtn, #innerCityHudBtn):focus-visible {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+html.hud-buttons-draft .profile-action-row .profile-rank-icon,
+html.hud-buttons-draft .profile-action-row .daily-login-reward-icon { visibility: hidden; }
+html.hud-buttons-draft .profile-action-row .hud-draft-image {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+/* Only the Clan ribbon is baked into the PNG. The complete saved heraldry
+   remains a separate layer, updated through the existing clan-render hook. */
+html.hud-buttons-draft .profile-action-row .clan-hud-icon {
+  position: absolute;
+  inset: 2% 16% 26%;
+  width: 68%;
+  height: 72%;
+  z-index: 1;
+}
+html.hud-buttons-draft .profile-action-row .clan-hud-icon > :is(.clan-shield-size-small, .clan-heraldry-size-small) { width: 100%; height: 100%; }
+html.hud-buttons-draft .clan-hud-btn.is-search::after { right: 0; bottom: 25%; }

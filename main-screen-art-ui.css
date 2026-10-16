@@ -1,5 +1,5 @@
-/* Approved main-screen illustrations. Keep the existing red HUD surfaces,
-   labels, geometry, heraldry, timers and interaction styles unchanged. */
+/* Approved main-screen illustrations. The four named top actions use transparent
+   image surfaces; other HUD controls retain their existing palette and layout. */
 body.hud-illustrated :is(.bag-icon,.shop-icon,.city-list-icon,.island-switch-icon,.profile-rank-icon,.daily-login-reward-icon){
  object-fit:contain!important;filter:drop-shadow(0 2px 2px #21190f55)!important;animation:none!important;
 }
@@ -11,6 +11,24 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 /* Align the complete top row with the existing Gold panel's left edge. */
 .profile-action-row{margin-left:-7px}
 .inner-city-hud-icon{width:86%;height:86%}
+/* Approved October 16: image names, original 56px/46px targets and spacing. */
+.profile-action-row > .hud-image-button{position:relative;padding:0;border:0}
+.profile-action-row > .hud-image-button .hud-button-image{
+ display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain!important;
+ pointer-events:none;user-select:none;filter:none!important;
+}
+@layer crownlands-theme{
+ .profile-action-row > :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#innerCityHudBtn).hud-image-button{
+  background:transparent!important;box-shadow:none!important;
+ }
+}
+.profile-action-row > .hud-image-button:focus-visible{outline:2px solid #d8bd78!important;outline-offset:2px}
+.profile-action-row > .hud-image-button:hover .hud-button-image{filter:brightness(1.08)!important}
+.profile-action-row > .hud-image-button .clan-hud-icon{
+ position:absolute;inset:2% 16% 26%;width:68%;height:72%;z-index:1;
+}
+.profile-action-row > .hud-image-button .clan-hud-icon > :is(.clan-shield-size-small,.clan-heraldry-size-small){width:100%;height:100%}
+.hud-image-button.clan-hud-btn.is-search::after{right:0;bottom:25%}
 /* The header shares Reports' 12px screen inset in every display mode;
    7px cancels the row/resource/timer margins inside that header. */
 .profile-stack{left:7px!important;height:auto!important;align-content:start}
