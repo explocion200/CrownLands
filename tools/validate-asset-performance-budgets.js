@@ -132,8 +132,9 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // The remaining four tiers add 5,923,710 bytes, bounded at 5824 KiB.
 // Retired gear derivatives stay outside the production artifact.
 // Four approved labeled HUD derivatives add 67,824 bytes, bounded at 68 KiB.
+// Four matching bottom-right images add 91,982 bytes, bounded at 92 KiB.
 // Keep the existing per-HUD-image 32 KiB cap and installation image exclusions.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824 + 68) * 1024;
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824 + 68 + 92) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -501,8 +502,8 @@ const replacedHudArt = {
   "hud-report": "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
   "hud-leaderboard": "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
   "hud-inner-city-ink": "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
-  "hud-shop": "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
-  "hud-bag": "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
+  "hud-shop": "assets/optimized/hud-shop-labeled-192x192-9046138ff7b9.webp",
+  "hud-bag": "assets/optimized/hud-bag-labeled-192x192-a715142d9f19.webp",
 };
 const reportArt = JSON.parse(read("docs/art-sources/report-actions/assets.json"));
 const reportPrompts = JSON.parse(read("docs/art-sources/report-actions/prompts.json")).prompts;

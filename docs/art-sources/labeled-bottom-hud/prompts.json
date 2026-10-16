@@ -1,0 +1,45 @@
+{
+  "revision": 1,
+  "assets": [
+    {
+      "asset": "bag-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Asset type: ONE finished transparent square Crownlands game HUD image. Image 1 is the edit target, the existing Bag artwork. Image 2 is only a style/layout reference for the approved Daily button. Add a matching antique parchment name ribbon to Image 1. Keep its existing objects, drawing style, colors and viewpoint recognizable. Fit its icon in the upper 76% of the square and a wide parchment name ribbon in the bottom 24%, like Image 2. Match the medieval ink-and-watercolor illustration, fine brown ink edges, warm cream parchment and restrained brass details. Text (verbatim): \"Bag\". ONE centered line of very dark bold readable lettering, large enough for a complete button displayed at 56 by 56 or 46 by 46 pixels. Use nearly the full square canvas with a tiny 2% transparent edge. Preserve the brown leather satchel, brass buckle and handle. Actual alpha transparency outside the artwork. No rectangular tile background, no extra frame, no added objects, no Daily artwork or Daily text, no watermark. Preserve the square canvas."
+    },
+    {
+      "asset": "shop-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Asset type: ONE finished transparent square Crownlands game HUD image. Image 1 is the edit target, the existing Shop artwork. Image 2 is only a style/layout reference for the approved Daily button. Add a matching antique parchment name ribbon to Image 1. Keep its existing objects, drawing style, colors and viewpoint recognizable. Fit its icon in the upper 76% of the square and a wide parchment name ribbon in the bottom 24%, like Image 2. Match the medieval ink-and-watercolor illustration, fine brown ink edges, warm cream parchment and restrained brass details. Text (verbatim): \"Shop\". ONE centered line of very dark bold readable lettering, large enough for a complete button displayed at 56 by 56 or 46 by 46 pixels. Use nearly the full square canvas with a tiny 2% transparent edge. Preserve the brass merchant scales, book and weight. Actual alpha transparency outside the artwork. No rectangular tile background, no extra frame, no added objects, no Daily artwork or Daily text, no watermark. Preserve the square canvas."
+    },
+    {
+      "asset": "cities-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-cities-ink-384x384-642f1dc4c45f.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Asset type: ONE finished transparent square Crownlands game HUD image. Image 1 is the edit target, the existing Cities artwork. Image 2 is only a style/layout reference for the approved Daily button. Add a matching antique parchment name ribbon to Image 1. Keep its existing objects, drawing style, colors and viewpoint recognizable. Fit its icon in the upper 76% of the square and a wide parchment name ribbon in the bottom 24%, like Image 2. Match the medieval ink-and-watercolor illustration, fine brown ink edges, warm cream parchment and restrained brass details. Text (verbatim): \"Cities\". ONE centered line of very dark bold readable lettering, large enough for a complete button displayed at 56 by 56 or 46 by 46 pixels. Use nearly the full square canvas with a tiny 2% transparent edge. Preserve the stone gate with twin towers and the sealed parchment behind it. Actual alpha transparency outside the artwork. No rectangular tile background, no extra frame, no added objects, no Daily artwork or Daily text, no watermark. Preserve the square canvas."
+    },
+    {
+      "asset": "map-button.png",
+      "tool": "built-in image_gen",
+      "transparentBackground": true,
+      "referenceImages": [
+        "assets/optimized/hud-map-ink-384x384-8809be8ab509.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp"
+      ],
+      "prompt": "Use case: precise-object-edit. Asset type: ONE finished transparent square Crownlands game HUD image. Image 1 is the edit target, the existing Map artwork. Image 2 is only a style/layout reference for the approved Daily button. Add a matching antique parchment name ribbon to Image 1. Keep its existing objects, drawing style, colors and viewpoint recognizable. Fit its icon in the upper 76% of the square and a wide parchment name ribbon in the bottom 24%, like Image 2. Match the medieval ink-and-watercolor illustration, fine brown ink edges, warm cream parchment and restrained brass details. Text (verbatim): \"Map\". ONE centered line of very dark bold readable lettering, large enough for a complete button displayed at 56 by 56 or 46 by 46 pixels. Use nearly the full square canvas with a tiny 2% transparent edge. Preserve the unfolded parchment map with mountains, river, compass rose and red wax seal. Actual alpha transparency outside the artwork. No rectangular tile background, no extra frame, no added objects, no Daily artwork or Daily text, no watermark. Preserve the square canvas."
+    }
+  ]
+}

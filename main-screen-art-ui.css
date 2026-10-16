@@ -1,5 +1,5 @@
-/* Approved main-screen illustrations. The four named top actions use transparent
-   image surfaces; other HUD controls retain their existing palette and layout. */
+/* Approved main-screen illustrations. The named top and bottom-right actions
+   use transparent image surfaces while retaining their existing layout. */
 body.hud-illustrated :is(.bag-icon,.shop-icon,.city-list-icon,.island-switch-icon,.profile-rank-icon,.daily-login-reward-icon){
  object-fit:contain!important;filter:drop-shadow(0 2px 2px #21190f55)!important;animation:none!important;
 }
@@ -11,19 +11,21 @@ body.hud-illustrated #logBtn .report-icon{filter:none!important}
 /* Align the complete top row with the existing Gold panel's left edge. */
 .profile-action-row{margin-left:-7px}
 .inner-city-hud-icon{width:86%;height:86%}
-/* Approved October 16: image names, original 56px/46px targets and spacing. */
-.profile-action-row > .hud-image-button{position:relative;padding:0;border:0}
-.profile-action-row > .hud-image-button .hud-button-image{
+/* Approved October 16: image names, original targets and spacing. Bottom-right
+   controls retain their absolute positioning and responsive dimensions. */
+.profile-action-row > .hud-image-button{position:relative}
+.profile-action-row > .hud-image-button,.resource-pill.hud-image-button{padding:0;border:0}
+.hud-image-button > img.hud-button-image{
  display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain!important;
  pointer-events:none;user-select:none;filter:none!important;
 }
 @layer crownlands-theme{
- .profile-action-row > :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#innerCityHudBtn).hud-image-button{
+ :is(#leaderboardBtn,#clanHudBtn,#dailyLoginRewardBtn,#innerCityHudBtn,#inventoryBtn,#shopBtn,#cityListBtn,#islandSwitchBtn).hud-image-button{
   background:transparent!important;box-shadow:none!important;
  }
 }
-.profile-action-row > .hud-image-button:focus-visible{outline:2px solid #d8bd78!important;outline-offset:2px}
-.profile-action-row > .hud-image-button:hover .hud-button-image{filter:brightness(1.08)!important}
+.hud-image-button:focus-visible{outline:2px solid #d8bd78!important;outline-offset:2px}
+.hud-image-button:hover .hud-button-image{filter:brightness(1.08)!important}
 .profile-action-row > .hud-image-button .clan-hud-icon{
  position:absolute;inset:2% 16% 26%;width:68%;height:72%;z-index:1;
 }

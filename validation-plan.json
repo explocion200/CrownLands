@@ -1,15 +1,51 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "16512ad423ae6bc37f07ff6b326056e6347c1b9c",
+  "baseCommit": "b0ccaab75f401bc0496633a336d64baaad375fd4",
   "coverage": [
     {
       "paths": [
+        "index.html",
+        "main-screen-art-ui.css",
+        "service-worker.js",
+        "tools/validate-main-screen-art-browser.js"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-hud-screen-edge-browser.js",
+        "tools/validate-map-picker-input.js"
+      ],
+      "reason": "Bottom-right Bag/Shop/Cities/Map now use labeled images and the shared top-HUD transparent/focus style. Verify original desktop and landscape geometry, image decoding/alpha/ribbon containment, city-count accessibility, correct mouse/keyboard/touch panels, original top controls and dynamic clan shields, fullscreen/cutout hit targets, and Map navigation without accidental Shop/Bag activation. The stylesheet URL remains synchronized with the offline shell. No authoritative gameplay or server code changes, so no emulator suite is needed."
+    },
+    {
+      "paths": [
+        "assets/optimized/hud-bag-labeled-192x192-a715142d9f19.webp",
+        "assets/optimized/hud-cities-labeled-192x192-6d7dd23100e2.webp",
+        "assets/optimized/hud-map-labeled-192x192-f332a5efbd8b.webp",
+        "assets/optimized/hud-shop-labeled-192x192-9046138ff7b9.webp",
+        "assets/optimized/manifest.json",
+        "docs/art-sources/labeled-bottom-hud/bag-button.png",
+        "docs/art-sources/labeled-bottom-hud/cities-button.png",
+        "docs/art-sources/labeled-bottom-hud/map-button.png",
+        "docs/art-sources/labeled-bottom-hud/prompts.json",
+        "docs/art-sources/labeled-bottom-hud/runtime-assets.json",
+        "docs/art-sources/labeled-bottom-hud/shop-button.png",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "New generated masters, exact prompts, content-hashed 192px WebP images and manifest extend the approved HUD artwork. Check source/output hashes, decoded alpha and dimensions, per-image and total download budgets, runtime references, installation cache exclusion, production packaging and exclusion of source PNGs. Existing unlabeled window-header art stays available. These delivery and provenance changes do not modify gameplay or database access."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/LOCAL_BACKEND_RELEASE_2026-10-16.md",
-        "docs/LOCAL_RELEASE_2026-10-16_PRESETS_HUD.md"
+        "docs/art-sources/labeled-bottom-hud/README.md"
       ],
       "tests": [],
-      "reason": "Documentation records the owner-authorized, verified local web/backend release and updates only approved preset/HUD deployment status. It distinguishes historical transfer evidence, observed catch-up retries, current source/runtime identities, CI and actual production checks, and external integrations. No executable source, package, world data, gameplay rule, UI layout or backend behavior changes; no new runtime/emulator tests apply."
+      "reason": "Record the explicitly requested bottom-right extension of the approved image-button design and its asset provenance/validation method. Preserve existing behavior and distinguish implementation from deployment; no independent runtime tests are needed for explanatory documentation."
     }
   ]
 }

@@ -7152,6 +7152,58 @@
       "hasAlpha": true,
       "preparedDelivery": true,
       "sourceSha256": "412a72f2d5bca576546e9f3144906b688e06bc1fe4679c692a77858b1461f5e6"
+    },
+    {
+      "id": "hud-bag-labeled",
+      "category": "hud",
+      "source": "docs/art-sources/labeled-bottom-hud/bag-button.png",
+      "output": "assets/optimized/hud-bag-labeled-192x192-a715142d9f19.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 22118,
+      "sha256": "a715142d9f198da45fdb73b74cf1fa399a0129a08c4e553ec178c1aa9a968309",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "80b2300f790cdc809ee2203ea5c54f37207490cd9f3ba2ae45c33038024f7a0a"
+    },
+    {
+      "id": "hud-shop-labeled",
+      "category": "hud",
+      "source": "docs/art-sources/labeled-bottom-hud/shop-button.png",
+      "output": "assets/optimized/hud-shop-labeled-192x192-9046138ff7b9.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 21050,
+      "sha256": "9046138ff7b9bcd1abee64c5a3c1f5f32d1d2168dc7ff37be51135bc0febd58e",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "85caf509260e7fa52ad18c252e4acc0d5fb94cdf4db619a822981afa801296e2"
+    },
+    {
+      "id": "hud-cities-labeled",
+      "category": "hud",
+      "source": "docs/art-sources/labeled-bottom-hud/cities-button.png",
+      "output": "assets/optimized/hud-cities-labeled-192x192-6d7dd23100e2.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 25112,
+      "sha256": "6d7dd23100e2808bb0207aa9ee579d74ca3b478e40babb702559c9cb8129bc0f",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "2fa5d5f04bdfd83a3fd6157a103c075df5a1a1358a8d23f7138e179fc4309865"
+    },
+    {
+      "id": "hud-map-labeled",
+      "category": "hud",
+      "source": "docs/art-sources/labeled-bottom-hud/map-button.png",
+      "output": "assets/optimized/hud-map-labeled-192x192-f332a5efbd8b.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 23702,
+      "sha256": "f332a5efbd8ba3421884b355fc8f3984ae5afed471c8f0223d79bb182291069d",
+      "hasAlpha": true,
+      "preparedDelivery": true,
+      "sourceSha256": "7d0b2ea2b3897a6856f0a8665b0f0b90b2b6070c417a4ebd4680a7df38cd5cfe"
     }
   ]
 }
