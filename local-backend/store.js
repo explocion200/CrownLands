@@ -314,7 +314,14 @@ class Store {
         return result;
       } catch (error) {
         await client.query("ROLLBACK").catch(() => {});
-        if (!["40001", "40P01"].includes(error.code) || attempt === maxAttempts - 1) throw error;
+        if (!["40001", "40P01"].includes(error.code)) throw error;
+        if (attempt === maxAttempts - 1) {
+          // Preserve the game's existing bounded infrastructure retry contract.
+          // Raw SQLSTATEs bypass it (and become HTTP 500s). Only conflicts that
+          // rolled back may surface as retryable; business/fencing errors pass
+          // through unchanged. Keep the response free of database details.
+          throw Object.assign(Error("Transaction aborted after concurrent database updates. Retry the operation."), { code: "aborted" });
+        }
       } finally { client.release(); }
       // Give a competing writer time to finish. The previous short linear
       // delays could exhaust all eight attempts in about 200ms during catch-up.
