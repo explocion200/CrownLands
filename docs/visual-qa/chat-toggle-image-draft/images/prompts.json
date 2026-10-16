@@ -18,6 +18,22 @@
         "images/chat-left.png"
       ],
       "prompt": "Use case: precise-object-edit. Create the expanded-chat companion state for this exact Crownlands chat HUD button image. Change ONLY the upper chevron so it points RIGHT (shape >) instead of left. Mirror only the arrow shape horizontally around its own center. Keep the lower parchment ribbon, the word \"Chat\", readable left-to-right text, font, spelling, exact ribbon shape, position, scale, colors, edges, canvas size and transparent background unchanged. Keep the upper chevron the same size and vertical position, with the same warm ivory parchment fill, fine dark brown outline and watercolor shading. This must look like the same button with just its arrow facing the other direction, displayed at 56x56 pixels. Actual alpha transparency. Do not mirror the word Chat or ribbon; do not add any objects, background, extra text or watermark."
+    },
+    {
+      "asset": "chat-left-r2.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/chat-left.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Revise this exact transparent Crownlands Chat button image. Make ONLY the LEFT-pointing chevron about 15% smaller in both width and height (85% of its current size). Keep the chevron centered horizontally in its existing position; keep its lower point near the same vertical level above the ribbon so the reduced arrow sits naturally just above the ribbon. Preserve its direction, shape, ivory/parchment fill, brown outline and watercolor style. CRITICAL: keep the lower parchment banner and the word \"Chat\" at exactly their current size and position, with unchanged typography, proportions, color and detail. Do not shrink the complete image. Keep the same square canvas dimensions, composition and actual alpha transparency. Change only the arrow's scale; leave the ribbon and text untouched. No new objects, text, background, border or watermark. This button will display at 56x56 pixels."
+    },
+    {
+      "asset": "chat-right-r2.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/chat-right.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Revise this exact transparent Crownlands Chat button image. Make ONLY the RIGHT-pointing chevron about 15% smaller in both width and height (85% of its current size). Keep the chevron centered horizontally in its existing position; keep its lower point near the same vertical level above the ribbon so the reduced arrow sits naturally just above the ribbon. Preserve its direction, shape, ivory/parchment fill, brown outline and watercolor style. CRITICAL: keep the lower parchment banner and the word \"Chat\" at exactly their current size and position, with unchanged typography, proportions, color and detail. Do not shrink the complete image. Keep the same square canvas dimensions, composition and actual alpha transparency. Change only the arrow's scale; leave the ribbon and text untouched. No new objects, text, background, border or watermark. This button will display at 56x56 pixels."
     }
   ]
 }

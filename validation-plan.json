@@ -5,7 +5,9 @@
     {
       "paths": [
         "docs/visual-qa/chat-toggle-image-draft/draft.css",
+        "docs/visual-qa/chat-toggle-image-draft/images/chat-left-r2.png",
         "docs/visual-qa/chat-toggle-image-draft/images/chat-left.png",
+        "docs/visual-qa/chat-toggle-image-draft/images/chat-right-r2.png",
         "docs/visual-qa/chat-toggle-image-draft/images/chat-right.png",
         "docs/visual-qa/chat-toggle-image-draft/images/current-closed.png",
         "docs/visual-qa/chat-toggle-image-draft/images/prompts.json",
@@ -20,7 +22,7 @@
       "tests": [
         "tools/validate-chat-toggle-draft-browser.js"
       ],
-      "reason": "Isolated, unapproved chat-arrow design uses generated labeled raster images and a loopback-only synthetic game preview. Verify desktop/landscape unchanged 56px target geometry, two upright image states, existing show/hide handler via pointer/keyboard/touch, accessible expanded labels, independent unread dot, review toggles, decoded RGBA assets, no failed requests or network writes, and no draft references in production. The owner explicitly requires approval before runtime integration; no backend or gameplay change and no emulator suite apply."
+      "reason": "Isolated, unapproved chat-arrow design uses generated labeled raster images and a loopback-only synthetic game preview. Verify desktop/landscape unchanged 56px target geometry, two upright image states, existing show/hide handler via pointer/keyboard/touch, accessible expanded labels, independent unread dot, review toggles, decoded RGBA assets, no failed requests or network writes, and no draft references in production. The owner explicitly requires approval before runtime integration; no backend or gameplay change and no emulator suite apply. Revision 2 reduces only the arrow artwork while retaining the parchment label size; visually review both states at actual display size."
     },
     {
       "paths": [

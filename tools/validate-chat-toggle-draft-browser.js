@@ -35,7 +35,7 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
     assert.deepEqual(geometry(current),geometry(baseline));assert.equal(current.width,56);assert.equal(current.height,56);assert(current.hit);
     assert.equal(current.expanded,String(open));assert.equal(current.quickHidden,!open);assert.equal(current.label,open?"Collapse chat":"Open chat");
     assert.equal(current.background,"rgba(0, 0, 0, 0)");assert.equal(current.shadow,"none");assert(current.unread);
-    const visible=current.images.filter(i=>i.visible);assert.equal(visible.length,1);assert(visible[0].decoded&&visible[0].fits);assert.equal(visible[0].transform,"none","Text must never be mirrored or rotated");assert(visible[0].source.endsWith(open?"chat-right.png":"chat-left.png"));
+    const visible=current.images.filter(i=>i.visible);assert.equal(visible.length,1);assert(visible[0].decoded&&visible[0].fits);assert.equal(visible[0].transform,"none","Text must never be mirrored or rotated");assert(visible[0].source.endsWith(open?"chat-right-r2.png":"chat-left-r2.png"));
     await shot(width+(open?"-open":"-closed"));records.push({width,height,open,geometry:geometry(current)});
    }
    await press(false);await wait("draftGame.document.getElementById('quickChat').hidden");
@@ -45,7 +45,7 @@ const root=path.resolve(__dirname,".."),output=path.join(root,"release-artifacts
    if(width<1000){await client.send("Emulation.setTouchEmulationEnabled",{enabled:true,maxTouchPoints:1});await press(true);await wait("draftGame.document.getElementById('quickChat').hidden");await press(true);await wait("!draftGame.document.getElementById('quickChat').hidden");await client.send("Emulation.setTouchEmulationEnabled",{enabled:false});}
    await ev("draftGame.ChatImageDraft.apply({look:'draft',open:false,unread:false})");assert(!(await measure()).unread);
   }
-  for(const direction of ["left","right"]){const png=fs.readFileSync(path.join(root,`docs/visual-qa/chat-toggle-image-draft/images/chat-${direction}.png`));assert.equal(png.subarray(1,4).toString(),"PNG");assert.equal(png[25],6,"RGBA source required");}
+  for(const direction of ["left","right"]){const png=fs.readFileSync(path.join(root,`docs/visual-qa/chat-toggle-image-draft/images/chat-${direction}-r2.png`));assert.equal(png.subarray(1,4).toString(),"PNG");assert.equal(png[25],6,"RGBA source required");}
   for(const file of ["index.html","main-screen-art-ui.css","service-worker.js","game.js","chat-ui.js","chat.css"])assert(!fs.readFileSync(path.join(root,file),"utf8").includes("chat-toggle-image-draft"),"Unapproved draft leaked into production: "+file);
   // Exercise the user-facing review controls and capture the approval view.
   await client.send("Emulation.setDeviceMetricsOverride",{width:1200,height:860,deviceScaleFactor:1,mobile:false});

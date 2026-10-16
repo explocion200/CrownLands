@@ -4,7 +4,7 @@
   const button=document.getElementById("chatToggleBtn"),root=document.documentElement;
   for (const direction of ["left","right"]) {
     const image=document.createElement("img");image.className="chat-image-draft chat-image-"+direction;
-    image.src="/docs/visual-qa/chat-toggle-image-draft/images/chat-"+direction+".png";
+    image.src="/docs/visual-qa/chat-toggle-image-draft/images/chat-"+direction+"-r2.png";
     image.alt="";image.setAttribute("aria-hidden","true");image.draggable=false;button.append(image);
   }
   function apply({look="draft",open=false,unread=false}={}) {

@@ -5,6 +5,11 @@ for approval before implementation. **Do not merge or publish this draft until
 that approval is given.** The confirmed Master Specification and production
 entry, styles, chat logic and runtime image manifest remain unchanged.
 
+Revision 2 follows the owner's request to make only the arrows slightly smaller
+while preserving the parchment ribbon and Chat text size. The image-edit prompts
+request an approximately 15% reduction in arrow dimensions; the full button is
+not scaled down. Revision 1 source images remain available for comparison.
+
 The proposal keeps the 56 × 56 chat target, its position and behavior, with a
 cream-and-gold chevron above a parchment **Chat** ribbon. The left chevron shows
 chat; the right chevron collapses it. Separate images keep the label upright.
@@ -27,8 +32,8 @@ Run `node tools/map-benchmark/start-server.js 4189`, then open
 
 The built-in `image_gen` tool produced the RGBA originals, saved byte-for-byte:
 
-- [Show chat](images/chat-left.png)
-- [Hide chat](images/chat-right.png)
+- [Show chat — revision 2](images/chat-left-r2.png)
+- [Hide chat — revision 2](images/chat-right-r2.png)
 - [Exact prompts and input references](images/prompts.json)
 
 The left image uses a captured current arrow for direction/shape and the approved
