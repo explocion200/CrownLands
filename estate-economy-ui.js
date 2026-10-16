@@ -22,7 +22,7 @@
       const gauge = document.createElement("div"), note = document.createElement("small");
       gauge.className = "estate-construction-timer"; gauge.dataset.estateConstruction = b.key; gauge.hidden = true;
       gauge.setAttribute("role", "progressbar"); gauge.setAttribute("aria-valuemin", "0"); gauge.setAttribute("aria-valuemax", "100");
-      gauge.innerHTML = '<i aria-hidden="true" hidden></i><svg viewBox="0 0 112 40" aria-hidden="true"><path class="estate-timer-edge" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-track" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-fill" d="M7 31 Q56 -13 105 31" pathLength="100"/></svg><span data-estate-time-left></span>';
+      gauge.innerHTML = '<svg viewBox="0 0 112 40" aria-hidden="true"><path class="estate-timer-edge" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-track" d="M7 31 Q56 -13 105 31"/><path class="estate-timer-fill" d="M7 31 Q56 -13 105 31" pathLength="100"/></svg><span data-estate-time-left></span>';
       layer.append(gauge);
       const target = host.querySelector(`[data-inner-castle-building="${b.key}"]`), entry = host.querySelector(`[data-estate-directory-building="${b.key}"]`);
       note.className = "estate-construction-note"; note.id = "estateConstructionNote-" + b.key; note.hidden = true; entry.append(note);
@@ -68,8 +68,10 @@
         const districts = [...host.querySelectorAll('.estate-district')];
         const active = sites.filter(site => site.job).sort((a,b) => (b.b.key === selected) - (a.b.key === selected));
         if (!active.length) { districts.forEach(e => e.classList.remove('estate-timer-obscured')); return; }
-        const view = viewport.getBoundingClientRect(), overview = zoom < 2.5, width = overview ? 88 : 112, height = 40;
-        const rect = e => { const r = e.getBoundingClientRect(); return {left:r.left - view.left, right:r.right - view.left, top:r.top - view.top, bottom:r.bottom - view.top}; };
+        const screen = viewport.getBoundingClientRect(), view = {width:viewport.clientWidth, height:viewport.clientHeight};
+        const sx = screen.width / view.width, sy = screen.height / view.height, overview = zoom < 2.5, width = 88, height = 40;
+        // Use viewport layout pixels, including during the dialog's opening scale.
+        const rect = e => { const r = e.getBoundingClientRect(); return {left:(r.left - screen.left)/sx, right:(r.right - screen.left)/sx, top:(r.top - screen.top)/sy, bottom:(r.bottom - screen.top)/sy}; };
         const overlaps = (a,b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;
         const panels = '.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls';
         const obstacles = [...host.querySelectorAll(overview ? panels : panels + ',.estate-site>img,.estate-district:not([hidden])>span,.estate-nameplate:not([hidden]),.estate-building-target:not([hidden]),.estate-upgrade-targets button:not([hidden])')].filter(e => !e.hidden && e.getClientRects().length).map(rect);
@@ -80,21 +82,12 @@
         districts.forEach(e => e.classList.remove('estate-timer-obscured'));
         for (const site of active) {
           const art = artBoxes.get(site), cx = (art.left + art.right) / 2;
-          let box = {left:cx - width / 2, right:cx + width / 2, top:art.top - height - 6, bottom:art.top - 6};
-          if (overview) {
-            // Running timers take precedence over scenery/district captions.
-            // Fit northern sites and separate concurrent counters on small maps.
-            const top = Math.max(6, Math.min(view.height - height - 6, box.top));
-            const left = Math.max(6, Math.min(view.width - width - 6, box.left));
-            box = [0,-1,1,-2,2].map(n => ({left:left + n * (width + 4), right:left + n * (width + 4) + width, top, bottom:top + height}))
-              .find(b => b.left >= 6 && b.right <= view.width - 6 && !obstacles.some(o => overlaps(b,o)));
-          }
-          site.gauge.hidden = !box || art.right < 0 || art.left > view.width || art.bottom < 0 || art.top > view.height || box.left < 6 || box.top < 6 || box.right > view.width - 6 || box.bottom > view.height - 6 || obstacles.some(o => overlaps(box,o));
+          const box = {left:cx - width / 2, right:cx + width / 2, top:art.top - height - 6, bottom:art.top - 6};
+          // Keep one size and one building anchor at every zoom. The directory
+          // retains countdowns when their fixed map position is crowded/clipped.
+          site.gauge.hidden = art.right < 0 || art.left > view.width || art.bottom < 0 || art.top > view.height || box.left < 6 || box.top < 6 || box.right > view.width - 6 || box.bottom > view.height - 6 || obstacles.some(o => overlaps(box,o));
           if (!site.gauge.hidden) {
             site.gauge.style.left = box.left + "px"; site.gauge.style.top = box.top + "px"; site.gauge.style.width = width + "px";
-            const line = site.gauge.querySelector('i'), dx = cx - (box.left + width / 2), dy = art.top - box.bottom;
-            line.hidden = !overview || Math.abs(dx) < .5 && Math.abs(dy - 6) < .5;
-            if (!line.hidden) { line.style.width = Math.hypot(dx,dy) + 'px'; line.style.transform = 'rotate(' + Math.atan2(dy,dx) + 'rad)'; }
             if (overview) districts.filter(e => overlaps(box,districtBoxes.get(e))).forEach(e => e.classList.add('estate-timer-obscured'));
             obstacles.push(box);
           }

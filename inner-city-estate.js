@@ -330,60 +330,15 @@
           target.style.top=Math.max(parseFloat(target.style.top),south+labelHeight/2+6)+"px";
         }
       });
-      // The resource ledger reduces map height on small screens. Keep district
-      // buttons apart, using the nearby painted scenery when the center is tight.
-      // Layout coordinates avoid measuring the modal's opening transform, which
-      // can otherwise leave districts offset after the transition finishes.
-      const overlap=(a,b)=>a.left<b.right+3&&a.right>b.left-3&&a.top<b.bottom+3&&a.bottom>b.top-3;
-      const districtObstacles=panelBoxes;
-      // Fit the southernmost label before crafts, which has more room above it.
-      const districtPriority=['quarry','woodland','city','mine','farmland','crafts','trade'];
-      const cityX=tx+WIDTH*.5*scale,cityY=ty+HEIGHT*.43*scale;
+      // District captions share the map's fixed anchors. Crowding can hide
+      // a target, but must never relocate its title into a different district.
+      const districtObstacles=[...panelBoxes];
+      const districtPriority=['city','quarry','woodland','mine','farmland','crafts','trade'];
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
         const x=parseFloat(target.style.left),y=parseFloat(target.style.top),{w,h}=districtSizes.get(target),r=rect(x-w/2,y-h/2,w,h);
-        if(districts.find(d=>d.key===target.dataset.estateDistrict).labelAnchor){
-          // Never search for a new location for an anchored district. Panels
-          // and viewport edges may occlude it; the directory remains available.
-          target.hidden=r.left<4||r.right>width-4||r.top<4||r.bottom>height-4||districtObstacles.some(other=>overlap(r,other));
-          if(!target.hidden)districtObstacles.push(r);
-          return;
-        }
-        const offsets=[];
-        for(const dy of [0,48,-48,96,-96])for(const dx of [0,48,-48,96,-96,144,-144,192,-192,240,-240]){
-          if(dy<0&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
-          offsets.push({dx,dy,distance:dx*dx+dy*dy});
-        }
-        offsets.sort((a,b)=>a.distance-b.distance);
-        const key=target.dataset.estateDistrict;
-        const geographic=box=>{
-          if(key==='city')return Math.abs(x+box.dx-cityX)<24&&Math.abs(y+box.dy-cityY)<24;
-          if(['quarry','woodland','crafts','farmland'].includes(key)&&box.right>cityX-4)return false;
-          if(['mine','trade'].includes(key)&&box.left<cityX+4)return false;
-          if(key==='woodland'&&y+box.dy>cityY-24)return false;
-          // At the smallest landscape size, allow the southern controls' upper
-          // halves alongside the square while keeping their centers near it.
-          return !['crafts','farmland','trade'].includes(key)||y+box.dy>=cityY-(width<640?r.h/2:0);
-        };
-        const findPosition=()=>offsets.map(({dx,dy})=>({...rect(r.left+dx,r.top+dy,r.w,r.h),dx,dy})).find(box=>geographic(box)&&box.left>=4&&box.right<=width-4&&box.top>=4&&box.bottom<=height-4&&!districtObstacles.some(other=>overlap(box,other)));
-        let position=findPosition();
-        if(!position){
-          // Include obstacle edges so narrow landscape views can use the small
-          // gaps between fixed districts and controls without moving the anchors.
-          const clearance=3.1; // Match the three-pixel collision gap, allowing for rounding.
-          const xs=[r.w/2+4,width-r.w/2-4,x,...districtObstacles.flatMap(o=>[o.left-r.w/2-clearance,o.right+r.w/2+clearance])];
-          const ys=[r.h/2+4,height-r.h/2-4,y,cityY,...districtObstacles.flatMap(o=>[o.top-r.h/2-clearance,o.bottom+r.h/2+clearance])];
-          for(const cy of ys)for(const cx of xs){
-            if(cy<y&&['quarry','mine'].includes(key))continue;
-            const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy});
-          }
-          for(let cy=r.h/2+4;cy<=height-r.h/2-4;cy+=8)for(let cx=r.w/2+4;cx<=width-r.w/2-4;cx+=12){
-            if(cy<y&&['quarry','mine'].includes(target.dataset.estateDistrict))continue;
-            const dx=cx-x,dy=cy-y;offsets.push({dx,dy,distance:dx*dx+dy*dy+1});
-          }
-          offsets.sort((a,b)=>a.distance-b.distance);position=findPosition();
-        }
-        if(position){place(target,x+position.dx,y+position.dy);districtObstacles.push(position);}else target.hidden=true;
+        target.hidden=r.left<4||r.right>width-4||r.top<4||r.bottom>height-4||districtObstacles.some(other=>overlaps(r,other));
+        if(!target.hidden)districtObstacles.push(r);
       });
       query(".estate-map-hint").hidden=camera.zoom>=2.5;
       placeNameplates(artBoxes,boxes,width,height,panelBoxes);
