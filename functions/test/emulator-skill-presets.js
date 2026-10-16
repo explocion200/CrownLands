@@ -119,6 +119,12 @@ async function callFunction(name, token, data = {}) {
   return response.result;
 }
 
+async function reviewApply(profileRef, slot = 1) {
+  const profile = (await profileRef.get()).data();
+  const preset = profile.skillPresets.slots.find(entry => entry.slot === slot);
+  return { slot, currency: "crowns", expectedPrice: 10, requestId: crypto.randomUUID(), expectedSavedAtMs: Number(preset?.savedAtMs || 0) };
+}
+
 async function setBuild(profileRef, cityRef, { level, upgrades, gold }) {
   const nowMs = Date.now();
   const earned = Math.max(0, level - 1);
@@ -180,6 +186,8 @@ async function main() {
   const claim = await callFunction("claimStartingCity", user.token, { playerName: "Preset Sentinel" });
   const profileRef = db.doc(`players/${user.uid}`);
   const cityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
+  const walletRef = db.doc(`players/${user.uid}/cosmetics/state`);
+  await walletRef.set({ crowns: 500, revision: 0 });
   let profile = (await profileRef.get()).data() || {};
   assert(profile.skillPresets?.slots?.length === 4, "A new profile did not receive all four default preset slots.");
   assert(profile.skillPresets.slots.every(slot => slot.saved === false), "A new profile began with a populated preset.");
@@ -229,27 +237,35 @@ async function main() {
   await callFunction("renameSkillPreset", user.token, { slot: 4, name: "Utility" });
   await callFunction("saveSkillPreset", user.token, { slot: 4, name: "Utility", upgrades: alternateBuild });
 
-  const pricing = await callFunction("collectEconomy", user.token);
-  const applyCost = Number(pricing.shopPricing.rawBaseGoldPerHour) * Number(economyConfig.playerCosts.skillPresetApplyHours);
-  assert(applyCost > 0 && applyCost < 1_000_000, "Fixture must exercise an hourly price below the old fixed price.");
+  const applyCost = Number(economyConfig.playerCosts.skillPresetApplyCrowns);
+  assert(applyCost === 10, "Preset Apply must cost exactly 10 Crowns.");
+  assert((await walletRef.get()).data().crowns === 500, "Free save and rename must preserve Crowns.");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An old Gold client could spend Crowns");
+  const reviewed = await reviewApply(profileRef);
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { ...reviewed, expectedPrice: 9 }), "FAILED_PRECONDITION", "A stale price was accepted");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { ...reviewed, expectedSavedAtMs: reviewed.expectedSavedAtMs + 1 }), "FAILED_PRECONDITION", "A changed saved build was accepted");
   const duplicateApplies = await Promise.all([
-    invokeFunction("applySkillPreset", user.token, { slot: 1 }),
-    invokeFunction("applySkillPreset", user.token, { slot: 1 }),
+    invokeFunction("applySkillPreset", user.token, reviewed),
+    invokeFunction("applySkillPreset", user.token, reviewed),
   ]);
   assert(duplicateApplies.every(response => response.ok), `Duplicate apply requests failed: ${JSON.stringify(duplicateApplies)}`);
-  const totalCharged = duplicateApplies.reduce((total, response) => total + Number(response.result?.skillPreset?.goldCharged || 0), 0);
-  assert(totalCharged === applyCost * 2, `Two accepted applications charged ${totalCharged} gold.`);
-  assert(duplicateApplies.filter(response => response.result?.skillPreset?.changed === true).length === 1, "Duplicate application changed the allocation more than once.");
+  assert(duplicateApplies.filter(response => response.result.replayed).length === 1, "One duplicate must replay its receipt.");
+  assert((await walletRef.get()).data().crowns === 490, "The same confirmation must debit exactly 10 Crowns.");
+  assert(duplicateApplies.every(response => response.result.skillPreset.crownsCharged === 10 && response.result.skillPreset.goldCharged === 0), "Receipt must report Crowns and no Gold.");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { ...reviewed, slot: 2 }), "INVALID_ARGUMENT", "A request ID was reused for another preset");
   profile = (await profileRef.get()).data() || {};
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === savedBuild[skill]), "Applying did not restore the exact saved allocation.");
   assert(Number(profile.character?.skillPoints || 0) === 80, "Points earned after an earlier preset save were not left unspent at Level 100.");
-  assert(Number(profile.gold || 0) >= 4_000_000 - 2 * applyCost && Number(profile.gold || 0) < 4_000_020 - 2 * applyCost, `Two applications charged the wrong gold amount (${profile.gold}).`);
+  assert(Number(profile.gold || 0) >= 4_000_000 && Number(profile.gold || 0) < 4_000_100, `Crown applications must preserve Gold apart from accrual (${profile.gold}).`);
   assert(Number(profile.skillPresets?.activeSlot || 0) === 1, "Applying preset 1 did not make it the sole active preset.");
-  const activeApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
-  assert(activeApply.skillPreset?.changed === false && activeApply.skillPreset?.goldCharged === applyCost, "An already-active preset was not charged exactly once.");
-  const duplicateAllocationApply = await callFunction("applySkillPreset", user.token, { slot: 2 });
-  assert(duplicateAllocationApply.skillPreset?.changed === false && duplicateAllocationApply.skillPreset?.goldCharged === applyCost, "An identical saved allocation was not charged exactly once.");
+  const activeApply = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1));
+  assert(activeApply.skillPreset?.changed === false && activeApply.skillPreset?.crownsCharged === applyCost, "An already-active preset was not charged exactly once.");
+  const duplicateAllocationApply = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 2));
+  assert(duplicateAllocationApply.skillPreset?.changed === false && duplicateAllocationApply.skillPreset?.crownsCharged === applyCost, "An identical saved allocation was not charged exactly once.");
   assert(Number(duplicateAllocationApply.currentUser?.skillPresets?.activeSlot || 0) === 2, "Applying an identical saved allocation did not move the sole active marker to the requested tab.");
+  const replayAfterNewApply = await callFunction("applySkillPreset", user.token, reviewed);
+  assert(replayAfterNewApply.replayed && replayAfterNewApply.currentUser.skillPresets.activeSlot === 2, "An old receipt must not reactivate its preset.");
+  assert((await walletRef.get()).data().crowns === 470, "Three separate confirmations must cost 30 Crowns; replay is free.");
   const editedActive = await callFunction("saveSkillPreset", user.token, { slot: 2, name: "Economy Revised", upgrades: alternateBuild });
   assert(Number(editedActive.currentUser?.skillPresets?.activeSlot || 0) === 2, "Saving changes to the active preset cleared its active identity.");
   assert(SKILL_ORDER.every(skill => Number(editedActive.currentUser?.upgrades?.[skill] || 0) === savedBuild[skill]), "Saving changes to the active preset applied them to the live build.");
@@ -268,9 +284,9 @@ async function main() {
   assert(reset.freeResetConsumed === false && Number(reset.resetCost || 0) === 0, "Reset Skills was not reported as free.");
   assert(Number(reset.currentUser?.gold || 0) >= 2_000_000, "Reset Skills deducted Gold.");
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 2_000_000 });
-  const reactivated = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  const reactivated = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1));
   assert(Number(reactivated.currentUser?.skillPresets?.activeSlot || 0) === 1, "A matching allocation could not reactivate its preset.");
-  assert(Number(reactivated.skillPreset?.goldCharged || 0) === applyCost, "A matching allocation was not charged.");
+  assert(Number(reactivated.skillPreset?.crownsCharged || 0) === applyCost, "A matching allocation was not charged.");
   const batched = await callFunction("spendSkillPoints", user.token, {
     allocations: [
       { skillId: "guildCharters", points: 2 },
@@ -439,12 +455,25 @@ async function main() {
   assert(SKILL_ORDER.reduce((total, skill) => total + Number(profile.upgrades?.[skill] || 0), 0) === 5, "Concurrent skill batches partially or doubly spent points.");
   assert(Number(profile.character?.skillPoints || 0) === 0, "Concurrent skill batches left an incorrect available-point balance.");
 
-  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 0 });
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 2_000_000 });
+  await walletRef.set({ crowns: 9, revision: 10 }, { merge: true });
   const beforeInsufficient = (await profileRef.get()).data() || {};
-  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An unaffordable preset applied");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1)), "FAILED_PRECONDITION", "An unaffordable preset applied");
   const afterInsufficient = (await profileRef.get()).data() || {};
   assert(Number(afterInsufficient.gold || 0) === Number(beforeInsufficient.gold || 0), "A rejected application consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(afterInsufficient.upgrades?.[skill] || 0) === alternateBuild[skill]), "A rejected application changed skills.");
+
+  assert((await walletRef.get()).data().crowns === 9, "A rejected Apply changed the wallet.");
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 0 });
+  await walletRef.set({ crowns: 10, revision: 11 }, { merge: true });
+  const competingApplies = await Promise.all([
+    invokeFunction("applySkillPreset", user.token, await reviewApply(profileRef)),
+    invokeFunction("applySkillPreset", user.token, await reviewApply(profileRef)),
+  ]);
+  assert(competingApplies.filter(response => response.ok).length === 1, "Only one independent Apply may spend the final ten Crowns.");
+  assert((await walletRef.get()).data().crowns === 0, "Concurrent Apply overdrew the wallet.");
+  assert(competingApplies.find(response => response.ok).result.skillPreset.goldCharged === 0, "Zero Gold must not block Crown Apply.");
+  await walletRef.set({ crowns: 500, revision: 20 }, { merge: true });
 
   await profileRef.set({
     createdAtMs: Date.parse("2026-08-07T23:59:59.000Z"),
@@ -453,9 +482,9 @@ async function main() {
     freeSkillResetCredits: FieldValue.delete(),
   }, { merge: true });
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 1_000_000 });
-  const paidLegacyApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  const paidLegacyApply = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1));
   assert(paidLegacyApply.skillPreset?.changed === true && paidLegacyApply.skillPreset?.freeResetConsumed === false, "A preset application reported consuming a legacy credit.");
-  assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === applyCost && Number(paidLegacyApply.currentUser?.gold || 0) >= 1_000_000 - applyCost, "A legacy profile did not pay the preset price.");
+  assert(Number(paidLegacyApply.skillPreset?.crownsCharged || 0) === applyCost && Number(paidLegacyApply.currentUser?.gold || 0) >= 1_000_000, "A legacy profile did not pay the preset price.");
   assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 0, "A v2 preset application revived a legacy or final-tier Reset Skills credit.");
 
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 123 });
@@ -481,9 +510,9 @@ async function main() {
     slots: currentPresets.slots.map(slot => slot.slot === 1 ? { ...slot, saved: true, upgrades } : slot),
   });
   await profileRef.set({ skillPresets: makeStale({ ...zeroBuild(), swordmastery: getSkillMaxLevel("swordmastery") + 1 }), gold: 2_000_000, goldFloat: 2_000_000 }, { merge: true });
-  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-cap preset applied");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1)), "FAILED_PRECONDITION", "An over-cap preset applied");
   await profileRef.set({ skillPresets: makeStale(Object.fromEntries(SKILL_ORDER.map(skill => [skill, 20]))) }, { merge: true });
-  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-budget preset applied");
+  assertRejected(await invokeFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1)), "FAILED_PRECONDITION", "An over-budget preset applied");
   profile = (await profileRef.get()).data() || {};
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
@@ -515,7 +544,7 @@ async function main() {
   await callFunction("syncSkillPointSystem", user.token);
   const repeatedSync = (await profileRef.get()).data() || {};
   assert(repeatedSync.character.skillPoints === 24 && JSON.stringify(repeatedSync.skillPresets) === JSON.stringify(profile.skillPresets), "Repeated synchronization changed the refund or presets.");
-  const convertedApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  const convertedApply = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1));
   assert(convertedApply.currentUser?.character?.skillPoints === 24, "A converted preset could not be applied with the refunded points intact.");
   for (const skill of SKILL_ORDER) {
     const cap = getSkillMaxLevel(skill);
@@ -533,7 +562,7 @@ async function main() {
   assert(getSpentSkillPoints(maximumBuild) === 256, "The maximum build must cost 256 points.");
   await setBuild(profileRef, cityRef, { level: 257, upgrades: zeroBuild(), gold: 2_000_000 });
   await callFunction("saveSkillPreset", user.token, { slot: 1, upgrades: maximumBuild });
-  const maximumApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  const maximumApply = await callFunction("applySkillPreset", user.token, await reviewApply(profileRef, 1));
   assert(maximumApply.currentUser?.character?.skillPoints === 0, "The Level 257 maximum build must spend exactly 256 points.");
   assert(SKILL_ORDER.every(skill => maximumApply.currentUser?.upgrades?.[skill] === maximumBuild[skill]), "Maximum preset application lost a skill level.");
 

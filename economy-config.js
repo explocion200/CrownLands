@@ -260,7 +260,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "nearbyScoutGold": 250000,
     "regroupGold": 250000,
     "skillResetGold": 0,
-    "skillPresetApplyHours": 1
+    "skillPresetApplyCrowns": 10
   },
   "skills": {
     "swordmastery": {

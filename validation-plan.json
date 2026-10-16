@@ -1,33 +1,79 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f83a54b218651c59cc3496082d326a024f0f50bd",
+  "baseCommit": "74ab40ae34b62095223a872da7bcccd0722d0671",
   "coverage": [
     {
       "paths": [
-        "local-client.js",
-        "tools/test-stamina-display-recovery.js"
+        "functions/index.js",
+        "functions/economy-config.json",
+        "economy-config.js",
+        "functions/test/emulator-skill-presets.js",
+        "tools/test-local-postgres-skill-preset-crowns.js",
+        "tools/validate-economy-balance.js"
       ],
       "tests": [
-        "tools/test-stamina-display-recovery.js",
-        "tools/test-local-browser-client.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-production-client.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-economy-balance.js",
+        "tools/validate-skill-presets.js",
+        "tools/test-local-postgres-skill-preset-crowns.js",
+        "functions/test/emulator-skill-presets.js",
+        "functions/test/emulator-cosmetics.js",
+        "functions/test/emulator-stamina-refills.js"
       ],
-      "reason": "After a transient subscription error, replay the next authorized snapshot so cleared stamina and other subscribed views recover even when persisted data is unchanged. Test the actual stamina UI and cosmetics subscription against source and minified local transport, network/service/deadline/rate-limit failures, unchanged-snapshot deduplication, existing backoff, hunt/recovery values and terminal permission revocation. Real PostgreSQL HTTP and browser integration protect the snapshot/error response contract, batching, authorization, transactions and session isolation; selecting the HTTP integration also provisions the isolated CI database used by the browser integration; chat and production-artifact fixtures protect shared transport and delivery budgets. No server, data, cooldown or balance changes."
+      "reason": "Charge fixed 10 Crowns from the permanent private wallet in the same transaction as skill allocation and receipt, preserving Gold accrual and legacy credits. Actual callable/PostgreSQL tests cover stale Gold consent, stale saved builds, idempotent receipts, independent confirmations, insufficient funds and concurrent Crown products. Full skill emulator preparation covers unlocks, validation, free saves/renames/resets, point budgets, old saved builds and authoritative projections. Existing cosmetics and refill emulators protect shared wallet revisions, permanence and competing Crown purchase semantics."
     },
     {
       "paths": [
-        "stamina-ui.js",
-        "tools/validate-marauders-browser.js"
+        "game.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "tools/validate-skill-presets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-gold-spend-audio.js"
       ],
       "tests": [
-        "tools/test-stamina-display-recovery.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-marauder-rules.js"
+        "tools/validate-skill-presets.js",
+        "tools/validate-skill-point-efficiency-browser.js",
+        "tools/validate-instant-economy-actions.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-gold-spend-audio.js"
       ],
-      "reason": "Clear only the stale reconnect warning after a valid stamina snapshot. Verify the number, progress bar, accessible label, unknown state, low-stamina threshold and refill review at desktop and two landscape-mobile sizes using source and delivered stamina UI. Existing marauder/refill tests preserve exact Crown pricing, no automatic purchase, draft retention, cooldown/recovery calculations and sign-out cleanup. No gameplay rules or server-authoritative code changes; emulator suites are not required for this client recovery fix."
+      "reason": "Display the fixed Crown price, known account wallet affordability and confirmation balance; prohibit client-only currency spending and retain request IDs after uncertain outcomes. Check cancel, lost response/retry at zero balance, account isolation, free draft editing and shared skill controls. Real rendered desktop and landscape views retain readable cost/confirmation and right-hand action. Build and shared asset checks cover the existing Crown icon and delivered scripts. Update the old static palette assertion to inspect the already-shipped ledger stylesheet, without changing styles. Bound the source increase for Crown confirmation and retry safety at 2 KiB; no new assets or requests. Verify that Crown purchases do not play the Gold-spend cue; remove the obsolete assertion for the already-removed recruit function while retaining all existing spending-action checks."
+    },
+    {
+      "paths": [
+        "crown-payments-ui.js",
+        "terms.html"
+      ],
+      "tests": [
+        "tools/validate-crown-payments-browser.js",
+        "tools/test-crown-payments.js"
+      ],
+      "reason": "Explain the newly approved Crown use in existing checkout and product terms; preserve checkout and pack price behavior. No payment routing, processing or legal refund policy changes."
+    },
+    {
+      "paths": [
+        "tools/map-editor/editor.js"
+      ],
+      "tests": [
+        "tools/validate-map-editor-layout.js",
+        "tools/validate-economy-balance.js"
+      ],
+      "reason": "Expose the renamed Crown-denominated preset price in the canonical economy editor, protecting the synchronized config and editor layout."
+    },
+    {
+      "paths": [
+        "README.md",
+        "battle-economy-guide.html",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "game-rules.html",
+        "how-to-play.html",
+        "objectives-guide.html",
+        "skills-presets-guide.html"
+      ],
+      "tests": [
+        "tools/validate-skill-presets.js",
+        "tools/validate-battle-economy-guide.js"
+      ],
+      "reason": "Record the explicit owner decision in the authoritative specification and replace outdated Gold costs in current player rules, guides and README. Preserve unlocks, free editing/reset and all other game rules; no runtime tests beyond the affected skill and guide checks are needed for prose."
     }
   ]
 }

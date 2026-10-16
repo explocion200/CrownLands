@@ -265,7 +265,7 @@ assert.deepEqual(serverConfig.skills.guildCharters, { percentPerLevel: 2, maxPer
 assert.equal(serverConfig.playerCosts.nearbyScoutGold, 250_000);
 assert.equal(serverConfig.playerCosts.regroupGold, 250_000);
 assert.equal(serverConfig.playerCosts.skillResetGold, 0);
-assert.equal(serverConfig.playerCosts.skillPresetApplyHours, 1);
+assert.equal(serverConfig.playerCosts.skillPresetApplyCrowns, 10);
 
 for (const source of [serverSource, clientSource]) {
   requireMatch(source, /economyNumber\(/, "Runtime is not reading the shared economy configuration.");

@@ -755,7 +755,7 @@ const SKILL_ORDER = [
   "fieldMedics",
 ];
 const SKILL_STANDARD_POINT_COST = 1;
-const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
+const SKILL_PRESET_APPLY_CROWNS = economyNumber("playerCosts.skillPresetApplyCrowns", 10);
 const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
@@ -16816,11 +16816,32 @@ exports.applySkillPreset = timedCallable(
   { region: "us-central1", maxInstances: 20, invoker: "public" },
   async request => {
     const uid = requireAuth(request);
-    const requestedSlot = Math.floor(safeNumber(request.data?.slot, 0));
+    const data = request.data || {};
+    const requestedSlot = Math.floor(safeNumber(data.slot, 0));
+    const applyCost = SKILL_PRESET_APPLY_CROWNS;
+    // An old Gold confirmation must never authorize a Crown debit.
+    if (data.currency !== "crowns" || data.expectedPrice !== applyCost) {
+      throw new HttpsError("failed-precondition", "Preset Apply now costs 10 Crowns. Refresh the game and review the new price.");
+    }
+    if (typeof data.requestId !== "string" || !/^[a-zA-Z0-9_-]{8,96}$/.test(data.requestId)
+        || !Number.isSafeInteger(data.expectedSavedAtMs) || data.expectedSavedAtMs < 0) {
+      throw new HttpsError("invalid-argument", "A reviewed preset and valid request ID are required.");
+    }
+    const receiptRef = cosmeticService.receiptRef(uid, `skill_preset_${data.requestId}`);
+    const signature = JSON.stringify(["skill-preset", RESET_GENERATION, getCurrentRealmShardId(), requestedSlot,
+      data.currency, data.expectedPrice, data.expectedSavedAtMs]);
     const nowMs = Date.now();
     return runTransactionWithInfrastructureRetry(async transaction => {
+      const [receipt, account] = await Promise.all([transaction.get(receiptRef), cosmeticService.read(transaction, uid)]);
+      if (receipt.exists && receipt.data().signature !== signature) {
+        throw new HttpsError("invalid-argument", "This request ID was already used for a different preset application.");
+      }
       const economy = await prepareEconomyCollection(transaction, uid, nowMs);
       if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      // Return today's build and wallet on a retry; never reapply an old purchase.
+      if (receipt.exists) return createEconomyResponse(economy, {
+        cosmetics: account.state, skillPreset: receipt.data().skillPreset, replayed: true,
+      });
       const currentUpgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
       const currentCharacter = reconcileSkillPoints(economy.profileAfter.character, currentUpgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, currentCharacter);
@@ -16829,45 +16850,31 @@ exports.applySkillPreset = timedCallable(
       if (!selected?.saved || !selected.upgrades) {
         throw new HttpsError("failed-precondition", "Save a skill build in this preset before applying it.");
       }
+      if (selected.savedAtMs !== data.expectedSavedAtMs) {
+        throw new HttpsError("failed-precondition", "This preset changed. Review the saved build before applying it.");
+      }
       if (!isValidSkillPresetAllocation(selected.upgrades, currentCharacter)) {
         throw new HttpsError("failed-precondition", "This saved preset is no longer valid. Save the current build again.");
       }
       const upgrades = normalizeSkillPresetAllocation(selected.upgrades);
       const changed = !skillPresetAllocationsMatch(currentUpgrades, upgrades);
       const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
-      const applyCost = Math.max(0, Math.ceil(getShopPricingContext(economy).rawBaseGoldPerHour * SKILL_PRESET_APPLY_HOURS));
-      if (economy.gold < applyCost) {
-        throw new HttpsError("failed-precondition", `Applying a skill preset costs ${applyCost.toLocaleString()} gold.`);
+      if (account.state.crowns < applyCost) {
+        throw new HttpsError("failed-precondition", `Applying a skill preset costs ${applyCost} Crowns.`);
       }
       const character = reconcileSkillPoints(currentCharacter, upgrades);
-      const gold = Math.max(0, economy.gold - applyCost);
       const skillPresets = setActiveSkillPresetSlot(currentPresets, definition.slot);
-      writePreparedEconomy(transaction, economy, {
-        character,
-        upgrades,
-        skillPresets,
-        gold,
-        goldFloat: gold,
-      });
+      const cosmetics = { ...account.state, crowns: account.state.crowns - applyCost, revision: account.state.revision + 1 };
+      const skillPreset = {
+        action: "apply", slot: definition.slot, name: selected.name, changed,
+        goldCharged: 0, crownsCharged: applyCost, freeResetConsumed: false, freeSkillResetCredits,
+        allocation: upgrades, remainingSkillPoints: character.skillPoints, savedAtMs: selected.savedAtMs,
+      };
+      writePreparedEconomy(transaction, economy, { character, upgrades, skillPresets });
+      transaction.set(account.ref, cosmetics);
+      transaction.create(receiptRef, { signature, requestId: data.requestId, skillPreset, createdAtMs: nowMs });
       return createEconomyResponse(economy, {
-        character,
-        upgrades,
-        skillPresets,
-        gold,
-        goldFloat: gold,
-        freeSkillResetCredits,
-        skillPreset: {
-          action: "apply",
-          slot: definition.slot,
-          name: selected.name,
-          changed,
-          goldCharged: applyCost,
-          freeResetConsumed: false,
-          freeSkillResetCredits,
-          allocation: upgrades,
-          remainingSkillPoints: character.skillPoints,
-          savedAtMs: selected.savedAtMs,
-        },
+        character, upgrades, skillPresets, freeSkillResetCredits, cosmetics, skillPreset, replayed: false,
       });
     });
   }

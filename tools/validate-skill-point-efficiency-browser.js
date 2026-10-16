@@ -63,6 +63,9 @@ async function main() {
         updateEconomy = () => {};
         state.character = { ...state.character, level: 100, xp: 17, skillPoints: 9 };
         state.gold = 2000000;
+        getCurrentOnlineUid = () => "preset-browser-fixture";
+        cosmeticUid = getCurrentOnlineUid();
+        cosmeticState = { crowns: 10, revision: 1 };
         const oldBuild = { ...createDefaultSkills(), shieldwallDiscipline: 30, marchOrders: 20, guildCharters: 25 };
         state.upgrades = normalizeUpgrades(oldBuild);
         state.skillPresets = normalizeSkillPresets({ modelVersion: 5, activeSlot: 1, slots: [
@@ -109,6 +112,55 @@ async function main() {
       await wait("!skillActionInFlight");
       assert.equal(await evaluate("state.skillPresets.slots[0].upgrades.marchOrders"), 19);
       assert.equal(await evaluate("state.gold"), 2000000, "Saving a draft spent Gold.");
+      // Exercise the Crown confirmation with the actual UI; the local fixture never sends a purchase.
+      await evaluate(`(() => {
+        window.presetTestApi = getOnlineApi;
+        window.presetTestAuthority = usesServerEconomyAuthority;
+        window.presetRequests = [];
+        usesServerEconomyAuthority = () => true;
+        getOnlineApi = () => ({ applySkillPreset: async payload => {
+          window.presetRequests.push(payload);
+          if (window.presetRequests.length === 1) {
+            cosmeticState = { ...cosmeticState, crowns: 0, revision: 2 };
+            throw Object.assign(Error('Simulated lost response'), { code: 'unavailable' });
+          }
+          return { cosmetics: { ...cosmeticState, crowns: 0, revision: 2 }, replayed: true,
+            skillPreset: { crownsCharged: 10 }, currentUser: { upgrades: state.skillPresets.slots[0].upgrades,
+              character: state.character, skillPresets: { ...state.skillPresets, activeSlot: 1 } } };
+        } });
+        cosmeticState = null; renderProfileSkills();
+      })()`);
+      assert(await evaluate("document.querySelector('[data-apply-skill-preset]').disabled"));
+      assert((await evaluate("document.querySelector('[data-skill-preset-status]').textContent")).includes('Loading Crown balance'));
+      await evaluate("cosmeticState = { crowns: 9, revision: 1 }; renderProfileSkills()");
+      assert(await evaluate("document.querySelector('[data-apply-skill-preset]').disabled"));
+      await evaluate("cosmeticState = { crowns: 10, revision: 1 }; state.gold = 0; renderProfileSkills()");
+      await click('[data-apply-skill-preset="1"]');
+      await wait('modal.open');
+      assert((await evaluate('modalBody.textContent')).includes('10 Crowns'));
+      assert((await evaluate('modalBody.textContent')).includes('After Apply: 0 Crowns'));
+      assert(!/base gold|production/i.test(await evaluate('modalBody.textContent')));
+      await delay(350);
+      fs.writeFileSync(path.join(artifacts, `${width}-crowns-confirmation.png`), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+      await click('[data-skill-preset-confirm="cancel"]');
+      await wait('!skillActionInFlight');
+      assert.equal(await evaluate('window.presetRequests.length'), 0);
+      await click('[data-apply-skill-preset="1"]');
+      await click('[data-skill-preset-confirm="accept"]');
+      await wait('!skillActionInFlight');
+      assert.equal(await evaluate('window.presetRequests.length'), 1);
+      assert.equal(await evaluate('state.gold'), 0);
+      await click('[data-apply-skill-preset="1"]');
+      assert((await evaluate('modalBody.textContent')).includes('not be charged again'));
+      await click('[data-skill-preset-confirm="accept"]');
+      await wait('!skillActionInFlight');
+      assert.equal(await evaluate('window.presetRequests.length'), 2);
+      assert(await evaluate('JSON.stringify(window.presetRequests[0]) === JSON.stringify(window.presetRequests[1])'));
+      assert(await evaluate('window.presetRequests[0].currency === "crowns" && window.presetRequests[0].expectedPrice === 10'));
+      assert.equal(await evaluate('state.gold'), 0);
+      assert.equal(await evaluate('getPendingSkillPresetApply()'), null);
+      assert(await evaluate("document.querySelector('[data-apply-skill-preset]').disabled"));
+      await evaluate('getOnlineApi = window.presetTestApi; usesServerEconomyAuthority = window.presetTestAuthority');
       await click('[data-skill-preset-slot="0"]');
 
       // Exercise the final point of every skill, including the partial 99% -> 100% step.
