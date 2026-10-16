@@ -10,11 +10,12 @@
       "tests": [
         "tools/test-stamina-display-recovery.js",
         "tools/test-local-browser-client.js",
+        "tools/test-local-postgres-game-http.js",
         "tools/test-local-chat-client.js",
         "tools/test-local-production-client.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "After a transient subscription error, replay the next authorized snapshot so cleared stamina and other subscribed views recover even when persisted data is unchanged. Test the actual stamina UI and cosmetics subscription against source and minified local transport, network/service/deadline/rate-limit failures, unchanged-snapshot deduplication, existing backoff, hunt/recovery values and terminal permission revocation. Real PostgreSQL browser integration protects batching, authorization, transactions and session isolation; chat and production-artifact fixtures protect shared transport and delivery budgets. No server, data, cooldown or balance changes."
+      "reason": "After a transient subscription error, replay the next authorized snapshot so cleared stamina and other subscribed views recover even when persisted data is unchanged. Test the actual stamina UI and cosmetics subscription against source and minified local transport, network/service/deadline/rate-limit failures, unchanged-snapshot deduplication, existing backoff, hunt/recovery values and terminal permission revocation. Real PostgreSQL HTTP and browser integration protect the snapshot/error response contract, batching, authorization, transactions and session isolation; selecting the HTTP integration also provisions the isolated CI database used by the browser integration; chat and production-artifact fixtures protect shared transport and delivery budgets. No server, data, cooldown or balance changes."
     },
     {
       "paths": [
