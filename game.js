@@ -37790,7 +37790,7 @@ function updateIncomingAttackUi() {
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length;
   const outgoingWasHidden = outgoingAttackBtn.hidden;
   setHiddenIfChanged(outgoingAttackBtn, total === 0);
   notifyMovementHudOccupancyChange(outgoingAttackBtn, outgoingWasHidden);
@@ -37800,29 +37800,23 @@ function updateOutgoingAttackUi() {
     setTextIfChanged(outgoingAttackTime, "Marches");
     outgoingAttackBtn.removeAttribute("title");
     setAttrIfChanged(outgoingAttackBtn, "aria-label", "Kingdom activity");
-    if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
+    if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
+      if (operations.camps.length || operations.strongholds.length) renderOutgoingAttacksModalContent(operations);
+      else modal.close();
+    }
     return;
   }
 
-  const soonestCamp = operations.camps
-    .filter(camp => camp.payoutAtMs > Date.now())
-    .sort((a, b) => a.payoutAtMs - b.payoutAtMs)[0];
   const travelingArmies = [...operations.marches, ...operations.reinforcements.filter(entry => !entry.stationed)]
     .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
   const status = travelingArmies.length
     ? travelingArmies[0].serverPending ? travelingArmies[0].serverRetrying ? "Checking" : "Sending"
       : travelingArmies[0].kind === "scout" && travelingArmies[0].isResolving ? "Receiving report…" : formatDuration(travelingArmies[0].remaining)
-    : operations.rallies.length
-      ? "Rallies"
-    : soonestCamp
-      ? formatDuration(Math.max(0, Math.ceil((soonestCamp.payoutAtMs - Date.now()) / 1000)))
-      : operations.reinforcements.length ? "Support" : "Holdings";
+    : operations.rallies.length ? "Rallies" : "Support";
   const titleParts = [];
   if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
   if (operations.rallies.length) titleParts.push(`${formatNumber(operations.rallies.length)} active ${operations.rallies.length === 1 ? "rally" : "rallies"}`);
   if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
-  if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
-  if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
   setTextIfChanged(outgoingAttackCount, formatNumber(total));
   setTextIfChanged(outgoingAttackTime, status);
   setAttrIfChanged(outgoingAttackBtn, "title", titleParts.join(" - "));
