@@ -11,7 +11,7 @@
   display: grid;
   place-items: center;
   color: var(--cl-ivory);
-  border: 2px solid rgba(181, 138, 59, .78);
+  border: 0;
   border-radius: 10px;
   background:
     linear-gradient(180deg, rgba(84, 54, 33, .97), rgba(45, 29, 19, .98)),
@@ -33,17 +33,6 @@
 
 .resource-pill.chat-toggle-btn:active {
   transform: translateY(1px);
-}
-
-.chat-toggle-chevron {
-  width: 34px;
-  height: 34px;
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .48));
-  transition: transform 160ms ease;
-}
-
-.chat-toggle-btn.is-expanded .chat-toggle-chevron {
-  transform: rotate(180deg);
 }
 
 .chat-toggle-unread,
@@ -458,11 +447,6 @@
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
-  .chat-toggle-chevron {
-    width: 29px;
-    height: 29px;
-  }
-
   .quick-chat {
     padding-inline: .46rem;
   }
@@ -552,11 +536,5 @@
 
   .chat-message-list {
     padding-top: 2.25rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chat-toggle-chevron {
-    transition: none;
   }
 }

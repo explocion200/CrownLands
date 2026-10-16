@@ -1,0 +1,39 @@
+{
+  "status": "Revision 2 approved October 16, 2026 for integration, merge and deployment",
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "asset": "chat-left.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/current-closed.png",
+        "assets/optimized/hud-bag-labeled-192x192-a715142d9f19.webp"
+      ],
+      "prompt": "Use case: style-transfer. Asset type: ONE transparent square Crownlands game HUD button illustration, draft for owner approval. Image 1 shows the current chat-toggle chevron and is the shape/direction reference only. Image 2 shows the approved Bag button and is the medieval ink-and-watercolor, parchment ribbon and typography style reference only. Replace Image 1's burgundy square tile with a transparent illustrated icon treatment matching Image 2. In the upper 74% place ONE very clear LEFT-POINTING chevron (the shape <, two thick joined strokes, no arrow shaft), rendered as warm ivory parchment or worn brass with fine dark brown ink outline and restrained watercolor shading. Keep the chevron bold, simple, large, unmistakably facing left, and readable at 56 by 56 pixels. In the bottom 24%, add a wide antique cream parchment ribbon matching Image 2. Text verbatim: \"Chat\", centered in large dark bold lettering like the Bag text. Tiny 2% transparent outer margins. Square full canvas, actual alpha transparency around artwork. Only the chevron and Chat ribbon: no satchel, chat bubbles, extra objects, lettering, burgundy tile, rectangular border, checkerboard or watermark. Keep the name part of the image."
+    },
+    {
+      "asset": "chat-right.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/chat-left.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Create the expanded-chat companion state for this exact Crownlands chat HUD button image. Change ONLY the upper chevron so it points RIGHT (shape >) instead of left. Mirror only the arrow shape horizontally around its own center. Keep the lower parchment ribbon, the word \"Chat\", readable left-to-right text, font, spelling, exact ribbon shape, position, scale, colors, edges, canvas size and transparent background unchanged. Keep the upper chevron the same size and vertical position, with the same warm ivory parchment fill, fine dark brown outline and watercolor shading. This must look like the same button with just its arrow facing the other direction, displayed at 56x56 pixels. Actual alpha transparency. Do not mirror the word Chat or ribbon; do not add any objects, background, extra text or watermark."
+    },
+    {
+      "asset": "chat-left-r2.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/chat-left.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Revise this exact transparent Crownlands Chat button image. Make ONLY the LEFT-pointing chevron about 15% smaller in both width and height (85% of its current size). Keep the chevron centered horizontally in its existing position; keep its lower point near the same vertical level above the ribbon so the reduced arrow sits naturally just above the ribbon. Preserve its direction, shape, ivory/parchment fill, brown outline and watercolor style. CRITICAL: keep the lower parchment banner and the word \"Chat\" at exactly their current size and position, with unchanged typography, proportions, color and detail. Do not shrink the complete image. Keep the same square canvas dimensions, composition and actual alpha transparency. Change only the arrow's scale; leave the ribbon and text untouched. No new objects, text, background, border or watermark. This button will display at 56x56 pixels."
+    },
+    {
+      "asset": "chat-right-r2.png",
+      "transparentBackground": true,
+      "referenceImages": [
+        "images/chat-right.png"
+      ],
+      "prompt": "Use case: precise-object-edit. Revise this exact transparent Crownlands Chat button image. Make ONLY the RIGHT-pointing chevron about 15% smaller in both width and height (85% of its current size). Keep the chevron centered horizontally in its existing position; keep its lower point near the same vertical level above the ribbon so the reduced arrow sits naturally just above the ribbon. Preserve its direction, shape, ivory/parchment fill, brown outline and watercolor style. CRITICAL: keep the lower parchment banner and the word \"Chat\" at exactly their current size and position, with unchanged typography, proportions, color and detail. Do not shrink the complete image. Keep the same square canvas dimensions, composition and actual alpha transparency. Change only the arrow's scale; leave the ribbon and text untouched. No new objects, text, background, border or watermark. This button will display at 56x56 pixels."
+    }
+  ]
+}
