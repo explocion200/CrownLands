@@ -1,11 +1,17 @@
 "use strict";
-const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
+const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),crypto=require("node:crypto");
 const {CdpClient}=require("./map-benchmark/cdp-client");
 const {createMapBenchmarkServer}=require("./map-benchmark/server");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
+const ribbon=require("../docs/art-sources/movement-ribbons/runtime-assets.json")[0];
+const provenance=require("../docs/art-sources/movement-ribbons/prompt.json");
+assert.equal(provenance.source,ribbon.source);assert(provenance.prompt&&fs.existsSync(path.resolve(__dirname,"..",provenance.reference)));
+const root=path.resolve(__dirname,"..");
+for(const[file,hash]of[[ribbon.source,ribbon.sourceSha256],[ribbon.output,ribbon.sha256]])assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root,file))).digest("hex"),hash);
+assert(ribbon.hasAlpha&&ribbon.bytes<=7*1024);
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{
- const server=createMapBenchmarkServer(),address=await server.listen(),output=path.resolve(__dirname,"../release-artifacts/parchment-hud");
+ const server=createMapBenchmarkServer(),address=await server.listen(),output=path.resolve(__dirname,"../release-artifacts/movement-ribbons");
  fs.mkdirSync(output,{recursive:true});let browser,client;const errors=[],failed=[],writes=[],records=[];
  try{
   const executable=[process.env.CHROME_PATH,"/usr/bin/google-chrome","/usr/bin/chromium","C:/Program Files/Google/Chrome/Application/chrome.exe"].find(p=>p&&fs.existsSync(p));assert(executable,"Chromium required");
@@ -30,6 +36,15 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     assert.equal((await measure("incomingAttackBtn")).hidden,!["incoming","both"].includes(mode));
     assert.equal((await measure("outgoingAttackBtn")).hidden,!["outgoing","both"].includes(mode));
    }
+   const artwork=await ev(`(async()=>{const paths=[${JSON.stringify(ribbon.output)},'assets/icons/skills/atlas-v1/marchOrders.webp','assets/optimized/report-attack-ink-384x384-1e1a12b255a7.webp'];const result=[];for(const src of paths){const img=new Image();img.src=src;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);result.push({src,width:img.naturalWidth,height:img.naturalHeight,corner:ctx.getImageData(0,0,1,1).data[3],center:ctx.getImageData(canvas.width/2,canvas.height/2,1,1).data[3]});}return result;})()`);
+   assert(artwork.every(a=>a.corner===0&&a.center>240),JSON.stringify(artwork));
+   for(const[id,src]of[['outgoingAttackBtn',artwork[1].src],['incomingAttackBtn',artwork[2].src]]){
+    assert(await ev(`(()=>{const img=document.querySelector('#${id} img.nav-btn-icon');return img?.getAttribute('src')==='${src}'&&img.complete&&img.naturalWidth>0&&img.alt==='';})()`));
+    assert.equal(await ev(`document.getElementById('${id.replace('Btn','Count')}').textContent`),'1');
+    assert.match(await ev(`document.getElementById('${id.replace('Btn','Time')}').textContent`),/\d+m/);
+   }
+   await ev("reportUnreadBadge.hidden=false;reportUnreadBadge.textContent='3';void 0");
+   assert(await ev("(()=>{const e=document.getElementById('reportUnreadBadge'),r=e.getBoundingClientRect(),b=logBtn.getBoundingClientRect();return !e.hidden&&e.textContent==='3'&&r.width>0&&r.x>=b.x&&r.x<b.right;})()"));
    const chatBefore=(await measure("chatToggleBtn")).rect;
    assert.deepEqual(chatBefore,[width-(width===568?361:369),height-72,56,56]);
    for(const open of [false,true]){
@@ -48,7 +63,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     for(const state of ["idle","hover","focus"]){
      await client.send("Input.dispatchMouseEvent",{type:"mouseMoved",...(state==="hover"?await point(id):{x:0,y:0})});
      if(state==="focus")await ev(`document.getElementById('${id}').focus()`);await pause(180);
-     const n=await measure(id);assert(n.image.includes("linear-gradient"),id+" lost parchment on "+state);assert.equal(n.color,ink);assert(n.labels.every(l=>l.color===ink&&l.fits),JSON.stringify({id,state,n}));assert.deepEqual(n.rect,initial.rect);
+     const n=await measure(id);assert(n.image.includes(ribbon.output),id+" lost illustrated ribbon on "+state);assert.equal(n.background,"rgba(0, 0, 0, 0)");assert.equal(n.shadow,"none");if(state==="focus")assert.notEqual(n.outline,"none");assert.equal(n.color,ink);assert(n.labels.every(l=>l.color===ink&&l.fits),JSON.stringify({id,state,n}));assert.deepEqual(n.rect,initial.rect);
     }
     for(const method of ["mouse","keyboard",...(width<1000?["touch"]:[])]){
      if(method==="mouse")await click(id);

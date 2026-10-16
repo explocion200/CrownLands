@@ -1,0 +1,7 @@
+{
+  "mode": "built-in image_gen",
+  "useCase": "precise-object-edit",
+  "reference": "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
+  "source": "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
+  "prompt": "Use case: precise-object-edit. Asset type: Crown Lands compact HUD label background. Input image 1 is the edit target: the approved Clan parchment ribbon. Produce a separate BLANK ribbon derived from that artwork. Remove the word Clan completely, preserving the cream parchment texture, thin dark brown hand-inked irregular edges, rolled curled ends and small antique gold finials. Eliminate the large empty space above it: use a tightly framed horizontal canvas with aspect ratio about 4:1, the ribbon filling nearly the entire width and height with a very small transparent margin. Make the central cream paper an unobstructed horizontal writing area for two small live UI lines (name and countdown) which will be added separately in HTML. Keep rolled ends confined to outer 10 percent at either side, center 80 percent calm light cream. True transparent background beyond the silhouette; no rectangle, no cast shadow behind the ribbon, no text, letters, numerals, symbols, icons, extra ornaments or watermark. Faithfully match the original medieval watercolor, fine ink contour and warm parchment palette."
+}

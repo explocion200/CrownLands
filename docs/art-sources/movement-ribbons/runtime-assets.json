@@ -1,0 +1,15 @@
+[
+  {
+    "id": "hud-notice-ribbon",
+    "category": "hud",
+    "source": "docs/art-sources/movement-ribbons/blank-ribbon-v1.png",
+    "output": "assets/optimized/hud-notice-ribbon-196x76-cbec34211712.webp",
+    "width": 196,
+    "height": 76,
+    "bytes": 6352,
+    "sha256": "cbec34211712ed3c59e1a9d0e2c8b7165dbb3bad1aae7334e2c5cece37a4913a",
+    "hasAlpha": true,
+    "preparedDelivery": true,
+    "sourceSha256": "18dd3bc4fd209a8faca2a2949245bafc7f3833ea3d1a8480a63fe78fe3445c09"
+  }
+]
