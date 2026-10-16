@@ -11,6 +11,9 @@
     const authState = { currentUser: null }, observers = new Set(), watchers = new Set();
     const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0;
     const pendingRequests = [];
+    let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0;
+    let chatSupported = typeof root.AbortController === "function";
+    const chatWatcher = watcher => watcher.target.kind === "collection" && /^(globalChat|clans)\/[^/]+\/messages$/.test(watcher.target.path);
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
     let readiness;
     async function ready() {
@@ -30,7 +33,7 @@
         if (!response.ok) throw makeError("auth/network-request-failed"); const result = await response.json();
         csrf = result.csrf;
         const prior = JSON.stringify([authState.currentUser, authTime]);
-        if (result.user?.uid !== authState.currentUser?.uid || result.authTime !== authTime) revision++;
+        if (result.user?.uid !== authState.currentUser?.uid || result.authTime !== authTime) { revision++; restartChat(); }
         if (authState.currentUser && result.user?.uid === authState.currentUser.uid) Object.assign(authState.currentUser, result.user);
         else authState.currentUser = result.user;
         authTime = result.authTime;
@@ -61,12 +64,12 @@
         if (next) next.resolve(); else activeRequests--;
       }
     }
-    async function performPost(path, input, authentication) {
+    async function performPost(path, input, authentication, signal) {
       const normalizeCode = code => !authentication && !path.startsWith("call/") ? code.replace(/^functions\//, "") : code;
       if (!csrf) await session();
       const started = revision;
       const response = await root.fetch((authentication ? "/local-auth/v1/" : "/api/local-game/v1/") + path, {
-        method: "POST", credentials: "same-origin", cache: "no-store", headers: { ...deploymentHeaders, "Content-Type": "application/json", "X-Crownlands-CSRF": csrf }, body: JSON.stringify(input),
+        method: "POST", credentials: "same-origin", cache: "no-store", signal, headers: { ...deploymentHeaders, "Content-Type": "application/json", "X-Crownlands-CSRF": csrf }, body: JSON.stringify(input),
       });
       const result = await response.json().catch(() => ({}));
       if (disposed || (!authentication && started !== revision)) throw makeError(normalizeCode("functions/unauthenticated"), "The account session changed.");
@@ -203,28 +206,85 @@
         commit: () => writes.length ? post("write", { writes }) : Promise.resolve() };
       return api;
     }
+    function deliver(watcher, result) {
+      if (!watchers.has(watcher)) return;
+      if (result.error) {
+        watchers.delete(watcher);
+        try { watcher.error?.(makeError(result.error.code, result.error.message)); } catch { /* Independent listener. */ }
+        return;
+      }
+      const identity = JSON.stringify(result);
+      if (identity !== watcher.identity) {
+        watcher.identity = identity; watcher.delivery = (watcher.delivery || 0) + 1;
+        watcher.previous = snapshot(result, watcher.previous);
+        try { watcher.next(watcher.previous); } catch { /* Independent listener. */ }
+      }
+    }
+    function wake() {
+      if (disposed) return;
+      if (polling) { pollAgain = true; return; }
+      root.clearTimeout(watchTimer);
+      watchTimer = watchers.size ? root.setTimeout(poll, 0) : null;
+    }
+    function restartChat() {
+      chatGeneration++; chatController?.abort(); chatController = null;
+      root.clearTimeout(chatTimer); chatTimer = null; chatConnected = false; chatCursor = undefined;
+      if (!disposed && chatSupported && !root.document.hidden && [...watchers].some(chatWatcher)) chatTimer = root.setTimeout(pollChat, 0);
+    }
+    async function pollChat() {
+      chatTimer = null;
+      const active = [...watchers].filter(chatWatcher), generation = chatGeneration;
+      if (disposed || root.document.hidden || !chatSupported || !active.length) return;
+      if (active.length > 2) { chatSupported = false; wake(); return; }
+      const controller = new root.AbortController(); chatController = controller;
+      let delay = 50;
+      try {
+        // One held response, outside the six action-request slots. The server
+        // wakes it on committed chat changes and reauthorizes every snapshot.
+        const result = await performPost("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
+        if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
+        if (!/^[a-f0-9]{64}$/.test(result?.cursor || "") || !Array.isArray(result.results) || result.results.length !== active.length) throw makeError("unavailable");
+        chatCursor = result.cursor; chatConnected = true;
+        active.forEach((watcher, index) => deliver(watcher, result.results[index]));
+      } catch (error) {
+        if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
+        chatConnected = false; chatCursor = undefined; delay = 10000;
+        if (error.code === "not-found") chatSupported = false; // Compatible older server.
+        if (["permission-denied", "unauthenticated", "invalid-argument"].includes(error.code)) {
+          for (const watcher of active) deliver(watcher, { error });
+        }
+        wake(); // Ordinary authorized polling remains the recovery path.
+      } finally {
+        if (generation === chatGeneration && !disposed) {
+          chatController = null;
+          if (chatSupported && !root.document.hidden && [...watchers].some(chatWatcher)) chatTimer = root.setTimeout(pollChat, delay);
+        }
+      }
+    }
+    function foreground() {
+      restartChat();
+      if (!root.document.hidden) wake();
+    }
+    root.document.addEventListener?.("visibilitychange", foreground);
+    root.addEventListener?.("online", foreground);
     async function poll() {
-      const active = [...watchers]; if (!active.length) { watchTimer = null; return; }
+      watchTimer = null;
+      if (disposed || polling) return;
+      const active = [...watchers].filter(watcher => !chatConnected || !chatWatcher(watcher));
+      if (!watchers.size) return;
+      polling = true; pollAgain = false;
+      const deliveries = active.map(watcher => watcher.delivery || 0);
       let delay = root.document.hidden ? 10000 : 1500;
       try {
         // A single bounded request prevents dozens of listeners from flooding
         // the host. The server authorizes every target and returns independent
         // permission failures without exposing a forbidden document.
-        const results = await post("watch", { targets: active.map(watcher => spec(watcher.target)) });
+        const results = active.length ? await post("watch", { targets: active.map(watcher => spec(watcher.target)) }) : [];
         if (!Array.isArray(results) || results.length !== active.length) throw makeError("unavailable");
         for (const [index, watcher] of active.entries()) {
-          if (!watchers.has(watcher)) continue;
-          const result = results[index];
-          if (result.error) {
-            watchers.delete(watcher);
-            try { watcher.error?.(makeError(result.error.code, result.error.message)); } catch { /* A UI callback must not interrupt other listeners. */ }
-            continue;
-          }
-          const identity = JSON.stringify(result);
-          if (identity !== watcher.identity) {
-            watcher.identity = identity; watcher.previous = snapshot(result, watcher.previous);
-            try { watcher.next(watcher.previous); } catch { /* Match independent SDK callback delivery. */ }
-          }
+          // A slow general snapshot cannot overwrite a newer chat response.
+          if (chatConnected && chatWatcher(watcher) || deliveries[index] !== (watcher.delivery || 0)) continue;
+          deliver(watcher, results[index]);
         }
       } catch (error) {
         delay = 10000;
@@ -234,7 +294,8 @@
           try { watcher.error?.(error); } catch { /* Keep remaining listeners independent. */ }
         }
       }
-      watchTimer = !disposed && watchers.size ? root.setTimeout(poll, delay) : null;
+      polling = false;
+      watchTimer = !disposed && watchers.size ? root.setTimeout(poll, pollAgain ? 0 : delay) : null;
     }
     const firestore = {
       getFirestore: () => db, Timestamp,
@@ -266,14 +327,15 @@
         if (!watcher.next) throw Error("A snapshot callback is required");
         if (watchers.size >= 80) throw makeError("resource-exhausted", "Too many active game listeners.");
         watchers.add(watcher);
-        if (!watchTimer) watchTimer = root.setTimeout(poll, 0);
-        return () => watchers.delete(watcher);
+        wake(); if (chatWatcher(watcher)) restartChat();
+        return () => { watchers.delete(watcher); if (chatWatcher(watcher)) restartChat(); };
       },
     };
     const messaging = root.CrownlandsLocalPush?.create() || { isSupported: async () => false };
     return { app: { initializeApp: () => ({}) }, auth, firestore, functions: { getFunctions: () => ({}), httpsCallable: (_functions, name) => async data => ({ data: await post("call/" + name, { data }) }) },
       appCheck: {}, messaging,
-      dispose: () => { disposed = true; revision++; messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+      dispose: () => { disposed = true; revision++; restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+        root.document.removeEventListener?.("visibilitychange", foreground); root.removeEventListener?.("online", foreground);
         for (const request of pendingRequests.splice(0)) request.reject(); } };
   }
   root.CrownlandsLocalBackend = { create };

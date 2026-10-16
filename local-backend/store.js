@@ -373,6 +373,8 @@ class Store {
         await tx.client.query(`INSERT INTO ${this.schema}.documents(path,collection_id,parent_path,body,source_sha256) VALUES($1,$2,$3,$4,$5) ON CONFLICT(path) DO UPDATE SET body=EXCLUDED.body,source_sha256=EXCLUDED.source_sha256`, [path, parts.at(-2), parts.slice(0, -2).join("/"), after, hash(after)]);
       } else await tx.client.query(`DELETE FROM ${this.schema}.documents WHERE path=$1`, [path]);
       await tx.client.query(`INSERT INTO ${this.schema}.changes(path,before_body,after_body) VALUES($1,$2,$3)`, [path, before || null, after || null]);
+      const chat = require("./chat-events"), topic = chat.topic(path.split("/").slice(0, -1).join("/"));
+      if (topic) await tx.client.query("SELECT pg_notify($1,$2)", [chat.channel(this.schema), topic]);
     }
   }
   batch() {

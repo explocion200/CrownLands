@@ -17,7 +17,7 @@ async function body(req, maximum = 262144) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw fail("invalid-argument"); return value;
 }
 function send(res, status, value) { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(value)); }
-function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, deployment, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now, reportError = () => {} }) {
+function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, deployment, chatEvents, chatHoldMs = 25000, chatRecheckMs = 10000, trustLoopbackProxy = true, maxConcurrent = 12, requestBudgetMs = 60000, now = Date.now, reportError = () => {} }) {
   const permanent = require("./deployment-policy").isPolicy(deployment, store.schema);
   const data = new ClientData(store), origin = new URL(auth.origin), expiry = permanent ? Infinity : Date.parse(expiresAt), callables = new Map();
   if (deployment && !permanent) throw Error("Invalid deployment capability");
@@ -29,11 +29,13 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
     callables.set(route.name, route);
   }
   let active = 0;
+  const chatAccounts = new Map(); let chatActive = 0;
   const server = http.createServer({ maxHeaderSize: 8192, requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {
     res.setHeader("Cache-Control", "no-store"); res.setHeader("Referrer-Policy", "no-referrer"); res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive"); res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
-    let counted = false, timer, operationPromise, timedOut = false, disconnected = false, operation = "request";
-    res.on("close", () => { if (!res.writableEnded) disconnected = true; });
+    let counted = false, timer, operationPromise, timedOut = false, disconnected = false, operation = "request", chatAccount;
+    const controller = new AbortController();
+    res.on("close", () => { if (!res.writableEnded) { disconnected = true; controller.abort(); } });
     try {
       if (req.headers.host !== origin.host) throw fail("invalid-argument", 421);
       let ip = req.socket.remoteAddress;
@@ -79,6 +81,15 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       // Imported saves can exceed 256 KiB in typed JSON. Keep callables and
       // reads smaller; writes still have count/value/document limits below.
       const input = await body(req, operation === "write" ? 2 * 1024 * 1024 : 262144);
+      if (operation === "watch-chat") {
+        if (!chatEvents) throw fail("not-found");
+        if (Object.keys(input).some(key => !["targets", "cursor"].includes(key))) throw fail("invalid-argument");
+        if (chatActive >= 64 || (chatAccounts.get(session.user.uid) || 0) >= 2) throw fail("resource-exhausted");
+        chatAccount = session.user.uid; chatActive++;
+        chatAccounts.set(chatAccount, (chatAccounts.get(chatAccount) || 0) + 1);
+        // Held chat responses must never consume action admission slots.
+        active--; counted = false;
+      }
       // Only the verified cookie supplies identity. Client-supplied auth/app/IP
       // objects never become a callable context or an anti-farming signal.
       let result;
@@ -90,7 +101,11 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
         if (!current || current.user.uid !== session.user.uid) throw fail("unauthenticated");
       };
       operationPromise = store.withTransactionGuard(guard, async () => {
-        if (operation === "read" || operation === "watch") {
+        if (operation === "watch-chat") {
+          result = await require("./chat-events").watchChat({ events: chatEvents, targets: input.targets, cursor: input.cursor,
+            signal: controller.signal, holdMs: chatHoldMs, recheckMs: chatRecheckMs,
+            read: targets => data.read(session.auth, targets, { partial: true }) });
+        } else if (operation === "read" || operation === "watch") {
           if (Object.keys(input).some(key => key !== "targets")) throw fail("invalid-argument");
           result = await data.read(session.auth, input.targets, { partial: operation === "watch" });
         } else if (operation === "write") {
@@ -105,7 +120,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
         } else throw fail("not-found");
       });
       await Promise.race([operationPromise, new Promise((_, reject) => {
-        timer = setTimeout(() => { timedOut = true; reject(fail("deadline-exceeded")); }, requestBudgetMs);
+        timer = setTimeout(() => { timedOut = true; controller.abort(); reject(fail("deadline-exceeded")); }, requestBudgetMs);
       })]);
       return send(res, 200, { result: result ?? null });
     } catch (cause) {
@@ -124,6 +139,12 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       if (!res.headersSent) send(res, status, { error }); else res.destroy();
     } finally {
       clearTimeout(timer);
+      controller.abort();
+      if (chatAccount) {
+        const release = () => { chatActive--; const remaining = chatAccounts.get(chatAccount) - 1;
+          if (remaining) chatAccounts.set(chatAccount, remaining); else chatAccounts.delete(chatAccount); };
+        if (timedOut && operationPromise) operationPromise.then(release, release); else release();
+      }
       // Keep a timed-out handler counted until it actually stops. Its inherited
       // transaction guard rejects late writes, and hung handlers cannot admit
       // an unbounded number of new executions.

@@ -1,17 +1,50 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1cf9d9ce0e4ca0604f3f8e06ba7c075dd0e58fe3",
+  "baseCommit": "097b6835329c3eff9c0bc33e765d15b34de756fe",
   "coverage": [
     {
       "paths": [
-        "crown-payments-ui.js",
-        "crown-payments-ui.css",
-        "tools/validate-crown-payments-browser.js"
+        "local-backend/chat-events.js",
+        "local-backend/game-http.js",
+        "local-backend/permanent-services.js",
+        "local-backend/store.js",
+        "tools/test-local-postgres-chat-events.js",
+        "tools/test-local-postgres-permanent.js"
       ],
       "tests": [
-        "tools/validate-crown-payments-browser.js"
+        "tools/test-local-postgres-chat-events.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-postgres-access.js",
+        "functions/test/emulator-chat.js"
       ],
-      "reason": "Move initial, continued and ready checkout actions to the footer right, keeping payment status as a quieter left-hand recovery control in matching keyboard order. The existing built-client live/test browser suite checks desktop and landscape-mobile geometry, visible controls, navigation, order recovery, status, terminal states and account isolation. Only presentation and DOM order change; payment requests, server verification and wallet authority are unchanged, so no emulator suites apply. Production build and asset budgets run automatically."
+      "reason": "Commit-scoped chat notifications and independently bounded held responses share the store transaction, cookie/session, current-realm and clan authorization paths. Real PostgreSQL tests verify rollback, edits/deletion, lost notifications, session/membership revocation, pool/admission independence and restricted permanent-service startup/shutdown. Existing store and access suites protect unrelated transactions and privacy; the selected chat emulator preserves authoritative send cooldown, idempotency, membership, moderation and retention rules. No gameplay or schema migration changes."
+    },
+    {
+      "paths": [
+        "local-client.js",
+        "tools/build-production-client.js",
+        "tools/test-local-chat-client.js",
+        "tools/test-local-production-client.js"
+      ],
+      "tests": [
+        "tools/test-local-chat-client.js",
+        "tools/test-local-browser-client.js",
+        "tools/test-local-production-client.js",
+        "tools/validate-map-chat-responsiveness-browser.js",
+        "tools/validate-chat.js",
+        "tools/validate-chat-translation.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Shared browser transport gains coalesced foreground/network refresh and a separate authorized chat delivery loop. Source and exact-minifier tests exercise fallback, cancellation, account/channel isolation, old response ordering, disposal and bounded ordinary requests; the production artifact fixture checks delivery bytes and unchanged cache budget. Existing real PostgreSQL browser adapter tests cover shared read/write compatibility, and desktop plus two landscape visual suites preserve composer, focus, moderation, cooldown and duplicate handling. Translation is unchanged but consumes the same message events."
+    },
+    {
+      "paths": [
+        "docs/RESPONSIVE_GAMEPLAY_PERFORMANCE.md"
+      ],
+      "tests": [],
+      "reason": "Documents the measured polling bottleneck, implemented transport bounds, validation limitations and separate protected-runtime rollout. No additional runtime behavior."
     }
   ]
 }

@@ -11,15 +11,15 @@ function writeStatus(directory,value){const file=path.join(directory,'status.jso
 async function start(role,{credentials=process.env.CREDENTIALS_DIRECTORY,directory=process.env.STATE_DIRECTORY,control=readControl,connect=options=>new Pool(options),ports=PORTS}={}) {
   if(!credentials||!directory)throw Error('System credentials and state required');
   const config=validateConfig(privateJson(path.join(credentials,'config')),role),initial=require('./deployment-policy').validateControl(control());
-  let pool,controlPool,store,loop,server,timer,stopping=false;const diagnostics=new WorkerDiagnostics();
+  let pool,controlPool,store,loop,server,timer,chatEvents,stopping=false;const diagnostics=new WorkerDiagnostics();
   const report=async()=>{const c=require('./deployment-policy').validateControl(control());if(c.phase!==initial.phase||c.epoch!==initial.epoch){await stop();return;}
     let status={healthy:true};if(loop)status=await loop.status();
     if(pool)await (controlPool||pool).query('SELECT 1');
-    writeStatus(directory,{...status,component:role,phase:initial.phase,recordedAt:new Date().toISOString(),...(role==='worker'?{handlerLogs:diagnostics.snapshot()}:{})});
+    writeStatus(directory,{...status,component:role,phase:initial.phase,recordedAt:new Date().toISOString(),...(role==='worker'?{handlerLogs:diagnostics.snapshot()}:{}),...(role==='game'&&initial.phase==='active'?{chatNotificationsConnected:Boolean(chatEvents?.client)}:{})});
     if(!stopping)timer=setTimeout(()=>report().catch(()=>{process.exitCode=1;void stop();}),5000);};
   const stop=async()=>{if(stopping)return;stopping=true;clearTimeout(timer);loop?.stop();
     setTimeout(()=>process.exit(1),20000).unref();
-    if(server)await new Promise(resolve=>server.close(resolve));await loop?.settle();await pool?.end();await controlPool?.end();};
+    await chatEvents?.close();if(server)await new Promise(resolve=>server.close(resolve));await loop?.settle();await pool?.end();await controlPool?.end();};
   process.once('SIGTERM',()=>{void stop();});process.once('SIGINT',()=>{void stop();});
   if(initial.phase!=='active'){await report();return {stop,standby:true};}
   const connection={host:'/var/run/postgresql',database:'crownlands_migration',
@@ -49,7 +49,9 @@ async function start(role,{credentials=process.env.CREDENTIALS_DIRECTORY,directo
       server=require('./auth-http').createAuthServer({auth,trustLoopbackProxy:true,deployment:policy});
     }else{
       process.env.CROWNLANDS_BACKEND='postgres-local';require('./permanent-platform').configure({store,config,deployment:policy});
-      const game=require('../functions');server=require('./game-http').createGameServer({store,auth,routes:require('./platform').describe(game),deployment:policy});
+      chatEvents=new (require('./chat-events').ChatEvents)(connect({...connection,max:1,application_name:'crownlands-chat-events'}),store.schema);
+      await chatEvents.start();
+      const game=require('../functions');server=require('./game-http').createGameServer({store,auth,routes:require('./platform').describe(game),deployment:policy,chatEvents});
     }
   }else if(role==='worker'){
     diagnostics.capture();process.env.CROWNLANDS_BACKEND='postgres-local';require('./permanent-platform').configure({store,config,deployment:policy});
