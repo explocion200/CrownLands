@@ -1,5 +1,10 @@
 # Local production transfer — October 16, 2026
 
+This records the initial morning transfer. The migration PR and subsequent repairs
+have since merged; see the [20:00 UTC release record](LOCAL_RELEASE_2026-10-16_PRESETS_HUD.md)
+for current publication and backend verification. Historical observations below
+retain their original timing.
+
 The owner authorized migration of the complete game to the Crownlands computer.
 Production local authority became active at **07:09:30 UTC**; protected activation
 completed at **07:09:37 UTC**. This is a verified web/backend deployment, not a

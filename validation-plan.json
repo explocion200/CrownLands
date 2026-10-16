@@ -1,23 +1,15 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "19429148c1e6b4cff1c55b26e728e90669c04a4c",
+  "baseCommit": "16512ad423ae6bc37f07ff6b326056e6347c1b9c",
   "coverage": [
     {
       "paths": [
-        "local-backend/document-size.js",
-        "local-backend/store.js",
-        "tools/test-local-postgres-document-size.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/LOCAL_BACKEND_RELEASE_2026-10-16.md",
+        "docs/LOCAL_RELEASE_2026-10-16_PRESETS_HUD.md"
       ],
-      "tests": [
-        "tools/test-local-postgres-document-size.js",
-        "tools/test-local-document-values.js",
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-skill-preset-crowns.js",
-        "functions/test/emulator-skill-presets.js"
-      ],
-      "reason": "Deployment preflight found live army resolution rejecting valid report-heavy profiles because REST typed JSON exceeds the logical document size. Retain the 1 MiB budget using documented logical sizes. Synthetic PostgreSQL coverage exercises the exact limit and full rollback, nested report history with atomic army/profile updates, typed values and escaped/Unicode data. Store transaction/query regression, game authorization, durable job scheduling and 10-Crown preset atomic wallet/receipt checks cover shared write dependencies. The selected preset emulator verifies the previously approved gameplay to be activated with this runtime. No UI code changes; already-passed desktop/mobile HUD tests from PR586 remain applicable."
+      "tests": [],
+      "reason": "Documentation records the owner-authorized, verified local web/backend release and updates only approved preset/HUD deployment status. It distinguishes historical transfer evidence, observed catch-up retries, current source/runtime identities, CI and actual production checks, and external integrations. No executable source, package, world data, gameplay rule, UI layout or backend behavior changes; no new runtime/emulator tests apply."
     }
   ]
 }
