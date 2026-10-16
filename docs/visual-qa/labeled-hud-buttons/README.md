@@ -1,4 +1,4 @@
-# Labeled HUD buttons — appearance draft
+# Labeled HUD buttons — approved artwork
 
 Owner request: draft the four existing top HUD actions with their existing images
 and visible names: **Leaderboard**, **Clan**, **Daily**, **Inner Castle**. The Clan
@@ -9,9 +9,11 @@ and spacing, and make the names part of the images. The current runtime uses
 56 × 56 buttons on desktop and the 844-wide landscape view, and 46 × 46 on the
 568-wide view. No larger tiles or additional text labels are introduced.
 
-This is a review artifact, not an approved production design. No production entry,
-stylesheet, gameplay code, data or Master Specification has been changed. Keep
-the pull request in draft and do not merge or deploy until the owner accepts it.
+The owner approved revision 2 on October 16, 2026 and requested merging the pending
+work. Production `index.html` and `main-screen-art-ui.css` now use this design;
+the existing actions, badges and saved clan renderer remain in place. The Master
+Specification records the approved exception to burgundy rectangular backgrounds
+for these four controls. Approval and merge are not deployment evidence.
 
 ## Review
 
@@ -35,7 +37,13 @@ empty transparent space above for dynamic heraldry. Four RGBA PNGs are saved in
 [`images/`](images/); the exact prompts and input references are in
 [`images/prompts.json`](images/prompts.json). Generated originals are retained;
 the repository copies are byte-identical. These review masters are not included
-in the production build. The stylesheet loads only inside the loopback preview.
+in the production build. Four 192 × 192 RGBA WebP delivery copies were prepared
+with the existing `tools/optimize-game-art.py` `build_asset` function at quality 92,
+retaining the full square canvases. Their combined size is 67,824 bytes; hashes,
+source references and dimensions are in [`images/runtime-assets.json`](images/runtime-assets.json)
+and the optimized-art manifest. They use the existing runtime image cache rather
+than adding images to installation preload. The preview restores the historical
+images before comparison; its stylesheet and sample state stay loopback-only.
 
 ## Validation
 
@@ -47,5 +55,9 @@ current/draft switching, different saved clan shields, no-clan discovery,
 notification visibility and no network writes. It saves screenshots and results
 under `release-artifacts/labeled-hud-draft/` (ignored review output).
 
+`node tools/validate-main-screen-art-browser.js` checks production rendering,
+navigation, keyboard/touch, unsaved Profile guards, dynamic shields and label
+clearance at the same three sizes. Build/artifact and asset-budget checks verify
+the runtime images are packaged and the source masters remain excluded.
 Emulator tests are unnecessary: server rules, database access and authoritative
-gameplay are unchanged. Human appearance approval is still pending.
+gameplay are unchanged. Physical-device review and live publication remain separate.

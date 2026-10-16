@@ -131,7 +131,9 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // 32 refreshed Common icons and selected-only 384px details add 1,232,808 bytes.
 // The remaining four tiers add 5,923,710 bytes, bounded at 5824 KiB.
 // Retired gear derivatives stay outside the production artifact.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824) * 1024;
+// Four approved labeled HUD derivatives add 67,824 bytes, bounded at 68 KiB.
+// Keep the existing per-HUD-image 32 KiB cap and installation image exclusions.
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180 + 1216 + 5824 + 68) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -497,7 +499,8 @@ const appReferenceSource = [read("home.html"), read("guides.html"), read("world.
 // These retained comparison masters were superseded by the already-shipped HUD art.
 const replacedHudArt = {
   "hud-report": "assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp",
-  "hud-leaderboard": "assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp",
+  "hud-leaderboard": "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
+  "hud-inner-city-ink": "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
   "hud-shop": "assets/optimized/hud-shop-ink-384x384-315e187c1111.webp",
   "hud-bag": "assets/optimized/hud-bag-ink-384x384-cef67c4e6db0.webp",
 };

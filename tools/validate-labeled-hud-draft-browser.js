@@ -36,7 +36,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const shot = async name => fs.writeFileSync(path.join(artifacts, name + ".png"), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
     await client.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
     await client.send("Page.navigate", { url: address.url + "/docs/visual-qa/labeled-hud-buttons/preview.html" });
-    await wait('document.documentElement.dataset.hudDraftReady === "true"');
+    await wait('document.documentElement?.dataset.hudDraftReady === "true"');
     await ev('window.draftGame = document.getElementById("game").contentWindow; void 0');
     const measure = () => ev(`(() => {
       const d = draftGame.document;

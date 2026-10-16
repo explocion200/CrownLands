@@ -4,6 +4,12 @@
   "coverage": [
     {
       "paths": [
+        "assets/optimized/hud-clan-labeled-192x192-ce3b79f74ade.webp",
+        "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp",
+        "assets/optimized/hud-inner-castle-labeled-192x192-de94d6f901a0.webp",
+        "assets/optimized/hud-leaderboard-labeled-192x192-cb53ce17ab12.webp",
+        "assets/optimized/manifest.json",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
         "docs/visual-qa/labeled-hud-buttons/README.md",
         "docs/visual-qa/labeled-hud-buttons/draft.css",
         "docs/visual-qa/labeled-hud-buttons/images/clan-button.png",
@@ -11,17 +17,28 @@
         "docs/visual-qa/labeled-hud-buttons/images/inner-castle-button.png",
         "docs/visual-qa/labeled-hud-buttons/images/leaderboard-button.png",
         "docs/visual-qa/labeled-hud-buttons/images/prompts.json",
+        "docs/visual-qa/labeled-hud-buttons/images/runtime-assets.json",
         "docs/visual-qa/labeled-hud-buttons/index.html",
         "docs/visual-qa/labeled-hud-buttons/preview.html",
         "docs/visual-qa/labeled-hud-buttons/preview.js",
         "docs/visual-qa/labeled-hud-buttons/review.js",
         "docs/visual-qa/labeled-hud-buttons/runtime-fixture.js",
-        "tools/validate-labeled-hud-draft-browser.js"
+        "index.html",
+        "main-screen-art-ui.css",
+        "service-worker.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-labeled-hud-draft-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/validate-labeled-hud-draft-browser.js"
+        "tools/validate-labeled-hud-draft-browser.js",
+        "tools/validate-main-screen-art-browser.js",
+        "tools/validate-hud-screen-edge-browser.js",
+        "tools/validate-crowns-hud-browser.js"
       ],
-      "reason": "Review-only image-button draft derives three transparent labeled images from current HUD art and preserves the actual dynamic clan heraldry renderer over a separate Clan ribbon. Focused browser validation compares exact original button positions, dimensions and spacing at desktop and two landscape sizes, checks RGBA image decoding and bounds, transparent surfaces, touch/hit targets, current comparison, changing clan shields and their clearance above the Clan ribbon for both shield renderer classes, no-clan state, badges and no network writes. Prompt metadata and README document the review assets. The test uses installed CI Chrome before its optional local Playwright fallback. Shared live sources and server authority are unchanged; no emulator suite is needed. Production build and artifact checks ensure these draft assets are excluded."
+      "reason": "Approved HUD image buttons retain original targets and positions, existing event handlers and dynamic saved heraldry. Draft comparison tests cover exact geometry, decoded alpha artwork, badges and no network writes; startup readiness is null-safe during navigation. Production art tests verify the compressed approved sources/hashes, actual navigation, mouse/touch/keyboard, Profile dirty-exit guards, clan shield clearance, no-clan state, map zoom independence and affected shared HUD controls. Production screen-edge/fullscreen and Crowns HUD tests cover shared profile layout, currency and stamina bounds at desktop and landscape sizes. Existing production artifact and asset-budget gates check runtime image delivery, offline stylesheet linkage and source-master exclusion. README/provenance and the Master Specification record the owner-approved design. No server-authoritative source, database or gameplay rule changes, so no emulator suites are needed. The measured 1,771-byte offline-shell increase is bounded at 2 KiB and the 67,824-byte runtime images at 68 KiB; per-image and login preload caps remain unchanged."
     }
   ]
 }

@@ -38,7 +38,7 @@ function getNotificationOpenUrl(notificationData = {}) {
 // Optional screen styles are requested when their screen opens and use the
 // bounded runtime cache. Keep installation focused on the playable shell.
 const STATIC_CACHE_URLS = [
-  "/main-screen-art-ui.css?v=20261001-crowns-r1",
+  "/main-screen-art-ui.css?v=20261016-labeled-buttons-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",
   "/player-journey.css?v=20260920-journey-r1",
