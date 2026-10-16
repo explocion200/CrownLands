@@ -22,6 +22,18 @@
       ],
       "tests": [],
       "reason": "Document the observed read-only diagnostic and checkout recovery behavior, distinguish historical setup from current local operation, and explain player requirements. Runtime behavior is covered by the adjacent UI validation group."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-crown-payments-browser.js"
+      ],
+      "reason": "The checkout recovery exceeded the existing installation-cache cap. Apply the existing conservative minifier only to crown-payments-ui.js and count those delivered bytes in the shell validator. Keep all size caps unchanged. Full artifact and asset-budget validators verify packaging, while the checkout browser suite asserts exact minifier output and serves the built client to exercise every live/test flow after compilation."
     }
   ]
 }

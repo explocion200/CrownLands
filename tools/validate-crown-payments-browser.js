@@ -3,6 +3,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { CdpClient } = require("./map-benchmark/cdp-client");
+// Test authority stays synthetic; serve the actual production client, including
+// the compact checkout module. Build validation runs before this browser suite.
+require("./map-benchmark/fixtures");
+process.env.CROWNLANDS_BENCHMARK_ROOT = path.resolve(__dirname, "../dist");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 
@@ -61,6 +65,8 @@ function shopFrame() {
 
 async function main() {
   const root = path.resolve(__dirname, "..");
+  assert.equal(fs.readFileSync(path.join(root, "dist/crown-payments-ui.js"), "utf8"),
+    require("./estate-delivery").minifyEstate(fs.readFileSync(path.join(root, "crown-payments-ui.js"), "utf8")), "Test the exact compiled checkout module");
   const executable = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].find(value => value && fs.existsSync(value));
   assert(executable, "Chromium is required");
   const server = createMapBenchmarkServer(), address = await server.listen();

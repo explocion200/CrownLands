@@ -12,7 +12,7 @@ Confirmed/expired orders and account changes remove the links; URLs are never pe
 
 Players need a signed-in permanent Crownlands account and the details requested by the Stripe form: email, a supported card, billing address, agreement to the purchase terms and any verification requested by their bank. They do not need a Stripe merchant account. The current offer is a one-time purchase; creating or reopening checkout does not charge the card. [Stripe-hosted checkout](https://docs.stripe.com/payments/checkout) handles payment details; only server verification of a paid order delivers Crowns.
 
-Validation selects the desktop/landscape-mobile browser fixture (including blocked, inaccessible, closed and silently failed popup navigation, same-order recovery, safe links, return page, expiry, confirmation and account isolation) and the existing live/test payment contract validators. These tests use simulated provider responses and do not make a live purchase. Deployment and the reporting device's final checkout verification must be recorded separately.
+The checkout module uses the existing conservative production minifier to stay within unchanged page and installation-cache size limits. Validation selects the built-client desktop/landscape-mobile browser fixture (including blocked, inaccessible, closed and silently failed popup navigation, same-order recovery, safe links, return page, expiry, confirmation and account isolation) and the existing live/test payment contract validators. These tests use simulated provider responses and do not make a live purchase. Deployment and the reporting device's final checkout verification must be recorded separately.
 
 ## Live purchase implementation — October 5, 2026
 
