@@ -46,7 +46,7 @@
     friendsTab = button("Friends", () => open("friends")); friendsTab.id = "socialFriendsTab";
     messagesTab = button("Messages", () => open("messages")); messagesTab.id = "socialMessagesTab";
     for (const node of [friendsTab, messagesTab]) { node.hidden = true; node.setAttribute("role", "tab"); node.setAttribute("aria-controls", "socialPanel"); node.setAttribute("aria-selected", "false"); node.tabIndex = -1; }
-    const tabs = dialog().querySelector(".chat-tabs"); tabs.append(friendsTab, messagesTab);
+    const tabs = dialog().querySelector(".chat-tabs"); tabs.append(messagesTab, friendsTab);
     tabs.addEventListener("click", event => { if (event.target.closest("[data-chat-channel]")) leave(); });
     tabs.addEventListener("keydown", event => {
       if (!ready || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
