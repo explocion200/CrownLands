@@ -112,6 +112,19 @@ async function main(){
   const pending=service(async texts=>{providerCalls++;entered();await new Promise(resolve=>{release=resolve;});return texts;});
   const c=await make();const first=pending(request(c));await ready;
   await rejectCode(pending(request(c)),"unavailable");release();await first;
+  // A short overlap joins the existing reservation across service instances.
+  // Waiting readers still authorize themselves and charge their own rate limit.
+  let finishShared, startedShared;
+  const sharedReady=new Promise(resolve=>{startedShared=resolve;});
+  const sharedGate=new Promise(resolve=>{finishShared=resolve;});
+  const sharedMessage=await make("Shared"), callsBefore=providerCalls;
+  const owner=service(async texts=>{providerCalls++;startedShared();await sharedGate;return texts;})(request(sharedMessage));
+  await sharedReady;
+  const sharedWaits=[];
+  const reader=createService({db,authorize,fail,now:()=>clock,
+    provider:async()=>{throw Error("Duplicate provider call");},
+    wait:async ms=>{sharedWaits.push(ms);finishShared();await owner;}})(request(sharedMessage));
+  assert.deepEqual(await reader,await owner);assert.deepEqual(sharedWaits,[20]);assert.equal(providerCalls,callsBefore+1);
   const before=(await db.doc("chatTranslationUsage/2030-02").get()).data().reservedCharacters;
   const failedMessage=await make();
   await rejectCode(service(async()=>{throw Error("Provider timeout");})(request(failedMessage)),"unavailable");

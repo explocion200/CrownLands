@@ -464,6 +464,7 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
   const routeData = createAuthoritativeRouteModels(layout, options);
   // Geometry is immutable within a planner. Expansion creates another planner.
   const legCache = createTerrainLegCache();
+  const targetBounds = new Map();
   const calculateLeg = (regionId, start, end) => {
     // A* tie-breaking and simplification can differ by search direction. Always
     // solve a pair in the same orientation, regardless of instance/cache history,
@@ -492,10 +493,46 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
     buildJob: (source, target) => buildAuthoritativeRouteJob(routeData, source, target),
     calculate(source, target, searchOptions = {}) {
       if (options.shortestTravelTime) {
+        const sourceRegion = getTargetRegionId(source), targetRegion = getTargetRegionId(target);
+        if (!routeData.models.has(sourceRegion) || !routeData.models.has(targetRegion)
+          || ![source.x, source.y, target.x, target.y].every(Number.isFinite)) return null;
+        // Re-entering a map is forbidden, so a same-map trip can only use its
+        // direct terrain leg. Searching other maps cannot produce another path.
+        if (sourceRegion === targetRegion) {
+          const leg = calculateLeg(sourceRegion, source, target);
+          const maximum = Number.isFinite(searchOptions.maxDistance) ? searchOptions.maxDistance : Infinity;
+          if (leg && leg.length > maximum + Math.max(1, maximum) * 1e-9) return null;
+          return leg ? normalizeRouteResult({ segments: [leg], points: leg.points, length: leg.length }) : null;
+        }
+        // A valid road-chain journey supplies an upper bound, never the answer.
+        // The exhaustive search still chooses the identical cheapest terrain
+        // route, but avoids solving unrelated maps that cannot beat that bound.
+        const chain = findAuthoritativeRegionChain(routeData.models, getTargetRegionId(source), getTargetRegionId(target));
+        let upperBound = 0;
+        let current = source;
+        for (let index = 0; index < (chain?.length || 0); index++) {
+          const regionId = chain[index], next = chain[index + 1];
+          const exit = next && getPortalForRoute(routeData.models, regionId, next);
+          const arrival = exit && getLinkedArrivalPortal(routeData.models, regionId, next, exit);
+          if (next && !arrival) { upperBound = Infinity; break; }
+          const end = next ? { ...exit, id: `portal:${regionId}:${exit.id}` } : target;
+          const leg = calculateLeg(regionId, current, end);
+          if (!leg) { upperBound = Infinity; break; }
+          upperBound += leg.length;
+          if (next) current = { ...arrival, id: `portal:${next}:${arrival.id}` };
+        }
+        if (!chain?.length) upperBound = Infinity;
+        const boundKey = JSON.stringify([targetRegion, target.x, target.y]);
+        let lowerBound = targetBounds.get(boundKey);
+        if (!lowerBound) lowerBound = worldTravel.createTargetDistanceBound(routeData.models.keys(),
+          regionId => routeData.models.get(regionId)?.portals || [], { ...target, regionId: targetRegion });
+        targetBounds.delete(boundKey); targetBounds.set(boundKey, lowerBound);
+        while (targetBounds.size > 32) targetBounds.delete(targetBounds.keys().next().value);
         return normalizeRouteResult(worldTravel.findShortestRoute(
           routeData.models.keys(), regionId => routeData.models.get(regionId)?.portals || [],
           { ...source, regionId: getTargetRegionId(source) },
-          { ...target, regionId: getTargetRegionId(target) }, calculateLeg, searchOptions
+          { ...target, regionId: getTargetRegionId(target) }, calculateLeg,
+          { ...searchOptions, lowerBound, maxDistance: Math.min(searchOptions.maxDistance ?? Infinity, upperBound) }
         ));
       }
       const job = buildAuthoritativeRouteJob(routeData, source, target);

@@ -27,5 +27,8 @@
 // bytes. Bound growth at 3 KiB; no new assets, dependencies or requests.
 // Friends/private messaging adds two compact shell modules, minified in production.
 // Bound the complete UI, bridge and markup addition at 24 KiB; no new art.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024;
+// Indexed card selectors preserve specificity; bounded route pruning adds no
+// assets or requests. Combined raw shell growth is 7,974 bytes (about 1.7 KiB
+// deflated). Bound that CPU-saving tradeoff at 8 KiB.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

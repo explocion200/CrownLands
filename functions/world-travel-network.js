@@ -134,11 +134,13 @@
     let winner = null;
     const maximum = Number.isFinite(options.maxDistance) ? options.maxDistance : Infinity;
     const beyondMaximum = cost => cost > maximum + Math.max(1, maximum) * 1e-9;
+    const remaining = typeof options.lowerBound === "function" ? options.lowerBound : () => 0;
     while (pending.length) {
       const current = pop();
       if (best.get(current.key) !== current) continue;
       if (beyondMaximum(current.cost)) break;
       if (winner && current.cost >= winner.cost) break;
+      if (beyondMaximum(current.cost + remaining({ ...current.point, regionId: current.regionId }))) continue;
       if (current.regionId === target.regionId) {
         const leg = calculateLeg(current.regionId, current.point, target);
         if (leg && Number.isFinite(leg.length) && leg.length >= 0) {
@@ -158,6 +160,12 @@
         if (!arrival) continue;
         if (beyondMaximum(current.cost + Math.hypot(current.point.x - exit.x, current.point.y - exit.y))) continue;
         const key = `${destinationId}:${arrival.id}`;
+        const minimumCost = current.cost + Math.hypot(current.point.x - exit.x, current.point.y - exit.y);
+        // These are lower bounds only. Keep Dijkstra's queue/tie ordering and
+        // the exact terrain solver; skip edges that cannot improve a state or
+        // fit a known feasible route. Do not replace distance with map hops.
+        if (options.lowerBound && best.has(key) && minimumCost > best.get(key).cost + Math.max(1, minimumCost) * 1e-9) continue;
+        if (beyondMaximum(minimumCost + remaining({ ...arrival, regionId: destinationId }))) continue;
         // A positive-distance cycle cannot improve an already finalized state.
         const leg = calculateLeg(current.regionId, current.point, { ...exit, id: `portal:${current.regionId}:${exit.id}` });
         if (!leg || !Number.isFinite(leg.length) || leg.length < 0) continue;

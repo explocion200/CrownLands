@@ -307,6 +307,7 @@ class Store {
         const guard = this.transactionGuard.getStore();
         if (guard) await guard(client);
         const tx = new Transaction(this, client);
+        tx.isolation = isolation;
         const result = await callback(tx);
         if (guard) await guard(client);
         await this.commit(tx);
@@ -339,9 +340,16 @@ class Store {
     // READ COMMITTED without losing simultaneous creates/merges/increments,
     // avoiding unrelated predicate conflicts during parallel map seeding.
     // Callback transactions still use SERIALIZABLE for query/phantom safety.
-    await tx.client.query(`SELECT pg_advisory_xact_lock(hashtext($1),lock_id) FROM
-      (SELECT DISTINCT hashtext(path) AS lock_id FROM unnest($2::text[]) AS path ORDER BY lock_id) AS locks`, [this.schema, paths]);
-    const current = await tx.client.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[]) ORDER BY path FOR UPDATE`, [paths]);
+    const lock = keys => tx.client.query(`SELECT pg_advisory_xact_lock(hashtext($1),lock_id) FROM
+      (SELECT DISTINCT hashtext(path) AS lock_id FROM unnest($2::text[]) AS path ORDER BY lock_id) AS locks`, [this.schema, keys]);
+    const serializable = tx.isolation === "SERIALIZABLE";
+    if (!serializable) await lock(paths);
+    // A projection can enqueue writes that already match its snapshot. Taking
+    // FOR UPDATE first makes such no-ops conflict with real player updates.
+    // SERIALIZABLE reads retain predicate/version protection; actual writes
+    // still acquire locks and PostgreSQL rejects stale updates at INSERT/DELETE.
+    // Blind READ COMMITTED batches must lock before reading current values.
+    const current = await tx.client.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[]) ORDER BY path${serializable ? "" : " FOR UPDATE"}`, [paths]);
     const bodies = new Map(current.rows.map(row => [row.path, row.body]));
     const original = new Map(bodies);
     let timestamp = V.Timestamp.now();
@@ -366,9 +374,11 @@ class Store {
         bodies.set(write.ref.path, body);
       }
     }
-    for (const path of paths) {
+    const changedPaths = paths.filter(path => !isDeepStrictEqual(original.get(path)?.fields, bodies.get(path)?.fields)
+      || Boolean(original.get(path)) !== Boolean(bodies.get(path)));
+    if (serializable && changedPaths.length) await lock(changedPaths);
+    for (const path of changedPaths) {
       const before = original.get(path), after = bodies.get(path);
-      if (isDeepStrictEqual(before?.fields, after?.fields) && Boolean(before) === Boolean(after)) continue;
       if (after) {
         const parts = path.split("/");
         await tx.client.query(`INSERT INTO ${this.schema}.documents(path,collection_id,parent_path,body,source_sha256) VALUES($1,$2,$3,$4,$5) ON CONFLICT(path) DO UPDATE SET body=EXCLUDED.body,source_sha256=EXCLUDED.source_sha256`, [path, parts.at(-2), parts.slice(0, -2).join("/"), after, hash(after)]);

@@ -27,8 +27,12 @@ function loadVersion(base = "") {
   engine._compile(fs.readFileSync(engineFile,"utf8"),engineFile);
   const loaded = new Module(filename,module);
   loaded.filename=filename; loaded.paths=module.paths;
+  const networkFile = path.join(root, "functions/world-travel-network.js");
+  const network = new Module(networkFile, module);
+  network.filename = networkFile; network.paths = module.paths;
+  network._compile(base ? execFileSync("git", ["show", `${base}:functions/world-travel-network.js`], {cwd:root,encoding:"utf8"}) : fs.readFileSync(networkFile,"utf8"), networkFile);
   const originalRequire=loaded.require.bind(loaded);
-  loaded.require=id=>id==="./canonical-route-engine.js" ? engine.exports : originalRequire(id);
+  loaded.require=id=>id==="./canonical-route-engine.js" ? engine.exports : id==="./world-travel-network.js" ? network.exports : originalRequire(id);
   loaded._compile(source,filename);
   return loaded.exports;
 }
@@ -68,14 +72,19 @@ function main() {
   const tower = towers.TOWERS[0];
   const towerSource = {...tower,...routing.imagePointToWorld(current.getModel(tower.regionId),{x:tower.reservedX,y:tower.reservedY})};
   const towerTarget = canonicalCity(current,tower.regionId);
+  for(const invalid of [{...city,x:NaN},{...city,y:Infinity},{...city,regionId:"inactive-map"}]) {
+    assert.equal(current.calculate(invalid,same),null);
+    assert.equal(current.calculate(city,invalid),null);
+  }
   const cases = [ ["city-same",city,same], ["city-cross",city,cross], ["tower-same",towerSource,towerTarget], ["tower-cross",towerSource,cross] ];
   const evidence = { base, scope:"Pure authoritative routing with isolated canonical caches; first use in a shared process, then warm samples. No network, Firestore, travel or production latency included", routes:[] };
   for (const [name,from,to] of cases) {
     const samples = {before:[],after:[]};
+    const cold = {};
     let expected;
     for (let pass=0;pass<21;pass++) {
-      let start=performance.now(); const before=reference.calculate(from,to); samples.before.push(performance.now()-start);
-      start=performance.now(); const after=current.calculate(from,to); samples.after.push(performance.now()-start);
+      let start=performance.now(); const before=timing.run(()=>{const route=reference.calculate(from,to);if(!pass)cold.before=timing.snapshot();return route;}); samples.before.push(performance.now()-start);
+      start=performance.now(); const after=timing.run(()=>{const route=current.calculate(from,to);if(!pass)cold.after=timing.snapshot();return route;}); samples.after.push(performance.now()-start);
       assert(before?.pathLength > 0, `${name} is not reachable`);
       assert.deepEqual(plain(after),plain(before),`${name}: caching changed authoritative geometry`);
       expected=plain(before);
@@ -83,7 +92,18 @@ function main() {
     const forward=current.calculate(from,to); forward.path[0].x=-999;
     assert.deepEqual(plain(current.calculate(from,to)),expected,"A returned route mutated the cache");
     assert.deepEqual(plain(current.calculate(to,from)),plain(reference.calculate(to,from)),"Reverse routes differ");
-    evidence.routes.push({name,firstUseMs:{before:samples.before[0],after:samples.after[0]},warmMs:{before:stats(samples.before.slice(1)),after:stats(samples.after.slice(1))}});
+    assert.equal(current.calculate(from,to,{maxDistance:expected.pathLength*.9}),null,"Distance cap was bypassed");
+    assert.deepEqual(plain(current.calculate(from,to,{maxDistance:expected.pathLength})),expected,"An exact distance bound rejected its valid route");
+    if(name==="city-cross")assert(cold.after.routeCacheMisses<cold.before.routeCacheMisses/2,"Cold routing did not reduce exact terrain solves");
+    evidence.routes.push({name,cold,firstUseMs:{before:samples.before[0],after:samples.after[0]},warmMs:{before:stats(samples.before.slice(1)),after:stats(samples.after.slice(1))}});
+  }
+  // Current Core/New Lands geometry, including expansion and mixed directions.
+  // Reusing the planners also exercises cache eviction, not just one hot pair.
+  const ids = fixture.maps.map(map=>map.id);
+  for(let i=0;i<16;i++) {
+    const from=canonicalCity(current,ids[(i*7)%ids.length],i%3);
+    const to=canonicalCity(current,ids[(i*13+5)%ids.length],(i+1)%3);
+    assert.deepEqual(plain(current.calculate(from,to)),plain(reference.calculate(from,to)),`Current world route ${i} differs`);
   }
   // A retry runs every candidate again; no origin may be removed or approximated.
   const candidates = fixture.activeRegionIds.slice(0,5).map(id=>({...canonicalCity(current,id),sourceType:"city"}));
@@ -95,7 +115,9 @@ function main() {
   evidence.candidateRetry=warm;
   // Exercise the full permitted Nearby batch, then a transaction retry.
   const targets=current.getModel(city.regionId).map.cities.filter(row=>row.id!==city.id).slice(0,MAX_NEARBY_SCOUT_TARGETS)
-    .map(row=>({...row,regionId:city.regionId,...routing.imagePointToWorld(current.getModel(city.regionId),row)}));
+    // Production getCanonicalArmyRouteEndpoint rounds persisted map positions.
+    // Do not reuse a city ID with a different fractional position in the engine.
+    .map(row=>{const p=routing.imagePointToWorld(current.getModel(city.regionId),row);return {...row,regionId:city.regionId,x:Math.round(p.x),y:Math.round(p.y)};});
   assert.equal(targets.length,MAX_NEARBY_SCOUT_TARGETS);
   const batch={};
   for(const [name,planner] of [["before",reference],["after",current]]) {
