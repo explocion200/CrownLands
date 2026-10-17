@@ -1,5 +1,39 @@
 # Local army query performance
 
+## Serializable conflict tracking and cleanup scope — October 16, 2026
+
+The follow-up audit found that the indexed 228-city ownership read still promoted
+its read dependencies to the entire `documents` table at PostgreSQL's default
+32-object per-relation threshold. An unrelated game-document write can then
+force a Serializable retry. The reviewed operator configuration in
+`tools/local-migration/postgresql-crownlands.conf` reserves 1,024 predicate locks
+per transaction on average, promotes at 512 objects per relation and 16 rows per
+page, and requires a PostgreSQL restart. It does not weaken isolation, change
+retry bounds, increase connection limits or change durability. See PostgreSQL's
+[predicate lock settings](https://www.postgresql.org/docs/18/runtime-config-locks.html)
+and [Serializable guidance](https://www.postgresql.org/docs/18/transaction-iso.html#XACT-SERIALIZABLE).
+
+An independent PostgreSQL fixture reproduces the default table-wide dependency
+and unnecessary retry between two disjoint 228-city kingdoms. With the reviewed
+configuration, five pairs commit without that promotion or retry. Real wallet
+contention, exact-once receipts and cross-document write-skew protection remain
+tested. These are controlled results, not a production latency guarantee.
+
+The cleanup failure was a current membership paired with a previous-season
+profile. The maintenance admission transaction now checks both. It skips a
+missing/older profile without modifying it, and retires only a known failed
+scope preflight with no asset-processing progress. Active leases, partial work
+and other failure reasons remain fenced for review. Existing failure evidence
+is retained; ordinary current-season inactivity rules stay unchanged. PostgreSQL
+and emulator tests cover the guard and replay. This fixes the failure rather
+than suppressing the worker health check. No archived assets are modified.
+
+Installation must verify the exact tested source and current realm, preserve the
+previous configuration and runtime, stop database clients gracefully, restart
+PostgreSQL and those clients, check effective settings and the real ownership
+read's predicate locks, then verify cleanup, all health endpoints and a fresh
+encrypted backup. A merge alone does not install this configuration or backend.
+
 ## Diagnosis — October 16, 2026
 
 Read-only production evidence after the worker connection repair found an army
