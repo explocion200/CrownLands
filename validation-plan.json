@@ -1,33 +1,22 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0d392a5f266ab0af7021eb4a65bc6cffd5dc7196",
+  "baseCommit": "51a22b1d39ac4a63701258ef0d2b9bbe327d3e00",
   "coverage": [
     {
       "paths": [
-        ".github/workflows/crownlands-local-publish.yml",
-        "tools/check-local-deploy-merge.js",
-        "tools/sign-local-game.js",
-        "tools/local-deploy/github_access.py",
-        "tools/local-deploy/publisher.py",
-        "tools/local-deploy/tests.py",
-        "tools/local-deploy/private_tests.py",
-        "tools/local-deploy/upgrade_private.py",
-        "tools/local-deploy/install.sh",
-        "tools/test-local-deployment.js"
+        "functions/estate-service.js",
+        "functions/estate-economy.js",
+        "tools/test-local-postgres-estate-quotes.js"
       ],
       "tests": [
-        "tools/test-local-deployment.js",
-        "tools/test-local-production-client.js",
-        "tools/validate-production-artifact.js"
+        "tools/test-local-postgres-estate-quotes.js",
+        "tools/test-estate-economy.js",
+        "tools/test-estate-manual-production.js",
+        "tools/test-guild-facilities.js",
+        "tools/test-guild-missions.js",
+        "functions/test/emulator-estate-economy.js"
       ],
-      "reason": "Restore private-repository publication on GitHub Free using scoped read-only GitHub App tokens, dedicated Ed25519 signatures and independent merged-PR/workflow/check-suite authorization. Tests cover actual Node/OpenSSL signing, RSA JWT lifetime/signature, least-privilege scopes, bounded authenticated downloads, redirect credential stripping, sanitized errors, pending/failing gates, orchestration before activation, operator upgrade preconditions and rollback, existing archive security, active local epoch/runtime checks, static transformation, atomic activation and recovery. Production artifact and local client checks verify that signing/publishing preserves validated game packaging and local bootstrap dependencies; align the existing transform fixture with production transport minification. No gameplay, UI, backend service or player-data authority changes, so no emulator or visual suites apply."
-    },
-    {
-      "paths": [
-        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md"
-      ],
-      "tests": [],
-      "reason": "Document private App access, dedicated signing trust, GitHub Free limitations, reviewed operator upgrade/rollback and credential rotation. This describes the intended flow; a merge is not deployment evidence."
+      "reason": "Use strict structural equality for persisted estate quotes so PostgreSQL JSONB map-key ordering cannot reject unchanged construction or production terms. The real isolated PostgreSQL service regression reproduces the prior failure, checks first construction and all 20 next-level builds through payment and completion, concurrent idempotent replay, material batches/reserves sharing quote validation, and rejection without partial changes for altered prices/nested terms/types/arrays/fields, stale revisions, expiration and insufficient Gold. Estate and production rules plus Guild facility/mission dependencies exercise unchanged costs, gates, receipts, production, champions and rewards. The selected estate emulator suite covers actual authenticated callable, realm/economy, legacy-credit, concurrency and persistence paths for the shared server-authoritative service. No UI, world-topology, schema, balance or design changes; no visual checks apply."
     }
   ]
 }

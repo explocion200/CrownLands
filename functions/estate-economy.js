@@ -1,4 +1,5 @@
 "use strict";
+const { isDeepStrictEqual } = require("node:util");
 // Account-owned estate rules. Only the service may commit these transitions.
 const C = require("./estate-config.json");
 const HOUR = 3600000, EPS = 1e-7;
@@ -129,7 +130,7 @@ function productionQuote(state, building, quantity) {
 }
 function startProduction(state, quote, requestId, now) {
   const fresh = productionQuote(state, quote.building, quote.quantity);
-  if (JSON.stringify(fresh) !== JSON.stringify(quote)) fail("Production changed. Review the current recipe and time.");
+  if (!isDeepStrictEqual(fresh, quote)) fail("Production changed. Review the current recipe and time.");
   spend(state, quote.materials);
   state.productionOrders ||= {};
   state.productionOrders[quote.building] = { ...quote, id: requestId, delivered: 0, status: "running", startedAtMs: now, completesAtMs: now + quote.durationMs };
