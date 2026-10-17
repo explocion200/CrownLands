@@ -72,7 +72,9 @@ function createGoogleProvider({ projectId, credential, fetchImpl = fetch, emulat
   };
 }
 
-function createService({ db, authorize, provider, fail, now = Date.now }) {
+function createService({ db, authorize, provider, fail, now = Date.now,
+  wait = ms => new Promise(resolve => setTimeout(resolve, ms)),
+  diagnostic = reason => console.warn("crownlands_translation", { reason }) }) {
   async function readMessages(transaction, request, payload) {
     const scope = await authorize(transaction, request, payload);
     const refs = payload.messageIds.map(id => db.doc(`${scope.messageCollection}/${id}`));
@@ -94,42 +96,56 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
     if (!request.auth?.uid) throw fail("unauthenticated", "Sign in before translating chat.");
     const payload = validatePayload(request.data || {}, fail);
     const owner = crypto.randomUUID();
-    const batch = await db.runTransaction(async transaction => {
-      const messages = await readMessages(transaction, request, payload);
-      const current = now();
-      const month = new Date(current).toISOString().slice(0, 7);
-      // This project-wide ledger is intentionally outside seasonal world data.
-      const budgetRef = db.doc(`chatTranslationUsage/${month}`);
-      const rateRef = db.doc(`serverRateLimits/translation_${request.auth.uid}`);
-      const snapshots = await transaction.getAll(budgetRef, rateRef, ...messages.map(item => item.cacheRef));
-      const [budget, rate, ...cached] = snapshots;
-      const rateData = rate.data() || {};
-      const minute = Math.floor(current / 60_000);
-      const count = rateData.minute === minute ? Number(rateData.count) || 0 : 0;
-      if (count >= REQUESTS_PER_MINUTE) throw fail("resource-exhausted", "Translation is busy. Try again in a minute.");
-      const pending = [];
-      for (let i = 0; i < messages.length; i += 1) {
-        const cache = cached[i].data() || {};
-        if (cache.state === "ready" && cache.expiresAtMs > current && typeof cache.text === "string") messages[i].text = cache.text;
-        else if (cache.state === "pending" && cache.leaseUntilMs > current) {
-          throw fail("unavailable", "These messages are being translated. Try again shortly.");
-        } else pending.push(messages[i]);
+    let batch;
+    // Another authorized reader may already be paying for the same result.
+    // Retry only that pending lease, outside the transaction/connection. Every
+    // attempt rechecks access and source text; no shared response bypasses ACLs.
+    // Six short waits total 1.26 seconds, then retain the existing manual Retry.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        batch = await db.runTransaction(async transaction => {
+          const messages = await readMessages(transaction, request, payload);
+          const current = now();
+          const month = new Date(current).toISOString().slice(0, 7);
+          // This project-wide ledger is intentionally outside seasonal world data.
+          const budgetRef = db.doc(`chatTranslationUsage/${month}`);
+          const rateRef = db.doc(`serverRateLimits/translation_${request.auth.uid}`);
+          const snapshots = await transaction.getAll(budgetRef, rateRef, ...messages.map(item => item.cacheRef));
+          const [budget, rate, ...cached] = snapshots;
+          const rateData = rate.data() || {};
+          const minute = Math.floor(current / 60_000);
+          const count = rateData.minute === minute ? Number(rateData.count) || 0 : 0;
+          if (count >= REQUESTS_PER_MINUTE) throw fail("resource-exhausted", "Translation is busy. Try again in a minute.");
+          const pending = [];
+          for (let i = 0; i < messages.length; i += 1) {
+            const cache = cached[i].data() || {};
+            if (cache.state === "ready" && cache.expiresAtMs > current && typeof cache.text === "string") messages[i].text = cache.text;
+            else if (cache.state === "pending" && cache.leaseUntilMs > current) {
+              throw fail("unavailable", "These messages are being translated. Try again shortly.", { reason: "translation-pending" });
+            } else pending.push(messages[i]);
+          }
+          const characters = pending.reduce((sum, item) => sum + Array.from(item.source).length, 0);
+          const reserved = budget.exists ? budget.data().reservedCharacters : 0;
+          if (!Number.isSafeInteger(reserved) || reserved < 0) throw fail("unavailable", "Translation usage is unavailable.");
+          if (characters && reserved + characters > MONTHLY_CHARACTER_LIMIT) {
+            throw fail("resource-exhausted", "This month's chat translation allowance is used. Originals remain available.", { reason: "translation-monthly-limit" });
+          }
+          transaction.set(rateRef, { minute, count: count + 1 });
+          if (characters) {
+            // Reserve before the external request. Failed or uncertain requests are
+            // not refunded: a timeout may still have been billed by Google.
+            transaction.set(budgetRef, { month, reservedCharacters: reserved + characters, limit: MONTHLY_CHARACTER_LIMIT, updatedAtMs: current });
+            for (const item of pending) transaction.set(item.cacheRef, { state: "pending", owner, leaseUntilMs: current + LEASE_MS, expiresAtMs: item.expiresAtMs });
+          }
+          return { messages, pending };
+        });
+        break;
+      } catch (error) {
+        if (error.details?.reason !== "translation-pending") throw error;
+        if (attempt >= 6) { diagnostic("pending-timeout"); throw error; }
+        await wait(20 * 2 ** attempt);
       }
-      const characters = pending.reduce((sum, item) => sum + Array.from(item.source).length, 0);
-      const reserved = budget.exists ? budget.data().reservedCharacters : 0;
-      if (!Number.isSafeInteger(reserved) || reserved < 0) throw fail("unavailable", "Translation usage is unavailable.");
-      if (characters && reserved + characters > MONTHLY_CHARACTER_LIMIT) {
-        throw fail("resource-exhausted", "This month's chat translation allowance is used. Originals remain available.", { reason: "translation-monthly-limit" });
-      }
-      transaction.set(rateRef, { minute, count: count + 1 });
-      if (characters) {
-        // Reserve before the external request. Failed or uncertain requests are
-        // not refunded: a timeout may still have been billed by Google.
-        transaction.set(budgetRef, { month, reservedCharacters: reserved + characters, limit: MONTHLY_CHARACTER_LIMIT, updatedAtMs: current });
-        for (const item of pending) transaction.set(item.cacheRef, { state: "pending", owner, leaseUntilMs: current + LEASE_MS, expiresAtMs: item.expiresAtMs });
-      }
-      return { messages, pending };
-    });
+    }
 
     if (batch.pending.length) {
       let translated;
@@ -138,6 +154,7 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
         if (!Array.isArray(translated) || translated.length !== batch.pending.length
           || translated.some(text => typeof text !== "string" || !text.trim() || text.length > 3000)) throw new Error("Incomplete translation.");
       } catch (_error) {
+        diagnostic("provider-unavailable");
         await db.runTransaction(async transaction => {
           const snapshots = await transaction.getAll(...batch.pending.map(item => item.cacheRef));
           snapshots.forEach((snapshot, index) => {

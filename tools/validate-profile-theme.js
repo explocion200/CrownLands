@@ -5,6 +5,9 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const css = read("profile-theme.css");
+// Card indexing repeats classes to retain specificity and wraps type filters
+// in :where(). Element matching/cascade equivalence is exercised in Chromium.
+const coverageCss = css.replace(/(\.[\w-]+)\1\b/g, "$1").replace(/:where\((div)\)/g, "$1");
 const index = read("index.html");
 const worker = read("service-worker.js");
 const builder = read("tools/build-production-client.js");
@@ -33,7 +36,7 @@ for (const family of [
   ".public-profile-section", ".daily-reward-card", ".daily-mission-row",
   ".seasonal-achievement-row", ".offline-reward-grid > div",
   ".realm-activity-card", ".bottom-nav .report-nav-btn",
-]) assert.ok(css.includes(family), `The Profile theme does not cover ${family}.`);
+]) assert.ok(coverageCss.includes(family), `The Profile theme does not cover ${family}.`);
 
 assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card\)[\s\S]*?:is\(h1, h2, h3, h4,[\s\S]*?color:\s*var\(--cl-profile-gold\) !important;/, "Interface headings do not use the Profile gold treatment.");
 assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card\)[\s\S]*?:is\(p, li, dd, dt, label, span:not\(\.flag-symbol\), small, em\)[\s\S]*?color:\s*var\(--cl-profile-muted\) !important;/, "Supporting interface copy does not use the Profile muted treatment without overriding player flags, map-selector labels, or dedicated report colors.");

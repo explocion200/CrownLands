@@ -270,7 +270,7 @@ const entrypointBudgets = {
   // Onboarding arrows and compact Profile guidance add under 2 KiB.
   // Shared title-image rules add 316 bytes and exceed the old cap by 88 bytes.
   // Bound this at 0.25 KiB; removed Bag/Shop seal styles offset the total UI payload.
-  "styles.css": 425.25 * 1024,
+  "styles.css": 427.25 * 1024, // Indexed card selectors preserve specificity.
   "holding-tower-ui.css": 24 * 1024,
   "holding-tower-ui.js": 24 * 1024,
   "camp-details-ui.js": 8 * 1024,
@@ -285,7 +285,7 @@ const entrypointBudgets = {
   "profile-theme.css": 32 * 1024,
   // Centralized Guild paint replaces scattered close/header rules. Bound this
   // file's consolidation at one additional KiB; the total shell is checked below.
-  "crownlands-palette.css": 46 * 1024,
+  "crownlands-palette.css": 48 * 1024, // Indexed card selectors retain the old specificity.
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,

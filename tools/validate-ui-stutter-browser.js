@@ -33,7 +33,9 @@ async function main() {
     };
     for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }, { width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
-      await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
+      // Pause/resume assertions need real active alerts. An empty march fixture
+      // has no pulse animation to pause, even on the unchanged production CSS.
+      await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=2&hudOperations=both` });
       await ready("window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready'");
       await evaluate(() => {
         __CROWNLANDS_BENCHMARK__.closeModal(); usesServerEconomyAuthority = () => true;
