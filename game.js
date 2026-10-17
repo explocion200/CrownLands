@@ -2271,6 +2271,10 @@ let flagSaveInFlight = false;
 let pendingFlagEditorExit = null;
 let activeProfileTab = "profile";
 let clanSnapshot = null;
+const CLAN_SHIELD_PREVIEW_STORAGE_KEY = "crownlands-clan-shield-preview-v1";
+let clanShieldPreview;
+let clanStateSubscriptionGeneration = 0;
+let activeClanSubscriptionScope = "";
 let clanMembers = [];
 let clanApplications = [];
 let clanSearchResults = [];
@@ -25457,13 +25461,51 @@ function getClanFriendlyBlockReason(target) {
   return isClanAllyCity(target) ? "You cannot scout or attack a clan ally." : "";
 }
 
+function getOwnClanShieldForDisplay() {
+  const clanId = state?.clanId || "";
+  if (!clanId) return null;
+  const scope = getOnlineRequestScope();
+  if (clanShieldPreview === undefined) {
+    clanShieldPreview = null;
+    try {
+      const raw = window.localStorage?.getItem(CLAN_SHIELD_PREVIEW_STORAGE_KEY);
+      if (raw && raw.length < 4096) {
+        const saved = JSON.parse(raw);
+        if (typeof saved?.scope === "string" && typeof saved.clanId === "string" && saved.shield && typeof saved.shield === "object") {
+          clanShieldPreview = { scope: saved.scope, clanId: saved.clanId, shield: normalizeClanHeraldry(saved.shield) };
+        }
+      }
+    } catch (_) { /* A missing preview must not prevent sign-in. */ }
+  }
+  const activeClan = clanSnapshot?.id === clanId ? clanSnapshot : null;
+  if (activeClan) {
+    const shield = normalizeClanHeraldry(activeClan.shield, activeClan.banner);
+    // Display-only: never use this preview for membership, permissions or saves.
+    // Keep one bounded entry, scoped to the account, realm, shard and clan.
+    const preview = { scope, clanId, shield };
+    if (JSON.stringify(preview) !== JSON.stringify(clanShieldPreview)) {
+      clanShieldPreview = preview;
+      if (getCurrentOnlineUid()) {
+        try { window.localStorage?.setItem(CLAN_SHIELD_PREVIEW_STORAGE_KEY, JSON.stringify(preview)); } catch (_) { /* Retain the in-memory preview. */ }
+      }
+    }
+    return shield;
+  }
+  return clanShieldPreview?.scope === scope && clanShieldPreview.clanId === clanId ? clanShieldPreview.shield : null;
+}
+
+function clearOwnClanShieldPreview() {
+  clanShieldPreview = null;
+  try { window.localStorage?.removeItem(CLAN_SHIELD_PREVIEW_STORAGE_KEY); } catch (_) { /* Storage is optional. */ }
+}
+
 function renderClanHudAccess() {
   if (!clanHudBtn || !clanHudIcon || !state) return;
   const hasClan = Boolean(state.clanId);
   const activeClan = clanSnapshot?.id === state.clanId ? clanSnapshot : null;
   const clanName = activeClan?.name || state.clanName || "Clan";
   const clanTag = activeClan?.tag || state.clanTag || "";
-  const shield = hasClan ? activeClan?.shield || activeClan?.banner : null;
+  const shield = getOwnClanShieldForDisplay();
   const applicationCount = hasClan && ["leader", "officer"].includes(state.clanRole)
     && clanApplicationsScope === `${getOnlineRequestScope()}:${state.clanId}`
     ? clanApplications.filter(application => application.status === "pending" && application.clanId === state.clanId).length : 0;
@@ -25479,7 +25521,7 @@ function renderClanHudAccess() {
     clanTag,
     onlineClanRallies.length,
     applicationCount,
-    JSON.stringify(normalizeClanHeraldry(shield)),
+    JSON.stringify(shield),
   ].join("|");
   if (signature === lastClanHudSignature) return;
   lastClanHudSignature = signature;
@@ -25501,7 +25543,8 @@ function renderClanHudAccess() {
       ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}${notificationLabel ? `, ${notificationLabel}` : ""}`
       : "Find a clan"
   );
-  clanHudIcon.innerHTML = renderClanHeraldry(
+  clanHudBtn.setAttribute("aria-busy", String(hasClan && !shield));
+  clanHudIcon.innerHTML = hasClan && !shield ? "" : renderClanHeraldry(
     shield,
     { size: "small", variant: "full", instance: "hud", label: hasClan ? `${clanName} clan shield` : "Find a clan" }
   );
@@ -25521,11 +25564,11 @@ function renderProfileClanAffiliation() {
   const activeClan = clanSnapshot?.id === state.clanId ? clanSnapshot : null;
   const clanName = activeClan?.name || state.clanName || "Clan";
   const clanTag = activeClan?.tag || state.clanTag || "";
-  const shield = activeClan?.shield || activeClan?.banner;
-  const signature = `${state.clanId}|${clanName}|${clanTag}|${JSON.stringify(normalizeClanHeraldry(shield))}`;
+  const shield = getOwnClanShieldForDisplay();
+  const signature = `${state.clanId}|${clanName}|${clanTag}|${JSON.stringify(shield)}`;
   if (profileClanAffiliation.dataset.clanSignature === signature) return;
   profileClanAffiliation.dataset.clanSignature = signature;
-  profileClanShield.innerHTML = renderClanHeraldry(
+  profileClanShield.innerHTML = !shield ? "" : renderClanHeraldry(
     shield,
     { size: "mini", variant: "full", instance: "own-profile", label: `${clanName} clan shield` }
   );
@@ -25653,6 +25696,8 @@ function updateClanQuestCountdown() {
 }
 
 function stopClanRealtimeSubscriptions({ clear = true, preserveApplications = false } = {}) {
+  clanStateSubscriptionGeneration += 1;
+  activeClanSubscriptionScope = "";
   resetClanTreasuryState();
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
@@ -25729,7 +25774,8 @@ function applyClanMembersSnapshot(members = [], changes = []) {
 function startClanRealtimeSubscriptions(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanState) return false;
-  if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") {
+  const session = getOnlineSessionRequestScope();
+  if (activeClanSubscriptionId === id && activeClanSubscriptionScope === session && typeof clanStateUnsubscribe === "function") {
     startClanTreasurySubscription(api, id);
     if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
       startClanRallySubscription(api, id);
@@ -25739,13 +25785,19 @@ function startClanRealtimeSubscriptions(api, clanId) {
   stopClanRealtimeSubscriptions({ clear: true, preserveApplications: clanApplicationsScope === `${getOnlineRequestScope()}:${id}` });
   startClanTreasurySubscription(api, id);
   activeClanSubscriptionId = id;
+  activeClanSubscriptionScope = session;
+  const generation = clanStateSubscriptionGeneration;
+  const isCurrent = () => generation === clanStateSubscriptionGeneration
+    && session === getOnlineSessionRequestScope() && state?.clanId === id;
   clanRosterReady = false;
   clanStateUnsubscribe = api.subscribeClanState(id, {
     onClan: clan => {
+      if (!isCurrent() || (clan && clan.id !== id)) return;
       const previousIdentity = clanSnapshot
         ? `${clanSnapshot.id}|${clanSnapshot.name || ""}|${clanSnapshot.tag || ""}|${JSON.stringify(clanSnapshot.shield || clanSnapshot.banner)}`
         : "";
       clanSnapshot = clan?.status === "active" ? preserveNewerClanHeraldry(clan, clanSnapshot) : null;
+      if (!clanSnapshot) clearOwnClanShieldPreview();
       const nextIdentity = clanSnapshot
         ? `${clanSnapshot.id}|${clanSnapshot.name || ""}|${clanSnapshot.tag || ""}|${JSON.stringify(clanSnapshot.shield || clanSnapshot.banner)}`
         : "";
@@ -25758,8 +25810,9 @@ function startClanRealtimeSubscriptions(api, clanId) {
       renderClanView();
       if (previousIdentity !== nextIdentity && clanRosterReady) refreshClanRelationshipPresentation();
     },
-    onMembers: (members, changes) => applyClanMembersSnapshot(members, changes),
+    onMembers: (members, changes) => { if (isCurrent()) applyClanMembersSnapshot(members, changes); },
     onError: (error, source) => {
+      if (!isCurrent()) return;
       markOnlineRealtimeRecoveryNeeded(error);
       console.warn(`Clan ${source || "state"} subscription failed`, error);
       if (source === "members") clanRosterReady = false;
@@ -26023,11 +26076,15 @@ async function refreshClanState(options = {}) {
     if (state?.clanId) {
       const subscriptionsStarted = startClanRealtimeSubscriptions(api, state.clanId);
       if (!subscriptionsStarted) {
+        const clanId = state.clanId;
+        const session = getOnlineSessionRequestScope();
         const [clan, members] = await Promise.all([
-          api.loadClan(state.clanId),
-          api.loadClanMembers(state.clanId),
+          api.loadClan(clanId),
+          api.loadClanMembers(clanId),
         ]);
-        clanSnapshot = clan;
+        if (state !== requestedState || session !== getOnlineSessionRequestScope() || state.clanId !== clanId) return;
+        clanSnapshot = clan?.status === "active" && clan.id === clanId ? preserveNewerClanHeraldry(clan, clanSnapshot) : null;
+        if (!clanSnapshot) clearOwnClanShieldPreview();
         activeClanSubscriptionId = state.clanId;
         applyClanMembersSnapshot(members, []);
       }
