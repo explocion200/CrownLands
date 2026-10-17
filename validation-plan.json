@@ -3,7 +3,10 @@
   "baseCommit": "13d1f3df20e8cdba01e60bf89fdecee9392323f3",
   "coverage": [
     {
-      "paths": ["game.js", "tools/validate-clan-shield-login-browser.js"],
+      "paths": [
+        "game.js",
+        "tools/validate-clan-shield-login-browser.js"
+      ],
       "tests": [
         "tools/validate-clan-shield-login-browser.js",
         "tools/validate-clan-notifications-browser.js",
@@ -11,6 +14,16 @@
         "tools/validate-clans.js"
       ],
       "reason": "HUD and own-profile heraldry must keep the last confirmed visual during delayed sign-in and reconnect, without inventing a default for a clan whose shield has not loaded. The new real-browser test exercises delayed and repeated subscriptions, actual page reload, display-only cache scoping across accounts/realm/shard/clan, stale callbacks, fresh edits, removed clans, corrupt/blocked storage and the one-shot load fallback. Inspect screenshots and hit/size geometry at desktop 1440x900 and landscape 844x390/568x320. Existing clan notification lifecycle coverage protects applications, role/session guards, badges, heraldry editing, revision ordering and v1 compatibility affected by shared rendering/subscription paths. Heraldry and clan validators preserve saved renderer/schema and membership integration. No backend, authoritative membership/reward rules, world data or styles change; no emulator suite is needed for this presentation-only change."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "reason": "The measured source shell grows from 4,530,481 to 4,533,371 bytes, exceeding the prior 4,532,224-byte allowance by 1,147 bytes. Bound the 2,890-byte display-cache/subscription-guard addition at 3 KiB in the existing shared shell limit. Both consumers validate the complete offline shell; all image, script, preload and runtime budgets remain unchanged. No assets, requests or dependencies are added."
     }
   ]
 }
