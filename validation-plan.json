@@ -1,39 +1,18 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "df189fc2f8e342c661d7952e4e41dd7b8ee0a384",
+  "baseCommit": "804188393655fd1994ff6c7bf8a902915ccfed4c",
   "coverage": [
     {
-      "paths": [
-        "functions/index.js",
-        "functions/test/emulator-inactive-city-level-reset.js"
-      ],
+      "paths": ["functions/index.js", "tools/test-local-postgres-pickups.js"],
       "tests": [
-        "tools/validate-inactive-player-lifecycle.js",
-        "tools/test-local-postgres-contention.js",
-        "functions/test/emulator-inactive-city-level-reset.js"
+        "tools/test-local-postgres-pickups.js",
+        "tools/validate-harvest-pickups.js",
+        "tools/validate-pickup-runtime.js",
+        "tools/validate-operation-timing.js",
+        "functions/test/emulator-harvest-pickup-rewards.js",
+        "functions/test/emulator-cosmetics.js"
       ],
-      "reason": "Current-season inactivity admission now reads the profile atomically with membership and receipt, preserving older profiles and retiring only a known failed scope preflight with zero asset progress. Exercise missing/stale/current profiles, current and archived memberships, active leases, partial-progress and unknown-failure fences, retry idempotency and ordinary city/main-city/fortification surrender behavior in real PostgreSQL and the emulator."
-    },
-    {
-      "paths": [
-        "tools/local-migration/postgresql-crownlands.conf",
-        "tools/test-local-postgres-contention.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-contention.js",
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-worker-loop.js"
-      ],
-      "reason": "Explicit PostgreSQL operator configuration avoids predicate-lock promotion during large indexed kingdom reads while preserving Serializable isolation and bounded retries. An independent socket-only cluster tests default false conflicts, five disjoint-kingdom pairs with reviewed settings, real conflicts, exactly-once debits, cross-document write skew and the cleanup scope guard. Shared adapter tests cover atomic typed writes, cursors, rollback, infrastructure retries, lease fencing, scheduling, real game realm initialization and replayed awards. No client presentation or travel/balance behavior changes; recent desktop and landscape scouting/march browser audit remains applicable."
-    },
-    {
-      "paths": [
-        "docs/LOCAL_GAME_QUERY_PERFORMANCE.md"
-      ],
-      "tests": [],
-      "reason": "Record diagnosed causes, controlled test limits and the explicit configuration/backend rollout and rollback requirements. No independent runtime behavior is introduced by this documentation."
+      "reason": "Map Gold, troop and Crown collection retains full authoritative economy projection but defers unrelated optional city checkpoints, matching the existing scout launch policy. Real PostgreSQL integration runs the current Core/Expansion callable with a synthetic 228-city kingdom and verifies zero unrelated writes, the main-city troop reward write, subsequent production materialization without double counting, concurrent/replayed collection, expired/missing/capped rejection, mandatory main-city repair and request timing. Emulator coverage preserves raw-production rewards under skills, gear, objectives and timed boosts, plus Crown wallet caps, receipts and cosmetic entitlements. Existing client pickup pending/duplicate/spawn/session/audio checks cover the unchanged response contract; no visual, placement, balance, timing or client code is changed. Operation timing coverage protects async isolation, privacy and real transaction retry accounting."
     }
   ]
 }

@@ -16366,7 +16366,7 @@ exports.returnClanReinforcement = timedCallable(
   }
 );
 
-exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+exports.collectHarvestBonus = timedCallable("collectHarvestBonus", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   const type = normalizeHarvestBonusType(data.type);
@@ -16378,7 +16378,11 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
     const crownReceiptRef = type === "crowns" && /^[a-zA-Z0-9_-]{1,96}$/.test(bonusId) ? cosmeticService.receiptRef(uid, `pickup_${bonusId}`) : null;
     const previousClaim = crownReceiptRef ? await transaction.get(crownReceiptRef) : null;
     if (previousClaim?.exists) return { ok: true, replayed: true, rewardType: "crowns", reward: 0, cosmetics: account.state };
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const economy = await OPERATION_TIMING.measure("economyPreparation", () => prepareEconomyCollection(transaction, uid, nowMs, {
+      // Keep rewards and projected production current without flushing every
+      // city's optional checkpoint. Troop pickups explicitly save the main city.
+      checkpointWriteBudget: 0,
+    }));
     let daily = mergeHarvestDailyTrackers(economy.profileAfter.daily, data.daily, new Date(nowMs));
     daily.harvestedCrownBonuses = COSMETICS.countToday(account.state, nowMs);
     daily.harvestedBonuses = daily.harvestedGoldBonuses + daily.harvestedTroopBonuses + daily.harvestedCrownBonuses;
