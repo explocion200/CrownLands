@@ -1765,14 +1765,36 @@ async function beginInactivePlayerMaintenance(uid = "", targetStage = "", nowMs 
     return { acquired: false, reason: "invalid" };
   }
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [membershipSnap, receiptSnap] = await Promise.all([
+    const [membershipSnap, receiptSnap, profileSnap] = await Promise.all([
       transaction.get(membershipRef),
       transaction.get(receiptRef),
+      transaction.get(db.doc(`players/${playerUid}`)),
     ]);
     const membership = membershipSnap.exists ? membershipSnap.data() || {} : {};
     const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
     if (!isCurrentInactivityMembership(membership)) {
       return { acquired: false, reason: "realm-changed" };
+    }
+    // Membership can advance when a player enters the realm before their
+    // seasonal profile is initialized. Never run current-season cleanup on
+    // that older profile, or leave its failed preflight blocking admission.
+    if (!profileSnap.exists || !isCurrentInactivityAsset(profileSnap.data() || {})) {
+      if (isInactivityJobLocked(receipt, nowMs)) return { acquired: false, reason: "locked" };
+      if (isInactivityLifecycleBlockingPlayer(receipt)) {
+        const progressed = ["releasedCities", "releasedCamps", "consolidatedTroops", "canceledArmies", "returnedReinforcements"]
+          .some(key => safeNumber(receipt[key], 0) > 0);
+        const failedPreflight = receipt.status === "failed" && receipt.stage === "surrendering"
+          && receipt.lastError === "Enter the current Crownlands realm; your profile must belong to the current Crownlands world before using gameplay.";
+        if (progressed || !failedPreflight) throw new HttpsError("failed-precondition", "Unfinished inactivity maintenance requires current-realm review.");
+        transaction.set(receiptRef, {
+          status: "skipped", skipReason: "profile-realm-mismatch", leaseUntilMs: 0,
+          updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        transaction.set(membershipRef, {
+          inactivityStage: FieldValue.delete(), updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      return { acquired: false, reason: "profile-realm-mismatch" };
     }
     const basisLastSeenAtMs = Math.max(0, Math.floor(safeNumber(membership.lastSeenAtMs, 0)));
     const currentTargetStage = getInactivityTargetStage(basisLastSeenAtMs, nowMs);

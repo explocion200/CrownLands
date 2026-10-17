@@ -163,7 +163,28 @@ async function main() {
   assert(Number(receiptAfter.data()?.releasedCities || 0) === 1, "Maintenance did not record the released city.");
   assert(membershipAfter.data()?.status === "inactive" && membershipAfter.data()?.inactivityStage === "surrendered", "Membership did not enter the surrendered state.");
 
-  console.log("Inactive-city emulator reset passed: upgraded ordinary city returned to level 1 while main-city and fortification state were preserved.");
+  // A membership can enter the new realm before the seasonal profile does.
+  // Retire only the failed scope preflight, preserving all older profile data.
+  const staleUid = `inactive-scope-${crypto.randomBytes(6).toString("hex")}`;
+  const staleProfile = db.doc(`players/${staleUid}`);
+  const staleMembership = staleProfile.collection("serverMembership").doc("current");
+  const staleReceipt = db.doc(`realmMaintenance/${realm.resetGeneration}/inactivePlayers/${staleUid}`);
+  const previousProfile = { worldId: "fixture-previous-world", resetGeneration: "fixture-previous-generation", gold: 431, gear: { commonGearBoxes: 3 } };
+  await staleProfile.set(previousProfile);
+  await staleMembership.set({ worldId: realm.worldId, resetGeneration: realm.resetGeneration, realmShardId: "legacy", status: "active", lastSeenAtMs: staleLastSeenAtMs, inactivityStage: "surrender-failed" });
+  await staleReceipt.set({ uid: staleUid, worldId: realm.worldId, resetGeneration: realm.resetGeneration, status: "failed", stage: "surrendering", leaseUntilMs: 0,
+    releasedCities: 0, releasedCamps: 0, consolidatedTroops: 0, canceledArmies: 0, returnedReinforcements: 0,
+    lastError: "Enter the current Crownlands realm; your profile must belong to the current Crownlands world before using gameplay." });
+  const oldVersion = (await staleProfile.get()).updateTime;
+  await runInactiveMaintenance();
+  assert((await staleProfile.get()).updateTime.isEqual(oldVersion), "Cleanup changed an older-season profile.");
+  const skipped = await staleReceipt.get();
+  assert(skipped.data()?.status === "skipped" && skipped.data()?.skipReason === "profile-realm-mismatch", "Stale profile preflight still blocks admission.");
+  assert((await staleMembership.get()).data()?.inactivityStage === undefined, "Stale membership failure was not released.");
+  await runInactiveMaintenance();
+  assert((await staleReceipt.get()).updateTime.isEqual(skipped.updateTime), "Repeated skipped maintenance rewrote its receipt.");
+
+  console.log("Inactive-city emulator reset passed: ordinary city neutralization, main-city/fortification preservation, and idempotent stale-profile preflight recovery.");
 }
 
 main().catch(error => {
