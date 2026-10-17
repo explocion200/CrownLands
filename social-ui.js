@@ -95,6 +95,7 @@
     if (section === "messages") {
       const control = button(privateAlerts ? "Private alerts: On" : "Private alerts: Off", () => run(async () => {
         if (!privateAlerts) {
+          if (api.getNotificationPermission?.() === "default" && doc.fullscreenElement && doc.exitFullscreen) await doc.exitFullscreen();
           const registration = await api.enablePushNotifications({ category: "private" });
           if (!registration.enabled) throw Error("Allow browser notifications to enable private alerts.");
         }

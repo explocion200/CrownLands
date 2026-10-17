@@ -26,6 +26,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
         if (input.action === "status") return { ...base, enabled: true, privateAlerts: false };
+        if (input.action === "preference") return { privateAlerts: input.enabled };
         if (input.action === "unread") return { count: socialQa.unread };
         if (input.action === "list") return { ...base, rows: input.kind === "blocked" ? [] : [{ id: "a".repeat(40), peerUid: "bob", player, friend: "friends", status: "accepted", unread: socialQa.unread, lastMessageAtMs: Date.now() }], next: null };
         if (input.action === "presence") return { ...base, players: [{ uid: "bob", online: true, expiresAtMs: Date.now() + 180000 }] };
@@ -33,7 +34,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         if (input.action === "read") { socialQa.unread = 0; return { ok: true }; }
         if (input.action === "send") { socialQa.messages.push({ id: "c".repeat(40), sequence: 2, senderUid: "alice", senderDisplayName: "Alice", text: input.text, createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }); return { ok: true }; }
         return { ok: true };
-      }, subscribeSocialSignals: callback => { socialQa.signal = callback; return () => {}; }, registerPushNotifications: async () => ({}), translateChatMessages: async () => ({ translations: [{ id: "b".repeat(40), text: "Translated fixture" }] }) };
+      }, subscribeSocialSignals: callback => { socialQa.signal = callback; return () => {}; }, registerPushNotifications: async () => ({}), enablePushNotifications: async options => { socialQa.alertCategory = options.category; return { enabled: true }; }, disablePushNotifications: async options => { socialQa.disabledCategory = options.category; }, getNotificationPermission: () => "default", translateChatMessages: async () => ({ translations: [{ id: "b".repeat(40), text: "Translated fixture" }] }) };
       await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("friends");
     });
     await delay(150);
@@ -61,6 +62,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.equal(await ev('document.querySelector(".social-compose textarea").disabled'), false);
     await ev('document.querySelector(".social-message-menu").open=true;Array.from(document.querySelectorAll(".social-message button")).find(b=>b.textContent==="Translate").click()'); await delay(80);
     assert((await ev('document.querySelector(".social-log").innerText')).includes("Translated fixture"));
+    await ev(() => {
+      CrownlandsSocial.open("messages");
+      Object.defineProperty(document, "fullscreenElement", { configurable: true, value: document.documentElement });
+      document.exitFullscreen = async () => { socialQa.exitedFullscreen = true; };
+      [...document.querySelectorAll("#socialToolbar button")].find(b => b.textContent === "Private alerts: Off").click();
+    }); await delay(100);
+    assert(await ev('socialQa.exitedFullscreen && socialQa.alertCategory === "private" && document.getElementById("socialToolbar").textContent.includes("Private alerts: On")'));
+    await ev('[...document.querySelectorAll("#socialToolbar button")].find(b => b.textContent === "Private alerts: On").click()'); await delay(100);
+    assert.equal(await ev('socialQa.disabledCategory'), "private");
     await ev('document.getElementById("globalTab").click()');
     assert.equal(await ev('document.getElementById("socialPanel").hidden'), true);
     await ev('CrownlandsSocial.stop()');
