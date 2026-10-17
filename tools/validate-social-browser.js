@@ -25,8 +25,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       socialQa.api = { social: async input => {
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
-        if (input.action === "status") return { ...base, enabled: true, privateAlerts: false };
-        if (input.action === "preference") return { privateAlerts: input.enabled };
+        if (input.action === "status") return { ...base, enabled: true, privateAlerts: Boolean(socialQa.privateAlerts) };
+        if (input.action === "preference") { socialQa.privateAlerts = input.enabled; return { privateAlerts: input.enabled }; }
         if (input.action === "unread") return { count: socialQa.unread };
         if (input.action === "list") return { ...base, rows: input.kind === "blocked" ? [] : [{ id: "a".repeat(40), peerUid: "bob", player, friend: "friends", status: "accepted", unread: socialQa.unread, lastMessageAtMs: Date.now() }], next: null };
         if (input.action === "presence") return { ...base, players: [{ uid: "bob", online: true, expiresAtMs: Date.now() + 180000 }] };
@@ -76,6 +76,30 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await ev('CrownlandsSocial.stop()');
     assert.equal(await ev('document.querySelector(".social-thread").textContent'), "");
     assert.equal(await ev('document.getElementById("socialFriendsTab").hidden'), true);
+    await ev(async () => {
+      socialQa.privateAlerts = true; socialQa.alertCategory = "";
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("messages");
+    }); await delay(80);
+    assert(await ev('document.getElementById("socialToolbar").textContent.includes("Enable private alerts here") && !document.getElementById("socialToolbar").textContent.includes("Private alerts: On")'));
+    await ev('[...document.querySelectorAll("#socialToolbar button")].find(b=>b.textContent==="Enable private alerts here").click()'); await delay(100);
+    assert(await ev('socialQa.alertCategory === "private" && socialQa.privateAlerts && document.getElementById("socialToolbar").textContent.includes("Private alerts: On")'));
+    await ev(async () => {
+      CrownlandsSocial.stop(); socialQa.api.getNotificationPermission = () => "granted";
+      socialQa.api.registerPushNotifications = async () => { throw Error("Synthetic expired token"); };
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("messages");
+    }); await delay(80);
+    assert(await ev('document.getElementById("socialToolbar").textContent.includes("Enable private alerts here")'));
+    await ev('[...document.querySelectorAll("#socialToolbar button")].find(b=>b.textContent==="Turn private alerts off").click()'); await delay(100);
+    assert(await ev('!socialQa.privateAlerts && socialQa.disabledCategory === "private" && document.getElementById("socialToolbar").textContent.includes("Private alerts: Off")'));
+    await ev('CrownlandsSocial.stop()');
+    await ev(async () => {
+      socialQa.api.enablePushNotifications = () => new Promise(resolve => { socialQa.finishPermission = resolve; });
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("messages");
+      socialQa.preferencesBeforeSwitch = socialQa.calls.filter(c => c.action === "preference").length;
+      [...document.querySelectorAll("#socialToolbar button")].find(b=>b.textContent==="Private alerts: Off").click();
+      CrownlandsSocial.stop(); socialQa.finishPermission({ enabled: true });
+    }); await delay(100);
+    assert(await ev('socialQa.calls.filter(c=>c.action==="preference").length === socialQa.preferencesBeforeSwitch'), "A late permission response cannot change the next account's preference");
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(artifacts, "results.json"), JSON.stringify({ passed: true, layouts }, null, 2));
     console.log("Social browser interaction, text safety, account cleanup and responsive layout checks passed.");

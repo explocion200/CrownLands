@@ -5,7 +5,7 @@
   let panel, list, thread, status, friendsTab, messagesTab, badge, listPage, listCursor = null, cursorStack = [];
   let current = null, history = [], older = null, before = null, viewVersion = 0, listVersion = 0;
   let conversationSession = 0;
-  let presenceTimer, expiryTimer, refreshTimer, senderBusy = false, pendingDraft, lastSignals = {}, offset = 0, privateAlerts = false;
+  let presenceTimer, expiryTimer, refreshTimer, senderBusy = false, pendingDraft, lastSignals = {}, offset = 0, privateAlerts = false, privateReady = false;
   const dialog = () => doc.getElementById("chatDialog");
   const now = () => Date.now() + offset;
   const element = (tag, text, className) => { const node = doc.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
@@ -93,18 +93,38 @@
       control.setAttribute("aria-pressed", String(kind === value)); toolbar.append(control);
     }
     if (section === "messages") {
-      const control = button(privateAlerts ? "Private alerts: On" : "Private alerts: Off", () => run(async () => {
-        if (!privateAlerts) {
+      const enableHere = privateAlerts && !privateReady;
+      const control = button(enableHere ? "Enable private alerts here" : privateAlerts ? "Private alerts: On" : "Private alerts: Off", () => run(async () => {
+        const scope = generation, enable = !privateAlerts || enableHere;
+        if (enable) {
           if (api.getNotificationPermission?.() === "default" && doc.fullscreenElement && doc.exitFullscreen) await doc.exitFullscreen();
           const registration = await api.enablePushNotifications({ category: "private" });
+          if (scope !== generation) throw Object.assign(Error("Account changed."), { stale: true });
           if (!registration.enabled) throw Error("Allow browser notifications to enable private alerts.");
+          privateReady = true;
         }
-        const result = await call({ action: "preference", enabled: !privateAlerts }); privateAlerts = result.privateAlerts;
-        if (!privateAlerts) await api.disablePushNotifications({ category: "private" });
+        const result = await call({ action: "preference", enabled: enable }); privateAlerts = result.privateAlerts;
+        if (!privateAlerts) { await api.disablePushNotifications({ category: "private" }); privateReady = false; }
         renderToolbar();
       }, control)); toolbar.append(control);
+      if (enableHere) {
+        const off = button("Turn private alerts off", () => run(async () => {
+          await call({ action: "preference", enabled: false }); privateAlerts = false;
+          await api.disablePushNotifications({ category: "private" }); privateReady = false; renderToolbar();
+        }, off)); toolbar.append(off);
+      }
     }
   }
+  async function restorePrivateRegistration() {
+    const scope = generation;
+    privateReady = false;
+    if (privateAlerts && api.getNotificationPermission?.() === "granted") {
+      try { const result = await api.registerPushNotifications({ category: "private" }); if (scope === generation) privateReady = result.enabled === true; }
+      catch { /* The Messages switch offers an explicit registration retry. */ }
+    }
+    if (scope === generation && visible()) renderToolbar();
+  }
+
   async function refreshBadge() {
     if (!ready) return; const result = await call({ action: "unread" });
     const label = result.count ? String(result.count) + (result.more ? "+" : "") : "";
@@ -252,12 +272,12 @@
     try {
       const result = await call({ action: "status" }); if (scope !== generation || !result.enabled) return;
       ready = true; privateAlerts = result.privateAlerts; friendsTab.hidden = false; messagesTab.hidden = false;
-      if (privateAlerts && api.getNotificationPermission?.() === "granted") void api.registerPushNotifications({ category: "private" }).catch(() => {});
+      void restorePrivateRegistration();
       stopSignals = api.subscribeSocialSignals(signals => {
         const changed = JSON.stringify(signals) !== JSON.stringify(lastSignals), preferencesChanged = signals.preferences !== lastSignals.preferences; lastSignals = signals;
         if (!changed || scope !== generation) return;
         clearTimeout(refreshTimer); refreshTimer = setTimeout(() => void run(async () => {
-          if (preferencesChanged) { const state = await call({ action: "status" }); privateAlerts = state.privateAlerts; if (visible()) renderToolbar(); }
+          if (preferencesChanged) { const state = await call({ action: "status" }); privateAlerts = state.privateAlerts; await restorePrivateRegistration(); }
           await refreshBadge(); if (visible()) { await refreshList(); if (current && !senderBusy) { if (before) { const latest = doc.getElementById("socialLatest"); if (latest) latest.hidden = false; } else await loadHistory(); } }
         }), 80);
       }, () => { if (visible()) setStatus("Messages are reconnecting…"); });
@@ -268,7 +288,7 @@
   }
   function stop() {
     generation++; conversationSession++; stopSignals?.(); stopSignals = null; clearTimeout(refreshTimer); clearTimeout(presenceTimer); clearTimeout(expiryTimer);
-    ready = false; uid = ""; current = null; history = []; listPage = null; pendingDraft = null; senderBusy = false; lastSignals = {}; offset = 0; leave();
+    ready = false; uid = ""; current = null; history = []; listPage = null; pendingDraft = null; senderBusy = false; lastSignals = {}; offset = 0; privateReady = false; leave();
     if (friendsTab) friendsTab.hidden = true; if (messagesTab) { messagesTab.hidden = true; messagesTab.textContent = "Messages"; }
     if (list) list.replaceChildren(); if (thread) thread.replaceChildren(); if (badge) badge.hidden = true;
     doc.querySelectorAll(".social-profile-actions").forEach(node => node.remove());
