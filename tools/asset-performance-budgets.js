@@ -23,5 +23,7 @@
 // Shared parchment resource/display controls add 287 CSS bytes and no assets.
 // Bound the required shell growth at 512 bytes; all other limits remain fixed.
 // Once-per-season login reminder adds 966 source bytes; bound growth at 1 KiB.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2) * 1024 + 2048;
+// Scoped clan-shield previews and stale subscription guards add 2,890 source
+// bytes. Bound growth at 3 KiB; no new assets, dependencies or requests.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

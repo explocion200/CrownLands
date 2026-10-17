@@ -1,18 +1,31 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "804188393655fd1994ff6c7bf8a902915ccfed4c",
+  "baseCommit": "13d1f3df20e8cdba01e60bf89fdecee9392323f3",
   "coverage": [
     {
-      "paths": ["functions/index.js", "tools/test-local-postgres-pickups.js"],
-      "tests": [
-        "tools/test-local-postgres-pickups.js",
-        "tools/validate-harvest-pickups.js",
-        "tools/validate-pickup-runtime.js",
-        "tools/validate-operation-timing.js",
-        "functions/test/emulator-harvest-pickup-rewards.js",
-        "functions/test/emulator-cosmetics.js"
+      "paths": [
+        "game.js",
+        "tools/validate-clan-shield-login-browser.js"
       ],
-      "reason": "Map Gold, troop and Crown collection retains full authoritative economy projection but defers unrelated optional city checkpoints, matching the existing scout launch policy. Real PostgreSQL integration runs the current Core/Expansion callable with a synthetic 228-city kingdom and verifies zero unrelated writes, the main-city troop reward write, subsequent production materialization without double counting, concurrent/replayed collection, expired/missing/capped rejection, mandatory main-city repair and request timing. Emulator coverage preserves raw-production rewards under skills, gear, objectives and timed boosts, plus Crown wallet caps, receipts and cosmetic entitlements. Existing client pickup pending/duplicate/spawn/session/audio checks cover the unchanged response contract; no visual, placement, balance, timing or client code is changed. Operation timing coverage protects async isolation, privacy and real transaction retry accounting."
+      "tests": [
+        "tools/validate-clan-shield-login-browser.js",
+        "tools/validate-clan-notifications-browser.js",
+        "tools/validate-clan-heraldry-v2.js",
+        "tools/validate-clans.js"
+      ],
+      "reason": "HUD and own-profile heraldry must keep the last confirmed visual during delayed sign-in and reconnect, without inventing a default for a clan whose shield has not loaded. The new real-browser test exercises delayed and repeated subscriptions, actual page reload, display-only cache scoping across accounts/realm/shard/clan, stale callbacks, fresh edits, removed clans, corrupt/blocked storage and the one-shot load fallback. Inspect screenshots and hit/size geometry at desktop 1440x900 and landscape 844x390/568x320. Existing clan notification lifecycle coverage protects applications, role/session guards, badges, heraldry editing, revision ordering and v1 compatibility affected by shared rendering/subscription paths. Heraldry and clan validators preserve saved renderer/schema and membership integration. No backend, authoritative membership/reward rules, world data or styles change; no emulator suite is needed for this presentation-only change."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-manuscript-prototype.js"
+      ],
+      "reason": "The measured source shell grows from 4,530,481 to 4,533,371 bytes, exceeding the prior 4,532,224-byte allowance by 1,147 bytes. Bound the 2,890-byte display-cache/subscription-guard addition at 3 KiB in the existing shared shell and game.js entry limits. Both consumers validate the complete offline shell; all other image, script, preload and runtime budgets remain unchanged. No assets, requests or dependencies are added. Align the older manuscript validator with the existing builder and asset validator by measuring delivered minified marauders/payments code; this corrects its stale source-byte accounting without changing either module or increasing their limits."
     }
   ]
 }
