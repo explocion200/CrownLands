@@ -109,6 +109,22 @@ async function run(db) {
   time += 8 * S.DAY;
   assert.equal((await call("carol", { action: "unread" })).count, 0, "Expiry applies before cleanup runs");
   await service.cleanup(); assert.equal((await call("carol", { action: "unread" })).count, 0);
+  // Alert coalescing belongs to each recipient, so the first reply does not
+  // lose its alert merely because the opposite participant was just notified.
+  for (const who of ["dave", "eve"]) {
+    await db.doc("players/" + who).set({ playerName: who });
+    await call(who, { action: "preference", enabled: true });
+  }
+  await call("dave", { action: "friend", peerUid: "eve", choice: "request" });
+  await call("eve", { action: "friend", peerUid: "dave", choice: "accept" });
+  const forward = await call("dave", { action: "send", peerUid: "eve", text: "First alert" });
+  time += 3001;
+  const reply = await call("eve", { action: "send", peerUid: "dave", text: "Reply alert" });
+  time += 3001;
+  const repeatedAlert = await call("dave", { action: "send", peerUid: "eve", text: "Already notified" });
+  assert((await db.doc("serverNotificationOutbox/social_" + forward.messageId).get()).exists);
+  assert((await db.doc("serverNotificationOutbox/social_" + reply.messageId).get()).exists);
+  assert.equal((await db.doc("serverNotificationOutbox/social_" + repeatedAlert.messageId).get()).exists, false);
   console.log("Social request, privacy, unread, presence, reports, retention and reset scenarios passed.");
 }
 module.exports = { run };

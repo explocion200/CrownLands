@@ -21,6 +21,17 @@
       ],
       "tests": [],
       "reason": "Record the observed first live release of the already-approved social feature: merged build and matching installed backend/public files, feature gate, indexes, installed fixture checks and service health were verified before recording LIVE. This changes deployment status only, not design rules."
+    },
+    {
+      "paths": [
+        "functions/social.js",
+        "tools/social-test-cases.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-social.js",
+        "functions/test/emulator-social.js"
+      ],
+      "reason": "Coalesce private push requests separately for each participant, so an immediate reply can notify its different recipient without being mistaken for a repeated alert to the first recipient. Shared PostgreSQL and emulator scenarios verify both directions receive an initial outbox item and repeated same-recipient alerts within 60 seconds remain coalesced, alongside all existing social authorization and expiry rules. This small backend change requires a separately validated runtime installation before publication."
     }
   ]
 }

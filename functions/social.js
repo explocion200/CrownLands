@@ -242,8 +242,8 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
       }
       if (message) {
         tx.set(db.doc(messagePath(id, message.id)), message);
-        if (pair.conversation.status === "accepted" && peerAccount.privateAlerts === true && (!pair.lastPushAtMs || time - pair.lastPushAtMs >= 60000)) {
-          pair.lastPushAtMs = time; tx.set(pairRef, pair);
+        if (pair.conversation.status === "accepted" && peerAccount.privateAlerts === true && (!pair.pushTimes?.[peer] || time - pair.pushTimes[peer] >= 60000)) {
+          pair.pushTimes = { ...(pair.pushTimes || {}), [peer]: time }; tx.set(pairRef, pair);
           tx.set(db.doc(`serverNotificationOutbox/social_${message.id}`), { type: "private_message", status: "pending", createdAtMs: time, expiresAtMs: time + 1800000,
             notification: { type: "private_message", recipientUid: peer, conversationId: id, messageId: message.id, sequence: message.sequence } });
         }
