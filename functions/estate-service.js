@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const { isDeepStrictEqual } = require("node:util");
 const E = require("./estate-economy");
 const S = require("./estate-services");
 const F = require("./guild-facilities");
@@ -230,7 +231,9 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
         if (["fund", "recruit", "claimCommission", "guildRoom", "guildMission", "guildClaim"].includes(value.action)) economy = await prepareEconomy(tx, uid, now);
         // Revalidate dynamic eligibility. Accepted contracts themselves never reprice.
         const fresh = makeQuote(account, q.input, now, economy ? rawMainGoldRate(economy) : 285, economy ? guildRealm(economy, now) : profileRealm(account));
-        if (JSON.stringify(fresh) !== JSON.stringify(value)) E.fail("This quote changed. Review the current price and reward.");
+        // Stored maps can return in a different key order (notably PostgreSQL
+        // JSONB). Compare the full terms, including array order and value types.
+        if (!isDeepStrictEqual(fresh, value)) E.fail("This quote changed. Review the current price and reward.");
         if (value.gold) {
           if (economy.goldFloat < value.gold) E.fail("Not enough Gold.");
           const goldFloat = economy.goldFloat - value.gold;
