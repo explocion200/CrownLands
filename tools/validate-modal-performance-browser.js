@@ -78,6 +78,7 @@ async function main() {
         views.push({ view, ...result });
       }
       await evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close());closeProfileScreen({force:true});showCityInfoModal(playerCities()[0].id)");
+      await delay(450); // Capture the settled window, not its opening fade.
       const screenshot=await client.send("Page.captureScreenshot", {format:"png"});
       const output=path.join(root,"release-artifacts/game-smoothness-fixes");fs.mkdirSync(output,{recursive:true});
       fs.writeFileSync(path.join(output,`city-${width}.png`),Buffer.from(screenshot.data,"base64"));
