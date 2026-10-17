@@ -1,22 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "51a22b1d39ac4a63701258ef0d2b9bbe327d3e00",
+  "baseCommit": "c5dbbd0b52317cf281accb3b9c836d5d9e304705",
   "coverage": [
     {
       "paths": [
-        "functions/estate-service.js",
-        "functions/estate-economy.js",
-        "tools/test-local-postgres-estate-quotes.js"
+        "inner-city-estate.js",
+        "inner-city-estate.css",
+        "tools/validate-inner-castle-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-estate-quotes.js",
-        "tools/test-estate-economy.js",
-        "tools/test-estate-manual-production.js",
-        "tools/test-guild-facilities.js",
-        "tools/test-guild-missions.js",
-        "functions/test/emulator-estate-economy.js"
+        "tools/validate-inner-city-estate.js",
+        "tools/validate-inner-castle-browser.js",
+        "tools/validate-estate-input-browser.js",
+        "tools/validate-estate-overview-timers.js",
+        "tools/validate-estate-camera-performance-browser.js"
       ],
-      "reason": "Use strict structural equality for persisted estate quotes so PostgreSQL JSONB map-key ordering cannot reject unchanged construction or production terms. The real isolated PostgreSQL service regression reproduces the prior failure, checks first construction and all 20 next-level builds through payment and completion, concurrent idempotent replay, material batches/reserves sharing quote validation, and rejection without partial changes for altered prices/nested terms/types/arrays/fields, stale revisions, expiration and insufficient Gold. Estate and production rules plus Guild facility/mission dependencies exercise unchanged costs, gates, receipts, production, champions and rewards. The selected estate emulator suite covers actual authenticated callable, realm/economy, legacy-credit, concurrency and persistence paths for the shared server-authoritative service. No UI, world-topology, schema, balance or design changes; no visual checks apply."
+      "reason": "Repair false district-caption crowding caused by transparent 44px touch padding hiding Quarry Hills and Crafts Quarter in the fitted landscape-phone overview. Measure painted caption bounds for district-to-district collisions while retaining fixed anchors, real caption collision hiding, full touch-target panel/edge guards and minimum hit dimensions. Position buttons without transform stacking contexts so each painted caption receives taps above neighboring transparent padding. Actual-game source/built integration checks all seven captions at desktop and 844x390, nine tap points per visible caption, the cramped 568x320 fallback, fixed geography after zoom/pan/resize/directory changes, district navigation and all twenty buildings. Native-input checks protect artwork selection, district clicks, mouse/touch/pinch/keyboard and drag suppression; construction timer tests protect caption occlusion/restoration and anchored counters; camera performance protects coalescing and idle cleanup. No server authority, player data, balance, topology or backend changes; emulator suites do not apply."
     }
   ]
 }
