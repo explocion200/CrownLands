@@ -2068,7 +2068,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 - Private browser alerts have a separate opt-in, default Off. Notifications hide message text, combine repeated alerts, and never alert for unsolicited message requests. Existing attack alerts keep priority.
 - Manual Translate sends only the selected authoritative message text to the existing Google service after the player clicks. Explain this alongside the control. No automatic detection or translation runs for private messages; the existing shared monthly allowance and authorization checks apply.
 - Reporting retains the selected message and up to five preceding, still-visible messages for 90 days from the report. Only the protected server operator tool can review evidence, dismiss reports or apply an audited private-messaging restriction. Reports alone never trigger automatic sanctions.
-- Runtime changes require a coordinated local service and client release, including access-control, recovery, retention, performance, and desktop/landscape checks. **Status:** `IN DEVELOPMENT`; approval and merge do not establish live deployment.
+- Runtime changes require a coordinated local service and client release, including access-control, recovery, retention, performance, and desktop/landscape checks. **Status:** `LIVE` on the home server’s `local-live` channel. PR #603, build `9d89c4f3cdc15a0c2369b98596b8a0e888b83b15`, was installed and its backend, feature gate, public files and six health endpoints verified on both web game domains on October 17, 2026. The new indexes and isolated installed-runtime tests passed; approval or merge alone did not establish deployment.
 
 ### Announcements and moderation
 
