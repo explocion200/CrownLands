@@ -83,7 +83,7 @@
         "tools/validate-chat.js",
         "tools/validate-chat-send-scheduling.js"
       ],
-      "reason": "Add Friends/Messages inside existing Realm Chat with profile entrypoints, shared flag renderer, bounded threads, explicit translation/report tools, server-acknowledged drafts and account cleanup. Exercise actual desktop 1440x900 and landscape 844x390/568x320 layout, plain-text injection safety, 90-day browser timer bounds, send/translate, return to Global, and account disposal. Existing public/clan ledger, send scheduling and HUD chat behavior protect shared lifecycle dependencies."
+      "reason": "Add Friends/Messages inside existing Realm Chat with profile entrypoints, shared flag renderer, bounded threads, explicit translation/report tools, server-acknowledged drafts and account cleanup. Exercise actual desktop 1440x900 and landscape 844x390/568x320 layout, plain-text injection safety, 90-day browser timer bounds, send/translate, return to Global, and account disposal. Existing public/clan ledger, send scheduling and HUD chat behavior protect shared lifecycle dependencies. The bridge grows by 2,036 bytes; its individual ceiling rises by 2 KiB (164 to 166 KiB), within the shared aggregate allowance."
     },
     {
       "paths": [

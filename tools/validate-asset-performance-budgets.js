@@ -293,7 +293,7 @@ const entrypointBudgets = {
   // NPC map subscription and readiness callable add 376 bytes over the prior cap.
   // Private Web Push selection adds 255 bytes; its implementation stays lazy.
   // Bound the entry at 164 KiB; the total installation-cache cap stays unchanged.
-  "firebaseClient.js": 164 * 1024,
+  "firebaseClient.js": 166 * 1024, // +2 KiB: social bridge and separate browser alert categories.
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,
