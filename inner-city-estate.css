@@ -41,8 +41,8 @@
 #modal.bailey-modal .estate-detail .estate-level-caption{margin:-5px 0 8px!important;font-size:11px;color:#65563f!important;font-variant-numeric:tabular-nums}
 #modal.bailey-modal .estate-building-target{position:absolute;padding:0;border:0;background:transparent!important;pointer-events:auto}.estate-building-target>span{display:none;position:absolute;top:var(--estate-caption-top,44px);left:50%;transform:translateX(-50%);width:max-content;max-width:180px;padding:4px 7px;background:var(--paper);border:1px solid var(--rule);font-size:12px}.estate-building-target:hover>span,.estate-building-target:focus-visible>span{display:block}
 #modal.bailey-modal .estate-building-target[aria-pressed=true]::before{content:"";position:absolute;inset:0;width:44px;height:44px;margin:auto;border:1px solid #79393b;background:#f5e7b51c;border-radius:50%}
-#modal.bailey-modal .estate-district{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;background:transparent!important;padding:5px;font:12px/1.15 Georgia,serif;border:0}
-.estate-district>span{display:block;background:#e5d5accc;border:1px solid #867650;padding:3px 6px}
+#modal.bailey-modal .estate-district{position:absolute;pointer-events:auto;background:transparent!important;padding:5px;font:12px/1.15 Georgia,serif;border:0}
+.estate-district>span{position:relative;z-index:1;display:block;background:#e5d5accc;border:1px solid #867650;padding:3px 6px}
 .estate-district{width:max-content;white-space:nowrap}
 .estate-new{display:inline-grid;place-items:center;width:17px;height:17px;flex:none;border-radius:50%;background:#7e3538;color:#fff3d5;font:bold 12px/1 Georgia,serif}.estate-building-target>.estate-new{position:absolute;right:0;top:0}
 .estate-directory{position:absolute;left:10px;top:10px;bottom:62px;width:260px;max-width:48%;padding:10px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;background:var(--paper);border:1px solid var(--rule);box-shadow:0 4px 16px #332b2544;z-index:8}.estate-directory h3{font:16px/1.2 Georgia,serif;margin:10px 0 5px!important}

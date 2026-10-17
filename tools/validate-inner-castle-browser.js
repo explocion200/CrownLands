@@ -82,18 +82,23 @@ async function main() {
       const result = await evaluate(() => {
         const world=document.querySelector('.estate-world').getBoundingClientRect();
         const cityX=world.left+world.width*.5,cityY=world.top+world.height*.43;
-        const boxes=[...document.querySelectorAll('[data-estate-district]')].filter(e=>!e.hidden).map(e=>({key:e.dataset.estateDistrict,...e.getBoundingClientRect().toJSON()}));
+        const boxes=[...document.querySelectorAll('[data-estate-district]')].filter(e=>!e.hidden).map(e=>{
+          const label=e.querySelector('span').getBoundingClientRect();
+          const clickable=[.1,.5,.9].every(x=>[.1,.5,.9].every(y=>e.contains(document.elementFromPoint(label.left+label.width*x,label.top+label.height*y))));
+          return {key:e.dataset.estateDistrict,...e.getBoundingClientRect().toJSON(),label:label.toJSON(),clickable};
+        });
         return {cityX,cityY,boxes,height:innerHeight};
       });
       assert(result.boxes.some(b=>b.key==='city'),'Fit must retain its central district control');
-      if(result.height>=900)assert.equal(result.boxes.length,7,'Uncrowded desktop fit must expose every district');
+      if(result.height>=390)assert.equal(result.boxes.length,7,'Desktop and landscape-phone fit must expose all seven district captions, including Quarry Hills and Crafts Quarter');
       assert.equal(await count('[data-estate-directory-building]'),20,'Crowded views retain every building in the directory');
       for(const b of result.boxes){
         assert(b.width>=44&&b.height>=44,'District controls retain accessible touch targets');
+        assert(b.clickable,'The entire visible caption must receive its own taps above neighboring transparent padding: '+b.key);
         if(b.key==='city')assert(Math.abs((b.left+b.right)/2-result.cityX)<1&&Math.abs((b.top+b.bottom)/2-result.cityY)<1,'City label must stay over the city');
         if(['quarry','woodland','crafts','farmland'].includes(b.key))assert(b.right<result.cityX,'Western district label crossed to eastern scenery: '+b.key);
         if(['mine','trade'].includes(b.key))assert(b.left>result.cityX,'Eastern district label crossed to western scenery: '+b.key);
-        for(const other of result.boxes.filter(o=>o.key!==b.key))assert(b.right<=other.left||b.left>=other.right||b.bottom<=other.top||b.top>=other.bottom,'District hit targets overlap');
+        for(const other of result.boxes.filter(o=>o.key!==b.key))assert(b.label.right<=other.label.left||b.label.left>=other.label.right||b.label.bottom<=other.label.top||b.label.top>=other.label.bottom,'Painted district captions overlap');
       }
       await assertFixedDistricts();
     };
@@ -549,7 +554,7 @@ async function main() {
     }
     assert(deliveredRequests > 0, 'Browser checks must exercise the delivered estate script');
     assert.deepEqual(errors, []);
-    console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; Back to Realm via mouse/touch/keyboard preserves the realm camera and disposes the estate; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping 44px targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
+    console.log('PASS: all 20 sites at desktop and three landscape sizes; sharp name/level captions avoid artwork, other captions and controls; initial/unbuilt status, Level 100 and mixed-level gear returns; Back to Realm via mouse/touch/keyboard preserves the realm camera and disposes the estate; unchanged 1448x1086 art/camera, lazy scenery and detail; four real gear UIs, 32 Back returns, 36 X/touch/Escape/backdrop returns, stale responses and lifecycle guards; nonoverlapping district captions above 44px touch targets, keyboard/touch navigation, drag/wheel/pinch and three art fixtures.');
   } finally {
     if (client) { await client.send('Browser.close').catch(() => {}); client.close(); }
     if (session) { if (!await waitForProcessExit(session.browserProcess)) { session.browserProcess.kill(); await waitForProcessExit(session.browserProcess); } await removeBrowserProfile(session.profilePath); }

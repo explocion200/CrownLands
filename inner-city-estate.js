@@ -270,7 +270,7 @@
         districtTargets.forEach(target=>{target.hidden=false;});
         districtSizes=new Map(districtTargets.map(target=>{
           const style=getComputedStyle(target),label=getComputedStyle(target.querySelector("span"));
-          return [target,{w:parseFloat(style.width),h:parseFloat(style.height),labelHeight:parseFloat(label.height)}];
+          return [target,{w:parseFloat(style.width),h:parseFloat(style.height),labelWidth:parseFloat(label.width),labelHeight:parseFloat(label.height)}];
         }));
       }
       // Re-rasterize at the current scale; a promoted overview layer otherwise
@@ -330,15 +330,18 @@
           target.style.top=Math.max(parseFloat(target.style.top),south+labelHeight/2+6)+"px";
         }
       });
-      // District captions share the map's fixed anchors. Crowding can hide
-      // a target, but must never relocate its title into a different district.
-      const districtObstacles=[...panelBoxes];
+      // Test caption crowding against the painted strips, not their invisible
+      // touch padding. Keep the full touch target clear of panels and edges.
+      const districtObstacles=[];
       const districtPriority=['city','quarry','woodland','mine','farmland','crafts','trade'];
       [...districtTargets].sort((a,b)=>districtPriority.indexOf(a.dataset.estateDistrict)-districtPriority.indexOf(b.dataset.estateDistrict)).forEach(target=>{
         if(target.hidden)return;
-        const x=parseFloat(target.style.left),y=parseFloat(target.style.top),{w,h}=districtSizes.get(target),r=rect(x-w/2,y-h/2,w,h);
-        target.hidden=r.left<4||r.right>width-4||r.top<4||r.bottom>height-4||districtObstacles.some(other=>overlaps(r,other));
-        if(!target.hidden)districtObstacles.push(r);
+        const x=parseFloat(target.style.left),y=parseFloat(target.style.top),{w,h,labelWidth,labelHeight}=districtSizes.get(target),r=rect(x-w/2,y-h/2,w,h),caption=rect(x-labelWidth/2,y-labelHeight/2,labelWidth,labelHeight);
+        // Position without a transform stacking context so each visible strip
+        // stays clickable above neighboring buttons' transparent padding.
+        place(target,r.left,r.top);
+        target.hidden=r.left<4||r.right>width-4||r.top<4||r.bottom>height-4||panelBoxes.some(other=>overlaps(r,other))||districtObstacles.some(other=>overlaps(caption,other));
+        if(!target.hidden)districtObstacles.push(caption);
       });
       query(".estate-map-hint").hidden=camera.zoom>=2.5;
       placeNameplates(artBoxes,boxes,width,height,panelBoxes);
