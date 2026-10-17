@@ -57,7 +57,8 @@
         "local-backend/web-push.js",
         "service-worker.js",
         "firebaseClient.js",
-        "tools/test-private-notifications.js"
+        "tools/test-private-notifications.js",
+        "tools/validate-chat-reward-ledgers-browser.js"
       ],
       "tests": [
         "tools/test-private-notifications.js",
@@ -67,7 +68,7 @@
         "functions/test/emulator-notification-delivery.js",
         "functions/test/emulator-chat.js"
       ],
-      "reason": "Private alerts require accepted unblocked conversation, unread message, account preference and browser category registration; payloads contain no private text. Exercise separate army/private toggles, existing legacy army preference, concurrent changes, token rotation, logout and denied permission using actual client and sender functions. Preserve durable outbox retries, encrypted delivery, safe endpoints, local service-worker configuration and existing attack-click behavior. Private queue follows pending attack queue; shared client profile/callable integration remains authorized."
+      "reason": "Private alerts require accepted unblocked conversation, unread message, account preference and browser category registration; payloads contain no private text. Exercise separate army/private toggles, existing legacy army preference, concurrent changes, token rotation, logout and denied permission using actual client and sender functions. Preserve durable outbox retries, encrypted delivery, safe endpoints, local service-worker configuration and existing attack-click behavior. Private queue follows pending attack queue; shared client profile/callable integration remains authorized. Update its obsolete sprite-arrow assertion to the already-approved loaded right-arrow image and expanded state; the HUD artwork itself is unchanged."
     },
     {
       "paths": [
