@@ -1,31 +1,113 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "13d1f3df20e8cdba01e60bf89fdecee9392323f3",
+  "baseCommit": "b6abff9ffa2a79c1201ebf1456f6f24405beda0f",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-clan-shield-login-browser.js"
+        "functions/social.js",
+        "functions/index.js",
+        "functions/test/emulator-social.js",
+        "tools/social-test-cases.js",
+        "tools/test-local-postgres-social.js",
+        "tools/test-local-social-integration.js",
+        "tools/local-postgres-social-indexes.js",
+        "tools/social-operator.js",
+        "tools/test-local-postgres-game.js"
       ],
       "tests": [
-        "tools/validate-clan-shield-login-browser.js",
-        "tools/validate-clan-notifications-browser.js",
-        "tools/validate-clan-heraldry-v2.js",
-        "tools/validate-clans.js"
+        "tools/test-local-postgres-social.js",
+        "tools/test-local-social-integration.js",
+        "tools/test-local-postgres-game.js",
+        "functions/test/emulator-social.js",
+        "functions/test/emulator-chat.js"
       ],
-      "reason": "HUD and own-profile heraldry must keep the last confirmed visual during delayed sign-in and reconnect, without inventing a default for a clan whose shield has not loaded. The new real-browser test exercises delayed and repeated subscriptions, actual page reload, display-only cache scoping across accounts/realm/shard/clan, stale callbacks, fresh edits, removed clans, corrupt/blocked storage and the one-shot load fallback. Inspect screenshots and hit/size geometry at desktop 1440x900 and landscape 844x390/568x320. Existing clan notification lifecycle coverage protects applications, role/session guards, badges, heraldry editing, revision ordering and v1 compatibility affected by shared rendering/subscription paths. Heraldry and clan validators preserve saved renderer/schema and membership integration. No backend, authoritative membership/reward rules, world data or styles change; no emulator suite is needed for this presentation-only change."
+      "reason": "Account-scoped relationship state machine, participation authorization, idempotent sends, blocking, rate/friend limits, stable bounded pagination, unread monotonicity, 90-day retention and report evidence run on both real PostgreSQL and Firestore fixtures. Integration checks protected operator evidence/restrictions, send/block races, selected Google translation and a 50-subscription latency/pool baseline. Explicit concurrent partial indexes are installed and definitions checked on isolated schemas. Local game export registration and existing public/clan chat authority remain compatible; no seasonal or combat rule changes."
     },
     {
       "paths": [
+        "functions/chat-translation.js"
+      ],
+      "tests": [
+        "functions/test/emulator-chat-translation.js",
+        "tools/validate-chat-translation.js",
+        "tools/validate-google-chat-translation.js",
+        "tools/test-local-postgres-translation.js",
+        "tools/test-local-social-integration.js"
+      ],
+      "reason": "Private translation is explicit single-message only, authorized before provider/cache access, subject to existing shared monthly quota, and bounded by private-message expiry. Existing public/clan translation behavior, cache and quota accounting must remain unchanged."
+    },
+    {
+      "paths": [
+        "local-backend/access.js",
+        "local-backend/chat-events.js",
+        "local-client.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-chat-events.js",
+        "tools/test-local-chat-client.js",
+        "tools/test-local-social-integration.js"
+      ],
+      "reason": "Add only own-account opaque signals to generic reads and extend the shared Global/Clan long-poll to a third target. Verify private documents remain unreadable/unwritable, duplicate targets are rejected, session/membership revocation and reconnection work, held requests consume no action admission or query connection, and client disposal/account changes terminate subscriptions."
+    },
+    {
+      "paths": [
+        "functions/notification-delivery.js",
+        "local-backend/permanent-push.js",
+        "local-backend/web-push.js",
+        "service-worker.js",
+        "firebaseClient.js",
+        "tools/test-private-notifications.js"
+      ],
+      "tests": [
+        "tools/test-private-notifications.js",
+        "tools/validate-notification-system.js",
+        "tools/test-local-postgres-web-push.js",
+        "tools/test-local-production-client.js",
+        "functions/test/emulator-notification-delivery.js",
+        "functions/test/emulator-chat.js"
+      ],
+      "reason": "Private alerts require accepted unblocked conversation, unread message, account preference and browser category registration; payloads contain no private text. Exercise separate army/private toggles, existing legacy army preference, concurrent changes, token rotation, logout and denied permission using actual client and sender functions. Preserve durable outbox retries, encrypted delivery, safe endpoints, local service-worker configuration and existing attack-click behavior. Private queue follows pending attack queue; shared client profile/callable integration remains authorized."
+    },
+    {
+      "paths": [
+        "game.js",
+        "social-ui.js",
+        "social-ui.css",
+        "index.html",
+        "tools/validate-social-browser.js"
+      ],
+      "tests": [
+        "tools/validate-social-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-chat.js",
+        "tools/validate-chat-send-scheduling.js"
+      ],
+      "reason": "Add Friends/Messages inside existing Realm Chat with profile entrypoints, shared flag renderer, bounded threads, explicit translation/report tools, server-acknowledged drafts and account cleanup. Exercise actual desktop 1440x900 and landscape 844x390/568x320 layout, plain-text injection safety, 90-day browser timer bounds, send/translate, return to Global, and account disposal. Existing public/clan ledger, send scheduling and HUD chat behavior protect shared lifecycle dependencies."
+    },
+    {
+      "paths": [
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
         "tools/asset-performance-budgets.js",
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-manuscript-prototype.js"
       ],
       "tests": [
+        "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-manuscript-prototype.js"
+        "tools/validate-manuscript-prototype.js",
+        "tools/test-local-production-client.js"
       ],
-      "reason": "The measured source shell grows from 4,530,481 to 4,533,371 bytes, exceeding the prior 4,532,224-byte allowance by 1,147 bytes. Bound the 2,890-byte display-cache/subscription-guard addition at 3 KiB in the existing shared shell and game.js entry limits. Both consumers validate the complete offline shell; all other image, script, preload and runtime budgets remain unchanged. No assets, requests or dependencies are added. Align the older manuscript validator with the existing builder and asset validator by measuring delivered minified marauders/payments code; this corrects its stale source-byte accounting without changing either module or increasing their limits."
+      "reason": "Copy, minify and fingerprint the compact social UI and stylesheet in the offline production shell and local static variant. Bound aggregate addition at 24 KiB with no new art or dependencies. Both size-budget consumers measure delivered minified social code; artifact validation protects manifest, routing, shell completeness and production transformation."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/FRIENDS_AND_PRIVATE_MESSAGES.md"
+      ],
+      "tests": [],
+      "reason": "Record explicitly approved behavior and account persistence, private-data handling, protected operator commands, required coordinated backend/index/client rollout and data-preserving rollback. Documentation is reviewed against implementation; no separate runtime tests apply to prose."
     }
   ]
 }

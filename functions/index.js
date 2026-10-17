@@ -20629,7 +20629,18 @@ function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   }
 }
 
+const socialService = require("./social").createService({ db,
+  fail: (code, message) => new HttpsError(code, message),
+  getRealm: () => ({ resetGeneration: RESET_GENERATION, worldId: ONLINE_WORLD_ID }),
+  memberPath: uid => `gameServers/${GAME_SERVER_DOCUMENT_ID}/members/${uid}`,
+});
+exports.social = timedCallable("social", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => {
+  requireAuth(request);
+  return socialService.handler(request);
+});
+
 async function authorizeChatTranslation(transaction, request, payload) {
+  if (payload.channel === "private") return socialService.authorizeTranslation(transaction, request, payload);
   requireCompatibleClient(request.data || {});
   const uid = request.auth.uid;
   const { profile } = await requireCurrentSeasonParticipation(transaction, uid);
@@ -35968,12 +35979,13 @@ exports.cleanupExpiredChat = onSchedule({
   memory: "256MiB",
 }, async () => {
   const nowMs = Date.now();
-  const [messages, requests, translations] = await Promise.all([
+  const [messages, requests, translations, social] = await Promise.all([
     cleanupGlobalChat(nowMs),
     cleanupExpiredChatCollectionGroup("chatSendRequests", nowMs),
     cleanupExpiredChatTranslations(nowMs),
+    socialService.cleanup(),
   ]);
-  console.log("Expired Crownlands chat data cleaned", { messages, requests, translations });
+  console.log("Expired Crownlands chat data cleaned", { messages, requests, translations, social });
   return { messages, requests, translations };
 });
 

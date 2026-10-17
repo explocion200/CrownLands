@@ -62,7 +62,7 @@ const rootFiles = [
   "modal-ui.js", "optional-ui-styles.js",
   "daily-rewards-guide.html",
   "season-rewards-ui.js", "season-rewards-ui.css",
-  "firebase-messaging-sw.js", "firebaseClient.js", "email-auth-ui.js", "chat-ledger-ui.css", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "instant-economy-actions.js",
+  "firebase-messaging-sw.js", "firebaseClient.js", "email-auth-ui.js", "chat-ledger-ui.css", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css", "chat-ui.js", "social-ui.js", "social-ui.css", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",
   "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
@@ -81,7 +81,7 @@ function copy(relativeSource, relativeDestination = relativeSource) {
     let text = fs.readFileSync(source, "utf8").replace(/\r\n/g, "\n");
     // Keep estate, Citadel, capture animation, NPCs, reports and checkout within delivery budgets. Only
     // remove whitespace/comments and shorten local names; do not optimize code.
-    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js", "stronghold-details-ui.js", "marauders-ui.js", "battle-report-detail-ui.js", "crown-payments-ui.js", "local-client.js"].includes(relativeSource)) text = minifyRuntime(text);
+    if (["inner-city-estate.js", "estate-economy-ui.js", "animation-manager.js", "stronghold-details-ui.js", "marauders-ui.js", "battle-report-detail-ui.js", "crown-payments-ui.js", "local-client.js", "social-ui.js"].includes(relativeSource)) text = minifyRuntime(text);
     fs.writeFileSync(destination, text, "utf8");
   } else fs.copyFileSync(source, destination);
 }

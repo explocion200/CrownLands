@@ -13,7 +13,7 @@
     const pendingRequests = [];
     let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0;
     let chatSupported = typeof root.AbortController === "function";
-    const chatWatcher = watcher => watcher.target.kind === "collection" && /^(globalChat|clans)\/[^/]+\/messages$/.test(watcher.target.path);
+    const chatWatcher = watcher => watcher.target.kind === "collection" && /^(?:(globalChat|clans)\/[^/]+\/messages|socialAccounts\/[^/]+\/signals)$/.test(watcher.target.path);
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
     let readiness;
     async function ready() {
@@ -235,7 +235,7 @@
       chatTimer = null;
       const active = [...watchers].filter(chatWatcher), generation = chatGeneration;
       if (disposed || root.document.hidden || !chatSupported || !active.length) return;
-      if (active.length > 2) { chatSupported = false; wake(); return; }
+      if (active.length > 3) { chatSupported = false; wake(); return; }
       const controller = new root.AbortController(); chatController = controller;
       let delay = 50;
       try {

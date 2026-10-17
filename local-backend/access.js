@@ -73,6 +73,7 @@ class Access {
     }
     if (p.length === 4 && root === "islands" && subcollection === "camps" && collection === "rewardHistory") return this.island(id) && has("awardedToPlayerId", this.uid);
     if (p.length !== 2) return false;
+    if (root === "socialAccounts") return id === this.uid && collection === "signals" && query.constraints.limit <= 1;
     if (root === "players") return id === this.uid && (PRIVATE_PLAYER.includes(collection) || (CURRENT_PLAYER.includes(collection) && current)
       || (collection === "saves" && has("__name__", "default-" + this.generation)));
     if (root === "realmGenerations") return id === this.generation && ((collection === "assignments" && has("__name__", this.uid)) || (collection === "expansion" && has("__name__", "current")));
@@ -122,6 +123,7 @@ class Access {
     if (p.length === 6 && root === "islands" && collection === "camps" && p[4] === "rewardHistory") return this.island(id) && data?.awardedToPlayerId === this.uid;
     if (p.length !== 4) return false;
     if (root === "realmGenerations") return id === this.generation && ((collection === "assignments" && record === this.uid) || (collection === "expansion" && record === "current"));
+    if (root === "socialAccounts") return id === this.uid && collection === "signals" && record === "current";
     if (root === "players") {
       if (id !== this.uid) return false;
       if (PRIVATE_PLAYER.includes(collection)) return true;

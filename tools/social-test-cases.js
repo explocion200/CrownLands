@@ -1,0 +1,114 @@
+"use strict";
+const assert = require("node:assert/strict"), crypto = require("node:crypto");
+const S = require("../functions/social");
+async function run(db) {
+  let time = Date.UTC(2026, 9, 17, 12);
+  const realm = { resetGeneration: "realm-social-fixture" };
+  const service = S.createService({ db, now: () => time, getRealm: () => realm, memberPath: uid => `gameServers/fixture/members/${uid}` });
+  const call = (uid, data) => service.handler({ auth: { uid, token: { email_verified: true } }, data: { ...data, requestId: data.requestId || crypto.randomUUID() } });
+  for (const uid of ["alice", "bob", "carol"]) await db.doc(`players/${uid}`).set({ playerName: uid, email: uid + "@secret.test", flag: { version: 2, primary: "#123456" } });
+  assert.equal((await call("alice", { action: "status" })).enabled, false);
+  await assert.rejects(call("alice", { action: "list", kind: "friends" }), { code: "unavailable" });
+  await db.doc(S.CONFIG).set({ enabled: true });
+  const first = { action: "send", peerUid: "bob", text: "Private diplomacy", requestId: crypto.randomUUID() };
+  const sent = await call("alice", first), id = sent.conversationId;
+  assert.equal((await call("alice", first)).replayed, true);
+  assert.equal((await call("bob", { action: "list", kind: "messageRequests" })).rows.length, 1);
+  assert.equal((await call("bob", { action: "unread" })).count, 1);
+  assert.equal((await call("alice", { action: "history", conversationId: id })).messages.length, 1);
+  await assert.rejects(call("carol", { action: "history", conversationId: id }), { code: "permission-denied" });
+  time += 3001;
+  await assert.rejects(call("alice", { ...first, requestId: crypto.randomUUID() }), { code: "failed-precondition" });
+  await call("bob", { action: "conversation", conversationId: id, choice: "accept" });
+  assert.equal((await call("bob", { action: "relation", peerUid: "alice" })).friend, "none");
+  await call("bob", { action: "preference", enabled: true });
+  const second = await call("alice", { action: "send", conversationId: id, text: "Accepted conversation" });
+  const outbox = (await db.doc("serverNotificationOutbox/social_" + second.messageId).get()).data();
+  assert.equal(await service.pushEligible(outbox.notification), true);
+  assert(!JSON.stringify(outbox).includes("Accepted conversation"));
+  await call("bob", { action: "read", conversationId: id, throughSeq: second.sequence });
+  assert.equal(await service.pushEligible(outbox.notification), false);
+  assert.equal((await call("bob", { action: "unread" })).count, 0);
+  // Stale read acknowledgements cannot erase a new message or move backwards.
+  time += 3001;
+  const third = await call("alice", { action: "send", conversationId: id, text: "Newest" });
+  await call("bob", { action: "read", conversationId: id, throughSeq: 1 });
+  assert.equal((await call("bob", { action: "unread" })).count, 1);
+  await call("alice", { action: "friend", peerUid: "bob", choice: "request" });
+  await call("bob", { action: "friend", peerUid: "alice", choice: "request" });
+  assert.equal((await call("bob", { action: "relation", peerUid: "alice" })).friend, "incoming");
+  await call("bob", { action: "friend", peerUid: "alice", choice: "accept" });
+  const friends = await call("alice", { action: "list", kind: "friends" });
+  assert.equal(friends.rows.length, 1); assert(!JSON.stringify(friends).includes("secret.test"));
+  await db.doc("gameServers/fixture/members/bob").set({ status: "active", resetGeneration: realm.resetGeneration, lastSeenAtMs: time });
+  assert.equal((await call("alice", { action: "presence", uids: ["bob", "carol"] })).players.length, 1);
+  assert.equal((await call("alice", { action: "presence", uids: ["bob"] })).players[0].online, true);
+  time += 180001;
+  assert.equal((await call("alice", { action: "presence", uids: ["bob"] })).players[0].online, false);
+  const report = await call("bob", { action: "report", conversationId: id, messageId: third.messageId, reason: "spam" });
+  const evidence = (await db.doc("socialReports/" + report.reportId).get()).data();
+  assert.equal(evidence.evidence.length, 3);
+  assert.equal((await call("bob", { action: "report", conversationId: id, messageId: third.messageId, reason: "spam" })).reportId, report.reportId);
+  await call("bob", { action: "block", peerUid: "alice", enabled: true });
+  await assert.rejects(call("alice", { action: "send", conversationId: id, text: "Blocked" }), { code: "permission-denied" });
+  assert.equal((await call("alice", { action: "presence", uids: ["bob"] })).players.length, 0);
+  assert.equal((await call("bob", { action: "list", kind: "blocked" })).rows.length, 1);
+  assert.equal((await db.doc(S.accountPath("alice")).get()).data().friendCount, 0);
+  assert.equal(await service.pushEligible(outbox.notification), false);
+  await call("bob", { action: "block", peerUid: "alice", enabled: false });
+  assert.equal((await call("bob", { action: "relation", peerUid: "alice" })).canSend, false);
+  await assert.rejects(call("alice", { action: "send", peerUid: "alice", text: "self" }), { code: "invalid-argument" });
+  await assert.rejects(call("alice", { action: "send", peerUid: "carol", text: "x".repeat(1001) }), { code: "invalid-argument" });
+  // Accepted history pages stay ordered and bounded; concurrent/retried requests
+  // are exercised separately against the real PostgreSQL transaction adapter.
+  await call("alice", { action: "friend", peerUid: "bob", choice: "request" });
+  await call("bob", { action: "friend", peerUid: "alice", choice: "accept" });
+  for (let i = 0; i < 55; i++) { time += 3001; await call("alice", { action: "send", peerUid: "bob", text: "History " + i }); }
+  const latest = await call("bob", { action: "history", conversationId: id });
+  const previous = await call("bob", { action: "history", conversationId: id, beforeSeq: latest.next });
+  assert.equal(latest.messages.length, 50); assert.equal(previous.messages.length, 8);
+  assert.equal(new Set([...previous.messages, ...latest.messages].map(m => m.sequence)).size, 58);
+  assert(latest.messages.every((m, i) => !i || m.sequence > latest.messages[i - 1].sequence));
+  await assert.rejects(call("alice", { action: "send", peerUid: "bob", text: "Too soon" }), { code: "resource-exhausted" });
+  const capReport = await call("bob", { action: "report", conversationId: id, messageId: latest.messages.at(-1).id, reason: "other" });
+  assert.equal((await db.doc("socialReports/" + capReport.reportId).get()).data().evidence.length, 6);
+  await call("alice", { action: "friend", peerUid: "bob", choice: "remove" });
+  assert.equal((await call("bob", { action: "relation", peerUid: "alice" })).canSend, true);
+  await call("alice", { action: "friend", peerUid: "carol", choice: "request" });
+  await db.doc(S.accountPath("carol")).set({ friendCount: 200 }, { merge: true });
+  await assert.rejects(call("carol", { action: "friend", peerUid: "alice", choice: "accept" }), { code: "resource-exhausted" });
+  await call("carol", { action: "friend", peerUid: "alice", choice: "decline" });
+  for (let i = 0; i < 51; i++) {
+    const peer = "page" + i, pid = S.pairId("carol", peer);
+    await db.doc("players/" + peer).set({ playerName: peer });
+    await db.doc(`${S.accountPath("carol")}/contacts/${pid}`).set({ peerUid: peer, friend: "friends", updatedAtMs: time });
+  }
+  const page = await call("carol", { action: "list", kind: "friends" });
+  const tail = await call("carol", { action: "list", kind: "friends", cursor: page.next });
+  assert.equal(page.rows.length, 50); assert.equal(tail.rows.length, 1); assert.equal(new Set([...page.rows, ...tail.rows].map(r => r.id)).size, 51);
+  await db.doc(S.accountPath("carol")).set({ requestDay: Math.floor(time / S.DAY), newRequests: 20 }, { merge: true });
+  await assert.rejects(call("carol", { action: "friend", peerUid: "bob", choice: "request" }), { code: "resource-exhausted" });
+  await assert.rejects(service.handler({ auth: { uid: "alice", token: { firebase: { sign_in_provider: "password" }, email_verified: false } }, data: { action: "list", kind: "friends" } }), { code: "permission-denied" });
+  // Season/profile replacement does not touch account-scoped relationships or history.
+  await db.doc("players/alice").set({ playerName: "NewName", resetGeneration: "next-season" });
+  assert.equal((await call("bob", { action: "history", conversationId: id })).messages.length, 50);
+  time += S.RETENTION;
+  assert.equal((await call("bob", { action: "history", conversationId: id })).messages.length, 0);
+  assert.equal((await call("bob", { action: "unread" })).count, 0);
+  await service.cleanup();
+  assert.equal((await db.doc(S.messagePath(id, sent.messageId)).get()).exists, false);
+  assert.equal((await db.doc(S.pairPath(id)).get()).exists, true);
+  // Friend-request expiration and declined retry windows survive cleanup.
+  await call("alice", { action: "friend", peerUid: "carol", choice: "request" });
+  time += 8 * S.DAY; await service.cleanup();
+  assert.equal((await call("carol", { action: "list", kind: "friendRequests" })).rows.length, 0);
+  await assert.rejects(call("alice", { action: "friend", peerUid: "carol", choice: "request" }), { code: "resource-exhausted" });
+  time += 31 * S.DAY;
+  await call("alice", { action: "send", peerUid: "carol", text: "Expiring request" });
+  assert.equal((await call("carol", { action: "unread" })).count, 1);
+  time += 8 * S.DAY;
+  assert.equal((await call("carol", { action: "unread" })).count, 0, "Expiry applies before cleanup runs");
+  await service.cleanup(); assert.equal((await call("carol", { action: "unread" })).count, 0);
+  console.log("Social request, privacy, unread, presence, reports, retention and reset scenarios passed.");
+}
+module.exports = { run };

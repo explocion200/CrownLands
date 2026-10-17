@@ -3,7 +3,7 @@ const crypto = require("node:crypto");
 const hash = value => crypto.createHash("sha256").update(value).digest("hex");
 const channel = schema => "crownlands_chat_" + hash(schema).slice(0, 32);
 function topic(collection) {
-  return /^(globalChat|clans)\/[^/]+\/messages$/.test(collection) ? hash(collection) : null;
+  return /^(?:(globalChat|clans)\/[^/]+\/messages|socialAccounts\/[^/]+\/signals)$/.test(collection) ? hash(collection) : null;
 }
 const unavailable = () => Object.assign(Error("Chat updates are reconnecting."), { code: "unavailable" });
 
@@ -43,7 +43,7 @@ class ChatEvents {
   subscribe(collections) {
     if (this.closed) throw unavailable();
     const topics = collections.map(topic);
-    if (!topics.length || topics.length > 2 || topics.some(value => !value)) throw Object.assign(Error("Invalid chat subscription."), { code: "invalid-argument" });
+    if (!topics.length || topics.length > 3 || new Set(topics).size !== topics.length || topics.some(value => !value)) throw Object.assign(Error("Invalid chat subscription."), { code: "invalid-argument" });
     let version = 0, pending = null, closed = false;
     const subscriber = { topics: new Set(topics), wake: () => { version++; pending?.(); } };
     this.subscribers.add(subscriber);
@@ -67,7 +67,8 @@ class ChatEvents {
 }
 
 async function watchChat({ events, targets, cursor, signal, read, holdMs = 25000, recheckMs = 10000 }) {
-  if (!Array.isArray(targets) || !targets.length || targets.length > 2
+  if (!Array.isArray(targets) || !targets.length || targets.length > 3
+      || new Set(targets.map(target => target?.collection)).size !== targets.length
       || targets.some(target => !target || !topic(target.collection || "") || !Number.isInteger(target.limit) || target.limit < 1 || target.limit > 100)
       || (cursor !== undefined && !/^[a-f0-9]{64}$/.test(cursor))) {
     throw Object.assign(Error("Invalid chat subscription."), { code: "invalid-argument" });

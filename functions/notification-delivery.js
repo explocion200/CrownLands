@@ -75,4 +75,10 @@ function incomingArmyData(notification = {}) {
   return data;
 }
 
-module.exports = { deliverNotificationOutbox, incomingArmyData };
+function notificationData(notification = {}) {
+  if (notification.type !== "private_message") return incomingArmyData(notification);
+  if (!/^[a-f0-9]{40}$/.test(notification.conversationId || "")) throw Error("Invalid private notification");
+  return { type: "private_message", title: "Crownlands private message", body: "You have a new private message.",
+    conversationId: notification.conversationId, url: "/play/" };
+}
+module.exports = { deliverNotificationOutbox, incomingArmyData, notificationData };

@@ -14084,6 +14084,7 @@ function renderPublicPlayerProfile(profile) {
       <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId && !publicPlayerLocationPending ? "" : "disabled"}>${renderCrownlandsIcon("locate")}<span>${publicPlayerLocationPending ? "Locating…" : "View Main City"}</span></button>
     </footer><p class="public-profile-location-status" role="status"></p>`;
   FlagRenderer.render(modalBody.querySelector("#publicPlayerFlag"), profile.flag, { stableKey: profile.uid, context: "public-profile" });
+  window.CrownlandsSocial?.profileActions(modalBody, profile.uid);
   const honorsRequest = publicPlayerProfileRequestId;
   void attachSeasonHonors("player", profile.uid, ".public-profile-flag", () => modal.open && modal.classList.contains("public-player-profile-modal") && publicPlayerProfileRequestId === honorsRequest);
 }
@@ -16664,6 +16665,7 @@ function startOnlineChat() {
   const uid = getCurrentOnlineUid();
   if (!state || !uid || !api?.isSignedIn?.() || !isOnlineWorldActive()) return false;
   getChatController()?.start({ api, uid, clanId: state.clanId || "" });
+  void window.CrownlandsSocial?.start({ api, uid, flagRenderer: FlagRenderer });
   return true;
 }
 
@@ -16672,6 +16674,7 @@ function updateOnlineChatClan(clanId = "") {
 }
 
 function disposeOnlineChat(options = {}) {
+  window.CrownlandsSocial?.stop();
   window.CrownlandsChat?.dispose?.(options);
 }
 

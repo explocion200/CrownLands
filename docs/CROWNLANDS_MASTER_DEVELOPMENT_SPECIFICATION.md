@@ -2056,6 +2056,20 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 - Current reset source preserves the confirmed player identity fields and transactionally carries clan identity, membership, roster, and roles into the new generation while resetting clan-season activity.
 - Player Flag save reliability after the reported production issue is **NEEDS VERIFICATION** through a current production smoke test.
 
+### Friends and private messages — approved October 17, 2026
+
+- Friends and Messages share the existing parchment Chat window. Player-profile actions are the entry points; no new search directory or HUD button is added. Friendship is social only and never changes combat, scouting, clan membership, or rewards.
+- Friendship requires an accepted request. Friends can message directly. Other players may send one introductory message request, and must wait for acceptance before sending more. Accepting a conversation does not create friendship. Crossed requests must not duplicate relationships.
+- Friendships, blocks, preferences and conversation contacts persist across seasons, renames, clan changes and world-slot cleanup. Private text has a rolling 90-day lifetime. Global and Clan retention rules remain unchanged.
+- Friends automatically see Online/Offline, with no enable switch, location, or last-seen display. Presence derives from server heartbeats and becomes Offline after three minutes without a heartbeat.
+- Removing a friend leaves accepted conversations available. Blocking removes friendship, cancels requests and stops private contact and friend-presence access. Unblocking does not restore friendship or accepted conversation state. Blocks do not affect combat or public chat.
+- First version: one-to-one plain text, unread-conversation badges, request management, blocking and reporting. No attachments, groups, read receipts, typing indicators or link previews. Private text stays out of the public mini-chat preview and persistent browser caches.
+- Limits: 1,000 characters per private message, three seconds between private sends, 200 accepted friends, and 20 new friend/message requests per account per UTC day. Pending requests expire after seven days; declined/expired/cancelled requests cannot be resent by that sender to the recipient for 30 days.
+- Private browser alerts have a separate opt-in, default Off. Notifications hide message text, combine repeated alerts, and never alert for unsolicited message requests. Existing attack alerts keep priority.
+- Manual Translate sends only the selected authoritative message text to the existing Google service after the player clicks. Explain this alongside the control. No automatic detection or translation runs for private messages; the existing shared monthly allowance and authorization checks apply.
+- Reporting retains the selected message and up to five preceding, still-visible messages for 90 days from the report. Only the protected server operator tool can review evidence, dismiss reports or apply an audited private-messaging restriction. Reports alone never trigger automatic sanctions.
+- Runtime changes require a coordinated local service and client release, including access-control, recovery, retention, performance, and desktop/landscape checks. **Status:** `IN DEVELOPMENT`; approval and merge do not establish live deployment.
+
 ### Announcements and moderation
 
 - Profanity filtering, spam controls beyond current rate limits, message reporting, moderator workflows, sanctions, announcement authoring, scheduled announcements, and audit retention are **NEEDS VERIFICATION**.
@@ -2084,6 +2098,8 @@ The persistence allowlist is explicit. The following are intended to persist acr
 15. All twenty Inner Castle estate buildings, their completed levels and earned benefits, including officer Gear rarity entitlements — confirmed October 7, 2026; persistence implementation is `PLANNED` and distinct from the existing Gear reset helper
 16. Acquired expedition champions, quality, levels, accumulated XP and recovery deadlines, active estate expeditions and earned/unclaimed estate rewards — confirmed October 7, 2026; `PLANNED`. This is separate from seasonal Hero progression.
 17. All estate material stockpiles and fractional production, processor preferences, partial building deposits, funded construction/queues, quotes, timers and transaction receipts, plus estate recruitment/catalog state and applicable daily allowance history — confirmed October 7, 2026; `PLANNED`. The complete Inner Castle persists; a realm rollover must not erase progress, restart a timer, duplicate settlement or refresh a daily allowance. Existing world Gold, world-city and Hero reset rules remain separate; the shared Gold counter is not a new permanent estate currency.
+
+18. Accepted friendships, social blocks, private-alert preferences, and private conversation contacts; message text expires after 90 days independently of season boundaries — confirmed October 17, 2026.
 
 Authentication and active-session data may carry forward as technical account state. They are not part of the player-facing persistence allowlist and confer no seasonal progression.
 

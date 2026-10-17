@@ -1216,6 +1216,15 @@
     return callServerFunction("claimClanQuestReward", payload);
   }
 
+  async function social(payload = {}) { return callServerFunction("social", payload); }
+
+  function subscribeSocialSignals(onChange, onError) {
+    if (!LOCAL || !client.db || !client.user?.uid) return () => {};
+    const { collection, query, limit } = client.modules.firestore;
+    return subscribeScopedSnapshot(query(collection(client.db, "socialAccounts", client.user.uid, "signals"), limit(1)),
+      snapshot => onChange(snapshot.docs.map(doc => doc.data())[0] || {}), onError);
+  }
+
   async function sendChatMessage(payload = {}) {
     return callServerFunction("sendChatMessage", payload);
   }
@@ -1706,6 +1715,7 @@
       body: notification.body || data.body || "",
       kind: data.kind || "",
       type: data.type || "",
+      conversationId: /^[a-f0-9]{40}$/.test(data.conversationId || "") ? data.conversationId : "",
       cityId: data.cityId || "",
       armyId: data.armyId || "",
       targetRegionId: data.targetRegionId || "",
@@ -1772,9 +1782,16 @@
   async function saveNotificationToken(token, options = {}) {
     const uid = requireSignedIn();
     if (!uid || !token) return null;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const { doc, setDoc, getDocs, collection, serverTimestamp } = client.modules.firestore;
     const tokenId = await hashText(token);
     const installationId = getGameInstallationId();
+    let categories = {};
+    if (LOCAL) {
+      const existing = await getDocs(collection(client.db, "players", uid, "notificationTokens"));
+      const prior = existing.docs.map(item => item.data()).find(item => item.installationId === installationId && item.enabled);
+      categories = { armyEnabled: prior ? prior.armyEnabled !== false : false, privateEnabled: prior?.privateEnabled === true };
+      categories[options.category === "private" ? "privateEnabled" : "armyEnabled"] = true;
+    }
     await setDoc(doc(client.db, "players", uid, "notificationTokens", tokenId), {
       uid,
       token,
@@ -1783,6 +1800,7 @@
       userAgent: String(navigator.userAgent || "").slice(0, 240),
       playerName: cleanPlayerName(options.playerName || client.user?.displayName),
       enabled: true,
+      ...categories,
       lastSeenAtMs: Date.now(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -1826,9 +1844,14 @@
     return Boolean(safeTokenId || removedInstallationTokens);
   }
 
+  async function serializePushChange(change) {
+    const pending = (client.pushPromise || Promise.resolve()).catch(() => null).then(change);
+    client.pushPromise = pending;
+    try { return await pending; } finally { if (client.pushPromise === pending) client.pushPromise = null; }
+  }
+
   async function enablePushNotifications(options = {}) {
-    if (client.pushPromise) return client.pushPromise;
-    const pushPromise = (async () => {
+    return serializePushChange(async () => {
       setPushRegistrationState("registering");
       try {
         if (!window.isSecureContext) throw new Error("Open the game with HTTPS to enable notifications.");
@@ -1858,13 +1881,7 @@
         setPushRegistrationState("error", { error: error?.message || error });
         throw error;
       }
-    })();
-    client.pushPromise = pushPromise;
-    try {
-      return await pushPromise;
-    } finally {
-      if (client.pushPromise === pushPromise) client.pushPromise = null;
-    }
+    });
   }
 
   async function registerPushNotifications(options = {}) {
@@ -1875,9 +1892,22 @@
     return enablePushNotifications(options);
   }
 
-  async function disablePushNotifications() {
-    if (client.pushPromise) await client.pushPromise.catch(() => null);
+  async function disablePushNotifications(options = {}) {
+    return serializePushChange(async () => {
     await init();
+    if (LOCAL && !options.all) {
+      const uid = requireSignedIn(), { collection, getDocs, setDoc } = client.modules.firestore;
+      const rows = await getDocs(collection(client.db, "players", uid, "notificationTokens"));
+      let retained = false;
+      for (const row of rows.docs.filter(item => item.data().installationId === getGameInstallationId())) {
+        const value = row.data(), categories = { armyEnabled: value.armyEnabled !== false, privateEnabled: value.privateEnabled === true };
+        categories[options.category === "private" ? "privateEnabled" : "armyEnabled"] = false;
+        if (categories.armyEnabled || categories.privateEnabled) {
+          await setDoc(row.ref, categories, { merge: true }); retained = true;
+        }
+      }
+      if (retained) return true;
+    }
     try {
       if (client.messaging && client.modules?.messaging?.deleteToken) {
         await client.modules.messaging.deleteToken(client.messaging);
@@ -1892,6 +1922,7 @@
     client.notificationTokenId = "";
     setPushRegistrationState("disabled");
     return true;
+    });
   }
 
   function sanitizeForFirestore(value) {
@@ -2017,7 +2048,7 @@
     await clearActivePresence().catch(error => {
       console.warn("Could not clear online presence during sign-out", error);
     });
-    await disablePushNotifications().catch(error => {
+    await disablePushNotifications({ all: true }).catch(error => {
       console.warn("Could not disable notifications during sign-out", error);
     });
     stopActiveSessionWatcher();
@@ -3711,6 +3742,8 @@
     claimClanGiftPool,
     claimClanQuestReward,
     getServerNowMs,
+    social,
+    subscribeSocialSignals,
     sendChatMessage,
     translateChatMessages,
     loadClan,
