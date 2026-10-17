@@ -1,37 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9d89c4f3cdc15a0c2369b98596b8a0e888b83b15",
+  "baseCommit": "4e599f754e33154af991fa954ee8346cf2519338",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "tools/validate-social-browser.js"
+        "social-ui.js"
       ],
       "tests": [
         "tools/validate-social-browser.js",
-        "tools/test-private-notifications.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/test-local-production-client.js"
+        "tools/validate-chat.js"
       ],
-      "reason": "Account private-alert opt-in must not claim a second browser is registered. Track successful category registration per active client session, offer explicit enable/retry without silently disabling the account preference, and retain an Off action when permission is blocked or token renewal fails. Real-browser cases cover account opt-in on an unregistered browser, fullscreen prompting, failed token renewal and Off; existing category-isolation tests protect attack alerts and logout. Recheck desktop and landscape layout, production transformation and shell size. No backend or player-rule changes; no emulator rerun applies."
+      "reason": "Place Messages before Friends in the existing Realm Chat tab DOM. Keyboard navigation already follows DOM order. Exercise the existing social browser interaction and desktop/landscape layouts, and the shared Global/Clan chat wiring. This changes only tab placement; no server-authoritative behavior or emulator suites are affected."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the observed first live release of the already-approved social feature: merged build and matching installed backend/public files, feature gate, indexes, installed fixture checks and service health were verified before recording LIVE. This changes deployment status only, not design rules."
-    },
-    {
-      "paths": [
-        "functions/social.js",
-        "tools/social-test-cases.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-social.js",
-        "functions/test/emulator-social.js"
-      ],
-      "reason": "Coalesce private push requests separately for each participant, so an immediate reply can notify its different recipient without being mistaken for a repeated alert to the first recipient. Shared PostgreSQL and emulator scenarios verify both directions receive an initial outbox item and repeated same-recipient alerts within 60 seconds remain coalesced, alongside all existing social authorization and expiry rules. This small backend change requires a separately validated runtime installation before publication."
+      "reason": "Record the user-confirmed Global, Clan, Messages, Friends tab order. No separate runtime tests apply to this documentation."
     }
   ]
 }

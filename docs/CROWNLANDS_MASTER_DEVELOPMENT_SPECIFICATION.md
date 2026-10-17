@@ -2058,7 +2058,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 
 ### Friends and private messages — approved October 17, 2026
 
-- Friends and Messages share the existing parchment Chat window. Player-profile actions are the entry points; no new search directory or HUD button is added. Friendship is social only and never changes combat, scouting, clan membership, or rewards.
+- Friends and Messages share the existing parchment Chat window. The tab order is Global, Clan, Messages, Friends, with Friends immediately to the right of Messages (confirmed October 17, 2026). Player-profile actions are the entry points; no new search directory or HUD button is added. Friendship is social only and never changes combat, scouting, clan membership, or rewards.
 - Friendship requires an accepted request. Friends can message directly. Other players may send one introductory message request, and must wait for acceptance before sending more. Accepting a conversation does not create friendship. Crossed requests must not duplicate relationships.
 - Friendships, blocks, preferences and conversation contacts persist across seasons, renames, clan changes and world-slot cleanup. Private text has a rolling 90-day lifetime. Global and Clan retention rules remain unchanged.
 - Friends automatically see Online/Offline, with no enable switch, location, or last-seen display. Presence derives from server heartbeats and becomes Offline after three minutes without a heartbeat.
