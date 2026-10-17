@@ -9,21 +9,15 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
-import subprocess
 import tarfile
 import tempfile
-import urllib.error
-import urllib.parse
 import urllib.request
+import github_access
 
 REPO = "explocion200/CrownLands"
-WORKFLOW = REPO + "/.github/workflows/crownlands-local-publish.yml"
 MAX_PACKAGE = 160 * 1024 * 1024
 MAX_CONTENT = 400 * 1024 * 1024
 MAX_FILES = 10000
-SHA = re.compile(r"[0-9a-f]{40}")
-HOSTS = {"api.github.com", "github.com", "release-assets.githubusercontent.com",
-         "objects.githubusercontent.com"}
 
 
 class BackendHold(ValueError):
@@ -45,55 +39,6 @@ def safe_path(name):
             or any(ord(c) < 32 for c in name)):
         raise ValueError("Unsafe package path")
     return name
-
-
-def check_url(url):
-    parsed = urllib.parse.urlsplit(url)
-    if (parsed.scheme != "https" or parsed.hostname not in HOSTS
-            or parsed.username or parsed.password or parsed.port not in (None, 443)):
-        raise ValueError("Unapproved download destination")
-    return url
-
-
-class SafeRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        check_url(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
-
-
-def download(url, limit):
-    check_url(url)
-    opener = urllib.request.build_opener(SafeRedirect)
-    request = urllib.request.Request(url, headers={"User-Agent": "Crownlands-local-publisher/1",
-                                                 "Accept": "application/vnd.github+json"})
-    with opener.open(request, timeout=45) as response:
-        data = response.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError("Download exceeds size limit")
-    return data
-
-
-def main_head():
-    data = json.loads(download("https://api.github.com/repos/" + REPO + "/commits/main", 2 * 1024 * 1024))
-    sha = data.get("sha", "")
-    if not SHA.fullmatch(sha):
-        raise ValueError("Invalid main commit")
-    return sha
-
-
-def verify_signature(package, bundle, sha, gh):
-    # A local bundle works without a GitHub credential. Enforce repository,
-    # workflow, main ref, source commit, artifact digest and GitHub-hosted runner.
-    result = subprocess.run([
-        str(gh), "attestation", "verify", str(package), "--bundle", str(bundle),
-        "--repo", REPO, "--signer-workflow", WORKFLOW, "--source-ref", "refs/heads/main",
-        "--source-digest", sha, "--deny-self-hosted-runners",
-    ], capture_output=True, text=True, timeout=120,
-        env={"PATH": "/usr/bin:/bin", "HOME": str(package.parent),
-             "GH_CONFIG_DIR": str(package.parent / "gh-config")})
-    if result.returncode:
-        raise ValueError("GitHub package signature/provenance verification failed: "
-                         + (result.stderr or result.stdout)[-1500:])
 
 
 def unpack(package, destination, sha, approved):
@@ -232,7 +177,7 @@ def smoke(root, meta, fetch=None):
                 raise ValueError('Live local backend identity mismatch')
 
 
-def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=main_head, authority_fn=lambda: None, previous_fn=lambda release: None):
+def activate(root, state, staged, meta, smoke_fn=smoke, head_fn=None, authority_fn=lambda: None, previous_fn=lambda release: None):
     authority_fn()
     if head_fn() != meta["commit"]:
         raise ValueError("A newer main commit arrived; stale package held")
@@ -292,7 +237,8 @@ def run(config, root, state, check_only=False):
     authority_check = lambda: local_runtime.authority(config)
     previous_check = (lambda release: local_runtime.require_local_release(release, local, config['approved'])) if local else lambda release: None
     recover(root, state, previous_check)
-    sha = main_head()
+    github = github_access.Client(config)
+    sha = github.main_head()
     active = current_release(root)
     previous_check(active)
     if active.name == "auto-" + sha:
@@ -302,19 +248,20 @@ def run(config, root, state, check_only=False):
         return {"status": "held", **json.loads(blocked.read_text())}
     if shutil.disk_usage(root).free < 1024 * 1024 * 1024:
         raise ValueError("Less than 1 GiB free; publication held to protect the live server")
-    base = "https://github.com/" + REPO + "/releases/download/local-game-" + sha + "/"
+    authorization = github.authorize(sha)
     with tempfile.TemporaryDirectory(prefix="download-", dir=state) as tmp:
         folder = Path(tmp)
         package = folder / "local-game.tar.gz"
         bundle = folder / "provenance.json"
         try:
-            package.write_bytes(download(base + package.name, MAX_PACKAGE))
-            bundle.write_bytes(download(base + bundle.name, 2 * 1024 * 1024))
-        except urllib.error.HTTPError as error:
-            if error.code == 404:
-                return {"status": "waiting-for-github-build", "commit": sha}
-            raise
-        verify_signature(package, bundle, sha, "/usr/local/lib/crownlands-deploy/gh")
+            assets = github.release_assets(sha)
+            package.write_bytes(github.download_asset(assets[package.name], MAX_PACKAGE))
+            bundle.write_bytes(github.download_asset(assets[bundle.name], 32768))
+            payload = github_access.verify_signature(package, bundle, sha,
+                '/etc/crownlands-deploy/publish-signing-public.pem', authorization)
+            github.require_publication(payload)
+        except github_access.WaitingForBuild:
+            return {"status": "waiting-for-github-build", "commit": sha}
         staged = Path(tempfile.mkdtemp(prefix=".stage-", dir=root / "releases"))
         try:
             try:
@@ -328,7 +275,12 @@ def run(config, root, state, check_only=False):
                 meta = local_runtime.transform(staged, meta, local)
             if check_only:
                 return {"status": "verified-ready", "commit": sha, "fileCount": len(meta["files"])}
-            activate(root, state, staged, meta, authority_fn=authority_check, previous_fn=previous_check)
+            def final_head():
+                if github.authorize(sha) != authorization:
+                    raise ValueError('PR authorization changed during publication')
+                return github.main_head()
+            activate(root, state, staged, meta, head_fn=final_head,
+                     authority_fn=authority_check, previous_fn=previous_check)
         finally:
             if staged.exists():
                 shutil.rmtree(staged)

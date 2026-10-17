@@ -8,20 +8,33 @@ and never deploys Firebase functions, rules, indexes, accounts or player data.
 ## Publication flow
 
 1. Follow the existing feature branch, validation-plan and pull-request workflow.
-   Main's ruleset requires a PR, an up-to-date branch and all three required checks.
+   Keep the branch current with main and pass all three required checks before
+   merging. GitHub Free does not enforce private-repository branch rules; the
+   local workflow and publisher enforce the release requirements below.
 2. A merge to main starts **Publish local game** on a GitHub-hosted runner. It
    verifies that the commit belongs to a merged PR and that the PR's required
    checks and latest release-gate run succeeded.
-3. The exact merged commit is built and artifact-validated. GitHub signs its
-   provenance and publishes the package and signature in a per-commit prerelease
-   named local-game-COMMIT. These are public static game assets, with no secrets
-   or server source. The normal latest-release designation is preserved.
+3. The exact merged commit is built and artifact-validated. A dedicated Crownlands
+   Ed25519 key signs the package digest, repository ID, commit, main ref, workflow,
+   runner environment, run/attempt and merged-PR authorization receipt. The package
+   and `provenance.json` signature are uploaded to a private per-commit prerelease
+   named local-game-COMMIT. The normal latest-release designation is preserved.
 4. The root-owned local systemd timer checks main every five minutes (plus up to
-   15 seconds jitter). It downloads the package using public HTTPS; no GitHub
-   token, incoming webhook port or self-hosted Actions runner is needed.
-5. GitHub CLI verifies the package digest, repository, workflow, main ref, exact
-   source SHA and GitHub-hosted signing runner. The publisher independently checks
-   all file hashes, sizes and paths; links and special files are rejected.
+   15 seconds jitter). A GitHub App creates a short-lived installation token scoped
+   to this repository, with read-only Actions, Checks, Contents, Pull requests and
+   Metadata permissions. Tokens stay in memory. Downloads use authenticated GitHub
+   asset APIs; credentials never follow redirects to the release CDN. No incoming
+   webhook port or self-hosted Actions runner is needed.
+5. The server verifies the signature with its root-owned pinned public key and
+   independently asks GitHub for the merged PR, exact PR head, latest successful
+   release-gate run and all three successful checks from that run's check suite.
+   It verifies that the reviewed PR head contains main's immediately preceding
+   commit, rejecting a PR merged after its base became stale.
+   It also requires the signed publishing run/attempt to finish successfully for
+   the exact main commit and workflow. It checks every file hash, size and path;
+   links and special files are rejected. PR authorization and main are rechecked
+   immediately before activation. Missing packages or unfinished publication wait
+   for the next timer; invalid signatures or authorization cannot deploy.
 6. A fresh version directory preserves the existing public website. After a final
    latest-main check, one atomic symlink switch activates the game. HTTPS checks
    on both game entry points verify the exact game files, service worker and build
@@ -32,6 +45,16 @@ An uploaded GitHub package is not proof that it is live. Read the commit at
 https://playcrownlands.com/local-deployment.json and local status before claiming
 publication. A build normally takes several minutes; activation follows on the
 next timer run. An offline computer catches up after it comes back online.
+
+The dedicated signature replaces GitHub artifact attestations, which require
+Enterprise for private repositories. It is a Crownlands-managed signing trust,
+not a GitHub/Sigstore attestation. Protect the repository owner's account, Actions
+secret, workflow changes and the server's root access. The server's independent
+PR/check policy prevents deploying direct pushes; it cannot stop an owner from
+changing GitHub itself. Keep the repository private and continue the reviewed PR
+workflow. GitHub Free includes a monthly private Actions allowance; exhausted
+minutes can delay updates without stopping the already-running game. Do not
+enable paid usage or reduce validation to work around a quota without review.
 
 ## Current backend boundary
 
@@ -72,11 +95,44 @@ install a different backend.
 ## Install and operate
 
 The repository contains reviewed source, not an unattended root installer entry
-point. Prepare a private bundle with publisher.py, install.sh, both systemd unit
-files, the official verified gh binary, config.json, a validated Caddyfile and a
+point. For an initial installation, prepare a private bundle with publisher.py,
+github_access.py, local_runtime.py, install.sh, both systemd unit files, config.json,
+github-app.pem, publish-signing-public.pem, a validated Caddyfile and a
 SHA256SUMS inventory. The configuration records the expected current release and
 original Caddyfile hash. The installer refuses changed preconditions or an
 existing installation. Local Ubuntu administrator authentication is required.
+
+For the existing public-to-private publisher upgrade, prepare a separate private
+bundle with `upgrade_private.py` and exactly these five inputs: `publisher.py`,
+`github_access.py`, `config.json`, `github-app.pem`, `publish-signing-public.pem`.
+`upgrade.json` records SHA-256 `before` and `after` maps for all five filenames
+(null means an installed file did not exist). Review the bundle and its checksums
+before running it as root. The upgrade pauses only the publication timer, acquires
+its lock, refuses pending activation or maintenance, and preserves every backend
+and authority setting. It saves the previous files in a private backup directory,
+installs atomically per file, checks authenticated access and candidate validation
+without activation, and restores the old files if that check fails. The previously
+active timer state is restored. A power loss during an operator upgrade requires
+inspection of this backup before resuming publication. Game services, Caddy routes,
+player data and the active static symlink are not changed by this installer.
+
+The config adds only `githubApp` with positive integer `appId`, `installationId`
+and `privateKeyFile: /etc/crownlands-deploy/github-app.pem`. Install the App only on
+`explocion200/CrownLands` (repository ID `1269252620`), disable webhooks, and request
+only the five read permissions above. The App RSA key must be root-owned mode 0600.
+The Ed25519 private signing key belongs in the repository Actions secret
+`CROWNLANDS_PUBLISH_SIGNING_KEY`; never commit it or install it in the public web
+directory. Only the public half is pinned on the server. The publisher reads
+credentials from protected files and never uses the operator's broad CLI token.
+
+To rotate signing keys, pause publication, generate a new Ed25519 pair privately,
+update the Actions secret and installed public key together, and verify a new
+signed main release before resuming. Existing packages signed with the old key
+will be rejected. For App key rotation, generate a replacement in GitHub, install
+its private file with mode 0600, verify read-only access, then revoke the old key.
+Deleting the App installation revokes private publishing access without stopping
+the live game. `/etc/crownlands-deploy` is included in the existing encrypted
+backups; treat its recovery access as sensitive.
 
 Caddy continues using /srv/crownlands/current. Its historical fixed release
 headers are removed during setup; local-deployment.json gives the current game
@@ -122,9 +178,12 @@ email alert channel; existing external game-availability alerts remain active.
 tools/test-local-deployment.js runs authorization and workflow checks plus
 isolated Python fixtures for packaging, unsafe paths/links, tampering, backend
 holds, stale commits, failed signatures, exact live-file checks, atomic
-activation, failed activation rollback and interrupted activation recovery.
+activation, failed activation rollback and interrupted activation recovery. Private
+transport tests exercise real Node-to-OpenSSL Ed25519 signatures, RSA App JWTs,
+least-privilege token scopes, redirect credential stripping, bounded responses,
+sanitized errors, exact workflow/check-suite authorization and installer rollback.
 No fixture changes production files or contacts players.
 
-The first live rollout must additionally verify a real GitHub-signed package and
+The first private rollout must additionally verify a real Actions-signed package and
 the systemd sandbox on this host. Neither unit fixtures nor a passing PR prove
 that root installation or live activation happened.
