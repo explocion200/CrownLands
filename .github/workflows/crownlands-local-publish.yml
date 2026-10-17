@@ -22,8 +22,6 @@ jobs:
       checks: read
       pull-requests: read
       actions: read
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -50,16 +48,13 @@ jobs:
           node tools/validate-production-artifact.js
           python3 tools/local-deploy/pack.py
       - name: Sign release provenance
-        id: provenance
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-path: release-artifacts/local-game.tar.gz
+        env:
+          CROWNLANDS_PUBLISH_SIGNING_KEY: ${{ secrets.CROWNLANDS_PUBLISH_SIGNING_KEY }}
+        run: node tools/sign-local-game.js
       - name: Publish signed package for this computer
         env:
           GH_TOKEN: ${{ github.token }}
-          BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
         run: |
-          cp "$BUNDLE_PATH" release-artifacts/provenance.json
           tag="local-game-$GITHUB_SHA"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release already exists; preserving its original signed package."

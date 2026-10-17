@@ -25,7 +25,9 @@ cp -a /etc/caddy/Caddyfile "$BACKUP/Caddyfile"
 readlink /srv/crownlands/current > "$BACKUP/release.txt"
 install -d -o root -g root -m 0755 /usr/local/lib/crownlands-deploy /etc/crownlands-deploy /var/lib/crownlands-deploy
 install -o root -g root -m 0644 publisher.py /usr/local/lib/crownlands-deploy/publisher.py
-install -o root -g root -m 0755 gh /usr/local/lib/crownlands-deploy/gh
+install -o root -g root -m 0644 github_access.py local_runtime.py /usr/local/lib/crownlands-deploy/
+install -o root -g root -m 0600 github-app.pem /etc/crownlands-deploy/github-app.pem
+install -o root -g root -m 0644 publish-signing-public.pem /etc/crownlands-deploy/publish-signing-public.pem
 install -o root -g root -m 0644 config.json /etc/crownlands-deploy/config.json
 install -o root -g root -m 0644 crownlands-deploy.service crownlands-deploy.timer /etc/systemd/system/
 install -o root -g root -m 0644 Caddyfile /etc/caddy/Caddyfile

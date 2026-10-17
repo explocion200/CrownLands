@@ -1,51 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f8976ba74a091eb25985e61383a948451cc26e69",
+  "baseCommit": "0d392a5f266ab0af7021eb4a65bc6cffd5dc7196",
   "coverage": [
     {
       "paths": [
-        "inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js"
+        ".github/workflows/crownlands-local-publish.yml",
+        "tools/check-local-deploy-merge.js",
+        "tools/sign-local-game.js",
+        "tools/local-deploy/github_access.py",
+        "tools/local-deploy/publisher.py",
+        "tools/local-deploy/tests.py",
+        "tools/local-deploy/private_tests.py",
+        "tools/local-deploy/upgrade_private.py",
+        "tools/local-deploy/install.sh",
+        "tools/test-local-deployment.js"
       ],
       "tests": [
-        "tools/validate-inner-city-estate.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-estate-input-browser.js",
-        "tools/validate-estate-camera-performance-browser.js"
+        "tools/test-local-deployment.js",
+        "tools/test-local-production-client.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Keep all overview district titles on their map anchors instead of collision-search relocation; retain 44px targets, inspection thresholds, fixed building captions and Buildings fallback for crowded views. Browser checks exercise actual theme, hover, pan/zoom/resize, all 20 buildings, mouse/touch/keyboard and Gear returns at desktop and landscape mobile sizes. Camera performance coverage checks removal of adaptive collision searches and affected timer geometry under throttling. No world topology, assets, server state or gameplay rules change."
+      "reason": "Restore private-repository publication on GitHub Free using scoped read-only GitHub App tokens, dedicated Ed25519 signatures and independent merged-PR/workflow/check-suite authorization. Tests cover actual Node/OpenSSL signing, RSA JWT lifetime/signature, least-privilege scopes, bounded authenticated downloads, redirect credential stripping, sanitized errors, pending/failing gates, orchestration before activation, operator upgrade preconditions and rollback, existing archive security, active local epoch/runtime checks, static transformation, atomic activation and recovery. Production artifact and local client checks verify that signing/publishing preserves validated game packaging and local bootstrap dependencies; align the existing transform fixture with production transport minification. No gameplay, UI, backend service or player-data authority changes, so no emulator or visual suites apply."
     },
     {
       "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-economy-browser.js"
-      ],
-      "tests": [
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-estate-refresh-browser.js"
-      ],
-      "reason": "Use a single 88x40 timer size centered six screen pixels above its own building at every zoom, remove displaced leader lines, and normalize modal-scale geometry. Source and production-build fixtures check every site, concurrent jobs, anchored visibility or proven obstruction/clipping with live directory fallback, zoom return, opening-scale completion, clock progress, authoritative completion and disposal. Shared economy integration covers Build/Upgrade/Enter and directory controls; align its obsolete 3px-radius assertion with the existing unchanged 2px shared theme. Refresh coverage preserves lightweight updates and lifecycle behavior. No backend or economy-authority changes, so no emulator suites are needed."
-    },
-    {
-      "paths": [
-        "crownlands-palette.css"
-      ],
-      "tests": [
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-inner-castle-browser.js",
-        "tools/validate-estate-overview-timers.js"
-      ],
-      "reason": "Exclude only estate district touch targets from the generic dialog button fill. Actual game theme and standalone source/built fixtures verify transparent padded targets, compact parchment labels and unchanged normal panel controls. Shared palette validation protects other dialogs and HUD styles."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md"
       ],
       "tests": [],
-      "reason": "Record the requested fixed-anchor titles and single-size construction timers, explicitly superseding prior adaptive/always-visible overview placement and 88/112px size split. Preserve directory access and gameplay; implementation is not proof of live deployment."
+      "reason": "Document private App access, dedicated signing trust, GitHub Free limitations, reviewed operator upgrade/rollback and credential rotation. This describes the intended flow; a merge is not deployment evidence."
     }
   ]
 }

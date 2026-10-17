@@ -155,27 +155,6 @@ class PublicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "service-worker"):
             p.smoke(self.host, meta, fetch)
 
-    def test_signature_verification_enforces_all_trust_constraints(self):
-        with patch.object(p.subprocess, "run") as run:
-            run.return_value.returncode = 0
-            p.verify_signature(self.package, self.root / "bundle.json", COMMIT, "/trusted/gh")
-            args = run.call_args.args[0]
-            for flag, value in (("--repo", p.REPO), ("--source-digest", COMMIT),
-                                ("--source-ref", "refs/heads/main"), ("--signer-workflow", p.WORKFLOW)):
-                self.assertEqual(args[args.index(flag) + 1], value)
-            self.assertIn("--deny-self-hosted-runners", args)
-            run.return_value.returncode = 1
-            run.return_value.stderr = "bad signature"
-            with self.assertRaisesRegex(ValueError, "signature"):
-                p.verify_signature(self.package, self.root / "bundle.json", COMMIT, "/trusted/gh")
-
-    def test_redirects_reject_credentials_and_untrusted_hosts(self):
-        for url in ("http://github.com/file", "https://evil.example/file",
-                    "https://github.com.evil.example/file", "https://user@github.com/file"):
-            with self.assertRaises(ValueError): p.check_url(url)
-        self.assertEqual(p.check_url("https://release-assets.githubusercontent.com/file"),
-                         "https://release-assets.githubusercontent.com/file")
-
     def test_packaging_round_trip(self):
         self.archive()
         meta = self.unpack()
@@ -212,6 +191,10 @@ class LocalPublicationTests(unittest.TestCase):
         for name in ['index.html','play/index.html']:(game/name).write_text(html)
         for name in ['local-production.js','local-client.js','local-web-push.js','firebaseClient.js','service-worker.js','firebase-config.js']:
             (game/name).write_bytes((self.repo/name).read_bytes())
+        # Match production's local transport bytes and its 32 KiB precache cap.
+        (game/'local-client.js').write_bytes(subprocess.check_output([str(self.node), '-e',
+            "const fs=require('node:fs');process.stdout.write(require('./tools/estate-delivery').minifyEstate(fs.readFileSync('local-client.js','utf8')))",
+        ], cwd=self.repo))
         meta['localRuntimeHash']=self.local['runtimeHash'];meta['files']=local.inventory(game)
         def protected(file,maximum=65536):
             self.assertIn(file,[self.node,self.helper]);return file.read_bytes()
