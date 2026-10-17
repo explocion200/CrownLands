@@ -95,7 +95,7 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
   // static ../ base adds one byte to the directory-relative root shell.
   if (relativePath === "play/index.html") return total + normalizedTextBytes("index.html") + 1;
   // Measure delivered code, matching the build and the shared asset validator.
-  if (["inner-city-estate.js", "animation-manager.js", "marauders-ui.js", "crown-payments-ui.js"].includes(relativePath))
+  if (["inner-city-estate.js", "animation-manager.js", "marauders-ui.js", "crown-payments-ui.js", "social-ui.js"].includes(relativePath))
     return total + Buffer.byteLength(minifyRuntime(read(relativePath)), "utf8");
   return total + (/\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
     ? normalizedTextBytes(relativePath)

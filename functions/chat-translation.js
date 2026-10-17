@@ -13,8 +13,9 @@ function cacheKey(path, text, language) {
 
 function validatePayload(data, fail) {
   const { channel, messageIds, targetLanguage, operation = "translate" } = data;
-  if (!["global", "clan"].includes(channel)
+  if (!["global", "clan", "private"].includes(channel)
     || !["translate", "detect"].includes(operation)
+    || (channel === "private" && (operation !== "translate" || !/^[a-f0-9]{40}$/.test(data.conversationId || "") || messageIds?.length !== 1))
     || !Array.isArray(messageIds) || !messageIds.length || messageIds.length > MAX_BATCH
     || messageIds.some(id => typeof id !== "string" || !/^[a-f0-9]{40}$/.test(id))
     || new Set(messageIds).size !== messageIds.length
@@ -23,7 +24,7 @@ function validatePayload(data, fail) {
     || ["text", "texts", "contents", "senderUid"].some(key => Object.hasOwn(data, key))) {
     throw fail("invalid-argument", "Choose a chat channel, message IDs and translation language.");
   }
-  return { channel, messageIds, targetLanguage, operation, clanId: data.clanId || "" };
+  return { channel, messageIds, targetLanguage, operation, clanId: data.clanId || "", conversationId: data.conversationId || "" };
 }
 
 // Google credentials stay on the backend. The provider receives message text only,
@@ -80,12 +81,12 @@ function createService({ db, authorize, provider, fail, now = Date.now }) {
     return snapshots.map((snapshot, index) => {
       const message = snapshot.data() || {};
       if (!snapshot.exists || !scope.isVisible(message, current)
-        || typeof message.text !== "string" || !message.text.trim() || Array.from(message.text).length > 250) {
+        || typeof message.text !== "string" || !message.text.trim() || Array.from(message.text).length > (scope.maxLength || 250)) {
         throw fail("not-found", "One or more messages are no longer available. Refresh chat.");
       }
       const key = cacheKey(refs[index].path, message.text, payload.operation === "detect" ? "language-detection-v1" : payload.targetLanguage);
       return { id: snapshot.id, source: message.text, cacheRef: db.doc(`chatTranslationCache/${key}`),
-        expiresAtMs: payload.channel === "global" ? Math.min(current + CACHE_LIFETIME_MS, message.createdAtMs + CACHE_LIFETIME_MS) : current + CACHE_LIFETIME_MS };
+        expiresAtMs: payload.channel === "private" ? Math.min(current + CACHE_LIFETIME_MS, message.expiresAtMs) : payload.channel === "global" ? Math.min(current + CACHE_LIFETIME_MS, message.createdAtMs + CACHE_LIFETIME_MS) : current + CACHE_LIFETIME_MS };
     });
   }
 

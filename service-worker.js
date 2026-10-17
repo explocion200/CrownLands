@@ -32,6 +32,9 @@ function getNotificationOpenUrl(notificationData = {}) {
       url.searchParams.set("notificationRegion", String(notificationData.targetRegionId).slice(0, 80));
     }
   }
+  if (notificationData.type === "private_message" && /^[a-f0-9]{40}$/.test(notificationData.conversationId || "")) {
+    url.searchParams.set("privateConversation", notificationData.conversationId);
+  }
   return url.href;
 }
 
@@ -61,6 +64,8 @@ const STATIC_CACHE_URLS = [
   "/action-buttons.css?v=20260827-instant-cross-map-city-upgrades-r1",
   "/mobile-viewport.css?v=20260825-shop-hourly-prices-r1",
   "/player-flag-editor.css?v=20260819-player-flags-v2-r1",
+  "/social-ui.js?v=social-v1",
+  "/social-ui.css?v=social-v1",
   "/chat-ui.js?v=20260818-global-clan-chat-r1",
   "/chat-ledger-ui.css?v=20260918-approved-ledgers-r1",
   "/chat-translation.js?v=20260918-approved-ledgers-r1",
@@ -177,7 +182,8 @@ self.addEventListener("push", event => {
   event.waitUntil((async () => {
     let payload; try { payload = event.data?.json(); } catch { return; }
     const data = payload?.data;
-    if (!data || data.type !== "incoming_army" || !["attack", "scout", "reinforce"].includes(data.kind)
+    if (!data || !(data.type === "incoming_army" && ["attack", "scout", "reinforce"].includes(data.kind)
+      || data.type === "private_message" && /^[a-f0-9]{40}$/.test(data.conversationId || ""))
       || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) return;
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {
@@ -186,9 +192,13 @@ self.addEventListener("push", event => {
         client.postMessage({ type: "CROWNLANDS_LOCAL_PUSH", epoch: LOCAL_BACKEND.epoch, payload });
       }
     }
+    if (data.type === "private_message" && windows.some(client => {
+      const url = new URL(client.url);
+      return client.visibilityState === "visible" && url.origin === self.location.origin && ["/play/", "/play/index.html", "/index.html"].includes(url.pathname);
+    })) return;
     await self.registration.showNotification(String(data.title || "Crownlands alert").slice(0, 80), {
       body: String(data.body || "A new army is marching.").slice(0, 180),
-      tag: "crownlands-" + String(data.armyId || "incoming").slice(0, 96), renotify: false,
+      tag: "crownlands-" + String(data.type === "private_message" ? "private-" + data.conversationId : data.armyId || "incoming").slice(0, 96), renotify: false,
       requireInteraction: data.kind === "attack", icon: resolveAppUrl("assets/optimized/report-reports-ink-384x384-05cfed23ee0e.webp"),
       badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
       data: { ...data, url: "/play/", localEpoch: LOCAL_BACKEND.epoch, expiresAt: payload.expiresAt },

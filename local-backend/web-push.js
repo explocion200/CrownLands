@@ -1,7 +1,7 @@
 "use strict";
 const crypto = require("node:crypto");
 const webpush = require("web-push");
-const { incomingArmyData } = require("../functions/notification-delivery");
+const { notificationData } = require("../functions/notification-delivery");
 const PREFIX = "clwp1.";
 const GAME_PATH = "/api/local-game/rehearsal/";
 function failure(code = "push-unavailable") { return Object.assign(Error("Browser notification delivery is unavailable."), { code }); }
@@ -56,7 +56,7 @@ class WebPushSender {
     if (this.active) throw failure("push-busy");
     this.assertActive();
     const target = subscription(token, this.keys.publicKey);
-    const data = { ...incomingArmyData(notification), url: this.deployment ? "/play/" : GAME_PATH };
+    const data = { ...notificationData(notification), url: this.deployment ? "/play/" : GAME_PATH };
     const payload = JSON.stringify({ data, expiresAt: Math.min(this.expiry, this.now() + 1800000) });
     if (Buffer.byteLength(payload) > 3000 || !/^[A-Za-z0-9_-]{1,32}$/.test(topic || "")) throw failure("push-invalid-payload");
     this.active = true;

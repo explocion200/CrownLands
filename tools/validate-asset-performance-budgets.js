@@ -293,7 +293,7 @@ const entrypointBudgets = {
   // NPC map subscription and readiness callable add 376 bytes over the prior cap.
   // Private Web Push selection adds 255 bytes; its implementation stays lazy.
   // Bound the entry at 164 KiB; the total installation-cache cap stays unchanged.
-  "firebaseClient.js": 164 * 1024,
+  "firebaseClient.js": 166 * 1024, // +2 KiB: social bridge and separate browser alert categories.
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,
@@ -400,7 +400,7 @@ for (const url of staticCacheUrls) {
     continue;
   }
   assert(fs.existsSync(path.join(root, relativePath)), `Precached file ${url} is missing.`);
-  if (["inner-city-estate.js", "animation-manager.js", "marauders-ui.js", "crown-payments-ui.js"].includes(relativePath)) {
+  if (["inner-city-estate.js", "animation-manager.js", "marauders-ui.js", "crown-payments-ui.js", "social-ui.js"].includes(relativePath)) {
     // Installation fetches the same minified bytes delivered by the production build.
     installPrecacheBytes += Buffer.byteLength(minifyRuntime(read(relativePath)), "utf8");
     continue;

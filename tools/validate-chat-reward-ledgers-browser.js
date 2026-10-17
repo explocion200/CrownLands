@@ -229,10 +229,10 @@ async function main() {
         const preview=document.getElementById("quickChat"),r=preview.getBoundingClientRect();
         const button=preview.querySelector(".per-message-translate"),b=button?.getBoundingClientRect();
         return {background:getComputedStyle(preview).backgroundImage,visible:!preview.hidden,height:r.height,width:r.width,bounds:{top:r.top,bottom:r.bottom,left:r.left,right:r.right},viewportHeight:innerHeight,
-          buttonVisible:!button||b.top>=r.top&&b.bottom<=r.bottom,arrow:document.querySelector('#chatToggleBtn use').getAttribute('href'),
+          buttonVisible:!button||b.top>=r.top&&b.bottom<=r.bottom,arrow:document.querySelector('#chatToggleBtn').getAttribute('aria-expanded')==='true' && [...document.querySelectorAll('#chatToggleBtn .chat-toggle-image')].some(img=>img.classList.contains('chat-toggle-right')&&getComputedStyle(img).display!=='none'&&img.naturalWidth>0),
           sharedResult:preview.textContent.includes("Hola <img"),mode:window.qaChat.diagnostics().mode};
       });
-      assert(mini.visible&&mini.buttonVisible&&mini.arrow==="#cl-icon-back"&&mini.background.includes("0.72")&&mini.bounds.top>=0&&mini.bounds.bottom<=viewport.height,JSON.stringify({viewport,mini}));
+      assert(mini.visible&&mini.buttonVisible&&mini.arrow===true&&mini.background.includes("0.72")&&mini.bounds.top>=0&&mini.bounds.bottom<=viewport.height,JSON.stringify({viewport,mini}));
       assert(mini.height===64&&mini.width<=360,"Mini chat keeps its original fixed footprint.");
       await screenshot("chat-individual-mini-"+viewport.name);
       await evaluate(()=>document.getElementById("chatToggleBtn").click());
