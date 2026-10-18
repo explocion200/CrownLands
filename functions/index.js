@@ -12824,6 +12824,72 @@ function createRallyReturnMovement({
   };
 }
 
+async function rejoinRecalledRallyContribution(transaction, army, assembly, nowMs, callerUid) {
+  // A withdrawn Ready contribution travels assembly -> home. A Horn reverses
+  // that same route, so its arrival is at fromId, not the old home destination.
+  if (!army.returning || !army.rallyReturn || army.rallyAttack
+    || !["transfer", "attack"].includes(army.kind) || army.returnReason !== RECALL_HORN_ITEM_ID
+    || !isCurrentWorldArmy(army) || !army.rallyId || !army.rallyClanId
+    || !army.rallyReturnOriginalCityId || !army.rallyReturnOriginalRegionId) return null;
+  const uid = getOwnerUid(army), clanId = safeString(army.rallyClanId, 128);
+  const rallyRef = clanRallyRef(clanId, army.rallyId), profileRef = db.doc(`players/${uid}`);
+  const [rallySnap, profileSnap, clanSnap, memberSnap] = await Promise.all([
+    transaction.get(rallyRef), transaction.get(profileRef),
+    transaction.get(db.doc(`clans/${clanId}`)), transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+  ]);
+  const rally = normalizeClanRally(rallySnap), profile = profileSnap.data() || {};
+  const participants = rally ? activeRallyParticipants(rally) : [];
+  const troops = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+  if (!rally || rally.status !== RALLY_STATUS_FORMING || rally.assemblyType !== "city"
+    || rally.leaderUid === uid || !troops || getRallyParticipant(rally, uid)
+    || participants.length >= (rally.targetType === "tower" ? CLAN_MEMBER_LIMIT : RALLY_MAX_PARTICIPANTS)
+    || rally.assemblyCityId !== army.fromId || rally.assemblyRegionId !== normalizeRegionId(army.sourceRegionId)
+    || !assembly || getOwnerUid(assembly) !== rally.leaderUid
+    || !clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists
+    || memberSnap.data()?.status === "removed") return null;
+  const [leaderSnap, leaderMemberSnap] = await Promise.all([
+    transaction.get(db.doc(`players/${rally.leaderUid}`)),
+    transaction.get(db.doc(`clans/${clanId}/members/${rally.leaderUid}`)),
+  ]);
+  if (!leaderMemberSnap.exists || leaderMemberSnap.data()?.status === "removed") return null;
+  try {
+    assertCurrentClanActorProfile(profile, clanId);
+    assertCurrentClanActorProfile(leaderSnap.data() || {}, clanId);
+    for (const snap of [clanSnap, memberSnap, leaderMemberSnap]) assertCurrentClan(snap.data());
+    if (rally.targetType === "tower") {
+      assertHoldingTowerMemberEligible(memberSnap.data(), nowMs, clanId);
+      assertHoldingTowerMemberEligible(leaderMemberSnap.data(), nowMs, clanId);
+    }
+  } catch (error) {
+    if (["failed-precondition", "permission-denied"].includes(error.code)) return null;
+    throw error;
+  }
+  const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+    profileRef, profileSnap, checkpointWriteBudget: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+  });
+  const currentProfile = economy.profileAfter || profile;
+  const participant = createRallyParticipantSnapshot({ uid, profile: currentProfile,
+    source: { id: army.rallyReturnOriginalCityId, name: army.rallyReturnOriginalCityName },
+    sourceRegionId: army.rallyReturnOriginalRegionId, troops, role: "ally",
+    status: RALLY_PARTICIPANT_ASSEMBLED, joinArmyId: army.id, joinedAtMs: nowMs, assembledAtMs: nowMs,
+    ownerKingPower: army.ownerKingPower, objectiveMarchSpeedBonusPercent: economy.bonuses?.marchSpeedBonusPercent,
+  });
+  participants.push(participant);
+  const totals = rallyParticipantTotals(participants);
+  const committedRallyTroops = getProfileCommittedRallyTroops(currentProfile) + troops;
+  writePreparedEconomy(transaction, economy, { committedRallyTroops, rallyResetGeneration: RESET_GENERATION }, [], {
+    excludeArmyIds: [army.id], nowMs,
+  });
+  transaction.set(rallyRef, { participants, ...totals, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  writeArmyMovementCopies(transaction, { ...army, status: "resolved", resolvedAtMs: nowMs,
+    result: { kind: "rally_join", outcome: "rejoined", rallyId: rally.id } });
+  writeClanAudit(transaction, clanId, uid, "rally_contribution_rejoined", { rallyId: rally.id, armyId: army.id, troops }, nowMs);
+  return { ok: true, status: "resolved", kind: "rally_join", outcome: "rejoined",
+    rally: callerUid === uid ? rallyForClient({ ...rally, participants, ...totals, updatedAtMs: nowMs }) : null,
+    currentUser: callerUid === uid ? { committedRallyTroops, rallyResetGeneration: RESET_GENERATION,
+      globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats) } : null };
+}
+
 function createRallySourceRecaptureMovement({
   rally = {},
   participant = {},
@@ -23661,7 +23727,10 @@ async function withdrawClanRallyContributionRequest(request) {
         profile: economy.profileAfter || profile,
         nowMs,
         reason: RALLY_RETURN_REASON,
-        movementId: `${rally.id}_${uid}_withdraw`,
+        // A contribution can now withdraw and rejoin repeatedly. Each departure
+        // needs a fresh identity so old recall flags and delayed arrivals cannot
+        // be merged into the next trip.
+        movementId: `rally_withdraw_${crypto.randomUUID()}`,
       });
       committedRallyTroops = Math.max(0, getProfileCommittedRallyTroops(economy.profileAfter || profile) - participant.troops);
       writePreparedEconomy(transaction, economy, {
@@ -28817,6 +28886,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     )) {
       throw new HttpsError("failed-precondition", "The rally state is unavailable for this army.");
     }
+    const rejoined = await rejoinRecalledRallyContribution(transaction, army, source, nowMs, callerUid);
+    if (rejoined) return rejoined;
     if (army.kind === "rally_join" && !isReturning) {
       const clanId = safeString(army.rallyClanId, 128);
       const rallyId = normalizeRallyId(army.rallyId);
@@ -29509,6 +29580,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     );
     if (
       isRallyReturn
+      && !isReturning
       && defenderUid !== attackerUid
       && (!isRallyReturnAttack || !defenderUid || rallyReturnClanOwned)
     ) {

@@ -1,58 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d47252f3eb2c53eed6e865d802a391526fd4238a",
+  "baseCommit": "736df44e5f7e44b096765f04adfd7a368f29285d",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "game.js"
+        "functions/index.js"
       ],
       "tests": [
-        "tools/validate-beginner-capture-xp.js",
-        "tools/validate-level-up-rewards.js",
-        "tools/test-local-postgres-beginner-xp.js",
-        "tools/validate-beginner-xp-browser.js",
-        "functions/test/emulator-combat-authorization.js",
-        "tools/validate-skills.js",
-        "tools/validate-skill-presets.js",
-        "functions/test/emulator-economy-concurrency.js"
+        "tools/test-local-postgres-rally-rejoin.js",
+        "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Server-owned first-29 neutral capture bonus counter and matching client previews. Verify fixed bonus totals independent of other XP, unchanged ordinary battle caps, failed/protected/abandoned/objective exclusions, settlement-time eligibility and duplicate/concurrent resolution. Character normalization must preserve the counter through progression, city upgrades, skill resets and presets. Current-realm combat and economy emulator suites cover those shared paths; PostgreSQL exercises 29 actual captures, skill reset, loss after bonus exhaustion and denied counter forgery. Browser checks actual previews at desktop/mobile sizes. Remove only immediately overwritten duplicate markup in the same preview function to retain the existing offline-cache budget."
+      "reason": "Exercise current core-realm city-assembled rallies using real join, withdraw, Recall Horn and arrival calls. Cover repeated departures, unique march identities, inventory/ownership authorization, duplicate/concurrent settlement, troop and King Power accounting, original-source preservation, capacity/clan/realm/assembly eligibility, Tower-target probation for both rulers, private response data, cancellation and launch races, captured-source attack reversal and safe fallback returns. Existing current-realm staging tests cover shared arrival, early-launch turnbacks, defense casualties and Tower assembly; no visual markup or controls change."
     },
     {
       "paths": [
-        "functions/test/beginner-capture-xp-cases.js",
-        "functions/test/emulator-combat-authorization.js",
-        "tools/test-local-postgres-beginner-xp.js"
+        "functions/test/rally-recall-rejoin-cases.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "tools/test-local-postgres-rally-rejoin.js"
       ],
       "tests": [
-        "tools/test-local-postgres-beginner-xp.js",
-        "functions/test/emulator-combat-authorization.js"
+        "tools/test-local-postgres-rally-rejoin.js",
+        "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Run synthetic first-29 capture fixtures on PostgreSQL and current-realm emulator with real dispatch limits, concurrent/replayed rewards, counter persistence after skill reset, no bonus after losing cities and denied client counter tampering. Fixtures never change production or archived worlds."
+      "reason": "Run the same synthetic gameplay regression cases in a disposable PostgreSQL schema and the current-realm emulator. Test real server authority and concurrent transactions without touching production or archived worlds. Keep the existing staging-defense gate to exercise both the changed fixture and dependent group settlement behavior. Wait for asynchronous cancellation receipts between cases; invoke the same settlement handler explicitly in the isolated PostgreSQL fixture so prior cases cannot affect later troop totals."
     },
     {
       "paths": [
-        "tools/validate-beginner-capture-xp.js",
-        "tools/validate-level-up-rewards.js",
-        "tools/validate-beginner-xp-browser.js",
-        "help-handbook-content.js"
-      ],
-      "tests": [
-        "tools/validate-beginner-capture-xp.js",
-        "tools/validate-level-up-rewards.js",
-        "tools/validate-beginner-xp-browser.js",
-        "tools/validate-help-handbook-browser.js"
-      ],
-      "reason": "Execute updated calculation/preview validators and handbook browser checks. Cover the 29-bonus schedule, additional XP and persistent eligibility above Level 15; unchanged later curve anchors and desktop/mobile navigation/readability."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/HERO_XP_PROGRESSION_REVIEW.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed 30-total-city target, precise prospective reward scope and evidence-backed later progression review. Later exponent changes remain recommendations only; no data migration or deployment is claimed."
+      "reason": "Record the owner-confirmed Recall Horn rejoin exception and its eligibility, safe fallback, item-cost and concurrency rules. Mark deployment pending; no runtime or visual change originates in this document."
     }
   ]
 }
