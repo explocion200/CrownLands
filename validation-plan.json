@@ -1,35 +1,18 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "736df44e5f7e44b096765f04adfd7a368f29285d",
+  "baseCommit": "6acf3fda182bca9119ff086ae9c199131847c5fb",
   "coverage": [
     {
       "paths": [
-        "functions/index.js"
+        "tools/local-migration/postgres_backup.py",
+        "tools/local-migration/install_database_backup.py",
+        "tools/local-migration/test_postgres_backup.py",
+        "tools/local-migration/test_database_backup_install.py"
       ],
       "tests": [
-        "tools/test-local-postgres-rally-rejoin.js",
-        "functions/test/emulator-rally-staging-defense.js"
+        "tools/test-local-postgres-backup.js"
       ],
-      "reason": "Exercise current core-realm city-assembled rallies using real join, withdraw, Recall Horn and arrival calls. Cover repeated departures, unique march identities, inventory/ownership authorization, duplicate/concurrent settlement, troop and King Power accounting, original-source preservation, capacity/clan/realm/assembly eligibility, Tower-target probation for both rulers, private response data, cancellation and launch races, captured-source attack reversal and safe fallback returns. Existing current-realm staging tests cover shared arrival, early-launch turnbacks, defense casualties and Tower assembly; no visual markup or controls change."
-    },
-    {
-      "paths": [
-        "functions/test/rally-recall-rejoin-cases.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "tools/test-local-postgres-rally-rejoin.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-rally-rejoin.js",
-        "functions/test/emulator-rally-staging-defense.js"
-      ],
-      "reason": "Run the same synthetic gameplay regression cases in a disposable PostgreSQL schema and the current-realm emulator. Test real server authority and concurrent transactions without touching production or archived worlds. Keep the existing staging-defense gate to exercise both the changed fixture and dependent group settlement behavior. Wait for asynchronous cancellation receipts between cases; invoke the same settlement handler explicitly in the isolated PostgreSQL fixture so prior cases cannot affect later troop totals."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [],
-      "reason": "Record the owner-confirmed Recall Horn rejoin exception and its eligibility, safe fallback, item-cost and concurrency rules. Mark deployment pending; no runtime or visual change originates in this document."
+      "reason": "Exercise consistent snapshots during concurrent writes, complete row fingerprints, real PostgreSQL restore and encrypted restic recovery. Verify bounded one-hour dump/restore deadlines, retained snapshot lifetime, failed-export preservation and temporary-file cleanup, redacted phase diagnostics, restricted restore owner and failed-copy preservation. Only operator backup tooling changes; no gameplay/server request behavior, visual layout, active realm rules, schema or credentials change, so emulator and visual suites are not applicable."
     }
   ]
 }

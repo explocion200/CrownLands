@@ -9,15 +9,39 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import uuid
 
 DATABASE = "crownlands_migration"
 SOCKET = "/var/run/postgresql"
+# The growing change history can exceed the old 15-minute export/restore limit.
+# Keep both operations bounded; retain the shared snapshot through fingerprinting
+# and export, within the host backup service's existing two-hour deadline.
+ARCHIVE_TIMEOUT_SECONDS = 3600
+SNAPSHOT_IDLE_MINUTES = 90
 CONFIGS = [Path("/etc/crownlands-auth-rehearsal/config.json"), Path("/etc/crownlands-game-rehearsal/config.json")]
 
 
 PERMANENT = ["crownlands_control", "migration_auth_live", "migration_game_live"]
 CONTROL = Path("/etc/crownlands-runtime/activation.json")
+
+
+@contextmanager
+def backup_phase(name):
+    if name not in {"fingerprints", "archive export", "archive inspection", "archive restore"}:
+        raise ValueError("Unknown backup phase")
+    started = time.monotonic()
+    print(f"Database backup: {name} started.", flush=True)
+    try:
+        yield
+    except Exception as error:
+        # Never log exception text: subprocess errors can contain SQL, private
+        # rows, credentials or captured stderr. Only fixed labels are emitted.
+        reason = "timed out" if isinstance(error, subprocess.TimeoutExpired) else "failed"
+        print(f"Database backup: {name} {reason} after {time.monotonic() - started:.0f}s; private diagnostics withheld.", flush=True)
+        raise
+    else:
+        print(f"Database backup: {name} completed in {time.monotonic() - started:.0f}s.", flush=True)
 
 
 def validate_schemas(schemas):
@@ -54,7 +78,7 @@ def query(statement, database=DATABASE, prefix=()):
 def exported_snapshot(prefix=()):
     process = subprocess.Popen(psql(prefix=prefix), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
     try:
-        process.stdin.write("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL idle_in_transaction_session_timeout='30min'; SELECT pg_export_snapshot();\n")
+        process.stdin.write(f"BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY; SET LOCAL idle_in_transaction_session_timeout='{SNAPSHOT_IDLE_MINUTES}min'; SELECT pg_export_snapshot();\n")
         process.stdin.flush()
         snapshot = process.stdout.readline().strip()
         if not re.fullmatch(r"[A-F0-9]{8}-[A-F0-9]{8}-[0-9]+", snapshot):
@@ -128,19 +152,22 @@ def capture(destination, schemas, prefix=(), after_snapshot=None):
         with exported_snapshot(prefix) as snapshot:
             if after_snapshot:
                 after_snapshot()
-            tables = fingerprints(schemas, snapshot, prefix=prefix)
-            with temporary.open("xb") as output:
-                temporary.chmod(0o600)
-                command = [*prefix, "pg_dump", *connection(DATABASE), "--format=custom", "--strict-names", "--snapshot=" + snapshot]
-                for schema in schemas:
-                    command.extend(["--schema", schema])
-                dumped = subprocess.run(command, stdout=output, stderr=subprocess.PIPE, timeout=900)
-                output.flush(); os.fsync(output.fileno())
-            if dumped.returncode or dumped.stderr:
-                raise RuntimeError("Private database dump failed or reported a warning")
-        listed = subprocess.run(["pg_restore", "--list", str(temporary)], capture_output=True, timeout=60)
-        if listed.returncode or not listed.stdout:
-            raise RuntimeError("Private database archive could not be read")
+            with backup_phase("fingerprints"):
+                tables = fingerprints(schemas, snapshot, prefix=prefix)
+            with backup_phase("archive export"):
+                with temporary.open("xb") as output:
+                    temporary.chmod(0o600)
+                    command = [*prefix, "pg_dump", *connection(DATABASE), "--format=custom", "--strict-names", "--snapshot=" + snapshot]
+                    for schema in schemas:
+                        command.extend(["--schema", schema])
+                    dumped = subprocess.run(command, stdout=output, stderr=subprocess.PIPE, timeout=ARCHIVE_TIMEOUT_SECONDS)
+                    output.flush(); os.fsync(output.fileno())
+                if dumped.returncode or dumped.stderr:
+                    raise RuntimeError("Private database dump failed or reported a warning")
+        with backup_phase("archive inspection"):
+            listed = subprocess.run(["pg_restore", "--list", str(temporary)], capture_output=True, timeout=60)
+            if listed.returncode or not listed.stdout:
+                raise RuntimeError("Private database archive could not be read")
         with temporary.open("rb") as archive:
             checksum = hashlib.file_digest(archive, "sha256").hexdigest()
         manifest = {"formatVersion": 1, "database": DATABASE, "schemas": schemas, "tables": tables,
