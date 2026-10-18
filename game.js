@@ -2981,6 +2981,7 @@ function registerCoreExpansionRegions(regions = []) {
         type: cleanRegionType(descriptor.type || existing.type),
         gridX: Math.round(Number(descriptor.gridX) || 0),
         gridY: Math.round(Number(descriptor.gridY) || 0),
+        cityCapacity: descriptor.cityCapacity,
         newPlayerSpawnEligible: descriptor.permanentCore !== true,
       });
       continue;
@@ -2994,6 +2995,7 @@ function registerCoreExpansionRegions(regions = []) {
       type: cleanRegionType(descriptor.type || STARTER_REGION_TYPE),
       gridX: Math.round(Number(descriptor.gridX) || 0),
       gridY: Math.round(Number(descriptor.gridY) || 0),
+      cityCapacity: descriptor.cityCapacity,
       newPlayerSpawnEligible: descriptor.permanentCore !== true,
       palette: regionPatch.palette || "frontier",
     };

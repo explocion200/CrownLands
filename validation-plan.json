@@ -1,36 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1ab39f825122bc855556e4cd1a30d222649d0ae9",
+  "baseCommit": "e75ce928706c44b398c033b47d40784cd052c747",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "social-ui.css",
-        "tools/validate-social-browser.js"
+        "game.js",
+        "tools/validate-owned-city-expansion-roster.js",
+        "tools/validate-city-list-browser.js"
       ],
       "tests": [
-        "tools/validate-social-browser.js",
+        "tools/validate-owned-city-expansion-roster.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-owned-city-roster-refresh.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-realm-refresh.js",
+        "tools/validate-core-expansion-release.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Scope the compact grid to accepted Friends rows only. Compare original and updated name-line/contact heights, inline Message/Remove positioning, hit targets, no overflow, full accessible name/tooltip, flag/clan visibility and online/offline states with regular and long names at eight desktop, short-window, landscape-mobile and narrow portrait sizes. Real pointer clicks must open the correct private conversation and issue one correctly targeted removal request while disabling duplicate clicks. The existing social browser suite also protects unchanged Global/Clan/Messages frame/typography, private-message density, conversation-row navigation, reporting/translation, notification preferences and stale-account cleanup. Presentation only; no server authority, relationship semantics or data schema changes, so emulator suites are not applicable."
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "The scoped friend markup/styles add 767 offline-shell bytes. Existing headroom covers 428; allow the remaining 339 bytes with a bounded 512-byte step. No image, dependency, additional request or backend payload is introduced. Production build/artifact validation still applies."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [
-        "tools/validate-social-browser.js"
-      ],
-      "reason": "Record the owner-confirmed same-line friend actions, smaller buttons without height growth and preserved identity/presence. The browser regression verifies this presentation; no friendship or messaging rule changes."
+      "reason": "Retain the server-provided cityCapacity when adding or refreshing active Core-expansion map descriptors. A real registration/identity/cache fixture reproduces the 45-of-46 roster failure before the fix and validates 46 regular cities plus four Strongholds afterward without loading that map's definition. Cover existing incomplete descriptors, bounded city ordinals, realm/shard isolation, duplicates, missing records, stale expansion replies and off-map upgrade lookup. Execute an actual Retry click after descriptor repair at desktop, landscape-mobile, portrait and short-landscape sizes; require one read, cleared warning, complete holdings and preserved scroll. Existing roster/list tests protect ownership invalidation, reconnect/error/timeout isolation, ordering, upgrade reconciliation, navigation and touch scrolling. Realm-refresh and Core-release suites cover the shared descriptor-registration dependency and current topology; build/artifact/asset validation covers delivery. This is client metadata only: no server-authoritative rule, data, query, migration or installed backend change, so emulator suites are not applicable."
     }
   ]
 }
