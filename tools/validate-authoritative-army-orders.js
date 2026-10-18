@@ -103,7 +103,9 @@ assert.doesNotMatch(launchRallySource, /validateArmyRoute\(/,
 assert.match(launchRallySource, /queueIncomingArmyNotification\(transaction, movement\.id/,
   "Rally launch responses must not wait for push delivery.");
 
-assert.match(server, /const \{ getMessaging \} = require\("firebase-admin\/messaging"\)/,
+assert.match(server, /getMessaging[\s\S]*?require\("\.\/platform"\)/,
+  "Army notifications must use the shared backend platform.");
+assert.match(fs.readFileSync(path.join(root, "functions", "platform.js"), "utf8"), /getMessaging: require\("firebase-admin\/messaging"\)\.getMessaging/,
   "Firebase Messaging must use the modular Admin SDK entry point.");
 assert.match(server, /exports\.deliverIncomingArmyNotification = onDocumentCreated/,
   "The private incoming-army notification outbox trigger is missing.");

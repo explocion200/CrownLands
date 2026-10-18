@@ -1,21 +1,55 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5787793870ccfe286c7125f6295f4ff8043726e9",
+  "baseCommit": "6542877a9e22432322cb5e76e82c371238edfc4b",
   "coverage": [
     {
       "paths": [
-        "functions/marauder-population.js",
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/marauder-respawn-cases.js",
-        "tools/test-local-postgres-marauder-respawn.js"
+        "functions/combat-authorization.js",
+        "functions/index.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/retaliation-impact-cases.js",
+        "tools/test-local-postgres-retaliation-impact.js",
+        "tools/validate-combat-authorization.js",
+        "tools/validate-authoritative-army-orders.js"
       ],
       "tests": [
-        "tools/validate-marauder-terrain.js",
-        "tools/test-local-postgres-marauder-respawn.js",
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/emulator-marauder-combat.js"
+        "tools/validate-combat-authorization.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-army-resolution-retries.js",
+        "tools/test-local-postgres-retaliation-impact.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Replace a due slot without treating its own atomically removed remains as a lasting obstacle, while rejecting the exact old point and retaining other remains, living NPC separation, road/inset/terrain/building clearances and reachable routes. Shared Firestore-emulator and isolated PostgreSQL fixtures reproduce the real Southhaven/Crown Citadel road deadlocks, exercise due deadlines, concurrent viewer/scheduler attempts, fresh private/public identities, stale requests, current-city obstruction and another defeated slot, and preserve genuinely blocked Lionwatch. Existing population coverage checks slot limits, level alternation, no fallback, retirement, inactive maps and realm isolation. Combat emulator coverage checks immutable encounter identities, reward/refund safety and defeated-state transitions. Terrain validation covers the current Core topology, all prepared maps and active generated New Lands templates; no archived topology or production data is edited. No client UI or timers change, so browser layout tests are not applicable."
+      "reason": "Exercise current core/monthly realm authority: grant reservation at both city/Tower dispatch, same-city contention, exact actor/target/realm, failed sends, shield activation and arrival repair, Recall Horn, clan changes, noncombat returns, actual victory/defeat, anti-farming/former-clan capture restrictions, stale return/arrival replay, original launch deadlines and legacy receipts. Recapture closes all outstanding same-city grants atomically; delayed ownership events cannot close later losses. Shared real-callable PostgreSQL/emulator fixtures cover database transactions and read-before-write behavior without touching live data. Existing combat coverage verifies private grants and forbidden client writes. The authoritative-order validator now follows the existing platform adapter when checking the modular Messaging import, retaining route/idempotency/notification checks that previously failed on the obsolete direct import assertion."
+    },
+    {
+      "paths": [
+        "game.js",
+        "combat-timers-ui.js",
+        "tools/validate-combat-timers-browser.js",
+        "index.html"
+      ],
+      "tests": [
+        "tools/validate-combat-timers-browser.js",
+        "tools/validate-combat-authorization.js",
+        "tools/validate-army-resolution-retries.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Use the existing ownership roster and loaded-map identities to suppress recovered/clan-owned retaliation targets; reserved grants cannot advertise or dispatch another attack. Verify reservation release, original countdown, recaptured city/roster suppression, exact city/map navigation, stale account handling and impact wording in the actual game fixture at desktop 1440x900 and landscape 844x390/568x320. Retain timer/popover bounds, chat clearance and asset budgets; no new browser listener or interval is added. Uncached targets stay hidden during initial roster loading to prevent a recovered-city alert flashing at login."
+    },
+    {
+      "paths": [
+        "help-handbook-content.js",
+        "battle-economy-guide.html",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
+      ],
+      "tests": [
+        "tools/validate-help-handbook-browser.js",
+        "tools/validate-battle-economy-guide.js",
+        "tools/validate-combat-authorization.js"
+      ],
+      "reason": "Document the owner-confirmed change from launch consumption to actual combat, one reserved army, shield/recall preservation, unchanged 24-hour deadline, third-owner/clan restrictions and recapture alert removal. Update former-clan wording consistently, keep historical spent grants unchanged, and mark deployment pending. Check actual handbook layout/search on desktop and landscape mobile plus the battle-guide content contract."
     }
   ]
 }
