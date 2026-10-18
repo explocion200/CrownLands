@@ -247,3 +247,7 @@
 #modal.outgoing-attack-modal.reinforcements-activity-ledger .support-ledger:focus-visible{outline:2px solid #376872!important;outline-offset:-3px!important}
 #modal.outgoing-attack-modal.reinforcements-activity-ledger .support-ledger .empty-state img{max-width:100%!important}
 #modal.outgoing-attack-modal.reinforcements-activity-ledger .support-row{border-radius:0!important;box-shadow:none!important;margin:0!important}
+
+#modal.outgoing-attack-modal.reinforcements-activity-ledger .support-location{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;min-height:44px!important;min-width:44px!important;padding:4px 7px!important;border:1px solid #9c8b64!important;background:#eee2c2!important;font:12px "Segoe UI",Arial,sans-serif!important;white-space:nowrap!important}
+#modal.outgoing-attack-modal.reinforcements-activity-ledger .support-location>span{font-size:19px!important;line-height:1!important}
+#modal.outgoing-attack-modal.reinforcements-activity-ledger .arrival .support-location{margin-top:5px!important}

@@ -206,9 +206,11 @@ assert.match(
 );
 assert.match(
   serverSource,
-  /function createIncomingArmyNotification[\s\S]*?targetRegionId:\s*normalizeRegionId\(movement\.targetRegionId[\s\S]*?function sendIncomingArmyNotification[\s\S]*?targetRegionId:\s*safeString\(notification\.targetRegionId/,
+  /function createIncomingArmyNotification[\s\S]*?targetRegionId:\s*normalizeRegionId\(movement\.targetRegionId[\s\S]*?function sendIncomingArmyNotification[\s\S]*?const data = incomingArmyData\(notification\)/,
   "Attack push notifications must carry the attacked map from creation through delivery."
 );
+assert.equal(require("../functions/notification-delivery").incomingArmyData({ targetRegionId: "northgate-march" }).targetRegionId,
+  "northgate-march", "The shared delivery formatter must retain the attacked map.");
 assert.match(
   serviceWorkerSource,
   /notificationclick[\s\S]*?CROWNLANDS_NOTIFICATION_CLICK[\s\S]*?notification:\s*notificationData/,
