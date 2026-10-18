@@ -31,6 +31,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       addEventListener("crownlands:chat-player-profile", () => socialQa.profileOpens++);
       socialQa.messages.push(...Array.from({ length: 19 }, (_, i) => ({ id: "fixture-" + i, sequence: i + 2, senderUid: i % 2 ? "alice" : "bob", senderDisplayName: i % 2 ? "Alice" : "Bob", text: "Private conversation line " + (i + 2) + ": the north road is clear. Meet at the castle after your troops return.", createdAtMs: Date.now() + i, expiresAtMs: Date.now() + 90 * 86400000 })));
       const player = { uid: "bob", name: "Bob of Stoneward", clanTag: "CODE", flag: { primary: "#336633", secondary: "#eee1b9", pattern: "solid", symbol: "crown" } };
+      socialQa.player = player;
       socialQa.api = { social: async input => {
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
@@ -38,8 +39,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         if (input.action === "preference") { socialQa.privateAlerts = input.enabled; return { privateAlerts: input.enabled }; }
         if (input.action === "unread") return { count: socialQa.unread };
         if (input.action === "list") return { ...base, rows: input.kind === "blocked" ? [] : [{ id: "a".repeat(40), peerUid: "bob", player, friend: "friends", status: "accepted", unread: socialQa.unread, lastMessageAtMs: Date.now() }], next: null };
-        if (input.action === "presence") return { ...base, players: [{ uid: "bob", online: true, expiresAtMs: Date.now() + 180000 }] };
+        if (input.action === "presence") return { ...base, players: [{ uid: "bob", online: !socialQa.offline, expiresAtMs: Date.now() + 180000 }] };
         if (input.action === "history") return { ...base, player, relation: { id: "a".repeat(40), friend: "friends", conversation: "accepted", canSend: true }, messages: socialQa.messages, next: null };
+        if (input.action === "friend" && input.choice === "remove" && socialQa.deferRemove) return new Promise(resolve => { socialQa.finishRemove = resolve; });
         if (input.action === "read") { socialQa.unread = 0; return { ok: true }; }
         if (input.action === "send") { socialQa.messages.push({ id: "c".repeat(40), sequence: socialQa.messages.length + 1, senderUid: "alice", senderDisplayName: "Alice", text: input.text, createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }); return { ok: true }; }
         return { ok: true };
@@ -82,8 +84,33 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         }
       }
       await ev('CrownlandsSocial.open("friends")'); await delay(100);
-      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, "friends-" + width + ".png"), Buffer.from(shot.data, "base64")));
-      await ev('Array.from(document.querySelectorAll(".social-list button")).find(b=>b.textContent==="Message").click()'); await delay(120);
+      for (const sample of ["standard", "long-offline"]) {
+        await ev(`socialQa.player.name=${JSON.stringify("Bob of Stoneward")};socialQa.offline=${sample === "long-offline"};${sample === "long-offline" ? 'socialQa.player.name="StonewardWithoutAnySpacesOrShortening";' : ''}CrownlandsSocial.open("friends")`); await delay(100);
+        const friend = await ev(() => {
+          const row = document.querySelector(".social-friend"), name = row.querySelector(".social-name");
+          row.classList.remove("social-friend");
+          const oldNameHeight = name.getBoundingClientRect().height, oldRowHeight = row.getBoundingClientRect().height;
+          row.classList.add("social-friend");
+          const n = name.getBoundingClientRect(), r = row.getBoundingClientRect(), presence = row.querySelector(".social-presence"), p = presence.getBoundingClientRect();
+          const actions = [...row.querySelectorAll(".social-row-actions button")];
+          return { nameHeight: n.height, rowHeight: r.height, oldNameHeight, oldRowHeight,
+            inline: actions.every(button => { const b = button.getBoundingClientRect(); return b.left >= n.right && b.top >= n.top && b.bottom <= n.bottom && Math.abs(b.y+b.height/2-n.y-n.height/2)<1; }),
+            fits: row.scrollWidth <= row.clientWidth && actions.every(button => { const b=button.getBoundingClientRect(); return b.right <= r.right && b.width>=44 && b.height>=24 && button.scrollWidth<=button.clientWidth && button.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)); }),
+            below: p.top >= n.bottom, presence: presence.textContent, online: presence.classList.contains("is-online"),
+            name: name.querySelector("strong").textContent, title: name.title,
+            flagHeight: row.querySelector(".social-flag").getBoundingClientRect().height, clan: name.querySelector("small").textContent,
+            labels: actions.map(button => button.textContent) };
+        });
+        assert(friend.inline && friend.fits && friend.below && friend.nameHeight<=friend.oldNameHeight && friend.rowHeight<=friend.oldRowHeight, JSON.stringify({width,height,sample,friend}));
+        assert.equal(friend.nameHeight, 44, "Actions must fit the existing 44px name line");
+        assert.equal(friend.flagHeight, 32); assert.equal(friend.clan, "[CODE]"); assert.equal(friend.title, friend.name);
+        assert.deepEqual(friend.labels, ["Message", "Remove friend"]);
+        assert.equal(friend.presence, sample === "standard" ? "Online" : "Offline"); assert.equal(friend.online, sample === "standard");
+        await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `friends-${width}x${height}-${sample}.png`), Buffer.from(shot.data, "base64")));
+      }
+      await ev('socialQa.player.name="Bob of Stoneward";socialQa.offline=false;CrownlandsSocial.open("friends")'); await delay(100);
+      await click(".social-friend .social-row-actions button:first-child");
+      assert(await ev('CrownlandsSocial.diagnostics().conversationId === "a".repeat(40)'), "The inline Message button opens the selected friend's conversation");
       await ev('socialQa.unread=1;CrownlandsSocial.open("messages")'); await delay(100);
       assert(await ev('document.querySelector("button.social-conversation") && !document.querySelector(".social-conversation button,.social-conversation a") && ![...document.querySelectorAll(".social-list button")].some(b=>b.textContent==="Open")'), "Conversation must be one native button, without nested profile actions or Open");
       assert(await ev('document.querySelector(".social-conversation").getBoundingClientRect().height <= 80'), "Conversation list row is not compact");
@@ -188,6 +215,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await ev('document.getElementById("globalTab").click()');
     assert.equal(await ev('document.getElementById("socialPanel").hidden'), true);
     assert(await ev('document.querySelector(".composer-panel").getBoundingClientRect().height > 0 && document.getElementById("chatHistory").getBoundingClientRect().height > 100'), "Returning to Global must restore its history and composer");
+    await ev('CrownlandsSocial.open("friends");socialQa.deferRemove=true'); await delay(100);
+    await click(".social-friend .social-row-actions button:last-child");
+    assert(await ev('document.querySelector(".social-friend .social-row-actions button:last-child").disabled'), "Removal must retain its pending guard");
+    await click(".social-friend .social-row-actions button:last-child");
+    assert.deepEqual(await ev('socialQa.calls.filter(c=>c.action==="friend").map(({action,choice,peerUid})=>({action,choice,peerUid}))'), [{action:"friend",choice:"remove",peerUid:"bob"}], "Inline removal must target only this friend and ignore duplicate clicks");
+    await ev('socialQa.finishRemove({ok:true});socialQa.deferRemove=false'); await delay(100);
+    assert(await ev('!document.querySelector(".social-friend .social-row-actions button:last-child").disabled'));
     await ev('CrownlandsSocial.stop()');
     assert.equal(await ev('document.querySelector(".social-thread").textContent'), "");
     assert.equal(await ev('document.getElementById("socialFriendsTab").hidden'), true);

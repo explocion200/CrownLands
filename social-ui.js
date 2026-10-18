@@ -152,6 +152,7 @@
       if (row.unread) article.append(element("span", "Unread", "social-unread"));
       const actions = element("div", null, "social-row-actions");
       if (kind === "friends") {
+        article.classList.add("social-friend"); title.title = row.player.name || "Ruler";
         const presence = element("small", "Checking status…", "social-presence"); presence.dataset.presenceUid = row.peerUid; article.append(presence);
         actions.append(button("Message", () => run(() => openConversation({ id: row.id, peerUid: row.peerUid }))), actionButton("Remove friend", { action: "friend", peerUid: row.peerUid, choice: "remove" }));
       } else if (kind === "blocked") actions.append(actionButton("Unblock", { action: "block", peerUid: row.peerUid, enabled: false }));
