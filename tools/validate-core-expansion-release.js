@@ -4,6 +4,8 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
+const { extractFunction } = require("./world-travel-test-fixtures.js");
 const topology = require("../functions/coreExpansionTopology.js");
 const realmTopology = require("../functions/realmTopology.js");
 const regionCatalogRuntime = require("../region-catalog.js");
@@ -257,6 +259,22 @@ assert.match(serverSource, /getDeedCampCandidateRegionIds[\s\S]*activeRegionIds\
 assert.match(serverSource, /getCoreAuthoritativeRoutePlanner/);
 assert.match(serverSource, /CORE_TEMPLATE_WORLD_MAPS[\s\S]*templateRegionId/);
 const clientSource = read("game.js");
+const clientSpawnThreshold = clientSource.match(/const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES =[^;]+;/)?.[0];
+assert(clientSpawnThreshold, "The client admission threshold must be present.");
+for (const clientCatalog of [catalog, { capacityPolicy: {} }]) {
+  const scope = vm.createContext({ CORE_EXPANSION_TOPOLOGY_ACTIVE: true, REGION_CATALOG: clientCatalog });
+  vm.runInContext(clientSpawnThreshold + "\n" + extractFunction(clientSource, "isStarterRegion"), scope);
+  assert.equal(vm.runInContext("MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES", scope), 10,
+    "Client policy and its fallback must agree with the ten-city server reserve.");
+  const region = { purpose: "player_region", spawnEligible: true, spawnReady: true, lifecycle: "active" };
+  for (const npcCityCount of [11, 19, 20, 40]) {
+    assert(scope.isStarterRegion({ ...region, npcCityCount }),
+      `The client excluded an eligible map with ${npcCityCount} neutral cities.`);
+  }
+  assert(!scope.isStarterRegion({ ...region, npcCityCount: 9 }));
+  assert(!scope.isStarterRegion({ ...region, npcCityCount: 40, permanentCore: true }));
+  assert(!scope.isStarterRegion({ ...region, npcCityCount: 40, spawnReady: false }));
+}
 assert.match(clientSource, /CORE_EXPANSION_TOPOLOGY_ACTIVE[\s\S]*worldTopology/);
 assert.ok(
   clientSource.indexOf('const STARTER_REGION_TYPE = "starter";')

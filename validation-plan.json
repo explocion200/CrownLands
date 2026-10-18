@@ -14,8 +14,10 @@
         "functions/index.js",
         "functions/player-region-spawn.js",
         "functions/test/emulator-core-expansion-state.js",
+        "game.js",
         "tools/build-prepared-core-expansion.js",
         "tools/test-local-postgres-expansion-threshold.js",
+        "tools/validate-core-expansion-release.js",
         "tools/validate-core-expansion-reset.js",
         "tools/validate-core-expansion-topology.js",
         "tools/validate-player-region-capacity.js",
@@ -31,7 +33,7 @@
         "tools/test-local-postgres-expansion-threshold.js",
         "functions/test/emulator-core-expansion-state.js"
       ],
-      "reason": "Owner-confirmed reduction of the active Core-expansion admission reserve from 20 to 10. Cover shared authoritative spawn eligibility and index.js threshold wiring; correct realm capacity to 40 minus reserve, protect 40-city templates, exact 11-to-10 and overdue capture transitions, concurrent unique starting-city claims, balanced admission, closed-map/receipt preservation, old pending 20-city completion, generated-layer discovery, two-layer reset verification and archived-generation isolation. PostgreSQL exercises real handlers in disposable schemas and the selected emulator validates cold reset plus 50 concurrent joins. Catalog generator, both current browser catalogs and receipt are synchronized only for the changed policy; world assets and layout are unchanged. Release and layer travel validators cover server/client catalog parity, current topology and discovery. No visual layout changes; existing desktop/mobile presentation is unaffected. Specification records the confirmed rule and audit documents read-only aggregate current-realm evidence."
+      "reason": "Owner-confirmed reduction of the active Core-expansion admission reserve from 20 to 10. Cover shared authoritative spawn eligibility and index.js threshold wiring; correct realm capacity to 40 minus reserve, protect 40-city templates, exact 11-to-10 and overdue capture transitions, concurrent unique starting-city claims, balanced admission, closed-map/receipt preservation, old pending 20-city completion, generated-layer discovery, two-layer reset verification and archived-generation isolation. PostgreSQL exercises real handlers in disposable schemas and the selected emulator validates cold reset plus 50 concurrent joins. Catalog generator, both current browser catalogs and receipt are synchronized only for the changed policy; world assets and layout are unchanged. Release and layer travel validators cover server/client catalog parity, current topology and discovery. No visual layout changes; existing desktop/mobile presentation is unaffected. Specification records the confirmed rule and audit documents read-only aggregate current-realm evidence. Execute the actual client threshold and starter-region predicate against current and missing catalog policy to prevent the old 20-city floor from excluding 11\u201319-city maps while preserving Core and readiness restrictions."
     }
   ]
 }

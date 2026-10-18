@@ -185,7 +185,7 @@ async function main() {
   assert(new Set(afterFirst.activeRegionIds).size === afterFirst.activeRegionIds.length,
     "The first threshold created duplicate active maps.");
   assert(!afterFirst.admittingRegionIds.includes(firstSource),
-    "The threshold source continued admitting players after reaching 20 NPC cities.");
+    "The threshold source continued admitting players after reaching 10 NPC cities.");
   assert(afterFirst.admittingRegionIds.length === 2,
     "The first threshold did not leave exactly two admitting maps.");
 
