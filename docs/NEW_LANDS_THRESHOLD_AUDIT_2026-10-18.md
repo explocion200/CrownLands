@@ -53,5 +53,10 @@ expansion at 20/19/11, overdue depletion, concurrent claims and exact-once
 activation, balanced placement, replay, preserved historical 20-city receipts,
 initial two-layer admission order, later-layer growth, archived-generation
 isolation, current catalog synchronization and client delivery. Local PostgreSQL
-fixtures use random disposable schemas; the emulator suite exercises 50 real
-starting-city claims. No production test players or captures are required.
+fixtures use random disposable schemas, including 50 starting-city claims at
+concurrency 10 with no caller retries. The first local burst passed in 1.79
+seconds, with 30/10/10 placement and one expansion pair; this is a synthetic
+backend check, not an end-to-end player latency guarantee. The Firebase emulator
+hit reservation contention at concurrency 10, so its compatibility gate retains
+50 real claims using the existing five-request stress limit. The live PostgreSQL
+gate keeps the higher burst. No production test players or captures are required.

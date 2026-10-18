@@ -313,7 +313,10 @@ async function main() {
   }, identity);
   assert(postResetHeartbeat?.status === "active" && postResetHeartbeat.realmShardId === realmInfo.sharedRealmId,
     "The repaired post-reset membership could not heartbeat in the active realm.");
-  const claims = await mapWithConcurrency(users, 10, (user, index) => callFunction(
+  // The lower reserve serializes 30 claims on the first island. Keep real
+  // concurrent emulator claims without exhausting its reservation polling;
+  // the PostgreSQL admission-burst gate covers all 50 at concurrency 10.
+  const claims = await mapWithConcurrency(users, THRESHOLD_STRESS_CONCURRENCY, (user, index) => callFunction(
     "claimStartingCity",
     user.token,
     { playerName: `Expansion Ruler ${index + 1}` },
