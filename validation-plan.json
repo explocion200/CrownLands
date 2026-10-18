@@ -1,59 +1,36 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cd53e46a424e68322562f437872c1020af40f32f",
+  "baseCommit": "1ab39f825122bc855556e4cd1a30d222649d0ae9",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "combat-timers-ui.js",
-        "incoming-threats-ui.js",
-        "objectives-activity-ui.js",
-        "quests-ui.js",
-        "rallies-activity-ui.js",
-        "reinforcements-activity-ui.js",
-        "location-buttons.css",
-        "tools/validate-location-buttons-browser.js"
+        "social-ui.js",
+        "social-ui.css",
+        "tools/validate-social-browser.js"
       ],
       "tests": [
-        "tools/validate-location-buttons-browser.js",
-        "tools/validate-reinforcement-locations-browser.js",
-        "tools/validate-incoming-threats-browser.js",
-        "tools/validate-public-player-profile-browser.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-combat-timers-browser.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-report-location-navigation.js",
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-scout-report-ui.js"
+        "tools/validate-social-browser.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "The common square image control affects all actual map-jump surfaces. Compare real rendered artwork and previous button/row geometry at 1440x900, 844x390 and 568x320 across atlas shortcuts, reports, realm activity, battle/scout detail, marches and long names, camps, strongholds, rally assembly, all reinforcement groups, incoming threats, public profiles including disabled state, both quest templates, city/deed lists and retaliation. Preserve accessible names, focus, labels, alpha and slot sizes. Existing navigation suites protect same/cross-map routing, current moving-army position, retry/failure, stale-account/clan guards, scroll/focus preservation, all reinforcement sections, city-list ownership and rally assembly from both Activity and Clan War Room. Report snapshot tests cover shared detail/Scout rendering dependencies. Presentation only: no server authority, economy, database, movement or retaliation rule changes; no emulator suites apply."
+      "reason": "Scope the compact grid to accepted Friends rows only. Compare original and updated name-line/contact heights, inline Message/Remove positioning, hit targets, no overflow, full accessible name/tooltip, flag/clan visibility and online/offline states with regular and long names at eight desktop, short-window, landscape-mobile and narrow portrait sizes. Real pointer clicks must open the correct private conversation and issue one correctly targeted removal request while disabling duplicate clicks. The existing social browser suite also protects unchanged Global/Clan/Messages frame/typography, private-message density, conversation-row navigation, reporting/translation, notification preferences and stale-account cleanup. Presentation only; no server authority, relationship semantics or data schema changes, so emulator suites are not applicable."
     },
     {
       "paths": [
-        "index.html",
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "assets/optimized/location-map-flag-192x192-cf45708cfe0c.webp"
+        "tools/asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-location-buttons-browser.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Load and cache the shared stylesheet, ship the hashed transparent 14.4 KiB image on demand, and verify its checksum/alpha/192px dimensions. The source shell grows 3,668 bytes over the previous cap (bounded at 4 KiB); game.js markup needs at most 1 KiB above its prior entry cap. Build validation must verify package closure and both game entry points; image source masters are excluded from production."
+      "reason": "The scoped friend markup/styles add 767 offline-shell bytes. Existing headroom covers 428; allow the remaining 339 bytes with a bounded 512-byte step. No image, dependency, additional request or backend payload is introduced. Production build/artifact validation still applies."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/location-button/README.md",
-        "docs/art-sources/location-button/delivery.json",
-        "docs/art-sources/location-button/location-map-flag-v1.png"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-location-buttons-browser.js"
+        "tools/validate-social-browser.js"
       ],
-      "reason": "Record the explicitly approved image and square-control design, retaining destinations and existing container sizes. Preserve the original approved PNG and reproducible technical thumbnail metadata; the visual regression verifies delivery identity and design constraints. No additional gameplay behavior is introduced."
+      "reason": "Record the owner-confirmed same-line friend actions, smaller buttons without height growth and preserved identity/presence. The browser regression verifies this presentation; no friendship or messaging rule changes."
     }
   ]
 }
