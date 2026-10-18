@@ -32,7 +32,10 @@ async function main() {
       for (let i = 0; i < 300; i++) { if (await ev(expression)) return; await pause(100); }
       throw Error("Timeout: " + expression);
     };
-    const fixture = file => ev(fs.readFileSync(path.join(root, "docs/visual-qa", file), "utf8"));
+    const fixture = async file => {
+      await ev(fs.readFileSync(path.join(root, "docs/visual-qa", file), "utf8"));
+      await ev("document.querySelectorAll('#reportsRuntimeControls,#detailRuntimeExample,#scoutRuntimeExample').forEach(e=>e.remove());document.querySelector('[aria-label=\"Runtime march example\"]')?.parentElement.remove()");
+    };
     const inspect = async name => {
       await ready("[...document.querySelectorAll('button.location-icon-button')].some(b=>b.getBoundingClientRect().width>0)");
       await ev("Promise.all(modal.querySelector(':scope > .modal-card').getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})))");
@@ -78,7 +81,7 @@ async function main() {
       for (const r of results) assert(r.square && r.fitsOldButton && r.noGrowth && r.art && r.named && r.title, name + ": " + JSON.stringify(r));
       checks.push({ name, buttons: results });
       console.log(`Checked ${name}: ${results.length} square location buttons.`);
-      await ev("(()=>{const b=[...document.querySelectorAll('button.location-icon-button')].find(b=>b.getBoundingClientRect().width>0&&!b.disabled);if(b){b.scrollIntoView({block:'center'});b.focus({preventScroll:true});if(document.activeElement!==b)throw Error('Location button is not focusable');}toast.classList.remove('visible');})()");
+      await ev("(()=>{const b=[...document.querySelectorAll('button.location-icon-button')].find(b=>b.getBoundingClientRect().width>0&&!b.disabled);if(b){b.scrollIntoView({block:'center'});b.focus({preventScroll:true});if(document.activeElement!==b)throw Error('Location button is not focusable');const r=b.getBoundingClientRect();if(!b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)))throw Error('Location button is obscured');}toast.classList.remove('visible');})()");
       fs.writeFileSync(path.join(output, name + ".png"), Buffer.from((await client.send("Page.captureScreenshot", { format: "png" })).data, "base64"));
     };
     for (const [width,height] of [[1440,900],[844,390],[568,320]]) {
@@ -125,7 +128,7 @@ async function main() {
       await ev(`(()=>{modal.close();modal.className='modal';const city=state.cities[0];
         modalBody.innerHTML=deedCampHistoryMarkup([{cityId:city.id,cityName:city.name,regionId:getCityRegionId(city),awardedAtMs:Date.now()}]);modal.showModal();})()`);
       await inspect(`deed-history-${width}`);
-      await ev(`(()=>{modal.close();const target=state.cities.find(c=>c.owner!=='player');onlineCombatAuthorization={uid:getCurrentOnlineUid(),shieldExpiresAtMs:0,
+      await ev(`(()=>{modal.close();closeProfileScreen({force:true});const target=state.cities.find(c=>c.owner!=='player');onlineCombatAuthorization={uid:getCurrentOnlineUid(),shieldExpiresAtMs:0,
         retaliation:[{id:'location-qa-retaliation',cityId:target.id,cityName:'Stoneward Keep',regionId:getCityRegionId(target),status:'available',capturedAtMs:Date.now(),expiresAtMs:Date.now()+86400000}]};
         renderCombatTimers();document.querySelector('#combatTimers details').open=true;})()`);
       await inspect(`retaliation-${width}`);
