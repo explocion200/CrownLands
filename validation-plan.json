@@ -14,7 +14,7 @@
         "tools/validate-beginner-xp-browser.js",
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Server-authoritative neutral capture floor and matching previews below Hero Level 15. Verify unchanged PvP, failed/protected/abandoned/objective XP, city-upgrade and later-level dependencies, settlement-time eligibility, per-battle caps, rewards and duplicate/concurrent resolution. Current-realm emulator covers shared combat authorization and tower-origin paths; PostgreSQL fixture uses real local transactions, 29 captures, 14 skill points and the 30-city cap. Browser validates actual readable previews at desktop and landscape sizes."
+      "reason": "Server-authoritative neutral capture floor and matching previews below Hero Level 15. Verify unchanged PvP, failed/protected/abandoned/objective XP, city-upgrade and later-level dependencies, settlement-time eligibility, per-battle caps, rewards and duplicate/concurrent resolution. Current-realm emulator covers shared combat authorization and tower-origin paths; PostgreSQL fixture uses real local transactions, 29 captures, 14 skill points and the 30-city cap. Browser validates actual readable previews at desktop and landscape sizes. Remove only the immediately overwritten duplicate attack-preview markup in the same function so the new bonus stays within the existing offline-cache budget; browser checks verify retained visible controls and XP."
     },
     {
       "paths": [

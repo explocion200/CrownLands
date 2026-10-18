@@ -37167,30 +37167,6 @@ function showAttackPreview(source, target) {
   modalTitle.textContent = `Attack ${target.name}`;
   modalBody.innerHTML = `
     <div class="battle-preview ${preview.success ? "win" : "lose"}">
-      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label}</span></div>
-      <div class="stat-grid">
-        <div class="stat-card"><strong>${formatNumber(preview.send)}</strong><small>troops to send</small></div>
-        <div class="stat-card"><strong>${formatNumber(target.troops)}</strong><small>target troops</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
-      </div>
-      <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${formatDuration(preview.travel)} travel.</p>
-      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, mountains, cities, and strongholds. Swamp and forests are walkable.</p>
-      <p>${preview.success
-        ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
-        : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
-      ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
-      ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
-      <div class="modal-actions">
-        <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
-        <button id="cancelAttackBtn" class="safe-action" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-
-  modalBody.innerHTML = `
-    <div class="battle-preview ${preview.success ? "win" : "lose"}">
       <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label} - ${preview.beginnerCaptureBonus ? "Beginner XP bonus" : `${Math.round(preview.xpEfficiency * 100)}% XP`}</span></div>
       <div class="stat-grid">
         <div class="stat-card"><strong>${formatNumber(preview.send)}</strong><small>troops to send</small></div>
