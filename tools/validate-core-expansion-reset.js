@@ -27,7 +27,7 @@ function validateAdmission() {
   for (let turn = 0; turn < 40; turn += 1) {
     assert.deepEqual(state.admittingRegionIds, legacy.admittingRegionIds);
     const sourceRegionId = state.admittingRegionIds[0];
-    const args = { resetGeneration: generation, sourceRegionId, remainingNpcCities: 20, thresholdRevision: turn };
+    const args = { resetGeneration: generation, sourceRegionId, remainingNpcCities: 10, thresholdRevision: turn };
     const plan = topology.planThresholdActivation({ ...args, state });
     const oldPlan = topology.planThresholdActivation({ ...args, state: legacy });
     assert.deepEqual(plan.preparedRegions, oldPlan.preparedRegions);
@@ -56,7 +56,7 @@ function validateAdmission() {
     admittingRegionIds: [topology.getRegionAtActivationOrdinal(67).id], nextActivationOrdinal: 68 };
   assert.equal(topology.normalizeExpansionState(current).nextAdmissionOrdinal, undefined);
   assert.equal(topology.planThresholdActivation({ state: current, resetGeneration: generation,
-    sourceRegionId: current.admittingRegionIds[0], remainingNpcCities: 20 }).preparedRegions[0].activationOrdinal, 68);
+    sourceRegionId: current.admittingRegionIds[0], remainingNpcCities: 10 }).preparedRegions[0].activationOrdinal, 68);
 
   const fixture = createTravelFixture(56);
   assert.equal(fixture.descriptors.length, 81);

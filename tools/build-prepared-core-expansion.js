@@ -329,7 +329,7 @@ const catalog = {
     })),
   capacityPolicy: {
     cityCapacityPerNewLandsMap: 40,
-    minimumNpcCitiesForSpawn: 20,
+    minimumNpcCitiesForSpawn: topology.EXPANSION_THRESHOLD_NPC_CITIES,
     activationBatchSize: 2,
     serverAuthoritative: true,
     coreSpawnEligible: false,

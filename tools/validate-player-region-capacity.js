@@ -54,51 +54,51 @@ const ownershipState = ownedCount => regularCityIds.map((id, index) => ({
 }));
 
 assert.equal(PLAYER_REGION_CITY_CAPACITY, 40);
-assert.equal(MINIMUM_NPC_CITIES_FOR_SPAWN, 20);
+assert.equal(MINIMUM_NPC_CITIES_FOR_SPAWN, 10);
 assert.equal(countAuthoritativeNpcCities({
-  cityOwnershipState: ownershipState(20),
+  cityOwnershipState: ownershipState(30),
   regularCityIds,
   resetGeneration: "test-generation",
-}), 20);
+}), 10);
 
 const atThreshold = derivePlayerRegionSpawnEligibility({
   region: regionA,
   regions,
-  cityOwnershipState: ownershipState(19),
+  cityOwnershipState: ownershipState(29),
   regularCityIds,
   resetGeneration: "test-generation",
   ownershipStateAuthoritative: true,
 });
-assert.equal(atThreshold.currentNpcCityCount, 21);
-assert.equal(atThreshold.spawnEligible, true, "21 unowned cities must allow the placement that reaches the 20-city expansion threshold.");
+assert.equal(atThreshold.currentNpcCityCount, 11);
+assert.equal(atThreshold.spawnEligible, true, "11 unowned cities must allow the placement that reaches the 10-city expansion threshold.");
 
 const afterThresholdPlacement = derivePlayerRegionSpawnEligibility({
   region: regionA,
   regions,
-  cityOwnershipState: ownershipState(20),
+  cityOwnershipState: ownershipState(30),
   regularCityIds,
   resetGeneration: "test-generation",
   ownershipStateAuthoritative: true,
 });
-assert.equal(afterThresholdPlacement.currentNpcCityCount, 20);
-assert.equal(afterThresholdPlacement.spawnEligible, false, "The source map must stop admitting players once 20 remain.");
+assert.equal(afterThresholdPlacement.currentNpcCityCount, 10);
+assert.equal(afterThresholdPlacement.spawnEligible, false, "The source map must stop admitting players once 10 remain.");
 
 const belowThreshold = derivePlayerRegionSpawnEligibility({
   region: regionA,
   regions,
-  cityOwnershipState: ownershipState(28),
+  cityOwnershipState: ownershipState(31),
   regularCityIds,
   resetGeneration: "test-generation",
   ownershipStateAuthoritative: true,
 });
-assert.equal(belowThreshold.currentNpcCityCount, 12);
-assert.equal(belowThreshold.spawnEligible, false, "12 unowned cities must block new placement.");
+assert.equal(belowThreshold.currentNpcCityCount, 9);
+assert.equal(belowThreshold.spawnEligible, false, "9 unowned cities must block new placement.");
 assert(belowThreshold.reasons.includes("npc_city_threshold"));
 
 const staticMetadataOnly = derivePlayerRegionSpawnEligibility({
   region: { ...regionA, npcCityCount: 40, spawnEligible: true, spawnReady: true },
   regions,
-  cityOwnershipState: ownershipState(28),
+  cityOwnershipState: ownershipState(31),
   regularCityIds,
   resetGeneration: "test-generation",
   ownershipStateAuthoritative: false,
@@ -130,4 +130,4 @@ assert.match(serverSource, /region-spawn-ineligible[\s\S]*?ineligibleSpawnRegion
 assert.doesNotMatch(serverSource, /STARTER_REGION_IDS[\s\S]{0,1200}npcCityCount/,
   "Starter-region candidates still depend on static NPC metadata.");
 
-console.log("Validated exact 40-city player regions and authoritative 20-NPC runtime spawn eligibility.");
+console.log("Validated exact 40-city player regions and authoritative 10-NPC runtime spawn eligibility.");

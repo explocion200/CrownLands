@@ -294,7 +294,7 @@
   ],
   "capacityPolicy": {
     "cityCapacityPerNewLandsMap": 40,
-    "minimumNpcCitiesForSpawn": 20,
+    "minimumNpcCitiesForSpawn": 10,
     "activationBatchSize": 2,
     "serverAuthoritative": true,
     "coreSpawnEligible": false
