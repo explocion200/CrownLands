@@ -194,6 +194,50 @@ async function main() {
         [onlineOwnedCitiesCacheComplete,onlineOwnedCitiesRefreshError,onlineOwnedCitiesRefreshInFlight]=saved;
         renderCityListModal();return {incomplete:true,retry:true,empty:true,stronghold:true};
       })()`);
+      const retryPoint = await evaluate(`(async () => {
+        const api=getOnlineApi(),rows=await api.loadOwnedCitiesAcrossIslands([],{serverOnly:true});
+        const id='new-lands-l03-p013',template=REGION_CATALOG.regions.find(r=>r.purpose==='player_region');
+        if(WORLD_REGIONS_BY_ID.has(id))throw Error('Expanded-map fixture must start outside the bundled catalog');
+        const descriptor={...template,id,name:'Expanded map fixture',cityCapacity:40,gridX:5,gridY:3,
+          templateRegionId:template.id,templateDefinitionPath:template.regionDefinitionPath};
+        const realm={resetGeneration:RESET_GENERATION,worldId:ONLINE_WORLD_ID,coreExpansion:{revision:75,
+          activeRegionIds:[...ACTIVE_WORLD_REGION_IDS,id],regions:[descriptor]}};
+        applyCoreExpansionRealmState(realm);
+        const added={id:id+'-city-40',regionId:id,islandId:getOnlineIslandId(id),ownerUid:getCurrentOnlineUid(),level:10,troops:100};
+        window.clQaExpansion={api:getOnlineApi,stats:getGlobalStatsSnapshot,cache:onlineOwnedCitiesCache,
+          complete:onlineOwnedCitiesCacheComplete,error:onlineOwnedCitiesRefreshError,rows:[...rows,added],added,reads:0};
+        const stats=getGlobalStatsSnapshot();
+        getGlobalStatsSnapshot=()=>({...stats,version:1,totalCities:clQaExpansion.rows.filter(c=>!isStronghold(c)).length});
+        getOnlineApi=()=>({...api,loadOwnedCitiesAcrossIslands:()=>{clQaExpansion.reads++;return clQaExpansion.pending
+          ?new Promise(resolve=>{clQaExpansion.resolve=resolve;}):Promise.resolve(clQaExpansion.rows);}});
+        // Reproduce the old descriptor bug, then apply a fresh authoritative descriptor.
+        delete WORLD_REGIONS_BY_ID.get(id).cityCapacity;
+        if(await refreshAllOwnedCities(true))throw Error('Missing map metadata must not be marked complete');
+        if(!modalBody.querySelector('[role="alert"]'))throw Error('Failed expanded-map roster was not disclosed');
+        applyCoreExpansionRealmState(realm);
+        clQaExpansion.pending=true;clQaExpansion.reads=0;
+        const scroller=modalBody.querySelector('.city-list-rows');scroller.scrollTop=30;
+        clQaExpansion.scroller=scroller;clQaExpansion.scroll=scroller.scrollTop;
+        const r=modalBody.querySelector('[data-city-list-sync-retry]').getBoundingClientRect();
+        return {x:r.x+r.width/2,y:r.y+r.height/2};
+      })()`);
+      await screenshot(`expanded-map-before-retry-${viewport.name}`);
+      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", ...retryPoint, button: "left", clickCount: 1 });
+      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...retryPoint, button: "left", clickCount: 1 });
+      assert(await evaluate("onlineOwnedCitiesRefreshInFlight&&modalBody.textContent.includes('Syncing full city roster...')"), "A real Retry click must show the pending roster read");
+      await evaluate("clQaExpansion.resolve(clQaExpansion.rows)"); await wait(100);
+      const expandedMapRetry = await evaluate(`(() => {
+        if(!onlineOwnedCitiesCacheComplete||onlineOwnedCitiesRefreshError||modalBody.querySelector('[role="alert"]'))throw Error('Retry did not clear the expanded-map failure');
+        if(clQaExpansion.reads!==1)throw Error('Retry issued duplicate roster reads');
+        if(!getOwnedCitySnapshotForUpgrade(clQaExpansion.added.id,clQaExpansion.added.regionId))throw Error('Expanded holding cannot be selected for upgrade');
+        if(getAllOwnedCitiesForDisplay().length!==clQaExpansion.rows.length)throw Error('Retry dropped an owned holding');
+        if(modalBody.querySelector('.city-list-rows')!==clQaExpansion.scroller||clQaExpansion.scroller.scrollTop!==clQaExpansion.scroll)throw Error('Retry moved the roster scroll');
+        return {complete:true,holdings:getAllOwnedCitiesForDisplay().length,reads:clQaExpansion.reads,scrollPreserved:true};
+      })()`);
+      await screenshot(`expanded-map-after-retry-${viewport.name}`);
+      await evaluate(`getOnlineApi=clQaExpansion.api;getGlobalStatsSnapshot=clQaExpansion.stats;
+        onlineOwnedCitiesCache=clQaExpansion.cache;onlineOwnedCitiesCacheComplete=clQaExpansion.complete;
+        onlineOwnedCitiesRefreshError=clQaExpansion.error;delete window.clQaExpansion;renderCityListModal();`);
       const navigation = await evaluate(`(async () => {
         const city=getAllOwnedCitiesForDisplay().find(c=>getCityRegionId(c)!==getActiveMapRegionId());
         if(!city)throw Error('Fixture needs an off-map holding');
@@ -209,7 +253,7 @@ async function main() {
         if(JSON.stringify(before)!==JSON.stringify(after))throw Error('City List styling leaked into City Details');
         return {offMapInfo:true,locate:true,isolated:true};
       })()`);
-      results.push({ viewport: viewport.name, layout, costs, touchScroll, states, navigation });
+      results.push({ viewport: viewport.name, layout, costs, touchScroll, states, expandedMapRetry, navigation });
       console.log(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, [], "Uncaught errors occurred in City List.");
