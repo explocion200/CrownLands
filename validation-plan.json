@@ -1,23 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e75ce928706c44b398c033b47d40784cd052c747",
+  "baseCommit": "148a030980ddc07a610288162e3579d2b02fbe99",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-owned-city-expansion-roster.js",
-        "tools/validate-city-list-browser.js"
+        "reinforcements-activity-ui.js",
+        "reinforcements-activity-ui.css",
+        "tools/validate-reinforcement-locations-browser.js",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-owned-city-expansion-roster.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-owned-city-roster-refresh.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-realm-refresh.js",
-        "tools/validate-core-expansion-release.js",
+        "tools/validate-reinforcement-locations-browser.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-universal-profile-links.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Retain the server-provided cityCapacity when adding or refreshing active Core-expansion map descriptors. A real registration/identity/cache fixture reproduces the 45-of-46 roster failure before the fix and validates 46 regular cities plus four Strongholds afterward without loading that map's definition. Cover existing incomplete descriptors, bounded city ordinals, realm/shard isolation, duplicates, missing records, stale expansion replies and off-map upgrade lookup. Execute an actual Retry click after descriptor repair at desktop, landscape-mobile, portrait and short-landscape sizes; require one read, cleared warning, complete holdings and preserved scroll. Existing roster/list tests protect ownership invalidation, reconnect/error/timeout isolation, ordering, upgrade reconciliation, navigation and touch scrolling. Realm-refresh and Core-release suites cover the shared descriptor-registration dependency and current topology; build/artifact/asset validation covers delivery. This is client metadata only: no server-authoritative rule, data, query, migration or installed backend change, so emulator suites are not applicable."
+      "reason": "Compact the existing reinforcement view only: place the square Location control immediately left of Recall or Send Home, reduce redundant stacked metadata and spacing, and put the traveling Location beside arrival details. The isolated live-renderer browser fixture checks desktop and two landscape phone sizes, bounded row height, nonoverlapping controls, horizontal action order, full large troop counts, long holding names, pending/failed return states, independent action bindings, unchanged scroll/focus and same-map/cross-map location behavior. Incoming-army estimate validation protects troop disclosure in the affected view; profile-link validation protects its ruler navigation. Asset budgets and production build validation cover delivery of the lazy-loaded view. The Master Specification records this explicitly confirmed presentation only. No authoritative gameplay, backend, permissions, data or API changes; emulator suites are not applicable."
     }
   ]
 }
